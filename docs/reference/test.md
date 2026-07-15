@@ -18,7 +18,10 @@ title: "测试"
 node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --timing-json
 ```
 
-下面的本地测试命令仅适用于人工工作流，或用户明确要求的代理回退。必须报告远程提供商不可用的情况；不能默默地在本地运行大范围门禁。
+第一次成功复用后，包装器会将该租约的 base、dependency 和 Testbox workflow fingerprint 记录到 `.crabbox/testbox-leases/` 下。仅有源码修改时会继续复用已预热的 box。若 merge base、lockfile、package-manager 输入、wrapper 或 Testbox workflow 发生变化，则会失败并要求新的租约。每次运行仍会同步当前检出。
+`OPENCLAW_TESTBOX_ALLOW_STALE=1` 仅用于有意进行诊断，不用于发布验证。
+
+下面的本地测试命令仅适用于人工工作流，或用户明确请求的代理回退方案。必须报告远程提供方不可用的情况；这不代表可以静默运行一个宽泛的本地门禁。
 
 对于不受信任的代码，使用 `--provider aws` 预热。每次运行都必须设置 `CRABBOX_ENV_ALLOW=CI`，传入 `--provider aws --no-hydrate`，并在安装依赖或运行测试之前使用新的临时远程 `HOME`。为该不受信任来源使用新预热的专用租约；绝不要复用受信任的或之前已 hydrated 的租约。必须从干净的受信任 `main` 检出中启动已安装的受信任 Crabbox 二进制，并且只使用 `--fresh-pr` 获取远程 PR；绝不要在本地执行不受信任检出中的包装器或配置。取消设置 `CRABBOX_AWS_INSTANCE_PROFILE`，并在未解析出 `aws.instanceProfile` 为空时直接失败。 在任何安装/测试之前，使用受信任的绝对路径工具要求 IMDSv2 token，证明 IAM 凭据端点返回 404，并验证远程 `git rev-parse HEAD` 等于完整审查过的 PR head SHA。将租约绑定到该 SHA，并在 head 变更时停止/重新预热。与 `--fresh-pr` 一起，从干净的 `main` 上传受信任的 `scripts/crabbox-untrusted-bootstrap.sh`；它会安装固定版本的 Node/pnpm，验证 SHA 和包管理器 pin，隔离 `HOME`，安装依赖，然后执行所请求的测试。如果 broker 不能证明不存在 role 或不存在远程 PR，则使用无密钥的 fork CI。不要使用 `hydrate-github`、`--no-sync`，或带有凭据 hydration 的 Testbox 工作流。
 
@@ -45,14 +48,14 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 
 | 命令                                           | 作用                                                                                                                                                                                                                                                                                                                                          |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test`                                       | 明确的文件/目录目标会路由到受范围限制的 Vitest 通道。未指定目标的运行会进行整套测试验证：固定的分片组会展开为叶子级配置以便本地并行执行，启动前会打印出预期的分片扇出。扩展组始终会展开为按扩展划分的分片配置，而不是一个巨大的根项目进程。 |
-| `pnpm test:changed`                               | 轻量智能变更测试运行：来自直接测试编辑的精确目标、同级 `*.test.ts` 文件、显式源映射以及本地导入图。除非它们能映射到精确测试，否则会跳过较大的/配置/包变更。                                                                                                                     |
-| `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` | 显式的宽松变更测试运行；当测试脚手架/配置/包的编辑应回退到 Vitest 更宽泛的变更测试行为时使用。                                                                                                                                                                                                              |
-| `pnpm test:force`                                 | 释放已配置的 OpenClaw 网关端口（默认 `18789`），然后使用隔离的网关端口运行完整套件，这样服务器测试就不会与正在运行的实例冲突。                                                                                                                                                                          |
-| `pnpm test:coverage`                              | 带 V8 覆盖率的单元测试套件（`vitest.unit.config.ts`）。这是默认单元通道的门禁，而不是整个仓库的覆盖率：`coverage.all` 为 `false`，阈值为 lines/functions/statements 70%，branches 55%，范围限定为带有同级源文件的非快速单元测试。                                                                                           |
-| `pnpm test:coverage:changed`                      | 仅针对自 `origin/main` 以来变更的文件进行单元覆盖率测试。                                                                                                                                                                                                                                                                                             |
-| `pnpm changed:lanes`                              | 显示相对于 `origin/main` 的 diff 所触发的架构通道。                                                                                                                                                                                                                                                                            |
-| `pnpm check:changed`                              | 默认情况下在 CI 之外委托给 Crabbox/Testbox，然后在远程子进程内运行智能变更检查门禁：受影响通道的类型检查、lint 和 guard 命令。不运行 Vitest；如需测试验证，请使用 `pnpm test:changed` 或 `pnpm test <target>`。                                                                                      |
+| `pnpm test`                                       | 显式文件/目录目标会路由到受限作用域的 Vitest 通道。未指定目标的运行属于全套验证：固定分片组会展开为叶子配置以便本地并行执行，启动前会打印预期的分片分发情况。扩展组始终会展开为按扩展名划分的分片配置，而不是一个巨大的根项目进程。 |
+| `pnpm test:changed`                               | 低成本的智能变更测试运行：基于直接测试改动、同级 `*.test.ts` 文件、显式源码映射以及本地导入图生成精确目标。除非广泛/配置/包级别的变更能映射到精确测试，否则会跳过这些变更。                                                                                                                     |
+| `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` | 显式的宽范围变更测试运行；当测试框架/配置/包的修改应退回到 Vitest 更宽泛的变更测试行为时使用。                                                                                                                                                                                                              |
+| `pnpm test:force`                                 | 释放已配置的 OpenClaw 网关端口（默认 `18789`），然后使用隔离的网关端口运行完整测试套件，这样服务器测试就不会与正在运行的实例发生冲突。                                                                                                                                                                          |
+| `pnpm test:coverage`                              | 为默认单元分支（`vitest.unit.config.ts`）输出一份信息性的 V8 覆盖率报告；不强制任何覆盖率阈值。                                                                                                                                                                                                                   |
+| `pnpm test:coverage:changed`                      | 仅对自 `origin/main` 以来发生变更的文件进行单元覆盖率统计。                                                                                                                                                                                                                                                                                             |
+| `pnpm changed:lanes`                              | 显示相对于 `origin/main` 的 diff 所触发的架构分支。                                                                                                                                                                                                                                                                            |
+| `pnpm check:changed`                              | 默认在 CI 之外委派给 Crabbox/Testbox，然后在远程子进程中运行智能变更检查门禁：针对受影响分支执行格式化以及类型检查、lint 和 guard 命令。不会运行 Vitest；如需测试验证，请使用 `pnpm test:changed` 或 `pnpm test <target>`。                                                                      |
 
 ## 共享测试状态和进程辅助工具
 
@@ -63,13 +66,14 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 
 ## Control UI、TUI 和扩展通道
 
-- **Control UI 模拟 E2E：** `pnpm test:ui:e2e` 运行 Vitest + Playwright 通道，启动 Vite Control UI，并针对模拟的 Gateway WebSocket 驱动一个真实的 Chromium 页面。测试位于 `ui/src/**/*.e2e.test.ts`；共享的 mocks/controls 位于 `ui/src/test-helpers/control-ui-e2e.ts`。`pnpm test:e2e` 包含此通道。Agent 运行默认使用 Testbox/Crabbox，包括定向 proof；仅在明确需要本地回退时才使用 `node scripts/run-vitest.mjs run --config test/vitest/vitest.ui-e2e.config.ts --configLoader runner ui/src/ui/e2e/chat-flow.e2e.test.ts`。
-- **TUI PTY 测试：** `node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts` 运行快速的 fake-backend PTY 通道。`OPENCLAW_TUI_PTY_INCLUDE_LOCAL=1` 或 `pnpm tui:pty:test:watch --mode local` 运行较慢的 `tui --local` smoke 测试，它只模拟外部模型端点。断言稳定的可见文本或 fixture 调用，而不是原始 ANSI 快照。
-- `pnpm test:extensions` 和 `pnpm test extensions` 运行所有扩展/plugin 分片。重型通道插件、浏览器插件和 OpenAI 作为独立分片运行；其他插件组保持批量执行。`pnpm test extensions/<id>` 运行一个打包好的插件通道。
-- 具有同级测试的源文件会优先映射到该同级测试，然后再回退到更宽泛的目录 glob。`src/channels/plugins/contracts/test-helpers`、`src/plugin-sdk/test-helpers` 和 `src/plugins/contracts` 下的辅助文件编辑会使用本地 import 图来运行导入它们的测试，而不是在依赖路径足够精确时广泛运行所有分片。
-- `auto-reply` 分拆为三个独立配置（`core`、`top-level`、`reply`），这样 reply harness 就不会压过更轻量的 top-level status/token/helper 测试。
-- 选定的 `plugin-sdk` 和 `commands` 测试文件会通过专用的轻量通道路由，这些通道只保留 `test/setup.ts`，而将运行时开销大的用例留在它们现有的通道上。
-- 基础 Vitest 配置默认 `pool: "threads"` 且 `isolate: false`，并在整个仓库配置中启用共享的非隔离 runner。
+- **Control UI 模拟 E2E：** `pnpm test:ui:e2e` 运行 Vitest + Playwright 任务线，该任务线启动 Vite Control UI，并针对一个模拟的 Gateway WebSocket 驱动真实的 Chromium 页面。测试位于 `ui/src/**/*.e2e.test.ts`；共享的 mock/控制器位于 `ui/src/test-helpers/control-ui-e2e.ts`。`pnpm test:e2e` 包含此任务线。Agent 运行默认使用 Testbox/Crabbox，包括定向证明；仅在明确需要本地回退时才使用 `node scripts/run-vitest.mjs run --config test/vitest/vitest.ui-e2e.config.ts --configLoader runner ui/src/ui/e2e/chat-flow.e2e.test.ts`。
+- **TUI PTY 测试：** `node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts` 运行快速的 fake-backend PTY 任务线。`OPENCLAW_TUI_PTY_INCLUDE_LOCAL=1` 或 `pnpm tui:pty:test:watch --mode local` 运行更慢的 `tui --local` 冒烟测试，它只 mock 外部模型端点。断言稳定的可见文本或 fixture 调用，不要断言原始 ANSI 快照。
+- `pnpm test:extensions` 和 `pnpm test extensions` 运行所有扩展/插件分片。重型 channel 插件、浏览器插件以及 OpenAI 作为专用分片运行；其他插件组保持批处理。`pnpm test extensions/<id>` 运行一个打包后的单个插件任务线。
+- 带有兄弟测试的源文件会先映射到该兄弟测试，然后再回退到更广的目录 glob。位于 `src/channels/plugins/contracts/test-helpers`、`src/plugin-sdk/test-helpers` 和 `src/plugins/contracts` 下的辅助修改会使用本地导入图来运行导入它们的测试，而不是在依赖路径足够精确时宽泛地运行每个分片。
+- 合约目录目标会分发到它们各自的合约任务线：`pnpm test src/channels/plugins/contracts` 运行四个 channel 合约配置，而 `pnpm test src/plugins/contracts` 运行插件合约配置，因为通用的 `channels`/`plugins` 项目排除了 `contracts/**`。
+- `auto-reply` 拆分为三个专用配置（`core`、`top-level`、`reply`），这样 reply 运行器就不会在较轻量的 top-level status/token/helper 测试中占据主导。
+- 选定的 `plugin-sdk` 和 `commands` 测试文件会通过专用的轻量任务线路由，这些任务线只保留 `test/setup.ts`，将运行时较重的案例留在它们现有的任务线上。
+- 基础 Vitest 配置默认使用 `pool: "threads"` 和 `isolate: false`，并在整个仓库配置中启用共享的非隔离运行器。
 - `pnpm test:channels` 运行 `vitest.channels.config.ts`。
 
 ## 网关和 E2E
@@ -92,7 +96,7 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 
 | 环境变量                                                                                                         | 默认值              | 用途                                                                                                                                                                                                                                                                                    |
 | --------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `OPENCLAW_DOCKER_ALL_PARALLELISM`                                                                               | 10                  | 进程槽位。                                                                                                                                                                                                                                                                             |
+| `OPENCLAW_DOCKER_ALL_PARALLELISM`                                                                               | 10                  | 进程槽位。                                                                                                                                                                                                                                                                            |
 | `OPENCLAW_DOCKER_ALL_TAIL_PARALLELISM`                                                                          | 10                  | 与提供者敏感的尾部池。                                                                                                                                                                                                                                                              |
 | `OPENCLAW_DOCKER_ALL_LIVE_LIMIT`                                                                                | 9                   | 重型 live-provider 通道上限。                                                                                                                                                                                                                                                              |
 | `OPENCLAW_DOCKER_ALL_NPM_LIMIT`                                                                                 | 5                   | npm 资源通道上限。                                                                                                                                                                                                                                                                     |
@@ -127,9 +131,9 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 | `pnpm test:docker:update-migration`                                         | `plugin-deps-cleanup` 场景中的 published-upgrade survivor 运行器，默认从 `openclaw@2026.4.23` 开始。`Update Migration` 工作流会将其扩展为 `baselines=all-since-2026.4.23`，以证明在 Full Release CI 之外的已配置插件依赖清理。                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `pnpm test:docker:plugins`                                                  | 本地路径、`file:`、带提升依赖的 npm registry 包、git 移动引用、ClawHub fixture、marketplace 更新，以及 Claude-bundle 启用/检查的安装/更新冒烟测试。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
-## 本地 PR 门禁
+## Local PR Gates
 
-对于本地 PR 合入/门禁检查，运行：
+For local PR merge/gate checks, run:
 
 - `pnpm check:changed`
 - `pnpm check`
@@ -138,7 +142,7 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 - `pnpm test`
 - `pnpm check:docs`
 
-如果 `pnpm test` 在负载较高的主机上出现偶发失败，在将其视为回归之前先重跑一次，然后使用 `pnpm test <path/to/test>` 进行隔离。对于内存受限的主机：
+If `pnpm test` intermittently fails on heavily loaded hosts, rerun it once before treating it as a regression, then use `pnpm test <path/to/test>` to isolate it. For memory-constrained hosts:
 
 - `OPENCLAW_VITEST_MAX_WORKERS=1 pnpm test`
 - `OPENCLAW_VITEST_FS_MODULE_CACHE_PATH=/tmp/openclaw-vitest-cache pnpm test:changed`
@@ -159,7 +163,7 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 pnpm tsx scripts/bench-model.ts --runs 10
 ```
 
-可选环境变量：`MINIMAX_API_KEY`、`MINIMAX_BASE_URL`、`MINIMAX_MODEL`、`ANTHROPIC_API_KEY`。默认提示词："Reply with a single word: ok. No punctuation or extra text."
+可选环境变量：`MINIMAX_API_KEY`、`MINIMAX_BASE_URL`、`MINIMAX_MODEL`、`ANTHROPIC_API_KEY`。默认提示词："仅回复一个词：ok。不加标点或额外文本。"
 
 </Accordion>
 

@@ -608,12 +608,12 @@ Talk 会话提供商选择以会话为作用域。Talk 客户端应从 `talk.cat
 - `provider` (registered provider id; requires `allowProvider: true`)
 - `speakerVoice` / `speakerVoiceId` (legacy aliases: `voice`, `voiceName`, `voice_name`, `google_voice`, `voiceId`)
 - `model` / `google_model`
-- `stability`、`similarityBoost`、`style`、`speed`、`useSpeakerBoost`
-- `vol` / `volume`（MiniMax 音量，0–10）
-- `pitch`（MiniMax 整数音高，−12 到 12；小数值会被截断）
-- `emotion`（Volcengine 情感标签）
-- `applyTextNormalization`（`auto|on|off`）
-- `languageCode`（ISO 639-1）
+- `stability`, `similarityBoost`, `style`, `speed`, `useSpeakerBoost`
+- `vol` / `volume` (MiniMax volume, `(0, 10]`)
+- `pitch` (MiniMax integer pitch, −12 to 12; fractional values are truncated)
+- `emotion` (Volcengine emotion tag)
+- `applyTextNormalization` (`auto|on|off`)
+- `languageCode` (ISO 639-1)
 - `seed`
 
 **完全禁用模型覆盖：**
@@ -695,7 +695,7 @@ Per-provider notes:
 - **Google Gemini:** returns raw 24 kHz PCM. OpenClaw wraps it as WAV for audio attachments, transcodes it to 48 kHz Opus for voice-note targets, and returns PCM directly for Talk/telephony.
 - **Gradium:** WAV for audio attachments, Opus for voice-note targets, and `ulaw_8000` at 8 kHz for telephony.
 - **Inworld:** MP3 for normal audio attachments, native `OGG_OPUS` for voice-note targets, and raw `PCM` at 22050 Hz for Talk/telephony.
-- **xAI:** MP3 by default; `responseFormat` may be `mp3`, `wav`, `pcm`, `mulaw`, or `alaw`. Uses xAI's batch REST TTS endpoint and returns a complete audio attachment; xAI's streaming TTS WebSocket is not used by this provider path. Native Opus voice-note format is not supported.
+- **xAI:** MP3 by default; audio-file synthesis may use `mp3`, `wav`, `pcm`, `mulaw`, or `alaw` for both buffered and streaming output. Voice-note targets use MP3 for streaming and buffered fallback because xAI's `pcm`, `mulaw`, and `alaw` outputs are headerless raw audio. Buffered synthesis uses xAI's batch REST `/v1/tts` endpoint; `textToSpeechStream` uses native `wss://api.x.ai/v1/tts`. This is not the realtime voice contract. Native Opus voice-note format is not supported.
 - **Microsoft:** uses `microsoft.outputFormat` (default `audio-24khz-48kbitrate-mono-mp3`).
   - The bundled transport accepts an `outputFormat`, but not all formats are available from the service.
   - Output format values follow Microsoft Speech output formats (including Ogg/WebM Opus).
@@ -767,7 +767,7 @@ Reply -> TTS enabled?
       由语音提供方 id 作为键的、提供方拥有的设置。旧的直接块（`messages.tts.openai`、`.elevenlabs`、`.microsoft`、`.edge`）会被 `openclaw doctor --fix` 重写；只提交 `messages.tts.providers.<id>`。
     </ParamField>
     <ParamField path="maxTextLength" type="number" default="4096">
-      Hard cap for TTS input characters. `/tts audio` and `tts.convert` fail if exceeded.
+      Hard cap for TTS input characters. `/tts audio`, `tts.convert`, and `tts.speak` fail if exceeded.
     </ParamField>
     <ParamField path="timeoutMs" type="number" default="30000">
       Request timeout in milliseconds. A per-call `timeoutMs` (agent tool, gateway) wins when set; otherwise an explicitly configured `messages.tts.timeoutMs` wins over any plugin-authored provider default.
@@ -812,9 +812,9 @@ Reply -> TTS enabled?
   </Accordion>
 
   <Accordion title="Gradium">
-    <ParamField path="apiKey" type="string">环境变量：`GRADIUM_API_KEY`。</ParamField>
-    <ParamField path="baseUrl" type="string">默认 `https://api.gradium.ai`。</ParamField>
-    <ParamField path="speakerVoiceId" type="string">默认 Emma（`YTpq7expH9539ERJ`）。旧别名：`voiceId`。</ParamField>
+    <ParamField path="apiKey" type="string">Env: `GRADIUM_API_KEY`.</ParamField>
+    <ParamField path="baseUrl" type="string">HTTPS Gradium API URL on `api.gradium.ai`. Default `https://api.gradium.ai`.</ParamField>
+    <ParamField path="speakerVoiceId" type="string">Default Emma (`YTpq7expH9539ERJ`). Legacy alias: `voiceId`.</ParamField>
   </Accordion>
 
   <Accordion title="Inworld">
@@ -828,13 +828,16 @@ Reply -> TTS enabled?
 
   </Accordion>
 
-  <Accordion title="本地 CLI (tts-local-cli)">
-    <ParamField path="command" type="string">用于 CLI TTS 的本地可执行文件或命令字符串。</ParamField>
-    <ParamField path="args" type="string[]">命令参数。支持 `{{Text}}`、`{{OutputPath}}`、`{{OutputDir}}`、`{{OutputBase}}` 占位符。</ParamField>
-    <ParamField path="outputFormat" type='"mp3" | "opus" | "wav"'>预期的 CLI 输出格式。音频附件默认使用 `mp3`。</ParamField>
-    <ParamField path="timeoutMs" type="number">命令超时时间（毫秒）。默认 `120000`。</ParamField>
-    <ParamField path="cwd" type="string">可选的命令工作目录。</ParamField>
-    <ParamField path="env" type="Record<string, string>">命令的可选环境变量覆盖。</ParamField>
+  <Accordion title="Local CLI (tts-local-cli)">
+    <ParamField path="command" type="string">Local executable or command string for CLI TTS.</ParamField>
+    <ParamField path="args" type="string[]">Command arguments. Supports `{{Text}}`, `{{OutputPath}}`, `{{OutputDir}}`, `{{OutputBase}}` placeholders.</ParamField>
+    <ParamField path="outputFormat" type='"mp3" | "opus" | "wav"'>Expected CLI output format. Default `mp3` for audio attachments.</ParamField>
+    <ParamField path="timeoutMs" type="number">Command timeout in milliseconds. Default `120000`.</ParamField>
+    <ParamField path="cwd" type="string">Optional command working directory.</ParamField>
+    <ParamField path="env" type="Record<string, string>">Optional environment overrides for the command.</ParamField>
+
+    Command stdout and generated or converted audio are limited to 50 MiB. Diagnostic stderr is limited to 1 MiB. OpenClaw terminates the command and fails synthesis when either limit is exceeded.
+
   </Accordion>
 
   <Accordion title="Microsoft (no API key)">
@@ -893,7 +896,7 @@ Reply -> TTS enabled?
   <Accordion title="xAI">
     <ParamField path="apiKey" type="string">Env: `XAI_API_KEY`.</ParamField>
     <ParamField path="baseUrl" type="string">Default `https://api.x.ai/v1`. Env: `XAI_BASE_URL`.</ParamField>
-    <ParamField path="speakerVoiceId" type="string">Default `eve`. Live voices: `ara`, `eve`, `leo`, `rex`, `sal`, `una`. Legacy alias: `voiceId`.</ParamField>
+    <ParamField path="speakerVoiceId" type="string">Default `eve`. With auth, `openclaw infer tts voices --provider xai` fetches the current built-in catalog; without auth it lists offline fallbacks `ara`, `eve`, `leo`, `rex`, and `sal`. Account custom voice IDs are forwarded even when absent from the built-in list. Legacy alias: `voiceId`.</ParamField>
     <ParamField path="language" type="string">BCP-47 language code or `auto`. Default `en`.</ParamField>
     <ParamField path="responseFormat" type='"mp3" | "wav" | "pcm" | "mulaw" | "alaw"'>Default `mp3`.</ParamField>
     <ParamField path="speed" type="number">Provider-native speed override, `0.7..1.5`.</ParamField>

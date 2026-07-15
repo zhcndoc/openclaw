@@ -18,11 +18,11 @@ pnpm plugins:inventory:gen
 
 ## 定义
 
-- **核心 npm 包：** 内置于 `openclaw` npm 包中，无需单独安装插件即可使用。
-- **官方外部包：** 由 OpenClaw 维护的插件，不包含在核心 npm 包中，保留在此官方清单里，并可通过 ClawHub 和/或 npm 按需安装。
-- **仅源码检出：** 仅保留在仓库本地的插件，不包含在已发布的 npm 制品中，也不作为可安装包进行宣传。
+- **核心 npm 包：** Built into the `openclaw` npm package, usable without installing a separate plugin.
+- **官方外部包：** Plugins maintained by OpenClaw, not included in the core npm package, kept in this official list, and can be installed on demand via ClawHub and/or npm.
+- **仅源码检出：** Plugins retained only in the local repository, not included in the published npm artifacts, and not promoted as installable packages.
 
-源码检出与 npm 安装不同：在 `pnpm install` 之后，捆绑插件从 `extensions/<id>` 加载，因此本地修改和包内工作区依赖都可用。
+Source checkout differs from npm installation: after `pnpm install`, bundled plugins are loaded from `extensions/<id>`, so both local modifications and in-package workspace dependencies are available.
 
 ## 安装插件
 
@@ -47,13 +47,13 @@ openclaw plugins inspect discord --runtime --json
 
 ## 核心 npm 包
 
-60 个插件
+66 plugins
 
 - **[admin-http-rpc](/plugins/reference/admin-http-rpc)** (`@openclaw/admin-http-rpc`) - 包含在 OpenClaw 中。OpenClaw 管理 HTTP RPC 端点。
 
 - **[alibaba](/plugins/reference/alibaba)** (`@openclaw/alibaba-provider`) - 包含在 OpenClaw 中。添加视频生成提供方支持。
 
-- **[anthropic](/plugins/reference/anthropic)** (`@openclaw/anthropic-provider`) - 包含在 OpenClaw 中。为 OpenClaw 添加 Anthropic 模型提供方支持。
+- **[anthropic](/plugins/reference/anthropic)** (`@openclaw/anthropic-provider`) - 包含在 OpenClaw 中。Anthropic 模型、Claude CLI 和原生 Claude 会话目录。
 
 - **[azure-speech](/plugins/reference/azure-speech)** (`@openclaw/azure-speech`) - 包含在 OpenClaw 中。Azure AI Speech 文本转语音（MP3、原生 Ogg/Opus 语音笔记、PCM 电话语音）。
 
@@ -67,13 +67,13 @@ openclaw plugins inspect discord --runtime --json
 
 - **[clawrouter](/plugins/reference/clawrouter)** (`@openclaw/clawrouter`) - 包含在 OpenClaw 中。向 OpenClaw 添加 ClawRouter 模型提供方支持。
 
-- **[codex-supervisor](/plugins/reference/codex-supervisor)** (`@openclaw/codex-supervisor`) - 包含在 OpenClaw 中。从 OpenClaw 监管 Codex 应用服务器会话。
-
-- **[cohere](/plugins/reference/cohere)** (`@openclaw/cohere-provider`) - 包含在 OpenClaw 中；npm；ClawHub：`clawhub:@openclaw/cohere-provider`。OpenClaw Cohere 提供程序插件。
+- **[cohere](/plugins/reference/cohere)** (`@openclaw/cohere-provider`) - 包含在 OpenClaw 中；npm；ClawHub：`clawhub:@openclaw/cohere-provider`。OpenClaw Cohere 提供方插件。
 
 - **[comfy](/plugins/reference/comfy)** (`@openclaw/comfy-provider`) - 包含在 OpenClaw 中。为 OpenClaw 添加 ComfyUI 模型提供方支持。
 
 - **[copilot-proxy](/plugins/reference/copilot-proxy)** (`@openclaw/copilot-proxy`) - 包含在 OpenClaw 中。向 OpenClaw 添加 Copilot Proxy 模型提供方支持。
+
+- **[crabbox](/plugins/reference/crabbox)** (`@openclaw/crabbox-provider`) - 包含在 OpenClaw 中。由 Crabbox CLI 支持的云工作器提供方。
 
 - **[deepgram](/plugins/reference/deepgram)** (`@openclaw/deepgram-provider`) - 包含在 OpenClaw 中。添加媒体理解提供方支持。添加实时转录提供方支持。
 
@@ -101,9 +101,13 @@ openclaw plugins inspect discord --runtime --json
 
 - **[lmstudio](/plugins/reference/lmstudio)** (`@openclaw/lmstudio-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 LM Studio 模型提供方支持。
 
+- **[logbook](/plugins/reference/logbook)** (`@openclaw/logbook`) - 包含在 OpenClaw 中。自动工作日志：从配对节点定期捕获屏幕快照，并将其转换为可回顾的日程时间线。
+
 - **[memory-core](/plugins/reference/memory-core)** (`@openclaw/memory-core`) - 包含在 OpenClaw 中。添加 agent 可调用工具。
 
 - **[memory-wiki](/plugins/reference/memory-wiki)** (`@openclaw/memory-wiki`) - 包含在 OpenClaw 中。OpenClaw 的持久化 wiki 编译器和面向 Obsidian 的知识库。
+
+- **[meta](/plugins/reference/meta)** (`@openclaw/meta-provider`) - 包含在 OpenClaw 中；npm；ClawHub：`clawhub:@openclaw/meta-provider`。为 OpenClaw 添加 Meta 模型提供方支持。
 
 - **[microsoft](/plugins/reference/microsoft)** (`@openclaw/microsoft-speech`) - 包含在 OpenClaw 中。添加文本转语音提供方支持。
 
@@ -125,6 +129,8 @@ openclaw plugins inspect discord --runtime --json
 
 - **[ollama](/plugins/reference/ollama)** (`@openclaw/ollama-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 Ollama、Ollama Cloud 模型提供方支持。
 
+- **[onepassword](/plugins/reference/onepassword)** (`@openclaw/onepassword`) - 包含在 OpenClaw 中。带审批策略和 SQLite 审计历史的精选 1Password 密钥代理。
+
 - **[open-prose](/plugins/reference/open-prose)** (`@openclaw/open-prose`) - 包含在 OpenClaw 中。带有 `/prose` 斜杠命令的 OpenProse VM 技能包。
 
 - **[openai](/plugins/reference/openai)** (`@openclaw/openai-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 OpenAI 模型提供方支持。
@@ -136,6 +142,8 @@ openclaw plugins inspect discord --runtime --json
 - **[openrouter](/plugins/reference/openrouter)** (`@openclaw/openrouter-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 OpenRouter 模型提供方支持。
 
 - **[policy](/plugins/reference/policy)** (`@openclaw/policy`) - 包含在 OpenClaw 中。添加由策略支持的 workspace 合规性 doctor 检查。
+
+- **[reef](/plugins/reference/reef)** (`@openclaw/reef`) - 包含在 OpenClaw 中。受保护的端到端加密 claw 频道。
 
 - **[runway](/plugins/reference/runway)** (`@openclaw/runway-provider`) - 包含在 OpenClaw 中。添加视频生成提供方支持。
 
@@ -151,7 +159,9 @@ openclaw plugins inspect discord --runtime --json
 
 - **[tts-local-cli](/plugins/reference/tts-local-cli)** (`@openclaw/tts-local-cli`) - 包含在 OpenClaw 中。添加文本转语音提供方支持。
 
-- **[vllm](/plugins/reference/vllm)** (`@openclaw/vllm-provider`) - 包含在 OpenClaw 中。为 OpenClaw 添加 vLLM 模型提供方支持。
+- **[vault](/plugins/reference/vault)** (`@openclaw/vault`) - 包含在 OpenClaw 中。HashiCorp Vault SecretRef 提供方集成。
+
+- **[vllm](/plugins/reference/vllm)** (`@openclaw/vllm-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 vLLM 模型提供方支持。
 
 - **[volcengine](/plugins/reference/volcengine)** (`@openclaw/volcengine-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 Volcengine、Volcengine Plan 模型提供方支持。
 
@@ -165,13 +175,15 @@ openclaw plugins inspect discord --runtime --json
 
 - **[workboard](/plugins/reference/workboard)** (`@openclaw/workboard`) - 包含在 OpenClaw 中。面向 agent 拥有的问题与会话的仪表板工作板。
 
-- **[xai](/plugins/reference/xai)** (`@openclaw/xai-plugin`) - 包含在 OpenClaw 中。向 OpenClaw 添加 xAI 模型提供方支持。
+- **[workspaces](/plugins/reference/workspaces)** (`@openclaw/workspaces-plugin`) - 包含在 OpenClaw 中。Agent 可组合的 Workspaces 文档和控制平面后端。
+
+- **[xai](/plugins/reference/xai)** (`@openclaw/xai-plugin`) - 包含在 OpenClaw 中。为 OpenClaw 添加 xAI 模型提供方支持。
 
 - **[xiaomi](/plugins/reference/xiaomi)** (`@openclaw/xiaomi-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 Xiaomi、Xiaomi Token Plan 模型提供方支持。
 
 ## 官方外部包
 
-68 个插件
+71 个插件
 
 - **[acpx](/plugins/reference/acpx)** (`@openclaw/acpx`) - npm；ClawHub。OpenClaw ACP 运行时后端，提供由插件拥有的会话和传输管理。
 
@@ -193,7 +205,7 @@ openclaw plugins inspect discord --runtime --json
 
 - **[cloudflare-ai-gateway](/plugins/reference/cloudflare-ai-gateway)** (`@openclaw/cloudflare-ai-gateway-provider`) - npm；ClawHub：`clawhub:@openclaw/cloudflare-ai-gateway-provider`。为 OpenClaw 添加 Cloudflare AI Gateway 模型提供方支持。
 
-- **[codex](/plugins/reference/codex)** (`@openclaw/codex`) - npm；ClawHub。OpenClaw Codex app-server 运行时和模型提供方插件，带有由 Codex 管理的 GPT 目录。
+- **[codex](/plugins/reference/codex)** (`@openclaw/codex`) - npm; ClawHub. Codex app-server harness, model provider, and native session catalog.
 
 - **[copilot](/plugins/reference/copilot)** (`@openclaw/copilot`) - npm；ClawHub：`clawhub:@openclaw/copilot`。注册 GitHub Copilot 代理运行时。
 
@@ -213,7 +225,9 @@ openclaw plugins inspect discord --runtime --json
 
 - **[exa](/plugins/reference/exa)** (`@openclaw/exa-plugin`) - npm；ClawHub：`clawhub:@openclaw/exa-plugin`。添加网页搜索提供方支持。
 
-- **[feishu](/plugins/reference/feishu)** (`@openclaw/feishu`) - npm；ClawHub。OpenClaw 飞书/Lark 聊天和工作场所工具频道插件（由 @m1heng 社区维护）。
+- **[featherless](/plugins/reference/featherless)** (`@openclaw/featherless-provider`) - npm; ClawHub: `clawhub:@openclaw/featherless-provider`. OpenClaw Featherless AI 提供程序插件。
+
+- **[feishu](/plugins/reference/feishu)** (`@openclaw/feishu`) - npm; ClawHub. OpenClaw 飞书/Lark 频道插件，用于聊天和办公工具（由 @m1heng 社区维护）。
 
 - **[firecrawl](/plugins/reference/firecrawl)** (`@openclaw/firecrawl-plugin`) - npm；ClawHub：`clawhub:@openclaw/firecrawl-plugin`。添加 agent 可调用工具。添加网页抓取提供方支持。添加网页搜索提供方支持。
 
@@ -243,7 +257,9 @@ openclaw plugins inspect discord --runtime --json
 
 - **[lobster](/plugins/reference/lobster)** (`@openclaw/lobster`) - npm；ClawHub。用于类型化流水线和可恢复审批的 Lobster 工作流工具插件。
 
-- **[matrix](/plugins/reference/matrix)** (`@openclaw/matrix`) - ClawHub：`clawhub:@openclaw/matrix`；npm。OpenClaw Matrix 频道插件，用于房间和直接消息。
+- **[longcat](/plugins/reference/longcat)** (`@openclaw/longcat-provider`) - npm; ClawHub: `clawhub:@openclaw/longcat-provider`. OpenClaw LongCat 提供程序插件。
+
+- **[matrix](/plugins/reference/matrix)** (`@openclaw/matrix`) - ClawHub: `clawhub:@openclaw/matrix`; npm. OpenClaw Matrix 频道插件，用于房间和直接消息。
 
 - **[mattermost](/plugins/reference/mattermost)** (`@openclaw/mattermost`) - npm；ClawHub：`clawhub:@openclaw/mattermost`。添加用于发送和接收 OpenClaw 消息的 Mattermost 频道表面。
 
@@ -253,7 +269,9 @@ openclaw plugins inspect discord --runtime --json
 
 - **[msteams](/plugins/reference/msteams)** (`@openclaw/msteams`) - npm；ClawHub。OpenClaw Microsoft Teams 频道插件，用于机器人对话。
 
-- **[nextcloud-talk](/plugins/reference/nextcloud-talk)** (`@openclaw/nextcloud-talk`) - npm；ClawHub。OpenClaw Nextcloud Talk 频道插件，用于对话。
+- **[mxc](/plugins/reference/mxc)** (`@openclaw/mxc-sandbox`) - npm; ClawHub. 通过 MXC 在支持 MXC 的 Windows 主机上进行操作系统级沙箱化工具执行：使用已配置的 MXC 策略文件在 ProcessContainer（Windows）中运行命令。
+
+- **[nextcloud-talk](/plugins/reference/nextcloud-talk)** (`@openclaw/nextcloud-talk`) - npm; ClawHub. OpenClaw Nextcloud Talk 频道插件，用于对话。
 
 - **[nostr](/plugins/reference/nostr)** (`@openclaw/nostr`) - npm；ClawHub。OpenClaw Nostr 频道插件，用于 NIP-04 加密的直接消息。
 
@@ -269,7 +287,7 @@ openclaw plugins inspect discord --runtime --json
 
 - **[qqbot](/plugins/reference/qqbot)** (`@openclaw/qqbot`) - npm；ClawHub。OpenClaw QQ Bot 频道插件，用于群组和直接消息工作流。
 
-- **[qwen](/plugins/reference/qwen)** (`@openclaw/qwen-provider`) - npm；ClawHub：`clawhub:@openclaw/qwen-provider`。为 OpenClaw 添加 Qwen、Qwen Cloud、Model Studio、DashScope、Qwen Oauth、Qwen Portal、Qwen CLI 模型提供方支持。
+- **[qwen](/plugins/reference/qwen)** (`@openclaw/qwen-provider`) - npm; ClawHub: `clawhub:@openclaw/qwen-provider`. 为 OpenClaw 添加 Qwen、Qwen Cloud、Model Studio、DashScope、Qwen Oauth、Qwen Portal、Qwen CLI、Qwen Token Plan、Bailian Token Plan 模型提供方支持。
 
 - **[raft](/plugins/reference/raft)** (`@openclaw/raft`) - npm；ClawHub。OpenClaw Raft 频道插件，用于安全 CLI 唤醒桥接。
 
@@ -287,7 +305,7 @@ openclaw plugins inspect discord --runtime --json
 
 - **[tavily](/plugins/reference/tavily)** (`@openclaw/tavily-plugin`) - npm；ClawHub：`clawhub:@openclaw/tavily-plugin`。添加 agent 可调用工具。添加网页搜索提供方支持。
 
-- **[tencent](/plugins/reference/tencent)** (`@openclaw/tencent-provider`) - npm；ClawHub：`clawhub:@openclaw/tencent-provider`。为 OpenClaw 添加 Tencent TokenHub 模型提供方支持。
+- **[tencent](/plugins/reference/tencent)** (`@openclaw/tencent-provider`) - npm; ClawHub: `clawhub:@openclaw/tencent-provider`. 为 OpenClaw 添加 Tencent TokenHub、Tencent Tokenplan 模型提供方支持。
 
 - **[tlon](/plugins/reference/tlon)** (`@openclaw/tlon`) - npm；ClawHub。OpenClaw Tlon/Urbit 频道插件，用于聊天工作流。
 

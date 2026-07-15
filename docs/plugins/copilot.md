@@ -8,12 +8,12 @@ read_when:
 ---
 
 外部的 `@openclaw/copilot` 插件通过 GitHub Copilot CLI（`@github/copilot-sdk`）运行嵌入式订阅版 Copilot
-agent 轮次，而不是通过 OpenClaw 内置的 PI harness。Copilot CLI 会负责底层
-agent 循环：原生工具执行、原生压缩（`infiniteSessions`），以及
-由 `copilotHome` 管理的 CLI 线程状态。OpenClaw 仍然负责聊天
+agent 轮次，而不是使用 OpenClaw 内置的 harness。Copilot CLI 会拥有底层的
+agent 循环：原生工具执行、原生压缩（`infiniteSessions`），以及由 CLI 在
+`copilotHome` 下管理的线程状态。OpenClaw 仍然负责聊天
 通道、会话文件、模型选择、动态工具（桥接）、审批、
-媒体传递、可见的转录镜像、`/btw` 侧问答（参见
-[侧问答（`/btw`）](#side-questions-btw)），以及 `openclaw doctor`。
+媒体传递、可见的对话镜像、`/btw` 附加问题（参见
+[附加问题 (`/btw`)](#side-questions-btw)），以及 `openclaw doctor`。
 
 关于更广泛的模型 / provider / runtime 拆分，请从
 [Agent runtimes](/concepts/agent-runtimes) 开始。

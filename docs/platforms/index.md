@@ -6,11 +6,12 @@ read_when:
 title: "平台"
 ---
 
-OpenClaw 核心采用 TypeScript 编写。**推荐使用 Node 作为运行时**。
-不建议在 Gateway 中使用 Bun——WhatsApp 和 Telegram 通道存在已知问题；详情请参见 [Bun（实验性）](/install/bun)。
+OpenClaw core 使用 TypeScript 编写。**Node 是必需的运行时**，因为
+规范状态存储使用 `node:sqlite`。Bun 仍可用于
+依赖安装和包脚本；请参见 [Bun](/install/bun)。
 
 Windows Hub、macOS（菜单栏应用）和移动节点（iOS/Android）都有配套应用。
-Linux 配套应用计划中，但 Gateway 目前已完全支持。在 Windows 上，桌面应用请选择 Windows Hub；若偏向终端优先，可使用原生 PowerShell 安装；或者使用 WSL2 以获得最兼容 Linux 的 Gateway 运行时。
+Linux 配套应用在计划中，但 Gateway 目前已完全支持。在 Windows 上，桌面应用请选择 Windows Hub；若偏向终端优先，可使用原生 PowerShell 安装；或者使用 WSL2 以获得最兼容 Linux 的 Gateway 运行时。
 
 ## 选择你的操作系统
 
@@ -49,7 +50,7 @@ Linux 配套应用计划中，但 Gateway 目前已完全支持。在 Windows �
 
 服务目标取决于操作系统：
 
-- macOS: LaunchAgent (`ai.openclaw.gateway`, 或命名配置文件使用 `ai.openclaw.<profile>`)
+- macOS: LaunchAgent (`ai.openclaw.gateway`，或命名配置文件使用 `ai.openclaw.<profile>`)
 - Linux/WSL2: systemd 用户服务 (`openclaw-gateway[-<profile>].service`)
 - 原生 Windows: 计划任务 (`OpenClaw Gateway` 或 `OpenClaw Gateway (<profile>)`)，如果任务创建被拒绝，则回退为按用户的 Startup-folder 登录项
 

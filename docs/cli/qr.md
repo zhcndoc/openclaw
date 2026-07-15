@@ -15,6 +15,7 @@ openclaw qr
 openclaw qr --setup-code-only
 openclaw qr --json
 openclaw qr --remote
+openclaw qr --limited
 openclaw qr --url wss://gateway.example/ws
 ```
 
@@ -28,30 +29,36 @@ openclaw devices approve <requestId>
 ## 选项
 
 - `--remote`：优先使用 `gateway.remote.url`；如果该 URL 未设置，则回退到 `gateway.tailscale.mode=serve|funnel`。忽略 `device-pair` 插件的 `publicUrl`。
-- `--url <url>`：覆盖负载中使用的网关 URL
-- `--public-url <url>`：覆盖负载中使用的公共 URL
-- `--token <token>`：覆盖启动流程进行身份验证时使用的网关令牌
-- `--password <password>`：覆盖启动流程进行身份验证时使用的网关密码
+- `--url <url>`：覆盖 payload 中使用的网关 URL
+- `--public-url <url>`：覆盖 payload 中使用的公网 URL
+- `--token <token>`：覆盖引导流程进行身份验证时使用的网关令牌
+- `--password <password>`：覆盖引导流程进行身份验证时使用的网关密码
+- `--limited`：从移交给操作员的令牌中省略管理员 Gateway 访问权限
 - `--setup-code-only`：仅打印设置代码
-- `--no-ascii`：跳过 ASCII 二维码渲染
-- `--json`：输出 JSON（`setupCode`、`gatewayUrl`、可选的 `gatewayUrls`、`auth`、`urlSource`）
+- `--no-ascii`：跳过 ASCII QR 渲染
+- `--json`：输出 JSON（`setupCode`、`gatewayUrl`、可选的 `gatewayUrls`、`auth`、`access`、可选的 `accessDowngraded`、`urlSource`）
 
 `--token` 和 `--password` 互斥。
 
 ## 设置代码内容
 
-设置代码携带的是一个不透明、短时有效的 `bootstrapToken`，而不是共享的网关令牌/密码。内置的引导流程会签发：
+设置代码携带的是一个不透明、短期有效的 `bootstrapToken`，而不是共享的网关令牌/密码。对于 `wss://` 端点（或同主机回环），默认的引导流程会发放：
 
-- 一个主要的 `node` 令牌，`scopes: []`
-- 一个有边界的 `operator` 交接令牌，权限仅限于 `operator.approvals`、`operator.read`、`operator.talk.secrets` 和 `operator.write`
+- 一个主 `node` 令牌，`scopes: []`
+- 一个完整的原生移动端 `operator` 转交令牌，包含 `operator.admin`、`operator.approvals`、`operator.read`、`operator.talk.secrets` 和 `operator.write`
 
-配对变更作用域和 `operator.admin` 仍然需要单独经批准的 operator 配对或令牌流程。
+使用 `--limited` 可以保持相同的 node 令牌，同时在 operator 转交中省略 `operator.admin`。配对修改范围从不会通过设置代码转交。
+
+明文 LAN `ws://` 设置仍然可用，但 OpenClaw 会自动使用
+受限配置，因为网络观察者可能会捕获并抢先使用持有者
+bootstrap 令牌。请配置 `wss://` 或 Tailscale Serve，然后生成一个新代码
+以获得完整访问权限。
 
 ## 网关 URL 解析
 
-对于 Tailscale/公网 `ws://` 网关 URL，移动端配对会在安全关闭模式下失败：请为这些情况使用 Tailscale Serve/Funnel 或 `wss://` 网关 URL。私有 LAN 地址和 `.local` Bonjour 主机仍然支持通过普通 `ws://` 访问。
+对于 Tailscale/公开的 `ws://` 网关 URL，移动端配对会失败并关闭：请改用 Tailscale Serve/Funnel，或使用 `wss://` 网关 URL。私有 LAN 地址和 `.local` Bonjour 主机仍然支持通过普通 `ws://` 访问，但如上所述，仅限有限的操作员访问。
 
-当所选网关 URL 来自 `gateway.bind=lan` 时，OpenClaw 还会检查持久化的 `tailscale serve status --json` 路由。任何代理活动网关回环端口的 HTTPS Serve 根地址都会作为备用方案包含在内。特定接口的 `custom` 和 `tailnet` 绑定不会获得此备用方案，因为回环 Serve 代理无法访问这些监听器。当前的 iOS 客户端会按顺序探测公布的路由，并保存第一个可达的路由；旧版客户端的 `url` 字段保持不变。
+当所选 Gateway URL 来自 `gateway.bind=lan` 时，OpenClaw 还会检查持久化的 `tailscale serve status --json` 路由。任何代理当前网关回环端口的 HTTPS Serve 根路径都会作为后备方案包含进来。QR 命令只会为 `lan` 添加此后备方案；`custom` 和 `tailnet` 会保留其明确公布的路由。当前 iOS 客户端会按顺序探测已公布的路由，并保存第一个可达的路由；旧版 `url` 字段对旧客户端保持不变。
 
 使用 `--remote` 时，必须提供 `gateway.remote.url` 或 `gateway.tailscale.mode=serve|funnel` 之一。
 
@@ -67,10 +74,10 @@ openclaw devices approve <requestId>
 
 ## Auth resolution (`--remote`)
 
-如果有效的活动远程凭据配置为 SecretRefs，且未传递 `--token` 或 `--password`，命令会从活动网关快照中解析它们。如果网关不可用，命令会快速失败。
+If active remote credentials are configured as SecretRefs, and `--token` or `--password` is not provided, the command will resolve them from the active gateway snapshot. If the gateway is unavailable, the command will fail fast.
 
 <Note>
-此命令路径需要支持 `secrets.resolve` RPC 方法的网关。较旧的网关会返回未知方法错误。
+This command path requires a gateway that supports the `secrets.resolve` RPC method. Older gateways will return an unknown method error.
 </Note>
 
 ## 相关

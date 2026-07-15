@@ -386,10 +386,6 @@ title: "配置示例"
     store: "~/.openclaw/cron/jobs.json",
     maxConcurrentRuns: 8, // 默认值；cron 调度 + 隔离的 cron agent-turn 执行
     sessionRetention: "24h",
-    runLog: {
-      maxBytes: "2mb",
-      keepLines: 2000,
-    },
   },
 
   // Webhook
@@ -691,7 +687,7 @@ title: "配置示例"
 - 如果你设置了 `dmPolicy: "open"`，匹配的 `allowFrom` 列表必须包含 `"*"`.
 - 提供方 ID 各不相同（电话号码、用户 ID、频道 ID）。请查阅提供方文档以确认格式。
 - 可稍后添加的可选部分：`web`、`browser`、`ui`、`discovery`、`plugins`、`talk`、`signal`、`imessage`。
-- 查看 [Providers](/providers) 和 [Troubleshooting](/gateway/troubleshooting) 以获取更深入的设置说明。
+- 查看 [提供方](/providers) 和 [故障排除](/gateway/troubleshooting) 以获取更深入的设置说明。
 
 ## 相关内容
 

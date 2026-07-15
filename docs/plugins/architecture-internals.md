@@ -155,25 +155,25 @@ export default {
 
 此回调仅用于通知。它不会改变谁可以绑定会话，并且会在核心审批处理完成后运行。
 
-## 提供者运行时钩子
+## Provider Runtime Hooks
 
-提供者插件有三层：
+Provider plugins have three layers:
 
-- **清单元数据** 用于在运行时前进行廉价查找：
-  `setup.providers[].envVars`、已弃用的兼容项 `providerAuthEnvVars`、
-  `providerAuthAliases`、`providerAuthChoices` 和 `channelEnvVars`。
-- **配置期钩子**：`catalog`（旧版 `discovery`）以及
-  `applyConfigDefaults`。
-- **运行时钩子**：40+ 个可选钩子，涵盖认证、模型解析、
-  流包装、thinking 级别、回放策略和 usage 端点。请参见
-  [钩子顺序与使用](#hook-order-and-usage)。
+- **Manifest metadata** for cheap lookups before runtime:
+  `setup.providers[].envVars`, the deprecated compatibility field `providerAuthEnvVars`,
+  `providerAuthAliases`, `providerAuthChoices`, and `channelEnvVars`.
+- **Config-phase hooks**: `catalog` (legacy `discovery`) and
+  `applyConfigDefaults`.
+- **Runtime hooks**: 40+ optional hooks covering auth, model resolution,
+  stream wrapping, thinking levels, replay policy, and usage endpoints. See
+  [Hook order and usage](#hook-order-and-usage).
 
-OpenClaw 仍然负责通用代理循环、故障转移、转录处理和工具策略。
-这些钩子是提供者特定行为的扩展面，无需整个自定义推理传输。
+OpenClaw still owns the generic agent loop, failover, transcription handling, and tool policy.
+These hooks are an extension surface for provider-specific behavior, without requiring a fully custom inference transport.
 
-当提供者拥有基于环境变量的凭据，并且通用认证/状态/模型选择路径应在不加载插件运行时的情况下看到它们时，请使用清单 `setup.providers[].envVars`。已弃用的 `providerAuthEnvVars` 在弃用窗口内仍会被兼容适配器读取，使用它的非捆绑插件会收到清单诊断。当一个提供者 id 需要复用另一个提供者 id 的环境变量、认证配置文件、基于配置的认证和 API 密钥引导选择时，请使用清单 `providerAuthAliases`。当入门/认证选择的 CLI 界面应在不加载提供者运行时的情况下知道提供者的选择 id、组标签和简单一键认证接线时，请使用清单 `providerAuthChoices`。将提供者运行时 `envVars` 保留给面向运维者的提示，例如入门标签或 OAuth client-id/client-secret 设置变量。
+Use manifest `setup.providers[].envVars` when a provider has env-var-based credentials and the generic auth/status/model-selection paths should see them without loading plugin runtime. The deprecated `providerAuthEnvVars` is still read by the compatibility adapter within the deprecation window; non-bundled plugins using it will receive manifest diagnostics. Use manifest `providerAuthAliases` when a provider id needs to reuse another provider id's env vars, auth profile, config-based auth, and API-key bootstrap selection. Use manifest `providerAuthChoices` when the CLI surface for onboarding/auth selection should know a provider's choice ids, group labels, and simple one-click auth wiring without loading provider runtime. Keep provider runtime `envVars` for operator-facing prompts such as onboarding labels or OAuth client-id/client-secret setup variables.
 
-当某个通道具有由环境变量驱动的认证或设置，而通用 shell-env 回退、配置/状态检查或设置提示应在不加载通道运行时的情况下看到它们时，请使用清单 `channelEnvVars`。
+Use manifest `channelEnvVars` when a channel has env-var-driven authentication or setup and the generic shell-env fallback, config/status checks, or setup prompts should see them without loading channel runtime.
 
 ### 钩子顺序与使用
 
@@ -233,16 +233,19 @@ OpenClaw 不再调用的仅兼容性提供者字段，例如
 
 如果提供者需要完全自定义的线协议或自定义请求执行器，那就是另一类扩展。这些钩子面向仍然运行在 OpenClaw 正常推理循环上的提供者行为。
 
-`resolveUsageAuth` 决定 OpenClaw 是否应调用 `fetchUsageSnapshot`，或者针对 usage/status 界面回退到通用凭据解析。当提供者拥有 usage 凭据时返回
-`{ token, accountId? }`；当提供者拥有的 usage 认证已处理请求且必须抑制通用 API key/OAuth 回退时返回
-`{ handled: true }`；当提供者未处理 usage 认证时返回 `null` 或 `undefined`。
+`resolveUsageAuth` 决定 OpenClaw 是否应调用 `fetchUsageSnapshot`，还是在 usage/status 界面上回退到通用凭据解析。若提供者具有 usage 凭据，则返回
+`{ token, accountId?, subscriptionType?, rateLimitTier? }`（可选的计划元数据会流入
+`fetchUsageSnapshot`）；当提供者拥有的 usage 认证已处理该请求且必须禁止通用 API key/OAuth 回退时，返回
+`{ handled: true }`；当提供者未处理 usage 认证时，返回 `null` 或 `undefined`。
 
-### 提供者示例
+在清单 `providerUsageAuthEnvVars` 中声明组织或计费凭据。这样通用发现和秘密清理界面就能识别它们，而不会把它们当作推理认证候选项。
+
+### Provider 示例
 
 ```ts
 api.registerProvider({
   id: "example-proxy",
-  label: "Example Proxy",
+  label: "示例代理",
   auth: [],
   catalog: {
     order: "simple",
@@ -256,7 +259,7 @@ api.registerProvider({
           baseUrl: "https://proxy.example.com/v1",
           apiKey,
           api: "openai-completions",
-          models: [{ id: "auto", name: "Auto" }],
+          models: [{ id: "auto", name: "自动" }],
         },
       };
     },
@@ -347,12 +350,13 @@ const voices = await api.runtime.tts.listVoices({
 
 注释：
 
-- `textToSpeech` 会返回用于文件/语音备注界面的标准核心 TTS 输出载荷。
+- `textToSpeech` 返回用于文件/语音笔记界面的标准核心 TTS 输出载荷。
 - 使用核心 `messages.tts` 配置和提供方选择。
-- 返回 PCM 音频缓冲区 + 采样率。插件必须针对提供方进行重采样/编码。
-- `listVoices` 是按提供方可选的。可用于供应商自有的语音选择器或设置流程。
-- 语音列表可以包含更丰富的元数据，例如地区、性别和个性标签，以便为感知提供方的选择器提供支持。
-- OpenAI 和 ElevenLabs 目前支持电话场景。Microsoft 不支持。
+- 返回 PCM 音频缓冲区 + 采样率。插件必须为提供方进行重采样/编码。
+- `listVoices` 对每个提供方是可选的。可将其用于供应商自有的声音选择器或设置流程。
+- 核心会将已解析的请求截止时间传递给提供方的 `listVoices` 钩子；提供方特定的超时设置可能会覆盖它。
+- 语音列表可以包含更丰富的元数据，例如区域设置、性别和个性标签，以便为感知提供方的选择器提供支持。
+- OpenAI 和 ElevenLabs 目前支持电话语音。Microsoft 不支持。
 
 插件也可以通过 `api.registerSpeechProvider(...)` 注册语音提供方。
 
@@ -417,7 +421,7 @@ const video = await api.runtime.mediaUnderstanding.describeVideoFile({
 
 const extraction = await api.runtime.mediaUnderstanding.extractStructuredWithModel({
   provider: "codex",
-  model: "gpt-5.5",
+  model: "gpt-5.6-sol",
   input: [
     {
       type: "image",
@@ -549,17 +553,18 @@ api.registerHttpRoute({
 
 注释：
 
-- `api.registerHttpHandler(...)` 已被移除，并会导致插件加载错误。请改用 `api.registerHttpRoute(...)`。
+- `api.registerHttpHandler(...)` 已被移除，调用将导致插件加载错误。请改用 `api.registerHttpRoute(...)`。
 - 插件路由必须显式声明 `auth`。
-- 相同的 `path + match` 冲突会被拒绝，除非使用 `replaceExisting: true`，且一个插件不能替换另一个插件的路由。
-- 具有不同 `auth` 等级的重叠路由会被拒绝。仅在同一 `auth` 等级下保留 `exact`/`prefix` 的回退链。
-- `auth: "plugin"` 路由**不会**自动接收操作员运行时作用域。它们用于插件管理的 webhook/签名校验，而不是特权的 Gateway 辅助调用。
-- `auth: "gateway"` 路由会在 Gateway 请求运行时作用域中执行。默认表面（`gatewayRuntimeScopeSurface: "write-default"`）是刻意保守的：
-  - 共享密钥 bearer 认证（`gateway.auth.mode = "token"` / `"password"`）以及任何非可信代理认证方式，即使调用方发送了 `x-openclaw-scopes`，也只会获得一个 `operator.write` 作用域
-  - 没有显式 `x-openclaw-scopes` 头的 `trusted-proxy` 调用方也仍然保持旧版仅 `operator.write` 的表面
-  - 发送了 `x-openclaw-scopes` 的 `trusted-proxy` 调用方则会获得声明的作用域
-  - 路由可以选择 `gatewayRuntimeScopeSurface: "trusted-operator"`，以便始终为具有身份的认证模式尊重 `x-openclaw-scopes`（如果头部缺失，则回退到完整的 CLI 默认作用域集合）
-- 实践规则：不要假设一个 gateway-auth 插件路由就是隐式的管理员入口。如果你的路由需要仅管理员可用的行为，请启用 `trusted-operator` 作用域表面，要求具备身份的认证模式，并明确记录 `x-openclaw-scopes` 头部契约。
+- 相同 `path + match` 的冲突会被拒绝，除非设置 `replaceExisting: true`，且一个插件不能替换另一个插件的路由。
+- 不同 `auth` 级别的重叠路由会被拒绝。请仅在同一 `auth` 级别内保留 `exact`/`prefix` 的兜底链。
+- `auth: "plugin"` 路由不会自动获得运营者运行时作用域。它们用于插件管理的 webhook/签名校验，而不是特权的 Gateway 辅助调用。
+- `auth: "gateway"` 路由在 Gateway 请求运行时作用域内执行。默认面（`gatewayRuntimeScopeSurface: "write-default"`）是刻意保守的：
+  - 共享密钥 bearer 认证（`gateway.auth.mode = "token"` / `"password"`）以及任何非可信代理认证方式，即使调用方发送了 `x-openclaw-scopes`，也只会获得单个 `operator.write` 作用域
+  - 没有显式 `x-openclaw-scopes` 头的 `trusted-proxy` 调用方也会保留旧版仅 `operator.write` 的面
+  - 发送了 `x-openclaw-scopes` 的 `trusted-proxy` 调用方则会直接使用所声明的作用域
+  - 路由可以选择 `gatewayRuntimeScopeSurface: "trusted-operator"`，以便在所有具备身份的认证模式下始终遵循 `x-openclaw-scopes`（如果没有该头，则回退到 CLI 默认的完整作用域集合）
+- 实践规则：不要把一个 gateway-auth 插件路由当作隐式管理员入口。如果你的路由需要仅管理员可用的行为，请启用 `trusted-operator` 作用域面，要求使用具备身份的认证模式，并记录明确的 `x-openclaw-scopes` 头部契约。
+- 路由匹配和认证之后，普通处理器会参与 Gateway 根工作接纳流程。处于预备或重启中的 Gateway 会在调用处理器之前返回 `503`。一个狭义例外是：具有清单授权的 `auth: "gateway"` 路由，同时还启用了路由专用的 `trusted-operator` 面；它仍然保持可达，因此不会使暂停控制分发被困住，而同一插件中的普通同级路由仍然受接纳边界保护。WebSocket `handleUpgrade` 的所有权使用相同的原子接纳边界；一旦处理器接受了一个 socket，该 socket 之后的生命周期就归插件所有，不再受此边界跟踪。
 
 ## 插件 SDK 导入路径
 
@@ -611,8 +616,9 @@ api.registerHttpRoute({
 
 具备发送能力的插件通过消息能力声明它们可以渲染的内容：
 
-- `presentation`：用于语义化展示块（`text`、`context`、`divider`、`buttons`、`select`）
-- `delivery-pin`：用于置顶投递请求
+- `presentation` 用于语义展示块（`text`、`context`、
+  `divider`、`chart`、`table`、`buttons`、`select`）
+- `delivery-pin` 用于置顶发送请求
 
 Core 决定是原生渲染该展示，还是将其降级为文本。不要通过通用消息工具暴露 provider 原生 UI 的逃生通道。面向旧版原生架构的已弃用 SDK 辅助函数仍会导出，以兼容现有第三方插件，但新插件不应使用它们。
 
@@ -711,9 +717,9 @@ provider 插件可以通过 `registerProvider({ catalog: { run(...) { ... } } })
 
 这使得只读命令可以报告“已配置但在此命令路径中不可用”，而不是崩溃或把账户误报为未配置。
 
-## 包集合
+## Package Collections
 
-插件目录可以包含带有 `openclaw.extensions` 的 `package.json`：
+A plugin directory can contain `package.json` files with `openclaw.extensions`:
 
 ```json
 {
@@ -725,40 +731,40 @@ provider 插件可以通过 `registerProvider({ catalog: { run(...) { ... } } })
 }
 ```
 
-每个条目都会成为一个插件。如果包列出了多个扩展，插件
-id 变为 `<manifestOrPackageName>/<fileBase>`（存在 manifest id 时以它为准；否则使用未作用域化的 `package.json` 名称）。
+Each entry becomes a plugin. If a package lists multiple extensions, the plugin
+id becomes `<manifestOrPackageName>/<fileBase>` (the manifest id takes precedence if present; otherwise the unscoped `package.json` name is used).
 
-如果你的插件导入 npm 依赖，请在该目录中安装它们，以便 `node_modules` 可用（`npm install` / `pnpm install`）。
+If your plugin imports npm dependencies, install them in that directory so `node_modules` is available (`npm install` / `pnpm install`).
 
-安全护栏：每个 `openclaw.extensions` 条目在符号链接解析后必须仍位于插件目录内。逃出包目录的条目会被拒绝。
+Safety guardrail: after symlink resolution, each `openclaw.extensions` entry must still remain inside the plugin directory. Entries that escape the package directory will be rejected.
 
-安全提示：`openclaw.plugins install` 使用项目本地的 `npm install --omit=dev --ignore-scripts` 安装插件依赖（运行时没有生命周期脚本、没有 dev 依赖），并忽略继承来的全局 npm 安装设置。请保持插件依赖树“纯 JS/TS”，并避免需要 `postinstall` 构建的包。
+Safety note: `openclaw.plugins install` uses the project-local `npm install --omit=dev --ignore-scripts` to install plugin dependencies (no lifecycle scripts, no dev dependencies at runtime), and ignores inherited global npm install settings. Please keep plugin dependency trees “pure JS/TS” and avoid packages that require `postinstall` builds.
 
-可选：`openclaw.setupEntry` 可以指向一个轻量级的仅 setup 模块。当 OpenClaw 需要已禁用渠道插件的 setup 界面，或者当渠道插件已启用但仍未配置时，它会加载 `setupEntry` 而不是完整插件入口。这样可以在主插件入口也连接工具、hooks 或其他仅运行时代码时，让启动和 setup 更轻量。
+Optional: `openclaw.setupEntry` can point to a lightweight setup-only module. When OpenClaw needs the setup screen for a disabled channel plugin, or when a channel plugin is enabled but not yet configured, it will load `setupEntry` instead of the full plugin entry. This makes startup and setup lighter, while still allowing the main plugin entry to wire tools, hooks, or other runtime-only code.
 
-可选：`openclaw.startup.deferConfiguredChannelFullLoadUntilAfterListen` 可以让渠道插件在 gateway 的预监听启动阶段进入同样的 `setupEntry` 路径，即使该渠道已经配置完成。
+Optional: `openclaw.startup.deferConfiguredChannelFullLoadUntilAfterListen` lets a channel plugin follow the same `setupEntry` path during the gateway’s pre-listen startup phase, even if that channel is already configured.
 
-仅当 `setupEntry` 完整覆盖了 gateway 开始监听前必须存在的启动面时才使用此项。实际上，这意味着 setup 入口必须注册 startup 所依赖的每一个渠道拥有的能力，例如：
+Use this only if the setup entry fully covers everything that must exist before the gateway starts listening. In practice, this means the setup entry must register every channel-owned capability that startup depends on, such as:
 
-- 渠道注册本身
-- gateway 开始监听前必须可用的任何 HTTP 路由
-- 在同一窗口中必须存在的任何 gateway 方法、工具或服务
+- channel registration itself
+- any HTTP routes that must be available before the gateway starts listening
+- any gateway methods, tools, or services that must exist in the same window
 
-如果你的完整入口仍然拥有任何必需的启动能力，请不要启用此标志。保持插件使用默认行为，并让 OpenClaw 在启动期间加载完整入口。
+If your full entry still owns any required startup capability, do not enable this flag. Keep the plugin on the default behavior and let OpenClaw load the full entry during startup.
 
-捆绑渠道还可以发布仅 setup 的 contract-surface 辅助函数，core 可以在完整渠道运行时加载前查询这些函数。当前的 setup 提升 surface 是：
+Bundled channels can also publish setup-only contract-surface helper functions that core can query before the full channel runtime loads. The current setup promotion surface is:
 
 - `singleAccountKeysToMove`
 - `namedAccountPromotionKeys`
 - `resolveSingleAccountPromotionTarget(...)`
 
-当 core 需要在不加载完整插件入口的情况下，将旧的单账户渠道配置提升为 `channels.<id>.accounts.*` 时，会使用该 surface。Matrix 是当前的捆绑示例：当已存在命名账户时，它只会把 auth/bootstrap 键移动到已命名的提升账户中，并且可以保留一个已配置的非规范默认账户键，而不是始终创建 `accounts.default`。
+Core uses this surface when it needs to promote legacy single-account channel configs into `channels.<id>.accounts.*` without loading the full plugin entry. Matrix is the current bundled example: when named accounts already exist, it only moves auth/bootstrap keys into the named promoted account and can preserve a configured non-default account key instead of always creating `accounts.default`.
 
-这些 setup 补丁适配器保持了捆绑 contract-surface 发现的惰性。导入时保持轻量；promotion surface 只在首次使用时加载，而不是在模块导入时重新进入捆绑渠道的启动流程。
+These setup patch adapters preserve lazy discovery of bundled contract-surface functionality. Keep imports lightweight; the promotion surface is loaded only on first use, rather than re-entering bundled channel startup during module import.
 
-当这些启动 surface 包含 gateway RPC 方法时，请将它们放在插件专属前缀下。core 管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）仍然保留，并且始终解析为 `operator.admin`，即使插件请求了更窄的作用域。
+When these startup surfaces include gateway RPC methods, place them under plugin-specific prefixes. Core-managed namespaces (`config.*`, `exec.approvals.*`, `wizard.*`, `update.*`) remain reserved and always resolve as `operator.admin`, even when a plugin requests a narrower scope.
 
-示例：
+Example:
 
 ```json
 {
@@ -773,11 +779,11 @@ id 变为 `<manifestOrPackageName>/<fileBase>`（存在 manifest id 时以它为
 }
 ```
 
-### 渠道目录元数据
+### Channel Directory Metadata
 
-渠道插件可以通过 `openclaw.channel` 宣告 setup/discovery 元数据，并通过 `openclaw.install` 提供安装提示。这使 core 目录保持无数据状态。
+Channel plugins can declare setup/discovery metadata through `openclaw.channel` and provide installation guidance through `openclaw.install`. This keeps the core directory free of data.
 
-示例：
+Example:
 
 ```json
 {
@@ -787,10 +793,10 @@ id 变为 `<manifestOrPackageName>/<fileBase>`（存在 manifest id 时以它为
     "channel": {
       "id": "nextcloud-talk",
       "label": "Nextcloud Talk",
-      "selectionLabel": "Nextcloud Talk（自托管）",
+      "selectionLabel": "Nextcloud Talk（self-hosted）",
       "docsPath": "/channels/nextcloud-talk",
       "docsLabel": "nextcloud-talk",
-      "blurb": "通过 Nextcloud Talk webhook bots 提供自托管聊天。",
+      "blurb": "Self-hosted chat via Nextcloud Talk webhook bots.",
       "order": 65,
       "aliases": ["nc-talk", "nc"]
     },
@@ -803,43 +809,43 @@ id 变为 `<manifestOrPackageName>/<fileBase>`（存在 manifest id 时以它为
 }
 ```
 
-除最小示例之外，`openclaw.channel` 还有一些有用字段：
+Beyond the minimal example, `openclaw.channel` has several useful fields:
 
-- `detailLabel`：用于更丰富目录/状态界面的次级标签
-- `docsLabel`：覆盖文档链接的链接文本
-- `preferOver`：此目录条目应优先于哪些低优先级插件/渠道 id
-- `selectionDocsPrefix`、`selectionDocsOmitLabel`、`selectionExtras`：选择界面的文案控制
-- `markdownCapable`：将渠道标记为支持 markdown，用于出站格式化决策
-- `exposure.configured`：设为 `false` 时，从已配置渠道列表界面隐藏该渠道
-- `exposure.setup`：设为 `false` 时，从交互式 setup/configure 选择器中隐藏该渠道
-- `exposure.docs`：将该渠道在文档导航界面中标记为内部/私有
-- `showConfigured` / `showInSetup`：仍接受的旧版别名；优先使用 `exposure`
-- `quickstartAllowFrom`：让渠道进入标准 quickstart 的 `allowFrom` 流程
-- `forceAccountBinding`：即使只有一个账户也要求显式账户绑定
-- `preferSessionLookupForAnnounceTarget`：解析 announce 目标时优先使用会话查找
+- `detailLabel`: secondary label for richer directory/status surfaces
+- `docsLabel`: overrides the link text for documentation links
+- `preferOver`: which lower-priority plugin/channel ids this directory entry should outrank
+- `selectionDocsPrefix`, `selectionDocsOmitLabel`, `selectionExtras`: copy controls for the selection UI
+- `markdownCapable`: marks the channel as supporting markdown for outbound formatting decisions
+- `exposure.configured`: when set to `false`, hides the channel from the configured channels list
+- `exposure.setup`: when set to `false`, hides the channel from the interactive setup/configure picker
+- `exposure.docs`: marks the channel as internal/private in documentation navigation
+- `showConfigured` / `showInSetup`: older aliases still accepted; prefer `exposure`
+- `quickstartAllowFrom`: lets the channel participate in the standard quickstart `allowFrom` flow
+- `forceAccountBinding`: requires explicit account binding even when there is only one account
+- `preferSessionLookupForAnnounceTarget`: prefers session lookup when resolving announce targets
 
-OpenClaw 还可以合并**外部渠道目录**（例如 MPM registry 导出）。将 JSON 文件放在以下任一位置：
+OpenClaw can also merge **external channel catalogs** (for example, MPM registry exports). Put a JSON file in any of these locations:
 
 - `~/.openclaw/mpm/plugins.json`
 - `~/.openclaw/mpm/catalog.json`
 - `~/.openclaw/plugins/catalog.json`
 
-或者将 `OPENCLAW_PLUGIN_CATALOG_PATHS`（或 `OPENCLAW_MPM_CATALOG_PATHS`）指向一个或多个 JSON 文件（以逗号/分号/`PATH` 分隔）。每个文件应包含 `{ "entries": [ { "name": "@scope/pkg", "openclaw": { "channel": {...}, "install": {...} } } ] }`。解析器也接受 `"packages"` 或 `"plugins"` 作为 `"entries"` 键的旧版别名。
+Or point `OPENCLAW_PLUGIN_CATALOG_PATHS` (or `OPENCLAW_MPM_CATALOG_PATHS`) at one or more JSON files, separated by commas/semicolons/`PATH`. Each file should contain `{ "entries": [ { "name": "@scope/pkg", "openclaw": { "channel": {...}, "install": {...} } } ] }`. The parser also accepts `"packages"` or `"plugins"` as legacy aliases for the `"entries"` key.
 
-生成的渠道目录条目和 provider 安装目录条目，会在原始 `openclaw.install` 块旁边暴露归一化后的安装源事实。归一化事实会标识 npm spec 是精确版本还是浮动选择器、是否存在预期的完整性元数据，以及是否也可用本地源路径。当目录/包身份已知时，归一化事实会在解析出的 npm 包名与该身份不一致时发出警告。当 `defaultChoice` 无效或指向不可用来源时，以及当 npm 完整性元数据存在但没有有效 npm 来源时，它们也会发出警告。消费者应将 `installSource` 视为附加的可选字段，这样手工构建的条目和目录 shim 就不必自行合成它。
-这使 onboarding 和诊断可以解释 source-plane 状态，而无需导入插件运行时。
+The generated channel catalog entries and provider install catalog entries expose normalized install-source facts alongside the original `openclaw.install` block. The normalized facts identify whether the npm spec is an exact version or a floating selector, whether expected integrity metadata exists, and whether a local source path is also available. When the catalog/package identity is known, the normalized facts warn if the resolved npm package name does not match that identity. They also warn when `defaultChoice` is invalid or points to an unavailable source, and when npm integrity metadata exists but there is no valid npm source. Consumers should treat `installSource` as an additional optional field so hand-built entries and catalog shims do not need to synthesize it themselves.
+This lets onboarding and diagnostics explain source-plane state without importing plugin runtime.
 
-官方外部 npm 条目应优先使用精确的 `npmSpec` 加上
-`expectedIntegrity`。裸包名和 dist-tag 仍然可以用于兼容，
-但它们会暴露 source-plane 警告，这样目录就可以朝着固定版本、带完整性校验的安装方式演进，而不会破坏现有插件。
-当从本地目录路径进行 onboarding 安装时，它会记录一个受管理的插件
-插件索引条目，带有 `source: "path"`，并在可能时带有一个相对于工作区的
-`sourcePath`。绝对的运行加载路径仍保留在
-`plugins.load.paths` 中；安装记录避免把本地工作站路径复制进长期配置。
-这使得本地开发安装对 source-plane 诊断仍然可见，同时不会增加第二个原始文件系统路径泄露面。
-持久化的 `installed_plugin_index` SQLite 表是安装
-源的事实来源，并且可以在不加载插件运行时模块的情况下刷新。
-即使插件 manifest 丢失或无效，它的 `installRecords` 映射仍然是持久的；它的 `plugins` 载荷是一个可重建的 manifest 视图。
+Official external npm entries should prefer an exact `npmSpec` plus
+`expectedIntegrity`. Bare package names and dist-tags are still allowed for compatibility,
+but they will surface source-plane warnings so catalogs can move toward pinned, integrity-verified installs without breaking existing plugins.
+When onboarding from a local directory path, it records a managed plugin
+plugin index entry with `source: "path"` and, when possible, a
+workspace-relative `sourcePath`. The absolute runtime load path remains in
+`plugins.load.paths`; the install record avoids copying local workstation paths into long-term config.
+This keeps local development installs visible to source-plane diagnostics without adding a second raw filesystem path leakage surface.
+The persistent `installed_plugin_index` SQLite table is the source of truth for install
+sources and can be refreshed without loading plugin runtime modules.
+Even if a plugin manifest is missing or invalid, its `installRecords` map remains persistent; its `plugins` payload is a reconstructable manifest view.
 
 ## 上下文引擎插件
 
@@ -849,6 +855,7 @@ OpenClaw 还可以合并**外部渠道目录**（例如 MPM registry 导出）�
 
 ```ts
 import { buildMemorySystemPromptAddition } from "openclaw/plugin-sdk/core";
+import { resolveSessionAgentId } from "openclaw/plugin-sdk/memory-host-core";
 
 export default function (api) {
   api.registerContextEngine("lossless-claw", (ctx) => ({
@@ -856,13 +863,15 @@ export default function (api) {
     async ingest() {
       return { ingested: true };
     },
-    async assemble({ messages, availableTools, citationsMode }) {
+    async assemble({ messages, sessionKey, availableTools, citationsMode }) {
       return {
         messages,
         estimatedTokens: 0,
         systemPromptAddition: buildMemorySystemPromptAddition({
           availableTools: availableTools ?? new Set(),
           citationsMode,
+          agentId: resolveSessionAgentId({ config: ctx.config, sessionKey }),
+          agentSessionKey: sessionKey,
         }),
       };
     },
@@ -884,6 +893,7 @@ import {
   buildMemorySystemPromptAddition,
   delegateCompactionToRuntime,
 } from "openclaw/plugin-sdk/core";
+import { resolveSessionAgentId } from "openclaw/plugin-sdk/memory-host-core";
 
 export default function (api) {
   api.registerContextEngine("my-memory-engine", (ctx) => ({
@@ -895,13 +905,15 @@ export default function (api) {
     async ingest() {
       return { ingested: true };
     },
-    async assemble({ messages, availableTools, citationsMode }) {
+    async assemble({ messages, sessionKey, availableTools, citationsMode }) {
       return {
         messages,
         estimatedTokens: 0,
         systemPromptAddition: buildMemorySystemPromptAddition({
           availableTools: availableTools ?? new Set(),
           citationsMode,
+          agentId: resolveSessionAgentId({ config: ctx.config, sessionKey }),
+          agentSessionKey: sessionKey,
         }),
       };
     },

@@ -98,20 +98,26 @@ Sessions 会在 `session.reset` 下到期前重复使用：
 
 ## 状态存放位置
 
-- **存储：** `~/.openclaw/agents/<agentId>/sessions/sessions.json`
-- **转录：** `~/.openclaw/agents/<agentId>/sessions/<sessionId>.jsonl`
+- **运行时会话行：** `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
+- **归档的转录文件：** `~/.openclaw/agents/<agentId>/sessions/`
+- **旧版行迁移来源：** `~/.openclaw/agents/<agentId>/sessions/sessions.json`
 
-`sessions.json` 保持独立的生命周期时间戳：
+每个 agent 的 SQLite 数据库中的会话行会保留独立的生命周期
+时间戳：
 
 - `sessionStartedAt`：当前 `sessionId` 开始的时间；每日重置使用它。
 - `lastInteractionAt`：最后一次会延长空闲时长的用户/频道交互。
 - `updatedAt`：存储行最后一次变更；适合用于列表和清理，但
   不作为每日/空闲重置新鲜度的权威依据。
 
-没有 `sessionStartedAt` 的旧记录会在可用时从转录 JSONL
-会话头中解析。如果更旧的记录也缺少 `lastInteractionAt`，
-则空闲新鲜度会回退到该会话的开始时间，而不是后续的记账
-写入时间。
+在从旧版本安装迁移时，网关启动和 `openclaw doctor
+--fix` 会自动将旧版 `sessions.json` 行以及热转录 JSONL 历史导入到
+SQLite 中。没有 `sessionStartedAt` 的行会在可用时从旧版转录 JSONL 会话头中解析。
+如果较旧的行也缺少 `lastInteractionAt`，空闲新鲜度会回退到该会话开始时间，
+而不是回退到更晚的账务写入时间。需要显式
+检查或验证证据时，请使用 `openclaw doctor --session-sqlite inspect
+--session-sqlite-all-agents` 以及 [Doctor 迁移
+顺序](/cli/doctor#session-sqlite-migration)。
 
 ## 会话维护
 
@@ -150,13 +156,14 @@ Gateway 的 model-run 探测会话默认是短生命周期。匹配 `agent:*:exp
 
 ## 延伸阅读
 
-- [会话裁剪](/concepts/session-pruning) - 裁剪工具结果
-- [压缩](/concepts/compaction) - 总结长对话
+- [会话搜索](/concepts/session-search) - 在过去的对话记录中进行全文检索
+- [会话修剪](/concepts/session-pruning) - 裁剪工具结果
+- [压缩](/concepts/compaction) - 对长对话进行摘要
 - [会话工具](/concepts/session-tool) - 用于跨会话工作的代理工具
 - [会话管理深度解析](/reference/session-management-compaction) -
-  存储 schema、转录、发送策略、来源元数据和高级配置
-- [多代理](/concepts/multi-agent) - 代理之间的路由和会话隔离
-- [后台任务](/automation/tasks) - 分离的工作如何创建带有会话引用的任务记录
+  存储模式、对话记录、发送策略、来源元数据和高级配置
+- [多代理](/concepts/multi-agent) - 在代理之间进行路由和会话隔离
+- [后台任务](/automation/tasks) - 分离出的工作如何创建带有会话引用的任务记录
 - [通道路由](/channels/channel-routing) - 入站消息如何路由到会话
 
 ## 相关内容

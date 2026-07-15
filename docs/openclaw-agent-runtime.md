@@ -50,17 +50,17 @@ pnpm test:live src/agents/embedded-agent-runner-extraparams.live.test.ts
 
 | 路径                                           | 内容                                                               |
 | ---------------------------------------------- | ------------------------------------------------------------------ |
-| `openclaw.json`                                | 配置                                                              |
-| `state/openclaw.sqlite`                        | 共享运行时状态数据库                                                |
-| `agents/<agentId>/agent/openclaw-agent.sqlite` | 每个代理的模型认证配置文件（API 密钥 + OAuth）和运行时状态          |
-| `credentials/`                                | 认证配置文件存储之外的提供方/通道凭据                                |
-| `agents/<agentId>/sessions/`                  | 会话转录以及 `sessions.json` 索引                                     |
-| `sessions/`                                   | 旧版单代理会话存储（仅旧安装使用）                                  |
-| `workspace/`                                   | 默认代理工作区（额外代理使用 `workspace-<agentId>`）                |
+| `openclaw.json`                                | 配置                                                             |
+| `state/openclaw.sqlite`                        | 共享运行时状态数据库                                      |
+| `agents/<agentId>/agent/openclaw-agent.sqlite` | 每个代理的模型认证配置文件（API 密钥 + OAuth）和运行时状态 |
+| `credentials/`                                 | 身份验证配置文件存储之外的提供方/通道凭据        |
+| `agents/<agentId>/sessions/`                   | 转录历史和旧版会话迁移来源            |
+| `sessions/`                                    | 旧版单代理会话存储（仅限旧安装）              |
+| `workspace/`                                   | 默认代理工作区（额外代理使用 `workspace-<agentId>`）   |
 
 删除这些路径即可完全重置。更精简的重置方式：
 
-- 仅会话：删除该代理的 `agents/<agentId>/sessions/`。
+- 仅会话：不要删除 `agents/<agentId>/agent/openclaw-agent.sqlite`；会话行与其他每个代理的状态一起保存在那里。使用 `/new` 或 `/reset` 为单个聊天开始一个新会话，并使用 `openclaw sessions cleanup` 进行会话维护。
 - 保留认证：保留 `agents/<agentId>/agent/openclaw-agent.sqlite` 和 `credentials/`。
 
 旧版 `auth-profiles.json` 文件在运行时不再读取；

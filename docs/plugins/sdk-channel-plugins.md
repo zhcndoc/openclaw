@@ -33,7 +33,7 @@ read_when:
 核心负责共享消息工具、提示词接线、外层会话键形状、
 通用的 `:thread:` 记账以及分发。
 
-## Message adapter
+## Message 适配器
 
 使用 `openclaw/plugin-sdk/channel-outbound` 中的 `defineChannelMessageAdapter` 暴露一个 `message` 适配器。只声明你的原生传输实际支持的、可持久化的最终发送能力，并通过一个契约测试来证明原生副作用和返回的收据。文本/媒体发送应指向与旧版 `outbound` 适配器相同的传输函数。完整的 API 契约、能力矩阵、收据规则、实时预览定稿、接收确认策略、测试和迁移表，请参见
 [Channel outbound API](/plugins/sdk-channel-outbound)。
@@ -84,7 +84,15 @@ read_when:
 
 当插件代码需要规范化类似 route 的字段、比较子 thread 与其父 route，或从 `{ channel, to, accountId, threadId }` 构建稳定的去重 key 时，请使用 `openclaw/plugin-sdk/channel-route`。这个 helper 会像 core 一样规范化数字类型的 thread id，因此应优先于临时的 `String(threadId)` 比较。具有 provider 特定目标语法的插件应暴露 `messaging.resolveOutboundSessionRoute(...)`，以便 core 无需 parser shim 就能获取 provider 原生的 session 和 thread 身份。
 
-## 审批与通道能力
+### Account-scoped conversation binding support
+
+当 channel 支持通用的当前会话绑定时，将 `conversationBindings.supportsCurrentConversationBinding` 设为 true。`createChatChannelPlugin(...)` 默认会将这个静态能力设为 `true`。
+
+如果支持情况因已配置账号而异，还应实现 `conversationBindings.isCurrentConversationBindingSupported({ accountId })`。core 只有在静态能力启用后才会评估这个同步 hook。返回 `false` 会使该账号不可用通用的当前会话能力、bind、lookup、list、touch 和 unbind 操作。省略该 hook 则会把静态能力应用于每个账号。
+
+请从已加载的账号配置或运行时状态中解析答案。这个 hook 只会对通用当前会话绑定进行门控；它不会替代已配置的绑定规则或插件拥有的会话路由。契约测试应至少覆盖一个支持账号和一个不支持账号，并通过 `openclaw/plugin-sdk/channel-core` 导出的 `ChannelPlugin["conversationBindings"]` 契约来验证。
+
+## 审批和通道能力
 
 大多数通道插件不需要审批专用代码。Core 负责同聊天室的
 `/approve`、共享的审批按钮载荷以及通用的回退投递。
@@ -159,35 +167,47 @@ core 不再从该对象读取审批认证钩子。
 
 其他审批帮助器：
 
-- 当某个通道同时支持 session-origin 原生投递和显式审批转发目标时，使用
-  `openclaw/plugin-sdk/approval-native-runtime` 中的
-  `createNativeApprovalChannelRouteGates`。
-  该 helper 集中处理审批配置选择、`mode` 处理、agent/session 过滤、账户绑定、
-  session-target 匹配和目标列表匹配，而调用方仍负责通道 id、默认转发模式、
-  账户查找、transport-enabled 检查、目标规范化以及 turn-source 目标解析。
-  不要用它来创建 core 拥有的通道策略默认值；请显式传入该通道文档化的默认 mode。
-- `createChannelNativeOriginTargetResolver` 默认使用共享的 channel-route 匹配器来处理
-  `{ to, accountId, threadId }` 目标。只有当通道具有 provider 特定的等价规则时，
-  才传入 `targetsMatch`，例如 Slack 的 timestamp 前缀匹配。
-  当通道需要在默认 route matcher 或自定义 `targetsMatch` 回调运行前规范化 provider id，
-  同时保留原始目标用于投递时，传入 `normalizeTargetForMatch`。
-  仅当最终解析出的投递目标本身也应该被规范化时，才使用 `normalizeTarget`。
-- 如果通道需要运行时拥有的对象，例如 client、token、Bolt app 或 webhook receiver，
-  请通过 `openclaw/plugin-sdk/channel-runtime-context` 注册它们。
-  通用的 runtime-context registry 让 core 能够基于通道启动状态引导能力驱动的处理器，
-  而无需增加审批专用的包装粘合层。
-- 只有在能力驱动的接口仍不足以表达时，才使用更底层的
+- 当通道同时支持 session-origin 原生投递和显式审批转发目标时，使用
+  `openclaw/plugin-sdk/approval-native-runtime` 中的 `createNativeApprovalChannelRouteGates`。
+  该帮助器集中处理审批配置选择、`mode` 处理、agent/session
+  过滤、账户绑定、session-target 匹配以及目标列表匹配，
+  而调用方仍然负责通道 id、默认转发模式、账户
+  查找、传输启用检查、目标规范化以及 turn-source
+  目标解析。不要用它来创建 core 拥有的通道策略
+  默认值；请显式传入通道文档中定义的默认模式。
+- `createChannelNativeOriginTargetResolver` 默认使用共享的 channel-route
+  matcher 来处理 `{ to, accountId, threadId }` 目标。只有当通道具有提供商特定的等价规则时，
+  才传入 `targetsMatch`，例如 Slack 的 timestamp 前缀匹配。若通道需要在默认 route
+  matcher 或自定义 `targetsMatch` 回调执行前规范化提供商 id，同时保留
+  原始目标用于投递，请传入 `normalizeTargetForMatch`。只有当解析后的
+  投递目标本身也应被规范化时，才使用 `normalizeTarget`。
+- 如果通道需要 runtime 拥有的对象，例如 client、token、Bolt
+  app 或 webhook receiver，请通过
+  `openclaw/plugin-sdk/channel-runtime-context` 注册它们。
+  通用的 runtime-context 注册表允许 core 在不增加审批专用包装胶水的情况下，
+  从通道启动状态引导基于能力的处理器。
+- 仅当基于能力的切入点还不够表达时，才使用更底层的
   `createChannelApprovalHandler` 或 `createChannelNativeApprovalRuntime`。
-- 原生审批通道必须通过这些 helper 同时路由 `accountId` 和 `approvalKind`。
-  `accountId` 将多账户审批策略限定在正确的 bot 账户上，`approvalKind` 则让通道无需在 core 中写死分支
-  也能区分 exec 与 plugin 审批行为。
-- Core 也负责审批重新路由通知。通道插件不应通过
-  `createChannelNativeApprovalRuntime` 自己发送“审批已转到 DM / 另一个通道”的后续消息；
-  相反，应通过共享的审批能力 helper 暴露准确的 origin + approver-DM 路由，
-  让 core 在回帖给发起聊天前先汇总实际投递情况。
-- 保持投递出去的审批 id kind 全链路一致。原生客户端不应根据通道本地状态猜测或重写 exec 与 plugin 审批路由。
-- 不同的审批 kind 可以有意暴露不同的原生界面。当前捆绑示例：Matrix 对 exec 和 plugin 审批保留相同的原生 DM/channel 路由和 reaction 体验，同时仍允许认证按审批 kind 区分；Slack 则对 exec 和 plugin id 都保留原生审批路由可用。
-- `createApproverRestrictedNativeApprovalAdapter` 仍作为兼容包装器存在，但新代码应优先使用 capability builder，并在插件上暴露 `approvalCapability`。
+- 原生审批通道必须通过这些帮助器同时路由 `accountId` 和 `approvalKind`。
+  `accountId` 确保多账户审批策略限定在正确的 bot 账户上，
+  而 `approvalKind` 则让 exec 与 plugin 的审批行为无需在 core
+  中硬编码分支即可对通道可用。
+- Core 也负责审批重路由通知。通道插件不应在
+  `createChannelNativeApprovalRuntime` 中自行发送“审批已转到 DM / 其他通道”的后续消息；
+  应改为通过共享审批能力帮助器暴露准确的 origin +
+  approver-DM 路由，并让 core 在向发起聊天发送任何通知前汇总实际投递结果。
+- 端到端保留已投递审批 id 的类型。原生客户端不应根据通道本地
+  状态猜测或重写 exec 与 plugin 审批路由。
+- 将显式的 `approvalKind` 传给 `resolveApprovalOverGateway`。这会使用
+  规范的 `approval.resolve` 服务，并在其他界面先响应时返回已记录的获胜者。
+  较旧的显式 `resolveMethod` 输入仍保留给命令驱动的控制；新的原生动作
+  不得使用它，也不得从 id 推断 kind。
+- 不同的 approval kind 可以有意暴露不同的原生界面。当前捆绑示例：
+  Matrix 对 exec 和 plugin 审批保持相同的原生 DM/channel 路由和 reaction
+  交互体验，同时仍允许认证按 approval kind 区分；Slack 对 exec 和 plugin id
+  都保持可用的原生审批路由。
+- `createApproverRestrictedNativeApprovalAdapter` 仍作为兼容包装器存在，但新代码
+  应优先使用 capability builder，并在插件上暴露 `approvalCapability`。
 
 ### 更窄的审批运行时子路径
 
@@ -197,6 +217,7 @@ core 不再从该对象读取审批认证钩子。
 - `openclaw/plugin-sdk/approval-client-runtime`
 - `openclaw/plugin-sdk/approval-delivery-runtime`
 - `openclaw/plugin-sdk/approval-gateway-runtime`
+- `openclaw/plugin-sdk/approval-reference-runtime`
 - `openclaw/plugin-sdk/approval-handler-adapter-runtime`
 - `openclaw/plugin-sdk/approval-handler-runtime`
 - `openclaw/plugin-sdk/approval-native-runtime`
@@ -228,7 +249,8 @@ core 不再从该对象读取审批认证钩子。
 `createOptionalChannelSetupSurface(...)`。生成的 adapter/wizard 会在配置写入和最终化时
 闭合失败，并且它们会在校验、finalize 和 docs-link 文案中复用同一条“需要安装”的消息。
 
-如果你的通道支持由环境驱动的设置或认证，并且通用启动/配置流程在运行时加载之前就应该知道这些环境名，请在插件 manifest 中通过 `channelEnvVars` 声明它们。仅将通道运行时的 `envVars` 或本地常量用于面向操作员的文案。
+如果你的通道支持由环境驱动的设置或认证，并且通用启动/配置流程在运行时加载之前就应该知道这些环境名，请在插件 manifest 中通过
+`channelEnvVars` 声明它们。仅将通道运行时的 `envVars` 或本地常量用于面向操作员的文案。
 
 如果你的通道可以在插件运行时启动之前就出现在 `status`、`channels list`、`channels status` 或 SecretRef 扫描中，请在 `package.json` 里添加 `openclaw.setupEntry`。该入口点应能在只读命令路径中安全导入，并应返回这些汇总所需的通道元数据、设置安全的 config adapter、状态 adapter，以及通道 secret target 元数据。不要从 setup entry 启动客户端、监听器或传输运行时。
 
@@ -722,10 +744,10 @@ if (decision.shouldSkip) return;
 
 ## 下一步
 
-- [提供方插件](/plugins/sdk-provider-plugins) - 如果你的插件也提供模型
-- [SDK 概览](/plugins/sdk-overview) - 完整的子路径导入参考
-- [SDK 测试](/plugins/sdk-testing) - 测试工具和契约测试
-- [插件清单](/plugins/manifest) - 完整的清单 schema
+- [Provider plugins](/plugins/sdk-provider-plugins) - If your plugin also provides models
+- [SDK overview](/plugins/sdk-overview) - Complete subpath import reference
+- [SDK testing](/plugins/sdk-testing) - Testing tools and contract testing
+- [Plugin manifest](/plugins/manifest) - Complete manifest schema
 
 ## 相关内容
 

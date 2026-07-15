@@ -121,7 +121,16 @@ openclaw googlemeet create --access-type OPEN --transport chrome-node --mode age
 
 设置 `"mode": "transcribe"` 可跳过双工实时桥接（不需要 BlackHole/SoX，也没有对讲）。转写模式下的 Chrome 加入也会跳过 OpenClaw 的麦克风/摄像头权限授予，以及 Meet 的 **Use microphone** 路径；如果 Meet 显示音频选择插页，自动化会优先尝试 **Continue without microphone**。该模式下托管的 Chrome 传输会尽力安装 Meet 字幕观察器。`googlemeet status --json` 和 `googlemeet doctor` 会报告 `captioning`、`captionsEnabledAttempted`、`transcriptLines`、`lastCaptionAt`、`lastCaptionSpeaker`、`lastCaptionText` 以及 `recentTranscript` 尾部内容。
 
-进行一个是/否的监听探测：
+对于有界会话转录，请读取精确跟踪的 Meet 标签页：
+
+```bash
+openclaw googlemeet transcript <session-id>
+openclaw googlemeet transcript <session-id> --since <next-index> --json
+```
+
+观察器在 Meet 页面中最多保留 2,000 行已完成的字幕行。可见的渐进式文本会保留在状态健康尾部，直到字幕行完成，因此保存 `nextIndex` 不会跳过后续的文本扩展；离开时会在快照前最终确定可见行。`droppedLines` 会报告因超过上限而从头部丢失的行。最近结束的四个会话转录在网关重启前仍可读取。更早结束的转录会返回 `evicted: true`。这刻意属于运行时内存，而不是持久化的会议历史存储：重启网关、在快照前关闭标签页，或超过文档中说明的上限，都可能丢失字幕。
+
+对于是/否监听探测：
 
 ```bash
 openclaw googlemeet test-listen <meet-url> --transport chrome-node
@@ -133,19 +142,19 @@ openclaw googlemeet test-listen <meet-url> --transport chrome-node
 
 在对讲会话期间，`google_meet` status 会报告 Chrome/音频桥健康状态：`inCall`、`manualActionRequired`、`providerConnected`、`realtimeReady`、`audioInputActive`、`audioOutputActive`、最近的输入/输出时间戳、字节计数器以及桥接关闭状态。托管的 Chrome 会话只有在健康状态报告 `inCall: true` 后才会说出引言/测试短语；否则 `speechReady: false`，语音尝试会被阻止，而不是静默无操作。
 
-通过已登录的 OpenClaw 浏览器配置文件进行本地 Chrome 加入时，麦克风/扬声器路径需要 `BlackHole 2ch`。单个 BlackHole 设备足以进行首次冒烟测试，但可能会产生回声；为获得干净的双工音频，请使用分离的虚拟设备或类似 Loopback 的图谱。
+通过已登录的 OpenClaw 浏览器配置文件进行本地 Chrome 加入时，麦克风/扬声器路径需要 `BlackHole 2ch`。单个 BlackHole 设备足以进行首次烟雾测试，但可能会产生回声；为获得干净的双工音频，请使用分离的虚拟设备或类似 Loopback 的图谱。
 
-## 本地网关 + Parallels Chrome
+## Local Gateway + Parallels Chrome
 
-仅仅为了让 macOS 虚拟机使用 Chrome，并不需要完整的 Gateway 或模型 API key。在本地运行 Gateway 和 agent；在虚拟机中运行 node host。
+Just to let a macOS virtual machine use Chrome, you do not need a full Gateway or model API key. Run Gateway and the agent locally; run the node host in the VM.
 
-| 运行位置             | 内容                                                                                            |
+| Location             | Contents                                                                                            |
 | -------------------- | ----------------------------------------------------------------------------------------------- |
-| Gateway host         | OpenClaw Gateway、agent 工作区、模型/API keys、实时提供商、Google Meet 插件配置 |
-| Parallels macOS VM   | OpenClaw CLI/node host、Chrome、SoX、BlackHole 2ch、已登录 Google 的 Chrome profile        |
-| VM 中不需要          | Gateway service、agent 配置、模型提供商设置                                             |
+| Gateway host         | OpenClaw Gateway, agent workspace, model/API keys, real-time providers, Google Meet plugin config |
+| Parallels macOS VM   | OpenClaw CLI/node host, Chrome, SoX, BlackHole 2ch, Chrome profile signed into Google        |
+| Not needed in VM     | Gateway service, agent config, model provider settings                                             |
 
-安装虚拟机依赖，重启，验证：
+Install VM dependencies, reboot, verify:
 
 ```bash
 brew install blackhole-2ch sox
@@ -154,21 +163,21 @@ system_profiler SPAudioDataType | grep -i BlackHole
 command -v sox
 ```
 
-在虚拟机中启用插件并启动 node host：
+Enable the plugin and start the node host in the VM:
 
 ```bash
 openclaw plugins enable google-meet
 openclaw node run --host <gateway-host> --port 18789 --display-name parallels-macos
 ```
 
-如果 `<gateway-host>` 是一个没有 TLS 的 LAN IP，请为该受信任的私有网络启用此选项：
+If `<gateway-host>` is a LAN IP without TLS, enable this option for that trusted private network:
 
 ```bash
 OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 \
   openclaw node run --host <gateway-lan-ip> --port 18789 --display-name parallels-macos
 ```
 
-安装为 LaunchAgent 时也使用相同的标志（它是进程环境，在安装命令执行时会保存在 LaunchAgent 环境中，而不是 `openclaw.json` 设置）：
+When installing as a LaunchAgent, use the same flag as well (it is a process environment and will be preserved in the LaunchAgent environment at install time, not in `openclaw.json` settings):
 
 ```bash
 OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 \
@@ -176,7 +185,7 @@ OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 \
 openclaw node restart
 ```
 
-在 Gateway host 上批准该 node，然后确认它同时声明了 `googlemeet.chrome` 和 browser capability/`browser.proxy`：
+Approve the node on the Gateway host, then confirm it advertises both `googlemeet.chrome` and browser capability/`browser.proxy`:
 
 ```bash
 openclaw devices list
@@ -184,7 +193,7 @@ openclaw devices approve <requestId>
 openclaw nodes status
 ```
 
-将 Meet 路由通过该 node：
+Route Meet through that node:
 
 ```json5
 {
@@ -214,33 +223,33 @@ openclaw nodes status
 }
 ```
 
-现在从 Gateway host 正常加入：
+Now join normally from the Gateway host:
 
 ```bash
 openclaw googlemeet join https://meet.google.com/abc-defg-hij
 ```
 
-若要进行一个单命令冒烟测试，它会创建或复用会话、说出已知短语并打印会话健康状态：
+For a one-command smoke test, which creates or reuses a session, speaks a known phrase, and prints session health:
 
 ```bash
 openclaw googlemeet test-speech https://meet.google.com/abc-defg-hij
 ```
 
-在实时加入期间，浏览器自动化会填写访客名称，点击“加入/请求加入”，并在出现 Meet 首次运行的“使用麦克风”提示时接受它（或者在仅观察加入以及仅浏览器会议创建时选择“继续且不使用麦克风”）。如果 profile 已退出登录、Meet 正在等待主持人批准、Chrome 需要麦克风/摄像头权限，或者 Meet 卡在未解决的提示上，结果会报告 `manualActionRequired: true`，并附带 `manualActionReason` 和 `manualActionMessage`。停止重试，报告该消息以及 `browserUrl`/`browserTitle`，并且仅在手动操作完成后再重试。
+During live join, browser automation will fill in the guest name, click Join/Request to join, and accept the Meet first-run "Use microphone" prompt if it appears (or choose Continue without microphone for observe-only joins and browser-only meeting creation). If the profile is signed out, Meet is waiting for host approval, Chrome needs microphone/camera permissions, or Meet is stuck on an unresolved prompt, the result will report `manualActionRequired: true` along with `manualActionReason` and `manualActionMessage`. Stop retrying, report that message plus `browserUrl`/`browserTitle`, and retry only after the manual action is complete.
 
-如果省略 `chromeNode.node`，只有在恰好一个已连接 node 同时声明了 `googlemeet.chrome` 和 browser control 时，OpenClaw 才会自动选择；当连接了多个具备能力的 node 时，请固定设置 `chromeNode.node`（node id、显示名称或远程 IP）。
+If `chromeNode.node` is omitted, OpenClaw will auto-select only when exactly one connected node advertises both `googlemeet.chrome` and browser control; when multiple capable nodes are connected, pin `chromeNode.node` (node id, display name, or remote IP).
 
-### 常见故障检查
+### Common troubleshooting
 
-| 症状                                                  | 修复                                                                                                                                                                                                                                                                 |
+| Symptom                                                  | Fix                                                                                                                                                                                                                                                                 |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Configured Google Meet node ... is not usable: offline` | 固定的 node 已知但不可用。报告该设置阻塞；除非被要求，否则不要静默回退到其他传输方式。                                                                                                                                    |
-| `No connected Google Meet-capable node`                  | 在虚拟机中运行 `openclaw node run`，批准配对，并在该处运行 `openclaw plugins enable google-meet` 和 `openclaw plugins enable browser`。确认 `gateway.nodes.allowCommands` 包含 `googlemeet.chrome` 和 `browser.proxy`。                              |
-| `BlackHole 2ch audio device not found`                   | 在被检查的主机上安装 `blackhole-2ch` 并重启。                                                                                                                                                                                                       |
-| `BlackHole 2ch audio device not found on the node`       | 在虚拟机中安装 `blackhole-2ch` 并重启虚拟机。                                                                                                                                                                                                                |
-| Chrome opens but cannot join                             | 在虚拟机的浏览器 profile 中登录，或者保持 `chrome.guestName` 已设置。访客自动加入通过 node browser proxy 使用 OpenClaw browser automation；将 node 的 `browser.defaultProfile`（或某个命名的现有会话 profile）指向你想要的 profile。 |
-| Duplicate Meet tabs                                      | 保持 `chrome.reuseExistingTab: true`。OpenClaw 会激活同一 URL 的现有标签页，并且在打开另一个标签页之前，创建流程会复用一个进行中的 `.../new` 或 Google 账号提示标签页。                                                                      |
-| No audio                                                 | 将 Meet 的麦克风/扬声器通过 OpenClaw 使用的虚拟音频路径路由；使用独立的虚拟设备或类似 Loopback 的路由来获得干净的双向音频。                                                                                                              |
+| `Configured Google Meet node ... is not usable: offline` | The pinned node is known but unavailable. Report the configuration as blocking; do not silently fall back to another transport unless instructed to do so.                                                                                                            |
+| `No connected Google Meet-capable node`                  | Run `openclaw node run` in the VM, approve pairing, and run `openclaw plugins enable google-meet` and `openclaw plugins enable browser` there. Confirm `gateway.nodes.allowCommands` includes `googlemeet.chrome` and `browser.proxy`.                              |
+| `BlackHole 2ch audio device not found`                   | Install `blackhole-2ch` on the host being checked and reboot.                                                                                                                                                                                                       |
+| `BlackHole 2ch audio device not found on the node`       | Install `blackhole-2ch` in the VM and reboot the VM.                                                                                                                                                                                                                |
+| Chrome opens but cannot join                             | Sign into the browser profile in the VM, or keep `chrome.guestName` set. Guest auto-join uses OpenClaw browser automation via the node browser proxy; point the node's `browser.defaultProfile` (or a named existing session profile) at the profile you want. |
+| Duplicate Meet tabs                                      | Keep `chrome.reuseExistingTab: true`. OpenClaw will activate the existing tab for the same URL, and the creation flow will reuse an in-progress `.../new` or Google account prompt tab before opening another one.                                                  |
+| No audio                                                 | Route Meet's mic/speaker through the virtual audio path used by OpenClaw; use a separate virtual device or Loopback-like routing for clean bidirectional audio.                                                                                                      |
 
 ## 安装说明
 
@@ -714,7 +723,7 @@ API 创建 JSON：
       "-q",
       "-t",
       "coreaudio",
-      "External Microphone",
+      "外接麦克风",
       "-r",
       "24000",
       "-c",
@@ -736,10 +745,10 @@ API 创建 JSON：
     provider: "openai",
     transcriptionProvider: "openai",
     voiceProvider: "google",
-    model: "gemini-2.5-flash-native-audio-preview-12-2025",
+    model: "gemini-3.1-flash-live-preview",
     agentId: "jay",
     toolPolicy: "owner",
-    introMessage: "Say exactly: I'm here.",
+    introMessage: "准确说：I'm here.",
     providers: {
       google: {
         speakerVoice: "Kore",
@@ -805,6 +814,11 @@ API 创建 JSON：
 
 当 `voiceCall.enabled: true`（默认值）且使用 Twilio 传输时，Voice Call 会在打开实时媒体流之前先拨打 DTMF 序列，然后使用保存的开场文本作为初始实时问候。如果未启用 `voice-call`，Google Meet 仍然可以验证并记录拨号计划，但无法发起 Twilio 呼叫。
 
+将 `voiceCall.gatewayUrl` 留空，以使用本地受信任的 Gateway 运行时，这会在整个通话期间保留
+发起调用的 agent。已配置的 Gateway URL 仍然是一个显式的 WebSocket 目标，
+且无法验证插件来源；非默认 agent 加入会直接失败，而不会静默地
+使用另一个 agent。若需要按 agent 路由，请在同一个 Gateway 进程中运行 Google Meet 和 Voice Call。
+
 ## 工具
 
 Agents 使用 `google_meet` 工具：
@@ -820,27 +834,30 @@ Agents 使用 `google_meet` 工具：
 
 | `action`                | 用途                                                                                              |
 | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `join`                  | 加入一个明确的 Meet URL                                                                            |
-| `create`                 | 创建一个空间（并默认加入）；支持 `accessType`/`entryPointAccess`                                    |
-| `status`                | 列出活动会话，或通过 `sessionId` 检查某个会话                                                     |
-| `setup_status`          | 运行与 `googlemeet setup` 相同的检查                                                             |
-| `resolve_space`         | 通过 `spaces.get` 解析一个 URL/代码/`spaces/{id}`                                                 |
-| `preflight`             | 验证 OAuth + 会议解析前置条件                                                                     |
-| `latest`                | 查找某个会议的最新会议记录                                                                        |
-| `calendar_events`       | 预览带有 Meet 链接的 Calendar 事件                                                                 |
-| `artifacts`             | 列出会议记录以及参与者/录音/转录/智能笔记元数据                                                    |
-| `attendance`            | 列出参与者和参与者会话                                                                            |
-| `export`                | 写出 artifacts/attendance/transcript/manifest 捆绑包；将 `"dryRun": true` 用于仅生成 manifest |
-| `recover_current_tab`   | 聚焦/检查现有 Meet 标签页，而不打开新的标签页                                                     |
-| `leave`                 | 结束一个会话（对于委托会话，会挂断底层 Twilio 通话）                                                |
-| `end_active_conference` | 结束 API 管理空间中的活动 Google Meet 会议                                                        |
-| `speak`                 | 给定 `sessionId` 和 `message`，立即让实时代理发言                                                   |
-| `test_speech`           | 创建/复用一个会话，触发已知短语，返回 Chrome 健康状态                                                |
-| `test_listen`           | 创建/复用一个仅观察会话，等待字幕/转录变化                                                         |
+| `join`                  | 加入一个明确的 Meet URL                                                                         |
+| `create`                | 创建一个空间（并默认加入）；支持 `accessType`/`entryPointAccess`                    |
+| `status`                | 列出活动会话，或通过 `sessionId` 检查一个会话                                               |
+| `setup_status`          | 运行与 `googlemeet setup` 相同的检查                                                         |
+| `resolve_space`         | 通过 `spaces.get` 解析 URL/代码/`spaces/{id}`                                                 |
+| `preflight`             | 验证 OAuth + 会议解析前置条件                                                 |
+| `latest`                | 查找某个会议的最新会议记录                                                   |
+| `calendar_events`       | 预览带有 Meet 链接的日历事件                                                           |
+| `artifacts`             | 列出会议记录以及参与者/录制/转录/智能笔记元数据                  |
+| `attendance`            | 列出参与者和参与者会话                                                        |
+| `export`               | 写出 artifacts/attendance/transcript/manifest 捆绑包；将 `"dryRun": true` 设为仅生成 manifest |
+| `recover_current_tab`   | 聚焦/检查现有 Meet 标签页，而不打开新标签                                      |
+| `transcript`            | 读取有边界的字幕转录；`sinceIndex` 从上一次的 `nextIndex` 继续           |
+| `leave`                 | 结束一个会话（Chrome 点击离开；仅关闭它打开的标签页；Twilio 挂断）                        |
+| `end_active_conference` | 结束 API 管理空间中的活动 Google Meet 会议                                    |
+| `speak`                 | 根据 `sessionId` 和 `message` 让实时代理立即发言                        |
+| `test_speech`           | 创建/复用一个会话，触发一个已知短语，返回 Chrome 健康状态                              |
+| `test_listen`           | 创建/复用一个仅观察会话，等待字幕/转录变化                        |
 
 `test_speech` 总是强制使用 `mode: "agent"` 或 `"bidi"`，如果要求在 `mode: "transcribe"` 下运行则会失败，因为仅观察会话不能发声。它的 `speechOutputVerified` 结果基于该调用期间实时音频输出字节数是否增加，因此复用一个带有较早音频的会话不算作一次新的检查。
 
-当 Chrome 在 Gateway 主机上运行时使用 `transport: "chrome"`，当它在配对节点上运行时使用 `transport: "chrome-node"`。在这两种情况下，模型提供方和 `openclaw_agent_consult` 都在 Gateway 主机上运行，因此模型凭据保留在那里。Agent 模式日志会在桥接启动时包含已解析的转录提供方/模型，并在每次合成回复后包含 TTS 提供方/模型/声音/输出格式/采样率。原始的 `mode: "realtime"` 仍作为 `mode: "agent"` 的旧版兼容别名被接受，但不再在工具的 `mode` 枚举中进行宣传。
+对于 Chrome 传输方式，`leave` 在点击 Meet 的离开通话按钮后会保留一个复用的用户自有标签页保持打开。由 OpenClaw 打开的标签页会在离开后关闭。
+
+当 Chrome 运行在 Gateway 主机上时使用 `transport: "chrome"`，当它运行在配对节点上时使用 `transport: "chrome-node"`。在这两种情况下，模型提供方和 `openclaw_agent_consult` 都运行在 Gateway 主机上，因此模型凭据保留在那里。Agent 模式日志会在桥接启动时包含解析后的转录提供方/模型，并在每次合成回复后包含 TTS 提供方/模型/语音/输出格式/采样率。原始 `mode: "realtime"` 仍作为 `mode: "agent"` 的旧兼容别名被接受，但它不再出现在工具的 `mode` 枚举中。
 
 带有 API 支持房间和显式访问策略的 `create`：
 
@@ -894,7 +911,7 @@ Agents 使用 `google_meet` 工具：
 | `providerConnected` / `realtimeReady`                                 | 实时语音桥接状态                                                                                                          |
 | `lastInputAt` / `lastOutputAt`                                        | 最近一次从桥接接收/发送的音频                                                                                              |
 | `audioOutputRouted` / `audioOutputDeviceLabel`                        | Meet 标签页的媒体输出是否已主动路由到桥接的 BlackHole 设备                                                                 |
-| `lastSuppressedInputAt` / `suppressedInputBytes`                      | 在助手播放 активе 时被忽略的回环输入                                                                                       |
+| `lastSuppressedInputAt` / `suppressedInputBytes`                      | 在助手播放 აქტive 时被忽略的回环输入                                                                                       |
 
 ## Agent 和 bidi 模式
 
@@ -912,7 +929,7 @@ Agents 使用 `google_meet` 工具：
 `realtime.toolPolicy` 控制 consult 运行：
 
 | 策略             | 行为                                                                                                                         |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | `safe-read-only` | 暴露 consult 工具；将常规 agent 的工具限制为 `read`、`web_search`、`web_fetch`、`x_search`、`memory_search`、`memory_get` |
 | `owner`          | 暴露 consult 工具；允许常规 agent 使用其正常的工具策略                                                                      |
 | `none`           | 不向实时语音模型暴露 consult 工具                                                                                             |

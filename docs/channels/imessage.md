@@ -7,7 +7,7 @@ title: "iMessage"
 ---
 
 <Note>
-对于 OpenClaw iMessage 部署，请在已登录的 macOS Messages 主机上使用 `imsg`。如果你的 Gateway 运行在 Linux 或 Windows 上，请将 `channels.imessage.cliPath` 指向一个通过 SSH 在 Mac 上运行 `imsg` 的包装器。
+对于常见的 OpenClaw iMessage 部署，请在同一台已登录的 macOS Messages 主机上运行 Gateway 和 `imsg`。如果你的 Gateway 运行在其他位置，请将 `channels.imessage.cliPath` 指向一个透明的 SSH 包装器，由其在 Mac 上运行 `imsg`。
 
 **入站恢复是自动的。** 在桥接或网关重启后，iMessage 会重放停机期间遗漏的消息，并抑制 Apple 在 Push 恢复后可能刷出的过时“积压炸弹”，通过去重确保不会重复分发任何内容。无需启用任何配置——请参见[桥接或网关重启后的入站恢复](#inbound-recovery-after-a-bridge-or-gateway-restart)。
 </Note>
@@ -16,10 +16,12 @@ title: "iMessage"
 BlueBubbles 支持已被移除。请将 `channels.bluebubbles` 配置迁移到 `channels.imessage`；OpenClaw 仅通过 `imsg` 支持 iMessage。从 [BlueBubbles 移除与 imsg iMessage 路径](/announcements/bluebubbles-imessage) 查看简短公告，或从 [来自 BlueBubbles](/channels/imessage-from-bluebubbles) 查看完整迁移表。
 </Warning>
 
-状态：原生外部 CLI 集成。Gateway 会启动 `imsg rpc` 并通过 stdio 进行 JSON-RPC 通信——无需单独的守护进程或端口。高级操作需要 `imsg launch` 以及成功的私有 API 探测。
+状态：原生外部 CLI 集成。Gateway 会启动 `imsg rpc`，并通过 stdio 使用 JSON-RPC 通信——不需要单独的守护进程或端口。强烈建议使用私有 API 模式以获得完整的 iMessage 通道；回复、tapback、效果、投票、附件回复和群组操作都需要 `imsg launch` 以及成功通过私有 API 探测。
+
+对于常见的本地设置，OpenClaw 配置可以在已登录 Messages 的 Mac 上为 `imsg` 提供经用户确认的 Homebrew 安装或更新。手动设置和 SSH 包装器拓扑仍由操作者管理：请在将要运行 Gateway 或包装器的相同用户上下文中安装或更新 `imsg`。
 
 <CardGroup cols={3}>
-  <Card title="Private API actions" icon="wand-sparkles" href="#private-api-actions">
+  <Card title="私有 API 操作" icon="wand-sparkles" href="#private-api-actions">
     回复、tapback、效果、投票、附件和群组管理。
   </Card>
   <Card title="配对" icon="link" href="/channels/pairing">
@@ -42,10 +44,13 @@ BlueBubbles 支持已被移除。请将 `channels.bluebubbles` 配置迁移到 `
 
 ```bash
 brew install steipete/tap/imsg
+brew update && brew upgrade imsg
 imsg rpc --help
 imsg launch
 openclaw channels status --probe
 ```
+
+        当本地设置向导检测到缺失的默认 `imsg` 命令时，它可以提示通过 Homebrew 安装 `steipete/tap/imsg`。如果检测到由 Homebrew 管理的 `imsg`，它可以提示重新安装或更新它。自定义的 `cliPath` 包装器不会被修改。
 
       </Step>
 
@@ -86,12 +91,17 @@ openclaw pairing approve imessage <CODE>
 
   </Tab>
 
-  <Tab title="通过 SSH 连接远程 Mac">
-    OpenClaw 只需要一个兼容 stdio 的 `cliPath`，因此你可以把 `cliPath` 指向一个包装脚本，由该脚本通过 SSH 连接到远程 Mac 并运行 `imsg`。
+  <Tab title="通过 SSH 远程连接 Mac">
+    大多数设置不需要 SSH。只有当 Gateway 无法在已登录 Messages 的 Mac 上运行时，才使用这种拓扑结构。OpenClaw 只需要一个兼容 stdio 的 `cliPath`，因此你可以将 `cliPath` 指向一个包装脚本，该脚本通过 SSH 连接到远程 Mac 并运行 `imsg`。
+    请在那台远程 Mac 上安装和更新 `imsg`，而不是在 Gateway 主机上：
+
+```bash
+ssh messages-mac 'brew install steipete/tap/imsg && brew update && brew upgrade imsg'
+```
 
 ```bash
 #!/usr/bin/env bash
-exec ssh -T gateway-host imsg "$@"
+exec ssh -T messages-mac imsg "$@"
 ```
 
     启用附件时推荐的配置：
@@ -133,15 +143,15 @@ exec ssh -T gateway-host imsg "$@"
   </Tab>
 </Tabs>
 
-## Requirements and permissions (macOS)
+## 要求与权限（macOS）
 
-- Messages must be signed in on the Mac running `imsg`.
-- Full Disk Access is required for the process context running OpenClaw/`imsg` (Messages DB access).
-- Automation permission is required to send messages through Messages.app.
-- For advanced actions (react / edit / unsend / threaded reply / effects / polls / group ops), System Integrity Protection must be disabled — see [Enabling the imsg private API](#enabling-the-imsg-private-api). Basic text and media send/receive work without it.
+- Messages 必须在运行 `imsg` 的 Mac 上登录。
+- 运行 OpenClaw/`imsg` 的进程上下文需要“完全磁盘访问权限”（用于访问 Messages 数据库）。
+- 通过 Messages.app 发送消息需要“自动化”权限。
+- 对于高级操作（react / edit / unsend / threaded reply / effects / polls / group ops），必须禁用系统完整性保护（System Integrity Protection）——请参见 [启用 imsg 私有 API](#enabling-the-imsg-private-api)。基础文本和媒体的收发不需要它。
 
 <Tip>
-Permissions are granted per process context. If the gateway runs headless (LaunchAgent/SSH), run a one-time interactive command in that same context to trigger prompts:
+权限是按进程上下文授予的。如果网关以无头方式运行（LaunchAgent/SSH），请在同一上下文中运行一次交互式命令以触发权限提示：
 
 ```bash
 imsg chats --limit 1
@@ -151,7 +161,7 @@ imsg send <handle> "test"
 
 </Tip>
 
-<Accordion title="SSH wrapper sends fail with AppleEvents -1743">
+<Accordion title="SSH 包装器发送失败并出现 AppleEvents -1743">
   远程 SSH 设置可以读取聊天、通过 `channels status --probe`，并处理入站消息，但外发发送仍会因 AppleEvents 授权错误而失败：
 
 ```text
@@ -176,12 +186,12 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
 ## 启用 imsg 私有 API
 
-`imsg` 提供两种运行模式：
+`imsg` 有两种运行模式。对于 OpenClaw，推荐使用私有 API 模式，因为它能为该通道提供用户期望的原生 iMessage 操作。基础模式仍然适用于低风险安装、初始验证，或无法禁用 SIP 的主机。
 
 - **基本模式**（默认，无需更改 SIP）：通过 `send` 发送文本和媒体、入站监控/历史记录、聊天列表。这就是你在全新安装 `brew install steipete/tap/imsg` 再加上上面的标准 macOS 权限后开箱即用所获得的能力。
 - **私有 API 模式**：`imsg` 会向 `Messages.app` 注入一个 helper dylib，以调用内部 `IMCore` 函数。这将解锁 `react`、`edit`、`unsend`、`reply`（线程式）、`sendWithEffect`、`poll` 和 `poll-vote`（原生 Messages 投票）、`renameGroup`、`setGroupIcon`、`addParticipant`、`removeParticipant`、`leaveGroup`，以及输入指示和已读回执。
 
-本页的高级操作接口需要私有 API 模式。`imsg` README 也明确说明了这一要求：
+本页推荐的操作面需要私有 API 模式。`imsg` README 对此要求写得很明确：
 
 > 诸如 `read`、`typing`、`launch`、基于桥接的富发送、消息变更和聊天管理等高级功能都是可选的。它们需要禁用 SIP，并将一个 helper dylib 注入到 `Messages.app` 中。启用 SIP 时，`imsg launch` 会拒绝注入。
 
@@ -190,7 +200,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 <Warning>
 **禁用 SIP 是真实的安全权衡。** SIP 是 macOS 防止运行被修改系统代码的核心保护之一；在系统范围内关闭它会带来额外的攻击面和副作用。尤其是，**在 Apple Silicon Mac 上禁用 SIP 也会禁用在你的 Mac 上安装和运行 iOS App 的能力**。
 
-请把这视为一个有意的运维选择，而不是默认配置。如果你的威胁模型无法接受关闭 SIP，那么捆绑的 iMessage 只能停留在基本模式——仅支持文本和媒体的发送/接收，不支持反应、编辑、撤回、效果或群组操作。
+请将此视为一个经过深思熟虑的运维选择，尤其是在作为主力个人 Mac 时。对于生产级 OpenClaw iMessage，最好使用一台专用 Mac 或 bot macOS 用户，只要你愿意启用这个桥接即可。如果你的威胁模型无法接受任何地方关闭 SIP，那么捆绑式 iMessage 只能使用基本模式——仅支持文本和媒体收发，不支持 reactions / edit / unsend / effects / group ops。
 </Warning>
 
 ### 设置
@@ -199,6 +209,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
    ```bash
    brew install steipete/tap/imsg
+   brew update && brew upgrade imsg
    imsg --version
    imsg status --json
    ```
@@ -498,12 +509,12 @@ iMessage 聊天可以绑定到 ACP 会话。
   </Accordion>
 
   <Accordion title="出站文本和分块">
-    - 文本块限制：`channels.imessage.textChunkLimit`（默认 4000）
-    - 分块模式：`channels.imessage.chunkMode`
+    - 文本分块限制：`channels.imessage.textChunkLimit`（默认 4000）
+    - 分块模式：`channels.imessage.streaming.chunkMode`
       - `length`（默认）
       - `newline`（优先按段落拆分）
-    - 出站 markdown 中的粗体/斜体/下划线/删除线会转换为原生样式文本（macOS 15+ 的接收方会显示这些样式；较旧的接收方会看到不带标记的纯文本）；markdown 表格会根据通道的 markdown 表格模式进行转换
-    - `channels.imessage.sendTransport`（默认 `auto`，可选 `bridge`、`applescript`）用于选择 `imsg` 的发送方式
+    - 出站 markdown 的粗体/斜体/下划线/删除线会转换为原生样式文本（macOS 15+ 接收者可渲染这些样式；较旧的接收者会看到不带标记的纯文本）；markdown 表格会根据通道的 markdown 表格模式进行转换
+    - `channels.imessage.sendTransport`（默认 `auto`，可选 `bridge`、`applescript`）用于选择 `imsg` 的发送投递方式
 
   </Accordion>
 
@@ -557,14 +568,14 @@ iMessage 聊天可以绑定到 ACP 会话。
 ```
 
 <AccordionGroup>
-  <Accordion title="Available actions">
+  <Accordion title="可用动作">
     - **react**: 添加/移除 iMessage tapback（`messageId`、`emoji`、`remove`）。支持的 tapback 映射到 love、like、dislike、laugh、emphasize 和 question。不带 emoji 进行移除会清除已设置的任意 tapback。
     - **reply**: 向现有消息发送线程回复（`messageId`、`text` 或 `message`，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。带附件的回复还需要一个 `imsg` 构建版本，其 `send-rich` 支持 `--file`。
     - **sendWithEffect**: 发送带 iMessage 效果的文本（`text` 或 `message`，`effect` 或 `effectId`）。短名称：slam、loud、gentle、invisibleink、confetti、lasers、fireworks、balloon、heart、echo、happybirthday、shootingstar、sparkles、spotlight。
     - **edit**: 在受支持的 macOS/private API 版本上编辑已发送消息（`messageId`、`text` 或 `newText`）。只能编辑网关自身发送的消息。
     - **unsend**: 在受支持的 macOS/private API 版本上撤回已发送消息（`messageId`）。只能撤回网关自身发送的消息。
     - **upload-file**: 发送媒体/文件（`buffer` 以 base64 形式，或已 hydrated 的 `media`/`path`/`filePath`，`filename`，可选 `asVoice`）。旧别名：`sendAttachment`。
-    - **renameGroup**、**setGroupIcon**、**addParticipant**、**removeParticipant**、**leaveGroup**: 当当前目标是群聊时管理群聊。这些操作会修改主机的 Messages 身份，因此需要 owner sender 或 `operator.admin` Gateway 客户端。
+    - **renameGroup**、`setGroupIcon`、`addParticipant`、`removeParticipant`、`leaveGroup`：当当前目标是群聊时管理群聊。这些操作会修改主机的 Messages 身份，因此需要 owner sender 或 `operator.admin` Gateway 客户端。
     - **poll**: 创建原生 Apple Messages 投票（`pollQuestion`、`pollOption` 重复 2 到 12 次，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。iOS/iPadOS/macOS 26+ 上的接收者会原生查看并投票；较旧的 OS 版本会收到“Sent a poll”文本回退。需要 `selectors.pollPayloadMessage`。
     - **poll-vote**: 对现有投票进行投票（`pollId` 或 `messageId`，以及 `pollOptionIndex`、`pollOptionId` 或 `pollOptionText` 中恰好一个）。需要 `selectors.pollVoteMessage` 和 `poll.vote` RPC 方法。
 
@@ -572,7 +583,7 @@ iMessage 聊天可以绑定到 ACP 会话。
 
   </Accordion>
 
-  <Accordion title="Message IDs">
+  <Accordion title="消息 ID">
     入站 iMessage 上下文在可用时同时包含简短的 `MessageSid` 值和完整的消息 GUID（`MessageSidFull`）。简短 ID 仅作用于最近的、基于 SQLite 的回复缓存，并且在使用前会先与当前聊天进行校验。如果简短 ID 已过期或属于其他聊天，请改用完整的 `MessageSidFull` 重试。
 
   </Accordion>
@@ -582,7 +593,7 @@ iMessage 聊天可以绑定到 ACP 会话。
 
   </Accordion>
 
-  <Accordion title="Read receipts and typing">
+  <Accordion title="已读回执和正在输入">
     当私有 API 桥接可用时，已接受的入站聊天会被标记为已读，而直接聊天会在回合被接受时立刻显示正在输入气泡，同时代理准备上下文并生成回复。可通过以下方式禁用已读标记：
 
     ```json5

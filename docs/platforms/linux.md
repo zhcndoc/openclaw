@@ -7,27 +7,46 @@ read_when:
 title: "Linux 应用"
 ---
 
-Gateway 在 Linux 上得到完全支持。Node 是推荐的运行时；不推荐使用 Bun（已知存在 WhatsApp/Telegram 问题）。
+Gateway 在 Linux 上受到完全支持，并且需要 Node。Bun 仍然可以用作依赖安装器或包脚本运行器，但它不能运行 OpenClaw，因为它不提供 `node:sqlite`。
 
-目前还没有原生 Linux 配套应用。欢迎贡献。
+## 桌面伴侣
 
-## 快速路径（VPS）
+OpenClaw Linux 伴侣是一个用于本地 Gateway 的 Tauri 桌面应用。它：
 
-1. 安装 Node 24（推荐）或 Node 22.19+（LTS，仍受支持）。
+- 在缺失时安装 OpenClaw CLI 和受管理的 Node 运行时
+- 在尝试更改服务之前先连接到健康的 Gateway
+- 将安装、启动、停止和重启操作委托给由 CLI 管理的 systemd 用户服务
+- 使用其解析后的认证 URL 打开 Gateway 提供的 Control UI
+- 在窗口关闭后仍可通过系统托盘保持可用
+
+目前尚未发布托管版本。可从源代码检出中构建 `.deb` 和 AppImage：
+
+```bash
+cd apps/linux/src-tauri
+pnpm dlx @tauri-apps/cli@2.11.4 build --bundles deb,appimage
+```
+
+`Linux App` CI 工作流还会在针对该应用的拉取请求以及手动运行时，将相同的 bundles 作为 `openclaw-linux-companion` artifact 上传。有关 Linux 构建依赖和开发命令，请参见仓库中的 `apps/linux/README.md`。
+
+## CLI 和 SSH 替代方案
+
+对于无头服务器、VPS 或远程网关，CLI 仍然是最简单的选择：
+
+1. 安装 Node 24.15+（推荐）、Node 22.22.3+（LTS）或 Node 25.9+。
 2. `npm i -g openclaw@latest`
 3. `openclaw onboard --install-daemon`
 4. 在你的笔记本电脑上：`ssh -N -L 18789:127.0.0.1:18789 <user>@<host>`
 5. 打开 `http://127.0.0.1:18789/`，并使用已配置的共享密钥进行身份验证（默认是 token；如果 `gateway.auth.mode` 是 `"password"`，则使用密码）。
 
-完整服务器指南：[Linux Server](/vps)。逐步 VPS 示例：[exe.dev](/install/exe-dev)。
+完整服务器指南：[Linux 服务器](/vps)。逐步 VPS 示例：[exe.dev](/install/exe-dev)。
 
 ## 安装
 
-- [快速开始](/start/getting-started)
+- [入门指南](/start/getting-started)
 - [安装与更新](/install/updating)
-- 可选：[Bun（实验性）](/install/bun)，[Nix](/install/nix)，[Docker](/install/docker)
+- 可选： [Bun 包工作流](/install/bun), [Nix](/install/nix), [Docker](/install/docker)
 
-## Gateway service (systemd)
+## Gateway 服务（systemd）
 
 使用以下任一方式安装：
 
@@ -52,7 +71,7 @@ openclaw doctor
 
 ```ini
 [Unit]
-Description=OpenClaw 网关（配置文件：<profile>，v<version>）
+Description=OpenClaw Gateway (profile: <profile>, v<version>)
 After=network-online.target
 Wants=network-online.target
 StartLimitBurst=5

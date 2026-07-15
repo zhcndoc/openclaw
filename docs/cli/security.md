@@ -8,7 +8,7 @@ title: "安全"
 
 # `openclaw security`
 
-安全工具：审计以及可选的安全修复。相关：[Security](/gateway/security)。
+安全工具：审计以及可选的安全修复。相关：[安全](/gateway/security)。
 
 ```bash
 openclaw security audit
@@ -91,7 +91,7 @@ openclaw security audit --json
       "suppressions": [
         {
           "checkId": "plugins.tools_reachable_permissive_policy",
-          "detailIncludes": "Enabled extension plugins: gbrain",
+          "detailIncludes": "启用的扩展插件：gbrain",
           "reason": "受信任的本地操作员插件"
         }
       ]
@@ -121,11 +121,11 @@ openclaw security audit --fix --json | jq '{fix: .fix.ok, summary: .report.summa
 
 应用安全、确定性的修复：
 
-- 将常见的 `groupPolicy="open"` 改为 `groupPolicy="allowlist"`（包括受支持通道中的账号变体）
-- 当 WhatsApp 组策略切换为 `allowlist` 时，如果该列表存在且配置尚未定义 `allowFrom`，则从已存储的 `allowFrom` 文件中填充 `groupAllowFrom`
-- 将 `logging.redactSensitive` 从 `"off"` 设为 `"tools"`
-- 加强 state/config 以及常见敏感文件（`credentials/*.json`、`auth-profiles.json`、`sessions.json`、会话 `*.jsonl`）的权限
-- 也会加强 `openclaw.json` 中引用的 config include 文件权限
+- 将常见的 `groupPolicy="open"` 更改为 `groupPolicy="allowlist"`（包括受支持通道中的账号变体）
+- 当 WhatsApp 群组策略切换为 `allowlist` 时，如果该列表存在且配置尚未定义 `allowFrom`，则从已存储的 `allowFrom` 文件中为 `groupAllowFrom` 设定初始值
+- 将 `logging.redactSensitive` 从 `"off"` 设置为 `"tools"`
+- 收紧状态/配置以及常见敏感文件的权限（`credentials/*.json`、`auth-profiles.json`、`openclaw-agent.sqlite` 和旧版会话工件）
+- 也会收紧从 `openclaw.json` 引用的配置包含文件的权限
 - 在 POSIX 主机上使用 `chmod`，在 Windows 上使用 `icacls` 重置
 
 `--fix` **不会**：

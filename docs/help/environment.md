@@ -10,32 +10,32 @@ title: "环境变量"
 OpenClaw 从多个来源加载环境变量。规则是**绝不覆盖现有值**。
 Workspace `.env` 文件属于低信任来源：OpenClaw 在应用优先级规则前，会忽略 workspace `.env` 中的提供商凭据和受保护的运行时控制项。
 
-## 优先级（从高到低）
+## Priority (from high to low)
 
-1. **进程环境**（Gateway 进程从父 shell/daemon 继承的内容）。
-2. **当前工作目录中的 `.env`**（dotenv 默认行为；不会覆盖；会忽略提供商凭据和受保护的运行时控制项）。
-3. **全局 `.env`**：`~/.openclaw/.env`（也就是 `$OPENCLAW_STATE_DIR/.env`；推荐用于提供商 API key；不会覆盖）。
-4. **`~/.openclaw/openclaw.json` 中的 `env` 块**（仅在缺失时应用）。
-5. **可选的登录 shell 导入**（`env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1`），仅应用于缺失的预期键。
+1. **Process environment** (what the Gateway process inherits from the parent shell/daemon).
+2. **`.env` in the current working directory** (dotenv default behavior; does not overwrite; ignores provider credentials and protected runtime control keys).
+3. **Global `.env`**: `~/.openclaw/.env` (i.e. `$OPENCLAW_STATE_DIR/.env`; recommended for provider API keys; does not overwrite).
+4. **`env` block in `~/.openclaw/openclaw.json`** (applied only when missing).
+5. **Optional login shell import** (`env.shellEnv.enabled` or `OPENCLAW_LOAD_SHELL_ENV=1`), applied only to missing expected keys.
 
-在使用默认状态目录的新装 Ubuntu 上，OpenClaw 还会在全局 `.env` 之后将 `~/.config/openclaw/gateway.env` 作为兼容性回退。如果这两个文件都存在且内容不一致，OpenClaw 会保留 `~/.openclaw/.env` 并打印警告。
+On a fresh Ubuntu install using the default state directory, OpenClaw also uses `~/.config/openclaw/gateway.env` as a compatibility fallback after the global `.env`. If both files exist and differ, OpenClaw keeps `~/.openclaw/.env` and prints a warning.
 
-如果配置文件完全缺失，则跳过第 4 步；如果启用了 shell 导入，第 5 步仍会运行。
+If the configuration file is completely missing, step 4 is skipped; if shell import is enabled, step 5 still runs.
 
-## 提供商凭据与 workspace `.env`
+## Provider Credentials and workspace `.env`
 
-不要只将提供商 API 密钥保存在 workspace `.env` 中。OpenClaw 会阻止从 workspace `.env` 文件中使用一大类提供商凭据和端点重定向密钥，包括所有已知的提供商认证环境变量（例如 `GEMINI_API_KEY`、`GOOGLE_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY`、`GROQ_API_KEY`、`DEEPSEEK_API_KEY`、`PERPLEXITY_API_KEY`、`BRAVE_API_KEY`、`TAVILY_API_KEY`、`EXA_API_KEY`、`FIRECRAWL_API_KEY`），以及任何以 `_API_HOST`、`_BASE_URL` 或 `_HOMESERVER` 结尾的键，还有整个 `OPENCLAW_*`、`CLAWHUB_*`、`ANTHROPIC_API_KEY_*` 和 `OPENAI_API_KEY_*` 命名空间。
+Do not store provider API keys only in the workspace `.env`. OpenClaw will block a broad class of provider credentials and endpoint override keys from workspace `.env` files, including all known provider auth environment variables (for example `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY`, `PERPLEXITY_API_KEY`, `BRAVE_API_KEY`, `TAVILY_API_KEY`, `EXA_API_KEY`, `FIRECRAWL_API_KEY`), as well as any key ending in `_API_HOST`, `_BASE_URL`, or `_HOMESERVER`, plus the entire `OPENCLAW_*`, `CLAWHUB_*`, `ANTHROPIC_API_KEY_*`, and `OPENAI_API_KEY_*` namespaces.
 
-请改为使用以下受信任来源之一提供提供商凭据：
+Instead, provide provider credentials from one of the following trusted sources:
 
-- Gateway 进程环境，例如 shell、launchd/systemd 单元、容器 secret 或 CI secret。
-- 全局运行时 dotenv 文件：`~/.openclaw/.env` 或 `$OPENCLAW_STATE_DIR/.env`。
-- `~/.openclaw/openclaw.json` 中的 `env` 块。
-- 在启用 `env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1` 时，可选的登录 shell 导入。
+- The Gateway process environment, such as shell, launchd/systemd unit, container secret, or CI secret.
+- The global runtime dotenv file: `~/.openclaw/.env` or `$OPENCLAW_STATE_DIR/.env`.
+- The `env` block in `~/.openclaw/openclaw.json`.
+- Optional login shell import when `env.shellEnv.enabled` or `OPENCLAW_LOAD_SHELL_ENV=1` is enabled.
 
-如果你之前只把提供商密钥存放在 workspace `.env` 中，请将它们迁移到上述受信任来源之一。Workspace `.env` 仍然可以提供普通的项目变量，这些变量不是凭据、端点重定向、主机覆盖或 `OPENCLAW_*` 运行时控制项。
+If you previously kept provider keys only in the workspace `.env`, migrate them to one of the trusted sources above. Workspace `.env` can still provide ordinary project variables that are not credentials, endpoint overrides, host overrides, or `OPENCLAW_*` runtime control variables.
 
-请参见 [Workspace `.env` files](/gateway/security#workspace-env-files) 了解安全原因。
+See [Workspace `.env` files](/gateway/security#workspace-env-files) for the security rationale.
 
 ## 配置 `env` 块
 
@@ -99,23 +99,23 @@ Workspace `.env` 文件属于低信任来源：OpenClaw 在应用优先级规则
 - `OPENCLAW_LOAD_SHELL_ENV=1`
 - `OPENCLAW_SHELL_ENV_TIMEOUT_MS=15000`（默认 `15000`）
 
-## Exec shell snapshots
+## Exec shell 快照
 
-On non-Windows Gateway hosts, the `exec` command for bash and zsh uses startup snapshots by default.
-Setting `OPENCLAW_EXEC_SHELL_SNAPSHOT=0` in the Gateway process environment can disable this path.
-`false`, `no`, and `off` also disable it. The `exec.env` value for a single invocation cannot switch snapshots or redirect the snapshot cache.
+在非 Windows 的 Gateway 主机上，bash 和 zsh 的 `exec` 命令默认使用启动快照。
+在 Gateway 进程环境中设置 `OPENCLAW_EXEC_SHELL_SNAPSHOT=0` 可以禁用这一路径。
+`false`、`no` 和 `off` 也会禁用它。单次调用的 `exec.env` 值无法切换快照或重定向快照缓存。
 
-## 运行时注入的环境变量
+## Runtime injected environment variables
 
-OpenClaw 还会向派生的子进程注入上下文标记：
+OpenClaw also injects context markers into spawned child processes:
 
-- `OPENCLAW_SHELL=exec`: 通过 `exec` 工具运行的命令会设置此项。
-- `OPENCLAW_SHELL=acp-client`: 当 `openclaw acp client` 启动 ACP bridge 进程时会设置此项。
-- `OPENCLAW_SHELL=tui-local`: 本地 TUI `!` shell 命令会设置此项。
-- `OPENCLAW_CLI=1`: 由 CLI 入口点派生的子进程会设置此项。
+- `OPENCLAW_SHELL=exec`: Commands run via the `exec` tool will set this.
+- `OPENCLAW_SHELL=acp-client`: Set when `openclaw acp client` starts the ACP bridge process.
+- `OPENCLAW_SHELL=tui-local`: Set by local TUI `!` shell commands.
+- `OPENCLAW_CLI=1`: Set by child processes spawned from the CLI entry point.
 
-这些是运行时标记（不是必需的用户配置）。它们可用于 shell/profile 逻辑
-以应用特定于上下文的规则。
+These are runtime markers (not required user configuration). They can be used in shell/profile logic
+to apply context-specific rules.
 
 ## UI 环境变量
 
@@ -123,9 +123,9 @@ OpenClaw 还会向派生的子进程注入上下文标记：
 - `OPENCLAW_THEME=dark`：强制使用深色 TUI 调色板。
 - `COLORFGBG`：如果终端导出了它，OpenClaw 会使用背景色提示自动选择 TUI 调色板。
 
-## Environment Variable Substitution in Configuration
+## 配置中的环境变量替换
 
-You can directly use the `${VAR_NAME}` syntax in configuration string values to reference environment variables:
+你可以在配置字符串值中直接使用 `${VAR_NAME}` 语法来引用环境变量：
 
 ```json5
 {
@@ -139,7 +139,7 @@ You can directly use the `${VAR_NAME}` syntax in configuration string values to 
 }
 ```
 
-For full details, see [Configuration: Env var substitution](/gateway/configuration-reference#env-var-substitution).
+有关完整详情，请参阅 [配置：环境变量替换](/gateway/configuration-reference#env-var-substitution)。
 
 ## Secret refs vs `${ENV}` 字符串
 
@@ -152,24 +152,24 @@ OpenClaw 支持两种基于环境变量的模式：
 配置中的 `env` 块本身不会解析 SecretRef 或 `file:...`
 简写值。
 
-## 路径相关环境变量
+## Path-related environment variables
 
-| 变量                     | 用途                                                                                                                                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_HOME`          | 覆盖用于内部 OpenClaw 路径默认值的主目录（`~/.openclaw/`、agent 目录、sessions、credentials、installer onboarding，以及默认的开发检出目录）。在将 OpenClaw 作为专用服务用户运行时很有用。 |
-| `OPENCLAW_STATE_DIR`     | 覆盖状态目录（默认 `~/.openclaw`）。                                                                                                                                                                                   |
-| `OPENCLAW_CONFIG_PATH`   | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                                                                                    |
-| `OPENCLAW_INCLUDE_ROOTS` | `$include` 指令可在其中解析配置目录之外文件的目录路径列表（默认：无——`$include` 限定在配置目录内）。支持波浪号展开。                                                         |
+| Variable                     | Purpose                                                                                                                                                                                                                                 |
+| ------------------------ | ------------------------ |
+| `OPENCLAW_HOME`          | Override the home directory used for internal OpenClaw path defaults (`~/.openclaw/`, agent directory, sessions, credentials, installer onboarding, and the default development checkout directory). Useful when running OpenClaw as a dedicated service user. |
+| `OPENCLAW_STATE_DIR`     | Override the state directory (default `~/.openclaw`).                                                                                                                                                                                   |
+| `OPENCLAW_CONFIG_PATH`   | Override the config file path (default `~/.openclaw/openclaw.json`).                                                                                                                                                                    |
+| `OPENCLAW_INCLUDE_ROOTS` | A list of directory paths where `$include` directives may resolve files outside the configuration directory (default: none — `$include` is constrained to the configuration directory). Supports tilde expansion.                                                         |
 
 ## 日志
 
 | 变量                           | 用途                                                                                                                                                                                      |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_LOG_LEVEL`             | 覆盖文件和控制台的日志级别（例如 `debug`、`trace`）。优先级高于配置中的 `logging.level` 和 `logging.consoleLevel`。无效值会被忽略并给出警告。 |
-| `OPENCLAW_DEBUG_MODEL_TRANSPORT` | 在不启用全局 debug 日志的情况下，以 `info` 级别输出针对性的模型请求/响应时序诊断。                                                                                  |
-| `OPENCLAW_DEBUG_MODEL_PAYLOAD`   | 模型负载诊断：`summary`、`tools` 或 `full-redacted`。`full-redacted` 有长度上限并会脱敏，但可能包含 prompt/message 文本。                                               |
-| `OPENCLAW_DEBUG_SSE`             | 流式诊断：`events` 用于首个/完成时序，`peek` 会包含前五个脱敏的 SSE 事件。                                                                                 |
-| `OPENCLAW_DEBUG_CODE_MODE`       | 代码模式的模型表面诊断，包括 provider 工具隐藏和 exec/wait-only 强制执行。                                                                                          |
+| `OPENCLAW_LOG_LEVEL`             | 同时覆盖文件和控制台的日志级别（例如 `debug`、`trace`）。优先于配置中的 `logging.level` 和 `logging.consoleLevel`。无效值会被忽略并给出警告。 |
+| `OPENCLAW_DEBUG_MODEL_TRANSPORT` | 在不启用全局 debug 日志的情况下，以 `info` 级别输出有针对性的模型请求/响应时序诊断信息。                                                                                  |
+| `OPENCLAW_DEBUG_MODEL_PAYLOAD`   | 模型负载诊断：`summary`、`tools` 或 `full-redacted`。`full-redacted` 有大小上限且会被脱敏，但可能仍包含提示/消息文本。                                               |
+| `OPENCLAW_DEBUG_SSE`             | 流式诊断：`events` 用于首个/完成时序，`peek` 用于包含前五个脱敏的 SSE 事件。                                                                                 |
+| `OPENCLAW_DEBUG_CODE_MODE`       | 代码模式下的模型表面诊断，包括 provider-tool 隐藏以及紧凑控制/直接强制。                                                                                  |
 
 ### `OPENCLAW_HOME`
 

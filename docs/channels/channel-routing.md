@@ -131,16 +131,25 @@ OpenClaw 可以更新现有会话的元数据和 `lastRoute`，但不会因为�
 
 ## 会话存储
 
-会话存储位于状态目录下（默认 `~/.openclaw`）：
+运行时会话行存储在每个 agent 的 SQLite 数据库中，位于 state
+目录下（默认 `~/.openclaw`）：
 
-- `~/.openclaw/agents/<agentId>/sessions/sessions.json`
-- JSONL 转录文件与存储文件并排存放
+- `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
 
-你可以通过 `session.store` 和 `{agentId}` 模板覆盖存储路径。
+较旧的安装版本可能仍在 `~/.openclaw/agents/<agentId>/sessions/` 下保留
+旧版转录 JSONL 文件和一个 `sessions.json` 行
+存储。Gateway 启动和
+`openclaw doctor --fix` 会自动将热的旧版行/历史导入到 SQLite
+中。需要明确的迁移证据时，请使用 `openclaw doctor --session-sqlite inspect
+--session-sqlite-all-agents` 和
+[Doctor](/cli/doctor#session-sqlite-migration) 验证序列。
+你仍然可以通过 `session.store` 和 `{agentId}`
+模板选择一个旧存储路径，用于迁移和离线维护工作流。
 
-Gateway 和 ACP 的会话发现也会扫描默认 `agents/` 根目录以及模板化的
-`session.store` 根目录下的磁盘代理存储。被发现的存储必须保留在解析后的代理根目录内，并使用普通的
-`sessions.json` 文件。符号链接和越出根目录的路径会被忽略。
+Gateway 和 ACP 的会话发现也会扫描默认 `agents/` 根目录下以及
+模板化 `session.store` 根目录下的磁盘支持 agent 存储。发现的
+存储必须保留在解析后的 agent 根目录内，并使用常规的旧版
+`sessions.json` 文件。符号链接和超出根目录的路径会被忽略。
 
 ## WebChat 行为
 

@@ -176,31 +176,31 @@ openclaw onboard --non-interactive --accept-risk \
 
 Anthropic 的 setup-token 认证仍然受支持，但当本地 Claude CLI 已登录可用时，OpenClaw 会优先复用 Claude CLI。用于生产环境时，建议优先使用 Anthropic API key。
 
-## 添加另一个 agent
+## Add another agent
 
-`openclaw agents add <name>` 会创建一个独立的 agent，拥有自己的工作区、会话和认证配置文件。不带 `--workspace`（且没有其他标志）运行时会启动交互式向导；传入 `--workspace`、`--model`、`--agent-dir`、`--bind` 或 `--non-interactive` 中的任意一个时，则会以非交互方式运行，然后需要提供 `--workspace`。
+`openclaw agents add <name>` will create an independent agent with its own workspace, session, and authentication config files. Running it without `--workspace` (and without any other flags) will start an interactive wizard; passing any of `--workspace`, `--model`, `--agent-dir`, `--bind`, or `--non-interactive` will run it non-interactively, and then `--workspace` must be provided.
 
 ```bash
 openclaw agents add work \
   --workspace ~/.openclaw/workspace-work \
-  --model openai/gpt-5.5 \
+  --model openai/gpt-5.6-sol \
   --bind whatsapp:biz \
   --non-interactive \
   --json
 ```
 
-它写入的配置键（新 agent id 的 `agents.list[]` 条目）：
+Configuration keys it writes (the new agent id's `agents.list[]` entry):
 
 - `name`
 - `workspace`
 - `agentDir`
-- `model`（仅在传入 `--model` 时）
+- `model` (only when `--model` is passed)
 
-注意：
+Note:
 
-- 默认工作区（当交互式向导中省略 `--workspace` 时）：`~/.openclaw/workspace-<agentId>`。
-- `--bind <channel[:accountId]>` 可重复使用；添加绑定以将传入消息路由到新 agent（向导也可以交互式完成此操作）。
-- agent 名称会被规范化为有效的 agent id；`main` 是保留名称。
+- Default workspace (when `--workspace` is omitted in the interactive wizard): `~/.openclaw/workspace-<agentId>`.
+- `--bind <channel[:accountId]>` can be repeated; add bindings to route incoming messages to the new agent (this can also be done interactively in the wizard).
+- The agent name will be normalized into a valid agent id; `main` is a reserved name.
 
 ## 相关文档
 

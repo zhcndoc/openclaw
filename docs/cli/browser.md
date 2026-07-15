@@ -15,12 +15,16 @@ title: "浏览器"
 
 ## 常用标志
 
-- `--url <gatewayWsUrl>`: 网关 WebSocket URL（默认使用配置中的值）。
-- `--token <token>`: 网关令牌（如需要）。
-- `--timeout <ms>`: 请求超时时间，单位为毫秒（默认：`30000`）。
-- `--expect-final`: 等待最终的网关响应。
-- `--browser-profile <name>`: 选择一个浏览器配置文件（默认：`openclaw`，或 `browser.defaultProfile`）。
-- `--json`: 机器可读输出（在支持的情况下）。
+- `--url <gatewayWsUrl>`: Gateway WebSocket URL（默认使用配置）。
+- `--token <token>`: Gateway 令牌（如需要）。
+- `--timeout <ms>`: 请求超时时间，单位为 ms（默认：`30000`）。
+- `--expect-final`: 等待最终的 Gateway 响应。
+- `--browser-profile <name>`: 选择浏览器配置文件（默认：`openclaw`，或 `browser.defaultProfile`）。
+- `--json`: 机器可读输出（在支持的情况下）。这是一个浏览器级别的选项，因此
+  请将其放在子命令之前，以获得明确无歧义的形式，例如
+  `openclaw browser --json status`。尾随位置例如
+  `openclaw browser status --json` 也可行，前提是所选子命令没有
+  定义自己的 `--json`。
 
 ## 快速开始（本地）
 
@@ -60,14 +64,16 @@ openclaw browser stop
 openclaw browser --browser-profile openclaw reset-profile
 ```
 
-- `doctor --deep` 会添加一个实时快照探测：当基础 CDP 就绪状态为绿色，但你想确认当前标签页是否可以被检查时，这很有用。
-- `stop` 会关闭当前的控制会话，并清除临时的仿真覆盖，即使对于 `attachOnly` 和远程 CDP 配置也是如此，因为在这些情况下 OpenClaw 并未自行启动浏览器进程。对于本地托管配置，`stop` 还会停止所启动的浏览器进程。
-- `start --headless` 仅对该次启动请求生效，并且只在 OpenClaw 启动本地托管浏览器时生效。它不会重写 `browser.headless` 或配置文件，并且对于已经运行的浏览器不会产生任何作用。
-- 在没有 `DISPLAY` 或 `WAYLAND_DISPLAY` 的 Linux 主机上，本地托管配置会自动以无头模式运行，除非 `OPENCLAW_BROWSER_HEADLESS=0`、`browser.headless=false` 或 `browser.profiles.<name>.headless=false` 明确请求可见浏览器。
+- `doctor --deep` 会添加一个实时快照探测：当基础 CDP 就绪状态已为绿色，但你还想确认当前标签页可以被检查时，这很有用。
+- 对于正在运行的本地托管配置文件，`status` 和 `doctor` 会从 Chrome 报告缓存的图形诊断信息：硬件/软件分类、渲染器、后端、设备/驱动、功能与禁用状态详情，以及加速视频能力。`openclaw browser --json status` 会返回完整的结构化负载。
+  被动状态检查绝不会为了收集这些信息而专门启动 Chrome。
+- `stop` 会关闭活动控制会话，并清除临时的仿真覆盖，即使对于 `attachOnly` 和远程 CDP 配置文件也是如此，因为在这些情况下 OpenClaw 并未自行启动浏览器进程。对于本地托管配置文件，`stop` 还会停止所启动的浏览器进程。
+- `start --headless` 仅对该次启动请求生效，并且只在 OpenClaw 启动本地托管浏览器时适用。它不会改写 `browser.headless` 或配置文件配置，并且对于已经在运行的浏览器不会产生任何作用。
+- 在没有 `DISPLAY` 或 `WAYLAND_DISPLAY` 的 Linux 主机上，本地托管配置文件会自动以无头模式运行，除非 `OPENCLAW_BROWSER_HEADLESS=0`、`browser.headless=false` 或 `browser.profiles.<name>.headless=false` 明确请求一个可见浏览器。
 
-## 如果命令缺失
+## If the command is missing
 
-如果 `openclaw browser` 是未知命令，请检查 `~/.openclaw/openclaw.json` 中的 `plugins.allow`。当存在 `plugins.allow` 时，除非配置中已经有根级 `browser` 块，否则请显式列出内置浏览器插件：
+If `openclaw browser` is an unknown command, please check `plugins.allow` in `~/.openclaw/openclaw.json`. When `plugins.allow` exists, unless the configuration already has a root-level `browser` block, explicitly list the built-in browser plugin:
 
 ```json5
 {
@@ -77,9 +83,9 @@ openclaw browser --browser-profile openclaw reset-profile
 }
 ```
 
-根级显式的 `browser` 块（例如 `browser.enabled=true` 或 `browser.profiles.<name>`）也会在限制性插件允许列表下激活内置浏览器插件。
+A root-level explicit `browser` block (for example, `browser.enabled=true` or `browser.profiles.<name>`) will also activate the built-in browser plugin under a restrictive plugin allowlist.
 
-相关：[Browser tool](/tools/browser#missing-browser-command-or-tool)
+Related: [Browser tool](/tools/browser#missing-browser-command-or-tool)
 
 ## 配置文件
 
@@ -91,6 +97,10 @@ Profiles 是命名的浏览器路由配置：
 
 ```bash
 openclaw browser profiles
+openclaw browser system-profiles
+openclaw browser system-profiles --browser brave
+openclaw browser import-profile --browser chrome --system Default --into imported
+openclaw browser import-profile --system "Profile 1" --into work --domains google.com,youtube.com
 openclaw browser create-profile --name work --color "#FF5A36"
 openclaw browser create-profile --name chrome-live --driver existing-session
 openclaw browser create-profile --name remote --cdp-url https://browser-host.example.com
@@ -99,16 +109,22 @@ openclaw browser delete-profile --name work
 
 可在任意子命令中使用 `--browser-profile <name>` 指定特定 profile，例如 `openclaw browser --browser-profile work tabs`。
 
-## 标签页
+在 macOS 上，`system-profiles` 会列出主机上可用的真实 Chrome、Brave、Edge 或 Chromium profiles。`import-profile` 会在一次 macOS 钥匙串/Touch ID 许可提示后解密它们的 cookies，并将其注入到一个全新的、由 OpenClaw 管理的 profile 中。它只会导入 cookies；本地存储和 IndexedDB 不会改变。某些 Google 会话使用设备绑定会话凭据（DBSC），因此在导入后仍可能需要重新认证。
+
+当 macOS 应用使用本地 Gateway 时，它可以提供一次这种导入，并将隔离后的已导入 profile 设为代理浏览的默认配置。导入始终需要明确点击；成功导入或取消都会抑制后续的自动提示，且 **Settings → General → Browser login** 仍可用于重新导入。
+
+系统 profile 导入默认已启用。将 `browser.allowSystemProfileImport=false` 可同时禁用 CLI 和 agent 触发的导入。导入仅在主机本地执行，无法通过 browser node proxy 运行。
+
+## 选项卡
 
 ```bash
 openclaw browser tabs
-openclaw browser tab new --label docs
-openclaw browser tab label t1 docs
+openclaw browser tab new --label 文档
+openclaw browser tab label t1 文档
 openclaw browser tab select 2
 openclaw browser tab close 2
-openclaw browser open https://docs.openclaw.ai --label docs
-openclaw browser focus docs
+openclaw browser open https://docs.openclaw.ai --label 文档
+openclaw browser focus 文档
 openclaw browser close t1
 ```
 
@@ -235,18 +251,18 @@ openclaw browser --browser-profile chrome-live tabs
 
 当前 existing-session 限制：
 
-- 基于快照的操作使用引用（refs），而不是 CSS 选择器。
-- 当调用方省略 `timeoutMs` 时，`browser.actionTimeoutMs` 默认会将支持的 `act` 请求设置为 60000 毫秒；单次调用的 `timeoutMs` 仍然优先。
-- `click` 仅支持左键单击。
+- 快照驱动的操作使用 ref，而不是 CSS 选择器。
+- 当调用方省略 `timeoutMs` 时，`browser.actionTimeoutMs` 会将受支持的 `act` 请求默认设为 60000 ms；单次调用的 `timeoutMs` 仍然优先生效。
+- `click` 仅支持左键点击。
 - `type` 不支持 `slowly=true`。
 - `press` 不支持 `delayMs`。
-- `hover`、`scrollintoview`、`drag`、`select`、`fill` 和 `evaluate` 会拒绝单次调用的超时覆盖。
+- `hover`、`scrollintoview`、`drag`、`select` 和 `fill` 会拒绝单次调用的超时覆盖；`evaluate` 接受 `--timeout-ms`。
 - `select` 仅支持一个值。
-- `wait --load networkidle` 不受支持（在托管和原始/远程 CDP 配置文件中可用）。
-- 文件上传需要 `--ref` / `--input-ref`，不支持 CSS `--element`，且一次仅支持一个文件。
+- `wait --load networkidle` 不受支持（在受管理和原始/远程 CDP 配置文件中可用）。
+- 文件上传需要 `--ref` / `--input-ref`，不支持 CSS `--element`，并且一次仅支持一个文件。
 - 对话框钩子不支持 `--timeout`。
 - 截图支持页面捕获和 `--ref`，但不支持 CSS `--element`。
-- `responsebody`、下载拦截、PDF 导出和批量操作仍然需要托管浏览器或原始 CDP 配置文件。
+- `responsebody`、下载拦截、PDF 导出和批量操作仍然需要受管理的浏览器或原始 CDP 配置文件。
 
 ## 远程浏览器控制（node host 代理）
 

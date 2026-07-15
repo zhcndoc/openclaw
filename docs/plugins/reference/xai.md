@@ -11,12 +11,12 @@ title: "xAI 插件"
 
 ## 分发
 
-- Package: `@openclaw/xai-plugin`
-- Install route: 已包含在 OpenClaw 中
+- 包：`@openclaw/xai-plugin`
+- 安装方式：已包含在 OpenClaw 中
 
-## 表面
+## Surface
 
-providers: xai; contracts: imageGenerationProviders, mediaUnderstandingProviders, realtimeTranscriptionProviders, speechProviders, tools, videoGenerationProviders, webSearchProviders
+providers: xai; contracts: imageGenerationProviders, mediaUnderstandingProviders, realtimeTranscriptionProviders, realtimeVoiceProviders, speechProviders, tools, videoGenerationProviders, webSearchProviders
 
 ## 相关文档
 

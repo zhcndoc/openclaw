@@ -15,7 +15,7 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 | [`install-cli.sh`](#install-clish) | macOS / Linux / WSL  | 通过 npm 或 git 将 Node + OpenClaw 安装到本地前缀（`~/.openclaw`）。无需 root。 |
 | [`install.ps1`](#installps1)       | Windows (PowerShell) | 如有需要会安装 Node，通过 npm（默认）或 git 安装 OpenClaw，并可运行引导流程。       |
 
-这三个脚本都支持 Node **22.19+、23.11+ 或 24+**；对于全新安装，默认目标是 Node 24。
+这三个脚本都支持 Node **22.22.3+、24.15+ 或 25.9+**；对于全新安装，默认目标是 Node 24。
 
 ## 快速命令
 
@@ -72,8 +72,8 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
     支持 macOS 和 Linux（包括 WSL）。
   </Step>
   <Step title="默认确保 Node.js 24">
-    检查 Node 版本，并在需要时安装 Node 24（macOS 上使用 Homebrew，Linux 的 apt/dnf/yum 使用 NodeSource 安装脚本）。在 macOS 上，仅当安装程序需要 Homebrew 来安装 Node 或 Git 时才会安装 Homebrew。出于兼容性考虑，仍支持 Node 22.19+ 和 23.11+。
-    在 Alpine/musl Linux 上，安装程序会使用 apk 包而不是 NodeSource；配置的 Alpine 仓库必须提供受支持的 Node 版本（撰写本文时为 Alpine 3.21 或更高版本）。
+    检查 Node 版本，并在需要时安装 Node 24（macOS 上使用 Homebrew，Linux 上使用 NodeSource 安装脚本，适用于 apt/dnf/yum）。在 macOS 上，仅当安装程序为 Node 或 Git 需要时才会安装 Homebrew。支持 Node 22.22.3+、Node 24.15+ 和 Node 25.9+；不支持 Node 23。
+    在 Alpine/musl Linux 上，安装程序会使用 apk 包而不是 NodeSource，并验证实际链接的 SQLite 版本。当前稳定的 Alpine 包流可能提供足够新的 Node，但系统 SQLite 存在漏洞；遇到这种情况时，请改用官方 `node:24-alpine` 容器或基于 glibc 的主机。
   </Step>
   <Step title="确保 Git">
     如果缺少 Git，会使用检测到的包管理器安装，包括 macOS 上的 Homebrew 和 Alpine 上的 apk。
@@ -84,10 +84,10 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 
   </Step>
   <Step title="安装后任务">
-    - 尽力刷新已加载的 gateway 服务（`openclaw gateway install --force`，然后重启）
-    - 在升级和 git 安装时运行 `openclaw doctor --non-interactive`（尽力而为）
-    - 在合适时尝试引导配置（TTY 可用、未禁用 onboarding，且 bootstrap/config 检查通过）
-    - 当设置了 `--verify` 时运行安装后的冒烟验证
+    - 解析刚安装的 `openclaw` 二进制文件，以便后续命令使用
+    - 对于未配置的安装，会在 doctor 或 gateway 探测之前启动引导。使用 `--no-onboard` 或在没有 TTY 的情况下，它会打印稍后完成设置的命令。
+    - 对于已配置的安装，会尽力刷新并重启已加载的 gateway 服务，并运行 doctor。升级会在可能时更新插件；或者在支持交互提示的无头运行中打印手动命令。
+    - 当运行 `--verify` 时，仅在存在配置后才会检查已安装版本并检查 gateway 健康状况。
 
   </Step>
 </Steps>
@@ -196,8 +196,9 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 
 <Steps>
   <Step title="安装本地 Node 运行时">
-    下载一个已固定且受支持的 Node LTS tarball（版本内嵌在脚本中并独立更新，默认 `22.22.0`）到 `<prefix>/tools/node-v<version>`，并验证 SHA-256。
-    在 Alpine/musl Linux 上，由于 Node 不会为该固定运行时发布兼容的 tarball，会使用 `apk` 安装 `nodejs` 和 `npm`，并将该运行时链接到前缀包装器路径中。Alpine 仓库必须提供受支持的 Node 版本（22.19+、23.11+ 或 24+）；如果较旧的仓库只提供 Node 20 或 21，请使用 Alpine 3.21 或更高版本。
+    下载一个固定版本的受支持 Node LTS tarball（该版本内嵌在脚本中并独立更新，默认 `24.15.0`）到 `<prefix>/tools/node-v<version>`，并验证 SHA-256。
+    Linux ARMv7 使用 Node `22.22.3`，因为官方 Node 24+ ARMv7 二进制文件不可用。
+    在 Alpine/musl Linux 上，由于 Node 不会为固定运行时发布兼容的 tarball，会通过 `apk` 安装 `nodejs` 和 `npm`，然后验证 Node 以及实际链接的 SQLite 库。当前稳定版 Alpine 软件包流即使使用足够新的 Node，也可能仍然链接到存在漏洞的 SQLite；如果安全检查拒绝该软件包，请使用官方 `node:24-alpine` 容器或基于 glibc 的主机。
   </Step>
   <Step title="确保 Git 可用">
     如果缺少 Git，会尝试通过 Linux 上的 apt/dnf/yum/apk 或 macOS 上的 Homebrew 安装。
@@ -249,17 +250,17 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 
 | Flag                                    | Description                                                                     |
 | --------------------------------------- | ------------------------------------------------------------------------------- |
-| `--prefix <path>`                       | 安装前缀（默认：`~/.openclaw`）                                                  |
-| `--install-method \| --method npm\|git` | 选择安装方式（默认：`npm`）                                                     |
+| `--prefix <path>`                       | 安装前缀 (默认: `~/.openclaw`)                                                 |
+| `--install-method \| --method npm\|git` | 选择安装方式 (默认: `npm`)                                                     |
 | `--npm`                                 | npm 方式快捷选项                                                               |
 | `--git \| --github`                     | git 方式快捷选项                                                               |
-| `--git-dir \| --dir <path>`             | Git 检出目录（默认：`~/openclaw`）                                              |
-| `--version <ver>`                       | OpenClaw 版本或 dist-tag（默认：`latest`）                                      |
-| `--node-version <ver>`                  | Node 版本（默认：`22.22.0`）                                                    |
+| `--git-dir \| --dir <path>`             | Git 检出目录 (默认: `~/openclaw`)                                              |
+| `--version <ver>`                       | OpenClaw 版本或 dist-tag (默认: `latest`)                                      |
+| `--node-version <ver>`                  | Node 版本 (默认: `24.15.0`; Linux ARMv7 上为 `22.22.3`)                        |
 | `--json`                                | 输出 NDJSON 事件                                                               |
 | `--onboard`                             | 安装后运行 `openclaw onboard`                                                  |
-| `--no-onboard`                          | 跳过引导（默认）                                                               |
-| `--set-npm-prefix`                      | 在 Linux 上，如果当前前缀不可写，则强制将 npm 前缀设为 `~/.npm-global`         |
+| `--no-onboard`                          | 跳过引导 (默认)                                                                |
+| `--set-npm-prefix`                      | 在 Linux 上，如果当前前缀不可写，则强制将 npm 前缀设为 `~/.npm-global` |
 | `--help \| -h`                          | 显示用法                                                                      |
 
   </Accordion>
@@ -294,11 +295,11 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 ### 流程（install.ps1）
 
 <Steps>
-  <Step title="确保 PowerShell + Windows 环境">
+  <Step title="Ensure PowerShell + Windows 环境">
     需要 PowerShell 5+。
   </Step>
   <Step title="默认确保 Node.js 24">
-    如果缺失，会先尝试通过 winget 安装，然后是 Chocolatey，最后是 Scoop。如果没有可用的包管理器，脚本会将官方 Node.js 24 Windows zip 下载到 `%LOCALAPPDATA%\OpenClaw\deps\portable-node`，并将其添加到当前进程和用户 PATH 中。为兼容性起见，仍支持 Node 22.19+ 和 23.11+。
+    如果缺失，脚本会先尝试通过 winget 安装，然后是 Chocolatey，接着是 Scoop。如果没有可用的包管理器，脚本会将官方 Node.js 24 Windows zip 下载到 `%LOCALAPPDATA%\OpenClaw\deps\portable-node`，并将其添加到当前进程和用户 PATH。支持 Node 22.22.3+、Node 24.15+ 和 Node 25.9+；不支持 Node 23。
   </Step>
   <Step title="安装 OpenClaw">
     - `npm` 方法（默认）：使用所选的 `-Tag` 进行全局 npm 安装，并从可写的安装临时目录启动，因此即使在受保护的文件夹（如 `C:\`）中打开的 shell 也能正常工作

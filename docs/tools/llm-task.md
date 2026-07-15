@@ -46,9 +46,9 @@ Schema 进行验证。它为像 Lobster 这样的工作流引擎提供一个 LLM
         "enabled": true,
         "config": {
           "defaultProvider": "openai",
-          "defaultModel": "gpt-5.5",
+          "defaultModel": "gpt-5.6-sol",
           "defaultAuthProfileId": "main",
-          "allowedModels": ["openai/gpt-5.5"],
+          "allowedModels": ["openai/gpt-5.6-sol"],
           "maxTokens": 800,
           "timeoutMs": 30000
         }
@@ -80,34 +80,34 @@ Schema 进行验证。它为像 Lobster 这样的工作流引擎提供一个 LLM
 返回 `details.json`（解析并经过 schema 验证的 JSON）以及 `details.provider`
 和 `details.model`，用于标明实际运行的内容。
 
-## 示例：Lobster 工作流步骤
+## Example: Lobster Workflow Steps
 
-### 重要限制
+### Important Limitations
 
-下面的示例假设 **独立运行的 Lobster CLI** 正在运行，其中
-`openclaw.invoke` 已经具有正确的网关 URL/认证上下文。
+The example below assumes that a **standalone Lobster CLI** is running, and that
+`openclaw.invoke` already has the correct gateway URL/authentication context.
 
-对于 OpenClaw 内部捆绑的 **嵌入式** Lobster 运行器，此嵌套 CLI
-模式 **目前并不可靠**：
+For the **embedded** Lobster runner bundled inside OpenClaw, this nested CLI
+mode is **currently not reliable**:
 
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{ ... }'
 ```
 
-在嵌入式 Lobster 还没有为此流程提供受支持的桥接之前，请优先选择以下任一方式：
+Until embedded Lobster provides a supported bridge for this flow, prefer either of the following:
 
-- 在 Lobster 之外直接调用 `llm-task` 工具，或
-- 不依赖嵌套 `openclaw.invoke` 调用的 Lobster 步骤。
+- Call the `llm-task` tool directly outside of Lobster, or
+- Use Lobster steps that do not rely on nested `openclaw.invoke` calls.
 
-独立运行的 Lobster CLI 示例：
+Standalone Lobster CLI example:
 
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{
-  "prompt": "根据输入的邮件，返回意图和草稿。",
+  "prompt": "Based on the input email, return the intent and a draft.",
   "thinking": "low",
   "input": {
-    "subject": "你好",
-    "body": "你能帮忙吗？"
+    "subject": "Hello",
+    "body": "Can you help?"
   },
   "schema": {
     "type": "object",

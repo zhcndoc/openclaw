@@ -3,8 +3,9 @@ summary: "插件钩子：拦截 agent、tool、message、session 以及 Gateway 
 title: "插件钩子"
 read_when:
   - 你正在构建一个需要 before_tool_call、before_agent_reply、message 钩子或生命周期钩子的插件
-  - 你需要从插件中阻止、重写或要求批准 tool 调用
-  - 你正在内部钩子和插件钩子之间做选择
+  - 你需要从插件中阻止、重写或要求审批 tool 调用
+  - 你正在在内部钩子和插件钩子之间做选择
+  - 你正在将 OpenClaw cron 唤醒投射到外部主机调度器
 ---
 
 插件钩子是 OpenClaw 插件的进程内扩展点：可检查或
@@ -39,7 +40,6 @@ export default definePluginEntry({
             description: `允许搜索查询：${String(event.params.query ?? "")}`,
             severity: "info",
             timeoutMs: 60_000,
-            timeoutBehavior: "deny",
           },
         };
       },
@@ -49,14 +49,14 @@ export default definePluginEntry({
 });
 ```
 
-处理程序按 `priority` 降序依次运行；相同 `priority` 的处理程序会保持注册顺序。
+可以返回决策或修改的处理器会按 `priority` 降序顺序依次运行；相同 `priority` 的处理器保持注册顺序。仅观察类处理器会并行运行，而“即发即弃”的观察分发可能与后续事件重叠。不要使用 priority 来安排观察副作用的顺序。
 
 `api.on(name, handler, opts?)` 接受：
 
-| 选项         | 作用                                                                                                                                                                                          |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `priority`   | 排序；值越高越先运行。                                                                                                                                                                        |
-| `timeoutMs`  | 每个钩子的预算。设置后，运行器会在该预算耗尽后中止该处理程序并继续执行，而不是阻塞到配置的模型超时。省略则使用运行器默认的每钩子超时。 |
+| Option      | Effect                                                                                                                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `priority`  | 顺序；数值越高越先运行。                                                                                                                                                                           |
+| `timeoutMs` | 每个钩子的等待预算。到期后，OpenClaw 会停止等待该处理器并继续执行下一个。它不会取消该处理器或其副作用。省略则使用运行器的默认每钩子超时。 |
 
 运维人员可以在不修改插件代码的情况下设置钩子预算：
 
@@ -80,7 +80,13 @@ export default definePluginEntry({
 
 `hooks.timeouts.<hookName>` 会覆盖 `hooks.timeoutMs`，后者又会覆盖插件作者通过 `api.on(..., { timeoutMs })` 指定的值。每个值都必须是一个不超过 600000 ms 的正整数。对于已知较慢的钩子，优先使用按钩子覆盖，这样某个插件不会在所有地方都获得更长的预算。
 
-每个钩子都会接收 `event.context.pluginConfig`，即为注册该处理程序的插件解析后的配置。OpenClaw 会按处理程序逐个注入该配置，而不会修改其他插件看到的共享事件对象。
+超时的处理器 promise 会继续运行，因为钩子回调不会收到取消信号。钩子分发在插件工作仍在进行时就可以释放其 Gateway admission。拥有长时间运行工作的插件必须提供自己的取消与关闭生命周期。
+
+出站修改类钩子 `message_sending` 和 `reply_payload_sending` 默认每个处理器使用 15 秒。若某个处理器超时，OpenClaw 会记录插件错误并继续使用最新的 payload，以便序列化交付通道能够稳定下来。对于有意在交付前执行更慢工作的插件，请为每个钩子设置更大的预算。
+
+使用 `createReplyDispatcher` 的通道插件同样可以通过 `beforeDeliverOptions: { timeoutMs }` 声明更大的正向每阶段预算，或者在通过 `dispatcher.appendBeforeDeliver(handler, { timeoutMs })` 追加工作时指定。若没有所有者声明的预算，这些回调会使用相同的 15 秒默认值，这样一个卡住的回调就不会占用序列化交付通道。
+
+每个钩子都会接收 `event.context.pluginConfig`，也就是为注册该处理器的插件解析后的配置。OpenClaw 会按处理器逐个注入，而不会修改其他插件看到的共享事件对象。
 
 ## 钩子目录
 
@@ -120,15 +126,16 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 **消息与传递**
 
-| Hook                        | Purpose                                                           |
-| --------------------------- | ----------------------------------------------------------------- |
-| **`inbound_claim`**         | 在代理路由之前认领传入消息（合成回复） |
-| `message_received`          | 观察传入内容、发送者、线程和元数据             |
-| **`message_sending`**       | 重写发出的内容或取消发送                       |
-| **`reply_payload_sending`** | 在投递前修改或取消规范化的回复负载        |
-| `message_sent`              | 观察发出投递的成功或失败                      |
-| **`before_dispatch`**       | 在通道交接前检查或重写发出分发    |
-| **`reply_dispatch`**        | 参与最终的回复分发流水线                  |
+| Hook                            | Purpose                                                           |
+| ------------------------------- | ----------------------------------------------------------------- |
+| **`inbound_claim`**             | 在代理路由前认领传入消息（合成回复） |
+| **`channel_pairing_requested`** | 观察新创建的 DM 配对请求                         |
+| `message_received`              | 观察传入内容、发送者、线程和元数据             |
+| **`message_sending`**           | 重写外发内容或取消投递                       |
+| **`reply_payload_sending`**     | 在投递前修改或取消规范化的回复负载        |
+| `message_sent`                  | 观察外发投递成功或失败                      |
+| **`before_dispatch`**           | 在通道交接前检查或重写外发分发    |
+| **`reply_dispatch`**            | 参与最终的回复分发管线                  |
 
 **Sessions 与压缩**
 
@@ -151,13 +158,28 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 | Hook                             | Purpose                                                                                              |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `gateway_start` / `gateway_stop` | 随 Gateway 启动或停止插件拥有的服务                                                 |
-| `deactivate`                     | 已弃用的 `gateway_stop` 兼容别名；在新插件中使用 `gateway_stop`                 |
-| `cron_changed`                   | 观察 Gateway 拥有的 cron 生命周期变化（添加、更新、移除、启动、完成、计划） |
-| **`before_install`**             | 检查来自已加载插件运行时的暂存技能或插件安装材料                         |
+| `deactivate`                     | `gateway_stop` 的已弃用兼容别名；在新插件中使用 `gateway_stop`                 |
+| `cron_reconciled`                | 在启动或重新加载后，根据完整的 Gateway cron 状态进行协调                            |
+| `cron_changed`                   | 观察 Gateway 拥有的 cron 生命周期变更（添加、更新、移除、启动、完成、计划） |
+| **`before_install`**             | 检查已加载插件运行时中的暂存技能或插件安装材料                         |
+
+### Channel pairing requests
+
+当插件需要在未配对的 DM 发送者创建待处理配对请求后通知操作员或写入审计记录时，使用 `channel_pairing_requested`。该钩子会在请求创建时派发；配对回复的通道投递不会因为缓慢或失败的钩子处理程序而延迟。
+
+```typescript
+api.on("channel_pairing_requested", async (event) => {
+  await notifyOperator({
+    text: `来自 ${event.senderId} 的新 ${event.channel} 配对请求：${event.code}`,
+  });
+});
+```
+
+该钩子仅用于观察。它不会批准、拒绝、抑制或重写配对回复。有效负载包含通道、可选的 `accountId`、按通道范围的 `senderId`、配对 `code` 以及通道元数据。请将配对代码视为实时一次性批准凭证，并仅将其交付给受信任的操作员接收端。请将 `metadata` 视为不受信任的、由发送者提供的身份文本。该钩子不包含传入消息正文或媒体。
 
 ## 调试运行时钩子
 
-使用 `before_model_resolve` 在代理轮次中切换提供方或模型——它会在模型解析之前运行。`llm_output` 仅在一次模型尝试生成助手输出后运行。
+在代理轮次中使用 `before_model_resolve` 切换提供方或模型——它会在模型解析之前运行。`llm_output` 仅在一次模型尝试生成助手输出后运行。
 
 要验证会话模型是否生效，请检查运行时注册信息，然后使用 `openclaw sessions` 或 Gateway 的 session/status 界面。要调试提供方载荷，请使用 `--raw-stream` 和 `--raw-stream-path <path>` 启动 Gateway，将原始模型流事件写入 jsonl 文件。
 
@@ -167,17 +189,17 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 - `event.toolName`
 - `event.params`
-- optional `event.toolKind` and `event.toolInputKind`，宿主权威的
+- 可选的 `event.toolKind` 和 `event.toolInputKind`，宿主权威的
   区分器，用于有意共享名称的工具；例如，外层
   code-mode `exec` 调用使用 `toolKind: "code_mode_exec"`，并在输入语言已知时包含
   `toolInputKind: "javascript" | "typescript"`
-- optional `event.derivedPaths`，对宿主派生的目标路径提示的最佳努力结果，
+- 可选的 `event.derivedPaths`，对宿主派生的目标路径提示的最佳努力结果，
   适用于诸如 `apply_patch` 之类的已知工具封装；这些路径可能
   不完整，或对工具实际会触及的内容过于宽泛（例如在输入有误或部分缺失时）
-- optional `event.runId`
-- optional `event.toolCallId`
-- context fields such as `ctx.agentId`, `ctx.sessionKey`, `ctx.sessionId`,
-  `ctx.runId`, `ctx.toolKind`, `ctx.toolInputKind`, and diagnostic `ctx.trace`
+- 可选的 `event.runId`
+- 可选的 `event.toolCallId`
+- 上下文字段，例如 `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId`、
+  `ctx.runId`、`ctx.toolKind`、`ctx.toolInputKind`，以及诊断信息 `ctx.trace`
 
 它可以返回：
 
@@ -191,6 +213,7 @@ type BeforeToolCallResult = {
       description: string;
       severity?: "info" | "warning" | "critical";
       timeoutMs?: number;
+      /** @deprecated 未解决的审批始终拒绝。 */
       timeoutBehavior?: "allow" | "deny";
       allowedDecisions?: Array<"allow-once" | "allow-always" | "deny">;
       pluginId?: string;
@@ -198,7 +221,7 @@ type BeforeToolCallResult = {
         decision: "allow-once" | "allow-always" | "deny" | "timeout" | "cancelled",
       ) => Promise<void> | void;
     };
-};
+  };
 ```
 
 类型化生命周期钩子的守卫行为：
@@ -346,11 +369,13 @@ signal，否则不会取消插件拥有的网络工作。
 `contextTokenBudget`，即模型/配置/agent 限制后的有效 token 预算，以及
 在施加更低上限时的 `contextWindowSource` 和 `contextWindowReferenceTokens`。
 
-`before_agent_finalize` 仅在 harness 即将接受自然生成的最终 assistant 答案时运行。
-它不是 `/stop` 取消路径，也不会在用户中止回合时运行。返回 `{ action: "revise", reason }`
-可请求 harness 在最终定稿前再进行一次模型传递，返回 `{ action: "finalize", reason? }`
-可强制定稿，或省略结果以继续。Codex 原生的 `Stop` 钩子会作为 OpenClaw 的
-`before_agent_finalize` 决策转发到这里。
+`before_agent_finalize` 仅在 harness 即将接受自然的最终助手回复时运行。它不是
+`/stop` 取消路径，也不会在用户中止回合时运行。返回 `{ action: "revise", reason }`
+可要求 harness 在最终定稿前再进行一次模型传递，返回 `{ action:
+"finalize", reason? }` 可强制最终定稿，或省略结果以继续。处理器默认预算为 15 秒；
+超时后，OpenClaw 会记录失败并继续使用原始最终答案。
+Codex 原生的 `Stop` 钩子会作为 OpenClaw 的 `before_agent_finalize`
+决策转发到此钩子中。
 
 当返回 `action: "revise"` 时，插件可以包含 `retry` 元数据，以便让额外的模型传递
 保持有界且可重放：
@@ -388,32 +413,26 @@ type BeforeAgentFinalizeRetry = {
 Prompt-mutating hooks 和 durable next-turn injections 可以通过
 `plugins.entries.<id>.hooks.allowPromptInjection=false` 按插件禁用。
 
-### Session 扩展与下一回合注入
+### 会话扩展与下一回合注入
 
-Workflow plugins can persist small JSON-compatible session state with
-`api.session.state.registerSessionExtension(...)` and update it through the
-Gateway `sessions.pluginPatch` method. Session rows project registered
-extension state through `pluginExtensions`, letting Control UI and other
-clients render plugin-owned status without learning plugin internals.
+Workflow 插件可以使用 `api.session.state.registerSessionExtension(...)` 持久化小型
+JSON 兼容会话状态，并通过 Gateway 的 `sessions.pluginPatch` 方法更新它。会话行会将
+已注册的扩展状态通过 `pluginExtensions` 映射出来，让 Control UI 和其他客户端在不
+了解插件内部实现的情况下也能渲染插件拥有的状态。
 `api.registerSessionExtension(...)` 仍然可用，但已弃用，建议改用
 `api.session.state` 命名空间。
 
-Use `api.session.workflow.enqueueNextTurnInjection(...)` when a plugin needs
-durable context to reach the next model turn exactly once (the top-level
-`api.enqueueNextTurnInjection(...)` is a deprecated alias with the same
-behavior). OpenClaw drains queued injections before prompt hooks, drops
-expired injections, and deduplicates by `idempotencyKey` per plugin. This is
-the right seam for approval resumes, policy summaries, background monitor
-deltas, and command continuations that should be visible to the model on the
-next turn but should not become permanent system prompt text.
+当插件需要让持久化上下文恰好一次地到达下一次模型回合时，请使用
+`api.session.workflow.enqueueNextTurnInjection(...)`（顶层的
+`api.enqueueNextTurnInjection(...)` 是一个具有相同行为的已弃用别名）。
+OpenClaw 会在提示词钩子之前清空已排队的注入，丢弃过期注入，并按插件的
+`idempotencyKey` 去重。这是批准恢复、策略摘要、后台监控增量以及命令续接的合适
+接入点：这些内容应在下一回合对模型可见，但不应变成永久的系统提示词文本。
 
-Cleanup semantics are part of the contract. Session extension cleanup and
-runtime lifecycle cleanup callbacks receive `reset`, `delete`, `disable`, or
-`restart`. The host removes the owning plugin's persistent session extension
-state and pending next-turn injections for reset/delete/disable; restart
-keeps durable session state while cleanup callbacks let plugins release
-scheduler jobs, run context, and other out-of-band resources for the old
-runtime generation.
+清理语义是契约的一部分。会话扩展清理和运行时生命周期清理回调会接收 `reset`、
+`delete`、`disable` 或 `restart`。主机会在 reset/delete/disable 时移除拥有该插件的
+持久会话扩展状态和待处理的下一回合注入；restart 会保留持久会话状态，而清理回调则
+允许插件释放旧运行代的调度器任务、运行上下文以及其他带外资源。
 
 ## 消息钩子
 
@@ -433,7 +452,7 @@ runtime generation.
 
 `reply_payload_sending` 事件可能包含 `usageState`，这是对每次 turn 的模型/用量/上下文的尽力而为的实时快照。持久化投递、恢复回放以及没有精确运行关联的回复会省略它。
 
-当可用时，Message hook 上下文会暴露稳定的关联字段：
+当可用时，Message hook 上文会暴露稳定的关联字段：
 `ctx.sessionKey`、`ctx.runId`、`ctx.messageId`、`ctx.senderId`、`ctx.trace`、
 `ctx.traceId`、`ctx.spanId`、`ctx.parentSpanId` 和 `ctx.callDepth`。入站
 和 `before_dispatch` 上下文在通道具有可见性过滤的引用消息数据时也会暴露回复元数据：`replyToId`、`replyToIdFull`、
@@ -467,46 +486,175 @@ runtime generation.
 
 ## 网关生命周期
 
-为需要由 Gateway 托管状态的插件服务使用 `gateway_start`。上下文会暴露
-`ctx.config`、`ctx.workspaceDir` 和用于 cron 检查与更新的 `ctx.getCron?.()`。
-使用 `gateway_stop` 清理长时间运行的资源。
+使用 `gateway_start` 来启动通用插件服务，并使用 `gateway_stop` 来清理长期运行的资源。cron 调度器在 `gateway_start` 运行时仍可能处于加载中，因此不要把它作为外部 cron 投影的基线信号。
 
 不要依赖内部的 `gateway:startup` 钩子来实现插件拥有的运行时服务。
 
-`cron_changed` 会在 Gateway 拥有的 cron 生命周期事件发生时触发，并带有一个类型化的
-事件载荷，覆盖 `added`、`updated`、`removed`、`started`、`finished` 和
-`scheduled` 原因。该事件携带一个 `PluginHookGatewayCronJob`
-快照（包括 `state.nextRunAtMs`、`state.lastRunStatus`，以及在存在时的
-`state.lastError`），外加一个 `PluginHookGatewayCronDeliveryStatus`，其值为
-`not-requested` | `delivered` | `not-delivered` | `unknown`。已移除事件
-仍会携带已删除的 job 快照，因此外部调度器可以协调
-状态。与外部唤醒调度器同步时，请使用运行时上下文中的 `ctx.getCron?.()` 和
-`ctx.config`，并让 OpenClaw 作为到期检查和执行的事实来源。
+`cron_reconciled` 会在 Gateway 的 cron 调度器及其退出时监听器完成有状态协调后触发。它既会在初始启动时触发，也会在配置重载时调度器替换后触发。该事件会报告 `reason`（`startup` 或 `reload`）以及实际生效的 `enabled` 状态。即使 cron 被禁用，也会以 `enabled: false` 触发，从而允许外部投影清除过期的唤醒。使用 `ctx.getCron?.()` 获取完成协调的精确调度器实例；之后的重载不会重新指向该回调。`ctx.abortSignal` 持有同一份调度器快照。Gateway 会在有更新的调度器被启用或关闭开始时立刻中止它。请将它传递给每一个持久化副作用，并且在它中止后不要再接受该快照。
+这是一个调度器生命周期信号，不是插件激活信号：仅插件热重载不会再次触发它。新启用的消费者会在下一次调度器替换或 Gateway 启动时收到它的第一个基线信号。
+
+与其他观察钩子类似，`gateway_start` 和 `cron_reconciled` 的回调可能会重叠。如果两个处理器共享插件初始化，请使用插件本地的就绪 promise 来协调，而不要依赖回调顺序。
+
+`cron_changed` 会针对 Gateway 拥有的 cron 生命周期事件触发，并带有类型化事件载荷，涵盖 `added`、`updated`、`removed`、`started`、`finished` 和 `scheduled` 这些原因。该事件携带一个 `PluginHookGatewayCronJob` 快照（在存在时包括 `state.nextRunAtMs`、`state.lastRunStatus` 和 `state.lastError`），以及一个 `PluginHookGatewayCronDeliveryStatus`，其值可以是 `not-requested` | `delivered` | `not-delivered` | `unknown`。`removed` 事件属于提交后事件：只有在持久化删除成功后才会触发，并且仍然携带已删除的作业快照，以便外部调度器协调状态。
+
+`scheduled` 事件也属于提交后事件：它只会在一次成功的持久化写入改变了现有作业的有效 `nextRunAtMs` 之后触发，并且不包括该作业显式的 `added`、`updated` 或 `removed` 生命周期事件。顶层的 `event.nextRunAtMs` 是已提交的下一次唤醒时间；当它缺失时，表示该作业没有下一次唤醒。请把这些事件视为协调提示，而不是有序的增量日志。将它们作为可合并的提示，用来重新读取由 `cron_reconciled` 最后捕获的调度器；不要从 `cron_changed` 上下文中接管调度器。将 OpenClaw 作为到期检查和执行的唯一真实来源。
+
+### 安全的外部 cron 投影
+
+投影完整的唤醒快照，而不是转发 cron 事件增量。外部适配器的 `replaceAll` 操作必须是原子且幂等的，并且只有在宿主已持久化接受该快照后才算完成。它还必须遵守所提供的中止信号：如果该信号在持久化接受之前中止，则适配器不得接受该快照。
+
+这种模式使得同一时刻只有一个最新状态 worker 在运行。只有 `cron_reconciled` 会接管一个调度器实例；`cron_changed` 只是要求该 worker 重新读取权威实例，因此迟到的提示不会恢复较旧的调度器。更新的版本会在宿主尝试接受陈旧快照之前中止当前尝试。
+
+```typescript
+import { setTimeout as sleep } from "node:timers/promises";
+import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+
+type ExternalWake = { jobId: string; runAtMs: number };
+
+type ExternalWakeHost = {
+  replaceAll(wakes: readonly ExternalWake[], options: { signal: AbortSignal }): Promise<void>;
+  close(): Promise<void>;
+};
+
+type CronReader = {
+  list(options: { includeDisabled: true }): Promise<
+    Array<{
+      id: string;
+      enabled?: boolean;
+      state?: { nextRunAtMs?: number };
+    }>
+  >;
+};
+
+export function registerCronProjection(api: OpenClawPluginApi, host: ExternalWakeHost) {
+  const lifecycle = new AbortController();
+  let cron: CronReader | undefined;
+  let enabled = false;
+  let hasBaseline = false;
+  let reconciliationSignal: AbortSignal | undefined;
+  let requestedRevision = 0;
+  let appliedRevision = 0;
+  let worker = Promise.resolve();
+  let activeAttempt: AbortController | undefined;
+
+  const projectLatest = async () => {
+    let retryMs = 1_000;
+
+    while (!lifecycle.signal.aborted && appliedRevision < requestedRevision) {
+      const ownerSignal = reconciliationSignal;
+      if (!ownerSignal || ownerSignal.aborted) {
+        return;
+      }
+      const targetRevision = requestedRevision;
+      const attempt = new AbortController();
+      const signal = AbortSignal.any([lifecycle.signal, ownerSignal, attempt.signal]);
+      activeAttempt = attempt;
+
+      try {
+        const jobs = enabled && cron ? await cron.list({ includeDisabled: true }) : [];
+        if (signal.aborted || targetRevision !== requestedRevision) {
+          continue;
+        }
+        const wakes = jobs
+          .flatMap((job): ExternalWake[] => {
+            const runAtMs = job.enabled === false ? undefined : job.state?.nextRunAtMs;
+            return runAtMs === undefined ? [] : [{ jobId: job.id, runAtMs }];
+          })
+          .sort((a, b) => a.runAtMs - b.runAtMs || a.jobId.localeCompare(b.jobId));
+
+        await host.replaceAll(wakes, { signal });
+        if (signal.aborted || targetRevision !== requestedRevision) {
+          continue;
+        }
+        appliedRevision = targetRevision;
+        retryMs = 1_000;
+      } catch {
+        if (lifecycle.signal.aborted || ownerSignal.aborted) {
+          return;
+        }
+        if (attempt.signal.aborted) {
+          continue;
+        }
+        api.logger.warn(`外部 cron 投影失败；将在 ${retryMs}ms 后重试`);
+        try {
+          await sleep(retryMs, undefined, { signal });
+        } catch {
+          if (lifecycle.signal.aborted) {
+            return;
+          }
+          if (attempt.signal.aborted) {
+            continue;
+          }
+        }
+        retryMs = Math.min(retryMs * 2, 30_000);
+      } finally {
+        if (activeAttempt === attempt) {
+          activeAttempt = undefined;
+        }
+      }
+    }
+  };
+
+  const requestProjection = () => {
+    const targetRevision = ++requestedRevision;
+    activeAttempt?.abort();
+    worker = worker.then(async () => {
+      if (!lifecycle.signal.aborted && appliedRevision < targetRevision) {
+        await projectLatest();
+      }
+    });
+    return worker;
+  };
+
+  api.on("cron_reconciled", (event, ctx) => {
+    const reconciledCron = ctx.getCron?.();
+    if (event.enabled && !reconciledCron) {
+      api.logger.warn("cron 协调未暴露调度器");
+      return;
+    }
+    cron = reconciledCron;
+    enabled = event.enabled;
+    hasBaseline = true;
+    reconciliationSignal = ctx.abortSignal;
+    return requestProjection();
+  });
+
+  api.on("cron_changed", () => {
+    if (hasBaseline) {
+      return requestProjection();
+    }
+  });
+
+  api.on("gateway_stop", async () => {
+    lifecycle.abort();
+    await worker;
+    await host.close();
+  });
+}
+```
+
+当 `cron_reconciled` 报告 `enabled: false` 时，同一路径会调用 `replaceAll([])` 并清除过期的外部唤醒。此示例中的重试/退避是进程本地的，并将运行时适配器失败视为暂时性错误；请在注册前验证不可重试的配置。OpenClaw 不为插件钩子副作用提供 outbox。如果进程在持久化接受之前退出，下一次 Gateway 启动会发出新的权威 `cron_reconciled` 快照。`gateway_stop` 会中止正在进行的宿主工作，等待 worker 稳定下来，然后关闭适配器。
 
 ## 即将弃用
 
 有少数与钩子相邻的接口已弃用，但仍受支持。请在下一次重大版本发布前迁移：
 
-- **Plaintext channel envelopes** in `inbound_claim` and `message_received`
-  handlers. Read `BodyForAgent` and the structured user-context blocks
-  instead of parsing flat envelope text. See
-  [Plaintext channel envelopes → BodyForAgent](/plugins/sdk-migration#active-deprecations).
-- **`before_agent_start`** remains for compatibility. New plugins should use
-  `before_model_resolve` and `before_prompt_build` instead of the combined
-  phase.
-- **`subagent_spawning`** remains for compatibility with older plugins, but
-  new plugins should not return thread routing from it. Core prepares
-  `thread: true` subagent bindings through channel session-binding adapters
-  before `subagent_spawned` fires.
-- **`deactivate`** remains as a deprecated cleanup compatibility alias until
-  after 2026-08-16. New plugins should use `gateway_stop`.
-- **`onResolution` in `before_tool_call`** now uses the typed
-  `PluginApprovalResolution` union (`allow-once` / `allow-always` / `deny` /
-  `timeout` / `cancelled`) instead of a free-form `string`.
-- **`api.registerSessionExtension` / `api.enqueueNextTurnInjection`** remain
-  as top-level compatibility aliases. New plugins should use
-  `api.session.state.registerSessionExtension(...)` and
-  `api.session.workflow.enqueueNextTurnInjection(...)`.
+- **`inbound_claim` 和 `message_received`** 处理器中的**纯文本通道信封**。请读取 `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。参见
+  [纯文本通道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
+- **`before_agent_start`** 为兼容性而保留。新插件应使用
+  `before_model_resolve` 和 `before_prompt_build`，而不是合并后的
+  阶段。
+- **`subagent_spawning`** 为兼容旧插件而保留，但
+  新插件不应从中返回线程路由。核心在 `subagent_spawned` 触发之前，
+  会通过通道会话绑定适配器准备 `thread: true` 的子代理绑定。
+- **`deactivate`** 作为已弃用的清理兼容别名保留，直到
+  2026-08-16 之后。新插件应使用 `gateway_stop`。
+- **`before_tool_call` 中的 `onResolution`** 现在使用带类型的
+  `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` /
+  `timeout` / `cancelled`），而不是自由形式的 `string`。
+- **`api.registerSessionExtension` / `api.enqueueNextTurnInjection`** 仍作为顶层兼容别名保留。新插件应使用
+  `api.session.state.registerSessionExtension(...)` 和
+  `api.session.workflow.enqueueNextTurnInjection(...)`。
 
 有关完整列表——内存能力注册、提供方思维
 配置文件、外部认证提供方、提供方发现类型、任务运行时

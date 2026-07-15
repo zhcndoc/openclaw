@@ -84,13 +84,25 @@ pnpm gateway:watch
 
 ```bash
 tmux attach -t openclaw-gateway-watch-main
+# 读取最近输出而不附加
+tmux capture-pane -ep -t openclaw-gateway-watch-main -S -200
 ```
 
-tmux 窗格运行的是原始 watcher：
+该窗格使用 tmux 的 `remain-on-exit`，因此启动失败会保留，便于附加或捕获，而不会删除会话。重新运行 `pnpm gateway:watch` 会重新生成该窗格。
+
+tmux 窗格运行原始 watcher：
 
 ```bash
 node scripts/watch-node.mjs gateway --force
 ```
+
+在监视配置的/默认端口之前，tmux 包装器会停止当前 profile 已安装的 Gateway 服务。这样就能把端口交给源 watcher，而不会被 launchd、systemd 或 Scheduled Task 重新启动并替换掉它。该服务仍会保持安装状态；在 watch 会话结束后，可用以下命令恢复它：
+
+```bash
+pnpm openclaw gateway start
+```
+
+当显式的 `--port` 或 `OPENCLAW_GATEWAY_PORT` 与已安装服务的实际端口不同时，包装器会让该服务继续运行，这样两个 Gateway 就可以并行运行。
 
 不使用 tmux 的前台模式：
 
@@ -99,6 +111,8 @@ pnpm gateway:watch:raw
 # 或
 OPENCLAW_GATEWAY_WATCH_TMUX=0 pnpm gateway:watch
 ```
+
+原始模式不会管理已安装的服务。当它使用相同端口时，请先运行 `pnpm openclaw gateway stop`。
 
 保留 tmux 管理，但禁用自动附加：
 
@@ -133,7 +147,7 @@ watcher 会在 `src/` 下的构建相关文件、扩展源码文件、扩展的 
 
 在 `gateway:watch` 之后追加 gateway CLI 标志，这些标志会在每次重启时透传。重新运行相同的 watch 命令会重新生成同名 tmux 窗格；原始 watcher 会保持单一 watcher 锁，因此重复的 watcher 父进程会被替换，而不是堆积起来。
 
-## Dev 配置 + dev 网关（--dev）
+## Dev Configuration + dev 网关（--dev）
 
 两个**独立的** `--dev` 标志：
 

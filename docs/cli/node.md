@@ -11,6 +11,10 @@ title: "节点"
 运行一个连接到 Gateway WebSocket 并在此机器上公开
 `system.run` / `system.which` 的**无头节点主机**。
 
+在 macOS 上，菜单栏应用已经将此节点主机运行时嵌入到其自身的
+节点连接中，并添加了原生 Mac 能力。仅当你有意想要一个不带应用的无头节点时，
+才在 Mac 上使用 `openclaw node run`。同时运行两者会为同一台机器创建两个节点身份。
+
 ## 为什么使用节点主机？
 
 当你希望代理在**其他机器上运行命令**，而无需在那里安装完整的 macOS 配套应用时，
@@ -25,7 +29,20 @@ title: "节点"
 执行仍受 **exec 批准** 和节点主机上每个代理的允许列表保护，
 因此你可以保持命令访问范围明确且受控。
 
-## 浏览器代理（零配置）
+`openclaw node run` 连接后可以发布插件或基于 MCP 的工具。Gateway 默认信任
+来自已配对节点的描述符，同时要求每个描述符的命令仍然保持在节点已批准的
+命令范围内。代理会将每个已接受的描述符视为普通插件工具，但执行仍然通过
+`node.invoke` 进行，因此断开节点会将该工具从新的代理运行中移除。
+Gateway 运维人员可以通过以下配置禁用发布功能：
+`gateway.nodes.pluginTools.enabled: false`。
+
+对于声明式 MCP 工具，请在节点机器上的 `openclaw.json` 中，将常规的 MCP
+服务器结构添加到 `nodeHost.mcp.servers` 下，然后重启节点主机。节点会声明
+受批准流程保护的 `mcp.tools.call.v1` 命令族，并在连接后发布列出的工具；
+之后更改服务器列表不需要重新配对。参见
+[节点托管的 MCP 服务器](/nodes#node-hosted-mcp-servers)。
+
+## Browser proxy（零配置）
 
 如果节点上未禁用 `browser.enabled`，节点主机会自动声明一个浏览器代理。这使代理可以在该节点上使用浏览器自动化，而无需额外配置。
 
@@ -54,12 +71,13 @@ openclaw node run --host <gateway-host> --port 18789
 
 选项：
 
-- `--host <host>`: 网关 WebSocket 主机（默认：`127.0.0.1`）
-- `--port <port>`: 网关 WebSocket 端口（默认：`18789`）
-- `--context-path <path>`: 网关 WebSocket 上下文路径（例如 `/openclaw-gw`）。会附加到 WebSocket URL。
-- `--tls`: 为网关连接使用 TLS
+- `--host <host>`: Gateway WebSocket 主机（默认：`127.0.0.1`）
+- `--port <port>`: Gateway WebSocket 端口（默认：`18789`）
+- `--context-path <path>`: Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。将附加到 WebSocket URL。
+- `--tls`: 为 gateway 连接使用 TLS
+- `--no-tls`: 即使本地 Gateway 配置启用了 TLS，也强制使用明文 Gateway 连接
 - `--tls-fingerprint <sha256>`: 期望的 TLS 证书指纹（sha256）
-- `--node-id <id>`: 覆盖节点 ID（清除配对令牌）
+- `--node-id <id>`: 覆盖存储在 `node.json` 中的旧版客户端实例 ID（不会重置配对）
 - `--display-name <name>`: 覆盖节点显示名称
 
 ## 节点主机的 Gateway 认证
@@ -92,15 +110,15 @@ openclaw node install --host <gateway-host> --port 18789
 
 选项：
 
-- `--host <host>`：Gateway WebSocket 主机（默认：`127.0.0.1`）
-- `--port <port>`：Gateway WebSocket 端口（默认：`18789`）
-- `--context-path <path>`：Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。将附加到 WebSocket URL。
-- `--tls`：为 gateway 连接使用 TLS
-- `--tls-fingerprint <sha256>`：期望的 TLS 证书指纹（sha256）
-- `--node-id <id>`：覆盖 node id（清除配对 token）
-- `--display-name <name>`：覆盖 node 显示名称
-- `--runtime <runtime>`：服务运行时（`node` 或 `bun`）
-- `--force`：如果已安装则重新安装/覆盖
+- `--host <host>`: Gateway WebSocket 主机（默认：`127.0.0.1`）
+- `--port <port>`: Gateway WebSocket 端口（默认：`18789`）
+- `--context-path <path>`: Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。会附加到 WebSocket URL。
+- `--tls`: 为网关连接使用 TLS
+- `--tls-fingerprint <sha256>`: 预期的 TLS 证书指纹（sha256）
+- `--node-id <id>`: 覆盖存储在 `node.json` 中的旧版客户端实例 ID（不会重置配对）
+- `--display-name <name>`: 覆盖 node 显示名称
+- `--runtime <runtime>`: 服务运行时（`node`）
+- `--force`: 如果已安装，则重新安装/覆盖
 
 管理服务：
 
@@ -120,15 +138,27 @@ Node 主机会在进程内重试 Gateway 重启和网络关闭。如果 Gateway 
 
 ## 配对
 
-首次连接会在 Gateway 上创建一个待处理的设备配对请求（`role: node`）。
-可通过以下方式批准：
+第一次连接会在 Gateway 上创建一个待处理的设备配对请求（`role: node`）。
+
+当 Gateway 主机能够以非交互方式通过 SSH 连接到节点主机时（同一用户、受信任的主机密钥），该待处理请求会自动批准：Gateway 会通过 SSH 在节点主机上运行 `openclaw node identity --json`，并在设备密钥完全匹配时批准。这一功能默认开启；有关要求以及如何禁用它（`gateway.nodes.pairing.sshVerify: false`），请参阅
+[SSH 验证的设备自动批准](/gateway/pairing#ssh-verified-device-auto-approval-default)。
+
+否则，请通过以下方式手动批准：
 
 ```bash
 openclaw devices list
 openclaw devices approve <requestId>
 ```
 
-在严格控制的节点网络中，Gateway 操作者可以明确选择对来自受信任 CIDR 的首次节点配对自动批准：
+查看 Gateway 用于验证的本地节点身份：
+
+```bash
+openclaw node identity --json
+```
+
+它会输出来自 `identity/device.json` 的设备 ID 和公钥，且绝不会创建或修改身份文件。
+
+在严格受控的节点网络中，Gateway 操作员可以显式选择自动批准来自受信任 CIDR 的首次节点配对：
 
 ```json5
 {
@@ -142,14 +172,33 @@ openclaw devices approve <requestId>
 }
 ```
 
-默认情况下这是禁用的（`autoApproveCidrs` 未设置）。它仅适用于
-来自 Gateway 信任的客户端 IP、且没有请求任何 scopes 的全新 `role: node` 配对。
-Operator/browser 客户端、Control UI、WebChat，以及 role、scope、metadata 或 public-key 升级仍然需要手动批准。
+默认情况下这是禁用的（未设置 `autoApproveCidrs`）。它仅适用于来自 Gateway 信任的客户端 IP、且没有请求任何 scope 的全新 `role: node` 配对。Operator/browser 客户端、Control UI、WebChat，以及 role、scope、metadata 或 public-key 升级仍然需要手动批准。
 
 如果节点在重试配对时认证细节发生变化（role/scopes/public key），先前的待处理请求会被取代，并创建新的 `requestId`。
 在批准之前请再次运行 `openclaw devices list`。
 
-节点主机将其 node id、token、显示名称以及 gateway 连接信息存储在 OpenClaw 状态目录中的 `node.json` 里（默认是 `~/.openclaw`，如果设置了 `$OPENCLAW_STATE_DIR` 则使用该目录）。
+### 身份和配对状态
+
+无头节点会将其旧版客户端实例 ID 与 Gateway 用于配对和路由的签名设备身份分开处理。这些文件位于 OpenClaw 状态目录中（默认是 `~/.openclaw`，或在设置了 `$OPENCLAW_STATE_DIR` 时使用该目录）：
+
+| 文件                        | 作用                                                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node.json`                 | 旧版 `nodeId` 键下的客户端实例 ID、显示名称以及 Gateway 连接元数据。客户端会将该值作为 `instanceId` 发送。 |
+| `identity/device.json`      | 签名的 Ed25519 密钥对及派生出的设备 ID。对于签名连接，此设备 ID 就是路由中的节点 ID 和配对身份。              |
+| `identity/device-auth.json` | 已配对的设备令牌，按加密设备 ID 和角色进行键控。                                                                              |
+
+`--node-id` 只会更改 `node.json` 中的客户端实例 ID。它不会更改加密设备 ID，也不会清除配对认证。仅删除 `node.json` 同样不会重置配对。要撤销并重新配对节点：
+
+1. 在 Gateway 上运行 `openclaw nodes remove --node <id|name|ip>`。
+2. 在节点上，使用 `openclaw node restart` 重启已安装的服务，或者停止后重新运行前台的 `openclaw node run` 命令。这会启动设备配对流程。如果 `openclaw devices list` 没有显示请求，且节点报告 `AUTH_DEVICE_TOKEN_MISMATCH`，请再重启或重新运行一次。被拒绝的尝试会清除已被撤销的本地令牌；下一次尝试可以请求配对。
+3. 在 Gateway 上运行 `openclaw devices list`，然后运行 `openclaw devices approve <deviceRequestId>`。
+4. 再次重启或重新运行节点。处于配对暂停状态的客户端在批准后不会自动恢复；这次重新连接会创建单独的命令面请求。
+5. 在 Gateway 上运行 `openclaw nodes pending`，然后运行 `openclaw nodes approve <nodeRequestId>`。
+
+这两个请求 ID 是不同的。适用的受信任 CIDR 策略可以自动批准首次设备配对步骤；命令面批准仍然是单独的检查。
+
+较早版本的 OpenClaw 可能会在 `node.json` 中保留一个旧版 `token` 字段。
+当前的 OpenClaw 不再使用该字段，并会在节点主机下次保存该文件时将其移除。请将 `identity/` 下的这两个文件都妥善保密；它们包含设备密钥对和认证令牌。
 
 ## Exec 批准
 

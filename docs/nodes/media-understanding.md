@@ -40,20 +40,14 @@ OpenClaw 可以在回复流程运行之前对入站媒体（图像/音频/视频
   tools: {
     media: {
       concurrency: 2, // 最大并发能力运行数（默认）
-      models: [
-        /* 共享列表，按能力进行门控 */
-      ],
-      image: {
-        /* 可选覆盖 */
-      },
+      models: [/* 共享列表，按 capabilities 进行门控 */],
+      image: {/* 可选覆盖 */},
       audio: {
         /* 可选覆盖 */
         echoTranscript: true,
         echoFormat: '📝 "{transcript}"',
       },
-      video: {
-        /* 可选覆盖 */
-      },
+      video: {/* 可选覆盖 */},
     },
   },
 }
@@ -88,8 +82,8 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
     {
       type: "provider", // 如果省略则默认为此
       provider: "openai",
-      model: "gpt-5.5",
-      prompt: "将图像描述在 <= 500 个字符内。",
+      model: "gpt-5.6-sol",
+      prompt: "用不超过 500 个字符描述图像。",
       maxChars: 500,
       maxBytes: 10485760,
       timeoutSeconds: 60,
@@ -164,10 +158,14 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
     先尝试已配置的、支持音频的 `models.providers.*` 条目，再尝试本地 CLI。内置 provider 优先级顺序（并列时按 provider id 字母顺序打破平局）：Groq/OpenAI → xAI → Deepgram → OpenRouter → Google/SenseAudio → Deepinfra/ElevenLabs → Mistral。
   </Step>
   <Step title="本地 CLI（仅音频）">
-    按以下顺序尝试第一个已安装的本地二进制文件：
-    - `sherpa-onnx-offline`（需要 `SHERPA_ONNX_MODEL_DIR`，其中包含 `tokens.txt`/`encoder.onnx`/`decoder.onnx`/`joiner.onnx`）
-    - `whisper-cli`（`whisper-cpp`；使用 `WHISPER_CPP_MODEL` 或内置的 tiny 模型）
-    - `whisper`（Python CLI；默认使用 `turbo` 模型，并自动下载）
+    已就绪的本地二进制文件会成为一个有序的后备列表：
+    - `whisper-cli` 仅在当前进程中较早的一次模型调用观察到 Metal 或 CUDA 后才会优先使用
+    - CPU 默认的 `sherpa-onnx-offline`（需要 `SHERPA_ONNX_MODEL_DIR`，其中包含 `tokens.txt`/`encoder.onnx`/`decoder.onnx`/`joiner.onnx`）
+    - 当加速仅表现为具备构建能力或尚未被观察到时使用 `whisper-cli`
+    - Apple Silicon 上的 `parakeet-mlx`（具备 MLX 能力，但设备使用尚未被观察到）
+    - `whisper`（Python CLI；默认使用 `turbo` 模型，并会自动下载）
+
+    后端能力检查会被缓存且不会加载模型。构建能力、请求的后端标志，以及从真实调用中观察到的后端，彼此保持独立。自动检测到的 whisper.cpp 会保持模型运行日志开启，以便记录上游选择的后端行。显式 CLI 条目会保留其配置顺序、后端标志和输出标志。
 
   </Step>
   <Step title="Provider auth（图像/视频）">
@@ -239,11 +237,12 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
 
 ## 模型选择指南
 
-- 当质量和安全重要时，优先选择每种媒体能力中当前一代最强的模型。
-- 对于处理不可信输入的工具启用型代理，避免使用较旧/较弱的媒体模型。
-- 为每种能力至少保留一个备用方案以保证可用性（高质量模型 + 更快/更便宜的模型）。
-- 当提供方 API 不可用时，CLI 备用项（`whisper-cli`、`whisper`、`gemini`）会派上用场。
-- `parakeet-mlx`：使用 `--output-dir` 时，当输出格式为 `txt` 或未指定时，OpenClaw 会读取 `<output-dir>/<media-basename>.txt`；其他格式则回退到 stdout。
+- 当质量和安全很重要时，为每种媒体能力优先选择当前一代中最强的模型。
+- 对于处理不可信输入的工具型代理，避免使用较旧/较弱的媒体模型。
+- 每种能力至少保留一个备用方案以确保可用性（高质量模型 + 更快/更便宜的模型）。
+- 当提供方 API 不可用时，CLI 备用方案（`whisper-cli`、`whisper`、`gemini`）会派上用场。
+- 已知的文件输出模式具有权威性：空的或缺失的推断转录文件不会回退到 CLI 进度输出，而是不会生成转录内容。
+- `parakeet-mlx`：使用 `--output-format txt`（或 `all`）配合 `--output-dir` 和默认的 `{filename}` 输出模板。上游的 `PARAKEET_OUTPUT_FORMAT` 和 `PARAKEET_OUTPUT_TEMPLATE` 环境变量也会被遵循。OpenClaw 读取 `<output-dir>/<media-basename>.txt`；默认的 `srt` 格式、其他格式以及自定义输出模板仍然使用 stdout。
 
 ## 附件策略
 
@@ -277,7 +276,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
       tools: {
         media: {
           models: [
-            { provider: "openai", model: "gpt-5.5", capabilities: ["image"] },
+            { provider: "openai", model: "gpt-5.6-sol", capabilities: ["image"] },
             {
               provider: "google",
               model: "gemini-3-flash-preview",
@@ -356,7 +355,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
             maxBytes: 10485760,
             maxChars: 500,
             models: [
-              { provider: "openai", model: "gpt-5.5" },
+              { provider: "openai", model: "gpt-5.6-sol" },
               { provider: "anthropic", model: "claude-opus-4-8" },
               {
                 type: "cli",
@@ -420,14 +419,20 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
 当媒体理解运行时，`/status` 会包含一行按能力划分的摘要：
 
 ```
-📎 Media: image ok (openai/gpt-5.5) · audio skipped (maxBytes)
+📎 Media: image ok (openai/gpt-5.6-sol) · audio ok (whisper-cli observed=metal)
+```
+
+对于预检清单，请运行 `openclaw capability audio providers`。本地行会单独显示本地回退获胜者，以及全局提供方选择、就绪状态和分别的 capable/requested/observed 后端字段。相同的本地选择也可作为信息性的 doctor 发现项获取：
+
+```bash
+openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-min info
 ```
 
 ## 说明
 
-- 理解功能尽力而为。错误不会阻止回复。
-- 即使禁用理解功能，附件仍会传递给模型。
-- 使用 `scope` 来限制理解功能运行的范围（例如，仅限私信）。
+- 功能理解尽力而为。错误不会阻止回复。
+- 即使禁用功能理解，附件仍会传递给模型。
+- 使用 `scope` 来限制功能理解运行的范围（例如，仅限私信）。
 
 ## 相关内容
 

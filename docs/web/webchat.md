@@ -39,11 +39,11 @@ title: "WebChat"
 
 WebChat 有两条独立的数据路径：
 
-- 会话 JSONL 文件是持久化的模型/运行时转写。对于正常的代理运行，内嵌的 OpenClaw 运行时会通过其会话管理器持久化模型可见的 `user`、`assistant` 和 `toolResult` 消息。WebChat 不会把任意投递、状态或辅助文本写入该转写。
-- Gateway 的 `ReplyPayload` 事件是实时投递投影：已针对 WebChat/频道显示、分块流式传输、指令标签、媒体嵌入、TTS/音频标志以及 UI 回退行为进行归一化。它们本身并不是权威的会话日志。
-- 需要通过 `tools.message` 显示回复的 harness 仍然把 WebChat 作为当前运行的内部来源回复汇。来自该活动 WebChat 运行、且不带目标的 `message.send` 会被投影到同一个聊天中，并镜像到会话转写；WebChat 不会因此变成可复用的对外通道，也永远不会继承 `lastChannel`。
-- 只有当 Gateway 在正常的嵌入式代理轮次之外拥有一条已显示消息时，WebChat 才会注入助手转写条目：`chat.inject`、非代理命令回复、中止时的部分输出，以及 WebChat 管理的媒体转写补充。
-- 如果在运行期间出现实时助手文本，但在历史重载后消失，请按以下顺序检查：原始 JSONL 中是否包含该助手文本，`chat.history` 的显示投影是否将其剥离，然后再检查 Control UI 的乐观尾部合并是否用持久化快照替换了本地投递状态。
+- SQLite 转写行是持久化的模型/运行时转写。对于正常的 agent 运行，嵌入式 OpenClaw 运行时会通过 session accessor 持久化模型可见的 `user`、`assistant` 和 `toolResult` 消息。WebChat 不会将任意投递内容、状态内容或辅助文本写入该转写。
+- Gateway `ReplyPayload` 事件是实时投递投影：针对 WebChat/频道显示、块流式传输、指令标签、媒体嵌入、TTS/音频标志以及 UI 回退行为进行归一化。它们本身并不是规范化的会话日志。
+- 需要通过 `tools.message` 显示回复的 harness 仍然使用 WebChat 作为当前运行的内部源回复汇。来自该活动 WebChat 运行的无目标 `message.send` 会投影到同一聊天中并镜像到会话转写；WebChat 不会变成可复用的出站通道，也永远不会继承 `lastChannel`。
+- 只有当 Gateway 拥有一个正常嵌入式 agent 回合之外的已显示消息时，WebChat 才会注入助手转写条目：`chat.inject`、非 agent 命令回复、中止的部分输出，以及 WebChat 管理的媒体转写补充。
+- 如果运行期间实时助手文本出现了，但在历史记录重新加载后消失，请按以下顺序检查：SQLite 转写是否包含该助手文本，`chat.history` 显示投影是否将其剥离，然后再看 Control UI 的乐观尾部合并是否用持久化快照替换了本地投递状态。
 
 正常的 agent 运行最终答案应该是持久化的，因为嵌入式运行时会写入助手 `message_end`。任何将已投递的最终载荷回镜到转写中的回退逻辑，都必须先避免重复写入嵌入式运行时已经写过的助手回合。
 
@@ -61,7 +61,7 @@ WebChat 有两条独立的数据路径：
 
 ## 配置参考（WebChat）
 
-完整配置：[Configuration](/gateway/configuration)
+完整配置：[配置](/gateway/configuration)
 
 WebChat 没有持久化的配置部分。Gateway 使用内置的 `chat.history` 显示限制；API 客户端可以为单次调用发送 `maxChars` 来覆盖它。旧版的 `channels.webchat` 和 `gateway.webchat` 配置已弃用；运行 `openclaw doctor --fix` 将其移除。
 

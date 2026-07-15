@@ -36,7 +36,7 @@ OpenClaw 随附一个用于工作流驱动 ComfyUI 运行的 `comfy` 插件。�
     **最适合：** 在你的机器或局域网中运行你自己的 ComfyUI 实例。
 
     <Steps>
-      <Step title="本地启动 ComfyUI">
+      <Step title="在本地启动 ComfyUI">
         确保你的本地 ComfyUI 实例正在运行（默认是 `http://127.0.0.1:8188`）。
       </Step>
       <Step title="准备你的工作流 JSON">
@@ -100,7 +100,7 @@ OpenClaw 随附一个用于工作流驱动 ComfyUI 运行的 `comfy` 插件。�
         通过以下任一方式提供你的密钥：
 
         ```bash
-        # Onboarding flag
+        # Onboarding 标志
         openclaw onboard --comfy-api-key "your-key"
 
         # 环境变量（推荐用于守护进程）
@@ -203,10 +203,14 @@ Comfy 支持共享的顶层连接设置以及按能力划分的工作流部分�
 
 | Key                   | Type                   | Description                                                                           |
 | --------------------- | ---------------------- | ------------------------------------------------------------------------------------- |
-| `mode`                | `"local"` or `"cloud"` | 连接模式。默认为 `"local"`。                                               |
-| `baseUrl`             | string                 | 本地模式默认为 `http://127.0.0.1:8188`，云模式默认为 `https://cloud.comfy.org`。 |
-| `apiKey`              | string                 | 可选的内联密钥，可替代 `COMFY_API_KEY` / `COMFY_CLOUD_API_KEY` 环境变量。 |
-| `allowPrivateNetwork` | boolean                | 在云模式下允许使用私有/LAN `baseUrl`。                                          |
+| `mode`                | `"local"` or `"cloud"` | 连接模式。默认为 `"local"`。                                                           |
+| `baseUrl`             | string                 | 本地模式默认值为 `http://127.0.0.1:8188`，云模式默认值为 `https://cloud.comfy.org`。 |
+| `apiKey`              | string                 | 可选的内联密钥，可替代 `COMFY_API_KEY` / `COMFY_CLOUD_API_KEY` 环境变量。             |
+| `allowPrivateNetwork` | boolean                | 在云模式下允许使用私有/LAN `baseUrl`，或本地私有 DNS FQDN。                            |
+
+<Note>
+在 `local` 模式下，回环/私有 IP 字面量以及诸如 `http://comfyui:8188` 这样的单标签服务名都可以在不使用 `allowPrivateNetwork` 的情况下工作。像 `https://comfy.local.example.com` 这样的外观上属于公网域名的私有 DNS FQDN 需要设置 `allowPrivateNetwork: true`。私有来源信任仍然仅限于已配置的协议、主机名和端口；本地重定向不能离开已配置的主机名，而指向公共 CDN 的云端重定向会按默认 SSRF 策略进行检查。
+</Note>
 
 ### 按能力划分的键
 

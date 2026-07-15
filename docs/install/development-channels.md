@@ -11,13 +11,13 @@ sidebarTitle: "发布通道"
 OpenClaw 提供四个更新通道：
 
 - **stable**: npm dist-tag `latest`。推荐大多数用户使用。
-- **extended-stable**: npm dist-tag `extended-stable`。一个全新的、后置的
-  受支持月份包通道。此版本中仅支持包级，且仅支持前台使用。
+- **extended-stable**: npm dist-tag `extended-stable`。一个全新的、后续
+  受支持月份的软件包通道。它仅限于软件包安装，并且仅在前台安装。已保存的选择在
+  启用 `update.checkOnStart` 时会收到只读更新提示，但不会自动应用。
 - **beta**: npm dist-tag `beta`。当 `beta` 缺失
-  或比当前稳定版更旧时，回退到 `latest`。
+  或比当前稳定版更新时，回退到 `latest`。
 - **dev**: `main`（git）的移动头指针。发布时对应 npm dist-tag `dev`。`main`
-  用于实验和积极开发；它可能包含不完整
-  的功能或破坏性变更。不要在生产网关上运行它。
+  用于实验和积极开发；它可能包含不完整的功能或破坏性更改。不要在生产网关上运行它。
 
 稳定版构建通常会先发布到 **beta**，在那里经过验证，然后再在不更改版本号的情况下
 提升到 **latest**。维护者也可以直接发布到 `latest`。Dist-tag 是 npm 安装的事实来源。
@@ -107,9 +107,9 @@ openclaw update --dry-run --json
 
 使用 `openclaw update` 切换通道时，也会同步插件来源：
 
-- `dev` 会将那些有捆绑对应版本的已安装插件切回到其捆绑的（git checkout）来源。
+- `dev` 会将已安装且有对应内置版本的插件切回其内置（git checkout）来源。
 - `stable` 和 `beta` 会恢复 npm 安装或 ClawHub 安装的插件包。
-- `extended-stable` 目前在核心包成功后，仍使用现有的 stable/latest 插件线路。尚未查询官方插件 `@extended-stable` 选择器。
+- `extended-stable` 会将符合条件的官方 npm 插件，使用裸/默认或 `latest` 意图，解析为当前安装的核心版本的精确版本。运行时不会查询插件的 `@extended-stable` 标签。
 - npm 安装的插件会在核心更新完成后更新。
 
 ## 检查当前状态

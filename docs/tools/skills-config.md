@@ -77,7 +77,7 @@ read_when:
 </ParamField>
 
 <ParamField path="skills.install.nodeManager" type='"npm" | "pnpm" | "yarn" | "bun"' default='"npm"'>
-  技能安装的 Node 包管理器偏好设置。此项仅影响技能安装——Gateway 运行时仍应使用 Node（不建议在 WhatsApp/Telegram 中使用 Bun）。`openclaw setup --node-manager` 和 `openclaw onboard --node-manager` 接受 `npm`、`pnpm` 或 `bun`；若要使用基于 Yarn 的技能安装，请在配置中直接设置 `"yarn"`。
+  技能安装的 Node 包管理器偏好。此设置仅影响技能安装——OpenClaw CLI 和 Gateway 运行时需要 Node，因为规范状态存储使用 `node:sqlite`。`openclaw setup --node-manager` 和 `openclaw onboard --node-manager` 接受 `npm`、`pnpm` 或 `bun`；如果要使用基于 Yarn 的技能安装，请直接在配置中设置 `"yarn"`。
 </ParamField>
 
 <ParamField path="skills.install.allowUploadedArchives" type="boolean" default="false">
@@ -289,9 +289,10 @@ process.stdin.on("end", () => {
 ## 工作坊 (`skills.workshop`)
 
 <ParamField path="skills.workshop.autonomous.enabled" type="boolean" default="false">
-  当为 `true` 时，agent 在成功轮次后可根据持久化对话信号创建待处理提案。
-  用户提示触发的技能创建始终会通过 Skill Workshop，不受此设置影响。
+  当为 `true` 时，OpenClaw 可以从持久性修正中创建待处理提案，并且在系统变为空闲后可以审查成功且实质性的已完成工作。这可能会在符合条件的回合之后额外触发一次后台模型运行。即使该设置为 `false`，用户提示的技能创建和 `/learn` 仍然可以正常工作。
 </ParamField>
+
+请参见 [自学习](/tools/self-learning) 了解资格、隐私、成本、仅提案权限以及故障排除。
 
 <ParamField path="skills.workshop.approvalPolicy" type='"pending" | "auto"' default='"pending"'>
   `pending` 需要在 agent 发起 apply、reject
@@ -409,6 +410,9 @@ skills.load.extraDirs (最低)
   </Card>
   <Card title="技能工作坊" href="/tools/skill-workshop" icon="flask">
     agent 草拟技能的提案队列。
+  </Card>
+  <Card title="自学习" href="/tools/self-learning" icon="brain">
+    来自已完成工作的保守、可选择加入的提案。
   </Card>
   <Card title="斜杠命令" href="/tools/slash-commands" icon="terminal">
     原生斜杠命令目录和聊天指令。

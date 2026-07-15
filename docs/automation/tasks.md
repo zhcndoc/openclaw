@@ -181,15 +181,15 @@ openclaw tasks notify <lookup> state_changes
 ## CLI 参考
 
 <AccordionGroup>
-  <Accordion title="tasks list">
+  <Accordion title="任务列表">
     ```bash
     openclaw tasks list [--runtime <acp|subagent|cron|cli>] [--status <status>] [--json]
     ```
 
-    输出列：Task、Kind、Status、Delivery、Run、Child Session、Summary。直接输入 `openclaw tasks` 的行为与 `openclaw tasks list` 相同。
+    输出列：任务、类型、状态、传递、运行、子会话、摘要。直接输入 `openclaw tasks` 的行为与 `openclaw tasks list` 相同。
 
   </Accordion>
-  <Accordion title="tasks show">
+  <Accordion title="任务详情">
     ```bash
     openclaw tasks show <lookup> [--json]
     ```
@@ -197,7 +197,7 @@ openclaw tasks notify <lookup> state_changes
     查找令牌可以接受 task ID、run ID 或 session key。显示完整记录，包括计时、传递状态、错误和终端摘要。
 
   </Accordion>
-  <Accordion title="tasks cancel">
+  <Accordion title="取消任务">
     ```bash
     openclaw tasks cancel <lookup>
     ```
@@ -205,12 +205,12 @@ openclaw tasks notify <lookup> state_changes
     对于 ACP 和 subagent 任务，这会终止子会话；ACP 和 cron 的取消会通过正在运行的 Gateway（`tasks.cancel`）路由。对于 CLI 跟踪的任务，取消会记录到任务注册表中（没有单独的子运行时句柄）。状态会转换为 `cancelled`，并在适用时发送传递通知。
 
   </Accordion>
-  <Accordion title="tasks notify">
+  <Accordion title="任务通知">
     ```bash
     openclaw tasks notify <lookup> <done_only|state_changes|silent>
     ```
   </Accordion>
-  <Accordion title="tasks audit">
+  <Accordion title="任务审计">
     ```bash
     openclaw tasks audit [--severity <warn|error>] [--code <name>] [--limit <n>] [--json]
     ```
@@ -222,7 +222,7 @@ openclaw tasks notify <lookup> state_changes
     | 发现项                    | 严重性     | 触发条件                                                                                                      |
     | ------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
     | `stale_queued`            | warn       | 排队超过 10 分钟                                                                                             |
-    | `stale_running`           | error      | 运行超过 30 分钟                                                                                             |
+    | `stale_running`          | error      | 运行超过 30 分钟                                                                                             |
     | `lost`                    | warn/error | 由运行时支持的任务所有权消失；保留的 lost 任务在 `cleanupAfter` 之前显示为警告，之后变为错误                  |
     | `delivery_failed`         | warn       | 传递失败且通知策略不是 `silent`                                                                              |
     | `missing_cleanup`         | warn       | 终态任务缺少 cleanup 时间戳                                                                                  |
@@ -241,7 +241,7 @@ openclaw tasks notify <lookup> state_changes
     | `blocked_task_missing` | warn       | 被阻塞的 flow 指向一个已不存在的 task id                                     |
 
   </Accordion>
-  <Accordion title="tasks maintenance">
+  <Accordion title="任务维护">
     ```bash
     openclaw tasks maintenance [--json]
     openclaw tasks maintenance --apply [--json]
@@ -267,7 +267,7 @@ openclaw tasks notify <lookup> state_changes
     应用维护时，OpenClaw 还会移除超过 7 天的过期 `cron:<jobId>:run:<runId>` 会话注册表行，同时保留当前正在运行的 cron 作业对应的行，并且不影响非 cron 的会话行。
 
   </Accordion>
-  <Accordion title="tasks flow list | show | cancel">
+  <Accordion title="任务流 列表 | 详情 | 取消">
     ```bash
     openclaw tasks flow list [--status <status>] [--json]
     openclaw tasks flow show <lookup> [--json]
@@ -286,6 +286,12 @@ openclaw tasks notify <lookup> state_changes
 当当前会话没有可见的关联任务时，`/tasks` 会回退到 agent 本地任务计数，因此你仍能获得概览，而不会泄露其他会话的详情。
 
 如需完整的操作员账本，请使用 CLI：`openclaw tasks list`。
+
+### 控制台 UI
+
+Web 版控制台 UI 在侧边栏中提供了一个 **任务** 页面，显示实时的活跃和最近的后台任务。可用它来查看进度、打开关联会话、刷新账本，或取消排队中和正在运行的任务。
+
+聊天面板还提供了一个可折叠的 **后台任务** 侧栏，其范围限定为该面板的 agent：其中包含正在运行的任务和子 agent，并带有停止控制、已完成部分，以及指向每个任务子会话的查看转录链接。可通过面板标题中的活动切换按钮（或单面板聊天中的浮动活动按钮）打开它。
 
 ## 状态集成（任务压力）
 
@@ -320,7 +326,7 @@ Tasks    2 active · 1 queued · 1 running · 1 issue · audit clean · 6 tracke
 清理程序每 **60 秒** 运行一次（第一次大约在网关启动后 5 秒），并处理四件事：
 
 <Steps>
-  <Step title="Reconciliation">
+  <Step title="协调">
     检查活跃任务是否仍有权威运行支撑。ACP 任务需要一个存活的进程内轮次，子代理任务使用子会话状态，cron 任务使用活跃作业所有权加持久化运行历史，而带有运行标识的 CLI 任务则使用所属运行上下文。如果支撑状态消失超过 5 分钟（无子任务的原生子代理任务为 30 分钟），该任务会被标记为 `lost`。
   </Step>
   <Step title="ACP 会话修复">
@@ -338,30 +344,30 @@ Tasks    2 active · 1 queued · 1 running · 1 issue · audit clean · 6 tracke
 **保留策略：** 终态任务记录会保留 **7 天**（`lost` 记录保留 **24 小时**），然后自动清理。无需配置。
 </Note>
 
-## How Tasks Relate to Other Systems
+## 任务如何与其他系统关联
 
 <AccordionGroup>
-  <Accordion title="Tasks and Task Flows">
-    [Task Flow](/automation/taskflow) is the orchestration layer above background tasks. A single flow can coordinate multiple tasks in hosted or mirrored synchronous mode throughout its lifecycle. Use `openclaw tasks` to view individual task records, and `openclaw tasks flow` to view orchestration flows.
+  <Accordion title="任务和任务流">
+    [任务流](/automation/taskflow) 是后台任务之上的编排层。单个流程可以在其生命周期内，以托管或镜像的同步模式协调多个任务。使用 `openclaw tasks` 查看单个任务记录，使用 `openclaw tasks flow` 查看编排流程。
 
   </Accordion>
-  <Accordion title="Tasks and cron">
-    Cron job definitions, runtime execution state, and run history live in OpenClaw's shared SQLite state database. **Every** cron execution creates a task record - both main-session and isolated - with `silent` notify policy, so cron runs are tracked without generating task notifications of their own.
+  <Accordion title="任务和 cron">
+    Cron 作业定义、运行时执行状态和运行历史保存在 OpenClaw 共享的 SQLite 状态数据库中。**每次** cron 执行都会创建一条任务记录——包括主会话和隔离会话——并使用 `silent` 通知策略，因此 cron 运行会被跟踪，但不会生成其自己的任务通知。
 
-    See [Cron Jobs](/automation/cron-jobs) for details.
-
-  </Accordion>
-  <Accordion title="Tasks and heartbeat">
-    Heartbeat runs are main-session turns—they do not create task records. When a task completes, it can trigger a heartbeat wake-up so you can see the result promptly.
-
-    See [Heartbeat](/gateway/heartbeat) for details.
+    有关详细信息，请参见 [Cron 作业](/automation/cron-jobs)。
 
   </Accordion>
-  <Accordion title="Tasks and sessions">
-    Tasks may reference `childSessionKey` (where the work runs) and `requesterSessionKey` (who started it). Its `agentId` identifies the agent performing the work, while the requester and owner fields preserve the start and control context. Sessions are conversational context; tasks are activity tracking built on top of it.
+  <Accordion title="任务和心跳">
+    心跳运行是主会话轮次——它们不会创建任务记录。当任务完成时，它可以触发心跳唤醒，以便你及时看到结果。
+
+    有关详细信息，请参见 [心跳](/gateway/heartbeat)。
+
   </Accordion>
-  <Accordion title="Tasks and Agent runs">
-    A task's `runId` connects to the agent run executing the work. Agent lifecycle events (start, end, error) automatically update task status—you don't need to manage the lifecycle manually.
+  <Accordion title="任务和会话">
+    任务可能会引用 `childSessionKey`（工作运行的位置）和 `requesterSessionKey`（发起者）。其 `agentId` 标识执行工作的代理，而请求者和所有者字段保留了启动和控制上下文。会话是对话上下文；任务是在其之上构建的活动跟踪。
+  </Accordion>
+  <Accordion title="任务和 Agent 运行">
+    任务的 `runId` 连接到执行工作的代理运行。代理生命周期事件（开始、结束、错误）会自动更新任务状态——你无需手动管理生命周期。
   </Accordion>
 </AccordionGroup>
 

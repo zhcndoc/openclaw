@@ -21,7 +21,7 @@ read_when:
 ## 快速开始
 
 <Steps>
-  <Step title="Choose a provider">
+  <Step title="选择一个提供商">
     选择一个提供商并完成任何所需的设置。有些提供商无需密钥，其他则需要 API 密钥。详情请参见下面的提供商页面。
   </Step>
   <Step title="配置">
@@ -31,7 +31,7 @@ read_when:
     这会存储提供商和任何所需的凭据。对于基于 API 的提供商，你也可以直接设置该提供商的环境变量（例如
     `BRAVE_API_KEY`），并跳过这一步。
   </Step>
-  <Step title="Use it">
+  <Step title="使用它">
     ```javascript
     await web_search({ query: "OpenClaw plugin SDK" });
     ```
@@ -342,6 +342,11 @@ OpenClaw 还会在 Grok 设置完成后提供可选的 `x_search` 配置，且�
 OpenClaw 会按请求构建内置的 xAI `x_search`
 工具，而不是将其永久注册，因此它只在实际调用它的那一轮生效。
 
+<Warning>
+  `x_search` 运行在 xAI 的服务器上。xAI 每 1,000 次工具调用收费 5 美元，外加
+  模型的输入和输出 token。
+</Warning>
+
 <Note>
   xAI 将 `x_search` 文档化为支持关键词搜索、语义搜索、用户
   搜索以及线程抓取。对于每个帖子的互动统计信息，例如转发、回复、
@@ -353,6 +358,13 @@ OpenClaw 会按请求构建内置的 xAI `x_search`
 
 ### x_search 配置
 
+With `enabled` omitted, `x_search` is exposed only when the active model's
+provider is `xai` and xAI credentials resolve. For an active model with a known
+non-xAI provider, set `plugins.entries.xai.config.xSearch.enabled` to `true` to
+opt in to cross-provider use. If the active model provider is missing or
+unresolved, the tool stays hidden. Set `enabled` to `false` to disable it for
+every provider. xAI credentials are always required.
+
 ```json5
 {
   plugins: {
@@ -360,9 +372,9 @@ OpenClaw 会按请求构建内置的 xAI `x_search`
       xai: {
         config: {
           xSearch: {
-            enabled: true,
-            model: "grok-4-1-fast-non-reasoning",
-            baseUrl: "https://api.x.ai/v1", // 可选，覆盖 webSearch.baseUrl
+            enabled: true, // 对于已知的非 xAI 模型提供商是必需的
+            model: "grok-4.3",
+            baseUrl: "https://api.x.ai/v1", // 可选，会覆盖 webSearch.baseUrl
             inlineCitations: false,
             maxTurns: 2,
             timeoutSeconds: 30,
@@ -387,17 +399,19 @@ OpenClaw 会按请求构建内置的 xAI `x_search`
 
 ### x_search 参数
 
-| 参数                         | 描述                                               |
-| ---------------------------- | -------------------------------------------------- |
-| `query`                      | 搜索查询（必填）                                   |
-| `allowed_x_handles`          | 将结果限制为特定的 X 账号                          |
-| `excluded_x_handles`         | 排除特定的 X 账号                                  |
-| `from_date`                  | 仅包含此日期及之后的帖子（YYYY-MM-DD）             |
-| `to_date`                    | 仅包含此日期及之前的帖子（YYYY-MM-DD）             |
-| `enable_image_understanding` | 允许 xAI 检查匹配帖子中附带的图片                 |
-| `enable_video_understanding` | 允许 xAI 检查匹配帖子中附带的视频                 |
+| Parameter                    | Description                                            |
+| ---------------------------- | ------------------------------------------------------ |
+| `query`                      | 搜索查询（必填）                                        |
+| `allowed_x_handles`          | 将结果限制为最多 20 个 X 账号                                |
+| `excluded_x_handles`          | 排除最多 20 个 X 账号                                    |
+| `from_date`                  | 仅包含此日期当天及之后的帖子（YYYY-MM-DD）              |
+| `to_date`                    | 仅包含此日期当天及之前的帖子（YYYY-MM-DD）              |
+| `enable_image_understanding` | 允许 xAI 检查匹配帖子所附图片                        |
+| `enable_video_understanding` | 允许 xAI 检查匹配帖子所附视频                        |
 
-### x_search 示例
+`allowed_x_handles` 和 `excluded_x_handles` 互斥。
+
+### x_search example
 
 ```javascript
 await x_search({

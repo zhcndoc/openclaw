@@ -11,7 +11,7 @@ read_when:
 ## 你需要准备什么
 
 - 已安装 [flyctl CLI](https://fly.io/docs/hands-on/install-flyctl/)
-- Fly.io 账号（免费套餐即可）
+- Fly.io 账户（免费套餐即可）
 - 模型认证：你所选模型提供商的 API key
 - 频道凭证：Discord bot token、Telegram token 等
 
@@ -79,7 +79,7 @@ read_when:
 
     **关键设置：**
 
-    | Setting                        | Why                                                                         |
+    | 设置                           | 原因                                                                        |
     | ------------------------------ | --------------------------------------------------------------------------- |
     | `--bind lan`                   | 绑定到 `0.0.0.0`，这样 Fly 的代理才能访问 gateway                         |
     | `--allow-unconfigured`         | 无需配置文件即可启动（之后你再创建）                                        |
@@ -244,19 +244,19 @@ read_when:
 
 gateway 绑定到了 `127.0.0.1`，而不是 `0.0.0.0`。
 
-**Fix:** 在 `fly.toml` 的进程命令中添加 `--bind lan`。
+**修复：** 在 `fly.toml` 的进程命令中添加 `--bind lan`。
 
 ### 健康检查失败 / connection refused
 
 Fly 无法通过配置的端口访问 gateway。
 
-**Fix:** 确保 `internal_port` 与 gateway 端口一致（`--port 3000` 或 `OPENCLAW_GATEWAY_PORT=3000`）。
+**修复：** 确保 `internal_port` 与 gateway 端口一致（`--port 3000` 或 `OPENCLAW_GATEWAY_PORT=3000`）。
 
 ### OOM / memory issues
 
 容器一直重启或被杀死。表现：`SIGABRT`、`v8::internal::Runtime_AllocateInYoungGeneration`，或者静默重启。
 
-**Fix:** 增加 `fly.toml` 中的内存：
+**修复：** 增加 `fly.toml` 中的内存：
 
 ```toml
 [[vm]]
@@ -275,7 +275,11 @@ fly machine update <machine-id> --vm-memory 2048 -y
 
 在容器重启后，Gateway 因“already running”错误而拒绝启动。
 
-单实例锁文件位于 `<tmpdir>/openclaw-<uid>/gateway.<hash>.lock`（Linux: `/tmp/openclaw-<uid>/gateway.<hash>.lock`），而不在持久化的 `/data` 卷上，所以完整的容器重启通常会连同容器文件系统的其余部分一起清除它。如果锁仍然存在（例如保留容器文件系统的 `fly machine restart`）并阻止启动，请手动删除：
+运行时锁文件位于 `<tmpdir>/openclaw-<uid>/gateway.<hash>.lock`
+和 `gateway.state.<hash>.lock`（Linux：
+`/tmp/openclaw-<uid>/gateway.*.lock`），而不在持久化的 `/data` 卷中，因此
+完整的容器重启通常会将它们与容器文件系统的其余部分一并清除。如果锁仍然存在（例如 `fly machine restart`
+会保留容器文件系统）并阻止启动，请手动删除：
 
 ```bash
 fly ssh console --command "rm -f /tmp/openclaw-*/gateway.*.lock"
@@ -315,7 +319,7 @@ fly ssh console --command "rm /data/openclaw.json"
 
 如果在重启后丢失了 auth profiles、channel/provider 状态或会话，则说明 state dir 正在写入容器文件系统，而不是卷。
 
-**Fix:** 确保在 `fly.toml` 中设置了 `OPENCLAW_STATE_DIR=/data` 并重新部署。
+**修复：** 确保在 `fly.toml` 中设置了 `OPENCLAW_STATE_DIR=/data` 并重新部署。
 
 ## 更新
 
@@ -326,7 +330,7 @@ fly status
 fly logs
 ```
 
-`git pull` + `fly deploy` 是这里受监督的更新路径：它会根据 Dockerfile 重新构建镜像，因此 CLI/gateway 版本、基础 OS 镜像以及任何 Dockerfile 的更改都会一起更新。运行中容器内的 `openclaw update` 不是同一种操作，因为该镜像以 Docker 构建的 `dist/` 目录树形式提供，没有 `.git` 检出，也没有 npm 管理的全局安装可供其检测；有关 VM 风格安装的该流程，请参见 [Updating](/install/updating)。
+`git pull` + `fly deploy` 是这里受监督的更新路径：它会根据 Dockerfile 重新构建镜像，因此 CLI/gateway 版本、基础 OS 镜像以及任何 Dockerfile 的更改都会一起更新。运行中容器内的 `openclaw update` 不是同一种操作，因为该镜像以 Docker 构建的 `dist/` 目录树形式提供，没有 `.git` 检出，也没有 npm 管理的全局安装可供其检测；有关 VM 风格安装的该流程，请参见 [更新](/install/updating)。
 
 ### 更新机器命令
 

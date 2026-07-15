@@ -8,9 +8,9 @@ title: "语音唤醒"
 
 唤醒词是**由 Gateway 持有的一个全局列表**——不存在每个节点各自的自定义列表。任何节点或应用 UI 都可以编辑该列表；Gateway 会持久化该更改，并将其广播给每个已连接的客户端。
 
-- **macOS**：本地 Voice Wake 启用/禁用开关。需要 macOS 26+；运行时/PTT 详情请参见 [Voice wake (macOS)](/platforms/mac/voicewake)。
-- **iOS**：设置中的本地 Voice Wake 启用/禁用开关。
-- **Android**：Voice Wake 在运行时被强制禁用。Voice 选项卡使用手动麦克风采集，而不是唤醒词触发。
+- **macOS**: 本地语音唤醒启用/禁用开关。需要 macOS 26+；运行时/PTT 详情请参见 [语音唤醒（macOS）](/platforms/mac/voicewake)。
+- **iOS**: 设置中的本地语音唤醒启用/禁用开关。
+- **Android**: 不实现语音唤醒。Voice 选项卡使用手动麦克风采集，而不是唤醒词触发。
 
 ## 存储
 
@@ -22,16 +22,16 @@ title: "语音唤醒"
 
 | 方法          | 参数                     | 结果                     |
 | --------------- | ------------------------ | ------------------------ |
-| `voicewake.get` | none                     | `{ triggers: string[] }` |
+| `voicewake.get` | 无                     | `{ triggers: string[] }` |
 | `voicewake.set` | `{ triggers: string[] }` | `{ triggers: string[] }` |
 
-`voicewake.set` 会规范化输入：去除首尾空白、丢弃空条目、最多保留 32 个触发词，并将每个触发词截断为 64 个字符。若结果为空，则回退到内置默认值（`openclaw`、`claude`、`computer`）。
+`voicewake.set` 会规范化输入：去除首尾空白、丢弃空项、最多保留 32 个触发词，并将每个触发词截断为最多 64 个 UTF-16 代码单元且不拆分代理对。若结果为空，则回退到内置默认值（`openclaw`、`claude`、`computer`）。
 
 ### 路由（触发词到目标）
 
 | 方法                  | 参数                               | 结果                               |
 | ----------------------- | ------------------------------------ | ------------------------------------ |
-| `voicewake.routing.get` | none                                 | `{ config: VoiceWakeRoutingConfig }` |
+| `voicewake.routing.get` | 无                                   | `{ config: VoiceWakeRoutingConfig }` |
 | `voicewake.routing.set` | `{ config: VoiceWakeRoutingConfig }` | `{ config: VoiceWakeRoutingConfig }` |
 
 ```json
@@ -62,9 +62,9 @@ title: "语音唤醒"
 
 ## 客户端行为
 
-- **macOS**: 调用 `voicewake.set`/`voicewake.get`，并监听 `voicewake.changed` 以与其他客户端保持同步。
-- **iOS**: 调用 `voicewake.set`/`voicewake.get`，并监听 `voicewake.changed` 以保持本地唤醒词检测的响应性。
-- **Android**: `VoiceWakeMode`（`Off`/`Foreground`/`Always`）和网关同步代码已存在，但应用在启动时会强制将该模式设为 `Off`——目前无法从 Android 设置中访问 Voice Wake。
+- **macOS**：调用 `voicewake.set`/`voicewake.get`，并监听 `voicewake.changed` 以与其他客户端保持同步。
+- **iOS**：调用 `voicewake.set`/`voicewake.get`，并监听 `voicewake.changed` 以保持本地唤醒词检测的响应性。
+- **Android**：不声明 `voiceWake` 能力，也不消费唤醒词更新。
 
 ## 相关内容
 

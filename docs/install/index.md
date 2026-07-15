@@ -9,9 +9,9 @@ title: "安装"
 
 ## 系统要求
 
-- **Node 22.19+、23.11+ 或 24+** - Node 24 是默认目标；安装脚本会自动处理这一点。
-- **macOS、Linux 或 Windows** - Windows 用户可以从原生 Windows Hub 应用、PowerShell CLI 安装程序或 WSL2 Gateway 开始。请参见 [Windows](/platforms/windows)。
-- 仅在从源代码构建时才需要 `pnpm`。
+- **Node 22.22.3+、24.15+ 或 25.9+** - Node 24 是默认目标；安装脚本会自动处理这一点。
+- **macOS、Linux 或 Windows** - Windows 用户可以从原生 Windows Hub 应用、PowerShell CLI 安装程序或 WSL2 Gateway 开始。参见 [Windows](/platforms/windows)。
+- 仅在你从源代码构建时才需要 `pnpm`。
 
 ## 推荐：安装脚本
 
@@ -105,7 +105,7 @@ curl -fsSL https://openclaw.ai/install-cli.sh | bash
     ```
 
     <Note>
-    Bun 支持全局 CLI 安装路径。对于 Gateway 运行时，Node 仍然是推荐的 daemon 运行时。
+    Bun 可以安装全局包，但生成的 `openclaw` 可执行文件需要受支持的 Node 运行时，因为 OpenClaw 状态使用了 `node:sqlite`。
     </Note>
 
   </Tab>
@@ -147,7 +147,7 @@ curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -
     自动化集群配置。
   </Card>
   <Card title="Bun" href="/install/bun" icon="zap">
-    通过 Bun 运行时仅使用 CLI。
+    可选依赖安装器和包脚本运行器。
   </Card>
 </CardGroup>
 

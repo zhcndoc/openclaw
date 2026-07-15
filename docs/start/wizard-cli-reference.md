@@ -65,7 +65,7 @@ sidebarTitle: "CLI 参考"
     - 非 loopback 绑定仍然需要认证。
 
   </Step>
-  <Step title="渠道">
+  <Step title="Channels">
     - [WhatsApp](/channels/whatsapp): 可选 QR 登录
     - [Telegram](/channels/telegram): bot token
     - [Discord](/channels/discord): bot token
@@ -85,12 +85,12 @@ sidebarTitle: "CLI 参考"
     - macOS: LaunchAgent
       - 需要已登录的用户会话；对于无头环境，请使用自定义 LaunchDaemon（未随附）。
     - Linux 和通过 WSL2 的 Windows：systemd 用户单元
-      - 向导会尝试 `loginctl enable-linger <user>`，以便注销后网关仍保持运行。
-      - 可能会提示输入 sudo（写入 `/var/lib/systemd/linger`）；它会先尝试不使用 sudo。
-    - 原生 Windows：优先使用 Scheduled Task
-      - 如果拒绝创建任务，OpenClaw 会回退到按用户的 Startup-folder 登录项，并立即启动网关。
-      - 仍然首选 Scheduled Tasks，因为它们提供更好的 supervisor 状态。
-    - 运行时选择：交互式仅提供 Node。Bun 可能在 WhatsApp/Telegram 重连时导致内存损坏，因此这些渠道不支持将 Bun 用作 daemon 运行时；只有在不涉及该组合时才传入 `--daemon-runtime bun`。
+      - 向导会尝试执行 `loginctl enable-linger <user>`，以便网关在注销后继续运行。
+      - 可能会提示输入 sudo（会写入 `/var/lib/systemd/linger`）；它会先尝试不使用 sudo。
+    - 原生 Windows：首先使用计划任务
+      - 如果创建任务被拒绝，OpenClaw 会回退到按用户划分的 Startup 文件夹登录项，并立即启动网关。
+      - 仍然优先使用计划任务，因为它们能提供更好的监督状态。
+    - 运行时选择：需要 Node，因为 OpenClaw 的规范运行时状态存储使用 `node:sqlite`。
 
   </Step>
   <Step title="健康检查">
@@ -147,6 +147,8 @@ sidebarTitle: "CLI 参考"
 
 ## 认证和模型选项
 
+如果交互式 onboarding 中的某个提供方设置步骤失败（例如没有本地登录时使用 CLI 复用选项），向导会显示错误并返回提供方选择器，而不是退出。显式的 `--auth-choice` 运行仍会为自动化场景快速失败。
+
 <AccordionGroup>
   <Accordion title="Anthropic API key">
     如果存在则使用 `ANTHROPIC_API_KEY`，否则提示输入 key，然后保存以供守护进程使用。
@@ -157,19 +159,24 @@ sidebarTitle: "CLI 参考"
   <Accordion title="OpenAI Code subscription (OAuth)">
     浏览器流程；粘贴 `code#state`。
 
-    当模型未设置或已属于 OpenAI 系列时，通过 Codex 运行时将 `agents.defaults.model` 设置为 `openai/gpt-5.5`。
+    在没有主模型的新设置中，会通过 Codex runtime 将 `agents.defaults.model` 设置为
+    `openai/gpt-5.6-sol`。
 
   </Accordion>
   <Accordion title="OpenAI Code 订阅（设备配对）">
     带短期设备码的浏览器配对流程。
 
-    当模型未设置或已属于 OpenAI 系列时，通过 Codex 运行时将 `agents.defaults.model` 设置为 `openai/gpt-5.5`。
+    在没有主模型的新设置中，会通过 Codex runtime 将 `agents.defaults.model` 设置为
+    `openai/gpt-5.6-sol`。
 
   </Accordion>
   <Accordion title="OpenAI API key">
     如果存在则使用 `OPENAI_API_KEY`，否则提示输入 key，然后将凭证存储在 auth profiles 中。
 
-    当模型未设置、为 `openai/*`，或为旧版 Codex 模型引用时，将 `agents.defaults.model` 设置为 `openai/gpt-5.5`。
+    在没有主模型的新设置中，会通过 Codex runtime 将 `agents.defaults.model` 设置为
+    `openai/gpt-5.6`；直接 API 的裸模型 id 会解析为 Sol 级别。
+
+    添加或重新认证 OpenAI 时，会保留现有的显式主模型，包括 `openai/gpt-5.5`。如果该账户不提供 GPT-5.6，请显式选择 `openai/gpt-5.5`；OpenClaw 不会静默降级它。
 
   </Accordion>
   <Accordion title="xAI（Grok）OAuth">
@@ -318,8 +325,11 @@ sidebarTitle: "CLI 参考"
 
 `openclaw agents add` 会写入 `agents.list[]` 和可选的 `bindings`。
 
-WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/`。
-会话存放在 `~/.openclaw/agents/<agentId>/sessions/`。
+WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
+活动会话和转录内容存储在
+`~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` 中。
+`~/.openclaw/agents/<agentId>/sessions/` 目录用于旧版迁移
+输入以及归档/支持工件。
 
 <Note>
 某些渠道作为插件提供。选择后，在渠道配置之前，引导程序会提示安装插件（npm 或本地路径）。

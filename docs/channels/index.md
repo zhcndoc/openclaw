@@ -17,33 +17,34 @@ Gateway。“External plugin” 频道由 OpenClaw 仓库之外维护。
 ## 支持的渠道
 
 - [Discord](/channels/discord) - Discord Bot API + Gateway；支持服务器、频道和私信（官方插件）。
-- [Feishu](/channels/feishu) - 通过 WebSocket 连接的 Feishu/Lark 机器人（官方插件）。
+- [Feishu](/channels/feishu) - 通过 WebSocket 的 Feishu/Lark 机器人（官方插件）。
 - [Google Chat](/channels/googlechat) - 通过 HTTP webhook 的 Google Chat API 应用（官方插件）。
-- [iMessage](/channels/imessage) - 核心内置。通过已登录 Mac 上的 `imsg` 桥接实现原生 macOS 集成（或当 Gateway 在其他地方运行时使用 SSH 包装器），包括用于回复、轻点回馈、特效、附件和群组管理的私有 API 操作。
-- [IRC](/channels/irc) - 经典 IRC 服务器；通过配对/允许列表控制支持频道 + 私信（官方插件）。
+- [iMessage](/channels/imessage) - 内置于核心中。在已登录的 Mac 上通过 `imsg` 桥接实现原生 macOS 集成（或在 Gateway 运行在其他位置时使用 SSH 包装器），包括用于回复、tapbacks、特效、附件和群组管理的私有 API 操作。
+- [IRC](/channels/irc) - 经典 IRC 服务器；通过配对/允许名单控制支持频道 + 私信（官方插件）。
 - [LINE](/channels/line) - LINE Messaging API 机器人（官方插件）。
 - [Matrix](/channels/matrix) - Matrix 协议（官方插件）。
 - [Mattermost](/channels/mattermost) - Bot API + WebSocket；频道、群组、私信（官方插件）。
 - [Microsoft Teams](/channels/msteams) - Bot Framework；企业支持（官方插件）。
-- [Nextcloud Talk](/channels/nextcloud-talk) - 通过 Nextcloud Talk 自托管聊天（官方插件）。
-- [Nostr](/channels/nostr) - 通过 NIP-04 实现去中心化私信（官方插件）。
+- [Nextcloud Talk](/channels/nextcloud-talk) - 通过 Nextcloud Talk 的自托管聊天（官方插件）。
+- [Nostr](/channels/nostr) - 通过 NIP-04 的去中心化私信（官方插件）。
 - [QQ Bot](/channels/qqbot) - QQ Bot API；私聊、群聊和富媒体（官方插件）。
-- [Raft](/channels/raft) - 面向人类与智能体协作的 Raft CLI 唤醒桥接（官方插件）。
+- [Reef](/channels/reef) - 在不同人的 OpenClaw 代理之间进行受保护的、端到端加密的 claw-to-claw 消息传递（捆绑插件）。
+- [Raft](/channels/raft) - 用于人类与代理协作的 Raft CLI 唤醒桥接（官方插件）。
 - [Signal](/channels/signal) - signal-cli；注重隐私（官方插件）。
 - [Slack](/channels/slack) - Bolt SDK；工作区应用（官方插件）。
-- [SMS](/channels/sms) - 通过 Gateway webhook 的 Twilio 支持短信（官方插件）。
-- [Synology Chat](/channels/synology-chat) - 通过发送+接收 webhook 的 Synology NAS Chat（官方插件）。
-- [Telegram](/channels/telegram) - 核心内置。通过 grammY 的 Bot API；支持群组。
-- [Tlon](/channels/tlon) - 基于 Urbit 的消息工具（官方插件）。
+- [SMS](/channels/sms) - 通过 Gateway webhook 提供的、由 Twilio 支持的 SMS（官方插件）。
+- [Synology Chat](/channels/synology-chat) - 通过外发 + 传入 webhooks 的 Synology NAS Chat（官方插件）。
+- [Telegram](/channels/telegram) - 内置于核心中。通过 grammY 的 Bot API；支持群组。
+- [Tlon](/channels/tlon) - 基于 Urbit 的消息传递器（官方插件）。
 - [Twitch](/channels/twitch) - 通过 IRC 连接的 Twitch 聊天（官方插件）。
-- [Voice Call](/plugins/voice-call) - 通过 Plivo、Telnyx 或 Twilio 实现电话通信（官方插件）。
-- [WebChat](/web/webchat) - 核心内置。通过 WebSocket 的 Gateway WebChat 界面。
-- [WeChat](/channels/wechat) - 通过 QR 登录的腾讯 iLink 机器人；仅支持私聊（外部插件）。
-- [WhatsApp](/channels/whatsapp) - 最受欢迎；使用 Baileys，且需要 QR 配对（官方插件）。
+- [Voice Call](/plugins/voice-call) - 通过 Plivo、Telnyx 或 Twilio 提供电话功能（官方插件）。
+- [WebChat](/web/webchat) - 内置于核心中。通过 WebSocket 的 Gateway WebChat 界面。
+- [WeChat](/channels/wechat) - 通过二维码登录的腾讯 iLink 机器人；仅支持私聊（外部插件）。
+- [WhatsApp](/channels/whatsapp) - 最受欢迎；使用 Baileys 并需要二维码配对（官方插件）。
 - [Yuanbao](/channels/yuanbao) - 腾讯元宝机器人（外部插件）。
 - [Zalo](/channels/zalo) - Zalo Bot API；越南流行的即时通讯工具（官方插件）。
-- [Zalo ClawBot](/channels/zaloclawbot) - 通过 QR 登录的个人 Zalo 助手；受所有者绑定（外部插件）。
-- [Zalo Personal](/channels/zalouser) - 通过 QR 登录的 Zalo 个人账号（官方插件）。
+- [Zalo ClawBot](/channels/zaloclawbot) - 通过二维码登录的个人 Zalo 助手；受所有者绑定（外部插件）。
+- [Zalo Personal](/channels/zalouser) - 通过二维码登录的 Zalo 个人账号（官方插件）。
 
 ## 交付说明
 

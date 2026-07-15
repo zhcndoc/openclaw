@@ -92,6 +92,73 @@ GitHub Copilot 是 GitHub 的 AI 编码助手。它为你的 GitHub 账户和套
   </Tab>
 </Tabs>
 
+## GitHub Enterprise（数据驻留）
+
+如果你的组织使用支持数据驻留的 GitHub Enterprise 租户（例如
+`*.ghe.com` 主机，如 `your-org.ghe.com`），Copilot 会驻留在租户本地
+端点，而不是公共 `github.com`。OpenClaw 将其作为一项一等认证选项提供，
+因此你无需手动编辑 URL。
+
+<Steps>
+  <Step title="选择 Enterprise 认证选项">
+    在引导流程或 `openclaw models auth` 中，选择
+    **GitHub Copilot（Enterprise / data residency）**。系统会提示你输入
+    Enterprise 域名（例如 `your-org.ghe.com`），然后设备登录会针对该租户运行。
+
+    只输入租户根域名（`your-org.ghe.com`）。像
+    `api.your-org.ghe.com` 或 `copilot-api.your-org.ghe.com` 这样的派生服务主机不被接受；
+    OpenClaw 会自动根据租户根域名推导这些端点。
+
+    ```bash
+    openclaw models auth login --provider github-copilot --method device-enterprise
+    ```
+
+  </Step>
+  <Step title="域名会持久化到配置中">
+    所选主机会存储在提供方参数下，因此后续的令牌刷新
+    和补全会自动针对该租户：
+
+    ```json5
+    {
+      models: {
+        providers: {
+          "github-copilot": { params: { githubDomain: "your-org.ghe.com" } },
+        },
+      },
+    }
+    ```
+
+  </Step>
+</Steps>
+
+设备流程、令牌交换和补全分别会解析到
+`https://your-org.ghe.com/login/device/code`、
+`https://api.your-org.ghe.com/copilot_internal/v2/token`，以及
+`https://copilot-api.your-org.ghe.com`。数据驻留令牌携带
+租户标记且不带代理提示，因此补全基础 URL 会回退到
+租户 Copilot 主机，而不是公共端点。
+
+<Note>
+切换域名时总会重新执行设备登录。如果你已经保存了
+Copilot 令牌，并选择了不同的域名（公共 `github.com` ↔ 一个 `*.ghe.com`
+租户，或从一个租户切换到另一个租户），OpenClaw 不会复用现有令牌——
+它会强制进行全新的登录，以便令牌的作用域与写入配置的域名一致。
+对 *相同* 域名重新执行登录时，仍会提示是否复用当前令牌。
+切回公共 `github.com` 时会清除持久化的
+`githubDomain`，使配置恢复为默认值。
+</Note>
+
+<Note>
+`COPILOT_GITHUB_DOMAIN` 环境变量会覆盖所有解析该域名的 Copilot 路径的
+解析结果——包括 Enterprise 设备登录
+（`--method device-enterprise`）、独立的
+`openclaw models auth login-github-copilot` 快捷方式、令牌刷新、嵌入，
+以及补全。将其设置为你的 `*.ghe.com` 主机，以便实现完全无头或 CI
+环境。保持其未设置（且配置参数不存在）即可使用公共 `github.com`。
+登录会持久化其签发令牌时使用的域名（在针对公共 `github.com` 登录时会清除该域名），
+因此即使环境变量后来被取消设置，路由仍然保持正确。
+</Note>
+
 ## 可选标志
 
 | 命令                                                                   | 标志            | 描述                                                 |
@@ -186,7 +253,7 @@ openclaw onboard --non-interactive --accept-risk \
 
 GitHub Copilot 也可以作为 [memory search](/concepts/memory-search) 的嵌入提供方。如果你有 Copilot 订阅并已登录，OpenClaw 可将其用于嵌入，而无需单独的 API 密钥。
 
-### Config
+### 配置
 
 将 `memorySearch.provider` 明确设置为使用 GitHub Copilot 嵌入。如果有可用的 GitHub 令牌，OpenClaw 会从 Copilot API 发现可用的嵌入模型并自动选择最佳模型。
 

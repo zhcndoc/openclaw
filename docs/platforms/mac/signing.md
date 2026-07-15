@@ -9,13 +9,13 @@ title: "macOS 签名"
 
 [`scripts/package-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/package-mac-app.sh) 会将应用构建并打包到固定路径（`dist/OpenClaw.app`），然后调用 [`scripts/codesign-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/codesign-mac-app.sh) 对其进行签名。TCC 权限与 bundle ID 和代码签名绑定；在多次重新构建时保持二者稳定（以及应用位于固定路径）可防止 macOS 忘记 TCC 授权（通知、辅助功能、屏幕录制、麦克风、语音）。
 
-- 调试 bundle identifier 默认是 `ai.openclaw.mac.debug`（可通过 `BUNDLE_ID=...` 覆盖）。
-- Node：`>=22.19.0 <23` 或 `>=23.11.0`（仓库 `package.json` 中的 `engines`）。打包器还会构建 Control UI（`pnpm ui:build`）。
-- 默认需要真实的签名身份；如果未找到任何身份且未设置 `ALLOW_ADHOC_SIGNING`，codesign 脚本会报错并退出。临时签名（`SIGN_IDENTITY="-"`）是显式启用的选项，不会在重新构建后保留 TCC 权限。参见 [macOS 权限](/platforms/mac/permissions)。
+- 调试 bundle identifier 默认值为 `ai.openclaw.mac.debug`（可通过 `BUNDLE_ID=...` 覆盖）。
+- Node：`>=22.22.3 <23`、`>=24.15.0 <25` 或 `>=25.9.0`（仓库 `package.json` 中的 `engines`）。打包脚本还会构建 Control UI（`pnpm ui:build`）。
+- 默认需要真实的签名身份；如果未找到任何身份且未设置 `ALLOW_ADHOC_SIGNING`，codesign 脚本会报错退出。ad-hoc 签名（`SIGN_IDENTITY="-"`）需要显式启用，且不会在重新构建后保留 TCC 权限。参见 [macOS 权限](/platforms/mac/permissions)。
 - 从环境中读取 `SIGN_IDENTITY`（例如 `export SIGN_IDENTITY="Apple Development: Your Name (TEAMID)"`，或 Developer ID Application 证书）。如果未设置，`codesign-mac-app.sh` 会按以下顺序自动选择身份：Developer ID Application、Apple Distribution、Apple Development，然后是找到的第一个有效代码签名身份。
-- `CODESIGN_TIMESTAMP=auto`（默认）仅为 Developer ID Application 签名启用受信任时间戳。设置为 `on`/`off` 可强制开启或关闭。
-- 使用 `OpenClawBuildTimestamp`（ISO8601 UTC）和 `OpenClawGitCommit`（短哈希，若不可用则为 `unknown`）标记 Info.plist，因此 About 选项卡可以显示构建信息、git 信息以及调试/发布渠道。
-- 签名后会执行 Team ID 审计，如果 bundle 内任何 Mach-O 的 Team ID 不同则会失败。设置 `SKIP_TEAM_ID_CHECK=1` 可跳过。
+- `CODESIGN_TIMESTAMP=auto`（默认）仅为 Developer ID Application 签名启用受信任时间戳。设置为 `on`/`off` 可强制指定。
+- 在 Info.plist 中写入 `OpenClawBuildTimestamp`（ISO8601 UTC）和 `OpenClawGitCommit`（短哈希，若不可用则为 `unknown`），以便 About 选项卡显示构建、git 和 debug/release 渠道信息。
+- 签名后会执行 Team ID 审核；如果 bundle 内任何 Mach-O 的 Team ID 不同则失败。可设置 `SKIP_TEAM_ID_CHECK=1` 跳过。
 
 ## 使用方法
 

@@ -16,7 +16,7 @@ title: "MiniMax 插件"
 
 ## 暴露接口
 
-providers: minimax, minimax-portal; contracts: imageGenerationProviders, mediaUnderstandingProviders, musicGenerationProviders, speechProviders, videoGenerationProviders, webSearchProviders
+providers: minimax, minimax-portal; contracts: imageGenerationProviders, mediaUnderstandingProviders, musicGenerationProviders, speechProviders, usageProviders, videoGenerationProviders, webSearchProviders
 
 ## 相关文档
 

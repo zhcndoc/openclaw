@@ -13,7 +13,7 @@ sidebarTitle: "语音通话"
 带有允许列表策略的来电。
 
 **Providers:** `mock`（开发环境，无网络）、`plivo`（语音 API + XML 转接 +
-GetInput 语音）、`telnyx`（Call Control v2）、`twilio`（Programmable Voice +
+GetInput 语音）、`telnyx`（Call Control v2）、`twilio`（可编程语音 +
 Media Streams）。
 
 <Note>
@@ -117,6 +117,7 @@ Media Streams）。
           twilio: {
             accountSid: "ACxxxxxxxx",
             authToken: "...",
+            // region: "ie1", // 可选：us1 | ie1 | au1；默认为 us1
           },
           telnyx: {
             apiKey: "...",
@@ -151,8 +152,8 @@ Media Streams）。
             defaultMode: "notify", // notify | conversation
           },
 
-          streaming: { enabled: true /* 参见 Streaming transcription */ },
-          realtime: { enabled: false /* 参见 Realtime voice conversations */ },
+          streaming: { enabled: true /* 仅 Twilio；参见流式转写 */ },
+          realtime: { enabled: false /* 参见实时语音对话 */ },
         },
       },
     },
@@ -167,10 +168,10 @@ Media Streams）。
 | Key                             | Default      | Notes                                                                                  |
 | ------------------------------- | ------------ | -------------------------------------------------------------------------------------- |
 | `enabled`                       | `false`      | 主开关。                                                                               |
-| `inboundPolicy`                 | `"disabled"` | `disabled` \| `allowlist` \| `pairing` \| `open`。参见 [Inbound calls](#inbound-calls)。 |
+| `inboundPolicy`                 | `"disabled"` | `disabled` \| `allowlist` \| `pairing` \| `open`。参见 [来电](#inbound-calls)。         |
 | `allowFrom`                     | `[]`         | `inboundPolicy: "allowlist"` 的 E.164 白名单。                                         |
 | `maxDurationSeconds`            | `300`        | 单通话时长硬限制，无论是否接通都会强制执行。                                            |
-| `staleCallReaperSeconds`        | `120`        | 参见 [Stale call reaper](#stale-call-reaper)。`0` 可禁用。                               |
+| `staleCallReaperSeconds`        | `120`        | 参见 [陈旧通话清理器](#stale-call-reaper)。`0` 可禁用。                                 |
 | `silenceTimeoutMs`              | `800`        | 经典（非 realtime）流程的发言结束静默检测。                                             |
 | `transcriptTimeoutMs`           | `180000`     | 在放弃一次轮次前等待来电者转写的最长时间。                                              |
 | `ringTimeoutMs`                 | `30000`      | 外呼的响铃超时时间。                                                                    |
@@ -183,8 +184,10 @@ Media Streams）。
 | `responseSystemPrompt`          | generated    | 经典响应的自定义系统提示词。                                                            |
 | `responseTimeoutMs`             | `30000`      | 经典响应生成超时时间（毫秒）。                                                          |
 
+Twilio 默认使用其 US1 REST 端点。要在受支持的非美国区域处理通话，请将 `twilio.region` 设置为 `ie1` 或 `au1`，并使用该区域的凭据。请参见 [Twilio 的非美国 REST API 指南](https://www.twilio.com/docs/global-infrastructure/using-the-twilio-rest-api-in-a-non-us-region)。
+
 <AccordionGroup>
-  <Accordion title="Provider exposure and security notes">
+  <Accordion title="提供商暴露与安全说明">
     - Twilio、Telnyx 和 Plivo 都需要一个**可公开访问**的 webhook URL。
     - `mock` 是本地开发提供商（不进行网络调用）。
     - Telnyx 需要 `telnyx.publicKey`（或 `TELNYX_PUBLIC_KEY`），除非 `skipSignatureVerification` 为 true。
@@ -194,14 +197,14 @@ Media Streams）。
     - ngrok 免费套餐的 URL 可能会变化或增加中间页行为；如果 `publicUrl` 发生漂移，Twilio 签名将失败。生产环境：优先使用稳定域名或 Tailscale funnel。
 
   </Accordion>
-  <Accordion title="Streaming connection caps">
+  <Accordion title="流式连接上限">
     - `streaming.preStartTimeoutMs`（默认 `5000`）会关闭从未发送有效 `start` 帧的 socket。
     - `streaming.maxPendingConnections`（默认 `32`）限制未认证、未开始的 socket 总数。
     - `streaming.maxPendingConnectionsPerIp`（默认 `4`）限制每个源 IP 的未认证、未开始 socket 数。
     - `streaming.maxConnections`（默认 `128`）限制所有打开的媒体流 socket（pending + active）。
 
   </Accordion>
-  <Accordion title="Legacy config migrations">
+  <Accordion title="旧配置迁移">
     配置解析会自动规范化这些旧键，并记录一条警告，说明替换路径；该兼容层将在未来版本（`2026.6.0`）移除，因此请运行 `openclaw doctor --fix` 将已提交的配置重写为规范形态：
 
     - `provider: "log"` → `provider: "mock"`
@@ -309,9 +312,9 @@ Voice Call 会将生成的会话密钥存储在已配置的 agent 命名空间�
 <Tabs>
   <Tab title="Google Gemini Live">
     默认值：API key 来自 `realtime.providers.google.apiKey`、`GEMINI_API_KEY`
-    或 `GOOGLE_API_KEY`；模型为 `gemini-2.5-flash-native-audio-preview-12-2025`；
-    语音为 `Kore`。对于更长、可重连的通话，`sessionResumption` 和
-    `contextWindowCompression` 默认开启。使用 `silenceDurationMs`、
+    或 `GOOGLE_API_KEY`；模型为 `gemini-3.1-flash-live-preview`；
+    语音为 `Kore`。`sessionResumption` 和 `contextWindowCompression` 默认开启，
+    适用于更长、可重新连接的通话。可使用 `silenceDurationMs`、
     `startSensitivity` 和 `endSensitivity` 来调优电话音频中的更快轮次切换。
 
     ```json5
@@ -335,7 +338,7 @@ Voice Call 会将生成的会话密钥存储在已配置的 agent 命名空间�
                 providers: {
                   google: {
                     apiKey: "${GEMINI_API_KEY}",
-                    model: "gemini-2.5-flash-native-audio-preview-12-2025",
+                    model: "gemini-3.1-flash-live-preview",
                     speakerVoice: "Kore",
                     silenceDurationMs: 500,
                     startSensitivity: "high",
@@ -379,7 +382,10 @@ Voice Call 会将生成的会话密钥存储在已配置的 agent 命名空间�
 
 ## 流式转录
 
-`streaming` 会为实时通话音频选择一个实时转录提供商。
+`streaming` 将 Twilio Media Streams 连接到实时转录提供商。
+经典的流式路径需要 `provider: "twilio"`；与 Telnyx、Plivo 或 mock 的
+配置会被拒绝。Telnyx 实时音频则使用单独认证的
+`realtime.enabled` 路径。
 
 当前运行时行为：
 
@@ -476,7 +482,7 @@ Voice Call 使用核心 `messages.tts` 配置为通话流式输出语音。你�
 ```
 
 <Warning>
-**Microsoft speech 会被通话忽略。** 电话合成需要一个实现 telephony-target 输出的提供商；Microsoft speech 提供商不支持，因此在通话中会被跳过，并改为尝试回退链中的其他提供商。
+**Microsoft 语音会被通话忽略。** 电话合成需要一个实现 telephony-target 输出的提供商；Microsoft 语音提供商不支持，因此在通话中会被跳过，并改为尝试回退链中的其他提供商。
 </Warning>
 
 行为说明：
@@ -744,7 +750,7 @@ openclaw voicecall expose --mode funnel
 | `speak_to_user` | `callId`, `message`                        |
 | `send_dtmf`     | `callId`, `digits`                         |
 | `end_call`     | `callId`                                   |
-| `get_status`    | `callId`                                   |
+| `get_status`     | `callId`                                   |
 
 voice-call 插件附带一个匹配的 agent 技能。
 

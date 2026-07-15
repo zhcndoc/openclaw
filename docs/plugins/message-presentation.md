@@ -1,18 +1,17 @@
 ---
-summary: "语义化消息卡片、按钮、选择器、回退文本以及用于频道插件的投递提示"
+summary: "用于频道插件的语义消息卡片、图表、表格、控件、回退文本和交付提示"
 title: "消息展示"
 read_when:
-  - 添加或修改消息卡片、按钮或选择器渲染时
-  - 构建支持富出站消息的频道插件时
-  - 更改消息工具展示或投递能力时
-  - 调试特定提供方的卡片/区块/组件渲染回归时
+  - 添加或修改消息卡片、图表、表格、按钮或选择器渲染
+  - 构建支持富出站消息的频道插件
+  - 更改消息工具展示或交付能力
+  - 调试特定提供方的卡片/块/组件渲染回归
 ---
 
 消息展示是 OpenClaw 面向富出站聊天 UI 的共享契约。
 它允许代理、CLI 命令、审批流和插件只描述一次消息意图，而由各个频道插件尽可能渲染为最佳的原生形态。
 
-使用展示来实现可移植的消息 UI：文本区块、小型上下文/页脚文本、
-分割线、按钮、选择菜单，以及卡片标题/色调。
+将展示用于可移植的消息 UI：文本区块、小的上下文/页脚文本、分隔线、图表、表格、按钮、选择菜单，以及卡片标题/语气。
 
 不要在共享消息工具中新增诸如 Discord `components`、Slack `blocks`、Telegram `buttons`、Teams `card` 或 Feishu `card` 之类的提供方原生字段。这些是由频道插件拥有的渲染器输出。
 
@@ -41,20 +40,52 @@ type MessagePresentationBlock =
   | { type: "context"; text: string }
   | { type: "divider" }
   | { type: "buttons"; buttons: MessagePresentationButton[] }
-  | { type: "select"; placeholder?: string; options: MessagePresentationOption[] };
+  | { type: "select"; placeholder?: string; options: MessagePresentationOption[] }
+  | {
+      type: "chart";
+      chartType: "pie";
+      title: string;
+      segments: Array<{ label: string; value: number }>;
+    }
+  | {
+      type: "chart";
+      chartType: "bar" | "area" | "line";
+      title: string;
+      categories: string[];
+      series: Array<{ name: string; values: number[] }>;
+      xLabel?: string;
+      yLabel?: string;
+    }
+  | {
+      type: "table";
+      caption: string;
+      headers: string[];
+      rows: Array<Array<string | number>>;
+      rowHeaderColumnIndex?: number;
+    };
 
 type MessagePresentationAction =
   | { type: "command"; command: string }
-  | { type: "callback"; value: string };
+  | { type: "callback"; value: string }
+  | {
+      type: "approval";
+      approvalId: string;
+      approvalKind: "exec" | "plugin";
+      decision: "allow-once" | "allow-always" | "deny";
+    }
+  | { type: "url"; url: string }
+  | { type: "web-app"; url: string };
 
 type MessagePresentationButton = {
   label: string;
   action?: MessagePresentationAction;
   /** 旧版回调值。新控件优先使用 action。 */
   value?: string;
+  /** @deprecated 使用 type 为 "url" 的 action。 */
   url?: string;
+  /** @deprecated 使用 type 为 "web-app" 的 action。 */
   webApp?: { url: string };
-  /** @deprecated 使用 webApp。仅接受旧版 JSON 载荷。 */
+  /** @deprecated 使用 type 为 "web-app" 的 action。 */
   web_app?: { url: string };
   priority?: number;
   disabled?: boolean;
@@ -64,8 +95,8 @@ type MessagePresentationButton = {
 
 type MessagePresentationOption = {
   label: string;
-  action?: MessagePresentationAction;
-  /** 旧版选择值。新控件优先使用 action。 */
+  action?: Extract<MessagePresentationAction, { type: "command" | "callback" }>;
+  /** 旧版选中应用值。新控件优先使用 action。 */
   value?: string;
 };
 
@@ -82,23 +113,48 @@ type ReplyPayloadDelivery = {
 
 按钮语义：
 
-- `action.type: "command"` 通过 core 的 command 路径运行原生 slash 命令。用于内置命令按钮和菜单。
-- `action.type: "callback"` 通过频道的交互路径传递不透明的插件数据。频道插件不得将回调数据重新解释为 slash 命令。
-- `value` 是旧版的不透明回调值。新控件应使用 `action`，这样频道插件就可以在不根据文本猜测的情况下映射命令和回调。
-- `url` 是链接按钮。它可以在没有 `value` 的情况下存在。
-- `webApp` 描述一个频道原生的 web 应用按钮。Telegram 会将其渲染为 `web_app`，且仅支持私聊。为了兼容性，`web_app` 在宽松的 JSON 载荷中仍被接受，但 TypeScript 生成方应使用 `webApp`。
-- `label` 是必需的，并且也会用于文本回退。
-- `style` 仅作建议。渲染器应将不支持的样式映射为安全的默认值，而不是发送失败。
-- `priority` 是可选的。当某个频道声明了动作限制且必须丢弃部分控件时，core 会优先保留更高优先级的按钮，并在相同优先级按钮之间保持原始顺序。当所有控件都能容纳时，会保留作者定义的顺序。
-- `disabled` 是可选的。频道必须通过 `supportsDisabled` 明确支持；否则 core 会将禁用控件降级为不可交互的回退文本。即使禁用按钮携带 `command` 动作，回退文本中也始终只显示标签，不可交互。
-- `reusable` 是可选的。支持可复用原生回调的频道可以在成功交互后继续保留该动作可用。可将其用于可重复或幂等的动作，例如刷新、检查或查看更多详情；普通的一次性审批和破坏性操作则不要设置它。
+- `action.type: "command"` 通过 core 的命令路径运行原生斜杠命令。用于内置命令按钮和菜单。
+- `action.type: "callback"` 通过频道的交互路径携带不透明的插件数据。频道插件不得将回调数据重新解释为斜杠命令。
+- `action.type: "approval"` 标识一个持久化的操作员审批、其明确的 `exec` 或 `plugin` 类型，以及请求的决策。频道插件将该动作编码为传输私有的回调，并通过审批服务解析；它们不得解析 `/approve` 命令文本或从 ID 推断类型。
+- `action.type: "url"` 打开普通链接。
+- `action.type: "web-app"` 启动频道原生 Web 应用。
+- `value` 是旧版不透明回调值。新控件应使用 `action`，这样频道插件就可以在不根据文本猜测的情况下映射命令和回调。
+- `url`、`webApp` 和 `web_app` 仍作为已弃用的边界输入被接受。规范化器会保留这些字段，以便渲染器能够区分已发送的旧版语义和显式的类型化动作。新的生产者应使用 `action`。
+- `label` 是必需项，也用于文本回退。
+- `style` 仅作为建议。渲染器应将不支持的样式映射为安全默认值，而不是发送失败。
+- `priority` 是可选项。当频道声明动作数量限制且必须丢弃控件时，core 会优先保留更高优先级的按钮，并在相同优先级按钮之间保持原始顺序。当所有控件都能放下时，保持作者编写顺序。
+- `disabled` 是可选项。频道必须通过 `supportsDisabled` 明确启用；否则 core 会将禁用控件降级为非交互式回退文本。即使携带 `command` 动作，禁用按钮在回退文本中也始终只渲染标签。
+- `reusable` 是可选项。支持可复用原生回调的频道可以在一次成功交互后仍保留该动作可用。用于可重复或幂等的动作，例如刷新、查看、更多详情；普通的一次性审批和破坏性动作应保持未设置。
 
 选择器语义：
 
-- `options[].action` 与按钮 `action` 具有相同的 command/callback 含义。
-- `options[].value` 是旧版的所选应用值。
-- `placeholder` 仅供参考，缺少原生选择支持的频道可以忽略它。
-- 如果频道不支持选择器，回退文本会列出这些标签。
+- `options[].action` 仅接受 `command` 或 `callback`；审批和链接动作仅适用于按钮。
+- `options[].value` 是旧版选中的应用值。
+- `placeholder` 仅作为建议，可能会被不支持原生选择器的频道忽略。
+- 如果频道不支持选择器，回退文本会列出标签。
+
+图表语义：
+
+- `pie` 要求分段值为正数。
+- `bar`、`area` 和 `line` 使用一个有序的 `categories` 数组。每个系列都必须按相同顺序为每个类别提供恰好一个有限值。
+- 类别标签和系列名称必须唯一。无效或不完整的图表块在规范化期间会被丢弃，而不是悄悄更改数据。
+- 原生图表渲染通过 `presentationCapabilities.charts` 进行可选启用。其他频道会以确定性文本接收图表标题、坐标轴、类别、系列和值。这也是可访问性回退。
+
+表格语义：
+
+- `caption` 是必需的简短标题。`headers` 必须至少包含一个唯一的、非空的列标签。
+- `rows` 必须至少包含一行。每一行必须恰好包含每个标题对应的一个单元格，且每个单元格必须是非空字符串或有限数字。
+- `rowHeaderColumnIndex` 是可选的、从零开始的索引，用于标识其单元格应被原生渲染器作为行标题公开的列。
+- 表格规范化是原子的。无效的标题、表头、行宽、单元格或行标题索引会直接丢弃表格块，而不是截断或修复其数据。
+- 原生表格渲染通过 `presentationCapabilities.tables` 进行可选启用。其他频道会以确定性线性文本接收标题和每一行，并折叠内部空白：
+
+  ```text
+  Open pipeline (table)
+  - Account: Acme; Stage: Won; ARR: 125000
+  - Account: Globex; Stage: Review; ARR: 82000
+  ```
+
+不存在单独的 `report` discriminator。使用 `title`、`tone`、`text`、`context`、`chart`、`table` 和动作块来组合报告。这样可以让每个块都能独立渲染，并让完整报告拥有同样确定性的文本回退。
 
 ## 生产者示例
 
@@ -114,8 +170,16 @@ type ReplyPayloadDelivery = {
     {
       "type": "buttons",
       "buttons": [
-        { "label": "批准", "value": "deploy:approve", "style": "success" },
-        { "label": "拒绝", "value": "deploy:decline", "style": "danger" }
+        {
+          "label": "批准",
+          "action": { "type": "callback", "value": "deploy:approve" },
+          "style": "success"
+        },
+        {
+          "label": "拒绝",
+          "action": { "type": "callback", "value": "deploy:decline" },
+          "style": "danger"
+        }
       ]
     }
   ]
@@ -130,7 +194,12 @@ type ReplyPayloadDelivery = {
     { "type": "text", "text": "发布说明已准备好。" },
     {
       "type": "buttons",
-      "buttons": [{ "label": "打开说明", "url": "https://example.com/release" }]
+      "buttons": [
+        {
+          "label": "打开说明",
+          "action": { "type": "url", "url": "https://example.com/release" }
+        }
+      ]
     }
   ]
 }
@@ -143,7 +212,12 @@ Telegram Mini App 按钮：
   "blocks": [
     {
       "type": "buttons",
-      "buttons": [{ "label": "启动", "web_app": { "url": "https://example.com/app" } }]
+      "buttons": [
+        {
+          "label": "启动",
+          "action": { "type": "web-app", "url": "https://example.com/app" }
+        }
+      ]
     }
   ]
 }
@@ -163,6 +237,50 @@ Telegram Mini App 按钮：
         { "label": "生产", "value": "env:prod" }
       ]
     }
+  ]
+}
+```
+
+图表：
+
+```json
+{
+  "blocks": [
+    {
+      "type": "chart",
+      "chartType": "line",
+      "title": "季度收入",
+      "categories": ["Q1", "Q2", "Q3"],
+      "series": [
+        { "name": "产品", "values": [120, 145, 138] },
+        { "name": "服务", "values": [80, 95, 104] }
+      ],
+      "xLabel": "季度",
+      "yLabel": "收入"
+    }
+  ]
+}
+```
+
+表格报告：
+
+```json
+{
+  "title": "管道报告",
+  "tone": "info",
+  "blocks": [
+    { "type": "text", "text": "按阶段划分的当前商机。" },
+    {
+      "type": "table",
+      "caption": "开放管道",
+      "headers": ["账户", "阶段", "ARR"],
+      "rows": [
+        ["Acme", "已赢单", 125000],
+        ["Globex", "审核中", 82000]
+      ],
+      "rowHeaderColumnIndex": 0
+    },
+    { "type": "context", "text": "已从 CRM 快照更新。" }
   ]
 }
 ```
@@ -210,6 +328,8 @@ const adapter: ChannelOutboundAdapter = {
     selects: true,
     context: true,
     divider: true,
+    charts: false,
+    tables: false,
     limits: {
       actions: {
         maxActions: 25,
@@ -254,6 +374,8 @@ type ChannelPresentationCapabilities = {
   selects?: boolean;
   context?: boolean;
   divider?: boolean;
+  charts?: boolean;
+  tables?: boolean;
   limits?: {
     actions?: {
       maxActions?: number;
@@ -284,18 +406,20 @@ core 会在渲染前将通用限制应用于语义化控件。渲染器仍然负
 
 ## 核心渲染流程
 
-当 `ReplyPayload` 或消息动作包含 `presentation` 时，core 会：
+在 CLI 和标准消息操作使用的规范出站路径中，核心：
 
 1. 规范化展示载荷。
 2. 解析目标频道的出站适配器。
 3. 读取 `presentationCapabilities`。
-4. 在适配器声明支持时，应用通用能力限制，例如动作数量、标签长度和选择项数量。
-5. 当适配器可以渲染该载荷时调用 `renderPresentation`。
-6. 当适配器缺失或无法渲染时回退为保守文本。
-7. 通过正常的频道投递路径发送结果载荷。
-8. 在首条消息成功发送后应用诸如 `delivery.pin` 之类的投递元数据。
+4. 当适配器声明支持时，应用通用能力限制，例如操作数量、标签长度以及选择项数量。图表和表格块会变为确定性的文本，除非适配器明确声明分别支持 `charts: true` 或 `tables: true`。
+5. 当适配器能够渲染载荷时，调用 `renderPresentation`。
+6. 当适配器缺失或无法渲染时，回退为保守文本。
+7. 通过正常的频道投递路径发送最终载荷。
+8. 在首条成功发送的消息之后，应用投递元数据，例如 `delivery.pin`。
 
-core 负责回退行为，因此生产者可以保持与频道无关。频道插件负责原生渲染和交互处理。
+直接消费 `ReplyPayload` 的频道本地回复或预览流程，必须要么进入该规范路径，要么在将载荷下探为纯文本/媒体之前，先生成相同的展示回退。
+
+核心负责回退行为，因此生产者可以保持与频道无关。频道插件负责原生渲染和交互处理。
 
 ## 降级规则
 
@@ -303,30 +427,42 @@ core 负责回退行为，因此生产者可以保持与频道无关。频道插
 
 回退文本包括：
 
-- `title` 作为第一行
-- `text` 区块作为普通段落
-- `context` 区块作为紧凑的上下文行
-- `divider` 区块作为视觉分隔符
-- 按钮标签，包括链接按钮的 URL
-- 选择器选项标签
+- `title` as the first line
+- `text` blocks as normal paragraphs
+- `context` blocks as compact context lines
+- `divider` blocks as a visual separator
+- button labels, including URLs for link buttons
+- select option labels
+- chart title, type, axes, categories, series, and values
+- table caption, headers, and every row value
 
 ### 按钮值回退可见性
 
 当某个频道无法渲染交互控件时，按钮和值选择会回退为纯文本。此回退行为在保持可用性的同时，会保护不透明的回调数据私密：
 
-- **`command` 类型的动作** 会渲染为 `label: \`command\``，这样用户可以复制该命令并在频道输入中手动运行。
-- **`callback` 类型的动作** 和旧版 **`value`** 字段会仅渲染标签。未公开的回调值不会出现在回退文本中。
-- **`url` / `webApp`** 按钮会连同按钮标签一起渲染 URL 文本，因为 URL 是面向用户的。
-- **选择器选项** 仅渲染标签。底层选项值不会出现在回退文本中。
+- **`command`-typed actions** render as `label: \`command\`` so users can
+  copy the command and run it manually in the channel input.
+- **`callback`-typed actions** and legacy **`value`** fields render as
+  label-only. The opaque callback value is not exposed in fallback text.
+- **`approval`-typed actions** render label-only. Approval IDs and decisions are
+  transport data and are not exposed through generic scalar helpers or fallback
+  text.
+- **`url` / `web-app` actions** and deprecated **`url` / `webApp` / `web_app`**
+  inputs render the URL text alongside the button label, since the URL is
+  user-facing.
+- **Select options** render as label-only. The underlying option value is not
+  exposed in fallback text.
 
 在回退 UI 中添加手动命令指引的频道适配器（例如飞书文档评论说明）必须从与回退渲染器相同的展示区块中派生命令存在性检查，因此只有在实际显示手动命令时，指引文本才会出现。
 
 不支持的原生控件应当降级，而不是让整个发送失败。例如：
 
-- 在禁用内联按钮的 Telegram 中会发送文本回退。
-- 不支持选择器的频道会将选择项作为文本列出。
-- 仅 URL 的按钮会变成原生链接按钮，或者回退为 URL 行。
-- 可选的置顶失败不会导致已投递消息失败。
+- Telegram with inline buttons disabled sends text fallback.
+- A channel without select support lists select options as text.
+- A channel without native chart support lists the chart data as text.
+- A channel without native table support lists every table row as text.
+- A URL-only button becomes either a native link button or a fallback URL line.
+- Optional pin failures do not fail the delivered message.
 
 主要例外是 `delivery.pin.required: true`；如果请求置顶为必需，而频道无法将已发送消息置顶，则投递会报告失败。
 
@@ -334,16 +470,16 @@ core 负责回退行为，因此生产者可以保持与频道无关。频道插
 
 当前内置渲染器：
 
-| Channel         | Native render target                      | Notes                                                                                                                                                                                                             |
-| --------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Discord         | 组件和组件容器       | 为现有提供方原生载荷生产者保留旧版 `channelData.discord.components`，但新的共享发送应使用 `presentation`。                                                                                                                              |
-| 飞书          | 交互式卡片                         | 卡片标题可使用 `title`；正文避免重复该标题。                                                                                                                                                  |
-| Matrix         | 文本回退加结构化事件字段 | 按钮/选择项会被标记为受支持，但目前每个块都仅渲染为 `renderMessagePresentationFallbackText` 的输出，并携带在 `com.openclaw.presentation` 事件字段中，而不是原生交互式组件。 |
-| Mattermost      | 文本加交互属性               | 不支持选择项和分隔线；这些块会降级为文本。                                                                                                                                             |
-| Microsoft Teams | 自适应卡片                            | 当同时提供时，纯 `message` 文本会与卡片一起包含。 不支持选择项、样式和禁用状态。                                                                                     |
-| Slack           | Block Kit                                 | 为现有提供方原生载荷生产者保留旧版 `channelData.slack.blocks`，但新的共享发送应使用 `presentation`。                                                                       |
-| Telegram        | 文本加内联键盘                | 按钮/选择项需要目标界面具备内联按钮能力；否则将使用文本回退。                                                                                                         |
-| 纯文本渠道  | 文本回退                             | 即使没有渲染器的渠道也能获得可读输出。                                                                                                                                                            |
+| Channel         | 原生渲染目标                               | 说明                                                                                                                                                                                                             |
+| --------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Discord         | 组件和组件容器                              | 为现有的 provider 原生载荷生产者保留旧版 `channelData.discord.components`，但新的共享发送应使用 `presentation`。                                                                                                      |
+| Feishu          | 交互式卡片                                  | 卡片头部可以使用 `title`；正文避免重复该标题。                                                                                                                                                                   |
+| Matrix          | 文本回退加结构化事件字段                    | 按钮/选择器被标记为受支持，但当前每个块都会渲染为 `renderMessagePresentationFallbackText` 的输出，并携带在 `com.openclaw.presentation` 事件字段中，而不是原生交互式小部件。                                      |
+| Mattermost      | 文本加交互属性                               | 不支持选择器和分隔符；这些块会降级为文本。                                                                                                                                                                        |
+| Microsoft Teams | 自适应卡片                                  | 当同时提供时，普通 `message` 文本会与卡片一起包含。 不支持选择器、样式和禁用状态。                                                                                                                                |
+| Slack           | Block Kit                                  | 将 `chart` 渲染为原生 `data_visualization`，将 `table` 渲染为原生 `data_table`；保留旧版 `channelData.slack.blocks`，但新的共享发送应使用 `presentation`。                                                         |
+| Telegram        | 文本加内联键盘                              | 按钮/选择器需要目标界面具备内联按钮能力；否则使用文本回退。                                                                                                                                                       |
+| Plain channels  | 文本回退                                    | 没有渲染器的通道仍会获得可读输出。                                                                                                                                                                                |
 
 提供方原生载荷兼容性是为现有回复生产者提供的过渡性便利。它不是新增共享原生字段的理由。
 
@@ -357,12 +493,14 @@ core 负责回退行为，因此生产者可以保持与频道无关。频道插
 
 `MessagePresentation` 是规范的共享发送契约。它新增了：
 
-- 标题
-- 语气
-- 上下文
-- 分隔线
-- 仅 URL 按钮
-- 通过 `ReplyPayload.delivery` 提供的通用投递元数据
+- title
+- tone
+- context
+- divider
+- chart
+- table
+- URL-only 按钮
+- 通过 `ReplyPayload.delivery` 提供的通用发送元数据
 
 在桥接旧代码时，请使用 `openclaw/plugin-sdk/interactive-runtime` 中的辅助函数：
 
@@ -377,9 +515,13 @@ import {
   presentationPageSize,
   presentationToInteractiveControlsReply,
   presentationToInteractiveReply,
+  renderMessagePresentationChartFallbackText,
   renderMessagePresentationFallbackText,
+  renderMessagePresentationTableFallbackText,
   resolveMessagePresentationActionValue,
+  resolveMessagePresentationButtonAction,
   resolveMessagePresentationControlValue,
+  resolveMessagePresentationOptionAction,
 } from "openclaw/plugin-sdk/interactive-runtime";
 ```
 
@@ -390,14 +532,20 @@ import {
 值得了解的非弃用辅助函数：
 
 - `normalizeMessagePresentation(raw)` / `hasMessagePresentationBlocks(value)`
-  验证并强制转换一个未类型化载荷（例如来自 CLI
-  `--presentation` 标志的 JSON）为 `MessagePresentation`。
-- `isMessagePresentationInteractiveBlock(block)` 将一个区块缩窄为
+  将未类型化载荷（例如来自 CLI
+  `--presentation` 标志的 JSON）验证并转换为 `MessagePresentation`。
+- `isMessagePresentationInteractiveBlock(block)` 将一个块缩窄为
   `buttons` | `select` 联合类型。
+- `resolveMessagePresentationButtonAction(button)` 和
+  `resolveMessagePresentationOptionAction(option)` 在接受已弃用边界字段的同时，返回规范的强类型
+  action。显式的 `action`
+  始终优先。
 - `resolveMessagePresentationActionValue(action)` /
-  `resolveMessagePresentationControlValue(control)` 读取 `action` 上有效的
-  command/callback 值，并在 `resolveMessagePresentationControlValue` 中回退到旧的 `value`
-  字段。
+  `resolveMessagePresentationControlValue(control)` 仅读取命令/回调
+  标量值。非标量的规范 action 不会回退到旧版隐藏的 `value`，因此审批 ID 和链接目标会保持类型安全。
+- `renderMessagePresentationChartFallbackText(block)` /
+  `renderMessagePresentationTableFallbackText(block)` 将一个结构化
+  数据块渲染为确定性的文本，用于特定频道的回退路径。
 
 SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 `@deprecated`：
@@ -426,10 +574,17 @@ SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 - 使用 `buildExecApprovalPresentation(...)` 代替
   `buildExecApprovalInteractiveReply(...)`
 
-`renderMessagePresentationFallbackText(...)` 对于没有文本回退的
-展示区块会返回空字符串，例如仅包含分隔线的展示。需要非空发送正文的传输层可以传入
-`emptyFallback`，以在不改变默认回退
-契约的情况下使用最小正文。
+这些已发布的构建器仍保持以命令为基础，以兼容插件。拥有持久化审批类型的 Gateway
+和捆绑频道代码应使用
+`buildTypedApprovalPresentation(...)`、
+`buildTypedExecApprovalPendingReplyPayload(...)` 或
+`buildTypedPluginApprovalPendingReplyPayload(...)`，以便传输层接收到显式的
+`approval` action，而不是从 `/approve` 文本推断语义。
+
+`renderMessagePresentationFallbackText(...)` 会为
+没有文本回退内容的 presentation 块返回空字符串，例如仅包含 divider 的 presentation。要求发送正文非空的传输层可以传入
+`emptyFallback`，在不改变默认回退
+契约的情况下启用一个最小正文。
 
 ## 投递置顶
 
@@ -448,15 +603,15 @@ SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 
 ## 插件作者检查清单
 
-- 当通道可以渲染语义化呈现，或能够安全降级时，从 `describeMessageTool(...)` 声明 `presentation`。
-- 在运行时 outbound adapter 中添加 `presentationCapabilities`。
-- 在运行时代码中实现 `renderPresentation`，不要放在控制平面插件初始化代码中。
-- 不要让原生 UI 库进入热路径的初始化/目录路径。
+- 当通道可以渲染或安全降级语义呈现时，从 `describeMessageTool(...)` 声明 `presentation`。
+- 将 `presentationCapabilities` 添加到运行时出站适配器。
+- 在运行时代码中实现 `renderPresentation`，而不是在控制平面插件设置代码中实现。
+- 避免在高频设置/目录路径中引入原生 UI 库。
 - 当已知时，在 `presentationCapabilities.limits` 上声明通用能力限制。
 - 在渲染器和测试中保留最终的平台限制。
-- 为不支持的按钮、选择器、URL 按钮、标题/文本重复，以及同时发送 `message` 和 `presentation` 的情况添加回退测试。
-- 仅当提供方能够对已发送消息 id 进行置顶时，通过 `deliveryCapabilities.pin` 和 `pinDeliveredMessage` 添加投递置顶支持。
-- 不要通过共享的消息动作 schema 暴露新的提供方原生卡片/区块/组件/按钮字段。
+- 为不支持的图表、表格、按钮、选择器、URL 按钮、标题/文本重复，以及混合 `message` 和 `presentation` 发送添加回退测试。
+- 仅当提供方可以固定已发送消息 ID 时，才通过 `deliveryCapabilities.pin` 和 `pinDeliveredMessage` 添加发送固定支持。
+- 不要通过共享消息操作 schema 暴露新的 provider 原生 card/block/component/button 字段。
 
 ## 相关文档
 

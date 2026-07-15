@@ -50,16 +50,16 @@ openclaw agent --agent ops --message "在本地运行" --local
 
 ## 说明
 
-- 精确传入 `--message` 或 `--message-file` 中的一个。`--message-file` 会去除开头的 UTF-8 BOM，并保留多行内容；它会拒绝不是有效 UTF-8 的文件。
-- 斜杠命令（例如 `/compact`）不能通过 `--message` 运行。CLI 会拒绝它们，并将你引导到对应的一等命令（压缩时使用 `openclaw sessions compact <key>`）。
-- `--local` 和内嵌回退运行是一次性的：为本次运行打开的捆绑 MCP 回环资源和预热的 Claude stdio 会话会在回复后被回收，因此脚本化调用不会留下本地子进程持续运行。基于 Gateway 的运行则会将 Gateway 拥有的 MCP 回环资源保留在正在运行的 Gateway 进程中。
-- `--channel`、`--reply-channel` 和 `--reply-account` 影响回复投递，而不是会话路由。
-- `--session-key` 选择一个显式会话键。以 agent 为前缀的键必须使用 `agent:<agent-id>:<session-key>`，并且当两者都提供时，`--agent` 必须与该键的 agent id 匹配。普通的非哨兵键在提供 `--agent` 时会限定到 `--agent`，否则限定到配置的默认 agent；例如 `--agent ops --session-key incident-42` 会路由到 `agent:ops:incident-42`。字面键 `global` 和 `unknown` 只有在未提供 `--agent` 时才保持不加范围限定。
-- `--json` 会将 stdout 留给 JSON 响应；Gateway、插件和内嵌回退诊断会输出到 stderr，这样脚本就可以直接解析 stdout。
-- 内嵌回退 JSON 包含 `meta.transport: "embedded"` 和 `meta.fallbackFrom: "gateway"`，因此脚本可以检测回退运行。
-- 如果 Gateway 接受了某次运行，但 CLI 在等待最终回复时超时，内嵌回退会使用一个新的 `gateway-fallback-*` 会话/运行 id，并报告 `meta.fallbackReason: "gateway_timeout"` 以及回退会话字段，而不是与 Gateway 拥有的记录争抢，或静默替换原始会话。
-- `SIGTERM`/`SIGINT` 会中断正在等待的基于 Gateway 的请求；如果 Gateway 已经接受了该运行，CLI 在退出前还会为该运行 id 发送 `chat.abort`。`--local` 和内嵌回退运行会收到相同的信号，但不会发送 `chat.abort`。如果内部运行去重键已经有一个该会话的活动运行，响应会报告 `status: "in_flight"`，而非 JSON 的 CLI 会打印一条 stderr 诊断信息，而不是空回复。对于外部的 cron/systemd 包装器，请保留一个强制终止的后备措施，例如 `timeout -k 60 600 openclaw agent ...`，以便在关闭无法完成清理时由监督器回收进程。
-- 当此命令触发 `models.json` 重新生成时，SecretRef 管理的提供方凭据会以非密钥标记的形式持久化（例如环境变量名、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），绝不会解析为明文密钥。标记写入来自当前生效的源配置快照，而不是来自已解析的运行时密钥值。
+- 准确传入 `--message` 或 `--message-file` 其中之一。`--message-file` 会去除开头的 UTF-8 BOM，并保留多行内容；它会拒绝不是有效 UTF-8 的文件。
+- 斜杠命令（例如 `/compact`）不能通过 `--message` 运行。CLI 会拒绝它们，并引导你使用对应的一等命令（压缩使用 `openclaw sessions compact <key>`）。
+- `--local` 和内嵌回退运行都是一次性的：为本次运行打开的捆绑 MCP 回环资源和预热的 Claude stdio 会话，会在回复后被回收，因此脚本化调用不会留下本地子进程在运行。由 Gateway 支持的运行则会把 Gateway 拥有的 MCP 回环资源保留在正在运行的 Gateway 进程中。
+- 当 `--agent`、`--channel` 和 `--to` 一起使用时，会话路由遵循频道的规范收件人和 `session.dmScope`。具有稳定的仅出站收件人身份的频道会使用由提供方拥有的会话，并与代理的主会话隔离。`--reply-channel` 和 `--reply-account` 只影响投递。
+- `--session-key` 用于选择显式会话键。以 agent 为前缀的键必须使用 `agent:<agent-id>:<session-key>`，并且当同时提供 `--agent` 时，它必须与键中的 agent id 一致。裸的非 sentinel 键在提供 `--agent` 时会限定到 `--agent`，否则限定到配置的默认 agent；例如 `--agent ops --session-key incident-42` 会路由到 `agent:ops:incident-42`。字面键 `global` 和 `unknown` 只有在未提供 `--agent` 时才保持不限定。
+- `--json` 会为 JSON 响应保留 stdout；Gateway、插件以及内嵌回退诊断信息会输出到 stderr，因此脚本可以直接解析 stdout。
+- 内嵌回退的 JSON 包含 `meta.transport: "embedded"` 和 `meta.fallbackFrom: "gateway"`，以便脚本能够检测到回退运行。
+- 如果 Gateway 接受了运行，但 CLI 在等待最终回复时超时，内嵌回退会使用一个新的 `gateway-fallback-*` 会话/运行 id，并报告 `meta.fallbackReason: "gateway_timeout"` 以及回退会话字段，而不是与 Gateway 拥有的转录记录竞争，或静默替换原始会话。
+- `SIGTERM`/`SIGINT` 会中断正在等待的 Gateway 支持请求；如果 Gateway 已经接受了该运行，CLI 在退出前还会针对该运行 id 发送 `chat.abort`。`--local` 和内嵌回退运行会接收相同信号，但不会发送 `chat.abort`。如果内部运行去重键已经存在一个该会话的活动运行，响应会报告 `status: "in_flight"`，而非 JSON 的 CLI 会打印 stderr 诊断信息，而不是空回复。对于外部 cron/systemd 包装器，请保留一个硬终止兜底，例如 `timeout -k 60 600 openclaw agent ...`，这样如果无法正常关闭，监督程序仍可回收该进程。
+- 当此命令触发 `models.json` 重新生成时，由 SecretRef 管理的提供方凭据会以非密文标记的形式持久化（例如 env var 名称、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），绝不会解析为秘密明文。标记写入来自当前活动的源配置快照，而不是来自已解析的运行时密钥值。
 
 ## JSON 投递状态
 

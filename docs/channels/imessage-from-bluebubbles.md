@@ -43,11 +43,12 @@ title: "从 BlueBubbles 迁移"
 
    ```bash
    brew install steipete/tap/imsg
+   brew update && brew upgrade imsg
    imsg --version
    imsg chats --limit 3
    ```
 
-   如果 `imsg chats` 失败并显示 `unable to open database file`、空输出，或 `authorization denied`，请为启动 `imsg` 的终端、编辑器、Node 进程、Gateway 服务或 SSH 父进程授予“完全磁盘访问权限”，然后重新打开该父进程。
+   对于常见的本地设置，OpenClaw 设置可以在已登录的 Messages Mac 上，为 `imsg` 提供用户确认的 Homebrew 安装或更新。手动设置和 SSH 包装器拓扑仍由操作者管理：请在将运行 `imsg` 的相同本地或远程用户上下文中重复执行 Homebrew 更新。如果 `imsg chats` 失败并报 `unable to open database file`、输出为空，或 `authorization denied`，请将终端、编辑器、Node 进程、Gateway 服务或启动 `imsg` 的 SSH 父进程授予“完全磁盘访问权限”，然后重新打开该父进程。
 
 2. 在更改 OpenClaw 配置之前，先验证读取、监听、发送和 RPC 能力：
 
@@ -61,14 +62,14 @@ title: "从 BlueBubbles 迁移"
 
    将 `42` 替换为 `imsg chats` 返回的真实聊天 ID。发送需要为 Messages.app 授予自动化权限。如果 OpenClaw 将通过 SSH 运行，请通过 OpenClaw 将使用的同一 SSH 包装器或用户上下文运行这些命令。如果读取正常但发送因 AppleEvents `-1743` 失败，请检查自动化是否落到了 `/usr/libexec/sshd-keygen-wrapper` 上；参见 [SSH wrapper sends fail with AppleEvents -1743](/channels/imessage#requirements-and-permissions-macos)。
 
-3. 在需要高级操作时启用私有 API 桥接：
+3. 启用私有 API 桥接。对于 OpenClaw iMessage，这一点强烈建议启用，因为回复、tapback、效果、投票、附件回复和群组操作都依赖它：
 
    ```bash
    imsg launch
    imsg status --json
    ```
 
-   `imsg launch` 需要禁用 SIP（并且在现代 macOS 上还需要放宽库验证——参见 [启用 imsg 私有 API](/channels/imessage#enabling-the-imsg-private-api)）。基础发送、历史记录和监听无需 `imsg launch` 即可工作；高级操作则不行。
+   `imsg launch` 需要禁用 SIP（并且在现代 macOS 上，还需要放宽库验证——参见 [启用 imsg 私有 API](/channels/imessage#enabling-the-imsg-private-api)）。基础发送、历史记录和监听在不使用 `imsg launch` 的情况下也能工作；但完整的 OpenClaw iMessage 操作范围则不行。
 
 4. 在启用 `channels.imessage` 并启动 Gateway 之后，通过 OpenClaw 验证桥接：
 
@@ -88,7 +89,7 @@ title: "从 BlueBubbles 迁移"
 
 iMessage 和 BlueBubbles 共享大多数通道级行为键。不同之处在于传输方式（REST 服务器 vs 本地 CLI）以及群组注册表键格式。
 
-| BlueBubbles                                                | bundled iMessage                          | Notes                                                                                                                                                                                                                                                                                                                 |
+| BlueBubbles                                                | bundled iMessage                          | 说明                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `channels.bluebubbles.enabled`                             | `channels.imessage.enabled`               | 含义相同（只要该块存在，默认值为 `true`）。                                                                                                                                                                                                                                                                          |
 | `channels.bluebubbles.serverUrl`                           | _(removed)_                               | 不需要 REST 服务器——插件通过 stdio 启动 `imsg rpc`。                                                                                                                                                                                                                                                               |

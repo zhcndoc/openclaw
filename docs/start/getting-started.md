@@ -10,8 +10,8 @@ title: "入门"
 
 ## 你需要什么
 
-- **Node.js 22.19+, 23.11+, or 24+** (24 是推荐默认版本)
-- **来自模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）——入门时会提示你
+- **Node.js 22.22.3+、24.15+ 或 25.9+**（24 是推荐默认版本）
+- **来自模型提供商的 API key**（Anthropic、OpenAI、Google 等）—— onboarding 会提示你
 
 <Tip>
 使用 `node --version` 检查你的 Node 版本。

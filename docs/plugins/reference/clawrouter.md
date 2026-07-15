@@ -14,9 +14,9 @@ title: "ClawRouter 插件"
 - 包：`@openclaw/clawrouter`
 - 安装方式：已包含在 OpenClaw 中
 
-## 表面
+## Surface
 
-providers: clawrouter
+providers: clawrouter; contracts: usageProviders
 
 ## 相关文档
 

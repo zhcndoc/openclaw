@@ -9,22 +9,46 @@ title: "Android 应用"
 ---
 
 <Note>
-官方 Android 应用可在 [Google Play](https://play.google.com/store/apps/details?id=ai.openclaw.app&hl=en_IN) 获取。它是一个配套节点，需要正在运行的 OpenClaw Gateway。来源：[apps/android](https://github.com/openclaw/openclaw/tree/main/apps/android)（[构建说明](https://github.com/openclaw/openclaw/blob/main/apps/android/README.md)）。
+官方 Android 应用可在 [Google Play](https://play.google.com/store/apps/details?id=ai.openclaw.app&hl=en_IN) 获取，也可作为已签名的独立 APK 在受支持的 [GitHub Releases](https://github.com/openclaw/openclaw/releases) 中下载。它是一个配套节点，需要运行中的 OpenClaw Gateway。来源：[apps/android](https://github.com/openclaw/openclaw/tree/main/apps/android)（[构建说明](https://github.com/openclaw/openclaw/blob/main/apps/android/README.md)）。
 </Note>
 
 ## 支持概览
 
-- 角色：伴生节点应用（Android 不承载 Gateway）。
-- 需要 Gateway：是（在 macOS、Linux 或通过 WSL2 的 Windows 上运行）。
-- 安装：应用请见 [Google Play](https://play.google.com/store/apps/details?id=ai.openclaw.app&hl=en_IN)，Gateway 请见 [入门指南](/start/getting-started)，然后进行 [配对](/channels/pairing)。
-- Gateway：[运行手册](/gateway) + [配置](/gateway/configuration)。
-  - 协议：[Gateway 协议](/gateway/protocol)（节点 + 控制平面）。
+- Role: companion node app（Android 不托管 Gateway）。
+- Gateway required: yes（在 macOS、Linux 或通过 WSL2 的 Windows 上运行它）。
+- Install: [Google Play](https://play.google.com/store/apps/details?id=ai.openclaw.app&hl=en_IN) 或来自受支持的 [GitHub Release](https://github.com/openclaw/openclaw/releases) 的 `OpenClaw-Android.apk`，[Getting Started](/start/getting-started) 用于 Gateway，然后是 [Pairing](/channels/pairing)。
+- Gateway: [Runbook](/gateway) + [Configuration](/gateway/configuration)。
+  - Protocols: [Gateway protocol](/gateway/protocol)（节点 + 控制平面）。
 
 系统控制（launchd/systemd）位于 Gateway 主机上——请参见 [Gateway](/gateway)。
 
+## 在 Google Play 之外安装
+
+正式版和修正版的 GitHub Releases 都包含一个通用的 `OpenClaw-Android.apk` 和 `OpenClaw-Android-SHA256SUMS.txt`。APK 由发布标签构建，使用 OpenClaw Android 发布密钥签名，并带有 GitHub Actions 溯源信息。
+
+请选择一个同时列出这两个资源的 [release](https://github.com/openclaw/openclaw/releases)，然后在侧载前下载并验证该确切标签：
+
+```bash
+release_tag=vYYYY.M.PATCH
+gh release download "$release_tag" \
+  --repo openclaw/openclaw \
+  --pattern OpenClaw-Android.apk \
+  --pattern OpenClaw-Android-SHA256SUMS.txt
+sha256sum --check OpenClaw-Android-SHA256SUMS.txt
+gh attestation verify OpenClaw-Android.apk \
+  --repo openclaw/openclaw \
+  --signer-workflow openclaw/openclaw/.github/workflows/android-release.yml \
+  --source-ref "refs/tags/${release_tag}" \
+  --deny-self-hosted-runners
+```
+
+<Warning>
+Google Play 和独立 APK 安装使用不同的更新渠道，且可能具有不同的签名标识。Android 可能要求在切换渠道之前卸载现有应用，这会删除其本地应用数据。正常更新请保持在同一渠道。
+</Warning>
+
 ## 从远程 Mac 镜像并控制 Android
 
-[scrcpy](https://github.com/Genymobile/scrcpy) 会在 macOS 窗口中镜像 Android 屏幕，并通过 Android Debug Bridge（ADB）转发键盘和指针输入。这是一种操作端工作流，独立于 OpenClaw 节点连接。当 Android 设备和 Mac 处于不同地点，但共享一个私有 Tailscale 网络时，它非常有用。
+[scrcpy](https://github.com/Genymobile/scrcpy) 会在 macOS 窗口中镜像 Android 屏幕，并通过 Android 调试桥接（ADB）转发键盘和指针输入。这是一种操作端工作流，独立于 OpenClaw 节点连接。当 Android 设备和 Mac 处于不同地点，但共享一个私有 Tailscale 网络时，它非常有用。
 
 ### 开始之前
 
@@ -103,9 +127,9 @@ Android 直接连接到 Gateway WebSocket，并使用设备配对（`role: node`
 
 对于 Tailscale 或公共主机，Android 需要一个安全端点：
 
-- 首选：Tailscale Serve / Funnel，使用 `https://<magicdns>` / `wss://<magicdns>`
+- 优先：使用 Tailscale Serve / Funnel，并通过 `https://<magicdns>` / `wss://<magicdns>`
 - 也支持：任何其他带真实 TLS 端点的 `wss://` Gateway URL
-- 明文 `ws://` 仍支持私有局域网地址 / `.local` 主机，以及 `localhost`、`127.0.0.1` 和 Android 模拟器桥接地址（`10.0.2.2`）
+- 仍支持明文 `ws://`：适用于私有 LAN 地址 / `.local` 主机，以及 `localhost`、`127.0.0.1` 和 Android 模拟器桥接地址 (`10.0.2.2`)；非回环地址的设置会自动使用受限操作者权限
 
 ### 前提条件
 
@@ -171,7 +195,18 @@ Android NSD/mDNS 发现不会跨网络。如果 Android 节点和 gateway 处于
 - 使用 **Setup Code** 或 **Manual** 模式。
 - 如果发现被阻止，请在 **Advanced controls** 中手动填写 host/port。对于私有局域网主机，`ws://` 仍然可用。对于 Tailscale/公网主机，请开启 TLS 并使用 `wss://` / Tailscale Serve 端点。
 
-首次成功配对后，Android 会在启动时自动重连：优先使用手动端点（如果已启用），否则使用上一次发现的 gateway（尽力而为）。
+首次成功配对后，Android 会在启动时自动重新连接到当前已配对的 gateway（对已发现的 gateway 尽力而为，前提是它们在网络中可见）。
+
+官方设置码会将 Android 作为节点连接，并默认通过 `wss://` 授予完整的 Gateway 操作员访问权限。明文的非回环 `ws://` 设置会自动使用受限权限，以保证 bearer token 安全。**Settings → Gateway** 会显示 **Full** 或 **Limited** 访问。若要使用受限连接，请配置 `wss://` 或 Tailscale Serve，在 Control UI 中或使用 `openclaw qr` 生成新的完整访问代码，然后在该页面扫描或粘贴并重新连接。希望使用降级配置的操作者可以在 Control UI 中选择 **Limited access**，或运行 `openclaw qr --limited`。
+
+### Multiple gateways
+
+该应用会为它配对过的每一个 gateway 维护一个注册表，因此你可以在它们之间切换，而无需重新配对：
+
+- **Settings -> Gateways** 会列出已配对的 gateway，并标记当前激活项。点击某一项即可切换；应用会拆除当前会话并重新连接到所选 gateway。
+- 当配对的 gateway 多于一个时，**Connect** 选项卡会显示一个快速切换器。
+- 凭据、设备令牌、TLS 信任、聊天历史和离线队列消息都会按 gateway 分开存储。切换时不会混用不同 gateway 的状态，而离线期间排队的消息只会发送到其写入时对应的 gateway。
+- **Forget** 会删除某个 gateway 的注册项，以及它的凭据、设备令牌、TLS pin 和缓存的聊天记录。
 
 ### 存活信标
 
@@ -218,9 +253,11 @@ openclaw gateway call node.list --params "{}"
 
 Android 的 Chat 选项卡支持会话选择（默认 `main`，以及其他已存在的会话）：
 
-- History: `chat.history` (显示规范化——内联指令标签、纯文本工具调用 XML 负载（`<tool_call>`、`<function_call>`、`<tool_calls>`、`<function_calls>` 及其截断变体），以及泄露的 ASCII/全角模型控制 token 会被清除；像精确 `NO_REPLY` / `no_reply` 这样的静默 token 助手行会被省略；超大的行可替换为占位符)
+- History: `chat.history`（显示规范化——内联指令标签、纯文本工具调用 XML 负载（`<tool_call>`、`<function_call>`、`<tool_calls>`、`<function_calls>` 及其截断变体），以及泄露的 ASCII/全角模型控制 token 会被清除；像精确 `NO_REPLY` / `no_reply` 这样的静默 token 助手行会被省略；超大的行可替换为占位符）
 - Send: `chat.send`
+- Durable sending: 每次发送（文本、选中的图片和语音笔记）都会在任何网络尝试之前，先写入到每个 gateway 对应的设备本地发件箱日志中，因此应用终止不会丢失已提交的输入。离线时排队的发送会在重新连接后按顺序送达，并使用稳定的幂等键；只有当该轮消息已在规范化的 `chat.history` 中可见后，该发送才算完成——仅有确认并不视为已送达的证明。结果不明确的情况（确认丢失、发送中应用被杀、gateway 在写入转录前重启）会以可见行的形式呈现，并提供明确的 **Retry**/**Delete**，而不是自动重发。斜杠命令在重新连接后绝不会自动重放；它们会被挂起，等待明确重试。队列有上限（每个 gateway 50 条消息和 48 MB 的附件字节），未发送行会在 48 小时后过期。尚未提交的编辑草稿不具备进程级持久性。
 - Push updates (best-effort): `chat.subscribe` -> `event:"chat"`
+- Listen: 长按某条助手消息并选择 **Listen** 即可收听；音频通过 gateway `tts.speak` 和已配置的 TTS provider chain 渲染，当 gateway 无法渲染音频时会使用设备上的系统 TTS。切换会话、开始新聊天、应用进入后台或关闭聊天时，播放都会停止。
 
 ### 7. Canvas + camera
 
@@ -245,19 +282,19 @@ Tailscale（可选）：如果两台设备都在 Tailscale 上，请使用 Magic
 
 Canvas 命令（仅前台）：
 
-- `canvas.eval`, `canvas.snapshot`, `canvas.navigate` (使用 `{"url":""}` 或 `{"url":"/"}` 返回默认骨架)。`canvas.snapshot` 返回 `{ format, base64 }`（默认 `format="jpeg"`）。
+- `canvas.eval`, `canvas.snapshot`, `canvas.navigate`（使用 `{"url":""}` 或 `{"url":"/"}` 返回默认骨架）。`canvas.snapshot` 返回 `{ format, base64 }`（默认 `format="jpeg"`）。
 - A2UI: `canvas.a2ui.push`, `canvas.a2ui.reset`（`canvas.a2ui.pushJSONL` 为旧别名）。这些命令使用内置的、由应用拥有的 A2UI 页面进行可执行动作的渲染。
 
 Camera 命令（仅前台；受权限限制）：`camera.snap`（jpg）、`camera.clip`（mp4）。参数和 CLI 辅助工具请参见 [Camera node](/nodes/camera)。
 
 ### 8. Voice + 扩展的 Android 命令面
 
-- Voice 选项卡：Android 有两种明确的捕获模式。**Mic** 是一个手动的 Voice 选项卡会话，它会将每次暂停作为一个聊天轮次发送，并在应用离开前台或用户离开 Voice 选项卡时停止。**Talk** 是连续的 Talk Mode，会持续监听，直到被切换关闭或节点断开连接。
-- Talk Mode 会在捕获开始前将现有前台服务从 `connectedDevice` 提升为 `connectedDevice|microphone`，然后在 Talk Mode 停止时降级回去。节点服务声明了 `FOREGROUND_SERVICE_CONNECTED_DEVICE` 和 `CHANGE_NETWORK_STATE`；Android 14+ 还要求声明 `FOREGROUND_SERVICE_MICROPHONE`、授予 `RECORD_AUDIO` 运行时权限，并在运行时指定 microphone 服务类型。
-- 默认情况下，Android Talk 使用原生语音识别、Gateway chat，以及通过已配置的 gateway Talk provider 的 `talk.speak`。只有在 `talk.speak` 不可用时，才使用本地系统 TTS。
-- 仅当 `talk.realtime.mode` 为 `realtime` 且 `talk.realtime.transport` 为 `gateway-relay` 时，Android Talk 才使用实时 Gateway relay。
-- Voice wake 已在源码中实现（`VoiceWakeMode`），但发布版应用运行时会在连接时强制将其设为 `off`——当前没有面向用户的切换开关。
-- 其他 Android 命令家族（可用性取决于设备、权限和用户设置）：
+- Voice tab: Android 有两种明确的采集模式。**Mic** 是一种手动的 Voice 选项卡会话，它会把每一次停顿作为一个聊天轮次发送，并在应用离开前台或用户离开 Voice 选项卡时停止。**Talk** 是持续的 Talk Mode，会一直监听，直到被关闭或节点断开连接。
+- Talk Mode 会在采集开始前，将现有的前台服务从 `connectedDevice` 提升为 `connectedDevice|microphone`，然后在 Talk Mode 停止时降级。节点服务声明 `FOREGROUND_SERVICE_CONNECTED_DEVICE` 与 `CHANGE_NETWORK_STATE`；Android 14+ 还要求声明 `FOREGROUND_SERVICE_MICROPHONE`、运行时 `RECORD_AUDIO` 授权，以及运行时使用 microphone 服务类型。
+- 默认情况下，Android Talk 会通过已配置的 gateway Talk provider 使用原生语音识别、Gateway chat 和 `talk.speak`。只有在 `talk.speak` 不可用时，才会使用本地系统 TTS。
+- 只有当 `talk.realtime.mode` 为 `realtime` 且 `talk.realtime.transport` 为 `gateway-relay` 时，Android Talk 才使用实时 Gateway relay。
+- Android 不会公开 `voiceWake` 能力。语音输入请使用 **Mic** 或 **Talk**。
+- 其他 Android 命令族（可用性取决于设备、权限和用户设置）：
   - `device.status`, `device.info`, `device.permissions`, `device.health`
   - 仅当启用 **Settings > Phone Capabilities > Installed Apps** 时，`device.apps` 才可用；默认列出启动器可见的应用（传入 `includeNonLaunchable` 可获取完整列表）。
   - `notifications.list`, `notifications.actions`（见下文 [通知转发](#notification-forwarding)）
@@ -268,14 +305,26 @@ Camera 命令（仅前台；受权限限制）：`camera.snap`（jpg）、`camer
   - `sms.search`
   - `motion.activity`、`motion.pedometer`
 
-## 助手入口点
+### 9. Workspace files (read-only)
+
+Home 概览中包含一个 **Files** 卡片，它通过只读的 `agents.workspace.list` / `agents.workspace.get` gateway RPC 浏览当前代理的工作区：支持目录下钻、文本和图片预览，以及通过 Android 分享面板导出。不提供任何写入操作，且预览大小受 gateway 限制。
+
+## 审核命令批准
+
+具有 `operator.admin` 的操作员连接，或由 Gateway 明确定位的配对 `operator.approvals` 连接，可以在 **Settings -> Approvals** 下审核待处理的 exec 请求。应用会在启用其按钮之前加载 Gateway 经过清理的批准记录，显示任何安全警告以及该请求提供的确切决策，并将批准 ID 和所有者类型回传给 Gateway。
+
+批准状态与 Control UI 和受支持的聊天界面共享。第一个提交的答案获胜；即使另一个界面先回答，Android 也会显示该规范结果。如果 resolve 响应丢失或 Gateway 断开连接，应用会保持该操作锁定，并在提供另一个决策之前再次读取批准。
+
+早于统一批准方法的 Gateway 会回退到随附的 exec 专用方法。待审查流程仍然可用，但保留的终端状态以及更丰富的跨界面结果需要更新的 Gateway。
+
+## 助手入口
 
 Android 支持从系统助手触发器（Google Assistant）启动 OpenClaw。按住主页按钮（或其他 `ACTION_ASSIST` 触发器）会打开应用；说出“Hey Google, ask OpenClaw `<prompt>`”会匹配应用声明的 App Actions 查询模式，并将提示词传入聊天编辑器中，而不会自动发送。
 
-这使用的是在应用清单中声明的 Android **App Actions**（`shortcuts.xml` 能力）。无需进行网关侧配置——助手 intent 完全由 Android 应用处理。
+这使用的是在应用清单中声明的 Android **App Actions**（`shortcuts.xml` 功能）。无需进行网关侧配置——助手 intent 完全由 Android 应用处理。
 
 <Note>
-App Actions 的可用性取决于设备、Google Play Services 版本，以及用户是否已将 OpenClaw 设置为默认助手应用。
+App Actions 的可用性取决于设备、Google Play 服务版本，以及用户是否已将 OpenClaw 设置为默认助手应用。
 </Note>
 
 ## 通知转发
@@ -294,8 +343,10 @@ Android 可以将设备通知作为 `node.event` 项转发到网关。这是在*
 通知转发需要 Android Notification Listener 权限。应用会在设置过程中提示你授予此权限。
 </Note>
 
-## 相关内容
+WhatsApp, WhatsApp Business, Telegram, Telegram X, Discord, and Signal 通知始终被排除。它们的消息已经由原生 OpenClaw channel sessions 所拥有；将 Android 通知作为单独的 node event 转发，可能会把回复路由到错误的对话中。
 
-- [iOS app](/platforms/ios)
+## 相关
+
+- [iOS 应用](/platforms/ios)
 - [节点](/nodes)
 - [Android 节点故障排除](/nodes/troubleshooting)

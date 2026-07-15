@@ -12,7 +12,7 @@ title: "更新"
 更新 OpenClaw，并在 stable/extended-stable/beta/dev 频道之间切换。
 
 如果你是通过 **npm/pnpm/bun** 安装的（全局安装，没有 git 元数据），
-更新会走 [Updating](/install/updating) 中描述的包管理器流程。
+更新会走 [更新](/install/updating) 中描述的包管理器流程。
 
 ## 用法
 
@@ -61,6 +61,8 @@ openclaw --update
 
 <Warning>
 降级需要确认，因为旧版本可能会破坏配置。
+如果安装已经将会话迁移到 SQLite，请在启动旧的基于文件版本之前恢复已归档的旧版转录工件。请参见
+[Doctor：在会话 SQLite 迁移后降级](/cli/doctor#downgrading-after-session-sqlite-migration)。
 </Warning>
 
 ## `update status`
@@ -91,22 +93,20 @@ openclaw update repair --acknowledge-clawhub-risk
 openclaw update repair --json
 ```
 
-| 标志                                             | 说明                                                                                                                                                                                                            |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--channel <stable\|extended-stable\|beta\|dev>` | 在修复前持久化核心更新通道。对于 extended-stable，插件收敛会临时以 stable/latest 插件线路为目标。若是 Git 检出状态且不更改配置，则会拒绝 extended-stable 修复。 |
-| `--json`                                         | 打印机器可读的收尾 JSON。                                                                                                                                                                                       |
-| `--timeout <seconds>`                            | 修复步骤的超时时间。默认值为 `1800`。                                                                                                                                                                             |
-| `--yes`                                          | 跳过确认提示。                                                                                                                                                                                                  |
-| `--acknowledge-clawhub-risk`                     | 行为与 `openclaw update` 中相同。                                                                                                                                                                                 |
-| `--no-restart`                                   | 为保持一致性而接受；修复过程绝不会重启 Gateway。                                                                                                                                                                |
+| Flag                                             | Description                                                                                                                                                                                                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--channel <stable\|extended-stable\|beta\|dev>` | 在修复前持久化核心更新通道。对于 extended-stable，符合条件且遵循 bare/default 或 `latest` intent 的官方 npm 插件会目标指向当前安装的确切核心版本。在不更改配置的情况下，Git 检出上的 extended-stable 修复会被拒绝。 |
+| `--json`                                         | 打印可供机器读取的收尾 JSON。                                                                                                                                                                                                                                       |
+| `--timeout <seconds>`                            | 修复步骤的超时时间。默认 `1800`。                                                                                                                                                                                                                                   |
+| `--yes`                                          | 跳过确认提示。                                                                                                                                                                                                                                          |
+| `--acknowledge-clawhub-risk`                     | 与 `openclaw update` 中的行为相同。                                                                                                                                                                                                                              |
+| `--no-restart`                                   | 为保持一致性而接受；修复过程绝不会重启 Gateway。                                                                                                                                                                                                             |
 
 `update repair` 会运行 `openclaw doctor --fix`，重新加载已修复的配置和安装记录，同步当前更新通道的受跟踪插件，更新受管的 npm 插件安装，修复缺失的已配置插件负载，刷新插件注册表，并写入已收敛的安装记录元数据。它不会安装新的核心包，也不会重启 Gateway。
 
 ## `update wizard`
 
-交互式流程，用于选择更新通道并确认之后是否重启
-Gateway（默认会重启）。在没有 git
-检出版本的情况下选择 `dev` 会提供创建一个的选项。
+交互式流程，用于选择更新通道并确认之后是否重启 Gateway（默认会重启）。在没有 git 检出版本的情况下选择 `dev` 会提供创建一个的选项。
 
 | Flag                  | Default | Description                   |
 | --------------------- | ------- | ----------------------------- |
@@ -125,7 +125,12 @@ Gateway（默认会重启）。在没有 git
 
 Gateway 核心自动更新器（在配置中启用时）会在实时 Gateway 请求处理程序之外启动 CLI 更新路径。控制平面 `update.run` 的包管理器更新和受监管的 git 检出更新使用相同的受管服务交接方式，而不是替换包树或在实时 Gateway 进程内重建 `dist/`：Gateway 会启动一个分离的辅助进程并退出，然后该辅助进程从 Gateway 进程树之外运行 `openclaw update --yes --json`。如果交接不可用，`update.run` 会返回一个结构化响应，其中包含可手动执行的安全 shell 命令。
 
-extended-stable 有意被排除在启动检查和后台自动更新调度之外。显式前台更新、带有已保存 `update.channel: "extended-stable"` 的裸前台更新、按需状态查询，以及受管 Gateway 交接仍然受支持。
+Stored extended-stable selections receive read-only startup and 24-hour update
+hints when `update.checkOnStart` is enabled. These checks never apply an update,
+start a handoff, restart the Gateway, use stable delay/jitter, or use beta
+polling cadence. Explicit foreground updates, bare foreground updates with
+stored `update.channel: "extended-stable"`, on-demand status, and their managed
+Gateway handoff remain supported.
 
 当本地安装了受管 Gateway 服务并启用了重启时，包管理器和 git 检出更新会先停止正在运行的服务，然后再替换包树或修改检出/构建输出。随后更新器会刷新服务元数据，重启服务，并在报告 `Gateway: restarted and verified.` 之前验证重启后的 Gateway。包管理器更新还会额外验证重启后的 Gateway 报告了预期的包版本；git 检出更新会在重建后验证 gateway 健康状况和服务就绪状态。
 
@@ -209,10 +214,7 @@ OpenClaw 也会回退。这些回退警告不会
 当更新后的 Gateway 启动时，插件加载仅进行验证：启动过程不会运行包管理器，也不会修改依赖树。包管理器的 `update.run` 重启会交给 CLI 托管服务路径处理，因此包替换发生在旧 Gateway 进程之外，而服务健康检查会决定该更新是否可以被报告为完成。
 </Note>
 
-在 extended-stable 核心更新成功后，核心后的插件完整性和
-收敛流程仍然会运行，但官方插件会暂时指向
-stable/latest 分支。OpenClaw 在此版本中不会查询插件的 `@extended-stable`
-选择器。
+在扩展稳定版核心更新成功后，核心后插件完整性和一致性会将符合条件的官方 npm 插件目标到精确安装的核心版本。对于默认/`latest` 意图，OpenClaw 不会查询插件 `@extended-stable`，也不会回退到 npm `latest`；它会根据已安装的核心推导包版本。显式版本固定、显式非 `latest` 标签、第三方包以及非 npm 来源会保留其现有意图。
 
 对于包管理器安装，`openclaw update` 会在调用包管理器之前解析目标包
 版本。npm 全局安装使用分阶段安装：OpenClaw 先将新包安装到一个临时的 npm 前缀中，

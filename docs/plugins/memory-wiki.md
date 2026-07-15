@@ -1,9 +1,10 @@
 ---
 summary: "memory-wiki：一个带有来源、声明、仪表盘和桥接模式的编译知识库"
 read_when:
-  - 你希望在普通 MEMORY.md 笔记之外保留持久知识
+  - 你想要超越普通 MEMORY.md 笔记的持久知识
   - 你正在配置捆绑的 memory-wiki 插件
-  - 你想了解 wiki_search、wiki_get 或桥接模式
+  - 你需要为同一个 Gateway 中的不同代理使用独立的 wiki vault
+  - 你想了解 wiki_search、wiki_get 或 bridge 模式
 title: "Memory wiki"
 ---
 
@@ -32,7 +33,14 @@ title: "Memory wiki"
 - `bridge`：通过公开的插件 SDK 接口，读取当前激活的 memory 插件中的公开 memory 产物和事件日志。用于在不接触私有插件内部实现的情况下，汇总 memory 插件导出的产物。
 - `unsafe-local`：面向本机私有路径的显式逃生通道。该模式有意保持实验性且不可移植；仅在你了解信任边界并且确实需要 bridge 模式无法提供的本地文件系统访问时使用。
 
-Bridge 模式可按 `bridge.*` 配置开关对以下内容建立索引：
+Vault 模式和 vault 范围是两个独立的选择：
+
+- `vaultMode` 决定 wiki 输入的来源。
+- `vault.scope` 决定所有 agent 共用一个 vault，还是每个 agent 使用一个子 vault。
+
+`vault.scope: "global"` 是默认值，并保留现有的单 vault 行为。请在 `isolated` 或 `bridge` 模式下将 `vault.scope` 设为 `"agent"`，当 agent 之间不能共享 wiki 页面、编译后的摘要、搜索结果或写入内容时使用。由于这些已配置的私有路径并不是 agent 拥有的输入，因此 agent 范围不能与 `unsafe-local` 模式结合。配置校验会拒绝这种组合。
+
+Bridge 模式可以按每个 `bridge.*` 配置开关索引以下内容：
 
 - 导出的 memory 产物（`indexMemoryRoot`）
 - 每日笔记（`indexDailyNotes`）
@@ -220,13 +228,13 @@ Agent 和运行时代码会读取这些摘要，而不是抓取 Markdown。编�
 
 ## 代理工具
 
-| Tool          | Purpose                                                                                                                                                       |
+| 工具          | 作用                                                                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `wiki_status` | 当前 vault 模式、健康状态、Obsidian CLI 可用性                                                                                                                 |
-| `wiki_search` | 搜索 wiki 页面，并在已配置时搜索共享记忆语料库；接受 `mode` 参数，用于人物查找、问题路由、来源证据或原始断言下钻 |
-| `wiki_get`    | 通过 id/path 读取 wiki 页面；如果启用了共享搜索且查找未命中，则回退到共享记忆语料库                                     |
-| `wiki_apply`  | 进行局部综合/元数据变更，不进行自由形式的页面编辑                                                                                             |
-| `wiki_lint`   | 结构检查、来源缺口、矛盾、未解决问题                                                                                            |
+| `wiki_status` | 当前 vault 模式和作用范围、已解析的代理、健康状态、Obsidian CLI 可用性                                                                               |
+| `wiki_search` | 搜索 wiki 页面，并在已配置时搜索共享记忆语料；接受 `mode` 参数用于人员查找、问题路由、来源证据或原始声明深挖 |
+| `wiki_get`    | 按 id/path 读取 wiki 页面；如果启用了共享搜索且未命中，则回退到共享记忆语料                                     |
+| `wiki_apply`  | 进行范围受限的综合/元数据变更，不进行自由形式的页面编辑                                                                                             |
+| `wiki_lint`   | 结构检查、来源缺口、矛盾、未解问题                                                                                            |
 
 插件还注册了一个非独占的记忆语料补充，因此当活动记忆插件支持语料选择时，共享的
 `memory_search` 和 `memory_get` 也可以访问 wiki。
@@ -251,6 +259,7 @@ Agent 和运行时代码会读取这些摘要，而不是抓取 Markdown。编�
         config: {
           vaultMode: "isolated",
           vault: {
+            scope: "global",
             path: "~/.openclaw/wiki/main",
             renderMode: "obsidian",
           },
@@ -298,20 +307,78 @@ Agent 和运行时代码会读取这些摘要，而不是抓取 Markdown。编�
 
 关键开关：
 
-| Key                                        | Values / default                               | Notes                                                    |
-| ------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------- |
-| `vaultMode`                                | `isolated` (default), `bridge`, `unsafe-local` |                                                          |
-| `vault.path`                               | default `~/.openclaw/wiki/main`                |                                                          |
-| `vault.renderMode`                         | `native` (default), `obsidian`                 |                                                          |
-| `bridge.readMemoryArtifacts`               | default `true`                                 | 导入活动 memory 插件的公开产物                           |
-| `bridge.followMemoryEvents`                | default `true`                                 | 在 bridge 模式下包含事件日志                             |
-| `unsafeLocal.allowPrivateMemoryCoreAccess` | default `false`                                | 运行 `unsafe-local` 导入所必需                            |
-| `unsafeLocal.paths`                        | default `[]`                                   | 在 `unsafe-local` 模式下显式导入的本地路径                |
-| `search.backend`                           | `shared` (default), `local`                    |                                                          |
-| `search.corpus`                            | `wiki` (default), `memory`, `all`              |                                                          |
-| `context.includeCompiledDigestPrompt`      | default `false`                                | 将紧凑的摘要快照附加到 memory 提示词部分                 |
-| `render.createBacklinks`                   | default `true`                                 | 生成确定性的相关块                                       |
-| `render.createDashboards`                  | default `true`                                 | 生成仪表盘页面                                           |
+| Key                                        | Values / default                               | Notes                                                                         |
+| ------------------------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| `vaultMode`                                | `isolated` (default), `bridge`, `unsafe-local` | 选择输入和集成行为                                                            |
+| `vault.scope`                              | `global` (default), `agent`                    | 一个共享 vault，或每个 agent 一个子 vault                                      |
+| `vault.path`                               | global default `~/.openclaw/wiki/main`         | 全局时为精确 vault；agent 范围的父目录默认是 `~/.openclaw/wiki`              |
+| `vault.renderMode`                         | `native` (default), `obsidian`                 |                                                                               |
+| `bridge.readMemoryArtifacts`               | default `true`                                 | 导入活动 memory 插件的公开制品                                               |
+| `bridge.followMemoryEvents`                | default `true`                                 | 在桥接模式中包含事件日志                                                      |
+| `unsafeLocal.allowPrivateMemoryCoreAccess` | default `false`                                | 运行 `unsafe-local` 导入所必需                                                |
+| `unsafeLocal.paths`                        | default `[]`                                   | 在 `unsafe-local` 模式下要导入的明确本地路径                                   |
+| `search.backend`                           | `shared` (default), `local`                    |                                                                               |
+| `search.corpus`                            | `wiki` (default), `memory`, `all`              |                                                                               |
+| `context.includeCompiledDigestPrompt`      | default `false`                                | 将所选 agent 的紧凑摘要快照追加到 memory 提示词部分                             |
+| `render.createBacklinks`                   | default `true`                                 | 生成确定性的相关块                                                            |
+| `render.createDashboards`                  | default `true`                                 | 生成仪表盘页面                                                                |
+
+### 每个 agent 独立的 vault
+
+将 `vault.scope` 设为 `agent`，即可为每个已配置的 agent 提供一个独立的 wiki。
+在此范围内，`vault.path` 是父目录，OpenClaw 会追加标准化后的 agent id：
+
+```json5
+{
+  agents: {
+    list: [{ id: "support" }, { id: "marketing" }],
+  },
+  plugins: {
+    entries: {
+      "memory-wiki": {
+        enabled: true,
+        config: {
+          vaultMode: "bridge",
+          vault: {
+            scope: "agent",
+            path: "~/.openclaw/wiki",
+          },
+          bridge: {
+            enabled: true,
+            readMemoryArtifacts: true,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+这会解析为 `~/.openclaw/wiki/support` 和
+`~/.openclaw/wiki/marketing`。如果在 agent 范围内省略 `vault.path`，
+父目录默认是 `~/.openclaw/wiki`。因此，默认的 `main` agent 仍然保持
+现有的 `~/.openclaw/wiki/main` 路径。
+
+Agent 工具、编译后的提示摘要，以及通过 `memory_search` / `memory_get`
+暴露的 wiki 补充内容，都会根据当前 agent 上下文来解析 vault。
+对于包含多个已配置 agent 的 CLI 和 Gateway 调用，请使用
+`openclaw wiki --agent <agentId> ...` 或 Gateway 请求的 `agentId`
+显式提供 agent。若只配置了一个 agent，则在未提供 id 时它仍会作为默认值。
+
+在桥接模式下，agent 范围的导入仅在公开 memory 制品的 `agentIds`
+包含所选 agent 时才会接受。属于其他 agent、没有所有权元数据或所有者未知的制品都会被跳过。
+全局范围则保持现有的共享制品行为。
+
+<Warning>
+更改 `vault.scope` 不会复制或拆分现有 vault。在 agent 范围内，
+显式配置的 `vault.path` 会成为父目录，因此在切换生产 agent 之前，
+请有意地移动或导入现有页面。先备份 vault。
+
+每个 agent 独立的 vault 是同一进程内的知识边界，而不是操作系统级别的
+安全边界。拥有宿主文件系统访问权限的插件和未沙箱化工具仍然可以读取另一个 agent 的目录。
+当 agent 彼此不信任时，请使用 [沙箱](/gateway/sandboxing) 或
+[独立的 Gateway 配置文件](/gateway/multiple-gateways)。
+</Warning>
 
 ### 示例：QMD + 桥接模式
 
@@ -379,6 +446,12 @@ openclaw wiki obsidian status
 Markdown，并且可以选择使用官方 `obsidian` CLI 来进行状态
 探测、vault 搜索、打开页面、调用命令以及跳转到
 每日笔记。这个功能是可选的；即使不使用 Obsidian，wiki 仍然可以在原生模式下工作。
+
+面向代理的 vault 仍然可以使用适配 Obsidian 的 Markdown，但配置
+验证会在 `vault.scope: "agent"` 时拒绝 `obsidian.useOfficialCli: true`。
+当前的 `obsidian.vaultName` 设置是全局性的，无法为每个代理选择不同的
+Obsidian vault。请改用 wiki 工具和 CLI 操作，
+或者将由 Obsidian 操作的 wiki 保持在全局作用域下。
 
 ## 推荐工作流
 

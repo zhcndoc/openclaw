@@ -6,11 +6,11 @@ read_when:
 title: "Matrix 静默预览推送规则"
 ---
 
-当 `channels.matrix.streaming` 为 `"quiet"` 时，OpenClaw 会通过就地编辑单个预览事件来流式传输回复。预览会作为不触发通知的 `m.notice` 事件发送，而最终编辑会被标记为 `content["com.openclaw.finalized_preview"] = true`。只有当某个按用户配置的推送规则匹配到该标记时，Matrix 客户端才会对这次最终编辑发出通知。此页面面向自行托管 Matrix、并希望为每个收件人账户安装该规则的运维人员。
+当 `channels.matrix.streaming.mode` 为 `"quiet"` 时，OpenClaw 会通过就地编辑单个预览事件来流式传输回复。预览会以不触发通知的 `m.notice` 事件发送，而最终完成的编辑会被标记为 `content["com.openclaw.finalized_preview"] = true`。只有当按用户设置的推送规则匹配到该标记时，Matrix 客户端才会在这次最终编辑时通知用户。本文档面向自托管 Matrix 的运维人员，帮助他们为每个收件人账户安装这条规则。
 
-`streaming: "progress"` 也会通过相同路径完成其草稿，因此同样的规则也会对 progress 模式下的最终编辑生效。
+`streaming.mode: "progress"` 也会通过同一路径完成其草稿，因此同样的规则也会对 progress 模式下的最终编辑生效。
 
-如果你只想使用标准的 Matrix 通知行为，请使用 `streaming: "partial"` 或保持 streaming 关闭。参见 [Matrix 频道设置](/channels/matrix#streaming-previews)。
+如果你只想使用原生 Matrix 通知行为，请使用 `streaming.mode: "partial"` 或保持关闭流式传输。请参见 [Matrix channel setup](/channels/matrix#streaming-previews)。
 
 ## 前提条件
 
@@ -29,7 +29,7 @@ title: "Matrix 静默预览推送规则"
 {
   channels: {
     matrix: {
-      streaming: "quiet",
+      streaming: { mode: "quiet" },
     },
   },
 }

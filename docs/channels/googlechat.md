@@ -51,13 +51,13 @@ openclaw plugins install ./path/to/local/googlechat-plugin
 
 1. 前往 [Google Chat](https://chat.google.com/)。
 2. 点击 **Direct Messages** 旁边的 **+**（加号）图标。
-3. 搜索你在 Google Cloud Console 中配置的 **App name**。
+3. 搜索你在 Google Cloud Console 中配置的 **应用名称**。
    - 由于该机器人是私有应用，它不会出现在 Marketplace 的浏览列表中；请按名称搜索。
 4. 选择该机器人，点击 **Add** 或 **Chat**，然后发送一条消息。
 
-## 公网 URL（仅 Webhook）
+## Public URL（仅 Webhook）
 
-Google Chat webhooks 需要一个公开的 HTTPS 端点。出于安全考虑，仅将 **`/googlechat` 路径** 暴露到互联网，并将 OpenClaw 仪表板及其他端点保持私有。
+Google Chat webhooks 需要一个公开的 HTTPS 端点。出于安全考虑，仅将 **`/googlechat 路径`** 暴露到互联网，并将 OpenClaw 仪表板及其他端点保持私有。
 
 ### 方案 A：Tailscale Funnel（推荐）
 
@@ -179,7 +179,6 @@ your-domain.com {
           systemPrompt: "仅简短回答。",
         },
       },
-      actions: { reactions: true },
       typingIndicator: "message",
       mediaMaxMb: 20,
     },
@@ -189,16 +188,16 @@ your-domain.com {
 
 说明：
 
-- 服务账号凭证：`serviceAccountFile`（路径）、`serviceAccount`（内联 JSON 字符串或对象），或 `serviceAccountRef`（env/file SecretRef）。环境变量 `GOOGLE_CHAT_SERVICE_ACCOUNT`（内联 JSON）和 `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`（路径）仅适用于默认账号。多账号配置使用 `channels.googlechat.accounts.<id>`，并使用相同的键，包括每个账号的 `serviceAccountRef`。
+- 服务账号凭据：`serviceAccountFile`（路径）、`serviceAccount`（内联 JSON 字符串或对象），或 `serviceAccountRef`（env/file SecretRef）。默认账号仅适用于环境变量 `GOOGLE_CHAT_SERVICE_ACCOUNT`（内联 JSON）和 `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`（路径）。多账号配置使用 `channels.googlechat.accounts.<id>`，并采用相同的键，包括每个账号的 `serviceAccountRef`。
 - 当未设置 `webhookPath` 时，默认 webhook 路径为 `/googlechat`；也可以由 `webhookUrl` 提供该路径。
-- 群组键必须是稳定的空间 ID（`spaces/<spaceId>`）。显示名称键已弃用，并会按弃用处理进行记录。
-- `dangerouslyAllowNameMatching` 会为 allowlist 重新启用可变的邮箱主体匹配（紧急兼容模式）；doctor 会对邮箱条目发出警告。
-- 反应默认已启用，并通过 `reactions` 工具和 `channels action` 暴露；可使用 `actions.reactions: false` 禁用。
-- 原生审批卡使用 Google Chat `cardsV2` 按钮点击，而不是 reaction 事件。审批者来自 `dm.allowFrom` 或 `defaultTo`，并且必须是稳定的数字 `users/<id>` 值。
-- 消息动作提供用于文本的 `send` 和用于显式附件发送的 `upload-file`。`upload-file` 接受 `media` / `filePath` / `path`，以及可选的 `message`、`filename` 和线程目标（`threadId` / `replyTo`）。
-- `typingIndicator`：`message`（默认）会发布一个 `_<Bot> is typing..._` 占位符，并将其编辑为第一条回复；`none` 会禁用它；`reaction` 需要用户 OAuth，在服务账号认证下目前会记录错误并回退到 `message`。
+- 群组键必须是稳定的空间 ID（`spaces/<spaceId>`）。显示名称键已废弃，并会被记录为已废弃。
+- `dangerouslyAllowNameMatching` 会为 allowlist 重新启用可变邮件主体匹配（紧急兼容模式）；doctor 会警告邮件条目。
+- Google Chat reaction 操作不会暴露。该插件使用服务账号认证，而 Google Chat reaction 端点需要用户认证。现有的 `actions.reactions` 配置会为兼容性而被接受，但不会生效。
+- 原生审批卡使用 Google Chat `cardsV2` 按钮点击，而不是 reaction 事件。审批人来自 `dm.allowFrom` 或 `defaultTo`，并且必须是稳定的数字 `users/<id>` 值。
+- 消息操作仅暴露文本 `send`。Google Chat 附件上传需要用户认证，而此插件使用服务账号认证，因此不会暴露出站文件上传。
+- `typingIndicator`：`message`（默认）会发送 `_<Bot> is typing..._` 占位符，并将其编辑为第一条回复；`none` 会禁用它；`reaction` 需要用户 OAuth，并且在当前服务账号认证下会记录错误并回退为 `message`。
 - 入站附件（每条消息的第一个附件）会通过 Chat API 下载到媒体管道中，并受 `mediaMaxMb` 限制（默认 20）。
-- 默认忽略 bot 发送的消息。启用 `allowBots: true` 时，接受到的 bot 消息会使用共享的 [bot loop protection](/channels/bot-loop-protection)：先配置 `channels.defaults.botLoopProtection`，然后可通过 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 覆盖。
+- 默认会忽略机器人作者发送的消息。启用 `allowBots: true` 后，接受到的机器人消息会使用共享的 [bot loop protection](/channels/bot-loop-protection)：先配置 `channels.defaults.botLoopProtection`，然后通过 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 进行覆盖。
 
 密钥引用详情：[Secrets Management](/gateway/secrets)。
 
@@ -252,10 +251,9 @@ openclaw channels status
 
 ## 相关内容
 
-- [Channels 概览](/channels) — 所有支持的频道
-- [频道路由](/channels/channel-routing) — 消息的会话路由
-- [网关配置](/gateway/configuration)
-- [群组](/channels/groups) — 群聊行为和提及门控
-- [配对](/channels/pairing) — DM 身份验证和配对流程
-- [表情回应](/tools/reactions)
-- [安全性](/gateway/security) — 访问模型和加固
+- [Channels Overview](/channels) — 所有支持的渠道
+- [Channel Routing](/channels/channel-routing) — 消息的会话路由
+- [Gateway configuration](/gateway/configuration)
+- [Groups](/channels/groups) — 群聊行为和提及门控
+- [Pairing](/channels/pairing) — DM 身份验证和配对流程
+- [Security](/gateway/security) — 访问模型和加固

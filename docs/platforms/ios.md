@@ -2,8 +2,9 @@
 summary: "iOS 节点应用：连接到 Gateway、配对、画布和故障排查"
 read_when:
   - 配对或重新连接 iOS 节点
-  - 从源代码运行 iOS 应用
-  - 调试网关发现或画布命令
+  - 启用或排查直接 Apple Watch 节点
+  - 从源码运行 iOS 应用
+  - 调试 gateway 发现或画布命令
 title: "iOS 应用"
 ---
 
@@ -11,9 +12,13 @@ title: "iOS 应用"
 
 ## 它的作用
 
-- 通过 WebSocket 连接到 Gateway（局域网或 tailnet）。
-- 暴露节点能力：Canvas、屏幕快照、摄像头捕获、位置、Talk 模式、语音唤醒。
+- 通过 WebSocket 连接到网关（LAN 或 tailnet）。
+- 暴露节点能力：Canvas、屏幕截图、摄像头捕获、位置、对话模式、语音唤醒，以及可选的健康摘要。
 - 接收 `node.invoke` 命令并报告节点状态事件。
+- 从 Agents 界面的 Files 中只读浏览所选代理的工作区：目录逐级展开、带语法高亮的文本预览、图片预览以及分享菜单导出。不执行写入操作；预览大小受网关限制。
+- 为每个已配对网关保留一份小型只读离线缓存，缓存最近的聊天会话和转写内容：冷启动时会立即显示上次已知的转写内容，并在网关响应后刷新；断开连接时最近聊天仍可浏览；执行 reset/forget 会清除受保护的本地缓存。
+- 为断开连接期间发送的文本消息在每个网关维护一个持久化发件箱（最多 50 条）：排队中的气泡会显示在转写中，重新连接后按顺序发送并支持幂等重试，在权威历史确认发送前保持持久化，重试会采用退避策略后再显示重试/删除操作；离线 48 小时后会过期而不发送；reset/forget 会连同缓存一起清空队列。
+- 按需朗读助手消息：在 Chat 中长按消息并选择 **Listen**。应用会使用已配置的 TTS 提供商播放受支持的网关 `tts.speak` 片段，并在网关音频不可用或无法播放时回退到设备端语音。会话切换或应用进入后台时停止播放。
 
 ## 要求
 
@@ -25,8 +30,9 @@ title: "iOS 应用"
 
 ## 快速开始（配对 + 连接）
 
-1. 启动一个已认证的 Gateway，并使用手机能够访问的路由。Tailscale
-   Serve 是推荐的远程路径：
+首次启动时，应用会引导完成一个简短的配对说明页面，以及一个权限页面（通知、相机、麦克风、照片、联系人、日历、提醒事项、位置）。所有授权都是可选的，之后也可以在 **Settings** -> **Permissions** 中，或在 iOS 的 Settings 应用中更改。
+
+1. 使用手机能够访问的路由启动一个已认证的 Gateway。推荐的远程路径是 Tailscale Serve：
 
 ```bash
 openclaw gateway --port 18789 --tailscale serve
@@ -35,19 +41,19 @@ openclaw gateway --port 18789 --tailscale serve
 对于可信的同一局域网（same-LAN）设置，也可以改用已认证的 `gateway.bind: "lan"`
 。默认的 loopback 绑定无法被手机访问。如果 Gateway 还没有完成配置，请先运行 `openclaw onboard`，这样在创建 setup-code 时会有 token 或 password 认证路径。
 
-2. 打开 [控制界面](/web/control-ui)，选择 **Nodes**，然后在 **Devices** 卡片中点击
-   **Pair mobile device**。
+2. 打开 [Control UI](/web/control-ui)，选择 **Nodes**，然后在 **Devices** 页面点击
+   **Pair mobile device**。建议使用 Full access，且默认已选中；只有当你想省略管理性的 Gateway 控制时，才选择 Limited access，然后点击 **Create setup code**。
 
 3. 在 iOS 应用中，打开 **Settings** -> **Gateway**，扫描二维码（或粘贴
    setup code），然后连接。
 
    如果 setup code 同时包含 LAN 和 Tailscale Serve 路由，应用会按顺序探测这些路由，并保存第一个可达的端点。
 
-4. 官方应用会自动连接。如果 **Devices** 显示为待处理请求，请在批准之前先检查其角色和权限范围。
+4. 官方应用会自动连接。如果显示 **Pending approval** 请求，请在批准前先查看其角色和权限范围。
 
-控制界面按钮要求已经配对过一个具有 `operator.admin` 的会话。
-作为终端备用方案，可以在 iOS 应用中选择一个已发现的 gateway（或启用
-Manual Host 并输入主机/端口），然后在 Gateway 主机上批准该请求：
+   **Settings → Gateway** 会显示已保存的 operator 连接是 **Full** 还是 **Limited** 访问。明文 LAN `ws://` setup 会因 bearer-token 安全性而自动受限。如果它是受限的，请配置 `wss://` 或 Tailscale Serve，从 Control UI 或 `openclaw qr` 扫描一个新的 full-access code，然后重新连接以启用设置和升级。
+
+Control UI 按钮要求已经配对过的、具有 `operator.admin` 的会话。作为终端兜底方案，可以在 iOS 应用中选择一个已发现的 gateway（或启用 Manual Host 并输入 host/port），然后在 Gateway 主机上批准该请求：
 
 ```bash
 openclaw devices list
@@ -78,6 +84,55 @@ openclaw devices approve <requestId>
 openclaw nodes status
 openclaw gateway call node.list --params "{}"
 ```
+
+## 健康摘要
+
+iOS 节点可以返回一个可选择加入的、只读的 HealthKit 汇总，用于当前
+日历日。iPhone 授权同意和显式的 Gateway 命令授权是
+彼此独立的门控。有关
+设置、调用、有效负载字段、隐私行为和故障排除，请参见 [HealthKit 摘要](/platforms/ios-healthkit)。
+
+默认情况下，Apple Watch 配套端会继续使用现有的 iPhone 中继，并且
+不需要单独的 Gateway 配对。请在 Apple 的 Watch app 中将 Watch 与 iPhone 配对，
+从 **Watch app -> My Watch -> Available Apps** 安装 OpenClaw，然后在两个设备上各自打开一次 OpenClaw。
+
+## 审批命令
+
+具有 `operator.admin` 权限的操作员连接，或者由 Gateway 明确指定的已配对 `operator.approvals` 连接，可以在 iPhone 上审查待处理的 exec 请求。审批卡片会显示 Gateway 已清理后的命令预览、警告、主机上下文、过期时间，以及该请求提供的所有决策选项。配对的 Apple Watch 会通过现有的 iPhone 中继接收相同的审查者安全提示，并提供简化的仅允许一次/拒绝决策子集。直接的 Watch Gateway 模式不包含审批提示。
+
+审批状态与 Control UI 以及受支持的聊天界面共享。第一个提交的答复会生效。iPhone 和 Watch 会在其他界面解决该请求后、收到远程已解决通知后，以及在可能丢失解决确认时，从 Gateway 获取规范的终端记录。只有在该读取操作确认请求是否仍然处于待处理状态之前，操作才保持不可用。
+
+审批归属绑定到所选的 Gateway。切换 Gateway 不会将旧提示应用到替换后的连接。早于统一审批方法的 Gateway 会回退到随附的特定于 exec 的方法；保留的终端状态以及更丰富的跨界面结果需要更新后的 Gateway。
+
+## 可选的 Apple Watch 直接节点
+
+直接模式会为手表提供其自己的已签名节点身份和 Gateway 连接。  
+当 OpenClaw 处于活动状态时，即使配对的 iPhone 不可用，支持的节点命令仍可通过手表的 Wi-Fi 或蜂窝网络工作。
+
+要求：
+
+- iPhone 已连接到 Gateway，并具有 `operator.admin` 权限范围。
+- 安装代码会公布一个 `wss://` 的 Gateway 端点，该端点使用 watchOS 信任的证书；手表会轮询对应的 `https://` 源。普通 HTTP 以及仅自签名或仅指纹信任都不受支持。有关端点配置，请参见 [Gateway 拥有的配对](/gateway/pairing)。手表无法独立访问回环、仅 iPhone 和仅 tailnet 路由。
+- 蜂窝网络使用需要一款支持蜂窝网络的 Apple Watch，并且已开通有效服务。
+- OpenClaw 在手表上处于活动状态。Apple 不允许普通 watchOS 应用保持通用的 WebSocket/TCP 连接，因此直接节点会使用短周期 HTTPS 轮询，并在应用回到前台时重新连接。请参阅 Apple 的 [watchOS 底层网络指导](https://developer.apple.com/documentation/technotes/tn3135-low-level-networking-on-watchOS)。
+
+设置：
+
+1. 在 iPhone 上，打开 **设置 -> Apple Watch**。
+2. 点击 **启用直接 Gateway 连接**。
+3. 在短期安装代码过期之前，先在手表上打开 OpenClaw。
+4. 使用 `openclaw nodes status` 验证独立的 Apple Watch 行。
+
+安装代码包含一个短期有效、仅用于节点的引导凭据；在其过期前，请将其视为密码。它绝不会包含 iPhone 已保存的 Gateway 密码或令牌。配对完成后，手表会存储自己的设备令牌并删除该引导凭据。直接模式仅覆盖下面的命令。聊天、通话、审批以及现有的 `watch.*` 通知流程仍然是 iPhone 中继功能，并且仍然需要已配对的 iPhone。
+
+watchOS 直接节点命令：
+
+| 表面         | 命令                           | 备注                                                   |
+| ------------ | ------------------------------ | ------------------------------------------------------ |
+| 设备         | `device.info`, `device.status` | 手表身份、电池、温度、存储和网络。                      |
+| 通知         | `system.notify`                | 在应用处于活动状态时可用；需要手表权限。                |
+
+watchOS 不向第三方应用开放 WebKit，因此直接手表节点不会公布 Canvas 命令。
 
 ## 官方构建的 relay 支持推送
 
@@ -182,6 +237,15 @@ iOS 应用在 `local.` 上浏览 `_openclaw-gw._tcp`，并且在配置后，也�
 
 在设置中启用 **手动主机**，然后输入 gateway 主机 + 端口（默认 `18789`）。
 
+## 多个网关
+
+应用会保留其已配对的每个网关的注册信息，因此你可以在它们之间切换，而无需再次配对：
+
+- **设置 -> 网关** 会显示一个带有当前活动网关标记的 **已配对网关** 列表。点按某一项即可切换；应用会拆除当前会话并重新连接到所选网关。当配对了多个网关时，连接行旁边会出现一个快速切换菜单。
+- 凭据、TLS 信任决策、每个网关的偏好设置以及缓存的聊天记录都会按网关分别存储。切换时绝不会混合不同网关之间的状态，推送注册也会跟随当前活动网关。
+- 轻扫某个已配对网关（或使用其上下文菜单）以 **忘记** 它，这会移除其凭据、设备令牌、TLS 指纹以及缓存的聊天记录。
+- 已发现的网关必须在网络上可见才能切换到它们；手动添加的网关则会通过已保存的主机和端口重新连接。
+
 ## Canvas + A2UI
 
 iOS 节点渲染一个 WKWebView 画布。使用 `node.invoke` 来驱动它：
@@ -222,10 +286,15 @@ openclaw nodes invoke --node "iOS Node" --command canvas.snapshot --params '{"ma
 
 ## 常见错误
 
-- `NODE_BACKGROUND_UNAVAILABLE`：将 iOS 应用切换到前台（canvas/camera/screen 命令需要它）。
-- `A2UI_HOST_UNAVAILABLE`：随应用捆绑的 A2UI 页面在应用 WebView 中不可达；请保持应用位于前台并停留在 Screen 标签页，然后重试。
-- 配对提示始终不出现：运行 `openclaw devices list` 并手动批准。
-- 重装后重新连接失败：Keychain 中的配对令牌已清除；请重新为节点配对。
+- `NODE_BACKGROUND_UNAVAILABLE`: 将 iOS 应用切换到前台（canvas/camera/screen 命令需要它）。
+- `A2UI_HOST_UNAVAILABLE`: 捆绑的 A2UI 页面在应用 WebView 中无法访问；请保持应用在 Screen 选项卡上处于前台并重试。
+- 配对提示从未出现：运行 `openclaw devices list` 并手动批准。
+- Watch 未显示 iPhone 状态：确认 iPhone 在 `watch.status` 中报告 `watchPaired: true`
+  和 `watchAppInstalled: true`。如果 pairing 为 false，请在 Apple 的 Watch 应用中配对
+  Watch。如果 installation 为 false，请从 **My Watch -> Available Apps** 安装配套应用。
+  在任一更改后，在 Watch 上打开一次 OpenClaw；要立即可达仍需要两个应用都在运行，
+  而排队的更新可能会稍后在后台到达。
+- 重新安装后重连失败：Keychain 配对令牌已被清除；请重新为该节点配对。
 
 ## 相关文档
 

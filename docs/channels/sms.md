@@ -343,15 +343,20 @@ imsg send --to "+15551234567" --service sms --text "reply exactly SMS pong" --js
 
 ## Webhook 安全
 
-默认情况下，OpenClaw 会使用 `publicWebhookUrl` 和 `authToken` 验证 `X-Twilio-Signature`。请确保 `publicWebhookUrl` 与 Twilio 中配置的 URL 完全逐字节一致，包括 scheme、host、path 和 query string。
+默认情况下，OpenClaw 会使用 `publicWebhookUrl` 和 `authToken` 验证 `X-Twilio-Signature`。请确保 `publicWebhookUrl` 的端点部分与在 Twilio 中配置的 URL 按字节级完全一致，包括协议、主机、路径和查询字符串。OpenClaw 会按 Twilio 的要求，在签名计算中排除 Twilio 的 [connection-override](https://www.twilio.com/docs/usage/webhooks/webhooks-connection-overrides) 片段（`#...`）。
 
 Webhook 路由还会独立于签名验证强制执行以下规则：
 
 - 仅允许 `POST`。
-- 每个源 IP 每分钟限流 30 次请求（超过则返回 HTTP 429）。
-- 载荷中的 `AccountSid` 必须与配置的 `accountSid` 匹配（否则返回 HTTP 403）。
+- 每个 SMS account、webhook route 和解析后的客户端地址，每分钟 300 个请求的失败请求预算。所有请求都会计入此预算，但只有在请求体解析失败、Twilio 验证失败或 AccountSid 匹配失败之后，才会应用 HTTP 429。
+- 在上述检查通过后，每个 SMS account、webhook route 和解析后的客户端地址，每分钟允许 30 个可分发的已接受回调（超过则返回 HTTP 429）。如果签名验证被禁用，那么这个 30/min 限制就是未认证的分发上限。
+- 客户端地址通过共享的 Gateway 可信代理规则解析。如果 `gateway.trustedProxies` 包含转发 Twilio 回调的反向代理，OpenClaw 会以转发后的客户端地址作为这些限制的键；否则会回退为直接的套接字地址。
+- 负载中的 `AccountSid` 必须与配置的 `accountSid` 匹配（否则返回 HTTP 403）。
 - 重放的 `MessageSid` 值会被去重 10 分钟。
-- 超过 32 KB 的请求体会被拒绝。
+- 每个 SMS account 的重放缓存最多保留 10,000 个活跃消息 SID。当前端口槽位全部处于活跃状态时，该 account 的新 webhook 会以 HTTP 429 失败并附带 `Retry-After` 头，直到最早的槽位过期。
+- 超过 32 KB 的请求体将被拒绝。
+
+Twilio 默认不会重试 HTTP 429，也没有说明对 `Retry-After` 的支持。`#rp=4xx` 和 `#rp=all` connection override 会启用 4xx 重试，但 Twilio 将完整的重试事务上限限制为 15 秒，因此重试仍可能在重放缓存槽位过期之前结束。当需要另一个处理程序接收失败投递时，请配置 fallback URL；应将 429 视为 fail-closed 拒绝，而不是可靠的背压。
 
 仅用于本地隧道测试时，你可以设置：
 
@@ -369,7 +374,7 @@ Webhook 路由还会独立于签名验证强制执行以下规则：
 
 ## 多账户配置
 
-当你运营多个 Twilio 号码时，请使用 `accounts`：
+当您运营多个 Twilio 号码时，请使用 `accounts`：
 
 ```json5
 {

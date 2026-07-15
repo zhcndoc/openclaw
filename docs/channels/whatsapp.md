@@ -303,9 +303,9 @@ WhatsApp 审批反应要求在 `allowFrom` 中显式指定审批人（或使用 
   </Tab>
 </Tabs>
 
-## 已配置的 ACP 绑定
+## Configured ACP Bindings
 
-WhatsApp 支持通过顶层 `bindings[]` 实现持久化 ACP 绑定：
+WhatsApp supports persistent ACP bindings through top-level `bindings[]`:
 
 ```json5
 {
@@ -332,11 +332,11 @@ WhatsApp 支持通过顶层 `bindings[]` 实现持久化 ACP 绑定：
 }
 ```
 
-私聊匹配 E.164 号码；群聊匹配 WhatsApp 群组 JID。群组允许名单、发送者策略以及提及/激活门控会在 OpenClaw 确保绑定的 ACP 会话存在之前运行。匹配到的绑定会拥有该路由——广播群不会把该轮消息分发到普通 WhatsApp 会话。
+Private chats match E.164 numbers; group chats match WhatsApp group JIDs. Group allowlists, sender policies, and mention/activation gating run in OpenClaw before ensuring the bound ACP session exists. The matched binding owns the route — broadcast groups will not distribute that turn’s message to ordinary WhatsApp sessions.
 
-## 个人号码与自聊行为
+## Personal number and self-chat behavior
 
-当关联的自号码也出现在 `allowFrom` 中时，会启用自聊保护：跳过自聊回合的已读回执，忽略会触发向自己发送提醒的 mention-JID 自动触发行为，并且当 `messages.responsePrefix` 未设置时，默认回复为 `[{identity.name}]`（或 `[openclaw]`）。
+When the associated self number also appears in `allowFrom`, self-chat protection will be enabled: read receipts for self-chat turns will be skipped, mention-JID auto-trigger behavior that would send a reminder to yourself will be ignored, and when `messages.responsePrefix` is not set, the default reply will be `[{identity.name}]` (or `[openclaw]`).
 
 ## 消息规范化与上下文
 
@@ -391,7 +391,7 @@ WhatsApp 支持通过顶层 `bindings[]` 实现持久化 ACP 绑定：
 <AccordionGroup>
   <Accordion title="文本分块">
     - 默认分块限制：`channels.whatsapp.textChunkLimit = 4000`
-    - `channels.whatsapp.chunkMode = "length" | "newline"`；`newline` 优先使用段落边界（空行），然后回退到按长度安全分块
+    - `channels.whatsapp.streaming.chunkMode = "length" | "newline"`；`newline` 优先按段落边界（空行）分割，然后回退到按长度安全分块
 
   </Accordion>
 
@@ -461,7 +461,7 @@ WhatsApp 支持通过顶层 `bindings[]` 实现持久化 ACP 绑定：
       ackReaction: {
         emoji: "👀",
         direct: true,
-        group: "mentions", // 始终 | 提及 | 从不
+        group: "提及", // 始终 | 提及 | 从不
       },
     },
   },
@@ -598,7 +598,7 @@ openclaw channels status
   </Accordion>
 
   <Accordion title="Bun 运行时警告">
-    WhatsApp 网关运行时应使用 Node。Bun 被标记为与稳定的 WhatsApp/Telegram 网关运行不兼容。
+    OpenClaw 网关需要 Node。Bun 不提供 canonical 状态存储所使用的 `node:sqlite` API，而 doctor 会将旧的 Bun 服务迁移到 Node。
   </Accordion>
 </AccordionGroup>
 
@@ -676,12 +676,12 @@ WhatsApp 通过 `groups` 和 `direct` 映射支持类似 Telegram 的群组与�
 
 | 区域             | 字段                                                                                                         |
 | ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| 访问           | `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`                                             |
-| 发送           | `textChunkLimit`, `chunkMode`, `mediaMaxMb`, `sendReadReceipts`, `ackReaction`, `reactionLevel`                |
-| 多账户    | `accounts.<id>.enabled`, `accounts.<id>.authDir`，以及其他每账户覆盖项                              |
-| 操作       | `configWrites`, `debounceMs`, `web.enabled`, `web.heartbeatSeconds`, `web.reconnect.*`, `web.whatsapp.*`       |
-| 会话行为 | `session.dmScope`, `historyLimit`, `dmHistoryLimit`, `dms.<id>.historyLimit`                                   |
-| 提示词          | `groups.<id>.systemPrompt`, `groups["*"].systemPrompt`, `direct.<id>.systemPrompt`, `direct["*"].systemPrompt` |
+| Access           | `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`                                             |
+| Delivery         | `textChunkLimit`, `streaming.chunkMode`, `mediaMaxMb`, `sendReadReceipts`, `ackReaction`, `reactionLevel`      |
+| Multi-account    | `accounts.<id>.enabled`, `accounts.<id>.authDir`, and other per-account overrides                              |
+| Operations       | `configWrites`, `debounceMs`, `web.enabled`, `web.heartbeatSeconds`, `web.reconnect.*`, `web.whatsapp.*`       |
+| Session behavior | `session.dmScope`, `historyLimit`, `dmHistoryLimit`, `dms.<id>.historyLimit`                                   |
+| Prompts          | `groups.<id>.systemPrompt`, `groups["*"].systemPrompt`, `direct.<id>.systemPrompt`, `direct["*"].systemPrompt` |
 
 ## 相关内容
 

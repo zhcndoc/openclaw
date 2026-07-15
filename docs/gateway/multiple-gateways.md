@@ -91,7 +91,7 @@ openclaw --profile ops gateway install --port 19789
 | `gateway.port`（或 `--port`） | 每个实例唯一                        |
 | 派生的浏览器/CDP 端口         | 见下文                               |
 
-共享其中任何一项都会导致配置竞争和端口冲突。
+共享其中任何一项都会导致配置、状态或端口冲突。Gateway 启动会强制唯一的状态目录归属，即使 `OPENCLAW_ALLOW_MULTI_GATEWAY=1` 跳过了按配置的单例检查。
 
 ## 端口映射（派生）
 

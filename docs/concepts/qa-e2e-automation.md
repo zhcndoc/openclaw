@@ -246,7 +246,7 @@ pnpm openclaw qa mantis slack-desktop-smoke \
 该模式与 `--gateway-setup` 互斥。它会运行 Slack
 审批场景，拒绝非审批场景 id，在每个待处理和已解决的审批状态处等待，将观测到的 Slack API 消息渲染为
 `approval-checkpoints/<scenario>-pending.png` 和
-`approval-checkpoints/<scenario>-resolved.png`，然后在任何检查点、消息证据、确认或渲染截图缺失或为空时失败。冷启动的 CI 租约可能仍会在
+`approval-checkpoints/<scenario>-resolved.png`，然后在任何检查点、消息证据、确认或渲染截图缺失或为空时失败。冷启动的 CI 租约可能仍然会在
 `slack-desktop-smoke.png` 中显示 Slack 登录；审批检查点图片则是该通道的视觉证据。
 
 默认的检查点运行会保留两个标准 Slack 审批场景。
@@ -264,7 +264,7 @@ pnpm openclaw qa mantis slack-desktop-smoke \
 pnpm openclaw qa mantis visual-task \
   --browser-url https://example.net \
   --expect-text "Example Domain" \
-  --vision-model openai/gpt-5.5
+  --vision-model openai/gpt-5.6-luna
 ```
 
 `visual-task` 会租用或复用一台 Crabbox 桌面/浏览器机器，启动
@@ -296,11 +296,11 @@ doctor 会检查 Convex broker 环境（`OPENCLAW_QA_CONVEX_SITE_URL`、
 
 | 通道     | Canary | 触发门控 | 机器人对机器人 | 允许列表阻断 | 顶层回复 | 引用回复 | 重启恢复 | 线程后续 | 线程隔离 | 反应观察 | 帮助命令 | 原生命令注册 |
 | -------- | ------ | -------- | ---------- | --------------- | --------------- | ----------- | -------------- | ---------------- | ---------------- | -------------------- | ------------ | --------------------------- |
-| Discord  | x      | x        | x          |                 |                 |             |                |                  |                  |                      |              | x                           |
-| Matrix   | x      | x        | x          | x               | x               |             | x              | x                | x                | x                    |              |                             |
-| Slack    | x      | x        | x          | x               | x               |             | x              | x                | x                |                      |              |                             |
-| Telegram | x      | x        | x          |                 |                 |             |                |                  |                  |                      | x            |                             |
-| WhatsApp | x      | x        |            | x               | x               | x           | x              |                  |                  | x                    | x            |                             |
+| Discord  | x      | x      | x          |                 |                 |             |                |                  |                  |                      |              | x                           |
+| Matrix   | x      | x      | x          | x               | x               |             | x              | x                | x                | x                    |              |                             |
+| Slack    | x      | x      | x          | x               | x               |             | x              | x                | x                |                      |              |                             |
+| Telegram | x      | x      | x          |                 |                 |             |                |                  |                  |                      | x            |                             |
+| WhatsApp | x      | x      |            | x               | x               | x           | x              |                  |                  | x                    | x            |                             |
 
 这使得 `qa-channel` 继续作为更广泛的产品行为套件，而 Matrix、Telegram 以及其他实时传输通道共享一份明确的传输契约检查清单。
 
@@ -459,8 +459,8 @@ pnpm openclaw qa discord \
 pnpm openclaw qa discord \
   --scenario discord-status-reactions-tool-only \
   --provider-mode live-frontier \
-  --model openai/gpt-5.5 \
-  --alt-model openai/gpt-5.5 \
+  --model openai/gpt-5.6-luna \
+  --alt-model openai/gpt-5.6-luna \
   --fast
 ```
 
@@ -493,20 +493,51 @@ pnpm openclaw qa slack
 - `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_DIR` 为 Mantis 启用可视化审批检查点。运行器会写入 `<scenario>.pending.json` 和 `<scenario>.resolved.json`，然后等待匹配的 `.ack.json` 文件。
 - `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_TIMEOUT_MS` 覆盖检查点确认超时时间。默认值为 `120000`。
 
-场景（`extensions/qa-lab/src/live-transports/slack/slack-live.runtime.ts`）：
+通过 Slack live adapter 暴露的规范 YAML 场景：
+
+- `thread-follow-up`
+- `thread-isolation`
+
+命令式 Slack 场景（`extensions/qa-lab/src/live-transports/slack/slack-live.runtime.ts`）：
 
 - `slack-canary`
 - `slack-mention-gating`
 - `slack-allowlist-block`
+- `slack-channel-disabled-warning` - 可选的真实 Slack 探测，用于确认
+  已配置的禁用频道会发出结构化警告而不会回复。
 - `slack-top-level-reply-shape`
 - `slack-restart-resume`
-- `slack-thread-follow-up`
-- `slack-thread-isolation`
-- `slack-reaction-glyph-native` - 可选启用的实时 message-tool reaction 场景。指导 agent 发送精确的 `✅` 字形，并确认 Slack 在目标消息上为 SUT bot 存储了 `white_check_mark`。
-- `slack-approval-exec-native` - 可选启用的原生 Slack exec 审批场景。通过 gateway 请求一次 exec 审批，验证 Slack 消息具有原生审批按钮，进行处理，并验证已解决的 Slack 更新。
-- `slack-approval-plugin-native` - 可选启用的原生 Slack 插件审批场景。将 exec 和插件审批转发同时启用，这样插件事件不会被 exec 审批路由抑制，然后验证相同的 pending/resolved 原生 Slack UI 路径。
-- `slack-codex-approval-exec-native` - 可选启用的 Codex Guardian 命令审批场景。以 Guardian 模式启用 Codex 插件，将一个源自 Slack 的 Gateway agent 回合通过 Codex app-server harness 路由，等待 `openclaw-codex-app-server` 的原生 Slack 插件审批提示，解决它，并验证 Codex 回合以预期的 command-output 和 assistant 标记完成。
-- `slack-codex-approval-plugin-native` - 可选启用的 Codex Guardian 文件审批场景。使用工作区外的 `apply_patch` 指令，使 Codex 发出 app-server 文件变更审批路由，然后验证相同的原生 Slack pending/resolved 审批路径、最终 assistant 标记，以及在清理前的精确文件内容。
+- `slack-progress-commentary-true`、`slack-progress-commentary-false`、
+  `slack-progress-commentary-omitted`，以及
+  `slack-progress-commentary-verbose-dedupe` - 用于独立的 commentary/tool-progress 控制、
+  省略键的旧默认值，以及在持久化 verbose progress 开启时单次投递行为的可选真实 Slack 探测。
+- `slack-reaction-glyph-native` - 可选的实时消息工具 reaction 场景。
+  指示代理传递精确的 `✅` 符号，并确认 Slack 已为目标消息中的 SUT bot 存储
+  `white_check_mark`。
+- `slack-chart-presentation-native` - 可选的可移植图表场景，
+  验证原生 `data_visualization` 区块和精确的可访问文本。
+- `slack-table-presentation-native` - 可选的可移植表格场景，
+  验证原生 `data_table` 区块、精确的行和可访问文本。
+- `slack-table-invalid-blocks-fallback` - 可选的直接传输场景，
+  通过生产 Slack 发送路径发送一个结构上可读但超限的原始表格，
+  包含 101 行数据及其表头，证明 Slack 本身返回 `invalid_blocks`，
+  并验证存储的禁用格式回退是完整的且没有原生 data block。报告只保留安全的错误码、计数和布尔证据；原始合成表格文本遵循
+  `OPENCLAW_QA_SLACK_CAPTURE_CONTENT`。
+- `slack-approval-exec-native` - 可选的原生 Slack exec 审批场景。
+  通过 gateway 请求一个 exec 审批，验证 Slack 消息具有原生审批按钮，完成其审批，
+  并验证已解决的 Slack 更新。
+- `slack-approval-plugin-native` - 可选的原生 Slack plugin 审批
+  场景。同步启用 exec 和 plugin 审批转发，以便 plugin 事件不会被 exec 审批路由抑制，
+  然后验证相同的 pending/resolved 原生 Slack UI 路径。
+- `slack-codex-approval-exec-native` - 可选的 Codex Guardian 命令审批
+  场景。以 Guardian 模式启用 Codex 插件，通过 Codex app-server harness 路由一个
+  源自 Slack 的 Gateway agent 回合，等待
+  `openclaw-codex-app-server` 的原生 Slack plugin 审批提示，完成其审批，并验证 Codex 回合
+  以预期的命令输出和 assistant 标记结束。
+- `slack-codex-approval-plugin-native` - 可选的 Codex Guardian 文件审批
+  场景。使用工作区外的 `apply_patch` 指令，使 Codex 发出 app-server 文件变更审批路由，
+  然后验证相同的原生 Slack pending/resolved 审批路径、最终 assistant 标记，以及在清理前
+  的精确文件内容。
 
 Codex 审批场景需要 `openai/*` 或 `codex/*` 的 `--model`、常规的 live model 凭据，以及被 Codex 插件接受的 Codex auth 或 API-key auth。
 Slack 报告会包含 Codex app-server 方法、所选 Codex 模型 key、最终 Codex 回合状态，以及操作标记验证，并附带已脱敏的 Slack 审批元数据。
@@ -917,11 +948,17 @@ gateway 代码通过 provider registry 路由，而不是基于 provider 名称�
 
 1. 保持 `qa-lab` 作为共享 `qa` 根命令的所有者。
 2. 在共享的 `qa-lab` 主机接缝上实现传输运行器。
-3. 将传输特定机制保留在运行器插件或通道 harness 内部。
-4. 将运行器挂载为 `openclaw qa <runner>`，而不是注册一个竞争性的根命令。运行器插件应在 `openclaw.plugin.json` 中声明 `qaRunners`，并从 `runtime-api.ts` 导出匹配的 `qaRunnerCliRegistrations` 数组。保持 `runtime-api.ts` 轻量；惰性 CLI 和运行器执行应继续留在各自独立的入口点之后。
-5. 在主题化的 `qa/scenarios/` 目录下编写或调整 YAML 场景。
-6. 为新场景使用通用场景辅助函数。
-7. 除非仓库正在进行有意的迁移，否则保持现有兼容别名可用。
+3. 将传输特定机制保留在运行器插件或通道
+   harness 中。
+4. 将运行器挂载为 `openclaw qa <runner>`，而不是注册一个
+   竞争性的根命令。运行器插件应在 `openclaw.plugin.json` 中声明 `qaRunners`，并在 `runtime-api.ts` 中导出匹配的 `qaRunnerCliRegistrations`
+   数组。保持 `runtime-api.ts` 轻量；懒加载 CLI 和
+   运行器执行应留在单独的入口点之后。可选的 `adapterFactory` 可将传输暴露给共享场景，而无需更改
+   该命令现有的场景目录。
+5. 在主题化的 `qa/scenarios/`
+   目录下编写或适配 YAML 场景。
+6. 对新场景使用通用场景辅助函数。
+7. 除非仓库正在进行有意迁移，否则保持现有兼容别名可用。
 
 决策规则是严格的：
 
@@ -976,7 +1013,7 @@ gateway 代码通过 provider registry 路由，而不是基于 provider 名称�
 
 ```bash
 pnpm openclaw qa character-eval \
-  --model openai/gpt-5.5,thinking=medium,fast \
+  --model openai/gpt-5.6-luna,thinking=medium,fast \
   --model openai/gpt-5.2,thinking=xhigh \
   --model openai/gpt-5,thinking=xhigh \
   --model anthropic/claude-opus-4-8,thinking=high \
@@ -984,7 +1021,7 @@ pnpm openclaw qa character-eval \
   --model zai/glm-5.1,thinking=high \
   --model moonshot/kimi-k2.5,thinking=high \
   --model google/gemini-3.1-pro-preview,thinking=high \
-  --judge-model openai/gpt-5.5,thinking=xhigh,fast \
+  --judge-model openai/gpt-5.6-sol,thinking=xhigh,fast \
   --judge-model anthropic/claude-opus-4-8,thinking=high \
   --blind-judge-models \
   --concurrency 16 \
@@ -993,15 +1030,27 @@ pnpm openclaw qa character-eval \
 
 该命令运行本地 QA gateway 子进程，而不是 Docker。字符评估场景应通过 `SOUL.md` 设置 persona，然后运行普通的用户回合，例如聊天、工作区帮助和小文件任务。候选模型不应被告知它正在被评估。该命令会保留每份完整对话，记录基本运行统计，然后在支持的情况下以 `xhigh` 推理、fast 模式向裁判模型请求，按自然度、氛围和幽默感对运行结果进行排序。比较 provider 时使用 `--blind-judge-models`；裁判提示仍会获得每份对话和运行状态，但候选 ref 会被替换为中性标签，例如 `candidate-01`；报告会在解析后将排名映射回真实 ref。
 
-候选运行默认使用 `high` thinking，其中 GPT-5.5 使用 `medium`，支持该模式的较旧 OpenAI 评估 ref 使用 `xhigh`。可通过 `--model provider/model,thinking=<level>` 在行内覆盖某个候选；行内选项还支持 `fast`、`no-fast` 和 `fast=<bool>`。`--thinking <level>` 仍然会设置全局回退值，而较旧的 `--model-thinking
-`provider/model=level` 形式则保留用于兼容性。OpenAI 候选 ref 默认使用 fast 模式，因此在 provider 支持时会使用优先级处理。只有当你想强制对每个候选模型都开启 fast 模式时，才传入 `--fast`。候选和裁判的持续时间都会记录在报告中以便进行基准分析，但裁判提示明确说明不要按速度排名。候选和裁判模型运行默认都使用 concurrency 16。当 provider 限制或本地 gateway 压力使运行过于嘈杂时，可降低 `--concurrency` 或 `--judge-concurrency`。
+Candidate runs default to `high` thinking, with `medium` for GPT-5.6 Luna and
+`xhigh` for older OpenAI eval refs that support it. Override a specific
+candidate inline with `--model provider/model,thinking=<level>`; inline
+options also support `fast`, `no-fast`, and `fast=<bool>`. `--thinking
+<level>` still sets a global fallback, and the older `--model-thinking
+<provider/model=level>` form is kept for compatibility. OpenAI candidate
+refs default to fast mode so priority processing is used where the provider
+supports it. Pass `--fast` only when you want to force fast mode on for
+every candidate model. Candidate and judge durations are recorded in the
+report for benchmark analysis, but judge prompts explicitly say not to rank
+by speed. Candidate and judge model runs both default to concurrency 16.
+Lower `--concurrency` or `--judge-concurrency` when provider limits or local
+gateway pressure make a run too noisy.
 
-当没有传入候选 `--model` 时，字符评估默认使用 `openai/gpt-5.5`、`openai/gpt-5.2`、`openai/gpt-5`、
-`anthropic/claude-opus-4-8`、`anthropic/claude-sonnet-4-6`、`zai/glm-5.1`、
-`moonshot/kimi-k2.5` 和 `google/gemini-3.1-pro-preview`。当没有传入
-`--judge-model` 时，裁判默认使用
-`openai/gpt-5.5,thinking=xhigh,fast` 和
-`anthropic/claude-opus-4-8,thinking=high`。
+When no candidate `--model` is passed, the character eval defaults to
+`openai/gpt-5.6-luna`, `openai/gpt-5.2`, `openai/gpt-5`,
+`anthropic/claude-opus-4-8`, `anthropic/claude-sonnet-4-6`, `zai/glm-5.1`,
+`moonshot/kimi-k2.5`, and `google/gemini-3.1-pro-preview`. When no
+`--judge-model` is passed, the judges default to
+`openai/gpt-5.6-sol,thinking=xhigh,fast` and
+`anthropic/claude-opus-4-8,thinking=high`.
 
 ## 相关文档
 

@@ -60,7 +60,7 @@ openclaw gateway restart
 {
   messages: {
     tts: {
-      auto: "always",
+      auto: "始终",
       provider: "gradium",
       providers: {
         gradium: {
@@ -74,11 +74,11 @@ openclaw gateway restart
 }
 ```
 
-| 键                                              | 类型   | 描述                                                                              |
-| ----------------------------------------------- | ------ | --------------------------------------------------------------------------------- |
-| `messages.tts.providers.gradium.apiKey`         | string | 解析后的 API 密钥。支持 `${ENV}` 和 secret 引用。                                 |
-| `messages.tts.providers.gradium.baseUrl`        | string | API 源地址覆盖。会去掉末尾斜杠。默认值为 `https://api.gradium.ai`。                 |
-| `messages.tts.providers.gradium.speakerVoiceId` | string | 未指定覆盖指令时使用的默认语音 ID。                                                |
+| Key                                             | Type   | Description                                                                                             |
+| ----------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
+| `messages.tts.providers.gradium.apiKey`         | string | 解析后的 API 密钥。支持 `${ENV}` 和密钥引用。                                                            |
+| `messages.tts.providers.gradium.baseUrl`         | string | `api.gradium.ai` 上的 HTTPS Gradium API URL。会去除尾部斜杠。默认值为 `https://api.gradium.ai`。 |
+| `messages.tts.providers.gradium.speakerVoiceId` | string | 当没有指令覆盖时使用的默认语音 ID。                                            |
 
 输出格式会根据目标平台自动选择（见 [输出](#output)），并且不能在 `openclaw.json` 中配置。
 

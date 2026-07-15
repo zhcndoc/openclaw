@@ -9,13 +9,13 @@ sidebarTitle: "配置"
 用于 `openclaw.json` 的非交互式辅助命令：可按路径获取/设置/补丁/取消设置某个值，打印 schema，验证，或打印当前活动文件路径。无子命令运行 `openclaw config` 时，会打开与 `openclaw configure` 相同的引导式向导。
 
 <Note>
-当 `OPENCLAW_NIX_MODE=1` 时，OpenClaw 会将 `openclaw.json` 视为不可变。只读命令（`config get`、`config file`、`config schema`、`config validate`）仍可工作；配置写入命令会拒绝执行。请改为编辑安装所使用的 Nix 源；对于第一方的 nix-openclaw 发行版，请使用 [nix-openclaw Quick Start](https://github.com/openclaw/nix-openclaw#quick-start)，并在 `programs.openclaw.config` 或 `instances.<name>.config` 下设置值。
+当 `OPENCLAW_NIX_MODE=1` 时，OpenClaw 会将 `openclaw.json` 视为不可变。只读命令（`config get`、`config file`、`config schema`、`config validate`）仍可工作；配置写入命令会拒绝执行。请改为编辑安装所使用的 Nix 源；对于第一方的 nix-openclaw 发行版，请使用 [nix-openclaw 快速开始](https://github.com/openclaw/nix-openclaw#quick-start)，并在 `programs.openclaw.config` 或 `instances.<name>.config` 下设置值。
 </Note>
 
 ## 根选项
 
 <ParamField path="--section <section>" type="string">
-  当你不带子命令运行 `openclaw config` 时，可重复使用的引导式设置分区过滤器。
+  可重复使用的引导式设置分区过滤器，当你不带子命令运行 `openclaw config` 时使用。
 </ParamField>
 
 引导式分区：`workspace`、`model`、`web`、`gateway`、`daemon`、`channels`、`plugins`、`skills`、`health`。
@@ -145,7 +145,7 @@ openclaw config set models.providers.ollama.models '[{"id":"llama3.2","name":"Ll
     ```
   </Tab>
   <Tab title="Provider 构建器模式">
-    仅面向 `secrets.providers.<alias>` 路径：
+    仅适用于 `secrets.providers.<alias>` 路径：
 
     ```bash
     openclaw config set secrets.providers.vault \
@@ -248,21 +248,21 @@ openclaw config set secrets.providers.vault \
 
 ## `config patch`
 
-粘贴或通过管道传入一个结构类似 config 的 JSON5 补丁，而不是运行许多基于路径的 `config set` 命令。对象会递归合并；数组和标量值会替换目标；`null` 会删除目标路径。
+Paste or pipe in a JSON5 patch that resembles config, instead of running many path-based `config set` commands. Objects merge recursively; arrays and scalar values replace the target; `null` deletes the target path.
 
 ```bash
 openclaw config patch --file ./openclaw.patch.json5 --dry-run
 openclaw config patch --file ./openclaw.patch.json5
 ```
 
-将补丁通过 stdin 传入，用于远程安装脚本：
+Pass the patch through stdin for remote install scripts:
 
 ```bash
 ssh user@gateway-host 'openclaw config patch --stdin --dry-run' < ./openclaw.patch.json5
 ssh user@gateway-host 'openclaw config patch --stdin' < ./openclaw.patch.json5
 ```
 
-补丁示例：
+Patch example:
 
 ```json5
 {
@@ -285,22 +285,22 @@ ssh user@gateway-host 'openclaw config patch --stdin' < ./openclaw.patch.json5
   },
   agents: {
     defaults: {
-      model: { primary: "openai/gpt-5.5" },
+      model: { primary: "openai/gpt-5.6-sol" },
       models: {
-        "openai/gpt-5.5": { params: { fastMode: true } },
+        "openai/gpt-5.6-sol": { params: { fastMode: true } },
       },
     },
   },
 }
 ```
 
-当某个对象或数组必须精确变为所提供的值，而不是进行递归补丁时，请使用 `--replace-path <path>`：
+When an object or array must be set exactly to the provided value rather than patched recursively, use `--replace-path <path>`:
 
 ```bash
 openclaw config patch --file ./discord.patch.json5 --replace-path 'channels.discord.guilds["123"].channels'
 ```
 
-`--dry-run` 会在不写入的情况下运行 schema 和 SecretRef 可解析性检查。默认在 dry-run 期间会跳过由 Exec 支持的 SecretRef；当你有意希望 dry-run 执行 provider 命令时，请添加 `--allow-exec`。
+`--dry-run` runs schema and SecretRef resolvability checks without writing. By default, dry-run skips Exec-backed SecretRef; add `--allow-exec` when you intentionally want dry-run to execute provider commands.
 
 ## 试运行
 

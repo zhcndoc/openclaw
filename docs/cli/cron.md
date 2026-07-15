@@ -100,15 +100,15 @@ openclaw cron create "*/15 * * * *" \
 
 失败通知按以下顺序解析：
 
-1. `delivery.failureDestination` on the job.
-2. Global `cron.failureDestination`.
+1. `delivery.failureDestination` 作业上的设置。
+2. 全局 `cron.failureDestination`。
 3. 作业的主 announce 目标（当以上两者都无法解析为具体目标时）。
 
 <Note>
 主会话作业仅在主投递模式为 `webhook` 时才可使用 `delivery.failureDestination`。隔离作业在所有模式下都接受它。
 </Note>
 
-隔离 cron 运行会将运行级代理失败视为作业错误，即使没有生成回复负载，因此模型/提供方失败仍会增加错误计数并触发失败通知。
+隔离 cron 运行会将运行级代理失败视为作业错误，即使没有生成回复负载，因此模型/提供方失败仍然会增加错误计数并触发失败通知。
 
 命令型 cron 作业不会启动隔离的代理轮次。退出码为 0 会记录为 `ok`；非 0 退出、信号、超时或无输出超时会记录为 `error`，并且可以触发相同的失败通知路径。
 
@@ -202,7 +202,7 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 
 ### 结构化拒绝
 
-Isolated cron runs use structured execution-denial metadata from the embedded run (fatal exec-tool errors coded `SYSTEM_RUN_DENIED` or `INVALID_REQUEST`) as the authoritative denial signal. They also honor node-host `UNAVAILABLE` wrappers around a nested structured error carrying one of those codes.
+隔离 cron 运行使用来自嵌入式运行的结构化执行拒绝元数据（标记为 `SYSTEM_RUN_DENIED` 或 `INVALID_REQUEST` 的致命 exec-tool 错误）作为权威拒绝信号。它们也会接受 node-host 的 `UNAVAILABLE` 包装，其中包含带有这些代码之一的嵌套结构化错误。
 
 除非嵌入式运行也提供了结构化拒绝元数据，否则 cron 不会将最终输出散文或看起来像审批拒绝的短语归类为拒绝，因此普通的助手文本不会被视为被阻止的命令。
 
@@ -210,10 +210,10 @@ Isolated cron runs use structured execution-denial metadata from the embedded ru
 
 ## 保留
 
-保留和清理由配置控制：
+保留行为：
 
-- `cron.sessionRetention`（默认 `24h`，或设为 `false` 以禁用）会清理已完成的隔离运行会话。
-- `cron.runLog.keepLines`（默认 `2000`）会按每个作业清理保留的 SQLite 运行历史行。`cron.runLog.maxBytes`（默认 `2000000`）仍被接受，以兼容较旧的基于文件的运行日志；SQLite 清理基于行数。
+- `cron.sessionRetention`（默认 `24h`，或设置为 `false` 以禁用）会清理已完成的隔离运行会话。
+- 运行历史会为每个 cron 作业保留最新的 2000 行终端输出。丢失的行将保留标准的 24 小时丢失任务清理窗口。
 
 ## 迁移旧作业
 
@@ -302,7 +302,7 @@ openclaw cron runs --id <job-id> --run-id <run-id>
 
 `openclaw cron get <job-id>` 直接返回存储的作业 JSON。想要带投递路由预览的人类可读视图时，请使用 `cron show <job-id>`。
 
-`cron list --json` 和 `cron show <job-id> --json` 会在每个作业上包含一个顶层 `status` 字段，该字段由 `enabled`、`state.runningAtMs` 和 `state.lastRunStatus` 计算得出。取值：`disabled`、`running`、`ok`、`error`、`skipped` 或 `idle`。这与人类可读的状态列一致，因此外部工具无需重新推导即可读取作业状态。
+`cron list --json` 和 `cron show <job-id> --json` 会在每个作业中包含一个顶层 `status` 字段，该字段由 `enabled`、`state.runningAtMs` 和 `state.lastRunStatus` 计算得出。取值：`disabled`、`running`、`ok`、`error`、`skipped` 或 `idle`。JSON 状态保持规范且不加修饰，因此外部工具可以读取作业状态而无需重新推导；人类可读输出可能会为重复的 `error` 状态附加失败次数。
 
 `cron runs` 条目包含投递诊断信息，涵盖预期的 cron 目标、解析后的目标、message 工具发送、回退使用情况以及已投递状态。
 

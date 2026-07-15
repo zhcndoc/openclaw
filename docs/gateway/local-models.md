@@ -263,7 +263,7 @@ MLX (`mlx_lm.server`)、vLLM、SGLang、LiteLLM、OAI-proxy，或任何自定义
    openclaw infer model run --gateway --model <provider/model> --prompt "Reply with exactly: pong" --json
    ```
 
-3. **如果前两个探测都通过，但真实的 agent 轮次因错误的工具调用或提示词过大而失败，尝试 lean mode：** 设置 `agents.defaults.experimental.localModelLean: true`。它会在未显式要求时，移除重量级的 browser、cron、message、media-generation、voice 和 PDF 工具，并默认将更大的工具目录放到结构化的 Tool Search 控制之后。详见 [Experimental Features -> Local model lean mode](/concepts/experimental-features#local-model-lean-mode) 以获取细节以及如何确认它已开启。
+3. **如果前两项都通过，但真实的 agent 轮次因工具调用格式错误或提示词过大而失败，请尝试精简模式**：将 `agents.defaults.experimental.localModelLean: true`。它会移除重量级的浏览器、cron、消息、媒体生成、语音和 PDF 工具，除非显式需要；同时会在保持 `exec` 直接可见的前提下，通过结构化的 Tool Search 控制来默认收起更大的工具目录。详见 [Experimental Features -> Local model lean mode](/concepts/experimental-features#local-model-lean-mode)，以及如何确认它已开启。
 
 4. **作为最后手段，完全禁用工具**：为该模型设置 `models.providers.<provider>.models[].compat.supportsTools: false`，这样 agent 就不会再进行工具调用。
 

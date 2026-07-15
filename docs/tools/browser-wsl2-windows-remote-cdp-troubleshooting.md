@@ -54,17 +54,43 @@ http://127.0.0.1:18789/
 ### 第 1 层：验证 Chrome 是否在 Windows 上提供 CDP
 
 ```powershell
-chrome.exe --remote-debugging-port=9222
+chrome.exe --remote-debugging-port=9222 --user-data-dir="$env:LOCALAPPDATA\OpenClaw\ChromeCDP"
 ```
+
+Chrome 136 及更高版本会忽略默认 Chrome 数据目录上的 remote-debugging 命令行开关。请像上面所示那样使用单独的、非默认的数据目录。请参见 Chrome 的 [remote-debugging security change](https://developer.chrome.com/blog/remote-debugging-port)。这不会使正常登录的 Chrome 配置文件变得可被远程控制。
 
 先在 Windows 上验证 Chrome 本身：
 
 ```powershell
-curl http://127.0.0.1:9222/json/version
-curl http://127.0.0.1:9222/json/list
+curl.exe http://127.0.0.1:9222/json/version
+curl.exe http://127.0.0.1:9222/json/list
 ```
 
-如果这一步在 Windows 上就失败了，那么还不是 OpenClaw 的问题。
+如果这一步失败，请先排查下面的 Windows 监听器。此时还不是 OpenClaw 的问题。
+
+#### 在更改 portproxy 之前诊断 IPv4 和 IPv6
+
+Chromium 会先尝试将远程调试绑定到 `127.0.0.1`，只有在 IPv4 绑定失败时才回退到 `[::1]`。一个持续存在的、监听 `127.0.0.1:9222` 的 `v4tov4` 规则可能会在 Chrome 启动前占用该端点。随后 Chrome 会回退到 `[::1]:9222`，而旧规则会将 IPv4 流量转发回它自己的监听器并返回空响应。
+
+请直接在 Windows 上检查实际的监听器和代理规则，不要根据 Chrome 版本去推断：
+
+```powershell
+netstat -ano | findstr :9222
+netsh interface portproxy show all
+curl.exe http://127.0.0.1:9222/json/version
+curl.exe http://[::1]:9222/json/version
+```
+
+对 `netstat` 中的每个 PID 使用 `tasklist /fi "PID eq <PID>"`。
+
+- 如果 `chrome.exe` 在 `127.0.0.1` 上有响应，请移除任何同样监听 `127.0.0.1:9222` 的 portproxy 规则。只将 WSL2 可达的 Windows 适配器地址转发到 `127.0.0.1`。
+- 如果 `chrome.exe` 只在 `[::1]` 上有响应，请使用 `v4tov6` 将 WSL2 可达的监听器指向 `::1`，而不是转发到一个未使用的 IPv4 地址：
+
+  ```powershell
+  netsh interface portproxy add v4tov6 listenaddress=WINDOWS_HOST_OR_IP listenport=9222 connectaddress=::1 connectport=9222
+  ```
+
+将监听器绑定到 WSL2 所需的适配器地址。不要将 CDP 端口暴露在 `0.0.0.0`、LAN 地址或 tailnet 地址上：CDP 会授予对浏览器会话的控制权。
 
 ### 第 2 层：验证 WSL2 是否能够访问该 Windows 端点
 
@@ -140,24 +166,26 @@ openclaw browser --browser-profile remote tabs
 
 | Message                                                                                 | Meaning                                                                                                                                                                           |
 | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `control-ui-insecure-auth`                                                              | UI 来源/安全上下文问题，而不是 CDP 传输问题                                                                                                                                        |
-| `token_missing`                                                                         | 认证配置问题                                                                                                                                                                      |
-| `pairing required`                                                                      | 设备批准问题                                                                                                                                                                      |
-| `Remote CDP for profile "remote" is not reachable`                                      | WSL2 无法连接到已配置的 `cdpUrl`                                                                                                                                                   |
-| `Browser attachOnly is enabled and CDP websocket for profile "remote" is not reachable` | HTTP 端点有响应，但无法打开 DevTools WebSocket                                                                                                                                    |
-| stale viewport / dark-mode / locale / offline overrides after a remote session          | 运行 `openclaw browser --browser-profile remote stop` 以关闭会话并释放缓存的 Playwright/CDP 连接，而无需重启 Gateway 或外部浏览器                                                       |
-| timeout around `remoteCdpTimeoutMs` (default 1500ms)                                    | 通常仍然是 CDP 可达性问题，或者远程端点响应缓慢/不可达                                                                                                                             |
-| `No Chrome tabs found for profile="user"`                                               | 选择了本地 Chrome MCP 配置文件，但当前没有可用的主机本地标签页                                                                                                                     |
+| `control-ui-insecure-auth`                                                              | UI 源/安全上下文问题，而不是 CDP 传输问题                                                                                                                     |
+| `token_missing`                                                                         | 认证配置问题                                                                                                                                                        |
+| `pairing required`                                                                      | 设备批准问题                                                                                                                                                           |
+| `Remote CDP for profile "remote" is not reachable`                                      | WSL2 无法连接到配置的 `cdpUrl`                                                                                                                                         |
+| empty CDP reply / `other side closed` through a portproxy                               | Windows 监听不匹配或自环；请检查两个 loopback 族以及 `netsh interface portproxy show all`                                                                 |
+| `Browser attachOnly is enabled and CDP websocket for profile "remote" is not reachable` | HTTP 端点有响应，但无法打开 DevTools WebSocket                                                                                                        |
+| stale viewport / dark-mode / locale / offline overrides after a remote session          | 运行 `openclaw browser --browser-profile remote stop` 以关闭会话，并释放缓存的 Playwright/CDP 连接，而无需重启 Gateway 或外部浏览器 |
+| timeout around `remoteCdpTimeoutMs` (default 1500ms)                                    | 通常仍然是 CDP 可达性问题，或远程端点缓慢/不可达                                                                                                             |
+| `Playwright page enumeration timed out after 3000ms`                                    | 远程 CDP 已连接，但其持久标签页读取卡住；截止时间是 `remoteCdpTimeoutMs` 和 `remoteCdpHandshakeTimeoutMs` 中较大的那个                               |
+| `No Chrome tabs found for profile="user"`                                               | 选择了本地 Chrome MCP 配置文件，但当前没有可用的主机本地标签页                                                                                                          |
 
 ## 快速分诊清单
 
-1. Windows: `curl http://127.0.0.1:9222/json/version` 能工作吗？
-2. WSL2: `curl http://WINDOWS_HOST_OR_IP:9222/json/version` 能工作吗？
-3. OpenClaw 配置：`browser.profiles.<name>.cdpUrl` 是否使用了那个完全相同的
-   可被 WSL2 访问的地址？
-4. Control UI：你打开的是 `http://127.0.0.1:18789/`，而不是局域网 IP 吗？
-5. 你是否试图在 WSL2 和 Windows 之间使用 `existing-session`，
-   而不是直接使用原始的远程 CDP？
+1. Windows: `127.0.0.1` 或 `[::1]` 中哪一个能在 `/json/version` 上响应，并且
+   这个监听是否属于 `chrome.exe`？
+2. WSL2: `curl http://WINDOWS_HOST_OR_IP:9222/json/version` 是否可用？
+3. OpenClaw config: `browser.profiles.<name>.cdpUrl` 是否使用了那个完全相同
+   的、WSL2 可访问的地址？
+4. Control UI: 你是否打开的是 `http://127.0.0.1:18789/`，而不是 LAN IP？
+5. 你是否试图在 WSL2 和 Windows 之间使用 `existing-session`，而不是原始的远程 CDP？
 
 先在本地验证 Windows 上的 Chrome 端点，再从 WSL2 验证同一个端点，
 然后才去排查 OpenClaw 配置或 Control UI 认证。

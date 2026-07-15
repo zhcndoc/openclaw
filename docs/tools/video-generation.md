@@ -105,15 +105,15 @@ openclaw tasks cancel <lookup>
 | ComfyUI               | `workflow`                      |  ✓   | 1 张图片                                             | -                                               | `COMFY_API_KEY` 或 `COMFY_CLOUD_API_KEY` |
 | DeepInfra             | `Pixverse/Pixverse-T2V`         |  ✓   | -                                                    | -                                               | `DEEPINFRA_API_KEY`                      |
 | fal                   | `fal-ai/minimax/video-01-live`  |  ✓   | 1 张图片；使用 Seedance reference-to-video 时最多 9 张 | 使用 Seedance reference-to-video 时最多 3 个视频 | `FAL_KEY`                                |
-| Google                | `veo-3.1-fast-generate-preview` |  ✓   | 1 张图片                                             | 1 个视频                                        | `GEMINI_API_KEY`                         |
-| MiniMax               | `MiniMax-Hailuo-2.3`            |  ✓   | 1 张图片                                             | -                                               | `MINIMAX_API_KEY` 或 MiniMax OAuth       |
-| OpenAI                | `sora-2`                        |  ✓   | 1 张图片                                             | 1 个视频                                        | `OPENAI_API_KEY`                         |
-| OpenRouter            | `google/veo-3.1-fast`           |  ✓   | 最多 4 张图片（第一帧/最后一帧或参考图）            | -                                               | `OPENROUTER_API_KEY`                     |
-| Qwen                  | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                      | 是（远程 URL）                                 | `QWEN_API_KEY`                           |
-| Runway                | `gen4.5`                        |  ✓   | 1 张图片                                             | 1 个视频                                        | `RUNWAYML_API_SECRET`                    |
-| Together              | `Wan-AI/Wan2.2-T2V-A14B`        |  ✓   | 仅 `Wan-AI/Wan2.2-I2V-A14B`                          | -                                               | `TOGETHER_API_KEY`                       |
-| Vydra                 | `veo3`                          |  ✓   | 1 张图片（`kling`）                                  | -                                               | `VYDRA_API_KEY`                          |
-| xAI                   | `grok-imagine-video`            |  ✓   | 1 张首帧图片或最多 7 个 `reference_image`             | 1 个视频                                        | `XAI_API_KEY`                            |
+| Google                | `veo-3.1-fast-generate-preview` |  ✓   | 1 张图片                                              | 1 个视频                                        | `GEMINI_API_KEY`                         |
+| MiniMax               | `MiniMax-Hailuo-2.3`            |  ✓   | 1 张图片                                              | -                                               | `MINIMAX_API_KEY` 或 MiniMax OAuth       |
+| OpenAI                | `sora-2`                        |  ✓   | 1 张图片                                              | 1 个视频                                        | `OPENAI_API_KEY`                         |
+| OpenRouter            | `google/veo-3.1-fast`           |  ✓   | 最多 4 张图片（第一帧/最后一帧或参考图）              | -                                               | `OPENROUTER_API_KEY`                     |
+| Qwen                  | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                      | 是（远程 URL）                                | `QWEN_API_KEY`                           |
+| Runway                | `gen4.5`                        |  ✓   | 1 张图片                                              | 1 个视频                                        | `RUNWAYML_API_SECRET`                    |
+| Together              | `Wan-AI/Wan2.2-T2V-A14B`        |  ✓   | 仅 `Wan-AI/Wan2.2-I2V-A14B`                         | -                                               | `TOGETHER_API_KEY`                       |
+| Vydra                 | `veo3`                          |  ✓   | 1 张图片（`kling`）                                 | -                                               | `VYDRA_API_KEY`                          |
+| xAI                   | `grok-imagine-video`            |  ✓   | 经典版：1 张首帧或 7 张参考图；1.5：1 帧              | 经典版：1 个视频                                | `XAI_API_KEY`                            |
 
 某些提供商还接受额外或替代的 API 密钥环境变量。详情请参见各个[提供商页面](#related)。
 
@@ -137,8 +137,8 @@ openclaw tasks cancel <lookup>
 | Qwen       |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` 已跳过，因为此提供商需要远程 `http(s)` 视频 URL                                              |
 | Runway     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 仅当所选模型为 `runway/gen4_aleph` 时运行 `videoToVideo`                                                   |
 | Together   |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
-| Vydra      |     ✓      |       ✓        |       -        | `generate`；共享的 `imageToVideo` 已跳过，因为捆绑的 `veo3` 仅支持文本，而捆绑的 `kling` 需要远程图片 URL                               |
-| xAI        |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` 已跳过，因为此提供商当前需要远程 MP4 URL                                                     |
+| Vydra      |     ✓      |       ✓        |       -        | `generate`; 共享的 `imageToVideo` 已跳过，因为捆绑的 `veo3` 仅支持文本，而捆绑的 `kling` 需要远程图片 URL                                 |
+| xAI        |     ✓      |       ✓        |       ✓        | 经典版支持所有模式；Video 1.5 仅支持图生视频；远程 MP4 输入使 `videoToVideo` 不进入共享 sweep                                             |
 
 ## 工具参数
 
@@ -257,13 +257,13 @@ run on a capable fallback:
 
 请求中的第一个跳过原因会以 `warn` 级别记录，因此运维人员能看到主提供方何时被跳过；后续跳过会以 `debug` 级别记录，以保持较长的回退链安静。如果所有候选项都被跳过，聚合错误会包含每个跳过原因。
 
-## Action
+## 操作
 
-| Action       | Description                                                                                         |
+| 操作       | 描述                                                                                         |
 | ------------ | --------------------------------------------------------------------------------------------------- |
-| `generate`   | Default. Create a video based on the given prompt and optional reference input.                     |
-| `status`     | Check the status of video tasks currently in progress in the current session without starting a new generation. |
-| `list`       | Display available providers, models, and their capabilities.                                        |
+| `generate`   | 默认。根据给定的提示词和可选的参考输入创建视频。                     |
+| `status`     | 检查当前会话中正在进行的视频任务状态，不会启动新的生成。 |
+| `list`       | 显示可用的提供方、模型及其能力。                                        |
 
 ## 模型选择
 
@@ -397,17 +397,24 @@ OpenClaw 按以下顺序解析模型：
     远程图像 URL。
   </Accordion>
   <Accordion title="xAI">
-    支持文本转视频、单张首帧图像转视频、最多 7 个通过 xAI
-    `reference_images` 传入的 `reference_image` 输入，以及远程
-    视频编辑/扩展流程。
+    默认的 `grok-imagine-video` 模型支持文本转视频、单张首帧图像转视频、
+    通过 xAI `reference_images` 最多 7 个 `reference_image` 输入，以及远程视频编辑/扩展流程。生成默认
+    为 `480P`；单图像图像转视频在省略 `aspectRatio` 时会继承源比例。视频编辑/扩展会继承输入几何形状，
+    不接受宽高比或分辨率覆盖。扩展支持 2-10 秒。
+
+    `grok-imagine-video-1.5` 仅支持图像转视频：必须恰好提供一张图像。
+    它支持 1-15 秒以及 `480P`、`720P` 或 `1080P`，默认
+    为 `480P`；省略 `aspectRatio` 会继承源图像比例。预览版和带日期的 1.5 标识符
+    接受相同的校验，并会原样转发。
+
   </Accordion>
 </AccordionGroup>
 
-## 提供商能力模式
+## Provider Capability Modes
 
-共享的视频生成契约支持按模式区分的能力，
-而不是只使用扁平的聚合限制。新的提供商实现
-应优先使用显式的模式块：
+The shared video generation contract supports mode-specific capabilities,
+rather than only using flat aggregate limits. New provider implementations
+should prefer explicit mode blocks:
 
 ```typescript
 capabilities: {
@@ -432,15 +439,15 @@ capabilities: {
 }
 ```
 
-诸如 `maxInputImages` 和 `maxInputVideos` 这样的扁平聚合字段
-**不足以**声明变换模式支持。提供商应
-显式声明 `generate`、`imageToVideo` 和 `videoToVideo`，以便实时
-测试、契约测试以及共享的 `video_generate` 工具能够确定性地验证
-模式支持。
+Flat aggregate fields such as `maxInputImages` and `maxInputVideos`
+are **not sufficient** to declare transform mode support. Providers should
+explicitly declare `generate`, `imageToVideo`, and `videoToVideo` so that
+live tests, contract tests, and the shared `video_generate` tool can
+deterministically validate mode support.
 
-当提供商中的某个模型对参考输入的支持范围比
-其他模型更宽时，应使用 `maxInputImagesByModel`、`maxInputVideosByModel` 或
-`maxInputAudiosByModel`，而不是提升整个模式的限制。
+When a model within a provider supports a broader range of reference inputs than
+other models, use `maxInputImagesByModel`, `maxInputVideosByModel`, or
+`maxInputAudiosByModel` instead of raising the limit for the entire mode.
 
 ## 实时测试
 

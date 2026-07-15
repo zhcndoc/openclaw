@@ -14,7 +14,7 @@ title: "Podman"
 - 持久化状态默认保存在主机上的 `~/.openclaw` 下。
 - 日常管理使用 `openclaw --container <name> ...`，而不是 `sudo -u openclaw`、`podman exec` 或单独的服务用户。
 
-## 先决条件
+## 前提条件
 
 - **Podman** 处于无根模式
 - 主机上已安装 **OpenClaw CLI**
@@ -34,9 +34,9 @@ title: "Podman"
     | Var | 作用 |
     | --- | --- |
     | `OPENCLAW_IMAGE` / `OPENCLAW_PODMAN_IMAGE` | 使用现有/已拉取的镜像，而不是构建 `openclaw:local` |
-    | `OPENCLAW_IMAGE_APT_PACKAGES` | 在镜像构建期间安装额外的 apt 包（也兼容旧版 `OPENCLAW_DOCKER_APT_PACKAGES`） |
+    | `OPENCLAW_IMAGE_APT_PACKAGES` | 在镜像构建期间安装额外的 apt 包（也支持旧的 `OPENCLAW_DOCKER_APT_PACKAGES`） |
     | `OPENCLAW_IMAGE_PIP_PACKAGES` | 在镜像构建期间安装额外的 Python 包；请固定版本并仅使用你信任的包索引 |
-    | `OPENCLAW_EXTENSIONS` | 在构建时预安装插件依赖 |
+    | `OPENCLAW_EXTENSIONS` | 编译/打包受支持的所选插件并安装其运行时依赖 |
     | `OPENCLAW_INSTALL_BROWSER` | 为浏览器自动化预安装 Chromium 和 Xvfb（设为 `1`） |
 
     如果想改用 Quadlet 管理的设置方式（仅限 Linux + systemd 用户服务）：
@@ -102,7 +102,7 @@ Podman 特定说明：
 - 优先使用主机管理的 `tailscale serve`，而不是 `openclaw gateway --tailscale serve`。
 - 在 macOS 上，如果本地浏览器设备认证上下文不可靠，请改用 Tailscale 访问，而不是临时的本地隧道替代方案。
 
-参见 [Tailscale](/gateway/tailscale) 和 [Control UI](/web/control-ui)。
+参见 [Tailscale](/gateway/tailscale) 和 [控制界面](/web/control-ui)。
 
 ## Systemd（Quadlet，可选）
 
@@ -153,7 +153,32 @@ sudo loginctl enable-linger "$(whoami)"
 
 如果你使用非默认的 `OPENCLAW_CONFIG_DIR` 或 `OPENCLAW_WORKSPACE_DIR`，请为 `./scripts/podman/setup.sh` 以及后续的 `./scripts/run-openclaw-podman.sh launch` 命令都设置相同的变量——仓库本地启动器不会在不同 shell 之间保留自定义路径覆盖。
 
-## 有用命令
+## 升级镜像
+
+在你重新构建或拉取新镜像后，请重启容器或 Quadlet 服务。  
+对于新 OpenClaw 版本的首次启动，网关会先执行安全状态和插件修复，然后再报告就绪。
+
+如果网关退出而不是变为就绪，请使用相同的挂载状态/配置，针对同一个镜像额外运行一次 `openclaw doctor --fix`，然后正常重启网关：
+
+```bash
+OPENCLAW_CONFIG_DIR="${OPENCLAW_CONFIG_DIR:-$HOME/.openclaw}"
+OPENCLAW_WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$OPENCLAW_CONFIG_DIR/workspace}"
+OPENCLAW_PODMAN_IMAGE="${OPENCLAW_PODMAN_IMAGE:-${OPENCLAW_IMAGE:-openclaw:local}}"
+
+podman run --rm -it \
+  --userns=keep-id \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/home/node \
+  -e NPM_CONFIG_CACHE=/home/node/.openclaw/.npm \
+  -v "$OPENCLAW_CONFIG_DIR:/home/node/.openclaw:rw" \
+  -v "$OPENCLAW_WORKSPACE_DIR:/home/node/.openclaw/workspace:rw" \
+  "$OPENCLAW_PODMAN_IMAGE" \
+  openclaw doctor --fix
+```
+
+在启用了 SELinux 的主机上，如果 Podman 阻止访问已挂载状态，请在两个绑定挂载上都添加 `,Z`。
+
+## 有用的命令
 
 - **容器日志：** `podman logs -f openclaw`
 - **停止容器：** `podman stop openclaw`
@@ -163,12 +188,13 @@ sudo loginctl enable-linger "$(whoami)"
 
 ## 故障排除
 
-- **配置或 workspace 上出现权限拒绝（EACCES）：** 容器默认使用 `--userns=keep-id` 和 `--user <your uid>:<your gid>` 运行。请确保主机上的配置/workspace 路径归当前用户所有。
-- **Gateway 启动被阻止（缺少 `gateway.mode=local`）：** 确保 `~/.openclaw/openclaw.json` 存在且设置了 `gateway.mode="local"`。`scripts/podman/setup.sh` 会在缺失时创建它。
-- **容器 CLI 命令命中了错误的目标：** 显式使用 `openclaw --container <name> ...`，或在你的 shell 中导出 `OPENCLAW_CONTAINER=<name>`。
-- **`openclaw update` 在使用 `--container` 时失败：** 这是预期行为。重新构建/拉取镜像，然后重启容器或 Quadlet 服务。
-- **Quadlet 服务未启动：** 运行 `systemctl --user daemon-reload`，然后 `systemctl --user start openclaw.service`。在无头系统上，你可能还需要 `sudo loginctl enable-linger "$(whoami)"`。
-- **SELinux 阻止了绑定挂载：** 保持默认挂载行为不变；当 SELinux 处于 enforcing 或 permissive 状态时，启动器会在 Linux 上自动添加 `:Z`。
+- **配置或工作区权限被拒绝（EACCES）：** 容器默认使用 `--userns=keep-id` 和 `--user <your uid>:<your gid>` 运行。请确保主机上的配置/工作区路径归当前用户所有。
+- **网关启动被阻止（缺少 `gateway.mode=local`）：** 确保 `~/.openclaw/openclaw.json` 存在，并设置了 `gateway.mode="local"`。如果缺失，`scripts/podman/setup.sh` 会创建它。
+- **镜像更新后容器重启：** 先运行一次性命令 `openclaw doctor --fix`，参见 [升级镜像](#upgrading-images)，然后再次启动网关。
+- **容器 CLI 命令命中了错误的目标：** 显式使用 `openclaw --container <name> ...`，或者在 shell 中导出 `OPENCLAW_CONTAINER=<name>`。
+- **`openclaw update` 在使用 `--container` 时失败：** 这是预期行为。请重新构建/拉取镜像，然后重启容器或 Quadlet 服务。
+- **Quadlet 服务未启动：** 运行 `systemctl --user daemon-reload`，然后执行 `systemctl --user start openclaw.service`。在无头系统上，您可能还需要运行 `sudo loginctl enable-linger "$(whoami)"`。
+- **SELinux 阻止 bind 挂载：** 保持默认挂载行为不变；当 Linux 上 SELinux 处于 enforcing 或 permissive 模式时，启动器会自动添加 `:Z`。
 
 ## 相关内容
 

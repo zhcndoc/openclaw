@@ -1,10 +1,10 @@
 ---
 summary: "导出已脱敏的轨迹包以调试 OpenClaw 代理会话"
 read_when:
-  - 调试为什么某个代理以某种方式回答、失败或调用工具
-  - 为 OpenClaw 会话导出支持包
-  - 排查提示上下文、工具调用、运行时错误或使用元数据
-  - 禁用或重新定位轨迹捕获
+  - 调试代理为何做出某种回答、失败或以某种方式调用工具
+  - 导出 OpenClaw 会话的支持包
+  - 调查提示词上下文、工具调用、运行时错误或使用元数据
+  - 关闭轨迹捕获
 title: "轨迹包"
 ---
 
@@ -100,33 +100,19 @@ OpenClaw 代理运行默认开启轨迹捕获。
 | `session-branch.json` | 已脱敏的活动转录分支和会话头部                                           |
 | `metadata.json`       | OpenClaw 版本、操作系统/运行时、模型、配置快照、插件、技能和提示元数据     |
 | `artifacts.json`      | 最终状态、错误、使用量、提示缓存、压缩计数、助手文本和工具元数据 |
-| `prompts.json`        | 已提交的提示词和选定的提示构建细节                                         |
+| `prompts.json`      | 已提交的提示词和选定的提示构建细节                                         |
 | `system-prompt.txt`   | 最近编译的系统提示词（如已捕获）                                                   |
 | `tools.json`        | 发送给模型的工具定义（如已捕获）                                              |
 
 `manifest.json` 列出了给定包中存在的文件；当会话未捕获相应的运行时数据时，某些文件会被省略。
 
-## 捕获位置
+## 捕获存储
 
-默认情况下，运行时轨迹事件会写在会话文件旁边：
+运行时轨迹事件与会话一起存储在按代理划分的 SQLite
+数据库中。导出轨迹时会生成一个经过脱敏处理的 JSONL 支持包；实时运行时捕获并不是会话旁边的 JSONL 侧车文件。
 
-```text
-<session>.trajectory.jsonl
-```
-
-OpenClaw 还会在会话文件旁边写入一个尽力而为的指针文件：
-
-```text
-<session>.trajectory-path.json
-
-将 `OPENCLAW_TRAJECTORY_DIR` 设置为将运行时轨迹旁文件存储到一个
-专用目录中，每个会话 id 对应一个 JSONL 文件：
-
-```bash
-export OPENCLAW_TRAJECTORY_DIR=/var/lib/openclaw/trajectories
-```
-
-会话维护会在其所属会话条目被会话磁盘预算修剪、封顶或逐出时，删除轨迹旁文件。会话目录外的运行时文件仅在指针目标仍能证明它属于该会话时才会被删除。
+旧版 `.trajectory.jsonl` 和 `.trajectory-path.json` 文件可能仍会
+来自较早版本或显式的旧版文件导出。会话维护会将这些文件视为清理目标；活动捕获则写入数据库行。
 
 ## 禁用捕获
 
@@ -135,14 +121,12 @@ export OPENCLAW_TRAJECTORY=0
 ```
 
 这会在启动 OpenClaw 之前禁用运行时轨迹捕获。
-`/export-trajectory` 仍然可以导出 transcript 分支，但仅运行时生成的
-文件（如编译后的上下文、provider 工件和提示元数据）可能会
-缺失。
+`/export-trajectory` 仍然可以导出会话分支，但仅运行时数据，例如已编译的上下文、提供方产物以及提示元数据，可能会缺失。
 
 ## 调整 flush 超时
 
-OpenClaw 会在代理清理期间刷写运行时轨迹侧车文件。默认
-清理超时为 10,000 ms。在慢速磁盘或大型存储上，请在启动 OpenClaw 之前设置
+OpenClaw 在代理清理期间会 flush 运行时轨迹行。默认
+清理超时时间为 10,000 ms。在慢磁盘或大型存储上，请在启动 OpenClaw 之前设置
 `OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS`：
 
 ```bash
@@ -165,11 +149,11 @@ export OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS=30000
 
 导出器也会对输入大小设置上限：
 
-- runtime sidecar files: the live capture file is a rolling window capped at 10 MiB, dropping the oldest events to make room for new ones; export accepts existing runtime sidecar files up to 50 MiB
-- session files: 50 MiB
-- runtime events per export: 200,000
-- total exported events: 250,000
-- individual runtime event lines are truncated above 256 KiB
+- 运行时捕获：实时捕获是一个滚动窗口，上限为 10 MiB，会丢弃最旧的事件以为新事件腾出空间；导出可接受现有的旧版运行时侧车文件，最大为 50 MiB
+- 会话文件：50 MiB
+- 每次导出的运行时事件：200,000
+- 导出的事件总数：250,000
+- 单个运行时事件行在超过 256 KiB 时会被截断
 
 在与你的团队之外共享之前，请先审查支持包。脱敏是尽力而为的，无法知道所有应用特定的秘密。
 
@@ -178,9 +162,8 @@ export OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS=30000
 如果导出没有运行时事件：
 
 - 确认 OpenClaw 启动时未设置 `OPENCLAW_TRAJECTORY=0`
-- 检查 `OPENCLAW_TRAJECTORY_DIR` 是否指向可写目录
-- 在会话中再发送一条消息，然后重新导出
-- 在 `manifest.json` 中检查 `runtimeEventCount`
+- 在会话中再运行一条消息，然后重新导出
+- 检查 `manifest.json` 中的 `runtimeEventCount`
 
 如果命令拒绝输出路径：
 

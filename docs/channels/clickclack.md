@@ -1,5 +1,5 @@
 ---
-summary: "ClickClack bot-token channel setup and target syntax"
+summary: "ClickClack 机器人令牌频道设置和目标语法"
 read_when:
   - 连接 OpenClaw 到 ClickClack 工作区
   - 测试 ClickClack bot 身份
@@ -55,11 +55,11 @@ openclaw gateway
 | Key                     | Default             | Notes                                                                                   |
 | ----------------------- | ------------------- | --------------------------------------------------------------------------------------- |
 | `baseUrl`               | none (required)     | ClickClack 服务器 URL。                                                                 |
-| `token`                 | none (required)     | Plain string or secret ref (`source: "env" \| "file" \| "exec"`).                       |
-| `workspace`             | none (required)     | Workspace id, slug, or name.                                                            |
-| `replyMode`             | `"agent"`           | `"agent"` runs the full agent pipeline; `"model"` sends short direct model completions. |
+| `token`                | none (required)     | 明文字符串或密钥引用（`source: "env" \| "file" \| "exec"`）。                           |
+| `workspace`             | none (required)     | Workspace id、slug 或名称。                                                             |
+| `replyMode`             | `"agent"`           | `"agent"` 运行完整的 agent 流水线；`"model"` 发送简短的直接模型回复。                    |
 | `defaultTo`             | `"channel:general"` | 当 outbound path 没有提供目标时使用的目标。                                              |
-| `allowFrom`             | `["*"]`             | 用户 ID allowlist，用于 inbound DMs and channel messages.                               |
+| `allowFrom`             | `["*"]`             | 用户 ID 白名单，用于 inbound DMs 和 channel messages。                                  |
 | `botUserId`             | auto-detected       | 在启动时从 bot token 身份解析得到。                                                     |
 | `agentId`               | route default       | 将此账号的 inbound messages 固定到一个 agent。                                          |
 | `toolsAllow`            | none                | 该账号的 agent replies 所允许使用的工具白名单。                                         |
@@ -68,9 +68,9 @@ openclaw gateway
 
 如果 `plugins.allow` 是一个非空的限制性列表，那么在 channel 设置中显式选择 ClickClack，或运行 `openclaw plugins enable clickclack`，都会将 `clickclack` 追加到该列表中。Onboarding 安装使用相同的显式选择行为。这些路径不会覆盖 `plugins.deny` 或全局的 `plugins.enabled: false` 设置。直接执行 `openclaw plugins install @openclaw/clickclack` 会遵循正常的插件安装策略，并且也会将 ClickClack 记录到现有的 allowlist 中。
 
-## Multiple bots
+## 多个机器人
 
-Each account will open its own ClickClack real-time connection and use its own bot token.
+每个账号都会打开自己的 ClickClack 实时连接，并使用各自的机器人令牌。
 
 ```json5
 {
@@ -100,8 +100,8 @@ Each account will open its own ClickClack real-time connection and use its own b
 
 ## 回复模式
 
-- `replyMode: "agent"`（默认）会通过正常的代理流程分发传入消息，包括会话记录和工具策略。
-- `replyMode: "model"` 会跳过代理流程，并使用插件运行时的 `llm.complete` 生成简短的直接机器人回复（可选地由 `model` 和 `systemPrompt` 进行调整）。
+- `replyMode: "agent"`（默认）通过正常的代理管道分发传入消息，包括会话记录和工具策略。
+- `replyMode: "model"` 跳过代理管道，直接使用插件运行时的 `llm.complete` 进行机器人回复，可选地由 `model` 和 `systemPrompt` 进行塑形。所选提供方和模型拥有补全预算。
 
 模型模式会针对已解析的机器人代理 ID 运行补全，这需要显式的
 `plugins.entries.clickclack.llm.allowAgentIdOverride: true` 信任位：
@@ -121,6 +121,34 @@ Each account will open its own ClickClack real-time connection and use its own b
 ```
 
 如果你只使用默认的 `agent` 回复模式，就保持该信任位关闭；在那里并不需要它。
+
+使用 `agent` 模式来获取跨服务关联证据。对于具有其规范
+`msg_<ulid>` 形状的权威 ClickClack 消息 ID，该通道会导出
+确定性的 OpenClaw 运行 ID `clickclack:<message-id>`。随后每次模型调用都
+会在诊断中显示为 `clickclack:<message-id>:model:<n>`；当该轮次使用 ClawRouter 时，
+同一个模型调用 ID 会作为 `X-Request-ID` 发送。
+`model` 模式会绕过正常的代理运行/会话诊断，因此
+不适用于此证据路径。
+
+当实时事件包含已验证的 `payload.correlation_id` 时，该通道会在权威消息获取和
+生成的 ClickClack 回复请求上将其作为 `X-Correlation-ID` 传递。值使用 ClickClack 的安全
+128 字符集（`A-Z`、`a-z`、`0-9`、`.`、`_`、`:` 和 `-`）；无效值
+会被省略。这些关联只包含标识符，绝不包含消息正文、
+提示词、补全内容、凭据或工具输出。
+
+## 持久化媒体传输
+
+包含媒体的代理回复使用所需的持久化传输。OpenClaw 会在第一次 ClickClack 写入之前，为每个部分分配稳定的消息和上传随机数，因此重试时会复用相同的上传和消息，而不是消耗存储配额或发布重复内容。如果重启后上传已存在，OpenClaw 不会重新读取原始本地路径或远程媒体 URL。
+
+此恢复契约要求 ClickClack 服务器支持：
+
+- `GET /api/uploads/by-nonce`，并在找到和未找到结果时都返回
+  `X-ClickClack-Upload-Nonce: supported`。
+- `GET /api/messages/by-nonce`，并在找到和未找到结果时都返回
+  `X-ClickClack-Message-Nonce: supported`。
+- 对同一 owner 作用域的随机数和上传，消息创建与附件关联具有幂等性。
+
+旧版服务器的通用 404 不被视为该发送不存在的证明。OpenClaw 会让传输保持未解决状态，而不是冒着重复发送的风险；在启用会产生媒体的代理回复之前，请先更新 ClickClack。
 
 ## Agent 活动行
 
@@ -154,6 +182,8 @@ Each account will open its own ClickClack real-time connection and use its own b
 - `thread:<message_id>` 在该消息所在的线程中回复。
 
 显式的出站目标也可以带有 `clickclack:` 或 `cc:` 提供商前缀。
+
+出站媒体使用 ClickClack 的上传 API，然后将持久化上传附加到创建的频道消息、线程回复或 DM。本地文件和受支持的远程媒体 URL 遵循 OpenClaw 的常规媒体访问策略，单个文件上限为 64 MiB。持久化排队发送为每个上传和消息部分使用单独的所有者作用域 nonce，然后使用相同对象重试附件关联。有关服务器契约和恢复行为，请参阅 [持久化媒体传递](#durable-media-delivery)。
 
 示例：
 

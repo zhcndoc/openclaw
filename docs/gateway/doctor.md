@@ -80,7 +80,9 @@ cat ~/.openclaw/openclaw.json
 
 ## 只读 lint 模式
 
-`openclaw doctor --lint` is the automation-friendly sibling of `openclaw doctor --fix`. Both run the same health checks; only the posture differs:
+`openclaw doctor --lint` is the automation-friendly sibling of
+`openclaw doctor --fix`. They share the same Doctor rule registry, but they do
+not select or act on rules in the same way:
 
 | 模式                     | 提示      | 写入配置/状态            | 输出                   | 适用场景                        |
 | ------------------------ | --------- | ------------------------ | ---------------------- | ------------------------------- |
@@ -88,7 +90,27 @@ cat ~/.openclaw/openclaw.json
 | `openclaw doctor --fix`  | 有时      | 是，按修复策略写入       | 友好的修复日志         | 应用已批准的修复                |
 | `openclaw doctor --lint` | 否        | 否                       | 结构化结果             | CI、预检和审查门禁              |
 
-Health checks may provide an optional `repair()` implementation; `doctor --fix` applies it when present and falls back to the legacy doctor repair flow otherwise. The contract separates `detect()` (reports findings) from `repair()` (reports changes/diffs/side effects), which keeps a path open for a future `doctor --fix --dry-run` without turning lint checks into mutation planners.
+Default `doctor --lint` runs the broad-safe automation profile: checks that are
+static, local, and useful in CI or preflight output. It skips opt-in checks that
+are advisory, environment-sensitive, live-service dependent, account/workspace
+inventory, or historical cleanup. Use `doctor --lint --all` when you want the
+full registered lint audit, including those opt-in checks, or `--only <id>` for
+a targeted check.
+
+`doctor --fix` does not use the lint default profile and does not accept
+`--all`. It runs Doctor's ordered repair path: modern health checks may provide
+an optional `repair()` implementation, and older areas still use their legacy
+Doctor repair flow. Some lint findings are intentionally diagnostic only, so a
+check appearing in `--lint --all` does not mean `--fix` will mutate that area.
+The contract separates `detect()` (reports findings) from `repair()` (reports
+changes/diffs/side effects), which keeps a path open for a future
+`doctor --fix --dry-run` without turning lint checks into mutation planners.
+
+Some built-in checks are default-disabled internally so they stay available to
+`--all`, `--only`, and Doctor repair flows without becoming part of the default
+`doctor --lint` automation profile. Finding severity is still emitted per
+finding (`info`, `warning`, or `error`); default selection is not a severity
+level.
 
 ```bash
 openclaw doctor --lint
@@ -115,7 +137,7 @@ JSON output fields:
 Flags:
 
 - `--severity-min info|warning|error` (default `warning`): controls both what prints and what causes a non-zero exit.
-- `--all`: runs every registered check, including opt-in checks excluded from the default automation set.
+- `--all`: runs every registered lint check, including opt-in checks excluded from the default automation set.
 - `--only <id>` (repeatable): run only the named check id(s); an unknown id is reported as an error finding.
 - `--skip <id>` (repeatable): exclude a check while keeping the rest of the run active.
 - `--json`, `--severity-min`, `--all`, `--only`, and `--skip` require `--lint`; plain `openclaw doctor` and `--fix` runs reject them.
@@ -155,18 +177,18 @@ Flags:
 
   </Accordion>
   <Accordion title="Gateway, services, and supervisors">
-    - 沙箱镜像修复，当沙箱化已启用时。
-    - 旧服务迁移和额外 gateway 检测。
-    - Matrix 频道旧状态迁移（在 `--fix` / `--repair` 模式下）。
-    - Gateway 运行时检查（服务已安装但未运行；缓存的 launchd 标签）。
-    - 频道状态警告（从运行中的 gateway 探测）。
-    - 频道特定权限检查位于 `openclaw channels capabilities` 下；例如，可用 `openclaw channels capabilities --channel discord --target channel:<channel-id>` 审计 Discord 语音频道权限。
-    - 当本地 TUI 客户端仍在运行且 Gateway 事件循环健康状况降级时，执行 WhatsApp 响应性检查；`--fix` 只会停止已验证的本地 TUI 客户端。
-    - 对旧的 `openai-codex/*` 模型引用进行 Codex 路由修复，覆盖主模型、回退、图像/视频生成模型、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及会话路由固定；`--fix` 会将它们重写为 `openai/*`，将 `openai-codex:*` 认证配置文件/顺序迁移到 `openai:*`，移除陈旧的会话/整 agent 运行时固定，并将规范化的 OpenAI agent 引用保留在默认 Codex harness 上。
-    - supervisor 配置审计（launchd/systemd/schtasks），并支持可选修复。
-    - gateway 服务在安装或更新期间捕获 shell `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 值时的嵌入式代理环境清理。
-    - Gateway 运行时最佳实践检查（Node vs Bun、版本管理器路径）。
-    - Gateway 端口冲突诊断（默认 `18789`）。
+    - Sandbox image repair when sandboxing is enabled.
+    - Legacy service migration and extra gateway detection.
+    - Matrix channel legacy state migration (in `--fix` / `--repair` mode).
+    - Gateway runtime checks (service installed but not running; cached launchd label).
+    - Channel status warnings (probed from the running gateway).
+    - Channel-specific permission checks live under `openclaw channels capabilities`; for example, Discord voice channel permissions are audited with `openclaw channels capabilities --channel discord --target channel:<channel-id>`.
+    - WhatsApp responsiveness checks for degraded Gateway event-loop health with local TUI clients still running; `--fix` stops only verified local TUI clients.
+    - Codex route repair for legacy `openai-codex/*` model refs in primary models, fallbacks, image/video generation models, heartbeat/subagent/compaction overrides, hooks, channel model overrides, and session route pins; `--fix` rewrites them to `openai/*`, migrates `openai-codex:*` auth profiles/order to `openai:*`, removes stale session/whole-agent runtime pins, and lets the repaired effective route determine whether Codex is compatible.
+    - Supervisor config audit (launchd/systemd/schtasks) with optional repair.
+    - Embedded proxy environment cleanup for gateway services that captured shell `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` values during install or update.
+    - Gateway runtime checks (unsupported legacy Bun services, version-manager paths).
+    - Gateway port collision diagnostics (default `18789`).
 
   </Accordion>
   <Accordion title="认证、安全和配对">
@@ -312,11 +334,11 @@ That stages grounded durable candidates into the short-term dreaming store while
   <Accordion title="2d. OAuth TLS 前置条件">
     当配置了 OpenAI Codex OAuth 配置文件时，doctor 会探测 OpenAI 授权端点，以验证本地 Node/OpenSSL TLS 栈能否验证证书链。如果探测因证书错误失败（例如 `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`、证书过期或自签名证书），doctor 会打印平台特定的修复指导。在使用 Homebrew Node 的 macOS 上，通常的修复方式是 `brew postinstall ca-certificates`。使用 `--deep` 时，即使 gateway 健康，探测也会运行。
   </Accordion>
-  <Accordion title="2e. Codex OAuth provider 覆盖">
-    如果你之前在 `models.providers.openai-codex` 下添加了旧的 OpenAI 传输设置，它们可能会遮蔽新版发布自动使用的内置 Codex OAuth provider 路径。Doctor 在看到这些旧传输设置与 Codex OAuth 同时存在时会发出警告，方便你移除或重写过时的传输覆盖，并恢复内置的路由/回退行为。自定义代理和仅头部覆盖仍受支持，不会触发此警告。
+  <Accordion title="2e. Codex OAuth provider overrides">
+    If you previously added legacy OpenAI transport settings under `models.providers.openai-codex`, they can shadow the built-in Codex OAuth provider path. Doctor warns when it sees those old transport settings alongside Codex OAuth so you can remove or rewrite the stale transport override and restore current routing behavior. Custom proxies and header-only overrides remain supported and do not trigger this warning, but those authored request routes are not eligible for implicit Codex selection.
   </Accordion>
   <Accordion title="2f. Codex route repair">
-    Doctor 检查旧的 `openai-codex/*` 模型引用。原生 Codex harness 路由使用规范化的 `openai/*` 模型引用；OpenAI agent 回合会通过 Codex app-server harness，而不是走 OpenClaw 的 OpenAI provider 路径。
+    Doctor checks for legacy `openai-codex/*` model refs. Native Codex harness routing uses canonical `openai/*` model refs, but the prefix alone never selects Codex. With runtime policy unset or `auto`, only an exact official HTTPS Platform Responses or ChatGPT Responses route with no authored request override is eligible. See [OpenAI implicit agent runtime](/providers/openai#implicit-agent-runtime).
 
     在 `--fix` / `--repair` 模式下，doctor 会重写受影响的默认 agent 和按 agent 引用，包括主模型、回退、图像/视频生成模型、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及陈旧的持久化会话路由状态：
 
@@ -412,7 +434,9 @@ That stages grounded durable candidates into the short-term dreaming store while
   <Accordion title="7b. Plugin install cleanup">
     Doctor removes legacy OpenClaw-generated plugin dependency staging state in `openclaw doctor --fix` / `openclaw doctor --repair` mode: stale generated dependency roots, old install-stage directories, package-local debris from earlier bundled-plugin dependency repair code, and orphaned or recovered managed npm copies of bundled `@openclaw/*` plugins that can shadow the current bundled manifest. Doctor also relinks the host `openclaw` package into managed npm plugins that declare `peerDependencies.openclaw`, so package-local runtime imports such as `openclaw/plugin-sdk/*` keep resolving after updates or npm repairs.
 
-    Doctor can also reinstall missing downloadable plugins when config references them but the local plugin registry cannot find them (material `plugins.entries`, configured channel/provider/search settings, configured agent runtimes). During package updates, doctor avoids running package-manager plugin repair while the core package is being swapped; run `openclaw doctor --fix` again after the update if a configured plugin still needs recovery. Gateway startup and config reload do not run package managers; plugin installs remain explicit doctor/install/update work.
+    Doctor can also reinstall missing downloadable plugins when config references them but the local plugin registry cannot find them (material `plugins.entries`, configured channel/provider/search settings, configured agent runtimes). During package updates, doctor avoids reinstalling plugin packages while the core package is being swapped; run `openclaw doctor --fix` again after the update if a configured plugin still needs recovery. Outside the container image startup exception below, gateway startup and config reload do not run package repair; plugin installs remain explicit doctor/install/update work.
+
+    Containerized gateway startup has a narrow upgrade exception: when `openclaw gateway run` starts on a new OpenClaw version, it runs safe state migrations and the existing post-core plugin convergence before readiness, then records a per-version checkpoint. This startup pass can clean stale bundled-plugin records, repair local plugin links, reinstall configured plugin packages when the convergence path requires it, and check active plugin payloads. If startup cannot repair safely, run the same image once with `openclaw doctor --fix` against the same mounted state/config before restarting the container normally.
 
   </Accordion>
   <Accordion title="8. Gateway 服务迁移和清理提示">
@@ -536,7 +560,7 @@ That stages grounded durable candidates into the short-term dreaming store while
     Doctor 会检查服务运行时（PID、上次退出状态），并在服务已安装但实际上未运行时发出警告。它还会检查 gateway 端口（默认 `18789`）上的端口冲突，并报告可能原因（gateway 已在运行、SSH 隧道）。
   </Accordion>
   <Accordion title="17. Gateway runtime best practices">
-    Doctor warns when the gateway service runs on Bun or a version-managed Node path (`nvm`, `fnm`, `volta`, `asdf`, etc.). WhatsApp and Telegram channels require Node, and version-manager paths can break after upgrades because the service does not load your shell init. Doctor offers to migrate to a system Node install when available (Homebrew/apt/choco).
+    Doctor warns when the gateway service runs on Bun or a version-managed Node path (`nvm`, `fnm`, `volta`, `asdf`, etc.). Bun cannot open OpenClaw's `node:sqlite` state store, so repairs migrate legacy Bun services to Node. Version-manager paths can break after upgrades because the service does not load your shell init. Doctor offers to migrate to a system Node install when available (Homebrew/apt/choco).
 
     Newly installed or repaired macOS LaunchAgents use a canonical system PATH (`/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`) instead of copying the interactive shell PATH, so Homebrew-managed system binaries stay available while Volta, asdf, fnm, pnpm, and other version-manager directories do not change which Node child processes resolve. Linux services still keep explicit environment roots (`NVM_DIR`, `FNM_DIR`, `VOLTA_HOME`, `ASDF_DATA_DIR`, `BUN_INSTALL`, `PNPM_HOME`) and stable user-bin directories, but guessed version-manager fallback directories are only written to the service PATH when those directories exist on disk.
 

@@ -46,7 +46,7 @@ openclaw channels add
 该向导还提供二维码绑定作为手动输入 AppID/AppSecret 的替代方案：
 使用与目标 QQ Bot 绑定的手机应用扫描二维码即可完成绑定。OpenClaw 会将返回的凭据持久化到该账户的配置作用域下。
 
-## Configure
+## 配置
 
 最小配置：
 
@@ -103,7 +103,29 @@ Env SecretRef AppSecret：
 - 旧版 `secretref:...` / `secretref-env:...` 标记字符串会被 `clientSecret` 拒绝；
   请改用结构化 SecretRef 对象。
 
-### Access policy
+### 流式传输
+
+```json5
+{
+  channels: {
+    qqbot: {
+      streaming: {
+        mode: "partial", // 块流式传输：`partial`（默认）或 `off`
+        nativeTransport: true, // 对 DM 使用 QQ 官方的 C2C `stream_messages` API
+      },
+    },
+  },
+}
+```
+
+- `streaming.mode: "off"` 会为该账号禁用块流式传输。
+- `streaming.nativeTransport: true` 会通过 QQ 官方的 `stream_messages` API
+  为 C2C（DM）回复提供流式传输；群聊/频道目标不受影响。
+- 旧版的 `streaming: true|false` 标量以及 `streaming.c2cStreamApi` 键
+  可通过 `openclaw doctor --fix` 迁移为此结构。
+- `/bot-streaming on|off` 会从 DM 中切换同样的配置。
+
+### 访问策略
 
 - `allowFrom` / `groupAllowFrom` 控制谁可以在 C2C / 群聊场景中与机器人聊天。`dmPolicy` / `groupPolicy`（`open` | `allowlist` | `disabled`）
   控制执行模式。只要 `allowFrom` 有具体的（非通配符）条目，`dmPolicy` 默认是 `allowlist`，否则为 `open`。
@@ -176,24 +198,24 @@ openclaw channels add --channel qqbot --account bot2 --token "222222222:secret-o
 
 `groups["*"]` 为所有群设置默认值；具体的 `groups.GROUP_OPENID` 条目会覆盖某个群的这些默认值。群设置如下：
 
-| Field                 | Default          | Description                                                                                        |
-| --------------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
-| `requireMention`      | `true`           | 在机器人回复前要求先 `@` 提及它。                                                                   |
-| `commandLevel`        | `all`            | 群内可运行哪些内置斜杠命令（见下文）。                                                              |
-| `ignoreOtherMentions` | `false`          | 丢弃提及了别人但没有提及机器人的消息。                                                              |
-| `historyLimit`        | `50`             | 为下一次被提及时保留的最近非提及消息上下文数量。`0` 可禁用历史记录。                                |
-| `tools`               | —                | 为整个群允许/拒绝工具。                                                                             |
-| `toolsBySender`       | —                | 按发送者覆盖工具设置；见 [Groups](/channels/groups#groupchannel-tool-restrictions-optional)。       |
-| `name`                | openid prefix    | 日志和群上下文中使用的友好名称。                                                                    |
-| `prompt`              | built-in default | 附加到代理上下文中的群级行为提示词。                                                                |
+| 字段                  | 默认值               | 说明                                                                                           |
+| --------------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
+| `requireMention`      | `true`               | 在机器人回复前要求先 `@` 提及它。                                                                |
+| `commandLevel`        | `all`                | 群内可运行哪些内置斜杠命令（见下文）。                                                         |
+| `ignoreOtherMentions` | `false`              | 丢弃提及了别人但没有提及机器人的消息。                                                         |
+| `historyLimit`        | `50`                 | 为下一次被提及时保留的最近非提及消息上下文数量。`0` 可禁用历史记录。                           |
+| `tools`               | —                    | 为整个群允许/拒绝工具。                                                                        |
+| `toolsBySender`       | —                    | 按发送者覆盖工具设置；见 [Groups](/channels/groups#groupchannel-tool-restrictions-optional)。 |
+| `name`                | openid 前缀          | 日志和群上下文中使用的友好名称。                                                               |
+| `prompt`              | 内置默认值            | 附加到代理上下文中的群级行为提示词。                                                           |
 
 `commandLevel` 接受：
 
-| Level    | Behavior                                                                                                                                      |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `all`    | 现有内置命令保持可用。部分命令会在菜单中隐藏，但授权用户仍可在群里运行它们。                                                                     |
-| `safety` | `/help`、`/btw`、`/stop` 在群里保持可见；敏感命令（`/config`、`/tools`、`/bash` 等）必须在私聊中运行。                                          |
-| `strict` | 仅允许严格运行所需的群会话控制命令。`/stop` 仍然可用，因此授权发送者可以中断当前运行。                                                            |
+| 级别     | 行为                                                                                                                                      |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `all`    | 现有内置命令保持可用。部分命令会在菜单中隐藏，但授权用户仍可在群里运行它们。                                                               |
+| `safety` | `/help`、`/btw`、`/stop` 在群里保持可见；敏感命令（`/config`、`/tools`、`/bash` 等）必须在私聊中运行。                                    |
+| `strict` | 仅允许严格运行所需的群会话控制命令。`/stop` 仍然可用，因此授权发送者可以中断当前运行。                                                     |
 
 旧版 QQBot 的 `toolPolicy` 条目已弃用。运行 `openclaw doctor --fix` 将其迁移到 `tools`。
 
@@ -241,7 +263,14 @@ STT 和 TTS 支持两级配置，并按优先级回退：
 
 将任一项设置为 `enabled: false` 即可禁用。账号级 TTS 覆盖的结构与 `messages.tts` 相同，并会在 channel/global TTS 配置之上进行深度合并。
 
-入站 QQ 语音附件会作为音频媒体元数据暴露给代理，同时将原始语音文件排除在通用的 `MediaPaths` 之外。纯文本回复中的 `[[audio_as_voice]]` 会合成 TTS，并在已配置 TTS 时发送原生 QQ 语音消息。
+STT 请求默认在 60 秒后超时。插件专用 STT 使用
+所选的 `models.providers.<id>.timeoutSeconds` 覆盖。框架音频 STT
+依次使用 `tools.media.audio.models[0].timeoutSeconds`、
+`tools.media.audio.timeoutSeconds`，然后使用所选 provider 的覆盖值。
+
+进入的 QQ 语音附件会作为音频媒体元数据暴露给代理，
+同时不会将原始语音文件放入通用的 `MediaPaths` 中。`[[audio_as_voice]]`
+出现在纯文本回复中时，会合成 TTS，并在配置了 TTS 时发送原生 QQ 语音消息。
 
 出站音频上传/转码行为也可以通过
 `channels.qqbot.audioFormatPolicy` 进行调整：
@@ -307,8 +336,8 @@ STT 和 TTS 支持两级配置，并按优先级回退：
 
 - **Gateway does not start / no inbound messages:** 验证 `appId` 和
   `clientSecret` 是否正确，并且机器人已在 QQ 开放平台上启用。
-  缺少凭据时会显示为 "QQBot not configured (missing appId or
-  clientSecret)"。
+  缺少凭据时会显示为 "QQBot 未配置（缺少 appId 或
+  clientSecret）"。
 - **Setup with `--token-file` still shows unconfigured:** `--token-file` 仅
   设置 AppSecret。`appId` 仍必须在配置或 `QQBOT_APP_ID` 中设置。
 - **Bursty group replies collide:** 当对端队列满时，入站队列会优先驱逐

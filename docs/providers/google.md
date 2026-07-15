@@ -18,7 +18,7 @@ Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时�
 选择你偏好的身份验证方式并按照设置步骤操作。
 
 <Tabs>
-  <Tab title="API key">
+  <Tab title="API 密钥">
     **最佳适用场景：** 通过 Google AI Studio 进行标准 Gemini API 访问。
 
     <Steps>
@@ -131,17 +131,17 @@ Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时�
 
 | 功能                    | 支持情况                      |
 | ---------------------- | ----------------------------- |
-| Chat completions       | 是                           |
-| Image generation       | 是                           |
-| Music generation       | 是                           |
-| Text-to-speech         | 是                           |
-| Realtime voice         | 是（Google Live API）         |
-| Image understanding    | 是                           |
-| Audio transcription    | 是                           |
-| Video understanding    | 是                           |
-| Web search (Grounding) | 是                           |
-| Thinking/reasoning     | 是（Gemini 2.5+ / Gemini 3+） |
-| Gemma 4 models         | 是                           |
+| 聊天补全               | 是                           |
+| 图像生成               | 是                           |
+| 音乐生成               | 是                           |
+| 文本转语音             | 是                           |
+| 实时语音               | 是（Google Live API）         |
+| 图像理解               | 是                           |
+| 音频转录               | 是                           |
+| 视频理解               | 是                           |
+| 网络搜索（Grounding）  | 是                           |
+| 思考/推理              | 是（Gemini 2.5+ / Gemini 3+） |
+| Gemma 4 模型          | 是                           |
 
 ## Web search
 
@@ -339,14 +339,14 @@ Gemini Live API 支持的实时语音 provider，用于后端音频桥接，例�
 
 | 设置                  | 配置路径                                                          | 默认值                                                                               |
 | --------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Model                 | `plugins.entries.voice-call.config.realtime.providers.google.model` | `gemini-2.5-flash-native-audio-preview-12-2025`                                       |
+| Model                 | `plugins.entries.voice-call.config.realtime.providers.google.model` | `gemini-3.1-flash-live-preview`                                                       |
 | Voice                 | `...google.voice`                                                   | `Kore`                                                                                |
 | Temperature           | `...google.temperature`                                             | (unset)                                                                               |
 | VAD start sensitivity | `...google.startSensitivity`                                          | (unset)                                                                               |
-| VAD end sensitivity   | `...google.endSensitivity`                                          | (unset)                                                                               |
+| VAD end sensitivity   | `...google.endSensitivity`                                            | (unset)                                                                               |
 | Silence duration      | `...google.silenceDurationMs`                                       | (unset)                                                                               |
 | Activity handling     | `...google.activityHandling`                                        | Google 默认，`start-of-activity-interrupts`                                        |
-| Turn coverage         | `...google.turnCoverage`                                            | Google 默认，`only-activity`                                                       |
+| Turn coverage         | `...google.turnCoverage`                                            | Google 默认，`audio-activity-and-all-video`                                        |
 | Disable auto VAD      | `...google.automaticActivityDetectionDisabled`                      | `false`                                                                               |
 | Session resumption    | `...google.sessionResumption`                                       | `true`                                                                                |
 | Context compression   | `...google.contextWindowCompression`                                | `true`                                                                                |
@@ -366,10 +366,10 @@ Voice Call 实时配置示例：
             provider: "google",
             providers: {
               google: {
-                model: "gemini-2.5-flash-native-audio-preview-12-2025",
+                model: "gemini-3.1-flash-live-preview",
                 speakerVoice: "Kore",
                 activityHandling: "start-of-activity-interrupts",
-                turnCoverage: "only-activity",
+                turnCoverage: "audio-activity-and-all-video",
               },
             },
           },
@@ -390,9 +390,16 @@ SDK 会拒绝此 API 路径上的语言代码提示。
 </Note>
 
 <Note>
-Control UI Talk 支持带受限一次性令牌的 Google Live 浏览器会话。
-仅后端的实时语音 provider 也可以通过通用的
-Gateway relay transport 运行，这会将 provider 凭据保留在 Gateway 上。
+Gemini 3.1 Live 接受通过实时输入传入的会话文本，并使用
+顺序函数调用。OpenClaw 会为此模型省略较旧的 `NON_BLOCKING`、函数
+响应调度和情感对话字段。优先使用 `thinkingLevel`；已配置的正值 `thinkingBudget`
+会映射到最接近的受支持级别，而 `-1` 会保留 Google 的默认值。参见
+[Gemini Live 能力对比](https://ai.google.dev/gemini-api/docs/live-api/capabilities)。
+</Note>
+
+<Note>
+Control UI Talk 支持带有限制性一次性令牌的 Google Live 浏览器会话。仅后端的实时语音 provider
+也可以通过通用的 Gateway relay transport 运行，这会将 provider 凭据保留在 Gateway 上。
 </Note>
 
 对于维护者的实时验证，请运行

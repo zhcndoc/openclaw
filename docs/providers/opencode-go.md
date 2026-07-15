@@ -76,21 +76,19 @@ OpenCode Go 是 [OpenCode](/providers/opencode) 中的 Go 目录。它与 Zen �
 | `opencode-go/glm-5`             | GLM-5             | 202,752   | 32,768     | 否          |
 | `opencode-go/glm-5.1`           | GLM-5.1           | 202,752   | 32,768     | 否          |
 | `opencode-go/glm-5.2`           | GLM-5.2           | 1M        | 131,072    | 否          |
-| `opencode-go/hy3-preview`       | HY3 预览版       | 262,144   | 32,768     | 否          |
-| `opencode-go/kimi-k2.5`         | Kimi K2.5         | 262,144   | 65,536     | 是         |
-| `opencode-go/kimi-k2.6`         | Kimi K2.6         | 262,144   | 65,536     | 是         |
-| `opencode-go/kimi-k2.7-code`    | Kimi K2.7 代码版    | 262,144   | 262,144    | 是         |
-| `opencode-go/mimo-v2-omni`      | MiMo V2 全能版      | 262,144   | 32,000     | 是         |
-| `opencode-go/mimo-v2.5`         | MiMo V2.5         | 1M        | 128,000    | 是         |
-| `opencode-go/mimo-v2-pro`       | MiMo V2 专业版       | 1,048,576 | 32,000     | 否          |
-| `opencode-go/mimo-v2.5-pro`     | MiMo V2.5 专业版     | 1,048,576 | 128,000    | 否          |
+| `opencode-go/hy3-preview`       | HY3 Preview       | 262,144   | 32,768     | 否          |
+| `opencode-go/kimi-k2.5`         | Kimi K2.5         | 262,144   | 65,536     | 是          |
+| `opencode-go/kimi-k2.6`         | Kimi K2.6         | 262,144   | 65,536     | 是          |
+| `opencode-go/kimi-k2.7-code`    | Kimi K2.7 Code    | 262,144   | 262,144    | 是          |
+| `opencode-go/mimo-v2.5`         | MiMo V2.5         | 1M        | 128,000    | 是          |
+| `opencode-go/mimo-v2.5-pro`     | MiMo V2.5 Pro     | 1,048,576 | 128,000    | 否          |
 | `opencode-go/minimax-m2.5`      | MiniMax M2.5      | 204,800   | 65,536     | 否          |
 | `opencode-go/minimax-m2.7`      | MiniMax M2.7      | 204,800   | 131,072    | 否          |
 | `opencode-go/minimax-m3`        | MiniMax M3        | 204,800   | 131,072    | 否          |
-| `opencode-go/qwen3.5-plus`      | Qwen3.5 Plus      | 262,144   | 65,536     | 是         |
-| `opencode-go/qwen3.6-plus`      | Qwen3.6 Plus      | 262,144   | 65,536     | 是         |
+| `opencode-go/qwen3.5-plus`      | Qwen3.5 Plus      | 262,144   | 65,536     | 是          |
+| `opencode-go/qwen3.6-plus`      | Qwen3.6 Plus      | 262,144   | 65,536     | 是          |
 | `opencode-go/qwen3.7-max`       | Qwen3.7 Max       | 1M        | 65,536     | 否          |
-| `opencode-go/qwen3.7-plus`      | Qwen3.7 Plus      | 1M        | 65,536     | 是         |
+| `opencode-go/qwen3.7-plus`      | Qwen3.7 Plus      | 1M        | 65,536     | 是          |
 
 ## 高级配置
 

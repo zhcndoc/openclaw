@@ -41,10 +41,11 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [ds4（本地 DeepSeek V4）](/providers/ds4)
 - [ElevenLabs](/providers/elevenlabs)
 - [fal](/providers/fal)
+- [Featherless AI](/providers/featherless)
 - [Fireworks](/providers/fireworks)
 - [GitHub Copilot](/providers/github-copilot)
 - [GMI Cloud](/providers/gmi)
-- [Google (Gemini)](/providers/google)
+- [Google（Gemini）](/providers/google)
 - [Gradium](/providers/gradium)
 - [Groq（LPU 推理）](/providers/groq)
 - [Hugging Face（推理）](/providers/huggingface)
@@ -52,14 +53,15 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [Kilocode](/providers/kilocode)
 - [LiteLLM（统一网关）](/providers/litellm)
 - [LM Studio（本地模型）](/providers/lmstudio)
+- [LongCat](/providers/longcat)
 - [MiniMax](/providers/minimax)
 - [Mistral](/providers/mistral)
-- [Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
+- [Moonshot AI（Kimi + Kimi Coding）](/providers/moonshot)
 - [NovitaAI](/providers/novita)
 - [NVIDIA](/providers/nvidia)
-- [Ollama (cloud + local models)](/providers/ollama)
+- [Ollama（云 + 本地模型）](/providers/ollama)
 - [Ollama Cloud](/providers/ollama-cloud)
-- [OpenAI (API + Codex)](/providers/openai)
+- [OpenAI（API + Codex）](/providers/openai)
 - [OpenCode](/providers/opencode)
 - [OpenCode Go](/providers/opencode-go)
 - [OpenRouter](/providers/openrouter)
@@ -72,7 +74,7 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [SGLang（本地模型）](/providers/sglang)
 - [StepFun](/providers/stepfun)
 - [Synthetic](/providers/synthetic)
-- [Tencent Cloud（TokenHub）](/providers/tencent)
+- [Tencent Cloud (TokenHub / TokenPlan)](/providers/tencent)
 - [Together AI](/providers/together)
 - [Venice（Venice AI，注重隐私）](/providers/venice)
 - [Vercel AI Gateway](/providers/vercel-ai-gateway)
@@ -85,10 +87,10 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 
 ## 共享概览页面
 
-- [Additional provider variants](/providers/models#additional-provider-variants) - Anthropic Vertex、Copilot Proxy 和 Gemini CLI OAuth
-- [Image Generation](/tools/image-generation) - 共享 `image_generate` 工具、提供方选择和故障转移
-- [Music Generation](/tools/music-generation) - 共享 `music_generate` 工具、提供方选择和故障转移
-- [Video Generation](/tools/video-generation) - 共享 `video_generate` 工具、提供方选择和故障转移
+- [附加提供方变体](/providers/models#additional-provider-variants) - Anthropic Vertex、Copilot Proxy 和 Gemini CLI OAuth
+- [图像生成](/tools/image-generation) - 共享 `image_generate` 工具、提供方选择和故障转移
+- [音乐生成](/tools/music-generation) - 共享 `music_generate` 工具、提供方选择和故障转移
+- [视频生成](/tools/video-generation) - 共享 `video_generate` 工具、提供方选择和故障转移
 
 ## 转录提供商
 

@@ -13,7 +13,7 @@ title: "配置 — 代理"
 
 ### `agents.defaults.workspace`
 
-Default: `OPENCLAW_WORKSPACE_DIR` when set, otherwise `~/.openclaw/workspace` (or `~/.openclaw/workspace-<profile>` when `OPENCLAW_PROFILE` is set to a non-default profile).
+默认值：当设置了 `OPENCLAW_WORKSPACE_DIR` 时为该值，否则为 `~/.openclaw/workspace`（如果 `OPENCLAW_PROFILE` 设置为非默认配置，则为 `~/.openclaw/workspace-<profile>`）。
 
 ```json5
 {
@@ -26,7 +26,7 @@ Default: `OPENCLAW_WORKSPACE_DIR` when set, otherwise `~/.openclaw/workspace` (o
 
 ### `agents.defaults.repoRoot`
 
-可选的仓库根目录，会显示在系统提示词的 Runtime 行中。若未设置，OpenClaw 会从工作区向上遍历自动检测。
+The optional repository root directory, which will be shown in the Runtime line of the system prompt. If not set, OpenClaw will automatically detect it by traversing upward from the workspace.
 
 ```json5
 {
@@ -58,7 +58,7 @@ Default: `OPENCLAW_WORKSPACE_DIR` when set, otherwise `~/.openclaw/workspace` (o
 
 ### `agents.defaults.skipBootstrap`
 
-禁用自动创建工作区引导文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md`）。
+Disable automatic creation of workspace bootstrap files (`AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`).
 
 ```json5
 {
@@ -68,7 +68,7 @@ Default: `OPENCLAW_WORKSPACE_DIR` when set, otherwise `~/.openclaw/workspace` (o
 
 ### `agents.defaults.skipOptionalBootstrapFiles`
 
-Skips creation of selected optional workspace files while still writing required bootstrap files (`AGENTS.md`, `TOOLS.md`, `BOOTSTRAP.md`). Valid values: `SOUL.md`, `USER.md`, `HEARTBEAT.md`, and `IDENTITY.md`.
+跳过创建所选的可选工作区文件，同时仍会写入必需的引导文件（`AGENTS.md`、`TOOLS.md`、`BOOTSTRAP.md`）。有效值：`SOUL.md`、`USER.md`、`HEARTBEAT.md` 和 `IDENTITY.md`。
 
 ```json5
 {
@@ -98,7 +98,7 @@ Skips creation of selected optional workspace files while still writing required
 
 ### `agents.defaults.bootstrapMaxChars`
 
-Max characters per workspace bootstrap file before truncation. Default: `20000`.
+每个工作区引导文件在截断前的最大字符数。默认值：`20000`。
 
 ```json5
 {
@@ -111,7 +111,7 @@ Max characters per workspace bootstrap file before truncation. Default: `20000`.
 
 ### `agents.defaults.bootstrapTotalMaxChars`
 
-跨所有工作区引导文件注入的最大总字符数。默认值：`60000`。
+The maximum total character count injected across all workspace bootstrap files. Default: `60000`.
 
 ```json5
 {
@@ -119,8 +119,8 @@ Max characters per workspace bootstrap file before truncation. Default: `20000`.
 }
 ```
 
-逐代理覆盖：`agents.list[].bootstrapTotalMaxChars`。省略的值会
-继承 `agents.defaults.bootstrapTotalMaxChars`。
+Per-agent override: `agents.list[].bootstrapTotalMaxChars`. Omitted values
+inherit `agents.defaults.bootstrapTotalMaxChars`.
 
 ### 逐代理引导配置文件覆盖
 
@@ -149,14 +149,14 @@ Max characters per workspace bootstrap file before truncation. Default: `20000`.
 
 ### `agents.defaults.bootstrapPromptTruncationWarning`
 
-控制当引导上下文被截断时，代理可见的系统提示词通知。
-默认值：`"always"`。
+Controls the system prompt notification visible to the agent when the bootstrap context is truncated.
+Default value: `"always"`.
 
-- `"off"`：从不向系统提示词注入截断通知文本。
-- `"once"`：针对每个唯一的截断特征注入一次简洁通知。
-- `"always"`：只要存在截断，就在每次运行时注入简洁通知（推荐）。
+- `"off"`: Never inject truncation notification text into the system prompt.
+- `"once"`: Inject a concise notification once for each unique truncation signature.
+- `"always"`: Inject a concise notification on every run as long as truncation exists (recommended).
 
-更详细的原始/注入计数和配置调优字段会保留在诊断信息中，例如上下文/状态报告和日志；常规 WebChat 用户/运行时上下文只会获得简洁的恢复通知。
+More detailed original/injected counts and configuration tuning fields are preserved in diagnostic information, such as context/state reports and logs; regular WebChat users/runtime context will only receive a concise recovery notification.
 
 ```json5
 {
@@ -170,13 +170,13 @@ OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按�
 
 | Budget                                                         | Covers                                                                                                                                                          |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `agents.defaults.bootstrapMaxChars` / `bootstrapTotalMaxChars` | Normal workspace bootstrap injection                                                                                                                            |
-| `agents.defaults.startupContext.*`                             | One-shot reset/startup model-run prelude, including recent daily `memory/*.md` files. Bare chat `/new` and `/reset` are acknowledged without invoking the model |
-| `skills.limits.*`                                              | The compact skills list injected into the system prompt                                                                                                         |
-| `agents.defaults.contextLimits.*`                              | Bounded runtime excerpts and injected runtime-owned blocks                                                                                                      |
-| `memory.qmd.limits.*`                                          | Indexed memory-search snippet and injection sizing                                                                                                              |
+| `agents.defaults.bootstrapMaxChars` / `bootstrapTotalMaxChars` | 常规工作区引导注入                                                                                                                                                |
+| `agents.defaults.startupContext.*`                             | 一次性重置/启动模型运行前奏，包括最近的每日 `memory/*.md` 文件。裸聊天 `/new` 和 `/reset` 会在不调用模型的情况下被确认 |
+| `skills.limits.*`                                              | 注入系统提示词中的紧凑技能列表                                                                                                                                    |
+| `agents.defaults.contextLimits.*`                              | 有边界的运行时摘录以及注入的运行时所有块                                                                                                                          |
+| `memory.qmd.limits.*`                                          | 索引化的记忆搜索片段和注入大小                                                                                                                                    |
 
-Matching per-agent overrides:
+匹配的按代理覆盖：
 
 - `agents.list[].skillsLimits.maxSkillsPromptChars`
 - `agents.list[].contextInjection`
@@ -223,19 +223,10 @@ Matching per-agent overrides:
 }
 ```
 
-- `memoryGetMaxChars`: default `memory_get` excerpt cap before truncation
-  metadata and continuation notice are added.
-- `memoryGetDefaultLines`: default `memory_get` line window when `lines` is
-  omitted.
-- `toolResultMaxChars`: advanced live tool-result ceiling used for persisted
-  results and overflow recovery. Leave unset for the model-context auto cap:
-  `16000` chars below 100K tokens, `32000` chars at 100K+ tokens, and `64000`
-  chars at 200K+ tokens. Explicit values up to `1000000` are accepted for
-  long-context models, but the effective cap is still limited to about 30% of
-  the model context window. `openclaw doctor --deep` prints the effective cap,
-  and doctor warns only when an explicit override is stale or has no effect.
-- `postCompactionMaxChars`: AGENTS.md excerpt cap used during post-compaction
-  refresh injection.
+- `memoryGetMaxChars`: 默认 `memory_get` 摘录上限，在添加元数据和续接提示之前进行截断。
+- `memoryGetDefaultLines`: 当省略 `lines` 时，默认的 `memory_get` 行窗口。
+- `toolResultMaxChars`: 用于持久化结果和溢出恢复的高级实时工具结果上限。若不设置，则使用模型上下文自动上限：低于 100K tokens 时为 `16000` 字符，100K+ tokens 时为 `32000` 字符，200K+ tokens 时为 `64000` 字符。对于长上下文模型，可显式设置最多 `1000000`，但有效上限仍受限于模型上下文窗口的约 30%。`openclaw doctor --deep` 会打印有效上限，而 doctor 只会在显式覆盖已过时或不起作用时发出警告。
+- `postCompactionMaxChars`: 压缩后刷新注入期间使用的 AGENTS.md 摘录上限。
 
 #### `agents.list[].contextLimits`
 
@@ -284,10 +275,10 @@ Matching per-agent overrides:
 
 ### `agents.defaults.imageMaxDimensionPx`
 
-传递给提供方调用前，转录/工具图像块中最长边的最大像素尺寸。默认值：`1200`。
+Maximum pixel size for the longest edge in transcription/tool image blocks before being passed to the provider call. Default: `1200`.
 
-更低的值通常能减少视觉 token 用量，以及对截图密集型运行的请求载荷大小。
-更高的值会保留更多视觉细节。
+Lower values usually reduce visual token usage and the request payload size for screenshot-heavy runs.
+Higher values preserve more visual detail.
 
 ```json5
 {
@@ -300,7 +291,7 @@ Matching per-agent overrides:
 从文件路径、URL 和媒体引用加载的图片的图像工具压缩/细节偏好。
 默认值：`auto`。
 
-OpenClaw adapts the resize ladder to the selected image model. For example, Claude Opus 4.8, OpenAI GPT-5.5, Qwen VL, and hosted Llama 4 vision models can use larger images than older/default high-detail vision paths, while multi-image turns are compressed more aggressively in `auto` mode to control token and latency cost.
+OpenClaw 会根据所选图像模型调整缩放梯度。例如，Claude Opus 4.8、OpenAI GPT-5.6 Sol、Qwen VL 和托管的 Llama 4 视觉模型可以使用比旧版/默认高细节视觉路径更大的图像，而在 `auto` 模式下，多图像轮次会被更积极地压缩，以控制 token 和延迟成本。
 
 可选值：
 
@@ -327,7 +318,7 @@ OpenClaw adapts the resize ladder to the selected image model. For example, Clau
 
 ### `agents.defaults.timeFormat`
 
-系统提示词中的时间格式。默认值：`auto`（操作系统偏好）。
+Time format in system prompts. Default value: `auto` (operating system preference).
 
 ```json5
 {
@@ -383,58 +374,58 @@ OpenClaw adapts the resize ladder to the selected image model. For example, Clau
 }
 ```
 
-- `model`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - String form sets only the primary model.
-  - Object form sets primary plus ordered failover models.
-- `utilityModel`: optional `provider/model` ref or alias for short internal tasks. It currently powers generated Control UI session titles, Telegram DM topic titles, and Discord auto-thread titles. These tasks fall back to the agent's primary model when unset; `agents.list[].utilityModel` overrides the default, and an operation-specific model override wins over both. Utility tasks make separate model calls and send task-specific content to the selected model provider. Dashboard title generation sends at most the first 1,000 characters of the first non-command message. Choose a provider that matches your cost and data-handling requirements.
-- `imageModel`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - Used by the `image` tool path as its vision-model config.
-  - Also used as fallback routing when the selected/default model cannot accept image input.
-  - Prefer explicit `provider/model` refs. Bare IDs are accepted for compatibility; if a bare ID uniquely matches a configured image-capable entry in `models.providers.*.models`, OpenClaw qualifies it to that provider. Ambiguous configured matches require an explicit provider prefix.
-- `imageGenerationModel`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - Used by the shared image-generation capability and any future tool/plugin surface that generates images.
-  - Typical values: `google/gemini-3.1-flash-image-preview` for native Gemini image generation, `fal/fal-ai/flux/dev` for fal, `openai/gpt-image-2` for OpenAI Images, or `openai/gpt-image-1.5` for transparent-background OpenAI PNG/WebP output.
-  - If you select a provider/model directly, configure matching provider auth too (for example `GEMINI_API_KEY` or `GOOGLE_API_KEY` for `google/*`, `OPENAI_API_KEY` or OpenAI Codex OAuth for `openai/gpt-image-2` / `openai/gpt-image-1.5`, `FAL_KEY` for `fal/*`).
-  - If omitted, `image_generate` can still infer an auth-backed provider default. It tries the current default provider first, then the remaining registered image-generation providers in provider-id order.
-- `musicGenerationModel`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - Used by the shared music-generation capability and the built-in `music_generate` tool.
-  - Typical values: `google/lyria-3-clip-preview`, `google/lyria-3-pro-preview`, or `minimax/music-2.6`.
-  - If omitted, `music_generate` can still infer an auth-backed provider default. It tries the current default provider first, then the remaining registered music-generation providers in provider-id order.
-  - If you select a provider/model directly, configure the matching provider auth/API key too.
-- `videoGenerationModel`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - Used by the shared video-generation capability and the built-in `video_generate` tool.
-  - Typical values: `qwen/wan2.6-t2v`, `qwen/wan2.6-i2v`, `qwen/wan2.6-r2v`, `qwen/wan2.6-r2v-flash`, or `qwen/wan2.7-r2v`.
-  - If omitted, `video_generate` can still infer an auth-backed provider default. It tries the current default provider first, then the remaining registered video-generation providers in provider-id order.
-  - If you select a provider/model directly, configure the matching provider auth/API key too.
-  - The official Qwen video-generation plugin supports up to 1 output video, 1 input image, 4 input videos, 10 seconds duration, and provider-level `size`, `aspectRatio`, `resolution`, `audio`, and `watermark` options.
-- `pdfModel`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - Used by the `pdf` tool for model routing.
-  - If omitted, the PDF tool falls back to `imageModel`, then to the resolved session/default model.
-- `pdfMaxBytesMb`: default PDF size limit for the `pdf` tool when `maxBytesMb` is not passed at call time.
-- `pdfMaxPages`: default maximum pages considered by extraction fallback mode in the `pdf` tool.
-- `verboseDefault`: default verbose level for agents. Values: `"off"`, `"on"`, `"full"`. Default: `"off"`.
-- `toolProgressDetail`: detail mode for `/verbose` tool summaries and progress-draft tool lines. Values: `"explain"` (default, compact human labels) or `"raw"` (append raw command/detail when available). Per-agent `agents.list[].toolProgressDetail` overrides this default.
-- `reasoningDefault`: default reasoning visibility for agents. Values: `"off"`, `"on"`, `"stream"`. Per-agent `agents.list[].reasoningDefault` overrides this default. Configured reasoning defaults are only applied for owners, authorized senders, or operator-admin gateway contexts when no per-message or session reasoning override is set.
-- `elevatedDefault`: default elevated-output level for agents. Values: `"off"`, `"on"`, `"ask"`, `"full"`. Default: `"on"`.
-- `model.primary`: format `provider/model` (e.g. `openai/gpt-5.5` for OpenAI API-key or Codex OAuth access). If you omit the provider, OpenClaw tries an alias first, then a unique configured-provider match for that exact model id, and only then falls back to the configured default provider (deprecated compatibility behavior, so prefer explicit `provider/model`). If that provider no longer exposes the configured default model, OpenClaw falls back to the first configured provider/model instead of surfacing a stale removed-provider default.
-- `models`: the configured model catalog and allowlist for `/model`. Each entry can include `alias` (shortcut) and `params` (provider-specific, for example `temperature`, `maxTokens`, `cacheRetention`, `context1m`, `responsesServerCompaction`, `responsesCompactThreshold`, OpenRouter `provider` routing, `chat_template_kwargs`, `extra_body`/`extraBody`).
-  - Use `provider/*` entries such as `"openai/*": {}` or `"vllm/*": {}` to show all discovered models for selected providers without manually listing every model id.
-  - Add `agentRuntime` to a `provider/*` entry when every dynamically discovered model for that provider should use the same runtime. Exact `provider/model` runtime policy still wins over the wildcard.
-  - Safe edits: use `openclaw config set agents.defaults.models '<json>' --strict-json --merge` to add entries. `config set` refuses replacements that would remove existing allowlist entries unless you pass `--replace`.
-  - Provider-scoped configure/onboarding flows merge selected provider models into this map and preserve unrelated providers already configured.
-  - For direct OpenAI Responses models, server-side compaction is enabled automatically. Use `params.responsesServerCompaction: false` to stop injecting `context_management`, or `params.responsesCompactThreshold` to override the threshold. See [OpenAI server-side compaction](/providers/openai#advanced-configuration).
-- `params`: global default provider parameters applied to all models. Set at `agents.defaults.params` (e.g. `{ cacheRetention: "long" }`).
-- `params` merge precedence (config): `agents.defaults.params` (global base) is overridden by `agents.defaults.models["provider/model"].params` (per-model), then `agents.list[].params` (matching agent id) overrides by key. See [Prompt Caching](/reference/prompt-caching) for details.
-- `models.providers.openrouter.params.provider`: OpenRouter-wide default provider-routing policy. OpenClaw forwards this to OpenRouter's request `provider` object; per-model `agents.defaults.models["openrouter/<model>"].params.provider` and agent params override by key. See [OpenRouter provider routing](/providers/openrouter#advanced-configuration).
-- `params.extra_body`/`params.extraBody`: advanced pass-through JSON merged into `api: "openai-completions"` request bodies for OpenAI-compatible proxies. If it collides with generated request keys, the extra body wins; non-native completions routes still strip OpenAI-only `store` afterward.
-- `params.chat_template_kwargs`: vLLM/OpenAI-compatible chat-template arguments merged into top-level `api: "openai-completions"` request bodies. For `vllm/nemotron-3-*` with thinking off, the bundled vLLM plugin automatically sends `enable_thinking: false` and `force_nonempty_content: true`; explicit `chat_template_kwargs` override generated defaults, and `extra_body.chat_template_kwargs` still has final precedence. Configured vLLM Qwen and Nemotron thinking models expose binary `/think` choices (`off`, `on`) instead of the multi-level effort ladder.
-- `compat.thinkingFormat`: OpenAI-compatible thinking payload style. Use `"together"` for Together-style `reasoning.enabled`, `"qwen"` for Qwen-style top-level `enable_thinking`, or `"qwen-chat-template"` for `chat_template_kwargs.enable_thinking` on Qwen-family backends that support request-level chat-template kwargs, such as vLLM. OpenClaw maps disabled thinking to `false` and enabled thinking to `true`, and configured vLLM Qwen models expose binary `/think` choices for these formats.
-- `compat.supportedReasoningEfforts`: per-model OpenAI-compatible reasoning effort list. Include `"xhigh"` for custom endpoints that truly accept it; OpenClaw then exposes `/think xhigh` in command menus, Gateway session rows, session patch validation, agent CLI validation, and `llm-task` validation for that configured provider/model. Use `compat.reasoningEffortMap` when the backend wants a provider-specific value for a canonical level.
-- `params.preserveThinking`: Z.AI-only opt-in for preserved thinking. When enabled and thinking is on, OpenClaw sends `thinking.clear_thinking: false` and replays prior `reasoning_content`; see [Z.AI thinking and preserved thinking](/providers/zai#advanced-configuration).
-- `localService`: optional provider-level process manager for local/self-hosted model servers. When the selected model belongs to that provider, OpenClaw probes `healthUrl` (or `baseUrl + "/models"`), starts `command` with `args` if the endpoint is down, waits up to `readyTimeoutMs`, then sends the model request. `command` must be an absolute path. `idleStopMs: 0` keeps the process alive until OpenClaw exits; a positive value stops the OpenClaw-spawned process after that many idle milliseconds. See [Local model services](/gateway/local-model-services).
-- Runtime policy belongs on providers or models, not on `agents.defaults`. Use `models.providers.<provider>.agentRuntime` for provider-wide rules or `agents.defaults.models["provider/model"].agentRuntime` / `agents.list[].models["provider/model"].agentRuntime` for model-specific rules. OpenAI agent models on the official OpenAI provider select Codex by default.
-- Config writers that mutate these fields (for example `/models set`, `/models set-image`, and fallback add/remove commands) save canonical object form and preserve existing fallback lists when possible.
-- `maxConcurrent`: max parallel agent runs across sessions (each session still serialized). Default: `4`.
+- `model`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
+  - 字符串形式只设置主模型。
+  - 对象形式会设置主模型以及有序的故障转移模型。
+- `utilityModel`：可选的 `provider/model` 引用或别名，用于简短的内部任务。它目前为生成的 Control UI 会话标题、Telegram 私信主题标题、Discord 自动线程标题，以及 [progress-draft narration](/concepts/progress-drafts#narrated-status) 提供支持。未设置时，OpenClaw 会在存在默认小模型时推导出主提供方声明的默认小模型（OpenAI → `gpt-5.6-luna`，Anthropic → `claude-haiku-4-5`）；标题任务否则回退到代理的主模型，而叙述保持关闭。设置 `utilityModel: ""` 可完全禁用 utility 路由。`agents.list[].utilityModel` 会覆盖默认值（单个代理中设置为空值会为该代理禁用它），而特定操作的模型覆盖会优先于两者。utility 任务会发起独立的模型调用，并向所选模型提供方发送任务特定内容。Dashboard 标题生成最多发送第一条非命令消息的前 1,000 个字符；叙述会发送入站请求以及紧凑的脱敏工具摘要。请选择符合你的成本和数据处理要求的提供方。
+- `imageModel`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
+  - 由 `image` 工具路径作为其视觉模型配置使用。
+  - 当所选/默认模型无法接收图像输入时，也用于回退路由。
+  - 优先使用显式的 `provider/model` 引用。为兼容性也接受裸 ID；如果裸 ID 能唯一匹配 `models.providers.*.models` 中某个已配置的支持图像条目，OpenClaw 会将其限定到该提供方。若存在歧义的已配置匹配，则需要显式提供 provider 前缀。
+- `imageGenerationModel`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
+  - 由共享的图像生成能力以及任何未来生成图像的工具/插件表面使用。
+  - 典型值：`google/gemini-3.1-flash-image-preview` 用于 Gemini 原生图像生成，`fal/fal-ai/flux/dev` 用于 fal，`openai/gpt-image-2` 用于 OpenAI Images，或 `openai/gpt-image-1.5` 用于透明背景 OpenAI PNG/WebP 输出。
+  - 如果你直接选择了某个 provider/model，也要配置匹配的 provider 认证，例如 `google/*` 使用 `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`，`openai/gpt-image-2` / `openai/gpt-image-1.5` 使用 `OPENAI_API_KEY` 或 OpenAI Codex OAuth，`fal/*` 使用 `FAL_KEY`。
+  - 如果省略，`image_generate` 仍可推断出一个带认证的 provider 默认值。它会先尝试当前默认提供方，然后按 provider-id 顺序尝试其余已注册的图像生成提供方。
+- `musicGenerationModel`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
+  - 由共享的音乐生成能力以及内置的 `music_generate` 工具使用。
+  - 典型值：`google/lyria-3-clip-preview`、`google/lyria-3-pro-preview` 或 `minimax/music-2.6`。
+  - 如果省略，`music_generate` 仍可推断出一个带认证的 provider 默认值。它会先尝试当前默认提供方，然后按 provider-id 顺序尝试其余已注册的音乐生成提供方。
+  - 如果你直接选择了某个 provider/model，也要配置匹配的 provider 认证/API key。
+- `videoGenerationModel`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
+  - 由共享的视频生成能力以及内置的 `video_generate` 工具使用。
+  - 典型值：`qwen/wan2.6-t2v`、`qwen/wan2.6-i2v`、`qwen/wan2.6-r2v`、`qwen/wan2.6-r2v-flash` 或 `qwen/wan2.7-r2v`。
+  - 如果省略，`video_generate` 仍可推断出一个带认证的 provider 默认值。它会先尝试当前默认提供方，然后按 provider-id 顺序尝试其余已注册的视频生成提供方。
+  - 如果你直接选择了某个 provider/model，也要配置匹配的 provider 认证/API key。
+  - 官方 Qwen 视频生成插件支持最多 1 个输出视频、1 张输入图像、4 个输入视频、10 秒时长，以及 provider 级别的 `size`、`aspectRatio`、`resolution`、`audio` 和 `watermark` 选项。
+- `pdfModel`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
+  - 由 `pdf` 工具用于模型路由。
+  - 如果省略，PDF 工具会先回退到 `imageModel`，再回退到解析后的会话/默认模型。
+- `pdfMaxBytesMb`：当调用时未传入 `maxBytesMb` 时，`pdf` 工具的默认 PDF 大小限制。
+- `pdfMaxPages`：`pdf` 工具中提取回退模式所考虑的默认最大页数。
+- `verboseDefault`：代理的默认 verbose 级别。取值：`"off"`、`"on"`、`"full"`。默认值：`"off"`。
+- `toolProgressDetail`：`/verbose` 工具摘要和 progress-draft 工具行的详细模式。取值：`"explain"`（默认，简洁的人类标签）或 `"raw"`（在可用时附加原始命令/详情）。每个代理的 `agents.list[].toolProgressDetail` 会覆盖此默认值。
+- `reasoningDefault`：代理的默认 reasoning 可见性。取值：`"off"`、`"on"`、`"stream"`。每个代理的 `agents.list[].reasoningDefault` 会覆盖此默认值。已配置的 reasoning 默认值仅在所有者、被授权发送者或 operator-admin gateway 上下文中生效，且在未设置逐消息或会话 reasoning 覆盖时才会应用。
+- `elevatedDefault`：代理的默认 elevated 输出级别。取值：`"off"`、`"on"`、`"ask"`、`"full"`。默认值：`"on"`。
+- `model.primary`：格式为 `provider/model`（例如 `openai/gpt-5.6-sol`，用于 Codex OAuth 访问）。如果省略 provider，OpenClaw 会先尝试别名，然后尝试与该精确 model id 相匹配的唯一已配置提供方，最后才回退到已配置的默认提供方（已弃用的兼容行为，因此建议显式使用 `provider/model`）。如果该 provider 不再暴露已配置的默认模型，OpenClaw 会回退到第一个已配置的 provider/model，而不是暴露一个过时的已移除提供方默认值。
+- `models`：用于 `/model` 的已配置模型目录和允许列表。每个条目都可以包含 `alias`（快捷方式）和 `params`（provider 特定，例如 `temperature`、`maxTokens`、`cacheRetention`、`context1m`、`responsesServerCompaction`、`responsesCompactThreshold`、OpenRouter `provider` 路由、`chat_template_kwargs`、`extra_body`/`extraBody`）。
+  - 使用 `provider/*` 条目，例如 `"openai/*": {}` 或 `"vllm/*": {}`，即可显示所选提供方发现的所有模型，而无需手动列出每个模型 id。
+  - 当某个 provider 动态发现的所有模型都应使用相同运行时，可在 `provider/*` 条目中添加 `agentRuntime`。精确的 `provider/model` 运行时策略仍然优先于通配符。
+  - 安全编辑：使用 `openclaw config set agents.defaults.models '<json>' --strict-json --merge` 来添加条目。`config set` 会拒绝那些会移除现有允许列表条目的替换，除非你传入 `--replace`。
+  - 以 provider 为范围的配置/入门流程会将所选 provider 的模型合并到此映射中，并保留已配置的其他无关 provider。
+  - 对于直接的 OpenAI Responses 模型，会自动启用服务端压缩。使用 `params.responsesServerCompaction: false` 可停止注入 `context_management`，或使用 `params.responsesCompactThreshold` 覆盖阈值。参见 [OpenAI server-side compaction](/providers/openai#advanced-configuration)。
+- `params`：应用于所有模型的全局默认 provider 参数。设置在 `agents.defaults.params`（例如 `{ cacheRetention: "long" }`）。
+- `params` 合并优先级（配置）：`agents.defaults.params`（全局基础）会被 `agents.defaults.models["provider/model"].params`（按模型）覆盖，然后 `agents.list[].params`（匹配的代理 id）按键覆盖。详见 [Prompt Caching](/reference/prompt-caching)。
+- `models.providers.openrouter.params.provider`：OpenRouter 级别的默认 provider 路由策略。OpenClaw 会将其转发给 OpenRouter 请求的 `provider` 对象；按模型的 `agents.defaults.models["openrouter/<model>"].params.provider` 和代理参数会按键覆盖。参见 [OpenRouter provider routing](/providers/openrouter#advanced-configuration)。
+- `params.extra_body`/`params.extraBody`：高级透传 JSON，合并到 OpenAI 兼容代理的 `api: "openai-completions"` 请求体中。如果与生成的请求键冲突，则 extra body 胜出；非原生 completions 路由随后仍会剥离仅限 OpenAI 的 `store`。
+- `params.chat_template_kwargs`：合并到顶层 `api: "openai-completions"` 请求体中的 vLLM/OpenAI 兼容 chat-template 参数。对于在关闭 thinking 时的 `vllm/nemotron-3-*`，捆绑的 vLLM 插件会自动发送 `enable_thinking: false` 和 `force_nonempty_content: true`；显式的 `chat_template_kwargs` 会覆盖生成的默认值，而 `extra_body.chat_template_kwargs` 仍具有最终优先级。已配置的 vLLM Qwen 和 Nemotron thinking 模型提供二元 `/think` 选项（`off`、`on`），而不是多级 effort 梯度。
+- `compat.thinkingFormat`：OpenAI 兼容的 thinking 载荷样式。对 Together 风格的 `reasoning.enabled` 使用 `"together"`，对 Qwen 风格的顶层 `enable_thinking` 使用 `"qwen"`，或对支持请求级 chat-template kwargs 的 Qwen 系列后端（例如 vLLM）使用 `chat_template_kwargs.enable_thinking` 的 `"qwen-chat-template"`。OpenClaw 会将禁用 thinking 映射为 `false`，将启用 thinking 映射为 `true`，并且已配置的 vLLM Qwen 模型会为这些格式提供二元 `/think` 选项。
+- `compat.supportedReasoningEfforts`：每个模型的 OpenAI 兼容 reasoning effort 列表。对于真正接受它的自定义端点，包含 `"xhigh"`；这样 OpenClaw 会在命令菜单、Gateway 会话行、会话补丁验证、代理 CLI 验证以及针对该已配置 provider/model 的 `llm-task` 验证中暴露 `/think xhigh`。当后端希望某个规范级别对应特定 provider 值时，请使用 `compat.reasoningEffortMap`。
+- `params.preserveThinking`：仅限 Z.AI 的保留 thinking 选项。启用且 thinking 打开时，OpenClaw 会发送 `thinking.clear_thinking: false` 并重放之前的 `reasoning_content`；参见 [Z.AI thinking and preserved thinking](/providers/zai#advanced-configuration)。
+- `localService`：用于本地/自托管模型服务器的可选 provider 级进程管理器。当前选择的模型属于该 provider 时，OpenClaw 会探测 `healthUrl`（或 `baseUrl + "/models"`），在端点宕机时用 `args` 启动 `command`，最多等待 `readyTimeoutMs`，然后发送模型请求。`command` 必须是绝对路径。`idleStopMs: 0` 会让进程保持运行直到 OpenClaw 退出；正值会在空闲指定毫秒后停止由 OpenClaw 启动的进程。参见 [Local model services](/gateway/local-model-services)。
+- 运行时策略应放在 providers 或 models 上，而不是 `agents.defaults`。对 provider 级规则使用 `models.providers.<provider>.agentRuntime`，对模型级规则使用 `agents.defaults.models["provider/model"].agentRuntime` / `agents.list[].models["provider/model"].agentRuntime`。仅有 provider/model 前缀不会选择 harness。若运行时未设置或为 `auto`，OpenAI 仅会在精确的官方 HTTPS Platform Responses 或 ChatGPT Responses 路由且没有作者定义的请求覆盖时隐式选择 Codex。参见 [OpenAI implicit agent runtime](/providers/openai#implicit-agent-runtime)。
+- 修改这些字段的配置写入器（例如 `/models set`、`/models set-image`，以及 fallback add/remove 命令）会保存规范对象形式，并在可能时保留现有的 fallback 列表。
+- `maxConcurrent`：跨会话的最大并行代理运行数（每个会话仍然串行）。默认值：`4`。
 
 ### 运行时策略
 
@@ -449,7 +440,7 @@ OpenClaw adapts the resize ladder to the selected image model. For example, Clau
   },
   agents: {
     defaults: {
-      model: "openai/gpt-5.5",
+      model: "openai/gpt-5.6-sol",
       models: {
         "anthropic/claude-opus-4-8": {
           agentRuntime: { id: "claude-cli" },
@@ -463,14 +454,14 @@ OpenClaw adapts the resize ladder to the selected image model. For example, Clau
 }
 ```
 
-- `id`: `"auto"`, `"openclaw"`, a registered plugin harness id, or a supported CLI backend alias. The bundled Codex plugin registers `codex`; the bundled Anthropic plugin provides the `claude-cli` CLI backend.
-- `id: "auto"` lets registered plugin harnesses claim supported turns and uses OpenClaw when no harness matches. An explicit plugin runtime such as `id: "codex"` requires that harness and fails closed if it is unavailable or fails.
-- `id: "pi"` is accepted only as a deprecated alias for `openclaw` to preserve shipped configs from v2026.5.22 and earlier. New config should use `openclaw`.
-- Runtime precedence is exact model policy first (`agents.list[].models["provider/model"]`, `agents.defaults.models["provider/model"]`, or `models.providers.<provider>.models[]`), then `agents.list[]` / `agents.defaults.models["provider/*"]`, then provider-wide policy at `models.providers.<provider>.agentRuntime`.
-- Whole-agent runtime keys are legacy. `agents.defaults.agentRuntime`, `agents.list[].agentRuntime`, session runtime pins, and `OPENCLAW_AGENT_RUNTIME` are ignored by runtime selection. Run `openclaw doctor --fix` to remove stale values.
-- OpenAI agent models use the Codex harness by default; provider/model `agentRuntime.id: "codex"` remains valid when you want to make that explicit.
-- For Claude CLI deployments, prefer `model: "anthropic/claude-opus-4-8"` plus model-scoped `agentRuntime.id: "claude-cli"`. Legacy `claude-cli/<model>` refs still work for compatibility, but new config should keep provider/model selection canonical and put the execution backend in provider/model runtime policy.
-- This only controls text agent-turn execution. Media generation, vision, PDF, music, video, and TTS still use their provider/model settings.
+- `id`: `"auto"`、`"openclaw"`、已注册的插件 harness id，或受支持的 CLI 后端别名。内置的 Codex 插件注册了 `codex`；内置的 Anthropic 插件提供 `claude-cli` CLI 后端。
+- `id: "auto"` 会让已注册的插件 harness 认领那些声明了或以其他方式满足其支持契约的有效路由；当没有任何 harness 匹配时则使用 OpenClaw。显式指定插件运行时（例如 `id: "codex"`）要求该 harness 和兼容的有效路由同时可用；如果任一不可用或执行失败，则会以失败关闭的方式处理。
+- `id: "pi"` 仅作为 `openclaw` 的弃用别名被接受，以兼容 v2026.5.22 及更早版本中已发布的配置。新配置应使用 `openclaw`。
+- 运行时优先级先是精确模型策略（`agents.list[].models["provider/model"]`、`agents.defaults.models["provider/model"]`，或 `models.providers.<provider>.models[]`），然后是 `agents.list[]` / `agents.defaults.models["provider/*"]`，最后是 `models.providers.<provider>.agentRuntime` 的整个平台策略。
+- 整个 agent 级别的 runtime 键属于旧版。`agents.defaults.agentRuntime`、`agents.list[].agentRuntime`、会话 runtime 固定值，以及 `OPENCLAW_AGENT_RUNTIME` 都会在运行时选择中被忽略。运行 `openclaw doctor --fix` 以移除过时值。
+- 符合条件的精确官方 HTTPS OpenAI Responses/ChatGPT 路由，在没有作者自定义请求覆盖的情况下，可以隐式使用 Codex harness。为 provider/model 设置 `agentRuntime.id: "codex"` 会使 Codex 成为一个失败关闭的强制要求，但不会让不兼容的路由变得兼容。
+- 对于 Claude CLI 部署，建议使用 `model: "anthropic/claude-opus-4-8"` 再配合模型级别的 `agentRuntime.id: "claude-cli"`。旧的 `claude-cli/<model>` 引用仍可用于兼容性，但新配置应保持 provider/model 选择为规范形式，并将执行后端放在 provider/model 的 runtime 策略中。
+- 这只控制文本 agent turn 的执行。媒体生成、视觉、PDF、音乐、视频和 TTS 仍然使用各自的 provider/model 设置。
 
 **内置别名快捷方式**（仅在模型位于 `agents.defaults.models` 中时适用）：
 
@@ -487,9 +478,9 @@ OpenClaw adapts the resize ladder to the selected image model. For example, Clau
 
 你配置的别名始终优先于默认值。
 
-Z.AI GLM-4.x models automatically enable thinking mode unless you set `--thinking off` or define `agents.defaults.models["zai/<model>"].params.thinking` yourself.
-Z.AI models enable `tool_stream` by default for tool call streaming. Set `agents.defaults.models["zai/<model>"].params.tool_stream` to `false` to disable it.
-Anthropic Claude Opus 4.8 keeps thinking off by default in OpenClaw; when adaptive thinking is explicitly enabled, Anthropic's provider-owned effort default is `high`. Claude 4.6 models default to `adaptive` when no explicit thinking level is set.
+Z.AI GLM-4.x 模型会自动启用 thinking 模式，除非你设置 `--thinking off`，或者自行定义 `agents.defaults.models["zai/<model>"].params.thinking`。
+Z.AI 模型默认会为工具调用流式传输启用 `tool_stream`。将 `agents.defaults.models["zai/<model>"].params.tool_stream` 设为 `false` 可将其禁用。
+Anthropic Claude Opus 4.8 在 OpenClaw 中默认关闭 thinking；当显式启用自适应 thinking 时，Anthropic 的 provider 自有 effort 默认值为 `high`。Claude 4.6 模型在未设置明确 thinking 级别时默认使用 `adaptive`。
 
 ### `agents.defaults.cliBackends`
 
@@ -529,7 +520,7 @@ Anthropic Claude Opus 4.8 keeps thinking off by default in OpenClaw; when adapti
 
 ### `agents.defaults.promptOverlays`
 
-Provider-independent prompt overlays applied by model family on OpenClaw-assembled prompt surfaces. GPT-5-family model ids receive the shared behavior contract across OpenClaw/provider routes; `personality` controls only the friendly interaction-style layer. Native Codex app-server routes keep Codex-owned base/model instructions instead of this OpenClaw GPT-5 overlay, and OpenClaw disables Codex's built-in personality for native threads.
+按模型家族应用于 OpenClaw 组装的提示表面的、与提供方无关的提示覆盖层。GPT-5 系列模型 id 会通过 OpenClaw/提供方路由接收共享的行为契约；`personality` 只控制友好的交互风格层。原生 Codex 应用服务器路由会保留 Codex 拥有的基础/模型指令，而不是这个 OpenClaw GPT-5 覆盖层，并且 OpenClaw 会为原生线程禁用 Codex 内置的 personality。
 
 ```json5
 {
@@ -579,16 +570,16 @@ Provider-independent prompt overlays applied by model family on OpenClaw-assembl
 }
 ```
 
-- `every`: duration string (ms/s/m/h). Default: `30m` (API-key auth) or `1h` (OAuth auth). Set to `0m` to disable.
-- `includeSystemPromptSection`: when false, omits the Heartbeat section from the system prompt and skips `HEARTBEAT.md` injection into bootstrap context. Default: `true`.
-- `suppressToolErrorWarnings`: when true, suppresses tool error warning payloads during heartbeat runs.
-- `timeoutSeconds`: maximum time in seconds allowed for a heartbeat agent turn before it is aborted. Leave unset to use `agents.defaults.timeoutSeconds` when set, otherwise the heartbeat cadence capped at 600 seconds.
-- `directPolicy`: direct/DM delivery policy. `allow` (default) permits direct-target delivery. `block` suppresses direct-target delivery and emits `reason=dm-blocked`.
-- `lightContext`: when true, heartbeat runs use lightweight bootstrap context and keep only `HEARTBEAT.md` from workspace bootstrap files.
-- `isolatedSession`: when true, each heartbeat runs in a fresh session with no prior conversation history. Same isolation pattern as cron `sessionTarget: "isolated"`. Reduces per-heartbeat token cost from ~100K to ~2-5K tokens.
-- `skipWhenBusy`: when true, heartbeat runs defer on that agent's extra busy lanes: its own session-keyed subagent or nested command work. Cron lanes always defer heartbeats, even without this flag.
-- Per-agent: set `agents.list[].heartbeat`. When any agent defines `heartbeat`, **only those agents** run heartbeats.
-- Heartbeats run full agent turns — shorter intervals burn more tokens.
+- `every`：持续时间字符串（ms/s/m/h）。默认值：`30m`（API 密钥认证）或 `1h`（OAuth 认证）。设为 `0m` 可禁用。
+- `includeSystemPromptSection`：为 false 时，会从系统提示词中省略 Heartbeat 章节，并跳过将 `HEARTBEAT.md` 注入到启动上下文中。默认值：`true`。
+- `suppressToolErrorWarnings`：为 true 时，在心跳运行期间抑制工具错误警告载荷。
+- `timeoutSeconds`：在心跳代理一次运行被中止前允许的最长秒数。留空则使用 `agents.defaults.timeoutSeconds`（如果已设置），否则使用心跳频率上限 600 秒。
+- `directPolicy`：直接/私信投递策略。`allow`（默认）允许向直接目标投递。`block` 会抑制向直接目标投递，并发出 `reason=dm-blocked`。
+- `lightContext`：为 true 时，心跳运行使用轻量级启动上下文，并且只保留来自工作区启动文件的 `HEARTBEAT.md`。
+- `isolatedSession`：为 true 时，每次心跳都会在全新的会话中运行，不保留之前的对话历史。与 cron 的 `sessionTarget: "isolated"` 采用相同的隔离模式。可将每次心跳的 token 成本从约 100K 降低到约 2-5K。
+- `skipWhenBusy`：为 true 时，心跳运行会在该代理的额外繁忙通道上延后：其自身按会话键区分的子代理工作或嵌套命令工作。cron 通道始终会延后心跳，即使没有该标志也是如此。
+- 按代理配置：设置 `agents.list[].heartbeat`。当任意代理定义了 `heartbeat` 时，**只有这些代理** 会运行心跳。
+- 心跳会完整执行代理轮次——间隔越短，消耗的 token 越多。
 
 ### `agents.defaults.compaction`
 
@@ -598,29 +589,29 @@ Provider-independent prompt overlays applied by model family on OpenClaw-assembl
     defaults: {
       compaction: {
         mode: "safeguard", // default | safeguard
-        provider: "my-provider", // id of a registered compaction provider plugin (optional)
+        provider: "my-provider", // 已注册的压缩提供程序插件的 id（可选）
         timeoutSeconds: 180,
         reserveTokensFloor: 24000,
         keepRecentTokens: 50000,
         recentTurnsPreserve: 3,
         maxHistoryShare: 0.7,
         identifierPolicy: "strict", // strict | off | custom
-        identifierInstructions: "精确保留部署 ID、工单 ID 和 host:port 对。", // identifierPolicy=custom 时使用
+        identifierInstructions: "精确保留部署 ID、工单 ID 和 host:port 对。", // 在 identifierPolicy=custom 时使用
         qualityGuard: { enabled: true, maxRetries: 1 },
-        midTurnPrecheck: { enabled: false }, // optional tool-loop pressure check
+        midTurnPrecheck: { enabled: false }, // 可选的工具循环压力检查
         postIndexSync: "async", // off | async | await
-        postCompactionSections: ["Session Startup", "Red Lines"], // opt in to AGENTS.md section reinjection
-        model: "openrouter/anthropic/claude-sonnet-4-6", // optional compaction-only model override
-        truncateAfterCompaction: true, // rotate to a smaller successor JSONL after compaction
-        maxActiveTranscriptBytes: "20mb", // optional preflight local compaction trigger
-        notifyUser: true, // send brief notices when compaction starts and completes (default: false)
+        postCompactionSections: ["Session Startup", "Red Lines"], // 选择性启用 AGENTS.md 章节重注入
+        model: "openrouter/anthropic/claude-sonnet-4-6", // 仅用于压缩的可选模型覆盖
+        truncateAfterCompaction: true, // 压缩后轮转到更小的后继 JSONL
+        maxActiveTranscriptBytes: "20mb", // 可选的本地压缩预检触发阈值
+        notifyUser: true, // 在压缩开始/完成以及 memory-flush 降级时通知用户（默认：false）
         memoryFlush: {
           enabled: true,
           model: "ollama/qwen3:8b", // 可选的仅 memory-flush 模型覆盖
           softThresholdTokens: 6000,
           forceFlushTranscriptBytes: "2mb",
-          systemPrompt: "Session nearing compaction. Store durable memories now.",
-          prompt: "Write any lasting notes to memory/YYYY-MM-DD.md; reply with the exact silent token NO_REPLY if nothing to store.",
+          systemPrompt: "会话接近压缩。现在存储持久化记忆。",
+          prompt: "将任何持久性笔记写入 memory/YYYY-MM-DD.md；如果没有需要存储的内容，请以确切的静默标记 NO_REPLY 回复。",
         },
       },
     },
@@ -628,27 +619,29 @@ Provider-independent prompt overlays applied by model family on OpenClaw-assembl
 }
 ```
 
-- `mode`: `default` or `safeguard` (chunked summarization for long histories). See [Compaction](/concepts/compaction).
-- `provider`: id of a registered compaction provider plugin. When set, the provider's `summarize()` is called instead of built-in LLM summarization. Falls back to built-in on failure. Setting a provider forces `mode: "safeguard"`. See [Compaction](/concepts/compaction).
-- `timeoutSeconds`: maximum seconds allowed for a single compaction operation before OpenClaw aborts it. Default: `180`.
-- `keepRecentTokens`: agent cut-point budget for keeping the most recent transcript tail verbatim. Manual `/compact` honors this when explicitly set; otherwise manual compaction is a hard checkpoint.
-- `recentTurnsPreserve`: number of most recent user/assistant turns kept verbatim outside safeguard summarization. Default: `3`.
-- `maxHistoryShare`: maximum fraction of the total context budget allowed for retained history after compaction (range `0.1`-`0.9`).
-- `identifierPolicy`: `strict` (default), `off`, or `custom`. `strict` prepends built-in opaque identifier retention guidance during compaction summarization.
-- `identifierInstructions`: optional custom identifier-preservation text used when `identifierPolicy=custom`.
-- `qualityGuard`: retry-on-malformed-output checks for safeguard summaries. Enabled by default in safeguard mode; set `enabled: false` to skip the audit.
-- `midTurnPrecheck`: optional tool-loop pressure check. When `enabled: true`, OpenClaw checks context pressure after tool results are appended and before the next model call. If the context no longer fits, it aborts the current attempt before submitting the prompt and reuses the existing precheck recovery path to truncate tool results or compact and retry. Works with both `default` and `safeguard` compaction modes. Default: disabled.
-- `postIndexSync`: post-compaction session-memory reindex mode. Default: `"async"`. Use `"await"` for strongest freshness, `"async"` for lower compaction latency, or `"off"` only when session-memory sync is handled elsewhere.
-- `postCompactionSections`: optional AGENTS.md H2/H3 section names to re-inject after compaction. Reinjection is disabled when unset or set to `[]`. Explicitly setting `["Session Startup", "Red Lines"]` enables that pair and preserves the legacy `Every Session`/`Safety` fallback. Enable this only when the extra context is worth the risk of duplicating project guidance already captured in the compaction summary.
-- `model`: optional `provider/model-id` or bare alias from `agents.defaults.models` for compaction summarization only. Bare aliases resolve before dispatch; configured literal model IDs retain precedence on collisions. Use this when the main session should keep one model but compaction summaries should run on another; when unset, compaction uses the session's primary model.
-- `truncateAfterCompaction`: rotates the active session JSONL after compaction so future turns load only the summary and unsummarized tail, while the previous full transcript remains archived. Prevents unbounded active transcript growth in long-running sessions. Default: `false`.
-- `maxActiveTranscriptBytes`: optional byte threshold (`number` or strings like `"20mb"`) that triggers normal local compaction before a run when the active JSONL grows past the threshold. Requires `truncateAfterCompaction` so successful compaction can rotate to a smaller successor transcript. Disabled when unset or `0`.
-- `notifyUser`: when `true`, sends brief notices to the user when compaction starts and when it completes (for example, "Compacting context..." and "Compaction complete"). Disabled by default to keep compaction silent.
-- `memoryFlush`: silent agentic turn before auto-compaction to store durable memories. Set `model` to an exact provider/model such as `ollama/qwen3:8b` when this housekeeping turn should stay on a local model; the override does not inherit the active session fallback chain. `forceFlushTranscriptBytes` forces the flush when transcript file size reaches the threshold even if token counters are stale. Skipped when workspace is read-only.
+- `mode`: `default` 或 `safeguard`（用于长历史的分块摘要）。参见 [压缩](/concepts/compaction)。
+- `provider`: 已注册的压缩提供程序插件的 id。设置后，会调用该提供程序的 `summarize()`，而不是内置的 LLM 摘要。失败时回退到内置实现。设置 provider 会强制 `mode: "safeguard"`。参见 [压缩](/concepts/compaction)。
+- `timeoutSeconds`: OpenClaw 在放弃单次压缩操作前允许的最长秒数。默认：`180`。
+- `reserveTokens`: 压缩后为模型输出和未来工具结果保留的 token 余量。当模型上下文窗口已知时，OpenClaw 会限制有效预留，避免其占用提示预算。
+- `reserveTokensFloor`: 嵌入式运行时强制执行的最小预留。设为 `0` 可禁用该下限。该下限仍受当前上下文窗口上限约束。
+- `keepRecentTokens`: 代理切点预算，用于逐字保留最新的会话尾部。手动 `/compact` 在显式设置时会遵循此项；否则手动压缩是一个硬检查点。
+- `recentTurnsPreserve`: 在 safeguard 摘要之外逐字保留的最近用户/助手轮次数。默认：`3`。
+- `maxHistoryShare`: 压缩后保留历史允许占用总上下文预算的最大比例（范围 `0.1`-`0.9`）。
+- `identifierPolicy`: `strict`（默认）、`off` 或 `custom`。`strict` 在压缩摘要期间前置内置的、不可见标识符保留指导。
+- `identifierInstructions`: 当 `identifierPolicy=custom` 时使用的可选自定义标识符保留文本。
+- `qualityGuard`: 针对有误输出的 safeguard 摘要重试检查。默认在 safeguard 模式下启用；将 `enabled: false` 设为跳过审计。
+- `midTurnPrecheck`: 可选的工具循环压力检查。当 `enabled: true` 时，OpenClaw 会在附加工具结果后、下一次模型调用前检查上下文压力。如果上下文已无法容纳，它会在提交提示前中止当前尝试，并复用现有的预检恢复路径来截断工具结果或执行压缩后重试。适用于 `default` 和 `safeguard` 两种压缩模式。默认：禁用。
+- `postIndexSync`: 压缩后会话记忆重建索引模式。默认：`"async"`。使用 `"await"` 可获得最强的新鲜度，使用 `"async"` 可降低压缩延迟，仅在会话记忆同步由其他地方处理时使用 `"off"`。
+- `postCompactionSections`: 压缩后可选重注入的 AGENTS.md H2/H3 章节名称。未设置或设为 `[]` 时禁用重注入。显式设置 `["Session Startup", "Red Lines"]` 会启用这对章节，并保留旧版 `Every Session`/`Safety` 回退。仅在额外上下文值得冒重复项目指导（这些指导已包含在压缩摘要中）风险时启用此项。
+- `model`: 仅用于压缩摘要的可选 `provider/model-id`，或来自 `agents.defaults.models` 的裸别名。裸别名会在分发前解析；冲突时，已配置的字面模型 ID 优先。当前会话若希望继续使用一个模型，而压缩摘要希望使用另一个模型时可用此项；未设置时，压缩将使用会话的主模型。
+- `truncateAfterCompaction`: 压缩后轮转当前会话转录，使未来轮次仅加载摘要和未摘要的尾部，同时保留之前的完整转录归档。防止长时间运行会话中的活跃转录无限增长。默认：`false`。
+- `maxActiveTranscriptBytes`: 可选字节阈值（`number` 或如 `"20mb"` 的字符串），当转录历史增长超过该阈值时，会在运行前触发常规本地压缩。需要 `truncateAfterCompaction`，以便成功压缩后轮转到更小的后继转录。未设置或为 `0` 时禁用。
+- `notifyUser`: 当为 `true` 时，向用户发送简短的上下文维护通知：压缩开始和完成时（例如，“正在压缩上下文...”和“压缩完成”），以及预压缩 memory flush 耗尽、回复改为降级继续时（例如，“内存维护暂时失败；继续处理你的回复。”）。默认禁用，以保持这些通知静默。
+- `memoryFlush`: 在自动压缩前进行的静默代理回合，用于存储持久化记忆。若此整理回合应保持在本地模型上，将 `model` 设置为精确的 provider/model，例如 `ollama/qwen3:8b`；该覆盖不会继承当前会话的回退链。`forceFlushTranscriptBytes` 会在转录大小达到阈值时强制刷新，即使 token 计数器已过时。工作区为只读时跳过。
 
 ### `agents.defaults.runRetries`
 
-Outer run loop retry iteration boundaries for the embedded agent runtime to prevent infinite execution loops during failure recovery. This setting only applies to the embedded agent runtime, not ACP or CLI runtimes.
+用于嵌入式代理运行时的外层运行循环重试迭代边界，以防在失败恢复期间出现无限执行循环。此设置仅适用于嵌入式代理运行时，不适用于 ACP 或 CLI 运行时。
 
 ```json5
 {
@@ -678,7 +671,7 @@ Outer run loop retry iteration boundaries for the embedded agent runtime to prev
 
 ### `agents.defaults.contextPruning`
 
-Prunes **old tool results** from in-memory context before sending to the LLM. Does **not** modify session history on disk. Disabled by default; set `mode: "cache-ttl"` to enable.
+在将内容发送给 LLM 之前，会从内存上下文中清理**旧的工具结果**。不会修改磁盘上的会话历史。默认禁用；设置 `mode: "cache-ttl"` 即可启用。
 
 ```json5
 {
@@ -702,10 +695,10 @@ Prunes **old tool results** from in-memory context before sending to the LLM. Do
 
 <Accordion title="cache-ttl 模式行为">
 
-- `mode: "cache-ttl"` enables pruning passes.
-- `ttl` controls how often pruning can run again (after the last cache touch). Default: `5m`.
-- Pruning soft-trims oversized tool results first, then hard-clears older tool results if needed.
-- `softTrimRatio` and `hardClearRatio` accept values from `0.0` through `1.0`; config validation rejects values outside that range.
+- `mode: "cache-ttl"` 会启用清理流程。
+- `ttl` 控制清理多久可以再次运行一次（在上次缓存被触碰之后）。默认：`5m`。
+- 清理会先对过大的工具结果进行软裁剪，然后在需要时对较旧的工具结果进行硬清除。
+- `softTrimRatio` 和 `hardClearRatio` 接受 `0.0` 到 `1.0` 之间的值；配置校验会拒绝该范围之外的值。
 
 **软裁剪**会保留开头 + 结尾，并在中间插入 `...`。
 
@@ -727,20 +720,20 @@ Prunes **old tool results** from in-memory context before sending to the LLM. Do
 {
   agents: {
     defaults: {
-      blockStreamingDefault: "off", // on | off
+      blockStreamingDefault: "off", // 开启 | 关闭
       blockStreamingBreak: "text_end", // text_end | message_end
       blockStreamingChunk: { minChars: 800, maxChars: 1200, breakPreference: "paragraph" },
       blockStreamingCoalesce: { idleMs: 1000 },
-      humanDelay: { mode: "natural" }, // off (default) | natural | custom (use minMs/maxMs)
+      humanDelay: { mode: "natural" }, // 关闭（默认） | 自然 | 自定义（使用 minMs/maxMs）
     },
   },
 }
 ```
 
-- Non-Telegram channels require explicit `*.blockStreaming: true` to enable block replies.
-- Channel overrides: `channels.<channel>.blockStreamingCoalesce` (and per-account variants). Discord, Google Chat, Mattermost, MS Teams, Signal, and Slack default `minChars: 1500` / `idleMs: 1000`.
-- `blockStreamingChunk.breakPreference`: preferred chunk boundary (`"paragraph" | "newline" | "sentence"`).
-- `humanDelay`: randomized pause between block replies. Default: `off`. `natural` = 800-2500ms. `custom` uses `minMs`/`maxMs` (falls back to the natural range for any unset bound). Per-agent override: `agents.list[].humanDelay`.
+- 非 Telegram 频道需要显式设置 `*.streaming.block.enabled: true` 才能启用分块回复。QQ Bot 是个例外：它没有 `streaming.block` 相关键，且会默认流式发送分块回复，除非 `channels.qqbot.streaming.mode` 为 `"off"`。
+- 频道覆盖：`channels.<channel>.streaming.block.coalesce`（以及按账号的变体）。Discord、Google Chat、Mattermost、MS Teams、Signal 和 Slack 的默认值为 `minChars: 1500` / `idleMs: 1000`。
+- `blockStreamingChunk.breakPreference`：首选分块边界（`"paragraph" | "newline" | "sentence"`）。
+- `humanDelay`：分块回复之间的随机暂停。默认值：`off`。`natural` = 800-2500ms。`custom` 使用 `minMs`/`maxMs`（若某个边界未设置，则回退到自然范围）。按代理覆盖：`agents.list[].humanDelay`。
 
 行为和分块细节请参见 [流式输出](/concepts/streaming)。
 
@@ -757,9 +750,9 @@ Prunes **old tool results** from in-memory context before sending to the LLM. Do
 }
 ```
 
-- Defaults: `instant` for direct chats/mentions, `message` for unmentioned group chats.
-- `typingIntervalSeconds` default: `6`.
-- Per-session overrides: `session.typingMode`, `session.typingIntervalSeconds`.
+- 默认值：直接聊天/提及时为 `instant`，未提及的群聊为 `message`。
+- `typingIntervalSeconds` 默认值：`6`。
+- 每个会话的覆盖项：`session.typingMode`、`session.typingIntervalSeconds`。
 
 参见 [输入指示器](/concepts/typing-indicators)。
 
@@ -774,10 +767,10 @@ Prunes **old tool results** from in-memory context before sending to the LLM. Do
   agents: {
     defaults: {
       sandbox: {
-        mode: "non-main", // off (default) | non-main | all
-        backend: "docker", // docker (default) | ssh | openshell
-        scope: "agent", // session | agent (default) | shared
-        workspaceAccess: "none", // none (default) | ro | rw
+        mode: "non-main", // 关闭（默认） | non-main | all
+        backend: "docker", // docker（默认） | ssh | openshell
+        scope: "agent", // session | agent（默认） | shared
+        workspaceAccess: "none", // none（默认） | ro | rw
         workspaceRoot: "~/.openclaw/sandboxes",
         docker: {
           image: "openclaw-sandbox:bookworm-slim",
@@ -863,9 +856,9 @@ Prunes **old tool results** from in-memory context before sending to the LLM. Do
 }
 ```
 
-Defaults shown above (`off`/`docker`/`agent`/`none`/`bookworm-slim` image/`none` network/etc.) are the actual OpenClaw defaults, not just illustrative values.
+上面显示的默认值（`off`/`docker`/`agent`/`none`/`bookworm-slim` 镜像/`none` 网络等）是实际的 OpenClaw 默认值，而不仅仅是示意值。
 
-<Accordion title="Sandbox details">
+<Accordion title="沙箱详情">
 
 **后端：**
 
@@ -877,12 +870,12 @@ Defaults shown above (`off`/`docker`/`agent`/`none`/`bookworm-slim` image/`none`
 
 **SSH 后端配置：**
 
-- `target`: SSH target in `user@host[:port]` form
-- `command`: SSH client command (default: `ssh`)
-- `workspaceRoot`: absolute remote root used for per-scope workspaces (default: `/tmp/openclaw-sandboxes`)
-- `identityFile` / `certificateFile` / `knownHostsFile`: existing local files passed to OpenSSH
-- `identityData` / `certificateData` / `knownHostsData`: inline contents or SecretRefs that OpenClaw materializes into temp files at runtime
-- `strictHostKeyChecking` / `updateHostKeys`: OpenSSH host-key policy knobs (both default `true`)
+- `target`: 形如 `user@host[:port]` 的 SSH 目标
+- `command`: SSH 客户端命令（默认：`ssh`）
+- `workspaceRoot`: 用于每个作用域工作区的绝对远程根目录（默认：`/tmp/openclaw-sandboxes`）
+- `identityFile` / `certificateFile` / `knownHostsFile`: 传递给 OpenSSH 的现有本地文件
+- `identityData` / `certificateData` / `knownHostsData`: 内联内容或 SecretRef，OpenClaw 会在运行时将其物化为临时文件
+- `strictHostKeyChecking` / `updateHostKeys`: OpenSSH 主机密钥策略选项（两者默认均为 `true`）
 
 **SSH 认证优先级：**
 
@@ -901,9 +894,9 @@ Defaults shown above (`off`/`docker`/`agent`/`none`/`bookworm-slim` image/`none`
 
 **工作区访问：**
 
-- `none`: per-scope sandbox workspace under `~/.openclaw/sandboxes` (default)
-- `ro`: sandbox workspace at `/workspace`, agent workspace mounted read-only at `/agent`
-- `rw`: agent workspace mounted read/write at `/workspace`
+- `none`: 每个作用域的沙箱工作区位于 `~/.openclaw/sandboxes` 下（默认）
+- `ro`: 沙箱工作区位于 `/workspace`，代理工作区以只读方式挂载到 `/agent`
+- `rw`: 代理工作区以读写方式挂载到 `/workspace`
 
 **作用域：**
 
@@ -920,7 +913,7 @@ Defaults shown above (`off`/`docker`/`agent`/`none`/`bookworm-slim` image/`none`
       openshell: {
         enabled: true,
         config: {
-          mode: "mirror", // mirror (default) | remote
+          mode: "mirror", // mirror（默认） | remote
           command: "openshell",
           from: "openclaw",
           remoteWorkspaceDir: "/sandbox",
@@ -957,15 +950,15 @@ Defaults shown above (`off`/`docker`/`agent`/`none`/`bookworm-slim` image/`none`
 
 **`docker.binds`** 会挂载额外的宿主目录；全局和逐代理的 binds 会合并。
 
-**Sandboxed browser** (`sandbox.browser.enabled`, default `false`): Chromium + CDP in a container. noVNC URL injected into system prompt. Does not require `browser.enabled` in `openclaw.json`.
-noVNC observer access uses VNC auth by default and OpenClaw emits a short-lived token URL (instead of exposing the password in the shared URL).
+**沙箱浏览器** (`sandbox.browser.enabled`, 默认 `false`): 容器中的 Chromium + CDP。noVNC URL 会注入到系统提示词中。无需在 `openclaw.json` 中设置 `browser.enabled`。
+noVNC 观察者访问默认使用 VNC 认证，OpenClaw 会发出一个短期有效的令牌 URL（而不是在共享 URL 中暴露密码）。
 
-- `allowHostControl: false` (default) blocks sandboxed sessions from targeting the host browser.
-- `network` defaults to `openclaw-sandbox-browser` (dedicated bridge network). Set to `bridge` only when you explicitly want global bridge connectivity. `"host"` is blocked here too.
-- `cdpSourceRange` optionally restricts CDP ingress at the container edge to a CIDR range (for example `172.21.0.1/32`).
-- `sandbox.browser.binds` mounts additional host directories into the sandbox browser container only. When set (including `[]`), it replaces `docker.binds` for the browser container.
-- The sandbox browser container's Chromium always launches with `--no-sandbox --disable-setuid-sandbox` (containers do not have the kernel primitives Chrome's own sandbox needs); there is no config toggle for this.
-- Launch defaults are defined in `scripts/sandbox-browser-entrypoint.sh` and tuned for container hosts:
+- `allowHostControl: false`（默认）会阻止沙箱会话把目标指向宿主机浏览器。
+- `network` 默认是 `openclaw-sandbox-browser`（专用 bridge 网络）。仅当你明确希望使用全局 bridge 连通性时才设置为 `bridge`。这里的 `"host"` 也会被阻止。
+- `cdpSourceRange` 可选地将容器边缘的 CDP 入站限制到一个 CIDR 范围（例如 `172.21.0.1/32`）。
+- `sandbox.browser.binds` 仅将额外的宿主目录挂载到沙箱浏览器容器中。设置后（包括 `[]`），它会替换浏览器容器的 `docker.binds`。
+- 沙箱浏览器容器中的 Chromium 始终以 `--no-sandbox --disable-setuid-sandbox` 启动（容器不具备 Chrome 自身沙箱所需的内核原语）；此项没有配置开关。
+- 启动默认值定义在 `scripts/sandbox-browser-entrypoint.sh` 中，并针对容器主机进行了调优：
   - `--remote-debugging-address=127.0.0.1`
   - `--remote-debugging-port=<derived from OPENCLAW_BROWSER_CDP_PORT>`
   - `--user-data-dir=${HOME}/.chrome`
@@ -979,17 +972,11 @@ noVNC observer access uses VNC auth by default and OpenClaw emits a short-lived 
   - `--metrics-recording-only`
   - `--password-store=basic`
   - `--use-mock-keychain`
-  - `--disable-3d-apis`, `--disable-gpu`, and `--disable-software-rasterizer` are
-    enabled by default and can be disabled with
-    `OPENCLAW_BROWSER_DISABLE_GRAPHICS_FLAGS=0` if WebGL/3D usage requires it.
-  - `--disable-extensions` (default enabled); `OPENCLAW_BROWSER_DISABLE_EXTENSIONS=0`
-    re-enables extensions if your workflow depends on them.
-  - `--renderer-process-limit=2` by default; change with
-    `OPENCLAW_BROWSER_RENDERER_PROCESS_LIMIT=<N>`, set `0` to use Chromium's
-    default process limit.
-  - `--headless=new` only when `headless` is enabled.
-  - Defaults are the container image baseline; use a custom browser image with a custom
-    entrypoint to change container defaults.
+  - `--disable-3d-apis`、`--disable-gpu` 和 `--disable-software-rasterizer` 默认启用；如果 WebGL/3D 使用需要，可通过 `OPENCLAW_BROWSER_DISABLE_GRAPHICS_FLAGS=0` 禁用它们。
+  - `--disable-extensions`（默认启用）；如果你的工作流依赖扩展，可通过 `OPENCLAW_BROWSER_DISABLE_EXTENSIONS=0` 重新启用扩展。
+  - `--renderer-process-limit=2` 默认启用；可通过 `OPENCLAW_BROWSER_RENDERER_PROCESS_LIMIT=<N>` 更改，设为 `0` 可使用 Chromium 的默认进程限制。
+  - 仅当启用 `headless` 时才使用 `--headless=new`。
+  - 默认值为容器镜像基线；如需更改容器默认值，请使用带自定义入口点的自定义浏览器镜像。
 
 </Accordion>
 
@@ -1015,15 +1002,15 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
       {
         id: "main",
         default: true,
-        name: "Main Agent",
+        name: "主代理",
         workspace: "~/.openclaw/workspace",
         agentDir: "~/.openclaw/agents/main/agent",
-        model: "anthropic/claude-opus-4-6", // or { primary, fallbacks }
+        model: "anthropic/claude-opus-4-6", // 或 { primary, fallbacks }
         utilityModel: "openai/gpt-5.4-mini",
-        thinkingDefault: "high", // per-agent thinking level override
-        reasoningDefault: "on", // per-agent reasoning visibility override
-        fastModeDefault: false, // per-agent fast mode override
-        params: { cacheRetention: "none" }, // overrides matching defaults.models params by key
+        thinkingDefault: "high", // 每个代理的 thinking 级别覆盖
+        reasoningDefault: "on", // 每个代理的 reasoning 可见性覆盖
+        fastModeDefault: false, // 每个代理的快速模式覆盖
+        params: { cacheRetention: "none" }, // 按键覆盖 agents.defaults.models 中匹配的默认项 params
         tts: {
           providers: {
             elevenlabs: { speakerVoiceId: "EXAVITQu4vr4xnSDxMaL" },
@@ -1060,28 +1047,28 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 }
 ```
 
-- `id`: stable agent id (required).
-- `default`: when multiple are set, first wins (warning logged). If none set, first list entry is default.
-- `model`: string form sets a strict per-agent primary with no model fallback; object form `{ primary }` is also strict unless you add `fallbacks`. Use `{ primary, fallbacks: [...] }` to opt that agent into fallback, or `{ primary, fallbacks: [] }` to make strict behavior explicit. Cron jobs that only override `primary` still inherit default fallbacks unless you set `fallbacks: []`.
-- `utilityModel`: optional per-agent override for short internal tasks such as generated session and thread titles. Falls back to `agents.defaults.utilityModel`, then this agent's primary model.
-- `params`: per-agent stream params merged over the selected model entry in `agents.defaults.models`. Use this for agent-specific overrides like `cacheRetention`, `temperature`, or `maxTokens` without duplicating the whole model catalog.
-- `tts`: optional per-agent text-to-speech overrides. The block deep-merges over `messages.tts`, so keep shared provider credentials and fallback policy in `messages.tts` and set only persona-specific values such as provider, voice, model, style, or auto mode here.
-- `skills`: optional per-agent skill allowlist. If omitted, the agent inherits `agents.defaults.skills` when set; an explicit list replaces defaults instead of merging, and `[]` means no skills.
-- `thinkingDefault`: optional per-agent default thinking level (`off | minimal | low | medium | high | xhigh | adaptive | max`). Overrides `agents.defaults.thinkingDefault` for this agent when no per-message or session override is set. The selected provider/model profile controls which values are valid; for Google Gemini, `adaptive` keeps provider-owned dynamic thinking (`thinkingLevel` omitted on Gemini 3/3.1, `thinkingBudget: -1` on Gemini 2.5).
-- `reasoningDefault`: optional per-agent default reasoning visibility (`on | off | stream`). Overrides `agents.defaults.reasoningDefault` for this agent when no per-message or session reasoning override is set.
-- `fastModeDefault`: optional per-agent default for fast mode (`"auto" | true | false`). Applies when no per-message or session fast-mode override is set.
-- `models`: optional per-agent model catalog/runtime overrides keyed by full `provider/model` ids. Use `models["provider/model"].agentRuntime` for per-agent runtime exceptions.
-- `runtime`: optional per-agent runtime descriptor. Use `type: "acp"` with `runtime.acp` defaults (`agent`, `backend`, `mode`, `cwd`) when the agent should default to ACP harness sessions.
-- `identity.avatar`: workspace-relative path, `http(s)` URL, or `data:` URI.
-- Local workspace-relative `identity.avatar` image files are limited to 2 MB. `http(s)` URLs and `data:` URIs are not checked against the local file-size limit.
-- `identity` derives defaults: `ackReaction` from `emoji`, `mentionPatterns` from `name`/`emoji`.
-- `subagents.allowAgents`: allowlist of configured agent ids for explicit `sessions_spawn.agentId` targets (`["*"]` = any configured target; default: same agent only). Include the requester id when self-targeted `agentId` calls should be allowed. Stale entries whose agent config was deleted are rejected by `sessions_spawn` and omitted from `agents_list`; run `openclaw doctor --fix` to clean them up, or add a minimal `agents.list[]` entry if that target should remain spawnable while inheriting defaults.
-- Sandbox inheritance guard: if the requester session is sandboxed, `sessions_spawn` rejects targets that would run unsandboxed.
-- `subagents.requireAgentId`: when true, block `sessions_spawn` calls that omit `agentId` (forces explicit profile selection; default: false).
-- `subagents.maxConcurrent`: max concurrent child-agent runs across subagent execution. Default: `8`.
-- `subagents.maxChildrenPerAgent`: max active children a single agent session can spawn. Default: `5`.
-- `subagents.maxSpawnDepth`: max nesting depth for sub-agent spawning (`1`-`5`). Default: `1` (no nesting).
-- `subagents.archiveAfterMinutes`: age before completed subagent state is archived. Default: `60`.
+- `id`：稳定的代理 ID（必需）。
+- `default`：当设置多个时，最先出现的生效（会记录警告）。如果未设置，则列表中的第一项为默认。
+- `model`：字符串形式会将该代理的主模型严格设置为单一模型，不包含模型回退；对象形式 `{ primary }` 也同样是严格模式，除非你添加 `fallbacks`。使用 `{ primary, fallbacks: [...] }` 可为该代理启用回退，或使用 `{ primary, fallbacks: [] }` 明确指定严格行为。只覆盖 `primary` 的 Cron 任务仍会继承默认回退，除非你设置 `fallbacks: []`。
+- `utilityModel`：可选的每代理覆盖，用于生成会话标题和线程标题等短内部任务。若未设置，则依次回退到 `agents.defaults.utilityModel`、主提供方声明的小模型默认值，然后回退到该代理的主模型。空字符串会为该代理禁用 utility 路由。
+- `params`：每代理流参数，基于 `agents.defaults.models` 中所选模型条目进行合并。可用于像 `cacheRetention`、`temperature` 或 `maxTokens` 之类的代理特定覆盖，而无需重复整个模型目录。
+- `tts`：可选的每代理文字转语音覆盖。该块会在 `messages.tts` 之上进行深度合并，因此请将共享的提供方凭据和回退策略保留在 `messages.tts` 中，并仅在此处设置角色专属值，如提供方、语音、模型、风格或自动模式。
+- `skills`：可选的每代理技能白名单。如果省略，则在设置了 `agents.defaults.skills` 时继承该默认值；显式列表会替换默认值而不是合并，`[]` 表示没有技能。
+- `thinkingDefault`：可选的每代理默认 thinking 级别（`off | minimal | low | medium | high | xhigh | adaptive | max`）。当未设置每条消息或会话覆盖时，它会覆盖该代理的 `agents.defaults.thinkingDefault`。所选提供方/模型配置决定哪些值有效；对于 Google Gemini，`adaptive` 会保持由提供方控制的动态 thinking（Gemini 3/3.1 上省略 `thinkingLevel`，Gemini 2.5 上使用 `thinkingBudget: -1`）。
+- `reasoningDefault`：可选的每代理默认 reasoning 可见性（`on | off | stream`）。当未设置每条消息或会话 reasoning 覆盖时，它会覆盖该代理的 `agents.defaults.reasoningDefault`。
+- `fastModeDefault`：可选的每代理快速模式默认值（`"auto" | true | false`）。当未设置每条消息或会话快速模式覆盖时适用。
+- `models`：可选的每代理模型目录/运行时覆盖，按完整的 `provider/model` ID 作为键。对每代理运行时例外情况使用 `models["provider/model"].agentRuntime`。
+- `runtime`：可选的每代理运行时描述符。当代理应默认使用 ACP harness 会话时，使用 `type: "acp"` 并采用 `runtime.acp` 默认值（`agent`、`backend`、`mode`、`cwd`）。
+- `identity.avatar`：相对于工作区的路径、`http(s)` URL 或 `data:` URI。
+- 本地、相对于工作区的 `identity.avatar` 图片文件限制为 2 MB。`http(s)` URL 和 `data:` URI 不受本地文件大小限制检查。
+- `identity` 会派生默认值：`ackReaction` 来自 `emoji`，`mentionPatterns` 来自 `name`/`emoji`。
+- `subagents.allowAgents`：已配置代理 ID 的白名单，用于显式的 `sessions_spawn.agentId` 目标（`["*"]` = 任意已配置目标；默认：仅相同代理）。当自引用的 `agentId` 调用应被允许时，请包含请求者自身的 ID。已删除代理配置的过期条目会被 `sessions_spawn` 拒绝，并从 `agents_list` 中省略；运行 `openclaw doctor --fix` 可清理它们，或者如果该目标仍应可被 spawn 且继承默认值，则添加一个最小的 `agents.list[]` 条目。
+- 沙盒继承保护：如果请求者会话处于沙盒中，`sessions_spawn` 会拒绝那些会在非沙盒环境中运行的目标。
+- `subagents.requireAgentId`：为 `true` 时，阻止省略 `agentId` 的 `sessions_spawn` 调用（强制显式选择配置；默认：`false`）。
+- `subagents.maxConcurrent`：子代理执行过程中最大并发子代理运行数。默认：`8`。
+- `subagents.maxChildrenPerAgent`：单个代理会话可生成的最大活动子级数量。默认：`5`。
+- `subagents.maxSpawnDepth`：子代理生成的最大嵌套深度（`1`-`5`）。默认：`1`（不嵌套）。
+- `subagents.archiveAfterMinutes`：完成的子代理状态在归档前的最长存活时间。默认：`60`。
 
 ## 多代理路由
 
@@ -1278,40 +1265,40 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 
 <Accordion title="会话字段详情">
 
-- **`scope`**: base session grouping strategy for group-chat contexts.
-  - `per-sender` (default): each sender gets an isolated session within a channel context.
-  - `global`: all participants in a channel context share a single session (use only when shared context is intended).
-- **`dmScope`**: how DMs are grouped.
-  - `main`: all DMs share the main session.
-  - `per-peer`: isolate by sender id across channels.
-  - `per-channel-peer`: isolate per channel + sender (recommended for multi-user inboxes).
-  - `per-account-channel-peer`: isolate per account + channel + sender (recommended for multi-account).
-- **`identityLinks`**: map canonical ids to provider-prefixed peers for cross-channel session sharing. Dock commands such as `/dock_discord` use the same map to switch the active session's reply route to another linked channel peer; see [Channel docking](/concepts/channel-docking).
-- **`reset`**: primary reset policy. `daily` resets at `atHour` local time; `idle` resets after `idleMinutes`. When both configured, whichever expires first wins. Daily reset freshness uses the session row's `sessionStartedAt`; idle reset freshness uses `lastInteractionAt`. Background/system-event writes such as heartbeat, cron wakeups, exec notifications, and gateway bookkeeping can update `updatedAt`, but they do not keep daily/idle sessions fresh.
-- **`resetByType`**: per-type overrides (`direct`, `group`, `thread`). Legacy `dm` accepted as alias for `direct`.
-- **`resetByChannel`**: per-channel reset overrides keyed by provider/channel id. When the session's channel has a matching entry, it wins outright over `resetByType`/`reset` for that session. Use only when one channel needs reset behavior different from the type-level policy.
-- **`mainKey`**: legacy field. Runtime always uses `"main"` for the main direct-chat bucket.
-- **`agentToAgent.maxPingPongTurns`**: maximum reply-back turns between agents during agent-to-agent exchanges (integer, range: `0`-`20`, default: `5`). `0` disables ping-pong chaining.
-- **`sendPolicy`**: match by `channel`, `chatType` (`direct|group|channel`, with legacy `dm` alias), `keyPrefix`, or `rawKeyPrefix`. First deny wins.
-- **`maintenance`**: session-store cleanup + retention controls.
-  - `mode`: `enforce` applies cleanup and is the default; `warn` emits warnings only.
-  - `pruneAfter`: age cutoff for stale entries (default `30d`).
-  - `maxEntries`: maximum number of entries in `sessions.json` (default `500`). Runtime writes batch cleanup with a small high-water buffer for production-sized caps; `openclaw sessions cleanup --enforce` applies the cap immediately.
-  - Short-lived gateway model-run probe sessions use fixed `24h` retention, but cleanup is pressure-gated: it only removes stale strict model-run probe rows when session-entry maintenance/cap pressure is reached. Only strict explicit probe keys matching `agent:*:explicit:model-run-<uuid>` are eligible; normal direct, group, thread, cron, hook, heartbeat, ACP, and sub-agent sessions do not inherit this 24h retention. When model-run cleanup runs, it runs before the broader `pruneAfter` stale-entry cleanup and `maxEntries` cap.
-  - `rotateBytes`: deprecated and ignored; `openclaw doctor --fix` removes it from older configs.
-  - `resetArchiveRetention`: retention for `*.reset.<timestamp>` transcript archives. Defaults to `pruneAfter`; set `false` to disable.
-  - `maxDiskBytes`: optional sessions-directory disk budget. In `warn` mode it logs warnings; in `enforce` mode it removes oldest artifacts/sessions first.
-  - `highWaterBytes`: optional target after budget cleanup. Defaults to `80%` of `maxDiskBytes`.
-- **`writeLock`**: session transcript write-lock controls. Tune only when legitimate transcript prep, cleanup, compaction, or mirror work contends longer than the default policies.
-  - `acquireTimeoutMs`: milliseconds to wait while acquiring a lock before reporting the session as busy. Default: `60000`; env override `OPENCLAW_SESSION_WRITE_LOCK_ACQUIRE_TIMEOUT_MS`.
-  - `staleMs`: milliseconds before an existing lock is treated as stale and reclaimed. Default: `1800000`; env override `OPENCLAW_SESSION_WRITE_LOCK_STALE_MS`.
-  - `maxHoldMs`: milliseconds a held in-process lock may remain held before the watchdog releases it. Default: `300000`; env override `OPENCLAW_SESSION_WRITE_LOCK_MAX_HOLD_MS`.
-- **`threadBindings`**: global defaults for thread-bound session features.
-  - `enabled`: master default switch (providers can override; Discord uses `channels.discord.threadBindings.enabled`)
-  - `idleHours`: default inactivity auto-unfocus in hours (`0` disables; providers can override)
-  - `maxAgeHours`: default hard max age in hours (`0` disables; providers can override)
-  - `spawnSessions`: default gate for creating thread-bound work sessions from `sessions_spawn` and ACP thread spawns. Defaults to `true` when thread bindings are enabled; providers/accounts can override.
-  - `defaultSpawnContext`: default native subagent context for thread-bound spawns (`"fork"` or `"isolated"`). Defaults to `"fork"`.
+- **`scope`**: 群聊上下文的基础会话分组策略。
+  - `per-sender`（默认）：在频道上下文中，每个发送者获得一个隔离的会话。
+  - `global`：频道上下文中的所有参与者共享单个会话（仅在确实需要共享上下文时使用）。
+- **`dmScope`**: DM 的分组方式。
+  - `main`：所有 DM 共享主会话。
+  - `per-peer`：按发送者 id 跨频道隔离。
+  - `per-channel-peer`：按频道 + 发送者隔离（推荐用于多用户收件箱）。
+  - `per-account-channel-peer`：按账号 + 频道 + 发送者隔离（推荐用于多账号场景）。
+- **`identityLinks`**: 将规范化 id 映射到带提供方前缀的对端，以便跨频道共享会话。诸如 `/dock_discord` 之类的 Dock 命令会使用同一映射，将当前会话的回复路由切换到另一个已关联的频道对端；参见 [Channel docking](/concepts/channel-docking)。
+- **`reset`**: 主要重置策略。`daily` 在本地时间 `atHour` 重置；`idle` 在 `idleMinutes` 之后重置。当两者都配置时，先到期者生效。每日重置的“新鲜度”使用会话行的 `sessionStartedAt`；空闲重置的“新鲜度”使用 `lastInteractionAt`。诸如心跳、cron 唤醒、exec 通知以及网关账务记录等后台/系统事件写入可能会更新 `updatedAt`，但不会让每日/空闲会话保持新鲜。
+- **`resetByType`**: 按类型覆盖（`direct`、`group`、`thread`）。旧的 `dm` 也可作为 `direct` 的别名。
+- **`resetByChannel`**: 以提供方/频道 id 为键的按频道重置覆盖。当会话所属频道有匹配项时，它会完全优先于该会话的 `resetByType`/`reset`。仅在某个频道需要与类型级策略不同的重置行为时使用。
+- **`mainKey`**: 旧字段。运行时始终使用 `"main"` 作为主直接聊天桶。
+- **`agentToAgent.maxPingPongTurns`**: 代理之间在 agent-to-agent 交互期间的最大来回回复轮数（整数，范围：`0`-`20`，默认：`5`）。`0` 会禁用乒乓链式回复。
+- **`sendPolicy`**: 按 `channel`、`chatType`（`direct|group|channel`，旧的 `dm` 可作为别名）、`keyPrefix` 或 `rawKeyPrefix` 匹配。先匹配到的 deny 生效。
+- **`maintenance`**: 会话存储清理 + 保留控制。
+  - `mode`：`enforce` 会执行清理，是默认值；`warn` 仅发出警告。
+  - `pruneAfter`：陈旧条目的年龄阈值（默认 `30d`）。
+  - `maxEntries`：SQLite 会话条目的最大数量（默认 `500`）。运行时写入会通过小型高水位缓冲进行批量清理，以适配生产规模的上限；`openclaw sessions cleanup --enforce` 会立即应用该上限。
+  - 短生命周期的网关模型运行探测会话使用固定的 `24h` 保留期，但清理受压力门控：仅当达到会话条目维护/容量压力时，才会移除陈旧的严格模型运行探测行。只有匹配 `agent:*:explicit:model-run-<uuid>` 的严格显式探测键才有资格；普通的 direct、group、thread、cron、hook、heartbeat、ACP 以及子代理会话不会继承这个 24h 保留期。模型运行清理触发时，会先于更广泛的 `pruneAfter` 陈旧条目清理和 `maxEntries` 上限执行。
+  - 旧的 `rotateBytes` 会被当前 schema 拒绝；`openclaw doctor --fix` 会将其从旧配置中移除。
+  - `resetArchiveRetention`：`*.reset.<timestamp>` 转录归档的保留期。默认值为 `pruneAfter`；设为 `false` 可禁用。
+  - `maxDiskBytes`：可选的 sessions 目录磁盘预算。在 `warn` 模式下只记录警告；在 `enforce` 模式下会优先移除最旧的工件/会话。
+  - `highWaterBytes`：预算清理后的可选目标值。默认是 `maxDiskBytes` 的 `80%`。
+- **`writeLock`**: 会话转录写锁控制。仅在合法的转录准备、清理、压缩或镜像工作与默认策略的争用时间更长时才需要调整。
+  - `acquireTimeoutMs`：获取锁时等待的毫秒数，超时后将会话报告为繁忙。默认：`60000`；环境变量覆盖：`OPENCLAW_SESSION_WRITE_LOCK_ACQUIRE_TIMEOUT_MS`。
+  - `staleMs`：现有锁在被视为陈旧并回收之前的毫秒数。默认：`1800000`；环境变量覆盖：`OPENCLAW_SESSION_WRITE_LOCK_STALE_MS`。
+  - `maxHoldMs`：持有中的进程内锁在被 watchdog 释放之前可持续持有的毫秒数。默认：`300000`；环境变量覆盖：`OPENCLAW_SESSION_WRITE_LOCK_MAX_HOLD_MS`。
+- **`threadBindings`**: 线程绑定会话功能的全局默认值。
+  - `enabled`：主默认开关（提供方可以覆盖；Discord 使用 `channels.discord.threadBindings.enabled`）
+  - `idleHours`：默认空闲自动取消聚焦时长（小时）（`0` 禁用；提供方可以覆盖）
+  - `maxAgeHours`：默认硬性最大时长（小时）（`0` 禁用；提供方可以覆盖）
+  - `spawnSessions`：从 `sessions_spawn` 和 ACP 线程派生创建线程绑定工作会话的默认门控。在线程绑定启用时默认为 `true`；提供方/账号可以覆盖。
+  - `defaultSpawnContext`：线程绑定派生的默认原生子代理上下文（`"fork"` 或 `"isolated"`）。默认值为 `"fork"`。
 
 </Accordion>
 
@@ -1327,10 +1314,10 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
     ackReactionScope: "group-mentions", // group-mentions | group-all | direct | all | off | none
     removeAckAfterReply: false,
     queue: {
-      mode: "steer", // steer (default) | followup | collect | interrupt
+      mode: "steer", // steer (默认) | followup | collect | interrupt
       debounceMs: 500,
       cap: 20,
-      drop: "summarize", // old | new | summarize (default)
+      drop: "summarize", // old | new | summarize (默认)
       byChannel: {
         whatsapp: "followup",
         telegram: "followup",
@@ -1367,45 +1354,44 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 
 ### 确认反应
 
-- Defaults to active agent's `identity.emoji`, otherwise `"👀"`. Set `""` to disable.
-- Per-channel overrides: `channels.<channel>.ackReaction`, `channels.<channel>.accounts.<id>.ackReaction`.
-- Resolution order: account → channel → `messages.ackReaction` → identity fallback.
-- Scope: `group-mentions` (default), `group-all`, `direct`, `all`, or `off`/`none` (disables ack reactions entirely).
-- `removeAckAfterReply`: removes ack after reply on reaction-capable channels such as Slack, Discord, Signal, Telegram, WhatsApp, and iMessage.
-- `messages.statusReactions.enabled`: enables lifecycle status reactions on Slack, Discord, Signal, Telegram, and WhatsApp.
-  On Discord, unset keeps status reactions enabled when ack reactions are active.
-  On Slack, Signal, Telegram, and WhatsApp, set it explicitly to `true` to enable lifecycle status reactions.
-  Slack uses its native assistant thread status and rotating loading messages for progress by default, while keeping the configured ack reaction static.
-- `messages.statusReactions.emojis`: overrides lifecycle emoji keys:
-  `queued`, `thinking`, `compacting`, `tool`, `coding`, `web`, `deploy`, `build`,
-  `concierge`, `done`, `error`, `stallSoft`, and `stallHard`.
-  Telegram only allows a fixed reaction set, so unsupported configured emoji fall back
-  to the nearest supported status variant for that chat.
+- 默认使用活跃代理的 `identity.emoji`，否则为 `"👀"`。设置为 `""` 可禁用。
+- 按频道覆盖：`channels.<channel>.ackReaction`、`channels.<channel>.accounts.<id>.ackReaction`。
+- 解析顺序：账户 → 频道 → `messages.ackReaction` → 身份回退。
+- 范围：`group-mentions`（默认）、`group-all`、`direct`、`all`，或 `off`/`none`（完全禁用确认反应）。
+- `removeAckAfterReply`：在支持反应的频道（如 Slack、Discord、Signal、Telegram、WhatsApp 和 iMessage）中，在回复后移除确认反应。
+- `messages.statusReactions.enabled`：在 Slack、Discord、Signal、Telegram 和 WhatsApp 上启用生命周期状态反应。
+  在 Discord 上，若未设置，则在确认反应启用时仍保持状态反应启用。
+  在 Slack、Signal、Telegram 和 WhatsApp 上，需显式设为 `true` 才会启用生命周期状态反应。
+  Slack 默认使用其原生助手线程状态和轮换加载消息来显示进度，同时保持已配置的确认反应静态不变。
+- `messages.statusReactions.emojis`：覆盖生命周期表情键：
+  `queued`、`thinking`、`compacting`、`tool`、`coding`、`web`、`deploy`、`build`、
+  `concierge`、`done`、`error`、`stallSoft` 和 `stallHard`。
+  Telegram 仅允许固定的反应集合，因此不受支持的已配置表情会回退为该聊天中最接近支持的状态变体。
 
-### Queue
+### 队列
 
-- `mode`: queue strategy for inbound messages that arrive while a session run is active. Default: `"steer"`.
-  - `steer`: inject the new prompt into the active run.
-  - `followup`: run the new prompt after the active run finishes.
-  - `collect`: batch compatible messages and run them together later.
-  - `interrupt`: abort the active run before starting the newest prompt.
-- `debounceMs`: delay before dispatching a queued/steered message. Default: `500`.
-- `cap`: maximum queued messages before the drop policy applies. Default: `20`.
-- `drop`: strategy when the cap is exceeded. `"summarize"` (default) drops oldest entries but keeps compact summaries; `"old"` drops oldest without summaries; `"new"` rejects the newest item.
-- `byChannel`: per-channel `mode` overrides keyed by provider id.
-- `debounceMsByChannel`: per-channel `debounceMs` overrides keyed by provider id.
+- `mode`：当会话运行处于活动状态时，对到达的传入消息采用的队列策略。默认：`"steer"`。
+  - `steer`：将新提示注入到当前运行中。
+  - `followup`：在当前运行结束后运行新提示。
+  - `collect`：将兼容消息批量收集，稍后一起运行。
+  - `interrupt`：在开始最新提示前中止当前运行。
+- `debounceMs`：分发排队/导向消息前的延迟。默认：`500`。
+- `cap`：应用丢弃策略前允许的最大排队消息数。默认：`20`。
+- `drop`：超过上限时的策略。`"summarize"`（默认）会丢弃最旧条目但保留简要摘要；`"old"` 会直接丢弃最旧条目而不保留摘要；`"new"` 会拒绝最新条目。
+- `byChannel`：按提供方 ID 键控的每频道 `mode` 覆盖。
+- `debounceMsByChannel`：按提供方 ID 键控的每频道 `debounceMs` 覆盖。
 
-### Inbound debounce
+### 传入去抖
 
-Batches rapid text-only messages from the same sender into a single agent turn. Media/attachments flush immediately. Control commands bypass debouncing. Default `debounceMs`: `2000`.
+将来自同一发送者的快速纯文本消息批量合并为一次代理轮次。媒体/附件会立即刷新发送。控制命令不受去抖影响。默认 `debounceMs`：`2000`。
 
-### Other message keys
+### 其他消息键
 
-- `messages.messagePrefix`: prefix text prepended to inbound user messages before they reach the agent runtime. Use sparingly for channel context markers.
-- `messages.visibleReplies`: controls visible source replies across direct, group, and channel conversations (`"message_tool"` requires `message(action=send)` for visible output; `"automatic"` posts normal replies as before).
-- `messages.usageTemplate` / `messages.responseUsage`: custom `/usage` footer template and default per-reply usage mode (`off | tokens | full`, plus legacy `on` alias for `tokens`).
-- `messages.groupChat.mentionPatterns` / `historyLimit`: group-message mention triggers and history window sizing.
-- `messages.suppressToolErrors`: when `true`, suppresses `⚠️` tool-error warnings shown to the user (the agent still sees errors in context and can retry). Default: `false`.
+- `messages.messagePrefix`：在传入用户消息到达代理运行时之前，预先添加的前缀文本。请谨慎使用，用于频道上下文标记。
+- `messages.visibleReplies`：控制直接、群组和频道会话中的可见源回复（`"message_tool"` 需要 `message(action=send)` 才能产生可见输出；`"automatic"` 则像以前一样发布正常回复）。
+- `messages.usageTemplate` / `messages.responseUsage`：自定义 `/usage` 页脚模板，以及每次回复的默认使用量模式（`off | tokens | full`，另有旧版 `on` 别名表示 `tokens`）。
+- `messages.groupChat.mentionPatterns` / `historyLimit`：群组消息的提及触发规则和历史窗口大小。
+- `messages.suppressToolErrors`：设为 `true` 时，抑制向用户显示的 `⚠️` 工具错误警告（代理仍会在上下文中看到错误并可重试）。默认：`false`。
 
 ### TTS（文本转语音）
 
@@ -1413,7 +1399,7 @@ Batches rapid text-only messages from the same sender into a single agent turn. 
 {
   messages: {
     tts: {
-      auto: "off", // off (default) | always | inbound | tagged
+      auto: "off", // off (默认) | always | inbound | tagged
       mode: "final", // final | all
       provider: "elevenlabs",
       summaryModel: "openai/gpt-5.4-mini",
@@ -1455,19 +1441,19 @@ Batches rapid text-only messages from the same sender into a single agent turn. 
 }
 ```
 
-- `auto` controls the default auto-TTS mode: `off`, `always`, `inbound`, or `tagged`. `/tts on|off` can override local prefs, and `/tts status` shows the effective state.
-- `summaryModel` overrides `agents.defaults.model.primary` for auto-summary.
-- `modelOverrides` is enabled by default (`enabled !== false`); `modelOverrides.allowProvider` is opt-in.
-- API keys fall back to `ELEVENLABS_API_KEY`/`XI_API_KEY` and `OPENAI_API_KEY`.
-- Bundled speech providers are plugin-owned. If `plugins.allow` is set, include each TTS provider plugin you want to use, for example `microsoft` for Edge TTS. The legacy `edge` provider id is accepted as an alias for `microsoft`.
-- `providers.openai.baseUrl` overrides the OpenAI TTS endpoint. Resolution order is config, then `OPENAI_TTS_BASE_URL`, then `https://api.openai.com/v1`.
-- When `providers.openai.baseUrl` points to a non-OpenAI endpoint, OpenClaw treats it as an OpenAI-compatible TTS server and relaxes model/voice validation.
+- `auto` 控制默认的自动 TTS 模式：`off`、`always`、`inbound` 或 `tagged`。`/tts on|off` 可覆盖本地偏好，`/tts status` 会显示生效状态。
+- `summaryModel` 会为自动摘要覆盖 `agents.defaults.model.primary`。
+- `modelOverrides` 默认启用（`enabled !== false`）；`modelOverrides.allowProvider` 需要显式启用。
+- API 密钥会回退到 `ELEVENLABS_API_KEY`/`XI_API_KEY` 和 `OPENAI_API_KEY`。
+- 内置语音提供方由插件拥有。如果设置了 `plugins.allow`，请包含你想使用的每个 TTS 提供方插件，例如用于 Edge TTS 的 `microsoft`。旧版 `edge` 提供方 ID 可作为 `microsoft` 的别名接受。
+- `providers.openai.baseUrl` 会覆盖 OpenAI TTS 端点。解析顺序为配置，其次是 `OPENAI_TTS_BASE_URL`，最后是 `https://api.openai.com/v1`。
+- 当 `providers.openai.baseUrl` 指向非 OpenAI 端点时，OpenClaw 会将其视为兼容 OpenAI 的 TTS 服务器，并放宽模型/语音校验。
 
 ---
 
 ## Talk
 
-Defaults for Talk mode (macOS/iOS/Android and the browser Control UI).
+Talk 模式的默认值（macOS/iOS/Android 和浏览器 Control UI）。
 
 ```json5
 {
@@ -1498,11 +1484,11 @@ Defaults for Talk mode (macOS/iOS/Android and the browser Control UI).
       provider: "openai",
       providers: {
         openai: {
-          model: "gpt-realtime-2",
+          model: "gpt-realtime-2.1",
           speakerVoice: "cedar",
         },
       },
-      instructions: "Speak warmly and keep answers brief.",
+      instructions: "温和地说话，并保持回答简短。",
       mode: "realtime", // realtime | stt-tts | transcription
       transport: "webrtc", // webrtc | provider-websocket | gateway-relay | managed-room
       vadThreshold: 0.5,
@@ -1515,26 +1501,24 @@ Defaults for Talk mode (macOS/iOS/Android and the browser Control UI).
 }
 ```
 
-- `talk.provider` must match a key in `talk.providers` when multiple Talk providers are configured.
-- Legacy flat Talk keys (`talk.voiceId`, `talk.voiceAliases`, `talk.modelId`, `talk.outputFormat`, `talk.apiKey`) are compatibility-only. Run `openclaw doctor --fix` to rewrite persisted config into `talk.providers.<provider>`.
-- Voice IDs fall back to `ELEVENLABS_VOICE_ID` or `SAG_VOICE_ID` (macOS Talk client behavior).
-- `providers.*.apiKey` accepts plaintext strings or SecretRef objects.
-- `ELEVENLABS_API_KEY` fallback applies only when no Talk API key is configured.
-- `providers.*.voiceAliases` lets Talk directives use friendly names.
-- `providers.mlx.modelId` selects the Hugging Face repo used by the macOS local MLX helper. If omitted, macOS uses `mlx-community/Soprano-80M-bf16`.
-- macOS MLX playback runs through the bundled `openclaw-mlx-tts` helper when present, or an executable on `PATH`; `OPENCLAW_MLX_TTS_BIN` overrides the helper path for development.
-- `consultThinkingLevel` controls the thinking level for the full OpenClaw agent run behind Control UI Talk realtime `openclaw_agent_consult` calls. Leave unset to preserve normal session/model behavior.
-- `consultFastMode` sets a one-shot fast-mode override for Control UI Talk realtime consults without changing the session's normal fast-mode setting.
-- `speechLocale` sets the BCP 47 locale id used by iOS/macOS Talk speech recognition. Leave unset to use the device default.
-- `silenceTimeoutMs` controls how long Talk mode waits after user silence before it sends the transcript. Unset keeps the platform default pause window (`700 ms on macOS and Android, 900 ms on iOS`).
-- `realtime.instructions` appends provider-facing system instructions to OpenClaw's built-in realtime prompt, so voice style can be configured without losing default `openclaw_agent_consult` guidance.
-- `realtime.vadThreshold` sets the provider voice-activity threshold from `0` (most sensitive) to `1` (least sensitive). Unset keeps the provider default.
-- `realtime.silenceDurationMs` sets the positive whole-number silence window before the provider commits a realtime user turn. Unset keeps the provider default.
-- `realtime.prefixPaddingMs` sets the non-negative whole-number amount of audio retained before detected speech begins. Unset keeps the provider default.
-- `realtime.reasoningEffort` sets the provider-specific reasoning level for realtime sessions. Unset keeps the provider default.
-- `realtime.consultRouting`: `"provider-direct"` (default) preserves direct provider replies when the realtime provider produces a final user transcript without `openclaw_agent_consult`. `"force-agent-consult"` routes the finalized request through OpenClaw instead.
-
----
+- 当配置了多个 Talk provider 时，`talk.provider` 必须与 `talk.providers` 中的一个键匹配。
+- 旧的扁平化 Talk 键（`talk.voiceId`、`talk.voiceAliases`、`talk.modelId`、`talk.outputFormat`、`talk.apiKey`）仅用于兼容。运行 `openclaw doctor --fix` 可将持久化配置重写为 `talk.providers.<provider>`。
+- Voice ID 会回退到 `ELEVENLABS_VOICE_ID` 或 `SAG_VOICE_ID`（macOS Talk 客户端行为）。
+- `providers.*.apiKey` 接受明文字符串或 SecretRef 对象。
+- `ELEVENLABS_API_KEY` 回退仅在未配置 Talk API key 时生效。
+- `providers.*.voiceAliases` 允许 Talk 指令使用友好的名称。
+- `providers.mlx.modelId` 选择 macOS 本地 MLX helper 使用的 Hugging Face 仓库。如果省略，macOS 将使用 `mlx-community/Soprano-80M-bf16`。
+- macOS MLX 播放会通过内置的 `openclaw-mlx-tts` helper（如果存在）运行，或者通过 `PATH` 上的可执行文件运行；`OPENCLAW_MLX_TTS_BIN` 会覆盖开发环境中的 helper 路径。
+- `consultThinkingLevel` 控制 Control UI Talk realtime `openclaw_agent_consult` 调用背后完整 OpenClaw agent 运行时的思考等级。留空可保留正常的 session/model 行为。
+- `consultFastMode` 为 Control UI Talk realtime consult 设置一次性的 fast-mode 覆盖，而不更改 session 的正常 fast-mode 设置。
+- `speechLocale` 设置 iOS/macOS Talk 语音识别使用的 BCP 47 locale id。留空则使用设备默认值。
+- `silenceTimeoutMs` 控制 Talk 模式在用户静音后等待多长时间才发送转录。留空则保持平台默认的暂停窗口（`macOS 和 Android 上为 700 ms，iOS 上为 900 ms`）。
+- `realtime.instructions` 将面向 provider 的系统指令追加到 OpenClaw 内置的 realtime 提示词中，这样可以在不丢失默认 `openclaw_agent_consult` 指导的情况下配置语音风格。
+- `realtime.vadThreshold` 将 provider 的语音活动阈值设置为从 `0`（最敏感）到 `1`（最不敏感）。留空则保持 provider 默认值。
+- `realtime.silenceDurationMs` 设置 provider 在提交实时用户轮次前的正整数静音窗口。留空则保持 provider 默认值。
+- `realtime.prefixPaddingMs` 设置在检测到语音开始前保留的非负整数音频时长。留空则保持 provider 默认值。
+- `realtime.reasoningEffort` 为 realtime 会话设置 provider 特定的推理等级。留空则保持 provider 默认值。
+- `realtime.consultRouting`: `"provider-direct"`（默认）在 realtime provider 产生最终用户转录且未经过 `openclaw_agent_consult` 时，保留 provider 的直接回复。`"force-agent-consult"` 则将最终请求路由通过 OpenClaw。
 
 ## 相关
 

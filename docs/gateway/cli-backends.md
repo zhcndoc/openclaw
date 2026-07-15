@@ -127,7 +127,7 @@ openclaw agent --agent main --message "hi" --model claude-cli/claude-sonnet-4-6
 
 Claude CLI 有自己的非交互权限模式；OpenClaw 会将其映射到现有的 exec 策略，而不是添加 Claude 专用配置。对于 OpenClaw 管理的 Claude 实时会话，生效的 exec 策略具有权威性：YOLO（`tools.exec.security: "full"` 且 `tools.exec.ask: "off"`）会以 `--permission-mode bypassPermissions` 启动 Claude，而限制性策略则会以 `--permission-mode default` 启动它。按代理配置的 `agents.list[].tools.exec` 设置会覆盖该代理的全局 `tools.exec`。原始后端参数仍然可以包含 `--permission-mode`，但实时 Claude 启动会将该标志规范化，以匹配生效的策略。
 
-该后端还会将 OpenClaw 的 `/think` 等级映射到 Claude Code 原生的 `--effort` 标志：`minimal`/`low` -> `low`，`adaptive`/`medium` -> `medium`，而 `high`/`xhigh`/`max` 则直接透传。其他 CLI 后端需要其所属插件先声明一个等效的 argv 映射器，`/think` 才会影响启动的 CLI。
+后端还会将 OpenClaw 的 `/think` 等级映射到 Claude Code 的原生 `--effort` 标志：`minimal`/`low` -> `low`，`medium` -> `medium`，`high`/`xhigh`/`max` 直接透传。`adaptive` 会移除已配置的 `--effort` 标志且不提供替代项，因此 Claude Code 会根据自身环境、设置和模型默认值解析有效的 effort。其他 CLI 后端需要其所属插件先声明等价的 argv 映射器，`/think` 才会影响启动的 CLI。
 
 在 OpenClaw 可以使用 `claude-cli` 之前，Claude Code 本身必须已在同一主机上登录：
 
@@ -260,7 +260,7 @@ api.registerTextTransforms({
 
 某些 CLI 后端会运行一个代理来压缩其自身的对话记录，因此 OpenClaw 必须不要对它们运行其保护性摘要器——这样做会与后端自身的压缩机制相冲突，并且可能会使该轮次直接失败。
 
-`claude-cli` 没有 harness 端点（Claude Code 会在内部进行压缩），因此它声明 `ownsNativeCompaction: true`，而 OpenClaw 的压缩路径会原样返回 session entry。像 Codex 这样的原生 harness 会话则仍然继续路由到它们各自的 harness 压缩端点。
+`claude-cli` 没有 harness 端点（Claude Code 会在内部进行压缩），因此它声明 `ownsNativeCompaction: true`，而 OpenClaw 的压缩路径会原样返回会话条目。OpenClaw 通过 Claude Code 文档中的 [`CLAUDE_CODE_AUTO_COMPACT_WINDOW`](https://code.claude.com/docs/en/env-vars)，将运行的有效上下文预算传递下去，使原生自动压缩与配置的 Anthropic `contextTokens` 限制保持一致。像 Codex 这样的原生 harness 会话则会继续路由到它们自己的 harness 压缩端点。
 
 ```typescript
 api.registerCliBackend({ id: "my-cli", ownsNativeCompaction: true /* ... */ });
@@ -277,10 +277,10 @@ CLI 后端不会直接接收 OpenClaw 工具调用，但后端可以通过 `bund
 
 启用 bundle MCP 后，OpenClaw 会：
 
-- 启动一个回环 HTTP MCP 服务器，通过为每个会话生成的令牌（`OPENCLAW_MCP_TOKEN`）对 CLI 进程进行身份验证，并向其暴露网关工具；
-- 将工具访问范围限定为当前会话、账号和频道上下文；
-- 为当前工作区加载已启用的 bundle-MCP 服务器，并将它们与现有的后端 MCP 配置/设置结构合并；
-- 使用所属插件中由后端拥有的集成模式重写启动配置。
+- 启动一个回环 HTTP MCP 服务器，向 CLI 进程暴露网关工具，并使用仅在当前执行尝试期间有效的每次运行上下文授权（`OPENCLAW_MCP_TOKEN`）进行认证；
+- 将工具访问绑定到 Gateway 选择的会话、账户和频道上下文，而不是信任子进程头部信息；
+- 为当前工作区加载已启用的 bundle-MCP 服务器，并将它们与任何现有的后端 MCP 配置/设置结构合并；
+- 使用所属插件中的后端所有集成模式重写启动配置。
 
 如果没有启用任何 MCP 服务器，当后端选择启用 bundle MCP 时，OpenClaw 仍会注入严格配置，以便后台运行保持隔离。
 

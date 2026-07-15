@@ -77,8 +77,9 @@ NVIDIA API 密钥，或者该源不可用或格式错误，OpenClaw 将回退到
 
 ## Nemotron 3 Ultra
 
-Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 对
-[`nvidia/nemotron-3-ultra-550b-a55b`](https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b) 的构建页面将其列为可用的免费端点，且上下文规格为 1M tokens。内置目录记录的最大输出为 16,384 tokens，以匹配 NVIDIA 当前针对该托管端点的 OpenAI 兼容示例请求。
+Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 的构建页面
+[`nvidia/nemotron-3-ultra-550b-a55b`](https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b)
+将其列为可用的免费端点，并提供 1M token 的上下文规格。
 
 捆绑的 Ultra 行默认发送
 `chat_template_kwargs: { enable_thinking: false, force_nonempty_content: true }`
@@ -88,15 +89,25 @@ Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 对
 
 ## 内置回退目录
 
-| Model ref                                  | Name                         | Context   | Max output | Notes                                    |
-| ------------------------------------------ | ---------------------------- | --------- | ---------- | ---------------------------------------- |
-| `nvidia/nvidia/nemotron-3-ultra-550b-a55b` | NVIDIA Nemotron 3 Ultra 550B | 1,000,000 | 16,384     | 默认                                     |
-| `nvidia/nvidia/nemotron-3-super-120b-a12b` | NVIDIA Nemotron 3 Super 120B | 1,048,576 | 8,192      |                                          |
-| `nvidia/moonshotai/kimi-k2.5`              | Kimi K2.5                    | 262,144   | 8,192      |                                          |
-| `nvidia/minimaxai/minimax-m2.7`            | Minimax M2.7                 | 196,608   | 8,192      |                                          |
-| `nvidia/z-ai/glm-5.1`                      | GLM 5.1                      | 202,752   | 8,192      |                                          |
-| `nvidia/minimaxai/minimax-m2.5`            | MiniMax M2.5                 | 196,608   | 8,192      | 已弃用；请使用 `minimaxai/minimax-m2.7` |
-| `nvidia/z-ai/glm5`                         | GLM-5                        | 202,752   | 8,192      | 已弃用；请使用 `z-ai/glm-5.1`           |
+可选的捆绑行会快照 NVIDIA 的特色模型目录。已弃用的
+兼容性行仍可通过精确引用解析，但不会出现在模型
+选择器中。
+
+| 模型引用                                   | 名称                  | 上下文   | 最大输出 |
+| ------------------------------------------ | --------------------- | --------- | ---------- |
+| `nvidia/nvidia/nemotron-3-ultra-550b-a55b` | Nemotron 3 Ultra 550B | 1,048,576 | 8,192      |
+| `nvidia/nvidia/nemotron-3-super-120b-a12b` | Nemotron 3 Super 120B | 1,000,000 | 8,192      |
+| `nvidia/z-ai/glm-5.2`                      | GLM 5.2               | 202,752   | 8,192      |
+| `nvidia/moonshotai/kimi-k2.6`              | Kimi K2.6             | 262,144   | 8,192      |
+| `nvidia/minimaxai/minimax-m3`              | Minimax M3            | 196,608   | 8,192      |
+| `nvidia/deepseek-ai/deepseek-v4-pro`       | DeepSeek V4 Pro       | 262,144   | 16,384     |
+| `nvidia/qwen/qwen3.5-397b-a17b`            | Qwen3.5 397B A17B     | 262,144   | 16,384     |
+
+完整的兼容性目录也保留了这些已发布的引用，以供现有
+配置使用：`nvidia/moonshotai/kimi-k2.5`、`nvidia/z-ai/glm-5.1`、
+`nvidia/minimaxai/minimax-m2.5`、`nvidia/z-ai/glm5`，以及
+`nvidia/minimaxai/minimax-m2.7`。它们仍可通过精确引用使用，但
+不会出现在引导流程或模型选择器中。
 
 ## 高级配置
 
@@ -106,10 +117,10 @@ Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 对
   </Accordion>
 
   <Accordion title="目录与定价">
-    当配置了 NVIDIA 认证时，OpenClaw 会优先使用 NVIDIA 的公开精选模型目录，并将其缓存 24 小时。内置回退目录是静态的，并保留了已弃用但仍随发行版提供的引用，以便升级兼容。由于 NVIDIA 目前为列出的模型提供免费 API 访问，源码中的成本默认值为 `0`。
+    当已配置 NVIDIA 身份验证时，OpenClaw 会优先使用 NVIDIA 的公开精选模型目录，并将其缓存 24 小时。随附的可选后备方案是 NVIDIA 精选模型目录的静态快照；已弃用的精确引用兼容行会在模型选择器中隐藏。由于 NVIDIA 目前为所列模型提供免费 API 访问，源中的成本默认为 `0`。
   </Accordion>
 
-  <Accordion title="OpenAI-compatible endpoint">
+  <Accordion title="OpenAI 兼容端点">
     OpenClaw 使用 `openai-completions` 适配器通过标准的 `/v1` 聊天补全路由与 NVIDIA 通信。任何兼容 OpenAI 的工具都应可在 NVIDIA base URL 下直接使用。
   </Accordion>
 

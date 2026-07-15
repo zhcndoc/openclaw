@@ -1,16 +1,16 @@
 ---
-summary: "Bun 工作流（实验性）：与 pnpm 相比的安装和注意事项"
+summary: "Bun 用于安装和包脚本的工作流；运行时需要 Node"
 read_when:
-  - 你想要最快的本地开发循环（bun + watch）
-  - 你遇到 Bun 安装/补丁/生命周期脚本问题
-title: "Bun（实验性）"
+  - 你想使用 Bun 安装依赖或运行包脚本
+  - 你遇到 Bun install/patch/lifecycle 脚本问题
+title: "Bun"
 ---
 
 <Warning>
-不建议在网关运行时使用 Bun（已知与 WhatsApp 和 Telegram 存在问题）。生产环境请使用 Node。
+Bun 不能运行 OpenClaw CLI 或 Gateway，因为它不提供所需的 `node:sqlite` API。请安装受支持的 Node 版本以运行所有 OpenClaw 运行时命令。
 </Warning>
 
-Bun 是一个可选的本地运行时，可直接运行 TypeScript（`bun run ...`、`bun --watch ...`）。默认的包管理器仍然是 `pnpm`，它获得完全支持，并被文档工具链使用。Bun 不能使用 `pnpm-lock.yaml`，并且会忽略它。
+Bun 仍可作为可选的依赖安装器和包脚本运行器使用。默认包管理器仍然是 `pnpm`，它得到完全支持，并用于文档工具链。Bun 不能使用 `pnpm-lock.yaml`，并且会忽略它。
 
 ## 安装
 
@@ -32,14 +32,17 @@ Bun 是一个可选的本地运行时，可直接运行 TypeScript（`bun run ..
     bun run build
     bun run vitest run
     ```
+
+    启动 OpenClaw 本身的命令仍然必须通过 Node 运行。
+
   </Step>
 </Steps>
 
 ## 生命周期脚本
 
-Bun 会阻止依赖生命周期脚本，除非显式信任它们。对于这个仓库，常见会被阻止的脚本并不需要：
+Bun 会阻止依赖的生命周期脚本，除非显式信任它们。对于这个仓库，常见会被阻止的脚本并不需要：
 
-- `baileys` `preinstall`：检查 Node 主版本是否 >= 20（OpenClaw 需要 Node 22.19+ 或 23.11+，推荐使用 Node 24）
+- `baileys` `preinstall`：检查 Node 主版本是否 >= 20（OpenClaw 需要 Node 22.22.3+、24.15+ 或 25.9+，其中推荐使用 Node 24）
 - `protobufjs` `postinstall`：发出关于不兼容版本方案的警告（没有构建产物）
 
 如果你遇到需要这些脚本的运行时问题，请显式信任它们：

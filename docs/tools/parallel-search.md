@@ -118,7 +118,7 @@ best results.
 </ParamField>
 
 <ParamField path="client_model" type="string">
-调用该接口的模型可选标识符（例如 `claude-opus-4-7`、`gpt-5.5`），最多 100 个字符。这样 Parallel 可以根据你的模型能力调整默认设置。请传入当前活动模型的完整 slug；不要缩写为某个家族别名。
+可选的发起调用的模型标识符（例如 `claude-opus-4-7`、`gpt-5.6-sol`），最多 100 个字符。它让 Parallel 能根据你的模型能力调整默认设置。请传入准确的当前活动模型 slug；不要缩写为家族别名。
 </ParamField>
 
 ## 说明

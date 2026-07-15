@@ -60,13 +60,13 @@ OpenClaw 在选择压缩分割点时，会将助手的工具调用与其对应�
 
 当设置了 `agents.defaults.compaction.keepRecentTokens`（默认值：20,000）时，手动压缩会遵守该截断点，并在重建的上下文中保留最近的尾部内容。如果没有显式的保留预算，手动压缩将作为一个硬性检查点，并仅从新的摘要继续。
 
-## Configuration
+## 配置
 
-In your `openclaw.json`, configure compaction under `agents.defaults.compaction`. The most common options are listed below; for full reference, see [Session management deep dive](/reference/session-management-compaction).
+在你的 `openclaw.json` 中，在 `agents.defaults.compaction` 下配置压缩。最常见的选项如下所列；完整参考请见 [会话管理深入解析](/reference/session-management-compaction)。
 
-### Using a different model
+### 使用不同的模型
 
-By default, compaction uses the agent’s primary model. Set `agents.defaults.compaction.model` to a different value to delegate summarization to a more powerful or specialized model. This override accepts a `provider/model-id` string, or a bare alias configured under `agents.defaults.models`:
+默认情况下，压缩使用代理的主模型。将 `agents.defaults.compaction.model` 设置为不同的值，可将总结任务委托给更强大或更专门的模型。此覆盖项接受 `provider/model-id` 字符串，或在 `agents.defaults.models` 下配置的裸别名：
 
 ```json
 {
@@ -80,9 +80,9 @@ By default, compaction uses the agent’s primary model. Set `agents.defaults.co
 }
 ```
 
-A bare configuration alias is resolved to its canonical provider and model before compaction starts. If a bare value matches both an alias and a configured literal model ID, the literal model ID takes precedence. Unmatched bare values are kept as the model ID on the currently active provider.
+在压缩开始之前，裸配置别名会被解析为其规范的提供方和模型。如果一个裸值同时匹配别名和已配置的字面模型 ID，则以字面模型 ID 为准。不匹配的裸值会保留为当前活跃提供方上的模型 ID。
 
-This also applies to local models, for example a second Ollama model dedicated to summarization:
+这同样适用于本地模型，例如专用于总结的第二个 Ollama 模型：
 
 ```json
 {
@@ -96,30 +96,30 @@ This also applies to local models, for example a second Ollama model dedicated t
 }
 ```
 
-If unset, compaction starts with the currently active session model. If summarization fails due to a provider error suitable for fallback, OpenClaw retries that compaction using the session’s existing model fallback chain. The fallback selection is temporary and is not written back to session state. An explicit `agents.defaults.compaction.model` override remains exact and does not inherit the session fallback chain.
+如果未设置，压缩将从当前活跃的会话模型开始。如果由于适合回退的提供方错误导致总结失败，OpenClaw 会使用该会话现有的模型回退链重试该压缩。回退选择是临时的，不会写回会话状态。显式的 `agents.defaults.compaction.model` 覆盖项保持精确，不会继承会话回退链。
 
-### Identifier retention
+### 标识符保留
 
-Compaction summaries retain opaque identifiers by default (`identifierPolicy: "strict"`). You can disable this with `identifierPolicy: "off"`, or provide custom guidance with `identifierPolicy: "custom"` and `identifierInstructions`.
+压缩摘要默认保留不透明标识符（`identifierPolicy: "strict"`）。你可以通过 `identifierPolicy: "off"` 禁用此行为，或通过 `identifierPolicy: "custom"` 和 `identifierInstructions` 提供自定义指导。
 
-### Active transcript byte guard
+### 活跃转录字节守卫
 
-When `agents.defaults.compaction.maxActiveTranscriptBytes` is set, OpenClaw triggers a normal local compaction run before execution if the active JSONL reaches that size. This is useful for long-running sessions: provider-side context management may keep the model context healthy, while the local transcript continues growing. It does not split the raw JSONL bytes; it simply asks the normal compaction pipeline to create a semantic summary.
+当设置了 `agents.defaults.compaction.maxActiveTranscriptBytes` 时，OpenClaw 会在运行前于转录历史达到该大小时触发正常的本地压缩。这对于长时间运行的会话很有用，因为提供方侧的上下文管理可以保持模型上下文健康，而持久化的转录历史却持续增长。它不会按原始字节切分；它会请求正常的压缩流水线创建语义摘要。
 
 <Warning>
-The byte guard requires `truncateAfterCompaction: true`. If the transcript is not rotated, the active file will not shrink, and the guard will remain inactive.
+字节守卫适用于活跃的 SQLite 转录历史。旧版 JSONL 检查点工件不是当前活跃的压缩目标。
 </Warning>
 
-### Successor transcript
+### 后继转录
 
-When `agents.defaults.compaction.truncateAfterCompaction` is enabled, OpenClaw does not rewrite the existing transcript in place. Instead, it creates a new active successor transcript based on the compaction summary, preserved state, and the unsummarized tail, then records branch/resume checkpoint metadata pointing to that compacted successor.
-The successor transcript also discards exact duplicate long user turns that arrive inside the short retry window, so channel retry storms are not carried into the next active transcript after compaction.
+当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，OpenClaw 不会就地重写现有转录。相反，它会基于压缩摘要、保留状态以及未摘要的尾部创建一个新的活跃后继转录，然后记录指向该压缩后继的分支/恢复检查点元数据。
+后继转录还会丢弃在短重试窗口内到达的完全重复的长用户轮次，因此通道重试风暴不会在压缩后被带入下一个活跃转录。
 
-OpenClaw no longer writes a separate `.checkpoint.*.jsonl` copy for new compactions. Existing legacy checkpoint files remain usable while still referenced, and are pruned during normal session cleanup.
+OpenClaw 不再为新的压缩写入单独的 `.checkpoint.*.jsonl` 副本。现有的旧版检查点文件在仍被引用时仍可使用，并会在正常的会话清理过程中被清除。
 
-### Compaction notifications
+### 压缩通知
 
-By default, compaction runs silently. Set `notifyUser` to show brief status messages when compaction starts and completes:
+默认情况下，压缩会静默运行。将 `notifyUser` 设置为在压缩开始和完成时显示简短状态消息，并在预压缩内存刷新耗尽但回复仍继续时显示降级通知：
 
 ```json5
 {
@@ -133,9 +133,9 @@ By default, compaction runs silently. Set `notifyUser` to show brief status mess
 }
 ```
 
-### Memory flush
+### 内存刷新
 
-Before compaction, OpenClaw can run a **silent memory flush** turn to persist notes to disk. If this maintenance turn should use a local model instead of the current conversation model, set `agents.defaults.compaction.memoryFlush.model`:
+在压缩之前，OpenClaw 可以运行一个**静默内存刷新**轮次，将笔记持久化到磁盘。如果这个维护轮次应使用本地模型而不是当前对话模型，请设置 `agents.defaults.compaction.memoryFlush.model`：
 
 ```json
 {
@@ -151,7 +151,7 @@ Before compaction, OpenClaw can run a **silent memory flush** turn to persist no
 }
 ```
 
-The memory flush model override is exact and does not inherit the active session’s fallback chain. See [Memory](/concepts/memory) for details and configuration.
+内存刷新模型覆盖是精确的，不会继承活跃会话的回退链。详情和配置请参见 [内存](/concepts/memory)。
 
 ## 可插拔的压缩提供方
 

@@ -10,7 +10,7 @@ title: "节点"
 
 管理已配对的节点（设备）并调用节点能力。
 
-相关：[节点概览](/nodes) - [摄像头节点](/nodes/camera) - [图像节点](/nodes/images)
+Related: [Nodes overview](/nodes) - [Active computer presence](/nodes/presence) - [Camera nodes](/nodes/camera) - [Image nodes](/nodes/images)
 
 每个子命令的通用选项：`--url <url>`、`--token <token>`、`--timeout <ms>`（默认 `10000`）、`--json`。
 
@@ -24,7 +24,7 @@ openclaw nodes list
 openclaw nodes describe --node <idOrNameOrIp>
 ```
 
-`status` 和 `list` 都接受 `--connected`（仅显示已连接节点）和 `--last-connected <duration>`（例如 `24h`、`7d`；仅显示在该时长内连接过的节点）。`list` 会将待定和已配对节点分别显示在不同的表格中，其中已配对行包含最近一次连接时长（Last Connect）；`status` 会显示一个合并后的表格，其中包含每个节点的能力和版本详情。`describe` 会打印单个节点的能力、权限，以及生效/待处理的 invoke 命令。
+`status` 和 `list` 都接受 `--connected`（仅显示已连接节点）和 `--last-connected <duration>`（例如 `24h`、`7d`；仅显示在该时间段内连接过的节点）。`list` 会将待处理和已配对的节点分别显示在不同的表格中，其中已配对行包含最近一次连接时长（Last Connect）；`status` 则显示一个合并后的表格，包含每个节点的能力、版本和最后输入详情。已连接的 macOS 节点仅在授予 Accessibility 权限时才会报告最后输入；最新的行会标记为 `active`；参见 [Active computer presence](/nodes/presence)。`describe` 会打印单个节点的能力、权限、活动情况，以及生效/待生效的 invoke 命令。
 
 ## 配对
 
@@ -38,19 +38,20 @@ openclaw nodes rename --node <id|name|ip> --name <displayName>
 
 这些命令驱动网关拥有的 `node.pair.*` 存储，与设备配对（`openclaw devices approve`）分离；设备配对用于控制节点的 WS `connect` 握手。有关二者的关系，请参见 [Nodes](/nodes)。
 
-- `remove` 会撤销节点的已配对角色条目。对于有设备绑定的节点，这会撤销设备配对存储中的 `node` 角色，并断开其 node 角色会话：混合角色设备会保留其记录行，只失去 `node` 角色；仅节点设备的记录行会被删除。它还会清除任何匹配的旧版网关拥有的节点配对记录。
-- `pending` 只需要 `operator.pairing` 范围。
-- `gateway.nodes.pairing.autoApproveCidrs` 可以跳过明确受信任、首次 `role: node` 设备配对的待处理步骤。默认关闭；不会批准角色升级。
-- `approve` 的范围要求遵循待处理请求声明的命令：
+- `remove` 会撤销该节点的配对角色条目。对于由设备支持的节点，这会撤销设备配对存储中的 `node` 角色，并断开其 node-role 会话：混合角色设备会保留其记录，只失去 `node` 角色；仅节点设备的记录会被删除。它还会清除任何匹配的旧版网关拥有的节点配对记录。
+- `pending` 仅需要 `operator.pairing` 作用域。
+- `gateway.nodes.pairing.autoApproveCidrs` 可以为明确受信任的、首次 `role: node` 设备配对跳过待处理步骤。默认关闭；不会批准角色升级。
+- `gateway.nodes.pairing.sshVerify`（默认开启）在网关能够通过 SSH 向节点主机验证设备密钥时，会自动批准首次 `role: node` 设备配对；首个能力表面会在同一步中获批。另请参见 [Node pairing](/gateway/pairing#ssh-verified-device-auto-approval-default)。
+- `approve` 的作用域要求取决于待处理请求中声明的命令：
   - 无命令请求：`operator.pairing`
-  - 非执行类节点命令：`operator.pairing` + `operator.write`
-  - `system.run` / `system.run.prepare` / `system.which`：`operator.pairing` + `operator.admin`
-- `remove` 范围：`operator.pairing` 可以移除非 operator 的节点记录；设备令牌调用方在混合角色设备上撤销自己的 node 角色时，另外还需要 `operator.admin`。
+  - 普通节点命令：`operator.pairing` + `operator.write`
+  - 管理员敏感命令（`system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`fs.listDir` 以及 `system.execApprovals.get/set`）：`operator.pairing` + `operator.admin`
+- `remove` 作用域：`operator.pairing` 可以移除非 operator 的节点记录；调用者若是设备令牌并且要在混合角色设备上撤销自身的 node 角色，则还需要 `operator.admin`。
 
 ## 调用
 
 ```bash
-openclaw nodes invoke --node <id> --command system.which --params '{"name":"uname"}'
+openclaw nodes invoke --node <id> --command system.which --params '{"bins":["uname"]}'
 ```
 
 标志：
@@ -71,7 +72,7 @@ openclaw nodes location get --node <id> --accuracy precise
 openclaw nodes screen record --node <id> --duration 10s --fps 10 --out ./clip.mp4
 ```
 
-- `notify` 会在节点上发送本地通知（仅限 macOS）。需要 `--title` 或 `--body`。选项：`--sound <name>`、`--priority <passive|active|timeSensitive>`、`--delivery <system|overlay|auto>`（默认 `system`）、`--invoke-timeout <ms>`（默认 `15000`）。
+- `notify` 会在声明了 `system.notify` 的节点上发送本地通知，包括 macOS、iOS、Android 和直接连接的 watchOS 节点。直接向 watchOS 投递需要 OpenClaw 处于活动状态。需要 `--title` 或 `--body`。选项：`--sound <name>`、`--priority <passive|active|timeSensitive>`、`--delivery <system|overlay|auto>`（默认 `system`）、`--invoke-timeout <ms>`（默认 `15000`）。
 - `push` 会向 iOS 节点发送一条 APNs 测试推送。选项：`--title <text>`（默认 `OpenClaw`）、`--body <text>`、`--environment <sandbox|production>` 用于覆盖检测到的 APNs 环境。
 - `location get` 获取节点当前的位置。选项：`--max-age <ms>`（复用缓存的定位结果）、`--accuracy <coarse|balanced|precise>`、`--location-timeout <ms>`（默认 `10000`）、`--invoke-timeout <ms>`（默认 `20000`）。
 - `screen record` 捕获一段短视频并打印保存路径（或使用 `--json` 输出 JSON）。选项：`--screen <index>`（默认 `0`）、`--duration <ms|10s>`（默认 `10000`）、`--fps <fps>`（默认 `10`）、`--no-audio`、`--out <path>`、`--invoke-timeout <ms>`（默认 `120000`）。

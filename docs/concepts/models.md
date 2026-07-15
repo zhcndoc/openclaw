@@ -15,15 +15,27 @@ sidebarTitle: "Models CLI"
   <Card title="模型提供商" href="/concepts/model-providers">
     供应商概览和快速示例。
   </Card>
-  <Card title="Models CLI reference" href="/cli/models">
+  <Card title="Models CLI 参考" href="/cli/models">
     完整的 `openclaw models` 命令和标志参考。
   </Card>
-  <Card title="Configuration reference" href="/gateway/config-agents#agent-defaults">
+  <Card title="配置参考" href="/gateway/config-agents#agent-defaults">
     模型配置键、默认值和示例。
   </Card>
 </CardGroup>
 
-模型引用（`provider/model`）会选择一个提供商和模型。它通常不会选择底层的 agent 运行时。OpenAI 是主要例外：在官方 OpenAI 提供商上，`openai/gpt-5.5` 默认通过 Codex app-server 运行时运行。订阅版 Copilot 引用（`github-copilot/*`）可以选择接入外部 GitHub Copilot agent 运行时插件，但该路径始终是显式指定的（绝不会被 `auto` 选择）。运行时覆盖应当放在 provider/model 策略上，而不是整个 agent 或会话上。在 Codex 运行时模式下，`openai/gpt-*` 并不意味着按 API 密钥计费；认证可以来自 Codex 账户或 `openai` OAuth 配置文件。参见 [Agent runtimes](/concepts/agent-runtimes) 和 [GitHub Copilot agent runtime](/plugins/copilot)。
+模型引用（`provider/model`）选择的是提供商和模型，而不是底层
+agent 运行时。在未设置运行时策略或设置为 `auto` 时，OpenAI 的 provider-owned
+路由策略可能只会为精确匹配的官方 HTTPS Platform
+Responses 或 ChatGPT Responses 路由选择 Codex，且不能带有作者指定的请求覆盖；仅仅使用
+`openai/*` 前缀永远不会选择 Codex。Completions 适配器、自定义
+端点，以及作者指定的请求行为都会保留在 OpenClaw 上。纯文本的官方
+HTTP 端点会被拒绝。参见 [OpenAI 隐式 agent 运行时](/providers/openai#implicit-agent-runtime)。
+
+订阅 Copilot 引用（`github-copilot/*`）可以选择接入外部
+GitHub Copilot agent 运行时插件，但该路径始终是显式的（绝不会被 `auto` 选择）。运行时覆盖应配置在 provider/model 策略上，而不是整个 agent 或会话上。运行时选择不决定计费：
+OpenAI API 密钥和 ChatGPT/Codex 订阅凭证仍然是不同的。参见
+[Agent runtimes](/concepts/agent-runtimes) 和
+[GitHub Copilot agent runtime](/plugins/copilot)。
 
 ## 选择顺序
 
@@ -41,12 +53,12 @@ sidebarTitle: "Models CLI"
 
 相关的模型配置入口：
 
-- `agents.defaults.models` 是 OpenClaw 可使用的模型白名单/目录，以及别名。使用 `provider/*` 条目可允许某个提供方中发现的所有模型，而无需逐个列出。
-- `agents.defaults.utilityModel` 是一个可选的低成本模型，用于较短的内部任务，例如生成仪表盘会话标题以及受支持的频道线程/主题标题。每个代理的 `agents.list[].utilityModel` 会覆盖它。未设置时，这些任务会使用该代理的主模型。实用任务是独立的模型调用，可能会向选定的模型提供方发送有范围限制的任务内容。
+- `agents.defaults.models` 是 OpenClaw 可使用的模型白名单/目录，以及别名。使用 `provider/*` 条目可允许某个提供方发现的所有模型，而无需逐一列出。
+- `agents.defaults.utilityModel` 是一个可选的低成本模型，用于生成仪表板会话标题、受支持的频道线程/主题标题以及进度播报等简短内部任务。按代理级别的 `agents.list[].utilityModel` 会覆盖它。未设置时，OpenClaw 会在存在主提供方声明的小模型默认值时使用该默认值（OpenAI → `gpt-5.6-luna`，Anthropic → `claude-haiku-4-5`），否则使用该代理的主模型；将其设置为空字符串可禁用 utility 路由。Utility 任务是独立的模型调用，可能会向所选模型提供方发送有界的任务内容。
 - `agents.defaults.imageModel` 仅在主模型无法接受图像时使用。
 - `agents.defaults.pdfModel` 由 `pdf` 工具使用。若未设置，该工具会回退到 `imageModel`，然后回退到已解析的会话/默认模型。
-- `agents.defaults.imageGenerationModel`、`musicGenerationModel` 和 `videoGenerationModel` 为共享的媒体生成工具提供支持。若未设置，每个工具会推断一个带认证支持的提供方默认值：先使用当前默认提供方，然后按 provider-id 顺序使用该能力下其余已注册的提供方。设置 `agents.defaults.mediaGenerationAutoProviderFallback: false` 可在保留显式备用项的同时禁用这种跨提供方推断。
-- 每个代理的 `agents.list[].model`（加上绑定）会覆盖 `agents.defaults.model`——参见 [多代理路由](/concepts/multi-agent)。
+- `agents.defaults.imageGenerationModel`、`musicGenerationModel` 和 `videoGenerationModel` 为共享的媒体生成工具提供支持。若未设置，每个工具都会推断一个带认证的提供方默认值：先使用当前默认提供方，然后按 provider-id 顺序使用该能力的其余已注册提供方。设置 `agents.defaults.mediaGenerationAutoProviderFallback: false` 可在保留显式回退的同时禁用这种跨提供方推断。
+- 按代理级别的 `agents.list[].model`（加上绑定）会覆盖 `agents.defaults.model` — 参见 [多代理路由](/concepts/multi-agent)。
 
 完整键参考、默认值和 JSON5 示例：[配置参考](/gateway/config-agents#agent-defaults)。
 
@@ -63,9 +75,10 @@ sidebarTitle: "Models CLI"
 
 其他选择规则：
 
-- 更改 `agents.defaults.model.primary` 不会重写现有会话的固定设置。如果状态报告 `This session is pinned to X; config primary Y will apply to new/unpinned sessions.`，请运行 `/model default` 来清除固定设置。
-- CLI 默认模型和允许列表选择器会尊重 `models.mode: "replace"`，此时只列出 `models.providers.*.models`，而不是完整的内建目录。
-- Control UI 模型选择器会向 Gateway 请求其配置的模型视图：如果设置了 `agents.defaults.models`（包括 `provider/*` 通配符条目），则使用该视图；否则使用 `models.providers.*.models` 以及具有可用认证的 providers。完整的内建目录仅保留给显式浏览视图（`models.list` 且 `view: "all"`，或 `openclaw models list --all`）。
+- 更改 `agents.defaults.model.primary` 不会重写现有会话的固定绑定。如果状态报告显示 `This session is pinned to X; config primary Y will apply to new/unpinned sessions.`，请运行 `/model default` 来清除绑定。
+- CLI 默认模型和允许列表选择器会遵循 `models.mode: "replace"`，此时只列出 `models.providers.*.models`，而不是完整的内置目录。
+- Control UI 的模型选择器会向 Gateway 请求其配置后的模型视图：当设置了 `agents.defaults.models` 时（包括 `provider/*` 通配符条目），否则使用 `models.providers.*.models` 加上具有可用认证信息的 provider。完整的内置目录仅保留给显式浏览视图（`models.list` 且 `view: "all"`，或 `openclaw models list --all`）。
+- Provider 清单 UI 使用 `models.list` 并设置 `view: "provider-config"`，以显示源头配置的 `models.providers.*.models` 行，而不应用选择器允许列表。
 
 完整机制：[模型故障切换](/concepts/model-failover)。
 
@@ -83,7 +96,14 @@ openclaw onboard
 
 为常见提供商设置模型和认证，无需手动编辑配置，包括 OpenAI Codex 订阅 OAuth 和 Anthropic（API 密钥或 Claude CLI 复用）。
 
-## “Model is not allowed”（以及为什么回复会停止）
+如果未配置主模型，新的 OpenAI API 密钥设置会选择
+`openai/gpt-5.6`；直接使用 API 的裸 ID 会解析到 Sol 层级。新的
+ChatGPT/Codex OAuth 设置会选择精确的 `openai/gpt-5.6-sol` 目录引用。
+重新认证会保留现有的显式主模型，包括
+`openai/gpt-5.5`。如果该账户无法使用 GPT-5.6，请显式选择
+`openai/gpt-5.5`；OpenClaw 不会悄悄降级它。
+
+## “模型不被允许”（以及为什么回复会停止）
 
 如果设置了 `agents.defaults.models`，它就会成为 `/model` 和会话覆盖的允许列表。选择该允许列表之外的模型时，在生成任何正常回复之前会返回：
 
@@ -174,7 +194,7 @@ openclaw models image-fallbacks list|add|remove|clear
 openclaw models auth list|add|login|paste-api-key|paste-token|setup-token|order
 ```
 
-不带子命令的 `openclaw models` 是 `models status` 的快捷方式，它也会显示 auth-store 配置文件的 OAuth 过期时间（默认在 24 小时内发出警告）。完整标志、JSON 结构以及 auth-profile 子命令：[Models CLI reference](/cli/models)。
+不带子命令的 `openclaw models` 是 `models status` 的快捷方式，它也会显示 auth-store 配置文件的 OAuth 过期时间（默认在 24 小时内发出警告）。完整标志、JSON 结构以及 auth-profile 子命令：[Models CLI 参考](/cli/models)。
 
 <AccordionGroup>
   <Accordion title="扫描（OpenRouter 免费模型）">

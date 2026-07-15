@@ -1,12 +1,12 @@
 ---
-summary: "多代理路由：隔离的代理、通道账户和绑定"
+summary: "多代理路由：代理边界、通道账户和绑定"
 title: "多代理路由"
 sidebarTitle: "多代理路由"
-read_when: "你希望在一个网关进程中运行多个隔离的代理（工作区 + 认证）。"
+read_when: "当你希望在一个 Gateway 进程中让多个代理拥有各自独立的工作区、认证和会话时。"
 status: active
 ---
 
-在一个 Gateway 进程中运行多个_隔离的_代理，每个代理都有自己的工作区、状态目录（`agentDir`）和会话存储，以及多个通道账户（例如两个 WhatsApp 号码）。传入消息通过**绑定**路由到正确的代理。
+在一个 Gateway 进程中运行多个_隔离的_代理，每个代理都有自己的工作区、状态目录（`agentDir`）和基于 SQLite 的会话历史，以及多个通道账户（例如两个 WhatsApp 号码）。传入消息通过**绑定**路由到正确的代理。
 
 **代理**是完整的按人格划分的作用域：工作区文件、认证配置文件、模型注册表和会话存储。**绑定**将一个通道账户（如一个 Slack 工作区、一个 WhatsApp 号码等）映射到这些代理中的某一个。
 
@@ -14,9 +14,9 @@ status: active
 
 每个 agent 都有自己的：
 
-- **工作区**：文件、`AGENTS.md`/`SOUL.md`/`USER.md`、本地笔记、人格规则。
-- **状态目录**（`agentDir`）：认证配置文件、模型注册表、每个 agent 的配置。
-- **会话存储**：位于 `~/.openclaw/agents/<agentId>/sessions` 下的聊天历史和路由状态。
+- **Workspace**: 文件、`AGENTS.md`/`SOUL.md`/`USER.md`、本地笔记、角色规则。
+- **State directory** (`agentDir`): 认证配置文件、模型注册表、每个 agent 的配置。
+- **Session store**: 聊天历史和路由状态，位于 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`。
 
 认证配置文件是按 agent 分开的，读取自：
 
@@ -34,20 +34,23 @@ status: active
 
 技能会从每个 agent 的工作区以及共享根目录（如 `~/.openclaw/skills`）加载，然后根据生效的 agent 技能允许列表进行过滤。使用 `agents.defaults.skills` 作为共享基线，并使用 `agents.list[].skills` 作为每个 agent 的替换项（显式条目会替换默认项，不会合并）。参见 [技能：按 agent 与共享](/tools/skills#per-agent-vs-shared-skills) 和 [技能：agent 允许列表](/tools/skills#agent-allowlists)。
 
+插件拥有的存储遵循该插件自身的配置；添加第二个 agent 不会自动把所有全局插件存储拆分开。例如，当不同角色不能共享已编译的 wiki 知识时，请配置 [按 agent 划分的 Memory Wiki 保管库](/concepts/multi-agent#per-agent-memory-wiki-vaults)。
+
 <Note>
 **工作区说明：** 每个 agent 的工作区都是**默认 cwd**，而不是硬性沙箱。相对路径会在工作区内解析，但只要未启用沙箱，绝对路径仍可访问其他主机位置。参见 [Sandboxing](/gateway/sandboxing)。
 </Note>
 
 ## 路径
 
-| 内容                      | 默认值                                                                                | 覆盖                                                                                 |
-| ------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 配置                    | `~/.openclaw/openclaw.json`                                                            | `OPENCLAW_CONFIG_PATH`                                                                   |
-| 状态目录                 | `~/.openclaw`                                                                          | `OPENCLAW_STATE_DIR`                                                                     |
-| 默认代理的工作区         | `~/.openclaw/workspace`（如果设置了 `OPENCLAW_PROFILE`，则为 `workspace-<profile>`）      | `agents.list[].workspace`，然后是 `agents.defaults.workspace`，或 `OPENCLAW_WORKSPACE_DIR` |
-| 其他代理的工作区         | `<stateDir>/workspace-<agentId>`（如果已设置，则为 `<agents.defaults.workspace>/<agentId>`） | `agents.list[].workspace`                                                                |
-| 代理目录                 | `~/.openclaw/agents/<agentId>/agent`                                                   | `agents.list[].agentDir`                                                                 |
-| 会话                      | `~/.openclaw/agents/<agentId>/sessions`                                                | —                                                                                        |
+| 什么                             | 默认                                                                                   | 覆盖                                                                                     |
+| -------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Config                           | `~/.openclaw/openclaw.json`                                                            | `OPENCLAW_CONFIG_PATH`                                                                   |
+| State dir                        | `~/.openclaw`                                                                          | `OPENCLAW_STATE_DIR`                                                                     |
+| Default agent's workspace        | `~/.openclaw/workspace` (or `workspace-<profile>` when `OPENCLAW_PROFILE` is set)      | `agents.list[].workspace`, then `agents.defaults.workspace`, or `OPENCLAW_WORKSPACE_DIR` |
+| Other agents' workspace          | `<stateDir>/workspace-<agentId>` (or `<agents.defaults.workspace>/<agentId>` when set) | `agents.list[].workspace`                                                                |
+| Agent dir                        | `~/.openclaw/agents/<agentId>/agent`                                                   | `agents.list[].agentDir`                                                                 |
+| Sessions and transcripts         | `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`                             | —                                                                                        |
+| Legacy/archive session artifacts | `~/.openclaw/agents/<agentId>/sessions`                                                | —                                                                                        |
 
 ### 单 agent 模式（默认）
 
@@ -114,13 +117,44 @@ openclaw agents list --bindings
 
 ## 多个代理，多个角色
 
-每个已配置的 `agentId` 都是一个完全隔离的角色：
+每个已配置的 `agentId` 都是核心代理状态的独立人格边界：
 
-- 每个频道使用不同的账号（按 `accountId` 区分）。
-- 不同的个性（按代理分别配置 `AGENTS.md`/`SOUL.md`）。
-- 独立的认证和会话，除非显式启用，否则不会互相通信。
+- 每个渠道使用不同的账号（按 `accountId` 区分）。
+- 不同的个性（按代理的 `AGENTS.md`/`SOUL.md` 区分）。
+- 独立的认证和会话，仅在通过显式功能或插件配置启用时，才允许跨代理访问。
 
-这使得多人可以共享一个 Gateway，同时保持各自的代理状态彼此隔离。
+这使得多人可以共享一个 Gateway，同时保持核心代理状态彼此分离。
+
+## 每个代理的 Memory Wiki 保管库
+
+Memory Wiki 默认使用一个全局保管库。为了将支持代理的
+编译知识与营销代理的知识分开，请将
+`plugins.entries.memory-wiki.config.vault.scope` 设置为 `agent`：
+
+```json5
+{
+  plugins: {
+    entries: {
+      "memory-wiki": {
+        enabled: true,
+        config: {
+          vault: {
+            scope: "agent",
+            path: "~/.openclaw/wiki",
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+所配置的路径是父目录。OpenClaw 会附加规范化后的
+代理 ID，生成诸如 `~/.openclaw/wiki/support` 和
+`~/.openclaw/wiki/marketing` 这样的路径。当配置了多个代理时，
+作用域为代理的 CLI 和 Gateway 操作需要显式指定代理。有关桥接
+过滤、迁移以及信任边界的详细信息，请参见
+[每个代理的 Memory Wiki 保管库](/plugins/memory-wiki#per-agent-vaults)。
 
 ## 跨 agent 的 QMD 内存搜索
 
@@ -143,7 +177,7 @@ openclaw agents list --bindings
         workspace: "~/workspaces/main",
         memorySearch: {
           qmd: {
-            extraCollections: [{ path: "notes" }], // resolved within workspace -> collection name "notes-main"
+            extraCollections: [{ path: "notes" }], // 解析到 workspace 中 -> 集合名称 "notes-main"
           },
         },
       },
@@ -204,13 +238,13 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
 - 如果某个绑定设置了多个匹配字段（例如 `peer` + `guildId`），则所有指定字段都必须匹配（`AND` 语义）。
 - 省略 `accountId` 的绑定只匹配默认账户，而不是所有账户。使用 `accountId: "*"` 表示整个 channel 的回退规则，或使用 `accountId: "<name>"` 表示某一个账户。再次添加相同绑定并显式指定 account id，会将现有的仅 channel 绑定升级，而不是创建重复项。
 
-## 多个账户 / 电话号码
+## Multiple Accounts / Phone Numbers
 
-支持多个账户的 Channels（例如 WhatsApp）使用 `accountId` 来标识每个登录。每个 `accountId` 都会路由到其对应的 agent，因此一台服务器可以托管多个电话号码，而不会混淆会话。
+Channels that support multiple accounts (for example WhatsApp) use `accountId` to identify each login. Each `accountId` is routed to its corresponding agent, so one server can host multiple phone numbers without mixing up sessions.
 
-设置 `channels.<channel>.defaultAccount` 以选择在省略 `accountId` 时使用的账户。若未设置，OpenClaw 会优先回退到 `default`（如果存在），否则使用第一个已配置的账户 id（按排序后的顺序）。
+Set `channels.<channel>.defaultAccount` to choose which account to use when `accountId` is omitted. If not set, OpenClaw will first fall back to `default` (if it exists), otherwise it will use the first configured account id (in sorted order).
 
-支持多个账户的 Channels：`discord`、`feishu`、`googlechat`、`imessage`、`irc`、`line`、`mattermost`、`matrix`、`nextcloud-talk`、`nostr`、`signal`、`slack`、`telegram`、`whatsapp`、`zalo`、`zalouser`。
+Channels that support multiple accounts: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `mattermost`, `matrix`, `nextcloud-talk`, `nostr`, `signal`, `slack`, `telegram`, `whatsapp`, `zalo`, `zalouser`.
 
 ## 概念
 
@@ -416,7 +450,7 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
     }
     ```
 
-    这些示例使用 `accountId: "*"`，因此即使你以后添加账号，绑定规则仍然有效。若要在保持其余消息走 chat 的同时，把某个单独的 DM/群组路由到 Opus，可以为该 peer 添加一个 `match.peer` 绑定——peer 匹配始终优先于按频道的规则。
+    这些示例使用 `accountId: "*"`, 因此即使你以后添加账号，绑定规则仍然有效。若要在保持其余消息走 chat 的同时，把某个单独的 DM/群组路由到 Opus，可以为该 peer 添加一个 `match.peer` 绑定——peer 匹配始终优先于按频道的规则。
 
   </Tab>
   <Tab title="同一频道，将一个 peer 路由到 Opus">

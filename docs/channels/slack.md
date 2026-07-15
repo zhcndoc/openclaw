@@ -45,7 +45,7 @@ Socket Mode 和 HTTP Request URLs 在消息、斜杠命令、App Home 和交互�
   Slack 可以为一个应用维护多个 Socket Mode 连接，并且可能将任意有效载荷投递到任意连接。因此，共享同一个 Slack 应用的不同 OpenClaw gateway 需要一致的路由和授权配置。否则，请为每个 gateway 使用单独的 Slack 应用、单一路由入口，或在负载均衡器后使用 HTTP Request URLs。参见 [Using Socket Mode](https://docs.slack.dev/apis/events-api/using-socket-mode#using-multiple-connections)。
 </Warning>
 
-### Relay mode
+### 中继模式
 
 Relay mode 将 Slack 入口与 OpenClaw gateway 分离。受信任的路由器拥有唯一的 Slack Socket Mode 连接，选择目标 gateway，并通过已认证的 websocket 转发带类型的事件。gateway 仍然使用自己的 bot token 来执行外发的 Slack Web API 调用。
 
@@ -67,6 +67,165 @@ Relay mode 将 Slack 入口与 OpenClaw gateway 分离。受信任的路由器�
 
 除非目标是 localhost，否则 relay URL 必须使用 `wss://`。请将 bearer token 和路由器路由表视为 Slack 授权边界的一部分：被路由的事件会作为已授权的激活进入正常的 Slack 消息处理器。websocket `hello` 帧中由路由器提供的 `slack_identity` 可以设置默认的外发用户名和图标；但如果调用方显式提供了 identity，则以调用方为准。relay 连接会以与 Socket Mode 相同的有限退避时序重新连接，并在断开时清除路由器提供的 identity。
 
+### Enterprise Grid 组织级安装
+
+一个 Slack 账号可以接收 Enterprise Grid 组织级安装所覆盖的每个工作区发来的消息。请选择直接 Socket Mode 或 HTTP Request URLs；企业账号不支持 relay 模式。下面这两个最小权限清单都只启用 V1 `message` 和 `app_mention` 事件路径、即时回复，以及由监听器拥有的状态反应。
+
+#### Socket Mode
+
+```json
+{
+  "display_information": {
+    "name": "OpenClaw",
+    "description": "OpenClaw 的 Slack 连接器"
+  },
+  "features": {
+    "bot_user": { "display_name": "OpenClaw", "always_online": true }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "files:read",
+        "files:write",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "mpim:history",
+        "mpim:read",
+        "reactions:write",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": true,
+    "socket_mode_enabled": true,
+    "event_subscriptions": {
+      "bot_events": [
+        "app_mention",
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim"
+      ]
+    }
+  }
+}
+```
+
+请让 Enterprise Grid 的 Org Admin 或 Org Owner 审批该应用，在组织级别安装它，并选择该安装所覆盖的工作区。在启动 OpenClaw 之前，确认该应用在所有目标工作区中都可用。为 Socket Mode 生成一个带有 `connections:write` 的应用级 token，然后从组织安装中复制 bot token。配置使用组织安装 bot token 的账号：
+
+```json5
+{
+  channels: {
+    slack: {
+      enabled: true,
+      mode: "socket",
+      enterpriseOrgInstall: true,
+      appToken: { source: "env", provider: "default", id: "SLACK_APP_TOKEN" },
+      botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
+      dmPolicy: "open",
+      allowFrom: ["*"],
+      groupPolicy: "allowlist",
+      channels: {
+        C0123456789: { requireMention: true },
+      },
+    },
+  },
+}
+```
+
+#### HTTP Request URLs
+
+当 Gateway 有一个公开的 HTTPS 端点且不打开 Socket Mode 连接时，请使用 HTTP 模式。将示例 URL 替换为 Gateway 的公开 `webhookPath` URL（默认 `/slack/events`）：
+
+```json
+{
+  "display_information": {
+    "name": "OpenClaw",
+    "description": "OpenClaw 的 Slack 连接器"
+  },
+  "features": {
+    "bot_user": { "display_name": "OpenClaw", "always_online": true }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "files:read",
+        "files:write",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "mpim:history",
+        "mpim:read",
+        "reactions:write",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": true,
+    "event_subscriptions": {
+      "request_url": "https://gateway-host.example.com/slack/events",
+      "bot_events": [
+        "app_mention",
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim"
+      ]
+    }
+  }
+}
+```
+
+请让 Enterprise Grid 的 Org Admin 或 Org Owner 审批该应用，在组织级别安装它，并选择该安装所覆盖的工作区。Slack 验证 Request URL 后，复制组织安装的 bot token 以及应用的 **Basic Information -> App Credentials -> Signing Secret**。使用相同的 Request URL 路径配置企业账号：
+
+```json5
+{
+  channels: {
+    slack: {
+      enabled: true,
+      mode: "http",
+      enterpriseOrgInstall: true,
+      botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
+      signingSecret: {
+        source: "env",
+        provider: "default",
+        id: "SLACK_SIGNING_SECRET",
+      },
+      webhookPath: "/slack/events",
+      dmPolicy: "open",
+      allowFrom: ["*"],
+      groupPolicy: "allowlist",
+      channels: {
+        C0123456789: { requireMention: true },
+      },
+    },
+  },
+}
+```
+
+启动时，OpenClaw 会通过 Slack 的 `auth.test` 验证 `enterpriseOrgInstall`。没有该标志的组织安装 token，或者带有该标志的工作区 token，都会导致启动失败。Slack 仍然是哪些工作区已授权该安装的唯一事实来源；随后 OpenClaw 会把配置的 channel、user、DM 和 mention 策略应用到每个已投递事件上。Enterprise V1 会在分发前拒绝所有由 bot 发送的 `message` 和 `app_mention` 事件，不论 `allowBots` 如何，因为组织安装不会提供稳定、带工作区限定的 bot 身份用于防循环。
+
+企业支持刻意限制为直接 Socket Mode 或 HTTP 的 `message` 和 `app_mention` 事件及其即时回复。relay 模式、slash commands、interactions、App Home、reaction event listeners、pins、Slack action tools、Slack-native approvals、bindings、queued 或 scheduled delivery，以及 proactive sends 都不适用于企业账号。出站确认、typing 和状态反应通过由监听器拥有的 Slack client 支持，并且需要 `reactions:write`；入站 reaction 通知和 reaction action tools 仍不可用。
+
+即时回复会复用标准 Slack 投递行为，支持 chunks、media、metadata、identity fallback、unfurls 和 receipts，但前提是已验证、由监听器拥有的 client 仍处于活动事件轮次中。内存中的发送队列和线程参与记录会按该事件的工作区进行分区；client 本身不会被序列化或持久化。
+
+Channel policy 键和 `dm.groupChannels` 条目必须使用原始且稳定的 Slack channel ID，或者使用 `channel:<id>` 形式。OpenClaw 会在运行时将这两种形式都归一化为原始 channel ID 进行匹配；`slack:`、`group:` 和 `mpim:` 前缀会导致启动失败。用户策略条目必须使用稳定的 Slack user ID；名称、slug、显示名称和电子邮件地址都会导致启动失败。ID 必须使用 Slack 的规范大写前缀和主体（例如 `C0123456789` 或 `U0123456789`）；小写和短的相似形式都会导致启动失败。企业账号不能启用 `dangerouslyAllowNameMatching`。企业账号可以设置全局 `mentionPatterns.mode`，但 `mentionPatterns.allowIn` 和 `mentionPatterns.denyIn` 会导致启动失败，因为裸的 Slack channel ID 不带工作区限定，并且可以在多个工作区中复用。工作区安装保留现有的带作用域 mention-pattern 行为。每个被接受的工作区都会获得独立的 routing、session、transcript、dedupe、history 和 cache identity，即使 Slack ID 重叠也是如此。在 `message` 流中，普通用户消息和用户发出的 `file_share` 事件是受支持的；其他 message 子类型会在授权或系统事件处理之前被拒绝。
+
+企业 DM 必须么是被禁用的（`dm.enabled=false` 或 `dmPolicy="disabled"`），要么显式开启为 `dmPolicy="open"` 且有效账号 `allowFrom` 包含字面量 `"*"`。空白 allowlist 或不包含 `"*"` 的用户特定 ID 都会导致启动失败。由于这些授权存储中的 Slack user ID 不带工作区限定，因此配对和按用户划分的 DM allowlist 会被拒绝。channel 和 sender policy 仍然适用于 channel 消息。
+
 ## 安装
 
 ```bash
@@ -76,6 +235,8 @@ openclaw plugins install @openclaw/slack
 `plugins install` 会注册并启用该插件。在你配置好下面的 Slack 应用和频道设置之前，它不会执行任何操作。有关通用的插件安装规则，请参见 [Plugins](/tools/plugin)。
 
 ## 快速设置
+
+本节中的 manifest 会创建一个 workspace 作用域的安装。对于 Enterprise Grid 组织安装，请改用专用的 [org-wide manifest and workflow](#enterprise-grid-org-wide-installs)。
 
 <Tabs>
   <Tab title="Socket 模式（默认）">
@@ -695,7 +856,7 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
 
 启用不同功能以扩展上述默认配置。
 
-默认 manifest 启用 Slack App Home 的 **Home** 选项卡，并订阅 `app_home_opened`。当工作区成员打开 Home 选项卡时，OpenClaw 会通过 `views.publish` 发布一个安全的默认 Home 视图；其中不包含会话负载或私有配置。**Messages** 选项卡仍对 Slack 私信启用。该 manifest 还通过 `features.assistant_view`、`assistant:write`、`assistant_thread_started` 和 `assistant_thread_context_changed` 启用 Slack assistant threads；assistant threads 会路由到各自的 OpenClaw 线程会话，并让 Slack 提供的线程上下文可供代理使用。
+默认 manifest 会启用 Slack App Home 的 **Home** 选项卡，并订阅 `app_home_opened`。当工作区成员打开 Home 选项卡时，OpenClaw 会使用 `views.publish` 发布一个安全的默认 Home 视图；不会包含对话载荷或私有配置。启用单斜杠命令模式时，命令提示会使用 `channels.slack.slashCommand.name`；使用原生命令或不使用斜杠命令的安装会省略该提示。**Messages** 选项卡对 Slack 私信保持启用。该 manifest 还通过 `features.assistant_view`、`assistant:write`、`assistant_thread_started` 和 `assistant_thread_context_changed` 启用了 Slack assistant threads；assistant threads 会路由到各自的 OpenClaw 线程会话，并让 Slack 提供的线程上下文可供代理使用。
 
 <AccordionGroup>
   <Accordion title="可选的原生斜杠命令">
@@ -909,21 +1070,21 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
 对于操作/目录读取，如果已配置，user token 可以优先使用。对于写入，仍优先使用 bot token；只有在 `userTokenReadOnly: false` 且 bot token 不可用时，才允许使用 user-token 写入。
 </Tip>
 
-## 操作与门控
+## Operations and Gating
 
-Slack 操作由 `channels.slack.actions.*` 控制。
+Slack actions are controlled by `channels.slack.actions.*`.
 
-当前 Slack 工具中可用的操作组：
+The available action groups in the current Slack tool are:
 
-| 组          | 默认   |
-| ----------- | ------ |
-| messages    | 已启用 |
-| reactions   | 已启用 |
-| pins        | 已启用 |
-| memberInfo  | 已启用 |
-| emojiList   | 已启用 |
+| Group       | Default |
+| ----------- | ------- |
+| messages    | Enabled |
+| reactions   | Enabled |
+| pins        | Enabled |
+| memberInfo  | Enabled |
+| emojiList   | Enabled |
 
-当前 Slack 消息操作包括 `send`、`upload-file`、`download-file`、`read`、`edit`、`delete`、`pin`、`unpin`、`list-pins`、`member-info` 和 `emoji-list`。`download-file` 接受入站文件占位符中显示的 Slack 文件 ID，并会针对图片返回图片预览，针对其他文件类型返回本地文件元数据。
+Current Slack message actions include `send`, `upload-file`, `download-file`, `read`, `edit`, `delete`, `pin`, `unpin`, `list-pins`, `member-info`, and `emoji-list`. `download-file` accepts the Slack file ID shown in the inbound file placeholder and returns an image preview for images, and local file metadata for other file types.
 
 ## 访问控制与路由
 
@@ -986,7 +1147,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
         slack: {
           groupPolicy: "allowlist",
           channels: {
-            C12345678: { allow: true, requireMention: true },
+            C12345678: { enabled: true, requireMention: true },
           },
         },
       },
@@ -1001,7 +1162,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
         slack: {
           groupPolicy: "allowlist",
           channels: {
-            "#eng-my-channel": { allow: true, requireMention: true },
+            "#eng-my-channel": { enabled: true, requireMention: true },
           },
         },
       },
@@ -1025,13 +1186,13 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 
     - `requireMention`
     - `ignoreOtherMentions`
-    - `replyToMode` (`off|first|all|batched`; overrides account/chat-type reply mode for this channel)
-    - `users` (allowlist)
+    - `replyToMode` (`off|first|all|batched`; 覆盖该频道的账号/聊天类型回复模式)
+    - `users`（允许列表）
     - `allowBots`
     - `skills`
     - `systemPrompt`
     - `tools`, `toolsBySender`
-    - `toolsBySender` key format: `channel:`, `id:`, `e164:`, `username:`, `name:`, or `"*"` wildcard
+    - `toolsBySender` 键格式：`channel:`、`id:`、`e164:`、`username:`、`name:`，或 `"*"` 通配符
       （旧版未加前缀的键仍仅映射到 `id:`）
 
     `ignoreOtherMentions`（默认 `false`）会丢弃提及其他用户或用户组但未提及此 bot 的频道消息。DM 和群组 DM（MPIM）不受影响。此过滤器需要从 `auth.test` 解析出的 bot 用户 ID；如果该身份不可用（例如仅有 user-token 的身份），则该门控会放行，消息会保持原样通过。
@@ -1102,21 +1263,21 @@ Slack 提供方从 `messages.ackReactionScope` 读取范围（默认 `"group-men
 
 取值：
 
-- `"all"`：在 DMs 和群组中都添加反应。
-- `"direct"`：仅在 DMs 中添加反应。
-- `"group-all"`：对每条群组消息都添加反应（不包括 DMs）。
-- `"group-mentions"`（默认）：在群组中添加反应，但仅在 bot 被提及（或在已选择启用的群组可提及对象中）时才触发。**不包括 DMs。**
+- `"all"`：在私聊和群组中添加反应，包括环境房间事件。
+- `"direct"`：仅在私聊中添加反应。
+- `"group-all"`：对所有群组消息添加反应，但不包括环境房间事件（不含私聊）。
+- `"group-mentions"`（默认）：在群组中添加反应，但仅限于提及机器人时（或在已选择加入的群组可提及对象中）。**不包括私聊。**
 - `"off"` / `"none"`：从不添加反应。
 
 <Note>
-默认范围（`"group-mentions"`）不会在私聊中触发确认反应。若要在入站 Slack DMs 上看到已配置的 `ackReaction`（例如 `"eyes"`），请将 `messages.ackReactionScope` 设为 `"direct"` 或 `"all"`。`messages.ackReactionScope` 会在 Slack 提供方启动时读取，因此需要重启网关后更改才会生效。
+默认范围（`"group-mentions"`）不会在私聊或环境房间事件中触发确认反应。若要在传入的 Slack 私聊和安静的房间事件中看到已配置的 `ackReaction`（例如 `"eyes"`），请将 `messages.ackReactionScope` 设置为 `"all"`。`messages.ackReactionScope` 会在 Slack 提供方启动时读取，因此需要重启网关才能使更改生效。
 </Note>
 
 ```json5
 {
   messages: {
     ackReaction: "eyes",
-    ackReactionScope: "all", // 在 DMs 和群组中添加反应
+    ackReactionScope: "all", // 在私聊和群组中添加反应
   },
 }
 ```
@@ -1196,10 +1357,10 @@ Slack 原生进度任务卡片在 progress 模式下为可选启用。将 `chann
 
 旧版键：
 
-- `channels.slack.streamMode` (`replace | status_final | append`) 是 `channels.slack.streaming.mode` 的旧版运行时别名。
-- 布尔值 `channels.slack.streaming` 是 `channels.slack.streaming.mode` 和 `channels.slack.streaming.nativeTransport` 的旧版运行时别名。
-- 顶层 `channels.slack.chunkMode` 和 `channels.slack.nativeStreaming` 是 `channels.slack.streaming.chunkMode` 和 `channels.slack.streaming.nativeTransport` 的旧版运行时别名。
-- 运行 `openclaw doctor --fix` 可将持久化的 Slack 流式传输配置重写为规范键。
+- `channels.slack.streamMode` (`replace | status_final | append`) 是 `channels.slack.streaming.mode` 的旧版别名。
+- 布尔值 `channels.slack.streaming` 是 `channels.slack.streaming.mode` 和 `channels.slack.streaming.nativeTransport` 的旧版别名。
+- 顶层 `channels.slack.chunkMode` 和 `channels.slack.nativeStreaming` 是 `channels.slack.streaming.chunkMode` 和 `channels.slack.streaming.nativeTransport` 的旧版别名。
+- 运行时不会读取旧版别名；请运行 `openclaw doctor --fix` 将持久化的 Slack 流式传输配置重写为规范键。
 
 ## 输入中 typing 反应回退
 
@@ -1215,6 +1376,17 @@ Slack 原生进度任务卡片在 progress 模式下为可选启用。将 `chann
 - Slack 期望使用简写名（例如 `"hourglass_flowing_sand"`）。
 - 该反应尽力而为，回复或失败路径完成后会自动尝试清理。
 
+## 语音输入
+
+要在 Slack 中向 OpenClaw 讲话，请现在发送一个 Slack 音频剪辑到 OpenClaw 应用。Slackbot 的听写麦克风是 Slack 自有的独立功能，不是应用 API。
+
+- **[Slackbot 语音听写](https://slack.com/help/articles/202026038-How-to-use-Slackbot)** 存在于用户的私有 Slackbot 会话中。Slack 会将录音转换为 Slackbot 提示，但不会通过 Events API 向第三方 Slack 应用发出音频文件、听写事件、提示或输入源标记。OpenClaw Slack 插件无法启用或接收它。
+- **[Slack 音频剪辑](https://slack.com/help/articles/4406235165587-Record-audio-and-video-clips-in-Slack)** 是可存储的 Slack 文件，可以发布到 OpenClaw 的 DM、频道或线程中。OpenClaw 会使用 bot token 下载可访问的剪辑，规范化 Slack 剪辑的 MIME 元数据，并通过共享的 [音频转录管道](/nodes/audio) 发送它。推荐的应用清单包含所需的 `files:read` 范围。
+
+音频剪辑和 Slackbot 听写具有不同的隐私语义：剪辑遵循 Slack 文件保留策略，OpenClaw 会下载它们用于转录，而 Slack 说明听写音频不会被存储。
+
+在 `requireMention: true` 的频道中，无字幕的音频剪辑可以通过说出一个已配置的提及模式（`agents.list[].groupChat.mentionPatterns`，回退到 `messages.groupChat.mentionPatterns`）来满足门槛。OpenClaw 会在下载或转录剪辑之前对发送者进行授权，然后只有在转录结果匹配时才允许通过。失败或不匹配的推测性转录会与下载的剪辑一起被丢弃；它不会保留在频道历史中。无法从语音中推断出原生 Slack `@bot` 标识，因此请配置一个口头名称模式或包含一个键入的提及。如果启用了转录回显，则回显仅在通过后发送。
+
 ## 媒体、分块与投递
 
 <AccordionGroup>
@@ -1227,11 +1399,12 @@ Slack 原生进度任务卡片在 progress 模式下为可选启用。将 `chann
 
   </Accordion>
 
-  <Accordion title="Outbound text and files">
-    - 文本分块使用 `channels.slack.textChunkLimit`（默认 `8000`，并受 Slack 自身消息长度限制封顶）
+  <Accordion title="出站文本和文件">
+    - 文本分块使用 `channels.slack.textChunkLimit`（默认 `8000`，并受 Slack 自身消息长度限制上限约束）
     - `channels.slack.streaming.chunkMode="newline"` 启用先按段落拆分
     - 文件发送使用 Slack 上传 API，并且可以包含线程回复（`thread_ts`）
-    - 如果配置了 `channels.slack.mediaMaxMb`，则出站媒体上限遵循它；否则频道发送使用媒体管道中按 MIME 类型设置的默认值
+    - 较长的文件说明会将第一个 Slack 安全文本分块作为上传评论，其余分块作为后续消息发送
+    - 出站媒体上限在配置时遵循 `channels.slack.mediaMaxMb`；否则频道发送使用媒体管道中的 MIME 类型默认值
 
   </Accordion>
 
@@ -1279,6 +1452,98 @@ Slash 命令在 Slack 中表现为单个已配置命令或多个原生命令。�
 ```
 
 Slash 会话使用类似 `agent:<agentId>:slack:slash:<userId>` 的隔离键，并仍然通过 `CommandTargetSessionKey` 将命令执行路由到目标对话会话。
+
+## 原生图表
+
+Slack 的公开 [`data_visualization` Block Kit 区块](https://docs.slack.dev/reference/block-kit/blocks/data-visualization-block/)
+可在消息中渲染折线图、柱状图、面积图和饼图。OpenClaw 将可移植的
+`presentation` `chart` 区块映射为这种原生形态；除正常的
+`chat:write` 消息访问权限外，不需要额外的 OAuth 作用域、
+文件上传、图像渲染器或 Slack 配置。
+
+```json
+{
+  "blocks": [
+    {
+      "type": "chart",
+      "chartType": "bar",
+      "title": "季度收入",
+      "categories": ["Q1", "Q2"],
+      "series": [{ "name": "收入", "values": [120, 145] }],
+      "xLabel": "季度"
+    }
+  ]
+}
+```
+
+Slack 的限制会在原生渲染前强制执行：
+
+- 标题和可选坐标轴标签：50 个字符
+- 饼图：1-12 个正值分段
+- 折线图/柱状图/面积图：1-12 个唯一命名的系列，以及 1-20 个共享类别
+- 分段、类别和系列标签：20 个字符
+- 每个系列都必须为每个类别包含一个有限值；非饼图数值
+  可以为负数
+
+每个原生图表还会携带一个顶层文本表示，用于屏幕
+阅读器、通知、会话镜像，以及无法渲染该
+区块的客户端。发送到其他 OpenClaw 通道的标准 presentation 会接收同样的
+确定性图表数据文本，除非它们声明支持原生图表。若
+Slack 在分阶段推出期间以 `invalid_blocks` 拒绝图表，OpenClaw 会移除被拒绝的原生数据区块，保留任何同级控件，并以可见文本的形式发送完整的图表表示。
+
+Slack 当前每条消息最多接受两个 `data_visualization` 区块。若一个 presentation 包含超过两个有效图表，OpenClaw 会保留它们的顺序，并在后续消息中继续原生渲染，每条消息不超过两个
+图表。
+
+Slack 的 [开发者发布](https://docs.slack.dev/changelog/2026/06/16/block-kit-data-visualization-block/)
+将该区块描述为面向应用的 Block Kit 功能，并未公布任何付费
+方案限制。Business+/Enterprise 的资格说明适用于
+Slackbot 自动生成 AI 图表，这与应用发送一个
+已经结构化的 Block Kit 图表是不同的。图表是仅限消息的区块，不是 App
+Home、模态窗口或 Canvas 内容。
+
+## 原生表格
+
+Slack 当前的 [`data_table` Block Kit block](https://docs.slack.dev/reference/block-kit/blocks/data-table-block/)  
+可在消息中渲染结构化的行和列。OpenClaw 会将显式的、可移植的  
+`presentation` `table` 块映射为 `data_table`；它不使用 Slack 旧版的  
+[`table` block](https://docs.slack.dev/reference/block-kit/blocks/table-block/)。  
+除了正常的 `chat:write` 消息访问权限之外，不需要额外的 OAuth scope 或 Slack 配置。
+
+```json
+{
+  "blocks": [
+    {
+      "type": "table",
+      "caption": "开放中的流水线",
+      "headers": ["账户", "阶段", "ARR"],
+      "rows": [
+        ["Acme", "已赢单", 125000],
+        ["Globex", "评审中", 82000]
+      ],
+      "rowHeaderColumnIndex": 0
+    }
+  ]
+}
+```
+
+OpenClaw 会将表头单元格和字符串单元格映射为 Slack `raw_text` 单元格。数值单元格  
+映射为 `raw_number`，并保留有限数值以便原生排序和筛选。`rowHeaderColumnIndex` 在存在时，  
+会将该从 0 开始计数的列标记为 Slack 行标题。
+
+Slack 公布的 `data_table` 限制会在原生渲染前强制执行：
+
+- 1-20 列
+- 1-100 行数据，外加表头行
+- 每一行的单元格数量必须相同
+- 在一条消息中的所有表格单元格总字符数最多为 10,000
+
+当消息仍然处于总字符限制内时，多个有效的表格块可以原生渲染。无法在原生限制范围内渲染的表格会变成完整、确定性的文本，而不是丢失行或单元格。若该文本超过一条 Slack 消息，则发送和斜杠命令响应会使用有序的文本分块。表格编辑会明确报大小错误，而不是静默地从现有消息中截断行。
+
+从可移植 presentation 生成的每个原生表格还会附带一个顶层  
+文本表示，供屏幕阅读器、通知、会话镜像以及无法渲染该块的客户端使用。原始图表和表格值在回退内容中保持字面形式，因此诸如 `<@U123>` 这样的单元格数据不会变成 Slack 提及。  
+如果 Slack 因 `invalid_blocks` 拒绝原生图表或表格块，OpenClaw 会在一次有界恢复步骤中移除所有原生数据块，保留诸如按钮和选择器之类的有效兄弟块，并在禁用 Slack 格式化的情况下发送完整可见的图表和表格文本。斜杠命令传递会跟踪 Slack 在该命令中的五次调用 `response_url` 预算。在每一批回复之前，它都会选择一个能适配剩余调用次数的完整计划，否则会在发送该批次之前失败。
+
+只有显式的 `presentation` 表格块才会被提升为原生表格。Markdown 管道表格仍然作为作者文本；OpenClaw 不会猜测表格结构或单元格类型。现有受信任的 Slack 原生生产者可以继续通过 `channelData.slack.blocks` 传递原始块；OpenClaw 会从有效的原始 `data_table` 单元格推导回退文本，而格式错误的自定义块可能会降级为其 caption 或通用的 Block Kit 回退。可移植 agent、CLI 和插件输出应使用 `presentation`。
 
 ## 交互式回复
 
@@ -1431,14 +1696,14 @@ Slack 可以作为原生审批客户端，通过交互式按钮和交互操作�
 
 <Accordion title="高信号 Slack 字段">
 
-- mode/auth: `mode`, `botToken`, `appToken`, `signingSecret`, `webhookPath`, `accounts.*`
-- DM 访问: `dm.enabled`, `dmPolicy`, `allowFrom`（旧版：`dm.policy`, `dm.allowFrom`）, `dm.groupEnabled`, `dm.groupChannels`
-- 兼容性开关: `dangerouslyAllowNameMatching`（紧急开关；除非需要，否则保持关闭）
-- 频道访问: `groupPolicy`, `channels.*`, `channels.*.users`, `channels.*.requireMention`
-- 线程/历史: `replyToMode`, `replyToModeByChatType`, `thread.*`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
-- 传递: `textChunkLimit`, `streaming.chunkMode`, `mediaMaxMb`, `streaming`, `streaming.nativeTransport`, `streaming.preview.toolProgress`
-- 展开预览: `unfurlLinks`（默认：`false`）, `unfurlMedia` 用于控制 `chat.postMessage` 的链接/媒体预览；设置 `unfurlLinks: true` 可重新启用链接预览
-- 运维/功能: `configWrites`, `commands.native`, `slashCommand.*`, `actions.*`, `userToken`, `userTokenReadOnly`
+- mode/auth: `mode`, `enterpriseOrgInstall`, `botToken`, `appToken`, `signingSecret`, `webhookPath`, `accounts.*`
+- DM access: `dm.enabled`, `dmPolicy`, `allowFrom` (legacy: `dm.policy`, `dm.allowFrom`), `dm.groupEnabled`, `dm.groupChannels`
+- compatibility toggle: `dangerouslyAllowNameMatching` (break-glass; keep off unless needed)
+- channel access: `groupPolicy`, `channels.*`, `channels.*.users`, `channels.*.requireMention`
+- threading/history: `replyToMode`, `replyToModeByChatType`, `thread.*`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
+- delivery: `textChunkLimit`, `streaming.chunkMode`, `mediaMaxMb`, `streaming`, `streaming.nativeTransport`, `streaming.preview.toolProgress`
+- unfurls: `unfurlLinks` (default: `false`), `unfurlMedia` for `chat.postMessage` link/media preview control; set `unfurlLinks: true` to opt back into link previews
+- ops/features: `configWrites`, `commands.native`, `slashCommand.*`, `actions.*`, `userToken`, `userTokenReadOnly`
 
 </Accordion>
 
@@ -1491,7 +1756,7 @@ openclaw pairing list slack
 
   </Accordion>
 
-  <Accordion title="Socket mode not connecting">
+  <Accordion title="Socket 模式未连接">
     验证 Slack 应用设置中的 bot + app tokens 和 Socket Mode 启用状态。
     App-Level Token 需要 `connections:write`，并且 Bot User OAuth Token
     必须属于与 app token 相同的 Slack app/workspace。
@@ -1543,37 +1808,39 @@ openclaw pairing list slack
   </Accordion>
 </AccordionGroup>
 
-## 附件视觉参考
+## 附件媒体参考
 
-当 Slack 文件下载成功且大小限制允许时，Slack 可以将已下载媒体附加到 agent 的轮次中。图片文件可以通过媒体理解路径传递，或直接传递给支持视觉的回复模型；其他文件会作为可下载的文件上下文保留，而不会被当作图像输入处理。
+当 Slack 文件下载成功且大小限制允许时，Slack 可以将下载的媒体附加到代理轮次中。音频片段可以被转写，图像文件可以通过媒体理解路径处理，或直接传递给支持视觉的回复模型，而其他文件仍可作为可下载的文件上下文使用。
 
 ### 支持的媒体类型
 
-| 媒体类型                     | 来源                 | 当前行为                                                                  | 备注                                                                     |
-| ---------------------------- | -------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| JPEG / PNG / GIF / WebP 图片 | Slack 文件 URL        | 下载并附加到轮次中，以便进行支持视觉的处理                               | 单文件上限：`channels.slack.mediaMaxMb`（默认 20 MB）                 |
-| PDF 文件                     | Slack 文件 URL        | 下载并作为文件上下文暴露给诸如 `download-file` 或 `pdf` 之类的工具       | Slack 入站不会自动将 PDF 转换为图像视觉输入                               |
-| 其他文件                     | Slack 文件 URL        | 在可能时下载并作为文件上下文暴露                                         | 二进制文件不被当作图像输入                                               |
-| 线程回复                     | 线程起始消息文件     | 当回复没有直接媒体时，可将根消息文件作为上下文注入                         | 仅文件的起始消息会使用附件占位符                                         |
-| 多图消息                     | 多个 Slack 文件      | 每个文件独立评估                                                         | Slack 处理每条消息最多限制为八个文件                                     |
+| 媒体类型                     | 来源                 | 当前行为                                                                 | 备注                                                                     |
+| ------------------------------ | -------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Slack 音频片段               | Slack 文件 URL       | 下载后通过共享音频转写流程路由处理                                         | 需要 `files:read` 权限以及可正常工作的 `tools.media.audio` 模型或 CLI      |
+| JPEG / PNG / GIF / WebP 图像 | Slack 文件 URL       | 下载后附加到该轮次中，以便进行支持视觉的处理                                | 单文件上限：`channels.slack.mediaMaxMb`（默认 20 MB）                    |
+| PDF 文件                     | Slack 文件 URL       | 下载后作为文件上下文暴露给诸如 `download-file` 或 `pdf` 之类的工具         | Slack 入站不会自动将 PDF 转换为图像视觉输入                               |
+| 其他文件                     | Slack 文件 URL       | 尽可能下载，并作为文件上下文暴露                                           | 二进制文件不会被视为图像输入                                              |
+| 线程回复                     | 线程起始文件             | 当回复没有直接媒体时，可将根消息文件作为上下文注入                            | 仅包含文件的起始消息会使用附件占位符                                      |
+| 多文件消息                   | 多个 Slack 文件         | 每个文件都会被独立评估                                                      | Slack 处理每条消息最多支持八个文件                                        |
 
 ### 入站管道
 
 当带有文件附件的 Slack 消息到达时：
 
 1. OpenClaw 使用 bot token 从 Slack 的私有 URL 下载文件。
-2. 文件在成功后写入媒体存储。
-3. 下载的媒体路径和内容类型会添加到入站上下文中。
-4. 支持图像的模型/工具路径可以使用该上下文中的图像附件。
-5. 非图像文件仍会作为文件元数据或媒体引用保留，供能够处理它们的工具使用。
+2. 下载成功后，文件会写入媒体存储。
+3. 下载后的媒体路径和内容类型会添加到入站上下文中。
+4. 音频片段会路由到共享转写管道；支持图像的模型/工具路径可以使用同一上下文中的图像附件。
+5. 其他文件仍可作为文件元数据或媒体引用供能够处理它们的工具使用。
 
 ### 线程根附件继承
 
 当消息在某个线程中到达（具有 `thread_ts` 父级）时：
 
-- 如果回复本身没有直接媒体，而包含的根消息有文件，Slack 可以将根文件作为线程起始上下文注入。
-- 直接回复附件优先于根消息附件。
-- 只有文件而没有文本的根消息会表示为附件占位符，以便回退机制仍可包含其文件。
+- 如果回复本身没有直接媒体，而包含的根消息有文件，则 Slack 可以将根文件作为线程起始上下文注入。
+- 只有在初始化新的或重置后的线程会话时，才会注入根文件。后续仅文本回复会复用现有会话上下文，不会将根文件重新附加为新的媒体。
+- 直接回复附件的优先级高于根消息附件。
+- 仅包含文件而没有文本的根消息会以附件占位符表示，以便回退逻辑仍可包含其文件。
 
 ### 多附件处理
 
@@ -1587,23 +1854,27 @@ openclaw pairing list slack
 ### 大小、下载与模型限制
 
 - **大小上限**：默认每个文件 20 MB。可通过 `channels.slack.mediaMaxMb` 配置。
-- **下载失败**：Slack 无法提供的文件、过期 URL、无法访问的文件、超大文件，以及 Slack auth/login HTML 响应都会被跳过，而不是报告为不支持的格式。
-- **视觉模型**：图像分析会使用当前激活的回复模型（如果它支持视觉），或者使用 `agents.defaults.imageModel` 中配置的图像模型。
+- **音频转写上限**：当下载的文件发送给转写提供方或 CLI 时，`tools.media.audio.maxBytes` 也同样适用。
+- **下载失败**：Slack 无法提供的文件、过期 URL、无法访问的文件、超大文件，以及 Slack 认证/登录 HTML 响应都会被跳过，而不会被报告为不支持的格式。
+- **视觉模型**：图像分析会使用当前活动的回复模型（如果它支持视觉），或者使用 `agents.defaults.imageModel` 中配置的图像模型。
 
 ### 已知限制
 
-| 场景                               | 当前行为                                                             | 解决办法                                                                 |
-| ---------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| 过期的 Slack 文件 URL              | 文件被跳过；不显示错误                                               | 在 Slack 中重新上传文件                                                 |
-| 未配置视觉模型                     | 图像附件会作为媒体引用存储，但不会作为图像分析                         | 配置 `agents.defaults.imageModel`，或使用支持视觉的回复模型             |
-| 非常大的图片（默认 > 20 MB）       | 按大小上限跳过                                                       | 如果 Slack 允许，可增大 `channels.slack.mediaMaxMb`                     |
-| 转发/共享的附件                   | 文本和 Slack 托管的图像/文件媒体按最佳努力处理                         | 直接在 OpenClaw 线程中重新分享                                         |
-| PDF 附件                           | 作为文件/媒体上下文存储，不会自动通过图像视觉路径处理                 | 使用 `download-file` 获取文件元数据，或使用 `pdf` 工具分析 PDF         |
+| 场景                                      | 当前行为                                                                   | 解决方法                                                                    |
+| --------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 过期的 Slack 文件 URL                        | 文件被跳过；不显示错误                                                      | 在 Slack 中重新上传该文件                                                   |
+| 音频转写不可用                               | 片段仍会附加，但不会生成转写                                               | 配置 `tools.media.audio` 或安装受支持的本地转写 CLI                         |
+| 无字幕片段未通过提及门控                     | 在私有的推测性转写后被丢弃；转写内容和下载内容都会被丢弃                  | 配置口头姓名提及模式、添加已输入的 bot 提及，或使用 DM                     |
+| 未配置视觉模型                               | 图像附件会作为媒体引用存储，但不会作为图像进行分析                        | 配置 `agents.defaults.imageModel` 或使用支持视觉的回复模型                  |
+| 非常大的图像（默认 > 20 MB）                 | 根据大小上限被跳过                                                         | 如果 Slack 允许，可增大 `channels.slack.mediaMaxMb`                        |
+| 转发/共享的附件                              | 文本和 Slack 托管的图像/文件媒体尽力处理                                   | 直接在 OpenClaw 线程中重新共享                                             |
+| PDF 附件                                    | 作为文件/媒体上下文存储，不会自动通过图像视觉路由                          | 使用 `download-file` 获取文件元数据，或使用 `pdf` 工具进行 PDF 分析        |
 
 ### 相关文档
 
-- [Media understanding pipeline](/nodes/media-understanding)
-- [PDF tool](/tools/pdf)
+- [媒体理解管道](/nodes/media-understanding)
+- [音频与语音笔记](/nodes/audio)
+- [PDF 工具](/tools/pdf)
 
 ## 相关内容
 

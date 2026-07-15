@@ -20,15 +20,30 @@ OpenClaw 支持附加式 SecretRef，因此受支持的凭据不需要以明文�
 
 ## 运行时模型
 
-- Secrets 会在激活期间尽早解析为内存中的运行时快照，而不是在请求路径上惰性解析。
-- 当一个实际上处于激活状态的 SecretRef 无法解析时，启动会快速失败。
-- 重新加载是原子性切换：要么完整成功，要么保留上一次已知良好的快照。
-- 策略违规（例如 OAuth 模式的 auth profile 与 SecretRef 输入组合）会在运行时切换之前使激活失败。
-- 运行时请求只读取当前激活的内存快照。出站投递路径（Discord 回复/线程投递、Telegram action 发送）也会读取该快照，并且不会在每次发送时重新解析 refs。
+- Secrets 在激活时会主动解析为内存中的运行时快照，而不是在请求路径上惰性解析。
+- 当一个实际处于激活状态的 SecretRef 无法解析时，启动会快速失败。
+- 重新加载是一次原子替换：要么完全成功，要么保留上一次已知可用的快照。
+- 策略违规（例如 OAuth 模式的 auth profile 与 SecretRef 输入同时使用）会在运行时替换之前导致激活失败。
+- 运行时请求只读取当前激活的内存快照。模型提供方的 SecretRef 凭据会通过认证存储和流式选项，以进程内哨兵的形式传递，直到出站。出站投递路径（Discord 回复/线程投递、Telegram 动作发送）也会读取该快照，不会在每次发送时重新解析引用。
 
 这可以让 secret-provider 故障不影响热点请求路径。
 
-## Agent 可访问边界
+## 出站时注入（哨兵值）
+
+对于由 SecretRefs 支持的模型提供方凭据，OpenClaw 会在模型认证解析期间生成一个不可解析、仅进程本地可见的哨兵值。因此，认证存储、流选项、SDK 配置、日志、错误对象以及大多数运行时自省看到的值都会类似于 `oc-sent-v1-...`，而不是提供方凭据。受保护的模型获取和受管理的本地提供方健康探测会在每次请求离开进程之前，立即在 URL 和 header 值中替换已知哨兵值。
+
+未知的、形状类似哨兵值的内容会在网络活动开始前被关闭式拒绝。OpenClaw 会拒绝发送请求，而不是将未解析的哨兵值转发给提供方。已解析的密钥值也会以精确值方式注册用于日志脱敏，作为纵深防御措施。
+
+提供方适配器会使用其 SDK 所支持的最新注入点：
+
+- 支持自定义 fetch 选项的 SDK 会接收 OpenClaw 受保护的 fetch，因此 SDK 会保留哨兵值。
+- 不支持自定义 fetch 选项的 SDK 会在创建客户端之前立即展开哨兵值。由插件拥有的提供方流和代理运行器会在最终的核心拥有交接点展开哨兵值，因为这些传输不共享 OpenClaw 的受保护 fetch。
+
+哨兵值可减少模型调用链中的明文暴露，但它们并不等同于进程隔离。真实值仍然存在于同一进程内存中，并会出现在最终的适配器边界。未通过 SecretRefs 配置的普通环境变量凭据仍然是明文，并且不在此机制范围内。
+
+设置 `OPENCLAW_SECRET_SENTINELS=off`（也接受 `0` 或 `false`，不区分大小写）可在事故响应或兼容性排查期间禁用哨兵值生成。该关闭开关不会禁用按精确值进行的脱敏注册。
+
+## 代理访问边界
 
 SecretRefs 可防止凭据被持久化到配置和生成的模型文件中，但它们并不是进程隔离边界。如果明文凭据留在磁盘上，且位于代理可读取的路径中，那么仍然可以通过文件或 shell 工具读取，从而绕过 API 级别的脱敏。
 
@@ -223,15 +238,20 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 {
   "protocolVersion": 1,
   "values": {},
-  "errors": { "providers/openai/apiKey": { "message": "未找到" } }
+  "errors": { "providers/openai/apiKey": { "code": "NOT_FOUND" } }
 }
 ```
+
+`code` 是一个可选的机器可读诊断信息。OpenClaw 会将识别出的
+`NOT_FOUND` 和 `AMBIGUOUS_DUPLICATE_KEY` 代码与 provider 和 ref id 一起显示。其他
+代码以及诸如 `message` 之类的自由格式字段可用于 protocol-v1 兼容性，
+但不会显示，因为解析器输出可能包含凭据信息。
 
 </Accordion>
 
 ## 基于文件的 API 密钥
 
-不要在配置的 `env` 块中放置 `file:...` 字符串。该块是字面量且不会被覆盖，因此在这里 `file:...` 永远不会被解析。
+不要在配置的 `env` 块中放置 `file:...` 字符串。该块是字面量且不会被覆盖，因此这里的 `file:...` 永远不会被解析。
 
 请改为在受支持的凭据字段上使用文件类型的 SecretRef：
 
@@ -261,6 +281,8 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 有关接受 SecretRef 的字段，请参见 [SecretRef Credential Surface](/reference/secretref-credential-surface)。
 
 ## Exec 集成示例
+
+有关服务账户、捆绑代理技能和故障排除的专门 1Password 指南，请参见 [1Password](/gateway/1password)。
 
 <AccordionGroup>
   <Accordion title="1Password CLI">
@@ -592,13 +614,13 @@ Google Chat 兼容性：`serviceAccountRef` 优先于明文 `serviceAccount`；�
 
 ## 命令路径解析
 
-Command paths can opt into supported SecretRef resolution via a gateway snapshot RPC. Two broad behaviors apply:
+命令路径可以通过网关快照 RPC 选择性使用受支持的 SecretRef 解析。适用两种广泛行为：
 
 <Tabs>
   <Tab title="严格命令路径">
     例如 `openclaw memory` 远程内存路径，以及当 `openclaw qr --remote` 需要远程共享密钥引用时的情况。它们从活动快照读取，在所需 SecretRef 不可用时快速失败。
   </Tab>
-  <Tab title="Read-only command paths">
+  <Tab title="只读命令路径">
     例如 `openclaw status`、`openclaw status --all`、`openclaw channels status`、`openclaw channels resolve`、`openclaw security audit`，以及只读的 doctor/config repair 流程。它们也会优先使用活动快照，但在目标 SecretRef 不可用时会降级而不是中止。
 
     只读行为：
@@ -724,9 +746,10 @@ OpenClaw 故意不会写入包含历史明文密钥值的回滚备份。
 
 ## 相关内容
 
-- [Authentication](/gateway/authentication) - 认证设置
-- [CLI: secrets](/cli/secrets) - CLI 命令
-- [Environment Variables](/help/environment) - 环境变量优先级
-- [SecretRef Credential Surface](/reference/secretref-credential-surface) - 凭据表面
+- [认证](/gateway/authentication) - 认证设置
+- [CLI：密钥](/cli/secrets) - CLI 命令
+- [Vault SecretRefs](/plugins/vault) - HashiCorp Vault 提供程序设置
+- [环境变量](/help/environment) - 环境优先级
+- [SecretRef 凭据面](/reference/secretref-credential-surface) - 凭据面
 - [Secrets Apply Plan Contract](/gateway/secrets-plan-contract) - 计划契约详情
-- [Security](/gateway/security) - 安全态势
+- [安全](/gateway/security) - 安全态势

@@ -8,7 +8,7 @@ read_when:
 ---
 
 OpenClaw 通过官方 `diagnostics-otel` 插件使用 **OTLP/HTTP (protobuf)** 导出诊断信息。日志也可以作为 stdout JSONL 写入，用于容器和沙箱日志管道。任何接受 OTLP/HTTP 的收集器或后端都无需代码更改即可使用。如需本地文件日志，请参阅
-[Logging](/logging)。
+[日志](/logging)。
 
 - **诊断事件** 是结构化的、进程内记录，由 Gateway 和捆绑的插件在模型运行、消息流、会话、队列和 exec 过程中发出。
 - **`diagnostics-otel`** 订阅这些事件，并通过 OTLP/HTTP 将它们导出为 OpenTelemetry **metrics**、**traces** 和 **logs**，还可以将日志记录镜像到 stdout JSONL。
@@ -75,7 +75,7 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
       metricsEndpoint: "http://otel-collector:4318/v1/metrics",
       logsEndpoint: "http://otel-collector:4318/v1/logs",
       protocol: "http/protobuf", // grpc disables OTLP 导出
-      serviceName: "openclaw-gateway", // 未设置则回退到 OTEL_SERVICE_NAME，然后是 "openclaw"
+      serviceName: "openclaw-gateway", // 若未设置，则回退到 OTEL_SERVICE_NAME，然后是 "openclaw"
       headers: { "x-collector-token": "..." },
       traces: true,
       metrics: true,
@@ -129,7 +129,7 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
 布尔值 `captureContent: true` 会同时启用 `inputMessages`、`outputMessages`、`toolInputs`、`toolOutputs`、`toolDefinitions` 以及 OTLP 日志正文，但**不会**启用 `systemPrompt`——如果你也需要组装后的 system prompt，请显式设置 `captureContent.systemPrompt: true`。
 </Note>
 
-`toolInputs`/`toolOutputs` 内容会被内置 agent 运行时的工具执行捕获（完成/错误 span 上的 `openclaw.content.tool_input`，完成 span 上的 `openclaw.content.tool_output`）。外部 harness 工具调用（Codex、Claude CLI）会发出不带内容载荷的 `tool.execution.*` span。捕获到的内容会通过受信任、仅监听者可见的通道传输，且绝不会放入公共诊断事件总线。
+`toolInputs`/`toolOutputs` 内容会被内置 agent 运行时的工具执行捕获（在完成/错误 span 上对应 `openclaw.content.tool_input` 和 `gen_ai.tool.call.arguments`；在完成 span 上对应 `openclaw.content.tool_output` 和 `gen_ai.tool.call.result`）。`openclaw.content.*` 名称仍然是稳定的 OpenClaw 属性名；`gen_ai.tool.call.*` 副本则用于与 semconv 原生查看器保持一致。外部 harness 工具调用（Codex、Claude CLI）会发出不含内容载荷的 `tool.execution.*` span。被捕获的内容会通过受信任的、仅监听的通道传输，绝不会放到公共诊断事件总线上。
 
 ## 采样和刷新
 
@@ -273,8 +273,8 @@ Liveness 警告也会发出：
   - 完成时：`openclaw.harness.result_classification`, `openclaw.harness.yield_detected`, `openclaw.harness.items.started`, `openclaw.harness.items.completed`, `openclaw.harness.items.active`
   - 出错时：`openclaw.harness.phase`, `openclaw.errorCategory`, 可选的 `openclaw.harness.cleanup_failed`
 - `openclaw.tool.execution`
-  - `gen_ai.tool.name`, `openclaw.toolName`, `openclaw.tool.source`, optional `openclaw.tool.owner`, `openclaw.tool.params.*`
-  - 出错时可选 `openclaw.errorCategory`/`openclaw.errorCode`，当因策略或沙箱被拒绝时使用 `openclaw.deniedReason` 和 `openclaw.outcome=blocked`
+  - `gen_ai.tool.name`, `gen_ai.operation.name` (`execute_tool`), `openclaw.toolName`, `openclaw.tool.source`, 可选的 `gen_ai.tool.call.id`, `openclaw.tool.owner`, `openclaw.tool.params.*`
+  - 错误时可选的 `openclaw.errorCategory`/`openclaw.errorCode`，当因策略或沙箱被拒绝时使用 `openclaw.deniedReason` 和 `openclaw.outcome=blocked`
 - `openclaw.exec`
   - `openclaw.exec.target`, `openclaw.exec.mode`, `openclaw.outcome`, `openclaw.failureKind`, `openclaw.exec.command_length`, `openclaw.exec.exit_code`, `openclaw.exec.exit_signal`, `openclaw.exec.timed_out`
 - `openclaw.webhook.processed`
@@ -290,9 +290,9 @@ Liveness 警告也会发出：
 - `openclaw.context.assembled`
   - `openclaw.prompt.size`, `openclaw.history.size`, `openclaw.context.tokens`, `openclaw.errorCategory`（不包含提示词、历史、响应或 session-key 内容）
 - `openclaw.tool.loop`
-  - `openclaw.toolName`, `openclaw.loop.level`, `openclaw.loop.action`, `openclaw.loop.detector`, `openclaw.loop.count`, optional `openclaw.loop.paired_tool`（不包含循环消息、参数或工具输出）
+  - `openclaw.toolName`, `openclaw.loop.level`, `openclaw.loop.action`, `openclaw.loop.detector`, `openclaw.loop.count`, 可选的 `openclaw.loop.paired_tool`（不包含循环消息、参数或工具输出）
 - `openclaw.memory.pressure`
-  - `openclaw.memory.level`, `openclaw.memory.reason`, `openclaw.memory.rss_bytes`, `openclaw.memory.heap_used_bytes`, `openclaw.memory.heap_total_bytes`, `openclaw.memory.external_bytes`, `openclaw.memory.array_buffers_bytes`, optional `openclaw.memory.threshold_bytes`/`openclaw.memory.rss_growth_bytes`/`openclaw.memory.window_ms`
+  - `openclaw.memory.level`, `openclaw.memory.reason`, `openclaw.memory.rss_bytes`, `openclaw.memory.heap_used_bytes`, `openclaw.memory.heap_total_bytes`, `openclaw.memory.external_bytes`, `openclaw.memory.array_buffers_bytes`, 可选的 `openclaw.memory.threshold_bytes`/`openclaw.memory.rss_growth_bytes`/`openclaw.memory.window_ms`
 
 当显式启用内容捕获时，模型和工具 spans 还可以包含针对你选择启用的特定内容类别的、受限且已脱敏的 `openclaw.content.*` 属性。
 

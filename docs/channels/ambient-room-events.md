@@ -46,6 +46,8 @@ sidebarTitle: "环境房间事件"
 
 房间事件使用严格的可见交付。最终助手文本是私有的。代理必须调用 `message(action=send)` 才能在房间中发帖。
 
+对于房间事件，输入状态和生命周期状态反应仍然会被抑制。唯一明确的回执例外是 `messages.ackReactionScope: "all"`，它会发送配置的确认反应；当房间必须保持完全静默时，请使用任何更窄的范围或 `"off"`。
+
 ## Discord 示例
 
 ```json5
@@ -177,7 +179,7 @@ Telegram 群组 ID 通常是负数，例如 `-1001234567890`。可通过 `opencl
 
 对于普通群组/频道用户请求，`messages.groupChat.visibleReplies` 默认值为 `"automatic"`。当最终助手文本应当以可见方式发布且没有显式的 message-tool 调用时，请保持该默认值。
 
-对于常驻的 ambient 房间，仍建议将 `messages.groupChat.visibleReplies` 设为 `"message_tool"`，尤其是在使用最新一代、工具调用可靠的模型（例如 GPT 5.5）时。它允许代理通过调用 message 工具来决定何时发言。如果模型在没有调用该工具的情况下返回最终文本，OpenClaw 会将该最终文本保留为私密，并记录被抑制投递的元数据。
+对于 ambient 始终在线房间，仍然建议使用 `messages.groupChat.visibleReplies: "message_tool"`，尤其是在最新一代、工具调用可靠的模型（如 GPT-5.6 Sol）上。它允许代理通过调用 message 工具来决定何时发言。如果模型在没有调用该工具的情况下返回最终文本，OpenClaw 会将该最终文本保留为私有，并记录被抑制投递的元数据。
 
 即使其他群组请求使用 automatic 回复，房间事件仍然保持严格模式。未被提及的 ambient 房间事件始终需要使用 `message(action=send)` 才能可见输出。
 

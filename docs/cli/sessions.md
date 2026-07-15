@@ -25,7 +25,7 @@ openclaw sessions --store ./tmp/sessions.json
 openclaw sessions --json
 ```
 
-Flags:
+标志：
 
 | Flag                 | Description                                                            |
 | -------------------- | ---------------------------------------------------------------------- |
@@ -47,10 +47,10 @@ RPC 客户端可以传入 `configuredAgentsOnly: true`，以保留广泛的组�
 但只返回当前配置中存在的 agent 的行。控制 UI 默认使用该模式，因此已删除
 或仅磁盘存在的 agent 存储不会重新出现在 Sessions 视图中。
 
-`--all-agents` 读取已配置的 agent 存储。Gateway 和 ACP 的会话发现范围更广：
-它们还会包括在默认 `agents/` 根目录下或模板化的 `session.store` 根目录下
-发现的仅磁盘存储。这些被发现的存储必须解析为 agent 根目录中的普通
-`sessions.json` 文件；符号链接和根目录外路径会被跳过。
+`--all-agents` 读取已配置的 agent 存储。Gateway 和 ACP session
+发现范围更广：它们还包括从已配置的 agent 根目录或模板化的 `session.store`
+根目录解析出的 SQLite 存储。旧版选择器路径必须解析到 agent 根目录内；
+符号链接和根目录外路径会被跳过。
 
 `openclaw sessions --all-agents --json`：
 
@@ -68,7 +68,7 @@ RPC 客户端可以传入 `configuredAgentsOnly: true`，以保留广泛的组�
   "hasMore": false,
   "activeMinutes": null,
   "sessions": [
-    { "agentId": "main", "key": "agent:main:main", "model": "openai/gpt-5.5" },
+    { "agentId": "main", "key": "agent:main:main", "model": "openai/gpt-5.6-sol" },
     { "agentId": "work", "key": "agent:work:main", "model": "anthropic/claude-sonnet-4-6" }
   ]
 }
@@ -84,11 +84,7 @@ openclaw sessions --agent work tail --follow
 openclaw sessions --all-agents tail --follow
 ```
 
-`openclaw sessions tail` 会将最近的轨迹 JSONL 事件渲染为紧凑的
-进度行。不使用 `--session-key` 时，它会先跟踪正在运行的会话，然后跟踪
-最新保存的会话。`--tail <count>` 控制在进入跟随模式之前打印多少个现有事件；
-默认值为 `80`，而 `0` 则从当前末尾开始。`--follow` 会持续监视所选的轨迹文件，
-包括由 `<session>.trajectory-path.json` 引用的已迁移文件。
+`openclaw sessions tail` 会将最近的运行时轨迹事件渲染为紧凑的进度行。若未指定 `--session-key`，它会先跟踪正在运行的会话，然后跟踪最新的已存储会话。`--tail <count>` 控制在跟随模式之前打印多少条现有事件；默认值为 `80`，而 `0` 则从当前末尾开始。`--follow` 会持续监视所选的基于 SQLite 的会话或一个显式指定的旧版轨迹文件。
 
 进度视图是有意保持保守的：不会打印提示文本、工具参数和工具结果正文。
 工具调用会显示工具名称以及 `{...redacted...}`；工具结果会显示诸如 `ok`、`error`
@@ -121,33 +117,34 @@ openclaw sessions cleanup --json
 （[配置参考](/gateway/config-agents#session)）：
 
 - 范围说明：`openclaw sessions cleanup` 会维护会话存储、
-  转录和轨迹 sidecar。它不会清理 cron 运行历史，
-  该内容由 `cron.runLog.keepLines`
-  管理（[Cron 配置](/automation/cron-jobs#configuration)）。
-- 清理还会删除未被引用的主转录、压缩
-  检查点，以及早于 `session.maintenance.pruneAfter` 的轨迹 sidecar；
-  仍被 `sessions.json` 引用的文件会被保留。
+  转录、轨迹行以及旧版轨迹侧边车。它不会清理 cron 运行历史，
+  cron 运行历史会自动为每个作业保留最新的 2000 行
+  （[Cron 配置](/automation/cron-jobs#configuration)）。
+- 清理还会清除未被引用的旧版/归档转录工件、
+  压缩检查点，以及早于 `session.maintenance.pruneAfter`
+  的轨迹侧边车；仍被 SQLite 会话行引用的工件会被保留。
 - 清理会将短生命周期的 Gateway 模型运行探测清理单独报告为
-  `modelRunPruned`。这仅匹配形如
-  `agent:*:explicit:model-run-<uuid>` 的严格显式键。保留期固定为 `24h`，并且
-  受压力门控：只有当会话条目维护/容量压力达到时，才会移除过期的探测行。
-  当它运行时，模型运行清理会先于全局过期清理和容量截断执行。
+  `modelRunPruned`。这只匹配形如 `agent:*:explicit:model-run-<uuid>` 的严格显式键。
+  保留期固定为 `24h`，并且受压力门控：只有在达到会话条目维护/容量上限压力时，
+  才会移除过期的探测行。运行时，模型运行清理会先于全局过期清理和容量限制处理。
 
 标志：
 
-| 标志                 | 描述                                                                                                                                                                                                                                                                                         |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--dry-run`          | 预览将要删除/截断多少条目而不写入。文本模式下，会打印按会话分组的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`）以及摘要。                                                                                                |
-| `--enforce`          | 即使 `session.maintenance.mode` 为 `warn`，也执行维护。                                                                                                                                                                                                                                   |
-| `--fix-missing`      | 移除转录文件缺失，或仅有头部/为空的条目，即使它们通常还不会因年龄/数量而被清理。                                                                                                                                                                          |
-| `--fix-dm-scope`     | 当 `session.dmScope` 为 `main` 时，清理先前 `per-peer`、`per-channel-peer` 或 `per-account-channel-peer` 路由遗留下来的、按对端键控且已过期的 direct-DM 行。请先使用 `--dry-run`；应用后会从 `sessions.json` 中移除这些行，并将其转录作为已删除归档保留。 |
-| `--active-key <key>` | 保护某个特定的活动键不被磁盘预算驱逐。持久化的外部会话指针，例如群组会话和按线程作用域的聊天会话，也会受到按年龄/数量/磁盘预算的维护保护。                                                                                        |
-| `--agent <id>`       | 为某一个已配置的代理存储运行清理。                                                                                                                                                                                                                                                         |
-| `--all-agents`       | 为所有已配置的代理存储运行清理。                                                                                                                                                                                                                                                        |
-| `--store <path>`     | 针对指定的 `sessions.json` 文件运行。                                                                                                                                                                                                                                                        |
-| `--json`             | 输出 JSON 摘要。使用 `--all-agents` 时，输出会包含每个存储的一份摘要。                                                                                                                                                                                                                   |
+| Flag                 | Description                                                                                                                                                                                                                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run`          | 预览将被清理/截断的条目数量，而不进行写入。在文本模式下，会打印按会话的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`），以及按会话标签分组的摘要。                                                                                                                 |
+| `--enforce`          | 即使 `session.maintenance.mode` 为 `warn`，也执行维护。                                                                                                                                                                                                                                                   |
+| `--fix-missing`      | 移除归档转录工件缺失，或仅有头部/为空的旧版条目，即使它们通常还不会因年龄/数量而被清理。                                                                                                                                                                                                                 |
+| `--fix-dm-scope`     | 当 `session.dmScope` 为 `main` 时，清理早先 `per-peer`、`per-channel-peer` 或 `per-account-channel-peer` 路由遗留下来的、按对端键控的陈旧直接 DM 行。请先使用 `--dry-run`；执行时会从 SQLite 中移除这些行，并将其旧版转录工件保留为已删除归档。 |
+| `--active-key <key>` | 保护某个特定的活动键不被磁盘预算驱逐。持久化的外部会话指针，例如群组会话和线程范围聊天会话，也会在年龄/数量/磁盘预算维护中被保留。                                                                                               |
+| `--agent <id>`       | 为某个已配置的代理存储运行清理。                                                                                                                                                                                                                                                                        |
+| `--all-agents`       | 为所有已配置的代理存储运行清理。                                                                                                                                                                                                                                                                        |
+| `--store <path>`     | 针对某个特定的旧版存储选择器路径运行。                                                                                                                                                                                                                                                                   |
+| `--json`             | 输出 JSON 摘要。使用 `--all-agents` 时，输出会为每个存储包含一份摘要。                                                                                                                                                                                                                                   |
 
-当 Gateway 可用时，对已配置代理存储执行的非 dry-run 清理会通过 Gateway 发送，因此它与运行时流量共享同一个会话存储写入器。若要对某个存储文件进行显式离线修复，请使用 `--store <path>`。
+当 Gateway 可访问时，针对已配置代理存储的非 dry-run 清理会通过 Gateway 发送，
+因此它与运行时流量共享相同的会话存储写入器。使用 `--store <path>` 可以
+对旧版存储选择器执行显式离线修复。
 
 `openclaw sessions cleanup --all-agents --dry-run --json`：
 

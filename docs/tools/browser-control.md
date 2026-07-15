@@ -217,6 +217,7 @@ openclaw browser select 9 OptionA OptionB
 openclaw browser download e12 report.pdf
 openclaw browser waitfordownload report.pdf
 openclaw browser upload /tmp/openclaw/uploads/file.pdf
+openclaw browser upload /tmp/openclaw/uploads/file.pdf --ref e12
 openclaw browser upload media://inbound/file.pdf
 openclaw browser fill --fields '[{"ref":"1","type":"text","value":"Ada"}]'
 openclaw browser dialog --accept
@@ -258,17 +259,26 @@ openclaw browser set device "iPhone 14"
 
 注意：
 
-- `upload` 和 `dialog` 是**预置**调用；请在触发选择器/对话框的 click/press 之前运行它们。如果某个操作打开了模态窗口，动作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；将该 `dialogId` 传入即可直接响应。在 OpenClaw 外部处理的对话框会出现在 `browserState.dialogs.recent` 中。
-- `click`/`type` 等操作需要来自 `snapshot` 的 `ref`（数字 `12`、role ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器有意不支持用于操作。只有可见视口位置是唯一可靠目标时，请使用 `click-coords`。
+- 面向代理的 `browser` 工具提供了 `action=download`（必需 `ref` 和
+  `path`）以及 `action=waitfordownload`（可选 `path`）。二者都会返回已保存的
+  下载 URL、建议文件名以及受保护的本地路径。显式下载
+  拦截仅对受管理的 Playwright 配置文件可用；existing-session
+  配置文件会返回不支持该操作的错误。
+- 优先使用原子化的选择器上传：在上传时传入触发用的 `--ref`，这样 OpenClaw 会在一次请求中完成布防和点击。仅传路径的 `upload` 仍然受支持，适用于刻意延后触发的场景。使用 `--input-ref` 或 `--element` 可直接设置文件输入框。`dialog` 是一个布防调用；请在触发对话框的点击/按键之前先运行它。若某个操作打开了模态框，该操作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；传入该 `dialogId` 可直接响应。OpenClaw 之外处理的对话框会出现在 `browserState.dialogs.recent` 中。
+- `click`/`type`/等操作需要来自 `snapshot` 的 `ref`（数字 `12`、角色 ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器有意不被动作支持。仅当可见视口位置是唯一可靠目标时，请使用 `click-coords`。
 - 下载和 trace 路径受 OpenClaw 临时根目录限制：`/tmp/openclaw{,/downloads}`（回退：`${os.tmpdir()}/openclaw/...`）。
-- `upload` 接受来自 OpenClaw 临时上传根目录以及 OpenClaw 管理的传入媒体中的文件。管理的传入媒体可通过 `media://inbound/<id>`、沙箱相对路径 `media/inbound/<id>` 或受管传入媒体目录中的解析路径来引用。嵌套媒体引用、路径遍历、符号链接、硬链接以及任意本地路径仍会被拒绝。
-- `upload` 还可通过 `--input-ref` 或 `--element` 直接设置文件输入。
+- `upload` 接受来自 OpenClaw 临时 uploads 根目录以及
+  OpenClaw 管理的传入媒体的文件。受管理的传入媒体可引用为
+  `media://inbound/<id>`、sandbox-relative `media/inbound/<id>`，或管理的 inbound media 目录中的已解析
+  路径。嵌套媒体引用、
+  路径穿越、符号链接、硬链接以及任意本地路径仍会被拒绝。
+- `upload` 也可以通过 `--input-ref` 或 `--element` 直接设置文件输入框。
 
-当 OpenClaw 能够证明替换后的标签页时，例如相同 URL 或提交表单后单个旧标签页变成单个新标签页，稳定的标签页 id 和标签会在 Chromium 原始 target 替换时保持不变。原始 target id 仍然是易变的；在脚本中优先使用 `tabs` 返回的 `suggestedTargetId`。
+当 OpenClaw 能证明替换后的标签页时，稳定的 tab id 和 label 会在 Chromium 原始目标替换后保持不变，例如同一 URL 的唯一旧/新配对，或者表单提交后单个旧标签页变为单个新标签页。含糊的重复 URL 替换会获得新的句柄。原始目标 id 仍然是易变的；在脚本中请优先使用 `tabs` 返回的 `suggestedTargetId`。
 
 快照标志一览：
 
-- `--format ai` (默认，使用 Playwright)：带数字 refs 的 AI 快照（`aria-ref="<n>"`）。
+- `--format ai`（默认，使用 Playwright）：带数字 refs 的 AI 快照（`aria-ref="<n>"`）。
 - `--format aria`：带 `axN` refs 的可访问性树。在 Playwright 可用时，OpenClaw 会将 refs 与后端 DOM id 绑定到实时页面，因此后续操作可以使用它们；否则应将输出仅视为检查用途。
 - `--efficient`（或 `--mode efficient`）：紧凑的 role 快照预设。设置 `browser.snapshotDefaults.mode: "efficient"` 可将其设为默认值（参见 [Gateway 配置](/gateway/configuration-reference#browser)）。
 - `--interactive`、`--compact`、`--depth`、`--selector` 会强制使用带 `ref=e12` refs 的 role 快照。`--frame "<iframe>"` 会将 role 快照限定到某个 iframe。
@@ -362,10 +372,10 @@ openclaw browser wait "#main" \
 示例：
 
 ```bash
-openclaw browser status --json
-openclaw browser snapshot --interactive --json
-openclaw browser requests --filter api --json
-openclaw browser cookies --json
+openclaw browser --json status
+openclaw browser --json snapshot --interactive
+openclaw browser --json requests --filter api
+openclaw browser --json cookies
 ```
 
 JSON 中的 Role 快照包含 `refs`，以及一个小型 `stats` 块（lines/chars/refs/interactive），这有助于工具推断负载大小和密度。

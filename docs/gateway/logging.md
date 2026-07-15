@@ -18,7 +18,7 @@ OpenClaw 有两个日志输出面：
 在启动时，网关会记录解析后的默认代理模型，以及会影响新会话的模式默认值：
 
 ```text
-agent model: openai/gpt-5.5 (thinking=medium, fast=on)
+agent model: openai/gpt-5.6-sol (thinking=medium, fast=on)
 ```
 
 `thinking` 来自默认代理、模型参数或全局代理默认值；未设置时显示为 `medium`。`fast` 来自默认代理或模型的 `fastMode` 参数。
@@ -66,30 +66,30 @@ OpenClaw 会在日志或转录输出离开进程之前对敏感 token 进行脱�
 
 无论 `logging.redactSensitive` 设置为何，某些安全边界都会始终脱敏：控制 UI 的工具调用事件、`sessions_history` 工具输出、诊断支持导出、提供方错误观测、exec 审批命令显示，以及 Gateway WebSocket 协议日志。这些表面仍会将 `logging.redactPatterns` 作为附加模式生效，但 `redactSensitive: "off"` 并不会让它们输出原始密钥。
 
-## 网关 WebSocket 日志
+## Gateway WebSocket Logs
 
-网关以两种模式打印 WebSocket 协议日志：
+The gateway prints WebSocket protocol logs in two modes:
 
-- **普通模式（无 `--verbose`）**：仅打印“有意义”的 RPC 结果——错误（`ok=false`）、慢调用（默认阈值：`>= 50ms`）以及解析错误。
-- **详细模式（`--verbose`）**：打印所有 WS 请求/响应流量。
+- **Normal mode (without `--verbose`)**: prints only “meaningful” RPC results — errors (`ok=false`), slow calls (default threshold: `>= 50ms`), and parse errors.
+- **Verbose mode (`--verbose`)**: prints all WS request/response traffic.
 
-### WS 日志样式
+### WS Log Styles
 
-`openclaw gateway` 支持按网关切换样式：
+`openclaw gateway` supports style switching by gateway:
 
-- `--ws-log auto`（默认）：普通模式下采用优化输出；详细模式下使用紧凑输出。
-- `--ws-log compact`：详细模式下使用紧凑输出（配对请求/响应）。
-- `--ws-log full`：详细模式下按每帧输出完整内容。
-- `--compact`：`--ws-log compact` 的别名。
+- `--ws-log auto` (default): uses optimized output in normal mode; uses compact output in verbose mode.
+- `--ws-log compact`: uses compact output in verbose mode (paired requests/responses).
+- `--ws-log full`: outputs full content per frame in verbose mode.
+- `--compact`: alias for `--ws-log compact`.
 
 ```bash
-# 优化输出（仅错误/慢调用）
+# Optimized output (errors/slow calls only)
 openclaw gateway
 
-# 显示所有 WS 流量（成对）
+# Show all WS traffic (paired)
 openclaw gateway --verbose --ws-log compact
 
-# 显示所有 WS 流量（完整元数据）
+# Show all WS traffic (full metadata)
 openclaw gateway --verbose --ws-log full
 ```
 

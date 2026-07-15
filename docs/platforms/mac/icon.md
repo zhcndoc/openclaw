@@ -13,10 +13,12 @@ Scope: macOS app (`apps/macos`). Rendering: `CritterIconRenderer.makeIcon(...)`.
 
 | 状态                 | 触发                                   | 视觉                                                                                              |
 | --------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 空闲                  | 默认                                   | 正常眨眼/摆动动画                                                                               |
-| 已暂停                | `isPaused=true`                           | 状态项使用 `appearsDisabled`；无运动                                                       |
-| 语音唤醒（大耳朵） | 听到唤醒词                           | 耳朵缩放到 `1.9x`，并设置 `earHoles=true`（用于可读性的圆形孔洞）；静默后消失     |
-| 工作中               | `isWorking=true` 或活动的 `IconState` | 更快的腿部摆动（`legWiggle` 最高到 `1.0`），并带有轻微的水平偏移；叠加于空闲摆动之上 |
+| 空闲                  | 默认                                   | 正常眨眼/扭动动画；睁开的眼睛保持闪亮的高光                                        |
+| 暂停                | `isPaused=true`                           | 触角下垂（“下班了”），眼睛睁开；无动作                                               |
+| 睡眠               | 网关断开连接/未配置         | 触角下垂，眼睛闭合成 `⌣ ⌣` 形；无动作                                            |
+| 庆祝             | 已发送消息（`sendCelebrationTick`）      | 眼睛闪烁出开心的 `∩ ∩` 弧线约 0.9 秒，并伴随一次腿部踢动                                               |
+| 语音唤醒（大耳朵） | 听到唤醒词                           | 触角竖起并变得更高（`earScale=1.9`）；在静默后恢复                          |
+| 工作中               | `isWorking=true` 或活动中的 `IconState` | 更快的腿部扭动（`legWiggle` 最高到 `1.0`）并带有轻微的水平偏移；会叠加到空闲扭动之上 |
 
 当会话有活动任务或工具时，可以在同一个小生物图标上方渲染一个工具活动徽标（SF Symbol 圆点，例如用于 exec 的 `chevron.left.slash.chevron.right`）。该徽标来自 `IconState`/`ActivityKind`；完整状态模型请参见 [菜单栏](/platforms/mac/menu-bar)。
 
@@ -29,9 +31,10 @@ Scope: macOS app (`apps/macos`). Rendering: `CritterIconRenderer.makeIcon(...)`.
 
 ## 形状和尺寸
 
-- Canvas：18x18pt 模板图像，渲染为 36x36px 位图 backing store（2x），这样图标在 Retina 上仍然保持清晰。
-- 耳朵缩放默认值为 `1.0`；语音增强会将 `earScale=1.9` 和 `earHoles=true`，而不改变整体框架。
-- 腿部快速移动使用 `legWiggle`，最大到 `1.0`，并带有轻微的水平抖动。
+- 画布：18x18pt 模板图像，渲染到 36x36px 位图后备存储（2x），以便图标在 Retina 屏幕上保持清晰。
+- 耳朵缩放默认值为 `1.0`；语音增强会将 `earScale` 设置为 `1.9`，而不改变整体框架。
+- `antennaDroop`（0-1）会在暂停和睡眠姿势下将天线向下折叠。
+- 腿部快速移动会使用最高到 `1.0` 的 `legWiggle`，并带有轻微的水平抖动。
 
 ## 行为说明
 

@@ -99,10 +99,10 @@ Admin HTTP RPC (`POST /api/v1/admin/rpc`) 是一个独立的、默认关闭的�
 
 ### 端口和绑定优先级
 
-| Setting      | Resolution order                                                     |
-| ------------ | -------------------------------------------------------------------- |
-| Gateway port | `--port` → `OPENCLAW_GATEWAY_PORT` → `gateway.port` → `18789`        |
-| Bind mode    | CLI/override → `gateway.bind` → `loopback` (or `auto` in containers) |
+| 设置         | 解析顺序                                                         |
+| ------------ | ---------------------------------------------------------------- |
+| Gateway 端口 | `--port` → `OPENCLAW_GATEWAY_PORT` → `gateway.port` → `18789`    |
+| 绑定模式     | CLI/override → `gateway.bind` → `loopback`（容器中为 `auto`） |
 
 已安装的 gateway 服务会在 supervisor 元数据中记录解析后的 `--port`。更改 `gateway.port` 后，请运行 `openclaw doctor --fix` 或 `openclaw gateway install --force`，以便 launchd/systemd/schtasks 在新端口上启动进程。
 
@@ -146,8 +146,8 @@ openclaw gateway probe
 
 预期结果：
 
-- `gateway status --deep` can report `Other gateway-like services detected (best effort)` and print cleanup hints when stale launchd/systemd/schtasks installs are still around.
-- `gateway probe` can warn about `multiple reachable gateway identities` when distinct gateways answer, or when OpenClaw cannot prove reachable targets are the same gateway. An SSH tunnel, proxy URL, or configured remote URL to the same gateway is one gateway with multiple transports, even when transport ports differ.
+- `gateway status --deep` 可以报告 `Other gateway-like services detected (best effort)`，并在仍存在陈旧的 launchd/systemd/schtasks 安装时打印清理提示。
+- `gateway probe` 在检测到不同的 gateway 响应，或者 OpenClaw 无法证明可达目标是同一个 gateway 时，可能会警告 `multiple reachable gateway identities`。SSH 隧道、代理 URL，或指向同一个 gateway 的已配置远程 URL，即使传输端口不同，也仍然算作一个 gateway 的多种传输方式。
 - 如果这是有意为之，请为每个 gateway 分别隔离端口、配置/状态以及工作区根目录。
 
 每个实例的检查清单：
@@ -282,6 +282,8 @@ sudo systemctl enable --now openclaw-gateway[-<profile>].service
   </Tab>
 </Tabs>
 
+无效配置错误的退出码为 `78`。Linux systemd 单元使用 `RestartPreventExitStatus=78` 来在配置修复前停止重新拉起。launchd 和 Windows Task Scheduler 没有按退出码停止的等效规则，因此 Gateway 还会持久化快速的非正常启动历史，并在多次启动失败后抑制 channel/provider 账户的自动启动。在该安全模式下，控制平面仍会启动以便检查和修复，配置热重载和 `secrets.reload` 会拒绝自动 channel 重启，而显式的操作员 `channels.start` 请求可以覆盖该抑制。
+
 ## 开发者配置快速路径
 
 ```bash
@@ -295,14 +297,14 @@ openclaw --dev status
 ## 协议快速参考（操作员视图）
 
 - 首个客户端帧必须是 `connect`。
-- 网关会返回一个带有 `snapshot`（`presence`、`health`、`stateVersion`、`uptimeMs`）以及 `policy` 限制（`maxPayload`、`maxBufferedBytes`、`tickIntervalMs`）的 `hello-ok` 帧。
-- `hello-ok.features.methods` / `events` 是一个保守的发现列表，而不是
-  每个可调用 helper 路由的自动生成完整清单。
+- 网关返回一个带有 `snapshot`（`presence`、`health`、`stateVersion`、`uptimeMs`）以及 `policy` 限制（`maxPayload`、`maxBufferedBytes`、`tickIntervalMs`）的 `hello-ok` 帧。
+- `hello-ok.features.methods` / `events` 是保守的发现列表，不是
+  所有可调用辅助路由的生成式转储。
 - 请求：`req(method, params)` → `res(ok/payload|error)`。
 - 常见事件包括 `connect.challenge`、`agent`、`chat`、
-  `session.message`、`session.operation`、`session.tool`、`sessions.changed`、
-  `presence`、`tick`、`health`、`heartbeat`、配对/审批生命周期事件，
-  以及 `shutdown`。
+  `session.message`、`session.operation`、`session.tool`、可选的
+  `session.approval`、`sessions.changed`、`presence`、`tick`、`health`、
+  `heartbeat`、配对/审批生命周期事件，以及 `shutdown`。
 
 Agent 运行分为两个阶段：
 

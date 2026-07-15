@@ -63,21 +63,32 @@ macOS 应用的首次运行流程：选择 Gateway 运行位置，连接已验�
   本身的推荐运行时。现有的兼容安装会被复用。
 </Step>
 <Step title="连接你的 AI">
-  一旦 Gateway 就绪，上手流程会查找你已经拥有的 AI 访问方式：
-  Claude Code、Codex 或 Gemini CLI 登录，或者 `OPENAI_API_KEY` /
-  `ANTHROPIC_API_KEY`。最佳选项会通过真实补全进行测试，并且
-  只有在它成功回答后才会保存；当测试失败时，应用会自动尝试
-  下一个选项，并说明前一个选项失败的原因。如果找到多个选项，
-  你可以在继续之前在它们之间切换。
+  已连接且已经配置好代理模型的 Gateway 会直接跳过此
+  页面，并打开正常的代理 UI。Crestodian 和提供方设置
+  仅适用于全新或未完成配置的 Gateway。
 
-如果什么都没找到（或者都不可用），则可以通过手动步骤接受
-Anthropic、OpenAI 或 Google 的 API key，以相同方式进行验证，
-并将其存储为身份验证配置文件。只有当某个后端通过实时测试后，
-Next 才会解锁，因此第一轮代理对话绝不会在没有可用推理能力的情况下开始。
-Crestodian 聊天仍可从此页面（以及之后的 Settings → Crestodian）访问，以获得
-自然语言帮助。
+完成 Gateway 就绪后，上手流程会查找你已经拥有的 AI 访问权限：
+Claude Code 或 Codex 登录，或者 `OPENAI_API_KEY` /
+`ANTHROPIC_API_KEY`。最佳选项会通过一次真实补全进行测试，并且
+只有在成功回答后才会保存；当测试失败时，应用会自动尝试
+下一个选项，并显示前一个选项失败的原因。如果找到多个选项，
+你可以在继续之前在它们之间切换。
 
-Configure Later 会跳过这一步。
+Gemini CLI 在设置完成后的正常代理中仍然可用，但这里不会提供，
+因为它无法强制执行无工具推理探测。
+
+你也可以通过提供方自己的 OAuth 或设备配对流程登录。
+内置选项包括 OpenAI/ChatGPT、OpenRouter、GitHub Copilot、Google
+Gemini CLI、xAI、MiniMax Global 和 CN，以及 Chutes。该列表来自
+Gateway 当前启用的文本推理提供方插件，而不是固定的应用列表，
+因此其他提供方无需添加特定于提供方的 macOS 代码也可以选择接入。
+
+手动密钥/token 选择器使用相同的提供方注册表。在所有路径中，
+提供方都会提供其起始模型和配置；OpenClaw 会使用相同的实时测试验证
+凭据，然后再保存其身份验证配置文件。下一步会保持锁定，直到某个后端通过，
+因此第一个代理对话不能在推理可用之前开始。该实时检查通过后，Crestodian 就会
+可用，用于帮助配置其余的工作区、Gateway、渠道以及
+其他可选功能；你之后也可以在 设置 → Crestodian 中再次使用它。
 </Step>
 <Step title="权限">
 
@@ -88,11 +99,13 @@ Configure Later 会跳过这一步。
 上手流程会请求以下 TCC 权限：Automation（AppleScript）、Notifications、Accessibility、Screen Recording、Microphone、Speech Recognition、Camera 和 Location。
 
 </Step>
-<Step title="上手聊天（专用会话）">
-  设置完成后，应用会打开一个单独的代理上手聊天，使代理能够
-  介绍自己并引导后续步骤，而不会把这段交流混入
-  正常的对话历史中。这延续了 Crestodian 的设置对话；
-  它并不替代它。有关代理首次真正开始运行时在 gateway 主机上会发生什么，请参见 [启动](/start/bootstrapping)。
+<Step title="完成">
+  推理通过后，Crestodian 会负责其余可选设置，并可以
+  将你转交到正常的代理聊天界面。完成权限引导
+  会打开同一个聊天界面；应用不会在 Crestodian 之前创建工作区或启动单独的
+  代理设置对话。请参见
+  [Bootstrapping](/start/bootstrapping) 了解代理首次真正运行时
+  在 gateway 主机上会发生什么。
 </Step>
 </Steps>
 

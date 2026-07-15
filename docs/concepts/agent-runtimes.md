@@ -14,10 +14,10 @@ read_when:
 
 | 层            | 示例                                         | 含义                                                                |
 | ------------- | -------------------------------------------- | ------------------------------------------------------------------- |
-| 提供方        | `anthropic`, `github-copilot`, `openai`      | OpenClaw 如何进行身份验证、发现模型，以及命名模型引用。             |
-| 模型          | `claude-opus-4-6`, `gpt-5.5`                 | 为代理轮次选择的模型。                                              |
-| 代理运行时    | `claude-cli`, `codex`, `copilot`, `openclaw` | 执行已准备轮次的底层循环或后端。                                    |
-| 通道          | Discord, Slack, Telegram, WhatsApp           | 消息进入和离开 OpenClaw 的位置。                                   |
+| Provider      | `anthropic`, `github-copilot`, `openai`      | OpenClaw 如何进行身份验证、发现模型以及命名模型引用。 |
+| Model         | `claude-opus-4-6`, `gpt-5.6-sol`             | 为代理轮次选择的模型。                              |
+| Agent runtime | `claude-cli`, `codex`, `copilot`, `openclaw` | 执行已准备轮次的底层循环或后端。      |
+| Channel       | Discord, Slack, Telegram, WhatsApp           | 消息进入和离开 OpenClaw 的位置。                            |
 
 **harness** 是提供代理运行时的实现（代码术语）。例如，内置的 Codex harness 实现了 `codex` 运行时。公开配置在 provider 或 model 条目上使用 `agentRuntime.id`；整代理运行时键属于旧式配置并会被忽略。`openclaw doctor --fix` 会移除旧的整代理运行时固定项，并在需要时将旧式运行时模型引用重写为规范的 provider/model 引用以及按模型作用域的运行时策略。
 
@@ -52,7 +52,7 @@ OpenAI API surface is being used.
 {
   agents: {
     defaults: {
-      model: "openai/gpt-5.5",
+      model: "openai/gpt-5.6-sol",
     },
   },
 }
@@ -142,7 +142,7 @@ CLI 后端别名与嵌入式 harness ids 不同。首选的 Claude CLI 形式如
 
 如果 `openclaw doctor` 提示在保留旧版 Codex 模型引用的同时已启用 `codex` 插件，请将其视为旧路由状态，并运行 `openclaw doctor --fix` 将其重写为带有 Codex 运行时的 `openai/*`。
 
-## GitHub Copilot agent runtime
+## GitHub Copilot 代理运行时
 
 外部 `@openclaw/copilot` 插件注册了一个可选择加入的 `copilot` 运行时，  
 该运行时由 GitHub Copilot CLI（`@github/copilot-sdk`）提供支持。它声明了  
@@ -166,7 +166,7 @@ CLI 后端别名与嵌入式 harness ids 不同。首选的 Claude CLI 形式如
 
 该 harness 会在 `extensions/copilot/doctor-contract-api.ts` 中声明其提供商、运行时、CLI 会话键以及认证配置文件前缀，  
 `openclaw doctor` 会自动加载该文件。有关配置、认证、转录镜像、压缩、声明式 doctor 合同，以及  
-PI、Codex 与 Copilot SDK 之间更广泛的决策，请参见 [GitHub Copilot agent runtime](/plugins/copilot)。
+PI、Codex 与 Copilot SDK 之间更广泛的决策，请参见 [GitHub Copilot 代理运行时](/plugins/copilot)。
 
 ## 兼容性契约
 
@@ -190,9 +190,9 @@ Codex 运行时支持契约记录在
 
 状态输出可以同时显示 `Execution` 和 `Runtime` 标签。请将它们视为诊断信息，而不是提供方名称：
 
-- 像 `openai/gpt-5.5` 这样的模型引用是所选的提供方/模型。
-- 像 `codex` 这样的运行时 ID 是正在执行该轮对话的循环。
-- 像 Telegram 或 Discord 这样的通道标签表示对话正在何处进行。
+- A model ref such as `openai/gpt-5.6-sol` is the selected provider/model.
+- A runtime id such as `codex` is the loop executing the turn.
+- A channel label such as Telegram or Discord is where the conversation is happening.
 
 如果一次运行显示了意外的运行时，请先检查所选提供方/模型的运行时策略。旧版会话运行时固定值不再决定路由。
 
@@ -200,7 +200,7 @@ Codex 运行时支持契约记录在
 
 - [Codex harness](/plugins/codex-harness)
 - [Codex harness 运行时](/plugins/codex-harness-runtime)
-- [GitHub Copilot agent 运行时](/plugins/copilot)
+- [GitHub Copilot 代理运行时](/plugins/copilot)
 - [OpenAI](/providers/openai)
 - [Agent harness 插件](/plugins/sdk-agent-harness)
 - [Agent 循环](/concepts/agent-loop)

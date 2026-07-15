@@ -1,22 +1,24 @@
 ---
-summary: "将 Amazon Bedrock Mantle（与 OpenAI 兼容）模型与 OpenClaw 一起使用"
+summary: "将 Amazon Bedrock Mantle OpenAI 兼容和 Claude Messages 模型与 OpenClaw 一起使用"
 read_when:
   - 你想将 Bedrock Mantle 托管的 OSS 模型与 OpenClaw 一起使用
   - 你需要用于 GPT-OSS、Qwen、Kimi 或 GLM 的 Mantle OpenAI 兼容端点
+  - 你想通过 Amazon Bedrock Mantle 使用 Claude Sonnet 5 或 Mythos 5
 title: "Amazon Bedrock Mantle"
 ---
 
 OpenClaw 包含一个内置的 **Amazon Bedrock Mantle** 提供方，可连接到
 Mantle OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的标准
-`/v1/chat/completions` 接口提供开源和第三方模型（GPT-OSS、Qwen、Kimi、GLM 等）。
-Mantle 还通过 Anthropic Messages 路由公开了两个 Anthropic Claude 模型。
+`/v1/chat/completions` 接口托管开源和
+第三方模型（GPT-OSS、Qwen、Kimi、GLM 及类似模型）。Mantle 还
+通过 Anthropic Messages 路由公开 Anthropic Claude 模型。
 
-| Property       | Value                                                                                          |
-| -------------- | ---------------------------------------------------------------------------------------------- |
-| Provider ID    | `amazon-bedrock-mantle`                                                                        |
-| API            | `openai-completions` for discovered OSS models, `anthropic-messages` for the two Claude models |
-| Auth           | Explicit `AWS_BEARER_TOKEN_BEDROCK` or IAM credential-chain bearer-token generation            |
-| Default region | `us-east-1` (override with `AWS_REGION` or `AWS_DEFAULT_REGION`)                               |
+| Property       | Value                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------- |
+| Provider ID    | `amazon-bedrock-mantle`                                                                |
+| API            | `openai-completions` for discovered OSS models, `anthropic-messages` for Claude models |
+| Auth           | Explicit `AWS_BEARER_TOKEN_BEDROCK` or IAM credential-chain bearer-token generation    |
+| Default region | `us-east-1` (override with `AWS_REGION` or `AWS_DEFAULT_REGION`)                       |
 
 ## 入门
 
@@ -135,6 +137,10 @@ bearer token 与标准 [Amazon Bedrock](/providers/bedrock) 提供程序使用�
 }
 ```
 
+一个显式且非空的 `models` 列表具有权威性，并会替换所有
+已发现的行，包括下面的 Claude 行。省略 `models` 以保留
+自动的 Mantle 目录，或者包含你想使用的完整 Claude 模型条目。
+
 ## 高级配置
 
 <AccordionGroup>
@@ -151,23 +157,32 @@ bearer token 与标准 [Amazon Bedrock](/providers/bedrock) 提供程序使用�
     会继续正常工作。
   </Accordion>
 
-  <Accordion title="通过 Anthropic Messages 路由使用 Claude Opus 4.7 和 Claude Mythos Preview">
-    无论 `/v1/models` 返回什么，OpenClaw 在成功发现后都会始终向 Mantle 目录附加两个 Claude 模型：
-    `amazon-bedrock-mantle/anthropic.claude-opus-4-7`（Claude Opus 4.7）和
-    `amazon-bedrock-mantle/anthropic.claude-mythos-preview`（Claude Mythos Preview）。这两个模型都使用
-    `anthropic-messages` API 形式，并通过同一个带 bearer 认证的 Anthropic 兼容端点
+  <Accordion title="通过 Anthropic Messages 路由使用 Claude">
+    当自动发现负责模型列表时，OpenClaw 会在成功查找后追加四个 Claude
+    模型，而不管 `/v1/models` 返回什么：`amazon-bedrock-mantle/anthropic.claude-sonnet-5`
+    （Claude Sonnet 5）、`amazon-bedrock-mantle/anthropic.claude-opus-4-7`
+    （Claude Opus 4.7）和 `amazon-bedrock-mantle/anthropic.claude-mythos-5`
+    （Claude Mythos 5），以及 `amazon-bedrock-mantle/anthropic.claude-mythos-preview`
+    （Claude Mythos Preview）。它们使用 `anthropic-messages` API 面，并通过同一个经 bearer 身份验证的 Anthropic 兼容端点
     （`<mantle-base>/anthropic`）进行流式传输，因此 AWS bearer token 不会被视为
     Anthropic API key。
 
-    Claude Mythos Preview 始终请求推理；如果未设置 `/think` 级别，则默认使用 `high`
-    effort（从 `xhigh`/`max` 映射到 `high`，并将 `minimal` 提升到 `low`）。Mantle 上的 Opus 4.7
-    以不包含模型提供推理的方式进行流式传输，并且 OpenClaw 会省略其 `temperature`
-    参数，因为 Opus 4.7 在此路由上不接受采样覆盖；Mythos Preview 则通常接受
+    Claude Sonnet 5 始终使用自适应思考，并默认使用 `high`
+    努力级别。`/think off` 和 `/think minimal` 会映射为 `low`，因为 Mantle
+    路由无法禁用思考。OpenClaw 还会为 Sonnet 5 请求省略自定义温度参数。
+
+    Claude Mythos 5 为限量访问。它提供 1,000,000 token 的上下文窗口和 128,000 token 的输出上限，
+    始终使用自适应思考，`/think off` 和 `/think minimal` 映射为 `low`，
+    并省略调用方选择的采样参数。
+
+    Claude Mythos Preview 始终请求推理，在未设置 `/think` 级别时默认使用 `high`
+    努力级别（从 `xhigh`/`max` 映射为 `high`，从 `minimal` 映射为 `low`）。Mantle 上的 Opus 4.7
+    会在不带模型提供的推理的情况下流式传输，并且 OpenClaw 会省略其 `temperature`
+    参数，因为 Opus 4.7 在此路由上不接受采样覆盖；Mythos Preview 正常接受
     `temperature` 覆盖。
 
-    这两个模型不能通过 `models.providers["amazon-bedrock-mantle"].models`
-    条目进行配置——它们在发现成功时总是会被自动添加，并且只有通过完全禁用发现
-    才会被移除。
+    非空的显式 `models.providers["amazon-bedrock-mantle"].models`
+    列表会替换完整的已发现目录。当你想要这些内置 Claude 行时，请省略该列表。
 
   </Accordion>
 

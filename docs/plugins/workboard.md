@@ -16,13 +16,26 @@ Workboard 的设计刻意保持小巧：它只跟踪一个 OpenClaw Gateway 的�
 
 Workboard 已捆绑，但默认是禁用的：
 
+1. 在 Control UI 中打开 **Plugins**，或使用相对于
+   已配置 Control UI 基础路径的 `/settings/plugins`。例如，基础路径为 `/openclaw` 时，
+   使用 `/openclaw/settings/plugins`。
+2. 找到 **Workboard** 并选择 **Enable**。由于 Workboard 已包含在
+   OpenClaw 中，因此不需要 **Install** 操作。
+3. 如果 UI 提示需要重启，请重启 Gateway。
+
+在插件运行时加载后，Workboard 选项卡会出现在仪表板导航中。
+当它被禁用时，该选项卡会继续在导航中隐藏。直接打开
+`/workboard` 路由时，如果插件被禁用或被
+`plugins.allow`/`plugins.deny` 阻止，则会显示插件不可用状态，而不是卡片
+数据。
+
+等效的 CLI 工作流为：
+
 ```bash
 openclaw plugins enable workboard
 openclaw gateway restart
 openclaw dashboard
 ```
-
-Workboard 选项卡会出现在仪表板导航中。如果该选项卡可见，但插件被禁用，或者被 `plugins.allow`/`plugins.deny` 阻止，则该选项卡会显示插件不可用状态，而不是卡片数据。
 
 ## 配置
 
@@ -47,7 +60,7 @@ openclaw plugins disable workboard
 openclaw gateway restart
 ```
 
-## 卡片字段
+## Card Fields
 
 | 字段       | 值                                                                                                        |
 | ----------- | ------------------------------------------------------------------------------------------------------------- |
@@ -75,8 +88,8 @@ openclaw gateway restart
 
 未关联的卡片可以直接开始工作：
 
-- **运行 Codex** / **运行 Claude** 会启动一个带任务跟踪的代理运行，使用明确的引擎，发送卡片提示，并将卡片标记为 `running`。Codex 运行使用 `openai/gpt-5.5`；Claude 运行使用 `anthropic/claude-sonnet-4-6`。
-- **打开 Codex** / **打开 Claude** 会创建一个关联的仪表板会话，但不会发送卡片提示，也不会移动卡片，适用于保持附属于看板的手动工作。
+- **Run Codex** / **Run Claude** 启动一次带任务跟踪的代理运行，使用明确的引擎，发送卡片提示，并将卡片标记为 `running`。Codex 运行使用 `openai/gpt-5.6-sol`；Claude 运行使用 `anthropic/claude-sonnet-4-6`。
+- **Open Codex** / **Open Claude** 创建一个已关联的仪表板会话，但不会发送卡片提示或移动卡片，适用于保留在看板上进行的手动工作。
 
 自主启动使用 Gateway 的任务跟踪代理运行路径（除非明确选择 Codex/Claude，否则使用默认代理和模型）；随后 Workboard 会将生成的任务、运行 ID 和会话密钥链接回卡片。每次已关联的执行还会记录一条尝试摘要（引擎、模式、模型、运行 ID、时间戳、状态、滚动失败计数），以便重复失败保持可见。
 
@@ -234,7 +247,7 @@ openclaw workboard dispatch [--board <id>] [--json]
 Gateway RPC 方法位于 `workboard.*` 下：
 
 | 作用域            | 方法                                                                                                                                                                                                                                                                                                                                                                            |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `operator.read`  | `cards.list`、`cards.export`、`cards.diagnostics`、附件列表/获取、通知事件读取、`boards.list`、`cards.stats`、`cards.runs`                                                                                                                                                                                                                                       |
 | `operator.write` | `cards.diagnostics.refresh`、创建/更新/移动/删除/评论/链接/链接依赖/证明/工件、附件添加/删除、worker 日志、协议违规、claim/heartbeat/release/promote/reassign/reclaim/complete/block/unblock、`cards.dispatch`、`cards.bulk`、归档、`boards.upsert`/`archive`/`delete`、`cards.specify`/`decompose`、通知订阅/删除/推进 |
 

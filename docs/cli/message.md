@@ -61,20 +61,20 @@ openclaw message <subcommand> [flags]
 
 ### 核心
 
-| 操作            | 渠道                                                                                                           | 必需                                                         | 备注                                                                                                                                                                                                                                                                                                   |
-| --------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `send`          | Discord, Google Chat, iMessage, Matrix, Mattermost (plugin), Microsoft Teams, Signal, Slack, Telegram, WhatsApp | `--target`，以及 `--message`/`--media`/`--presentation` 之一 | 见下方 [Send](#send)。                                                                                                                                                                                                                                                                                  |
-| `poll`          | Discord, Matrix, Microsoft Teams, Telegram, WhatsApp                                                            | `--target`、`--poll-question`、`--poll-option`（可重复）      | 见下方 [Poll](#poll)。                                                                                                                                                                                                                                                                                  |
-| `react`         | Discord, Google Chat, Matrix, Nextcloud Talk, Signal, Slack, Telegram, WhatsApp                                 | `--message-id`、`--target`                                   | `--emoji`、`--remove`（需要 `--emoji`；如需清除自己已添加的反应，在支持的情况下可省略它，参见 [Reactions](/tools/reactions)）。WhatsApp：`--participant`、`--from-me`。Signal 群组反应需要 `--target-author` 或 `--target-author-uuid`。Nextcloud Talk 仅支持添加反应；`--remove` 会报错。 |
-| `reactions`     | Discord, Google Chat, Matrix, Microsoft Teams, Slack                                                            | `--message-id`、`--target`                                   | `--limit`。                                                                                                                                                                                                                                                                                            |
-| `read`          | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--target`                                                   | `--limit`、`--message-id`、`--before`、`--after`。Discord：`--around`、`--include-thread`。Slack：`--message-id` 读取特定时间戳，结合 `--thread-id` 可精确读取线程回复。                                                                                                    |
-| `edit`          | Discord, Matrix, Microsoft Teams, Slack, Telegram                                                               | `--message-id`、`--message`、`--target`                      | Telegram 论坛主题使用 `--thread-id`。                                                                                                                                                                                                                                                               |
-| `delete`        | Discord, Matrix, Microsoft Teams, Slack, Telegram                                                               | `--message-id`、`--target`                                   |                                                                                                                                                                                                                                                                                                        |
-| `pin` / `unpin` | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--message-id`、`--target`                                   | `unpin` 也接受 `--pinned-message-id`（Microsoft Teams：pin/list-pins 资源 id，而不是聊天消息 id）。                                                                                                                                                                                                  |
-| `pins`（列表）  | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--target`                                                   | `--limit`。                                                                                                                                                                                                                                                                                            |
-| `permissions`   | Discord, Matrix                                                                                                 | `--target`                                                   | Matrix：仅在启用加密且允许验证操作时可用。                                                                                                                                                                                                                                                           |
-| `search`        | Discord                                                                                                         | `--guild-id`、`--query`                                      | `--channel-id`、`--channel-ids`（可重复）、`--author-id`、`--author-ids`（可重复）、`--limit`。                                                                                                                                                                                                         |
-| `member info`   | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--user-id`                                                  | `--guild-id`（Discord）。                                                                                                                                                                                                                                                                               |
+| 操作             | 支持渠道                                                                                                        | 必需项                                                       | 备注                                                                                                                                                                                                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `send`          | Discord, Google Chat, iMessage, Matrix, Mattermost (plugin), Microsoft Teams, Signal, Slack, Telegram, WhatsApp | `--target`，以及 `--message`/`--media`/`--presentation` 之一 | 参见下方 [Send](#send)。                                                                                                                                                                                                                                                                               |
+| `poll`          | Discord, Matrix, Microsoft Teams, Telegram, WhatsApp                                                            | `--target`、`--poll-question`、`--poll-option`（可重复）        | 参见下方 [Poll](#poll)。                                                                                                                                                                                                                                                                               |
+| `react`         | Discord, Matrix, Nextcloud Talk, Signal, Slack, Telegram, WhatsApp                                              | `--message-id`、`--target`                                     | `--emoji`、`--remove`（需要 `--emoji`；若要清除自己在受支持平台上的反应，可省略它，参见 [Reactions](/tools/reactions)）。WhatsApp：`--participant`、`--from-me`。Signal 群组反应需要 `--target-author` 或 `--target-author-uuid`。Nextcloud Talk 只会添加反应；`--remove` 会报错。 |
+| `reactions`     | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--message-id`、`--target`                                     | `--limit`。                                                                                                                                                                                                                                                                                             |
+| `read`          | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--target`                                                     | `--limit`、`--message-id`、`--before`、`--after`。Discord：`--around`、`--include-thread`。Slack：`--message-id` 读取特定时间戳，结合 `--thread-id` 可精确读取某条线程回复。                                                                                                     |
+| `edit`          | Discord, Matrix, Microsoft Teams, Slack, Telegram                                                               | `--message-id`、`--message`、`--target`                        | Telegram 论坛线程使用 `--thread-id`。                                                                                                                                                                                                                                                              |
+| `delete`        | Discord, Matrix, Microsoft Teams, Slack, Telegram                                                               | `--message-id`、`--target`                                     |                                                                                                                                                                                                                                                                                                        |
+| `pin` / `unpin` | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--message-id`、`--target`                                     | `unpin` 也接受 `--pinned-message-id`（Microsoft Teams：这是 pin/list-pins 资源 ID，不是聊天消息 ID）。                                                                                                                                                                                  |
+| `pins`（列表）   | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--target`                                                     | `--limit`。                                                                                                                                                                                                                                                                                             |
+| `permissions`   | Discord, Matrix                                                                                                 | `--target`                                                     | Matrix：仅在启用加密且允许验证操作时可用。                                                                                                                                                                                                                |
+| `search`        | Discord                                                                                                         | `--guild-id`、`--query`                                        | `--channel-id`、`--channel-ids`（可重复）、`--author-id`、`--author-ids`（可重复）、`--limit`。                                                                                                                                                                                                           |
+| `member info`   | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--user-id`                                                    | `--guild-id`（Discord）。                                                                                                                                                                                                                                                                                |
 
 ### 发送
 
@@ -83,12 +83,18 @@ openclaw message send --channel discord \
   --target channel:123 --message "hi" --reply-to 456
 ```
 
-- `--media <path-or-url>`：附加图片/音频/视频/文档（本地路径或 URL）。
-- `--presentation <json>`：包含 `text`、`context`、`divider`、`buttons`、`select` 区块的共享负载，按各渠道能力渲染。参见 [Message Presentation](/plugins/message-presentation)。
-- `--delivery <json>`：通用投递偏好，例如 `{"pin":true}`。当渠道支持时，`--pin` 是置顶投递的简写。
-- `--reply-to <id>`、`--thread-id <id>`（Telegram 论坛主题；Slack 线程时间戳，与 `--reply-to` 使用相同字段）。
-- `--force-document`（Telegram、WhatsApp）：将图片/GIF/视频作为文档发送，以避免渠道压缩。
-- `--silent`（Telegram、Discord）：发送时不通知。
+- `--media <path-or-url>`：附加图片/音频/视频/文档（本地路径或
+  URL）。
+- `--presentation <json>`：共享负载，包含 `text`、`context`、`divider`、
+  `chart`、`table`、`buttons` 和 `select` 块，并根据频道
+  能力进行渲染。参见 [消息展示](/plugins/message-presentation)。
+- `--delivery <json>`：通用投递偏好，例如 `{"pin":
+true}`。当频道支持时，`--pin` 是置顶投递的简写。
+- `--reply-to <id>`、`--thread-id <id>`（Telegram 论坛主题；Slack 线程
+  时间戳，与 `--reply-to` 使用同一字段）。
+- `--force-document`（Telegram、WhatsApp）：将图片/GIF/视频作为
+  文档发送，以避免频道压缩。
+- `--silent`（Telegram、Discord）：发送时不产生通知。
 - `--gif-playback`（仅 WhatsApp）：将视频媒体按 GIF 播放处理。
 
 ```bash
@@ -102,7 +108,24 @@ openclaw message send --channel telegram --target @mychat --message "Choose:" \
   --presentation '{"blocks":[{"type":"buttons","buttons":[{"label":"Yes","value":"cmd:yes"},{"label":"No","value":"cmd:no"}]}]}'
 ```
 
-Telegram Mini App 按钮使用 `webApp`（`web_app` 仍会为兼容旧版 JSON 进行解析），并且只会在用户与机器人之间的私聊中渲染：
+Slack 会原生渲染受支持的 chart 块；其他频道会收到相同
+数据的可读文本形式：
+
+```bash
+openclaw message send --channel slack --target channel:C123 \
+  --presentation '{"blocks":[{"type":"chart","chartType":"bar","title":"Quarterly revenue","categories":["Q1","Q2"],"series":[{"name":"Revenue","values":[120,145]}],"xLabel":"Quarter"}]}'
+```
+
+Slack 也会原生渲染显式的 table 块。其他频道会收到
+标题和每一行的确定性文本：
+
+```bash
+openclaw message send --channel slack --target channel:C123 \
+  --presentation '{"title":"Pipeline report","blocks":[{"type":"table","caption":"Open pipeline","headers":["Account","Stage","ARR"],"rows":[["Acme","Won",125000],["Globex","Review",82000]],"rowHeaderColumnIndex":0}]}'
+```
+
+Telegram Mini App 按钮使用 `webApp`（`web_app` 仍会为旧版
+JSON 解析），且仅在用户与机器人之间的私聊中渲染：
 
 ```bash
 openclaw message send --channel telegram --target 123456789 --message "Open app:" \

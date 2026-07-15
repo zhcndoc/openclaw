@@ -25,6 +25,7 @@ title: "目标"
 ```text
 /goal start get CI green for PR 87469 and push the fix
 /goal
+/goal edit get CI green for PR 87469, push the fix, and update docs
 /goal pause waiting for CI
 /goal resume
 /goal complete pushed and verified
@@ -60,22 +61,23 @@ title: "目标"
 已用 token：12k
 token 预算：12k/50k
 
-命令：/goal pause, /goal complete, /goal clear
+Commands: /goal edit <objective>, /goal pause, /goal complete, /goal clear
 ```
 
 | 命令                                                | 作用                                                                     |
 | --------------------------------------------------- | ------------------------------------------------------------------------ |
-| `/goal` 或 `/goal status`                          | 显示当前目标。                                                           |
-| `/goal start <objective>`                          | 为当前会话创建一个新目标。                                               |
+| `/goal` or `/goal status`                           | 显示当前目标。                                                           |
+| `/goal start <objective>`                           | 为当前会话创建一个新目标。                                               |
 | `/goal set <objective>`, `/goal create <objective>` | `start` 的别名。                                                         |
-| `/goal <objective>`                                | 也会创建一个新目标（任何未被识别为动作词的文本）。                        |
-| `/goal pause [note]`                               | 暂停一个活动目标。                                                       |
-| `/goal resume [note]`                              | 恢复一个已暂停、已阻塞、受使用限制或受预算限制的目标。                   |
-| `/goal complete [note]`                            | 将目标标记为已达成。                                                     |
-| `/goal done [note]`                                | `complete` 的别名。                                                      |
-| `/goal block [note]`                               | 将目标标记为已阻塞。                                                     |
-| `/goal blocked [note]`                             | `block` 的别名。                                                         |
-| `/goal clear`                                      | 从会话中移除目标。                                                       |
+| `/goal <objective>`                                 | 也会创建一个新目标（任何未被识别为动作词的文本）。                         |
+| `/goal edit <objective>`                            | 重新表述当前目标；状态和 token 统计保持不变。                              |
+| `/goal pause [note]`                                | 暂停一个活跃目标。                                                        |
+| `/goal resume [note]`                               | 恢复一个已暂停、被阻塞、受使用量限制或受预算限制的目标。                   |
+| `/goal complete [note]`                             | 标记目标已完成。                                                          |
+| `/goal done [note]`                                 | `complete` 的别名。                                                      |
+| `/goal block [note]`                                | 标记目标被阻塞。                                                          |
+| `/goal blocked [note]`                              | `block` 的别名。                                                         |
+| `/goal clear`                                       | 从会话中移除该目标。                                                      |
 
 在一个会话中同一时间只能存在一个目标。创建第二个目标会失败，
 并显示 `Goal error: goal already exists`，直到当前目标被清除为止。
@@ -85,16 +87,14 @@ token 预算：12k/50k
 ## 状态
 
 - `active`：会话正在追求目标。
-- `paused`：操作员暂停了目标；`/goal resume` 会使其再次激活
+- `paused`：操作员已暂停目标；`/goal resume` 会使其再次激活
   。
 - `blocked`：代理或操作员报告了一个真实的阻塞；当有新的信息或状态可用时，`/goal resume`
   会使其再次激活。
-- `budget_limited`：已达到配置的 token 预算；`/goal resume`
-  会使用新的预算窗口，从同一目标重新开始追求。
-- `usage_limited`：保留用于未来的使用限制停止状态；`/goal
-resume` 会以相同方式重新开始追求。
+- `budget_limited`：已达到配置的 token 预算；`/goal resume` 会使用新的预算窗口，从同一目标重新开始追求。
+- `usage_limited`：保留用于未来的使用限制停止状态；`/goal resume` 会以相同方式重新开始追求。
 - `complete`：目标已达成。已完成的目标是终态；在开始另一个目标之前，请使用 `/goal
-clear`。
+  clear`。
 
 `/new` 和 `/reset` 会清除当前会话目标，因为它们会刻意
 启动全新的会话上下文。
@@ -122,6 +122,34 @@ OpenClaw 向代理运行环境暴露了三个目标工具：
 目标。
 
 `update_goal` 只有在目标确实达成时，才应将其标记为 `complete`。只有在同一阻塞条件连续至少三次目标轮次中再次出现后，才应将其标记为 `blocked`，而不是因为普通的困难或缺少润色。
+
+## 每次回合的目标上下文
+
+每个具有激活目标的用户/聊天回合都包含这一用户角色上下文行：
+
+```text
+Active goal: <objective> — 进一步推进它或更新其状态（get_goal/update_goal）。
+```
+
+OpenClaw 通过截断较长的目标来保持这一行的简洁。已暂停、已阻塞、受预算限制、受用量限制以及已完成的目标不会被注入，因此，操作员的停止指令会一直生效，直到该目标恢复为止。
+
+## 控制 UI
+
+Web 控制 UI 会在聊天输入框上方以紧凑的胶囊形式显示目标：
+一个状态图标、状态标签（例如 `Pursuing goal`）、截断后的
+目标，以及实时经过的计时器。
+
+该胶囊带有内联控制：
+
+- **铅笔** 会预填充输入框为 `/goal edit <objective>`，以便
+  可以改写目标并提交。
+- **暂停 / 恢复** 会根据当前状态在 `/goal pause` 和 `/goal resume` 之间切换。
+- **垃圾桶** 会发送 `/goal clear`。
+- **下拉箭头** 会展开胶囊，显示完整目标、最新状态
+  注释、token 使用量和经过时间。
+
+当输入框无法发送时（例如
+网关连接断开），这些操作按钮会隐藏；展开箭头仍然可用。
 
 ## TUI
 

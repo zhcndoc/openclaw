@@ -125,16 +125,6 @@ read_when:
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="旧版输入别名">
-    为了向后兼容，仍可接受：
-
-    - `format` -> `fileFormat`
-    - `imageFormat` -> `fileFormat`
-    - `imageQuality` -> `fileQuality`
-    - `imageScale` -> `fileScale`
-    - `imageMaxWidth` -> `fileMaxWidth`
-
-  </Accordion>
   <Accordion title="Validation and limits">
     - `before`/`after`: 每个最大 512 KiB。
     - `patch`: 最大 2 MiB。
@@ -170,8 +160,11 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
 
 ## 输出详情契约
 
+所有成功结果都包含 `changed`：前后输入完全一致时会返回 `false`，且不会创建任何工件；渲染后的结果会返回 `true`。
+
 <AccordionGroup>
   <Accordion title="查看器字段（view 和 both 模式）">
+    - `changed`
     - `artifactId`
     - `viewerUrl`
     - `viewerPath`
@@ -184,6 +177,7 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
 
   </Accordion>
   <Accordion title="文件字段（file 和 both 模式）">
+    - `changed`
     - `artifactId`
     - `expiresAt`
     - `filePath`
@@ -195,26 +189,21 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
     - `fileMaxWidth`
 
   </Accordion>
-  <Accordion title="兼容别名（始终返回）">
-    - `format` (= `fileFormat`)
-    - `imagePath` (= `filePath`)
-    - `imageBytes` (= `fileBytes`)
-    - `imageQuality` (= `fileQuality`)
-    - `imageScale` (= `fileScale`)
-    - `imageMaxWidth` (= `fileMaxWidth`)
-
-  </Accordion>
 </AccordionGroup>
 
-| 模式     | 返回内容                                                                                                      |
-| -------- | ------------------------------------------------------------------------------------------------------------ |
-| `"view"` | 仅返回查看器字段。                                                                                          |
-| `"file"` | 仅返回文件字段，不返回查看器 artifact。                                                                        |
-| `"both"` | 返回查看器字段加文件字段。如果文件渲染失败，查看器仍会返回，并带有 `fileError`/`imageError`。 |
+| 模式     | 返回内容                                                                                         |
+| -------- | ----------------------------------------------------------------------------------------------- |
+| `"view"` | 仅返回查看器字段。                                                                             |
+| `"file"` | 仅返回文件字段，不返回查看器工件。                                                           |
+| `"both"` | 返回查看器字段和文件字段。如果文件渲染失败，查看器仍会返回，并附带 `fileError`。 |
 
 ### 折叠的未更改部分
 
 查看器会显示类似 `N 行未修改` 的行。只有当渲染后的 diff 包含可展开的上下文数据时，才会出现展开控件（通常用于 before/after 输入）。许多统一补丁在其 hunks 中省略了上下文正文，因此该行可能在没有展开控件的情况下出现——这是预期行为，不是 bug。`expandUnchanged` 仅在存在可展开上下文时生效。
+
+### 多文件导航
+
+涉及多个文件的补丁会以一个已更改文件摘要卡片开头：总计 `+N` / `-N` 数量、每个文件的计数、添加/删除/重命名徽标，以及跳转到各文件的锚点链接。渲染后的 PNG/PDF 文件会保留每个文件的头部计数，但会移除交互式视图切换控件，因为这些在静态文件中属于无效控件。
 
 ## 插件默认值
 
@@ -307,13 +296,13 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
 
 ## 查看器 URL 和网络行为
 
-Viewer route: `/plugins/diffs/view/{artifactId}/{token}`
+查看器路由：`/plugins/diffs/view/{artifactId}/{token}`
 
-Viewer 资源：
+查看器资源：
 
 - `/plugins/diffs/assets/viewer.js`
 - `/plugins/diffs/assets/viewer-runtime.js`
-- `/plugins/diffs-language-pack/assets/viewer.js` (仅当 diff 使用语言包语言时)
+- `/plugins/diffs-language-pack/assets/viewer.js`（仅当 diff 使用语言包语言时）
 
 查看器文档会相对于 viewer URL 解析这些资源，因此可选的 `baseUrl` 路径前缀也会传递到资源请求中。
 
@@ -339,28 +328,28 @@ URL 解析顺序：tool-call `baseUrl`（经过严格校验后）-> 插件 `view
   </Accordion>
 </AccordionGroup>
 
-## 文件模式的浏览器要求
+## Browser Requirements for File Mode
 
-`mode: "file"` 和 `mode: "both"` 需要兼容 Chromium 的浏览器。
+`mode: "file"` and `mode: "both"` need to be compatible with Chromium-based browsers.
 
-解析顺序：
+Resolution order:
 
 <Steps>
-  <Step title="配置">
-    OpenClaw 配置中的 `browser.executablePath`。
+  <Step title="Configuration">
+    `browser.executablePath` in the OpenClaw configuration.
   </Step>
-  <Step title="环境变量">
+  <Step title="Environment Variables">
     - `OPENCLAW_BROWSER_EXECUTABLE_PATH`
     - `BROWSER_EXECUTABLE_PATH`
     - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`
 
   </Step>
-  <Step title="平台回退">
-    Chrome、Chromium、Edge 和 Brave 的常见安装路径及 `PATH` 查找。
+  <Step title="Platform Fallback">
+    Common installation paths for Chrome, Chromium, Edge, and Brave, plus `PATH` lookup.
   </Step>
 </Steps>
 
-常见失败提示：`Diff PNG/PDF rendering requires a Chromium-compatible browser...`。可通过安装 Chrome、Chromium、Edge 或 Brave，或设置上述任一可执行文件路径选项来修复。
+Common failure message: `Diff PNG/PDF rendering requires a Chromium-compatible browser...`. This can be fixed by installing Chrome, Chromium, Edge, or Brave, or by setting any of the executable path options above.
 
 ## 故障排查
 
@@ -407,6 +396,6 @@ Diff 渲染引擎由 [Diffs](https://diffs.com) 提供支持。
 
 ## 另请参阅
 
-- [Browser](/tools/browser)
+- [浏览器](/tools/browser)
 - [插件](/tools/plugin)
 - [工具概览](/tools)

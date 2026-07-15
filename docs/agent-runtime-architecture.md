@@ -43,11 +43,11 @@ Core 通过 OpenClaw 模块和 SDK barrel 调用内置运行时；不再保留�
 
 ## 运行时选择
 
-- 内置运行时 id 是 `openclaw`。旧别名 `pi` 会规范化为 `openclaw`；`codex-app-server` 会规范化为 `codex`。
-- 插件适配器会注册额外的运行时 id（例如 `codex`）。
-- 运行时策略是按模型/提供方范围配置的 `agentRuntime.id`（模型条目优先于提供方条目）。未设置或 `default` 会解析为 `auto`。
-- `auto` 会选择支持该提供方/模型的已注册插件适配器，否则使用内置的 OpenClaw 运行时。
-- 官方 API 端点上的 `openai` 提供方默认使用 `codex` 适配器；自定义 `baseUrl` 值则保持其已配置的行为。
+- 内置运行时 ID 是 `openclaw`。旧别名 `pi` 会规范化为 `openclaw`；`codex-app-server` 会规范化为 `codex`。
+- 插件宿主会注册额外的运行时 ID（例如 `codex`）。
+- 运行时策略是按模型/提供商作用域的 `agentRuntime.id` 配置（模型条目优先于提供商条目）。未设置或 `default` 会解析为 `auto`。
+- `auto` 会选择一个支持有效提供商路由的已注册插件宿主，否则使用内置 OpenClaw 运行时。仅提供商或模型前缀本身绝不会选择宿主。
+- OpenAI 仅在精确的官方 HTTPS Platform Responses 或 ChatGPT Responses 路由且没有自定义请求覆盖时，才可能隐式选择 `codex`。Completions 适配器、自定义端点，以及带有自定义请求行为的路由都会保持在 `openclaw`；纯文本官方 HTTP 端点会被拒绝。参见 [OpenAI 隐式代理运行时](/providers/openai#implicit-agent-runtime)。
 
 ## 相关
 

@@ -150,7 +150,7 @@ openclaw config get skills.load
 
 ## Anthropic 429 长上下文需要额外用量
 
-当日志/错误中包含以下内容时使用：`HTTP 429: rate_limit_error: Extra usage is required for long context requests`.
+当日志/错误中包含以下内容时使用：`HTTP 429: rate_limit_error: 长上下文请求需要额外用量`。
 
 ```bash
 openclaw logs --follow
@@ -482,6 +482,83 @@ launchctl print gui/$UID/ai.openclaw.gateway | grep -E "state|last exit|runs"
 - [日志](/logging)
 - [Doctor](/gateway/doctor)
 
+## macOS launchd 监督循环，重复的 gateway/node LaunchAgents
+
+当 macOS 安装每隔几秒就不断重启、`openclaw` 健康检查在 healthy 和 unavailable 之间来回波动，并且即使服务看起来正在运行，channel 分发仍然停滞时，请使用此方法。
+
+这通常见于较旧的安装，其中 `ai.openclaw.gateway` 和 `ai.openclaw.node` 两个 LaunchAgents 同时处于活跃状态，并且都注入了 `OPENCLAW_LAUNCHD_LABEL`。在这种状态下，OpenClaw 可能会检测到 launchd 监督，尝试把重启交回给 launchd，然后陷入快速的 `EADDRINUSE`/respawn 循环，而不是稳定运行一个 gateway 进程。
+
+```bash
+for i in 1 2 3 4; do
+  ps aux | grep 'openclaw.*index.js' | grep -v grep | awk '{print $2}'
+  sleep 10
+done
+
+openclaw gateway status --deep
+openclaw node status
+launchctl print gui/$UID/ai.openclaw.gateway | grep -E 'state|last exit|runs'
+tail -n 80 ~/Library/Logs/openclaw/gateway.log
+```
+
+重点关注：
+
+- 在 30 秒采样期间出现多个 gateway PID，而不是一个稳定的进程。
+- `gateway.log` 中出现 `EADDRINUSE`、`another gateway instance is already listening`，或者重复的 restart/handoff 日志行。
+- 在一台本应只运行一个受管 gateway 服务的主机上，`~/Library/LaunchAgents/ai.openclaw.gateway.plist` 和 `~/Library/LaunchAgents/ai.openclaw.node.plist` 两者同时被加载。
+
+要做什么：
+
+1. 如果这台主机只应该运行 Gateway 服务，请通过 OpenClaw 移除受管的 node 服务。**如果你确实依赖 node 服务提供远程 node 功能，请跳过此步骤**；卸载它会停止这台主机上的这些功能：
+
+   ```bash
+   openclaw node uninstall
+   ```
+
+2. 安装一个持久的 Gateway 包装器，在启动 OpenClaw 之前清除继承的 launchd 标记。请使用受支持的 `--wrapper` 选项；不要编辑 `~/.openclaw/service-env/` 下生成的文件，因为服务重装、更新和 doctor 修复都会重新生成该文件：
+
+   ```bash
+   mkdir -p ~/.local/bin
+   cat >~/.local/bin/openclaw-launchd-workaround <<'EOF'
+   #!/bin/sh
+   set -eu
+   unset OPENCLAW_LAUNCHD_LABEL LAUNCH_JOB_LABEL LAUNCH_JOB_NAME XPC_SERVICE_NAME || true
+   exec openclaw "$@"
+   EOF
+   chmod 700 ~/.local/bin/openclaw-launchd-workaround
+
+   openclaw gateway install \
+     --wrapper ~/.local/bin/openclaw-launchd-workaround \
+     --force
+   ```
+
+   `gateway install` 会在强制重装、更新和 doctor 修复之间保留 wrapper 路径。
+
+3. 验证 Gateway 是否稳定并且正在提供 RPC，而不仅仅是在监听：
+
+   ```bash
+   openclaw gateway status --deep --require-rpc
+
+   for i in 1 2 3 4; do
+     ps aux | grep 'openclaw.*index.js' | grep -v grep | awk '{print $2}'
+     sleep 10
+   done
+   ```
+
+   PID 采样应显示一个稳定的进程，而不是轮换的一组 PID，并且入站 channel 分发应该恢复。
+
+4. 在升级到修复了底层双 LaunchAgent 循环的版本后，移除该 workaround，并重新安装正常的受管服务：
+
+   ```bash
+   OPENCLAW_WRAPPER= openclaw gateway install --force
+   rm ~/.local/bin/openclaw-launchd-workaround
+   ```
+
+相关内容：
+
+- [macOS 平台说明](/platforms/mac/bundled-gateway)
+- [Doctor](/gateway/doctor)
+- [Gateway CLI](/cli/gateway)
+
 ## Gateway 在高内存使用期间退出
 
 当 Gateway 在负载下消失、supervisor 报告类似 OOM 的重启，或日志中提到 `critical memory pressure bundle written` 时使用。
@@ -749,15 +826,14 @@ openclaw doctor
 
   </Accordion>
   <Accordion title="元素 / 截图 / 上传签名">
-    - `fullPage is not supported for element screenshots` → 截图请求将 `--full-page` 与 `--ref` 或 `--element` 混用了。
-    - `element screenshots are not supported for existing-session profiles; use ref from snapshot.` → Chrome MCP / `existing-session` 截图调用必须使用页面捕获或快照 `--ref`，不能使用 CSS `--element`。
+    - `fullPage is not supported for element screenshots` → 截图请求将 `--full-page` 与 `--ref` 或 `--element` 混合使用了。
+    - `element screenshots are not supported for existing-session profiles; use ref from snapshot.` → Chrome MCP / `existing-session` 截图调用必须使用页面捕获或快照 `--ref`，而不是 CSS `--element`。
     - `existing-session file uploads do not support element selectors; use ref/inputRef.` → Chrome MCP 上传钩子需要快照引用，而不是 CSS 选择器。
-    - `existing-session file uploads currently support one file at a time.` → 在 Chrome MCP 配置文件上每次调用只发送一个上传。
+    - `existing-session file uploads currently support one file at a time.` → 在 Chrome MCP 配置文件上，每次调用只能上传一个文件。
     - `existing-session dialog handling does not support timeoutMs.` → Chrome MCP 配置文件上的对话框钩子不支持超时覆盖。
-    - `existing-session type does not support timeoutMs overrides.` → 对 `profile="user"` / Chrome MCP existing-session 配置文件上的 `act:type` 省略 `timeoutMs`，或者在需要自定义超时时使用受管理/CDP 浏览器配置文件。
-    - `existing-session evaluate does not support timeoutMs overrides.` → 对 `profile="user"` / Chrome MCP existing-session 配置文件上的 `act:evaluate` 省略 `timeoutMs`，或者在需要自定义超时时使用受管理/CDP 浏览器配置文件。
-    - `response body is not supported for existing-session profiles yet.` → `responsebody` 仍然需要受管理的浏览器或原始 CDP 配置文件。
-    - 仅附加或远程 CDP 配置文件上的过期视口 / 深色模式 / 区域设置 / 离线覆盖 → 运行 `openclaw browser stop --browser-profile <name>` 以关闭当前控制会话，并释放 Playwright/CDP 仿真状态，而无需重启整个网关。
+    - `existing-session type does not support timeoutMs overrides.` → 对 `profile="user"` / Chrome MCP existing-session 配置文件的 `act:type` 请省略 `timeoutMs`，或者在需要自定义超时时使用受管理的/CDP 浏览器配置文件。
+    - `response body is not supported for existing-session profiles yet.` → `responsebody` 仍然需要受管理浏览器或原始 CDP 配置文件。
+    - 连接附加模式或远程 CDP 配置文件上出现过期的视口 / 深色模式 / 语言环境 / 离线覆盖 → 运行 `openclaw browser stop --browser-profile <name>` 关闭当前控制会话，并释放 Playwright/CDP 模拟状态，而无需重启整个网关。
 
   </Accordion>
 </AccordionGroup>
@@ -841,9 +917,9 @@ openclaw gateway restart
 
 相关：
 
-- [认证](/gateway/authentication)
-- [后台执行和进程工具](/gateway/background-process)
-- [Gateway 拥有的配对](/gateway/pairing)
+- [Authentication](/gateway/authentication)
+- [Background exec and process tool](/gateway/background-process)
+- [Node pairing](/gateway/pairing)
 
 ## 相关
 

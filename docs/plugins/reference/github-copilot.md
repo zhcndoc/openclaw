@@ -16,7 +16,7 @@ title: "GitHub Copilot 插件"
 
 ## 作用域
 
-providers: github-copilot; contracts: memoryEmbeddingProviders
+providers：github-copilot；contracts：memoryEmbeddingProviders，usageProviders
 
 ## 相关文档
 

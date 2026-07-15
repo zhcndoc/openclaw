@@ -172,7 +172,7 @@ mock 默认会抛出异常，以便测试捕获对已废弃兼容性 API 的新�
 import { describe, it, expect, vi } from "vitest";
 
 describe("my-channel plugin", () => {
-  it("should resolve account from config", () => {
+  it("应该从配置中解析账户", () => {
     const cfg = {
       channels: {
         "my-channel": {
@@ -186,7 +186,7 @@ describe("my-channel plugin", () => {
     expect(account.token).toBe("test-token");
   });
 
-  it("should inspect account without materializing secrets", () => {
+  it("应该在不具体化密钥的情况下检查账户", () => {
     const cfg = {
       channels: {
         "my-channel": { token: "test-token" },
@@ -208,7 +208,7 @@ describe("my-channel plugin", () => {
 import { describe, it, expect } from "vitest";
 
 describe("my-provider plugin", () => {
-  it("should resolve dynamic models", () => {
+  it("应该解析动态模型", () => {
     const model = myProvider.resolveDynamicModel({
       modelId: "custom-model-v2",
       // ... 上下文
@@ -219,7 +219,7 @@ describe("my-provider plugin", () => {
     expect(model.api).toBe("openai-completions");
   });
 
-  it("should return catalog when API key is available", async () => {
+  it("在 API key 可用时应返回目录", async () => {
     const result = await myProvider.catalog.run({
       resolveProviderApiKey: () => ({ apiKey: "test-key" }),
       // ... 上下文
@@ -276,30 +276,30 @@ client.sendMessage = vi.fn().mockResolvedValue({ id: "msg-1" });
 // MyChannelClient.prototype.sendMessage = vi.fn();
 ```
 
-## Contract Tests (In-repo Plugins)
+## 合同测试（仓库内插件）
 
-Bundled built-in plugins include contract tests to verify registration ownership:
+捆绑的内置插件包含合同测试，用于验证注册归属：
 
 ```bash
 pnpm test src/plugins/contracts/
 ```
 
-These tests assert:
+这些测试会断言：
 
-- Which plugins register which providers
-- Which plugins register which speech providers
-- Whether the registration shape is correct
-- Whether the runtime contract meets requirements
+- 哪些插件注册了哪些提供者
+- 哪些插件注册了哪些语音提供者
+- 注册结构是否正确
+- 运行时契约是否满足要求
 
-### Running Tests for a Specific Scope
+### 为特定范围运行测试
 
-For a specific plugin:
+对于特定插件：
 
 ```bash
 pnpm test <bundled-plugin-root>/my-channel/
 ```
 
-Run only contract tests:
+仅运行合同测试：
 
 ```bash
 pnpm test src/plugins/contracts/shape.contract.test.ts
@@ -322,7 +322,7 @@ import 边界检查；每一项也可以在本地单独运行：
 
 ## 测试配置
 
-OpenClaw 使用 Vitest 4 和 V8 覆盖率阈值。对于插件测试：
+OpenClaw 使用带有信息性 V8 覆盖率报告的 Vitest 4。对于插件测试：
 
 ```bash
 # 运行所有测试

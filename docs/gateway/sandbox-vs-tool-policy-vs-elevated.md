@@ -47,7 +47,7 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 - 如果省略模式，默认是读写；涉及源代码/密钥时建议使用 `:ro`。
 - `scope: "shared"` 会忽略每个 agent 的绑定挂载（仅应用全局绑定）。
 - OpenClaw 会对绑定源进行两次校验：第一次在规范化后的源路径上，第二次在通过最深的现有祖先解析后再校验。符号链接父级逃逸不会绕过 blocked-path 或 allowed-root 检查。
-- 不存在的叶子路径也会被安全检查。如果 `/workspace/alias-out/new-file` 通过一个符号链接的父级解析到被阻止的路径或超出配置的允许根目录，绑定会被拒绝。
+- 不存在的叶子路径也会被安全检查。如果 `/workspace/alias-out/new-file` 通过一个符号链接的父级解析到被阻止的路径或超出配置的允许根目录，绑定将被拒绝。
 - 挂载 `/var/run/docker.sock` 本质上等于把主机控制权交给 sandbox；只有在明确有意这样做时才使用。
 - workspace access（`workspaceAccess`）与绑定挂载模式彼此独立。
 
@@ -99,7 +99,7 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 | `group:ui`         | `browser`, `canvas`                                                                                                                                        |
 | `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                                                     |
 | `group:messaging`  | `message`                                                                                                                                                  |
-| `group:nodes`      | `nodes`                                                                                                                                                    |
+| `group:nodes`      | `nodes`, `computer`                                                                                                                                        |
 | `group:agents`     | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `skill_workshop`                                                                   |
 | `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                                                       |
 | `group:openclaw`   | 大多数内置 OpenClaw 工具（不包括 `read`/`write`/`edit`/`apply_patch`/`exec`/`process` 文件系统和运行时原语、`canvas`，以及提供方插件） |
@@ -129,24 +129,24 @@ Elevated **不会**授予额外工具；它只影响 `exec`。
 
 参见 [Elevated Mode](/tools/elevated)。
 
-## 常见的 “sandbox jail” 修复
+## Common “sandbox jail” fixes
 
 ### “Tool X blocked by sandbox tool policy”
 
-修复键（任选其一）：
+Fix key (choose one):
 
-- 禁用 sandbox：`agents.defaults.sandbox.mode=off`（或按 agent 设置 `agents.list[].sandbox.mode=off`）
-- 在 sandbox 内允许该工具：
-  - 从 `tools.sandbox.tools.deny` 中移除它（或对应的 `agents.list[].tools.sandbox.tools.deny`）
-  - 或将其添加到 `tools.sandbox.tools.allow`（或对应的 per-agent allow）
-- 检查 `openclaw logs` 中的 `agents/tool-policy` 条目。它会记录 sandbox 模式，以及是 allow 还是 deny 规则阻止了该工具。
+- Disable sandbox: `agents.defaults.sandbox.mode=off` (or set per agent `agents.list[].sandbox.mode=off`)
+- Allow the tool inside the sandbox:
+  - Remove it from `tools.sandbox.tools.deny` (or the corresponding `agents.list[].tools.sandbox.tools.deny`)
+  - Or add it to `tools.sandbox.tools.allow` (or the corresponding per-agent allow)
+- Check the `agents/tool-policy` entry in `openclaw logs`. It will record the sandbox mode, and whether an allow or deny rule blocked the tool.
 
-### “我以为这是 main，为什么它被 sandbox 化了？”
+### “I thought this was main, why was it sandboxed?”
 
-在 `"non-main"` 模式下，群组/频道键 _不是_ main。请使用 main 会话键（由 `sandbox explain` 显示）或将模式切换为 `"off"`。
+In `"non-main"` mode, the group/channel key is _not_ main. Use the main session key (shown by `sandbox explain`) or switch the mode to `"off"`.
 
 ## 相关内容
 
-- [Sandboxing](/gateway/sandboxing) -- 完整的 sandbox 参考（模式、范围、后端、镜像）
-- [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) -- 按 agent 的覆盖与优先级
-- [Elevated Mode](/tools/elevated)
+- [沙箱化](/gateway/sandboxing) -- 完整的 sandbox 参考（模式、范围、后端、镜像）
+- [多智能体沙箱与工具](/tools/multi-agent-sandbox-tools) -- 按 agent 的覆盖与优先级
+- [提升模式](/tools/elevated)

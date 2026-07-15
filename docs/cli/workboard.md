@@ -22,7 +22,7 @@ openclaw gateway restart
 openclaw workboard list [--board <id>] [--status <status>] [--include-archived] [--json]
 openclaw workboard create <title...> [--notes <text>] [--status <status>] [--priority <priority>] [--agent <id>] [--board <id>] [--labels <items>] [--json]
 openclaw workboard show <id> [--json]
-openclaw workboard dispatch [--url <url>] [--token <token>] [--timeout <ms>] [--json]
+openclaw workboard dispatch [--board <id>] [--max-starts <count>] [--url <url>] [--token <token>] [--timeout <ms>] [--json]
 ```
 
 该命令读取并写入与仪表板和 Workboard 代理工具使用的同一插件所属 SQLite 数据库。卡片 ID 为 UUID；接受卡片 ID 的命令也接受无歧义的 ID 前缀（紧凑文本输出会显示前 8 个字符）。
@@ -37,7 +37,7 @@ openclaw workboard list --board default --status ready
 openclaw workboard list --json
 ```
 
-文本输出很紧凑：
+文本输出非常紧凑：
 
 ```text
 7f4a2c10  ready     high    default agent-a  修复失效的 worker 心跳
@@ -45,12 +45,12 @@ openclaw workboard list --json
 
 各列分别是 id 前缀、状态、优先级、board id、可选的 agent id，以及标题。
 
-| Flag                 | Purpose                                       |
-| -------------------- | --------------------------------------------- |
-| `--board <id>`       | 将结果限制为一个 board 命名空间              |
-| `--status <status>`  | 将结果限制为一个 Workboard 状态              |
-| `--include-archived` | 在紧凑文本输出中包含已归档卡片                |
-| `--json`             | 以机器可读的 JSON 形式打印完整卡片列表        |
+| Flag                 | 用途                                         |
+| -------------------- | -------------------------------------------- |
+| `--board <id>`       | 将结果限制为一个 board 命名空间             |
+| `--status <status>`  | 将结果限制为一个 Workboard 状态             |
+| `--include-archived` | 在紧凑文本输出中包含已归档卡片               |
+| `--json`             | 以机器可读的 JSON 形式打印完整卡片列表       |
 
 紧凑文本输出默认隐藏已归档卡片，因此 CLI 与 `/workboard list` 保持一致。传入 `--include-archived` 可显示它们。JSON 输出始终保留完整卡片列表，包括已归档卡片，以供现有自动化使用。
 
@@ -87,10 +87,11 @@ openclaw workboard show 7f4a2c10 --json
 ```bash
 openclaw workboard dispatch
 openclaw workboard dispatch --json
+openclaw workboard dispatch --max-starts 10
 openclaw workboard dispatch --url http://127.0.0.1:18789 --token "$OPENCLAW_GATEWAY_TOKEN"
 ```
 
-`dispatch` 先调用正在运行的 Gateway RPC 方法 `workboard.cards.dispatch`，它使用与仪表板 dispatch 操作相同的 subagent 运行时，因此就绪的卡片会成为带有关联会话键的任务跟踪 worker 运行。分配了 agent 的卡片会使用 agent 作用域的 subagent 会话键；未分配的卡片会保留未作用域化的 subagent 键，以便保留 Gateway 配置的默认 agent。
+`dispatch` 首先调用正在运行的 Gateway RPC 方法 `workboard.cards.dispatch`，它使用与仪表板 dispatch 操作相同的 subagent 运行时，因此就绪卡片会变成带有关联会话键的任务跟踪 worker 运行。`--max-starts` 使用附加的 `workboard.cards.dispatchWithOptions` 方法，因此较旧的 Gateway 会在启动任何 worker 之前拒绝该选项；在升级后、使用该标志之前，请重启 Gateway。已分配 agent 的卡片使用 agent 作用域的 subagent 会话键；未分配的卡片保留无作用域的 subagent 键，以便保留 Gateway 配置的默认 agent。
 
 dispatch 循环：
 
@@ -102,7 +103,7 @@ dispatch 循环：
 6. 使用受限的卡片上下文和卡片认领令牌启动一个 subagent worker 运行。
 7. 当 Gateway 任务账本报告时，将 worker 运行 id、会话键、任务关联，以及执行状态和 worker 日志存储到卡片上。
 
-选择策略是保守的：一次 dispatch 默认最多启动三个 worker，会跳过已归档或已经被认领的卡片，并且在单次遍历中每个 owner 或 agent 只启动一张卡片。已经被活动运行或审查工作占用的卡片会留待后续 dispatch。
+选择是保守的：一次 dispatch 默认最多启动三个 worker，会跳过已归档或已被认领的卡片，并且在单次遍历中每个所有者或 agent 只启动一张卡片。已被活跃运行或审阅工作占用的卡片会留到之后的 dispatch 处理。传入 `--max-starts <count>` 且为正整数可更改每次遍历的上限；每个所有者仅一张卡片的规则仍然适用，因此实际启动数量可能更少。
 
 如果 worker 启动在卡片被认领后失败，Workboard 会阻止该卡片，清除认领，并将失败记录到卡片执行和 worker-log 元数据中，让失败的启动保持可见，而不是悄悄把卡片返回队列。
 

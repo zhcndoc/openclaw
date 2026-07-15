@@ -11,18 +11,18 @@ macOS 应用使用 `WKWebView` 嵌入一个由代理控制的 **Canvas 面板**�
 
 ## Canvas 的位置
 
-Canvas 状态存储在 Application Support 下：
+Canvas state is stored under Application Support:
 
 - `~/Library/Application Support/OpenClaw/canvas/<session>/...`
 
-Canvas 面板通过自定义 URL 方案提供这些文件，
-`openclaw-canvas://<session>/<path>`：
+The Canvas panel exposes these files through a custom URL scheme,
+`openclaw-canvas://<session>/<path>`:
 
 - `openclaw-canvas://main/` -> `<canvasRoot>/main/index.html`
 - `openclaw-canvas://main/assets/app.css` -> `<canvasRoot>/main/assets/app.css`
 - `openclaw-canvas://main/widgets/todo/` -> `<canvasRoot>/main/widgets/todo/index.html`
 
-如果根目录下没有 `index.html`，应用会显示一个内置的脚手架页面。
+If there is no `index.html` in the root directory, the app will display a built-in scaffolding page.
 
 ## 面板行为
 
@@ -42,7 +42,7 @@ Canvas 通过 Gateway WebSocket 暴露，因此代理可以显示/隐藏
 
 ```bash
 openclaw nodes canvas present --node <id>
-openclaw nodes canvas navigate --node <id> --url "/"
+openclaw nodes canvas navigate --node <id> "/"
 openclaw nodes canvas eval --node <id> --js "document.title"
 openclaw nodes canvas snapshot --node <id>
 ```
@@ -50,13 +50,17 @@ openclaw nodes canvas snapshot --node <id>
 `canvas.navigate` 接受本地 canvas 路径、`http(s)` URL 和 `file://`
 URL。传入 `"/"` 会显示本地脚手架或 `index.html`。
 
+位于 `/__openclaw__/canvas/` 和 `/__openclaw__/a2ui/` 下的 Gateway 托管目标会通过节点会话的当前作用域 Canvas URL 进行解析。应用会在导航前刷新该短期有效的能力；你无需自行构造或复制 capability URL。
+
 ## Canvas 中的 A2UI
 
 A2UI 由 Gateway canvas host 托管，并渲染在 Canvas
 面板内。当 Gateway 广播 Canvas host 时，macOS 应用会在首次打开时自动跳转到
 A2UI host 页面。
 
-默认 A2UI host URL：`http://<gateway-host>:18789/__openclaw__/a2ui/`
+广告的 URL 具有能力范围，例如
+`http://<gateway-host>:18789/__openclaw__/cap/<token>/__openclaw__/a2ui/?platform=macos`。
+请将其视为一次性凭据，而不是稳定链接。
 
 ### A2UI 命令（v0.8）
 
@@ -102,9 +106,10 @@ window.location.href = "openclaw://agent?message=Review%20this%20design";
 
 ## 安全说明
 
-- Canvas 方案会阻止目录穿越；文件必须位于会话根目录下。
-- 本地 Canvas 内容使用自定义方案（无需 loopback 服务器）。
-- 仅当显式导航时才允许外部 `http(s)` URL。
+- Canvas 方案会阻止目录遍历；文件必须位于会话根目录下。
+- 本地 Canvas 内容使用自定义方案（无需回环服务器）。
+- 仅当明确导航时，才允许外部 `http(s)` URL。
+- 普通网页仅用于渲染。只有来自应用拥有的 Canvas 方案，或由应用选择的、精确限定能力范围的 Gateway A2UI 文档，才接受代理操作；子框架、重定向、失效的能力以及已更改的查询都不能触发操作。
 
 ## 相关内容
 

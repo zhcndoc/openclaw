@@ -56,7 +56,7 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 
 这两个工具都接受来自上一次列表调用的 **session key**（例如 `"main"`）或 **session ID**。
 
-如果你需要逐字节完全一致的转录内容，请直接检查磁盘上的转录文件，而不要把 `sessions_history` 当作原始转储。
+如果你需要精确的原始转录，请检查作用域限定的 SQLite 转录行，而不是将 `sessions_history` 视为未过滤的转储。
 
 ## 跨会话发送消息
 
@@ -71,7 +71,9 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 
 在目标方响应后，OpenClaw 可以运行一个 **回复回环**，在此过程中智能体交替发送消息（最多 `session.agentToAgent.maxPingPongTurns` 次，范围 0-20，默认 5）。目标智能体可以回复 `REPLY_SKIP` 以提前停止。
 
-## 状态和编排辅助工具
+传递 `watch: true` 以同时将发送方注册为目标的状态变更观察者：当其他参与者之后向目标发送直接人类消息或更改其目标时，发送方会收到一条系统通知，指向 `session_status` 的 `changesSince`。注册会在成功分发后进行，目标是实际接收到消息的会话，并从其当前状态版本开始，因此只有后续更改才会产生通知。结果会在注册成功时报告 `watched: true`。另请参阅[会话状态感知](/concepts/session-state)。
+
+## 状态与编排助手
 
 `session_status` 是当前或另一个可见会话的轻量级 `/status` 等价工具。它会报告用量、时间、模型/运行时状态，以及在存在时关联的后台任务上下文。与 `/status` 一样，它可以根据最新的转录用量条目回填稀疏的 token/cache 计数器，并且 `model=default` 会清除每个会话的覆盖设置。对调用方的当前会话使用 `sessionKey="current"`；像 `openclaw-tui` 这样的可见客户端标签不是 session key。
 
@@ -81,7 +83,13 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 - `active` 是当前实时运行的路由。它只会针对当前正在处理的实时或当前会话报告。
 - `deliveryContext` 是存储在会话上的持久化交付路由，OpenClaw 即使在活动界面不同的情况下，也可以在后续交付中复用它。
 
-`sessions_yield` 会故意结束当前轮次，这样下一条消息就可以成为你正在等待的后续事件。在你启动子代理后，如果希望完成结果作为下一条消息到达，而不是构建轮询循环，请使用它。
+## 会话状态变更
+
+OpenClaw 会保留一份持久的信号日志，记录重要的会话状态变更（发给受监视会话的直接人工消息、子运行结果、目标变更、压缩）。`sessions_list` 行和 `session_status` 会公开该会话的 `stateVersion`，并且 `session_status` 接受 `changesSince: <version>`，以返回该版本之后的类型化事件；当请求的版本早于保留历史时，会精确通过 `historyGap` 发出信号。监视者——由父级自动生成，或通过 `sessions_send watch: true` 显式设置——在其他参与者更改受监视会话时，会收到一条合并后的过期状态通知。
+
+有关完整模型，请参见 [会话状态感知](/concepts/session-state)：事件种类、监视者注册、反垃圾通知协议、协调流程以及当前限制。
+
+`sessions_yield` 会有意结束当前回合，以便下一条消息可以成为你正在等待的后续事件。当你在生成子代理后，希望完成结果作为下一条消息到达，而不是构建轮询循环时，请使用它。
 
 `subagents` 是用于查看已启动的 OpenClaw 子代理的可见性辅助工具。它支持 `action: "list"` 来检查活动/最近运行。
 
@@ -103,23 +111,24 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 
 关于 ACP 的特定行为，请参见 [ACP Agents](/tools/acp-agents)。
 
-## Visibility
+## 可见性
 
-The scope of session tools limits what the agent can see:
+会话工具的作用范围限制了代理可以看到的内容：
 
-| Level   | Scope                                   |
+| 级别   | 范围                                   |
 | ------ | ---------------------------------------- |
-| `self`  | Current session only                    |
-| `tree`  | Current session + generated child agents |
-| `agent` | All sessions of that agent               |
-| `all`   | All sessions (if configured, across agents) |
+| `self`  | 仅当前会话                    |
+| `tree`  | 当前会话 + 生成的子代理               |
+| `agent` | 该代理的所有会话               |
+| `all`   | 所有会话（如果已配置，则跨代理） |
 
-Default is `tree`. Sandboxed sessions are clamped to `tree` regardless of config.
+默认值为 `tree`。无论配置如何，沙盒会话都会被限制为 `tree`。
 
 ## 延伸阅读
 
 - [会话管理](/concepts/session): 路由、生命周期、维护
-- [ACP 代理](/tools/acp-agents): 外部执行环境启动
+- [子代理](/tools/subagents): 子会话生命周期与交付
+- [ACP 代理](/tools/acp-agents): 外部控制程序启动
 - [多代理](/concepts/multi-agent): 多代理架构
 - [网关配置](/gateway/configuration): 会话工具配置选项
 

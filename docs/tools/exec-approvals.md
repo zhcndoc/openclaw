@@ -8,7 +8,7 @@ title: "Exec 审批"
 sidebarTitle: "Exec 审批"
 ---
 
-Exec 审批是用于让一个沙箱化代理在真实主机（`gateway` 或 `node`）上运行命令的**伴随应用 / node 主机护栏**。只有当策略 + 允许列表 +（可选的）用户审批全部一致时，命令才会运行。审批是在工具策略和 elevated gating 之上的**叠加层**（elevated `full` 会跳过它们）。
+Exec 审批是用于让一个沙箱化代理在真实主机（`gateway` 或 `node`）上运行命令的**伴随应用 / node 主机护栏**。只有当策略 + 允许列表 +（可选）的用户审批全部一致时，命令才会运行。审批是在工具策略和 elevated gating 之上的**叠加层**（elevated `full` 会跳过它们）。
 
 关于 `deny`、`allowlist`、`ask`、`auto`、`full` 的 mode-first 概览、Codex Guardian 映射以及 ACPX harness 权限，请参见
 [权限模式](/tools/permission-modes)。
@@ -31,7 +31,7 @@ Exec 审批是用于让一个沙箱化代理在真实主机（`gateway` 或 `nod
 - 审批可降低意外执行风险，但**不是**按用户划分的身份验证边界，也不是文件系统只读策略。
 - 一旦获得批准，命令可根据所选主机或沙箱文件系统权限修改文件。
 - 已批准的节点主机运行会绑定规范化的执行上下文：cwd、精确的 argv、存在时的 env 绑定，以及适用时固定的可执行文件路径。
-- 对于 shell 脚本和直接解释器/运行时文件调用，OpenClaw 也会尝试绑定一个具体的本地文件操作数。如果该文件在批准后、执行前发生变化，则运行会被拒绝，而不会执行已漂移的内容。
+- 对于 shell 脚本和直接解释器/运行时文件调用，OpenClaw 也会尝试绑定一个具体的本地文件操作数。如果该文件在批准后、执行前发生变化，则运行将被拒绝，而不会执行已漂移的内容。
 - 文件绑定是尽力而为的，并不能完整覆盖所有解释器/运行时加载路径。如果无法准确识别出一个具体的本地文件，OpenClaw 会拒绝生成基于审批的运行，而不是假装已完全覆盖。
 
 ### macOS 分流
@@ -47,7 +47,11 @@ Exec 审批是用于让一个沙箱化代理在真实主机（`gateway` 或 `nod
 | `openclaw exec-policy show`                                      | 本地机器的合并视图。                                                             |
 | `openclaw exec-policy set` / `preset`                            | 将本地请求的策略与本地主机审批文件一步同步。 |
 
-完整 CLI 参考（标志、JSON 输出、允许列表添加/移除）：[Approvals CLI](/cli/approvals)。
+<Note>
+每个会话的 `/exec` 覆盖项不包含在内。请在相关会话中运行 `/exec` 以检查其当前默认值。参见 [session overrides](/tools/exec#session-overrides-exec)。
+</Note>
+
+完整的 CLI 参考（标志、JSON 输出、allowlist 添加/移除）：[Approvals CLI](/cli/approvals)。
 
 当本地范围请求 `host=node` 时，`exec-policy show` 会在运行时将
 该范围报告为由节点管理，而不是将本地审批
@@ -78,6 +82,12 @@ $OPENCLAW_STATE_DIR/exec-approvals.json
 `$OPENCLAW_STATE_DIR/exec-approvals.sock`，或者当变量未设置时使用
 `~/.openclaw/exec-approvals.sock`。
 
+2026.6.6 之前的版本始终将文件保存在 `~/.openclaw` 中。如果
+`OPENCLAW_STATE_DIR` 指向其他位置，而审批文件仍存在于默认目录中，请直接运行一次
+`openclaw doctor --fix`，将其导入状态目录（原始文件会以
+`.migrated` 后缀归档）。交互式 doctor 也可以预览并确认导入。自动更新和 Gateway watch 修复运行从不跨状态目录导入：临时或暂存状态目录绝不应捕获默认安装的审批。相同的边界也适用于将旧的
+`plugin-binding-approvals.json` 导入共享的 SQLite 状态。
+
 示例 schema：
 
 ```json
@@ -104,7 +114,6 @@ $OPENCLAW_STATE_DIR/exec-approvals.json
           "id": "B0C8C0B3-2C2D-4F8A-9A3C-5A4B3C2D1E0F",
           "pattern": "~/Projects/**/bin/rg",
           "source": "allow-always",
-          "commandText": "rg -n TODO",
           "lastUsedAt": 1737150000000,
           "lastUsedCommand": "rg -n TODO",
           "lastResolvedPath": "/Users/user/Projects/.../bin/rg"
@@ -179,8 +188,10 @@ $OPENCLAW_STATE_DIR/exec-approvals.json
 `ruby -e`、`perl -e`/`-E`、`php -r`、`lua -e`、`osascript -e`（以及 `awk`、
 `sed`、`make`、`find -exec` 和 `xargs` 的内联形式）。
 
-在严格模式下，这些命令仍然需要显式批准，并且
-`allow-always` 不会自动为它们持久化新的允许列表条目。
+在严格模式下，这些命令需要审阅者或显式批准。启用
+`tools.exec.mode: "auto"` 时，如果命令具有可强制执行的计划，审阅者可以授予一次低风险执行；否则 OpenClaw 会询问人工。
+进入审阅者回退流程的 `Codex app-server` 命令批准会询问人工，因为它们的批准请求不会暴露可强制执行的已解析可执行文件。
+`allow-always` 不会为内联求值命令持久保存新的允许列表条目。
 
 ### `tools.exec.commandHighlighting`
 
@@ -308,7 +319,7 @@ EOF
 
 ### 使用 argPattern 限制参数
 
-当某个白名单条目应当匹配一个二进制文件和特定参数形状时，请添加 `argPattern`。OpenClaw 会在解析后的命令参数上评估该正则表达式，不包括可执行文件标记（`argv[0]`）。对于手工编写的条目，参数会用单个空格连接，因此当你需要精确匹配时，请给模式加上锚点。
+当某个允许列表条目需要同时匹配二进制和特定的参数形式时，请添加 `argPattern`。OpenClaw 在每个主机上都使用 ECMAScript（JavaScript）正则表达式语义，并将表达式应用于解析后的命令参数，排除可执行文件标记（`argv[0]`）。对于手工编写的条目，参数会以单个空格连接，因此在需要精确匹配时请为模式加上锚点。
 
 ```json
 {
@@ -332,16 +343,16 @@ EOF
 
 每个白名单条目都支持：
 
-| 字段              | 含义                                                       |
-| ----------------- | ---------------------------------------------------------- |
-| `pattern`         | 解析后的二进制路径 glob 或裸命令名 glob                    |
-| `argPattern`      | 可选的 argv 正则；省略时表示仅路径匹配                    |
-| `id`             | 用于 UI 标识的稳定 UUID                                     |
-| `source`          | 条目来源，例如 `allow-always`                             |
-| `commandText`     | 审批流程创建该条目时捕获的命令文本                          |
-| `lastUsedAt`      | 上次使用时间戳                                              |
-| `lastUsedCommand` | 上次匹配的命令                                             |
-| `lastResolvedPath` | 上次解析得到的二进制路径                                   |
+| Field              | Meaning                                              |
+| ------------------ | ---------------------------------------------------- |
+| `pattern`          | 已解析的二进制路径 glob 或裸命令名 glob              |
+| `argPattern`       | 可选的 ECMAScript argv 正则表达式；省略则仅按路径匹配 |
+| `id`               | 稳定的透明 ID；缺失时会生成 UUID                   |
+| `source`           | 条目来源，例如 `allow-always`                     |
+| `commandText`      | 旧版明文输入；加载时会被丢弃                       |
+| `lastUsedAt`       | 上次使用时间戳                                      |
+| `lastUsedCommand`  | 上次匹配的命令                                       |
+| `lastResolvedPath` | 上次解析到的二进制路径                            |
 
 ## 自动允许技能 CLI
 
@@ -373,8 +384,11 @@ EOF
 node 主机）。如果某个节点尚未声明 exec approvals，请直接编辑其
 本地审批文件。
 
-CLI：`openclaw approvals` 支持 gateway 或 node 编辑 - 参见
-[Approvals CLI](/cli/approvals)。
+一些节点主机，包括 Windows companion，使用不同的审批
+策略格式。Control UI 会以只读方式显示这些主机原生策略。使用
+companion 应用或带有原生策略形状的 `openclaw approvals set --node <id|name|ip>` 来编辑它们；请参见 [Approvals CLI](/cli/approvals)。
+
+CLI：`openclaw approvals` 支持 gateway 或 node 编辑 - 请参见 [Approvals CLI](/cli/approvals)。
 
 ## 审批流程
 

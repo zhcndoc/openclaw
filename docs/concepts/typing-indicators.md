@@ -27,9 +27,9 @@ title: "输入中指示器"
 
 “触发时机有多早”的顺序：`never` -> `message`/`thinking` -> `instant`。
 
-## Configuration
+## 配置
 
-Set proxy-level defaults:
+设置代理级默认值：
 
 ```json5
 {
@@ -42,7 +42,7 @@ Set proxy-level defaults:
 }
 ```
 
-Override the mode or frequency per session:
+按会话覆盖模式或频率：
 
 ```json5
 {
@@ -65,7 +65,7 @@ Override the mode or frequency per session:
 
 <CardGroup cols={2}>
   <Card title="Presence" href="/concepts/presence" icon="signal">
-    Gateway 如何跟踪已连接的客户端，并在 macOS Instances 选项卡中显示它们。
+    网关如何跟踪已连接的客户端，用于 Control UI Devices 页面和 macOS Instances 选项卡。
   </Card>
   <Card title="Streaming and chunking" href="/concepts/streaming" icon="bars-staggered">
     出站流式行为、分块边界以及按频道的投递。

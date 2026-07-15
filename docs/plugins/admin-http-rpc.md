@@ -96,13 +96,14 @@ curl -sS http://<gateway-host>:<port>/api/v1/admin/rpc \
 
 请将此插件视为完整的 Gateway 运维接口。
 
-- 启用该插件会有意提供对位于 `/api/v1/admin/rpc` 的 allowlist 中的 admin RPC 方法的访问权限。
-- 该插件声明了保留的 `contracts.gatewayMethodDispatch: ["authenticated-request"]` 清单契约，这使得其经过 Gateway 身份验证的 HTTP 路由能够在进程内分发控制平面方法。这不是沙箱：该契约可防止对保留的 SDK 辅助工具的误用，但受信任的插件仍然运行在 Gateway 进程中。
-- 共享密钥 bearer 认证（`token`/`password` 模式）证明持有 gateway 运维者密钥；该路径会忽略更窄的 `x-openclaw-scopes` 请求头，并恢复为正常的完整运维者默认权限。
-- 受信任的、携带身份的 HTTP 认证（`trusted-proxy` 模式）在存在 `x-openclaw-scopes` 时会遵守该请求头。
-- `gateway.auth.mode="none"` 表示如果插件已启用，则该路由未经过身份验证。仅在你完全信任的私有入口之后使用它。
-- 在插件路由认证通过后，请求会通过与 WebSocket RPC 相同的 Gateway 方法处理器和作用域检查进行分发。
-- 请将此路由仅保留在 loopback、tailnet 或受信任的私有入口上。不要直接向公共互联网暴露它。当调用方跨越信任边界时，请使用独立的 gateway。
+- 启用该插件会有意向 `/api/v1/admin/rpc` 中允许名单内的 admin RPC 方法提供访问。
+- 该插件声明了保留的 `contracts.gatewayMethodDispatch: ["authenticated-request"]` 清单契约，这使其经 Gateway 认证的 HTTP 路由能够在进程内调度控制平面方法。这并不是沙箱：该契约可防止意外使用保留的 SDK 辅助函数，但受信任的插件仍然运行在 Gateway 进程中。
+- 共享密钥 bearer 认证（`token`/`password` 模式）可证明持有 gateway 操作员密钥；此路径会忽略更细粒度的 `x-openclaw-scopes` 标头，并恢复为正常的完整操作员默认权限。
+- 受信任、携带身份的 HTTP 认证（`trusted-proxy` 模式）在存在 `x-openclaw-scopes` 时会予以尊重。
+- `gateway.auth.mode="none"` 表示如果插件已启用，则此路由不需要认证。仅在你完全信任的私有入口后面使用。
+- 在插件路由认证通过后，请求会通过与 WebSocket RPC 相同的 Gateway 方法处理程序和作用域检查进行调度。
+- 在已准备好的挂起租约期间，该路由仍然可访问。受限的请求验证以及本地 `commands.list` 发现响应仍然可用。在被调度到 Gateway 的方法中，只有 `gateway.suspend.prepare`、`gateway.suspend.status` 和 `gateway.suspend.resume` 可以在 admission 关闭时运行；其他允许名单内的方法会返回正常、可重试的 Gateway `UNAVAILABLE` 响应。
+- 请将此路由保持在 loopback、tailnet 或私有且受信任的入口之后。不要直接暴露到公共互联网。若调用方跨越信任边界，请使用独立的 gateways。
 
 ## 请求
 
@@ -128,9 +129,9 @@ Content-Type: application/json
 
 默认最大请求体大小为 1 MB。
 
-## 响应
+## Responses
 
-成功响应使用 Gateway RPC 结构：
+Successful responses use the Gateway RPC structure:
 
 ```json
 {
@@ -140,7 +141,7 @@ Content-Type: application/json
 }
 ```
 
-Gateway 方法错误使用：
+Gateway method errors use:
 
 ```json
 {
@@ -153,22 +154,22 @@ Gateway 方法错误使用：
 }
 ```
 
-HTTP 状态遵循错误代码：
+HTTP status follows the error code:
 
-| 错误代码                   | HTTP 状态 |
-| -------------------------- | --------- |
-| `INVALID_REQUEST`          | 400       |
-| `APPROVAL_NOT_FOUND`       | 404       |
+| Error Code                 | HTTP Status |
+| -------------------------- | ----------- |
+| `INVALID_REQUEST`         | 400         |
+| `APPROVAL_NOT_FOUND`      | 404         |
 | `NOT_LINKED`, `NOT_PAIRED` | 409       |
-| `UNAVAILABLE`              | 503       |
-| `AGENT_TIMEOUT`            | 504       |
-| any other code             | 500       |
+| `UNAVAILABLE`             | 503         |
+| `AGENT_TIMEOUT`           | 504         |
+| any other code            | 500         |
 
 ## 允许的方法
 
 - discovery: `commands.list`
-  返回此插件允许的 HTTP RPC 方法名。
-- gateway: `health`, `status`, `logs.tail`, `usage.status`, `usage.cost`, `gateway.restart.request`
+  返回此插件允许的 HTTP RPC 方法名称。
+- gateway: `health`, `status`, `logs.tail`, `usage.status`, `usage.cost`, `gateway.restart.request`, `gateway.suspend.prepare`, `gateway.suspend.status`, `gateway.suspend.resume`
 - config: `config.get`, `config.schema`, `config.schema.lookup`, `config.set`, `config.patch`, `config.apply`
 - channels: `channels.status`, `channels.start`, `channels.stop`, `channels.logout`
 - web: `web.login.start`, `web.login.wait`
@@ -209,11 +210,11 @@ HTTP 状态遵循错误代码：
 
 `400 INVALID_REQUEST`
 
-: 请求体不是有效的 JSON，`method` 字段缺失，或者该方法不在插件允许列表中。
+: 请求体不是有效的 JSON，缺少 `method` 字段，方法不在插件允许列表中，或者暂停恢复 ID 与活动租约不匹配。
 
 `503 UNAVAILABLE`
 
-: Gateway 方法处理程序不可用。请检查 Gateway 日志，并在 Gateway 完成启动后重试。
+: Gateway 方法正在启动、受到速率限制、已暂停，或正在等待一个竞争中的暂停/恢复操作。若存在，请检查 `error.details`，并在重试前遵守 `error.retryAfterMs`。
 
 ## 相关内容
 

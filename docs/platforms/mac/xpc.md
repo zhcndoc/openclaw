@@ -7,22 +7,22 @@ title: "macOS IPC"
 
 # OpenClaw macOS IPC 架构
 
-本地 Unix socket 将节点主机服务连接到 macOS 应用，用于执行审批和 `system.run`。存在一个 `openclaw-mac` 调试 CLI（`apps/macos/Sources/OpenClawMacCLI`）用于发现/连接检查；代理操作仍通过 Gateway WebSocket 和 `node.invoke` 进行。UI 自动化使用 PeekabooBridge。
+一个本地 Unix socket 将节点主机服务连接到 macOS 应用，用于执行批准和 `system.run`。存在一个 `openclaw-mac` 调试 CLI（`apps/macos/Sources/OpenClawMacCLI`），用于发现/连接检查；但代理操作仍通过 Gateway WebSocket 和 `node.invoke` 流转。基于节点的 `computer.act` 路径会在进程内运行嵌入式 Peekaboo 自动化；独立的 Peekaboo 客户端使用 PeekabooBridge。
 
 ## 目标
 
-- 单一 GUI 应用实例，负责所有面向 TCC 的工作（通知、屏幕录制、麦克风、语音、AppleScript）。
-- 为自动化提供一个小而明确的表面：Gateway + node 命令，以及用于 UI 自动化的 PeekabooBridge。
+- 一个单一的 GUI 应用实例，负责所有面向 TCC 的工作（通知、屏幕录制、麦克风、语音、AppleScript）。
+- 一个用于自动化的小表面：Gateway + 节点命令、进程内 `computer.act`，以及面向独立 UI 自动化客户端的 PeekabooBridge。
 - 可预测的权限：始终使用相同的已签名 bundle ID，由 launchd 启动，因此 TCC 授权会保持有效。
 
 ## 工作原理
 
 ### Gateway + node 传输
 
-- 应用以本地模式运行 Gateway，并作为节点连接到它。
-- 代理操作通过 `node.invoke` 执行（例如：`system.run`、`system.notify`、`canvas.*`）。
-- 节点命令包括 `canvas.*`、`camera.snap`、`camera.clip`、`screen.snapshot`、`screen.record`、`system.run` 和 `system.notify`。
-- 节点会报告一个 `permissions` 映射，因此代理可以查看是否具备屏幕、摄像头、麦克风、语音、自动化或辅助功能访问权限。
+- 应用运行 Gateway（本地模式）并作为节点连接到它。
+- Agent 操作通过 `node.invoke` 执行（例如 `system.run`、`system.notify`、`canvas.*`）。
+- 节点命令包括 `canvas.*`、`camera.snap`、`camera.clip`、`screen.snapshot`、`screen.record`、`computer.act`、`system.run` 和 `system.notify`。
+- 节点会报告一个 `permissions` 映射，以便 agent 了解是否可用屏幕、摄像头、麦克风、语音、自动化或辅助功能访问权限。
 
 ### Node 服务 + app IPC
 
@@ -41,10 +41,11 @@ Agent -> Gateway -> Node Service (WS)
 
 ### PeekabooBridge（UI 自动化）
 
-- UI 自动化使用一个独立的 UNIX 套接字（`~/Library/Application Support/OpenClaw/<socket>`）和 PeekabooBridge JSON 协议。
-- 主机偏好顺序（客户端侧）：Peekaboo.app -> Claude.app -> OpenClaw.app -> 本地执行。
-- 安全性：桥接主机需要在允许名单中的 TeamID（随附的 `PeekabooBridgeHostCoordinator` 会将一个固定团队以及应用自身的签名团队加入允许名单）；一个仅在 DEBUG 下可用的同 UID 逃生通道由 `PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1` 保护（Peekaboo 约定）。
-- 详见：[PeekabooBridge 使用](/platforms/mac/peekaboo) 。
+- 内置 agent 的 `computer` 工具**不**使用这个套接字。配对的 macOS 节点会在应用进程中借助嵌入式 Peekaboo 服务来实现 `computer.act`。
+- UI 自动化使用单独的 UNIX 套接字（`~/Library/Application Support/OpenClaw/<socket>`）以及 PeekabooBridge JSON 协议。
+- 主机优先级顺序（客户端侧）：Peekaboo.app -> Claude.app -> OpenClaw.app -> 本地执行。
+- 安全性：bridge 主机要求允许列表中的 TeamID（捆绑的 `PeekabooBridgeHostCoordinator` 会将固定团队以及应用自身的签名团队加入允许列表）；一个仅限 DEBUG 的同 UID 逃生通道由 `PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1` 保护（Peekaboo 约定）。
+- 参见：[PeekabooBridge 使用](/platforms/mac/peekaboo) 了解详情。
 
 ## 运行流程
 

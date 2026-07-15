@@ -68,15 +68,16 @@ openclaw models scan
 
 注意：
 
-- `Auth` 列是 provider 级别且只读的。它由本地 auth profile 元数据、环境标记、已配置的 provider key、本地 provider 标记、AWS Bedrock 环境/profile 标记以及插件的 synthetic-auth 元数据计算得出；它不会加载 provider 运行时、读取 keychain 密钥、调用 provider API，也不能证明每个模型的精确执行就绪状态。
-- 即使你尚未对某个提供方完成认证，`models list --all --provider <id>` 也可能包含来自插件 manifest 或内置 provider catalog 元数据的 provider-owned 静态 catalog 行。这些行在配置了匹配的认证之前仍会显示为不可用。
-- `models list` 会在 provider catalog 发现过程较慢时保持控制平面响应。默认视图和已配置视图会在短暂等待后回退到已配置或 synthetic 模型行，并让发现过程在后台继续。需要精确的完整发现 catalog 且愿意等待时，请使用 `--all`。
-- 广泛的 `models list --all` 会将 manifest catalog 行覆盖到 registry 行之上，而不会加载 provider runtime supplement hook。按 provider 过滤的 manifest 快速路径仅使用标记为 `static` 的 provider；标记为 `refreshable` 的 provider 仍保持 registry/cache 支持，并将 manifest 行作为补充追加，而标记为 `runtime` 的 provider 仍依赖 registry/runtime 发现。
-- `models list` 会将原生模型元数据与运行时上限区分开来。在表格输出中，当有效的运行时上限与原生上下文窗口不同，`Ctx` 会显示 `contextTokens/contextWindow`；JSON 行中，当 provider 暴露该上限时会包含 `contextTokens`。
-- `models list --provider <id>` 按 provider id 过滤，例如 `moonshot` 或 `openai`。它不接受交互式 provider 选择器中的显示标签，例如 `Moonshot AI`。
-- 模型引用通过按 **第一个** `/` 进行拆分来解析。如果模型 ID 中包含 `/`（OpenRouter 风格），请包含 provider 前缀（例如 `openrouter/moonshotai/kimi-k2`）。
-- 如果省略 provider，OpenClaw 会先将输入解析为别名，然后解析为与该精确模型 id 唯一匹配的已配置 provider，最后才在带有弃用警告的情况下回退到已配置的默认 provider。如果该 provider 不再暴露已配置的默认模型，OpenClaw 会回退到第一个已配置的 provider/model，而不是暴露一个过时的已移除 provider 默认值。
-- `models status` 在 auth 输出中可能会为非密钥占位符显示 `marker(<value>)`（例如 `OPENAI_API_KEY`、`secretref-managed`、`minimax-oauth`、`oauth:chutes`、`ollama-local`），而不是将它们掩码为密钥。
+- `Auth` 列是只读的。对于由提供方拥有的模型路由（例如 OpenAI），它会将每一行的 API/base-URL 路由与有效 `auth.order`、环境/配置凭据以及已解析的命令作用域 SecretRefs 中的可用 profile 进行匹配。某个具体的 OpenAI 行在其路由策略不可用时会保持未知，而不会借用提供方级别认证；仅提供方旧版检查和其他提供方仍保留提供方级别行为。插件的 synthetic-auth 元数据只是运行时能力提示，并不能证明原生账号认证可用，因此在没有 registry 正向证据时，依赖账号的路由仍会显示为未知。该命令不会加载提供方运行时、读取 keychain 密钥、调用提供方 API，也不会证明确切的执行就绪状态。
+- `models list --all --provider <id>` 即使你尚未在该提供方完成认证，也可以包含来自插件清单或内置提供方 catalog 元数据的提供方拥有的静态 catalog 行。这些行在未配置匹配认证之前仍会显示为不可用。
+- 当提供方 catalog 发现过程较慢时，`models list` 会保持控制平面响应迅速。默认视图和已配置视图会在短暂等待后回退到已配置或合成的模型行，并让发现过程在后台继续完成。若你需要精确的完整发现 catalog 且愿意等待提供方发现完成，请使用 `--all`。
+- 宽泛的 `models list --all` 会在不加载提供方运行时补充 hook 的情况下，将 manifest catalog 行合并到 registry 行之上。按提供方筛选的 manifest 快速路径只使用标记为 `static` 的提供方；标记为 `refreshable` 的提供方仍保持 registry/cache-backed，并将 manifest 行作为补充追加；而标记为 `runtime` 的提供方则仍依赖 registry/runtime 发现。
+- `models list` 会将原生模型元数据与运行时上限区分开来。在表格输出中，当有效运行时上限与原生上下文窗口不同，`Ctx` 会显示 `contextTokens/contextWindow`；JSON 行在提供方暴露该上限时会包含 `contextTokens`。
+- 对于由提供方拥有的路由，`models list` 会将一个逻辑 provider/model 行投影到所选路由上。`Input` 和 `Ctx` 只来自完全匹配的物理路由 catalog 行，并在最后应用显式配置的逻辑覆盖；未解析的路由选择会显示未知能力字段，而不会借用同级路由的元数据。
+- `models list --provider <id>` 通过提供方 id 进行筛选，例如 `moonshot` 或 `openai`。它不接受交互式提供方选择器中的显示标签，例如 `Moonshot AI`。
+- 模型引用通过拆分第一个 `/` 来解析。如果模型 ID 本身包含 `/`（OpenRouter 风格），请包含提供方前缀（例如 `openrouter/moonshotai/kimi-k2`）。
+- 如果你省略提供方，OpenClaw 会先将输入解析为别名，然后解析为与该确切模型 id 对应的唯一已配置提供方匹配，最后才带着弃用警告回退到已配置的默认提供方。如果该提供方不再暴露已配置的默认模型，OpenClaw 会回退到第一个已配置的提供方/模型，而不是显示一个已失效、已移除提供方的默认值。
+- `models status` 在认证输出中可能会显示 `marker(<value>)`，用于非密钥占位符（例如 `OPENAI_API_KEY`、`secretref-managed`、`minimax-oauth`、`oauth:chutes`、`ollama-local`），而不是将它们掩码为密钥。
 
 ### Set default / image model
 
@@ -131,7 +132,7 @@ openclaw models fallbacks clear
 
 管理 `agents.defaults.model.fallbacks`。`openclaw models image-fallbacks list|add|remove|clear` 以相同的子命令形式管理并行的 `agents.defaults.imageModel.fallbacks` 列表。
 
-## Auth profiles
+## 认证配置文件
 
 ```bash
 openclaw models auth add

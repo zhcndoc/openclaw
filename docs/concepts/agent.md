@@ -86,11 +86,14 @@ OpenClaw 会从以下位置加载技能（优先级从高到低）：
 
 ## 会话
 
-会话转录以 JSONL 形式存储在：
+会话行存储在按代理划分的 SQLite 数据库中：
 
-- `~/.openclaw/agents/<agentId>/sessions/<SessionId>.jsonl`
+- `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
 
-会话 ID 是稳定的，由 OpenClaw 选择。OpenClaw 不会读取其他工具的会话文件夹。
+Transcript JSONL 文件仍可位于
+`~/.openclaw/agents/<agentId>/sessions/`，作为旧版迁移输入、已删除或
+重置的存档、导入、导出以及支持工件。活动代理历史与会话行一起
+存储在 SQLite 中。会话 ID 是稳定的，由 OpenClaw 选定。OpenClaw 不会读取其他工具的会话文件夹。
 
 ## 流式处理中进行 steering
 
@@ -101,12 +104,18 @@ Steering 会在当前助手轮次完成其工具调用之后、下一次 LLM 调
 `/queue interrupt` 则会中止当前 active-run。有关队列和边界行为，请参见 [Queue](/concepts/queue)
 和 [Steering queue](/concepts/queue-steering)。
 
-块流式传输会在完成时立即发送已完成的助手块；它默认是**关闭**的（`agents.defaults.blockStreamingDefault: "off"`）。
-通过 `agents.defaults.blockStreamingBreak` 调整边界（`text_end` vs `message_end`；默认值为 `text_end`）。
-使用 `agents.defaults.blockStreamingChunk` 控制软块分块（默认 800-1200 字符；优先段落分隔，其次换行；最后才是句子）。
-使用 `agents.defaults.blockStreamingCoalesce` 合并流式分块，以减少单行刷屏（发送前基于空闲时间进行合并）。非 Telegram 渠道需要显式设置 `*.blockStreaming: true` 才能启用块回复。
-详细工具摘要会在工具开始时发出（无去抖）；Control UI 会在可用时通过 agent 事件流式传输工具输出。
-更多详情： [Streaming + chunking](/concepts/streaming)。
+块流式传输会在完成时立即发送已完成的助手块；默认是
+**关闭**的（`agents.defaults.blockStreamingDefault: "off"`）。
+通过 `agents.defaults.blockStreamingBreak` 调整边界（`text_end` 与 `message_end`；默认值为 `text_end`）。
+使用 `agents.defaults.blockStreamingChunk` 控制软块分片（默认
+800-1200 个字符；优先按段落换行，其次按换行；最后按句子）。
+使用 `agents.defaults.blockStreamingCoalesce` 合并流式分片，以减少
+单行刷屏（发送前基于空闲时间进行合并）。非 Telegram 渠道需要
+显式设置 `*.streaming.block.enabled: true` 才能启用块回复（QQ Bot
+会默认流式发送块回复，除非 `channels.qqbot.streaming.mode` 为 `"off"`）。
+详细工具摘要会在工具开始时发出（无防抖）；Control UI
+在可用时通过 agent 事件流式输出工具结果。
+更多详情：[Streaming + chunking](/concepts/streaming)。
 
 ## 模型引用
 

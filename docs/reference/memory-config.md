@@ -292,7 +292,9 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     openclaw memory index --force --agent main
     ```
 
-    对本地 GGUF 嵌入显式设置 `provider: "local"`。`hf:` 和 HTTP(S) 模型引用也支持显式本地配置（通过 node-llama-cpp 的模型解析），但它们不会改变默认 provider。
+    数值型 `local.contextSize` 值也会影响 node-llama-cpp 的自动 GPU 层放置，因此模型权重和所请求的嵌入上下文会被一起适配。`openclaw memory status --deep` 会在运行时加载后报告上次已知的 llama.cpp 后端、设备、卸载、请求上下文以及带时间戳的内存信息；被动状态不会加载模型。
+
+    对本地 GGUF 嵌入显式设置 `provider: "local"`。明确的本地配置支持 `hf:` 和 HTTP(S) 模型引用（通过 node-llama-cpp 的模型解析），但这不会改变默认提供方。
 
   </Accordion>
 </AccordionGroup>
@@ -566,7 +568,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 | ------------------------ | --------- | -------- | ------------------------------------------------------------------------------------- |
 | `command`                | `string`  | `qmd`    | QMD 可执行文件路径；当服务 `PATH` 与你的 shell 不同时时，请设置绝对路径 |
 | `searchMode`             | `string`  | `search` | 搜索命令：`search`、`vsearch`、`query`                                          |
-| `rerank`                 | `boolean` | --       | 与 `searchMode: "query"` 和 QMD 2.1+ 一起设置为 `false`，可跳过 QMD 重排序          |
+| `rerank`                | `boolean` | --       | 与 `searchMode: "query"` 和 QMD 2.1+ 一起设置为 `false`，可跳过 QMD 重排序          |
 | `includeDefaultMemory`   | `boolean` | `true`   | 自动索引 `MEMORY.md` + `memory/**/*.md`                                             |
 | `paths[]`                | `array`   | --       | 额外路径：`{ name, path, pattern? }`                                               |
 | `sessions.enabled`       | `boolean` | `false`  | 将会话转录导出到 QMD                                                   |
@@ -587,8 +589,8 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
 
 所有配置都位于 `memory.qmd.mcporter` 下。它通过一个长期运行的 `mcporter` MCP 守护进程来路由 QMD 搜索，而不是每次查询都启动 `qmd`，从而为较大的模型降低冷启动开销。
 
-| Key           | Type      | Default | Description                                                            |
-| ------------- | --------- | ------- | ---------------------------------------------------------------------- |
+| 键           | 类型      | 默认值 | 描述                                                            |
+| ------------- | --------- | ------ | ---------------------------------------------------------------------- |
 | `enabled`     | `boolean` | `false` | 通过 mcporter 路由 QMD 调用，而不是每次请求都启动 `qmd` |
 | `serverName`  | `string`  | `qmd`   | 运行 `qmd mcp` 且 `lifecycle: keep-alive` 的 mcporter 服务器名称  |
 | `startDaemon` | `boolean` | `true`  | 当 `enabled` 为 true 时自动启动 mcporter 守护进程         |
@@ -597,11 +599,11 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
 
 <AccordionGroup>
   <Accordion title="更新计划">
-    | Key                       | Type      | Default | Description                           |
+    | 键                       | 类型      | 默认值 | 描述                           |
     | --------------------------- | --------- | -------- | ---------------------------------------- |
     | `update.interval`         | `string`  | `5m`    | 刷新间隔                      |
     | `update.debounceMs`       | `number`  | `15000` | 文件变更去抖                 |
-    | `update.onBoot`           | `boolean` | `true`  | 当长期运行的 QMD 管理器打开时刷新；设为 false 可跳过启动时的立即更新 |
+    | `update.onBoot`          | `boolean` | `true`  | 当长期运行的 QMD 管理器打开时刷新；设为 false 可跳过启动时的立即更新 |
     | `update.startup`          | `string`  | `off`   | 可选的网关启动时 QMD 初始化：`off`、`idle` 或 `immediate` |
     | `update.startupDelayMs`   | `number`  | `120000` | `startup: "idle"` 刷新运行前的延迟 |
     | `update.waitForBootSync`  | `boolean` | `false` | 在初始刷新完成之前阻止管理器打开 |
@@ -611,12 +613,12 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
     | `update.embedTimeoutMs`   | `number`  | `120000` | 每个 `qmd embed` 周期的超时时间    |
   </Accordion>
   <Accordion title="限制">
-    | Key                       | Type     | Default | Description                |
+    | 键                       | 类型     | 默认值 | 描述                |
     | --------------------------- | -------- | ------- | ------------------------------ |
-    | `limits.maxResults`       | `number` | `4`     | 最大搜索结果数         |
-    | `limits.maxSnippetChars`  | `number` | `450`   | 截断片段长度       |
-    | `limits.maxInjectedChars` | `number` | `2200`  | 截断注入总字符数 |
-    | `limits.timeoutMs`        | `number` | `4000`  | 搜索超时             |
+    | `limits.maxResults`       | `number` | `4`     | 最多搜索结果         |
+    | `limits.maxSnippetChars`  | `number` | `450`   | 限制片段长度       |
+    | `limits.maxInjectedChars` | `number` | `2200`  | 限制注入总字符数 |
+    | `limits.timeoutMs`        | `number` | `4000`  | 基于 QMD 的搜索期间的 QMD 命令超时时间，包括 `memory_search`；设置、同步、内置回退和补充工作仍保持默认工具截止时间 |
   </Accordion>
   <Accordion title="作用域">
     控制哪些会话可以接收 QMD 搜索结果。与 [`session.sendPolicy`](/gateway/config-agents#session) 具有相同的 schema：
@@ -640,7 +642,7 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
   <Accordion title="引用">
     `memory.citations` 适用于所有后端：
 
-    | Value            | Behavior                                            |
+    | 值               | 行为                                            |
     | ------------------ | ------------------------------------------------------ |
     | `auto` (default) | 在片段中包含 `Source: <path#line>` 页脚    |
     | `on`             | 始终包含页脚                               |

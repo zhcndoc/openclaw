@@ -1,20 +1,38 @@
 ---
-summary: "用于列出、安装、更新、检查和卸载 OpenClaw 插件的快速示例"
+summary: "从 Control UI 或 CLI 管理 OpenClaw 插件"
 read_when:
-  - 你想查看插件列表、安装、更新、检查或卸载的快速示例
-  - 你想选择插件安装来源
-  - 你想找到发布插件包的正确参考资料
+  - 您想在 Control UI 中浏览、安装、启用或禁用插件
+  - 您想快速查看插件列表、安装、更新、检查或卸载示例
+  - 您想选择插件安装来源
+  - 您想获得发布插件包的正确参考
 title: "管理插件"
 sidebarTitle: "管理插件"
 doc-schema-version: 1
 ---
 
-常见的插件管理命令。有关完整的命令约定、标志、
-来源选择规则以及边缘情况，请参阅 [`openclaw plugins`](/cli/plugins)。
+Control UI 覆盖了常见的发现、安装、启用和禁用
+工作流。CLI 增加了更新、卸载、高级配置以及显式的
+安装来源控制。有关其完整的命令契约、标志、来源选择
+规则和边缘情况，请参阅 [`openclaw plugins`](/cli/plugins)。
 
-典型工作流程：找到一个包，从 ClawHub、npm、git 或本地路径安装它，
-让受管理的 Gateway 自动重启（或手动重启），
-然后验证插件的运行时注册情况。
+典型的 CLI 工作流：找到一个包，从 ClawHub、npm、git 或
+本地路径安装它，让受管理的 Gateway 自动重启（或手动重启它），然后
+验证插件的运行时注册。
+
+## 使用 Control UI
+
+在 Control UI 中打开 **Plugins**，或者使用相对于已配置 Control UI 基础路径的 `/settings/plugins`。例如，基础路径为 `/openclaw` 时，使用 `/openclaw/settings/plugins`。该页面有两个选项卡：
+
+- **Installed** 显示按类别分组的完整本地清单（channels、model providers、memory、tools）。每一行都会打开详细视图；其溢出菜单（`…`）可启用或禁用插件，并且对于外部安装的插件，还提供 **Remove**。该选项卡还会列出已配置的 [MCP servers](/cli/mcp)，并通过相同的菜单驱动方式执行启用、禁用和移除操作，同时在 Gateway 配置中编辑 `mcp.servers`。
+- **Discover** 是商店：包含随 OpenClaw 提供的精选插件、官方外部插件，以及精选的连接器展示区。连接器卡片要么可一键添加托管的 MCP server（GitHub、Notion、Linear、Sentry、Home Assistant），要么会跳转到预填充的 ClawHub 搜索。在搜索框中输入内容会就地查询 [ClawHub](https://clawhub.ai/plugins)，并附加一个 **From ClawHub** 部分，其中包含下载量和来源验证徽章。
+
+内置插件不需要安装包。它们的菜单操作是 **Enable** 或 **Disable**。例如，Workboard 随 OpenClaw 一起提供且默认处于禁用状态，因此选择 **Enable** 即可启用它。捆绑插件不能被移除，只能被禁用。
+
+目录和搜索访问需要 `operator.read`。安装、启用、禁用、移除以及 MCP server 变更需要 `operator.admin`。ClawHub 安装由 Gateway 执行，并保留其信任性、完整性和插件安装策略检查。作为管理员启用已安装插件时，也会通过将所选插件添加到现有的受限 `plugins.allow` 列表中来记录该显式信任。显式的 `plugins.deny` 条目仍然具有权威性，必须先移除才能启用该插件。
+
+安装或移除插件代码需要重启 Gateway。当已安装插件和当前 Gateway 运行时支持时，启用变更可以无需重启直接应用；否则 UI 会提示需要重启。基于 OAuth 的 MCP 连接器在添加后，仍然需要先通过 CLI 执行一次 `openclaw mcp login <name>`。
+
+Control UI 不会从任意 npm、git 或本地路径来源进行安装，不会更新插件，也不会暴露丰富的插件配置。对于这些操作，请使用下面的 CLI 工作流。
 
 ## 列出和搜索插件
 

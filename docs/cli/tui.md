@@ -16,35 +16,38 @@ title: "TUI"
 
 ## 选项
 
-| Flag                  | Default                                   | Description                                                                        |
-| --------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
-| `--local`             | `false`                                   | 运行本地嵌入式 agent 运行时，而不是 Gateway。                                         |
-| `--url <url>`         | `gateway.remote.url` from config          | Gateway WebSocket URL。                                                             |
-| `--token <token>`     | (none)                                    | 如有需要，Gateway token。                                                           |
-| `--password <pass>`   | (none)                                    | 如有需要，Gateway 密码。                                                           |
-| `--session <key>`     | `main` (or `global` when scope is global) | 会话 key。在 agent 工作区内，它会自动选择该 agent，除非前缀已指定。                    |
-| `--deliver`           | `false`                                   | 通过已配置的渠道发送 assistant 回复。                                                |
-| `--thinking <level>`  | (model default)                           | 思考级别覆盖。                                                                      |
-| `--message <text>`    | (none)                                    | 连接后发送初始消息。                                                                |
-| `--timeout-ms <ms>`   | `agents.defaults.timeoutSeconds`          | agent 超时。无效值会记录警告并被忽略。                                               |
-| `--history-limit <n>` | `200`                                     | 连接时加载的历史条目数量。                                                          |
+| Flag                         | Default                                   | Description                                                                        |
+| ---------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| `--local`                    | `false`                                   | 在本地嵌入式 agent 运行时上运行，而不是通过 Gateway。                 |
+| `--url <url>`                | 配置中的 `gateway.remote.url`          | Gateway WebSocket URL。                                                             |
+| `--token <token>`            | (none)                                    | 如有需要，Gateway token。                                                         |
+| `--password <pass>`          | (none)                                    | 如有需要，Gateway 密码。                                                      |
+| `--tls-fingerprint <sha256>` | `gateway.remote.tlsFingerprint`           | 预期的 TLS 证书指纹，用于固定的 `wss://` Gateway。                |
+| `--session <key>`            | `main`（或当作用域为 global 时为 `global`） | 会话键。在 agent 工作区内，它会自动选择该 agent，除非前缀指定。 |
+| `--deliver`                  | `false`                                   | 通过已配置的渠道传递 assistant 回复。                             |
+| `--thinking <level>`         | （模型默认值）                           | Thinking level 覆盖。                                                           |
+| `--message <text>`           | (none)                                    | 连接后发送初始消息。                                          |
+| `--timeout-ms <ms>`          | `agents.defaults.timeoutSeconds`          | agent 超时。无效值会记录警告并被忽略。                       |
+| `--history-limit <n>`        | `200`                                     | 连接时要加载的历史记录条目数。                                                 |
 
 别名：`openclaw chat` 和 `openclaw terminal` 会以
 隐含的 `--local` 调用此命令。
 
 ## 说明
 
-- `--local` 不能与 `--url`、`--token` 或 `--password` 组合使用。
-- `tui` 会在可能时解析已配置的 Gateway 认证 SecretRefs，用于 token/password 认证
+- `--local` 不能与 `--url`、`--token`、`--password` 或 `--tls-fingerprint` 组合使用。
+- `tui` 会在可能的情况下解析已配置的 Gateway 认证 SecretRef，用于 token/password 认证
   （`env`/`file`/`exec` 提供程序）。
-- 从已配置的 agent 工作区目录内部启动时，TUI 会自动为会话键默认选择
-  该 agent（除非 `--session` 明确指定为 `agent:<id>:...`）。
-- 要在页脚中显示非本地、基于 URL 的连接的 Gateway 主机名，请运行
-  `openclaw config set tui.footer.showRemoteHost true`。默认关闭；对于回环地址或嵌入式本地连接，永不显示。
-- 本地模式直接使用嵌入式 agent 运行时。大多数本地工具都可正常使用，
+- 在没有显式 URL 或端口的情况下，`tui` 会跟随正在运行的 Gateway 记录的当前本地 Gateway 端口。
+  显式的 `--url`、`OPENCLAW_GATEWAY_URL`、`OPENCLAW_GATEWAY_PORT` 以及远程 Gateway 配置具有优先级。
+- 如果从已配置的 agent 工作区目录内部启动，TUI 会自动为会话密钥默认值选择
+  该 agent（除非 `--session` 明确为 `agent:<id>:...`）。
+- 要在非本地、基于 URL 的连接中在页脚显示 Gateway 主机名，请运行 `openclaw config set tui.footer.showRemoteHost true`。
+  默认关闭；对于回环或内嵌本地连接，永不显示。
+- 本地模式直接使用嵌入式 agent 运行时。大多数本地工具可正常工作，
   但仅 Gateway 可用的功能不可用。
-- 本地模式会向 TUI 命令界面添加 `/auth [provider]`。
-- 插件审批门控在本地模式下仍然适用：需要审批的工具会在终端中提示做出决定，不会静默自动批准。
+- 本地模式会为 TUI 命令界面添加 `/auth [provider]`。
+- 插件审批门禁在本地模式下仍然适用：需要审批的工具会在终端中提示你做出决定，不会静默自动批准。
 - 会话 [目标](/tools/goal) 会显示在页脚中，并可通过
   `/goal` 进行管理。
 

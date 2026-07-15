@@ -148,13 +148,15 @@ openclaw plugins install <package> --dangerously-force-unsafe-install
 摘要，以及类似 `openclaw plugins install clawhub:<package>` 的安装提示。
 
 <Note>
-ClawHub 是大多数插件的主要分发与发现入口。Npm
-仍然是受支持的回退和直接安装路径。OpenClaw 自有的
-`@openclaw/*` 插件包会重新发布到 npm；请在
-[npmjs.com/org/openclaw](https://www.npmjs.com/org/openclaw) 或
-[插件清单](/plugins/plugin-inventory) 中查看当前列表。稳定版安装使用 `latest`。
-beta 通道安装和更新在可用时优先使用 npm 的 `beta` dist-tag，
-否则回退到 `latest`。
+ClawHub 是大多数插件的主要分发和发现入口。Npm
+仍然是受支持的后备和直接安装路径。OpenClaw 自有的
+`@openclaw/*` 插件包已重新发布到 npm；请参见
+[npmjs.com/org/openclaw](https://www.npmjs.com/org/openclaw) 上的当前列表，或
+[插件清单](/plugins/plugin-inventory)。稳定版安装使用 `latest`。
+Beta 通道安装和更新在可用时优先使用 npm 的 `beta` dist-tag，
+否则回退到 `latest`。在 extended-stable 通道上，带裸/默认或 `latest` 意图的官方 npm 插件会解析为精确的已安装核心
+版本。精确固定和显式非 `latest` 标签、第三方包，以及
+非 npm 来源都不会被重写。
 </Note>
 
 <AccordionGroup>
@@ -264,7 +266,7 @@ openclaw plugins install <plugin-name> --marketplace ./my-marketplace
 ```
 
 <Tabs>
-  <Tab title="Marketplace 源">
+  <Tab title="Marketplace 来源">
     - 来自 `~/.claude/plugins/known_marketplaces.json` 的 Claude 已知 marketplace 名称
     - 本地 marketplace 根目录或 `marketplace.json` 路径
     - GitHub 仓库简写，例如 `owner/repo`
@@ -411,22 +413,22 @@ openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-ins
     只传入不带版本或标签的 npm 包名也会解析回已跟踪的插件记录。当某个插件曾被锁定到精确版本，而你想把它切回 registry 的默认发布线时，可以使用这种方式。
 
   </Accordion>
-  <Accordion title="Beta channel updates">
+  <Accordion title="Beta 通道更新">
     定向的 `openclaw plugins update <id-or-npm-spec>` 会复用已跟踪的插件 spec，除非你传入新的 spec。批量 `openclaw plugins update --all` 在将受信任的官方插件记录同步到官方目录目标时会使用配置的 `update.channel`，因此 beta-channel 安装可以保持在 beta 发布线上，而不会被悄悄规范化为 stable/latest。
 
     `openclaw update` 也知道当前活跃的 OpenClaw 更新通道：在 beta 通道上，默认发布线的 npm 和 ClawHub 插件记录会先尝试 `@beta`。如果不存在插件 beta 版本，它们会回退到已记录的 default/latest spec；npm 插件在 beta 包存在但安装验证失败时也会回退。该回退会以警告形式报告，并不会使核心更新失败。精确版本和显式标签在定向更新中会保持对该选择器的锁定。
 
   </Accordion>
-  <Accordion title="Version checks and integrity drift">
+  <Accordion title="版本检查与完整性漂移">
     在进行实时 npm 更新之前，OpenClaw 会将已安装包版本与 npm registry 元数据进行检查。如果已安装版本与记录的产物标识已经匹配解析目标，则会跳过更新，不会下载、重新安装或重写 `openclaw.json`。
 
     当存储的完整性哈希存在且获取到的产物哈希发生变化时，OpenClaw 会将其视为 npm 产物漂移。交互式的 `openclaw plugins update` 命令会打印预期和实际哈希，并在继续之前要求确认。非交互式更新助手会失败关闭，除非调用方提供明确的继续策略。
 
   </Accordion>
-  <Accordion title="--dangerously-force-unsafe-install on update">
+  <Accordion title="更新时的 --dangerously-force-unsafe-install">
     `--dangerously-force-unsafe-install` 在 `plugins update` 上也可接受以保持兼容，但它已弃用，并且不再改变插件更新行为。当插件 hooks 已加载的进程中，操作者的 `security.installPolicy` 仍然可以阻止更新；`before_install` hooks 仅在加载了插件 hooks 的进程中生效。
   </Accordion>
-  <Accordion title="--acknowledge-clawhub-risk on update">
+  <Accordion title="更新时的 --acknowledge-clawhub-risk">
     社区 ClawHub 支持的插件更新在下载替换包之前会执行与安装时相同的精确发布信任检查。对于经过审查的自动化流程，如果所选 ClawHub 发布版本带有有风险的信任警告，请使用 `--acknowledge-clawhub-risk` 继续。官方 ClawHub 包和内置的 OpenClaw 插件源会绕过此发布信任提示。
   </Accordion>
 </AccordionGroup>
@@ -459,7 +461,7 @@ openclaw plugins inspect --all
 `--json` 标志会输出适合脚本处理和审计的机器可读报告。`inspect --all` 会渲染全量表格，包含形态、能力类型、兼容性提示、bundle 能力和 hook 摘要列。`info` 是 `inspect` 的别名。
 </Note>
 
-## 医生
+## 医师
 
 ```bash
 openclaw plugins doctor

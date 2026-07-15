@@ -21,9 +21,9 @@ title: "设置"
 
 ## 前置条件（从源码）
 
-- 推荐使用 Node 24（仍支持 Node 22 LTS，目前为 `22.19+`）
-- 从源码检出时需要 `pnpm`。OpenClaw 在开发模式下会从 `extensions/*` pnpm workspace 包中加载捆绑插件，因此根目录的 `npm install` 不会准备完整的源码树。
-- Docker（可选；仅用于容器化设置/e2e - 见 [Docker](/install/docker)）
+- 推荐使用 Node 24.15+（仍支持 Node 22 LTS，目前为 `22.22.3+`）
+- 源码检出需要 `pnpm`。OpenClaw 在开发模式下会从 `extensions/*` pnpm workspace 包中加载捆绑插件，因此根目录下的 `npm install` 不会准备完整的源码树。
+- Docker（可选；仅用于容器化设置/e2e - 参见 [Docker](/install/docker)）
 
 ## 定制化策略（让更新不会伤到你）
 
@@ -96,11 +96,13 @@ pnpm openclaw setup
 pnpm gateway:watch
 ```
 
-`gateway:watch` 会在一个命名的 tmux 会话（`openclaw-gateway-watch-main`）中启动或重启 Gateway 监视进程，并在交互式终端中自动附加。非交互式 shell 会保持分离状态，并输出
+`gateway:watch` 会在一个命名的 tmux 会话（`openclaw-gateway-watch-main`）中启动或重启 Gateway 监视进程，并在交互式终端中自动附加。非交互式 shell 会保持分离，并打印
 `tmux attach -t openclaw-gateway-watch-main`；使用
-`OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch` 可让交互式运行保持分离，或使用 `pnpm gateway:watch:raw` 进入前台监视模式。监视器会在相关源码、配置和捆绑插件元数据变更时重新加载。如果被监视的 Gateway 在启动期间退出，`gateway:watch` 会先运行一次
-`openclaw doctor --fix --non-interactive`，然后重试；设置
-`OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0` 可禁用这一步仅用于开发的修复流程。
+`OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch` 可让交互式运行保持分离，或使用
+`pnpm gateway:watch:raw` 以进入前台监视模式。监视器会在接管其配置的/默认端口之前停止当前活动配置文件中已安装的 Gateway 服务，防止服务监督器用源进程替换它。
+该服务仍会保持安装状态；完成监视后运行 `pnpm openclaw gateway start`。
+即使启动失败，tmux 窗格也会保持可用，因此另一个终端或代理可以附加或获取其日志。监视器会在相关源码、配置和打包插件元数据变化时重新加载。如果被监视的 Gateway 在启动期间退出，`gateway:watch` 会先运行一次 `openclaw doctor --fix --non-interactive`，然后重试；设置
+`OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0` 可禁用该仅用于开发的修复流程。
 `pnpm gateway:watch` 不会重建 `dist/control-ui`，因此在 `ui/` 变更后请重新运行 `pnpm ui:build`，或者在开发 Control UI 时使用 `pnpm ui:dev`。
 
 ### 2) 将 macOS 应用指向你正在运行的 Gateway
@@ -121,12 +123,13 @@ openclaw health
 
 ### 常见坑
 
-- **端口错误：** Gateway WS 默认是 `ws://127.0.0.1:18789`；让应用和 CLI 使用相同端口。
-- **状态存放位置：**
-  - 渠道/提供者状态：`~/.openclaw/credentials/`
-  - 模型认证配置文件：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-  - 会话：`~/.openclaw/agents/<agentId>/sessions/`
-  - 日志：`/tmp/openclaw/`
+- **Wrong port:** Gateway WS 默认为 `ws://127.0.0.1:18789`；请让应用 + CLI 使用同一个端口。
+- **Where state lives:**
+  - Channel/provider state: `~/.openclaw/credentials/`
+  - Model auth profiles: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+  - Sessions and transcripts: `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
+  - Legacy/archive session artifacts: `~/.openclaw/agents/<agentId>/sessions/`
+  - Logs: `/tmp/openclaw/`
 
 ## 凭据存储映射
 

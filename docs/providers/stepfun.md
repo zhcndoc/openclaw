@@ -33,27 +33,29 @@ openclaw gateway restart
 
 ## 内置目录
 
-Standard (`stepfun`)：
+标准（`stepfun`）：
 
-| Model ref                | Context | Max output | Notes                  |
-| ------------------------ | ------- | ---------- | ---------------------- |
+| 模型引用 | 上下文 | 最大输出 | 说明 |
+| ------------------------ | ------- | ---------- | ------------------------------ |
 | `stepfun/step-3.5-flash` | 262,144 | 65,536     | 默认标准模型 |
+| `stepfun/step-3.7-flash` | 262,144 | 262,144    | 支持多模态图像输入 |
 
-Step Plan (`stepfun-plan`)：
+Step Plan（`stepfun-plan`）：
 
-| Model ref                          | Context | Max output | Notes                      |
-| ---------------------------------- | ------- | ---------- | -------------------------- |
-| `stepfun-plan/step-3.5-flash`      | 262,144 | 65,536     | 默认 Step Plan 模型    |
+| 模型引用 | 上下文 | 最大输出 | 说明 |
+| ---------------------------------- | ------- | ---------- | ------------------------------ |
+| `stepfun-plan/step-3.5-flash`      | 262,144 | 65,536     | 默认 Step Plan 模型 |
+| `stepfun-plan/step-3.7-flash`      | 262,144 | 262,144    | 支持多模态图像输入 |
 | `stepfun-plan/step-3.5-flash-2603` | 262,144 | 65,536     | 额外的 Step Plan 模型 |
 
 ## 快速开始
 
 <Tabs>
-  <Tab title="Standard">
+  <Tab title="标准">
     通过标准 StepFun 端点进行通用用途使用的最佳选择。
 
     <Steps>
-      <Step title="Choose your endpoint region">
+      <Step title="选择你的端点区域">
         | Auth choice                    | Endpoint                     | Region        |
         | -------------------------------- | ----------------------------- | -------------- |
         | `stepfun-standard-api-key-intl` | `https://api.stepfun.ai/v1`  | International |
@@ -64,7 +66,7 @@ Step Plan (`stepfun-plan`)：
         openclaw onboard --auth-choice stepfun-standard-api-key-intl
         ```
 
-        China endpoint:
+        中国端点：
 
         ```bash
         openclaw onboard --auth-choice stepfun-standard-api-key-cn
@@ -83,7 +85,8 @@ Step Plan (`stepfun-plan`)：
       </Step>
     </Steps>
 
-    默认模型：`stepfun/step-3.5-flash`
+    Default model: `stepfun/step-3.5-flash`
+    Alternate model: `stepfun/step-3.7-flash`
 
   </Tab>
 
@@ -91,7 +94,7 @@ Step Plan (`stepfun-plan`)：
     适用于 Step Plan 推理端点的最佳选择。
 
     <Steps>
-      <Step title="Choose your endpoint region">
+      <Step title="选择你的端点区域">
         | Auth choice                 | Endpoint                                | Region        |
         | ------------------------------ | ------------------------------------------ | -------------- |
         | `stepfun-plan-api-key-intl` | `https://api.stepfun.ai/step_plan/v1`  | International |
@@ -102,7 +105,7 @@ Step Plan (`stepfun-plan`)：
         openclaw onboard --auth-choice stepfun-plan-api-key-intl
         ```
 
-        China endpoint:
+        中国端点：
 
         ```bash
         openclaw onboard --auth-choice stepfun-plan-api-key-cn
@@ -121,8 +124,8 @@ Step Plan (`stepfun-plan`)：
       </Step>
     </Steps>
 
-    默认模型：`stepfun-plan/step-3.5-flash`
-    备用模型：`stepfun-plan/step-3.5-flash-2603`
+    Default model: `stepfun-plan/step-3.5-flash`
+    Alternate models: `stepfun-plan/step-3.7-flash`, `stepfun-plan/step-3.5-flash-2603`
 
   </Tab>
 </Tabs>
@@ -145,6 +148,36 @@ Step Plan (`stepfun-plan`)：
             api: "openai-completions",
             apiKey: "${STEPFUN_API_KEY}",
             models: [
+              {
+                id: "step-3.7-flash",
+                name: "Step 3.7 Flash",
+                reasoning: true,
+                input: ["text", "image"],
+                thinkingLevelMap: { off: "low", minimal: "low", xhigh: "high", max: "high" },
+                cost: { input: 0.2, output: 1.15, cacheRead: 0.04, cacheWrite: 0 },
+                contextWindow: 262144,
+                maxTokens: 262144,
+                compat: {
+                  supportsStore: false,
+                  supportsDeveloperRole: false,
+                  supportsUsageInStreaming: false,
+                  supportsReasoningEffort: true,
+                  supportsStrictMode: false,
+                  supportedReasoningEfforts: ["low", "medium", "high"],
+                  maxTokensField: "max_tokens",
+                  reasoningEffortMap: {
+                    off: "low",
+                    none: "low",
+                    minimal: "low",
+                    low: "low",
+                    medium: "medium",
+                    high: "high",
+                    xhigh: "high",
+                    adaptive: "high",
+                    max: "high",
+                  },
+                },
+              },
               {
                 id: "step-3.5-flash",
                 name: "Step 3.5 Flash",
@@ -176,6 +209,36 @@ Step Plan (`stepfun-plan`)：
             apiKey: "${STEPFUN_API_KEY}",
             models: [
               {
+                id: "step-3.7-flash",
+                name: "Step 3.7 Flash",
+                reasoning: true,
+                input: ["text", "image"],
+                thinkingLevelMap: { off: "low", minimal: "low", xhigh: "high", max: "high" },
+                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+                contextWindow: 262144,
+                maxTokens: 262144,
+                compat: {
+                  supportsStore: false,
+                  supportsDeveloperRole: false,
+                  supportsUsageInStreaming: false,
+                  supportsReasoningEffort: true,
+                  supportsStrictMode: false,
+                  supportedReasoningEfforts: ["low", "medium", "high"],
+                  maxTokensField: "max_tokens",
+                  reasoningEffortMap: {
+                    off: "low",
+                    none: "low",
+                    minimal: "low",
+                    low: "low",
+                    medium: "medium",
+                    high: "high",
+                    xhigh: "high",
+                    adaptive: "high",
+                    max: "high",
+                  },
+                },
+              },
+              {
                 id: "step-3.5-flash",
                 name: "Step 3.5 Flash",
                 reasoning: true,
@@ -201,8 +264,10 @@ Step Plan (`stepfun-plan`)：
     ```
   </Accordion>
 
-  <Accordion title="注释">
-    - `step-3.5-flash-2603` 目前仅在 `stepfun-plan` 上开放。
+  <Accordion title="说明">
+    - `step-3.7-flash` 通过 OpenClaw 接受文本和图像输入。StepFun 的 API 也支持视频，但这还不是 OpenClaw 中的模型输入模态。
+    - Step 3.7 支持 `low`、`medium` 和 `high` 推理强度。由于该模型没有非推理模式，`/think off` 会映射为 `low`。
+    - `step-3.5-flash-2603` 目前仅在 `stepfun-plan` 上公开。
     - 使用 `openclaw models list` 和 `openclaw models set <provider/model>` 来查看或切换模型。
 
   </Accordion>

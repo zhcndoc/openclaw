@@ -1,5 +1,5 @@
 ---
-summary: "入站频道位置解析（Telegram、WhatsApp、Matrix、LINE）和上下文字段"
+summary: "频道位置解析和可移植的出站位置负载"
 read_when:
   - 添加或修改频道位置解析
   - 在代理提示或工具中使用位置上下文字段
@@ -39,9 +39,9 @@ OpenClaw 将来自聊天频道的共享位置规范化为：
   "longitude": 2.294351,
   "accuracy_m": 12,
   "source": "place",
-  "name": "Eiffel Tower",
-  "address": "Champ de Mars, Paris",
-  "caption": "Meet here"
+  "name": "埃菲尔铁塔",
+  "address": "战神广场，巴黎",
+  "caption": "在这里见面"
 }
 ```
 ````
@@ -62,6 +62,12 @@ OpenClaw 将来自聊天频道的共享位置规范化为：
 当频道未设置显式来源时，OpenClaw 会推断它：live 分享变为 `live`，带有名称或地址的位置变为 `place`，其余情况均为 `pin`。
 
 提示渲染器将 `LocationName`、`LocationAddress` 和 `LocationCaption` 视为不受信任的元数据，并通过与其他频道上下文相同的受限 JSON 路径对它们进行序列化。
+
+## 外发负载
+
+消息工具和 Plugin SDK 对可移植的外发位置使用相同的 `NormalizedLocation` 结构。仅包含坐标的负载表示一个图钉。支持原生场所的渠道可以将 `name` 加上 `address` 映射为场所卡片。
+
+Telegram 目前通过 `message(action="send")` 暴露此功能。其首个实现是刻意独立的：位置负载不能与文本或媒体混用，不完整的场所配对会失败，而不是静默丢弃名称或地址。不支持的渠道不会公开 location 参数。
 
 ## 频道说明
 

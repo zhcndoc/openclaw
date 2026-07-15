@@ -237,33 +237,62 @@ OpenClaw 配置：
 
 群组：
 
-- `channels.signal.groupPolicy = open | allowlist | disabled`。
-- 当设置为 `allowlist` 时，`channels.signal.groupAllowFrom` 控制哪些群组或发送者可以触发群组回复；条目可以是 Signal 群组 ID（原始值、`group:<id>` 或 `signal:group:<id>`）、发送者电话号码、`uuid:<id>` 值，或者 `*`。
-- `channels.signal.groups["<group-id>" | "*"]` 可通过 `requireMention`、`tools` 和 `toolsBySender` 覆盖群组行为。
+- `channels.signal.groupPolicy = open | allowlist | disabled`.
+- `channels.signal.groupAllowFrom` 控制在设置为 `allowlist` 时哪些群组或发送者可以触发群组回复；条目可以是 Signal 群组 ID（原始形式、`group:<id>` 或 `signal:group:<id>`）、发送者手机号、`uuid:<id>` 值或 `*`。
+- `channels.signal.groups["<group-id>" | "*"]` 可以通过 `requireMention`、`tools` 和 `toolsBySender` 覆盖群组行为。
 - 在多账号设置中，使用 `channels.signal.accounts.<id>.groups` 进行按账号覆盖。
-- 通过 `groupAllowFrom` 将某个群组加入允许名单，并不会自动禁用提及门控。专门配置的 `channels.signal.groups["<group-id>"]` 条目会处理该群组的每一条消息，除非显式设置了 `requireMention: true`。
-- 运行时说明：如果 `channels.signal` 完全缺失，运行时会在群组检查中回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy` 也是如此）。
+- 通过 `groupAllowFrom` 将某个 Signal 群组加入允许列表，并不会自动禁用提及门控。一个专门配置的 `channels.signal.groups["<group-id>"]` 条目会处理每条群消息，除非设置了 `requireMention=true`。
+- 当 `requireMention=true` 时，会根据结构化提及元数据将 Signal 原生 @mentions 与机器人账号手机号或 `accountUuid` 进行匹配。配置的 `mentionPatterns` 仍然是纯文本回退方案。
+- 运行时说明：如果 `channels.signal` 完全缺失，运行时会在群组检查中回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
+
+带有受限上下文的提及门控群组：
+
+```json5
+{
+  channels: {
+    signal: {
+      account: "+15551234567",
+      accountUuid: "bot-signal-uuid",
+      groupPolicy: "allowlist",
+      groupAllowFrom: ["group:<signal-group-id>"],
+      historyLimit: 8,
+      groups: {
+        "<signal-group-id>": { requireMention: true },
+      },
+    },
+  },
+  messages: {
+    groupChat: {
+      mentionPatterns: ["\\bopenclaw\\b"],
+    },
+  },
+}
+```
+
+未提及机器人的允许群消息会保持静默，并且只会保留在有限的待处理历史窗口中。当后续的原生 @mention 或回退文本提及触发机器人时，OpenClaw 会包含那段最近的上下文，并回复到同一个群组。被跳过的附件正文不会被下载；它们可能只会以紧凑的媒体占位符形式出现在待处理上下文中。
 
 ## 工作原理（行为）
 
 - 原生模式：`signal-cli` 作为守护进程运行；网关通过 SSE 读取事件。
 - 容器模式：网关通过 REST API 发送，并通过 WebSocket 接收。
-- 入站消息会被规范化为共享通道信封。
+- 入站消息会被规范化为共享的频道信封。
 - 回复始终路由回同一个号码或群组。
+- 对入站消息的回复会在后端接受入站时间戳和作者时包含原生 Signal 引用元数据；如果引用元数据缺失或被拒绝，OpenClaw 会将回复作为普通消息发送。
+- 使用 `channels.signal.replyToMode = off | first | all | batched` 配置原生引用使用，或使用 `channels.signal.replyToModeByChatType.direct/group` 进行按聊天类型覆盖。`channels.signal.accounts.<id>` 下的账号级别值优先。
 
 ## 媒体 + 限制
 
-- 发出的文本会按 `channels.signal.textChunkLimit` 分块（默认 4000）。
-- 可选的换行分块：将 `channels.signal.chunkMode` 设置为 `"newline"`，以便先按空行（段落边界）拆分，再按长度分块。
-- 支持附件（从 `signal-cli` 以 base64 获取）。
-- 当 `contentType` 缺失时，语音备忘录附件会使用 `signal-cli` 的文件名作为 MIME 回退值，因此音频转写仍可识别 AAC 语音备忘录。
+- 外发文本会按 `channels.signal.textChunkLimit` 分块（默认 4000）。
+- 可选换行分块：将 `channels.signal.streaming.chunkMode` 设置为 `"newline"`，以便先按空行（段落边界）拆分，再按长度分块。
+- 支持附件（通过 `signal-cli` 以 base64 获取）。
+- 当 `contentType` 缺失时，语音备忘录附件会使用 `signal-cli` 的文件名作为 MIME 回退值，因此音频转录仍可对 AAC 语音备忘录进行分类。
 - 默认媒体上限：`channels.signal.mediaMaxMb`（默认 8）。
-- 使用 `channels.signal.ignoreAttachments` 可跳过下载媒体。
-- 群聊历史上下文使用 `channels.signal.historyLimit`（或 `channels.signal.accounts.*.historyLimit`），并回退到 `messages.groupChat.historyLimit`。设置为 `0` 可禁用（默认 50）。
+- 使用 `channels.signal.ignoreAttachments` 可跳过媒体下载。
+- 群组历史上下文使用 `channels.signal.historyLimit`（或 `channels.signal.accounts.*.historyLimit`），若未设置则回退到 `messages.groupChat.historyLimit`。设为 `0` 可禁用（默认 50）。
 
-## 输入中显示 + 已读回执
+## 显示正在输入 + 已读回执
 
-- **输入中指示**：OpenClaw 通过 `signal-cli sendTyping` 发送输入中信号，并在回复生成期间持续刷新。
+- **输入中指示**：OpenClaw 通过 `signal-cli sendTyping` 发送正在输入信号，并在回复生成期间持续刷新。
 - **已读回执**：当 `channels.signal.sendReadReceipts` 为 true 时，OpenClaw 会转发允许的私信的已读回执。
 - `signal-cli` 不会为群组公开已读回执。
 
@@ -316,7 +345,7 @@ Signal exec 和 plugin 批准提示使用顶层的 `approvals.exec` 和 `approva
 
 ## 别名
 
-为重复使用的 Signal 目标配置稳定名称。别名仅为 OpenClaw 侧配置；它们不会创建或编辑 Signal 联系人。
+为可重复使用的 Signal 目标配置稳定名称。别名仅用于 OpenClaw 侧配置；它们不会创建或编辑 Signal 联系人。
 
 ```json5
 {
@@ -362,7 +391,7 @@ openclaw message send --channel signal --target signal:ops --message "部署已�
 
 `openclaw directory peers list --channel signal` 和 `openclaw directory groups list --channel signal` 会列出已配置的别名。Signal 目录由配置驱动；它不会实时查询 Signal 联系人，也不会修改 Signal 账户。
 
-## Troubleshooting
+## 故障排查
 
 先运行这组检查：
 
@@ -412,46 +441,50 @@ grep -i "signal" "/tmp/openclaw/openclaw-$(date +%Y-%m-%d).log" | tail -20
 提供程序选项：
 
 - `channels.signal.enabled`: 启用/禁用通道启动。
-- `channels.signal.apiMode`: `auto | native | container`（默认：auto）。参见 [容器模式](#container-mode-bbernhardsignal-cli-rest-api)。
-- `channels.signal.account`: 机器人账户的 E.164 格式。
+- `channels.signal.apiMode`: `auto | native | container`（默认：auto）。请参见 [容器模式](#container-mode-bbernhardsignal-cli-rest-api)。
+- `channels.signal.account`: 机器人账号的 E.164。
+- `channels.signal.accountUuid`: 可选的机器人账号 UUID，用于原生 @ 提及检测和循环保护。
 - `channels.signal.cliPath`: `signal-cli` 的路径。
 - `channels.signal.configPath`: 可选的 `signal-cli --config` 目录。
 - `channels.signal.httpUrl`: 完整的守护进程 URL（覆盖 host/port）。
 - `channels.signal.httpHost`, `channels.signal.httpPort`: 守护进程绑定地址（默认 `127.0.0.1:8080`）。
-- `channels.signal.autoStart`: 自动启动守护进程（当 `httpUrl` 未设置时默认 true）。
-- `channels.signal.startupTimeoutMs`: 启动等待超时时间（单位 ms，最小 1000，最大 120000；默认 30000）。
+- `channels.signal.autoStart`: 自动启动守护进程（如果未设置 `httpUrl`，默认 true）。
+- `channels.signal.startupTimeoutMs`: 启动等待超时时间，单位为 ms（最小 1000，最大 120000；默认 30000）。
 - `channels.signal.receiveMode`: `on-start | manual`。
 - `channels.signal.ignoreAttachments`: 跳过附件下载。
 - `channels.signal.ignoreStories`: 忽略来自守护进程的动态。
 - `channels.signal.sendReadReceipts`: 转发已读回执。
 - `channels.signal.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）。
-- `channels.signal.allowFrom`: DM 白名单（E.164 或 `uuid:<id>`）。`open` 需要 `"*"`. Signal 没有用户名；请使用手机号/UUID 标识。
+- `channels.signal.allowFrom`: DM 白名单（E.164 或 `uuid:<id>`）。`open` 需要 `"*"`。Signal 没有用户名；请使用电话/UUID ID。
 - `channels.signal.aliases`: OpenClaw 侧用于 DM 或群组投递目标的别名。
 - `channels.signal.groupPolicy`: `open | allowlist | disabled`（默认：allowlist）。
-- `channels.signal.groupAllowFrom`: 群组白名单；接受 Signal 群组 ID（原始值、`group:<id>` 或 `signal:group:<id>`）、发送者 E.164 号码，或 `uuid:<id>` 值。
-- `channels.signal.groups`: 以 Signal 群组 ID（或 `"*"`）为键的每个群组覆盖配置。支持字段：`requireMention`、`tools`、`toolsBySender`。
-- `channels.signal.accounts.<id>.groups`: `channels.signal.groups` 的按账户版本，适用于多账户设置。
-- `channels.signal.accounts.<id>.aliases`: 按账户别名，与顶层别名合并。
-- `channels.signal.historyLimit`: 作为上下文包含的最大群消息数（0 为禁用）。
-- `channels.signal.dmHistoryLimit`: DM 历史记录限制，以用户轮次计。每用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
-- `channels.signal.textChunkLimit`: 出站分块大小，按字符计（默认 4000）。
-- `channels.signal.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）拆分，再进行长度分块。
+- `channels.signal.groupAllowFrom`: 群组白名单；接受 Signal 群组 ID（原始格式、`group:<id>` 或 `signal:group:<id>`）、发送者 E.164 号码，或 `uuid:<id>` 值。
+- `channels.signal.groups`: 按 Signal 群组 ID（或 `"*"`）键控的每个群组覆盖项。支持字段：`requireMention`、`tools`、`toolsBySender`。
+- `channels.signal.accounts.<id>.groups`: 多账号设置中，`channels.signal.groups` 的按账号版本。
+- `channels.signal.accounts.<id>.aliases`: 按账号别名，与顶层 aliases 合并。
+- `channels.signal.replyToMode`: 原生回复引用模式，`off | first | all | batched`（默认：`all`）。
+- `channels.signal.replyToModeByChatType.direct`, `channels.signal.replyToModeByChatType.group`: 按聊天类型的原生回复引用覆盖项。
+- `channels.signal.accounts.<id>.replyToMode`, `channels.signal.accounts.<id>.replyToModeByChatType.direct`, `channels.signal.accounts.<id>.replyToModeByChatType.group`: 按账号的回复引用覆盖项。
+- `channels.signal.historyLimit`: 作为上下文包含的最大群消息数（0 表示禁用）。
+- `channels.signal.dmHistoryLimit`: DM 历史记录限制，以用户轮次计。按用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
+- `channels.signal.textChunkLimit`: 出站分块字符数（默认 4000）。
+- `channels.signal.streaming.chunkMode`: `length`（默认）或 `newline`，在按长度分块之前按空行（段落边界）拆分。
 - `channels.signal.mediaMaxMb`: 入站/出站媒体上限，单位 MB（默认 8）。
-- `channels.signal.reactionLevel`: `off | ack | minimal | extensive`（默认 `minimal`）。参见 [表情反应](#reactions-message-tool)。
-- `channels.signal.reactionNotifications`: `off | own | all | allowlist`（默认 `own`）——当来自他人的传入反应通知代理时的设置。
-- `channels.signal.reactionAllowlist`: 当 `reactionNotifications: "allowlist"` 时，会通知代理的反应发送者白名单。
-- `channels.signal.blockStreaming`, `channels.signal.blockStreamingCoalesce`: 各通道共享的阻塞模式流式控制。参见 [流式传输](/concepts/streaming)。
+- `channels.signal.reactionLevel`: `off | ack | minimal | extensive`（默认 `minimal`）。参见 [反应](#reactions-message-tool)。
+- `channels.signal.reactionNotifications`: `off | own | all | allowlist`（默认 `own`）- 当代理收到他人发来的反应时进行通知。
+- `channels.signal.reactionAllowlist`: 当 `reactionNotifications: "allowlist"` 时，其反应会通知代理的发送者。
+- `channels.signal.streaming.block.enabled`, `channels.signal.streaming.block.coalesce`: 跨通道共享的块模式流式控制。参见 [流式传输](/concepts/streaming)。
 
 相关全局选项：
 
-- `agents.list[].groupChat.mentionPatterns`（Signal 不支持原生提及）。
+- `agents.list[].groupChat.mentionPatterns`（纯文本回退；当配置了机器人账号身份时，Signal 原生 @ 提及会从结构化元数据中检测到）。
 - `messages.groupChat.mentionPatterns`（全局回退）。
 - `messages.responsePrefix`。
 
 ## 相关内容
 
-- [Channels Overview](/channels) - 所有支持的频道
-- [Pairing](/channels/pairing) - DM 身份验证和配对流程
-- [Groups](/channels/groups) - 群聊行为和提及门控
-- [Channel Routing](/channels/channel-routing) - 消息的会话路由
-- [Security](/gateway/security) - 访问模型和加固
+- [频道概览](/channels) - 所有支持的频道
+- [配对](/channels/pairing) - DM 身份验证和配对流程
+- [群组](/channels/groups) - 群聊行为和提及门控
+- [频道路由](/channels/channel-routing) - 消息的会话路由
+- [安全性](/gateway/security) - 访问模型和加固

@@ -50,19 +50,19 @@ WebSocket `listen` 端点转发实时 G.711 u-law 帧，并在 Deepgram 返回�
   </Step>
 </Steps>
 
-## 配置选项
+## Configuration Options
 
-| 选项       | 路径                                  | 描述                               |
+| Option       | Path                                  | Description                               |
 | ---------- | ------------------------------------- | ------------------------------------- |
-| `model`    | `tools.media.audio.models[].model`    | Deepgram 模型 ID（默认：`nova-3`）   |
-| `language` | `tools.media.audio.models[].language` | 语言提示（可选）                   |
+| `model`    | `tools.media.audio.models[].model`    | Deepgram model ID (default: `nova-3`)   |
+| `language` | `tools.media.audio.models[].language` | Language hint (optional)                   |
 
-`providerOptions.deepgram` 会将额外的查询参数直接合并到
-Deepgram `/listen` 请求中，因此任何 Deepgram 支持的参数名都可以使用
-（例如 `detect_language`、`punctuate`、`smart_format`）：
+`providerOptions.deepgram` will merge extra query parameters directly into
+the Deepgram `/listen` request, so any parameter name supported by Deepgram can be used
+(for example, `detect_language`, `punctuate`, `smart_format`):
 
 <Tabs>
-  <Tab title="使用语言提示">
+  <Tab title="Using Language Hints">
     ```json5
     {
       tools: {
@@ -76,7 +76,7 @@ Deepgram `/listen` 请求中，因此任何 Deepgram 支持的参数名都可以
     }
     ```
   </Tab>
-  <Tab title="使用 Deepgram 选项">
+  <Tab title="Using Deepgram Options">
     ```json5
     {
       tools: {
@@ -103,15 +103,16 @@ Deepgram `/listen` 请求中，因此任何 Deepgram 支持的参数名都可以
 
 内置的 `deepgram` 插件还会为 Voice Call 插件注册一个实时转录提供方。
 
-| 设置            | 配置路径                                                            | 默认值                         |
-| --------------- | ------------------------------------------------------------------- | ------------------------------ |
-| API key         | `plugins.entries.voice-call.config.streaming.providers.deepgram.apiKey` | 回退到 `DEEPGRAM_API_KEY`       |
-| 模型            | `...deepgram.model`                                                | `nova-3`                       |
-| 语言            | `...deepgram.language`                                             | （未设置）                     |
-| 编码            | `...deepgram.encoding`                                             | `mulaw`                        |
-| 采样率          | `...deepgram.sampleRate`                                           | `8000`                         |
-| 端点检测        | `...deepgram.endpointingMs`                                        | `800`                          |
-| 中间结果        | `...deepgram.interimResults`                                       | `true`                         |
+| 设置            | 配置路径                                                            | 默认值                                       |
+| --------------- | ------------------------------------------------------------------- | -------------------------------------------- |
+| API key         | `plugins.entries.voice-call.config.streaming.providers.deepgram.apiKey` | 回退到 `DEEPGRAM_API_KEY`                   |
+| 基础 URL        | `...deepgram.baseUrl`                                               | `DEEPGRAM_BASE_URL` 或 Deepgram 的公共 API   |
+| 模型            | `...deepgram.model`                                                 | `nova-3`                                     |
+| 语言            | `...deepgram.language`                                              | （未设置）                                   |
+| 编码            | `...deepgram.encoding`                                              | `mulaw`                                      |
+| 采样率          | `...deepgram.sampleRate`                                           | `8000`                                       |
+| 端点检测        | `...deepgram.endpointingMs`                                        | `800`                                        |
+| 中间结果        | `...deepgram.interimResults`                                       | `true`                                       |
 
 ```json5
 {
@@ -137,6 +138,12 @@ Deepgram `/listen` 请求中，因此任何 Deepgram 支持的参数名都可以
   },
 }
 ```
+
+对于 [Deepgram 自定义端点](https://developers.deepgram.com/reference/custom-endpoints)，
+将 `baseUrl` 设置为端点根地址，包括任何基础路径，但不包括 `/listen`。
+实时端点接受 `http://`、`https://`、`ws://` 和 `wss://`。HTTP
+会映射为 WS，HTTPS 会映射为 WSS，而显式的 WebSocket 协议保持不变。
+格式错误的 URL 和其他协议会在会话设置期间失败。
 
 <Note>
 Voice Call 接收的是 8 kHz G.711 u-law 电话音频。Deepgram
@@ -173,7 +180,7 @@ Twilio 媒体帧可以直接转发。
   <Card title="故障排查" href="/help/troubleshooting" icon="wrench">
     常见问题和调试步骤。
   </Card>
-  <Card title="FAQ" href="/help/faq" icon="circle-question">
+  <Card title="常见问题" href="/help/faq" icon="circle-question">
     关于 OpenClaw 设置的常见问题。
   </Card>
 </CardGroup>

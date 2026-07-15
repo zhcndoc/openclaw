@@ -211,8 +211,10 @@ export QMD_GENERATE_MODEL="/absolute/path/to/generator.gguf"
 仅词法搜索，跳过 QMD 向量状态探测和嵌入维护，并
 将语义就绪检查留给 `vsearch` 或 `query` 配置。
 
-**搜索超时？** 增加 `memory.qmd.limits.timeoutMs`（默认：
-4000ms）。例如在较慢的硬件上可将其设为更高值，如 `120000`。
+**搜索超时？** 增加 `memory.qmd.limits.timeoutMs`（默认值：4000ms）。
+对于较慢的硬件，可以将其设置得更高，例如 `120000`。此限制适用于
+agent 执行 `memory_search` 调用时 QMD 自身的搜索命令；初始化、同步、
+内置回退以及补充语料库工作仍使用各自更短的截止时间。
 
 **群聊或频道聊天中结果为空？** 这是默认 `memory.qmd.scope`
 下的预期行为，它只允许直接会话。如果你希望在这些场景中使用 QMD 结果，请为 `group` 或 `channel` 聊天类型添加一个 `allow` 规则。

@@ -64,10 +64,28 @@ export const demoMessageAdapter = defineChannelMessageAdapter({
 
 只声明原生传输实际会保留的能力。请使用从此子路径导出的契约辅助函数，覆盖每一个已声明的发送、回执、实时预览和接收确认能力。
 
-## 现有的出站适配器
+## 纯文本清理
 
-如果该 channel 已经有一个兼容的 `outbound` 适配器，则应从中派生
-message 适配器，而不是重复编写发送代码：
+当出站适配器需要将受支持的 HTML 格式标签转换为轻量级文本标记时，请使用 `sanitizeForPlainText(...)`。默认会保留现有的聊天风格加粗和删除线标记。仅当该渠道会将结果重新解析为 Markdown 时，才传入 `{ style: "markdown" }`：
+
+```ts
+import { sanitizeForPlainText } from "openclaw/plugin-sdk/channel-outbound";
+
+const chatText = sanitizeForPlainText(text);
+const markdownText = sanitizeForPlainText(text, { style: "markdown" });
+```
+
+Markdown 风格使用 `**bold**` 和 `~~strikethrough~~`；斜体和行内代码在两种风格中都保留 `_italic_` 和反引号标记。应在渠道边界选择样式，而不是在清理后重写标记文本。
+
+## 投递证据
+
+`MessageReceipt` 记录由通道适配器返回的结果。具体的平台消息标识符表明平台发送路径已接受该消息；它们并不能证明收件人的设备已经显示或读取了该消息。不带平台消息标识符的收据仅是本地收据元数据。对于具有已读回执或设备投递状态的通道，应通过单独的、通道特定的路径来跟踪这些事实。
+
+如果某个通道适配器能够证明，重试失败不会导致收件人可见的发送重复，并且尚未开始任何具备最终化能力的调用，则应从 `openclaw/plugin-sdk/error-runtime` 抛出 `new PlatformMessageNotDispatchedError("...", { cause: error })`。这样 Core 就可以清除过时的发送尝试证据，并安全地重试队列中的意图。只有拥有最终分发边界的适配器才能做出这一断言。切勿在最终化/发送调用开始后或返回歧义结果后使用该标记；错误标记会导致消息重复。
+
+## Existing outbound adapters
+
+If the channel already has a compatible `outbound` adapter, derive the message adapter from it instead of duplicating the send code:
 
 ```ts
 import { createChannelMessageAdapterFromOutbound } from "openclaw/plugin-sdk/channel-outbound";
@@ -95,17 +113,23 @@ export const messageAdapter = createChannelMessageAdapterFromOutbound({
 
 `sendDurableMessageBatch(...)` 返回一个明确结果：
 
-| Outcome          | Meaning                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------- |
-| `sent`           | 至少投递了一条可见的平台消息                                      |
-| `suppressed`     | 没有平台消息应被视为缺失                                         |
-| `partial_failed` | 在后续有效载荷或副作用失败之前，至少已投递了一条平台消息 |
-| `failed`         | 未生成任何平台回执                                                         |
+| Outcome          | Meaning                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| `sent`           | 至少有一条可见的平台消息被平台发送路径接受                                                |
+| `suppressed`     | 不应将任何平台消息视为缺失                                                                |
+| `partial_failed` | 在后续有效载荷或副作用失败之前，至少有一条平台消息被接受                                  |
+| `failed`         | 未产生任何平台回执                                                                      |
 
-当一个批次混合了已发送、已抑制和失败的
-有效载荷时，请使用 `payloadOutcomes`。不要根据空的旧版
-直接投递结果推断 hook 被取消。
+当一个批次混合了已发送、已抑制和失败的有效载荷时，请使用 `payloadOutcomes`。不要根据空的旧版直接投递结果推断 hook 被取消。
 
-## 兼容性调度
+## 延迟投递准入
+
+当已解析的账户无法安全接受由 core 管理的出站或延迟投递时，请使用 `message.durableFinal.admitDeferredDelivery(...)`。Core 会在实时出站工作之前同步调用此钩子，包括跳过队列持久化的路径，并且会在回放已恢复的意图之前再次调用。上下文包含 `cfg`、`channel`、`to`、`accountId`，以及值为 `live` 或 `recovery` 的 `phase`。
+
+返回 `{ status: "allowed" }` 以继续。若投递不得被持久化、直接发送或回放，则返回 `{ status: "permanent_rejection", reason }`。实时拒绝会在创建队列、消息钩子或平台工作之前失败。恢复拒绝会将队列记录标记为失败，并跳过协调与回放。省略该钩子则表示允许。
+
+该钩子是同步的准入决策，而不是发送路径。只读取已经加载的配置或运行时状态；不要进行网络、文件系统或其他异步 I/O。契约测试应通过来自 `openclaw/plugin-sdk/channel-outbound` 的 `ChannelMessageDurableFinalAdapter` 覆盖两个阶段以及两种结果变体。
+
+## 兼容性分发
 
 通过 `channel-inbound` 中的 `dispatchChannelInboundReply(...)` 组装入站回复调度。将平台投递保留在投递适配器中；对消息适配器、持久化发送、回执、实时预览以及回复管道选项，使用 `channel-outbound`。

@@ -7,7 +7,7 @@ read_when:
 title: "从 Hermes 迁移"
 ---
 
-内置的 Hermes 迁移提供程序会检测 `~/.hermes` 中的状态，在应用之前预览每一项更改，在计划和报告中对密钥信息进行脱敏，并且在触碰任何内容之前会先写入一个已验证的 OpenClaw 备份。
+随附的 Hermes 迁移提供程序会跟随 `HERMES_HOME` 和当前激活的 Hermes 配置文件，并在 macOS/Linux 上回退到 `~/.hermes`，在 Windows 上回退到 `%LOCALAPPDATA%\hermes`。它会在应用之前预览每一项更改，在计划和报告中会对密钥进行脱敏，并在接触任何内容之前写入经过验证的 OpenClaw 备份。显式的 `--from` 路径始终优先生效。
 
 <Note>
 导入需要一个全新的 OpenClaw 设置。如果你已经有本地 OpenClaw 状态，请先重置配置、凭据、会话和工作区，或者在查看计划后直接使用带有 `--overwrite` 的 `openclaw migrate apply hermes`。
@@ -16,8 +16,8 @@ title: "从 Hermes 迁移"
 ## 两种导入方式
 
 <Tabs>
-  <Tab title="入门向导">
-    检测 `~/.hermes` 中的 Hermes，并在应用前显示预览。
+  <Tab title="Onboarding wizard">
+    检测活动的 Hermes home/profile，并在应用前显示预览。
 
     ```bash
     openclaw onboard --flow import
@@ -38,7 +38,7 @@ title: "从 Hermes 迁移"
     openclaw migrate apply hermes --yes  # 应用并跳过确认
     ```
 
-    当 Hermes 位于 `~/.hermes` 之外时，添加 `--from <path>`。
+    添加 `--from <path>` 以覆盖 Hermes home/profile 的自动发现。
 
   </Tab>
 </Tabs>
@@ -46,13 +46,13 @@ title: "从 Hermes 迁移"
 ## 会导入什么
 
 <AccordionGroup>
-  <Accordion title="模型配置">
+  <Accordion title="Model configuration">
     - 来自 Hermes `config.yaml` 的默认模型选择。
-    - 来自 `providers` 和 `custom_providers` 的已配置模型提供商以及自定义 OpenAI 兼容端点。
+    - 来自 `model`、`providers` 和 `custom_providers` 的已配置模型提供器和自定义端点，包括当前 Hermes Chat Completions、Codex Responses 和 Anthropic Messages 传输。
 
   </Accordion>
-  <Accordion title="MCP 服务器">
-    来自 `mcp_servers` 或 `mcp.servers` 的 MCP 服务器定义。
+  <Accordion title="MCP servers">
+    来自 `mcp_servers` 或 `mcp.servers` 的 MCP 服务器定义，包括禁用状态、超时、并行工具支持、OAuth 范围、兼容的 TLS 字段，以及原生/资源/提示工具策略。字面量环境变量和标头需要凭据导入同意。仅适用于 Hermes 的生命周期、采样、引发、预检、保活、CA 证书包、受密码保护的客户端密钥，以及预注册的 OAuth 客户端设置，会被标记为需要人工审查的项目，而不是无效的 OpenClaw 配置。
   </Accordion>
   <Accordion title="工作区文件">
     - `SOUL.md` 和 `AGENTS.md` 会被复制到 OpenClaw 的 agent 工作区中。
@@ -62,11 +62,11 @@ title: "从 Hermes 迁移"
   <Accordion title="记忆配置">
     OpenClaw 文件记忆的默认记忆配置。像 Honcho 这样的外部记忆提供器会被记录为归档或需人工审查的项目，以便你有意地迁移它们。
   </Accordion>
-  <Accordion title="技能">
-    位于 `skills/<name>/` 下、包含 `SKILL.md` 文件的技能会被复制，同时还会复制来自 `skills.config` 的每个技能的配置值。
+  <Accordion title="Skills">
+    `skills/` 下任意位置包含 `SKILL.md` 文件的 Skills 都会被递归发现、扁平化到 OpenClaw 工作区技能目录中，并连同其支持文件一起复制。来自 `skills.config` 的每个 skill 配置值都会被保留。
   </Accordion>
   <Accordion title="Auth credentials">
-    交互式 `openclaw migrate` 会在导入认证凭据前询问，默认选择“是”。接受后会从 OpenCode 的 `auth.json` 中导入 OpenCode OpenAI OAuth 和 GitHub Copilot 条目，以及 [受支持的 Hermes `.env` 键](/cli/migrate#supported-env-keys)。Hermes 自己的 `auth.json` OAuth 条目属于旧版状态：它们会作为手动重新认证/诊断项显示，而不会导入到实际生效的认证中。使用 `--include-secrets` 可在非交互运行中导入凭据，使用 `--no-auth-credentials` 可完全跳过凭据导入，或在入门向导中使用 `--import-secrets` 标志。
+    交互式 `openclaw migrate` 会在导入 auth credentials 前询问，默认选中“是”。接受的导入包括当前 Hermes OpenAI Codex OAuth 条目、OpenCode OpenAI OAuth 和 GitHub Copilot 条目，以及[支持的 Hermes `.env` 键](/cli/migrate#supported-env-keys)。非交互式导入请使用 `--include-secrets`，跳过凭据请使用 `--no-auth-credentials`，或使用 onboarding 的 `--import-secrets` 标志。导入 Hermes OAuth 后，不要让 Hermes 和 OpenClaw 继续使用同一个 refresh grant；在同时运行两者之前，请先让其中一侧重新认证。
   </Accordion>
 </AccordionGroup>
 
@@ -79,7 +79,9 @@ title: "从 Hermes 迁移"
 - `logs/`
 - `cron/`
 - `mcp-tokens/`
-- `state.db`
+- `plans/`, `workspace/`, `skins/`, and `kanban/`
+- `pairing/` and `platforms/` stores, plus gateway routing/process state
+- `state.db`, `hermes_state.db`, `projects.db`, `response_store.db`, `memory_store.db`, `verification_evidence.db`, `kanban.db`, and `retaindb_queue.db`
 
 OpenClaw 会拒绝自动执行或信任这些状态，因为不同系统之间的格式和信任假设可能会发生变化。请在查看归档后手动移动你需要的内容。
 
@@ -131,16 +133,16 @@ OpenClaw 会拒绝自动执行或信任这些状态，因为不同系统之间�
 
 在全新安装中，冲突并不常见。它们通常出现在你针对一个已经有用户修改的设置重新运行导入时。
 
-如果在应用过程中中途出现冲突（例如某个配置文件上发生了意外竞争），Hermes 会将剩余的相关配置项标记为 `skipped`，原因是 `blocked by earlier apply conflict`，而不是部分写入它们。迁移报告会记录每个被阻塞的项目，以便你解决最初的冲突后重新运行导入。
+如果在应用过程中中途出现冲突（例如，配置文件上发生了意外的竞争），该项会被报告为冲突，而其他独立的文件、技能、凭据、归档和配置条目会继续处理。请解决发生冲突的项目后重新运行导入；相同的内存导入是幂等的。
 
 ## 秘密信息
 
 交互式 `openclaw migrate` 会询问是否导入检测到的认证凭据，默认选择“是”。
 
-- 接受从 OpenCode 的 `auth.json` 导入 OpenCode OpenAI OAuth 和 GitHub Copilot 条目，以及 [支持的 `.env` 键](/cli/migrate#supported-env-keys)。Hermes 自己的 `auth.json` 中的 OAuth 条目会被报告出来，以便手动重新进行 OpenAI 认证或使用 doctor 修复。
-- 使用 `--no-auth-credentials`，或在提示时回答 no，仅导入非敏感状态。
-- 在无人值守的 `--yes` 运行中，使用 `--include-secrets` 导入凭据。
-- 使用 onboarding 向导的 `--import-secrets` 标志从向导中导入凭据。
+- 接受导入当前的 Hermes OpenAI Codex OAuth 条目、OpenCode OpenAI OAuth 和 GitHub Copilot 条目，以及 [受支持的 `.env` 键](/cli/migrate#supported-env-keys)。
+- 使用 `--no-auth-credentials`，或在提示时回答 no，只导入非秘密状态。
+- 使用 `--include-secrets` 可在无人值守的 `--yes` 运行中导入凭据。
+- 使用 onboarding wizard 的 `--import-secrets` 标志从 wizard 导入凭据。
 
 ## 用于自动化的 JSON 输出
 

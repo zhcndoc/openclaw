@@ -80,21 +80,23 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 说明：
 
-- 只有后台运行的会话会被列出/持久化——仅保存在内存中，不在磁盘上。进程重启后会话会丢失。
-- 只有当你运行 `process poll`/`log` 且工具结果被记录到聊天历史时，会话日志才会保存到聊天历史中。
-- `process` 以 agent 为范围；它只能看到由该 agent 启动的会话。
+- 仅列出/持久化后台会话——仅存在于内存中，不会写入磁盘。进程重启后会话将丢失。
+- 活动的后台会话会阻止协作式主机挂起，并且在进程所有者确认其实际退出之前，也会阻止安全的 Gateway 重启。
+- `process remove` 可以在请求终止后立即隐藏正在运行的会话；但在退出确认之前，挂起和重启仍会被阻止。
+- 只有当你运行 `process poll`/`log` 且工具结果被记录到聊天历史中时，会话日志才会保存到聊天历史。
+- `process` 作用域按代理隔离；它只能看到由该代理启动的会话。
 - 当自动完成唤醒不可用时，使用 `poll`/`log` 获取状态、日志或完成确认。
-- 在恢复交互式 CLI 之前先使用 `log`，这样当前的会话记录、stdin 状态和输入等待提示会一起可见。
+- 在恢复交互式 CLI 之前先使用 `log`，这样当前会话记录、stdin 状态和输入等待提示会一起可见。
 - 当你需要输入或干预时，使用 `write`/`send-keys`/`submit`/`paste`/`kill`。
-- `process list` 包含一个派生的 `name`（命令动词 + 目标），便于快速浏览。
-- 只有当会话仍然有可写的 stdin 且空闲时间超过输入等待阈值时（默认 15000 ms，`OPENCLAW_PROCESS_INPUT_WAIT_IDLE_MS`），`process list`、`poll` 和 `log` 才会报告 `waitingForInput`。
-- `process log` 使用基于行的 `offset`/`limit`。当两者都省略时，它会返回最后 200 行并附带分页提示。当设置了 `offset` 但未设置 `limit` 时，它会从 `offset` 返回到末尾（不限制为 200）。
-- `poll` 的 `timeout` 会在返回前最多等待这么多毫秒；超过 30000 的值会被截断为 30000。
-- Polling 用于按需获取状态，不用于循环等待调度。如果工作应该稍后执行，请使用 cron。
+- `process list` 会包含一个派生的 `name`（命令动词 + 目标），便于快速查看。
+- 只有当会话仍有可写 stdin 且已空闲时间超过输入等待阈值（默认 15000 毫秒，`OPENCLAW_PROCESS_INPUT_WAIT_IDLE_MS`）时，`process list`、`poll` 和 `log` 才会报告 `waitingForInput`。
+- `process log` 使用按行的 `offset`/`limit`。当两者都省略时，它返回最后 200 行并附带分页提示。当设置了 `offset` 而未设置 `limit` 时，它会从 `offset` 返回到末尾（不会限制为 200 行）。
+- `poll` 的 `timeout` 会在返回前最多等待相应毫秒数；超过 30000 的值会被截断为 30000。
+- `poll` 用于按需获取状态，不用于等待循环调度。如果工作应在稍后发生，请使用 cron。
 
 ## 示例
 
-Run a long task and poll later:
+运行一个长任务并稍后轮询：
 
 ```json
 { "tool": "exec", "command": "sleep 5 && echo done", "yieldMs": 1000 }
@@ -104,37 +106,37 @@ Run a long task and poll later:
 { "tool": "process", "action": "poll", "sessionId": "<id>" }
 ```
 
-Check an interactive session before sending input:
+在发送输入前检查一个交互式会话：
 
 ```json
 { "tool": "process", "action": "log", "sessionId": "<id>" }
 ```
 
-Start in the background immediately:
+立即在后台启动：
 
 ```json
 { "tool": "exec", "command": "npm run build", "background": true }
 ```
 
-Send stdin:
+发送 stdin：
 
 ```json
 { "tool": "process", "action": "write", "sessionId": "<id>", "data": "y\n" }
 ```
 
-Send PTY keys:
+发送 PTY 按键：
 
 ```json
 { "tool": "process", "action": "send-keys", "sessionId": "<id>", "keys": ["C-c"] }
 ```
 
-Submit the current line:
+提交当前行：
 
 ```json
 { "tool": "process", "action": "submit", "sessionId": "<id>" }
 ```
 
-Paste literal text:
+粘贴字面文本：
 
 ```json
 { "tool": "process", "action": "paste", "sessionId": "<id>", "text": "line1\nline2\n" }

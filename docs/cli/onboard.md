@@ -1,13 +1,16 @@
 ---
 summary: "OpenClaw 上机引导的 CLI 参考（交互式引导）"
 read_when:
-  - 你需要关于 gateway、workspace、auth、channels 和 skills 的引导式设置
-title: "引导"
+  - 你想先建立推理能力，然后用 Crestodian 完成设置
+title: "Onboard"
 ---
 
 # `openclaw onboard`
 
-用于模型认证、workspace、gateway、channels、skills 和健康检查的一体化引导设置。`openclaw setup` 是相同入口；`openclaw setup --baseline` 只写入基础配置/workspace。
+引导式设置会先建立推理能力：它会检测现有的 AI 访问方式，
+要求进行一次成功的实时补全，只持久化可工作的路由，然后启动
+Crestodian 来配置其余部分。`openclaw setup` 是相同的入口点；
+`openclaw setup --baseline` 只会写入基础配置/工作区。
 
 <CardGroup cols={2}>
   <Card title="CLI 引导中心" href="/start/wizard" icon="rocket">
@@ -31,6 +34,7 @@ title: "引导"
 
 ```bash
 openclaw onboard
+openclaw onboard --classic
 openclaw onboard --modern
 openclaw onboard --flow quickstart
 openclaw onboard --flow manual
@@ -40,16 +44,68 @@ openclaw onboard --skip-bootstrap
 openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 ```
 
-- `--flow quickstart`：最少的提示，自动生成网关令牌。
-- `--flow manual`（别名 `advanced`）：为端口、绑定和认证提供完整提示。
-- `--flow import`：运行检测到的迁移提供程序（例如通过 `--import-from hermes` 运行 Hermes），预览计划，然后在确认后应用。导入仅在全新的 OpenClaw 设置上运行——如果已有任何内容，请先重置配置、凭据、会话和工作区状态。使用 [`openclaw migrate`](/cli/migrate) 可进行 dry-run 计划、覆盖模式、报告和精确映射。
-- `--modern` 会启动 Crestodian 对话式设置/修复助手，而不是经典流程。
+- `--classic`：打开完整的逐步向导。它不能与
+  `--non-interactive` 组合使用；自动化设置时请省略 `--classic`。
+- `--flow quickstart`：打开带最少提示的经典向导，并
+  自动生成一个网关令牌。
+- `--flow manual`（别名 `advanced`）：打开带完整提示的经典向导，
+  用于端口、绑定和认证。
+- `--flow import`：运行检测到的迁移提供程序（例如通过 `--import-from hermes` 的 Hermes），预览计划，然后在确认后应用。导入仅在全新的 OpenClaw 设置上运行——如果已存在，请先重置配置、凭据、会话和工作区状态。对于干运行计划、覆盖模式、报告和精确映射，请使用 [`openclaw migrate`](/cli/migrate)。
+- `--modern` 是 Crestodian 对话式设置助手的兼容别名。
+  它使用与 `openclaw crestodian` 相同的实时推理门控，并且
+  仅接受 `--workspace`、`--accept-risk`、
+  `--non-interactive` 和 `--json`。其他设置标志会被拒绝，而不会
+  被静默忽略。
+
+## 引导流程
+
+直接运行 `openclaw onboard` 会启动引导流程。它会显示安全提示，
+检测已通过已配置模型、API 密钥
+环境变量以及受支持的本地 CLI 可用的 AI 访问，然后用一次真实补全测试
+推荐的候选项。如果该候选项失败，入门流程会显示
+原因并自动尝试下一个可用候选项。
+
+如果自动检测已用尽，请选择另一个已检测到的候选项，或在
+已遮蔽提示中输入提供方 API 密钥。手动输入的密钥会通过相同的
+实时补全路径进行测试。引导式入门
+在某个候选项通过之前，不会提供 Crestodian 或跳过 AI 的退出方式。OpenClaw
+只会在测试
+成功后持久化经过验证的模型路由及其凭据；失败的候选项不会替换已配置的模型，也不会保存
+所尝试的凭据。在 Crestodian 启动之前，Workspace 和 Gateway 的设置保持不变。
+
+在引导模式下，`--workspace <dir>` 会提供 Crestodian 建议的工作区
+和隔离的推理上下文。只有在你批准
+Crestodian 设置提案后，它才会被持久化。经典和非交互式入门会通过其
+正常的设置流程持久化工作区。
+
+推理通过后，引导式入门会立即使用已验证的模型启动 Crestodian。
+随后 Crestodian 可以配置工作区、Gateway、
+频道、代理、插件和其他可选功能。在 Crestodian 中，使用
+`open channel wizard for <channel>` 可将频道凭据收集交给
+一个已遮蔽的终端向导。若要更改模型提供方或其认证方式，
+请退出 Crestodian 并运行 `openclaw onboard`；Crestodian 不会打开引导式
+或经典的提供方流程。
+
+在已配置的安装中，再次运行 `openclaw onboard` 会先验证当前
+默认模型，因此同一流程也可作为验证和修复步骤。
+如果该检查失败，已配置的模型绝不会被自动替换——
+入门流程会停止并询问如何继续。该检查在你的
+工作区之外运行，因此由工作区插件提供的模型可能在此处失败，但仍能在代理中工作。
+使用 `openclaw onboard --classic` 进行特定提供方的认证、频道、技能、
+远程 Gateway 设置、导入或完整 Gateway 控制。对于以对话方式进行的
+非推理设置和修复，运行 `openclaw crestodian`；`openclaw onboard
+--modern` 是通过相同推理门禁的兼容别名。经典
+向导可以选择性地通过一次真实补全来验证默认模型，但在其自身的实时推理检查通过之前，
+Crestodian 不会启动。
 
 在交互式终端中，直接执行 `openclaw`（不带子命令）会根据配置状态进行路由：
 
-- 如果当前配置文件缺失，或者没有已编写的设置（为空或仅包含元数据），它会启动这个经典入门流程。
-- 如果配置文件存在但验证失败，它会启动 [Crestodian](/cli/crestodian) 进行修复。
-- 如果配置文件有效，它会打开正常的代理 TUI，要么本地运行，要么连接到可达的已配置 Gateway。在已配置的安装中，可在 TUI 内输入 `/crestodian` 或使用 `openclaw crestodian` 进入 Crestodian。
+- 如果当前配置文件缺失或没有已编写的设置（为空或
+  仅含元数据），则会启动引导式入门。
+- 如果配置文件存在但验证失败，则会启动经典的
+  入门路径，并提供 `openclaw doctor` 指引。Crestodian 需要可用的
+  推理能力，且不会用于修复这种推理前状态。
+- 如果配置文件有效，则会打开正常的代理 TUI。一个可达的、已配置的 Gateway，连同代理和模型，会直接进入该界面，而无需入门或 Crestodian。在已配置的安装中，可在 TUI 内使用 `/crestodian` 或运行 `openclaw crestodian` 进入 Crestodian。
 
 对于回环地址、私有 IP 字面量、`.local` 和 Tailnet `*.ts.net` 网关 URL，接受明文 `ws://`。对于其他受信任的私有 DNS 名称，请在入门过程的环境中设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。
 
@@ -62,17 +118,17 @@ openclaw onboard --reset --reset-scope full
 
 `--reset` 在运行设置之前清除状态。`--reset-scope` 控制清除范围：`config`（仅配置）、`config+creds+sessions`（当传入 `--reset` 但未指定范围时的默认值），或 `full`（同时重置工作区）。只有使用 `--reset-scope full` 时才会重置工作区。
 
-## 语言环境
+## Language Environment
 
-交互式引导对固定的设置文案使用 CLI 向导区域设置。解析顺序：
+For fixed setup text in the interactive guide, use CLI wizard localization. Parsing order:
 
 1. `OPENCLAW_LOCALE`
 2. `LC_ALL`
 3. `LC_MESSAGES`
 4. `LANG`
-5. 英文回退
+5. English fallback
 
-支持的向导区域设置有 `en`、`zh-CN` 和 `zh-TW`。区域设置值可以使用下划线或 POSIX 后缀形式，例如 `zh_CN.UTF-8`。产品名称、命令名称、配置键、URL、提供方 ID、模型 ID 以及插件/频道标签保持原样。
+Supported wizard locales are `en`, `zh-CN`, and `zh-TW`. Locale values can use underscores or POSIX suffix forms, for example `zh_CN.UTF-8`. Product names, command names, configuration keys, URLs, provider IDs, model IDs, and plugin/channel tags remain unchanged.
 
 ```bash
 OPENCLAW_LOCALE=zh-CN openclaw onboard
@@ -80,7 +136,7 @@ OPENCLAW_LOCALE=zh-CN openclaw onboard
 
 ## 非交互式设置
 
-`--non-interactive` 需要 `--accept-risk`（表示理解代理很强大，且拥有完整系统访问权限存在风险）。`--mode` 默认为 `local`。
+`--non-interactive` 需要 `--accept-risk`（表示理解代理功能非常强大，且拥有完整系统访问权限存在风险）。`--mode` 默认为 `local`。
 
 ```bash
 openclaw onboard --non-interactive \
@@ -140,10 +196,12 @@ openclaw onboard --non-interactive \
 - `--allow-unconfigured` 是 `openclaw gateway run` 的一个独立逃生通道；它不会让引导跳过 `gateway.mode`。
 
 ```bash
+export OPENAI_API_KEY="your-provider-key"
 export OPENCLAW_GATEWAY_TOKEN="your-token"
 openclaw onboard --non-interactive \
   --mode local \
-  --auth-choice skip \
+  --auth-choice openai-api-key \
+  --secret-input-mode ref \
   --gateway-auth token \
   --gateway-token-ref-env OPENCLAW_GATEWAY_TOKEN \
   --accept-risk
@@ -191,14 +249,14 @@ openclaw onboard --non-interactive \
 
 | Flag                            | Description                                                                                                                 |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `--token-provider <id>`         | 发放该 token 的 token 提供方 id                                                                                         |
+| `--token-provider <id>`         | 颁发该 token 的 token 提供方 id                                                                                         |
 | `--token <token>`               | 用于模型认证的 token 值                                                                                        |
 | `--token-profile-id <id>`       | 认证配置文件 id（默认 `<provider>:manual`；某些提供方自有流程使用其自己的默认值，例如 `anthropic:default`） |
 | `--token-expires-in <duration>` | 可选的 token 过期时长（例如 `365d`、`12h`）                                                                         |
 
 Cloudflare AI Gateway：`--cloudflare-ai-gateway-account-id <id>`、`--cloudflare-ai-gateway-gateway-id <id>`。
 
-守护进程安装控制：`--no-install-daemon` / `--skip-daemon`（别名；跳过网关服务安装）、`--daemon-runtime <node|bun>`。
+Daemon 安装控制：`--no-install-daemon` / `--skip-daemon`（别名；跳过 gateway 服务安装）、`--daemon-runtime <node>`。
 
 技能：`--node-manager <npm|pnpm|bun>`（默认 `npm`）、`--skip-skills`。
 
@@ -207,7 +265,9 @@ UI 和 hook 设置：`--skip-ui`（跳过 Control UI/TUI 提示）、`--skip-hoo
 输出：`--suppress-gateway-token-output` 会抑制带有 token 的 Gateway/UI 输出（token 提示、包含嵌入式 token 的自动登录 URL，以及自动启动 Control UI）——在共享终端和 CI 中很有用。
 
 <Note>
-`--json` 并不意味着非交互模式。脚本请使用 `--non-interactive`。
+`--json` 在引导式或经典 onboarding 中并不意味着非交互模式。
+使用 `--modern` 时，JSON 只会输出一次 Crestodian 概览，然后在这单个结果之后退出。
+其他脚本请使用 `--non-interactive`。
 </Note>
 
 ## 提供方预筛选
@@ -230,7 +290,9 @@ UI 和 hook 设置：`--skip-ui`（跳过 Control UI/TUI 提示）、`--skip-hoo
 
 ## 常见后续命令
 
-稍后使用 `openclaw configure` 进行有针对性的更改，并使用 `openclaw channels add` 进行仅频道设置。
+稍后使用 `openclaw configure` 进行有针对性的非推理更改，使用 `openclaw
+channels add` 进行仅通道设置。对于模型提供商或认证路径更改，请改为运行
+`openclaw onboard`。
 
 ```bash
 openclaw channels add

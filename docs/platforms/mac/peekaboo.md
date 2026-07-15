@@ -18,19 +18,20 @@ OpenClaw 可以将 **PeekabooBridge** 作为本地、感知权限的 UI 自动�
 
 ## 与其他桌面控制路径的关系
 
-OpenClaw 有三条刻意保持分离的桌面控制路径：
+OpenClaw 有四条刻意保持分离的桌面控制路径：
 
-- **PeekabooBridge 主机**：OpenClaw.app 承载本地 PeekabooBridge 套接字。`peekaboo` CLI 是客户端，并使用 OpenClaw.app 的 macOS 权限来执行截图、点击、菜单、对话框、Dock 操作以及窗口管理。
-- **Codex Computer Use**：随附的 `codex` 插件会检查并可安装 Codex 的 `computer-use` MCP 插件（`extensions/codex/src/app-server/computer-use.ts`），然后在 Codex 模式轮次中让 Codex 接管原生桌面控制工具调用。OpenClaw 不会通过 PeekabooBridge 代理这些操作。
-- **直接的 `cua-driver` MCP**：OpenClaw 可以将 TryCua 的上游 `cua-driver mcp` 服务器注册为普通 MCP 服务器，为代理提供 CUA 驱动自身的 schema 以及 pid/window/element-index 工作流，而无需经过 Codex marketplace 或 PeekabooBridge 套接字。
+- **PeekabooBridge 主机**：OpenClaw.app 托管本地 PeekabooBridge 套接字。`peekaboo` CLI 是客户端，并使用 OpenClaw.app 的 macOS 权限来进行截图、点击、菜单、对话框、Dock 操作和窗口管理。
+- **代理驱动的计算机使用（`computer.act`）**：网关代理内置的 `computer` 工具通过 `screen.snapshot` 捕获截图，并通过危险的 `computer.act` 节点命令驱动指针和键盘。macOS 节点通过其公开的嵌入式 Peekaboo 自动化服务以及窄范围的 CoreGraphics 原语，在进程内实现 `computer.act`，而不经过 PeekabooBridge 套接字或 `peekaboo` CLI。参见 [计算机使用](/nodes/computer-use)。
+- **Codex Computer Use**：捆绑的 `codex` 插件会检查并可以安装 Codex 的 `computer-use` MCP 插件（`extensions/codex/src/app-server/computer-use.ts`），然后在 Codex 模式轮次中让 Codex 接管原生桌面控制工具调用。OpenClaw 不会通过 PeekabooBridge 代理这些操作。
+- **直接 `cua-driver` MCP**：OpenClaw 可以将 TryCua 的上游 `cua-driver mcp` 服务器注册为普通 MCP 服务器，使代理获得 CUA 驱动自身的 schema 以及 pid/窗口/元素索引工作流，而无需通过 Codex 市场或 PeekabooBridge 套接字路由。
 
-在通过 OpenClaw.app 的具备权限感知的桥接主机提供广泛的 macOS 自动化能力时，请使用 Peekaboo。若 Codex 模式下的代理应依赖 Codex 的原生插件，请使用 Codex Computer Use。若要将 CUA 驱动以普通 MCP 服务器的形式暴露给任何由 OpenClaw 管理的运行时，请直接使用 `cua-driver mcp`。
+使用 Peekaboo，通过 OpenClaw.app 具备权限感知的桥接主机来覆盖广泛的 macOS 自动化能力。使用代理驱动的计算机使用，当网关代理应通过统一的 `computer.act` 节点命令查看并控制桌面，而该命令可由任何视觉模型驱动时。使用 Codex Computer Use，当 Codex 模式代理应依赖 Codex 的原生插件时。使用直接 `cua-driver mcp`，将 CUA 驱动暴露给任何由 OpenClaw 管理的运行时，作为普通 MCP 服务器。
 
 ## 启用桥接
 
-在 macOS 应用中：**Settings -> Enable Peekaboo Bridge**。
+在 macOS 应用中：**Settings -> Enable Peekaboo Bridge**。此开关要求 **Allow Computer Control** 处于开启状态，因为两者都会授予本地 UI 自动化权限；在关闭 Computer Control 时，该开关会被禁用，主机也不会运行。若要在没有 Computer Control 的情况下驱动 Peekaboo，请改为运行 Peekaboo 自己的 Mac 应用作为主机。
 
-启用后，OpenClaw 会在 `~/Library/Application Support/OpenClaw/<socket-name>` 启动一个本地 UNIX socket 服务器。若禁用，主机会停止，`peekaboo` 会回退到其他可用主机。协调器还会维护传统的 socket 符号链接（Application Support 下的 `clawdbot`、`clawdis`、`moltbot`），它们指向当前 socket，以兼容旧版 `peekaboo` 安装。
+启用后（且 Computer Control 已开启），OpenClaw 会在 `~/Library/Application Support/OpenClaw/<socket-name>` 启动一个本地 UNIX socket 服务器。若被禁用，主机将停止运行，`peekaboo` 会回退到其他可用主机。协调器还会维护旧版 socket 符号链接（`clawdbot`、`clawdis`、`moltbot` 位于 Application Support 下），它们指向当前 socket，以兼容较旧的 `peekaboo` 安装。
 
 ## 客户端发现顺序
 

@@ -16,8 +16,8 @@ read_when:
 
 ## 做梦会写入什么
 
-- **Machine state** in `memory/.dreams/` (recall store, phase signals, ingestion checkpoints, locks).
-- **Human-readable output** in `DREAMS.md` (or an existing `dreams.md`) and optional phase report files under `memory/dreaming/<phase>/YYYY-MM-DD.md`.
+- **Machine state** in `memory/.dreams/` (回忆存储、阶段信号、摄取检查点、锁)。
+- **Human-readable output** in `DREAMS.md`（或已有的 `dreams.md`）以及 `memory/dreaming/<phase>/YYYY-MM-DD.md` 下可选的阶段报告文件。
 
 长期提升仍然只写入 `MEMORY.md`。
 
@@ -80,7 +80,7 @@ Dreaming 会在 `DREAMS.md` 中保留一份叙事性的 **Dream Diary**。在每
   </Accordion>
 </AccordionGroup>
 
-Control UI 提供了相同的日记回填/重置流程，因此你可以先在 Dreams 场景中检查结果，再决定有依据的候选项是否值得晋升。一个独立的有依据 Scene 轨道会显示哪些已暂存的短期条目来自历史重放、哪些已晋升条目是 grounded-led，并允许你只清除仅有依据的已暂存条目，而不影响实时短期状态。
+控制 UI 在代理的 Memory 选项卡（Agents 页面）中提供相同的日记回填/重置流程，因此你可以在梦境场景中检查结果，再决定有依据的候选项是否值得晋升。一个独立的、有依据的 Scene 轨道会显示哪些已暂存的短期条目来自历史回放，哪些已晋升项目是由有依据内容引导的，并且允许你只清除仅限有依据的已暂存条目，而不会影响实时短期状态。
 
 ## 深度排序信号
 
@@ -114,10 +114,10 @@ QA Lab 包含一个仅报告的场景，用于探索未来的 dreaming shadow tr
 | `dreaming.frequency` | `0 3 * * *`   |
 | `dreaming.model`     | 默认模型      |
 
-## 快速开始
+## Quick Start
 
 <Tabs>
-  <Tab title="启用做梦">
+  <Tab title="Enable Dreaming">
     ```json
     {
       "plugins": {
@@ -134,7 +134,7 @@ QA Lab 包含一个仅报告的场景，用于探索未来的 dreaming shadow tr
     }
     ```
   </Tab>
-  <Tab title="自定义扫描频率">
+  <Tab title="Custom Scan Frequency">
     ```json
     {
       "plugins": {

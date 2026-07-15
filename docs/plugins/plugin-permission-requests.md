@@ -61,7 +61,6 @@ export default definePluginEntry({
               ? ["allow-once", "deny"]
               : ["allow-once", "allow-always", "deny"],
           timeoutMs: 120_000,
-          timeoutBehavior: "deny",
           onResolution(decision) {
             console.log(`deploy approval resolved: ${decision}`);
           },
@@ -75,16 +74,16 @@ export default definePluginEntry({
 为将要批准该动作的人编写提示文本：
 
 - 保持 `title` 简短且以动作为中心；Gateway 将其上限设为 80 个字符。
-- 保持 `description` 具体且有边界；Gateway 将其上限设为 256
+- 保持 `description` 具体且有边界；Gateway 将其上限设为 512
   个字符。
 - 包含动作、目标和风险。不要包含不应出现在聊天审批界面中的密钥、令牌或
   私有载荷。
-- 当省略 `severity` 时，默认值为 `"warning"`。仅对错误决定可能导致生产环境损坏
-  或数据丢失的操作使用 `"critical"`。
-- 当省略 `allowedDecisions` 时，默认值为 `["allow-once", "allow-always", "deny"]`。
-  对于持久信任对该动作不安全的情况，请传入 `["allow-once", "deny"]`。
-- `timeoutMs` 的默认值为 120000（2 分钟），并且无论请求值是多少，都会被限制
-  为 600000（10 分钟）。
+- 当省略 `severity` 时，默认为 `"warning"`。仅对那些错误决策可能导致生产损害或数据丢失的
+  动作使用 `"critical"`。
+- 当省略 `allowedDecisions` 时，默认为 `["allow-once", "allow-always", "deny"]`。
+  对于持久信任对该动作不安全的情况，传入 `["allow-once", "deny"]`。
+- `timeoutMs` 默认为 120000（2 分钟），并且无论请求的值是多少，都会被限制为 600000（10
+  分钟）。
 
 ## 决策行为
 
@@ -93,18 +92,16 @@ OpenClaw 会创建一个带有 `plugin:` ID 的待批准项，将其发送到
 
 | 决策              | 结果                                                                      |
 | ----------------- | ------------------------------------------------------------------------- |
-| `allow-once`      | 当前调用继续执行。                                                         |
-| `allow-always`    | 当前调用继续执行，并将该决策传递给插件。                                   |
-| `deny`            | 该调用被阻止，并返回拒绝的工具结果。                                       |
-| 超时              | 除非 `timeoutBehavior` 为 `"allow"`，否则该调用将被阻止。                  |
-| 取消              | 当运行被中止时，该调用将被阻止。                                           |
-| 没有批准路由      | 由于没有连接的批准界面能够处理它，该调用被阻止。                            |
+| `allow-once`      | 当前调用继续。                                                           |
+| `allow-always`    | 当前调用继续，并将该决策传递给插件。                                     |
+| `deny`            | 该调用被阻止，并返回拒绝的工具结果。                                     |
+| Timeout           | 该调用被阻止。                                                            |
+| Cancellation      | 当运行被中止时，该调用被阻止。                                            |
+| No approval route | 该调用被阻止，因为没有已连接的批准界面能够解析它。                        |
 
-`allow-always` 只有在请求的插件或运行时实现了
-该持久化时才是持久化的。对于普通的 `before_tool_call.requireApproval` hook，
-OpenClaw 会将 `allow-once` 和 `allow-always` 视为当前调用的批准决策，
-并将解析后的值传递给 `onResolution`。如果你的插件提供 `allow-always`，
-请明确记录并实现它未来会信任哪些调用。
+只有请求明确允许的 `allow-once` 和 `allow-always` 决策才会允许执行。未知、格式错误、不匹配、缺失以及超时的决策都会以关闭方式失败。为兼容插件，旧的 `timeoutBehavior` 字段仍然被接受，但已弃用且会被忽略；不要在新的 hook 中设置它。
+
+只有当请求插件或运行时实现了该持久化时，`allow-always` 才会真正持久化。对于普通的 `before_tool_call.requireApproval` hooks，OpenClaw 会将 `allow-once` 和 `allow-always` 视为当前调用的批准决策，并将解析后的值传递给 `onResolution`。如果你的插件提供 `allow-always`，请明确记录并实现它对未来哪些调用可信。
 
 如果该 hook 还返回了 `params`，OpenClaw 只会在批准成功后应用这些参数更改。
 较低优先级的 hook 仍然可以在较高优先级的 hook 请求批准后进行阻止。

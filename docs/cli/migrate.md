@@ -11,7 +11,8 @@ title: "迁移"
 通过由插件拥有的迁移提供程序从另一个代理系统导入状态。内置提供程序覆盖 Claude、Codex CLI 和 [Hermes](/install/migrating-hermes)；插件可以注册额外的提供程序。
 
 <Tip>
-For user-facing guides, see [Migrate from Claude](/install/migrating-claude) and [Migrate from Hermes](/install/migrating-hermes). [Migration hub](/install/migrating) lists all paths.
+如需面向用户的指南，请参阅 [从 Claude 迁移](/install/migrating-claude) 和 [从 Hermes 迁移](/install/migrating-hermes)。
+[迁移中心](/install/migrating) 列出了所有路径。
 </Tip>
 
 ## 命令
@@ -45,7 +46,7 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
   构建计划并退出，不更改状态。
 </ParamField>
 <ParamField path="--from <path>" type="string">
-  覆盖源状态目录。Hermes 默认为 `~/.hermes`，Codex 默认为 `~/.codex`（或 `$CODEX_HOME`），Claude 默认为 `~/.claude`。
+  覆盖源状态目录。Hermes 会遵循 `$HERMES_HOME` 和当前活动配置文件，然后使用平台默认值（`~/.hermes` 或 `%LOCALAPPDATA%\hermes`）。Codex 默认为 `~/.codex`（或 `$CODEX_HOME`），Claude 默认为 `~/.claude`。
 </ParamField>
 <ParamField path="--include-secrets" type="boolean">
   在不提示的情况下导入受支持的凭据。交互式 apply 会在检测到身份验证凭据时询问是否导入，默认选中 yes；非交互式 `--yes` 需要 `--include-secrets` 才会导入它们。
@@ -113,11 +114,14 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 
 ### Claude 导入内容
 
-- 项目 `CLAUDE.md` 和 `.claude/CLAUDE.md` 会导入到 OpenClaw 代理工作区（`AGENTS.md`）。
-- 用户级 `~/.claude/CLAUDE.md` 会追加到工作区 `USER.md`。
-- 来自项目 `.mcp.json`、Claude Code `~/.claude.json`（包括其按项目划分的条目）以及 Claude Desktop `claude_desktop_config.json` 的 MCP 服务器定义。
-- 包含 `SKILL.md` 的 Claude 技能目录（用户 `~/.claude/skills` 和项目 `.claude/skills`）。
-- Claude 命令 Markdown 文件（用户 `~/.claude/commands` 和项目 `.claude/commands`）会转换为 OpenClaw 技能，仅支持手动调用。
+- Claude Code auto-memory Markdown 来自 `~/.claude/projects/*/memory` 以及一个
+  用户配置的 `autoMemoryDirectory`，会复制到
+  `memory/imports/claude-code/` 下以供索引检索。
+- 项目 `CLAUDE.md` 和 `.claude/CLAUDE.md` 会导入到 OpenClaw agent 工作区（`AGENTS.md`）。
+- 用户的 `~/.claude/CLAUDE.md` 会追加到工作区 `USER.md`。
+- 来自项目 `.mcp.json`、Claude Code `~/.claude.json`（包括其按项目的条目）以及 Claude Desktop `claude_desktop_config.json` 的 MCP 服务器定义。
+- 包含 `SKILL.md` 的 Claude skill 目录（用户 `~/.claude/skills` 和项目 `.claude/skills`）。
+- Claude 命令 Markdown 文件（用户 `~/.claude/commands` 和项目 `.claude/commands`）会转换为 OpenClaw skills，仅可手动调用。
 
 ### 归档和人工审核状态
 
@@ -142,9 +146,10 @@ openclaw migrate apply codex --yes --plugin google-calendar
 
 ### Codex 导入内容
 
+- 从 `$CODEX_HOME/memories` 汇总的 Codex `MEMORY.md` 和 `memory_summary.md`，复制到 `memory/imports/codex/` 下用于索引回忆。原始 rollout memory 不会被导入。
 - `$CODEX_HOME/skills` 下的 Codex CLI skill 目录，不包括 Codex 的 `.system` 缓存。
-- `$HOME/.agents/skills` 下的个人 AgentSkills，会复制到当前 OpenClaw agent 工作区，以便按 agent 拥有。
-- 通过 Codex app-server `plugin/list` 发现的源安装 `openai-curated` Codex plugins。规划阶段会为每个已启用的已安装 plugin 读取 `plugin/read`。
+- `$HOME/.agents/skills` 下的个人 AgentSkills，会复制到当前 OpenClaw agent 工作区中，以便按 agent 归属管理。
+- 通过 Codex app-server `plugin/list` 发现的源安装 `openai-curated` Codex plugins。规划阶段会针对每个已启用的已安装 plugin 读取 `plugin/read`。
 
 基于 App 的 plugin 迁移有额外门槛：
 
@@ -173,28 +178,28 @@ Migration 绝不会写入 `plugins["*"]`，也绝不会存储本地 marketplace 
 
 ## Hermes 提供程序
 
-内置的 Hermes 提供程序默认检测位于 `~/.hermes` 的状态。若 Hermes 位于其他位置，请使用 `--from <path>`。
+捆绑的 Hermes 提供程序会遵循 `$HERMES_HOME` 和当前激活的配置文件，然后使用平台默认路径（`~/.hermes` 或 `%LOCALAPPDATA%\hermes`）。使用 `--from <path>` 可覆盖自动发现。
 
 ### Hermes 导入内容
 
-- 从 `config.yaml` 导入默认模型配置。
-- 从 `providers` 和 `custom_providers` 导入已配置的模型提供程序以及自定义 OpenAI 兼容端点。
-- 从 `mcp_servers` 或 `mcp.servers` 导入 MCP 服务器定义。
-- 将 `SOUL.md` 和 `AGENTS.md` 导入到 OpenClaw 代理工作区。
-- 将 `memories/MEMORY.md` 和 `memories/USER.md` 追加到工作区记忆文件中。
-- 导入 OpenClaw 文件记忆的默认记忆配置，以及诸如 Honcho 之类的外部记忆提供程序的归档或人工审核项目。
-- 导入在 `skills/<name>/` 下包含 `SKILL.md` 文件的技能。
-- 从 `skills.config` 导入每个技能的配置值。
-- 在接受交互式凭据迁移时，或设置了 `--include-secrets` 时，从 OpenCode 的 `auth.json` 中导入 OpenCode OpenAI OAuth 凭据。Hermes 的 `auth.json` OAuth 条目属于遗留状态，仅用于提示手动 OpenAI 重新认证或 doctor 修复。
-- 在接受交互式凭据迁移时，或设置了 `--include-secrets` 时，从 Hermes 的 `.env` 和 OpenCode 的 `auth.json` 中导入受支持的 API 密钥和令牌。
+- 来自 `config.yaml` 的默认模型配置。
+- 来自 `model`、`providers` 和 `custom_providers` 的已配置模型提供程序以及自定义 OpenAI 兼容端点。
+- 来自 `mcp_servers` 或 `mcp.servers` 的 MCP 服务器定义。精确的 OpenClaw 映射覆盖默认的 Streamable HTTP 路由、OAuth 作用域、布尔型 TLS 验证、独立的客户端证书/密钥路径，以及 Hermes 原生/资源/提示词工具策略。不支持的仅限 Hermes 运行时或凭据字段会被报告以供人工审查。
+- `SOUL.md` 和 `AGENTS.md` 到 OpenClaw 代理工作区。
+- `memories/MEMORY.md` 和 `memories/USER.md` 追加到工作区记忆文件中。
+- OpenClaw 文件记忆的默认记忆配置，以及外部记忆提供程序（例如 Honcho）的归档或人工审查项。
+- 任何包含 `SKILL.md` 文件的 `skills/` 下技能；嵌套技能会被展平到工作区技能目录中。
+- 来自 `skills.config` 的每个技能配置值。
+- 在接受交互式凭据迁移时，或设置了 `--include-secrets` 时，当前 Hermes OpenAI Codex OAuth 凭据和 OpenCode OpenAI OAuth 凭据。不要让 Hermes 和 OpenClaw 使用同一个已导入的刷新授权。
+- 在接受交互式凭据迁移时，或设置了 `--include-secrets` 时，来自 Hermes `.env` 和 OpenCode `auth.json` 的受支持 API 密钥和令牌。
 
 ### 支持的 `.env` 密钥
 
-`AI_GATEWAY_API_KEY`, `ALIBABA_API_KEY`, `ANTHROPIC_API_KEY`, `ARCEEAI_API_KEY`, `CEREBRAS_API_KEY`, `CHUTES_API_KEY`, `CLOUDFLARE_AI_GATEWAY_API_KEY`, `COPILOT_GITHUB_TOKEN`, `DASHSCOPE_API_KEY`, `DEEPINFRA_API_KEY`, `DEEPSEEK_API_KEY`, `FIREWORKS_API_KEY`, `GEMINI_API_KEY`, `GH_TOKEN`, `GITHUB_TOKEN`, `GLM_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, `HF_TOKEN`, `HUGGINGFACE_HUB_TOKEN`, `KILOCODE_API_KEY`, `KIMICODE_API_KEY`, `KIMI_API_KEY`, `MINIMAX_API_KEY`, `MINIMAX_CODING_API_KEY`, `MISTRAL_API_KEY`, `MODELSTUDIO_API_KEY`, `MOONSHOT_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`, `OPENCODE_API_KEY`, `OPENCODE_GO_API_KEY`, `OPENCODE_ZEN_API_KEY`, `OPENROUTER_API_KEY`, `QIANFAN_API_KEY`, `QWEN_API_KEY`, `TOGETHER_API_KEY`, `VENICE_API_KEY`, `XAI_API_KEY`, `XIAOMI_API_KEY`, `ZAI_API_KEY`, `Z_AI_API_KEY`.
+`AI_GATEWAY_API_KEY`, `ALIBABA_API_KEY`, `ANTHROPIC_API_KEY`, `ARCEEAI_API_KEY`, `CEREBRAS_API_KEY`, `CHUTES_API_KEY`, `CLOUDFLARE_AI_GATEWAY_API_KEY`, `COPILOT_GITHUB_TOKEN`, `DASHSCOPE_API_KEY`, `DEEPINFRA_API_KEY`, `DEEPSEEK_API_KEY`, `FIREWORKS_API_KEY`, `GEMINI_API_KEY`, `GH_TOKEN`, `GITHUB_TOKEN`, `GLM_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, `HF_TOKEN`, `HUGGINGFACE_HUB_TOKEN`, `KILOCODE_API_KEY`, `KIMICODE_API_KEY`, `KIMI_API_KEY`, `KIMI_CODING_API_KEY`, `MINIMAX_API_KEY`, `MINIMAX_CODING_API_KEY`, `MISTRAL_API_KEY`, `MODELSTUDIO_API_KEY`, `MOONSHOT_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`, `OPENCODE_API_KEY`, `OPENCODE_GO_API_KEY`, `OPENCODE_ZEN_API_KEY`, `OPENROUTER_API_KEY`, `QIANFAN_API_KEY`, `QWEN_API_KEY`, `TOGETHER_API_KEY`, `VENICE_API_KEY`, `XAI_API_KEY`, `XIAOMI_API_KEY`, `ZAI_API_KEY`, `Z_AI_API_KEY`.
 
 ### 仅归档状态
 
-OpenClaw 无法安全解析的 Hermes 状态会被复制到迁移报告中供人工审查，但不会加载到实际运行的 OpenClaw 配置或凭据中。这保留了不透明或不安全的状态，同时不会假装 OpenClaw 能自动执行或信任它：`plugins/`, `sessions/`, `logs/`, `cron/`, `mcp-tokens/`, `state.db`。
+OpenClaw 无法安全解释的 Hermes 状态会被复制到迁移报告中供人工审查，但不会加载到实时 OpenClaw 配置或凭据中。这包括 `plugins/`、`sessions/`、`logs/`、`cron/`、`mcp-tokens/`、`plans/`、`workspace/`、`skins/`、`kanban/`、配对/平台状态、网关路由/进程状态，以及检测到的 Hermes SQLite 数据库。
 
 ### 应用后
 
@@ -232,4 +237,4 @@ openclaw doctor
 - [从 Claude 迁移](/install/migrating-claude)：面向用户的操作指南。
 - [迁移](/install/migrating)：将 OpenClaw 迁移到新机器。
 - [Doctor](/gateway/doctor)：应用迁移后的健康检查。
-- [Plugins](/tools/plugin)：插件安装和注册。
+- [插件](/tools/plugin)：插件安装和注册。

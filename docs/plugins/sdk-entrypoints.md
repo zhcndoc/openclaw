@@ -111,12 +111,8 @@ export default definePluginEntry({
   name: "我的插件",
   description: "简短摘要",
   register(api) {
-    api.registerProvider({
-      /* ... */
-    });
-    api.registerTool({
-      /* ... */
-    });
+    api.registerProvider({/* ... */});
+    api.registerTool({/* ... */});
   },
 });
 ```
@@ -126,7 +122,7 @@ export default definePluginEntry({
 | `id`                      | `string`                                                         | 是   | -                   |
 | `name`                    | `string`                                                         | 是   | -                   |
 | `description`             | `string`                                                         | 是   | -                   |
-| `kind`                   | `string`（已弃用，见下文）                                       | 否   | -                   |
+| `kind`                    | `string`（已弃用，见下文）                                       | 否   | -                   |
 | `configSchema`            | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | 否   | 空对象 schema       |
 | `reload`                  | `OpenClawPluginReloadRegistration`                               | 否   | -                   |
 | `nodeHostCommands`        | `OpenClawPluginNodeHostCommand[]`                                | 否   | -                   |
@@ -134,10 +130,19 @@ export default definePluginEntry({
 | `register`                | `(api: OpenClawPluginApi) => void`                               | 是   | -                   |
 
 - `id` 必须与您的 `openclaw.plugin.json` 清单匹配。
-- `kind` 已弃用：请改为在 `openclaw.plugin.json` 清单的 `kind` 字段中声明一个独占槽位（`"memory"` 或
+- 外部会话目录使用
+  `openclaw/plugin-sdk/session-catalog` 和
+  `api.registerSessionCatalog({ id, label, list, read, continueSession?, archive? })`。
+  Core 拥有 `sessions.catalog.*` Gateway 方法；提供程序返回主机、
+  会话和规范化的转录投影，而无需注册 RPC。
+- `kind` 已弃用：请改为在 `openclaw.plugin.json` 清单的 `kind` 字段中
+  声明一个独占插槽（`"memory"` 或
   `"context-engine"`）。运行时入口的 `kind` 仅作为旧插件的兼容性回退保留。
 - `configSchema` 可以是一个用于延迟求值的函数。OpenClaw 会在首次访问时解析并
-  记忆该 schema，因此昂贵的 schema 构建器只会运行一次。
+  缓存该 schema，因此耗时的 schema 构建器只会运行一次。
+- `nodeHostCommands` 描述符可以定义 `isAvailable({ config, env })`。
+  返回 `false` 时，会从无头节点的 Gateway 声明中省略该命令及其能力。
+  OpenClaw 会根据节点本地的启动配置来计算它；命令处理程序在被调用时仍应验证可用性。
 
 ## `defineChannelPluginEntry`
 
@@ -185,7 +190,7 @@ export default defineChannelPluginEntry({
 - `registerCliMetadata` 会在 `"cli-metadata"`、`"discovery"` 和
   `"full"` 下运行。请将其作为通道拥有的 CLI 描述符的规范位置，
   这样根帮助就能保持非激活，发现快照能包含静态命令元数据，
-  而常规 CLI 注册仍能与完整插件加载兼容。
+  而常规 CLI 注册仍然能与完整插件加载兼容。
 - `registerFull` 只会在 `"full"` 和 `"tool-discovery"` 下运行。对于
   `"tool-discovery"`，它会 _替代_ 通道注册运行：OpenClaw 会完全跳过 `registerChannel`/`setRuntime`，
   只调用 `registerFull`，因此你的通道在独立工具发现或执行时所需的任何 provider/tool 注册

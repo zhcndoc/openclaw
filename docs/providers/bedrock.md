@@ -150,7 +150,7 @@ OpenClaw 可以自动发现支持 **流式输出** 和 **文本输出** 的 Bedr
 </Note>
 
 <AccordionGroup>
-  <Accordion title="Discovery config options">
+  <Accordion title="发现配置选项">
     配置选项位于 `plugins.entries.amazon-bedrock.config.discovery` 下：
 
     ```json5
@@ -185,7 +185,7 @@ OpenClaw 可以自动发现支持 **流式输出** 和 **文本输出** 的 Bedr
 
   </Accordion>
 
-  <Accordion title="Context window and max-token limits">
+  <Accordion title="上下文窗口和最大 token 限制">
     Bedrock 的 `ListFoundationModels` 和 `GetFoundationModel` API 不返回
     token 限制元数据，只返回模型 ID、名称、模态和生命周期
     状态。OpenClaw 为常见 Bedrock 模型（Claude、Nova、Llama、Mistral、DeepSeek
@@ -245,7 +245,7 @@ openclaw models list
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Inference profiles">
+  <Accordion title="推理配置文件">
     OpenClaw 会在基础模型之外一并发现 **区域和全局推理配置文件**。当配置文件映射到已知的基础模型时，该配置文件会继承该模型的能力（上下文窗口、最大 token 数、推理、视觉），并且会自动注入正确的 Bedrock 请求区域。这意味着跨区域 Claude 配置文件无需手动覆盖 provider 即可工作。全局跨区域配置文件（`global.*`）会在 `openclaw models list` 中优先显示，因为它们通常提供更好的容量和自动故障转移。
 
     推理配置文件 ID 形式如 `us.anthropic.claude-opus-4-6-v1:0`（区域）或 `anthropic.claude-opus-4-6-v1:0`（全局）。如果底层模型已经出现在发现结果中，配置文件会继承其完整能力集；否则将应用安全默认值。
@@ -254,7 +254,7 @@ openclaw models list
 
   </Accordion>
 
-  <Accordion title="Service tier">
+  <Accordion title="服务层级">
     某些 Bedrock 模型支持 `service_tier` 参数，用于优化成本
     或延迟。可用的层级如下：
 
@@ -289,11 +289,11 @@ openclaw models list
     ```
 
     有效值为 `default`、`flex`、`priority` 和 `reserved`。Claude
-    Fable 5 仅支持 `default` 层级；对于该模型请求 `flex`、`priority` 或 `reserved` 时，OpenClaw 会发出警告并忽略。对于其他模型，并非每个模型都支持每个层级——不受支持的层级会返回 Bedrock 验证错误，而且错误消息可能具有误导性（例如显示“所提供的模型标识符无效”，而不是指出问题出在层级上）。如果你看到此错误，请检查该模型是否支持所请求的层级。
+    Fable 5 和 Sonnet 5 只支持 `default` 层级；OpenClaw 会对为这些模型请求 `flex`、`priority` 或 `reserved` 的情况发出警告并忽略。对于其他模型，并非每个模型都支持每个层级——不支持的层级会返回 Bedrock 验证错误，而且错误信息可能具有误导性（例如显示“The provided model identifier is invalid”，而不是指出问题出在层级上）。如果你看到此错误，请检查该模型是否支持所请求的层级。
 
   </Accordion>
 
-  <Accordion title="Claude Opus 4.7 and 4.8 temperature">
+  <Accordion title="Claude Opus 4.7 和 4.8 的 temperature">
     Bedrock 会拒绝 Claude Opus 4.7 和 Opus
     4.8 的 `temperature` 参数。OpenClaw 会针对任何匹配的 Bedrock 引用自动省略 `temperature`，包括基础模型 ID、命名推理配置文件、其底层模型通过 `bedrock:GetInferenceProfile` 解析为 Opus 4.7/4.8 的应用推理配置文件，以及带点号的 `opus-4.7`/`opus-4.8` 变体（可选区域前缀：`us.`、`eu.`、`ap.`、`apac.`、`au.`、`jp.`、`global.`）。无需任何配置开关，该省略会同时应用于请求 options 对象和 `inferenceConfig` 负载字段。
   </Accordion>
@@ -312,7 +312,35 @@ openclaw models list
 
   </Accordion>
 
-  <Accordion title="Guardrails">
+  <Accordion title="Claude Mythos 5">
+    Claude Mythos 5 仅对已获得所需有限访问批准的账户可通过 Bedrock 使用。OpenClaw 能识别基础模型
+    `anthropic.claude-mythos-5` 以及区域或全局推理配置文件，例如 `us.anthropic.claude-mythos-5`。
+
+    OpenClaw 会应用 1,000,000 token 的上下文窗口、128,000 token 的输出
+    上限、图像输入、提示缓存、拒绝安全流式传输，以及原生
+    effort 等级。自适应思考始终开启：`/think off` 和
+    `/think minimal` 映射为 `low`，而 `xhigh` 和 `max` 仍然可用。
+    自定义采样和强制工具选择值会被省略。
+
+  </Accordion>
+
+  <Accordion title="Claude Sonnet 5">
+    AWS 在
+    [`bedrock-runtime` 和 `bedrock-mantle` 端点](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-sonnet-5.html) 上都记录了 Sonnet 5。
+    OpenClaw 识别 Bedrock 基础模型
+    `anthropic.claude-sonnet-5` 以及区域或全局推理配置文件，例如
+    `us.anthropic.claude-sonnet-5`。它会应用 1,000,000 token 的上下文
+    窗口、128,000 token 的输出上限、图像输入、原生 effort 等级、
+    提示缓存和拒绝安全流式传输。
+
+    Bedrock 会为 Sonnet 5 保持自适应思考开启。OpenClaw 默认使用
+    `high`；`/think off` 和 `/think minimal` 映射为 `low`，因为该路由
+    无法关闭思考功能。当自适应思考处于活动状态时，自定义 temperature 和强制工具选择值
+    会被省略。
+
+  </Accordion>
+
+  <Accordion title="护栏">
     你可以通过在 `amazon-bedrock` 插件配置中添加一个 `guardrail` 对象，
     将 [Amazon Bedrock Guardrails](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html)
     应用于所有 Bedrock 模型调用。Guardrails 让你可以强制执行内容过滤、主题拒绝、词语过滤、敏感信息过滤和上下文约束检查。
@@ -351,7 +379,7 @@ openclaw models list
 
   </Accordion>
 
-  <Accordion title="Embeddings for memory search">
+  <Accordion title="用于 memory search 的 embeddings">
     Bedrock 也可以作为 [memory search](/concepts/memory-search) 的 embedding provider。这与 inference provider 是分开配置的——将 `agents.defaults.memorySearch.provider` 设置为 `"bedrock"`：
 
     ```json5
@@ -375,7 +403,7 @@ openclaw models list
 
   </Accordion>
 
-  <Accordion title="Notes and caveats">
+  <Accordion title="说明和注意事项">
     - Bedrock 需要在你的 AWS 账户/区域中启用 **model access**。
     - 自动发现需要 `bedrock:ListFoundationModels` 和
       `bedrock:ListInferenceProfiles` 权限。
@@ -394,7 +422,7 @@ openclaw models list
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
     选择 provider、model 引用以及故障转移行为。
   </Card>
   <Card title="Memory search" href="/concepts/memory-search" icon="magnifying-glass">
@@ -403,7 +431,7 @@ openclaw models list
   <Card title="Memory config reference" href="/reference/memory-config#bedrock-embedding-config" icon="database">
     完整的 Bedrock embedding 模型列表和维度选项。
   </Card>
-  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
+  <Card title="故障排查" href="/help/troubleshooting" icon="wrench">
     常规故障排查和常见问题。
   </Card>
 </CardGroup>

@@ -69,14 +69,14 @@ sidebarTitle: "控制 UI"
 已配对的管理员无需打开终端即可创建 iOS/Android 连接二维码：
 
 <Steps>
-  <Step title="打开移动配对">
-    选择 **Nodes**，然后在 **Devices** 卡片中点击 **Pair mobile device**。
+  <Step title="Open mobile pairing">
+    Select **Devices**, then click **Pair mobile device** in the **Devices** card.
   </Step>
   <Step title="连接手机">
     在 OpenClaw 移动应用中，打开 **Settings** → **Gateway** 并扫描二维码。你也可以改为复制并粘贴设置代码。
   </Step>
-  <Step title="确认连接">
-    官方 iOS/Android 应用会自动连接。如果 **Devices** 显示待处理请求，请在批准前检查其角色和作用域。
+  <Step title="Confirm the connection">
+    The official iOS/Android app connects automatically. If **Pending approval** shows a request, review its role and scopes before approving it.
   </Step>
 </Steps>
 
@@ -92,9 +92,13 @@ sidebarTitle: "控制 UI"
 
 Control UI 会从 `/control-ui-config.json` 获取其运行时设置，该路径是相对于网关的 Control UI 基路径解析的（例如，在基路径 `/__openclaw__/` 下，对应 `/__openclaw__/control-ui-config.json`）。该端点与其余 HTTP 接口一样受相同的网关认证保护：未认证的浏览器无法获取它，只有在提供有效的网关令牌/密码、Tailscale Serve 身份或受信任代理身份时，才能成功获取。
 
-## 语言支持
+## Gateway host status
 
-Control UI 会在首次加载时根据你的浏览器区域设置自动本地化。若要稍后覆盖它，请打开 **Overview -> Gateway Access -> Language**（选择器位于 Gateway Access 卡片中，而不是在 Appearance 下）。
+Open **Settings** in Simple view to see the **Gateway Host** card with the Gateway machine, LAN address, operating system, runtime, uptime, CPU load, memory, and state-volume disk space. The card refreshes every 10 seconds while visible through the `system.info` Gateway RPC, which requires the `operator.read` scope. Older Gateways and connections without that scope omit the card.
+
+## Language support
+
+The Control UI localizes itself on first load based on your browser locale. To override it later, open **Settings -> General -> Language** (the picker lives in the General quick-settings card, not under Appearance).
 
 - 支持的区域设置：`en`、`ar`、`de`、`es`、`fa`、`fr`、`hi`、`id`、`it`、`ja-JP`、`ko`、`nl`、`pl`、`pt-BR`、`ru`、`th`、`tr`、`uk`、`vi`、`zh-CN`、`zh-TW`
 - 非英语翻译会在浏览器中按需加载。
@@ -111,90 +115,192 @@ Appearance 面板内置了 Claw、Knot 和 Dash 主题（Claw 为默认主题）
 
 Appearance 还提供一个仅限浏览器本地的 Text size 设置，和其余 Control UI 偏好设置一起存储。它会应用于聊天文本、编辑器文本、工具卡片以及聊天侧边栏，并将文本输入框保持在至少 16px，以避免 mobile Safari 在聚焦时自动缩放。
 
-## 侧边栏导航
+## Manage plugins
 
-侧边栏会首先显示会话，其后是少量固定的目的地集合。**概览**、**工作板**和**代理**默认已固定；展开 **更多** 可访问其他所有目的地。选择 **更多** 下的 **自定义侧边栏**，或右键单击导航区域，即可固定或取消固定目的地并恢复默认设置。固定集合和“更多”的展开状态会保存在当前浏览器配置文件中，并会在重新加载后保留。
+Open **Plugins** in the sidebar, or use `/settings/plugins` relative to the
+configured Control UI base path, to browse and manage plugins without leaving
+the Control UI. For example, a base path of `/openclaw` uses
+`/openclaw/settings/plugins`. The page is always available, even when every
+optional plugin is disabled.
 
-**设置** 会继续显示在侧边栏底部，位于 **文档** 旁边。在桌面端，使用终端控制旁边的顶部栏按钮可折叠或展开侧边栏。在抽屉断点处，该控制会被汉堡菜单按钮替代。
+Plugins is a hub with four tabs: **Installed** and **Discover** manage plugin
+code at `/settings/plugins`, **Skills** hosts the per-agent skill manager at
+`/skills`, and **Workshop** hosts Skill Workshop proposal review at
+`/skills/workshop`. Each tab keeps its own URL, and the sidebar shows the
+single Plugins entry for all of them.
+
+The **Installed** tab shows the full local inventory grouped by category, with
+overview counts. Each row opens a detail view; its overflow (`…`) menu enables
+or disables the plugin and offers **Remove** for externally installed plugins.
+It also lists configured [MCP servers](/cli/mcp) and supports adding, disabling,
+and removing them inline. The **Discover** tab is the store: featured plugins
+included with OpenClaw, official external plugins, and one-click MCP connectors
+for popular services. Typing in the search box queries
+[ClawHub](https://clawhub.ai/plugins) inline and appends a **From ClawHub**
+section with download counts and source-verification badges. Deep links can
+target the store directly with `/settings/plugins?tab=discover`.
+
+The **Skills** tab keeps the skill status report, enable/disable toggles, API
+key entry, and inline ClawHub skill search, scoped to the selected agent. The
+**Workshop** tab keeps the Skill Workshop board and Today review flow for
+[skill proposals](/tools/skill-workshop).
+
+Included plugins are already present on the Gateway and show **Enable** or
+**Disable** instead of **Install**. For example, Workboard is included with
+OpenClaw but disabled by default, so its action is **Enable**. Bundled plugins
+cannot be removed, only disabled.
+
+Reading the catalog and searching ClawHub require `operator.read`. Installing,
+enabling, disabling, or removing a plugin and changing MCP servers require
+`operator.admin`; those actions stay disabled for read-only operators.
+
+ClawHub installs run through the Gateway and keep the same trust, integrity,
+and plugin-install policy checks as other Gateway-mediated installs. Installing
+or removing plugin code requires a Gateway restart. Enabling or disabling an
+installed plugin can apply without a restart when the plugin and current
+Gateway runtime support it; otherwise the UI reports that a restart is
+required. OAuth-backed MCP connectors need a one-time
+`openclaw mcp login <name>` from the CLI after they are added.
+
+The page intentionally focuses on inventory, discovery, install, enablement,
+and removal. Use [`openclaw plugins`](/cli/plugins) for arbitrary npm, git, or
+local-path sources, updates, and advanced plugin configuration.
+
+## Sidebar navigation
+
+The sidebar pins navigation above a scrollable session list. In multi-agent setups every agent appears as a collapsible top-level section; expanding an agent browses its sessions without navigating away from the open chat, and collapsed agents show an unread indicator. Within an agent the list splits into **Pinned**, one built-in section per connected channel (Telegram, Slack, WhatsApp, ...), a built-in **Work** section for sessions bound to a managed worktree or exec node (rows show a `repo ⎇ branch` line plus the node host), custom groups (the session `category`), and **Chats** for the rest. Channel and Work sections classify rows automatically; assigning a session to a custom group always wins. Opening a session moves the selection highlight without reordering the rows. Sessions with new activity since they were last read show an unread dot, and opening one marks it read. Each session row has a context menu (kebab button or right-click) with Pin/Unpin, Mark as unread/read, Rename, Fork, Move to group (including New group and Remove from group), Archive, and Delete; touch layouts keep the direct pin and menu controls visible. Cmd/Ctrl-click toggles rows into a multi-select and Shift-click extends it across the visible order; opening the menu on a selected row then offers batch actions (Mark N as unread/read, Move N to group, Archive N, Delete N) that apply to every selected session, with a single confirmation for batch delete. Drag a session onto a custom group or **Chats** to move it. Custom group headers can be collapsed, expanded, or dragged to reorder them; group names and their order live in the gateway (`sessions.groups.*`), so they follow you across browsers, while the collapsed state stays in the browser profile. Group headers also have a menu (kebab button or right-click) with Rename group, New group, and Delete group; renaming or deleting a group updates every member session server-side, including archived ones, and deleting a group keeps its sessions and moves them back to Chats. The single **+** in the session-list header opens the New session page (see below). The sort control also has a Group by toggle: Grouped (default) or None for one flat list (Pinned stays separate); the choice is stored in the current browser profile. **Usage**, **Automations**, and **Plugins** are pinned by default; the **More** row opens a menu with every other destination, including plugin-provided tabs. Select **Edit pinned items** in that menu, or right-click the navigation area, to pin or unpin destinations and restore the defaults. The pinned set is stored in the current browser profile and survives reloads.
+
+## New session page
+
+The **+** in the sidebar session-list header opens a full-page draft at `/new`: nothing is created until you send the first message. A target row above the message box picks where the session works: the agent (multi-agent setups), where exec runs (**Gateway · local** or a paired node that exposes `system.run`; requires `operator.admin`), the folder (defaults to the agent workspace; other absolute Gateway paths require `operator.admin` and a worktree), and an optional **Worktree** toggle with a base-branch picker (backed by `worktrees.branches`, so no fetch happens) and an optional worktree name (the branch becomes `openclaw/<name>`). The folder chip's browse button opens an inline directory picker backed by the admin-only `fs.listDir` method. Its top level shows the Gateway and every known node; offline nodes and nodes without directory-browsing support stay visible but disabled. Selecting the Gateway starts from the current folder or Gateway home. Selecting a capable node browses that node's host filesystem, binds exec to it, and uses the selected absolute node path directly (managed worktrees remain Gateway-only). Submitting calls `sessions.create` with the first message, so the run starts in the same round-trip and the UI jumps to the new session's chat. If the Gateway creates the session but rejects that first send, the chat preserves the prompt and error across reloads; **Retry** sends it through the already-created session instead of creating another one.
+
+Inside **Settings**, the dedicated sidebar starts with a **Search settings** field for quickly finding settings sections.
+
+A **Search** field at the top of the sidebar opens the command palette (⌘K). Clicking the OpenClaw brand in the sidebar header opens the clean New session start screen. When something needs action — failed or overdue cron jobs, expiring or expired model auth — compact attention chips appear above the sidebar footer and click through to the owning page. The footer shows the active agent as a chip — avatar (identity image or emoji), name, connection dot, and a live subtitle — with a **+** for a new session. Clicking the chip opens the agent menu: an agent switcher (multi-agent setups), "What can this agent do?", **Agent settings**, **Settings**, mobile pairing, **Docs**, the build chip, and the color-mode toggle. Rosters above ten agents get a filter field and list pinned agents first; pin or unpin agents from the Agents settings page, with the pinned set stored in the browser profile. Choosing an agent scopes Chat plus Usage, Automations, Tasks, Workboard, and Sessions to that agent. Each scoped page exposes an **Agent** control with **All agents** as an escape; this widens the shared page scope without changing the concrete chat agent, while direct session links still open their target. The Agents settings page keeps its own `?agent=` selection and does not follow the shared page scope. When the gateway runs from a source checkout on a branch other than `main`, the footer also shows that branch name in red so a non-release gateway is obvious at a glance (release installs never show it). Shift-Command-Comma opens **Settings** without overriding the browser's Command-Comma shortcut. The sidebar header also holds the collapse toggle (⌘B); collapsing hides the sidebar entirely for a full-width workspace, and a floating expand control (or ⌘B) brings it back; the macOS app hosts that toggle natively in the titlebar instead. The sidebar is the only navigation chrome on desktop, with no top bar. Narrow viewports swap the sidebar for a slide-over drawer behind a compact header row holding the drawer toggle, brand, and command-palette search; in the macOS app that header row folds the titlebar clearance into a single compact strip beside the window controls. Navigation uses regular browser history, so the browser's back/forward buttons traverse it; the macOS app adds a native sidebar toggle next to the window controls plus trackpad swipe gestures, with back/forward buttons at the sidebar's right edge while it is expanded and native search (command palette) and new-session buttons while it is collapsed.
 
 ## 它目前能做什么
 
 <AccordionGroup>
-  <Accordion title="聊天和对话">
-    - 通过 Gateway WS 与模型聊天（`chat.history`、`chat.send`、`chat.abort`、`chat.inject`）。
-    - 聊天历史刷新会请求一个有上限的最近窗口，并对每条消息设置文本长度上限，因此在聊天可用之前，大型会话不会迫使浏览器先渲染完整转录载荷。
-    - 通过浏览器实时会话进行对话。OpenAI 使用直接 WebRTC，Google Live 使用通过 WebSocket 的受限一次性浏览器令牌，而仅后端的实时语音插件使用 Gateway 中继传输。由客户端拥有的提供方会话从 `talk.client.create` 开始；Gateway 中继会话从 `talk.session.create` 开始。中继会将提供方凭据保留在 Gateway 上，同时浏览器通过 `talk.session.appendAudio` 传输麦克风 PCM，将 `openclaw_agent_consult` 提供方工具调用通过 `talk.client.toolCall` 转发以供 Gateway 策略和更大的已配置 OpenClaw 模型处理，并通过 `talk.client.steer` 或 `talk.session.steer` 路由活动运行中的语音引导。
-    - 在 Chat 中流式展示工具调用和实时工具输出卡片（代理事件）。
-    - 活动选项卡：基于浏览器本地、优先脱敏的实时工具活动摘要，来源于现有的 `session.tool` / 工具事件投递。
+  <Accordion title="Chat and Talk">
+    - Chat with the model via Gateway WS (`chat.history`, `chat.send`, `chat.abort`, `chat.inject`).
+    - Chat history refreshes request a bounded recent window with per-message text caps, so large sessions do not force the browser to render a full transcript payload before chat becomes usable.
+    - Hovering or keyboard-focusing a public GitHub issue or pull request link shows its state, title, author, recent activity, comments, and change statistics. The connected Gateway fetches and caches public metadata without changing the link target, including when the UI uses a remote Gateway. The Gateway uses `GH_TOKEN` or `GITHUB_TOKEN` when available, after confirming the repository is public; otherwise it uses GitHub's anonymous API with a longer cache.
+    - Talk through browser realtime sessions. OpenAI uses direct WebRTC, Google Live uses a constrained one-use browser token over WebSocket, and backend-only realtime voice plugins use the Gateway relay transport. Client-owned provider sessions start with `talk.client.create`; Gateway relay sessions start with `talk.session.create`. The relay keeps provider credentials on the Gateway while the browser streams microphone PCM through `talk.session.appendAudio`, forwards `openclaw_agent_consult` provider tool calls through `talk.client.toolCall` for Gateway policy and the larger configured OpenClaw model, and routes active-run voice steering through `talk.client.steer` or `talk.session.steer`.
+    - Stream tool calls and live tool output cards in Chat (agent events). Tool activity renders as kind-aware rows: shell commands show the syntax-highlighted command with terminal-style output; supported edit and write calls show bounded inline diffs, line numbers when available, and `+added -removed` stats; and consecutive calls collapse into a summary such as "Ran 13 commands, read 6 files, edited 9 files". While a run is live, the newest running call names the group header. Expand a row to inspect its remaining arguments and raw output.
+    - Optional AI purpose titles for complex tool calls (long shell commands, argument-heavy plugin tools), enabled with `gateway.controlUi.toolTitles: true` (default off). Titles come from the batched `chat.toolTitles` method through standard utility-model routing — an explicit `utilityModel` (operator-chosen provider, like other utility tasks), else the session provider's declared small-model default — and cache gateway-side per agent. When the opt-in is off or no cheap model is usable, rows keep their deterministic labels and no model call happens.
+    - Start or dismiss ephemeral model-suggested follow-up tasks; accepted suggestions open a fresh managed-worktree session with the proposed prompt.
+    - Activity tab with browser-local, redaction-first summaries of live tool activity from existing `session.tool` / tool event delivery.
 
   </Accordion>
-  <Accordion title="通道、实例、会话、梦境">
-    - 通道：内置以及捆绑/外部插件通道状态、二维码登录，以及按通道配置（`channels.status`、`web.login.*`、`config.patch`）。
-    - 通道探测刷新会在缓慢的提供方检查完成期间保持先前快照可见，并在探测或审计超出 UI 预算时标记部分快照。
-    - 实例：存在列表与刷新（`system-presence`）。
-    - 会话：默认列出已配置代理会话，固定常用会话，重命名它们，归档或恢复不活跃会话，从过期的未配置代理会话键回退，并应用每个会话的模型/思考/快速/详细/追踪/推理覆盖项（`sessions.list`、`sessions.patch`）。固定会话会排在最近未固定会话之上；已归档会话保留在 Sessions 页面归档视图中，并保留其转录内容。
-    - 会话分组：通过“按以下方式分组”控件，可将会话表按自定义分组、通道、种类、代理或日期组织成各个区段。自定义分组通过 `sessions.patch`（`category`）按会话持久化，因此从消息通道（Discord、Telegram、WhatsApp、……）启动的会话也可以被分类；可通过将行拖到某个区段上、使用每行的分组选择器来分配分组，并通过“新建分组”操作创建分组。
-    - 梦境：做梦状态、启用/禁用切换，以及 Dream Diary 读取器（`doctor.memory.status`、`doctor.memory.dreamDiary`、`config.patch`）。
+  <Accordion title="Channels, sessions, memory">
+    - Channels: built-in plus bundled/external plugin channels status, QR login, and per-channel config (`channels.status`, `web.login.*`, `config.patch`).
+    - Channel probe refreshes keep the previous snapshot visible while slow provider checks finish, and label partial snapshots when a probe or audit exceeds its UI budget.
+    - Sessions (a settings page under **Agents & Tools**, `/settings/sessions`): list configured-agent sessions by default, pin frequent sessions, rename them, archive or restore inactive sessions, fall back from stale unconfigured agent session keys, and apply per-session model/thinking/fast/verbose/trace/reasoning overrides (`sessions.list`, `sessions.patch`). Pinned sessions sort above recent unpinned sessions; archived sessions live in the Sessions page's archived view and keep their transcripts. Rows show an unread dot for sessions with activity since their last read, with mark-unread/mark-read actions (`sessions.patch { unread }`), and a Fork action that branches the transcript into a new session (`sessions.create { parentSessionKey, fork: true }`). Overview tiles above the table summarize the loaded roster (session count, live runs, unread sessions, total tokens), each row carries a kind glyph with a live-run dot, status renders as a plain dot plus label, and the Tokens column shows a context-window usage meter when the session reports token and context sizes. Row management actions live in a per-row menu (kebab button or right-click) mirroring the sidebar's session menu, and the row drawer carries the agent runtime and run duration alongside the other session details.
+    - Session grouping: a Group by control organizes the sessions table into sections by custom groups, channel, kind, agent, or date. Custom groups persist per session via `sessions.patch` (`category`), so sessions started from message channels (Discord, Telegram, WhatsApp, ...) can be categorized too; assign groups by dragging rows onto a section, or with the per-row group selector, and create groups with the New group action.
+    - Memory (a tab on the Agents page, scoped to the selected agent): dreaming status, enable/disable toggle, and Dream Diary reader (`doctor.memory.status`, `doctor.memory.dreamDiary`, `config.patch`).
+    - Import Memory (a settings page under **Agents & Tools**, `/settings/memory-import`): preview and copy local Codex consolidated memory or Claude Code auto-memory into the selected agent workspace (`migrations.memory.plan`, `migrations.memory.apply`).
 
   </Accordion>
-  <Accordion title="Cron、技能、节点、执行审批">
-    - Cron 任务：列出/添加/编辑/运行/启用/禁用，以及运行历史（`cron.*`）。
-    - 技能：状态、启用/禁用、安装、API 密钥更新（`skills.*`）。
-    - 节点：列表及容量（`node.list`）、创建移动端设置代码，以及批准设备配对（`device.pair.*`）。
-    - 执行审批：编辑 gateway 或节点允许列表，并针对 `exec host=gateway/node` 请求策略（`exec.approvals.*`）。
+  <Accordion title="Cron, tasks, plugins, skills, devices, exec approvals">
+    - Automations (cron jobs): stat cards (automation count, failing count, scheduler state, next wake) above an Automations/Run history tab switch; the Automations tab lists jobs in a filterable table (All/Active/Paused, search, schedule and last-run filters, per-row action menu) with starter suggestions below, and the Run history tab shows recent runs across all automations (`cron.*`).
+    - Tasks: live active and recent background task ledger with linked sessions and cancellation (`tasks.*`).
+    - Plugins: browse the installed inventory and curated store, search ClawHub, install and remove plugin code, and enable or disable installed plugins (`plugins.*`); MCP server rows edit `mcp.servers` through the config methods.
+    - Skills: status, enable/disable, install, API key updates (`skills.*`).
+    - Devices: one inventory joins paired device records, the node catalog, and live presence (`device.pair.list`, `node.list`, `system-presence`). The Gateway host is pinned first; paired clients show connection status, roles, tokens, capabilities, and commands. Duplicate pairings collapse into an expandable group, and **Clean up N stale** bulk-removes admin-confirmed offline duplicates that were auto-approved (silent local, trusted-CIDR, or SSH-verified) or predate approval provenance. Entries can be removed (`node.pair.remove`, `device.pair.remove`), device pairing and node re-approvals handled inline (`device.pair.*`, `node.pair.approve`/`reject`), and mobile setup codes created from the same card.
+    - Exec approvals: edit gateway or node allowlists and ask policy for `exec host=gateway/node` (`exec.approvals.*`).
 
   </Accordion>
-  <Accordion title="配置">
-    - 查看/编辑 `~/.openclaw/openclaw.json`（`config.get`、`config.set`）。
-    - MCP 有一个专用设置页面，用于配置服务器、启用状态、OAuth/过滤/并行摘要、常用操作员命令，以及作用域限定的 `mcp` 配置编辑器。
-    - 通过验证后应用并重启（`config.apply`），然后唤醒最后一个活动会话。
-    - 写入包含基础哈希保护，以防覆盖并发编辑。
-    - 写入（`config.set`/`config.apply`/`config.patch`）会对提交的配置载荷中的引用预先进行活动 SecretRef 解析；未解析且处于活动状态的已提交引用会在写入前被拒绝。
-    - 表单保存会丢弃无法从已保存配置中恢复的过期脱敏占位符，同时保留仍能映射到已保存密钥的脱敏值。
-    - 模式与表单渲染来源于 `config.schema` / `config.schema.lookup`，包括字段 `title`/`description`、匹配到的 UI 提示、立即子项摘要、嵌套对象/通配符/数组/组合节点上的文档元数据，以及可用时的插件和通道模式。仅当快照具有安全的原始往返能力时才提供原始 JSON 编辑器；否则 Control UI 会强制使用表单模式。
-    - 原始 JSON 编辑器中的“重置为已保存”会保留原始编写的形态（格式、注释、`$include` 布局），而不是重新渲染为扁平化快照，因此当快照能够安全往返时，外部编辑在重置后仍可保留。
-    - 结构化 SecretRef 对象值在表单文本输入框中以只读方式渲染，以防止意外的对象到字符串损坏。
+  <Accordion title="Config">
+    - View/edit `~/.openclaw/openclaw.json` (`config.get`, `config.set`).
+    - Agents: a settings page (**Settings → Agents**, `/settings/agents`) with per-agent tabs (Overview, Files, Tools, Skills, Channels, Automations, Memory). The Overview tab edits the agent's identity — display name, emoji, and an avatar image that is downscaled and size-bounded in the browser before `agents.update`. Saving stores configured identity fields and mirrors them to the workspace `IDENTITY.md`; configured values take precedence over manual edits to the same file fields.
+    - Profile: a settings page showing the default agent's identity with all-time usage stats — lifetime tokens, peak day, longest session, activity streaks, a year-long token heatmap, top tools, and channel highlights (`usage.cost`, `sessions.usage`).
+    - MCP has a dedicated settings page with read-only server rows (transport, enablement, OAuth/filter/parallel summaries), common operator commands, and the scoped `mcp` config editor; adding, enabling/disabling, and removing servers happens on the Plugins page.
+    - Model Providers: a settings page listing every configured model provider with its brand icon, auth state (`models.authStatus`), model availability (`models.list`), live plan/quota/billing data where the provider reports it (`usage.status`), and local session spend for the last 30 days (`sessions.usage`). A Refresh action re-reads credential state and provider usage.
+    - Connection: a settings page (under **Connections**) owning the dashboard's own gateway link — WebSocket URL, gateway token, password, and default session key — plus the latest handshake snapshot (status, uptime, tick interval, last channels refresh). The offline login gate handles the disconnected case; this page edits the connection while connected.
+    - Apply and restart with validation (`config.apply`), then wake the last active session.
+    - Writes include a base-hash guard to prevent clobbering concurrent edits.
+    - Writes (`config.set`/`config.apply`/`config.patch`) preflight active SecretRef resolution for refs in the submitted config payload; unresolved active submitted refs are rejected before write.
+    - Form saves discard stale redacted placeholders that cannot be restored from the saved config, while preserving redacted values that still map to saved secrets.
+    - Schema and form rendering come from `config.schema` / `config.schema.lookup`, including field `title`/`description`, matched UI hints, immediate child summaries, docs metadata on nested object/wildcard/array/composition nodes, plus plugin and channel schemas when available. Raw JSON editor is available only when the snapshot has a safe raw round-trip; otherwise Control UI forces Form mode.
+    - Raw JSON editor "Reset to saved" preserves the raw-authored shape (formatting, comments, `$include` layout) instead of re-rendering a flattened snapshot, so external edits survive a reset when the snapshot can safely round-trip.
+    - Structured SecretRef object values render read-only in form text inputs, to prevent accidental object-to-string corruption.
 
   </Accordion>
-  <Accordion title="调试、日志、更新">
-    - 调试：状态/健康状况/模型快照、事件日志，以及手动 RPC 调用（`status`、`health`、`models.list`）。
-    - 事件日志包括 Control UI 刷新/RPC 耗时、缓慢的聊天/配置渲染耗时，以及当浏览器暴露这些 PerformanceObserver 条目类型时，对长动画帧或长任务的浏览器响应性条目。
-    - 日志：gateway 文件日志的实时尾随查看，支持过滤/导出（`logs.tail`）。
-    - 更新：执行包/git 更新并重启（`update.run`），附带重启报告，然后在重新连接后轮询 `update.status` 以验证正在运行的 gateway 版本。
+  <Accordion title="Usage">
+    - Session-derived token and estimated-cost analysis stays separate from provider billing.
+    - Provider cards call `usage.status` and show live plan names, quota windows, balances, spend, and budgets reported by configured provider plugins.
+    - A provider usage failure does not block the session/cost dashboard; unavailable provider cards show their own error state.
 
   </Accordion>
-  <Accordion title="Cron 任务面板说明">
-    - 对于隔离任务，投递默认使用 announce 摘要；若仅供内部运行，则切换为 none。
-    - 当选择 announce 时，会显示通道/目标字段。
-    - Webhook 模式使用 `delivery.mode = "webhook"`，并将 `delivery.to` 设置为有效的 HTTP(S) webhook URL。
-    - 对于主会话任务，可使用 webhook 和 none 投递模式。
-    - 高级编辑控件包括删除后运行、清除代理覆盖、cron 精确/错峰选项、代理模型/思考覆盖，以及尽力投递切换。
-    - 表单验证为内联方式，并带有字段级错误；无效值会禁用保存按钮，直到修正为止。
-    - 设置 `cron.webhookToken` 以发送专用 bearer token；如果省略，则 webhook 发送时不带 auth 头。
-    - `cron.webhook` 是一个已弃用的旧版回退方案：运行 `openclaw doctor --fix` 可迁移那些仍使用 `notify: true` 的已存储任务，使其改为显式的按任务 webhook 或完成投递。
+  <Accordion title="Debug, logs, update">
+    - Debug: status/health/models snapshots, event log, and manual RPC calls (`status`, `health`, `models.list`).
+    - The event log includes Control UI refresh/RPC timings, slow chat/config render timings, and browser responsiveness entries for long animation frames or long tasks when the browser exposes those PerformanceObserver entry types.
+    - Logs: live tail of gateway file logs with filter/export (`logs.tail`).
+    - Update: run a package/git update plus restart (`update.run`) with a restart report, then poll `update.status` after reconnect to verify the running gateway version.
+
+  </Accordion>
+  <Accordion title="Automations panel notes">
+    - Selecting a row opens a full-page detail view with an Active/Paused switch and Run now in the header (run-if-due, clone, and remove in its menu); the Settings tab edits the automation inline (prompt, details, frequency, advanced overrides) and the Run history tab shows that automation's runs.
+    - Starter automations under the table prefill the create form with an editable prompt and schedule.
+    - For isolated tasks, delivery defaults to announce summary; switch to none for internal-only runs.
+    - Channel/target fields appear when announce is selected.
+    - Webhook mode uses `delivery.mode = "webhook"` with `delivery.to` set to a valid HTTP(S) webhook URL.
+    - For main-session tasks, webhook and none delivery modes are available.
+    - Advanced edit controls include delete-after-run, clear agent override, cron exact/stagger options, agent model/thinking overrides, and best-effort delivery toggles.
+    - Form validation is inline with field-level errors; invalid values disable the save button until fixed.
+    - Set `cron.webhookToken` to send a dedicated bearer token; if omitted, the webhook is sent without an auth header.
+    - `cron.webhook` is a deprecated legacy fallback: run `openclaw doctor --fix` to migrate stored jobs that still use `notify: true` to explicit per-job webhook or completion delivery.
 
   </Accordion>
 </AccordionGroup>
 
-## MCP 页面
+## Import assistant memory
+
+Open **Settings** → **Import Memory** to bring local Codex or Claude Code memory
+into an OpenClaw agent. The Gateway discovers supported local memory on its own
+host, so a remote Control UI imports from the Gateway computer rather than the
+browser computer.
+
+1. Choose the destination agent.
+2. Review the detected source collections and Markdown filenames. File contents
+   are not sent in the plan response or displayed in the page.
+3. Select the collections to import and confirm. Apply rebuilds the plan before
+   writing so stale selections fail safely.
+4. If files already exist, enable **Replace existing imports**, refresh the
+   preview, and confirm the replacement.
+
+Codex imports only its consolidated `MEMORY.md` and `memory_summary.md`. Claude
+Code imports Markdown from project auto-memory directories and a configured
+`autoMemoryDirectory`; it does not import sessions, settings, instructions, or
+credentials through this page. Files are copied below `memory/imports/` in the
+selected workspace, where the active memory plugin can index them. Sources are
+never changed.
+
+Planning and applying require `operator.admin`. Every apply creates a verified
+OpenClaw backup when state exists, writes a redacted migration report, and keeps
+item-level backups before replacing existing destination files. See
+[Memory overview](/concepts/memory#import-from-coding-assistants) for paths and
+recall behavior.
+
+## MCP page
 
 专用的 MCP 页面是面向 OpenClaw 管理的 `mcp.servers` 下 MCP 服务器的操作员视图。它不会自行启动 MCP 传输；请用它来检查和编辑已保存配置，然后在需要实时服务器证明时使用 `openclaw mcp doctor --probe`。
 
 典型工作流：
 
-1. 从侧边栏打开 **MCP**。
-2. 检查摘要卡片，查看总数、已启用、OAuth 和已过滤服务器数量。
-3. 查看每个服务器行中的传输方式、启用状态、认证、过滤器、超时和命令提示。
-4. 当服务器应保持已配置但不参与运行时发现时，切换其启用状态。
-5. 编辑作用域为 `mcp` 的配置部分，用于服务器定义、请求头、TLS/mTLS 路径、OAuth 元数据、工具过滤器和 Codex 投影元数据。
-6. 对于配置写入使用 **Save**，如果运行中的 Gateway 应应用更改后的配置，则使用 **Save & Publish**。
-7. 在终端中运行 `openclaw mcp status --verbose`、`openclaw mcp doctor --probe` 或 `openclaw mcp reload`，以进行静态诊断、实时证明或清除缓存运行时。
+1. Open **MCP** from the sidebar.
+2. Check the summary cards for total, enabled, OAuth, and filtered server counts.
+3. Review each server row for transport, enablement, auth, filters, timeouts, and command hints.
+4. Manage servers (add, enable/disable, remove) on the **Plugins** page, which is the single interactive writer of `mcp.servers`; the row list here links to it.
+5. Edit the scoped `mcp` config section for server definitions, headers, TLS/mTLS paths, OAuth metadata, tool filters, and Codex projection metadata.
+6. Use **Save** for a config write, or **Save & Publish** when the running Gateway should apply the changed config.
+7. Run `openclaw mcp status --verbose`, `openclaw mcp doctor --probe`, or `openclaw mcp reload` from a terminal for static diagnostics, live proof, or cached-runtime disposal.
 
 在渲染之前，此页面会对包含凭据的类 URL 值进行脱敏，并在命令片段中为服务器名称加引号，这样复制后的命令在包含空格或 shell 元字符时仍可正常工作。完整的 CLI 和配置参考： [MCP](/cli/mcp)。
 
 ## Activity 标签页
 
-Activity 标签页是一个短暂的、浏览器本地的实时工具活动观察器，源自与驱动 Chat 工具卡片的同一 Gateway `session.tool` / 工具事件流。它不会新增另一类 Gateway 事件、端点、持久化活动存储、指标流或外部观察器流。
+The Activity tab lives in **Settings › System**, next to Logs and Debug. It is an ephemeral browser-local observer for live tool activity, derived from the same Gateway `session.tool` / tool event stream that powers Chat tool cards. It does not add another Gateway event family, endpoint, durable activity store, metrics feed, or external observer stream.
 
 Activity 条目只保留已脱敏摘要和经过脱敏、截断的输出预览。工具参数值不会存储在 Activity 状态中；UI 会显示这些参数被隐藏，并且只记录参数字段数量。内存中的列表跟随当前浏览器标签页，在 Control UI 内导航时会保留，并在页面重新加载、会话切换或点击 **Clear** 时重置。
 
@@ -212,37 +318,60 @@ Activity 条目只保留已脱敏摘要和经过脱敏、截断的输出预览�
 
 该终端还可作为全屏、仅终端的文档，通过 `/?view=terminal` 访问。iOS 和 Android 应用会在其 Terminal 界面中嵌入此页面，并复用已存储的 gateway 凭据；可用性同样受 `gateway.terminal.enabled` 和 `operator.admin` 门控限制，当所连接的 Gateway 不提供终端时，页面会显示通知。
 
-## 聊天行为
+## Browser panel
+
+The Control UI ships a dockable browser panel that renders the Gateway-controlled browser (the same one agents drive through the [browser tool](/tools/browser-control)) in any regular web browser - no native webview required. It appears when the connected Gateway advertises `browser.request` to an `operator.admin` connection; the globe button in the session workspace rail toggles it. The panel shows a live page snapshot with tabs, an editable URL bar, back/forward/reload, and open-in-your-browser, docks right or bottom, and forwards clicks, wheel scrolling, and basic typing to the remote page.
+
+Two capture modes package page context for the agent:
+
+- **Annotate (pencil)**: draw freehand markup over the page. **Send to chat** composites the strokes into the screenshot, attaches the image to the active chat composer, and prefills a prompt describing the page URL, title, and each marked region so the agent knows exactly what you circled.
+- **Inspect (pointer)**: hover to see the element under the cursor (selector, accessible name, role, size); click to send that element's details plus a highlighted screenshot through the same composer flow. Inspect, wheel scrolling, and back/forward need `browser.evaluateEnabled` (on by default).
+
+The macOS app keeps its native link-browser sidebar for links clicked in the dashboard; the browser panel works there too, and is the way to annotate pages on every other platform.
+
+## Chat behavior
 
 <AccordionGroup>
-  <Accordion title="发送与历史语义">
-    - `chat.send` 是**非阻塞**的：它会立即确认并返回 `{ runId, status: "started" }`，响应通过 `chat` 事件流式返回。受信任的 Control UI 客户端还可能接收到可选的 ACK 时序元数据，用于本地诊断。
-    - 聊天上传接受图片以及非视频文件。图片保留原生图片路径；其他文件作为受管媒体存储，并在历史中显示为附件链接。
-    - 使用相同的 `idempotencyKey` 重新发送时，在运行期间返回 `{ status: "in_flight" }`，完成后返回 `{ status: "ok" }`。
-    - `chat.history` 响应受大小限制，以保障 UI 安全。当转录条目过大时，Gateway 可能截断较长的文本字段，省略较重的元数据块，并用占位符替换超大消息（`[chat.history omitted: message too large]`）。
-    - 当可见的助手消息在 `chat.history` 中被截断时，侧边阅读器可以按需通过 `chat.message.get` 获取完整的显示规范化转录条目；如需要可通过 `sessionKey`、当前活动的 `agentId`，以及转录 `messageId`。如果 Gateway 仍然无法返回更多内容，阅读器会显示明确的不可用状态，而不是静默重复截断后的预览。
-    - 助手/生成的图片会作为受管媒体引用持久化，并通过已认证的 Gateway 媒体 URL 提供，因此重新加载不依赖于原始 base64 图片载荷继续留在聊天历史响应中。
-    - 渲染 `chat.history` 时，Control UI 会从可见的助手文本中剥离仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 载荷（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块），以及泄露的 ASCII/全角模型控制 token。它会省略那些整个可见文本仅为精确静默 token `NO_REPLY` / `no_reply` 或心跳确认 token `HEARTBEAT_OK` 的助手条目。
-    - 在活动发送期间和最终历史刷新时，如果 `chat.history` 短暂返回较旧快照，聊天视图会保留本地乐观的用户/助手消息可见；当 Gateway 历史赶上后，规范化转录会替换这些本地消息。
-    - 实时 `chat` 事件表示传递状态，而 `chat.history` 则从持久化的会话转录重建。工具最终事件之后，Control UI 会重新加载历史，并且只合并一个很小的乐观尾部；转录边界记录在 [WebChat](/web/webchat) 中。
-    - `chat.inject` 会向会话转录附加一条助手注释，并广播一个 `chat` 事件用于仅 UI 更新（不发生 agent 运行，也不进行通道传递）。
-    - 侧边栏列出最近会话，包含 New Session 操作、All Sessions 链接，以及一个会话搜索按钮，它会打开完整的会话选择器（按所选 agent 作用域划分，支持搜索和分页）。新的仪表板会话会在异步过程中根据其第一条非命令消息获得一个简短的生成标题；显式名称绝不会被替换。设置 `agents.defaults.utilityModel`（或 `agents.list[].utilityModel`）可将这个独立模型调用路由到更低成本的模型。切换 agent 时只显示属于该 agent 的会话；如果该 agent 还没有保存的仪表板会话，则回退到该 agent 的主会话。
-    - 每个会话选择器行都可以重命名、置顶或归档会话。活动运行和 agent 的主会话不能被归档。归档当前选中的会话会将 Chat 切回该 agent 的主会话。
-    - 在桌面宽度下，聊天控件保持在一行紧凑布局中，并会在向下滚动转录时折叠；向上滚动、返回顶部或到达底部时会恢复控件。
-    - 连续重复的纯文本消息会渲染为一个气泡，并带有数量徽标。包含图片、附件、工具输出或画布预览的消息不会被折叠。
-    - 聊天头部的模型和思考选择器会通过 `sessions.patch` 立即修补活动会话；它们是持久性的会话覆盖，而不是仅限单次发送的选项。
-    - 如果你在同一会话的模型选择器变更仍在保存时发送消息，composer 会先等待该会话修补完成，再调用 `chat.send`，以便这次发送使用所选模型。
-    - 输入 `/new` 会创建并切换到与 New Chat 相同的新仪表板会话，除非配置了 `session.dmScope: "main"` 且当前父会话是该 agent 的主会话；此时会在原地重置主会话。输入 `/reset` 会保留 Gateway 对当前会话的显式原地重置。
-    - 聊天模型选择器请求的是 Gateway 配置的模型视图。如果存在 `agents.defaults.models`，则该允许列表会驱动选择器，包括保持 provider 作用域目录动态的 `provider/*` 条目。否则，选择器会显示明确的 `models.providers.*.models` 条目以及具有可用认证的 providers。完整目录仍可通过调试用 `models.list` RPC，并设置 `view: "all"` 来访问。
-    - 当新的 Gateway 会话使用情况报告包含当前上下文 token 时，聊天 composer 工具栏会显示一个小型上下文使用环，展示已用百分比。点开后可查看当前上下文窗口、最近一次运行的 token 计数和估算总成本、provider/model 标识，以及最新 provider 响应的输入/输出/缓存成本拆分（如果有报告）。在上下文压力较高时，该环会切换为警告样式；在建议压缩级别时，会显示一个紧凑按钮，用于执行正常的会话压缩路径。过时的 token 快照会被隐藏，直到 Gateway 再次报告新的使用情况。
+  <Accordion title="Send and history semantics">
+    - `chat.send` is **non-blocking**: it acks immediately with `{ runId, status: "started" }` and the response streams via `chat` events. Trusted Control UI clients may also receive optional ACK timing metadata for local diagnostics.
+    - Chat uploads accept images plus non-video files. Images keep the native image path; other files are stored as managed media and shown in history as attachment links.
+    - Re-sending with the same `idempotencyKey` returns `{ status: "in_flight" }` while running, and `{ status: "ok" }` after completion.
+    - `chat.history` responses are size-bounded for UI safety. When transcript entries are too large, Gateway may truncate long text fields, omit heavy metadata blocks, and replace oversized messages with a placeholder (`[chat.history omitted: message too large]`).
+    - When a visible assistant message was truncated in `chat.history`, the side reader can fetch the full display-normalized transcript entry on demand through `chat.message.get` by `sessionKey`, active `agentId` when needed, and transcript `messageId`. If the Gateway still cannot return more, the reader shows an explicit unavailable state instead of silently repeating the truncated preview.
+    - Assistant/generated images are persisted as managed media references and served back through authenticated Gateway media URLs, so reloads do not depend on raw base64 image payloads staying in the chat history response.
+    - When rendering `chat.history`, the Control UI strips display-only inline directive tags from visible assistant text (for example `[[reply_to_*]]` and `[[audio_as_voice]]`), plain-text tool-call XML payloads (including `<tool_call>...</tool_call>`, `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and truncated tool-call blocks), and leaked ASCII/full-width model control tokens. It omits assistant entries whose whole visible text is only the exact silent token `NO_REPLY` / `no_reply` or the heartbeat acknowledgement token `HEARTBEAT_OK`.
+    - During an active send and the final history refresh, the chat view keeps local optimistic user/assistant messages visible if `chat.history` briefly returns an older snapshot; the canonical transcript replaces those local messages once the Gateway history catches up.
+    - Live `chat` events are delivery state, while `chat.history` is rebuilt from the durable session transcript. After tool-final events the Control UI reloads history and merges only a small optimistic tail; the transcript boundary is documented in [WebChat](/web/webchat).
+    - `chat.inject` appends an assistant note to the session transcript and broadcasts a `chat` event for UI-only updates (no agent run, no channel delivery).
+    - The sidebar lists every loaded active session by agent section and pinned/channel/work/custom/Chats buckets with a single New Session action that opens the draft dialog. Opening a visible row moves only the highlight. Custom groups are collapsible and drag-reorderable, and sessions can be dropped onto a group or Chats; group names and order sync through the gateway while the collapsed state stays in the browser. A new dashboard session asynchronously gets a concise generated title from its first non-command message; explicit names are never replaced. Set `agents.defaults.utilityModel` (or `agents.list[].utilityModel`) to route this separate model call to a lower-cost model. Expanding another agent section browses that agent's sessions without leaving the open chat.
+    - Session search lives in the command palette (⌘K, or the Search field at the top of the sidebar): typing a query follows a bounded number of matching pages across agents, filters internal child/cron rows, and lists visible matches next to navigation commands. The Sessions page keeps the exhaustive searchable list with filters.
+    - Each sidebar row keeps direct pin access plus a full context menu for unread state, rename, fork, grouping, archive, and delete. Multi-selected rows (Cmd/Ctrl-click, Shift-click for ranges) get a batch menu covering unread state, grouping, archive, and delete; batch archive/delete stays disabled unless every selected session is archivable. An active run and an agent's main session cannot be archived. Archiving or deleting the currently selected session switches Chat back to that agent's main session.
+    - In the macOS app, the OpenClaw mark uses the otherwise-empty native titlebar strip next to the window controls instead of consuming a sidebar row.
+    - On desktop widths, chat controls stay on one compact row and collapse while scrolling down the transcript; scrolling up, returning to the top, or reaching the bottom restores the controls.
+    - Consecutive duplicate text-only messages render as one bubble with a count badge. Messages that carry images, attachments, tool output, or canvas previews are left uncollapsed.
+    - When a session's checkout sits on a non-default branch of a GitHub repository, the chat view pins pull request chips above the composer: PR number, repo, branch, diff counts, a CI pill, and draft/merged/closed state, each linking to the PR. The row shows at most two chips — live (open/draft) PRs first — and a "Show more" button reveals collapsed merged/closed history. The CI pill opens a small CI monitoring popover with passed/failed/running/skipped check counts and a link to the PR's checks page. Detection runs server-side through `controlUi.sessionPullRequests`, which reuses the Gateway's `GH_TOKEN`/`GITHUB_TOKEN` when set. When the GitHub API rate limit is hit, chips keep the last known status and show a warning that the status may be out of date; dismissing a chip hides it for that session in the current browser profile. Before any PR exists, the row shows the branch itself — repo, branch name, and the +/− size of the diff against the default-branch merge base (committed and uncommitted work). Once the pushed branch has commits to compare, the row adds a Create PR button that opens GitHub's new-pull-request page; before that, a session with changed files (committed, uncommitted, or untracked) still gets the row without the button. The row hides itself while an open or draft PR exists. The branch row comes from local git only, so it stays available while GitHub is rate limited and carries the same stale-status warning, since "no PR found" cannot be trusted until the limit resets.
+    - The session diff panel shows what a session's checkout actually changed: the branch button (in the workspace rail header, the split-pane header, or the floating button in single-pane chat) opens the detail panel with a per-file diff of branch, uncommitted, and untracked work against the checkout's default-branch merge base — status dot, rename arrow, per-file +/− counts, collapsible files, and "N unmodified lines" markers between hunks. Diffs are computed server-side through the `sessions.diff` Gateway method (`operator.read` scope); binary and oversized files degrade to stats-only entries, and the button only appears when the connected Gateway advertises `sessions.diff`.
+    - The session workspace rail in each Chat pane lists session files, project files, and artifacts. It docks to the pane's right edge by default; drag its header (or use the dock button) to move it to the bottom, and the choice is stored in the current browser profile. A collapsed rail takes no space at all: reopen it with ⇧⌘B, the files toggle in the split-pane header, or the floating files button in single-pane chat (both carry a changed-file count badge). The separate file, tool, and Canvas detail panel is unaffected.
+    - Clicking a file reference in chat, a file path in an expanded read/edit/write tool card, or a file row in the workspace rail opens the file detail panel: a CodeMirror-based code view with syntax highlighting, line numbers, jump-to-line, in-file search, copy actions, and an open-in-external-editor menu. When the Gateway advertises `sessions.files.set` to an `operator.admin` connection, the panel adds an Edit mode with dirty tracking and Cmd/Ctrl-S save; unsaved drafts survive file, panel, and session navigation in the current browser tab until explicitly saved or discarded. Saves are compare-and-swap on a content hash returned by `sessions.files.get`: if the file changed on disk since it was loaded (for example because the agent kept working), the panel shows a conflict notice with Reload (take the latest content) and Overwrite (keep the local edit) actions. Writes go through the same fs-safe workspace guards as reads — path containment, symlink/hardlink rejection, and a 256 KB UTF-8 cap — and only overwrite existing files; the editor never creates or deletes them.
+    - The background tasks rail in each Chat pane lists the current agent's background tasks and subagents (`tasks.list` scoped by agent, kept live by `task` events): running work shows a live elapsed timer, tool-use count, the tool currently in use, and a stop control; the collapsible finished section adds run durations; and a View transcript link opens the task's child session in the pane. Open it with the activity toggle in the split-pane header or the floating activity button in single-pane chat — the task snapshot loads eagerly, so both carry a running-count badge without opening the rail first. The Tasks page remains the full cross-agent ledger.
+    - The workspace rail, background tasks rail, and detail panel adapt to each pane's own width rather than the window: in a narrow pane or compact window both rails present as bottom strips (side-dock controls hide until the pane widens; the workspace rail keeps first claim on the side slot when only one column fits), and the detail panel stacks below the thread with a horizontal resize handle instead of sharing the row with it. Phone-sized viewports still open the detail panel full-screen.
+    - The chat header model and thinking pickers patch the active session immediately through `sessions.patch`; they are persistent session overrides, not one-turn-only send options.
+    - **Split view:** open it from the top-right floating toggle row (beside the session diff, background tasks, and session files toggles), then split the active pane right or down for as many panes as fit. Each pane has its own session, transcript, composer, and tool stream.
+    - Drag a session from the sidebar into chat to open it in a pane. An animated drop preview glides between zones and labels the outcome — "Split" over the exact half a new pane will occupy, "Open here" over a whole pane — and drops also work from single-pane mode.
+    - The active split pane drives the sidebar selection and URL. Each pane carries its own header row with the session title plus workspace-rail, split, and close controls; dividers resize columns and stacked panes, and the browser stores the layout locally across reloads.
+    - On narrow screens, split view keeps the layout but renders only the active pane, including its header with the close control.
+    - If you send a message while a model picker change for the same session is still saving, the composer waits for that session patch before calling `chat.send` so the send uses the selected model.
+    - Typing `/new` creates and switches to the same fresh dashboard session as New Chat, except when `session.dmScope: "main"` is configured and the current parent is the agent's main session; then it resets the main session in place. Typing `/reset` keeps the Gateway's explicit in-place reset for the current session.
+    - The chat model picker requests the Gateway's configured model view. If `agents.defaults.models` is present, that allowlist drives the picker, including `provider/*` entries that keep provider-scoped catalogs dynamic. Otherwise the picker shows explicit `models.providers.*.models` entries plus providers with usable auth. The full catalog stays available through the debug `models.list` RPC with `view: "all"`.
+    - When fresh Gateway session usage reports include current context tokens, the chat composer toolbar shows a small context usage ring with the used percentage. Open the ring for the current context window, latest-run token counts and estimated total cost, provider/model identity, and the latest provider response's input/output/cache cost breakdown when reported. The ring switches to warning styling at high context pressure and, at recommended compaction levels, shows a compact button that runs the normal session compaction path. Stale token snapshots are hidden until the Gateway reports fresh usage again.
 
   </Accordion>
-  <Accordion title="对话模式（浏览器实时）">
-    对话模式使用已注册的实时语音提供方。使用 OpenAI 时，配置 `talk.realtime.provider: "openai"`，并提供 `openai` API 密钥认证配置文件、`talk.realtime.providers.openai.apiKey` 或 `OPENAI_API_KEY`；OpenAI OAuth 配置文件不会配置 Realtime 语音。使用 Google 时，配置 `talk.realtime.provider: "google"`，并提供 `talk.realtime.providers.google.apiKey`。浏览器永远不会接收到标准 provider API key：OpenAI 会接收用于 WebRTC 的一次性 Realtime 客户端密钥，Google Live 会接收一个仅可使用一次、受限制的 Live API 认证令牌用于浏览器 WebSocket 会话，而指令和工具声明会被 Gateway 锁定进令牌中。仅暴露后端 realtime 桥接的 providers 会通过 Gateway relay 传输运行，因此凭据和厂商 socket 保持在服务器端，而浏览器音频通过已认证的 Gateway RPC 流动。Realtime 会话提示由 Gateway 组装；`talk.client.create` 不接受调用方提供的指令覆盖。
+  <Accordion title="Talk mode (browser realtime)">
+    Talk mode uses a registered realtime voice provider. Configure OpenAI with `talk.realtime.provider: "openai"` plus an `openai` API-key profile, `talk.realtime.providers.openai.apiKey`, or `OPENAI_API_KEY`. OpenAI Realtime uses the public Platform API and requires a Platform API key; a Codex OAuth login does not satisfy this surface. Configure Google with `talk.realtime.provider: "google"` plus `talk.realtime.providers.google.apiKey`. The browser never receives a standard provider API key: OpenAI receives an ephemeral Realtime client secret for WebRTC, and Google Live receives a one-use constrained Live API auth token for a browser WebSocket session, with instructions and tool declarations locked into the token by the Gateway. Providers that only expose a backend realtime bridge run through the Gateway relay transport, so credentials and vendor sockets stay server-side while browser audio moves through authenticated Gateway RPCs. The Realtime session prompt is assembled by the Gateway; `talk.client.create` does not accept caller-provided instruction overrides.
 
-    Chat composer 在 Talk 开始/停止按钮旁边包含一个 Talk 选项下拉箭头。其紧凑面板仅保留下一次 Talk 会话所需的 Voice、Model 和 Sensitivity。**更多设置** 会打开 **Settings → Communications → Talk**，其中存放持久性的 provider、transport、reasoning effort、精确 VAD 阈值、静音时长和前缀填充默认值；更改这些默认值需要 `operator.admin` 访问权限。composer 中的空白值会回退到这些已配置默认值或 provider 默认值。配置 Gateway relay 会强制使用后端 relay 路径；配置 WebRTC 会保持会话由客户端拥有，并在 provider 无法创建浏览器会话时直接失败，而不是静默回退到 relay。
+    Persistent provider, model, voice, transport, reasoning effort, exact VAD threshold, silence duration, and prefix padding defaults live in **Settings → Communications → Talk**; changing them requires `operator.admin` access. Configuring Gateway relay forces the backend relay path; configuring WebRTC keeps the session client-owned and fails instead of silently falling back to relay if the provider cannot create a browser session.
 
-    Talk 控件本身就是 composer 工具栏中的麦克风按钮，旁边有一个小下拉箭头可打开 Talk 选项。Talk 开始时，composer 状态行会显示 `Connecting Talk...`，然后在音频连接后显示 `Talk live`，或者在实时工具调用通过 `talk.client.toolCall` 咨询所配置的更大模型时显示 `Asking OpenClaw...`。
+    The Talk control itself is the microphone button in the composer toolbar. Its caret lists **System default** and every microphone exposed by the browser, including USB, Bluetooth, and virtual inputs. The selected device ID stays browser-local and is never sent to the Gateway; if that exact device disappears, Talk asks you to choose another input instead of silently recording from a different microphone. While Talk is live, the microphone button becomes a pill showing the live input-level meter; clicking it stops voice input, and hovering it reveals the stop glyph. Screen readers announce `Connecting voice input...`, `Listening...`, or `Asking OpenClaw...` while a realtime tool call is consulting the configured larger model through `talk.client.toolCall`. Stopping a running agent response stays a separate square **Stop** control next to the pill.
 
     维护者实时烟雾测试：`OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts` 会验证 OpenAI 后端 WebSocket 桥接、OpenAI 浏览器 WebRTC SDP 交换、Google Live 受限令牌浏览器 WebSocket 设置，以及带有伪麦克风媒体的 Gateway relay 浏览器适配器。该命令只打印提供方状态，不会记录密钥。
 
@@ -262,7 +391,24 @@ Activity 条目只保留已脱敏摘要和经过脱敏、截断的输出预览�
   </Accordion>
 </AccordionGroup>
 
-## PWA 安装与 Web Push
+## Connection loss and reconnect
+
+Once a session is established, a dropped Gateway connection does not log you out. The dashboard
+stays visible with a floating amber "Gateway connection lost — Reconnecting…" pill under the top
+bar while the client retries automatically with backoff (800 ms up to 15 s). Live updates and
+realtime/session actions pause until the connection returns; **Retry now** in the pill forces an
+immediate attempt. Chat remains editable: ordinary text and attachment sends are kept in the
+current tab's gateway/session-scoped browser storage, shown as waiting for reconnect, and sent
+automatically when the Gateway returns. Live controls and slash commands remain unavailable while
+offline.
+
+When this browser already holds credentials (a configured token/password or an approved device
+token), first opens and reloads show a small animated OpenClaw mark while the connection is
+established instead of flashing the login gate. The login gate only appears when no credentials
+are stored yet or when the Gateway actively rejects them (bad token/password, revoked pairing) —
+states that need your input rather than waiting.
+
+## PWA install and web push
 
 Control UI 附带 `manifest.webmanifest` 和 service worker，因此现代浏览器可以将其安装为独立的 PWA。Web Push 允许 Gateway 在标签页或浏览器窗口未打开时也能通过通知唤醒已安装的 PWA。
 
@@ -296,6 +442,8 @@ Web Push 独立于 iOS APNS 中继路径（有关中继支持的推送，请参�
 
 助手消息可以通过 `[embed ...]` 短代码以内联方式渲染托管的网页内容。iframe 沙箱策略由 `gateway.controlUi.embedSandbox` 控制：
 
+The bundled Canvas plugin also provides [`show_widget`](/tools/show-widget) to render self-contained SVG or HTML directly from a tool call. The browser advertises the `inline-widgets` Gateway capability, and the resulting Canvas document remains available when chat history reloads. Channel-originated runs do not receive this tool.
+
 <Tabs>
   <Tab title="strict">
     禁用托管嵌入中的脚本执行。
@@ -326,7 +474,7 @@ Web Push 独立于 iOS APNS 中继路径（有关中继支持的推送，请参�
 
 ## 聊天消息宽度
 
-分组聊天消息使用可读性的默认最大宽度。宽屏部署可以通过设置 `gateway.controlUi.chatMessageMaxWidth` 来覆盖它，而无需修改打包后的 CSS：
+The chat transcript uses a centered readable frame aligned with the composer. Assistant and tool output stay left-aligned while user bubbles stay right-aligned inside that frame. Wide-monitor deployments can override the transcript width without patching bundled CSS by setting `gateway.controlUi.chatMessageMaxWidth`:
 
 ```json5
 {
@@ -436,10 +584,11 @@ Control UI 提供了严格的 `img-src` 策略：仅允许**同源**资源、`da
 
 在实际使用中：
 
-- 通过相对路径提供的头像和图片（例如 `/avatars/<id>`）仍然可以正常显示，包括 UI 获取并转换为本地 `blob:` URL 的已认证头像路由。
-- 内联的 `data:image/...` URL 仍然可以正常显示。
-- 由 Control UI 创建的本地 `blob:` URL 仍然可以正常显示。
-- 通道元数据输出的远程头像 URL 会在 Control UI 的头像辅助函数中被移除，并替换为内置的 logo/badge，因此被入侵或恶意的通道无法强制操作员浏览器发起任意远程图片请求。
+- Avatars and images served under relative paths (for example `/avatars/<id>`) still render, including authenticated avatar routes the UI fetches and converts into local `blob:` URLs.
+- Inline `data:image/...` URLs still render.
+- Local `blob:` URLs created by the Control UI still render.
+- GitHub link preview avatars are fetched by the Gateway from GitHub's fixed avatar host and returned as bounded `data:` URLs; the operator browser never contacts the remote avatar host.
+- Remote avatar URLs emitted by channel metadata are stripped at the Control UI's avatar helpers and replaced with the built-in logo/badge, so a compromised or malicious channel cannot force arbitrary remote image fetches from an operator browser.
 
 此功能始终启用，且不可配置。
 
@@ -463,7 +612,14 @@ When gateway authentication is configured, the Control UI's avatar endpoint need
 
 这使媒体渲染能够兼容浏览器原生媒体元素，同时不会把可复用的网关凭据暴露在可见的媒体 URL 中。
 
-## 构建 UI
+## Approval links
+
+Operator approval notifications can deep-link to a standalone approval document served under the reserved `${controlUiBasePath}/approve/{approvalId}` namespace (for example `/approve/<approvalId>`, or `/openclaw/approve/<approvalId>` with a configured base path). The URL is stable for the lifetime of the approval and safe to forward between your own devices: it identifies the approval, never authorizes it.
+
+- The one-segment `/approve/<approvalId>` namespace is reserved by the Gateway ahead of plugin HTTP routes for **all** HTTP methods, so a plugin route can never shadow or intercept an approval document.
+- Opening an approval document requires the same gateway auth as the rest of the Control UI (token/password, Tailscale Serve identity, or trusted-proxy identity); credentials are never part of the approval URL.
+- When Control UI serving is disabled, requests to the namespace return `404` instead of falling through to plugin handlers.
+- Signing in on an approval document is ephemeral for that page: it does not overwrite the gateway selection or settings saved by the full Control UI in the same browser.
 
 Gateway 从 `dist/control-ui` 提供静态文件：
 

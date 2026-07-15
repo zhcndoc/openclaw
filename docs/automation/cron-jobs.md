@@ -70,7 +70,7 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在合适的时间
 | `at`      | `--at`      | 一次性时间戳（ISO 8601 或相对时间，如 `20m`）                                                     |
 | `every`   | `--every`   | 固定间隔（`10m`、`1h`、`1d`）                                                                       |
 | `cron`    | `--cron`    | 5 字段或 6 字段的 cron 表达式，可选 `--tz`                                                  |
-| `on-exit` | `--on-exit` | 当被监视的命令退出时触发一次（事件触发；在 turn teardown 后仍可保留；可选 `--on-exit-cwd`） |
+| `on-exit` | `--on-exit` | 当被监视的命令退出时触发一次（事件触发；在 turn 清理后仍可保留；可选 `--on-exit-cwd`） |
 
 不带时区的时间戳会被视为 UTC。添加 `--tz America/New_York` 可将不带偏移的 `--at` 日期时间按该 IANA 时区解释，或按该 IANA 时区计算 cron 表达式。不带 `--tz` 的 cron 表达式使用 Gateway 主机时区。`--tz` 不能与 `--every` 或 `--on-exit` 一起使用。
 
@@ -88,7 +88,42 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月中
 
 这每月大约会触发 5-6 次，而不是 0-1 次。若要同时满足两个条件，请使用 croner 的 `+` 星期字段修饰符（`0 9 15 * +1`），或者只按一个字段进行调度，并在作业的 prompt 或命令中对另一个条件进行检查。
 
-## 载荷
+## 事件触发器（条件监视器）
+
+事件触发器会向 `every` 或 `cron` 计划添加一个无头条件脚本。Cron 会在任务到期时评估该脚本，并且只在脚本返回 `fire: true` 时运行正常负载：
+
+```json5
+{
+  schedule: { kind: "every", everyMs: 30000 },
+  trigger: {
+    // 仅当观察到的状态与上一次评估不同时时触发。
+    script: "const res = await tools.call('exec', { command: 'gh pr checks 123 --json state -q \\'.[].state\\' | sort -u' }); const status = String(res?.result?.details?.aggregated ?? '').trim(); json({ fire: status !== trigger.state?.status, message: `PR 123 CI: ${trigger.state?.status ?? 'unknown'} -> ${status}`, state: { status } });",
+    once: false,
+  },
+  payload: { kind: "agentTurn", message: "调查 CI 状态变化。" },
+}
+```
+
+脚本必须返回 `{ fire, message?, state? }`。先前的 JSON 状态可通过深度冻结的 `trigger.state` 获取；返回一个新的 `state` 值即可将其持久化。状态上限为 16 KB。 当触发结果包含 `message` 时，cron 会在执行前将其追加到系统事件文本或 agent-turn 消息中。`once: true` 会在第一次成功触发并执行负载后禁用该任务。
+
+`fire: false` 会持久化评估状态和计数器，然后重新安排执行，但不会创建运行历史。如果已触发的负载运行失败，返回的 `state` **不会** 被持久化——下一次评估会看到之前的状态并且可以再次触发，因此请将脚本写成只读检查，并把动作保留在负载中。触发器计划具有可配置的最小间隔（默认 30 秒）。每次评估都有 30 秒的墙钟时间预算，并且最多允许 5 次工具调用。
+
+<Warning>
+启用 `cron.triggers.enabled` 会让代理编写的脚本以无头方式运行，并使用所属代理的**完整工具策略，包括 `exec`**。请将其视为带有该代理权限的无人值守代码执行；除非所有允许创建 cron 任务的代理都已被相应信任，否则请保持禁用。
+</Warning>
+
+从本地脚本文件创建一个监视器（`-` 表示从 stdin 读取脚本）：
+
+```bash
+openclaw cron add \
+  --name "PR CI watcher" \
+  --every 30s \
+  --trigger-script ./watch-pr-ci.js \
+  --message "Respond to the CI status change" \
+  --session isolated
+```
+
+## Payloads
 
 每个作业都恰好携带一种载荷类型，由标志位决定：
 
@@ -104,10 +139,10 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月中
   提示文本（孤立/当前/自定义会话作业必填）。
 </ParamField>
 <ParamField path="--model" type="string">
-  模型覆盖；必须解析为允许的模型，否则运行会因校验错误而失败。
+  模型覆盖；必须解析为允许的模型，否则运行将因校验错误而失败。
 </ParamField>
 <ParamField path="--fallbacks" type="string">
-  每个作业的回退模型列表，例如 `--fallbacks openai/gpt-5.5,openrouter/meta-llama/llama-3.3-70b-instruct:free`。传入 `--fallbacks ""` 表示严格运行，不使用回退。
+  每个作业的回退模型列表，例如 `--fallbacks openai/gpt-5.6-sol,openrouter/meta-llama/llama-3.3-70b-instruct:free`。对于不带回退的严格运行，请传入 `--fallbacks ""`。
 </ParamField>
 <ParamField path="--clear-fallbacks" type="boolean">
   在 `cron edit` 中，移除每个作业的回退覆盖，使作业遵循已配置的回退优先级。不能与 `--fallbacks` 同时使用。
@@ -116,7 +151,7 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月中
   在 `cron edit` 中，移除每个作业的模型覆盖，使作业遵循正常的 cron 模型优先级（先存储的 cron-session 覆盖，其次 agent/default 模型）。不能与 `--model` 同时使用。
 </ParamField>
 <ParamField path="--thinking" type="string">
-  思考级别覆盖（`off|minimal|low|medium|high|xhigh|adaptive|max`）。
+  思考级别覆盖（`off|minimal|low|medium|high|xhigh|adaptive|max|ultra`）。可用级别仍取决于所选模型和 agent 运行时。
 </ParamField>
 <ParamField path="--clear-thinking" type="boolean">
   在 `cron edit` 中，移除每个作业的思考覆盖。不能与 `--thinking` 同时使用。
@@ -178,7 +213,7 @@ openclaw cron create "*/15 * * * *" \
   <Accordion title="主会话、隔离会话与自定义会话的区别">
     **主会话** 作业会将系统事件入队到 cron 所拥有的运行通道，并可选择唤醒 heartbeat（`--wake now` 或 `--wake next-heartbeat`）。它们可以使用目标主会话的最后一次交付上下文进行回复，但不会将常规 cron 回合追加到人工聊天通道，也不会延长目标会话的每日/空闲重置新鲜度。**隔离会话** 作业会在一个新的会话中运行专用的代理回合。**自定义会话**（`session:xxx`）会在多次运行之间持久化上下文，从而支持像每日站会这样基于先前摘要构建的工作流。
 
-    主会话 cron 事件是独立的系统事件提醒。它们不会自动包含默认 heartbeat 提示中的“Read HEARTBEAT.md”指令；如果某个提醒应当查阅 `HEARTBEAT.md`，请在 cron 事件文本中明确写出这一点。
+    主会话 cron 事件是独立的系统事件提醒。它们不会自动包含默认 heartbeat 提示中的“阅读 HEARTBEAT.md”指令；如果某个提醒应当查阅 `HEARTBEAT.md`，请在 cron 事件文本中明确写出这一点。
 
   </Accordion>
   <Accordion title="隔离作业中的“新鲜会话”是什么意思">
@@ -308,7 +343,7 @@ openclaw cron enable <jobId>
 openclaw cron disable <jobId>
 
 # 编辑作业
-openclaw cron edit <jobId> --message "Updated prompt" --model "opus"
+openclaw cron edit <jobId> --message "已更新的提示词" --model "opus"
 
 # 立即强制运行作业
 openclaw cron run <jobId>
@@ -333,7 +368,9 @@ openclaw cron create "0 6 * * *" "检查运维队列" --name "Ops sweep" --sessi
 openclaw cron edit <jobId> --clear-agent
 ```
 
-`openclaw cron run <jobId>` 在将手动运行入队后返回。对于关闭钩子、维护脚本或其他必须阻塞直到队列中的运行完成的自动化，请使用 `--wait`；它会轮询返回的 `runId`（默认超时 `10m`，轮询间隔 `2s`），并在状态为 `ok` 时以 `0` 退出，在 `error`、`skipped` 或等待超时时以非零退出。
+在归档一个会话时（Control UI 中，或由 operator-admin 调用者执行 `sessions.patch { archived: true }`），会禁用所有绑定到该会话且已启用的 cron 作业：其隔离的 `cron:<jobId>` 会话、一个 `session:<key>` 目标，或一个 delivery/wake `sessionKey` 通道。恢复该会话不会重新启用这些作业；请使用 `openclaw cron enable <jobId>`。在 Control UI 侧边栏中，绑定了已启用作业的会话会显示一个时钟徽标。
+
+`openclaw cron run <jobId>` 在将手动运行入队后返回。对于关闭钩子、维护脚本或其他必须阻塞直到队列中的运行完成的自动化，请使用 `--wait`；它会轮询返回的 `runId`（默认超时时间 `10m`，轮询间隔 `2s`），并在状态为 `ok` 时以 `0` 退出，在 `error`、`skipped` 或等待超时时以非零退出。
 
 agent `cron` 工具从 `cron(action: "list")` 返回紧凑的作业摘要（`id`、`name`、`enabled`、`nextRunAtMs`、`scheduleKind`、`lastRunStatus`）；要获取单个完整作业定义，请使用 `cron(action: "get", jobId: "...")`。直接 Gateway 调用者可以向 `cron.list` 传递 `compact: true`；省略它则会保留带有投递预览的完整响应。
 
@@ -402,7 +439,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
     curl -X POST http://127.0.0.1:18789/hooks/agent \
       -H 'Authorization: Bearer SECRET' \
       -H 'Content-Type: application/json' \
-      -d '{"message":"汇总收件箱","name":"Email","model":"openai/gpt-5.5"}'
+      -d '{"message":"总结收件箱","name":"Email","model":"openai/gpt-5.6-sol"}'
     ```
 
     字段：`message`（必填）、`name`、`agentId`、`sessionKey`（需要 `hooks.allowRequestSessionKey=true`）、`idempotencyKey`、`wakeMode`、`deliver`、`channel`、`to`、`model`、`thinking`、`timeoutSeconds`。
@@ -440,6 +477,12 @@ openclaw webhooks gmail setup --account openclaw@gmail.com
 ```
 
 这将写入 `hooks.gmail` 配置，启用 Gmail 预设，并默认使用 Tailscale Funnel 作为推送端点（`--tailscale funnel|serve|off`）。
+
+<Warning>
+Gmail 预设的按消息会话会分离对话上下文；它不会限制目标代理的工具或工作区。若没有设置 `agentId` 的自定义映射，Gmail hooks 会作为默认代理运行。
+
+对于不受信任的收件箱，请将 hook 路由到专用的读取代理，为该代理提供只读或无工作区访问权限，并禁用文件系统写入、shell、浏览器及其他不必要的工具。如果它需要通知主代理，则只允许所需的 agent-to-agent 交接。参见 [Prompt injection](/gateway/security#prompt-injection)、[Multi-agent sandbox and tools](/tools/multi-agent-sandbox-tools) 和 [`tools.agentToAgent`](/gateway/config-tools#toolsagenttoagent)。
+</Warning>
 
 ### Gateway 自动启动
 
@@ -482,12 +525,14 @@ openclaw webhooks gmail setup --account openclaw@gmail.com
 {
   hooks: {
     gmail: {
-      model: "openrouter/meta-llama/llama-3.3-70b-instruct:free",
-      thinking: "off",
+      model: "openai/gpt-5.6-sol",
+      thinking: "high",
     },
   },
 }
 ```
+
+对于不受信任的收件箱，请使用你提供商可用的最新一代、最高档模型。上面的值只是示例；该模型必须存在于你配置的目录和允许列表中。
 
 ## 配置
 
@@ -497,6 +542,10 @@ openclaw webhooks gmail setup --account openclaw@gmail.com
     enabled: true,
     store: "~/.openclaw/cron/jobs.json",
     maxConcurrentRuns: 8,
+    triggers: {
+      enabled: false,
+      minIntervalMs: 30000,
+    },
     retry: {
       maxAttempts: 3,
       backoffMs: [30000, 60000, 300000],
@@ -504,7 +553,6 @@ openclaw webhooks gmail setup --account openclaw@gmail.com
     },
     webhookToken: "replace-with-dedicated-webhook-token",
     sessionRetention: "24h",
-    runLog: { maxBytes: "2mb", keepLines: 2000 },
   },
 }
 ```
@@ -525,7 +573,7 @@ openclaw webhooks gmail setup --account openclaw@gmail.com
 
   </Accordion>
   <Accordion title="维护">
-    `cron.sessionRetention`（默认 `24h`，`false` 可禁用）会清理独立运行会话条目。`cron.runLog.keepLines` 限制每个作业保留的 SQLite 运行历史行数；`maxBytes` 仅为与较旧的文件后端运行日志保持配置兼容而保留。
+    `cron.sessionRetention`（默认 `24h`，`false` 可禁用）会清理隔离的运行会话条目。运行历史会为每个作业保留最新的 2000 条终态记录；丢失的记录仍保留其 24 小时的清理窗口。
   </Accordion>
   <Accordion title="旧存储迁移">
     升级后，请运行 `openclaw doctor --fix`，将旧的 `~/.openclaw/cron/jobs.json`、`jobs-state.json` 和 `runs/*.jsonl` 文件导入 SQLite，并将它们重命名为带有 `.migrated` 后缀的文件。格式异常的作业行会从运行时中跳过，并复制到 `jobs-quarantine.json` 以便后续修复或审查。
@@ -548,14 +596,14 @@ openclaw doctor
 ```
 
 <AccordionGroup>
-  <Accordion title="Cron not firing">
+  <Accordion title="Cron 未触发">
     - 检查 `cron.enabled` 和 `OPENCLAW_SKIP_CRON` 环境变量。
     - 确认 Gateway 正在持续运行。
     - 对于 `cron` 调度，请验证时区（`--tz`）与主机时区是否一致。
     - 运行输出中的 `reason: not-due` 表示手动运行是通过 `openclaw cron run <jobId> --due` 检查的，而该任务当时尚未到期。
 
   </Accordion>
-  <Accordion title="Cron fired but no delivery">
+  <Accordion title="Cron 已触发但未投递">
     - 传递模式 `none` 表示不期望有 runner 回退发送。只要存在聊天路由，agent 仍然可以使用 `message` 工具直接发送。
     - 缺少或无效的传递目标（`channel`/`to`）表示已跳过外发。
     - 对于 Matrix，复制的或旧版任务如果使用了小写的 `delivery.to` room ID 可能会失败，因为 Matrix room ID 区分大小写。请将任务编辑为 Matrix 中精确的 `!room:server` 或 `room:!room:server` 值。

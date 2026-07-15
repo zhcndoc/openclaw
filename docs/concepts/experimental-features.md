@@ -18,16 +18,18 @@ read_when:
 
 | Surface                  | Key                                                                                        | Use it when                                                                                                                       | More                                                                                          |
 | ------------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Local model runtime      | `agents.defaults.experimental.localModelLean`, `agents.list[].experimental.localModelLean` | 当更小或更严格的本地后端在处理 OpenClaw 的完整默认工具面板时会吃不消时                                                             | [本地模型](/gateway/local-models)                                                             |
-| Memory search            | `agents.defaults.memorySearch.experimental.sessionMemory`                                  | 你希望 `memory_search` 为之前的会话转录建立索引，并接受额外的存储/索引成本                                                         | [内存配置参考](/reference/memory-config#session-memory-search-experimental)                  |
+| 本地模型运行时           | `agents.defaults.experimental.localModelLean`, `agents.list[].experimental.localModelLean` | 当更小或更严格的本地后端在处理 OpenClaw 的完整默认工具面板时会吃不消时                                                             | [本地模型](/gateway/local-models)                                                             |
+| 内存搜索                 | `agents.defaults.memorySearch.experimental.sessionMemory`                                  | 你希望 `memory_search` 为之前的会话转录建立索引，并接受额外的存储/索引成本                                                         | [内存配置参考](/reference/memory-config#session-memory-search-experimental)                  |
 | Codex harness            | `plugins.entries.codex.config.appServer.experimental.sandboxExecServer`                    | 你希望原生 Codex app-server 0.132.0 或更新版本将目标指向由 OpenClaw 沙箱支持的 exec-server，而不是禁用 Code Mode                | [Codex harness 参考](/plugins/codex-harness-reference#sandboxed-native-execution)           |
-| Structured planning tool | `tools.experimental.planTool`                                                              | 你希望在兼容的运行时和 UI 中暴露结构化的 `update_plan` 工具，用于多步骤工作跟踪                                                  | [网关配置参考](/gateway/config-tools#toolsexperimental)                                      |
+| 结构化规划工具           | `tools.experimental.planTool`                                                              | 你希望在兼容的运行时和 UI 中暴露结构化的 `update_plan` 工具，用于多步骤工作跟踪                                                  | [网关配置参考](/gateway/config-tools#toolsexperimental)                                      |
 
 ## 本地模型精简模式
 
 `agents.defaults.experimental.localModelLean: true` 会在每一轮从代理的直接工具面板中移除重量级的可选工具：`browser`、`cron`、`message`、`image_generate`、`music_generate`、`video_generate`、`tts` 和 `pdf`。明确允许或交付所必需的工具仍然可用，不过工具搜索可能会将它们编入目录而不是直接暴露。精简模式还会在 `tools.toolSearch` 尚未设置时，默认将插件/MCP/客户端目录切换为结构化工具搜索（`tool_search`、`tool_describe`、`tool_call`）。使用 `agents.list[].experimental.localModelLean` 可将其仅作用于某一个代理。
 
 如果你已经在全局调优了工具搜索，OpenClaw 会保持该配置不变。将 `tools.toolSearch: false` 设为关闭，可退出精简模式下的工具搜索默认行为。
+
+In structured `tools` mode, lean runs keep `exec` directly visible beside the Tool Search controls so coding-tuned local models can still choose their familiar shell path. This changes schema visibility only: normal tool policy, sandboxing, and exec approvals still apply. Explicit `code` and `directory` modes keep their normal compaction behavior.
 
 ### 为什么是这些工具
 

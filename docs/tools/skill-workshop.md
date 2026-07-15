@@ -1,9 +1,10 @@
 ---
 summary: "通过 Skill Workshop 审核创建和更新工作区技能"
 read_when:
-  - 你希望代理从聊天中创建或更新一个技能
-  - 你需要审查、应用、拒绝或隔离一个生成的技能草稿
-  - 你正在配置 Skill Workshop 的审批、自主性、存储或限制
+  - 你想让代理从聊天中创建或更新技能
+  - 你需要审查、应用、拒绝或隔离生成的技能草稿
+  - 你正在配置 Skill Workshop 的批准、自主性、存储或限制
+  - 你想了解自学习提案在哪里被审查
 title: "Skill Workshop"
 sidebarTitle: "Skill Workshop"
 ---
@@ -40,10 +41,46 @@ Skill Workshop 只会写入工作区技能。它绝不会触碰捆绑、插件�
 
 只有 `pending` 提案可以被修订、应用、拒绝或隔离。
 
-## 聊天
+## 生命周期管理
+
+Gateway 在共享状态数据库中跟踪技能的整体使用情况。它每天会审查由 Skill Workshop 创建并应用的技能。超过 30 天未使用的技能会变为 `stale`；超过 90 天后会变为 `archived`，并且不会再包含在新的 agent 技能快照中。已归档的技能文件在磁盘上保持不变。手动编写的技能从不会被管理；只有由 Skill Workshop 提案创建的技能才会进入生命周期管理。
+
+置顶技能会绕过生命周期转换。陈旧的技能在被使用后，会在下一次扫描运行时恢复为 `active`。已归档的技能只能通过显式恢复来返回：
+
+生命周期转换和恢复适用于新会话；正在运行的会话会保留其当前的技能快照。
+
+```bash
+openclaw skills curator status
+openclaw skills curator pin <skill>
+openclaw skills curator unpin <skill>
+openclaw skills curator restore <skill>
+```
+
+所有 curator 命令都接受 `--json`。Status 还会仅作为建议报告确定性的重叠候选项；它绝不会合并技能或调用模型。
+
+## Chat
 
 向代理说明你想要的技能；它会调用 `skill_workshop` 并返回一个
 提案 ID。
+
+### 从最近的工作中学习
+
+使用 `/learn` 将当前对话或命名来源转换为一个
+遵循标准的技能提案：
+
+```text
+/learn
+/learn docs/runbook.md 和 https://example.com/guide；重点关注恢复
+```
+
+在没有请求时，`/learn` 会让代理从
+当前对话中提炼可复用的工作流。有请求时，代理会将路径、URL、粘贴的
+笔记和对话引用视为来源，同时遵守重点、范围和
+命名要求。它会使用现有工具收集这些来源，然后调用
+带有 `action: "create"` 的 `skill_workshop`。
+
+生成的提案将保持 `pending`；`/learn` 从不应用它。通过常规审批流程或使用 `openclaw skills workshop` 来审查并
+应用它。
 
 创建：
 
@@ -68,7 +105,11 @@ Skill Workshop 只会写入工作区技能。它绝不会触碰捆绑、插件�
 代理发起的 `apply`、`reject` 和 `quarantine` 默认会显示审批提示。
 在受信任的环境中，将 `skills.workshop.approvalPolicy` 设置为 `"auto"` 可跳过该提示。
 
-## CLI
+提示会标识提案 ID 和目标技能，并显示提案
+描述、支持文件数量和正文大小。审批请求有时间限制，必须在代理工具看门狗超时前完成。如果在提示过期前没有做出决定，则生命周期操作不会运行：提案保持待处理且未更改。稍后在 Skill Workshop UI 中决定，或运行
+`openclaw skills workshop apply|reject|quarantine <proposal-id>`。代理不应对已过期的生命周期操作循环重试。
+
+## 命令行界面
 
 ```bash
 # 创建
@@ -155,7 +196,15 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 `skill_workshop` 是一个内置代理工具，并包含在 `tools.profile: "coding"` 中。如果更严格的策略隐藏了它，请将 `skill_workshop` 添加到当前的 `tools.allow` 列表，或者在使用不带显式 `tools.allow` 的 profile 时，使用 `tools.alsoAllow: ["skill_workshop"]`。沙箱运行不会构造宿主侧的 Skill Workshop 工具，因此请从正常的宿主侧代理会话或 CLI 中运行提案审查操作。
 </Note>
 
-## 审批与自主性
+## 建议技能
+
+OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”、“记住要”，以及反应式纠正，包括失败的轮次。下一轮时，代理会通过 `skill_workshop` 提议保存最近检测到的工作流程；由用户决定是否创建一个提案。这个内置建议本身不会创建或更改任何技能。启用 `skills.workshop.autonomous.enabled` 可改为直接创建待处理提案。在控制界面中，Workshop 选项卡将相同设置作为页面标题栏中的 **Self-learning** 开关提供，并在空提案板上提供一个启用按钮。
+
+启用自主捕获后，OpenClaw 还可以在成功完成较大工作之后，以及整个代理系统变为空闲之后，执行一次保守审查。该独立审查最多可创建或修订一个待处理提案。即使 `approvalPolicy` 为 `"auto"`，它也不能更新正在运行的技能，或应用、拒绝、或隔离一个提案。
+
+有关启用方式、资格、隐私和成本详情、提案阈值以及故障排除，请参阅 [Self-learning](/tools/self-learning)。
+
+## 批准与自主
 
 ```json5
 {
@@ -173,15 +222,21 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 }
 ```
 
-| 设置                      | 默认值       | 影响                                                                                                                                                                 |
-| ------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `autonomous.enabled`      | `false`      | 允许 OpenClaw 在一次成功的回合后，基于持久化的对话信号创建待处理提案。                                                                                              |
-| `allowSymlinkTargetWrites` | `false`      | 允许通过工作区技能符号链接执行写入，而其真实目标已列在 `skills.load.allowSymlinkTargets` 中。                                                                      |
-| `approvalPolicy`          | `"pending"`  | `"pending"` 在代理发起 `apply`、`reject` 或 `quarantine` 之前需要审批提示。`"auto"` 会跳过该提示（但代理仍然需要调用该操作）。 |
-| `maxPending`              | `50`         | 限制每个工作区的待处理和已隔离提案数量（1-200）。                                                                                                                    |
-| `maxSkillBytes`           | `40000`      | 限制提案正文大小（以字节计）（1024-200000）。                                                                                                                        |
+| 设置                       | 默认值      | 影响                                                                                                                                                                  |
+| -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `autonomous.enabled`       | `false`     | 会从显式更正中创建待处理提案，并在空闲延迟后，为可复用的恢复或有意义的往返节省所产生的实质性已完成工作创建待处理提案。                                                      |
+| `allowSymlinkTargetWrites` | `false`     | 允许通过工作区技能符号链接应用写入，其中其真实目标列在 `skills.load.allowSymlinkTargets` 中。                                                                             |
+| `approvalPolicy`           | `"pending"` | `"pending"` 要求在代理发起的 `apply`、`reject` 或 `quarantine` 之前显示批准提示。`"auto"` 会跳过提示（代理仍然必须调用该操作）。                                             |
+| `maxPending`               | `50`        | 限制每个工作区的待处理和隔离提案数量（1-200）。                                                                                                                          |
+| `maxSkillBytes`            | `40000`     | 限制提案正文大小（以字节为单位）（1024-200000）。                                                                                                                       |
 
-无论 `maxSkillBytes` 如何，提案描述始终最多为 160 字节。
+自主捕获会识别前瞻性规则（例如，“从现在开始”）和反应式更正（例如，“那不是我要求的”）。它会按主题将新指令分组，每轮最多生成三个提案，将词汇匹配路由到现有的可写工作区技能，并在另一项更正针对同一技能时修订其自身的待处理提案。
+
+对于没有显式更正的成功实质性工作，所选模型的一个隔离运行会决定已完成的轨迹是否达到保守的提案门槛。前台模型在回复前不会被提示进行学习。后台审阅者会保留前台运行作为提案来源，无法访问通用代理工具，也不能做出生命周期决策。只有当后台运行时环境报告其精确解析后的模型以及 `skill_workshop` 确实可用时，审阅才会开始。因此，受限或未知的工具策略会默认失败并且不会创建任何提案。
+
+有关完整的自主审阅行为和安全模型，请参阅 [自学习](/tools/self-learning)。
+
+提案描述始终限制为 160 字节，与 `maxSkillBytes` 无关。
 
 ## Gateway 方法
 
@@ -196,6 +251,10 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 | `skills.proposals.apply`           | `operator.admin` |
 | `skills.proposals.reject`          | `operator.admin` |
 | `skills.proposals.quarantine`      | `operator.admin` |
+| `skills.curator.status`            | `operator.read`  |
+| `skills.curator.pin`               | `operator.admin` |
+| `skills.curator.unpin`             | `operator.admin` |
+| `skills.curator.restore`           | `operator.admin` |
 
 `requestRevision` 仅限 Gateway（没有对应的 CLI 或 agent-tool）：它会将自由文本的修订说明转发到所属 agent 的聊天会话中，而不是直接替换 `PROPOSAL.md`，适用于那些要求 agent 修改而不是提交字面新内容的 UI。
 
@@ -220,17 +279,17 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 - `proposal.json`：规范化的提案记录。
 - `proposals.json`：用于快速列出的索引，可由提案文件夹重建。
 - `PROPOSAL.md`：待处理的技能提案。
-- `rollback.json`：在 apply 更改生效文件之前写入的恢复元数据。
+- `rollback.json`：在应用更改生效文件之前写入的恢复元数据。
 
-## 限制
+## Restrictions
 
-| 限制                            | 值                                                                   |
-| ------------------------------- | -------------------------------------------------------------------- |
-| 描述                            | 160 字节                                                             |
-| 提案正文                       | `skills.workshop.maxSkillBytes`（默认 40,000；硬上限 1 MiB）         |
-| 支持文件                       | 每个提案 64 个                                                      |
-| 支持文件大小                 | 每个 256 KiB，总计 2 MiB                                           |
-| 待处理 + 隔离的提案          | 每个工作区 `skills.workshop.maxPending`（默认 50）                  |
+| Restriction                      | Value                                                                 |
+| -------------------------------- | -------------------------------------------------------------------- |
+| Description                      | 160 bytes                                                            |
+| Proposal body                   | `skills.workshop.maxSkillBytes` (default 40,000; hard limit 1 MiB)   |
+| Supported files                  | 64 per proposal                                                      |
+| Supported file size              | 256 KiB each, 2 MiB total                                           |
+| Pending + quarantined proposals  | Each workspace `skills.workshop.maxPending` (default 50)            |
 
 ## 故障排查
 
@@ -245,10 +304,20 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 | Proposal does not show in list                 | 检查所选的 `--agent` 工作区和 `OPENCLAW_STATE_DIR`。                                                                                                                                            |
 | Agent cannot call `skill_workshop`             | 检查当前工具策略和运行模式。`coding` 包含该工具；限制性 `tools.allow` 策略必须显式列出它，而沙箱运行必须使用正常的宿主侧代理会话或 CLI。 |
 
-## 相关内容
+### 工具策略诊断
 
-- [技能](/tools/skills)，了解加载顺序、优先级和可见性
-- [创建技能](/tools/creating-skills)，了解手写 `SKILL.md`
-  的基础知识
-- [技能配置](/tools/skills-config)，了解完整的 `skills.workshop` schema
-- [Skills CLI](/cli/skills)，了解 `openclaw skills` 命令
+当启用自动捕获时，`openclaw doctor` 会对默认代理运行
+`core/doctor/skill-workshop-tool-policy` 检查。如果策略
+隐藏了 `skill_workshop`，警告会指出第一个排除该项的配置层，以及
+需要进行的准确 `allow` 或 `alsoAllow` 更改。旧版运行手册可能仍使用
+`openclaw plugins inspect skill-workshop`；该命令现在会说明 Skill
+Workshop 是内置功能，并在适用时打印相同的策略提示。
+
+## 相关
+
+- [技能](/tools/skills)：用于加载顺序、优先级和可见性
+- [自学习](/tools/self-learning)：用于保守的运行后技能提议
+- [创建技能](/tools/creating-skills)：用于手写 `SKILL.md`
+  基础
+- [技能配置](/tools/skills-config)：用于完整的 `skills.workshop` 模式
+- [技能 CLI](/cli/skills)：用于 `openclaw skills` 命令

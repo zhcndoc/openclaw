@@ -45,22 +45,30 @@ openclaw hooks info session-memory
 
 ## 事件类型
 
-| 事件                     | 触发时机                                               |
-| ------------------------ | ------------------------------------------------------ |
-| `command:new`            | 执行 `/new` 命令时                                       |
-| `command:reset`          | 执行 `/reset` 命令时                                     |
-| `command:stop`           | 执行 `/stop` 命令时                                      |
-| `command`                | 任意命令事件（通用监听器）                               |
-| `session:compact:before` | 压缩在汇总历史记录之前                                     |
-| `session:compact:after`  | 压缩完成之后                                             |
+Hooks 订阅此表中的特定键，或订阅一个裸的家族名称
+(`command`, `session`, `agent`, `gateway`, `message`) 来接收该家族中的每个动作。
+OpenClaw 核心不会发出任何其他事件，因此任何其他名称几乎
+总是一个拼写错误，会让 hook 悄无声息地失效（只有发出自定义事件的插件才可能触发它）。
+hook 加载器会对这类名称记录警告
+（例如 `command:nwe`），并且 `openclaw hooks info <name>` 会将它们标记出来，因此
+从未运行过的 hook 是可以诊断的。
+
+| 事件                    | 触发时机                                               |
+| ----------------------- | ------------------------------------------------------ |
+| `command:new`            | 触发 `/new` 命令时                                      |
+| `command:reset`          | 触发 `/reset` 命令时                                    |
+| `command:stop`           | 触发 `/stop` 命令时                                     |
+| `command`                | 任何 command 事件（通用监听器）                          |
+| `session:compact:before` | 压缩在汇总历史之前                                       |
+| `session:compact:after`  | 压缩完成之后                                            |
 | `session:patch`          | 会话属性被修改时                                         |
-| `agent:bootstrap`        | 工作区引导文件注入之前                                     |
-| `gateway:startup`        | 通道启动且钩子加载之后                                     |
-| `gateway:shutdown`       | 网关开始关闭时                                           |
-| `gateway:pre-restart`    | 预期的网关重启之前                                       |
-| `message:received`       | 来自任意通道的入站消息                                     |
-| `message:transcribed`    | 音频转写完成后                                           |
-| `message:preprocessed`   | 媒体和链接预处理完成或被跳过后                             |
+| `agent:bootstrap`        | 工作区 bootstrap 文件被注入之前                          |
+| `gateway:startup`        | 通道启动且 hooks 已加载之后                               |
+| `gateway:shutdown`       | gateway 关闭开始时                                       |
+| `gateway:pre-restart`    | 预期的 gateway 重启之前                                  |
+| `message:received`       | 来自任意通道的入站消息                                    |
+| `message:transcribed`    | 音频转写完成后                                          |
+| `message:preprocessed`   | 媒体和链接预处理完成或被跳过后                            |
 | `message:sent`           | 尝试发送出站消息时（`context.success` 包含结果）          |
 
 ## 编写钩子
@@ -75,7 +83,7 @@ my-hook/
 └── handler.ts       # 处理器实现
 ```
 
-The handler file can be `handler.ts`, `handler.js`, `index.ts`, or `index.js`.
+处理器文件可以是 `handler.ts`、`handler.js`、`index.ts` 或 `index.js`。
 
 ### HOOK.md 格式
 
@@ -229,7 +237,7 @@ openclaw hooks enable <hook-name>
 
 ### session-memory 详情
 
-提取最后的用户/助手消息（默认 15 条，可通过 `hooks.internal.entries.session-memory.messages` 配置），并使用主机本地日期将它们保存到 `<workspace>/memory/YYYY-MM-DD-HHMM.md`。内存捕获在后台运行，因此 `/new` 和 `/reset` 的确认不会因转录读取或可选的 slug 生成而延迟。将 `hooks.internal.entries.session-memory.llmSlug: true` 设为启用后，会使用已配置的模型生成具有描述性的文件名 slug（在不可用时回退为基于时间戳的 slug）。需要配置 `workspace.dir`。
+提取最后的用户/助手消息（默认 15 条，可通过 `hooks.internal.entries.session-memory.messages` 配置）并使用主机本地日期将它们保存到 `<workspace>/memory/YYYY-MM-DD-HHMM.md`。内存捕获在后台运行，因此 `/new` 和 `/reset` 的确认不会因转录读取或可选的 slug 生成而延迟。将 `hooks.internal.entries.session-memory.llmSlug: true` 设为启用可生成描述性的文件名 slug，并且还可以将 `hooks.internal.entries.session-memory.model` 设置为已配置的别名（例如 `sonnet`）、代理默认提供商上的裸模型 ID，或 `provider/model` 引用。若未提供 `model`，slug 生成将使用代理的默认模型；在不可用时则回退为时间戳 slug。需要配置 `workspace.dir`。
 
 <a id="bootstrap-extra-files"></a>
 

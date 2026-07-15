@@ -1,18 +1,22 @@
 ---
 summary: "OpenClaw 的 presence 条目如何生成、合并和显示"
 read_when:
-  - 调试 Instances 选项卡
-  - 排查重复或陈旧的实例行
-  - 更改 gateway WS 连接或 system-event beacon
+  - 调试 Control UI Devices 页面上的实时状态
+  - 排查重复或过时的实例行
+  - 更改 gateway WS 连接或系统事件信标
 title: "Presence"
 ---
 
 OpenClaw 的 "presence" 是一种轻量级、尽力而为的视图，展示：
 
-- **Gateway** 本身，以及
-- **连接到 Gateway 的客户端**（mac 应用、WebChat、CLI 等）
+- the **Gateway** itself, and
+- **连接到 Gateway 的用户可见客户端**（mac app、WebChat、nodes 等）
 
-Presence 主要用于渲染 macOS 应用的 **Instances** 选项卡，并为操作人员提供快速可视化信息。
+Presence 会在 Control UI 的 **Devices** 页面
+（位于 **Settings → Devices** 下）以及 macOS app 的 **Instances** 选项卡中呈现实时连接元数据。
+
+本页涵盖 Gateway 客户端名册。要检测你最近使用的 Mac 并将 node 警报路由到那里，请参见
+[Active computer presence](/nodes/presence)。
 
 ## Presence 字段（显示内容）
 
@@ -41,9 +45,9 @@ Gateway 会在启动时始终生成一个 "self" 条目，因此即使在没有�
 
 每个 WS 客户端都会以一个 `connect` 请求开始。握手成功后，Gateway 会为该连接 upsert 一条 presence 条目。
 
-#### 为什么一次性 CLI 命令不会显示出来
+#### 为什么临时的控制平面连接不会显示出来
 
-CLI 通常只为短暂的、一次性的命令而连接。为了避免刷屏 Instances 列表，`client.mode === "cli"` **不会** 转换为 presence 条目。
+CLI 命令、后端 RPC 客户端和探测通常只会短暂连接。为了避免将这种 churn 在完整的 presence TTL 期间一直保留，处于 `cli`、`backend` 或 `probe` 模式的客户端**不会**被转换为 presence 条目。测试模式客户端会继续被跟踪，因为测试套件会把它们当作真实客户端的替身。
 
 ### 3) `system-event` beacon
 
@@ -57,16 +61,16 @@ CLI 通常只为短暂的、一次性的命令而连接。为了避免刷屏 Ins
 
 Presence 条目存储在一个单一的内存 map 中，键按大小写不敏感方式生成，优先使用以下第一个可用值，按顺序依次为：配对设备 id、`connect.client.instanceId`，或者在最后兜底使用每个连接的 id。
 
-CLI 客户端会被完全排除在跟踪之外（见上文），因此它们的连接 id 永远不会成为键。对于其他所有客户端，连接 id 的兜底逻辑意味着：如果某个客户端在没有稳定 `instanceId` 的情况下重新连接，它会显示为一行**重复**记录。
+短暂的控制平面客户端完全不纳入跟踪（见上文），因此它们的连接 id 永远不会成为键。对于其他所有客户端，连接 id 的兜底规则意味着：如果某个客户端在没有稳定 `instanceId` 的情况下重新连接，就会显示为一行**重复**记录。
 
 ## TTL 和最大容量
 
-Presence is intentionally designed to be ephemeral:
+Presence 被刻意设计为短暂存在：
 
-- **TTL:** Entries older than 5 minutes will be cleaned up
-- **Maximum number of entries:** 200 (oldest entries are discarded first)
+- **TTL：** 超过 5 分钟的条目将被清理
+- **最大条目数：** 200（最旧的条目会优先被丢弃）
 
-This keeps the list fresh and prevents unbounded memory growth.
+这可以保持列表的新鲜度，并防止内存无限增长。
 
 ## 远程/隧道注意事项（回环 IP）
 
@@ -77,7 +81,11 @@ This keeps the list fresh and prevents unbounded memory growth.
 
 ## 消费者
 
-### macOS 实例选项卡
+### Control UI Devices page
+
+**设备**页面将 `system-presence` 与持久配对和节点记录结合起来。它会优先固定 Gateway 自身的 beacon，并对 live platform、version、model 和 input-recency 元数据使用匹配的设备或实例 ID。
+
+### macOS Instances tab
 
 macOS 应用会渲染 `system-presence` 的输出，并根据最后更新时间的年龄应用一个小型状态指示器（Active/Idle/Stale）。
 
@@ -92,8 +100,11 @@ macOS 应用会渲染 `system-presence` 的输出，并根据最后更新时间�
 ## 相关内容
 
 <CardGroup cols={2}>
+  <Card title="活动的电脑存在状态" href="/nodes/presence" icon="computer-mouse">
+    物理 Mac 输入如何选择一个活动节点并路由连接提醒。
+  </Card>
   <Card title="输入指示器" href="/concepts/typing-indicators" icon="ellipsis">
-    输入指示器何时发送，以及如何调整它们。
+    何时发送输入指示器，以及如何调整它们。
   </Card>
   <Card title="流式传输与分块" href="/concepts/streaming" icon="bars-staggered">
     出站流式传输、分块以及按通道格式化。

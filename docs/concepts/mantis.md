@@ -1,14 +1,20 @@
 ---
-summary: "Mantis 是用于在真实传输环境中复现 OpenClaw 缺陷的可视化端到端验证系统，可捕获前后证据，并将工件附加到 PR。"
+summary: "Mantis 为实时传输对比和聚焦的仅候选浏览器证明捕获端到端视觉证据，并将这些制品附加到 PR。"
 title: "Mantis"
 read_when:
-  - 为 OpenClaw 缺陷构建或运行实时可视化 QA
+  - 为 OpenClaw 缺陷构建或运行实时视觉 QA
   - 为拉取请求添加前后验证
   - 添加 Discord、Slack、WhatsApp 或其他实时传输场景
+  - 运行针对候选引用的聚焦 Control UI 浏览器证明
   - 调试需要截图、浏览器自动化或 VNC 访问的 QA 运行
 ---
 
-Mantis 会在真实传输环境中，针对已知有缺陷的基线 ref 和候选 ref 重新运行一个 bug 场景，然后将前后对比作为 CI 工件和 PR 评论发布。Discord 最先支持：真实机器人认证、真实 guild 频道、表情反应、线程，以及人类可检查的浏览器见证。Slack 和 Telegram 通道也已存在；WhatsApp 和 Matrix 仍未实现。
+Mantis 会为 OpenClaw 的行为发布视觉 CI 证据和 PR 评论。
+实时传输场景会将已知不良基线与候选引用进行对比；
+聚焦的浏览器通道也可以改为用确定性的模拟传输来证明某个候选。
+Discord 最先上线，包含真实机器人认证、guild 频道、
+反应、线程以及浏览器见证。Slack、Telegram 和聚焦的 Control
+UI 聊天通道也已存在；WhatsApp 和 Matrix 尚未实现。
 
 ## 所有权
 
@@ -77,7 +83,7 @@ pnpm openclaw qa mantis run \
 | Scenario                                   | Default baseline                           | Baseline expects                         | Candidate expects            |
 | ----------------------------------------- | ---------------------------------------- | ---------------------------------------- | ---------------------------- |
 | `discord-status-reactions-tool-only`       | `0bf06e953fdda290799fc9fb9244a8f67fdae593` | `queued-only`                            | `queued -> thinking -> done` |
-| `discord-thread-reply-filepath-attachment` | `81349cdc2a9d5143fd0991ed858b739e7d96e05c` | thread reply omits `filePath` attachment | thread reply includes it     |
+| `discord-thread-reply-filepath-attachment` | `81349cdc2a9d5143fd0991ed858b739e7d96e05c` | 线程回复省略 `filePath` 附件           | 线程回复包含它     |
 
 `--candidate` 默认是 `HEAD`。其他参数：`--credential-source`
 （默认 `convex`）、`--credential-role`（默认 `ci`）、`--provider-mode`
@@ -247,14 +253,15 @@ pnpm openclaw qa mantis telegram-desktop-builder \
 评论通过 Mantis GitHub App（`MANTIS_GITHUB_APP_ID` /
 `MANTIS_GITHUB_APP_PRIVATE_KEY`）发布，而不是 `github-actions[bot]`，并使用一个隐藏的标记评论作为 upsert 键。
 
-| 工作流                             | 触发方式                                                                                   | 作用                                                                                                                                                                                                                                                                                    |
-| ---------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Mantis Discord Smoke`            | 手动触发                                                                                   | 在所选 ref 上运行 `discord-smoke`。                                                                                                                                                                                                                                                     |
-| `Mantis Discord Status Reactions` | PR 评论或手动触发                                                                            | 构建独立的 baseline/candidate worktree，在每个 worktree 上运行 `discord-status-reactions-tool-only`，在 Crabbox 桌面浏览器中渲染每个 lane 的时间线，使用 `crabbox media preview` 生成经过 motion-trim 的 GIF/MP4 预览，上传 artifacts，发布内联 PR 证据。            |
-| `Mantis Scenario`                 | 手动触发                                                                                   | 通用分发器：接收 `scenario_id`（`discord-status-reactions-tool-only`、`discord-thread-reply-filepath-attachment`、`slack-desktop-smoke`、`telegram-live`、`telegram-desktop-proof`）、`baseline_ref`、`candidate_ref`、`pr_number`，并转发到匹配的场景工作流。 |
-| `Mantis Slack Desktop Smoke`      | 手动触发                                                                                   | 租用一个 Crabbox Linux 桌面（默认 `aws`，可选 `hetzner`），在 candidate 上运行 `slack-desktop-smoke --gateway-setup`，录制桌面，生成 motion 预览，上传 artifacts；如果提供了 PR 编号，则发布 PR 证据。                                 |
-| `Mantis Telegram Live`            | PR 评论或手动触发                                                                            | 运行 bot-API Telegram live QA lane（`openclaw qa telegram`），根据 QA 摘要写入 `mantis-evidence.json`，通过 Crabbox 桌面浏览器渲染脱敏后的证据 HTML，生成 motion GIF，发布 PR 证据。该 lane 不需要 Telegram Web 登录。          |
-| `Mantis Telegram Desktop Proof`   | 维护者 PR 标签（`mantis: telegram-visible-proof`）加上 PR 评论，或手动触发                     | 代理式原生 Telegram Desktop 前后对比证明。将 PR、baseline/candidate refs 以及维护者指令交给 Codex，由其针对两个 refs 运行真实用户的 Crabbox Telegram Desktop proof lane，并发布一个两列的 PR 证据表。                                         |
+| 工作流 | 触发器 | 它的作用 |
+| --------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Mantis Discord Smoke`            | 手动触发                                                                            | 针对选定的 ref 运行 `discord-smoke`。 |
+| `Mantis Discord Status Reactions` | PR 评论或手动触发                                                              | 构建独立的 baseline/candidate 工作树，在每个工作树上运行 `discord-status-reactions-tool-only`，在 Crabbox 桌面浏览器中渲染每条 lane 的时间线，使用 `crabbox media preview` 生成经过动作裁剪的 GIF/MP4 预览，上传 artifacts，并发布内联 PR 证据。                                 |
+| `Mantis Scenario`                 | 手动触发                                                                            | 通用分发器：接收 `scenario_id`（`discord-status-reactions-tool-only`、`discord-thread-reply-filepath-attachment`、`slack-desktop-smoke`、`telegram-live`、`telegram-desktop-proof`、`web-ui-chat-proof`）、`baseline_ref`、`candidate_ref`、`pr_number`，并转发到匹配的场景工作流。 |
+| `Mantis Slack Desktop Smoke`      | 手动触发                                                                            | 租用一个 Crabbox Linux 桌面（默认 `aws`，可选 `hetzner`），针对 candidate 运行 `slack-desktop-smoke --gateway-setup`，记录桌面，生成 motion 预览，在提供 PR 编号时上传 artifacts 并发布 PR 证据。                                                      |
+| `Mantis Telegram Live`            | PR 评论或手动触发                                                              | 运行 bot-API Telegram live QA 线路（`openclaw qa telegram`），根据 QA 摘要写入 `mantis-evidence.json`，通过 Crabbox 桌面浏览器渲染经过脱敏的 evidence HTML，生成 motion GIF，并发布 PR 证据。此线路不需要 Telegram Web 登录。                               |
+| `Mantis Telegram Desktop Proof`   | 维护者 PR 标签（`mantis: telegram-visible-proof`）加 PR 评论，或手动触发 | 代理式原生 Telegram Desktop 前后对比 proof。将 PR、baseline/candidate refs 和维护者说明交给 Codex，由其为两个 refs 运行真实用户的 Crabbox Telegram Desktop proof 线路，并发布一个两列的 PR 证据表。                                                              |
+| `Mantis Web UI Chat Proof`        | PR 评论或手动触发                                                              | 针对 candidate 运行聚焦的 OpenClaw Control UI chat Playwright proof，验证浏览器通过模拟的 Gateway 发送请求，捕获截图/视频 artifacts，并发布 PR 证据。此线路仅限 web chat proof，不适用于 WinUI/原生应用或任意视觉 proof。                           |
 
 `Mantis Discord Status Reactions` 和 `Mantis Telegram Live` 都接受
 `baseline_ref`/`candidate_ref`（或在 PR 评论中使用 `baseline=`/`candidate=`）
@@ -268,10 +275,16 @@ pnpm openclaw qa mantis telegram-desktop-builder \
 @openclaw-mantis telegram
 @openclaw-mantis telegram scenario=telegram-status-command
 @openclaw-mantis telegram scenarios=telegram-status-command,telegram-mentioned-message-reply
+@openclaw-mantis web ui chat
+@openclaw-mantis web-ui-chat candidate=HEAD
 ```
 
 Telegram 评论触发器默认使用 PR head SHA 作为 candidate，并以 `telegram-status-command` 作为 scenario；它们接受 `provider=aws|hetzner` 和
 `lease=<cbx_...>`，用于指定特定的 Crabbox provider 或预热好的桌面。`Mantis Telegram Desktop Proof` 仅在 PR 已经带有 `mantis: telegram-visible-proof` 标签时，才会响应 PR 评论。
+
+Web UI chat 评论触发器默认使用 PR head SHA 作为 candidate。它们会运行
+Control UI 模拟 Gateway chat proof 并发布浏览器 artifacts；对其他网页和原生应用界面，请使用
+常规的 Playwright/browser proof、维护者截图、Crabbox 或本地 artifacts。
 
 ClawSweeper 也可以直接分发一个场景：
 
@@ -283,7 +296,7 @@ ClawSweeper 也可以直接分发一个场景：
 
 本地 CLI Crabbox 的默认值为 `--provider hetzner --class beast`；可通过 `--provider`、`--class`/`--machine-class`，或 `OPENCLAW_MANTIS_CRABBOX_PROVIDER` / `OPENCLAW_MANTIS_CRABBOX_CLASS` 覆盖。GitHub 工作流通常会同时覆盖这两项（例如 `--class standard`，以及 Slack 工作流中的 `aws`/`hetzner` provider 选择输入）。如果某个 provider 过慢或不可用，请在相同的 Crabbox 接口后面添加它，而不是硬编码回退方案。
 
-VM 基线：Linux，带有可用于桌面的 Chrome/Chromium、CDP 访问、VNC/noVNC、Node 22+ 和 pnpm、OpenClaw 检出版本，以及到目标传输层、GitHub、模型提供商和凭据代理的出站访问。
+VM 基线：Linux，配备可用于桌面的 Chrome/Chromium、CDP 访问、VNC/noVNC、Node 22.22.3+、24.15+ 或 25.9+ 以及 pnpm、OpenClaw 检出目录，并且能够向目标传输通道、GitHub、模型提供方和凭据代理服务进行出站访问。
 
 Mantis 工作流中使用的密钥名称：
 
@@ -301,24 +314,22 @@ Mantis 运行器绝不能打印 Discord/Slack/Telegram bot token、provider API 
 
 ## 运行结果
 
-一个场景可能以两种可区分的方式失败，报告会将它们分开，以免不稳定的环境被误读为产品回归：
+传输前/后场景区分了这些结果，以免将不稳定的
+环境误判为产品回归：
 
 - **Bug reproduced**：基线以该场景预期的方式失败。
 - **Harness failure**：在 oracle 变得有意义之前，环境设置、凭据、传输 API、浏览器或提供方就已失败。
 
-## 添加场景
+仅候选浏览器证明会报告候选是否通过了模拟的
+Gateway 和可见 UI 断言；它不主张基线复现。
 
-场景是按传输方式用 TypeScript 定义的（参见
-`extensions/qa-lab/src/mantis/run.runtime.ts` 中的 `MANTIS_SCENARIO_CONFIGS`，
-了解 Discord 的前后结构），而不是一种独立的声明式文件格式。
-每个场景都需要：id 和 title、transport、所需凭据、baseline ref policy、candidate ref policy、OpenClaw config patch、setup/stimulus steps、
-expected baseline 和 candidate oracle、visual capture targets、timeout
-budget，以及 cleanup steps。
+## 添加一个场景
 
-优先使用小而类型化的 oracle，而不是视觉检查：例如 Discord 的 reaction 状态或
-message references、Slack thread 的 `ts`/reaction API 状态、email message ids
-和 headers。仅当 UI 是唯一可靠的可观测对象时才使用浏览器截图，
-并且如果平台 API oracle 存在，视觉检查应作为补充。
+实时传输场景是按传输方式用 TypeScript 定义的（参见 `extensions/qa-lab/src/mantis/run.runtime.ts` 中用于 Discord 的前后形态的 `MANTIS_SCENARIO_CONFIGS`），而不是一个独立的声明式文件格式。每个场景都需要：id 和标题、传输方式、必需凭证、基线 ref 策略、候选 ref 策略、OpenClaw 配置补丁、设置/刺激步骤、预期的基线和候选 oracle、视觉捕获目标、超时预算以及清理步骤。
+
+聚焦的仅候选端浏览器 proof 可以使用专门的确定性 E2E 测试和工作流。保持其作用范围明确，在执行前验证候选 ref，隔离受密钥支持的发布，并输出相同的证据清单契约。
+
+优先使用小而类型明确的 oracle，而不是视觉检查：Discord 的 reaction 状态或消息引用、Slack 线程 `ts`/reaction API 状态、电子邮件 message id 和 headers。仅在 UI 是唯一可靠可观测项时使用浏览器截图，并在存在平台 API oracle 的情况下，将视觉检查作为补充而不是替代。
 
 在 Discord、Slack 和 Telegram 之后，同一 runner 形态会扩展到 WhatsApp
 （QR 登录、重新识别、送达、媒体、reactions）和 Matrix

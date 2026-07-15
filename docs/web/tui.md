@@ -43,17 +43,17 @@ openclaw tui --local
 ```
 
 - `openclaw chat` 和 `openclaw terminal` 是 `openclaw tui --local` 的别名。
-- `--local` 不能与 `--url`、`--token` 或 `--password` 同时使用。
-- 本地模式直接使用嵌入式 agent 运行时。大多数本地工具可用，但 Gateway 专属功能不可用。
-- 仅输入 `openclaw`（不带子命令）会自动选择目标：未配置的安装会运行引导流程；无效配置会打开 [Crestodian](#crestodian-setup-and-repair-helper)；有效配置会在 Gateway 可达时以 gateway 模式打开此 TUI shell，否则以本地模式打开。
+- `--local` 不能与 `--url`、`--token` 或 `--password` 组合使用。
+- 本地模式直接使用内置的 agent 运行时。大多数本地工具可用，但 Gateway 专属功能不可用。
+- 直接运行 `openclaw`（不带子命令）会自动选择目标：未配置的安装会运行推理引导；无效配置会打开经典的 doctor 指引；可访问且已配置的 Gateway 会以 gateway 模式打开此 TUI shell；否则，已配置的本地模型会以本地模式打开。
 
-## What you will see
+## 你将看到什么
 
-- Header: connection URL, current agent, current session.
-- Chat log: user messages, assistant replies, system notifications, tool cards.
-- Status line: connection/runtime status (connecting, running, streaming, idle, error).
-- Footer: agent + session + model + target status + think/fast/verbose/trace/reasoning + token count + deliver. When `tui.footer.showRemoteHost` is enabled, remote Gateway connections will also display the connected host.
-- Input: a text editor with autocomplete.
+- 标头：连接 URL、当前代理、当前会话。
+- 聊天记录：用户消息、助手回复、系统通知、工具卡片。
+- 状态行：连接/运行状态（connecting、running、streaming、idle、error）。
+- 页脚：代理 + 会话 + 模型 + 目标状态 + think/fast/verbose/trace/reasoning + 令牌计数 + deliver。当启用 `tui.footer.showRemoteHost` 时，远程 Gateway 连接还会显示已连接的主机。
+- 输入：带自动补全的文本编辑器。
 
 ## 心智模型：agents + sessions
 
@@ -121,8 +121,8 @@ openclaw tui --local
 - `/verbose <on|full|off>`
 - `/trace <on|off>`
 - `/reasoning <on|off|stream>`
-- `/usage <off|tokens|full|reset>`（`reset`/`inherit`/`clear`/`default` 会清除会话覆盖设置）
-- `/goal [status] | /goal start <objective> | /goal pause|resume|complete|block|clear`
+- `/usage <off|tokens|full|reset>` (`reset`/`inherit`/`clear`/`default` 清除会话覆盖设置)
+- `/goal [status] | /goal start <objective> | /goal edit <objective> | /goal pause|resume|complete|block|clear`
 - `/elevated <on|off|ask|full>`（别名：`/elev`）
 - `/activation <mention|always>`
 
@@ -144,29 +144,29 @@ Crestodian:
 
 其他 Gateway 斜杠命令（例如 `/context`）会转发给 Gateway，并作为系统输出显示。请参阅 [斜杠命令](/tools/slash-commands)。
 
-## 本地 shell 命令
+## Local shell commands
 
-- 在一行前加 `!` 即可在 TUI 主机上运行本地 shell 命令。
-- TUI 会在每个会话中提示一次是否允许本地执行；如果拒绝，该会话中 `!` 将保持禁用。
-- 命令会在 TUI 工作目录中的全新、非交互式 shell 里运行（不会保留 `cd`/环境变量）。
-- 本地 shell 命令会在其环境中接收 `OPENCLAW_SHELL=tui-local`。
-- 单独的 `!` 会作为普通消息发送；行首空格不会触发本地执行。
+- Add `!` at the beginning of a line to run a local shell command on the TUI host.
+- The TUI will prompt once per session whether to allow local execution; if refused, `!` will remain disabled for that session.
+- Commands run in a fresh, non-interactive shell in the TUI working directory (it will not preserve `cd`/environment variables).
+- Local shell commands receive `OPENCLAW_SHELL=tui-local` in their environment.
+- A standalone `!` will be sent as a normal message; a leading space will not trigger local execution.
 
 ## Crestodian 设置与修复助手
 
-Crestodian 是 ring-zero 设置/修复助手，通过 `openclaw crestodian` 暴露（或者当裸露的 `openclaw` 发现无效配置时自动启动）。它运行在与 `openclaw tui --local` 相同的本地 TUI shell 中，但使用专用的对话/操作层，而不是实时模型+工具会话：
+Crestodian 是 ring-zero 设置/修复助手，在配置好的默认模型通过实时推理检查后，会以 `openclaw crestodian` 的形式暴露出来。如果推理不可用，交互式调用会回到推理引导流程，并且自动化会在提供修复指导的情况下失败。它运行在与 `openclaw tui --local` 相同的本地 TUI shell 中，由一个受 Crestodian 类型化、需审批操作限制的 AI agent 提供支持：
 
 ```bash
-openclaw crestodian                       # start interactively
-openclaw crestodian -m "status"           # run one request and exit
-openclaw crestodian -m "set default model openai/gpt-5.2" --yes   # apply a config write
+openclaw crestodian                       # 交互式启动
+openclaw crestodian -m "status"           # 运行一个请求后退出
+openclaw crestodian -m "set default model openai/gpt-5.2" --yes   # 应用配置写入
 ```
 
 - 持久化配置写入需要审批：要么交互式确认，要么传入 `--yes`。
 - `--json` 会将启动概览以 JSON 形式输出，而不是启动聊天。
 - 在 Crestodian 内部，`open-tui` 请求（例如，要求与普通 agent 对话）会退出 Crestodian 并打开常规的 agent TUI；在其中使用 `/crestodian` 返回。
 
-当当前配置已经通过验证，并且你希望内嵌 agent 在同一台机器上检查它、将其与文档对比，并在不依赖正在运行的 Gateway 的情况下帮助修复偏差时，请使用本地模式。
+当当前配置已经通过验证，并且你希望内嵌 agent 在同一台机器上检查它、将它与文档对比，并在不依赖正在运行的 Gateway 的情况下帮助修复偏差时，请使用本地模式。
 
 如果 `openclaw config validate` 已经失败，先从 `openclaw configure` 或 `openclaw doctor --fix` 开始；`openclaw chat` 仍然需要可加载的配置才能启动。
 
@@ -227,19 +227,20 @@ openclaw chat
 
 ## 选项
 
-- `--local`: 针对本地嵌入式代理运行时运行
-- `--url <url>`: 网关 WebSocket URL（默认为配置中的 `gateway.remote.url`，或在回环地址上使用 `ws://127.0.0.1:<port>`）
+- `--local`: 连接到本地嵌入式代理运行时
+- `--url <url>`: 网关 WebSocket URL（默认使用配置中的 `gateway.remote.url`，或者在回环地址上使用 `ws://127.0.0.1:<port>`）
 - `--token <token>`: 网关令牌（如需要）
 - `--password <password>`: 网关密码（如需要）
+- `--tls-fingerprint <sha256>`: 预期的 TLS 证书指纹，用于固定的 `wss://` 网关
 - `--session <key>`: 会话键（默认：`main`，或在作用域为全局时为 `global`）
-- `--deliver`: 将助手回复传递给提供方（默认关闭）
+- `--deliver`: 将助手回复发送给提供方（默认关闭）
 - `--thinking <level>`: 覆盖发送时的思考级别
-- `--message <text>`: 连接后发送初始消息
-- `--timeout-ms <ms>`: 代理超时时间，单位为毫秒（默认为 `agents.defaults.timeoutSeconds`）
+- `--message <text>`: 连接后发送一条初始消息
+- `--timeout-ms <ms>`: 代理超时，单位为毫秒（默认值为 `agents.defaults.timeoutSeconds`）
 - `--history-limit <n>`: 要加载的历史记录条目数（默认 `200`）
 
 <Warning>
-当你设置了 `--url` 时，TUI 不会回退到配置或环境凭据。请显式传入 `--token` 或 `--password`。缺少显式凭据会导致错误。在本地模式下，不要传入 `--url`、`--token` 或 `--password`。
+当你设置了 `--url` 时，TUI 不会回退使用配置或环境中的凭据。请显式传入 `--token` 或 `--password`，如果目标使用的是固定证书，还需要传入 `--tls-fingerprint`。缺少显式凭据会报错。在本地模式下，不要传入 `--url`、`--token`、`--password` 或 `--tls-fingerprint`。
 </Warning>
 
 ## 故障排查
@@ -259,7 +260,7 @@ openclaw chat
 
 ## 相关内容
 
-- [Control UI](/web/control-ui) — 基于 Web 的控制界面
-- [Config](/cli/config) — 检查、验证并编辑 `openclaw.json`
+- [控制 UI](/web/control-ui) — 基于 Web 的控制界面
+- [配置](/cli/config) — 检查、验证并编辑 `openclaw.json`
 - [Doctor](/cli/doctor) — 引导式修复和迁移检查
-- [CLI Reference](/cli) — 完整的 CLI 命令参考
+- [CLI 参考](/cli) — 完整的 CLI 命令参考

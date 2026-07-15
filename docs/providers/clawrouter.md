@@ -55,6 +55,94 @@ ClawRouter 为 OpenClaw 提供一个面向多家上游模型提供方的策略�
   </Step>
 </Steps>
 
+## 托管的非交互式部署
+
+将代理密钥保留在工作负载的密钥注入中，并且只在 `openclaw.json` 中存储一个 SecretRef。规范化的托管字段如下：
+
+| 用途         | 配置或环境字段                                                           |
+| ------------ | ------------------------------------------------------------------------ |
+| 路由器源     | `models.providers.clawrouter.baseUrl`                                    |
+| 凭据         | `models.providers.clawrouter.apiKey` -> env SecretRef                    |
+| 密钥值       | 网关进程环境中的 `CLAWROUTER_API_KEY`                                    |
+| 默认模型     | `agents.defaults.model.primary` -> `clawrouter/<provider>/<model>`       |
+| 工作负载标签 | `models.providers.clawrouter.headers.X-ClawRouter-Project-Id`（可选）    |
+
+例如，部署控制器可以负责以下 JSON5 补丁：
+
+```json5
+{
+  plugins: {
+    entries: { clawrouter: { enabled: true } },
+  },
+  models: {
+    providers: {
+      clawrouter: {
+        baseUrl: "https://clawrouter.internal.example",
+        apiKey: {
+          source: "env",
+          provider: "default",
+          id: "CLAWROUTER_API_KEY",
+        },
+        headers: {
+          "X-ClawRouter-Project-Id": "fakeco",
+        },
+      },
+    },
+  },
+  agents: {
+    defaults: {
+      model: { primary: "clawrouter/openai/gpt-5.5" },
+    },
+  },
+}
+```
+
+如果部署设置了 `plugins.allow`，请保留其现有条目并添加 `clawrouter`。无需交互式向导即可验证并应用：
+
+```bash
+openclaw config patch --file ./clawrouter.patch.json5 --dry-run --json
+openclaw config patch --file ./clawrouter.patch.json5
+```
+
+dry run 会解析 SecretRef，但绝不会打印其值。要轮换凭据，请更新提供 `CLAWROUTER_API_KEY` 的外部 Secret，并重启网关工作负载，以便加载新的进程环境。配置文件和模型引用不会改变。
+
+对于源码构建的独立 Docker 网关，ClawRouter 已经包含在根运行时中。只需选择需要单独打包的通道插件，例如 `OPENCLAW_EXTENSIONS=clickclack`、`slack` 或 `msteams`；请参见[带所选插件的源码构建镜像](/install/docker#source-built-images-with-selected-plugins)。归档/ appliance 部署必须通过其自己的制品流水线打包相同的已落地源码，而不是使用 OCI 镜像。
+
+## 就绪性和真实验证
+
+这些检查证明的是不同的边界；不要互相替代：
+
+```bash
+# 仅检查 ClawRouter 进程健康；不会使用任何凭据或上游模型。
+curl -fsS https://clawrouter.internal.example/v1/health
+
+# 仅检查 OpenClaw 网关启动就绪；不会发起模型调用。
+curl -fsS http://127.0.0.1:18789/readyz
+
+# 基于凭据范围的目录发现。
+openclaw models list --all --provider clawrouter --json
+
+# 通过已配置的 ClawRouter provider 进行最小真实推理探测。
+openclaw models status --probe --probe-provider clawrouter --probe-max-tokens 8 --json
+
+# 使用精确授予的模型引用进行工作负载金丝雀测试。
+openclaw agent --agent main \
+  --model clawrouter/openai/gpt-5.5 \
+  --message "Reply exactly: CLAWROUTER_CANARY_OK" \
+  --json
+```
+
+请使用作用域目录返回的模型，而不是盲目复制示例模型。成功的 `/readyz` 响应意味着网关可以处理请求；这并不表示 ClawRouter、其凭据或上游提供商已就绪。模型探测和 agent 金丝雀测试才是推理证明。
+
+如需进行实时诊断，请发起金丝雀测试并检查网关的标准日志。现有的仅元数据模型传输诊断会输出如下形式的行：
+
+```text
+[model-fetch] start provider=clawrouter api=openai-responses model=openai/gpt-5.5 method=POST url=https://clawrouter.internal.example/v1/responses
+[model-fetch] response provider=clawrouter api=openai-responses model=openai/gpt-5.5 status=200
+```
+
+当这些标识符可用时，插件会发送有界的 `X-ClawRouter-Client`、`X-ClawRouter-Agent-Id` 和 `X-ClawRouter-Session-Id` 请求头。它还会将模型调用的诊断 `callId`（`<run-id>:model:<n>`）映射到 `X-Request-ID`，因此 OpenClaw 的模型调用事件可以与 ClawRouter 的仅元数据审计轨迹关联。128 字符请求 ID 预算内的值是相同的。更长的值会保留 `:model:<n>` 后缀和一个确定性哈希，使不同调用保持有界且可关联。诸如 `X-ClawRouter-Project-Id` 之类的静态部署元数据可以在 provider 的 `headers` 映射中设置。Agent 和 session 归属请求头各自保留独立的 256 字符限制。包含 ClawRouter ASCII 标识符集合之外字符的自动请求 ID 会使用相同的确定性有界形式。显式配置的请求头（包括 `X-Request-ID` 的任何大小写变体）优先于自动值。传输诊断会记录路由和响应元数据；它不会记录凭据、请求 ID、提示词或补全内容。ClawRouter 自身的审计事件会提供所选上游提供商和内容保留状态。
+
 ## 模型发现
 
 `GET /v1/catalog` 返回 `{ providers: [...] }`，其中每个 provider 条目都列出它自己的 `models[]`（包含上游 id、能力和定价），以及它支持的请求路由。OpenClaw 不提供第二份固定的 ClawRouter 模型列表。当满足以下条件时，catalog 中的某个模型会被声明为 OpenClaw 模型：
@@ -113,10 +201,12 @@ openclaw models status
 
 ## 安全行为
 
-- 目录发现的范围限定为已配置的代理密钥，并按凭据范围（agent dir、workspace dir、auth profile id 和 base URL）进行缓存。
-- 代理密钥仅在请求分发时附加；不会存储在模型元数据中。
+- 目录发现的作用域仅限于已配置的代理密钥，并按凭据作用域缓存（agent 目录、workspace 目录、auth profile id 和 base URL）。
+- 代理密钥仅在请求分发时附加；它不会存储在模型元数据中。
+- 自动归因和请求关联值在分发前会被裁剪并拒绝控制字符。归因值上限为 256 个字符；请求 id 上限为 128 个字符。
+- 模型传输诊断仅包含元数据，绝不会包含代理密钥或模型内容。
 - 原生 Anthropic 和 Gemini 模型 id 仅在分发时重写为其上游 id。
-- 不支持或未授予的目录行会以关闭方式失败，且不可选择。
+- 不受支持或未授予的目录行会安全失败，且不可被选择。
 
 ## 相关内容
 

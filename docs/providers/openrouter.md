@@ -111,9 +111,9 @@ OpenRouter 可以支持 `image_generate` 工具。请在 `agents.defaults.imageG
 
 OpenClaw 会向 OpenRouter 的 chat-completions 图像 API 发送图像请求，并使用 `modalities: ["image", "text"]`。Gemini 图像模型还会通过 OpenRouter 的 `image_config` 额外接收 `aspectRatio` 和 `resolution` 提示；其他图像模型则不会。对于较慢的模型，请使用 `agents.defaults.imageGenerationModel.timeoutMs`；不过，`image_generate` 工具每次调用时的 `timeoutMs` 仍然优先生效。
 
-## 视频生成
+## Video Generation
 
-OpenRouter 可以通过其异步的 `/videos` API 为 `video_generate` 工具提供支持。请在 `agents.defaults.videoGenerationModel` 下设置一个 OpenRouter 视频模型：
+OpenRouter can support the `video_generate` tool through its asynchronous `/videos` API. Set an OpenRouter video model under `agents.defaults.videoGenerationModel`:
 
 ```json5
 {
@@ -128,7 +128,7 @@ OpenRouter 可以通过其异步的 `/videos` API 为 `video_generate` 工具提
 }
 ```
 
-OpenClaw 会提交文生视频和图生视频任务，轮询返回的 `polling_url`，并从 OpenRouter 的 `unsigned_urls` 或任务内容端点下载完成的视频。参考图像默认使用首帧/末帧图像；标记为 `reference_image` 的图像则作为输入参考发送。内置的 `google/veo-3.1-fast` 默认支持 4/6/8 秒时长、`720P`/`1080P` 分辨率以及 `16:9`/`9:16` 画幅比例。不支持视频转视频：上游 API 只接受文本和图像参考。
+OpenClaw will submit text-to-video and image-to-video tasks, poll the returned `polling_url`, and download the completed video from OpenRouter's `unsigned_urls` or the task content endpoint. Reference images default to the first/last frame images; images marked as `reference_image` are sent as input references. The built-in `google/veo-3.1-fast` supports 4/6/8 second durations, `720P`/`1080P` resolutions, and `16:9`/`9:16` aspect ratios by default. Video-to-video is not supported: the upstream API only accepts text and image references.
 
 ## 音乐生成
 
@@ -149,9 +149,12 @@ OpenRouter 可以通过 chat-completions 音频输出为 `music_generate` 工具
 }
 ```
 
-内置的 OpenRouter 音乐提供方默认使用 `google/lyria-3-pro-preview`
-，并且还提供 `google/lyria-3-clip-preview`。OpenClaw 会发送 `modalities:
-["text", "audio"]`，流式接收响应，收集音频片段，并将结果保存为用于频道传递的生成媒体。Lyria 模型可通过共享的 `music_generate image=...` 参数接受一张参考图像。
+打包的 OpenRouter 音乐提供方默认使用 `google/lyria-3-pro-preview`
+，并且也提供 `google/lyria-3-clip-preview`。OpenClaw 会发送 `modalities:
+["text", "audio"]`，流式接收响应，收集音频片段，并将结果保存
+为用于通道投递的生成媒体。Lyria 模型通过共享的 `music_generate image=...` 参数接受一张参考图像。
+流式音频、转录保留以及派生的 SSE 事件封装都会受到 `agents.defaults.mediaMaxMb`
+的限制（默认音频上限为 16 MB）。
 
 ## 文本转语音
 

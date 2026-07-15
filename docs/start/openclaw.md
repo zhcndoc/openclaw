@@ -159,18 +159,19 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 
 ## 会话与记忆
 
-- 会话文件：`~/.openclaw/agents/<agentId>/sessions/{{SessionId}}.jsonl`
-- 会话元数据（token 使用量、上次路由等）：`~/.openclaw/agents/<agentId>/sessions/sessions.json`
-- `/new` 或 `/reset` 会为该聊天启动一个全新的会话（可通过 `session.resetTriggers` 配置）。如果单独发送，OpenClaw 会确认重置而不调用模型。
+- 会话行、转录行以及元数据（token 使用量、最后路由等）：`~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
+- 旧版/归档的转录产物：`~/.openclaw/agents/<agentId>/sessions/`
+- 旧版行迁移来源：`~/.openclaw/agents/<agentId>/sessions/sessions.json`
+- `/new` 或 `/reset` 会为该聊天开启一个全新的会话（可通过 `session.resetTriggers` 配置）。如果单独发送，OpenClaw 会确认重置，而不会调用模型。
 - `/compact [instructions]` 会压缩会话上下文并报告剩余的上下文预算。
 
 ## 心跳（主动模式）
 
 默认情况下，OpenClaw 每 30 分钟运行一次心跳，提示词为：
-`Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
+`如果存在 HEARTBEAT.md，请读取它（工作区上下文）。严格遵守其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，请回复 HEARTBEAT_OK。`
 将 `agents.defaults.heartbeat.every: "0m"` 可将其禁用。
 
-- 如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行、Markdown/HTML 注释、Markdown 标题如 `# Heading`、fence 标记，或空的 checklist 模板），OpenClaw 会跳过心跳运行以节省 API 调用。
+- 如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行、Markdown/HTML 注释、Markdown 标题如 `# 标题`、fence 标记，或空的 checklist 模板），OpenClaw 会跳过心跳运行以节省 API 调用。
 - 如果该文件缺失，心跳仍会运行，由模型自行决定如何处理。
 - 如果代理回复 `HEARTBEAT_OK`（可附带少量填充；参见 `agents.defaults.heartbeat.ackMaxChars`），OpenClaw 会抑制该次心跳的外发投递。
 - 默认情况下，允许向 DM 风格的 `user:<id>` 目标投递心跳。将 `agents.defaults.heartbeat.directPolicy: "block"` 可在保持心跳运行的同时禁止直接目标投递。

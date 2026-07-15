@@ -44,6 +44,11 @@ openclaw plugins install @openclaw/llama-cpp-provider
 （默认值：`~/.node-llama-cpp/models`），`local.contextSize` 接受一个
 整数或 `"auto"`。
 
+当 `local.contextSize` 为数值时，提供程序也会将该需求传递给
+node-llama-cpp 的自动 GPU 层放置。这样 node-llama-cpp 就可以在
+保留其内存安全检查的同时，将模型和嵌入上下文一起装入内存。
+而使用 `"auto"` 时，node-llama-cpp 会保持其正常的自动放置行为。
+
 ## 原生运行时
 
 使用 Node 24 可获得最顺畅的原生安装路径。使用
@@ -54,12 +59,23 @@ pnpm approve-builds
 pnpm rebuild node-llama-cpp
 ```
 
-## 故障排除
+## 运行时诊断
 
-如果 `node-llama-cpp` 缺失或加载失败，OpenClaw 会报告该失败信息，方式如下：
+在提供程序加载完成后，运行 `openclaw memory status --deep`，以检查
+所选后端和构建、设备名称、GPU 卸载层数、请求的
+上下文大小，以及最近一次观察到的 VRAM 或统一内存快照。VRAM
+值包含一个观测时间戳，因为被动状态读取不会
+重新加载模型或轮询设备。
+
+当运行中的 Gateway 已经使用过本地提供程序时，相同的最新已知信息也可能出现在 `openclaw doctor` 中。普通的 status 或 doctor 命令
+不会为了收集诊断信息而加载模型。
+
+## 故障排查
+
+如果 `node-llama-cpp` 缺失或加载失败，OpenClaw 会按如下方式报告该失败信息：
 
 1. 安装插件：`openclaw plugins install @openclaw/llama-cpp-provider`。
-2. 本地安装/更新时使用 Node 24。
+2. 在本地安装/更新时使用 Node 24。
 3. 如果是从 pnpm 源码检出：先运行 `pnpm approve-builds`，然后运行 `pnpm rebuild node-llama-cpp`。
 
 如果想在不进行本地构建步骤的情况下获得更低门槛的本地嵌入，请将 `memorySearch.provider` 设置为远程嵌入提供方，例如 `lmstudio`、`ollama`、`openai` 或 `voyage`。

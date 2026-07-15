@@ -35,6 +35,18 @@ OpenClaw 通过在你的代理工作区中写入普通的 Markdown 文件来记�
 
 如果 `MEMORY.md` 超过了启动文件预算，OpenClaw 会保留磁盘上的文件完整不变，但会截断注入到上下文中的副本。请把这视为一个信号：将详细内容移到 `memory/*.md` 中，只在 `MEMORY.md` 中保留持久摘要，或者如果你想投入更多提示预算，就提高启动限制。使用 `/context list`、`/context detail` 或 `openclaw doctor` 查看原始大小与注入大小以及截断状态。
 
+## 从编码助手导入
+
+Control UI 可以从 Codex 和 Claude Code 导入现有的本地记忆。
+打开 **Settings** → **Import Memory**，选择目标代理，查看检测到的文件，并确认导入。OpenClaw 只复制 Markdown 记忆：
+
+- Codex：位于 `~/.codex/memories`（或 `CODEX_HOME/memories`）下的汇总 `MEMORY.md` 和 `memory_summary.md` 文件。不导入原始 rollout 和 transcript 文件。
+- Claude Code：来自 `~/.claude/projects/*/memory` 下每个项目自动记忆目录中的 Markdown 文件，以及（如果存在）用户配置的 `autoMemoryDirectory`。项目说明、会话、设置和凭据不属于此仅记忆操作。
+
+导入的文件会在所选代理工作区中分别保存在 `memory/imports/codex/` 和 `memory/imports/claude-code/` 下。它们会被索引用于 `memory_search`，并可通过 `memory_get` 访问；它们不会合并到代理的启动 `MEMORY.md` 中。源文件保持不变。
+
+预览会标记目标冲突。启用 **Replace existing imports** 以替换这些文件；应用时会创建已验证的预导入备份，并在迁移报告中保留被覆盖文件的逐项副本。
+
 ## 行动敏感记忆
 
 大多数记忆都是普通的 Markdown 笔记。有些会影响智能体以后应该做什么；对于这些，应该记录何时可以安全地根据该笔记采取行动，而不仅仅是事实本身。
@@ -83,12 +95,12 @@ API 迁移正在另一个会话中设计。在迁移方案落地之前，未来�
 
 ## 记忆工具
 
-agent 有两个用于处理记忆的工具：
+agent has two tools for handling memory:
 
-- **`memory_search`** —— 即使措辞与原文不同，也能通过语义搜索找到相关笔记。
-- **`memory_get`** —— 读取指定的记忆文件或行范围。
+- **`memory_search`** —— even if the wording differs from the original text, it can find related notes through semantic search.
+- **`memory_get`** —— reads a specified memory file or line range.
 
-这两个工具都由当前激活的 memory 插件提供（默认：`memory-core`）。
+These two tools are both provided by the currently active memory plugin (default: `memory-core`).
 
 ## 记忆搜索
 
@@ -204,7 +216,7 @@ openclaw memory rem-backfill --rollback
 openclaw memory rem-backfill --rollback-short-term
 ```
 
-## CLI
+## 命令行界面
 
 ```bash
 openclaw memory status          # 检查索引状态和提供方

@@ -25,11 +25,11 @@ openclaw plugins install clawhub:<package-name>
 
 ## 要求
 
-- Node 22.19+、Node 23.11+ 或 Node 24+，以及 `npm` 或 `pnpm`。
+- Node 22.22.3+、Node 24.15+ 或 Node 25.9+，以及 `npm` 或 `pnpm`。
 - TypeScript ESM 模块。
-- 对于仓库内捆绑插件的开发，请克隆仓库并运行 `pnpm install`。
+- 对于仓库内打包插件开发，克隆仓库并运行 `pnpm install`。
   源码检出插件开发仅支持 pnpm，因为 OpenClaw 会从 `extensions/*` 工作区包中发现
-  捆绑插件。
+  已打包的插件。
 
 ## 选择插件形态
 
@@ -169,7 +169,7 @@ openclaw plugins install clawhub:<package-name>
 
   </Step>
 
-  <Step title="Test the package install">
+  <Step title="测试包安装">
     在发布一个可直接打包的插件之前，请测试与用户将获得的相同安装形态。
     首先添加构建步骤，将诸如
     `openclaw.extensions` 之类的运行时入口指向构建后的 JavaScript，例如 `./dist/index.js`，并确保
@@ -226,6 +226,9 @@ openclaw plugins install clawhub:<package-name>
 
 工具可以是必需的或可选的。必需工具在插件启用时始终可用。
 可选工具则需要用户显式选择启用后，OpenClaw 才会加载其所属插件的运行时。
+
+工具工厂会接收受信任的运行时上下文，包括 `deliveryContext`、
+可用时当前平台对话的 `nativeChannelId`，以及 `requesterSenderId`。
 
 ```typescript
 register(api) {
@@ -287,31 +290,30 @@ register(api) {
 请将 `toolMetadata.<tool>.optional: true` 与 `api.registerTool(..., { optional: true })`
 保持一致，这样 OpenClaw 才能在该工具未被显式允许列表收录前避免加载该插件运行时。
 
-## Import Conventions
+## 导入约定
 
-Import from focused SDK subpaths:
+从聚焦的 SDK 子路径导入：
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
 ```
 
-Do not import from the deprecated root barrel:
+不要从已弃用的根入口导入：
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk";
 ```
 
-Within your plugin package, use local barrel files for internal imports, such as `api.ts` and
-`runtime-api.ts`. Do not import your own plugin through SDK paths. Provider-specific helpers should remain in the provider package unless that boundary is genuinely shared.
+在你的插件包内，内部导入请使用本地的 barrel 文件，例如 `api.ts` 和
+`runtime-api.ts`。不要通过 SDK 路径导入你自己的插件。特定于提供者的辅助工具应保留在提供者包中，除非该边界确实是共享的。
 
-Custom Gateway RPC methods are advanced entry points. Reserve plugin-specific prefixes for them; core admin namespaces like `config.*`,
-`exec.approvals.*`, `operator.admin.*`, `wizard.*`, and `update.*` are reserved
-and resolve to `operator.admin`. The `openclaw/plugin-sdk/gateway-method-runtime`
-bridge is only for plugin HTTP routes that declare
-`contracts.gatewayMethodDispatch: ["authenticated-request"]`.
+自定义 Gateway RPC 方法是高级入口点。为它们保留插件专用前缀；核心管理命名空间如 `config.*`、
+`exec.approvals.*`、`operator.admin.*`、`wizard.*` 和 `update.*` 是保留的，
+并会解析到 `operator.admin`。`openclaw/plugin-sdk/gateway-method-runtime`
+桥接仅适用于声明了 `contracts.gatewayMethodDispatch: ["authenticated-request"]` 的插件 HTTP 路由。
 
-See the full import map in [Plugin SDK Overview](/plugins/sdk-overview).
+请参阅 [插件 SDK 概览](/plugins/sdk-overview) 中的完整导入映射。
 
 ## 提交前检查清单
 

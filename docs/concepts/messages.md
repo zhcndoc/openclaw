@@ -89,13 +89,13 @@ title: "消息"
 
 可通过 `messages.groupChat.historyLimit`（全局默认值）或按通道覆盖来配置历史大小，例如 `channels.slack.historyLimit` 和 `channels.telegram.accounts.<id>.historyLimit`（设为 `0` 可禁用）。
 
-## 工具结果元数据
+## Tool Result Metadata
 
-工具结果 `content` 是模型可见的结果；`details` 是用于 UI 渲染、诊断、媒体传递和插件的运行时元数据。
+The tool result `content` is model-visible output; `details` are runtime metadata used for UI rendering, diagnostics, media delivery, and plugin execution.
 
-- `toolResult.details` 会在提供方重放之前以及在压缩输入之前被移除。
-- 持久化的会话转录只保留有界的 `details`；超大的元数据会被替换为一个带有 `persistedDetailsTruncated: true` 标记的紧凑摘要。
-- 插件和工具应将模型必须读取的文本放在 `content` 中，而不是只放在 `details` 中。
+- `toolResult.details` will be removed before replay by the provider and before input compression.
+- Persistent session transcripts keep only bounded `details`; oversized metadata will be replaced with a compact summary marked with `persistedDetailsTruncated: true`.
+- Plugins and tools should place text that the model must read in `content`, not only in `details`.
 
 ## 排队和后续轮次
 
@@ -116,18 +116,18 @@ title: "消息"
 
 频道插件可以在消息进入会话队列之前维护顺序、对输入进行防抖，并应用传输背压。它们不应在代理轮次本身外再施加单独的超时。一旦消息被路由到会话中，会话、工具和运行时生命周期将负责管理长时间运行的工作，这样所有频道都能一致地报告并从缓慢的轮次中恢复。
 
-## 流式、分块和批处理
+## Streaming, Chunking, and Batching
 
-块流式传输会在模型生成文本块时发送部分回复；分块会遵守频道文本限制，并避免拆分围栏代码。
+Block streaming sends partial replies as the model generates text blocks; chunking respects channel text limits and avoids splitting fenced code blocks.
 
-- `agents.defaults.blockStreamingDefault` (`on|off`，默认 `off`)
+- `agents.defaults.blockStreamingDefault` (`on|off`, default `off`)
 - `agents.defaults.blockStreamingBreak` (`text_end|message_end`)
 - `agents.defaults.blockStreamingChunk` (`minChars|maxChars|breakPreference`)
-- `agents.defaults.blockStreamingCoalesce`（基于空闲的批处理）
-- `agents.defaults.humanDelay`（块回复之间类似人类的暂停）
-- 频道覆盖：`*.blockStreaming` 和 `*.blockStreamingCoalesce`（除非在每个频道上都显式将 `*.blockStreaming` 设置为 `true`，否则块流式传输为关闭状态，包括 Telegram 在内的所有频道）
+- `agents.defaults.blockStreamingCoalesce` (idle-based batching)
+- `agents.defaults.humanDelay` (human-like pause between block replies)
+- Channel overrides: `*.streaming.block.enabled` and `*.streaming.block.coalesce` on bundled channels; stale flat keys are migrated by `openclaw doctor --fix`. Block streaming is off unless explicitly enabled, on every channel including Telegram. QQ Bot is the exception: it has no `streaming.block` keys and streams block replies unless `channels.qqbot.streaming.mode` is `"off"`.
 
-详情： [流式 + 分块](/concepts/streaming)。
+Details: [Streaming + Chunking](/concepts/streaming).
 
 ## 推理可见性和 token
 

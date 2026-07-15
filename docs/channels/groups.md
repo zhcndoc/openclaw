@@ -35,18 +35,18 @@ OpenClaw “运行”在你自己的消息账号上。这里没有单独的 What
 快速流程（群消息会发生什么）：
 
 ```text
-groupPolicy? disabled -> drop
-groupPolicy? allowlist -> group allowed? no -> drop
-requireMention? yes -> mentioned? no -> store for context only
-mention/reply/command/DM -> user request
-always-on group chatter -> user request, or room event when configured
+groupPolicy? disabled -> 丢弃
+groupPolicy? allowlist -> 群组允许？否 -> 丢弃
+requireMention? 是 -> 是否提及？否 -> 仅存储用于上下文
+mention/reply/command/DM -> 用户请求
+always-on group chatter -> 用户请求，或在配置时生成房间事件
 ```
 
 ## 可见回复
 
 对于普通的群组/频道请求，OpenClaw 默认使用 `messages.groupChat.visibleReplies: "automatic"`：最终的助手文本会作为可见回复发布到房间中。
 
-当共享房间需要让代理通过调用 `message(action=send)` 来决定何时发言时，请使用 `messages.groupChat.visibleReplies: "message_tool"`。这在对工具调用可靠的模型上效果最好（例如 GPT 5.5）。如果模型漏掉了工具调用并返回了实质性的最终文本，OpenClaw 会将该文本保密，而不是发布到房间中。
+当共享房间应允许代理通过调用 `message(action=send)` 来决定何时发言时，请使用 `messages.groupChat.visibleReplies: "message_tool"`。这对工具调用可靠的模型最有效（例如 GPT-5.6 Sol）。如果模型漏掉了工具并返回了实质性的最终文本，OpenClaw 会将该文本保密，而不是发布到房间中。
 
 对于不可靠遵循仅工具交付的模型或运行时，请使用 `"automatic"`：普通文本最终结果会直接发布到房间中，而代理仍然可以调用 `message(action=send)` 发送无法随最终文本一起传递的文件、图片或其他附件。
 
@@ -349,7 +349,7 @@ always-on group chatter -> user request, or room event when configured
 
 ## 已配置的提及模式范围
 
-已配置的 `mentionPatterns` 是正则表达式的回退触发条件。当平台没有提供原生机器人提及时，或当诸如 `openclaw:` 这样的纯文本也应算作提及内容时，请使用它们。原生平台提及是独立的：当 Discord、Slack、Telegram、Matrix 或其他渠道能够证明消息明确提到了机器人时，即使已配置的正则模式被拒绝，该原生提及仍然会触发。
+已配置的 `mentionPatterns` 是正则回退触发器。当平台不提供原生机器人提及，或者你希望像 `openclaw:` 这样的纯文本也计为提及时，请使用它们。原生平台提及是独立的：当 Discord、Slack、Telegram、Matrix、Signal 或其他渠道能够证明消息明确提到了机器人时，即使已配置的正则模式被拒绝，该原生提及仍会触发。
 
 默认情况下，只要该渠道在提及检测中能将提供方和会话事实传入，已配置的提及模式就会在所有地方生效。为了避免宽泛模式在每个群组中都唤醒代理，请使用 `channels.<channel>.mentionPatterns` 按渠道进行作用域限定。
 
@@ -562,9 +562,9 @@ always-on group chatter -> user request, or room event when configured
 - 列出聊天：`imsg chats --limit 20`。
 - 群组回复始终返回到同一个 `chat_id`。
 
-## WhatsApp 系统提示
+## WhatsApp System Prompts
 
-请参阅 [WhatsApp](/channels/whatsapp#system-prompts) 获取权威的 WhatsApp 系统提示规则，包括群组和直接消息的提示解析、通配符行为以及账户覆盖语义。
+Please refer to [WhatsApp](/channels/whatsapp#system-prompts) for authoritative WhatsApp system prompt rules, including prompt parsing for groups and direct messages, wildcard behavior, and account override semantics.
 
 ## WhatsApp 细节
 

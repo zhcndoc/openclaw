@@ -112,10 +112,11 @@ OpenClaw 预期工作区内包含的标准文件：
 
 - `~/.openclaw/openclaw.json` (配置)
 - `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (模型认证配置文件：OAuth + API 密钥)
-- `~/.openclaw/agents/<agentId>/agent/codex-home/`（每个代理的 Codex 运行时账户、配置、技能、插件和原生线程状态）
-- `~/.openclaw/credentials/`（通道/提供方状态以及旧版 OAuth 导入数据）
-- `~/.openclaw/agents/<agentId>/sessions/`（会话记录 + 元数据）
-- `~/.openclaw/skills/`（托管技能）
+- `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` (会话记录、转录内容，以及每个代理的运行时状态)
+- `~/.openclaw/agents/<agentId>/agent/codex-home/` (每个代理的 Codex 运行时账户、配置、技能、插件和本地线程状态)
+- `~/.openclaw/credentials/` (通道/提供方状态以及旧版 OAuth 导入数据)
+- `~/.openclaw/agents/<agentId>/sessions/` (旧版迁移源和归档/支持工件)
+- `~/.openclaw/skills/` (托管技能)
 
 如果你需要迁移会话或配置，请单独复制它们，并使它们脱离版本控制。
 
@@ -217,7 +218,8 @@ OpenClaw 预期工作区内包含的标准文件：
     运行 `openclaw setup --workspace <path>` 以填充任何缺失的文件。
   </Step>
   <Step title="复制会话（可选）">
-    如果你需要会话，请从旧机器单独复制 `~/.openclaw/agents/<agentId>/sessions/`。
+    如果你需要会话，请从旧机器单独复制 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
+    仅在你也需要旧版迁移输入或归档/支持工件时，才复制 `~/.openclaw/agents/<agentId>/sessions/`。
   </Step>
 </Steps>
 

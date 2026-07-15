@@ -7,10 +7,10 @@ read_when:
 title: "macOS 上的网关"
 ---
 
-OpenClaw.app 不会捆绑 Node/Bun 或 Gateway 运行时。macOS 应用程序
-期望安装一个**外部**的 `openclaw` CLI，不会将 Gateway 作为
-子进程启动，并且会管理一个按用户区分的 launchd 服务，以保持 Gateway
-持续运行（或者附加到一个已在运行的本地 Gateway）。
+OpenClaw.app 不捆绑 Node 或 Gateway 运行时。macOS 应用
+期望安装一个 **外部** 的 `openclaw` CLI，不会将 Gateway 作为
+子进程启动，并且会管理一个按用户划分的 launchd 服务，以保持 Gateway
+持续运行（或者连接到一个已经在运行的本地 Gateway）。
 
 ## 自动设置
 
@@ -20,7 +20,7 @@ OpenClaw.app 不会捆绑 Node/Bun 或 Gateway 运行时。macOS 应用程序
 
 ## 手动恢复
 
-建议使用 Node 24 进行手动安装；Node 22.19+ 也可用。全局安装
+推荐在手动安装时使用 Node 24.15+；Node 22.22.3+ 也可正常使用。全局安装
 `openclaw`：
 
 ```bash
@@ -51,13 +51,17 @@ CLI 也可以直接安装：`openclaw gateway install`
 
 日志：
 
-- launchd stdout：`~/Library/Logs/openclaw/gateway.log`（配置文件使用
+- launchd stdout: `~/Library/Logs/openclaw/gateway.log`（配置文件使用
   `gateway-<profile>.log`）
-- launchd stderr：已抑制
+- launchd stderr: 已抑制
+- 如果主机因重复的 `EADDRINUSE` 或快速重启而陷入循环，请检查是否存在重复的
+  `ai.openclaw.gateway` / `ai.openclaw.node` LaunchAgents，以及
+  [Gateway troubleshooting](/gateway/troubleshooting#macos-launchd-supervisor-loop-with-duplicate-gatewaynode-launchagents) 中的
+  launchd-marker 变通方案。
 
 ## 版本兼容性
 
-macOS 应用会将 Gateway 版本与自身版本进行检查。Onboarding
+macOS 应用会将 Gateway 版本与自身版本进行检查。引导
 在现有 CLI 缺失或
 不兼容时会自动运行受管设置。使用 **重试设置** 可重复安装，或在修复外部 CLI 后使用 **再次检查**。
 

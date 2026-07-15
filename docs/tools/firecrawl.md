@@ -2,10 +2,10 @@
 summary: "Firecrawl 搜索、抓取和 web_fetch 回退"
 read_when:
   - 你想要使用 Firecrawl 支持的网页提取
-  - 你想要无需密钥的 Firecrawl web_fetch
-  - 你需要 Firecrawl API 密钥来进行搜索或获取更高限额
+  - 你想要无密钥的 Firecrawl Search（免费）或无密钥的 web_fetch
+  - 你需要 Firecrawl API 密钥用于搜索或更高的限制
   - 你想将 Firecrawl 作为 web_search 提供方
-  - 你想为 web_fetch 使用反爬虫提取
+  - 你想为 web_fetch 使用反机器人提取
 title: "Firecrawl"
 ---
 
@@ -26,9 +26,19 @@ openclaw plugins install @openclaw/firecrawl-plugin
 openclaw gateway restart
 ```
 
-## 无密钥 web_fetch 和 API 密钥
+## 无密钥访问和 API 密钥
 
-明确选择的托管 Firecrawl `web_fetch` 回退支持无需 API 密钥的入门级访问。在网关环境中添加 `FIRECRAWL_API_KEY`，或在需要更高限制时进行配置。Firecrawl `web_search` 和 `firecrawl_scrape` 需要 API 密钥。
+Firecrawl 注册了两个 `web_search` 提供方：
+
+- **Firecrawl Search** (`firecrawl`) — 使用托管的 `/v2/search` API 和你的
+  密钥；当检测到存在密钥时会自动选中。
+- **Firecrawl Search (Free)** (`firecrawl-free`) — 使用托管的无密钥入门
+  套餐，不需要 API 密钥。它**仅限手动选择**，且绝不会自动选中，因为
+  选择它会将你的搜索查询发送到 Firecrawl 的免费套餐。
+
+显式选择的 Firecrawl `web_fetch` 回退同样是无密钥的。显式的
+`firecrawl_search` 和 `firecrawl_scrape` 工具需要 API 密钥。在网关环境中添加
+`FIRECRAWL_API_KEY`，或对其进行配置以获得更高的限制。
 
 ## 配置 Firecrawl 搜索
 
@@ -59,12 +69,13 @@ openclaw gateway restart
 
 注意：
 
-- 在 onboarding 中选择 Firecrawl 或使用 `openclaw configure --section web` 会自动启用已安装的 Firecrawl 插件。
+- 在引导流程中选择 Firecrawl，或使用 `openclaw configure --section web`，会自动启用已安装的 Firecrawl 插件。
+- 在引导流程中选择 **Firecrawl Search (Free)**（或设置 `provider: "firecrawl-free"`），即可无密钥运行，无需 API key。带密钥的 **Firecrawl Search** 提供程序会发送 `plugins.entries.firecrawl.config.webSearch.apiKey` 或 `FIRECRAWL_API_KEY`。
 - 使用 Firecrawl 的 `web_search` 支持 `query` 和 `count`。
-- 对于 `sources`、`categories` 或结果抓取等 Firecrawl 特定控制，请使用 `firecrawl_search`。
-- `baseUrl` 默认指向托管的 Firecrawl：`https://api.firecrawl.dev`。仅允许为私有/内部端点覆盖为自托管；只有针对这些私有目标时才接受 HTTP。
-- `FIRECRAWL_BASE_URL` 是 Firecrawl 搜索和抓取 base URL 的共享环境变量回退值。
-- Firecrawl 搜索请求默认超时时间为 30 秒；`firecrawl_search` 的 `timeoutSeconds` 参数可按调用覆盖它。
+- 对于 Firecrawl 特有的控制项，例如 `sources`、`categories` 或结果抓取，请使用 `firecrawl_search`。
+- `baseUrl` 默认指向托管的 Firecrawl：`https://api.firecrawl.dev`。仅允许对私有/内部端点使用自托管覆盖；只有这些私有目标才接受 HTTP。
+- `FIRECRAWL_BASE_URL` 是 Firecrawl 搜索和抓取基础 URL 的共享环境变量回退值。
+- Firecrawl 搜索请求默认超时时间为 30 秒；`firecrawl_search` 的 `timeoutSeconds` 参数可按单次调用覆盖它。
 
 ## 配置 Firecrawl web_fetch 回退
 
@@ -116,14 +127,17 @@ openclaw gateway restart
 
 ### `firecrawl_search`
 
-当你想使用 Firecrawl 特定的搜索控制，而不是通用 `web_search` 时使用它。
+当你需要 Firecrawl 特定的搜索控制，而不是通用的 `web_search` 时使用此功能。需要 API 密钥。
 
 参数：
 
 - `query`
-- `count`
+- `count` (1-100)
 - `sources`
 - `categories`
+- `includeDomains` / `excludeDomains`（仅限主机名；二者互斥）
+- `tbs`（时间筛选，例如 `qdr:d`、`qdr:w`、`sbd:1`）
+- `location` 和 `country`（地理定向）
 - `scrapeResults`
 - `timeoutSeconds`
 

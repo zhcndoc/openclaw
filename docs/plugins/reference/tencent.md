@@ -1,5 +1,5 @@
 ---
-summary: "为 OpenClaw 添加腾讯 TokenHub 模型提供方支持。"
+summary: "为 OpenClaw 添加 Tencent TokenHub、Tencent Tokenplan 模型提供商支持。"
 read_when:
   - 你正在安装、配置或审计 tencent 插件
 title: "Tencent 插件"
@@ -7,7 +7,7 @@ title: "Tencent 插件"
 
 # Tencent 插件
 
-为 OpenClaw 添加腾讯 TokenHub 模型提供方支持。
+为 OpenClaw 添加 Tencent TokenHub、Tencent Tokenplan 模型提供商支持。
 
 ## 分发
 
@@ -16,8 +16,8 @@ title: "Tencent 插件"
 
 ## 接口
 
-providers: tencent-tokenhub
+providers: tencent-tokenhub, tencent-tokenplan
 
 ## 相关文档
 
-- [tencent](/providers/tencent)
+- [腾讯](/providers/tencent)

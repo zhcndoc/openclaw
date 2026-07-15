@@ -24,63 +24,57 @@ title: "反应"
 - 将 `remove: true` 设置为移除一个特定表情符号（要求 `emoji` 非空）。
 - 在具有状态反应的频道中，反应上的 `trackToolCalls: true` 允许运行时重用该已反应消息，用于同一轮中的后续工具进度反应。
 
-## 渠道行为
+## Channel Behavior
 
 <AccordionGroup>
-  <Accordion title="Discord 和 Slack">
-    - 空的 `emoji` 会移除机器人在该消息上的所有反应。
-    - `remove: true` 只会移除指定的表情。
-
-  </Accordion>
-
-  <Accordion title="Google Chat">
-    - 空的 `emoji`（或 `remove: true`）会移除机器人在该消息上的自身反应；如果设置了 `emoji`，则仅针对该 `emoji` 过滤。
-    - `remove: true` 只会移除指定的表情。
+  <Accordion title="Discord and Slack">
+    - An empty `emoji` will remove all of the bot’s reactions on that message.
+    - `remove: true` will only remove the specified emoji.
 
   </Accordion>
 
   <Accordion title="Nextcloud Talk">
-    - 仅添加反应：`emoji` 是必需的，并且不能为空。
-    - 反应移除尚未接入删除调用；`remove: true` 会返回明确的错误，而不是静默地不执行任何操作。
-    - 需要在 Talk 中注册并启用了 `reaction` 功能的机器人（参见 [Nextcloud Talk channel docs](/channels/nextcloud-talk)）。
+    - Add-only reactions: `emoji` is required and cannot be empty.
+    - Reaction removal is not yet wired to a delete call; `remove: true` returns a clear error rather than silently doing nothing.
+    - Requires a bot registered in Talk with the `reaction` feature enabled (see [Nextcloud Talk channel docs](/channels/nextcloud-talk)).
 
   </Accordion>
 
   <Accordion title="Telegram">
-    - 空的 `emoji` 会移除机器人的反应。
-    - `remove: true` 也会移除反应，但工具校验仍要求 `emoji` 非空。
+    - An empty `emoji` will remove the bot’s reaction.
+    - `remove: true` also removes reactions, but tool validation still requires a non-empty `emoji`.
 
   </Accordion>
 
   <Accordion title="WhatsApp">
-    - 空的 `emoji` 会移除机器人反应。
-    - `remove: true` 在内部会映射为空的 emoji（但在工具调用中仍然需要 `emoji`）。
-    - WhatsApp 对每条消息只有一个机器人反应槽位；发送新的反应会替换它，而不是叠加多个 emoji。
+    - An empty `emoji` will remove the bot reaction.
+    - `remove: true` is internally mapped to an empty emoji (but `emoji` is still required in the tool call).
+    - WhatsApp has a single bot-reaction slot per message; sending a new reaction replaces it instead of stacking multiple emoji.
 
   </Accordion>
 
   <Accordion title="Zalo Personal (zalouser)">
-    - 添加和移除都要求 `emoji` 非空。
-    - `remove: true` 会移除该特定 emoji 反应。
+    - Both adding and removing require a non-empty `emoji`.
+    - `remove: true` will remove that specific emoji reaction.
 
   </Accordion>
 
   <Accordion title="Feishu/Lark">
-    - 与其他渠道一样使用相同的 `react` 操作（通过消息反应 ID 进行添加/移除/列出），而不是单独的工具。
-    - 添加时要求 `emoji` 非空（映射到 Feishu 的 `emoji_type`，例如 `SMILE`、`THUMBSUP`、`HEART`）。
-    - `remove: true` 要求 `emoji` 非空，并移除机器人与该 emoji 类型匹配的自身反应。
-    - `clearAll: true` 配合空的 `emoji` 会移除机器人在该消息上的所有反应。
+    - Uses the same `react` operation as other channels (add/remove/list via reaction ID) rather than a separate tool.
+    - Adding requires a non-empty `emoji` (mapped to Feishu’s `emoji_type`, e.g. `SMILE`, `THUMBSUP`, `HEART`).
+    - `remove: true` requires a non-empty `emoji` and removes the bot’s own reaction matching that emoji type.
+    - `clearAll: true` with an empty `emoji` will remove all of the bot’s reactions on that message.
 
   </Accordion>
 
   <Accordion title="Signal">
-    - 入站反应通知由 `channels.signal.reactionNotifications` 控制：`"off"` 会禁用它们，`"own"`（默认）会在用户对机器人消息作出反应时发出事件，`"all"` 会为所有反应发出事件，而 `"allowlist"` 只会为 `channels.signal.reactionAllowlist` 中的发送者发出事件。
+    - Incoming reaction notifications are controlled by `channels.signal.reactionNotifications`: `"off"` disables them, `"own"` (default) emits events when users react to bot messages, `"all"` emits events for all reactions, and `"allowlist"` emits only for senders in `channels.signal.reactionAllowlist`.
 
   </Accordion>
 
   <Accordion title="iMessage">
-    - 出站反应是 iMessage tapbacks（`love`、`like`、`dislike`、`laugh`、`emphasize` 和 `question`）；`emoji` 必须映射到这些类型之一才能添加反应。
-    - 在没有可识别 tapback 类型的情况下使用 `remove: true` 会移除所有 tapback 类型；如果有可识别的类型，则只移除该一个。
+    - Outgoing reactions are iMessage tapbacks (`love`, `like`, `dislike`, `laugh`, `emphasize`, and `question`); `emoji` must map to one of these types in order to add a reaction.
+    - Using `remove: true` without a recognizable tapback type removes all tapback types; if a recognizable type exists, only that one is removed.
 
   </Accordion>
 </AccordionGroup>

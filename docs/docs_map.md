@@ -64,22 +64,23 @@ title: "文档映射"
 - 标题：
   - H2：快速开始
   - H2：cron 的工作原理
-  - H2：调度类型
-  - H3：月中的日期和星期几使用 OR 逻辑
-  - H2：负载
+  - H2：计划类型
+  - H3：每月日期和每周星期使用 OR 逻辑
+  - H2：事件触发器（条件监听器）
+  - H2：载荷
   - H3：Agent-turn 选项
-  - H3：命令负载
+  - H3：命令载荷
   - H2：执行样式
-  - H2：交付和输出
+  - H2：投递和输出
   - H3：失败通知
   - H3：输出语言
   - H2：CLI 示例
-  - H2：管理作业
-  - H2：Webhook
+  - H2：管理任务
+  - H2：Webhooks
   - H3：身份验证
   - H2：Gmail PubSub 集成
   - H3：向导设置（推荐）
-  - H3：Gateway 自动启动
+  - H3：网关自动启动
   - H3：手动一次性设置
   - H3：Gmail 模型覆盖
   - H2：配置
@@ -173,19 +174,19 @@ title: "文档映射"
 
 ## automation/taskflow.md
 
-- 路由：/automation/taskflow
-- 标题：
-  - H2：何时使用任务流
-  - H2：同步模式
-  - H3：托管模式
-  - H3：镜像模式
-  - H2：流程状态
-  - H2：持久状态和修订跟踪
-  - H2：取消行为
-  - H2：CLI 命令
-  - H2：可靠的定时工作流模式
-  - H2：流程与任务的关系
-  - H2：相关内容
+- Route: /automation/taskflow
+- Title:
+  - H2: When to use task flows
+  - H2: Synchronous mode
+  - H3: Managed mode
+  - H3: Mirrored mode
+  - H2: Flow state
+  - H2: Persistent state and revision tracking
+  - H2: Cancellation behavior
+  - H2: CLI commands
+  - H2: Reliable scheduled workflow patterns
+  - H2: Relationship between flows and tasks
+  - H2: Related content
 
 ## automation/tasks.md
 
@@ -199,6 +200,7 @@ title: "文档映射"
   - H3: 通知策略
   - H2: CLI 参考
   - H2: 聊天任务看板 (/tasks)
+  - H3: 控制 UI
   - H2: 状态集成（任务压力）
   - H2: 存储与维护
   - H3: 任务存放位置
@@ -281,7 +283,7 @@ title: "文档映射"
   - H2: 故障排查
   - H2: 示例
   - H2: API 参考
-  - H3: 配置 schema
+  - H3: 配置架构
   - H3: 字段
   - H2: 限制
   - H2: 相关内容
@@ -306,16 +308,17 @@ title: "文档映射"
 
 ## channels/clickclack.md
 
-- 路由：/channels/clickclack
-- 标题：
-  - H2：快速设置
-  - H3：账户配置键
-  - H2：多个机器人
-  - H2：回复模式
-  - H2：代理活动行
-  - H2：目标
-  - H2：权限
-  - H2：故障排除
+- 路由: /channels/clickclack
+- 标题:
+  - H2: 快速设置
+  - H3: 账户配置键
+  - H2: 多个机器人
+  - H2: 回复模式
+  - H2: 持久化媒体传递
+  - H2: 代理活动行
+  - H2: 目标
+  - H2: 权限
+  - H2: 故障排查
 
 ## channels/discord.md
 
@@ -395,7 +398,7 @@ title: "文档映射"
 - 标题：
   - H2：安装
   - H2：快速设置（初学者）
-  - H2：添加到 Google Chat
+  - H2：将其添加到 Google Chat
   - H2：公共 URL（仅限 Webhook）
   - H3：选项 A：Tailscale Funnel（推荐）
   - H3：选项 B：反向代理（Caddy）
@@ -447,7 +450,7 @@ title: "文档映射"
 - 路由：/channels/imessage-from-bluebubbles
 - 标题：
   - H2: 迁移检查清单
-  - H2: imsg 的作用
+  - H2: iMessage 的作用
   - H2: 开始之前
   - H2: 配置转换
   - H2: 群组注册陷阱
@@ -526,26 +529,23 @@ title: "文档映射"
 
 - 路由：/channels/location
 - 标题：
-  - H2：文本格式化
-  - H2：上下文字段
-  - H2：频道说明
-  - H2：相关内容
+  - H2: 文本格式化
+  - H2: 上下文字段
+  - H2: 出站负载
+  - H2: 渠道说明
+  - H2: 相关内容
 
 ## channels/matrix-migration.md
 
-- Route: /channels/matrix-migration
-- Headings:
-  - H2: 迁移会自动执行的操作
-  - H2: 迁移无法自动执行的操作
+- 路由：/channels/matrix-migration
+- 标题：
+  - H2: 迁移会自动执行的内容
+  - H2: 从早于 2026.4 的 OpenClaw 版本升级
   - H2: 推荐的升级流程
-  - H2: 加密迁移的工作原理
   - H2: 常见消息及其含义
-  - H3: 升级和检测消息
-  - H3: 加密状态恢复消息
   - H3: 手动恢复消息
-  - H3: 自定义插件安装消息
-  - H2: 如果加密历史仍然没有恢复
-  - H2: 如果你想为未来的消息重新开始
+  - H2: 如果加密历史记录仍然没有恢复
+  - H2: 如果你想为未来消息重新开始
   - H2: 相关内容
 
 ## channels/matrix-presentation.md
@@ -657,20 +657,20 @@ title: "文档映射"
   - H2: 配置写入
   - H2: 访问控制（私信 + 群组）
   - H3: 工作原理
-  - H3: 步骤 1：创建 Azure Bot
-  - H3: 步骤 2：获取凭据
-  - H3: 步骤 3：配置消息端点
-  - H3: 步骤 4：启用 Teams 渠道
-  - H3: 步骤 5：构建 Teams 应用清单
-  - H3: 步骤 6：配置 OpenClaw
-  - H3: 步骤 7：运行网关
-  - H2: 联合身份验证（证书 + 托管身份）
+  - H3: 第 1 步：创建 Azure Bot
+  - H3: 第 2 步：获取凭据
+  - H3: 第 3 步：配置消息端点
+  - H3: 第 4 步：启用 Teams 通道
+  - H3: 第 5 步：构建 Teams 应用清单
+  - H3: 第 6 步：配置 OpenClaw
+  - H3: 第 7 步：运行网关
+  - H2: 联邦身份验证（证书 + 托管标识）
   - H3: 选项 A：基于证书的身份验证
-  - H3: 选项 B：Azure 托管身份
-  - H3: AKS 工作负载身份设置
+  - H3: 选项 B：Azure 托管标识
+  - H3: AKS 工作负载标识设置
   - H3: 身份验证类型对比
   - H2: 本地开发（隧道）
-  - H2: 测试 bot
+  - H2: 测试机器人
   - H2: 环境变量
   - H2: 成员信息操作
   - H2: 历史上下文
@@ -678,38 +678,39 @@ title: "文档映射"
   - H2: Teams 清单示例（已脱敏）
   - H3: 清单注意事项（必需字段）
   - H3: 更新现有应用
-  - H2: 功能：仅 RSC 与 Graph
+  - H2: 功能：仅 RSC vs Graph
   - H3: 仅使用 Teams RSC（应用已安装，无 Graph API 权限）
   - H3: 使用 Teams RSC + Microsoft Graph 应用权限
-  - H3: RSC 与 Graph API
-  - H2: 启用 Graph 的媒体 + 历史记录（频道必需）
+  - H3: RSC vs Graph API
+  - H2: 支持 Graph 的媒体 + 历史记录
+  - H3: 通道/群组文件恢复（graphMediaFallback）
   - H2: 已知限制
   - H3: Webhook 超时
-  - H3: Teams 云和服务 URL 支持
-  - H3: 格式化
+  - H3: Teams 云与服务 URL 支持
+  - H3: 格式
   - H2: 配置
-  - H2: 路由和会话
+  - H2: 路由与会话
   - H2: 回复样式：线程 vs 帖子
-  - H3: 优先级
+  - H3: 解析优先级
   - H3: 线程上下文保留
   - H2: 附件和图片
   - H2: 在群聊中发送文件
   - H3: 为什么群聊需要 SharePoint
   - H3: 设置
-  - H3: 共享行为
+  - H3: 分享行为
   - H3: 回退行为
   - H3: 文件存储位置
   - H2: 投票（Adaptive Cards）
   - H2: 演示卡片
   - H2: 目标格式
   - H2: 主动消息
-  - H2: 团队和频道 ID（常见坑）
-  - H2: 私有频道
-  - H2: 故障排查
+  - H2: 团队和频道 ID（常见陷阱）
+  - H2: 私密频道
+  - H2: 故障排除
   - H3: 常见问题
   - H3: 清单上传错误
   - H3: RSC 权限不生效
-  - H2: 参考
+  - H2: 参考资料
   - H2: 相关内容
 
 ## channels/nextcloud-talk.md
@@ -779,20 +780,21 @@ title: "文档映射"
 
 ## channels/qqbot.md
 
-- 路由：/channels/qqbot
-- 标题：
-  - H2：安装
-  - H2：设置
-  - H2：配置
-  - H3：访问策略
-  - H3：多账号设置
-  - H3：群聊
-  - H3：语音（STT / TTS）
-  - H2：目标格式
-  - H2：斜杠命令
-  - H2：媒体与存储
-  - H2：故障排查
-  - H2：相关内容
+- 路由: /channels/qqbot
+- 标题:
+  - H2: 安装
+  - H2: 设置
+  - H2: 配置
+  - H3: 流式传输
+  - H3: 访问策略
+  - H3: 多账号设置
+  - H3: 群聊
+  - H3: 语音（STT / TTS）
+  - H2: 目标格式
+  - H2: 斜杠命令
+  - H2: 媒体和存储
+  - H2: 故障排除
+  - H2: 相关内容
 
 ## channels/raft.md
 
@@ -805,6 +807,17 @@ title: "文档映射"
   - H2: 验证
   - H2: 故障排除
   - H2: 参考资料
+
+## channels/reef.md
+
+- 路由：/channels/reef
+- 标题：
+  - H2：快速开始
+  - H2：配置
+  - H2：添加好友
+  - H2：发送和接收
+  - H2：守卫和所有者审核
+  - H2：故障排除
 
 ## channels/signal.md
 
@@ -837,38 +850,44 @@ title: "文档映射"
 - 路由：/channels/slack
 - 标题：
   - H2: 选择传输方式
-  - H3: 中继模式
+  - H3: 转发模式
+  - H3: Enterprise Grid 组织范围安装
+  - H4: Socket 模式
+  - H4: HTTP 请求 URL
   - H2: 安装
   - H2: 快速设置
   - H2: Socket 模式传输调优
-  - H2: Manifest 和权限范围检查清单
+  - H2: Manifest 和作用域检查清单
   - H3: 额外的 manifest 设置
-  - H2: 令牌模型
-  - H2: 操作和门控
+  - H2: Token 模型
+  - H2: 操作和 gate
   - H2: 访问控制和路由
   - H2: 线程、会话和回复标签
   - H2: Ack 反应
-  - H3: 表情符号（ackReaction）
-  - H3: 范围（messages.ackReactionScope）
+  - H3: Emoji（ackReaction）
+  - H3: 作用域（messages.ackReactionScope）
   - H2: 文本流式传输
   - H2: 输入中反应回退
-  - H2: 媒体、分块和投递
+  - H2: 语音输入
+  - H2: 媒体、分块和传递
   - H2: 命令和斜杠行为
+  - H2: 原生图表
+  - H2: 原生表格
   - H2: 交互式回复
-  - H3: 由插件拥有的模态提交
+  - H3: 插件拥有的模态提交
   - H2: Slack 中的原生审批
   - H2: 事件和运行行为
   - H2: 配置参考
   - H2: 故障排查
-  - H2: 附件视觉参考
+  - H2: 附件媒体参考
   - H3: 支持的媒体类型
-  - H3: 入站管道
+  - H3: 入站流水线
   - H3: 线程根附件继承
   - H3: 多附件处理
   - H3: 大小、下载和模型限制
   - H3: 已知限制
   - H3: 相关文档
-  - H2: 相关
+  - H2: 相关内容
 
 ## channels/sms.md
 
@@ -914,6 +933,7 @@ title: "文档映射"
 - 标题：
   - H2：快速设置
   - H2：Telegram 端设置
+  - H2：仪表板 Mini App
   - H2：访问控制与激活
   - H3：群组机器人身份
   - H2：运行时行为
@@ -1241,15 +1261,27 @@ title: "文档映射"
 - 路由：/cli/attach
 - 标题：无
 
+## cli/audit.md
+
+- 路由: /cli/audit
+- 标题:
+  - H1: openclaw 审计
+  - H2: 过滤器
+  - H2: 记录的事件
+  - H2: 网关 RPC
+  - H2: 相关
+
 ## cli/backup.md
 
-- 路由：/cli/backup
-- 标题：
+- 路由: /cli/backup
+- 标题:
   - H1: openclaw 备份
-  - H2: 注意事项
+  - H2: 备注
+  - H2: SQLite 快照
+  - H3: 验证和恢复
   - H2: 会备份什么
   - H2: 无效配置行为
-  - H2: 大小与性能
+  - H2: 大小和性能
   - H2: 相关内容
 
 ## cli/browser.md
@@ -1340,7 +1372,7 @@ title: "文档映射"
 
 - 路由：/cli/configure
 - 标题：
-  - H1：openclaw configure
+  - H1：openclaw 配置
   - H2：选项
   - H2：模型部分
   - H2：Web 部分
@@ -1355,13 +1387,14 @@ title: "文档映射"
   - H2: 启动时
   - H2: Crestodian 显示的内容
   - H2: 示例
-  - H2: 操作与审批
+  - H2: 操作与批准
+  - H3: 切换到 masked channel setup
   - H2: 设置引导
-  - H2: 模型辅助规划器
+  - H2: AI 对话
   - H3: CLI harness 信任模型
-  - H2: 切换到代理
+  - H2: 切换到 agent
   - H2: 消息救援模式
-  - H2: 相关
+  - H2: 相关内容
 
 ## cli/cron.md
 
@@ -1405,7 +1438,8 @@ title: "文档映射"
 
 - 路由：/cli/dashboard
 - 标题：
-  - H1：openclaw 仪表盘
+  - H1：openclaw 仪表板
+  - H2：机器可读输出
   - H2：相关内容
 
 ## cli/devices.md
@@ -1419,6 +1453,7 @@ title: "文档映射"
   - H3: openclaw devices approve [requestId] [--latest]
   - H3: openclaw devices reject &lt;requestId&gt;
   - H3: openclaw devices remove &lt;deviceId&gt;
+  - H3: openclaw devices rename --device &lt;id&gt; --name &lt;label&gt;
   - H3: openclaw devices clear --yes [--pending]
   - H3: openclaw devices rotate --device &lt;id&gt; --role &lt;role&gt; [--scope &lt;scope...&gt;]
   - H3: openclaw devices revoke --device &lt;id&gt; --role &lt;role&gt;
@@ -1466,15 +1501,43 @@ title: "文档映射"
 - 路由：/cli/doctor
 - 标题：
   - H1: openclaw doctor
-  - H2: 姿态
+  - H2: 姿势
   - H2: 示例
   - H2: 选项
-  - H2: 代码检查模式
+  - H2: lint 模式
   - H2: 结构化健康检查
   - H2: 检查选择
   - H2: 升级后模式
+  - H2: 共享状态 SQLite 紧凑化
+  - H2: 会话 SQLite 迁移
+  - H3: 会话 SQLite 迁移后的降级
   - H2: 说明
-  - H2: macOS: launchctl env 覆盖
+  - H2: macOS：launchctl 环境变量覆盖
+  - H2: 相关链接
+
+## cli/fleet.md
+
+- 路由: /cli/fleet
+- 标题:
+  - H1: openclaw fleet
+  - H2: 快速开始
+  - H2: 租户 ID
+  - H2: fleet create
+  - H3: 创建选项
+  - H3: 通过 digest 固定
+  - H3: 磁盘限制
+  - H3: 出站策略
+  - H2: fleet list
+  - H2: fleet status
+  - H2: fleet logs
+  - H2: fleet start、fleet stop 和 fleet restart
+  - H2: fleet upgrade
+  - H2: fleet backup 和 fleet restore
+  - H2: fleet doctor
+  - H2: fleet rm
+  - H2: 存储和容器布局
+  - H2: 安全配置文件
+  - H2: 令牌处理
   - H2: 相关内容
 
 ## cli/flows.md
@@ -1582,32 +1645,33 @@ title: "文档映射"
 
 - 路由：/cli/mcp
 - 标题：
-  - H2: 选择合适的 MCP 路径
-  - H2: 将 OpenClaw 作为 MCP 服务器
-  - H3: 何时使用 serve
-  - H3: 工作原理
-  - H3: 选择客户端模式
-  - H3: serve 暴露了什么
-  - H3: 用法
-  - H3: 桥接工具
-  - H3: 事件模型
-  - H3: Claude 通道通知
-  - H3: MCP 客户端配置
-  - H3: 选项
-  - H3: 安全性与信任边界
-  - H3: 测试
-  - H3: 故障排查
-  - H2: 将 OpenClaw 作为 MCP 客户端注册表
-  - H3: 已保存的 MCP 服务器定义
-  - H3: 常见服务器配方
-  - H3: JSON 输出形状
-  - H3: Stdio 传输
-  - H3: SSE / HTTP 传输
-  - H3: OAuth 工作流
-  - H3: 可流式 HTTP 传输
-  - H2: 控制界面
-  - H2: 当前限制
-  - H2: 相关内容
+  - 二级标题：选择合适的 MCP 路径
+  - 二级标题：OpenClaw 作为 MCP 服务器
+  - 三级标题：何时使用 serve
+  - 三级标题：工作原理
+  - 三级标题：选择一种客户端模式
+  - 三级标题：serve 暴露了什么
+  - 三级标题：用法
+  - 三级标题：桥接工具
+  - 三级标题：事件模型
+  - 三级标题：Claude 通道通知
+  - 三级标题：MCP 客户端配置
+  - 三级标题：选项
+  - 三级标题：安全性与信任边界
+  - 三级标题：测试
+  - 三级标题：故障排查
+  - 二级标题：OpenClaw 作为 MCP 客户端注册表
+  - 三级标题：已保存的 MCP 服务器定义
+  - 三级标题：常见服务器配方
+  - 三级标题：JSON 输出形状
+  - 三级标题：Stdio 传输
+  - 三级标题：SSE / HTTP 传输
+  - 三级标题：OAuth 工作流
+  - 三级标题：可流式 HTTP 传输
+  - 二级标题：控制界面
+  - 二级标题：MCP 应用
+  - 二级标题：当前限制
+  - 二级标题：相关内容
 
 ## cli/memory.md
 
@@ -1629,7 +1693,7 @@ title: "文档映射"
 
 - 路由: /cli/message
 - 标题:
-  - H1: openclaw message
+  - H1: openclaw 消息
   - H2: 渠道选择
   - H2: 目标格式 (-t, --target)
   - H2: 常用标志
@@ -1687,15 +1751,16 @@ title: "文档映射"
 
 - 路由：/cli/node
 - 标题：
-  - H1：openclaw 节点
-  - H2：为什么使用节点主机？
-  - H2：浏览器代理（零配置）
-  - H2：运行（前台）
-  - H2：节点主机的网关认证
-  - H2：服务（后台）
-  - H2：配对
-  - H2：执行审批
-  - H2：相关内容
+  - H1: openclaw 节点
+  - H2: 为什么使用节点主机？
+  - H2: 浏览器代理（零配置）
+  - H2: 运行（前台）
+  - H2: 节点主机的网关认证
+  - H2: 服务（后台）
+  - H2: 配对
+  - H3: 身份和配对状态
+  - H2: 执行审批
+  - H2: 相关
 
 ## cli/nodes.md
 
@@ -1712,18 +1777,19 @@ title: "文档映射"
 
 - 路由：/cli/onboard
 - 标题：
-  - H1: openclaw onboard
+  - H1: openclaw 入门
   - H2: 示例
+  - H2: 引导式流程
   - H2: 重置
   - H2: 语言环境
   - H2: 非交互式设置
   - H3: 网关认证（非交互式）
   - H3: 本地网关健康检查
-  - H3: 交互式 ref 模式
-  - H3: Z.AI 端点选择
+  - H3: 交互式引用模式
+  - H3: Z.AI 端点选项
   - H2: 其他非交互式标志
-  - H2: 提供商预筛选
-  - H2: Web 搜索后续操作
+  - H2: 提供方预筛选
+  - H2: Web 搜索后续
   - H2: 其他行为
   - H2: 常见后续命令
 
@@ -1791,7 +1857,7 @@ title: "文档映射"
 
 - 路由：/cli/policy
 - 标题：
-  - H1：openclaw policy
+  - H1：openclaw 策略
   - H2：快速开始
   - H3：策略规则参考
   - H4：范围叠加
@@ -1816,6 +1882,16 @@ title: "文档映射"
   - H2：修复
   - H2：退出码
   - H2：相关内容
+
+## cli/promos.md
+
+- 路由：/cli/promos
+- 标题：
+  - H1: openclaw 优惠活动
+  - H2: 命令
+  - H2: openclaw promos list
+  - H2: openclaw promos claim &lt;slug&gt;
+  - H2: 模型列表中的被动发现
 
 ## cli/proxy.md
 
@@ -1857,7 +1933,7 @@ title: "文档映射"
   - H3：openclaw sandbox list
   - H3：openclaw sandbox recreate
   - H3：openclaw sandbox explain
-  - H2：为什么需要 recreate
+  - H2：为什么需要重新创建
   - H2：常见触发条件
   - H2：注册表迁移
   - H2：配置
@@ -1867,7 +1943,7 @@ title: "文档映射"
 
 - 路由：/cli/secrets
 - 标题：
-  - H1：openclaw secrets
+  - H1：openclaw 密钥
   - H2：重新加载运行时快照
   - H2：审计
   - H2：配置（交互式助手）
@@ -1952,13 +2028,13 @@ title: "文档映射"
   - H2：用法
   - H2：根选项
   - H2：子命令
-  - H3：list
-  - H3：show
-  - H3：notify
-  - H3：cancel
-  - H3：audit
-  - H3：maintenance
-  - H3：flow
+  - H3：列表
+  - H3：显示
+  - H3：通知
+  - H3：取消
+  - H3：审计
+  - H3：维护
+  - H3：流程
   - H2：相关内容
 
 ## cli/transcripts.md
@@ -2058,6 +2134,7 @@ title: "文档映射"
 - 标题：
   - H1: openclaw wiki
   - H2: 常用命令
+  - H2: 代理选择
   - H2: 命令
   - H3: wiki status
   - H3: wiki doctor
@@ -2094,6 +2171,14 @@ title: "文档映射"
   - H3: 派发提示仅限数据
   - H3: 派发未启动任何内容
   - H2: 相关
+
+## cli/worker.md
+
+- 路由：/cli/worker
+- 标题：
+  - H1：openclaw worker
+  - H2：启动契约
+  - H2：运行时边界
 
 ## concepts/active-memory.md
 
@@ -2354,6 +2439,19 @@ title: "文档映射"
   - 二级标题：完整列表
   - 二级标题：相关内容
 
+## concepts/managed-worktrees.md
+
+- 路由: /concepts/managed-worktrees
+- 标题:
+  - H2: 布局和名称
+  - H2: 配置被忽略的文件
+  - H2: 运行仓库设置
+  - H2: 会话工作树
+  - H2: 快照、清理和恢复
+  - H2: CLI
+  - H2: 网关方法
+  - H2: 工作板工作区
+
 ## concepts/mantis-slack-desktop-runbook.md
 
 - 路由: /concepts/mantis-slack-desktop-runbook
@@ -2465,10 +2563,11 @@ title: "文档映射"
 
 ## concepts/memory.md
 
-- 路由：/concepts/memory
-- 标题：
+- 路由: /concepts/memory
+- 标题:
   - H2: 工作原理
-  - H2: 哪些内容放在哪里
+  - H2: 放在哪里
+  - H2: 从编码助手导入
   - H2: 动作敏感记忆
   - H2: 推断出的承诺
   - H2: 记忆工具
@@ -2477,8 +2576,8 @@ title: "文档映射"
   - H2: 知识 wiki 层
   - H2: 自动记忆刷新
   - H2: 梦境
-  - H2: 基于事实的回填与实时晋升
-  - H2: CLI
+  - H2: 扎根回填与实时晋升
+  - H2: 命令行界面
   - H2: 延伸阅读
 
 ## concepts/message-lifecycle-refactor.md
@@ -2543,9 +2642,10 @@ title: "文档映射"
 - 路由：/concepts/model-providers
 - 标题：
   - H2：快速规则
-  - H2：插件拥有的提供商行为
+  - H2：在控制界面中配置提供方
+  - H2：插件拥有的提供方行为
   - H2：API 密钥轮换
-  - H2：官方提供商插件
+  - H2：官方提供方插件
   - H3：OpenAI
   - H3：Anthropic
   - H3：OpenAI ChatGPT/Codex OAuth
@@ -2555,12 +2655,12 @@ title: "文档映射"
   - H3：Google Vertex 和 Gemini CLI
   - H3：Z.AI（GLM）
   - H3：Vercel AI Gateway
-  - H3：其他捆绑的提供商插件
-  - H4：值得了解的怪异行为
-  - H2：通过 models.providers 提供的提供商（自定义/基础 URL）
+  - H3：其他内置提供方插件
+  - H4：值得了解的特殊情况
+  - H2：通过 models.providers 配置提供方（自定义/基础 URL）
   - H3：Moonshot AI（Kimi）
   - H3：Kimi Coding
-  - H3：火山引擎（Doubao）
+  - H3：Volcano Engine（Doubao）
   - H3：BytePlus（国际版）
   - H3：Synthetic
   - H3：MiniMax
@@ -2588,23 +2688,24 @@ title: "文档映射"
 
 ## concepts/multi-agent.md
 
-- 路由: /concepts/multi-agent
+- 路由：/concepts/multi-agent
 - 标题：
-  - H2: 什么是一个代理
-  - H2: 路径
-  - H3: 单代理模式（默认）
-  - H2: 代理助手
-  - H2: 快速开始
-  - H2: 多个代理，多个角色
-  - H2: 跨代理 QMD 记忆搜索
-  - H2: 一个 WhatsApp 号码，多个人（私聊拆分）
-  - H2: 路由规则
-  - H2: 多个账户 / 电话号码
-  - H2: 概念
-  - H2: 平台示例
-  - H2: 常见模式
-  - H2: 每个代理的沙箱和工具配置
-  - H2: 相关内容
+  - H2：什么是一个代理
+  - H2：路径
+  - H3：单代理模式（默认）
+  - H2：代理助手
+  - H2：快速开始
+  - H2：多个代理，多个角色
+  - H2：每个代理的 Memory Wiki 保管库
+  - H2：跨代理 QMD 记忆搜索
+  - H2：一个 WhatsApp 号码，多个人（DM 拆分）
+  - H2：路由规则
+  - H2：多个账户 / 电话号码
+  - H2：概念
+  - H2：平台示例
+  - H2：常见模式
+  - H2：每个代理的沙盒和工具配置
+  - H2：相关内容
 
 ## concepts/oauth.md
 
@@ -2644,20 +2745,21 @@ title: "文档映射"
 
 ## concepts/presence.md
 
-- 路由: /concepts/presence
-- 标题:
-  - H2: Presence 字段（显示什么）
-  - H2: 生产者（presence 的来源）
-  - H3: 1) Gateway 自身条目
+- 路由：/concepts/presence
+- 标题：
+  - H2: 存在字段（显示什么）
+  - H2: 生产者（存在信息来自哪里）
+  - H3: 1) 网关自有条目
   - H3: 2) WebSocket 连接
-  - H4: 为什么一次性 CLI 命令不会显示
-  - H3: 3) system-event beacon
-  - H3: 4) Node 连接（角色：node）
+  - H4: 为什么短暂的控制平面连接不会显示
+  - H3: 3) system-event 信标
+  - H3: 4) 节点连接（role: node）
   - H2: 合并 + 去重规则（为什么 instanceId 很重要）
   - H2: TTL 和有界大小
-  - H2: 远程/隧道注意事项（loopback IP）
+  - H2: 远程/隧道注意事项（回环 IP）
   - H2: 消费者
-  - H3: macOS 实例标签页
+  - H3: 控制台 UI 设备页面
+  - H3: macOS 实例选项卡
   - H2: 调试提示
   - H2: 相关内容
 
@@ -2667,25 +2769,26 @@ title: "文档映射"
 - 标题：
   - H2: 快速开始
   - H2: 用户看到的内容
-  - H2: 选择模式
+  - H2: 选择一种模式
   - H2: 配置标签
   - H2: 控制进度行
-  - H3: 详情模式
+  - H3: 详细模式
   - H3: 命令/执行文本
   - H3: 评论通道
-  - H3: 行限制
+  - H3: 叙述式状态
+  - H3: 行数限制
   - H3: 富渲染（Slack）
   - H3: 隐藏工具/任务行
   - H2: 通道行为
-  - H2: 完成
-  - H2: 故障排除
+  - H2: 最终定稿
+  - H2: 故障排查
   - H2: 相关内容
 
 ## concepts/qa-e2e-automation.md
 
 - 路由：/concepts/qa-e2e-automation
 - 标题：
-  - H2: 命令界面
+  - H2: 命令行界面
   - H3: 基于配置文件的 qa 运行
   - H2: 运维流程
   - H3: 可观测性冒烟测试
@@ -2782,18 +2885,39 @@ title: "文档映射"
   - H2：延伸阅读
   - H2：相关
 
+## concepts/session-search.md
+
+- 路由：/concepts/session-search
+- 标题：
+  - H1：会话搜索
+  - H2：可见性与输出
+  - H2：索引生命周期
+  - H2：会话搜索 vs. 记忆搜索
+
+## concepts/session-state.md
+
+- 路由：/concepts/session-state
+- 标题：
+  - H2：信号日志
+  - H2：观察者
+  - H2：通知：一个，而不是多个
+  - H2：协调
+  - H2：存储与限制
+  - H2：相关内容
+
 ## concepts/session-tool.md
 
-- 路由: /concepts/session-tool
-- 标题:
-  - H2: 可用工具
-  - H2: 列出并读取会话
-  - H2: 发送跨会话消息
-  - H2: 状态与编排辅助工具
-  - H2: 启动子代理
-  - H2: 可见性
-  - H2: 延伸阅读
-  - H2: 相关内容
+- 路由：/concepts/session-tool
+- 标题：
+  - H2：可用工具
+  - H2：列出和读取会话
+  - H2：发送跨会话消息
+  - H2：状态和编排辅助工具
+  - H2：会话状态变更
+  - H2：生成子代理
+  - H2：可见性
+  - H2：延伸阅读
+  - H2：相关内容
 
 ## concepts/session.md
 
@@ -2872,7 +2996,7 @@ title: "文档映射"
 - 路由：/concepts/typebox
 - 标题：
   - H2：心智模型（30 秒）
-  - H2：模式所在位置
+  - H2：模式位于何处
   - H2：当前流水线
   - H2：运行时如何使用这些模式
   - H2：示例帧
@@ -2900,18 +3024,19 @@ title: "文档映射"
 - 路由：/concepts/usage-tracking
 - 标题：
   - H2: 它是什么
-  - H2: 它显示在哪里
+  - H2: 它会出现在哪里
+  - H2: Anthropic 和 OpenAI 成本历史
   - H2: 默认使用页脚模式
   - H3: 三种不同的会话状态
   - H3: 优先级
-  - H3: 重置与关闭
+  - H3: 重置 vs. 关闭
   - H3: 切换行为
   - H3: 配置
   - H2: 自定义 /usage 完整页脚
   - H3: 形状
   - H3: 合约路径
   - H3: 动词
-  - H3: 片段形式
+  - H3: 组成形式
   - H3: 示例
   - H2: 提供方 + 凭据
   - H2: 相关内容
@@ -2956,6 +3081,31 @@ title: "文档映射"
   - H2: 提取日志
   - H2: 说明
   - H2: 相关内容
+
+## gateway/1password.md
+
+- 路由：/gateway/1password
+- 标题：
+  - H2：需求
+  - H2：使用 op 解析配置密钥
+  - H2：无头 Gateway 的服务账户设置
+  - H2：供代理使用的 1password 技能
+  - H2：安全说明
+  - H2：故障排除
+
+## gateway/audit.md
+
+- 路由：/gateway/audit
+- 标题：
+  - H1：审计历史
+  - H2：记录家族
+  - H2：消息生命周期事件
+  - H3：会话类型分类
+  - H2：隐私模型
+  - H2：覆盖范围和证明限制
+  - H2：存储、保留与迁移
+  - H2：查询
+  - H2：相关内容
 
 ## gateway/authentication.md
 
@@ -3047,6 +3197,20 @@ title: "文档映射"
   - H2：重置历史记录上限
   - H2：限制
   - H2：故障排除
+  - H2：相关内容
+
+## gateway/cloud-workers.md
+
+- 路由：/gateway/cloud-workers
+- 标题：
+  - H2：在哪里运行什么
+  - H2：要求
+  - H2：配置
+  - H3：设置命令
+  - H3：安装通道
+  - H2：调度会话
+  - H2：安全模型
+  - H2：故障排查
   - H2：相关内容
 
 ## gateway/config-agents.md
@@ -3194,12 +3358,15 @@ title: "文档映射"
   - H3: 多实例隔离
   - H3: gateway.tls
   - H3: gateway.reload
-  - H2: 钩子
+  - H2: 云工作环境
+  - H3: Crabbox 配置文件
+  - H3: 静态 SSH 开发配置文件
+  - H2: Hooks
   - H3: Gmail 集成
   - H2: Canvas 插件主机
   - H2: 发现
   - H3: mDNS（Bonjour）
-  - H3: 广域（DNS-SD）
+  - H3: 广域网（DNS-SD）
   - H2: 环境
   - H3: env（内联环境变量）
   - H3: 环境变量替换
@@ -3209,6 +3376,7 @@ title: "文档映射"
   - H3: 密钥提供方配置
   - H2: 认证存储
   - H3: auth.cooldowns
+  - H2: 审计
   - H2: 日志
   - H2: 诊断
   - H2: 更新
@@ -3221,6 +3389,7 @@ title: "文档映射"
   - H3: cron.retry
   - H3: cron.failureAlert
   - H3: cron.failureDestination
+  - H2: 工作树
   - H2: 媒体模型模板变量
   - H2: 配置包含（$include）
   - H2: 相关内容
@@ -3287,9 +3456,10 @@ title: "文档映射"
 
 - 路由：/gateway/external-apps
 - 标题：
-  - H2：今天可用的内容
+  - H2：当前可用内容
   - H2：推荐路径
-  - H2：应用代码 vs 插件代码
+  - H2：协作式主机挂起
+  - H2：应用代码与插件代码
   - H2：相关内容
 
 ## gateway/gateway-lock.md
@@ -3297,11 +3467,11 @@ title: "文档映射"
 - 路由：/gateway/gateway-lock
 - 标题：
   - H2：为什么
-  - H2：两层
-  - H3：文件锁
-  - H3：套接字绑定
-  - H2：运维说明
-  - H2：相关内容
+  - H2：三层
+  - H3：状态和配置锁
+  - H3：Socket 绑定
+  - H2：操作说明
+  - H2：相关
 
 ## gateway/health.md
 
@@ -3407,6 +3577,19 @@ title: "文档映射"
   - H2: 控制台格式化（子系统日志记录）
   - H2: 相关内容
 
+## gateway/multi-tenant-hosting.md
+
+- 路由：/gateway/multi-tenant-hosting
+- 标题：
+  - H1：多租户托管
+  - H2：为什么每个租户都需要一个单元
+  - H2：架构
+  - H2：信任边界
+  - H2：隔离阶梯
+  - H2：快速开始
+  - H2：MVP 中暂缓
+  - H2：相关内容
+
 ## gateway/multiple-gateways.md
 
 - 路由：/gateway/multiple-gateways
@@ -3453,7 +3636,7 @@ title: "文档映射"
 
 - 路由: /gateway/openresponses-http-api
 - 标题:
-  - H2: 认证、 सुरक्षा 和路由
+  - H2: 认证、安全和路由
   - H2: 会话行为
   - H2: 请求形状
   - H2: 条目（输入）
@@ -3530,22 +3713,23 @@ title: "文档映射"
 
 ## gateway/pairing.md
 
-- 路由：/gateway/pairing
+- 路由: /gateway/pairing
 - 标题：
-  - H2：概念
-  - H2：配对如何工作
-  - H2：CLI 工作流（适合无头环境）
-  - H2：API 表面（gateway 协议）
-  - H2：Node 命令门控（2026.3.31+）
-  - H2：Node 事件信任边界（2026.3.31+）
-  - H2：自动批准（macOS 应用）
-  - H2：受信任 CIDR 设备自动批准
-  - H2：元数据升级自动批准
-  - H2：二维码配对辅助工具
-  - H2：本地性与转发头
-  - H2：存储（本地、私有）
-  - H2：传输行为
-  - H2：相关内容
+  - H2: 能力审批如何工作
+  - H2: CLI 工作流（适合无头环境）
+  - H2: API 表面（gateway 协议）
+  - H2: Node 命令门控（2026.3.31+）
+  - H2: Node 事件信任边界（2026.3.31+）
+  - H2: 基于 SSH 验证的设备自动批准（默认）
+  - H2: 自动批准（macOS 应用）
+  - H2: 基于受信任 CIDR 的设备自动批准
+  - H2: 静默配对覆盖清理
+  - H2: 元数据升级自动批准
+  - H2: 二维码配对助手
+  - H2: 本地性与转发头
+  - H2: 存储（本地，私有）
+  - H2: 传输行为
+  - H2: 相关内容
 
 ## gateway/prometheus.md
 
@@ -3563,28 +3747,32 @@ title: "文档映射"
 
 - 路由：/gateway/protocol
 - 标题：
-  - H2：传输与帧
+  - H2：传输与分帧
   - H2：握手
+  - H3：工作器角色与封闭协议
+  - H3：客户端能力
   - H3：节点连接示例
   - H2：角色与作用域
-  - H2：在线状态
+  - H3：Caps/命令/权限（节点）
+  - H2：存在状态
   - H3：节点后台存活事件
   - H2：广播事件作用域
-  - H2：RPC 方法族
-  - H3：通用事件族
+  - H2：RPC 方法家族
+  - H3：通用事件家族
   - H3：节点辅助方法
+  - H2：审计账本 RPC
   - H2：任务账本 RPC
-  - H2：操作员辅助方法
+  - H2：运维辅助方法
   - H3：models.list 视图
   - H2：执行审批
-  - H2：代理传递回退
-  - H2：版本管理
+  - H2：Agent 投递回退
+  - H2：版本控制
   - H3：客户端常量
   - H2：认证
   - H2：设备身份与配对
   - H3：设备认证迁移诊断
-  - H2：TLS 与证书固定
-  - H2：作用域
+  - H2：TLS 与 pinning
+  - H2：范围
   - H2：相关内容
 
 ## gateway/remote-gateway-readme.md
@@ -3617,6 +3805,20 @@ title: "文档映射"
   - H4：步骤 5：加载 LaunchAgent
   - H4：故障排查
   - H2：相关内容
+
+## gateway/restart-recovery.md
+
+- 路由：/gateway/restart-recovery
+- 标题：
+  - H2: 重启后哪些状态会保留
+  - H2: 优雅重启会先进行流量排空
+  - H2: 如何检测中断的工作
+  - H2: 自动恢复
+  - H3: 子代理
+  - H3: 后台任务
+  - H3: 代理请求的重启
+  - H2: 安全阀与可观测性
+  - H2: 哪些内容不会恢复
 
 ## gateway/sandbox-vs-tool-policy-vs-elevated.md
 
@@ -3671,27 +3873,28 @@ title: "文档映射"
 
 - 路由：/gateway/secrets
 - 标题：
-  - H2：运行时模型
-  - H2：Agent 访问边界
-  - H2：活跃面过滤
-  - H2：Gateway 认证面诊断
-  - H2：入门参考预检
-  - H2：SecretRef 契约
-  - H2：提供方配置
-  - H2：基于文件的 API 密钥
-  - H2：Exec 集成示例
-  - H2：MCP 服务器环境变量
-  - H2：Sandbox SSH 认证材料
-  - H2：支持的凭据面
-  - H2：必需行为与优先级
-  - H2：激活触发条件
-  - H2：降级与恢复信号
-  - H2：命令路径解析
-  - H2：审计与配置工作流
-  - H2：单向安全策略
-  - H2：旧版认证兼容性说明
-  - H2：Web UI 说明
-  - H2：相关内容
+  - H2: 运行时模型
+  - H2: 出站时注入（哨兵）
+  - H2: 代理访问边界
+  - H2: 活动面过滤
+  - H2: 网关认证面诊断
+  - H2: 入门参考预检
+  - H2: SecretRef 合约
+  - H2: 提供方配置
+  - H2: 基于文件的 API 密钥
+  - H2: Exec 集成示例
+  - H2: MCP 服务器环境变量
+  - H2: 沙箱 SSH 认证材料
+  - H2: 支持的凭据面
+  - H2: 必需行为与优先级
+  - H2: 激活触发条件
+  - H2: 降级与恢复信号
+  - H2: 命令路径解析
+  - H2: 审计与配置工作流
+  - H2: 单向安全策略
+  - H2: 旧版认证兼容性说明
+  - H2: Web UI 说明
+  - H2: 相关内容
 
 ## gateway/security/audit-checks.md
 
@@ -3826,28 +4029,29 @@ title: "文档映射"
 
 - 路由：/gateway/troubleshooting
 - 标题：
-  - H2: 命令阶梯
-  - H2: 更新后
-  - H2: 分裂大脑安装和较新的配置保护
-  - H2: 回滚后协议不匹配
-  - H2: Skill 符号链接因路径越界而被跳过
-  - H2: Anthropic 429 长上下文需要额外使用量
-  - H2: 上游 403 阻止的响应
-  - H2: 本地 OpenAI 兼容后端通过直接探测但代理运行失败
-  - H2: 没有回复
-  - H2: 仪表盘控制 UI 连接性
-  - H3: 认证详情代码速查表
-  - H2: 网关服务未运行
-  - H2: macOS 网关无声无息地停止响应，然后在你触摸仪表盘时恢复
-  - H2: 网关在高内存使用期间退出
-  - H2: 网关拒绝了无效配置
-  - H2: 网关探测警告
-  - H2: 通道已连接，消息未流动
-  - H2: Cron 和心跳传递
-  - H2: 节点已配对，工具失败
-  - H2: 浏览器工具失败
-  - H2: 如果你升级后某些内容突然坏了
-  - H2: 相关内容
+  - H2：命令阶梯
+  - H2：更新后
+  - H2：分裂大脑安装与较新配置保护
+  - H2：回滚后的协议不匹配
+  - H2：技能符号链接因路径逃逸而被跳过
+  - H2：Anthropic 429 长上下文需要额外使用量
+  - H2：上游 403 阻止响应
+  - H2：本地 OpenAI 兼容后端通过直接探测但代理运行失败
+  - H2：没有回复
+  - H2：仪表板控制 UI 连接
+  - H3：认证详细代码速查表
+  - H2：网关服务未运行
+  - H2：macOS 网关无声地停止响应，然后在你触摸仪表板时恢复
+  - H2：macOS launchd 监督循环，存在重复的 gateway/node LaunchAgents
+  - H2：网关在高内存使用期间退出
+  - H2：网关拒绝了无效配置
+  - H2：网关探测警告
+  - H2：通道已连接，消息未流动
+  - H2：Cron 和心跳投递
+  - H2：节点已配对，工具失败
+  - H2：浏览器工具失败
+  - H2：如果你升级后某些东西突然坏了
+  - H2：相关
 
 ## gateway/trusted-proxy-auth.md
 
@@ -3859,7 +4063,7 @@ title: "文档映射"
   - H2：配置
   - H3：配置参考
   - H2：控制 UI 配对行为
-  - H2：Operator scopes 标头
+  - H2：Operator 范围标头
   - H2：TLS 终止和 HSTS
   - H3：部署指南
   - H2：代理设置示例
@@ -4055,11 +4259,12 @@ title: "文档映射"
 - 路由：/
 - 标题：
   - H1: OpenClaw 🦞
+  - H2: 浏览文档
   - H2: 什么是 OpenClaw？
-  - H2: 工作原理
-  - H2: 主要能力
+  - H2: 它是如何工作的
+  - H2: 主要功能
   - H2: 快速开始
-  - H2: 仪表盘
+  - H2: 仪表板
   - H2: 配置（可选）
   - H2: 从这里开始
   - H2: 了解更多
@@ -4156,25 +4361,27 @@ title: "文档映射"
 
 ## install/docker.md
 
-- 路由：/install/docker
+- 路由: /install/docker
 - 标题：
-  - H2：前提条件
-  - H2：容器化网关
-  - H3：手动流程
-  - H3：环境变量
-  - H3：可观测性
-  - H3：健康检查
-  - H3：局域网 vs 回环
-  - H3：主机本地提供方
-  - H3：Docker 中的 Claude CLI 后端
-  - H3：Bonjour / mDNS
-  - H3：存储与持久化
-  - H3：Shell 辅助脚本（可选）
-  - H3：在 VPS 上运行？
-  - H2：Agent 沙箱
-  - H3：快速启用
-  - H2：故障排查
-  - H2：相关内容
+  - H2: 前提条件
+  - H2: 容器化网关
+  - H3: 手动流程
+  - H3: 升级容器镜像
+  - H3: 环境变量
+  - H3: 带有选定插件的源码构建镜像
+  - H3: 可观测性
+  - H3: 健康检查
+  - H3: 局域网 vs 回环
+  - H3: 主机本地提供方
+  - H3: Docker 中的 Claude CLI 后端
+  - H3: Bonjour / mDNS
+  - H3: 存储与持久化
+  - H3: Shell 辅助工具（可选）
+  - H3: 在 VPS 上运行？
+  - H2: Agent 沙箱
+  - H3: 快速启用
+  - H2: 故障排除
+  - H2: 相关内容
 
 ## install/exe-dev.md
 
@@ -4392,7 +4599,7 @@ title: "文档映射"
 - 标题：
   - H2：检查你的版本
   - H2：安装 Node
-  - H2：故障排除
+  - H3：故障排除
   - H3：openclaw：命令未找到
   - H3：在 npm install -g 时的权限错误（Linux）
   - H2：相关内容
@@ -4424,13 +4631,14 @@ title: "文档映射"
 
 - 路由: /install/podman
 - 标题:
-  - H2: 前提条件
+  - H2: 先决条件
   - H2: 快速开始
   - H2: Podman 和 Tailscale
   - H2: Systemd（Quadlet，可选）
-  - H2: 配置、环境和存储
-  - H2: 实用命令
-  - H2: 故障排除
+  - H2: 配置、环境变量和存储
+  - H2: 升级镜像
+  - H2: 常用命令
+  - H2: 故障排查
   - H2: 相关内容
 
 ## install/railway.mdx
@@ -4595,41 +4803,53 @@ title: "文档映射"
 
 - 路由：/nodes/audio
 - 标题：
-  - H2: 它的作用
-  - H2: 自动检测（默认）
-  - H2: 配置示例
-  - H3: 提供方 + CLI 回退（OpenAI + Whisper CLI）
-  - H3: 仅提供方，并进行范围门控
-  - H3: 仅提供方（Deepgram）
-  - H3: 仅提供方（Mistral Voxtral）
-  - H3: 仅提供方（SenseAudio）
-  - H3: 将转写回显到聊天中（可选启用）
-  - H2: 注意事项和限制
-  - H3: 代理环境支持
-  - H2: 群组中的提及检测
-  - H2: 注意事项
-  - H2: 相关内容
+  - H2：功能说明
+  - H2：自动检测（默认）
+  - H2：配置示例
+  - H3：提供方 + CLI 回退（OpenAI + Whisper CLI）
+  - H3：仅提供方，带作用域门控
+  - H3：仅提供方（Deepgram）
+  - H3：仅提供方（Mistral Voxtral）
+  - H3：仅提供方（SenseAudio）
+  - H3：将转写回显到聊天（可选启用）
+  - H2：注意事项和限制
+  - H3：常驻本地 STT
+  - H3：代理环境支持
+  - H2：群组中的提及检测
+  - H2：注意事项
+  - H2：相关内容
 
 ## nodes/camera.md
 
-- 路由：/nodes/camera
+- Route: /nodes/camera
+- Titles:
+  - H2: iOS Node
+  - H3: iOS User Settings
+  - H3: iOS Commands (via Gateway node.invoke)
+  - H3: iOS Foreground Requirements
+  - H3: CLI Helper Tool
+  - H2: Android Node
+  - H3: Android User Settings
+  - H3: Permissions
+  - H3: Android Foreground Requirements
+  - H3: Android Commands (via Gateway node.invoke)
+  - H2: macOS App
+  - H3: macOS User Settings
+  - H3: CLI Helper Tool (node invoke)
+  - H2: Security + Practical Limitations
+  - H2: macOS Screen Video (System-Level)
+  - H2: Related Content
+
+## nodes/computer-use.md
+
+- 路由：/nodes/computer-use
 - 标题：
-  - H2: iOS 节点
-  - H3: iOS 用户设置
-  - H3: iOS 命令（通过 Gateway node.invoke）
-  - H3: iOS 前台要求
-  - H3: CLI 辅助工具
-  - H2: Android 节点
-  - H3: Android 用户设置
-  - H3: 权限
-  - H3: Android 前台要求
-  - H3: Android 命令（通过 Gateway node.invoke）
-  - H2: macOS 应用
-  - H3: macOS 用户设置
-  - H3: CLI 辅助工具（node invoke）
-  - H2: 安全性 + 实际限制
-  - H2: macOS 屏幕视频（系统级）
-  - H2: 相关内容
+  - H2：要求
+  - H2：计算机代理工具
+  - H2：computer.act 节点命令
+  - H2：启用并武装
+  - H2：安全
+  - H2：与其他桌面控制路径的关系
 
 ## nodes/images.md
 
@@ -4649,27 +4869,33 @@ title: "文档映射"
 - 路由：/nodes
 - 标题：
   - H2: 配对 + 状态
+  - H2: 版本偏差与升级顺序
   - H2: 远程节点主机（system.run）
   - H3: 启动节点主机（前台）
   - H3: 通过 SSH 隧道的远程网关（回环绑定）
   - H3: 启动节点主机（服务）
   - H3: 配对 + 命名
+  - H3: 节点托管的 MCP 服务器
+  - H3: 节点托管的技能
+  - H3: 无头身份状态
   - H3: 允许列表中的命令
   - H3: 将 exec 指向节点
   - H3: 本地模型推理
+  - H3: Codex 会话和转录
+  - H3: Claude 会话和转录
   - H2: 调用命令
   - H2: 命令策略
   - H2: 配置（openclaw.json）
   - H2: 截图（画布快照）
-  - H3: 画布控制
+  - H3: 画布控件
   - H3: A2UI（画布）
-  - H2: 照片 + 视频（节点相机）
+  - H2: 照片 + 视频（节点摄像头）
   - H2: 屏幕录制（节点）
   - H2: 位置（节点）
-  - H2: SMS（Android 节点）
+  - H2: 短信（Android 节点）
   - H2: 设备和个人数据命令
   - H2: 系统命令（节点主机 / mac 节点）
-  - H2: exec 节点绑定
+  - H2: Exec 节点绑定
   - H2: 权限映射
   - H2: 无头节点主机（跨平台）
   - H2: Mac 节点模式
@@ -4709,6 +4935,18 @@ title: "文档映射"
   - 二级标题: 备注
   - 二级标题: 相关内容
 
+## nodes/presence.md
+
+- 路由：/nodes/presence
+- 标题：
+  - H2：需求
+  - H2：检查当前活动的电脑
+  - H2：活动如何转化为在线状态
+  - H2：隐私与模型上下文
+  - H2：连接提醒如何路由
+  - H2：故障排除
+  - H2：相关内容
+
 ## nodes/talk.md
 
 - 路由：/nodes/talk
@@ -4723,8 +4961,8 @@ title: "文档映射"
 
 ## nodes/troubleshooting.md
 
-- Route: /nodes/troubleshooting
-- Headings:
+- 路由：/nodes/troubleshooting
+- 标题：
   - H2: 命令阶梯
   - H2: 前台要求
   - H2: 权限矩阵
@@ -4762,42 +5000,41 @@ title: "文档映射"
 - 标题：
   - H2：相关
 
-## plan/codex-context-engine-harness.md
+## plan/cloud-workers.md
 
-- 路由：/plan/codex-context-engine-harness
+- 路由：/plan/cloud-workers
 - 标题：
-  - H2: 状态
-  - H2: 目标
-  - H2: 非目标
-  - H2: 当前架构
-  - H2: 当前缺口
-  - H2: 期望行为
-  - H2: 设计约束
-  - H3: Codex app-server 对原生线程状态保持权威
-  - H3: 上下文引擎装配必须投影到 Codex 输入中
-  - H3: 提示缓存稳定性很重要
-  - H3: 运行时选择语义不变
-  - H2: 实施计划
-  - H3: 1. 导出或移动可复用的上下文引擎尝试辅助函数
-  - H3: 2. 添加 Codex 上下文投影辅助函数
-  - H3: 3. 在 Codex 线程启动前连接引导流程
-  - H3: 4. 在 thread/start / thread/resume 和 turn/start 前连接 assemble
-  - H3: 5. 保持提示缓存稳定的格式
-  - H3: 6. 在 transcript 镜像之后连接 post-turn
-  - H3: 7. 规范化 usage 和 prompt-cache 运行时上下文
-  - H3: 8. 压缩策略
-  - H4: /compact 和显式的 OpenClaw 压缩
-  - H4: 轮内 Codex 原生 contextCompaction 事件
-  - H3: 9. 会话重置和绑定行为
-  - H3: 10. 错误处理
-  - H2: 测试计划
-  - H3: 单元测试
-  - H3: 需要更新的现有测试
-  - H3: 集成 / 真实环境测试
-  - H2: 可观测性
-  - H2: 迁移 / 兼容性
-  - H2: 未决问题
-  - H2: 验收标准
+  - H2：状态
+  - H2：问题
+  - H2：目标
+  - H2：非目标（v1）
+  - H2：前人做法（我们复制什么，我们反转什么）
+  - H2：架构决策：在 worker 上循环，推理通过网关
+  - H2：组件
+  - H3：1. 环境状态机 + 提供者契约
+  - H3：2. Worker 引导：在机器上安装 OpenClaw
+  - H3：3. 传输：全部通过 SSH
+  - H3：4. Worker 协议（专用；不是 node 协议）
+  - H3：5. 会话后端 RPC
+  - H3：6. 工作区同步
+  - H3：7. 放置状态机、会话和 UI
+  - H2：调度与交接
+  - H2：安全模型
+  - H2：容量
+  - H2：生命周期
+  - H2：配置面
+  - H2：里程碑
+  - H2：未决问题
+
+## plan/path3-sqlite-session-artifact-family.md
+
+- 路由: /plan/path3-sqlite-session-artifact-family
+- 标题:
+  - H1: 路径 3 SQLite 会话工件家族
+  - H2: 权威家族
+  - H2: 翻转后的非家族工件
+  - H2: 补丁点
+  - H2: 定向测试
 
 ## plan/ui-channels.md
 
@@ -4820,29 +5057,33 @@ title: "文档映射"
 
 - 路由：/platforms/android
 - 标题：
-  - H2: 支持概览
-  - H2: 从远程 Mac 镜像并控制 Android
-  - H3: 开始之前
-  - H3: 启用 ADB over TCP
-  - H3: 仅允许控制端 Mac
-  - H3: 连接并开始镜像
-  - H3: 故障排除
-  - H2: 连接操作手册
-  - H3: 前提条件
-  - H3: 1. 启动 Gateway
-  - H3: 2. 验证发现（可选）
-  - H4: 通过单播 DNS-SD 进行跨网络发现
-  - H3: 3. 从 Android 连接
-  - H3: 存在保持信标
-  - H3: 4. 批准配对（CLI）
-  - H3: 5. 验证节点已连接
-  - H3: 6. 聊天 + 历史记录
-  - H3: 7. 画布 + 摄像头
-  - H4: Gateway 画布主机（推荐用于网页内容）
-  - H3: 8. 语音 + 扩展的 Android 命令面
-  - H2: 助手入口
-  - H2: 通知转发
-  - H2: 相关内容
+  - H2：支持概览
+  - H2：在 Google Play 之外安装
+  - H2：从远程 Mac 镜像并控制 Android
+  - H3：开始之前
+  - H3：启用 TCP 上的 ADB
+  - H3：仅允许控制端 Mac
+  - H3：连接并开始镜像
+  - H3：故障排除
+  - H2：连接运行手册
+  - H3：前提条件
+  - H3：1. 启动网关
+  - H3：2. 验证发现（可选）
+  - H4：通过单播 DNS-SD 进行跨网络发现
+  - H3：3. 从 Android 连接
+  - H3：多个网关
+  - H3：在线存活信标
+  - H3：4. 批准配对（CLI）
+  - H3：5. 验证节点已连接
+  - H3：6. 聊天 + 历史记录
+  - H3：7. 画布 + 摄像头
+  - H4：Gateway Canvas Host（推荐用于网页内容）
+  - H3：8. 语音 + 扩展的 Android 命令面
+  - H3：9. 工作区文件（只读）
+  - H2：审查命令批准
+  - H2：助手入口点
+  - H2：通知转发
+  - H2：相关
 
 ## platforms/digitalocean.md
 
@@ -4871,20 +5112,43 @@ title: "文档映射"
   - H2：网关服务安装（CLI）
   - H2：相关内容
 
+## platforms/ios-healthkit.md
+
+- Route: /platforms/ios-healthkit
+- Headings:
+  - H1: HealthKit 摘要
+  - H2: 要求
+  - H2: 启用访问
+  - H3: 1. 授权 Gateway 命令
+  - H3: 2. 在 iPhone 上启用共享
+  - H2: 请求今天的摘要
+  - H2: 隐私行为
+  - H2: 故障排查
+  - H3: 命令未被 node 声明
+  - H3: 命令需要显式选择加入
+  - H3: HEALTHACCESSDISABLED
+  - H3: 摘要成功但缺少指标
+  - H3: 较早的范围失败
+  - H2: 相关
+
 ## platforms/ios.md
 
 - 路由: /platforms/ios
-- 标题:
+- 标题：
   - H2: 它的作用
   - H2: 要求
   - H2: 快速开始（配对 + 连接）
-  - H2: 官方构建版的基于中继的推送
+  - H2: 健康摘要
+  - H2: 审核命令批准
+  - H2: 可选的直接 Apple Watch 节点
+  - H2: 面向官方构建的基于中继的推送
   - H2: 后台存活信标
   - H2: 身份验证与信任流程
   - H2: 发现路径
   - H3: Bonjour（局域网）
   - H3: Tailnet（跨网络）
   - H3: 手动主机/端口
+  - H2: 多个网关
   - H2: Canvas + A2UI
   - H2: 计算机使用关系
   - H3: Canvas 评估 / 快照
@@ -4896,7 +5160,8 @@ title: "文档映射"
 
 - 路由: /platforms/linux
 - 标题:
-  - H2: 快速路径（VPS）
+  - H2: 桌面伴侣
+  - H2: CLI 和 SSH 替代方案
   - H2: 安装
   - H2: 网关服务（systemd）
   - H2: 内存压力和 OOM 杀死
@@ -4951,7 +5216,7 @@ title: "文档映射"
   - H2：故障排除
   - H3：构建失败：工具链或 SDK 不匹配
   - H3：授予权限后应用崩溃
-  - H3：Gateway 一直显示“Starting...”
+  - H3：Gateway 一直显示“启动中...”
   - H2：相关内容
 
 ## platforms/mac/health.md
@@ -4994,7 +5259,7 @@ title: "文档映射"
   - H2: 显示内容
   - H2: 状态模型
   - H2: IconState 枚举（Swift）
-  - H3: ActivityKind -&gt; 徽标符号
+  - H3: ActivityKind -> 徽标符号
   - H3: 视觉映射
   - H2: 上下文子菜单
   - H2: 状态行文本（菜单）
@@ -5115,14 +5380,17 @@ title: "文档映射"
 
 ## platforms/macos.md
 
-- 路由: /platforms/macos
-- 标题:
-  - H2: 下载
-  - H2: 首次运行
-  - H2: 选择网关模式
-  - H2: 应用拥有的内容
-  - H2: macOS 详情页
-  - H2: 相关内容
+- 路由：/platforms/macos
+- 标题：
+  - H2：下载
+  - H2：首次运行
+  - H2：更新
+  - H2：打开仪表盘链接
+  - H2：导入浏览器登录信息
+  - H2：选择 Gateway 模式
+  - H2：应用拥有的内容
+  - H2：macOS 详情页
+  - H2：相关内容
 
 ## platforms/oracle.md
 
@@ -5275,7 +5543,7 @@ title: "文档映射"
   - H2: bundle 存在的原因
   - H2: 安装 bundle
   - H2: OpenClaw 从 bundle 中映射了什么
-  - H3: 目前支持
+  - H3: 当前支持
   - H4: 技能内容
   - H4: Hook 包
   - H4: 适用于嵌入式 OpenClaw 的 MCP
@@ -5306,83 +5574,87 @@ title: "文档映射"
 
 ## plugins/codex-computer-use.md
 
-- 路由：/plugins/codex-computer-use
-- 标题：
-  - H2：OpenClaw.app 和 Peekaboo
-  - H2：iOS 应用
-  - H2：直接 cua-driver MCP
-  - H2：快速设置
-  - H2：命令
-  - H2：市场选择
-  - H2：捆绑的 macOS 市场
-  - H2：远程目录限制
-  - H2：配置参考
-  - H2：OpenClaw 检查什么
-  - H2：macOS 权限
-  - H2：故障排除
-  - H2：相关
+- 路由: /plugins/codex-computer-use
+- 标题:
+  - H2: OpenClaw.app 和 Peekaboo
+  - H2: iOS 应用
+  - H2: 直接 cua-driver MCP
+  - H2: 快速设置
+  - H2: 命令
+  - H2: 市场选择
+  - H2: 捆绑的 macOS 市场
+  - H3: 共享插件缓存
+  - H2: 远程目录限制
+  - H2: 配置参考
+  - H2: OpenClaw 检查什么
+  - H2: macOS 权限
+  - H2: 故障排除
+  - H2: 相关内容
 
 ## plugins/codex-harness-reference.md
 
-- 路由：/plugins/codex-harness-reference
-- 标题：
-  - H2：插件配置界面
-  - H2：应用服务器传输
-  - H2：审批和沙箱模式
-  - H2：沙箱化原生执行
-  - H2：认证和环境隔离
-  - H2：动态工具
-  - H2：超时
-  - H2：模型发现
-  - H2：工作区引导文件
-  - H2：环境覆盖
-  - H2：相关内容
+- 路由: /plugins/codex-harness-reference
+- 标题:
+  - H2: 插件配置界面
+  - H2: 监督
+  - H2: 应用服务器传输
+  - H2: 审批和沙盒模式
+  - H2: 沙盒化原生执行
+  - H2: 认证和环境隔离
+  - H2: 动态工具
+  - H2: 超时
+  - H2: 模型发现
+  - H2: 工作区启动文件
+  - H2: 环境覆盖
+  - H2: 相关
 
 ## plugins/codex-harness-runtime.md
 
-- 路由：/plugins/codex-harness-runtime
-- 标题：
+- 路由: /plugins/codex-harness-runtime
+- 标题:
   - H2: 概述
   - H2: 线程绑定和模型变更
+  - H2: 监管和安全续接
   - H2: 可见回复和心跳
   - H2: Hook 边界
   - H2: V1 支持契约
   - H2: 原生权限和 MCP 询问
-  - H2: 队列调度
+  - H2: 队列引导
   - H2: Codex 反馈上传
-  - H2: 压缩和转录镜像
-  - H2: 媒体和传递
-  - H2: 相关
+  - H2: 压缩和对话镜像
+  - H2: 媒体和传输
+  - H2: 相关内容
 
 ## plugins/codex-harness.md
 
 - 路由：/plugins/codex-harness
 - 标题：
-  - H2：Requirements
-  - H2：Quickstart
+  - H2：要求
+  - H2：快速开始
   - H2：与 Codex Desktop 和 CLI 共享线程
-  - H2：Configuration
-  - H3：Compaction
+  - H2：监督 Codex 会话
+  - H2：配置
+  - H3：压缩
   - H2：验证 Codex 运行时
-  - H2：路由与模型选择
+  - H2：路由和模型选择
   - H2：部署模式
   - H3：基础 Codex 部署
-  - H3：混合提供方部署
-  - H3：故障关闭的 Codex 部署
-  - H2：App-server 策略
-  - H2：命令与诊断
+  - H3：混合提供商部署
+  - H3：失败即关闭的 Codex 部署
+  - H2：应用服务器策略
+  - H2：命令和诊断
   - H3：在本地检查 Codex 线程
   - H3：认证顺序
   - H3：环境隔离
-  - H3：动态工具与网页搜索
+  - H3：动态工具和网页搜索
   - H3：配置字段
   - H3：动态工具调用超时
   - H3：本地测试环境覆盖
   - H2：原生 Codex 插件
   - H2：Computer Use
   - H2：运行时边界
-  - H2：故障排除
-  - H2：相关
+  - H2：故障排查
+  - H2：相关内容
 
 ## plugins/codex-native-plugins.md
 
@@ -5390,12 +5662,28 @@ title: "文档映射"
 - 标题：
   - H2：要求
   - H2：快速开始
-  - H2：从聊天中管理插件
-  - H2：原生插件设置的工作原理
+  - H2：通过聊天管理插件
+  - H2：本地插件设置如何工作
   - H2：V1 支持边界
-  - H2：应用清单和所有权
+  - H2：应用清单与所有权
+  - H2：已连接账号应用
   - H2：线程应用配置
   - H2：破坏性操作策略
+  - H2：故障排查
+  - H2：相关
+
+## plugins/codex-supervision.md
+
+- 路由：/plugins/codex-supervision
+- 标题：
+  - H2：开始之前
+  - H2：启用监管
+  - H2：使用 operator CLI
+  - H2：从本地会话分支
+  - H2：归档本地会话
+  - H2：了解配对节点限制
+  - H2：元数据和权限
+  - H3：兼容性工具
   - H2：故障排除
   - H2：相关内容
 
@@ -5493,19 +5781,21 @@ title: "文档映射"
 
 - 路由：/plugins/hooks
 - 标题：
-  - H2: 快速开始
-  - H2: 钩子目录
-  - H2: 调试运行时钩子
-  - H2: 工具调用策略
-  - H3: Exec 环境钩子
-  - H3: 工具结果持久化
-  - H2: 提示词与模型钩子
-  - H3: 会话扩展和下一轮注入
-  - H2: 消息钩子
-  - H2: 安装钩子
-  - H2: 网关生命周期
-  - H2: 即将废弃的内容
-  - H2: 相关内容
+  - H2：快速开始
+  - H2：Hook 目录
+  - H3：频道配对请求
+  - H2：调试运行时 hooks
+  - H2：工具调用策略
+  - H3：执行环境 hook
+  - H3：工具结果持久化
+  - H2：提示词和模型 hooks
+  - H3：会话扩展和下一轮注入
+  - H2：消息 hooks
+  - H2：安装 hooks
+  - H2：网关生命周期
+  - H3：安全的外部 cron 投影
+  - H2：即将弃用
+  - H2：相关内容
 
 ## plugins/install-overrides.md
 
@@ -5517,11 +5807,12 @@ title: "文档映射"
 
 ## plugins/llama-cpp.md
 
-- 路由: /plugins/llama-cpp
-- 标题:
-  - H2: 配置
-  - H2: 原生运行时
-  - H2: 故障排除
+- 路由：/plugins/llama-cpp
+- 标题：
+  - H2：配置
+  - H2：原生运行时
+  - H2：运行时诊断
+  - H2：故障排查
 
 ## plugins/logbook.md
 
@@ -5544,56 +5835,58 @@ title: "文档映射"
 
 ## plugins/manage-plugins.md
 
-- 路由：/plugins/manage-plugins
-- 标题：
-  - H2：列出并搜索插件
-  - H2：启用和禁用插件
-  - H2：安装插件
-  - H2：重启和检查
-  - H2：更新插件
-  - H2：卸载插件
-  - H2：选择来源
-  - H2：发布插件
-  - H2：相关内容
+- 路由: /plugins/manage-plugins
+- 标题:
+  - H2: 使用控制界面
+  - H2: 列出并搜索插件
+  - H2: 启用和禁用插件
+  - H2: 安装插件
+  - H2: 重启并检查
+  - H2: 更新插件
+  - H2: 卸载插件
+  - H2: 选择来源
+  - H2: 发布插件
+  - H2: 相关内容
 
 ## plugins/manifest.md
 
-- 路由: /plugins/manifest
+- 路由：/plugins/manifest
 - 标题：
-  - H2: 此文件的作用
-  - H2: 最小示例
-  - H2: 丰富示例
-  - H2: 顶级字段参考
-  - H2: 生成提供方元数据参考
-  - H2: 工具元数据参考
-  - H2: providerAuthChoices 参考
-  - H2: commandAliases 参考
-  - H2: activation 参考
-  - H2: qaRunners 参考
-  - H2: setup 参考
-  - H3: setup.providers 参考
-  - H3: setup 字段
-  - H2: uiHints 参考
-  - H2: contracts 参考
-  - H2: configContracts 参考
-  - H2: mediaUnderstandingProviderMetadata 参考
-  - H2: channelConfigs 参考
-  - H3: 替换另一个 channel 插件
-  - H2: modelSupport 参考
-  - H2: modelCatalog 参考
-  - H2: modelIdNormalization 参考
-  - H2: providerEndpoints 参考
-  - H2: providerRequest 参考
-  - H2: secretProviderIntegrations 参考
-  - H2: modelPricing 参考
-  - H3: OpenClaw 提供方索引
-  - H2: Manifest 与 package.json 的区别
-  - H3: 影响发现的 package.json 字段
-  - H2: 发现优先级（重复的插件 id）
-  - H2: JSON Schema 要求
-  - H2: 验证行为
-  - H2: 注意事项
-  - H2: 相关内容
+  - H2：此文件的作用
+  - H2：最小示例
+  - H2：丰富示例
+  - H2：顶层字段参考
+  - H2：catalog 参考
+  - H2：生成提供方元数据参考
+  - H2：工具元数据参考
+  - H2：providerAuthChoices 参考
+  - H2：commandAliases 参考
+  - H2：activation 参考
+  - H2：qaRunners 参考
+  - H2：setup 参考
+  - H3：setup.providers 参考
+  - H3：setup 字段
+  - H2：uiHints 参考
+  - H2：contracts 参考
+  - H2：configContracts 参考
+  - H2：mediaUnderstandingProviderMetadata 参考
+  - H2：channelConfigs 参考
+  - H3：替换另一个 channel 插件
+  - H2：modelSupport 参考
+  - H2：modelCatalog 参考
+  - H2：modelIdNormalization 参考
+  - H2：providerEndpoints 参考
+  - H2：providerRequest 参考
+  - H2：secretProviderIntegrations 参考
+  - H2：modelPricing 参考
+  - H3：OpenClaw Provider Index
+  - H2：Manifest 与 package.json 的区别
+  - H3：影响发现的 package.json 字段
+  - H2：发现优先级（重复的插件 id）
+  - H2：JSON Schema 要求
+  - H2：验证行为
+  - H2：说明
+  - H2：相关内容
 
 ## plugins/memory-lancedb.md
 
@@ -5616,24 +5909,25 @@ title: "文档映射"
 
 ## plugins/memory-wiki.md
 
-- 路由: /plugins/memory-wiki
-- 标题:
-  - H2: Vault 模式
-  - H2: Vault 布局
-  - H2: Open Knowledge Format 导入
-  - H2: 结构化断言与证据
-  - H2: 面向 Agent 的实体元数据
-  - H2: 编译流水线
-  - H2: 仪表板与健康报告
-  - H2: 搜索与检索
-  - H2: Agent 工具
-  - H2: 提示词与上下文行为
-  - H2: 配置
-  - H3: 示例：QMD + 桥接模式
-  - H2: CLI
-  - H2: Obsidian 支持
-  - H2: 推荐工作流
-  - H2: 相关文档
+- 路由：/plugins/memory-wiki
+- 标题：
+  - H2：Vault 模式
+  - H2：Vault 布局
+  - H2：Open Knowledge Format 导入
+  - H2：结构化断言与证据
+  - H2：面向代理的实体元数据
+  - H2：编译管道
+  - H2：仪表盘与健康报告
+  - H2：搜索与检索
+  - H2：代理工具
+  - H2：提示与上下文行为
+  - H2：配置
+  - H3：每个代理的 vault
+  - H3：示例：QMD + bridge 模式
+  - H2：CLI
+  - H2：Obsidian 支持
+  - H2：推荐工作流
+  - H2：相关文档
 
 ## plugins/message-presentation.md
 
@@ -5663,6 +5957,19 @@ title: "文档映射"
   - H2：与其他插件的关系
   - H2：安全性
   - H2：相关内容
+
+## plugins/onepassword.md
+
+- 路由：/plugins/onepassword
+- 标题：
+  - H1: 1Password 密钥代理
+  - H2: 安全模型
+  - H2: 开始之前
+  - H2: 配置已注册的密钥
+  - H2: 使用代理工具
+  - H2: 策略层级和审批
+  - H2: 检查状态和审计历史
+  - H2: 1Password CLI 行为
 
 ## plugins/plugin-inventory.md
 
@@ -5746,6 +6053,7 @@ title: "文档映射"
   - H2: 分发
   - H2: 表面
   - H2: Claude Fable 5
+  - H2: Claude Sonnet 5
 
 ## plugins/reference/anthropic.md
 
@@ -5753,7 +6061,7 @@ title: "文档映射"
 - 标题：
   - H1：Anthropic 插件
   - H2：分发
-  - H2：表面
+  - H2：界面
   - H2：相关文档
 
 ## plugins/reference/arcee.md
@@ -5861,15 +6169,6 @@ title: "文档映射"
   - H2: 接口
   - H2: 相关文档
 
-## plugins/reference/codex-supervisor.md
-
-- 路由: /plugins/reference/codex-supervisor
-- 标题:
-  - H1: Codex Supervisor 插件
-  - H2: 分发
-  - H2: 界面
-  - H2: 会话列表
-
 ## plugins/reference/codex.md
 
 - 路由：/plugins/reference/codex
@@ -5914,6 +6213,15 @@ title: "文档映射"
   - H2：表面
   - H2：相关文档
 
+## plugins/reference/crabbox.md
+
+- 路由：/plugins/reference/crabbox
+- 标题：
+  - H1：Crabbox 插件
+  - H2：分发
+  - H2：表面
+  - H2：配置
+
 ## plugins/reference/deepgram.md
 
 - 路由: /plugins/reference/deepgram
@@ -5954,8 +6262,8 @@ title: "文档映射"
 - 路由：/plugins/reference/diagnostics-prometheus
 - 标题：
   - H1: Diagnostics Prometheus 插件
-  - H2: 分布
-  - H2: 表面
+  - H2: Distribution
+  - H2: Surface
 
 ## plugins/reference/diffs-language-pack.md
 
@@ -6027,6 +6335,15 @@ title: "文档映射"
   - H2：分发
   - H2：表面
   - H2：相关文档
+
+## plugins/reference/featherless.md
+
+- 路由: /plugins/reference/featherless
+- 标题:
+  - H1: Featherless 插件
+  - H2: 分发
+  - H2: 表面
+  - H2: 相关文章
 
 ## plugins/reference/feishu.md
 
@@ -6221,7 +6538,7 @@ title: "文档映射"
 - 标题：
   - H1：LM Studio 插件
   - H2：发行版
-  - H2：表面
+  - H2：界面
   - H2：相关文档
 
 ## plugins/reference/lobster.md
@@ -6231,6 +6548,24 @@ title: "文档映射"
   - H1: Lobster 插件
   - H2: 分布
   - H2: 表面
+
+## plugins/reference/logbook.md
+
+- 路由：/plugins/reference/logbook
+- 标题：
+  - H1：日志簿插件
+  - H2：分发
+  - H2：表面
+  - H2：相关文档
+
+## plugins/reference/longcat.md
+
+- 路由: /plugins/reference/longcat
+- 标题:
+  - H1: LongCat 插件
+  - H2: 分发
+  - H2: 界面
+  - H2: 相关文章
 
 ## plugins/reference/matrix.md
 
@@ -6275,6 +6610,15 @@ title: "文档映射"
   - H2: 分布
   - H2: 界面
   - H2: 相关文档
+
+## plugins/reference/meta.md
+
+- 路由：/plugins/reference/meta
+- 标题：
+  - H1：元插件
+  - H2：分发
+  - H2：表面
+  - H2：相关文章
 
 ## plugins/reference/microsoft-foundry.md
 
@@ -6348,6 +6692,14 @@ title: "文档映射"
   - H2: 界面
   - H2: 相关文档
 
+## plugins/reference/mxc.md
+
+- 路由：/plugins/reference/mxc
+- 标题：
+  - H1：Mxc 插件
+  - H2：分发
+  - H2：表面
+
 ## plugins/reference/nextcloud-talk.md
 
 - 路由: /plugins/reference/nextcloud-talk
@@ -6401,6 +6753,15 @@ title: "文档映射"
   - H2: 分发
   - H2: 表面
   - H2: 相关文档
+
+## plugins/reference/onepassword.md
+
+- 路由：/plugins/reference/onepassword
+- 标题：
+  - H1：Onepassword 插件
+  - H2：分发
+  - H2：表面
+  - H2：相关文档
 
 ## plugins/reference/open-prose.md
 
@@ -6543,13 +6904,22 @@ title: "文档映射"
   - H2: 表面
   - H2: 相关文章
 
+## 插件/参考/reef.md
+
+- 路由：/plugins/reference/reef
+- 标题：
+  - H1：Reef 插件
+  - H2：分发
+  - H2：表面
+  - H2：相关文档
+
 ## plugins/reference/runway.md
 
 - 路由：/plugins/reference/runway
 - 标题：
   - H1：Runway 插件
   - H2：分发
-  - H2：表面
+  - H2：外观
   - H2：相关文档
 
 ## plugins/reference/searxng.md
@@ -6558,7 +6928,7 @@ title: "文档映射"
 - 标题：
   - H1：SearXNG 插件
   - H2：分发
-  - H2：表面
+  - H2：界面
 
 ## plugins/reference/senseaudio.md
 
@@ -6602,7 +6972,7 @@ title: "文档映射"
 - 标题：
   - H1：短信插件
   - H2：分发
-  - H2：表面
+  - H2：界面
   - H2：相关文档
 
 ## plugins/reference/stepfun.md
@@ -6703,6 +7073,15 @@ title: "文档映射"
   - H2：表面
   - H2：相关文档
 
+## plugins/reference/vault.md
+
+- 路由: /plugins/reference/vault
+- 标题:
+  - H1: Vault 插件
+  - H2: 分发
+  - H2: 界面
+  - H2: 相关文档
+
 ## plugins/reference/venice.md
 
 - 路由：/plugins/reference/venice
@@ -6769,7 +7148,7 @@ title: "文档映射"
 
 - 路由：/plugins/reference/web-readability
 - 标题：
-  - H1：Web Readability 插件
+  - H1：Web 可读性插件
   - H2：分发
   - H2：表面
 
@@ -6799,6 +7178,14 @@ title: "文档映射"
   - H2：分发
   - H2：界面
   - H2：相关文档
+
+## plugins/reference/workspaces.md
+
+- 路由：/plugins/reference/workspaces
+- 标题：
+  - H1：Workspaces 插件
+  - H2：分发
+  - H2：表面
 
 ## plugins/reference/xai.md
 
@@ -6850,17 +7237,21 @@ title: "文档映射"
 - 路由：/plugins/sdk-agent-harness
 - 标题：
   - H2：何时使用 harness
-  - H2：核心仍负责什么
-  - H2：注册 harness
+  - H2：核心仍然负责什么
+  - H3：由 harness 负责的认证启动
+  - H3：已验证的设置运行时工件
+  - H3：请求传输契约
+  - H2：注册一个 harness
+  - H3：委托执行
   - H2：选择策略
-  - H2：提供方与 harness 配对
+  - H2：Provider 与 harness 配对
   - H3：工具结果中间件
-  - H3：终局结果分类
-  - H3：Agent 结束副作用
+  - H3：终态结果分类
+  - H3：Agent 结束时的副作用
   - H3：用户输入和工具界面
   - H3：原生 Codex harness 模式
   - H2：运行时严格性
-  - H2：原生会话和转录镜像
+  - H2：原生会话和 transcript 镜像
   - H2：工具和媒体结果
   - H2：当前限制
   - H2：相关内容
@@ -6894,33 +7285,37 @@ title: "文档映射"
 - 路由: /plugins/sdk-channel-outbound
 - 标题:
   - H2: 适配器
+  - H2: 纯文本清理
+  - H2: 投递证据
   - H2: 现有的出站适配器
-  - H2: 持久发送
-  - H2: 兼容性派发
+  - H2: 持久化发送
+  - H2: 延迟投递准入
+  - H2: 兼容性分发
 
 ## plugins/sdk-channel-plugins.md
 
-- 路由: /plugins/sdk-channel-plugins
-- 标题:
-  - H2: 你的插件负责什么
+- 路由：/plugins/sdk-channel-plugins
+- 标题：
+  - H2: 您的插件负责什么
   - H2: 消息适配器
   - H3: 入站入口（实验性）
-  - H3: 输入指示
+  - H3: 输入中指示器
   - H3: 媒体源参数
-  - H3: 原生负载塑形
+  - H3: 原生载荷整形
   - H3: 会话对话语法
-  - H2: 审批和频道能力
+  - H3: 账户范围内的对话绑定支持
+  - H2: 审批与渠道能力
   - H3: 审批认证
-  - H3: 负载生命周期和设置指南
+  - H3: 载荷生命周期和设置指南
   - H3: 原生审批传递
   - H3: 更窄的审批运行时子路径
   - H3: 设置子路径
-  - H3: 其他更窄的频道子路径
+  - H3: 其他更窄的渠道子路径
   - H2: 入站提及策略
-  - H2: 演练
+  - H2: 操作指南
   - H2: 文件结构
   - H2: 高级主题
-  - H2: 下一步
+  - H2: 后续步骤
   - H2: 相关内容
 
 ## 插件/sdk-channel-turn.md
@@ -7074,6 +7469,21 @@ title: "文档映射"
   - H3：安装后工具未显示
   - H2：另请参阅
 
+## plugins/vault.md
+
+- 路由：/plugins/vault
+- 标题：
+  - H1：Vault SecretRefs
+  - H2：开始之前
+  - H2：将 provider key 存储到 Vault 中
+  - H2：让 Gateway 可访问 Vault
+  - H2：生成并应用 SecretRef 计划
+  - H2：配置更多 provider keys
+  - H2：SecretRef ID 格式
+  - H2：OpenClaw 存储了什么
+  - H2：容器和托管部署
+  - H2：相关内容
+
 ## plugins/voice-call.md
 
 - 路由：/plugins/voice-call
@@ -7183,19 +7593,21 @@ title: "文档映射"
 
 ## providers/anthropic.md
 
-- 路由：/providers/anthropic
-- 标题：
-  - H2：开始使用
-  - H2：思考默认值（Claude Fable 5、4.8 和 4.6）
-  - H2：安全拒绝回退（Claude Fable 5）
-  - H3：为什么会有这个功能
-  - H3：工作原理
-  - H3：可观测性与计费
-  - H3：范围
-  - H2：提示缓存
-  - H2：高级配置
-  - H2：故障排查
-  - H2：相关内容
+- 路由: /providers/anthropic
+- 标题:
+  - H2: 用量和成本跟踪
+  - H2: 入门
+  - H2: 跨电脑的 Claude 会话
+  - H2: Thinking 默认值（Claude Sonnet 5、Mythos 5、Fable 5、4.8 和 4.6）
+  - H2: 安全拒绝回退（Claude Fable 5）
+  - H3: 为什么会有这个功能
+  - H3: 它是如何工作的
+  - H3: 可观测性和计费
+  - H3: 范围
+  - H2: 提示缓存
+  - H2: 高级配置
+  - H2: 故障排除
+  - H2: 相关内容
 
 ## providers/arcee.md
 
@@ -7276,13 +7688,15 @@ title: "文档映射"
 
 - 路由：/providers/clawrouter
 - 标题：
-  - H2：入门
-  - H2：模型发现
-  - H2：协议和提供商插件
-  - H2：配额和使用情况
-  - H2：故障排除
-  - H2：安全行为
-  - H2：相关内容
+  - H2: 入门
+  - H2: 托管的非交互式部署
+  - H2: 就绪与在线证明
+  - H2: 模型发现
+  - H2: 协议与提供商插件
+  - H2: 配额与用量
+  - H2: 故障排查
+  - H2: 安全行为
+  - H2: 相关内容
 
 ## providers/cloudflare-ai-gateway.md
 
@@ -7296,11 +7710,12 @@ title: "文档映射"
 
 ## providers/cohere.md
 
-- 路由: /providers/cohere
-- 标题:
-  - H2: 开始使用
-  - H2: 仅环境变量设置
-  - H2: 相关
+- 路由：/providers/cohere
+- 标题：
+  - H2：内置目录
+  - H2：开始使用
+  - H2：仅通过环境变量配置
+  - H2：相关
 
 ## providers/comfy.md
 
@@ -7382,6 +7797,16 @@ title: "文档映射"
   - H2：音乐生成
   - H2：相关
 
+## providers/featherless.md
+
+- 路由：/providers/featherless
+- 标题：
+  - H2：设置
+  - H2：默认模型
+  - H2：其他 Featherless 模型
+  - H2：故障排查
+  - H2：相关内容
+
 ## providers/fireworks.md
 
 - 路由: /providers/fireworks
@@ -7394,15 +7819,16 @@ title: "文档映射"
 
 ## providers/github-copilot.md
 
-- 路由：/providers/github-copilot
-- 标题：
-  - H2：在 OpenClaw 中使用 Copilot 的三种方式
-  - H2：可选标志
-  - H2：非交互式入门
-  - H2：记忆搜索嵌入
-  - H3：配置
-  - H3：工作原理
-  - H2：相关内容
+- 路由: /providers/github-copilot
+- 标题:
+  - H2: 在 OpenClaw 中使用 Copilot 的三种方式
+  - H2: GitHub Enterprise（数据驻留）
+  - H2: 可选标志
+  - H2: 非交互式引导
+  - H2: 记忆搜索嵌入
+  - H3: 配置
+  - H3: 工作原理
+  - H2: 相关内容
 
 ## providers/gmi.md
 
@@ -7533,6 +7959,30 @@ title: "文档映射"
   - H3：身份验证错误（HTTP 401）
   - H2：相关
 
+## providers/longcat.md
+
+- 路由: /providers/longcat
+- 标题:
+  - H2: 安装插件
+  - H2: 开始使用
+  - H3: 非交互式设置
+  - H2: 推理行为
+  - H2: 定价
+  - H2: 自托管 LongCat-2.0
+  - H2: 故障排查
+  - H2: 相关内容
+
+## providers/meta.md
+
+- 路由：/providers/meta
+- 标题：
+  - H2：入门
+  - H2：非交互式设置
+  - H2：内置目录
+  - H2：手动配置
+  - H2：冒烟测试
+  - H2：相关内容
+
 ## providers/minimax.md
 
 - 路由：/providers/minimax
@@ -7611,7 +8061,7 @@ title: "文档映射"
 - 标题：
   - H2：设置
   - H2：默认值
-  - H2：何时选择 Ollama Cloud
+  - H2：何时选择 Ollama 云
   - H2：模型
   - H2：在线测试
   - H2：故障排查
@@ -7641,9 +8091,11 @@ title: "文档映射"
 
 - 路由：/providers/openai
 - 标题：
+  - H2：用量和成本跟踪
   - H2：快速选择
   - H2：命名映射
-  - H2：GPT-5.6 限量预览
+  - H2：隐式代理运行时
+  - H2：GPT-5.6 有限预览
   - H2：OpenClaw 功能覆盖
   - H2：记忆嵌入
   - H2：入门
@@ -7651,7 +8103,7 @@ title: "文档映射"
   - H2：图像生成
   - H2：视频生成
   - H2：GPT-5 提示词贡献
-  - H2：语音与音频
+  - H2：语音和语音识别
   - H2：Azure OpenAI 端点
   - H3：配置
   - H3：API 版本
@@ -7750,8 +8202,9 @@ title: "文档映射"
 - 标题：
   - H2：安装插件
   - H2：快速开始
-  - H2：计划类型和端点
+  - H2：套餐类型和端点
   - H2：内置目录
+  - H3：Token 套餐目录
   - H2：思考控制
   - H2：多模态附加组件
   - H2：高级配置
@@ -7807,14 +8260,13 @@ title: "文档映射"
 
 ## providers/tencent.md
 
-- 路由：/providers/tencent
-- 标题：
-  - H2：快速开始
-  - H2：非交互式设置
-  - H2：内置目录
-  - H2：分层定价
-  - H2：高级配置
-  - H2：相关内容
+- 路由: /providers/tencent
+- 标题:
+  - H2: 快速开始
+  - H2: 非交互式设置
+  - H2: 内置目录
+  - H2: 高级配置
+  - H2: 相关内容
 
 ## providers/together.md
 
@@ -7890,9 +8342,9 @@ title: "文档映射"
   - H2：设置
   - H2：OAuth 故障排查
   - H2：内置目录
-  - H2：功能覆盖
-  - H3：快速模式映射
-  - H3：旧版兼容别名
+  - H2：功能覆盖范围
+  - H3：旧版快速模式兼容性
+  - H3：旧版兼容性与迁移中的别名
   - H2：功能
   - H2：实时测试
   - H2：相关内容
@@ -7921,11 +8373,6 @@ title: "文档映射"
   - H2：思考级别
   - H2：高级配置
   - H2：相关内容
-
-## refactor/access.md
-
-- 路由：/refactor/access
-- 标题：无
 
 ## refactor/acp.md
 
@@ -7997,22 +8444,37 @@ title: "文档映射"
   - H2: 静态禁止项
   - H2: 完成标准
 
-## refactor/ingress-core.md
+## refactor/operator-approvals.md
 
-- 路由：/refactor/ingress-core
-- 标题：
-  - H1：Ingress 核心删除计划
-  - H2：预算
-  - H2：诊断
-  - H2：热点
-  - H2：当前代码阅读
-  - H2：边界
-  - H2：验收规则
-  - H2：工作包
-  - H2：删除波次
-  - H2：不要迁移
-  - H2：验证
-  - H2：退出标准
+- 路由: /refactor/operator-approvals
+- 标题:
+  - H1: 多端操作员审批
+  - H2: 目标
+  - H2: 非目标
+  - H2: 预发布基线与证据映射
+  - H2: 先前实践
+  - H2: 架构与所有权
+  - H2: 持久化记录
+  - H2: 状态机与比较并设置
+  - H2: 网关 API
+  - H2: 事件与可移植操作
+  - H2: 控制台 UI
+  - H2: 授权与隐私
+  - H2: 受众投影
+  - H2: 已交付端收敛
+  - H2: 重启、超时与路由语义
+  - H2: 兼容性方案
+  - H2: 推出
+  - H3: PR 1: 持久化生命周期
+  - H3: PR 2: 类型化操作和通道回调
+  - H3: PR 3: 控制台 UI 深度链接
+  - H3: PR 4: 原生客户端
+  - H3: PR 5: 祖先生命周期传播
+  - H3: PR 6: 失败关闭行为
+  - H3: 后续：持久化远程消息清理
+  - H2: 测试
+  - H2: 可观测性
+  - H2: 待决策事项
 
 ## reference/AGENTS.default.md
 
@@ -8038,7 +8500,7 @@ title: "文档映射"
 - 标题：
   - H2: 版本命名
   - H2: 发布节奏
-  - H2: 每月仅限 npm 的 extended-stable 发布
+  - H2: 每月仅限 npm 的扩展稳定版发布
   - H2: 常规发布操作员检查清单
   - H2: 稳定主分支收尾
   - H2: 发布前预检
@@ -8072,21 +8534,6 @@ title: "文档映射"
   - H3：语音（speech）
   - H3：技能（第三方 API）
   - H2：相关
-
-## reference/application-modernization-plan.md
-
-- 路由：/reference/application-modernization-plan
-- 标题：
-  - H2: 目标
-  - H2: 原则
-  - H2: 阶段 1：基线审计
-  - H2: 阶段 2：产品与 UX 清理
-  - H2: 阶段 3：前端架构收紧
-  - H2: 阶段 4：性能与可靠性
-  - H2: 阶段 5：类型、契约和测试加固
-  - H2: 阶段 6：文档与发布准备
-  - H2: 推荐的第一块切片
-  - H2: 前端技能更新
 
 ## reference/code-mode.md
 
@@ -8196,6 +8643,19 @@ title: "文档映射"
   - H2：设计约定
   - H2：子路径导出
 
+## reference/path3-live-sqlite-e2e-harness.md
+
+- 路由: /reference/path3-live-sqlite-e2e-harness
+- 标题:
+  - H2: 命令格式
+  - H2: 隔离的已构建 CLI 证明
+  - H2: 预检
+  - H2: 由代理驱动的场景
+  - H2: 每步断言
+  - H2: 证据工件
+  - H2: 安全规则
+  - H2: 通过结果
+
 ## reference/prompt-caching.md
 
 - 路由：/reference/prompt-caching
@@ -8280,25 +8740,26 @@ title: "文档映射"
 
 ## reference/session-management-compaction.md
 
-- 路由: /reference/session-management-compaction
-- 标题:
-  - H2: 两个持久化层
+- 路由：/reference/session-management-compaction
+- 标题：
+  - H2: 两层持久化
   - H2: 磁盘上的位置
-  - H2: 存储维护和磁盘控制
-  - H2: Cron 会话和运行日志
-  - H2: 会话键（sessionKey）
+  - H2: 存储维护与磁盘控制
+  - H3: 降级：SQLite 切换后
+  - H2: Cron 会话与运行日志
+  - H2: 会话密钥（sessionKey）
   - H2: 会话 ID（sessionId）
-  - H2: 会话存储模式（sessions.json）
-  - H2: 转录结构（.jsonl）
-  - H2: 上下文窗口与跟踪令牌
+  - H2: 会话存储模式
+  - H2: 转录事件结构
+  - H2: 上下文窗口与跟踪的 token
   - H2: 压缩：它是什么
-  - H3: 分块边界和工具配对
+  - H3: 分块边界与工具配对
   - H2: 自动压缩何时发生
   - H2: 压缩设置
   - H2: 可插拔压缩提供方
-  - H2: 用户可见的界面
+  - H2: 用户可见界面
   - H2: 静默维护（NOREPLY）
-  - H2: 压缩前内存刷新
+  - H2: 预压缩内存刷新
   - H2: 故障排查清单
   - H2: 相关内容
 
@@ -8627,24 +9088,24 @@ title: "文档映射"
   - H2：推荐阻止的目标
   - H2：限制
 
-## specs/claw-supervisor.md
+## specs/codex-supervision.md
 
-- 路由：/specs/claw-supervisor
-- 标题：
-  - H1：Claw Supervisor
-  - H2：目标
-  - H2：产品模型
-  - H2：架构
-  - H2：Codex 应用服务器契约
-  - H2：会话注册表
-  - H2：面向 Codex 的 MCP 表面
-  - H2：Claw 控制表面
-  - H2：启动流程
-  - H2：部署
-  - H2：安全
-  - H2：实施计划
-  - H2：验收测试
-  - H2：未决问题
+- 路由: /specs/codex-supervision
+- 标题:
+  - H1: Codex 监督
+  - H2: 目标
+  - H2: 产品边界
+  - H2: 所有权
+  - H2: 目录流转
+  - H2: Operator CLI 边界
+  - H2: 本地续接
+  - H2: 归档行为
+  - H2: 活动线程安全
+  - H2: 配对节点边界
+  - H2: 权限
+  - H2: 兼容性
+  - H2: 未来工作
+  - H2: 验收测试
 
 ## start/bootstrapping.md
 
@@ -8820,11 +9281,12 @@ title: "文档映射"
 - 路由：/start/wizard
 - 标题：
   - H2：区域设置
-  - H2：快速开始 vs 高级
-  - H2：入门配置内容
+  - H2：引导式默认
+  - H2：经典向导：QuickStart vs Advanced
+  - H2：经典入门配置的内容
   - H2：添加另一个代理
   - H2：完整参考
-  - H2：相关文章
+  - H2：相关文档
 
 ## tools/acp-agents-setup.md
 
@@ -8946,16 +9408,17 @@ title: "文档映射"
 
 ## tools/browser-wsl2-windows-remote-cdp-troubleshooting.md
 
-- 路由: /tools/browser-wsl2-windows-remote-cdp-troubleshooting
-- 标题:
-  - H2: 先选择正确的浏览器模式
+- 路由：/tools/browser-wsl2-windows-remote-cdp-troubleshooting
+- 标题：
+  - H2: 首先选择正确的浏览器模式
   - H3: 选项 1：从 WSL2 到 Windows 的原始远程 CDP
-  - H3: 选项 2：宿主机本地 Chrome MCP
+  - H3: 选项 2：主机本地 Chrome MCP
   - H2: 工作架构
   - H2: Control UI 的关键规则
   - H2: 分层验证
-  - H3: 第 1 层：验证 Windows 上的 Chrome 是否在提供 CDP
-  - H3: 第 2 层：验证 WSL2 是否能访问该 Windows 端点
+  - H3: 第 1 层：验证 Chrome 是否在 Windows 上提供 CDP
+  - H4: 在更改 portproxy 之前诊断 IPv4 和 IPv6
+  - H3: 第 2 层：验证 WSL2 是否可以访问该 Windows 端点
   - H3: 第 3 层：配置正确的浏览器配置文件
   - H3: 第 4 层：单独验证 Control UI 层
   - H3: 第 5 层：验证端到端浏览器控制
@@ -8965,19 +9428,19 @@ title: "文档映射"
 
 ## tools/browser.md
 
-- 路由：/tools/browser
-- 标题：
+- 路由: /tools/browser
+- 标题:
   - H2: 你将获得什么
   - H2: 快速开始
   - H2: 插件控制
-  - H2: 代理指导
+  - H2: Agent 指南
   - H2: 缺少浏览器命令或工具
-  - H2: 配置文件：openclaw 与 user
+  - H2: 配置文件：openclaw、user、chrome
   - H2: 配置
   - H3: 截图视觉（仅文本模型支持）
   - H2: 使用 Brave 或其他基于 Chromium 的浏览器
-  - H2: 本地控制与远程控制
-  - H2: Node 浏览器代理（默认零配置）
+  - H2: 本地控制 vs 远程控制
+  - H2: Node 浏览器代理（零配置默认）
   - H2: Browserless（托管远程 CDP）
   - H3: 同一主机上的 Browserless Docker
   - H2: 直接 WebSocket CDP 提供商
@@ -8997,20 +9460,33 @@ title: "文档映射"
 
 ## tools/btw.md
 
-- 路由：/tools/btw
-- 标题：
-  - H2：它的作用
-  - H2：它不做什么
-  - H2：交付模型
-  - H2：表层行为
-  - H2：何时使用它
-  - H2：相关内容
+- 路由: /tools/btw
+- 标题:
+  - H2: 它做什么
+  - H2: 它不做什么
+  - H2: 交付模型
+  - H2: 表面行为
+  - H2: 选择弹窗（控制界面）
+  - H2: 何时使用它
+  - H2: 相关内容
 
 ## tools/capability-cookbook.md
 
 - 路由：/tools/capability-cookbook
 - 标题：
   - H2：相关内容
+
+## tools/chrome-extension.md
+
+- 路由：/tools/chrome-extension
+- 标题：
+  - H1：Chrome 扩展
+  - H2：它是如何工作的
+  - H2：安装并配对
+  - H2：使用它
+  - H2：远程 / 跨机器
+  - H2：诊断
+  - H2：安全模型
 
 ## tools/clawhub.md
 
@@ -9045,22 +9521,23 @@ title: "文档映射"
 
 - 路由：/tools/diffs
 - 标题：
-  - H2：快速开始
-  - H2：禁用内置系统指引
-  - H2：工具输入参考
-  - H2：语法高亮
-  - H2：输出详情契约
-  - H3：折叠的未更改部分
-  - H2：插件默认值
-  - H3：持久化查看器 URL 配置
-  - H2：安全配置
-  - H2：制品生命周期与存储
-  - H2：查看器 URL 与网络行为
-  - H2：安全模型
-  - H2：文件模式的浏览器要求
-  - H2：故障排除
-  - H2：操作指南
-  - H2：相关内容
+  - H2: 快速开始
+  - H2: 禁用内置系统指导
+  - H2: 工具输入参考
+  - H2: 语法高亮
+  - H2: 输出详情约定
+  - H3: 折叠未更改部分
+  - H3: 多文件导航
+  - H2: 插件默认值
+  - H3: 持久化查看器 URL 配置
+  - H2: 安全配置
+  - H2: 工件生命周期和存储
+  - H2: 查看器 URL 和网络行为
+  - H2: 安全模型
+  - H2: 文件模式的浏览器要求
+  - H2: 故障排除
+  - H2: 运行指南
+  - H2: 相关内容
 
 ## tools/duckduckgo-search.md
 
@@ -9099,24 +9576,25 @@ title: "文档映射"
 
 ## tools/exec-approvals-advanced.md
 
-- 路由: /tools/exec-approvals-advanced
-- 标题:
-  - H2: 安全 bin（仅 stdin）
-  - H3: 参数验证和被拒绝的标志
-  - H3: 可信二进制目录
-  - H3: Shell 链式调用、包装器和多路复用器
-  - H3: 安全 bin 与允许列表
-  - H2: 解释器/运行时命令
-  - H3: 后续交付行为
-  - H2: 向聊天频道转发审批
-  - H3: 插件审批转发
-  - H3: 任意频道中的同聊审批
-  - H3: 原生审批交付
-  - H3: macOS IPC 流程
-  - H2: 常见问题
-  - H3: 何时会在审批目标中使用 accountId 和 threadId？
-  - H3: 当审批发送到某个会话时，该会话中的任何人都可以批准吗？
-  - H2: 相关内容
+- 路由：/tools/exec-approvals-advanced
+- 标题：
+  - H2：安全 bin（仅 stdin）
+  - H3：参数验证与拒绝的标志
+  - H3：可信二进制目录
+  - H3：Shell 串联、包装器与多路复用器
+  - H3：安全 bin 与白名单
+  - H2：解释器/运行时命令
+  - H3：后续消息投递行为
+  - H2：审批转发到聊天频道
+  - H3：插件审批转发
+  - H3：任意频道上的同聊审批
+  - H3：原生审批投递
+  - H3：官方移动端运营应用
+  - H3：macOS IPC 流程
+  - H2：常见问题
+  - H3：审批目标中的 accountId 和 threadId 何时会用到？
+  - H3：当审批发送到某个会话时，该会话中的任何人都可以批准吗？
+  - H2：相关
 
 ## tools/exec-approvals.md
 
@@ -9167,19 +9645,19 @@ title: "文档映射"
 
 ## tools/firecrawl.md
 
-- 路由：/tools/firecrawl
-- 标题：
-  - H2：安装插件
-  - H2：无密钥 webfetch 和 API 密钥
-  - H2：配置 Firecrawl 搜索
-  - H2：配置 Firecrawl webfetch 回退
-  - H3：自托管 Firecrawl
-  - H2：Firecrawl 插件工具
-  - H3：firecrawlsearch
-  - H3：firecrawlscrape
-  - H2：隐身 / 反机器人规避
-  - H2：webfetch 如何使用 Firecrawl
-  - H2：相关内容
+- 路由: /tools/firecrawl
+- 标题:
+  - H2: 安装插件
+  - H2: 无密钥访问和 API 密钥
+  - H2: 配置 Firecrawl 搜索
+  - H2: 配置 Firecrawl webfetch 回退
+  - H3: 自托管 Firecrawl
+  - H2: Firecrawl 插件工具
+  - H3: firecrawlsearch
+  - H3: firecrawlscrape
+  - H2: 隐身 / 机器人规避
+  - H2: webfetch 如何使用 Firecrawl
+  - H2: 相关内容
 
 ## tools/gemini-search.md
 
@@ -9196,7 +9674,7 @@ title: "文档映射"
 ## tools/goal.md
 
 - 路由: /tools/goal
-- 标题:
+- 标题：
   - H1: 目标
   - H2: 快速开始
   - H2: 目标的用途
@@ -9204,6 +9682,8 @@ title: "文档映射"
   - H2: 状态
   - H2: 令牌预算
   - H2: 模型工具
+  - H2: 每一轮的目标上下文
+  - H2: 控制界面
   - H2: TUI
   - H2: 通道行为
   - H2: 故障排查
@@ -9376,8 +9856,8 @@ title: "文档映射"
 
 ## tools/parallel-search.md
 
-- Route: /tools/parallel-search
-- Headings:
+- 路由：/tools/parallel-search
+- 标题：
   - H2: 安装插件
   - H2: API 密钥（付费提供商）
   - H2: 配置
@@ -9467,23 +9947,52 @@ title: "文档映射"
   - H2：说明
   - H2：相关
 
+## tools/self-learning.md
+
+- 路由：/tools/self-learning
+- 标题：
+  - H2：启用自学习
+  - H2：OpenClaw 可以学习什么
+  - H2：何时运行经验回顾
+  - H2：审阅者会收到什么
+  - H2：提议安全性
+  - H2：审阅已学习的提议
+  - H2：配置
+  - H2：故障排除
+  - H3：长轮次后没有出现提议
+  - H3：Doctor 报告 Workshop 工具被隐藏
+  - H3：出现过多低价值提议
+  - H2：相关
+
+## tools/show-widget.md
+
+- 路由：/tools/show-widget
+- 标题：
+  - H2：使用该工具
+  - H2：安全性和存储
+  - H2：相关内容
+
 ## tools/skill-workshop.md
 
 - 路由：/tools/skill-workshop
 - 标题：
-  - H2：工作原理
-  - H2：生命周期
-  - H2：聊天
-  - H2：CLI
-  - H2：提案内容
-  - H2：支持文件
-  - H2：Agent 工具
-  - H2：审批与自主性
-  - H2：网关方法
-  - H2：存储
-  - H2：限制
-  - H2：故障排查
-  - H2：相关内容
+  - H2: 工作原理
+  - H2: 生命周期
+  - H2: 生命周期策划
+  - H2: 聊天
+  - H3: 从近期工作中学习
+  - H2: CLI
+  - H2: 提案内容
+  - H2: 支持文件
+  - H2: Agent 工具
+  - H2: 建议的技能
+  - H2: 审批与自主性
+  - H2: 网关方法
+  - H2: 存储
+  - H2: 限制
+  - H2: 故障排除
+  - H3: 工具策略诊断
+  - H2: 相关内容
 
 ## tools/skills-config.md
 
@@ -9503,24 +10012,25 @@ title: "文档映射"
 
 ## tools/skills.md
 
-- 路由: /tools/skills
-- 标题:
-  - H2: 加载顺序
-  - H2: 每个代理与共享技能
-  - H2: 代理允许列表
-  - H2: 插件与技能
-  - H2: 技能工作坊
-  - H2: 从 ClawHub 安装
-  - H2: 安全性
-  - H2: SKILL.md 格式
-  - H3: 可选 frontmatter 键
-  - H2: 门控
-  - H3: 安装程序规范
-  - H2: 配置覆盖
-  - H2: 环境注入
-  - H2: 快照与刷新
-  - H2: 令牌影响
-  - H2: 相关内容
+- 路由：/tools/skills
+- 标题：
+  - H2：加载顺序
+  - H2：Node 托管技能
+  - H2：按代理划分与共享技能
+  - H2：代理允许列表
+  - H2：插件与技能
+  - H2：技能工作坊
+  - H2：从 ClawHub 安装
+  - H2：安全
+  - H2：SKILL.md 格式
+  - H3：可选 frontmatter 键
+  - H2：门控
+  - H3：安装器规范
+  - H2：配置覆盖
+  - H2：环境注入
+  - H2：快照与刷新
+  - H2：令牌影响
+  - H2：相关内容
 
 ## tools/slash-commands.md
 
@@ -9639,9 +10149,9 @@ title: "文档映射"
 
 - 路由：/tools/tool-search
 - 标题：
-  - H2: 一次轮次如何运行
+  - H2: 如何进行一次轮次
   - H2: 模式
-  - H2: 为什么存在这个
+  - H2: 为什么会有这个
   - H2: API
   - H2: 运行时边界
   - H2: 配置
@@ -9652,18 +10162,18 @@ title: "文档映射"
 
 ## tools/trajectory.md
 
-- 路由：/tools/trajectory
-- 标题：
-  - H2：快速开始
-  - H2：访问
-  - H2：会记录什么
-  - H2：捆绑文件
-  - H2：捕获位置
-  - H2：禁用捕获
-  - H2：调整刷新超时
-  - H2：隐私与限制
-  - H2：故障排除
-  - H2：相关
+- 路由: /tools/trajectory
+- 标题:
+  - H2: 快速开始
+  - H2: 访问
+  - H2: 会记录什么
+  - H2: 捆绑文件
+  - H2: 捕获存储
+  - H2: 禁用捕获
+  - H2: 调整刷新超时
+  - H2: 隐私与限制
+  - H2: 故障排除
+  - H2: 相关内容
 
 ## tools/tts.md
 
@@ -9771,33 +10281,39 @@ title: "文档映射"
 
 ## web/control-ui.md
 
-- 路由: /web/control-ui
+- 路由：/web/control-ui
 - 标题：
-  - H2: 快速打开（本地）
-  - H2: 设备配对（首次连接）
-  - H2: 配对移动设备
-  - H2: 个人身份（仅浏览器本地）
-  - H2: 运行时配置端点
-  - H2: 语言支持
-  - H2: 外观主题
-  - H2: 侧边栏导航
-  - H2: 它能做什么（当前）
-  - H2: MCP 页面
-  - H2: 活动标签页
-  - H2: 操作员终端
-  - H2: 聊天行为
-  - H2: PWA 安装和 Web 推送
-  - H2: 托管嵌入
-  - H2: 聊天消息宽度
-  - H2: Tailnet 访问（推荐）
-  - H2: 不安全的 HTTP
-  - H2: 内容安全策略
-  - H2: 头像路由认证
-  - H2: 助手媒体路由认证
-  - H2: 构建 UI
-  - H2: 空白控制 UI 页面
-  - H2: 调试/测试：开发服务器 + 远程 Gateway
-  - H2: 相关内容
+  - H2：快速打开（本地）
+  - H2：设备配对（首次连接）
+  - H2：配对移动设备
+  - H2：个人身份（浏览器本地）
+  - H2：运行时配置端点
+  - H2：网关主机状态
+  - H2：语言支持
+  - H2：外观主题
+  - H2：管理插件
+  - H2：侧边栏导航
+  - H2：新会话页面
+  - H2：它能做什么（目前）
+  - H2：导入助手记忆
+  - H2：MCP 页面
+  - H2：活动标签页
+  - H2：操作员终端
+  - H2：浏览器面板
+  - H2：聊天行为
+  - H2：连接丢失与重新连接
+  - H2：PWA 安装和 Web 推送
+  - H2：托管嵌入
+  - H2：聊天消息宽度
+  - H2：Tailnet 访问（推荐）
+  - H2：不安全的 HTTP
+  - H2：内容安全策略
+  - H2：头像路由认证
+  - H2：助手媒体路由认证
+  - H2：审批链接
+  - H2：空白 Control UI 页面
+  - H2：调试/测试：开发服务器 + 远程 Gateway
+  - H2：相关内容
 
 ## web/dashboard.md
 
@@ -9805,7 +10321,8 @@ title: "文档映射"
 - 标题：
   - H2：快速路径（推荐）
   - H2：认证基础（本地 vs 远程）
-  - H2：如果你看到“unauthorized” / 1008
+  - H2：在 Telegram 中打开
+  - H2：如果你看到“unauthorized”/ 1008
   - H2：相关内容
 
 ## web/index.md
@@ -9818,6 +10335,18 @@ title: "文档映射"
   - H2：Tailscale 访问
   - H2：安全说明
   - H2：构建 UI
+
+## web/lobster.md
+
+- 路由：/web/lobster
+- 标题：
+  - H2：你正在看到什么
+  - H2：它何时出现
+  - H2：你可以做的事情
+  - H2：关闭（或重新开启）访问
+  - H2：Lobsterdex
+  - H2：田野笔记
+  - H2：隐私
 
 ## web/tui.md
 
@@ -9849,9 +10378,21 @@ title: "文档映射"
 - 标题:
   - H2: 它是什么
   - H2: 快速开始
-  - H2: 它是如何工作的
-  - H3: 会话记录与交付模型
-  - H2: 控制 UI 代理工具面板
+  - H2: 它如何工作
+  - H3: 对话记录和传递模型
+  - H2: 控制 UI agent 工具面板
   - H2: 远程使用
   - H2: 配置参考（WebChat）
   - H2: 相关内容
+
+## web/workspaces.md
+
+- 路由：/web/workspaces
+- 标题：
+  - H2：启用工作区
+  - H2：默认工作区
+  - H2：内置小部件
+  - H2：来源
+  - H2：自定义小部件
+  - H2：CLI
+  - H2：存储

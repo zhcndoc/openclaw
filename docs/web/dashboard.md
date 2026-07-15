@@ -33,10 +33,10 @@ title: "仪表板"
 
 ## 快速路径（推荐）
 
-- After onboarding, the CLI auto-opens the dashboard and prints a clean (non-tokenized) link.
-- Re-open anytime: `openclaw dashboard` (copies the link, opens a browser if possible, prints an SSH hint if headless).
-- If clipboard and browser delivery both fail, `openclaw dashboard` still prints the clean URL and tells you to append your token (from `OPENCLAW_GATEWAY_TOKEN` or `gateway.auth.token`) as the URL fragment key `token`; it never prints the token value in logs.
-- If the UI prompts for shared-secret auth, paste the configured token or password into Control UI settings.
+- 在完成 onboarding 后，CLI 会自动打开 dashboard 并打印一个干净的（非 tokenized）链接。
+- 随时重新打开：`openclaw dashboard`（会复制链接，若可能则打开浏览器，如果是 headless 环境则打印 SSH 提示）。
+- 如果 clipboard 和 browser 传递都失败了，`openclaw dashboard` 仍然会打印干净的 URL，并告诉你将你的 token（来自 `OPENCLAW_GATEWAY_TOKEN` 或 `gateway.auth.token`）追加为 URL 片段键 `token`；它绝不会在日志中打印 token 值。
+- 如果 UI 提示 shared-secret auth，请将配置的 token 或密码粘贴到 Control UI settings 中。
 
 ## 认证基础（本地 vs 远程）
 
@@ -48,23 +48,41 @@ title: "仪表板"
 - **带身份模式**：当 `gateway.auth.allowTailscale: true` 时，Tailscale Serve 通过身份头满足 Control UI/WebSocket 认证；非回环的具身份感知反向代理通过 `gateway.auth.mode: "trusted-proxy"` 满足认证。这两种情况下，WebSocket 都不需要粘贴共享密钥。
 - **非本地主机**：使用 Tailscale Serve、非回环的共享密钥绑定、带身份感知的非回环反向代理并设置 `gateway.auth.mode: "trusted-proxy"`，或 SSH 隧道。HTTP API 仍然使用共享密钥认证，除非你有意运行私有入口的 `gateway.auth.mode: "none"` 或 trusted-proxy HTTP 认证。参见 [Web surfaces](/web)。
 
+## 在 Telegram 中打开
+
+Telegram bots 可以使用 `/dashboard` 将控制台作为 Telegram Mini App 打开。
+
+要求：
+
+- `gateway.tailscale.mode: "serve"` 或 `"funnel"`，这样 Telegram 才能获得一个 HTTPS Mini App URL。
+- Telegram 发送者必须是 bot 的所有者：`commands.ownerAllowFrom` 中的一个数字 Telegram 用户 ID，或者所选账号的有效 `channels.telegram.allowFrom`。
+- 在与 bot 的私聊（DM）中运行 `/dashboard`。在群聊中调用时，只会提示你在 DM 中打开该命令，不会包含按钮。
+- Docker 安装：Serve/Funnel 模式要求 gateway 在 `tailscaled` 旁边绑定 loopback，这与发布端口的 bridge 网络无法满足。请使用 `network_mode: host` 运行 gateway 容器，并将宿主机的 `tailscaled` socket（`/var/run/tailscale`）以及 `tailscale` CLI 挂载到容器中。
+
+Mini App 会执行一次性的所有者交接，并使用一个短期有效的 bootstrap token 重定向到 Control UI。它不会在 URL 中暴露共享的 gateway token。
+
+v1 的非目标：
+
+- 不支持 Telegram Web iframe。
+- 仅支持 Tailscale Serve/Funnel 作为已发布 URL 的路径。
+
 <a id="if-you-see-unauthorized-1008"></a>
 
 ## 如果你看到 "unauthorized" / 1008
 
-- 确认网关可达：本地运行 `openclaw status`；远程则通过 SSH 隧道 `ssh -N -L 18789:127.0.0.1:18789 user@gateway-host`，然后打开 `http://127.0.0.1:18789/`。
-- 对于 `AUTH_TOKEN_MISMATCH`，当网关返回重试提示时，客户端可以使用缓存的设备令牌进行一次受信任的重试；该重试会复用令牌缓存的已批准作用域（显式传入 `deviceToken`/`scopes` 的调用方会保留其请求的作用域集合）。如果在该重试后认证仍然失败，请手动解决令牌漂移。
+- 确认网关可达：本地执行 `openclaw status`；远程则通过 SSH 隧道 `ssh -N -L 18789:127.0.0.1:18789 user@gateway-host`，然后打开 `http://127.0.0.1:18789/`。
+- 对于 `AUTH_TOKEN_MISMATCH`，当网关返回重试提示时，客户端可使用缓存的设备令牌进行一次受信任的重试；该重试会复用令牌缓存的已批准作用域（显式传入 `deviceToken`/`scopes` 的调用方会保留其请求的作用域集合）。如果在该重试后认证仍然失败，请手动解决令牌漂移。
 - 对于 `AUTH_SCOPE_MISMATCH`，设备令牌已被识别，但不包含所请求的作用域；请重新配对或批准新的作用域集合，而不是轮换共享的网关令牌。
-- 在该重试路径之外，连接认证的优先级为：显式共享令牌/密码，其次是显式 `deviceToken`，然后是已存储的设备令牌，最后是引导令牌。
-- 在异步 Tailscale Serve 路径上，对同一 `{scope, ip}` 的失败尝试会在失败认证限流器记录之前被串行化，因此第二个并发的错误重试可能已经显示 `retry later`。
+- 在该重试路径之外，连接认证优先级为：显式共享令牌/密码，然后是显式 `deviceToken`，然后是已存储的设备令牌，最后是引导令牌。
+- 在异步 Tailscale Serve 路径上，同一 `{scope, ip}` 的失败尝试会在失败认证限流器记录之前被串行化，因此第二个并发的错误重试可能已经显示 `retry later`。
 - 有关令牌漂移修复步骤，请参见 [令牌漂移恢复清单](/cli/devices#token-drift-recovery-checklist)。
-- 从网关主机获取或提供共享密钥：
+- 从网关主机检索或提供共享密钥：
   - 令牌：`openclaw config get gateway.auth.token`
   - 密码：解析已配置的 `gateway.auth.password` 或 `OPENCLAW_GATEWAY_PASSWORD`
   - SecretRef 管理的令牌：解析外部密钥提供方，或在此 shell 中导出 `OPENCLAW_GATEWAY_TOKEN` 并重新运行 `openclaw dashboard`
   - 未配置共享密钥：`openclaw doctor --generate-gateway-token`
 - 在仪表板设置中，将令牌或密码粘贴到认证字段，然后连接。
-- UI 语言选择器位于 **概览 -> 网关访问 -> 语言**，不在外观下。
+- UI 语言选择器位于 **Settings -> General -> Language**，不在 Appearance 下。
 
 ## 相关内容
 

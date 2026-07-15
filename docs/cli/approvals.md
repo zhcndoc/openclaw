@@ -46,7 +46,13 @@ openclaw approvals get --node <id|name|ip>
 openclaw approvals get --gateway
 ```
 
-`get` 会显示目标的有效 exec 策略：请求的 `tools.exec` 策略、主机 approvals-file 策略，以及合并后的有效结果。
+`get` 显示目标的有效执行策略：请求的 `tools.exec` 策略、主机 approvals 文件策略，以及合并后的有效结果。对于具有主机原生策略的节点，例如 Windows companion，会直接显示该策略，而不是应用 OpenClaw approvals 文件的策略计算。
+
+对于基于文件的节点，合并视图需要一个由主机解析得到的策略快照。较旧的节点会将有效策略显示为不可用，而不是假定网关请求的策略也同样适用于主机。
+
+<Note>
+每个会话的 `/exec` 覆盖不会包含在内。请在相关会话中运行 `/exec`，以查看其当前默认值。
+</Note>
 
 优先级：
 
@@ -68,7 +74,20 @@ openclaw approvals set --gateway --file ./exec-approvals.json
 
 `set` 接受 JSON5，而不仅仅是严格 JSON。请使用 `--file` 或 `--stdin` 其中之一，不要同时使用。
 
-## “永不提示” / YOLO 示例
+主机原生 Windows 节点使用其自己的策略结构：
+
+```bash
+openclaw approvals set --node <id|name|ip> --stdin <<'EOF'
+{
+  defaultAction: "deny",
+  rules: [{ pattern: "hostname", action: "allow" }]
+}
+EOF
+```
+
+CLI 会先读取节点当前的哈希值，并在更新时一并发送，因此并发的本地编辑会被拒绝，而不会被覆盖。`rules` 是必需的，因为此操作会替换节点的完整规则列表；`defaultAction` 是可选的。报告其原生策略为已禁用的节点不能通过远程方式配置；请先在该主机上启用或配置该策略。主机原生策略不支持 `allowlist add|remove` 辅助命令。
+
+## "Never prompt" / YOLO 示例
 
 将某个绝不应在执行审批时停止的主机的主机审批默认值设置为 `full` + `off`：
 
@@ -85,7 +104,7 @@ openclaw approvals set --stdin <<'EOF'
 EOF
 ```
 
-Node 变体：使用 `openclaw approvals set --node <id|name|ip> --stdin`，正文相同。
+对于公开 OpenClaw 审批文件的节点，请使用相同的主体和 `openclaw approvals set --node <id|name|ip> --stdin`。主机原生节点需要其所有者特定的形状，如上所示。
 
 这只会更改 **主机审批文件**。为了保持请求的 OpenClaw 策略一致，也要设置：
 
@@ -95,7 +114,7 @@ openclaw config set tools.exec.security full
 openclaw config set tools.exec.ask off
 ```
 
-这里明确指定 `tools.exec.host=gateway`，因为 `host=auto` 仍然表示“可用时使用沙箱，否则使用网关”：YOLO 关注的是审批，而不是路由。 当你希望即使配置了沙箱也使用主机执行时，请使用 `gateway`（或 `/exec host=gateway`）。
+这里明确指定 `tools.exec.host=gateway`，因为 `host=auto` 仍然表示“可用时使用沙箱，否则使用网关”：YOLO 关注的是审批，而不是路由。当你希望即使配置了沙箱也使用主机执行时，请使用 `gateway`（或 `/exec host=gateway`）。
 
 如果省略 `askFallback`，默认值是 `deny`。当升级一个无 UI 的主机并且希望保持永不提示行为时，请显式设置 `askFallback: "full"`。
 
@@ -129,8 +148,8 @@ openclaw approvals allowlist remove "~/Projects/**/bin/rg"
 
 ## 说明
 
-- 节点主机必须声明 `system.execApprovals.get/set`（macOS 应用或无头节点主机）。
-- 审批文件按主机存储在 OpenClaw 状态目录中：`$OPENCLAW_STATE_DIR/exec-approvals.json`，如果未设置该变量，则为 `~/.openclaw/exec-approvals.json`。
+- 节点主机必须公开 `system.execApprovals.get/set`（macOS 应用、无头节点主机，或 Windows companion）。
+- 审批文件按主机存储在 OpenClaw 状态目录中：`$OPENCLAW_STATE_DIR/exec-approvals.json`，或者在未设置该变量时存储在 `~/.openclaw/exec-approvals.json`。
 
 ## 相关
 

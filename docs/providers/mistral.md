@@ -58,16 +58,17 @@ title: "Mistral"
 
 ## 内置 LLM 目录
 
-| Model ref                        | Input       | Context | Max output | Notes                                                            |
-| -------------------------------- | ----------- | ------- | ---------- | ---------------------------------------------------------------- |
-| `mistral/mistral-large-latest`   | 文本，图像   | 262,144 | 16,384     | 默认模型                                                    |
-| `mistral/mistral-medium-2508`    | 文本，图像   | 262,144 | 8,192      | Mistral Medium 3.1                                               |
-| `mistral/mistral-medium-3-5`     | 文本，图像   | 262,144 | 8,192      | Mistral Medium 3.5；可调推理                         |
-| `mistral/mistral-small-latest`   | 文本，图像   | 128,000 | 16,384     | Mistral Small 4；可通过 API `reasoning_effort` 调整推理 |
-| `mistral/pixtral-large-latest`   | 文本，图像   | 128,000 | 32,768     | Pixtral                                                          |
-| `mistral/codestral-latest`       | 文本         | 256,000 | 4,096      | 编码                                                           |
-| `mistral/devstral-medium-latest` | 文本         | 262,144 | 32,768     | Devstral 2                                                       |
-| `mistral/magistral-small`        | 文本         | 128,000 | 40,000     | 支持推理                                                |
+| Model ref                        | Input       | Context | Max output | Notes                                                 |
+| -------------------------------- | ----------- | ------- | ---------- | ----------------------------------------------------- |
+| `mistral/mistral-large-latest`   | 文本, 图像   | 262,144 | 16,384     | 默认模型                                              |
+| `mistral/mistral-medium-2508`    | 文本, 图像   | 262,144 | 8,192      | Mistral Medium 3.1                                    |
+| `mistral/mistral-medium-3-5`     | 文本, 图像   | 262,144 | 8,192      | Mistral Medium 3.5；可调推理                            |
+| `mistral/mistral-small-latest`   | 文本, 图像   | 262,144 | 16,384     | Mistral Small 4 最新版；可调 `reasoning_effort`       |
+| `mistral/mistral-small-2603`     | 文本, 图像   | 262,144 | 16,384     | Mistral Small 4 固定版本；可调 `reasoning_effort`     |
+| `mistral/pixtral-large-latest`   | 文本, 图像   | 128,000 | 32,768     | Pixtral                                               |
+| `mistral/codestral-latest`       | 文本        | 256,000 | 4,096      | 编码                                                  |
+| `mistral/devstral-medium-latest` | 文本        | 262,144 | 32,768     | Devstral 2                                            |
+| `mistral/magistral-small`        | 文本        | 128,000 | 40,000     | 支持推理                                              |
 
 在更改配置之前，请先浏览内置目录中的该行：
 
@@ -80,7 +81,7 @@ openclaw models list --all --provider mistral --plain
 ```bash
 openclaw infer model run --local \
   --model mistral/mistral-medium-3-5 \
-  --prompt "Reply with exactly: mistral-ok" \
+  --prompt "只回复：mistral-ok" \
   --json
 ```
 
@@ -147,8 +148,8 @@ OpenClaw 默认将 Mistral 实时 STT 设置为 8 kHz 的 `pcm_mulaw`，因此 V
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="可调推理">
-    `mistral/mistral-small-latest` 和 `mistral/mistral-medium-3-5` 在 Chat Completions API 上通过 `reasoning_effort` 支持[可调推理](https://docs.mistral.ai/studio-api/conversations/reasoning/adjustable)（`none` 会将额外思考降到最低并输出；`high` 会在最终答案之前展示完整的思考轨迹）。
+  <Accordion title="可调整推理">
+    `mistral/mistral-small-latest`, `mistral/mistral-small-2603`, and `mistral/mistral-medium-3-5` support [adjustable reasoning](https://docs.mistral.ai/studio-api/conversations/reasoning/adjustable) on the Chat Completions API via `reasoning_effort` (`none` minimizes extra thinking in the output; `high` surfaces full thinking traces before the final answer).
 
     OpenClaw 会将会话的 **thinking** 级别映射到 Mistral 的 API：
 
@@ -184,7 +185,7 @@ OpenClaw 默认将 Mistral 实时 STT 设置为 8 kHz 的 `pcm_mulaw`，因此 V
 
   </Accordion>
 
-  <Accordion title="记忆嵌入">
+  <Accordion title="Memory embeddings">
     Mistral 可以通过 `/v1/embeddings` 提供记忆嵌入（默认模型：`mistral-embed`）：
 
     ```json5
@@ -199,7 +200,7 @@ OpenClaw 默认将 Mistral 实时 STT 设置为 8 kHz 的 `pcm_mulaw`，因此 V
 
   </Accordion>
 
-  <Accordion title="认证和基础 URL">
+  <Accordion title="Authentication and Base URL">
     - Mistral 认证使用 `MISTRAL_API_KEY`（Bearer 头）。
     - 提供方基础 URL 默认为 `https://api.mistral.ai/v1`，并接受标准的 OpenAI 兼容 chat-completions 请求格式。
     - 接入引导的默认模型是 `mistral/mistral-large-latest`。
@@ -211,10 +212,10 @@ OpenClaw 默认将 Mistral 实时 STT 设置为 8 kHz 的 `pcm_mulaw`，因此 V
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
     选择提供方、模型引用和故障转移行为。
   </Card>
-  <Card title="媒体理解" href="/nodes/media-understanding" icon="microphone">
+  <Card title="Media understanding" href="/nodes/media-understanding" icon="microphone">
     音频转录设置和提供方选择。
   </Card>
 </CardGroup>

@@ -8,31 +8,30 @@ title: "健康检查"
 
 快速指南：无需猜测即可验证通道连接性。
 
-## 快速检查
+## Quick Check
 
-- `openclaw status` - 本地摘要：网关可达性/模式、更新提示、已链接通道认证时长、会话 + 最近活动。
-- `openclaw status --all` - 完整的本地诊断（只读、彩色、安全，可直接用于调试）。
-- `openclaw status --deep` - 向正在运行的网关请求实时探测（`health`，带 `probe:true`），包括在支持时按账户进行的通道探测。
-- `openclaw status --usage` - 显示模型提供方的使用量/配额快照。
-- `openclaw health` - 向正在运行的网关请求其健康快照（仅 WS；CLI 不直接连接任何通道 socket）。
-- `openclaw health --verbose`（别名 `--debug`）- 强制执行实时健康探测并打印网关连接详情。
-- `openclaw health --json` - 机器可读的健康快照输出。
-- 在任意通道中发送独立的聊天命令 `/status`，即可获得状态回复，而无需调用代理。
-- 日志：查看 `/tmp/openclaw/openclaw-*.log`，并过滤 `web-heartbeat`、`web-reconnect`、`web-auto-reply`、`web-inbound`。
+- `openclaw status` - Local summary: gateway reachability/mode, update hints, linked channel authentication age, sessions + recent activity.
+- `openclaw status --all` - Full local diagnostics (read-only, colored, safe, directly usable for debugging).
+- `openclaw status --deep` - Request a live probe from the running gateway (`health`, with `probe:true`), including per-account channel probes when supported.
+- `openclaw status --usage` - Show model provider usage/quota snapshot.
+- `openclaw health` - Request the running gateway’s health snapshot (WS only; CLI does not directly connect to any channel socket).
+- `openclaw health --verbose` (alias `--debug`) - Force a live health probe and print gateway connection details.
+- `openclaw health --json` - Machine-readable health snapshot output.
+- Send the standalone chat command `/status` in any channel to get a status reply without calling the agent.
+- Logs: inspect `/tmp/openclaw/openclaw-*.log`, and filter for `web-heartbeat`, `web-reconnect`, `web-auto-reply`, `web-inbound`.
 
-对于 Discord 和其他聊天提供方，session 行不代表 socket 存活。
-`openclaw sessions`、Gateway `sessions.list` 和 agent 的 `sessions_list` 工具
-读取的是已存储的会话状态。某个提供方可以重新连接，并在任何新的 session 行生成之前就显示健康的通道
-状态。请使用上面的通道状态和健康命令来进行实时连接性检查。
+For Discord and other chat providers, the session line does not represent socket liveness.
+`openclaw sessions`, Gateway `sessions.list`, and the agent’s `sessions_list` tool
+read stored session state. A provider may reconnect and show healthy channel status before any new session line is generated. Please use the channel status and health commands above for real-time connectivity checks.
 
 ## 深度诊断
 
-- 磁盘上的凭据：`ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json`（mtime 应该是最近的）。
-- 会话存储：`ls -l ~/.openclaw/agents/<agentId>/sessions/sessions.json`（路径可在配置中覆盖）。会话数量和最近的收件人可通过 `status` 查看。
-- 重新关联流程：当日志中出现状态码 409-515 或 `loggedOut` 时，执行 `openclaw channels logout && openclaw channels login --verbose`。对于状态 515，二维码登录流程在配对后会自动重启一次。
-- 诊断默认启用（`diagnostics.enabled: false` 会禁用它们）。内存事件会记录 RSS/heap 字节数以及阈值/增长压力；关键内存压力会通过 gateway logger 记录，并且当设置 `diagnostics.memoryPressureSnapshot: true` 时，还会写入一个预 OOM 稳定性包（V8 堆统计信息、可用时的 Linux cgroup 计数器、活动资源数量、按脱敏相对路径排序的最大会话/转录文件）。当进程仍在运行但已饱和时，活跃性警告会记录事件循环延迟/利用率、CPU 核心比以及活动/等待/排队中的会话数量。超大负载事件会记录被拒绝/截断/分块的内容及其大小和限制，绝不包含消息文本、附件内容、webhook 正文、原始请求/响应正文、令牌、cookie 或密钥值。
-- 同一个心跳驱动有界稳定性记录器：`openclaw gateway stability`（或 `diagnostics.stability` Gateway RPC）。严重 Gateway 退出、关闭超时、重启启动失败，以及（当 `diagnostics.memoryPressureSnapshot: true` 时）关键内存压力，都会将最新快照持久化到 `~/.openclaw/logs/stability/` 下。可使用 `openclaw gateway stability --bundle latest` 检查最新的包。
-- 对于 bug 报告，请运行 `openclaw gateway diagnostics export` 并附上生成的 zip：其中包含 Markdown 摘要、最新稳定性包、已清理的日志元数据、已清理的 Gateway 状态/健康快照以及配置结构。聊天文本、webhook 正文、工具输出、凭据、cookie、账号/消息标识符以及密钥值都会被省略或脱敏。参见 [Diagnostics Export](/gateway/diagnostics)。
+- 磁盘上的凭据：`ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json`（mtime 应为最近时间）。
+- 会话存储：`ls -l ~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`。`status` 会显示数量和最近的收件人。
+- 重新关联流程：当日志中出现状态码 409-515 或 `loggedOut` 时，执行 `openclaw channels logout && openclaw channels login --verbose`。二维码登录流程在配对后会针对状态 515 自动重启一次。
+- 诊断默认启用（`diagnostics.enabled: false` 会禁用它们）。内存事件会记录 RSS/heap 字节数以及阈值/增长压力；关键内存压力会通过 gateway logger 记录，并且当设置 `diagnostics.memoryPressureSnapshot: true` 时，还会写入一个预 OOM 稳定性包（V8 heap 统计信息、可用时的 Linux cgroup 计数器、活动资源计数，以及按脱敏相对路径显示的最大会话/转写文件）。当进程正在运行但已饱和时，liveness 警告会记录事件循环延迟/利用率、CPU 核心比，以及活动/等待/排队中的会话计数。超大载荷事件会记录被拒绝/截断/分块的内容以及大小和限制，绝不会记录消息文本、附件内容、webhook body、原始请求/响应 body、令牌、cookie 或密钥值。
+- 同一个心跳也驱动有界稳定性记录器：`openclaw gateway stability`（或 `diagnostics.stability` Gateway RPC）。致命的 Gateway 退出、关闭超时、重启启动失败，以及（当 `diagnostics.memoryPressureSnapshot: true` 时）关键内存压力，会将最新快照持久化到 `~/.openclaw/logs/stability/` 下。使用 `openclaw gateway stability --bundle latest` 查看最新的 bundle。
+- 如需提交 bug 报告，请运行 `openclaw gateway diagnostics export` 并附上生成的 zip：其中包含 Markdown 摘要、最新稳定性包、已脱敏的日志元数据、已脱敏的 Gateway 状态/健康快照，以及配置形状。聊天文本、webhook body、工具输出、凭据、cookie、账号/消息标识符和密钥值都会被省略或脱敏。参见 [Diagnostics Export](/gateway/diagnostics)。
 
 ## 健康监控配置
 

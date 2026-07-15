@@ -48,24 +48,25 @@ openclaw logs --follow
 
 ## 权限矩阵
 
-| 能力                         | iOS                                      | Android                                      | macOS 节点应用                | 典型失败代码                 |
-| ---------------------------- | ---------------------------------------- | -------------------------------------------- | ----------------------------- | ---------------------------- |
-| `camera.snap`, `camera.clip` | 摄像头（clip 音频还需要麦克风）           | 摄像头（clip 音频还需要麦克风）               | 摄像头（clip 音频还需要麦克风） | `*_PERMISSION_REQUIRED`      |
-| `screen.record`              | 屏幕录制（可选麦克风）                    | 屏幕捕获提示（可选麦克风）                    | 屏幕录制                      | `*_PERMISSION_REQUIRED`      |
-| `location.get`               | 使用期间或始终（取决于模式）              | 基于模式的前台/后台定位                       | 定位权限                      | `LOCATION_PERMISSION_REQUIRED` |
-| `system.run`                 | 不适用（节点主机路径）                    | 不适用（节点主机路径）                        | 需要 Exec 审批                | `SYSTEM_RUN_DENIED`          |
+| 能力                         | iOS                                     | Android                                      | macOS node app                   | 典型失败代码                                      |
+| ---------------------------- | --------------------------------------- | -------------------------------------------- | -------------------------------- | --------------------------------------------- |
+| `camera.snap`, `camera.clip` | 相机（录制 clip 音频时还需要麦克风）      | 相机（录制 clip 音频时还需要麦克风）          | 相机（录制 clip 音频时还需要麦克风） | `*_PERMISSION_REQUIRED`                       |
+| `screen.record`              | 屏幕录制（可选麦克风）                   | 屏幕捕获提示（可选麦克风）                   | 屏幕录制                       | `*_PERMISSION_REQUIRED`                       |
+| `computer.act`               | 不适用                                    | 不适用                                       | 辅助功能 + 屏幕录制             | `COMPUTER_DISABLED`, `ACCESSIBILITY_REQUIRED` |
+| `location.get`               | 使用期间或始终允许（取决于模式）          | 根据模式使用前台/后台定位                   | 定位权限                       | `LOCATION_PERMISSION_REQUIRED`                |
+| `system.run`                 | 不适用（node 主机路径）                  | 不适用（node 主机路径）                     | 需要执行批准                   | `SYSTEM_RUN_DENIED`                           |
 
-## 配对与审批
+## Pairing and approvals
 
-有三个独立的关卡控制一个节点命令是否成功：
+There are three independent gates that determine whether a node command succeeds:
 
-1. **设备配对**：这个节点能否连接到网关？
-2. **网关节点命令策略**：RPC 命令 ID 是否被 `gateway.nodes.allowCommands` / `denyCommands` 和平台默认规则允许？
-3. **Exec 审批**：这个节点是否可以在本地运行某个特定 shell 命令？
+1. **Device pairing**: Can this node connect to the gateway?
+2. **Gateway node command policy**: Is the RPC command ID allowed by `gateway.nodes.allowCommands` / `denyCommands` and the platform default rules?
+3. **Exec approval**: Is this node allowed to run a particular shell command locally?
 
-Node pairing 是身份/信任关卡，而不是按命令逐一审批的面板。对于 `system.run`，按节点的策略存放在该节点的 exec 审批文件中（`openclaw approvals get --node ...`），而不是在网关配对记录里。
+Node pairing is an identity/trust gate, not a per-command approval panel. For `system.run`, the node-specific policy lives in that node’s exec approval file (`openclaw approvals get --node ...`), not in the gateway pairing record.
 
-快速检查：
+Quick checks:
 
 ```bash
 openclaw devices list
@@ -74,24 +75,26 @@ openclaw approvals get --node <idOrNameOrIp>
 openclaw approvals allowlist add --node <idOrNameOrIp> "/usr/bin/uname"
 ```
 
-- 缺少配对：先批准该节点设备。
-- `nodes describe` 缺少某个命令：检查网关节点命令策略，以及该节点连接时是否实际声明了该命令。
-- 配对正常但 `system.run` 失败：修复该节点上的 exec 审批/allowlist。
+- Missing pairing: approve the device for that node first.
+- `nodes describe` is missing a command: check the gateway node command policy, and whether the node actually advertised that command when it connected.
+- Pairing is fine but `system.run` fails: fix the exec approvals/allowlist on that node.
 
-对于基于审批的 `host=node` 运行，网关还会将执行绑定到预先准备好的规范化 `systemRunPlan`。如果后续调用方在已批准的运行转发前修改了命令、cwd 或会话元数据，网关会将该运行视为审批不匹配并拒绝，而不是信任被编辑过的载荷。
+For approval-based `host=node` runs, the gateway also binds execution to a prebuilt normalized `systemRunPlan`. If the caller later mutates the command, cwd, or session metadata before the approved run is forwarded, the gateway treats it as an approval mismatch and rejects it rather than trusting the edited payload.
 
 ## 常见节点错误代码
 
 | Code                                   | Meaning                                                                                                                                                                                 |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_BACKGROUND_UNAVAILABLE`          | 应用处于后台；请将其切换到前台。                                                                                                                                        |
-| `CAMERA_DISABLED`                      | 节点设置中已禁用相机开关。                                                                                                                                                |
-| `*_PERMISSION_REQUIRED`                | 缺少/被拒绝的操作系统权限。                                                                                                                                                           |
+| `NODE_BACKGROUND_UNAVAILABLE`          | 应用已进入后台；请将其切换到前台。                                                                                                                                        |
+| `CAMERA_DISABLED`                      | 节点设置中摄像头开关已禁用。                                                                                                                                                |
+| `*_PERMISSION_REQUIRED`                | 缺少/已拒绝操作系统权限。                                                                                                                                                           |
 | `LOCATION_DISABLED`                    | 位置模式已关闭。                                                                                                                                                                   |
-| `LOCATION_PERMISSION_REQUIRED`         | 未授予请求的位置模式。                                                                                                                                                    |
-| `LOCATION_BACKGROUND_UNAVAILABLE`      | 应用处于后台，但仅有“使用期间”权限。                                                                                                                             |
-| `SYSTEM_RUN_DENIED: approval required` | 执行请求需要显式批准。                                                                                   |
-| `SYSTEM_RUN_DENIED: allowlist miss`    | 命令被允许列表模式阻止。在 Windows 节点主机上，像 `cmd.exe /c ...` 这样的 shell-wrapper 形式在允许列表模式下会被视为允许列表缺失，除非通过 ask 流程获批。 |
+| `LOCATION_PERMISSION_REQUIRED`         | 请求的位置模式未获授权。                                                                                                                                                    |
+| `LOCATION_BACKGROUND_UNAVAILABLE`      | 应用已进入后台，但只有“使用期间”权限。                                                                                                                             |
+| `COMPUTER_DISABLED`                    | 在 macOS 应用中启用 **允许计算机控制**，然后批准配对更新。                                                                                                    |
+| `ACCESSIBILITY_REQUIRED`               | 在 macOS 系统设置中，将辅助功能权限授予当前的 OpenClaw 应用包。                                                                                                        |
+| `SYSTEM_RUN_DENIED: approval required` | Exec 请求需要明确批准。                                                                                                                                                   |
+| `SYSTEM_RUN_DENIED: allowlist miss`    | 命令被允许列表模式阻止。在 Windows 节点主机上，像 `cmd.exe /c ...` 这样的 shell-wrapper 形式会在允许列表模式下被视为允许列表未命中，除非通过 ask 流程获批。 |
 
 ## 快速恢复循环
 
@@ -109,12 +112,15 @@ openclaw logs --follow
 - 重新授予操作系统权限。
 - 重新创建/调整执行审批策略。
 
+对于计算机控制，还要确认具备视觉能力的代理是否暴露了 `computer` 工具，`screen.snapshot` 在授予屏幕录制权限后是否成功，以及 `/phone status` 是否显示了你所期望的临时或持久网关授权。`gateway.nodes.denyCommands` 条目始终会覆盖 `allowCommands`。
+
 ## 相关内容
 
 - [节点概览](/nodes)
 - [摄像头节点](/nodes/camera)
-- [定位命令](/nodes/location-command)
-- [Exec 审批](/tools/exec-approvals)
+- [位置命令](/nodes/location-command)
+- [计算机使用](/nodes/computer-use)
+- [执行审批](/tools/exec-approvals)
 - [网关配对](/gateway/pairing)
 - [网关故障排查](/gateway/troubleshooting)
 - [通道故障排查](/channels/troubleshooting)

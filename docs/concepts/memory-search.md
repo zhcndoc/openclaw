@@ -48,16 +48,16 @@ openclaw plugins install @openclaw/llama-cpp-provider
 | 提供方              | ID                  | 需要 API key | 备注                              |
 | ------------------- | ------------------- | ------------ | --------------------------------- |
 | Bedrock             | `bedrock`           | 否           | 使用 AWS 凭证链                   |
-| DeepInfra           | `deepinfra`         | 是           | 默认模型 `BAAI/bge-m3`            |
-| Gemini              | `gemini`            | 是           | 支持图片/音频索引                  |
-| GitHub Copilot      | `github-copilot`    | 否           | 使用你的 Copilot 订阅              |
-| 本地                | `local`             | 否           | GGUF 模型，约 0.6 GB 自动下载      |
-| LM Studio           | `lmstudio`          | 否           | 本地/自托管服务器                  |
-| Mistral             | `mistral`           | 是           |                                   |
-| Ollama              | `ollama`            | 否           | 本地/自托管服务器                  |
-| OpenAI              | `openai`            | 是           | 默认                               |
-| OpenAI 兼容         | `openai-compatible` | 通常需要      | 通用 `/v1/embeddings` 端点         |
-| Voyage              | `voyage`            | 是           |                                   |
+| DeepInfra           | `deepinfra`           | 是           | 默认模型 `BAAI/bge-m3`            |
+| Gemini              | `gemini`             | 是           | 支持图片/音频索引                  |
+| GitHub Copilot      | `github-copilot`     | 否           | 使用你的 Copilot 订阅              |
+| 本地                | `local`              | 否           | GGUF 模型，约 0.6 GB 自动下载      |
+| LM Studio           | `lmstudio`           | 否           | 本地/自托管服务器                  |
+| Mistral             | `mistral`            | 是           |                                   |
+| Ollama              | `ollama`             | 否           | 本地/自托管服务器                  |
+| OpenAI              | `openai`             | 是           | 默认                               |
+| OpenAI 兼容         | `openai-compatible`  | 通常需要      | 通用 `/v1/embeddings` 端点         |
+| Voyage              | `voyage`             | 是           |                                   |
 
 ## 搜索如何工作
 
@@ -74,10 +74,11 @@ flowchart LR
     M --> R["前排结果"]
 ```
 
-- **向量搜索** 匹配相似含义（“gateway host” 匹配 “运行 OpenClaw 的
-  机器”）。
+- **向量搜索** 匹配相似含义（“gateway host” 匹配 “the
+  machine running OpenClaw”）。
 - **BM25 关键词搜索** 匹配精确术语（ID、错误字符串、配置
   键）。
+- **文件名搜索** 将路径与笔记正文分开索引。完整的精确路径、基名以及文件名词干的排名高于部分路径匹配，而摘要和正文关键词分数仍然来自笔记内容。
 
 如果只有一条路径可用，另一条将单独运行。
 
@@ -133,9 +134,13 @@ flowchart LR
 
 ## 会话记忆搜索
 
-可选地索引会话转录，以便 `memory_search` 能够回忆更早的
-对话。这是一个可选功能：设置 `experimental.sessionMemory: true` 并将
-`"sessions"` 添加到 `sources` 中（默认的 `sources` 是 `["memory"]`）。
+如需从会话转录中进行精确的全文回忆，请使用 [`sessions_search`](/concepts/session-search)
+，然后再通过 `sessions_history` 打开结果。会话记忆搜索仍然是语义化的、
+实验性的补充功能。
+
+也可以选择索引会话转录，以便 `memory_search` 回忆更早的
+对话。这是可选功能：设置 `experimental.sessionMemory: true` 并将
+`"sessions"` 添加到 `sources` 中（默认的 `sources` 为 `["memory"]`）。
 
 会话命中遵循 `tools.sessions.visibility`：默认的 `"tree"` 只会
 暴露当前会话及其派生出的会话。若要从另一个会话中回忆一个无关的

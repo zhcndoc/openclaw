@@ -19,7 +19,67 @@ read_when:
 
 <CardGroup cols={2}>
 
-<Card title="PR 审查到 Telegram 反馈" icon="code-pull-request" href="https://x.com/i/status/2010878524543131691">
+<Card title="Dropage 即时 HTML 部署" icon="cloud-arrow-up" href="https://clawhub.ai/jiantoucn/skills/dropage-deploy">
+  **@jiantoucn** • `deploy` `hosting` `skill`
+
+告诉你的代理“部署这个 HTML”，大约一秒后就能拿到一个公开 URL。页面会在一小时后自动过期——无需服务器、无需配置、无需注册。
+</Card>
+
+<Card title="反诈骗 URL 检查器" icon="shield-halved" href="https://clawhub.ai/phishguard-niki/anti-scam-guard">
+  **@phishguard-niki** • `security` `phishing` `skill`
+
+粘贴任意 URL，立即获得判断结果。来自 38 个数据源（PhishTank、OpenPhish、CERT.PL 等）的 250 万+ 诈骗域名，本地匹配，因此浏览历史不会离开机器。
+</Card>
+
+<Card title="产品设计推理技能" icon="pen-ruler" href="https://clawhub.ai/monikazapisekstudio/skills/socratic-dialog">
+  **@monikazapisekstudio** • `product` `reasoning` `skills`
+
+一组三个用于产品工作的技能：[苏格拉底式对话](https://clawhub.ai/monikazapisekstudio/skills/socratic-dialog) 会在回答前对问题进行交叉质询，[Kano 模型策略师](https://clawhub.ai/monikazapisekstudio/skills/kano-model-strategist) 会将功能分类，判断哪些值得被纳入，而 [清晰易读的代理输出](https://clawhub.ai/monikazapisekstudio/skills/legible-agent-output) 会把代理输出改写成通俗语言。
+</Card>
+
+<Card title="用于子代理的邮箱中转器" icon="inbox" href="https://clawhub.ai/albzhu/skills/miab-broker">
+  **@albzhu** • `multi-agent` `async` `skill`
+
+让编排器在子代理工作时不必空等：一种异步回调机制，结果会进入邮箱，而不是阻塞父代理。
+</Card>
+
+<Card title="低内存机器的 lite 模式" icon="feather" href="https://clawhub.ai/skills/lite-mode">
+  **@mirajmahmudul** • `performance` `skill`
+
+让 OpenClaw 在 2-4 GB 机器上依然可用：在机器开始交换到磁盘之前检查可用内存并裁剪重量级功能。[GitHub 上的源码](https://github.com/mirajmahmudul/openclaw-lite-mode)。
+</Card>
+
+<Card title="tokenomics 成本追踪器" icon="coins" href="https://github.com/ncz-os/tokenomics">
+  **@ncz-os** • `devtools` `costs` `tokens`
+
+来自一位 NVIDIA 工程师的令牌成本追踪器，原生支持 OpenClaw：精确查看你的代理花费都去了哪里，按模型、按会话逐一显示。
+</Card>
+
+<Card title="Excalidraw 图表生成器" icon="shapes" href="https://x.com/swiftlysingh/status/2009684853827281070">
+  **@swiftlysingh** • `diagrams` `excalidraw` `devtools`
+
+在聊天中描述一个图表，就能得到一张程序化生成的 Excalidraw 草图。
+</Card>
+
+<Card title="GA4 分析技能" icon="chart-column" href="https://x.com/jdrhyne/status/2012028725710192741">
+  **@jdrhyne** • `analytics` `ga4` `skill`
+
+让 OpenClaw 构建了自己的 Google Analytics 查询工具，然后将其打包并发布到了 ClawHub。
+</Card>
+
+<Card title="ClawEval 模型排名" icon="ranking-star" href="https://github.com/AIgenteur/ClawEval">
+  **@AIgenteur** • `evals` `models` `devtools`
+
+在 59 个代理角色上对模型进行基准测试，回答“我的 GPU 该用哪个 LLM？”。这是社区里挑选本地模型的热门参考。
+</Card>
+
+<Card title="Music Craft" icon="music" href="https://clawhub.ai/luischarro/music-craft">
+  **@luischarro** • `music` `generation` `skill`
+
+与提供商无关的歌曲生成：先规划曲目、构建歌词结构，并对稀疏结果进行迭代修订，而不是一次性提示。还包含一个 [MiniMax 变体](https://clawhub.ai/luischarro/music-craft-minimax)，支持 BPM、调性、结构和 mashup 控制。
+</Card>
+
+<Card title="PR Review to Telegram Feedback" icon="code-pull-request" href="https://x.com/i/status/2010878524543131691">
   **@bangnokia** • `review` `github` `telegram`
 
 OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回复建议以及明确的合并结论。
@@ -71,7 +131,7 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
 通过 Homebrew 安装的助手，用于列出、检查和监视本地 OpenAI Codex 会话（CLI + VS Code）。
 </Card>
 
-<Card title="Bambu 3D Printer Control" icon="print" href="https://clawhub.ai/tobiasbischoff/skills/bambu-cli">
+<Card title="Bambu 3D 打印机控制" icon="print" href="https://clawhub.ai/tobiasbischoff/skills/bambu-cli">
   **@tobiasbischoff** • `hardware` `3d-printing` `skill`
 
 控制和排查 BambuLab 打印机：状态、任务、摄像头、AMS、校准等。
@@ -79,7 +139,7 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
   <img src="/assets/showcase/bambu-cli.png" alt="ClawHub 上的 Bambu CLI 技能" />
 </Card>
 
-<Card title="Vienna transport (Wiener Linien)" icon="train" href="https://clawhub.ai/hjanuschka/skills/wienerlinien">
+<Card title="维也纳交通（Wiener Linien）" icon="train" href="https://clawhub.ai/hjanuschka/skills/wienerlinien">
   **@hjanuschka** • `travel` `transport` `skill`
 
 维也纳公共交通的实时出发、延误、电梯状态和路线规划。
@@ -93,7 +153,7 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
 通过 ParentPay 自动预订英国学校餐食。使用鼠标坐标可靠地点击表格单元格。
 </Card>
 
-<Card title="R2 upload (Send Me My Files)" icon="cloud-arrow-up" href="https://clawhub.ai/julianengel/skills/r2-upload">
+<Card title="R2 上传（Send Me My Files）" icon="cloud-arrow-up" href="https://clawhub.ai/julianengel/skills/r2-upload">
   **@julianengel** • `files` `r2` `presigned-urls`
 
 上传到 Cloudflare R2/S3，并生成安全的预签名下载链接。适用于远程 OpenClaw 实例。
@@ -101,13 +161,13 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
   <img src="/assets/showcase/r2-upload.png" alt="ClawHub 上的 R2 上传技能" />
 </Card>
 
-<Card title="iOS app via Telegram" icon="mobile">
+<Card title="通过 Telegram 构建 iOS 应用" icon="mobile">
   **@coard** • `ios` `xcode` `app-store`
 
 通过 Telegram 聊天完整构建了一个带地图和语音录制功能的 iOS 应用，并已为 App Store 分发做好准备。
 </Card>
 
-<Card title="Oura Ring 健康助手" icon="heart-pulse">
+<Card title="Oura 戒指健康助手" icon="heart-pulse">
   **@AS** • `health` `oura` `calendar`
 
 将 Oura 戒指数据与日历、预约和健身安排集成的个人 AI 健康助手。
@@ -115,7 +175,7 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
   <img src="/assets/showcase/oura-health.png" alt="Oura 戒指健康助手" />
 </Card>
 
-<Card title="Kev's Dream Team（14+ 个代理）" icon="robot" href="https://github.com/adam91holt/orchestrated-ai-articles">
+<Card title="Kev 的梦之队（14+ 个代理）" icon="robot" href="https://github.com/adam91holt/orchestrated-ai-articles">
   **@adam91holt** • `multi-agent` `orchestration`
 
 一个网关下的 14+ 个代理，由 Opus 4.5 编排器委派给 Codex 工作器。有关代理沙箱，请参见 [技术说明](https://github.com/adam91holt/orchestrated-ai-articles) 和 [Clawdspace](https://github.com/adam91holt/clawdspace)。
@@ -207,7 +267,37 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 通过浏览器自动化登录 TradingView，截取图表，并按需执行技术分析。无需 API——只需浏览器控制。
 </Card>
 
-<Card title="Slack 自动支持" icon="slack">
+<Card title="Car negotiation ($4,200 saved)" icon="car-side" href="https://x.com/astuyve/status/2014147784098681217">
+  **@astuyve** • `negotiation` `email` `automation`
+
+让 OpenClaw 放手去和汽车经销商周旋：它处理了来回谈判，并把价格压低了 4,200 美元。
+</Card>
+
+<Card title="Flight check-in autopilot" icon="plane-departure" href="https://x.com/armanddp/status/2008767951340794245">
+  **@armanddp** • `travel` `email` `automation`
+
+在电子邮件中找到下一班航班，完成在线值机，并选择靠窗座位——无需航空公司应用程序。
+</Card>
+
+<Card title="Insurance claim filing" icon="file-signature" href="https://x.com/avi_press/status/2013066316467560521">
+  **@avi_press** • `automation` `insurance` `browser`
+
+自主提交了保险理赔并安排了后续预约。
+</Card>
+
+<Card title="Idealista real estate skill" icon="building" href="https://x.com/quifago/status/2012458753786859872">
+  **@quifago** • `real-estate` `api` `skill`
+
+用于房源查询和估价的 Idealista API CLI，被封装成一个技能，这样代理就能在聊天中帮忙找房。
+</Card>
+
+<Card title="Gardening business back office" icon="seedling" href="https://news.ycombinator.com/item?id=47783940">
+  **@mjsweet** • `automation` `email` `invoicing`
+
+监视 Gmail 中的工作订单，分析通过 Telegram 发送的物业照片，撰写多页 LaTeX 报价 PDF，并通过 Xero 开具发票。
+</Card>
+
+<Card title="Slack auto-support" icon="slack">
   **@henrymascot** • `slack` `automation` `support`
 
 监视公司 Slack 频道，给出有帮助的回复，并将通知转发到 Telegram。未被要求就自主修复了已部署应用中的一个生产 bug。
@@ -229,8 +319,34 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
   <img src="/assets/showcase/xuezh-pronunciation.jpeg" alt="xuezh 发音反馈" />
 </Card>
 
+<Card title="X 帖子分析流水线" icon="hashtag" href="https://x.com/andrewjiang/status/2008388427180630155">
+  **@andrewjiang** • `analysis` `x` `pipeline`
+
+抓取了 100 个顶级 X 账号的 400 万条帖子，并将它们转化为可查询的分析流水线。
+</Card>
+
+<Card title="Lab results to Notion" icon="flask" href="https://x.com/danpeguine/status/2013388700479058068">
+  **@danpeguine** • `health` `notion` `organization`
+
+将多年来的血液检测化验结果整理成了结构化的 Notion 数据库。
+</Card>
+
+<Card title="Obsidian 第二大脑" icon="book" href="https://notesbylex.com/openclaw-the-missing-piece-for-obsidians-second-brain">
+  **@lexandstuff** • `obsidian` `whatsapp` `memory`
+
+在 WhatsApp 上运行的日常助手，所有记忆都以 markdown 形式存储在一个受版本控制的 Obsidian vault 中：卡路里和锻炼追踪、待办事项清单、生活事务管理。
+
+  <img src="/assets/showcase/xuezh-pronunciation.jpeg" alt="xuezh 发音反馈" />
+</Card>
+
+<Card title="Family history bot" icon="people-roof" href="https://news.ycombinator.com/item?id=47783940">
+  **@brtkwr** • `telegram` `memory` `family`
+
+生活在一个家庭 Telegram 群聊中，记录跨越 50 多位亲属的故事，并提出有见地的后续问题——还会用尼泊尔语与母语使用者交流。
+</Card>
+
 <Card title="WhatsApp 记忆保险库" icon="vault">
-  **社区** • `记忆` `转录` `索引`
+  **社区** • `memory` `transcription` `indexing`
 
 导入完整的 WhatsApp 导出，转录 1000+ 条语音笔记，与 git 日志交叉核对，输出关联的 markdown 报告。
 </Card>
@@ -255,6 +371,24 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 
 <CardGroup cols={2}>
 
+<Card title="Pebble Ring 一键语音" icon="ring" href="https://x.com/thekitze/status/2014765279650189578">
+  **@thekitze** • `voice` `wearable` `hardware`
+
+轻触一次 Pebble Ring 即可开始与 OpenClaw 的语音对话——通过可穿戴设备访问智能体。
+</Card>
+
+<Card title="创作者媒体工作室" icon="clapperboard" href="https://x.com/cedric_chee/status/2014608153393168425">
+  **@cedric_chee** • `media` `tts` `transcription`
+
+聊天中集成的完整媒体工作室：TTS、转录和浏览器自动化，连接到 Codex 5.2 和 MiniMax。
+</Card>
+
+<Card title="Action Button 对讲机" icon="walkie-talkie" href="https://x.com/i/status/2072766510053888497">
+  **@buddyhadry** • `voice` `ios` `mobile`
+
+将 iPhone Action Button 连接到 OpenClaw：按下、说话，然后智能体像对讲机一样回话。
+</Card>
+
 <Card title="Clawdia 电话桥接" icon="phone" href="https://github.com/alejandroOPI/clawdia-bridge">
   **@alejandroOPI** • `voice` `vapi` `bridge`
 
@@ -264,7 +398,7 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 <Card title="OpenRouter 转录" icon="microphone" href="https://clawhub.ai/obviyus/skills/openrouter-transcribe">
   **@obviyus** • `transcription` `multilingual` `skill`
 
-多语言音频转录，通过 OpenRouter（Gemini 等）实现。可在 ClawHub 上使用。
+通过 OpenRouter（Gemini 等）实现的多语言音频转录。可在 ClawHub 上使用。
 
   <img src="/assets/showcase/openrouter-transcribe.png" alt="ClawHub 上的 OpenRouter 转录技能" />
 </Card>
@@ -291,6 +425,12 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
   <img src="/assets/showcase/homeassistant.png" alt="ClawHub 上的 Home Assistant 技能" />
 </Card>
 
+<Card title="macOS 菜单栏管理器" icon="desktop" href="https://x.com/MagiMetal/status/2009424267801485362">
+  **@MagiMetal** • `macos` `swift` `ui`
+
+显示代理状态并提供快捷控制的原生 Swift 菜单栏应用。
+</Card>
+
 <Card title="Nix 打包" icon="snowflake" href="https://github.com/openclaw/nix-openclaw">
   **@openclaw** • `nix` `packaging` `deployment`
 
@@ -312,6 +452,18 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 OpenClaw 面向物理世界的一面：家庭、传感器、摄像头、吸尘器和其他设备。
 
 <CardGroup cols={2}>
+
+<Card title="自建 HomePod 技能" icon="volume-high" href="https://x.com/localghost/status/2014763987683225685">
+  **@localghost** • `homepod` `discovery` `skill`
+
+OpenClaw 在本地网络中找到了 HomePod，并为它们编写了一个技能来控制它们。
+</Card>
+
+<Card title="35 美元全息立方体界面" icon="cube" href="https://x.com/andrewjiang/status/2013140793649734032">
+  **@andrewjiang** • `hardware` `display` `fun`
+
+一个廉价的全息立方体，作为代理在桌面上的实体化身。
+</Card>
 
 <Card title="GoHome 自动化" icon="house-signal" href="https://github.com/joshp123/gohome">
   **@joshp123** • `home` `nix` `grafana`
@@ -343,6 +495,12 @@ OpenClaw 面向物理世界的一面：家庭、传感器、摄像头、吸尘�
 完整的天文器材市集。围绕 OpenClaw 生态构建。
 </Card>
 
+<Card title="Clinch agent negotiation protocol" icon="handshake" href="https://clawhub.ai/publicstringapps/clinch">
+  **@publicstringapps** • `protocol` `p2p` `skill`
+
+开放的 agent-to-agent 协商：你的代理会与其他节点讨价还价、安排日程和服务协议，并对结果进行加密签名——你只需批准或拒绝。
+</Card>
+
 </CardGroup>
 
 ## 提交你的项目
@@ -363,3 +521,4 @@ OpenClaw 面向物理世界的一面：家庭、传感器、摄像头、吸尘�
 
 - [入门指南](/start/getting-started)
 - [OpenClaw](/start/openclaw)
+- [openclaw.ai 上的完整 X 展示](https://openclaw.ai/showcase/)

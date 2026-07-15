@@ -1,5 +1,5 @@
 ---
-summary: "LINE Messaging API 插件的设置、配置和使用"
+summary: "LINE 消息 API 插件的设置、配置和使用"
 read_when:
   - 你想将 OpenClaw 连接到 LINE
   - 你需要 LINE webhook + 凭证设置
@@ -134,13 +134,13 @@ openclaw pairing approve line <CODE>
 
 允许列表和策略：
 
-- `channels.line.dmPolicy`: `pairing | allowlist | open | disabled`（默认 `pairing`）
-- `channels.line.allowFrom`: 用于直接消息的已加入允许列表的 LINE 用户 ID；`dmPolicy: "open"` 需要 `["*"]`
-- `channels.line.groupPolicy`: `allowlist | open | disabled`（默认 `allowlist`）
-- `channels.line.groupAllowFrom`: 用于群组的已加入允许列表的 LINE 用户 ID
-- 每个群组的覆盖配置：`channels.line.groups.<groupId>.allowFrom`（以及 `enabled`、`requireMention`、`systemPrompt`、`skills`）
-- 静态发送者访问组可以通过 `allowFrom`、`groupAllowFrom` 以及每个群组的 `allowFrom` 中的 `accessGroup:<name>` 引用；参见 [访问组](/channels/access-groups)。
-- 运行时说明：如果 `channels.line` 完全缺失，运行时会在群组检查中回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
+- `channels.line.dmPolicy`: `pairing | allowlist | open | disabled` (默认 `pairing`)
+- `channels.line.allowFrom`: 用于直接消息的已列入允许名单的 LINE 用户 ID；`dmPolicy: "open"` 需要 `["*"]`
+- `channels.line.groupPolicy`: `allowlist | open | disabled` (默认 `allowlist`)
+- `channels.line.groupAllowFrom`: 用于群组的已列入允许名单的 LINE 用户 ID；直接消息的 `allowFrom` 条目不会允许群组发送者
+- 每个群组的覆盖项：`channels.line.groups.<groupId>.allowFrom`（以及 `enabled`、`requireMention`、`systemPrompt`、`skills`）。在 `groupPolicy: "allowlist"` 下，设置 `groupAllowFrom` 或每个群组的 `allowFrom`；空的群组允许名单会阻止群组消息，即使直接消息是开放的。
+- 静态发送者访问组可通过 `allowFrom`、`groupAllowFrom` 和每个群组的 `allowFrom` 使用 `accessGroup:<name>` 引用；参见 [访问组](/channels/access-groups)。
+- 运行时说明：如果 `channels.line` 完全缺失，运行时会对群组检查回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
 
 LINE ID 区分大小写。有效 ID 形式如下：
 
@@ -150,14 +150,11 @@ LINE ID 区分大小写。有效 ID 形式如下：
 
 ## 消息行为
 
-- 文本按 5000 个字符分块。
-- Markdown 格式会被去除；代码块和表格会在可能时转换为 Flex
-  卡片。
-- 流式响应会被缓冲；LINE 会在代理工作时接收完整分块并显示加载
-  动画。
-- 媒体下载受 `channels.line.mediaMaxMb` 限制（默认 10）。
-- 入站媒体在传递给代理之前会先保存到 `~/.openclaw/media/inbound/`，
-  与其他渠道插件使用的共享媒体存储保持一致。
+- Text is chunked into 5000-character blocks.
+- Markdown formatting will be removed; code blocks and tables will be converted to Flex cards when possible.
+- Streaming responses will be buffered; LINE will receive complete chunks while the agent is working and display a loading animation.
+- Media downloads are limited by `channels.line.mediaMaxMb` (default 10).
+- Inbound media will first be saved to `~/.openclaw/media/inbound/` before being passed to the agent, keeping consistency with the shared media storage used by other channel plugins.
 
 ## Channel data（富媒体消息）
 
@@ -177,9 +174,7 @@ LINE ID 区分大小写。有效 ID 形式如下：
       },
       flexMessage: {
         altText: "状态卡片",
-        contents: {
-          /* Flex 载荷 */
-        },
+        contents: {/* Flex payload */},
       },
       templateMessage: {
         type: "confirm",

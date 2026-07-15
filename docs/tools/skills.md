@@ -58,7 +58,21 @@ OpenClaw 从以下来源加载，**优先级从高到低**。当同名
   `openclaw migrate codex` 将它们复制到你的 OpenClaw 工作区。
 </Note>
 
-对于非交互式运行，请对要复制的精确技能重复使用 `--skill <name>`。
+## 节点托管技能
+
+已连接的无头节点可以发布其活动 OpenClaw
+技能目录中安装的技能（默认位于 `~/.openclaw/skills`；适用配置文件环境覆盖）。
+当节点连接时，这些技能会出现在正常的代理技能列表中，
+断开连接时则会消失。发生名称冲突时，本地或 Gateway 技能会保留其名称；
+节点技能会获得一个确定性的、以节点为前缀的名称。
+节点托管 v1 要求目录名称与该技能的 `name`
+frontmatter 字段匹配。
+
+技能条目包含节点定位器。其文件、相对引用和
+二进制文件都位于节点上，因此请使用 `exec host=node node=<node-id>` 来加载和执行它。
+更改其技能文件后，请重启节点主机。有关配对和关闭开关，请参见 [节点](/nodes#node-hosted-skills)。
+
+## 按代理与共享技能
 
 在多代理设置中，每个代理都有自己的工作区。请使用与你期望可见性匹配的路径：
 
@@ -182,7 +196,7 @@ openclaw skills workshop apply <proposal-id>
 </Warning>
 
 <AccordionGroup>
-  <Accordion title="Path containment">
+  <Accordion title="路径包含性">
     Workspace、project-agent 和 extra-dir 的技能发现仅接受其解析后的 realpath 仍位于已配置根目录内的技能根目录，除非
     `skills.load.allowSymlinkTargets` 明确信任某个目标根目录。
     只有在启用 `skills.workshop.allowSymlinkTargetWrites` 时，Skill Workshop 才会通过这些受信任的目标进行写入。
@@ -252,7 +266,7 @@ description: 通过基于提供商的图像工作流生成或编辑图像
 
 ## 门控
 
-OpenClaw 在加载时使用 `metadata.openclaw`（嵌入在 frontmatter 中的 JSON5 对象，参见上面的解析说明）来过滤 skills。没有 `metadata.openclaw` 块的 skill 默认始终符合条件，除非被显式禁用。
+OpenClaw 在加载时使用 `metadata.openclaw`（嵌入在 frontmatter 中的 JSON5 对象，参见上面的解析说明）来过滤技能。没有 `metadata.openclaw` 块的技能默认始终符合条件，除非被显式禁用。
 
 ```markdown
 ---
@@ -270,7 +284,7 @@ metadata:
 ```
 
 <ParamField path="always" type="boolean">
-  当为 `true` 时，始终包含该 skill，并跳过所有其他门控。
+  当为 `true` 时，始终包含该技能，并跳过所有其他门控。
 </ParamField>
 
 <ParamField path="emoji" type="string">
@@ -282,7 +296,7 @@ metadata:
 </ParamField>
 
 <ParamField path="os" type='("darwin" | "linux" | "win32")[]'>
-  平台过滤器。设置后，该 skill 仅在所列 OS 上符合条件。
+  平台过滤器。设置后，该技能仅在所列 OS 上符合条件。
 </ParamField>
 
 <ParamField path="requires.bins" type="string[]">
@@ -310,7 +324,7 @@ metadata:
 </ParamField>
 
 <Note>
-  当 `metadata.openclaw` 不存在时，仍然接受旧版 `metadata.clawdbot` 块，因此较早安装的 skills 仍可保留它们的依赖门控和安装提示。新 skills 应使用 `metadata.openclaw`。
+  当 `metadata.openclaw` 不存在时，仍然接受旧版 `metadata.clawdbot` 块，因此较早安装的技能仍可保留它们的依赖门控和安装提示。新技能应使用 `metadata.openclaw`。
 </Note>
 
 ### 安装器规格
@@ -347,13 +361,13 @@ metadata:
     - 当列出多个安装器时，gateway 会选择一个首选项（可用时优先 brew，否则 node）。
     - 如果所有安装器都是 `download`，OpenClaw 会列出每个条目，以便你查看所有可用制品。
     - 规格可以包含 `os: ["darwin"|"linux"|"win32"]` 来按平台过滤。
-    - Node 安装会遵循 `openclaw.json` 中的 `skills.install.nodeManager`（默认：npm；可选：npm / pnpm / yarn / bun）。这只影响 skill 安装；Gateway 运行时仍应使用 Node。
+    - Node 安装会遵循 `openclaw.json` 中的 `skills.install.nodeManager`（默认：npm；可选：npm / pnpm / yarn / bun）。这只影响技能安装；Gateway 运行时仍应使用 Node。
     - Gateway 安装器优先级：Homebrew → uv → 已配置的 node manager → go → download。
   </Accordion>
   <Accordion title="每个安装器的详细信息">
     - **Homebrew:** OpenClaw 不会自动安装 Homebrew，也不会将 brew
       formula 转换为系统包命令。在没有 `brew` 的 Linux 容器中，只显示非 brew 专用的安装器；请使用自定义镜像或手动安装依赖。
-    - **Go:** OpenClaw 进行自动 skill 安装时要求 Go 1.21 或更高版本。
+    - **Go:** OpenClaw 进行自动技能安装时要求 Go 1.21 或更高版本。
       如果缺少 `go` 且 Homebrew 可用，OpenClaw 会先通过 Homebrew 安装 Go；在没有 Homebrew 的 Linux 上，如果刷新后的 `golang-go` 候选版本满足最低版本要求，也可以改用 `apt-get` 以 root 或通过免密 `sudo` 来安装。依赖项实际执行的 `go install` 总是目标为专用的、由 OpenClaw 管理的 bin 目录（全新安装时为 Homebrew 的 `bin`，否则为 `~/.local/bin`），而不是你配置的 `GOBIN` —— 你自己的 `GOBIN`、`GOPATH` 和 `GOTOOLCHAIN`
       环境变量会被读取，但绝不会被覆盖。
     - **Download:** `url`（必填）、`archive`（`tar.gz` | `tar.bz2` | `zip`）、
@@ -361,7 +375,7 @@ metadata:
       `targetDir`（默认：`~/.openclaw/tools/<skillKey>`）。
   </Accordion>
   <Accordion title="沙箱说明">
-    `requires.bins` 会在 skill 加载时于**主机**上检查。如果 agent 在沙箱中运行，该二进制文件也必须存在于**容器内**。请通过 `agents.defaults.sandbox.docker.setupCommand` 或自定义镜像安装它。`setupCommand` 会在容器创建后运行一次，并且需要沙箱具备网络外连、可写的根文件系统以及 root 用户。
+    `requires.bins` 会在技能加载时于**主机**上检查。如果 agent 在沙箱中运行，该二进制文件也必须存在于**容器内**。请通过 `agents.defaults.sandbox.docker.setupCommand` 或自定义镜像安装它。`setupCommand` 会在容器创建后运行一次，并且需要沙箱具备网络外连、可写的根文件系统以及 root 用户。
   </Accordion>
 </AccordionGroup>
 
@@ -423,7 +437,7 @@ metadata:
   <Step title="读取 skill 元数据">
     OpenClaw 会解析 agent 的有效 skill 列表，应用门控规则、允许列表和配置覆盖。
   </Step>
-  <Step title="注入环境变量和 API keys">
+  <Step title="注入环境变量和 API 密钥">
     `skills.entries.<key>.env` 和 `skills.entries.<key>.apiKey` 会在运行期间应用到
     `process.env`。
   </Step>
@@ -492,7 +506,8 @@ OpenClaw 会在会话开始时对符合条件的 skills 进行快照，并在该
 - XML 转义会将 `& < > " '` 展开为实体，因此每次出现都会增加少量字符。
 - 按每 token 约 4 个字符计算，97 个字符 ≈ 每个 skill 24 个 token，尚未计入字段长度。
 
-如果渲染后的块会超过配置的提示词预算（`skills.limits.maxSkillsPromptChars`），OpenClaw 会先去掉描述（紧凑格式：仅保留 name + location），然后截断 skill 列表，并添加一条指向 `openclaw skills check` 的提示。
+如果渲染后的块会超过配置的提示词预算
+（`skills.limits.maxSkillsPromptChars`），OpenClaw 会首先尽可能保留尽量多的 skill 标识（name、location 和 version），这些信息可以放入不含描述的紧凑格式中。然后会使用剩余预算放入缩短后的描述。如果不再有描述预算，则会省略描述。只要需要紧凑格式或列表截断，提示词中就会包含一条指向 `openclaw skills check` 的提示。
 
 请保持描述简短且具有描述性，以尽量减少提示词开销
 

@@ -174,22 +174,34 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 
 使用 `channels.mattermost.replyToMode` 来控制频道和群组回复是保持在主频道中，还是在触发消息下方开启一个线程。
 
-- `off`（默认）：仅当传入的帖子本身已经位于线程中时，才在线程中回复。
-- `first`：对于顶级频道/群组帖子，在该帖子下创建一个线程，并将对话路由到线程范围的会话中。
-- `all` 和 `batched`：在 Mattermost 中当前与 `first` 的行为相同，因为一旦 Mattermost 有了线程根，后续分块和媒体内容会继续留在同一个线程中。
-- 直接消息会忽略此设置，并保持非线程化。
+- `off` (默认)：仅当传入的帖子已经位于线程中时，才在线程中回复。
+- `first`：对于顶级频道/群组帖子，在该帖子下方发起一个线程，并将对话路由到线程作用域的会话中。
+- `all` 和 `batched`：在当前 Mattermost 中与 `first` 的行为相同，因为一旦 Mattermost 有了线程根消息，后续的分块和媒体会继续留在同一个线程中。
+- 即使设置了 `replyToMode`，直接消息默认仍为 `off`。
+
+使用 `channels.mattermost.replyToModeByChatType` 来覆盖 `direct`、`group` 或 `channel` 聊天的模式。将 `direct` 设置为可让直接消息使用线程：
+
+- `off` (默认)：直接消息保持为非线程式，处于单个滚动会话中。
+- `first`、`all` 或 `batched`：每条顶级直接消息都会启动一个 Mattermost 线程，并由一个全新、独立的会话来支持。
 
 ```json5
 {
   channels: {
     mattermost: {
       replyToMode: "all",
+      replyToModeByChatType: {
+        direct: "first",
+      },
     },
   },
 }
 ```
 
-线程范围的会话使用触发帖子 id 作为线程根。
+注意：
+
+- 线程作用域的会话使用触发该消息的帖子 id 作为线程根。
+- `first` 和 `all` 目前等价，因为一旦 Mattermost 有了线程根，后续的分块和媒体会继续留在同一个线程中。
+- 按聊天类型的覆盖设置优先于 `replyToMode`。如果没有 `direct` 覆盖，现有部署将继续保持扁平、非线程式的 DM。
 
 ## 访问控制（私信）
 
@@ -227,28 +239,28 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 }
 ```
 
-## 出站投递目标
+## Outbound Delivery Targets
 
-在 `openclaw message send` 或 cron/webhook 中使用以下目标格式：
+Use the following target formats in `openclaw message send` or cron/webhook:
 
 | Target                              | Delivers to                                                   |
 | ----------------------------------- | ------------------------------------------------------------- |
-| `channel:<id>`                      | 按 id 发送到频道                                                |
-| `channel:<name>` or `#channel-name` | 按名称发送到频道，在 bot 所属的团队中搜索                    |
-| `user:<id>` or `mattermost:<id>`    | 与该用户的 DM                                                  |
-| `@username`                         | DM（通过 Mattermost API 解析用户名）                 |
+| `channel:<id>`                      | Send to a channel by id                                           |
+| `channel:<name>` or `#channel-name` | Send to a channel by name, searching within the team the bot belongs to |
+| `user:<id>` or `mattermost:<id>`    | DM with that user                                                  |
+| `@username`                         | DM (resolves username through the Mattermost API)                 |
 
-出站发送每条消息最多支持一个附件；多个文件请拆分为多次发送。
+Outbound sending supports at most one attachment per message; please split multiple files into multiple sends.
 
 <Warning>
-裸的模糊 ID（如 `64ifufp...`）在 Mattermost 中是**有歧义的**（用户 ID 还是频道 ID）。
+Bare ambiguous IDs (such as `64ifufp...`) are **ambiguous** in Mattermost (user ID or channel ID).
 
-OpenClaw 会按**先用户后频道**的顺序解析它们：
+OpenClaw resolves them in **user-first, then channel** order:
 
-- 如果该 ID 作为用户存在（`GET /api/v4/users/<id>` 成功），OpenClaw 会通过 `/api/v4/channels/direct` 解析直接频道并发送 **私信**。
-- 否则，该 ID 会被视为 **频道 ID**。
+- If the ID exists as a user (`GET /api/v4/users/<id>` succeeds), OpenClaw will resolve the direct channel via `/api/v4/channels/direct` and send a **DM**.
+- Otherwise, the ID will be treated as a **channel ID**.
 
-如果你需要确定性的行为，请始终使用显式前缀（`user:<id>` / `channel:<id>`）。
+If you need deterministic behavior, always use explicit prefixes (`user:<id>` / `channel:<id>`).
 </Warning>
 
 ## 私信频道重试
@@ -280,32 +292,32 @@ OpenClaw 会按**先用户后频道**的顺序解析它们：
 
 ## 预览流式输出
 
-Mattermost 会将思考、工具活动和部分回复文本流式汇入单个**草稿预览消息**中，并在最终答案安全可发送时就地完成。预览会在同一个消息 id 上更新，而不是通过每个分块消息刷屏频道。媒体/错误的最终结果会取消待处理的预览编辑，并使用正常投递，而不是刷新一个会被丢弃的预览消息。
+Mattermost 会将思考过程、工具活动和部分回复文本流式写入一个**草稿预览帖子**，当最终答案可安全发送时，会在原地完成。 在 `partial` 模式下，预览会在同一个帖子 ID 上更新，而不是通过每个分块消息刷屏频道。 在 `block` 模式下，预览会在已完成文本和工具活动块之间轮换，因此较早的块会作为各自的帖子保持可见，而不会被下一个块覆盖。 媒体/错误类最终结果会取消待处理的预览编辑，并使用正常投递，而不是刷新一个一次性的预览帖子。
 
-Preview streaming is **默认开启** in `partial` mode. Configure via `channels.mattermost.streaming` (a mode string, boolean, or an object like `{ mode: "progress" }`):
+预览流式输出默认在 `partial` 模式下**开启**。 可通过 `channels.mattermost.streaming.mode` 配置（旧的标量/布尔 `streaming` 值会由 `openclaw doctor --fix` 迁移）：
 
 ```json5
 {
   channels: {
     mattermost: {
-      streaming: "partial", // 关闭 | 部分 | 块 | 进度
+      streaming: { mode: "partial" }, // 关闭 | partial | block | progress
     },
   },
 }
 ```
 
 <AccordionGroup>
-  <Accordion title="Streaming modes">
-    - `partial`（默认）：一条预览帖子会随着回复增长而被编辑，随后以完整答案完成。
-    - `block` 在预览帖子内使用追加式草稿分块。
+  <Accordion title="流式模式">
+    - `partial`（默认）：一个预览帖子会随着回复增长而被编辑，最后以完整答案完成。
+    - `block` 会在已完成文本和工具活动块之间轮换预览，因此每个块都会作为自己的帖子保持可见，而不是就地被覆盖。并行和连续的工具更新会共享当前的工具活动帖子。
     - `progress` 在生成过程中显示状态预览，并且只在完成时发布最终答案。
-    - `off` 禁用预览流式输出。
+    - `off` 禁用预览流式输出。使用 `streaming.block.enabled: true` 时，已完成的助手块仍会作为正常的块回复（独立帖子）发送，而不是合并成单个最终帖子。
 
   </Accordion>
   <Accordion title="流式行为说明">
     - 如果流无法就地完成（例如帖子在流式过程中被删除），OpenClaw 会回退并发送一个新的最终帖子，以确保回复不会丢失。
     - 仅思考内容的负载会被从频道帖子中抑制，包括作为 `> Thinking` 块引用到达的文本。设置 `/reasoning on` 可在其他界面中查看思考内容；Mattermost 最终帖子只保留答案。
-    - 请参见 [Streaming](/concepts/streaming#preview-streaming-modes) 了解通道映射矩阵。
+    - 请参见 [流式输出](/concepts/streaming#preview-streaming-modes) 了解通道映射矩阵。
 
   </Accordion>
 </AccordionGroup>
@@ -337,7 +349,7 @@ message action=react channel=mattermost target=channel:<channelId> messageId=<po
 按钮来自语义 `presentation` 负载（在普通 agent 回复和 `message action=send` 中）。OpenClaw 将值按钮渲染为 Mattermost 交互式按钮，将 URL 按钮保留在消息文本中，并将选择菜单降级为可读文本。
 
 ```text
-message action=send channel=mattermost target=channel:<channelId> presentation={"blocks":[{"type":"buttons","buttons":[{"label":"Yes","value":"yes"},{"label":"No","value":"no"}]}]}
+message action=send channel=mattermost target=channel:<channelId> presentation={"blocks":[{"type":"buttons","buttons":[{"label":"是","value":"yes"},{"label":"否","value":"no"}]}]}
 ```
 
 Presentation button fields:
@@ -374,7 +386,7 @@ Presentation button fields:
     点击者必须通过与消息发送者相同的 DM/群组策略检查；未经授权的点击会收到临时通知并被忽略。
   </Step>
   <Step title="按钮替换为确认信息">
-    所有按钮都会被一条确认行替换（例如，“✓ **Yes** 已由 @user 选择”）。
+    所有按钮都会被一条确认行替换（例如，“✓ **是** 已由 @user 选择”）。
   </Step>
   <Step title="Agent 接收所选内容">
     agent 会将所选内容作为入站消息（外加一个系统事件）接收并作出响应。
@@ -386,7 +398,7 @@ Presentation button fields:
     - 按钮回调使用 HMAC-SHA256 验证（自动完成，无需配置）。
     - 点击时会替换整个附件块，因此所有按钮会一起被移除 - 不支持部分移除。
     - 含有连字符或下划线的 action ID 会被自动清理（Mattermost 路由限制）。
-    - `action_id` 与原始帖子上的某个 action 不匹配的点击会被以 `403`（"Unknown action"）拒绝。
+    - `action_id` 与原始帖子上的某个 action 不匹配的点击会被以 `403`（"未知操作"）拒绝。
 
   </Accordion>
   <Accordion title="配置与可达性">
@@ -418,7 +430,7 @@ Presentation button fields:
           {
             id: "mybutton01", // 仅限字母数字 - 见下文
             type: "button", // 必需，否则点击会被静默忽略
-            name: "Approve", // 显示标签
+            name: "批准", // 显示标签
             style: "primary", // 可选："default"、"primary"、"danger"
             integration: {
               url: "https://gateway.example.com/mattermost/interactions/default",
@@ -561,8 +573,8 @@ Mattermost 支持在 `channels.mattermost.accounts` 下配置多个账号：
 
 ## 相关内容
 
-- [Channel Routing](/channels/channel-routing) - 消息的会话路由
-- [Channels Overview](/channels) - 所有支持的频道
-- [Groups](/channels/groups) - 群聊行为和 mention gating
-- [Pairing](/channels/pairing) - DM 认证和配对流程
-- [Security](/gateway/security) - 访问模型和加固
+- [频道路由](/channels/channel-routing) - 消息的会话路由
+- [频道概览](/channels) - 所有支持的频道
+- [群组](/channels/groups) - 群聊行为和 mention gating
+- [配对](/channels/pairing) - DM 认证和配对流程
+- [安全性](/gateway/security) - 访问模型和加固

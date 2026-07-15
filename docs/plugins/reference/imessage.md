@@ -16,8 +16,8 @@ title: "iMessage 插件"
 
 ## 接入层
 
-channels: imessage
+channels: iMessage; skills
 
 ## 相关文档
 
-- [imessage](/channels/imessage)
+- [iMessage](/channels/imessage)

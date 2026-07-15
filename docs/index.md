@@ -9,13 +9,13 @@ title: "OpenClaw"
 
 <p align="center">
     <img
-        src="/assets/openclaw-logo-text-dark.png"
+        src="/assets/openclaw-hero-light.png"
         alt="OpenClaw"
         width="500"
         class="dark:hidden"
     />
     <img
-        src="/assets/openclaw-logo-text.png"
+        src="/assets/openclaw-hero-dark.png"
         alt="OpenClaw"
         width="500"
         class="hidden dark:block"
@@ -33,11 +33,55 @@ title: "OpenClaw"
   <Card title="开始使用" href="/start/getting-started" icon="rocket">
     安装 OpenClaw，并在几分钟内启动网关。
   </Card>
-  <Card title="运行引导" href="/start/wizard" icon="sparkles">
+  <Card title="入门引导" href="/start/wizard" icon="list-checks">
     使用 `openclaw onboard` 和配对流程进行引导式设置。
   </Card>
-  <Card title="打开控制 UI" href="/web/control-ui" icon="layout-dashboard">
-    启动浏览器仪表板，用于聊天、配置和会话。
+  <Card title="连接频道" href="/channels" icon="message-circle">
+    连接 Discord、Signal、Telegram、WhatsApp 等，即可随时随地聊天。
+  </Card>
+  <Card title="打开控制界面" href="/web/control-ui" icon="layout-dashboard">
+    启动用于聊天、配置和会话的浏览器仪表盘。
+  </Card>
+</Columns>
+
+## 浏览文档
+
+移动浏览器可能会显示章节菜单，而不会显示完整的桌面端标签栏。请使用
+这些中心链接，从页面正文进入相同的顶级文档区域。
+
+<Columns>
+  <Card title="快速开始" href="/" icon="rocket">
+    概览、展示、第一步和设置指南。
+  </Card>
+  <Card title="安装" href="/install" icon="download">
+    安装路径、更新、容器、托管和高级设置。
+  </Card>
+  <Card title="频道" href="/channels" icon="messages-square">
+    消息频道、配对、路由、访问组和频道 QA。
+  </Card>
+  <Card title="代理" href="/concepts/architecture" icon="bot">
+    架构、会话、上下文、记忆和多代理路由。
+  </Card>
+  <Card title="功能" href="/tools" icon="wand-sparkles">
+    工具、技能、cron、webhook 和自动化功能。
+  </Card>
+  <Card title="ClawHub" href="/clawhub" icon="store">
+    插件市场、发布、精选与信任指南。
+  </Card>
+  <Card title="模型" href="/providers" icon="brain">
+    提供商、模型配置、故障切换和本地模型服务。
+  </Card>
+  <Card title="平台" href="/platforms" icon="monitor-smartphone">
+    macOS、Windows、iOS、Android、节点和 Web 界面。
+  </Card>
+  <Card title="网关与运维" href="/gateway" icon="server">
+    网关配置、安全性、诊断和运维。
+  </Card>
+  <Card title="参考" href="/cli" icon="terminal">
+    CLI 参考、模式、RPC、发行说明和模板。
+  </Card>
+  <Card title="帮助" href="/help" icon="life-buoy">
+    故障排查、常见问题、测试、诊断和环境检查。
   </Card>
 </Columns>
 
@@ -54,7 +98,7 @@ OpenClaw 是一个**自托管网关**，可通过频道插件将你最喜欢的�
 - **面向代理**：为支持工具使用、会话、记忆和多代理路由的编码代理而构建
 - **开源**：MIT 许可，社区驱动
 
-**你需要什么？** Node 24（推荐），或 Node 22 LTS（`22.19+`）以保证兼容性、来自你所选提供商的 API 密钥，以及 5 分钟。为获得最佳质量和安全性，请使用可用的最强最新一代模型。
+**你需要什么？** Node 24.15+（推荐）、用于兼容性的 Node 22 LTS（`22.22.3+`），或 Node 25.9+；你所选提供商的 API 密钥，以及 5 分钟。为了获得最佳质量和安全性，请使用当前可用的最强最新一代模型。
 
 ## 它是如何工作的
 

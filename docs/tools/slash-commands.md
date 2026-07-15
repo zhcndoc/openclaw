@@ -1,20 +1,19 @@
 ---
-title: "斜杠命令"
-sidebarTitle: "斜杠命令"
-summary: "所有可用的斜杠命令、指令和行内快捷方式——配置、路由以及按界面的行为。"
+title: "Slash Commands"
+sidebarTitle: "Slash Commands"
+summary: "All available slash commands, instructions, and inline shortcuts—configuration, routing, and interface-specific behavior."
 read_when:
-  - 使用或配置聊天命令时
-  - 调试命令路由或权限时
-  - 理解技能命令如何注册时
+  - when using or configuring chat commands
+  - when debugging command routing or permissions
+  - when understanding how skill commands are registered
 ---
 
-Gateway 处理以 `/` 开头、作为独立消息发送的命令。
-仅主机可用的 bash 命令使用 `! <cmd>`（`/bash <cmd>` 为别名）。
+Gateway handles commands that begin with `/` and are sent as standalone messages.
+Host-only bash commands use `! <cmd>` (`/bash <cmd>` is an alias).
 
-当会话绑定到 ACP 会话时，普通文本会路由到 ACP
-harness。Gateway 管理命令仍保留在本地：`/acp ...` 始终会到达
-OpenClaw 命令处理器，而 `/status` 和 `/unfocus` 会在该界面启用
-命令处理时始终保持本地执行。
+When a session is bound to an ACP session, normal text is routed to the ACP
+harness. Gateway management commands remain local: `/acp ...` always reaches the
+OpenClaw command handler, while `/status` and `/unfocus` stay local when command handling is enabled in that interface.
 
 ## 三种命令类型
 
@@ -134,19 +133,19 @@ OpenClaw 命令处理器，而 `/status` 和 `/unfocus` 会在该界面启用
 
 ## 命令列表
 
-Commands come from three sources:
+Commands 来自三个来源：
 
-- **Core built-ins:** `src/auto-reply/commands-registry.shared.ts`
-- **Generated dock commands:** `src/auto-reply/commands-registry.data.ts`
-- **Plugin commands:** plugin `registerCommand()` calls
+- **核心内置：** `src/auto-reply/commands-registry.shared.ts`
+- **生成的 dock 命令：** `src/auto-reply/commands-registry.data.ts`
+- **插件命令：** 插件的 `registerCommand()` 调用
 
-Availability depends on config flags, channel surface, and installed/enabled
-plugins.
+可用性取决于配置标志、频道表面，以及已安装/已启用的
+插件。
 
-### Core commands
+### 核心命令
 
 <AccordionGroup>
-  <Accordion title="Sessions and runs">
+  <Accordion title="会话与运行">
     | 命令 | 描述 |
     | --- | --- |
     | `/new [model]` | 将当前会话归档并开始一个新会话 |
@@ -169,7 +168,7 @@ plugins.
 
   </Accordion>
 
-  <Accordion title="Model and run controls">
+  <Accordion title="模型与运行控制">
     | 命令 | 描述 |
     | --- | --- |
     | `/think <level\|default>` | 设置思考级别或清除会话覆盖。别名：`/thinking`、`/t` |
@@ -186,7 +185,7 @@ plugins.
     | `/steer <message>` | 将指引注入到活动运行中。别名：`/tell`。参见 [Steer](/tools/steer) |
 
     <AccordionGroup>
-      <Accordion title="verbose / trace / fast / reasoning safety">
+      <Accordion title="verbose / trace / fast / reasoning 安全性">
         - `/verbose` 用于调试——正常使用时请保持**关闭**。
         - `/trace` 只会显示插件拥有的跟踪/调试行；普通的 verbose 输出仍保持关闭。
         - `/fast auto|on|off` 会持久化会话覆盖；使用 Sessions UI 的 `inherit` 选项可清除它。
@@ -194,7 +193,7 @@ plugins.
         - `/reasoning`、`/verbose` 和 `/trace` 在群组场景中存在风险——它们可能泄露内部推理或插件诊断信息。请在群聊中保持关闭。
 
       </Accordion>
-      <Accordion title="Model switching details">
+      <Accordion title="模型切换详情">
         - `/model` 会立即将新模型持久化到会话中。
         - 如果代理处于空闲状态，下一次运行会立即使用它。
         - 如果运行正在进行，切换会被标记为待处理，并在下一次干净的重试点应用。
@@ -204,33 +203,34 @@ plugins.
 
   </Accordion>
 
-  <Accordion title="Discovery and status">
+  <Accordion title="发现与状态">
     | 命令 | 描述 |
     | --- | --- |
     | `/help` | 显示简短帮助摘要 |
     | `/commands` | 显示生成的命令目录 |
-    | `/tools [compact\|verbose]` | 显示当前代理现在可以使用的内容 |
+    | `/tools [compact\|verbose]` | 显示当前代理此刻可用的工具 |
     | `/status` | 显示执行/运行时状态、Gateway 和系统运行时间、插件健康状态，以及提供方使用量/配额 |
-    | `/status plugins` | 显示详细的插件健康信息：加载错误、隔离、频道插件故障、依赖问题、兼容性提示。需要 `commands.plugins: true` |
-    | `/goal [status\|start\|pause\|resume\|complete\|block\|clear] ...` | 管理当前会话的持久化 [goal](/tools/goal) |
-    | `/diagnostics [note]` | 仅限 owner 的支持报告流程。每次都会请求 exec 批准 |
-    | `/crestodian <request>` | 从 owner 的 DM 中运行 Crestodian 设置和修复助手 |
-    | `/tasks` | 列出当前会话的活动/最近后台任务 |
+    | `/status plugins` | 显示详细的插件健康信息：加载错误、隔离、频道插件失败、依赖问题、兼容性提示。需要 `commands.plugins: true` |
+    | `/goal [status\|start\|edit\|pause\|resume\|complete\|block\|clear] ...` | 管理当前会话的持久化 [goal](/tools/goal) |
+    | `/diagnostics [note]` | 仅 owner 可用的支持报告流程。每次都会请求 exec 批准 |
+    | `/crestodian <request>` | 从 owner DM 中运行 Crestodian 设置和修复助手 |
+    | `/tasks` | 列出当前会话活跃/最近的后台任务 |
     | `/context [list\|detail\|map\|json]` | 解释上下文如何组装 |
     | `/whoami` | 显示你的发送者 id。别名：`/id` |
-    | `/usage off\|tokens\|full\|reset\|cost` | 控制每次响应的使用量页脚（`reset`/`inherit`/`clear`/`default` 会清除会话覆盖以重新继承已配置默认值），或打印本地成本摘要 |
+    | `/usage off\|tokens\|full\|reset\|cost` | 控制每次回复的 usage 页脚（`reset`/`inherit`/`clear`/`default` 会清除会话覆盖以重新继承已配置的默认值），或打印本地成本摘要 |
   </Accordion>
 
-  <Accordion title="Skills, allowlists, approvals">
+  <Accordion title="技能、允许列表、批准">
     | 命令 | 描述 |
     | --- | --- |
-    | `/skill <name> [input]` | 按名称运行一个技能 |
+    | `/skill <name> [input]` | 以名称运行某个技能 |
+    | `/learn [request]` | 通过 [Skill Workshop](/tools/skill-workshop) 根据当前对话或命名来源草拟一个可审阅的技能 |
     | `/allowlist [list\|add\|remove] ...` | 管理允许列表条目。仅文本 |
     | `/approve <id> <decision>` | 处理 exec 或插件批准提示 |
-    | `/btw <question>` | 在不更改会话上下文的情况下提出一个旁路问题。别名：`/side`。参见 [BTW](/tools/btw) |
+    | `/btw <question>` | 在不更改会话上下文的情况下提出旁支问题。别名：`/side`。参见 [BTW](/tools/btw) |
   </Accordion>
 
-  <Accordion title="Subagents and ACP">
+  <Accordion title="子代理与 ACP">
     | 命令 | 描述 |
     | --- | --- |
     | `/subagents list\|log\|info` | 检查当前会话的子代理运行情况 |
@@ -240,7 +240,7 @@ plugins.
     | `/agents` | 列出当前会话的线程绑定代理 |
   </Accordion>
 
-  <Accordion title="Owner-only writes and admin">
+  <Accordion title="仅 owner 可写和管理员">
     | 命令 | 需要 | 描述 |
     | --- | --- | --- |
     | `/config show\|get\|set\|unset` | `commands.config: true` | 读写 `openclaw.json`。仅限 owner |
@@ -251,7 +251,7 @@ plugins.
     | `/send on\|off\|inherit` | owner | 设置发送策略 |
   </Accordion>
 
-  <Accordion title="Voice, TTS, channel control">
+  <Accordion title="语音、TTS、频道控制">
     | 命令 | 描述 |
     | --- | --- |
     | `/tts on\|off\|status\|chat\|latest\|provider\|limit\|summary\|audio\|help` | 控制 TTS。参见 [TTS](/tools/tts) |
@@ -281,12 +281,12 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 | 命令                                                 | 描述                                                                                                                                                                                    |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dreaming [on\|off\|status\|help]`                     | 切换记忆梦境功能（owner 或 Gateway 管理员）。参见 [Dreaming](/concepts/dreaming)                                                                                                            |
+| `/dreaming [on\|off\|status\|help]`                     | 切换记忆做梦（owner 或 Gateway 管理员）。参见 [Dreaming](/concepts/dreaming)                                                                                                            |
 | `/pair [qr\|status\|pending\|approve\|cleanup\|notify]` | 管理设备配对。参见 [Pairing](/channels/pairing)                                                                                                                                        |
-| `/phone status\|arm ...\|disarm`                        | 临时启用高风险 phone 节点命令                                                                                                                                                  |
-| `/voice status\|list\|set <voiceId>`                    | 管理 Talk 语音配置。Discord 原生名称：`/talkvoice`                                                                                                                                    |
+| `/phone status\|arm ...\|disarm`                        | 临时武装高风险节点命令（camera/screen/computer/writes）。参见 [Computer use](/nodes/computer-use)                                                                               |
+| `/voice status\|list\|set <voiceId>`                    | 管理 Talk 语音配置。Discord 原生命令名：`/talkvoice`                                                                                                                                    |
 | `/card ...`                                             | 发送 LINE 富卡片预设。参见 [LINE](/channels/line)                                                                                                                                        |
-| `/codex <action> ...`                                   | 绑定、引导并检查 Codex 应用服务器 harness（status、threads、resume、model、fast、permissions、compact、review、mcp、skills 等）。参见 [Codex harness](/plugins/codex-harness) |
+| `/codex <action> ...`                                   | 绑定、指引并检查 Codex 应用服务器支架（status、threads、resume、model、fast、permissions、compact、review、mcp、skills 等）。参见 [Codex harness](/plugins/codex-harness) |
 
 仅 QQBot：`/bot-ping`、`/bot-version`、`/bot-help`、`/bot-upgrade`、`/bot-logs`
 
@@ -301,7 +301,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 - 名称会被规范化为 `a-z0-9_`（最多 32 个字符）；冲突会追加数字后缀。
 
 <AccordionGroup>
-  <Accordion title="Skill command dispatch">
+  <Accordion title="技能命令分发">
     默认情况下，技能命令会作为普通请求路由到模型。
 
     技能可以声明 `command-dispatch: tool`，从而直接路由到某个工具
@@ -309,7 +309,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
     —— 参见 [OpenProse](/prose)。
 
   </Accordion>
-  <Accordion title="Native command arguments">
+  <Accordion title="原生命令参数">
     当省略必需参数时，Discord 会使用自动补全来处理动态选项和按钮菜单。Telegram 和 Slack 会为具有选项的命令显示按钮菜单。动态选项会针对目标会话模型进行解析，因此像 `/think` 等特定于模型的选项级别会遵循会话的 `/model` 覆盖。
   </Accordion>
 </AccordionGroup>
@@ -369,6 +369,8 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 ```
 
 `/mcp` 将配置存储在 OpenClaw 配置中，而不是嵌入式代理项目设置中。
+`/mcp show` 会对含有凭据的字段、已识别的凭据标志值以及已知的密钥形参数组进行脱敏。  
+当在群组中运行时，配置会私下发送给 owner；如果没有可用的私有 owner 路由，命令将默认失败并要求 owner 从直接聊天中重试。
 
 ## `/debug`：仅运行时覆盖
 

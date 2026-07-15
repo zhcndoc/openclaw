@@ -10,16 +10,16 @@ title: "设备"
 
 管理设备配对请求和设备范围的令牌。
 
-## 常用选项
+## Common Options
 
-- `--url <url>`：网关 WebSocket URL（配置后默认为 `gateway.remote.url`）
-- `--token <token>`：网关令牌（如需要）
-- `--password <password>`：网关密码（密码认证）
-- `--timeout <ms>`：RPC 超时时间
-- `--json`：JSON 输出（建议用于脚本）
+- `--url <url>`: Gateway WebSocket URL (defaults to `gateway.remote.url` after configuration)
+- `--token <token>`: Gateway token (if required)
+- `--password <password>`: Gateway password (password authentication)
+- `--timeout <ms>`: RPC timeout
+- `--json`: JSON output (recommended for scripts)
 
 <Warning>
-当你设置 `--url` 时，CLI 不会回退到配置或环境凭据。请显式传入 `--token` 或 `--password`，否则命令会报错。
+When you set `--url`, the CLI will not fall back to configuration or environment credentials. Please explicitly pass `--token` or `--password`, otherwise the command will fail.
 </Warning>
 
 ## 命令
@@ -34,6 +34,8 @@ openclaw devices list --json
 ```
 
 对于已配对设备上的待处理请求，输出会在设备当前已批准访问权限旁显示请求的访问权限，因此范围/角色升级是可见的，而不会看起来像丢失了配对。
+
+已配对设备的显示名称使用以下优先级：操作员标签（`devices rename` 中的 `operatorLabel`），然后是客户端 `displayName`，然后是 `clientId`，最后是 `deviceId`。
 
 ### `openclaw devices approve [requestId] [--latest]`
 
@@ -51,9 +53,10 @@ openclaw devices approve --latest
 
 批准行为：
 
-- 如果设备已经配对，并请求更广泛的范围或角色，OpenClaw 会保留现有批准并创建一个新的待处理升级请求。在批准前，请在 `openclaw devices list` 中比较 `Requested` 与 `Approved`，或使用 `--latest` 预览。
-- 批准 `node` 角色或其他非 operator 角色需要 `operator.admin`。`operator.pairing` 足以用于 operator 设备批准，但前提是请求的 operator 范围不超出调用者自己的范围。参见 [Operator scopes](/gateway/operator-scopes)。
-- 如果配置了 `gateway.nodes.pairing.autoApproveCidrs`，来自匹配客户端 IP 的首次 `role: node` 请求可以在它们出现在此列表之前自动批准。默认禁用；从不适用于 operator/browser 客户端或升级请求。
+- 如果设备已经配对，并请求更广泛的范围或角色，OpenClaw 会保留现有批准并创建一个新的待处理升级请求。在批准之前，请在 `openclaw devices list` 中比较 `Requested` 与 `Approved`，或者使用 `--latest` 预览。
+- 批准 `node` 角色或其他非 operator 角色需要 `operator.admin`。`operator.pairing` 足以批准 operator 设备，但前提是请求的 operator 范围仍在调用者自身范围之内。参见 [Operator scopes](/gateway/operator-scopes)。
+- 如果配置了 `gateway.nodes.pairing.autoApproveCidrs`，来自匹配客户端 IP 的首次 `role: node` 请求可在它们出现在该列表之前自动批准。默认禁用；它永远不适用于 operator/browser 客户端或升级请求。
+- `gateway.nodes.pairing.sshVerify`（默认开启）会在网关通过 SSH 向节点主机验证设备密钥时，自动批准首次 `role: node` 请求。因此，请求可能会在出现后很快变为已批准。将 `sshVerify: false` 设为禁用 SSH 验证；这与 `autoApproveCidrs` 无关，因此若要仅手动配对，也请同时取消设置它。
 
 ### `openclaw devices reject <requestId>`
 
@@ -73,6 +76,19 @@ openclaw devices remove <deviceId> --json
 ```
 
 使用已配对设备令牌进行身份验证的调用者，只能移除其**自己的**设备条目。移除其他设备需要 `operator.admin`。
+
+### `openclaw devices rename --device <id> --name <label>`
+
+为已配对设备分配一个操作员标签。标签是所有者侧状态：它们会在配对修复和角色重新批准后保留，并且不会更改稳定的 `deviceId`。
+
+```bash
+openclaw devices rename --device <deviceId> --name "Kitchen Mac"
+openclaw devices rename --device <deviceId> --name "Kitchen Mac" --json
+```
+
+- `--name` 为必需项，且会被裁剪空白、不能为空，最长 64 个字符。
+- 显示位置（CLI 列表、Control UI 清单）优先使用操作员标签，而不是客户端报告的显示名称。
+- 非管理员的已配对设备调用者只能重命名**自己的**设备。重命名其他设备需要 `operator.admin`。
 
 ### `openclaw devices clear --yes [--pending]`
 
@@ -112,11 +128,11 @@ openclaw devices revoke --device <deviceId> --role node
 
 ## 说明
 
-- 这些命令需要 `operator.pairing`（或 `operator.admin`）作用域。非操作员设备角色始终需要 `operator.admin`；请参阅 [Operator scopes](/gateway/operator-scopes)。
-- 令牌轮换和吊销仅限于设备已批准的配对角色集和作用域基线内。意外存在的缓存令牌条目不会授予令牌管理目标。
-- 对于已配对设备的令牌会话，跨设备管理（`remove`、`rotate`、`revoke`）仅限于自身，除非调用方拥有 `operator.admin`。
-- 令牌轮换会返回一个新的令牌（敏感信息）——请像对待密钥一样处理它。
-- 如果本地回环不可用配对作用域，且未传递明确的 `--url`，`list`/`approve` 可以回退到本地配对状态。
+- 这些命令需要 `operator.pairing`（或 `operator.admin`）作用域。非 operator 设备角色始终需要 `operator.admin`；请参见 [Operator scopes](/gateway/operator-scopes)。
+- 令牌轮换和撤销仍然限制在设备已批准的配对角色集合和作用域基线内。孤立的缓存令牌条目不会授予令牌管理目标。
+- 对于已配对设备的令牌会话，跨设备管理（`remove`、`rename`、`rotate`、`revoke`）仅限于自身，除非调用方具有 `operator.admin`。
+- 令牌轮换会返回一个新令牌（敏感信息）——请将其视为机密。
+- 如果本地回环上不可用配对作用域，并且未传递显式的 `--url`，`list`/`approve` 可以回退到本地配对状态。
 
 ## 令牌漂移恢复检查清单
 
@@ -175,7 +191,7 @@ openclaw devices approve --latest
 openclaw devices approve --latest --url <gateway-ws-url> --token <gateway-token>
 ```
 
-为避免每次重启后都重新批准，请在 Paperclip 中配置持久的 `adapterConfig.devicePrivateKeyPem`，而不是让它每次运行都生成新的临时设备身份：
+为避免每次重启后都重新批准，请在 Paperclip 中配置持久的 `adapterConfig.devicePrivateKeyPem`，而不是让它每次运行时都生成新的临时设备身份：
 
 ```json
 {

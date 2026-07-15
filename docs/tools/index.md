@@ -21,15 +21,15 @@ title: "概览"
 
 对于大多数代理，先从内置工具类别开始，然后仅当代理应看到更少的工具或需要明确的主机访问时再调整策略。
 
-| 如果你需要...                             | 首先使用                                  | 然后阅读                                                                                                       |
-| ------------------------------------------ | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 让代理使用现有能力                         | [内置工具](#built-in-tool-categories)    | [工具类别](#built-in-tool-categories)                                                                          |
-| 控制代理可以调用什么                       | [工具策略](#configure-access-and-approvals) | [工具和自定义提供者](/gateway/config-tools)                                                                    |
-| 教会代理一个工作流                         | [技能](#choose-tools-skills-or-plugins)   | [技能](/tools/skills)、[创建技能](/tools/creating-skills) 和 [技能工作坊](/tools/skill-workshop)               |
-| 添加新的集成或运行时表面                   | [插件](#extend-capabilities)              | [插件](/tools/plugin) 和 [构建插件](/plugins/building-plugins)                                                |
-| 稍后或在后台运行工作                       | [自动化](/automation)                     | [自动化概览](/automation)                                                                                      |
-| 协调多个代理或执行器                       | [子代理](/tools/subagents)                | [ACP 代理](/tools/acp-agents) 和 [Agent send](/tools/agent-send)                                              |
-| 搜索大型 OpenClaw 工具目录                 | [工具搜索](/tools/tool-search)            | [工具搜索](/tools/tool-search)
+| 如果你需要...                           | 首先使用                                           | 然后阅读                                                                                                                                              |
+| ------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 让代理使用现有功能                       | [内置工具](#built-in-tool-categories)          | [工具类别](#built-in-tool-categories)                                                                                                                 |
+| 控制代理可以调用的内容                   | [工具策略](#configure-access-and-approvals)    | [工具和自定义提供方](/gateway/config-tools)                                                                                                            |
+| 教会代理一种工作流                       | [技能](#choose-tools-skills-or-plugins)       | [技能](/tools/skills)、[创建技能](/tools/creating-skills)、[技能工作坊](/tools/skill-workshop) 和 [自学习](/tools/self-learning)                      |
+| 添加新的集成或运行时接入面               | [插件](#extend-capabilities)                  | [插件](/tools/plugin) 和 [构建插件](/plugins/building-plugins)                                                                                         |
+| 让工作稍后或在后台运行                   | [自动化](/automation)                        | [自动化概览](/automation)                                                                                                                              |
+| 协调多个代理或执行器                     | [子代理](#sub-agents)                         | [ACP 代理](/tools/acp-agents) 和 [Agent send](/tools/agent-send)                                                                                      |
+| 搜索庞大的 OpenClaw 工具目录             | [工具搜索](/tools/tool-search)               | [工具搜索](/tools/tool-search)                                                                                                                        |
 
 ## 选择工具、技能或插件
 
@@ -55,7 +55,7 @@ title: "概览"
     技能可以位于工作区、共享技能目录、受管理的 OpenClaw
     技能根目录或插件包中。
 
-    [技能](/tools/skills) | [技能工作坊](/tools/skill-workshop) | [创建技能](/tools/creating-skills) | [技能配置](/tools/skills-config)
+    [Skills](/tools/skills) | [Skill Workshop](/tools/skill-workshop) | [Self-learning](/tools/self-learning) | [Creating skills](/tools/creating-skills) | [Skills config](/tools/skills-config)
 
   </Step>
 
@@ -106,12 +106,13 @@ Codex 原生代码模式、原生工具搜索、延迟动态工具，以及
 常见的插件提供工具包括：
 
 - [Diffs](/tools/diffs) 用于渲染文件和 markdown 差异
+- [Show widget](/tools/show-widget) 用于在网页聊天中显示独立的内联 SVG 和 HTML
 - [LLM Task](/tools/llm-task) 用于仅 JSON 的工作流步骤
-- [Lobster](/tools/lobster) 用于带有可恢复审批的类型化工作流
+- [Lobster](/tools/lobster) 用于带可恢复审批的类型化工作流
 - [Tokenjuice](/tools/tokenjuice) 用于压缩噪声较多的 `exec` 和 `bash` 工具
   输出
-- [工具搜索](/tools/tool-search) 用于发现并调用大型工具
-  目录，而无需把每个 schema 都放进提示词中
+- [Tool Search](/tools/tool-search) 用于发现并调用大型工具
+  目录，而无需将每个 schema 都放入提示中
 - [Canvas](/plugins/reference/canvas) 用于节点 Canvas 控制和 A2UI
   渲染
 

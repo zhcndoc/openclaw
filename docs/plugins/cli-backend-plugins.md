@@ -191,23 +191,33 @@ acme-cli/acme-large
 
 | Hook                               | Use                                                                         |
 | ---------------------------------- | --------------------------------------------------------------------------- |
-| `normalizeConfig(config, context)` | 合并后重写旧版用户配置                                      |
+| `normalizeConfig(config, context)` | 在合并后重写旧版用户配置                                      |
 | `resolveExecutionArgs(ctx)`        | 添加请求作用域标志，例如思考力度或 side-question 隔离 |
-| `prepareExecution(ctx)`            | 启动前创建临时认证或配置桥接                       |
+| `prepareExecution(ctx)`            | 在启动前创建临时认证、配置或环境桥接         |
 | `transformSystemPrompt(ctx)`       | 应用最终的 CLI 特定系统提示词转换                          |
 | `textTransforms`                   | 双向提示词/输出替换                                    |
 | `defaultAuthProfileId`             | 优先使用特定的 OpenClaw 认证配置文件                                     |
 | `authEpochMode`                    | 决定认证变更如何使已存储的 CLI 会话失效                      |
-| `nativeToolMode`                    | 声明 CLI 是否始终启用原生工具                          |
-| `sideQuestionToolMode`             | 声明 `/btw` side question 的已禁用原生工具                     |
-| `bundleMcp` / `bundleMcpMode`      | 选择加入 OpenClaw 的 loopback MCP 工具桥接                                |
-| `ownsNativeCompaction`              | 后端自行负责压缩 - OpenClaw 让出                           |
+| `nativeToolMode`                   | 声明原生工具是不存在、始终开启，还是可由宿主选择      |
+| `sideQuestionToolMode`             | 为 `/btw` side questions 声明已禁用的原生工具                     |
+| `bundleMcp` / `bundleMcpMode`      | 选择接入 OpenClaw 的 loopback MCP 工具桥                                |
+| `ownsNativeCompaction`             | 后端拥有自己的压缩——OpenClaw 让步                           |
+| `runtimeArtifact`                  | 将脚本启动器绑定到其完整的打包包树                |
 
 保持这些钩子的提供方所有权。不要在核心中为 CLI 添加特定分支，若某个后端钩子可以表达该行为。
 
-`ctx.executionMode` 在普通轮次时为 `"agent"`，在临时的 `/btw` 调用时为 `"side-question"`。当 CLI 需要不同的一次性标志时使用它，例如为 BTW 禁用原生工具、会话持久化或恢复行为。如果某个后端通常具有 `nativeToolMode: "always-on"`，但其 side-question argv 可靠地禁用了这些工具，也要将 `sideQuestionToolMode` 设为 `"disabled"`；否则当 BTW 需要无工具的 CLI 运行时，OpenClaw 会默认失败。
+`prepareExecution(ctx)` 接收 `ctx.contextTokenBudget`，即为本次运行选择的有效 token
+上限。拥有原生压缩的后端可以将该预算映射到其 CLI 特定的启动契约中。
 
-### `ownsNativeCompaction`: 放弃 OpenClaw 压缩
+`runtimeArtifact` 由插件拥有，且用户不可覆盖。只有在一次实时推理轮次铸造或重新验证已验证的设置权限时才会查询它；正常的 CLI 运行不需要它。没有该声明的后端无法铸造已验证的 CLI 设置权限。`bundled-package-tree` 声明会命名精确的 `package.json` 所有者，并要求包入口点就是该命令。OpenClaw 会对已边界化的完整已安装包树进行哈希，包括嵌套依赖，并对重定向 symlink、声明包之外的启动器、必需的外部依赖声明、过大的树以及未知脚本采取失败关闭。只有当该树包含完整的推理实现时才声明它；可选的工具集成不会让外部实现图变得安全。
+
+如果同一个后端还提供了一个自包含的原生可执行文件，请在 `nativeExecutableNames` 中列出其规范 basename。即便用户覆盖了后端命令，其他原生命令仍然是不受验证的。
+
+`ctx.executionMode` 在正常轮次中为 `"agent"`，在临时的 `/btw` 调用中为 `"side-question"`。当 CLI 需要不同的一次性标志时使用它，例如为 BTW 禁用原生工具、会话持久化或恢复行为。如果某个后端通常具有 `nativeToolMode: "always-on"`，但其 side-question argv 能可靠地禁用这些工具，也请设置 `sideQuestionToolMode: "disabled"`；否则当 BTW 需要无工具 CLI 运行时，OpenClaw 会失败关闭。
+
+仅当 `resolveExecutionArgs` 能为单次运行禁用每一个后端原生工具时，才将 `nativeToolMode` 设置为 `"selectable"`。对于这些受限运行，`ctx.toolAvailability.native` 是一个空元组，且 `ctx.toolAvailability.mcp` 是精确的宿主隔离 MCP allowlist。该钩子必须替换冲突的工具标志，并返回强制执行这两个值的 argv；OpenClaw 会在最终的新鲜或恢复 argv 上调用一次，并在后端无法强制执行该限制时失败关闭。此上下文中的 MCP 名称之所以可以安全地自动批准，仅仅是因为宿主已经将生成的 MCP 配置限制到了那些服务器和工具。
+
+### `ownsNativeCompaction`: opting out of OpenClaw compaction
 
 如果你的后端运行的代理会压缩它**自己的**对话记录，请设置 `ownsNativeCompaction: true`，这样 OpenClaw 的保护性摘要器就绝不会对其会话运行——CLI 的压缩生命周期会返回一个 no-op，当前轮次继续执行。`claude-cli` 声明了它，因为 Claude Code 会在内部压缩，而且没有 harness 端点。像 Codex 这样的 native-harness 会话则继续路由到它们各自的 harness 压缩端点。
 
@@ -243,10 +253,11 @@ return {
 | `codex-config-overrides` | 接受通过 argv 传入配置覆盖项的 CLI                                |
 | `gemini-system-settings` | 从其系统设置目录读取 MCP 设置的 CLI                               |
 
-仅当 CLI 确实可以消费时才启用桥接。如果 CLI 有
-其自身内置且无法禁用的工具层，请设置 `nativeToolMode:
-"always-on"`，这样当调用方要求不使用本地
-工具时，OpenClaw 才能安全失败。
+只有在 CLI 确实能够消费时才启用桥接。如果 CLI 有
+其自身内置的工具层且无法禁用，请设置 `nativeToolMode:
+"always-on"`，这样当调用方要求不使用原生
+工具时，OpenClaw 就可以安全失败。如果它可以在每次运行时禁用所有原生工具，请使用 `"selectable"` 并配合上面的
+`resolveExecutionArgs` 契约。
 
 ## 用户配置
 
@@ -266,7 +277,7 @@ return {
         },
       },
       model: {
-        primary: "openai/gpt-5.5",
+        primary: "openai/gpt-5.6-sol",
         fallbacks: ["acme-cli/large"],
       },
     },

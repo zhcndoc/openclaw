@@ -7,7 +7,7 @@ read_when:
   - "`npm install -g` 因权限或 PATH 问题失败"
 ---
 
-OpenClaw 需要 **Node 22.19+、Node 23.11+ 或 Node 24+**。**Node 24 是安装、CI 和发布工作流的默认且推荐的运行时**；Node 22 通过当前的 LTS 版本线仍受支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——当你想自己设置 Node 时，请使用本页（版本、PATH、全局安装）。
+OpenClaw 需要 **Node 22.22.3+、Node 24.15+ 或 Node 25.9+**。**Node 24 是安装、CI 和发布工作流的默认且推荐运行时**；Node 22 仍通过当前的 LTS 版本线受到支持。Node 23 不受支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——当你想自行设置 Node（版本、PATH、全局安装）时，请使用此页面。
 
 ## 检查你的版本
 
@@ -15,7 +15,7 @@ OpenClaw 需要 **Node 22.19+、Node 23.11+ 或 Node 24+**。**Node 24 是安装
 node -v
 ```
 
-`v24.x.x` 或更高版本是推荐的默认版本。`v22.19.x` 或更高版本是受支持的 Node 22 LTS 路径（方便时升级到 Node 24）。`v23.11.0` 之前的 Node 23 构建版本不受支持。如果缺少 Node，或版本超出受支持范围，请选择下面的一种安装方法。
+`v24.15.0` 或更高版本的 24.x 是推荐的默认版本。`v22.22.3` 或更高版本的 22.x 是受支持的 Node 22 LTS 路径；Node `v25.9.0+` 也受支持。不支持 Node 23。如果缺少 Node 或版本超出受支持范围，请选择下面的一种安装方法。
 
 ## 安装 Node
 

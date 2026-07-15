@@ -10,14 +10,19 @@ title: "代码执行"
 `code_execution` 在 xAI 的 Responses API（
 `https://api.x.ai/v1/responses`，与 `x_search` 使用的端点相同）上运行受沙箱保护的远程 Python 分析。它由捆绑的 `xai` 插件通过 `tools` 合约注册。
 
+<Warning>
+  `code_execution` 运行在 xAI 的服务器上。xAI 按每 1,000 次工具调用收取 5 美元，
+  另加模型的输入和输出 token 费用。
+</Warning>
+
 | 属性               | 值                                                                                 |
-| ------------------ | ---------------------------------------------------------------------------------- |
-| 工具名称           | `code_execution`                                                                   |
-| 提供者插件         | `xai`（捆绑，`enabledByDefault: true`）                                         |
+| ------------------ | --------------------------------------------------------------------------------- |
+| 工具名称           | `code_execution`                                                                  |
+| 提供方插件         | `xai`（内置，`enabledByDefault: true`）                                           |
 | 认证               | xAI 认证配置文件、`XAI_API_KEY`，或 `plugins.entries.xai.config.webSearch.apiKey` |
-| 默认模型           | `grok-4-1-fast`                                                                   |
-| 默认超时时间       | 30 秒                                                                             |
-| 默认 `maxTurns`    | 未设置（xAI 会应用其内部限制）                                                      |
+| 默认模型           | `grok-4.3`                                                                        |
+| 默认超时           | 30 秒                                                                            |
+| 默认 `maxTurns`    | 未设置（xAI 会应用其自身的内部限制）                                              |
 
 可用于计算、制表、快速统计以及图表式分析，包括来自 `x_search` 或 `web_search` 的数据。它无法访问本地文件、你的 shell、你的仓库或配对设备，并且不会在调用之间持久保存状态，因此请将每次调用视为一次性的分析，而不是笔记本会话。若要获取最新的 X 数据，请先运行 [`x_search`](/tools/web#x_search)，然后将结果传入。
 
@@ -70,10 +75,16 @@ title: "代码执行"
 
   </Step>
 
-  <Step title="启用并调优 code_execution">
-    只要 xAI 凭据可用，`code_execution` 就会可用。将
-    `plugins.entries.xai.config.codeExecution.enabled` 设置为 `false` 可将其禁用，
-    也可以使用相同的配置块来覆盖模型、轮次上限或超时时间：
+  <Step title="启用并调整 code_execution">
+    如果省略 `enabled`，则仅当当前
+    模型的提供方为 `xai` 且 xAI 凭据已解析时，才会暴露 `code_execution`。对于
+    当前模型提供方已知为非 xAI 的情况，设置
+    `plugins.entries.xai.config.codeExecution.enabled` 为 `true`，即可启用
+    跨提供方使用。如果当前模型提供方缺失或无法解析，
+    该工具将保持隐藏。将 `enabled` 设置为 `false` 可为所有
+    提供方禁用它。始终需要 xAI 凭据。
+
+    使用相同的配置块来覆盖模型、轮次上限或超时时间：
 
     ```json5
     {
@@ -82,10 +93,10 @@ title: "代码执行"
           xai: {
             config: {
               codeExecution: {
-                enabled: true,
-                model: "grok-4-1-fast", // Override the default xAI code execution model
-                maxTurns: 2,            // Optional maximum number of internal tool turns
-                timeoutSeconds: 30,     // Request timeout (default: 30)
+                enabled: true, // 对于已知的非 xAI 模型提供方是必需的
+                model: "grok-4.3", // 覆盖默认的 xAI 代码执行模型
+                maxTurns: 2,            // 可选的内部工具轮次上限
+                timeoutSeconds: 30,     // 请求超时时间（默认：30）
               },
             },
           },
@@ -101,7 +112,8 @@ title: "代码执行"
     openclaw gateway restart
     ```
 
-    一旦 xAI 插件以 `enabled: true` 重新注册，`code_execution` 就会出现在代理的工具列表中。
+    一旦 xAI 插件重新注册，并且上面的提供方、启用状态和认证检查都通过，`code_execution`
+    就会出现在 agent 的工具列表中。
 
   </Step>
 </Steps>
@@ -130,7 +142,7 @@ title: "代码执行"
 ```json
 {
   "error": "missing_xai_api_key",
-  "message": "code_execution 需要 xAI 凭证。运行 `openclaw onboard --auth-choice xai-oauth` 使用 Grok 登录，运行 `openclaw onboard --auth-choice xai-api-key`，在 Gateway 环境中设置 `XAI_API_KEY`，或配置 `plugins.entries.xai.config.webSearch.apiKey`。",
+  "message": "code_execution requires xAI credentials. Run `openclaw onboard --auth-choice xai-oauth` to sign in with Grok, run `openclaw onboard --auth-choice xai-api-key`, set `XAI_API_KEY` in Gateway environments, or configure `plugins.entries.xai.config.webSearch.apiKey`.",
   "docs": "https://docs.openclaw.ai/tools/code-execution"
 }
 ```

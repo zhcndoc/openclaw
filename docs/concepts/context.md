@@ -77,25 +77,28 @@ Sandbox：模式=non-main sandboxed=false
 
 ### `/context map`
 
-发送一个由最近一次缓存运行报告生成的图像。在本次会话中，如果正常消息尚未生成运行报告，`/context map` 会返回不可用消息，而不是渲染估算结果。矩形面积与已追踪的提示词字符数成正比：
+发送一张基于最新缓存运行报告和会话转录生成的图像。在会话中尚未有普通消息生成运行报告之前，`/context map` 会返回不可用消息，而不是渲染估算。矩形面积与跟踪到的提示词字符数成比例：
 
+- 对话转录（用户消息、助手回复、工具结果、压缩摘要），以及仅到达模型的每轮运行时上下文和钩子提示词附加内容
 - 注入的工作区文件
 - 基础系统提示词文本
 - 技能提示词条目
-- 工具 JSON schemas
+- 工具 JSON 模式
 
-当没有缓存运行报告时，`/context list`、`/context detail` 和 `/context json` 仍然可以检查按需估算结果。
+随着会话进行，对话组也会增长，因此地图会随轮次变化；压缩后，它会折叠为一个摘要磁贴。
 
-## 什么计入上下文窗口
+即使没有缓存的运行报告，`/context list`、`/context detail` 和 `/context json` 仍可检查按需估算。
 
-模型接收到的所有内容都计入，包括：
+## What counts toward the context window
 
-- 系统提示词（所有部分）。
-- 对话历史。
-- 工具调用 + 工具结果。
-- 附件/转录内容（图像/音频/文件）。
-- 压缩摘要和裁剪产物。
-- 提供方的“包装层”或隐藏头部（不可见，但仍会计入）。
+All content received by the model counts, including:
+
+- System prompts (all parts).
+- Conversation history.
+- Tool calls + tool results.
+- Attachments/transcript content (images/audio/files).
+- Compression summaries and truncation artifacts.
+- The provider’s “wrapper layer” or hidden headers (not visible, but still counted).
 
 ## OpenClaw 如何构建系统提示词
 
@@ -110,9 +113,9 @@ Sandbox：模式=non-main sandboxed=false
 
 完整拆分：[系统提示词](/concepts/system-prompt)。
 
-## Injected Workspace Files (Project Context)
+## 注入的工作区文件（项目上下文）
 
-By default, OpenClaw injects a fixed set of workspace files (if they exist):
+默认情况下，OpenClaw 会注入一组固定的工作区文件（如果它们存在）：
 
 - `AGENTS.md`
 - `SOUL.md`
@@ -120,17 +123,17 @@ By default, OpenClaw injects a fixed set of workspace files (if they exist):
 - `IDENTITY.md`
 - `USER.md`
 - `HEARTBEAT.md`
-- `BOOTSTRAP.md` (first run only)
+- `BOOTSTRAP.md`（仅首次运行）
 
-Large files are truncated on a per-file basis using `agents.defaults.bootstrapMaxChars` (default `20000` characters). OpenClaw also applies an upper limit to the total bootstrap injection volume for all files using `agents.defaults.bootstrapTotalMaxChars` (default `60000` characters). `/context` will show the **raw vs injected** size and whether truncation occurred.
+大文件会基于每个文件使用 `agents.defaults.bootstrapMaxChars` 进行截断（默认 `20000` 个字符）。OpenClaw 还会对所有文件的总注入量使用 `agents.defaults.bootstrapTotalMaxChars` 设置上限（默认 `60000` 个字符）。`/context` 会显示**原始 vs 注入**大小以及是否发生了截断。
 
-When truncation occurs, the runtime can inject an in-context warning block below the project context. This can be configured via `agents.defaults.bootstrapPromptTruncationWarning` (`off`, `once`, `always`; default `always`).
+当发生截断时，运行时可以在项目上下文下方注入一个上下文内警告块。可通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `always`）进行配置。
 
-## 技能：按需注入 vs 按需加载
+## Skill: On-Demand Injection vs On-Demand Loading
 
-系统提示词包含一个精简的 **技能列表**（名称 + 描述 + 位置）。这个列表有真实的开销。
+The system prompt contains a condensed **skill list** (name + description + location). This list has a real overhead.
 
-技能说明默认不会包含在内。模型应当仅在需要时 `read` 该技能的 `SKILL.md`。
+Skill instructions are not included by default. The model should only `read` that skill's `SKILL.md` when needed.
 
 ## 工具：有两种成本
 

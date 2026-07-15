@@ -49,7 +49,7 @@ openclaw plugins enable logbook
       logbook: {
         enabled: true,
         config: {
-          visionModel: "codex/gpt-5.5",
+          visionModel: "codex/gpt-5.6-sol",
         },
       },
     },
@@ -119,7 +119,7 @@ Logbook 使用两条独立的模型路由：
           nodeId: "my-mac",
           screenIndex: 0,
           maxWidth: 1440,
-          visionModel: "codex/gpt-5.5",
+          visionModel: "codex/gpt-5.6-sol",
           retentionDays: 14,
         },
       },
@@ -177,7 +177,7 @@ Logbook 注册了以下 Gateway RPC 方法：
 | `logbook.frames`      | `{ startMs, endMs }`     | `operator.write` | 请求的 epoch 毫秒范围内的 frame 元数据                                     |
 | `logbook.frame`       | `{ frameId }`            | `operator.write` | 一张原始 JPEG frame，以 base64 编码                                        |
 | `logbook.standup`     | `{ day?, refresh? }`     | `operator.write` | 某一天缓存或重新生成的 standup 文本                                         |
-| `logbook.ask`         | `{ day?, question }`     | `operator.write` | 基于 timeline 的某一天问答结果                                              |
+| `logbook.ask`         | `{ day?, question }`    | `operator.write` | 基于 timeline 的某一天问答结果                                              |
 | `logbook.capture.set` | `{ paused }`             | `operator.write` | 仅限会话的暂停状态及更新后的状态                                             |
 | `logbook.analyze.now` | none                     | `operator.write` | 开始待处理分析，或返回无法开始的原因                                        |
 

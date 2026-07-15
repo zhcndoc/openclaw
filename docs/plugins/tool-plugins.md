@@ -9,7 +9,7 @@ read_when:
 ---
 
 `defineToolPlugin` 构建一个仅添加 agent 可调用工具的插件：不包含
-channel、model provider、hook、service 或 setup backend。它会生成
+channel、model provider、hook、service 或 setup 后端。它会生成
 OpenClaw 发现工具所需的清单元数据，而无需加载插件运行时代码。
 
 对于 provider、channel、hook、service 或混合能力插件，请改从
@@ -18,11 +18,14 @@ OpenClaw 发现工具所需的清单元数据，而无需加载插件运行时�
 
 ## 要求
 
-- Node 22.19+、Node 23.11+ 或 Node 24+。
+- Node 22.22.3+、Node 24.15+ 或 Node 25.9+。
 - TypeScript ESM 包输出。
-- `dependencies` 中包含 `typebox`（不能只放在 `devDependencies` 中——生成的插件会在运行时导入它）。
-- `openclaw >=2026.5.17`，这是第一个导出 `openclaw/plugin-sdk/tool-plugin` 的版本。
-- 一个包根目录，包含 `dist/`、`openclaw.plugin.json` 和 `package.json`。
+- `dependencies` 中包含 `typebox`（不能只放在 `devDependencies` 中——生成的
+  插件会在运行时导入它）。
+- `openclaw >=2026.5.17`，这是第一个导出
+  `openclaw/plugin-sdk/tool-plugin` 的版本。
+- 一个会发布 `dist/`、`openclaw.plugin.json` 和
+  `package.json` 的包根目录。
 
 ## 快速开始
 
@@ -210,9 +213,9 @@ OpenClaw 会从 Gateway 配置中该插件的条目读取插件配置。请勿
 
 ## 生成的元数据
 
-OpenClaw 必须先读取插件清单，然后才能导入插件运行时代码。
-`defineToolPlugin` 为此暴露了静态元数据，而
-`openclaw plugins build` 会将其写入包中。更改插件 id、名称、描述、配置模式、激活方式或工具名称后，
+OpenClaw 必须先读取插件清单，然后才能导入插件运行时代码。  
+`defineToolPlugin` 为此暴露了静态元数据，而  
+`openclaw plugins build` 会将其写入包中。更改插件 id、名称、描述、配置模式、激活方式或工具名称后，  
 请重新运行生成器：
 
 ```bash
@@ -242,13 +245,12 @@ openclaw plugins build --entry ./dist/index.js
 }
 ```
 
-`contracts.tools` 是重要的发现契约：它告诉 OpenClaw 在不加载每个已安装插件的运行时的情况下，
+`contracts.tools` 是重要的发现契约：它告诉 OpenClaw 在不加载每个已安装插件的运行时的情况下，  
 每个工具分别属于哪个插件。过期的清单会导致工具在发现过程中丢失，或者把注册错误归咎于错误的插件。
 
-## 包元数据
+## Package metadata
 
-`openclaw plugins build` 也会将 `package.json` 对齐到所选的运行时
-入口：
+`openclaw plugins build` also aligns `package.json` to the selected runtime entry:
 
 ```json
 {
@@ -266,8 +268,8 @@ openclaw plugins build --entry ./dist/index.js
 }
 ```
 
-发布构建后的 JavaScript（`./dist/index.js`），不要使用 TypeScript 源码入口。
-源码入口仅适用于工作区本地开发。
+Publish the built JavaScript (`./dist/index.js`), do not use the TypeScript source entry.
+The source entry is only for local development in the workspace.
 
 ## 在 CI 中验证
 
@@ -305,7 +307,7 @@ openclaw plugins install npm-pack:./openclaw-plugin-stock-quotes-0.1.0.tgz
 openclaw plugins inspect stock-quotes --runtime --json
 ```
 
-安装后，重启或重新加载 Gateway，并让代理使用该工具。如果工具不可见，请在修改代码之前检查插件运行时和实际生效的工具目录（请参见 [Troubleshooting](#troubleshooting)）。
+安装后，重启或重新加载 Gateway，并让代理使用该工具。如果工具不可见，请在修改代码之前检查插件运行时和实际生效的工具目录（请参见 [故障排查](#troubleshooting)）。
 
 ## 发布
 

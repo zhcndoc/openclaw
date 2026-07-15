@@ -47,11 +47,30 @@ openclaw wiki obsidian command workspace:quick-switcher
 openclaw wiki obsidian daily
 ```
 
+## Agent 选择
+
+当 `plugins.entries.memory-wiki.config.vault.scope` 为 `agent` 时，使用顶层 `--agent <id>` 选项选择
+vault：
+
+```bash
+openclaw wiki --agent support status
+openclaw wiki --agent support search "refund policy"
+openclaw wiki --agent marketing ingest ./campaign-notes.md
+```
+
+在配置了多个 agent 的环境中，CLI 操作必须提供 `--agent`，这样命令就不能读取或写入任意默认 vault。如果
+只配置了一个 agent，则该 agent 仍然是默认值。未知的 agent id 会在 vault 操作开始之前失败。当
+`vault.scope` 为 `global` 时，此选项不会改变所选路径。
+
+Gateway 客户端遵循相同规则：在 agent 作用域的多 agent 环境中，对基于 vault 的 `wiki.*`
+请求传递 `agentId`。缺少或未知的 id 都会报错。Agent turn、wiki 工具、memory 语料补充以及编译后的 prompt
+摘要已经携带了当前运行时的 agent 上下文。
+
 ## 命令
 
 ### `wiki status`
 
-显示 vault 模式、健康状态以及 Obsidian CLI 可用性。先使用此命令检查 vault 是否已初始化、bridge 模式是否健康，或者 Obsidian 集成是否可用。
+显示 vault 模式和作用域、已解析的 agent、健康状态以及 Obsidian CLI 可用性。请首先使用此命令检查目标 vault 是否已初始化、bridge 模式是否健康，或者 Obsidian 集成是否可用。
 
 当 bridge 模式处于激活状态且配置为读取 memory artifacts 时，此命令会查询正在运行的 Gateway，因此它看到的与 agent/runtime memory 相同的当前活动内存插件上下文。
 
@@ -83,7 +102,7 @@ openclaw wiki obsidian daily
 
 将一个已解包的 Open Knowledge Format bundle 导入到 wiki 概念页面中。
 
-The importer reads every non-reserved `.md` concept document in the OKF directory tree, requires a non-empty `type` field, and treats unknown OKF `type` values as generic concepts. Reserved OKF `index.md` and `log.md` files are not imported as concepts.
+导入器会读取 OKF 目录树中所有非保留的 `.md` 概念文档，要求存在非空的 `type` 字段，并将未知的 OKF `type` 值视为通用概念。保留的 OKF `index.md` 和 `log.md` 文件不会作为概念导入。
 
 导入的页面会扁平化到 `concepts/` 下，因此现有的 wiki compile、search、get、digest 和 dashboard 流程可以立即看到它们。原始 OKF concept ID、`type`、`resource`、`tags`、时间戳、source 路径以及完整 frontmatter 都会保留在页面 frontmatter 中。OKF 内部 markdown 链接会被重写为生成的 wiki 页面；断开的或外部链接会保持不变。导入后总会重新编译 vault。
 
@@ -198,7 +217,9 @@ openclaw wiki chatgpt import --export ./conversations.json --dry-run
 
 用于在 Obsidian 友好模式下运行的 vault 的 Obsidian 辅助命令：`status`、`search`、`open`、`command`、`daily`。当启用 `obsidian.useOfficialCli` 时，这些命令需要 `PATH` 中存在官方 `obsidian` CLI。
 
-## 实际使用指南
+当 `vault.scope` 为 `agent` 时，配置校验会拒绝 `obsidian.useOfficialCli: true`，因为 `obsidian.vaultName` 是一个全局设置，而不是按 agent 映射。Obsidian 友好的 Markdown 渲染仍然可用。
+
+## 实用使用指南
 
 - 当来源可信度和页面标识很重要时，使用 `wiki search` + `wiki get`。
 - 使用 `wiki apply`，不要手动编辑受管理的生成部分。
@@ -207,11 +228,13 @@ openclaw wiki chatgpt import --export ./conversations.json --dry-run
 - 当数据目录、文档导出或 agent 富化流水线已经输出 OKF markdown bundles 时，使用 `wiki okf import`。
 - 当 bridge 模式依赖于新导出的 memory artifacts 时，使用 `wiki bridge import`。
 
-## 配置关联
+## Configuration Relationships
 
-`openclaw wiki` 的行为由以下配置项决定：
+The behavior of `openclaw wiki` is determined by the following configuration items:
 
 - `plugins.entries.memory-wiki.config.vaultMode`
+- `plugins.entries.memory-wiki.config.vault.scope`
+- `plugins.entries.memory-wiki.config.vault.path`
 - `plugins.entries.memory-wiki.config.search.backend`
 - `plugins.entries.memory-wiki.config.search.corpus`
 - `plugins.entries.memory-wiki.config.bridge.*`
@@ -220,9 +243,9 @@ openclaw wiki chatgpt import --export ./conversations.json --dry-run
 - `plugins.entries.memory-wiki.config.render.*`
 - `plugins.entries.memory-wiki.config.context.includeCompiledDigestPrompt`
 
-完整配置模型请参见 [Memory Wiki 插件](/plugins/memory-wiki)。
+For the complete configuration model, see [Memory Wiki Plugin](/plugins/memory-wiki).
 
 ## 相关
 
 - [CLI 参考](/cli)
-- [Memory wiki](/plugins/memory-wiki)
+- [记忆维基](/plugins/memory-wiki)

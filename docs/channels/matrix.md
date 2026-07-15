@@ -32,7 +32,7 @@ openclaw channels add
 openclaw configure --section channels
 ```
 
-该向导会询问 homeserver URL、认证方式（token 或 password）、user ID（仅限密码认证）、可选的设备名称、是否启用 E2EE，以及房间访问/自动加入设置。如果匹配的 `MATRIX_*` 环境变量已经存在且该账户没有保存的认证信息，向导会提供一个使用环境变量的快捷方式。使用 `openclaw channels resolve --channel matrix "Project Room"` 在保存 allowlist 之前解析房间名称。启用向导中的 E2EE 会执行与 [`openclaw matrix encryption setup`](#encryption-and-verification) 相同的初始化流程。
+该向导会询问 homeserver URL、认证方式（token 或 password）、user ID（仅限密码认证）、可选的设备名称、是否启用 E2EE，以及房间访问/自动加入设置。如果匹配的 `MATRIX_*` 环境变量已经存在且该账户没有保存的认证信息，向导会提供一个使用环境变量的快捷方式。使用 `openclaw channels resolve --channel matrix "项目房间"` 在保存 allowlist 之前解析房间名称。启用向导中的 E2EE 会执行与 [`openclaw matrix encryption setup`](#encryption-and-verification) 相同的初始化流程。
 
 ### 最小配置
 
@@ -61,7 +61,7 @@ openclaw configure --section channels
       homeserver: "https://matrix.example.org",
       userId: "@bot:example.org",
       password: "replace-me", // pragma: allowlist secret
-      deviceName: "OpenClaw Gateway",
+      deviceName: "OpenClaw 网关",
     },
   },
 }
@@ -153,7 +153,7 @@ Matrix 会将凭据缓存到 `~/.openclaw/credentials/matrix/` 下：默认账�
       autoJoinAllowlist: ["!roomid:example.org"],
       threadReplies: "inbound",
       replyToMode: "off",
-      streaming: "partial",
+      streaming: { mode: "partial" },
     },
   },
 }
@@ -161,19 +161,19 @@ Matrix 会将凭据缓存到 `~/.openclaw/credentials/matrix/` 下：默认账�
 
 ## 流式预览
 
-Matrix 回复流式传输是可选开启的。`streaming` 控制 OpenClaw 如何传递进行中的助手回复；`blockStreaming` 控制每个已完成的块是否作为独立的 Matrix 消息保留。
+Matrix 回复流式传输是可选启用的。`streaming.mode` 控制 OpenClaw 如何传递进行中的助手回复；`streaming.block.enabled` 控制每个已完成的块是否作为独立的 Matrix 消息保留。
 
 ```json5
 {
   channels: {
     matrix: {
-      streaming: "partial",
+      streaming: { mode: "partial" },
     },
   },
 }
 ```
 
-如果要保留实时答案预览，但隐藏中间的工具/进度行，请使用对象形式：
+若要保留实时答案预览但隐藏中间的工具/进度行：
 
 ```json5
 {
@@ -190,7 +190,7 @@ Matrix 回复流式传输是可选开启的。`streaming` 控制 OpenClaw 如何
 }
 ```
 
-完整对象形式接受 `{ mode, preview, progress }`：
+完整配置接受 `{ mode, chunkMode, block, preview, progress }`：
 
 ```json5
 {
@@ -217,26 +217,27 @@ Matrix 回复流式传输是可选开启的。`streaming` 控制 OpenClaw 如何
 - `progress.maxLineChars`：每条紧凑进度行在截断前的最大字符数。
 - `progress.toolProgress`：当为 `true`（默认）时，实时工具/进度活动会显示在草稿中。
 
-| `streaming`       | 行为                                                                                                                                                 |
+| `streaming.mode`  | 行为                                                                                                                                                 |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"off"`（默认） | 等待完整回复后一次性发送。`true` = `"partial"`，`false` = `"off"`。                                                                         |
-| `"partial"`       | 模型写入当前块时，原地编辑一条普通文本消息。原生客户端可能会在第一次预览时通知，而不是在最终编辑时通知。          |
-| `"quiet"`         | 与 `"partial"` 相同，但消息是不通知的提示。收件人会在每用户推送规则匹配最终编辑时收到通知（见下文）。 |
+| `"off"` (default) | 等待完整回复，一次发送。                                                                                                                      |
+| `"partial"`       | 当模型写入当前块时，就地编辑一条普通文本消息。原生客户端可能会在第一次预览时通知，而不是在最终编辑时通知。          |
+| `"quiet"`         | 与 `"partial"` 相同，但消息是不通知的提示。只有当每用户推送规则匹配最终编辑时，接收者才会收到通知（见下文）。 |
 | `"progress"`      | 使用进度草稿发送单独的紧凑进度行。                                                                                          |
 
-`blockStreaming`（默认 `false`）与 `streaming` 相互独立：
+`streaming.block.enabled`（默认 `false`）独立于 `streaming.mode`：
 
-| `streaming`             | `blockStreaming: true`                                              | `blockStreaming: false`（默认）                    |
+| `streaming.mode`        | `block.enabled: true`                                               | `block.enabled: false` (default)                     |
 | ----------------------- | ------------------------------------------------------------------- | ---------------------------------------------------- |
 | `"partial"` / `"quiet"` | 当前块的实时草稿，已完成的块作为消息保留 | 当前块的实时草稿，就地最终化 |
 | `"off"`                 | 每个已完成块发送一条会通知的 Matrix 消息                     | 整个回复发送一条会通知的 Matrix 消息      |
 
 注意：
 
-- 如果预览内容增长超过 Matrix 的单事件大小限制，OpenClaw 会停止预览流式传输并回退为仅最终发送。
-- 媒体回复始终会正常发送附件；如果旧预览无法安全复用，OpenClaw 会在发送最终媒体回复前将其撤回。
-- 在启用预览流式传输时，工具进度预览更新默认开启。将 `streaming.preview.toolProgress: false` 设置为在答案文本上保留预览编辑，但让工具进度走正常传递路径。
-- 预览编辑会额外消耗 Matrix API 调用。若想要最保守的速率限制配置，请保持 `streaming: "off"`。
+- 如果预览超过了 Matrix 的单事件大小限制，OpenClaw 会停止预览流式传输，并回退为仅最终结果的传递。
+- 媒体回复始终会正常发送附件；如果无法安全复用过时的预览，OpenClaw 会在发送最终媒体回复前将其清除。
+- 当预览流式传输处于活动状态时，工具进度预览更新默认开启。将 `streaming.preview.toolProgress: false` 设为仅保留答案文本的预览编辑，而让工具进度走正常传递路径。
+- 预览编辑会额外消耗 Matrix API 调用。若要获得最保守的速率限制配置，请保持 `streaming.mode: "off"`。
+- 旧的标量/布尔值 `streaming` 以及扁平的 `blockStreaming` / `chunkMode` 键，会被 `openclaw doctor --fix` 重写为这种嵌套结构。
 
 ## 语音消息
 
@@ -258,7 +259,7 @@ Matrix 原生审批提示是普通的 `m.room.message` 事件，其下的 OpenCl
 
 ### 用于静默最终化预览的自托管推送规则
 
-`streaming: "quiet"` 只有在一个块或回合最终确定后才通知接收者——每个用户的推送规则必须匹配已最终化的预览标记。完整方案请参见 [Matrix push rules for quiet previews](/channels/matrix-push-rules)。
+`streaming.mode: "quiet"` 仅在一个块或一轮内容完成定稿后才通知接收者——每个用户的推送规则必须匹配已完成的预览标记。完整配置请参见 [Matrix 静默预览的推送规则](/channels/matrix-push-rules)。
 
 ## 机器人到机器人房间
 
@@ -595,13 +596,13 @@ Matrix 支持外发反应、入站反应通知和确认反应。
 
 `reactionNotifications: "own"` 会在反应指向机器人发出的 Matrix 消息时，转发新增的 `m.reaction` 事件；`"off"` 会禁用反应系统事件。反应移除不会被合成为系统事件——Matrix 会将其表现为 redactions，而不是作为独立的 `m.reaction` 移除事件。
 
-## 历史上下文
+## Historical Context
 
-- `channels.matrix.historyLimit` 控制当房间消息触发代理时，最近多少条房间消息会作为 `InboundHistory` 包含进去。若未设置，则回退到 `messages.groupChat.historyLimit`；如果两者都未设置，最终默认值为 `0`（禁用）。
-- Matrix 房间历史仅限房间内使用；DM 仍然使用普通会话历史。
-- 房间历史仅针对待处理消息：OpenClaw 会缓冲尚未触发回复的房间消息，然后在出现提及或其他触发时对该窗口进行快照。
-- 当前触发消息不包含在 `InboundHistory` 中；它会保留在该轮的主入站正文里。
-- 同一个 Matrix 事件的重试会复用最初的历史快照，而不会随着新的房间消息继续向前漂移。
+- `channels.matrix.historyLimit` controls how many recent room messages are included as `InboundHistory` when a room message triggers the agent. If unset, it falls back to `messages.groupChat.historyLimit`; if neither is set, the final default value is `0` (disabled).
+- Matrix room history is room-only; DMs still use normal conversation history.
+- Room history applies only to pending messages: OpenClaw buffers room messages that have not yet triggered a reply, then snapshots that window when a mention or other trigger appears.
+- The current triggering message is not included in `InboundHistory`; it remains in the main inbound body for that turn.
+- Retries of the same Matrix event reuse the original history snapshot rather than continuing to drift forward with new room messages.
 
 ## 上下文可见性
 
@@ -648,7 +649,7 @@ Matrix 支持共享的 `contextVisibility` 控制，用于附加的房间上下�
 }
 ```
 
-有关提及门控和允许名单行为，请参阅 [Groups](/channels/groups)。
+有关提及门控和允许名单行为，请参阅 [群组](/channels/groups)。
 
 Matrix DM 的配对示例：
 
@@ -659,7 +660,7 @@ openclaw pairing approve matrix <CODE>
 
 如果未获批准的 Matrix 用户在批准前持续发消息，OpenClaw 会复用相同的待处理配对代码，并且在较短的冷却时间后可能发送一条提醒回复，而不是生成新的代码。
 
-有关共享 DM 配对流程和存储布局，请参阅 [Pairing](/channels/pairing)。
+有关共享 DM 配对流程和存储布局，请参阅 [配对](/channels/pairing)。
 
 ## 直接房间修复
 
@@ -877,17 +878,17 @@ Matrix 房间 ID 区分大小写。配置显式投递目标、cron 作业、绑�
 
 ### 回复行为
 
-- `replyToMode`：`"off"`（默认）、`"first"`、`"all"` 或 `"batched"`。
-- `threadReplies`：`"off"`（顶层默认值解析为 `"inbound"`，除非显式设置）、`"inbound"` 或 `"always"`。
-- `threadBindings`：用于线程绑定会话路由和生命周期的按通道覆盖。
-- `streaming`：`"off"`（默认）、`"partial"`、`"quiet"`、`"progress"`，或对象形式 `{ mode, preview: { toolProgress }, progress: { label, labels, maxLines, maxLineChars, toolProgress } }`。`true` `"partial"`，`false` `"off"`。
-- `blockStreaming`：当为 `true` 时，已完成的助手块会作为单独的进度消息保留。默认值：`false`。
-- `markdown`：用于外发文本的可选 Markdown 渲染配置。
-- `responsePrefix`：添加到外发回复前的可选字符串。
-- `textChunkLimit`：当 `chunkMode: "length"` 时，外发分块的字符数上限。默认值：`4000`。
-- `chunkMode`：`"length"`（默认，按字符数拆分）或 `"newline"`（按行边界拆分）。
-- `historyLimit`：当房间消息触发代理时，作为 `InboundHistory` 包含的最近房间消息数量。回退到 `messages.groupChat.historyLimit`；有效默认值为 `0`（禁用）。
-- `mediaMaxMb`：外发发送和入站处理的媒体大小上限，单位 MB。默认值：`20`。
+- `replyToMode`: `"off"` (default), `"first"`, `"all"`, or `"batched"`.
+- `threadReplies`: `"off"` (top-level default resolves to `"inbound"` unless explicitly set), `"inbound"`, or `"always"`.
+- `threadBindings`: per-channel overrides for thread-bound session routing and lifecycle.
+- `streaming`: nested object `{ mode, chunkMode, block: { enabled, coalesce }, preview: { toolProgress }, progress: { label, labels, maxLines, maxLineChars, toolProgress } }`. `mode` is `"off"` (default), `"partial"`, `"quiet"`, or `"progress"`. Legacy scalar/boolean spellings migrate via `openclaw doctor --fix`.
+- `streaming.block.enabled`: when `true`, completed assistant blocks are kept as separate progress messages. Default: `false`.
+- `markdown`: optional Markdown rendering config for outbound text.
+- `responsePrefix`: optional string prepended to outbound replies.
+- `textChunkLimit`: outbound chunk size in characters when `streaming.chunkMode: "length"`. Default: `4000`.
+- `streaming.chunkMode`: `"length"` (default, splits by character count) or `"newline"` (splits at line boundaries).
+- `historyLimit`: number of recent room messages included as `InboundHistory` when a room message triggers the agent. Falls back to `messages.groupChat.historyLimit`; effective default `0` (disabled).
+- `mediaMaxMb`: media size cap in MB for outbound sends and inbound processing. Default: `20`.
 
 ### 反应设置
 

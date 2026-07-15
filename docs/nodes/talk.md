@@ -28,23 +28,23 @@ Talk 模式涵盖五种运行形态：
 - 回复会写入 WebChat（与输入相同）。
 - **语音打断**（默认开启）：如果用户在助手说话时开口，播放会停止，并记录打断时间戳供下一个提示使用。
 
-## 回复中的语音指令
+## Voice Commands in Replies
 
-助手可以在回复前添加一行 JSON 以控制语音：
+The assistant can add a line of JSON before its reply to control speech:
 
 ```json
 { "voice": "<voice-id>", "once": true }
 ```
 
-规则：
+Rules:
 
-- 仅限第一条非空行；在 TTS 播放前，该 JSON 行会被移除。
-- 未知键会被忽略。
-- `once: true` 仅适用于当前回复；如果不指定，它会成为新的 Talk 模式默认值。
+- Only for the first non-empty line; before TTS playback, this JSON line will be removed.
+- Unknown keys will be ignored.
+- `once: true` applies only to the current reply; if not specified, it will become the new default value for Talk mode.
 
-支持的键：`voice` / `voice_id` / `voiceId`，`model` / `model_id` / `modelId`，`speed`，`rate`（WPM），`stability`，`similarity`，`style`，`speakerBoost`，`seed`，`normalize`，`lang`，`output_format`，`latency_tier`，`once`。
+Supported keys: `voice` / `voice_id` / `voiceId`, `model` / `model_id` / `modelId`, `speed`, `rate` (WPM), `stability`, `similarity`, `style`, `speakerBoost`, `seed`, `normalize`, `lang`, `output_format`, `latency_tier`, `once`.
 
-## 配置（`~/.openclaw/openclaw.json`）
+## Configuration (`~/.openclaw/openclaw.json`)
 
 ```json5
 {
@@ -70,11 +70,11 @@ Talk 模式涵盖五种运行形态：
       providers: {
         openai: {
           apiKey: "openai_api_key",
-          model: "gpt-realtime-2",
+          model: "gpt-realtime-2.1",
           speakerVoice: "cedar",
         },
       },
-      instructions: "请热情地说话，并保持回答简短。",
+      instructions: "Please speak enthusiastically and keep your answers brief.",
       mode: "realtime",
       transport: "webrtc",
       brain: "agent-consult",
@@ -83,41 +83,41 @@ Talk 模式涵盖五种运行形态：
 }
 ```
 
-| 键                                       | 默认值                                     | 说明                                                                                                                                                                                                                                                                   |
-| ---------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider`                               | -                                          | 当前启用的 Talk TTS 提供方。对于 macOS 本地播放路径，请使用 `elevenlabs`、`mlx` 或 `system`。                                                                                                                                                                         |
-| `providers.<id>.voiceId`                 | -                                          | ElevenLabs 会回退到 `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`，或者在有 API 密钥时使用第一个可用的语音。                                                                                                                                                                |
-| `providers.elevenlabs.modelId`           | `eleven_v3`                                |                                                                                                                                                                                                                                                                        |
-| `providers.mlx.modelId`                  | `mlx-community/Soprano-80M-bf16`           |                                                                                                                                                                                                                                                                        |
-| `providers.elevenlabs.apiKey`            | -                                          | 会回退到 `ELEVENLABS_API_KEY`（如果可用，也会回退到 gateway shell profile）。                                                                                                                                                                                          |
-| `speechLocale`                           | 设备默认值                                 | 用于 iOS/macOS 设备端 Talk 语音识别的 BCP 47 locale id。                                                                                                                                                                                                               |
-| `silenceTimeoutMs`                       | macOS/Android 为 `700` ms，iOS 为 `900` ms | Talk 发送转录文本前的停顿窗口。                                                                                                                                                                                                                                       |
-| `interruptOnSpeech`                      | `true`                                     |                                                                                                                                                                                                                                                                        |
-| `outputFormat`                           | macOS/iOS 为 `pcm_44100`，Android 为 `pcm_24000` | 设置为 `mp3_*` 可强制使用 MP3 流式传输。                                                                                                                                                                                                                              |
-| `consultThinkingLevel`                   | 未设置                                     | 用于运行在实时 `openclaw_agent_consult` 调用后面的 agent 的思考级别覆盖。                                                                                                                                                                                             |
-| `consultFastMode`                        | 未设置                                     | 用于实时 `openclaw_agent_consult` 调用的快速模式覆盖。                                                                                                                                                                                                                |
-| `realtime.provider`                      | -                                          | `openai` 用于 WebRTC，`google` 用于提供方 WebSocket，或通过 Gateway relay 使用仅桥接的提供方。                                                                                                                                                                        |
-| `realtime.providers.<id>`                | -                                          | 由提供方拥有的实时配置。浏览器只会接收临时/受限的会话凭据，绝不会接收标准 API 密钥。                                                                                                                                                                                  |
-| `realtime.providers.openai.speakerVoice` | `alloy`                                    | 内置的 OpenAI Realtime 语音 id（旧的 `voice` 键仍然可用，但已弃用）。当前 `gpt-realtime-2` 的语音有：`alloy`、`ash`、`ballad`、`cedar`、`coral`、`echo`、`marin`、`sage`、`shimmer`、`verse`；推荐使用 `marin` 和 `cedar` 以获得最佳质量。 |
-| `realtime.transport`                     | -                                          | `webrtc`：在 iOS 和浏览器中由客户端拥有的 OpenAI WebRTC。`provider-websocket`：由浏览器拥有，在 iOS 上保持在 Gateway relay。`gateway-relay`：将提供方音频保留在 Gateway 上；Android 仅在此传输方式下使用实时功能。                                                 |
-| `realtime.brain`                         | -                                          | `agent-consult` 通过 Gateway policy 路由实时工具调用；`direct-tools` 是旧版 direct-tool 兼容模式；`none` 用于转录/外部编排。                                                                                                                                        |
-| `realtime.consultRouting`                | -                                          | `provider-direct` 在跳过 `openclaw_agent_consult` 时保留提供方的直接回复；`force-agent-consult` 会将最终用户转录路由到 OpenClaw。                                                                                                                                    |
-| `realtime.instructions`                  | -                                          | 将面向提供方的系统指令附加到 OpenClaw 内置的实时提示词（语音风格/语气）后面；默认的 `openclaw_agent_consult` 指导仍然保留。                                                                                                                                        |
+| Key                                      | Default                                    | Notes                                                                                                                                                                                                                                                                      |
+| ---------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider`                               | -                                          | Active Talk TTS provider. Use `elevenlabs`, `mlx`, or `system` for macOS-local playback paths.                                                                                                                                                                             |
+| `providers.<id>.voiceId`                 | -                                          | ElevenLabs falls back to `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`, or the first available voice with an API key.                                                                                                                                                             |
+| `providers.elevenlabs.modelId`           | `eleven_v3`                                |                                                                                                                                                                                                                                                                            |
+| `providers.mlx.modelId`                  | `mlx-community/Soprano-80M-bf16`           |                                                                                                                                                                                                                                                                            |
+| `providers.elevenlabs.apiKey`            | -                                          | Falls back to `ELEVENLABS_API_KEY` (or gateway shell profile if available).                                                                                                                                                                                                |
+| `speechLocale`                           | device default                             | BCP 47 locale id for on-device Talk speech recognition on iOS/macOS.                                                                                                                                                                                                       |
+| `silenceTimeoutMs`                       | `700` ms macOS/Android, `900` ms iOS       | Pause window before Talk sends the transcript.                                                                                                                                                                                                                             |
+| `interruptOnSpeech`                      | `true`                                     |                                                                                                                                                                                                                                                                            |
+| `outputFormat`                           | `pcm_44100` macOS/iOS, `pcm_24000` Android | Set `mp3_*` to force MP3 streaming.                                                                                                                                                                                                                                        |
+| `consultThinkingLevel`                   | unset                                      | Thinking level override for the agent run behind realtime `openclaw_agent_consult` calls.                                                                                                                                                                                  |
+| `consultFastMode`                        | unset                                      | Fast-mode override for realtime `openclaw_agent_consult` calls.                                                                                                                                                                                                            |
+| `realtime.provider`                      | -                                          | `openai` for WebRTC, `google` for provider WebSocket, or a bridge-only provider through Gateway relay.                                                                                                                                                                     |
+| `realtime.providers.<id>`                | -                                          | Provider-owned realtime config. Browsers receive only ephemeral/constrained session credentials, never a standard API key.                                                                                                                                                 |
+| `realtime.providers.openai.speakerVoice` | `alloy`                                    | Built-in OpenAI Realtime voice id (the older `voice` key still works but is deprecated). Current `gpt-realtime-2.1` voices: `alloy`, `ash`, `ballad`, `cedar`, `coral`, `echo`, `marin`, `sage`, `shimmer`, `verse`; `marin` and `cedar` are recommended for best quality. |
+| `realtime.transport`                     | -                                          | `webrtc`: client-owned OpenAI WebRTC on iOS and in the browser. `provider-websocket`: browser-owned, stays on Gateway relay on iOS. `gateway-relay`: keeps provider audio on the Gateway; Android uses realtime only with this transport.                                  |
+| `realtime.brain`                         | -                                          | `agent-consult` routes realtime tool calls through Gateway policy; `direct-tools` is legacy direct-tool compatibility; `none` is for transcription/external orchestration.                                                                                                 |
+| `realtime.consultRouting`                | -                                          | `provider-direct` preserves the provider's direct reply when it skips `openclaw_agent_consult`; `force-agent-consult` routes finalized user transcripts through OpenClaw instead.                                                                                          |
+| `realtime.instructions`                  | -                                          | Appends provider-facing system instructions to OpenClaw's built-in realtime prompt (voice style/tone); the default `openclaw_agent_consult` guidance stays.                                                                                                                |
 
-`talk.catalog` 会公开规范化的提供方 id 和注册表别名、每个提供方有效的模式/传输方式/brain 策略/实时音频格式/能力标志，以及运行时选定的就绪结果。第一方 Talk 客户端应读取该 catalog，而不是在本地维护提供方别名；如果较旧的 Gateway 省略了组就绪状态，应将其视为未验证，而不是明确判定为未配置。流式转录提供方通过 `talk.catalog.transcription` 发现；当前的 Gateway relay 在专用 Talk 转录配置界面发布之前，会使用 Voice Call 流式提供方配置。
+`talk.catalog` will expose normalized provider ids and registry aliases, each provider's valid modes/transports/brain strategies/realtime audio formats/capability flags, and the runtime-selected readiness results. First-party Talk clients should read this catalog instead of maintaining provider aliases locally; if an older Gateway omits group readiness status, treat it as unverified rather than explicitly unconfigured. Streaming transcription providers are discovered via `talk.catalog.transcription`; the current Gateway relay uses the Voice Call streaming provider configuration until a dedicated Talk transcription configuration interface is published.
 
 ## macOS 界面
 
 - 菜单栏切换：**Talk**
-- 配置选项卡：**Talk Mode** 组（语音 ID + 中断开关）
-- 悬浮层：Listening（云朵随麦克风音量脉动）&rarr; Thinking（下沉动画）&rarr; Speaking（放射状圆环）。点击云朵可停止说话，点击 X 可退出 Talk 模式。
+- 配置标签页：**Talk Mode** 组（voice id + interrupt toggle）
+- 覆盖层：该球体渲染通用的 talk 波形（与 iOS、watchOS 和 Android 共用）。Listening 跟随实时麦克风音量，Speaking 跟随实际的 TTS 播放包络，Thinking 轻柔呼吸。点击球体可暂停/恢复，双击可停止说话，点击 X 可退出 Talk 模式。
 
 ## Android 界面
 
-- Voice tab toggle: **Talk**
-- Manual **Mic** 和 **Talk** 互斥的采集模式。
-- Manual Mic 和实时 Talk 优先使用已连接的 Bluetooth Classic 或 BLE 头戴式耳机麦克风；如果断开连接，应用会请求另一个头戴式输入，或回退到默认麦克风，并在采集停止后恢复默认偏好。
-- Manual Mic 在应用离开前台或用户离开 Voice 选项卡时停止。
+- Voice 选项卡切换：**Talk**
+- 手动 **Mic** 和 **Talk** 互斥的采集模式。
+- 手动 Mic 和实时 Talk 优先使用已连接的 Bluetooth Classic 或 BLE 头戴式耳机麦克风；如果断开连接，应用会请求另一个头戴式输入，或回退到默认麦克风，并在采集停止后恢复默认偏好。
+- 手动 Mic 在应用离开前台或用户离开 Voice 选项卡时停止。
 - Talk Mode 会持续运行，直到被切换关闭或节点断开连接，运行期间使用 Android 的 microphone foreground-service 类型。
 - Android 支持 `pcm_16000`、`pcm_22050`、`pcm_24000` 和 `pcm_44100` 输出格式，用于低延迟 `AudioTrack` 流式传输。
 

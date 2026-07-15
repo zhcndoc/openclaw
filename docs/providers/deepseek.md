@@ -74,12 +74,21 @@ openclaw gateway restart
 
 ## 内置目录
 
-| Model ref                    | Name              | Input | Context   | Max output | Notes                                      |
-| ---------------------------- | ----------------- | ----- | --------- | ---------- | ------------------------------------------ |
-| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | text  | 1,000,000 | 384,000    | 默认模型；支持 V4 thinking 的接口        |
-| `deepseek/deepseek-v4-pro`   | DeepSeek V4 Pro   | text  | 1,000,000 | 384,000    | 支持 V4 thinking 的接口                   |
-| `deepseek/deepseek-chat`     | DeepSeek Chat     | text  | 131,072   | 8,192      | DeepSeek V3.2 非 thinking 接口           |
-| `deepseek/deepseek-reasoner` | DeepSeek Reasoner | text  | 131,072   | 65,536     | 支持推理的 V3.2 接口                      |
+| Model ref                    | Name              | Input | Context   | Max output | Notes                                               |
+| ---------------------------- | ----------------- | ----- | --------- | ---------- | --------------------------------------------------- |
+| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | text  | 1,000,000 | 384,000    | 默认模型；支持思考的 V4 接口                       |
+| `deepseek/deepseek-v4-pro`   | DeepSeek V4 Pro   | text  | 1,000,000 | 384,000    | 支持思考的 V4 接口                                  |
+| `deepseek/deepseek-chat`     | DeepSeek Chat     | text  | 1,000,000 | 384,000    | 已弃用的 V4 Flash 非思考兼容名称                    |
+| `deepseek/deepseek-reasoner` | DeepSeek Reasoner | text  | 1,000,000 | 384,000    | 已弃用的 V4 Flash 思考兼容名称                      |
+
+<Warning>
+DeepSeek 将在 2026 年 7 月 24 日 15:59 UTC 停止提供 `deepseek-chat` 和 `deepseek-reasoner`。
+它们当前分别路由到 DeepSeek V4 Flash 的非思考模式和思考模式。在截止日期前，请将已配置的模型引用迁移到
+`deepseek/deepseek-v4-flash` 或 `deepseek/deepseek-v4-pro`。
+</Warning>
+
+OpenClaw 的本地成本估算遵循 DeepSeek 公布的 cache-hit、cache-miss 和输出费率。DeepSeek 可能会更改这些费率；
+其 [Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/) 页面是计费的权威来源。
 
 <Tip>
 V4 模型支持 DeepSeek 的 `thinking` 控制。OpenClaw 也会在后续轮次中重放

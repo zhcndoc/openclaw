@@ -35,18 +35,25 @@ token-delta 流式传输**到频道消息：
 
 **控制项**（除非另有说明，均位于 `agents.defaults` 下）：
 
-| Key                                                          | 值 / 结构                                                            | 默认值    |
-| ------------------------------------------------------------ | -------------------------------------------------------------------- | --------- |
-| `blockStreamingDefault`                                      | `"on"` / `"off"`                                                    | `"off"`    |
-| `blockStreamingBreak`                                        | `"text_end"` / `"message_end"`                                      | -          |
-| `blockStreamingChunk`                                        | `{ minChars, maxChars, breakPreference? }`                          | -          |
-| `blockStreamingCoalesce`                                     | `{ minChars?, maxChars?, idleMs? }`（在发送前合并已流式传输的区块） | -          |
-| `*.blockStreaming`（频道覆盖）                                | `true` / `false`，按频道（以及按账户）强制启用区块流式传输           | -          |
-| `*.textChunkLimit`（例如 `channels.whatsapp.textChunkLimit`） | number，硬上限                                                      | 4000       |
-| `*.chunkMode`                                                | `"length"` / `"newline"`                                            | `"length"` |
-| `channels.discord.maxLinesPerMessage`                        | number，软行数上限，用于拆分过高的回复以避免 UI 裁切                | 17         |
+| Key                                                          | Values / shape                                                          | Default    |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------- | ---------- |
+| `blockStreamingDefault`                                      | `"on"` / `"off"`                                                        | `"off"`    |
+| `blockStreamingBreak`                                        | `"text_end"` / `"message_end"`                                          | -          |
+| `blockStreamingChunk`                                        | `{ minChars, maxChars, breakPreference? }`                              | -          |
+| `blockStreamingCoalesce`                                     | `{ minChars?, maxChars?, idleMs? }` (发送前合并流式区块)              | -          |
+| `*.streaming.block.enabled` (频道覆盖)                        | `true` / `false`，按频道（以及按账户）强制启用区块流式传输              | -          |
+| `*.textChunkLimit` (例如 `channels.whatsapp.textChunkLimit`) | number，硬上限                                                      | 4000       |
+| `*.streaming.chunkMode`                                      | `"length"` / `"newline"`                                                | `"length"` |
+| `channels.discord.maxLinesPerMessage`                        | number，软行数上限，用于拆分过高的回复以避免 UI 裁剪                 | 17         |
 
-`chunkMode: "newline"` 会先按空行（段落边界）切分，而不是每一行换行；当文本超过限制后，再回退到按长度切分。
+`streaming.chunkMode: "newline"` 会按空白行（段落边界）拆分，
+而不是每一行；当文本超过限制后，再回退到按长度分块。
+
+打包频道将这些覆盖项写作
+`channels.<id>.streaming.{chunkMode,block.enabled,block.coalesce}`。扁平的
+`*.chunkMode` / `*.blockStreaming` / `*.blockStreamingCoalesce` 写法在所有打包频道中都属于
+旧版：`openclaw doctor --fix` 会把它们迁移为嵌套结构，且频道 schema 会拒绝它们。外部 SDK 插件
+配置如果仍在使用这些扁平写法，仍可通过已弃用的回退路径继续工作（并会在运行时给出警告），直到下一个发布周期。
 
 **`blockStreamingBreak` 的边界语义**：
 
@@ -78,15 +85,15 @@ token-delta 流式传输**到频道消息：
 当启用区块流式传输时，OpenClaw 可以在发送前**合并连续的区块
 片段**，在保持渐进式输出的同时减少单行刷屏。
 
-- 合并会等待**空闲间隔**（`idleMs`）后再刷新。
-- 缓冲区会被 `maxChars` 限制，若超过则立即刷新。
-- `minChars` 会阻止过小的片段发送，直到累积了足够的文本
+- 合并会在刷新前等待**空闲间隔**（`idleMs`）。
+- 缓冲区会受 `maxChars` 限制，并在超过时立即刷新。
+- `minChars` 可防止过小的片段过早发送，直到累积到足够文本
   （最终刷新始终会发送剩余文本）。
 - 连接符由 `blockStreamingChunk.breakPreference` 决定：`paragraph` ->
   `\n\n`，`newline` -> `\n`，`sentence` -> 空格。
-- 可通过 `*.blockStreamingCoalesce` 覆盖频道设置（包括
+- 可通过 `*.streaming.block.coalesce` 进行频道覆盖（包括
   按账户配置）。
-- Discord、Signal 和 Slack 默认合并为 `{ minChars: 1500, idleMs: 1000 }`
+- Discord、Signal 和 Slack 的默认合并配置为 `{ minChars: 1500, idleMs: 1000 }`
   ，除非被覆盖。
 
 ## 区块之间的人类化节奏
@@ -104,18 +111,18 @@ token-delta 流式传输**到频道消息：
 ## “流式分块还是一次全部输出”
 
 - **流式分块：** `blockStreamingDefault: "on"` + `blockStreamingBreak: "text_end"`
-  （边生成边发送）。非 Telegram 渠道还需要 `*.blockStreaming: true`。
-- **在结束时一次性全部输出：** `blockStreamingBreak: "message_end"`（一次刷新，
-  如果内容很长，可能会分成多个块）。
-- **不进行块流式输出：** `blockStreamingDefault: "off"`（仅最终回复）。
+  （边生成边输出）。非 Telegram 渠道还需要
+  `*.streaming.block.enabled: true`。
+- **在末尾一次性输出全部内容：** `blockStreamingBreak: "message_end"`（一次
+  刷出，内容很长时可能会分成多个块）。
+- **不进行分块流式输出：** `blockStreamingDefault: "off"`（仅最终回复）。
 
-块流式输出默认是**关闭**的，除非 `*.blockStreaming` 明确设置为
-`true`。渠道可以在不使用块回复的情况下进行实时预览流式输出（`channels.<channel>.streaming`）。
-`blockStreaming*` 的默认值位于 `agents.defaults` 下，而不是配置根目录。
+除非 `*.streaming.block.enabled` 明确设置为 `true`，否则块流式输出为**关闭**状态（例外：QQ Bot 没有 `streaming.block` 相关键，且会流式输出块回复，除非 `channels.qqbot.streaming.mode` 为 `"off"`）。各渠道可以在不启用块回复的情况下，流式输出实时预览（`channels.<channel>.streaming.mode`）。`blockStreaming*` 的默认值位于 `agents.defaults` 下，而不是配置根目录。
 
 ## 预览流式模式
 
-Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层布尔值是旧版别名）。
+Canonical key: `channels.<channel>.streaming` (nested `{ mode, ... }`; legacy
+top-level boolean/string spellings are rewritten by `openclaw doctor --fix`).
 
 | Mode       | 行为                                                                 |
 | ---------- | -------------------------------------------------------------------- |
@@ -124,7 +131,16 @@ Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层�
 | `block`    | 预览以分块/追加步骤更新                                                |
 | `progress` | 生成期间显示进度/状态预览，完成时输出最终答案                           |
 
-`streaming.mode: "block"` 是适用于可编辑频道（如 Discord 和 Telegram）的预览流式模式；它本身并不会在这些频道中启用频道块投递。正常的块回复请使用 `streaming.block.enabled`（或旧版的 `blockStreaming` 频道键）。Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streaming.mode: "block"` 会完全禁用原生流式传输，回复将作为常规块投递而不是原生 partial/progress 流式传输。
+`streaming.mode: "block"` is a preview-streaming mode for edit-capable
+channels such as Discord and Telegram; it does not by itself enable channel
+block delivery there. Use `streaming.block.enabled` for normal block replies.
+Microsoft Teams is the
+exception: it has no draft-preview block transport, so `streaming.mode:
+"block"` disables native streaming entirely and the reply lands as regular
+block delivery instead of native partial/progress streaming. Mattermost also
+differs: in `block` mode it rotates the preview between completed text and
+tool-activity blocks, so earlier blocks stay visible as separate posts
+instead of being overwritten in one editable draft.
 
 ### 频道映射
 
@@ -145,11 +161,14 @@ Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层�
 
 ### 旧键迁移
 
-| Channel  | Legacy keys                                                 | Status                                                                                                                                                       |
-| -------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Telegram | `streamMode`、标量/布尔 `streaming`                           | 通过 doctor/config 兼容路径检测并迁移到 `streaming.mode`                                                                                                      |
-| Discord  | `streamMode`、布尔 `streaming`                               | `streaming` 枚举的运行时别名；运行 `openclaw doctor --fix` 可重写已保存的配置                                                                                  |
-| Slack    | `streamMode`；布尔 `streaming`；旧版 `nativeStreaming`       | `streaming.mode` 的运行时别名（以及布尔/旧版形式对应的 `streaming.nativeTransport`）；运行 `openclaw doctor --fix` 可重写已保存的配置                           |
+| Channel  | Legacy keys                                                 | Status                                                                                                                                               |
+| ---------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Telegram | `streamMode`, scalar/boolean `streaming`                    | Rewritten to `streaming.mode` by `openclaw doctor --fix`; not read at runtime                                                                        |
+| Discord  | `streamMode`, boolean `streaming`                           | Rewritten to `streaming.mode` by `openclaw doctor --fix`; not read at runtime                                                                        |
+| Slack    | `streamMode`; boolean `streaming`; legacy `nativeStreaming` | Rewritten to `streaming.mode` (and `streaming.nativeTransport` for the boolean/legacy forms) by `openclaw doctor --fix`; not read at runtime         |
+| Matrix   | scalar/boolean `streaming`                                  | Rewritten to `streaming.mode` (including Matrix's `"quiet"` mode) by `openclaw doctor --fix`; not read at runtime                                    |
+| Feishu   | boolean `streaming`                                         | Rewritten to `streaming.mode` by `openclaw doctor --fix`; not read at runtime                                                                        |
+| QQ Bot   | boolean `streaming`; `streaming.c2cStreamApi`               | Rewritten to `streaming.mode` (and `streaming.nativeTransport` for the boolean/`c2cStreamApi` forms) by `openclaw doctor --fix`; not read at runtime |
 
 ## 运行时行为
 
@@ -170,7 +189,8 @@ Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层�
 - 使用发送 + 编辑预览消息。
 - `block` 模式使用草稿分块（`draftChunk`）。
 - 当 Discord block streaming 被显式启用时，会跳过预览流式传输。
-- 最终媒体、错误和显式回复载荷会取消待处理预览，而不会刷新新的草稿，然后使用常规投递。
+- `progress` 模式会在最终答案后附加一个小的 `-#` 活动回执（思考/工具调用计数以及耗时），并在该答案送达后删除状态草稿，因此繁忙频道不会在回复上方留下孤立的工具日志。错误类最终结果会保留草稿，作为失败轮次的记录。
+- 最终媒体、错误以及显式回复载荷会取消待处理的预览，而不会刷新新的草稿，然后使用常规投递。
 
 ### Slack
 
@@ -183,8 +203,10 @@ Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层�
 
 ### Mattermost
 
-- 将思考、工具活动和部分回复文本流入同一个草稿预览帖子，并在最终答案可安全发送时就地完成。
-- 如果预览帖子在完成时已被删除或由于其他原因不可用，则回退为发送一条新的最终帖子。
+- 在 `partial` 模式下，会将思考和部分回复文本流式传输到同一个草稿预览帖子中，并在最终答案可以安全发送时就地完成。
+- 在 `progress` 模式下，会将思考和工具活动流式传输到同一个状态预览中，并在最终答案可以安全发送时就地完成。
+- 在 `block` 模式下，会在已完成文本和工具活动帖子之间轮换；并行和连续的工具更新会共享当前的工具活动帖子。
+- 如果预览帖子已被删除，或在完成时不可用，则会回退为发送一条新的最终帖子。
 - 最终媒体/错误载荷会在常规投递之前取消待处理的预览更新，而不是刷新一个临时预览帖子。
 
 ### Matrix
@@ -196,15 +218,15 @@ Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层�
 
 预览流还可以包含 **工具进度** 更新：像“正在搜索网页”“正在读取文件”或“正在调用工具”这样的简短状态行，会在工具运行期间以同一条预览消息中的形式出现，并早于最终回复。在 Codex app-server 模式下，Codex 的前言/说明消息也使用同一预览路径，因此简短的“我正在检查……”进度提示可以流入可编辑草稿，而不会成为最终答案的一部分。这样可以让多步骤工具调用在视觉上保持“活跃”，而不是在第一次思考预览和最终答案之间静默无声。
 
-长时间运行的工具在返回之前可能会发出带类型的进度信息。例如，`web_fetch` 在启动时会启动一个五秒计时器：如果抓取仍在进行中，预览会显示 `Fetching page content...`；如果抓取在此之前完成或被取消，则不会发出进度行。随后较晚到达的最终工具结果仍会正常传递给模型。
+长时间运行的工具在返回之前可能会发出带类型的进度信息。例如，`web_fetch` 在启动时会启动一个五秒计时器：如果抓取仍在进行中，预览会显示 `正在获取页面内容...`；如果抓取在此之前完成或被取消，则不会发出进度行。随后较晚到达的最终工具结果仍会正常传递给模型。
 
 支持的场景：
 
 - **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流处于活动状态时，默认会将工具进度和 Codex 前言更新流入实时预览编辑。Microsoft Teams 在个人聊天中使用其原生进度流。
-- Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用可保留这一已发布行为。
-- **Mattermost** 已经会把工具活动折叠到其单一草稿预览帖子中（见上文）。
-- 工具进度编辑遵循当前活动的预览流模式；当预览流为 `off` 或消息已经被块流接管时，它们会被跳过。在 Telegram 上，`streaming.mode: "off"` 是仅最终结果模式：通用的进度闲聊也会被抑制，不会作为独立状态消息发送，而审批提示、媒体载荷和错误仍会正常路由。
-- 若要保留预览流但隐藏工具进度行，请为该频道将 `streaming.preview.toolProgress` 设为 `false`（默认 `true`）。若要在隐藏命令/执行文本的同时仍显示工具进度行，请将 `streaming.preview.commandText` 设为 `"status"`，或将 `streaming.progress.commandText` 设为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略适用于使用 OpenClaw 紧凑进度渲染器的草稿/进度通道，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
+- Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用可保留该已发布行为。
+- **Mattermost** 会在 `partial` 和 `progress` 模式下将工具活动折叠到一条预览帖子中，或在 `block` 模式下将一条工具活动帖子插入文本块之间（见上文）。
+- 工具进度编辑会遵循当前活动的预览流模式；当预览流为 `off` 或块流已经接管消息时，它们会被跳过。在 Telegram 上，`streaming.mode: "off"` 表示仅最终输出：通用进度闲聊也会被抑制，不会作为独立状态消息发送，而审批提示、媒体载荷和错误仍会正常路由。
+- 要保留预览流但隐藏工具进度行，可为该频道将 `streaming.preview.toolProgress` 设为 `false`（默认值为 `true`）。要在隐藏命令/执行文本的同时保留工具进度行可见，可将 `streaming.preview.commandText` 设为 `"status"`，或将 `streaming.progress.commandText` 设为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略适用于使用 OpenClaw 紧凑进度渲染器的草稿/进度通道，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
 
 ## 进度草稿渲染
 
@@ -246,7 +268,7 @@ Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层�
         "mode": "partial",
         "preview": {
           "toolProgress": true,
-          "commandText": "status"
+          "commandText": "状态"
         }
       }
     }
@@ -267,7 +289,7 @@ Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层�
         "mode": "progress",
         "progress": {
           "toolProgress": true,
-          "commandText": "status"
+          "commandText": "状态"
         }
       }
     }
@@ -275,10 +297,10 @@ Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；顶层�
 }
 ```
 
-## Related content
+## 相关内容
 
-- [Message lifecycle refactor](/concepts/message-lifecycle-refactor) - The goal is to share the design for preview, editing, streaming, and finalization
-- [Progress drafts](/concepts/progress-drafts) - Visible in-progress messages updated during long turns
-- [Messages](/concepts/messages) - Message lifecycle and delivery
-- [Retry](/concepts/retry) - Retry behavior when delivery fails
-- [Channels](/channels) - Streaming support for each channel
+- [消息生命周期重构](/concepts/message-lifecycle-refactor) - 目标是共享用于预览、编辑、流式传输和完成的设计
+- [进度草稿](/concepts/progress-drafts) - 在长时间轮次中更新的可见进行中消息
+- [消息](/concepts/messages) - 消息生命周期和传递
+- [重试](/concepts/retry) - 传递失败时的重试行为
+- [通道](/channels) - 各通道的流式支持

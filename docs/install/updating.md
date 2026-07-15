@@ -8,6 +8,9 @@ title: "更新"
 
 让 OpenClaw 保持最新版本。
 
+对于 Docker、Podman 和 Kubernetes 镜像替换，请参见
+[升级容器镜像](/install/docker#upgrading-container-images)。网关会在就绪之前运行启动安全的升级工作，如果挂载的状态需要手动修复，则会退出。
+
 ## 推荐：`openclaw update`
 
 检测你的安装类型（npm 或 git），获取最新版本，运行 `openclaw doctor`，并重启网关。
@@ -33,10 +36,16 @@ openclaw update --dry-run   # 不实际应用，仅预览
 或其版本低于最新稳定版发布，则会回退到 stable/latest。若想进行一次性的
 包更新并固定到原始 npm beta dist-tag，请改用 `--tag beta`。
 
-`--channel extended-stable` 仅适用于包且仅限前台模式。OpenClaw 会读取
-公开的 npm `extended-stable` 选择器，验证所选的精确包，并安装该精确版本。
-若注册表数据缺失或不一致，则会失败并停止；它绝不会回退到 `latest`。
-如果所选版本比已安装版本更旧，仍然适用正常的降级确认流程。
+`--channel extended-stable` 仅适用于包，且安装仍然仅在前台进行。OpenClaw 读取公开的 npm `extended-stable` 选择器，
+验证所选的精确包，并安装该精确版本。缺失或不一致的注册表数据会直接失败；
+它绝不会回退到 `latest`。如果所选版本比已安装版本更旧，正常的降级确认仍然适用。
+CLI 会在核心更新成功后持久化该通道；直接执行 `npm install -g openclaw@extended-stable`
+不会更新 `update.channel`。
+在核心切换后，符合条件的官方 npm 插件如果使用裸/default 或 `latest` 意图，会收敛到该精确的核心版本。
+精确锁定和显式非 `latest` 标签、第三方插件以及非 npm 来源保持不变。
+当前 OpenClaw 版本创建的目录安装会保留该默认意图。包含仅精确版本的旧记录会保持锁定，
+因为 OpenClaw 无法安全地区分旧的自动锁定和用户锁定；请在 extended-stable 通道上运行
+`openclaw plugins update @openclaw/name` 一次，以让该插件重新回到精确核心跟踪。
 
 `--channel dev` 提供一个持续更新的 GitHub `main` 检出。对于一次性的
 包更新，`--tag main` 会映射到 `github:openclaw/openclaw#main` 包规范，
@@ -181,38 +190,46 @@ bun add -g openclaw@latest
 }
 ```
 
-| Channel           | 行为                                                                                                                                           |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stable`          | 等待 `stableDelayHours`（默认：6），然后在 `stableJitterHours`（默认：12）内以确定性抖动方式应用，以实现分批发布。                              |
-| `extended-stable` | 不进行启动检查或自动应用。请手动使用 `openclaw update` 或 `openclaw update status`。                                                            |
-| `beta`            | 每 `betaCheckIntervalHours`（默认：1）检查一次，并立即应用。                                                                                   |
-| `dev`             | 不自动应用。请手动使用 `openclaw update`。                                                                                                      |
+| Channel           | 行为                                                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stable`          | 等待 `stableDelayHours`（默认：6），然后在 `stableJitterHours`（默认：12）范围内使用确定性抖动分散发布。 |
+| `extended-stable` | 在启用 `checkOnStart` 时，启动时以及每 24 小时检查一次只读更新提示。绝不会自动应用。                |
+| `beta`            | 每 `betaCheckIntervalHours`（默认：1）检查一次，并立即应用。                                                                  |
+| `dev`             | 不自动应用。请手动使用 `openclaw update`。                                                                                          |
 
-网关还会在启动时记录更新提示（可通过 `update.checkOnStart: false` 禁用）。
-已存储的 extended-stable 选择会完全跳过启动和后台解析。
-对于降级或事故恢复，可在网关环境中设置 `OPENCLAW_NO_AUTO_UPDATE=1`，即使配置了 `update.auto.enabled` 也会阻止自动应用。除非同时禁用 `update.checkOnStart`，否则启动更新提示仍可能运行。
+网关还会在启动时记录更新提示（可通过
+`update.checkOnStart: false` 禁用）。已存储的 extended-stable 选择会使用这种
+只读提示路径和现有的 24 小时提示间隔，但绝不会触发
+自动安装、交接、重启、stable 延迟/抖动或 beta 轮询。
+对于降级或事故恢复，请在网关环境中设置 `OPENCLAW_NO_AUTO_UPDATE=1`，即使配置了
+`update.auto.enabled` 也会阻止自动应用。启动时的更新提示仍然可以运行，除非
+`update.checkOnStart` 也被禁用。
 
 通过实时 Gateway 控制平面（`update.run`）请求的包管理器更新，不会替换正在运行的 Gateway 进程内的包树。在受管服务安装中，Gateway 会启动一个分离的交接，退出，并让正常的 `openclaw update --yes --json` CLI 路径去停止服务、替换包、刷新服务元数据、重启、验证 Gateway 版本和可达性，并在可能时恢复已安装但未加载的 macOS LaunchAgent。如果 Gateway 无法安全地完成该交接，`update.run` 会返回一个安全的 shell 命令，而不是在进程内运行包管理器。
 
-## Updated
+控制台 UI 侧边栏的更新卡片会启动同样的 `update.run` 流程。在
+签名的 macOS 应用中，该卡片会先通过 Sparkle 更新应用；重新启动后，
+应用会将其托管的本地 Gateway 更新到匹配的版本。
+
+## 更新后
 
 <Steps>
 
-### Run doctor
+### 运行 doctor
 
 ```bash
 openclaw doctor
 ```
 
-Migrate configuration, audit DM policies, and check gateway health status. Details: [Doctor](/gateway/doctor)
+迁移配置、审计 DM 策略，并检查网关健康状态。详情：[Doctor](/gateway/doctor)
 
-### Restart gateway
+### 重启网关
 
 ```bash
 openclaw gateway restart
 ```
 
-### Verify
+### 验证
 
 ```bash
 openclaw health
@@ -245,12 +262,12 @@ openclaw gateway restart
 
 要返回最新版本：`git checkout main && git pull`。
 
-## If you get stuck
+## 如果你遇到卡住的情况
 
-- Run `openclaw doctor` again, and read the output carefully.
-- For source checkouts on `openclaw update --channel dev`, the updater will automatically bootstrap `pnpm` when needed. If you see pnpm/corepack bootstrap errors, manually install `pnpm` (or re-enable `corepack`) and then rerun the update.
-- See: [Troubleshooting](/gateway/troubleshooting)
-- Ask in Discord: [https://discord.gg/clawd](https://discord.gg/clawd)
+- 再次运行 `openclaw doctor`，并仔细阅读输出内容。
+- 对于使用 `openclaw update --channel dev` 的源码检出版本，更新器会在需要时自动引导安装 `pnpm`。如果你看到 pnpm/corepack 引导错误，请手动安装 `pnpm`（或重新启用 `corepack`），然后再次运行更新。
+- 参见：[故障排除](/gateway/troubleshooting)
+- 在 Discord 中提问：[https://discord.gg/clawd](https://discord.gg/clawd)
 
 ## 相关内容
 

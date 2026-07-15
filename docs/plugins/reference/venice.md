@@ -11,12 +11,12 @@ title: "Venice 插件"
 
 ## 分发
 
-- Package: `@openclaw/venice-provider`
-- Install route: npm; ClawHub: `clawhub:@openclaw/venice-provider`
+- 包：`@openclaw/venice-provider`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/venice-provider`
 
 ## 接口
 
-providers: venice
+providers：venice；contracts：usageProviders
 
 ## 相关文档
 

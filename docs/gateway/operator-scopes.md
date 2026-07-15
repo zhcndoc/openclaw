@@ -21,7 +21,7 @@ title: "操作员作用域"
 
 - `operator`：控制平面客户端，例如 CLI、控制 UI、自动化，以及
   受信任的辅助进程。
-- `node`：能力宿主（macOS、iOS、Android、headless），通过
+- `node`：能力宿主（macOS、iOS、Android、无头），通过
   `node.invoke` 暴露命令。
 
 Operator RPC 方法需要 `operator` 角色；来自 node 的方法
@@ -70,16 +70,21 @@ Operator RPC 方法需要 `operator` 角色；来自 node 的方法
 
 ## 节点配对批准
 
-旧版 `node.pair.*` 方法使用一个由 Gateway 单独拥有的节点配对存储。
+旧版 `node.pair.*` 方法使用由 Gateway 单独拥有的节点配对存储。
 WS 节点则改用设备配对（`role: node`），但适用相同的批准术语。有关这两个存储之间的关系，请参见 [Gateway 配对](/gateway/pairing)。
 
 `node.pair.approve` 会根据待处理请求的命令列表推导出额外所需的作用域：
 
-| 声明的命令                                           | 所需作用域                            |
-| ----------------------------------------------------- | ------------------------------------- |
-| 无                                                    | `operator.pairing`                    |
-| 非 exec 节点命令                                      | `operator.pairing` + `operator.write` |
-| `system.run`、`system.run.prepare` 或 `system.which` | `operator.pairing` + `operator.admin` |
+| 声明的命令                                                                                                          | 所需作用域                            |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| 无                                                                                                                   | `operator.pairing`                    |
+| 普通节点命令                                                                                                         | `operator.pairing` + `operator.write` |
+| `system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`fs.listDir` 或 `system.execApprovals.get/set` | `operator.pairing` + `operator.admin` |
+
+批准节点声明不会启用具有单独运行时允许列表门控的命令。例如，批准一个声明了
+`computer.act` 的节点需要配对加写入作用域，但只会记录该表面。管理员或所有者仍然必须为
+`computer.act` 重新武装。只要它保持
+武装状态，通过具备写入作用域的 `node.invoke` 方法调用它时，每个操作都不需要 admin 作用域。
 
 节点配对用于建立身份和信任；它不会替代节点自身的 `system.run` exec 批准策略。
 

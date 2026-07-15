@@ -18,7 +18,7 @@ OpenClaw 可以为 Gateway 仪表盘和 WebSocket 端口自动配置 Tailscale *
 | `funnel`        | 通过 `tailscale funnel` 提供公共 HTTPS。需要共享密码。                    |
 | `off` (默认)    | 不进行 Tailscale 自动化。                                                 |
 
-状态和审计输出会针对这种 OpenClaw Serve/Funnel 模式使用 **Tailscale exposure**。`off` 表示 OpenClaw 不管理 Serve 或 Funnel；这并不意味着本地 Tailscale 守护进程已停止或已登出。
+状态和审计输出会针对这种 OpenClaw Serve/Funnel 模式使用 **Tailscale 暴露**。`off` 表示 OpenClaw 不管理 Serve 或 Funnel；这并不意味着本地 Tailscale 守护进程已停止或已登出。
 
 ## 配置示例
 
@@ -67,7 +67,7 @@ OpenClaw 可以为 Gateway 仪表盘和 WebSocket 端口自动配置 Tailscale *
 - WebSocket：`ws://<tailscale-ip>:18789`
 
 <Note>
-回环地址（`http://127.0.0.1:18789`）在此模式下将**无法**工作。
+当存在可绑定的 Tailnet IPv4 时，Gateway 还需要 `http://127.0.0.1:18789` 以便经过身份验证的同主机客户端使用。如果启动时没有可用的 Tailnet 地址，它会回退为仅绑定 loopback；在 Tailscale 可用后重新启动，即可添加直接的 Tailnet 访问。两种路径都不会带来 LAN 或公网暴露。
 </Note>
 
 ### 公共互联网（Funnel + 共享密码）
@@ -114,18 +114,18 @@ openclaw gateway --tailscale funnel --auth password
 - 对于已经携带浏览器设备身份的 Control UI 操作员会话，已验证的 Tailscale 身份会跳过 bootstrap-token/QR 配对往返流程。
 - 它不会绕过设备身份本身：没有设备的客户端仍会被拒绝，而节点角色连接仍会经过正常的配对和认证检查。
 
-## Notes
+## 说明
 
-- Tailscale Serve/Funnel 需要已安装并登录 `tailscale` CLI。
-- `tailscale.mode: "funnel"` 只有在认证模式为 `password` 时才允许启动，以避免公开暴露。
-- `gateway.tailscale.serviceName` 仅适用于 Serve 模式，并会传递给 `tailscale serve --service=<name>`。该值必须使用 Tailscale 的 `svc:<dns-label>` 格式，例如 `svc:openclaw`。Tailscale 要求 Service 主机必须是带标签的节点，而且该 Service 可能需要在管理控制台审批后，Serve 才能发布它。
+- Tailscale Serve/Funnel 需要已安装并登录的 `tailscale` CLI。
+- `tailscale.mode: "funnel"` 会拒绝启动，除非认证模式是 `password`，以避免公开暴露。
+- `gateway.tailscale.serviceName` 仅适用于 Serve 模式，并会传递给 `tailscale serve --service=<name>`。该值必须使用 Tailscale 的 `svc:<dns-label>` 格式，例如 `svc:openclaw`。Tailscale 要求 Service 主机必须是带标签的节点，并且该 Service 在 Serve 进行发布前可能需要管理员控制台批准。
 - `gateway.tailscale.resetOnExit` 会在关闭时撤销 `tailscale serve`/`tailscale funnel` 配置。
-- `gateway.tailscale.preserveFunnel: true` 会在网关重启期间保持外部配置的 `tailscale funnel` 路由持续生效。使用 `mode: "serve"` 时，OpenClaw 会在重新应用 Serve 之前检查 `tailscale funnel status`，如果已有 Funnel 路由覆盖了网关端口，则会跳过。OpenClaw 管理的仅密码策略的 Funnel 保持不变。
-- `gateway.bind: "tailnet"` 是直接绑定到 Tailnet（无 HTTPS、无 Serve/Funnel）。
-- `gateway.bind: "auto"` 优先使用回环；仅限 Tailnet 绑定时使用 `tailnet`。
-- Serve/Funnel 只暴露 **Gateway 控制 UI + WS**。节点通过同一个 Gateway WS 端点连接，因此 Serve 也适用于节点访问。
+- `gateway.tailscale.preserveFunnel: true` 会在网关重启期间保持外部配置的 `tailscale funnel` 路由持续生效。使用 `mode: "serve"` 时，OpenClaw 会在重新应用 Serve 之前检查 `tailscale funnel status`，如果已有 Funnel 路由覆盖网关端口，则会跳过。OpenClaw 管理的仅密码策略的 Funnel 不受影响。
+- `gateway.bind: "tailnet"` 使用直接 Tailnet 绑定（无 HTTPS、无 Serve/Funnel），并在可用 Tailnet IPv4 时同时要求本地 `127.0.0.1`；否则会退回到仅 loopback。
+- `gateway.bind: "auto"` 优先使用 loopback；使用 `tailnet` 可将网络暴露限制在 Tailnet 内，同时保留同主机 loopback 访问。
+- Serve/Funnel 仅暴露 **Gateway 控制界面 + WS**。节点通过相同的 Gateway WS 端点连接，因此 Serve 也可用于节点访问。
 
-### Tailscale prerequisites and limits
+### Tailscale 前置条件和限制
 
 - Serve 需要为你的 tailnet 启用 HTTPS；如果缺少该项，CLI 会提示。
 - Serve 会注入 Tailscale 身份标头；Funnel 不会。

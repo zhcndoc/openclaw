@@ -155,3 +155,4 @@ openclaw secrets audit --check
 
 - [CLI 参考](/cli)
 - [密钥管理](/gateway/secrets)
+- [Vault SecretRefs](/plugins/vault)

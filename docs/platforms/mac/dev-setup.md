@@ -11,9 +11,8 @@ title: "macOS 开发设置"
 
 ## 先决条件
 
-- **Xcode 26.2+**（Swift 6.2 工具链），运行在“软件更新”中可用的最新 macOS 上。
-- **Node.js 24 和 pnpm**，用于网关、CLI 和打包脚本。Node
-  22.19+ 也可以。
+- **Xcode 26.2+**（Swift 6.2 工具链），在 Software Update 中可用的最新 macOS 上。
+- **Node.js 24.15+ 和 pnpm**，用于网关、CLI 和打包脚本。Node 22.22.3+ 也可以。
 
 ## 1. 安装依赖
 

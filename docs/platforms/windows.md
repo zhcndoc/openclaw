@@ -16,19 +16,20 @@ Center 诊断以及 Windows 节点功能的桌面应用。直接使用 PowerShel
 ## 推荐：Windows Hub
 
 Windows Hub 是适用于 Windows 10 20H2+ 和
-Windows 11 的原生 WinUI 配套应用。它无需管理员权限即可安装，并作为经过签名的
-x64 和 ARM64 安装程序随 OpenClaw 版本发布。
+Windows 11 的原生 WinUI 配套应用。它无需管理员权限即可安装，并提供经过签名的 x64
+和 ARM64 安装程序，发布在其自己的发布页面上。
 
-从
-[OpenClaw 发布页面](https://github.com/openclaw/openclaw/releases) 下载最新稳定版安装程序，或者
-直接通过 `releases/latest/download` 获取：
+Windows Hub 的发布与 OpenClaw CLI 和 Gateway 独立。请从
+[Windows Hub releases page](https://github.com/openclaw/openclaw-windows-node/releases/latest)
+下载最新的稳定版 Hub 安装程序，或者直接通过 `releases/latest/download` 下载：
 
-- [OpenClawCompanion-Setup-x64.exe](https://github.com/openclaw/openclaw/releases/latest/download/OpenClawCompanion-Setup-x64.exe)
-- [OpenClawCompanion-Setup-arm64.exe](https://github.com/openclaw/openclaw/releases/latest/download/OpenClawCompanion-Setup-arm64.exe)
-- [校验和](https://github.com/openclaw/openclaw/releases/latest/download/OpenClawCompanion-SHA256SUMS.txt)
+- [OpenClawCompanion-Setup-x64.exe](https://github.com/openclaw/openclaw-windows-node/releases/latest/download/OpenClawCompanion-Setup-x64.exe)
+- [OpenClawCompanion-Setup-arm64.exe](https://github.com/openclaw/openclaw-windows-node/releases/latest/download/OpenClawCompanion-Setup-arm64.exe)
 
-如果上面的链接返回 404，请访问 [发布页面](https://github.com/openclaw/openclaw/releases)
-并在最新版本中查找 `OpenClawCompanion-Setup-*` 资源。
+如果上面的链接返回 404，请访问 [Windows Hub releases page](https://github.com/openclaw/openclaw-windows-node/releases)
+并打开最新的稳定版 Windows Hub 发布。常规的 OpenClaw 稳定版发布
+也会镜像一个固定的、经过发布验证的 Windows Hub 构建；该镜像可能会晚于
+更新的独立 Hub 发布。
 
 安装完成后，从开始菜单或系统
 托盘启动 **OpenClaw Companion**。安装程序还会添加 Gateway Setup、Chat、Settings、
@@ -72,7 +73,7 @@ Windows 原生能力。节点命令必须由节点声明，并在 Gateway 策略
 
 常见命令：
 
-| Family | Commands                                                                             |
+| 家族 | 命令                                                                             |
 | ------ | ------------------------------------------------------------------------------------ |
 | Canvas | `canvas.present`, `canvas.hide`, `canvas.navigate`, `canvas.eval`, `canvas.snapshot` |
 | Screen | `screen.snapshot`；`screen.record` 需要显式选择加入                          |
@@ -215,11 +216,11 @@ systemctl --user is-enabled openclaw-gateway.service
 systemctl --user status openclaw-gateway.service --no-pager
 ```
 
-## 通过 LAN 暴露 WSL 服务
+## Exponer servicios de WSL a través de LAN
 
-WSL 有自己的虚拟网络。如果另一台机器必须访问 WSL 内的某个服务，请将 Windows 端口转发到当前的 WSL IP。WSL 的 IP 在重启后可能会改变，因此需要时请刷新转发规则。
+WSL tiene su propia red virtual. Si otra máquina necesita acceder a un servicio dentro de WSL, reenvía el puerto de Windows a la IP actual de WSL. La IP de WSL puede cambiar después de reiniciar, así que actualiza las reglas de reenvío cuando sea necesario.
 
-PowerShell 管理员示例：
+Ejemplo de PowerShell como administrador:
 
 ```powershell
 $Distro = "Ubuntu-24.04"
@@ -227,7 +228,7 @@ $ListenPort = 2222
 $TargetPort = 22
 
 $WslIp = (wsl -d $Distro -- hostname -I).Trim().Split(" ")[0]
-if (-not $WslIp) { throw "未找到 WSL IP。" }
+if (-not $WslIp) { throw "No se encontró la IP de WSL." }
 
 netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=$ListenPort `
   connectaddress=$WslIp connectport=$TargetPort
@@ -236,11 +237,11 @@ New-NetFirewallRule -DisplayName "WSL SSH $ListenPort" -Direction Inbound `
   -Protocol TCP -LocalPort $ListenPort -Action Allow
 ```
 
-注意：
+Nota:
 
-- 来自另一台机器的 SSH 目标应为 Windows 主机 IP，例如 `ssh user@windows-host -p 2222`。
-- 远程节点必须指向可访问的 Gateway URL，而不是 `127.0.0.1`。
-- LAN 访问使用 `listenaddress=0.0.0.0`，仅本机访问使用 `127.0.0.1`。
+- El destino SSH desde otra máquina debe ser la IP del host de Windows, por ejemplo `ssh user@windows-host -p 2222`.
+- El nodo remoto debe apuntar a una URL de Gateway accesible, no a `127.0.0.1`.
+- El acceso por LAN usa `listenaddress=0.0.0.0`; el acceso solo local usa `127.0.0.1`.
 
 ## 故障排查
 

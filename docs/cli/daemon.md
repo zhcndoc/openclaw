@@ -23,14 +23,14 @@ openclaw daemon uninstall
 
 ## 子命令和选项
 
-| 子命令       | 选项                                                                                           |
-| ------------ | ---------------------------------------------------------------------------------------------- |
-| `status`     | `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json` |
-| `install`    | `--port`, `--runtime <node\|bun>`, `--token`, `--wrapper <path>`, `--force`, `--json`            |
-| `uninstall`  | `--json`                                                                                         |
-| `start`      | `--json`                                                                                         |
-| `stop`       | `--json`, `--disable`（仅限 launchd：在下次启动前持久禁止 KeepAlive/RunAtLoad）                   |
-| `restart`    | `--force`, `--safe`, `--skip-deferral`, `--wait <duration>`, `--json`                            |
+| Subcommand  | Options                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| `status`    | `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json` |
+| `install`   | `--port`, `--runtime <node>`, `--token`, `--wrapper <path>`, `--force`, `--json`                 |
+| `uninstall` | `--json`                                                                                         |
+| `start`     | `--json`                                                                                         |
+| `stop`      | `--json`, `--disable`（仅限 launchd：在下次启动前持续抑制 KeepAlive/RunAtLoad） |
+| `restart`   | `--force`, `--safe`, `--skip-deferral`, `--wait <duration>`, `--json`                            |
 
 - `status`：显示服务安装状态（launchd/systemd/schtasks）并探测 Gateway 健康状态。
 - `install`：安装服务；`--force` 会重新安装/覆盖现有安装。

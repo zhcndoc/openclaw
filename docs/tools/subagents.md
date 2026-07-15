@@ -103,18 +103,17 @@ Agents 使用 `sessions_spawn` 工具启动后台子代理。
   </Accordion>
 </AccordionGroup>
 
-## 上下文模式
+## Context Mode
 
-原生子代理默认会以隔离方式启动，除非调用方明确要求分叉
-当前转录。
+Native child agents start in isolation by default unless the caller explicitly requests forking the current transcript.
 
-| 模式       | 何时使用                                                                                                                                       | 行为                                                                            |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `isolated` | 全新的调研、独立实现、慢工具工作，或任何可以在任务文本中简要说明的内容                                                                       | 创建一个干净的子转录。这是默认模式，并能降低令牌使用量。                         |
-| `fork`     | 依赖当前对话、之前工具结果，或请求者转录中已存在的细微指令的工作                                                     | 在子会话开始前，将请求者转录分支到子会话中。 |
+| Mode       | When to use                                                                                                                                       | Behavior                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `isolated` | New research, independent implementation, slow tool work, or anything that can be briefly described in the task text                                                                       | Creates a clean child transcript. This is the default mode and can reduce token usage. |
+| `fork`     | Work that depends on the current conversation, prior tool results, or subtle instructions already present in the requester transcript                                                     | Fork the requester transcript into the child session before the child session starts. |
 
-请谨慎使用 `fork`。它用于依赖上下文的委派，而不是
-对清晰任务提示的替代。
+Use `fork` with caution. It is for context-dependent delegation, not
+a substitute for a clear task prompt.
 
 ## 工具：`sessions_spawn`
 
@@ -125,7 +124,8 @@ Agents 使用 `sessions_spawn` 工具启动后台子代理。
 可用性取决于调用方的有效工具策略。内置
 `coding` 配置包含 `sessions_spawn`；`messaging` 和 `minimal` 不
 包含。`full` 允许所有工具。对于仍应委派工作的、处于较窄配置文件的代理，请添加 `tools.alsoAllow: ["sessions_spawn",
-"sessions_yield", "subagents"]`，或者使用 `tools.profile: "coding"`。
+"sessions_yield",
+"subagents"]`，或者使用 `tools.profile: "coding"`。
 频道/组、提供方、沙箱以及按代理的允许/拒绝策略
 在配置文件阶段之后仍可能移除此工具。请在同一会话中使用 `/tools`
 以确认有效工具列表。
@@ -241,23 +241,23 @@ Agents 使用 `sessions_spawn` 工具启动后台子代理。
 保留目标 `last` 和 `all` 不能作为有效的 `taskName` 值，
 因为它们已经具有控制含义。
 
-## Tool: `sessions_yield`
+## 工具：`sessions_yield`
 
-End the current model turn and wait for runtime events, mainly
-subagent completion events, which will arrive as the next message. When the requester
-cannot provide a final answer before these completions arrive, use it after generating the required subtasks.
+结束当前模型轮次并等待运行时事件，主要是
+子代理完成事件，这些事件将作为下一条消息到达。当请求者
+在这些完成到来之前无法提供最终答案时，在生成所需的子任务后使用它。
 
-`sessions_yield` is a waiting primitive. Do not use
-a loop over subagents, `sessions_list`, `sessions_history`, shell `sleep`
-or process polling just to detect subtask completion.
+`sessions_yield` 是一种等待原语。不要使用
+对子代理的循环、`sessions_list`、`sessions_history`、shell `sleep`
+或进程轮询来仅仅检测子任务完成。
 
-Only use `sessions_yield` when the session’s effective tool list includes it.
-Some minimal or custom tool profiles may expose `sessions_spawn` and
-`subagents` but not `sessions_yield`; in that case, do not fake a polling loop to wait for completion.
+只有当会话的有效工具列表中包含 `sessions_yield` 时才使用它。
+某些最小或自定义工具配置可能提供 `sessions_spawn` 和
+`subagents`，但不提供 `sessions_yield`；在这种情况下，不要伪造轮询循环来等待完成。
 
-When there are active subtasks, OpenClaw will inject a compact runtime-generated
-`Active Subagents` prompt block during normal turns so the requester can see the current sub-sessions, run IDs, states, labels, tasks, and
-`taskName` aliases without polling. The task and label fields in that block are quoted as data, not instructions, because they may come from user/model-provided generation parameters.
+当存在活动子任务时，OpenClaw 会在正常轮次中注入一个紧凑的运行时生成的
+“Active Subagents” 提示块，以便请求者可以看到当前子会话、运行 ID、状态、标签、任务，以及
+`taskName` 别名，而无需轮询。该块中的 task 和 label 字段被引用为数据，而不是指令，因为它们可能来自用户/模型提供的生成参数。
 
 ## 工具：`subagents`
 
@@ -568,7 +568,11 @@ profile 阶段添加 browser：
 
 OpenClaw 不会将 `endedAt` 缺失视为子代理仍然存活的永久证据。超过陈旧运行窗口的未结束运行（2 小时，或配置的运行超时时间加上一小段宽限期，以较长者为准）在 `/subagents list`、状态摘要、后代完成门控以及每个会话的并发检查中，不再计为活动/待处理。
 
-在网关重启后，陈旧的未结束恢复运行会被清理，除非其子会话被标记为 `abortedLastRun: true`。这些重启后中止的子会话仍可通过子代理孤儿恢复流程找回；该流程会在清除中止标记之前发送一条合成的恢复消息。
+在网关重启后，过期且未结束的已恢复运行会被清理，除非
+其子会话标记为 `abortedLastRun: true`。重启中止的
+运行仍会保留注册状态，以用于子代理孤儿恢复流程：过期
+运行会在不恢复的情况下完成终止，而新的子会话会先收到
+一条合成的恢复消息，然后再清除中止标记。
 
 每个子会话的自动重启恢复都有边界。如果同一个子代理子会话在快速重新卡住窗口内被反复接受用于孤儿恢复，OpenClaw 会在该会话上持久化一个恢复墓碑，并在后续重启中停止自动恢复它。运行 `openclaw tasks maintenance --apply` 以协调任务记录，或运行 `openclaw doctor --fix` 清除墓碑会话上过期的中止恢复标记。
 
@@ -594,7 +598,8 @@ OpenClaw 不会将 `endedAt` 缺失视为子代理仍然存活的永久证据。
 
 ## 相关内容
 
+- [会话工具和状态更改](/concepts/session-tool)
 - [ACP 代理](/tools/acp-agents)
-- [代理发送](/tools/agent-send)
+- [Agent 发送](/tools/agent-send)
 - [后台任务](/automation/tasks)
 - [多代理沙箱工具](/tools/multi-agent-sandbox-tools)

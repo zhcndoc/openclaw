@@ -18,7 +18,7 @@ OpenClaw 自带一个内置的 `legacy` 引擎，并默认使用它。只有当�
   <Step title="检查当前激活的引擎">
     ```bash
     openclaw doctor
-    # 或直接检查配置：
+    # 或者直接检查配置：
     cat ~/.openclaw/openclaw.json | jq '.plugins.slots.contextEngine'
     ```
   </Step>
@@ -122,6 +122,7 @@ legacy 引擎不会注册工具，也不会提供 `systemPromptAddition`。
 
 ```ts
 import { buildMemorySystemPromptAddition } from "openclaw/plugin-sdk/core";
+import { resolveSessionAgentId } from "openclaw/plugin-sdk/memory-host-core";
 
 export default function register(api) {
   api.registerContextEngine("my-engine", (ctx) => ({
@@ -136,7 +137,14 @@ export default function register(api) {
       return { ingested: true };
     },
 
-    async assemble({ sessionId, messages, tokenBudget, availableTools, citationsMode }) {
+    async assemble({
+      sessionId,
+      sessionKey,
+      messages,
+      tokenBudget,
+      availableTools,
+      citationsMode,
+    }) {
       // 返回符合预算的消息
       return {
         messages: buildContext(messages, tokenBudget),
@@ -144,6 +152,8 @@ export default function register(api) {
         systemPromptAddition: buildMemorySystemPromptAddition({
           availableTools: availableTools ?? new Set(),
           citationsMode,
+          agentId: resolveSessionAgentId({ config: ctx.config, sessionKey }),
+          agentSessionKey: sessionKey,
         }),
       };
     },
@@ -205,7 +215,10 @@ export default function register(api) {
   适用于具有持久后端线程的主机的可选投影生命周期（例如 Codex app-server）。`mode: "thread_bootstrap"` 搭配稳定的 `epoch` 会要求主机在每个 epoch 只注入一次组装后的上下文，并在 epoch 变化前重用后端线程，而不是每轮都重新投影。对于正常的逐轮投影，请省略此字段。
 </ParamField>
 
-`compact` 返回一个 `CompactResult`。当压缩轮换活动转录时，`result.sessionId` 和 `result.sessionFile` 会标识下一个重试或下一轮必须使用的后继会话。
+`compact` 返回一个 `CompactResult`。当压缩更改了活动会话
+身份时，`result.sessionTarget`（一个带类型的 `ContextEngineSessionTarget`，包含
+会话身份和存储作用域）标识下一次重试或下一轮必须使用的后继会话；
+`result.sessionId` 与后继 id 保持一致。
 
 可选成员：
 
