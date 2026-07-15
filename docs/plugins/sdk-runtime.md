@@ -47,7 +47,7 @@ register(api) {
 `api.runtime.config.loadConfig()` and `api.runtime.config.writeConfigFile(...)` are deprecated. They warn once per plugin at runtime and remain available only for old external plugins during the migration window. Bundled plugins must not use them: an internal config boundary guard fails the build if plugin code calls them or imports those helpers from plugin SDK subpaths. Use `current()`, a passed-in `cfg`, `mutateConfigFile(...)`, or `replaceConfigFile(...)` instead.
 </Warning>
 
-For direct SDK imports, prefer the focused config subpaths over the broad `openclaw/plugin-sdk/config-runtime` compatibility barrel: `config-contracts` for types, `plugin-config-runtime` for already-loaded config assertions and plugin entry lookup, `runtime-config-snapshot` for current process snapshots, and `config-mutation` for writes. Bundled plugin tests should mock these focused subpaths directly instead of mocking the broad compatibility barrel.
+For direct SDK imports, prefer the focused config subpaths over the broad `openclaw/plugin-sdk/config-runtime` compatibility barrel: `config-contracts` for types, `plugin-config-runtime` for already-loaded config assertions, plugin entry lookup, and canonical config merging, `runtime-config-snapshot` for current process snapshots, and `config-mutation` for writes. Bundled plugin tests should mock these focused subpaths directly instead of mocking the broad compatibility barrel.
 
 Internal OpenClaw runtime code follows the same direction: load config once at the CLI, gateway, or process boundary, then pass that value through. Successful mutation writes refresh the process runtime snapshot and advance its internal revision; long-lived caches should key off the runtime-owned cache key instead of serializing config locally. Long-lived runtime modules have a zero-tolerance scanner for ambient `loadConfig()` calls; use a passed `cfg`, a request `context.getRuntimeConfig()`, or `getRuntimeConfig()` at an explicit process boundary.
 
@@ -297,6 +297,7 @@ return {
     const { runId } = await api.runtime.subagent.run({
       sessionKey: "agent:main:subagent:search-helper",
       message: "Expand this query into focused follow-up searches.",
+      toolsAlsoAllow: ["my_plugin_progress"],
       provider: "openai", // optional override
       model: "gpt-5.6-sol", // optional override
       deliver: false,
@@ -321,7 +322,42 @@ return {
     模型覆盖（`provider`/`model`）需要在配置中通过 `plugins.entries.<id>.subagent.allowModelOverride: true` 获得操作员明确允许。未受信任的插件仍然可以运行 subagent，但覆盖请求会被拒绝。
     </Warning>
 
-    `deleteSession(...)` 可以删除由同一插件通过 `api.runtime.subagent.run(...)` 创建的会话。删除任意用户或操作员会话仍需要带有 admin 作用域的 Gateway 请求。
+    `toolsAlsoAllow` adds exact, uniquely owned tools registered by the calling plugin to the worker's normal tool surface. The runtime rejects core tools and names shared with another plugin. Profiles and operator tool policies still apply, including explicit allowlists and denies.
+
+    `deleteSession(...)` can delete sessions created by the same plugin through `api.runtime.subagent.run(...)`. Deleting arbitrary user or operator sessions still requires an admin-scoped Gateway request.
+
+  </Accordion>
+  <Accordion title="api.runtime.sandbox">
+    Inspect the effective sandbox workspace authority for an agent session.
+
+    ```typescript
+    const authority = api.runtime.sandbox.resolveWorkspaceAuthority({
+      config: cfg,
+      agentId,
+      sessionKey,
+    });
+
+    const liveAuthority = await api.runtime.sandbox.prepareWorkspaceAuthority({
+      config: cfg,
+      agentId,
+      sessionKey,
+      workspaceDir,
+      confinedToolNames: ["my_plugin_safe_tool"],
+    });
+    ```
+
+    The result reports whether this session is sandboxed, whether its workspace
+    is unavailable, read-only, or writable, and an optional `confinementError`
+    when the effective Docker, tool, session, browser, or elevated policy can
+    escape that workspace. Use this for host-owned delegation decisions that
+    must not grant a worker more authority than its caller. It is an attestation
+    helper, not a replacement for checking the caller's own authorization.
+
+    `prepareWorkspaceAuthority(...)` performs the same policy check and also
+    prepares the Docker sandbox for `workspaceDir`. It rejects a hot container
+    whose live config hash does not match the requested mounts or policy. Pass
+    only exact tool names whose registered implementations the calling plugin
+    confines; wildcard prefixes do not prove tool ownership.
 
   </Accordion>
   <Accordion title="api.runtime.nodes">

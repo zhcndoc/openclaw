@@ -477,25 +477,25 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
 群组/渠道工具限制会在全局/代理工具策略之上应用（deny 仍然优先）。某些渠道对房间/渠道使用不同的嵌套方式（例如 Discord `guilds.*.channels.*`、Slack `channels.*`、Microsoft Teams `teams.*.channels.*`）。
 </Note>
 
-## 群组允许列表
+## Group allowlist
 
-当配置了 `channels.whatsapp.groups`、`channels.telegram.groups` 或 `channels.imessage.groups` 时，这些键会作为群组允许列表使用。使用 `"*"` 可以允许所有群组，同时仍然设置默认提及行为。
+When `channels.whatsapp.groups`, `channels.telegram.groups`, or `channels.imessage.groups` is configured, these keys are used as a group allowlist. Use `"*"` to allow all groups while still setting the default mention behavior.
 
 <Warning>
-常见混淆：DM 配对授权不等同于群组授权。对于支持 DM 配对的渠道，配对存储仅解锁 DM。群组命令仍需要来自配置允许列表的显式群组发送者授权，例如 `groupAllowFrom`，或该渠道文档中说明的配置回退。
+Common confusion: DM pairing authorization is not the same as group authorization. For channels that support DM pairing, pairing storage only unlocks DMs. Group commands still require explicit group sender authorization from the configured allowlist, such as `groupAllowFrom`, or the configuration fallback described in that channel's documentation.
 </Warning>
 
-常见意图（复制/粘贴）：
+Common intents (copy/paste):
 
 <Tabs>
-  <Tab title="禁用所有群组回复">
+  <Tab title="Disable all group replies">
     ```json5
     {
       channels: { whatsapp: { groupPolicy: "disabled" } },
     }
     ```
   </Tab>
-  <Tab title="仅允许特定群组（WhatsApp）">
+  <Tab title="Only allow specific groups (WhatsApp)">
     ```json5
     {
       channels: {
@@ -509,7 +509,7 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
     }
     ```
   </Tab>
-  <Tab title="允许所有群组但要求提及">
+  <Tab title="Allow all groups but require mention">
     ```json5
     {
       channels: {
@@ -520,7 +520,7 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
     }
     ```
   </Tab>
-  <Tab title="仅限所有者触发（WhatsApp）">
+  <Tab title="Owner-only trigger (WhatsApp)">
     ```json5
     {
       channels: {
@@ -542,7 +542,7 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
 - `/activation mention`
 - `/activation always`
 
-`/activation` 是一个核心的、仅限所有者的命令，并且只适用于群聊。所有者指的是发送者与频道的 `allowFrom` / `commands.ownerAllowFrom` 匹配（当未配置允许列表时，账号自身的 id 也算作所有者）。存储的模式会覆盖该群组在支持它的频道上的 `requireMention`（Google Chat、QQBot、Telegram、WhatsApp），并且群组系统提示词的介绍部分会在所有地方反映当前生效的模式。
+`/activation` 是一个核心的仅所有者可用命令，且仅适用于群聊。所有者指的是发送者与 `commands.ownerAllowFrom` 匹配；频道 `allowFrom` 列表只用于控制普通频道和命令访问。存储的模式会覆盖该群组在会参考它的频道（Google Chat、QQBot、Telegram、WhatsApp）上的 `requireMention`，并且群组系统提示的介绍会在所有地方反映当前启用的模式。
 
 ## 上下文字段
 
@@ -562,9 +562,9 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
 - 列出聊天：`imsg chats --limit 20`。
 - 群组回复始终返回到同一个 `chat_id`。
 
-## WhatsApp System Prompts
+## WhatsApp 系统提示词
 
-Please refer to [WhatsApp](/channels/whatsapp#system-prompts) for authoritative WhatsApp system prompt rules, including prompt parsing for groups and direct messages, wildcard behavior, and account override semantics.
+请参阅 [WhatsApp](/channels/whatsapp#system-prompts) 以了解权威的 WhatsApp 系统提示词规则，包括群组和直接消息的提示词解析、通配符行为以及账户覆盖语义。
 
 ## WhatsApp 细节
 

@@ -20,4 +20,4 @@ contracts: videoGenerationProviders
 
 ## 相关文档
 
-- [runway](/providers/runway)
+- [Runway](/providers/runway)

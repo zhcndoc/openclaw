@@ -28,7 +28,7 @@ read_when:
     workshop: {
       autonomous: { enabled: false },
       allowSymlinkTargetWrites: false,
-      approvalPolicy: "pending",
+      approvalPolicy: "auto",
       maxPending: 50,
       maxSkillBytes: 40000,
     },
@@ -294,9 +294,8 @@ process.stdin.on("end", () => {
 
 请参见 [自学习](/tools/self-learning) 了解资格、隐私、成本、仅提案权限以及故障排除。
 
-<ParamField path="skills.workshop.approvalPolicy" type='"pending" | "auto"' default='"pending"'>
-  `pending` 需要在 agent 发起 apply、reject
-  或 quarantine 之前获得操作员批准。`auto` 允许这些操作无需批准即可执行。
+<ParamField path="skills.workshop.approvalPolicy" type='"pending" | "auto"' default='"auto"'>
+  `auto` 允许由代理发起的 apply、reject 或 quarantine，无需额外的审批提示。`pending` 需要操作员批准。
 </ParamField>
 
 <ParamField path="skills.workshop.allowSymlinkTargetWrites" type="boolean" default="false">

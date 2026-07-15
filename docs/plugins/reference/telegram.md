@@ -20,4 +20,4 @@ channels: telegram
 
 ## 相关文档
 
-- [telegram](/channels/telegram)
+- [Telegram](/channels/telegram)

@@ -114,12 +114,12 @@ dns-sd -L "<instance>" _openclaw-gw._tcp local.
 网关会写入一个滚动日志文件（启动时会打印为 `gateway log file: ...`）。请查找 `bonjour:` 行，尤其是：
 
 - `bonjour: advertise failed ...`
-- `bonjour: suppressing ciao cancellation ...`
+- `bonjour: suppressing ciao netmask assertion ...`
 - `bonjour: ... name conflict resolved` / `hostname conflict resolved`
-- `bonjour: watchdog detected non-announced service ...`
-- `bonjour: disabling advertiser after ... failed restarts ...`
 
-看门狗会将活跃的 `probing`、`announcing` 以及新发生冲突后的重命名视为进行中的状态。若服务始终未达到 `announced`，OpenClaw 会重新创建 advertiser，并在多次失败后，为该网关进程禁用 Bonjour，而不是无限期地重新广播。
+OpenClaw 会为每个 Bonjour 服务仅启动一次，并将探测、重试、名称冲突解决以及接口变更后的重新发布交给 mDNS 响应器处理。这样可以避免在正常网络波动期间出现重叠的发布尝试。重复的内部自探测消息会被抑制，因此不会淹没网关日志。
+
+当多个 OpenClaw 网关从同一主机进行广播时，Bonjour 可能会追加诸如 `(2)` 或 `(3)` 之类的后缀，以保持服务实例名称唯一。这些后缀属于正常的冲突解决行为，不表示存在重复的 OCM 监督。
 
 当系统主机名是有效的 DNS 标签时，Bonjour 会使用它作为已广播的 `.local` 主机名。如果系统主机名包含空格、下划线或其他无效的 DNS 标签字符，OpenClaw 会回退到 `openclaw.local`。在需要显式主机标签时，请在启动网关之前设置 `OPENCLAW_MDNS_HOSTNAME=<name>`。
 
@@ -127,7 +127,7 @@ dns-sd -L "<instance>" _openclaw-gw._tcp local.
 
 iOS 节点使用 `NWBrowser` 发现 `_openclaw-gw._tcp`。
 
-要捕获日志：Settings -> Gateway -> Advanced -> **Discovery Debug Logs**，然后 Settings -> Gateway -> Advanced -> **Discovery Logs** -> 复现 -> **Copy**。日志包括浏览器状态转换和结果集变化。
+要捕获日志：Settings -> Gateway -> Advanced -> **发现调试日志**，然后 Settings -> Gateway -> Advanced -> **发现日志** -> 复现 -> **复制**。日志包括浏览器状态转换和结果集变化。
 
 ## 何时启用 Bonjour
 
@@ -169,7 +169,7 @@ openclaw plugins disable bonjour
 
 注意事项：
 
-- Bonjour 会在 macOS 主机上自动启动，在其他环境中则为可选启用。保持其禁用不会停止网关——只会跳过 LAN 多播广播。
+- Bonjour 会在 macOS 主机上自动启动，在其他环境中则可选择启用。保持其禁用不会停止网关——只会跳过 LAN 多播广播。
 - 禁用 Bonjour 不会改变 `gateway.bind`；Docker 仍然默认使用 `OPENCLAW_GATEWAY_BIND=lan`，因此已发布的主机端口仍可正常工作。
 - 禁用 Bonjour 不会禁用广域 DNS-SD。当网关和节点不在同一 LAN 上时，请使用广域发现或 Tailnet。
 - 在 Docker 外部重用相同的 `OPENCLAW_CONFIG_DIR` 不会保留容器的自动禁用策略。
@@ -202,16 +202,16 @@ openclaw plugins disable bonjour
    dns-sd -B _openclaw-gw._tcp local.
    ```
 
-   如果浏览结果为空，或者网关日志显示 ciao watchdog 反复取消，请恢复 `OPENCLAW_DISABLE_BONJOUR=1`，并改用直接路由或 Tailnet 路由。
+   如果浏览结果为空，或者网关日志显示 ciao 探测失败反复出现，请恢复 `OPENCLAW_DISABLE_BONJOUR=1`，并改用直接或 Tailnet 路由。
 
 ## 常见故障模式
 
-- **Bonjour 不会跨网络工作**：请使用 Tailnet 或 SSH。
+- **Bonjour 不会跨网络传递**：请使用 Tailnet 或 SSH。
 - **多播被阻止**：某些 Wi-Fi 网络会禁用 mDNS。
-- **发布者卡在 probing/announcing 状态**：主机上的多播被阻止、容器桥接、WSL 或接口频繁变动，都可能使 ciao 发布者停留在未发布状态。OpenClaw 会重试几次，然后为当前网关进程禁用 Bonjour，而不是无限重启发布者。
-- **Docker bridge 网络**：在检测到的容器中，Bonjour 会自动禁用。仅在主机、macvlan 或其他支持 mDNS 的网络上设置 `OPENCLAW_DISABLE_BONJOUR=0`。
-- **睡眠/接口频繁变动**：macOS 可能会暂时丢失 mDNS 结果；请重试。
-- **浏览可用但解析失败**：保持机器名简单（避免表情符号或标点），然后重启网关。服务实例名来源于主机名，因此过于复杂的名称可能会让某些解析器感到困惑。
+- **广告器卡在 probing/announcing 状态**：如果主机的多播被阻止、使用容器桥接、WSL，或接口频繁变动，responder 可能会保持在未发布状态。网关仍可通过 direct、SSH、Tailnet 或广域 DNS-SD 路径访问；当多播不可用时，请通过 `discovery.mdns.mode: "off"` 或 `OPENCLAW_DISABLE_BONJOUR=1` 禁用 LAN Bonjour。
+- **Docker 桥接网络**：在检测到的容器中，Bonjour 会自动禁用。仅在主机、macvlan 或其他支持 mDNS 的网络上设置 `OPENCLAW_DISABLE_BONJOUR=0`。
+- **睡眠/接口变动**：macOS 可能会暂时丢失 mDNS 结果；请重试。
+- **浏览正常但解析失败**：请保持机器名简单（避免表情符号或标点），然后重启网关。服务实例名来自主机名，因此过于复杂的名称可能会让某些解析器出错。
 
 ## 转义的实例名（`\032`）
 

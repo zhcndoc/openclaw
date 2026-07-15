@@ -42,11 +42,12 @@ read_when:
 
 如果存在，core 仍会转发一个兼容的、显式选择或按顺序排列的 OpenClaw auth profile 及其作用域存储。harness 必须在发起模型请求前解析该 profile 或其原生凭据，将密钥限制在该次尝试的作用域内，并暴露可操作的认证失败信息。不要在一个只在某些情况下拥有认证责任的 harness 上设置此能力。
 
-### Verified setup runtime artifacts
+### 已验证的设置运行时工件
 
 能够为首次运行设置提供推理的本地 harness，必须证明完成探测的实现。当 `params.captureRuntimeArtifact` 为 true 时，返回一个不透明的 `result.runtimeArtifact`，其中包含稳定的 id 和内容指纹。注册一个匹配的 `runtimeArtifact.validate(...)` 能力，以在不加载其他 harness 或扫描无关插件的情况下重新检查该绑定。
 
-已验证的 Crestodian continuation 也会传入 `params.expectedRuntimeArtifact`。harness 必须将其与其获取到的精确原生进程进行比较，并且如果二者不同，必须在启动或恢复原生线程之前失败。普通的 agent turn 会省略这两个字段，因此内容哈希不会进入正常请求的热路径。远程/WebSocket harness 在参与之前需要一个服务器证明契约；仅有版本字符串并不是 artifact 身份。
+已验证的 OpenClaw 续接也会传入 `params.expectedRuntimeArtifact`。  
+harness 必须将其与所获取的精确原生进程进行比较，并在启动或恢复原生线程之前，如果二者不同则失败。普通的 agent turn 会省略这两个字段，因此内容哈希不会进入正常请求的热路径。远程/WebSocket harness 在参与之前需要一个服务器证明契约；仅有版本字符串并不能作为工件身份。
 
 准备好的尝试还包含 `params.runtimePlan`，这是一个由 OpenClaw 拥有的运行时决策策略包，必须在 OpenClaw 与原生 harness 之间保持共享：
 
@@ -58,7 +59,7 @@ read_when:
 
 harness 可以使用该计划来做出需要与 OpenClaw 行为一致的决策，但应将其视为宿主拥有的尝试状态：不要修改它，也不要在一次 turn 中使用它来切换 provider/model。
 
-### Request-transport contract
+### 请求传输契约
 
 `supports(ctx)` 接收 `ctx.modelProvider` 中已解析的模型传输。两个无密钥、由 provider 拥有的事实描述了所选路由：
 

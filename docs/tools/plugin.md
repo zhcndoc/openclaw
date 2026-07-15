@@ -17,12 +17,12 @@ doc-schema-version: 1
 [管理插件](/plugins/manage-plugins)。关于捆绑的、官方的外部插件以及仅源代码插件的生成清单，请参见
 [插件清单](/plugins/plugin-inventory)。
 
-## 需求
+## Requirements
 
-- 一个可用的 OpenClaw 签出或安装环境，并且 `openclaw` CLI 可用
-- 可访问所选源的网络（ClawHub、npm 或 git 主机）
-- 该插件设置文档中提到的任何插件特定凭据、配置键或操作系统工具
-- 允许为提供你的频道的 Gateway 重新加载或重启的权限
+- An available OpenClaw checkout or installation environment, and the `openclaw` CLI available
+- Network access to the selected source (ClawHub, npm, or git host)
+- Any plugin-specific credentials, configuration keys, or operating system tools mentioned in that plugin’s setup documentation
+- Permission to reload or restart the Gateway that serves your channel
 
 ## 快速开始
 
@@ -54,11 +54,11 @@ doc-schema-version: 1
     openclaw plugins install --link ./my-plugin
     ```
 
-    将插件安装视为运行代码。对于可复现的生产安装，优先使用固定版本。
+    将插件安装视为运行代码。生产环境中建议使用固定版本以便可复现安装。ClawHub 包和 OpenClaw 的捆绑/官方目录属于受信任来源。新的任意 npm、git、本地路径/归档、`npm-pack:` 或市场来源，在非交互式安装中都需要 `--force`，并且应在你审查并信任该来源之后再使用。
 
   </Step>
 
-  <Step title="Configure and enable it">
+  <Step title="配置并启用它">
     在 `plugins.entries.<id>.config` 下配置插件特定设置。
     如果插件尚未启用，请启用它：
 
@@ -70,7 +70,7 @@ doc-schema-version: 1
 
   </Step>
 
-  <Step title="Let the Gateway reload">
+  <Step title="让 Gateway 重新加载">
     安装、更新或卸载插件代码都需要重启 Gateway。启用了配置重载的托管 Gateway 会检测到变更的插件安装记录并自动重启。否则，请手动重启：
 
     ```bash
@@ -91,31 +91,31 @@ doc-schema-version: 1
   </Step>
 </Steps>
 
-## 配置
+## Configuration
 
-### 选择安装来源
+### Choose installation source
 
-| 来源        | 适用场景                                                                       | 示例                                                        |
-| ----------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| ClawHub     | 你希望使用 OpenClaw 原生的发现、扫描、版本元数据和安装提示                        | `openclaw plugins install clawhub:<package>`                   |
-| npm         | 你需要直接使用 npm 注册表或 dist-tag 工作流                                      | `openclaw plugins install npm:<package>`                       |
-| git         | 你需要仓库中的分支、标签或提交                                                 | `openclaw plugins install git:github.com/<owner>/<repo>@<ref>` |
-| local path  | 你正在同一台机器上开发或测试插件                                               | `openclaw plugins install --link ./my-plugin`                  |
-| marketplace | 你正在安装一个兼容 Claude 的 marketplace 插件                                   | `openclaw plugins install <plugin> --marketplace <source>`     |
+| Source      | Applicable scenarios                                                            | Example                                                        |
+| ----------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| ClawHub     | You want to use OpenClaw’s native discovery, scanning, version metadata, and installation prompts | `openclaw plugins install clawhub:<package>`                   |
+| npm         | You need to use the npm registry or dist-tag workflow directly                    | `openclaw plugins install npm:<package>`                       |
+| git         | You need branches, tags, or commits from a repository                            | `openclaw plugins install git:github.com/<owner>/<repo>@<ref>` |
+| local path  | You are developing or testing a plugin on the same machine                       | `openclaw plugins install --link ./my-plugin`                  |
+| marketplace | You are installing a Claude-compatible marketplace plugin                        | `openclaw plugins install <plugin> --marketplace <source>`     |
 
-裸包规格具有特殊的兼容行为：与捆绑插件 id 匹配的裸名称会使用该捆绑来源；与官方外部插件 id 匹配的裸名称会使用官方包目录；在启动切换期间，其他任何裸规格都会通过 npm 安装。与捆绑插件匹配的原始 `@openclaw/*` 规格也会先解析为捆绑副本，然后才回退到 npm。使用 `npm:@openclaw/<plugin>@<version>` 可刻意安装外部 npm 包而不是捆绑副本。使用 `clawhub:`、`npm:`、`git:` 或 `npm-pack:` 可以确定性地选择来源。有关完整命令约定，请参见 [`openclaw plugins`](/cli/plugins#install)。
+Bare package specifications have special compatibility behavior: bare names that match bundled plugin ids use that bundled source; bare names that match official external plugin ids use the official package directory; during startup migration, any other bare specs are installed via npm. Raw `@openclaw/*` specs that match bundled plugins are also resolved to the bundled copy first, then fall back to npm. Use `npm:@openclaw/<plugin>@<version>` to intentionally install the external npm package instead of the bundled copy. Use `clawhub:`, `npm:`, `git:`, or `npm-pack:` to deterministically select a source. For complete command conventions, see [`openclaw plugins`](/cli/plugins#install).
 
-对于 npm 安装，未固定版本的规格和 `@latest` 会选择声明与此 OpenClaw 构建兼容的最新稳定包。如果 npm 当前的最新发布声明的 `openclaw.compat.pluginApi` 或 `openclaw.install.minHostVersion` 高于此构建所支持的版本，OpenClaw 会扫描更旧的稳定版本，并安装最符合要求的最新版本。精确版本和显式渠道标签（例如 `@beta`）会保持锁定到所选包，并在不兼容时失败。
+For npm installs, unpinned specs and `@latest` select the latest stable package whose declared compatibility matches this OpenClaw build. If npm’s current latest release declares an `openclaw.compat.pluginApi` or `openclaw.install.minHostVersion` higher than what this build supports, OpenClaw scans older stable versions and installs the newest version that best satisfies the requirement. Exact versions and explicit channel tags such as `@beta` stay locked to the selected package and fail if incompatible.
 
 ### Operator install policy
 
-在插件安装或更新继续之前，配置 `security.installPolicy` 以运行受信任的本地策略命令。该策略会接收元数据以及暂存的源路径，并可允许或阻止安装。它同时覆盖 CLI 和由 Gateway 支持的安装/更新路径。插件的 `before_install` hooks 会在之后运行，并且只在加载了插件 hooks 的 OpenClaw 进程中运行，因此请改用 `security.installPolicy` 来处理由 operator 拥有的安装决策。已弃用的 `--dangerously-force-unsafe-install` 标志为了兼容性仍被接受，但它不起作用：它不会绕过安装策略，也不会绕过 OpenClaw 内置的插件依赖黑名单。
+Before plugin installation or updates proceed, configure `security.installPolicy` to run a trusted local policy command. The policy receives metadata and the staged source path, and may allow or block the installation. It applies to both CLI and Gateway-backed install/update paths. Plugin `before_install` hooks run afterward, and only in OpenClaw processes that have plugin hooks loaded, so use `security.installPolicy` instead for operator-owned installation decisions. The deprecated `--dangerously-force-unsafe-install` flag is still accepted for compatibility, but it does nothing: it does not bypass the installation policy, and it does not bypass OpenClaw’s built-in plugin dependency blocklist.
 
-有关 skills 和 plugins 共用的 `security.installPolicy` exec schema，请参见 [Skills config](/tools/skills-config#operator-install-policy-securityinstallpolicy)。
+For the shared `security.installPolicy` exec schema used by skills and plugins, see [Skills config](/tools/skills-config#operator-install-policy-securityinstallpolicy).
 
 ### Configure plugin policy
 
-常见的插件配置形状如下：
+A common plugin configuration shape looks like this:
 
 ```json5
 {
@@ -132,26 +132,26 @@ doc-schema-version: 1
 }
 ```
 
-关键策略规则：
+Key policy rules:
 
-- `plugins.enabled: false` 会禁用所有插件并跳过发现/加载工作。处于此状态时，过期的插件引用会保持不活动；如果你希望移除过期 id，请在运行 doctor cleanup 之前重新启用插件。
-- `plugins.deny` 的优先级高于 allow 和按插件启用设置。
-- `plugins.allow` 是一个排他性的允许列表。allowlist 之外的插件拥有工具即使 `tools.allow` 包含 `"*"` 也仍然不可用。
-- `plugins.entries.<id>.enabled: false` 会禁用单个插件，同时保留其配置。
-- `plugins.load.paths` 会添加显式的本地插件文件或目录。托管式 `plugins install` 的本地路径必须是插件目录或归档；对于独立插件文件，请使用 `plugins.load.paths`。
-- 来自 workspace 的插件默认是禁用的；在使用本地 workspace 代码之前，请显式启用它们或将它们加入 allowlist。
-- 捆绑插件会遵循其内置的默认启用/默认禁用元数据，除非配置显式覆盖它。
-- `plugins.slots.<slot>`（`memory` 或 `contextEngine`）会为某个排他类别选择一个插件。槽位选择会计为显式激活，并会为该槽位强制启用所选插件，即使它本来需要显式启用也一样。`plugins.deny` 和 `plugins.entries.<id>.enabled: false` 仍然会阻止它。
-- 当配置命名了其拥有的任一表面时，捆绑的 opt-in 插件可以自动激活，例如 provider/model ref、channel 配置、CLI 后端或 agent harness runtime。
-- OpenAI 系列 Codex 路由会将 provider 和 runtime 插件边界分开：旧版 Codex model refs 属于需要 doctor 修复的旧配置，而捆绑的 `codex` 插件拥有 Canonical `openai/*` agent refs、显式的 `agentRuntime.id: "codex"` 以及旧的 `codex/*` refs 的 Codex app-server runtime。
+- `plugins.enabled: false` disables all plugins and skips discovery/loading work. In this state, stale plugin references remain inactive; if you want to remove stale ids, re-enable plugins before running doctor cleanup.
+- `plugins.deny` takes precedence over allow and per-plugin enablement settings.
+- `plugins.allow` is an exclusive allowlist. Plugins outside the allowlist remain unavailable even if `tools.allow` includes `"*"`.
+- `plugins.entries.<id>.enabled: false` disables a single plugin while preserving its configuration.
+- `plugins.load.paths` adds explicit local plugin files or directories. Managed `plugins install` local paths must be plugin directories or archives; for standalone plugin files, use `plugins.load.paths`.
+- Plugins from the workspace are disabled by default; explicitly enable them or add them to the allowlist before using local workspace code.
+- Bundled plugins follow their built-in default-enabled/default-disabled metadata unless configuration explicitly overrides it.
+- `plugins.slots.<slot>` (`memory` or `contextEngine`) selects a plugin for an exclusive category. Slot selection counts as explicit activation and will force-enable the chosen plugin for that slot even if it otherwise requires explicit enablement. `plugins.deny` and `plugins.entries.<id>.enabled: false` still block it.
+- Bundled opt-in plugins can auto-activate when configuration names any of their owned surfaces, such as provider/model refs, channel configuration, CLI backend, or agent harness runtime.
+- OpenAI-family Codex routing keeps provider and runtime plugin boundaries separate: legacy Codex model refs belong to legacy configuration that requires a doctor fix, while the bundled `codex` plugin owns Canonical `openai/*` agent refs, explicit `agentRuntime.id: "codex"`, and the Codex app-server runtime for legacy `codex/*` refs.
 
-当 `plugins.allow` 未设置，且非捆绑插件从 workspace 或全局插件根目录自动发现时，启动会记录
+When `plugins.allow` is unset and a non-bundled plugin is auto-discovered from the workspace or global plugin root, startup logs
 `plugins.allow is empty; discovered non-bundled plugins may auto-load: ...`
-并附带已发现的插件 id；对于较短的列表，还会给出一个最小的 `plugins.allow` 片段。在将受信任的插件复制到 `openclaw.json` 之前，请先对列出的插件 id 运行 [`openclaw plugins list --enabled --verbose`](/cli/plugins#list)
-或 [`openclaw plugins inspect <id>`](/cli/plugins#inspect)。当诊断信息显示某个插件是在
-`without install/load-path provenance` 情况下加载时，也适用同样的信任固定：先检查该插件 id，然后将其固定到 `plugins.allow` 中，或从受信任来源重新安装，以便 OpenClaw 记录安装来源。
+with the discovered plugin ids; for shorter lists, a minimal `plugins.allow` snippet is also provided. Before copying trusted plugins into `openclaw.json`, first run [`openclaw plugins list --enabled --verbose`](/cli/plugins#list)
+or [`openclaw plugins inspect <id>`](/cli/plugins#inspect) for the listed plugin ids. The same trust pinning applies when diagnostics show a plugin loaded
+`without install/load-path provenance`: inspect the plugin id first, then pin it in `plugins.allow` or reinstall it from a trusted source so OpenClaw records the installation provenance.
 
-当配置验证报告过期的插件 id、allowlist/tool 不匹配，或旧版捆绑插件路径时，请运行 `openclaw doctor` 或 `openclaw doctor --fix`。
+When configuration validation reports stale plugin ids, allowlist/tool mismatches, or legacy bundled plugin paths, run `openclaw doctor` or `openclaw doctor --fix`.
 
 ## 了解插件格式
 

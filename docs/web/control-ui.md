@@ -143,7 +143,12 @@ target the store directly with `/settings/plugins?tab=discover`.
 The **Skills** tab keeps the skill status report, enable/disable toggles, API
 key entry, and inline ClawHub skill search, scoped to the selected agent. The
 **Workshop** tab keeps the Skill Workshop board and Today review flow for
-[skill proposals](/tools/skill-workshop).
+[skill proposals](/tools/skill-workshop). **Find skill ideas** reviews a bounded
+window of substantial sessions from newest to oldest and leaves any results as
+pending proposals. The panel shows cumulative coverage; **Scan earlier work**
+continues from the persisted cursor, then becomes **Scan new work** after older
+history is exhausted. Manual history review works while autonomous self-learning
+is disabled and uses the selected agent's configured model.
 
 Included plugins are already present on the Gateway and show **Enable** or
 **Disable** instead of **Install**. For example, Workboard is included with
@@ -314,7 +319,15 @@ Activity 条目只保留已脱敏摘要和经过脱敏、截断的输出预览�
 
 使用 **Ctrl + backtick** 切换停靠面板。布局支持底部和右侧停靠，会随浏览器视口调整大小，并可保留多个 shell 标签页。有关 `gateway.terminal.enabled` 以及可选的 `gateway.terminal.shell` 覆盖项，请参阅 [Gateway 配置](/gateway/configuration-reference#gateway)。
 
-会话可在断开连接后继续保留：页面重新加载、笔记本电脑休眠或网络短暂中断时，Gateway 上的会话会被分离而不是终止，并且同一个浏览器标签页会在重新连接时重新附着，同时回放最近的输出。分离的会话会在 `gateway.terminal.detachedSessionTimeoutSeconds` 之后被终止（默认 300 秒；`0` 可恢复为断开即终止）。`terminal.list` 会显示可附着的会话，`terminal.attach` 会接管其中一个（tmux 风格的接管），而 `terminal.text` 可在不附着的情况下以纯文本读取会话的最近输出——这是面向 agent/工具链的能力。
+Drag one or more files onto the active terminal, or use the paperclip button to choose files. OpenClaw stages each file on the machine that owns the PTY and pastes shell-quoted absolute paths at the cursor; it never presses Enter or executes the input. A compact batch indicator shows the current file and completed count. Cancel stops the remaining batch without pasting paths; a failed transfer stays visible so you can retry from that file without re-uploading completed files. Images, PDFs, archives, and other file types are accepted up to 16 MiB per file. Staged files use a private system-temporary directory on POSIX hosts (directory mode `0700`, file mode `0600`) or a directory under the user-profile ACL boundary on Windows, plus a 24-hour cleanup timer, so move or copy anything you need to keep.
+
+Path insertion supports PowerShell, `cmd.exe`, and recognized POSIX shells (`sh`, Bash, Dash, Ash, Ksh, Zsh, and Fish), including Git Bash on Windows. Other shell overrides are refused because their quoting rules cannot be inferred safely; run the Gateway inside WSL for a native WSL terminal and Linux upload paths. `cmd.exe` paths containing `%` or `!` are also refused because that shell expands those characters even inside double quotes.
+
+Codex and Claude Code sessions discovered in the sessions sidebar can open in their native CLI inside the same terminal panel. In **Settings › Chat**, set **Open Codex/Claude sessions in** to **Terminal** to make a normal row click open `codex resume` or `claude --resume`; the default remains the read-only OpenClaw viewer. A row's right-click or kebab menu always offers both choices, and the viewer header includes **Open in terminal** when that session is eligible.
+
+Eligibility is per session and per host. Gateway-local sessions start the provider-owned resume command on the Gateway host. Paired-node sessions start an allowlisted provider command on the owning node and relay only that PTY's output, input, and resize events; this does not expose a general node shell or accept browser-supplied commands. File uploads use the separate, size-bounded `terminal.upload` node command and remain bound to the already-open terminal session. Approve the node pairing upgrade when that command first appears. Nodes that do not advertise the matching terminal-resume command, including embedded worker bridges without duplex streaming, keep the viewer available and show terminal opening as unavailable; older nodes can still run a terminal but cannot receive dragged files.
+
+Sessions survive disconnects: a page reload, laptop sleep, or network blip detaches the session on the Gateway instead of killing it, and the same browser tab reattaches on reconnect with recent output replayed. Detached sessions are killed after `gateway.terminal.detachedSessionTimeoutSeconds` (default 300 seconds; `0` restores kill-on-disconnect). `terminal.list` shows attachable sessions, `terminal.attach` adopts one (tmux-style take-over), and `terminal.text` reads a session's recent output as plain text without attaching - an agent/tooling affordance.
 
 该终端还可作为全屏、仅终端的文档，通过 `/?view=terminal` 访问。iOS 和 Android 应用会在其 Terminal 界面中嵌入此页面，并复用已存储的 gateway 凭据；可用性同样受 `gateway.terminal.enabled` 和 `operator.admin` 门控限制，当所连接的 Gateway 不提供终端时，页面会显示通知。
 

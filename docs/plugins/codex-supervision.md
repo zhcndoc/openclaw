@@ -29,7 +29,7 @@ Codex 监督是官方 `codex` 插件的一项可选功能。它会在正常的�
 
 ## 启用监督
 
-引导式 `openclaw onboard` 和 macOS 首次运行设置会在检测到本地 Codex 安装并成功激活所选推理后端后，尝试安装并启用 Codex 监督。Codex 不必是主后端。只要该机会性的插件激活成功，监督即可用。首次连接监督时会检查 App Server 的可用性。显式禁用 Codex 插件或策略阻止会阻止机会性激活，而现有的显式 `supervision.enabled: false` 会禁用面向代理的监督工具；只要 Codex 插件处于活动状态，操作员目录就会保持注册。
+Guided `openclaw onboard` 和 macOS 首次运行设置在检测到原生 Codex 安装并成功激活所选推理后端后，会尝试安装并启用 Codex 监督。Codex 不需要是主后端。当这种机会式插件激活成功时，监督即可使用。首次连接监督时会检查 App Server 的可用性。显式禁用 Codex 插件或策略阻止会阻止机会式激活，而现有的显式 `supervision.enabled: false` 会禁用面向代理的监督工具；只要 Codex 插件处于活动状态，且未通过 `sessionCatalog.enabled: false` 禁用它，操作员目录就会保持注册状态。这个单独的开关会保持 Codex provider、harness 和面向代理的监督策略不变，同时还会从此主机移除配对节点目录的列表/读取命令。
 
 现有安装可以手动启用相同能力：
 
@@ -56,7 +56,7 @@ Codex 监督是官方 `codex` 插件的一项可选功能。它会在正常的�
 
 在没有显式 `appServer` 连接设置的情况下，监督会使用一个单独的、受管理的 stdio 监督连接，指向本地用户 Codex home。普通 Codex harness 默认仍然是 agent 作用域。这使得本地会话在两个应用中都可见，而不会让普通 OpenClaw 回合共享本地 Codex 状态。如果 harness 也应该共享该状态，请显式设置 `appServer.homeScope: "user"`。监督会遵循显式的 `appServer` 连接设置，而不是用其本地用户 home 默认值替换它们。
 
-从 **Codex** 侧边栏组中创建的 Chat 并不是普通的 harness 会话。它的私有监督绑定会使用监督连接进行源读取、规范分支创建、历史注入以及之后的每一回合。使用默认本地连接时，这会保留本地用户 Codex home、认证和提供商配置，而不会更改其他会话的默认设置。
+A Chat adopted from the **Codex** sidebar group 不是普通的 harness 会话。其私有监督绑定使用监督连接进行源读取、规范分支创建、历史注入以及之后的每个回合。对于默认的本地连接，这会在不改变其他会话默认值的情况下，保留原生用户 Codex home、认证和 provider 配置。被监视的已接管 Chats 也会参与 [session state awareness](/concepts/session-state)。
 
 对于默认的本地监督连接，存储与本地 Codex 客户端共享。OpenClaw 不会假定另一个客户端共享相同的实时 App Server 进程，而且本地状态所有权是进程局部的。因此，它会把其监督 App Server 报告为 `notLoaded` 的线程视为 **已存储 / 活动状态未知**，而不是空闲。
 
@@ -74,6 +74,8 @@ openclaw nodes approve <requestId>
 在正常会话侧边栏中打开 **Codex** 组。它按主机列出相同的会话。**加载更多会话** 会为每个仍有更旧行的主机追加下一页，而这些追加的行会在侧边栏的周期性刷新中保留。每个返回的搜索页都会为每个主机扫描有限数量的本地页面，而不是将查询发送到 App Server，因为本地搜索也可能匹配转录预览。
 
 主机可用性与线程状态是分开的。**Offline** 或 **Unavailable** 描述的是主机刷新；不可用主机不会返回新的会话行，也不会把线程的本地状态更改为 `offline`。会话行使用 Codex 状态，例如 `idle`、`active`、`notLoaded` 或 error。失败的主机不会隐藏健康主机的结果。
+
+侧边栏警告包含目录错误代码和安全的底层 Gateway 错误。打开 **Settings > Automation > Plugins > Codex > Native Session Discovery** 可在不禁用 Codex 的情况下关闭发现功能。对于 `NODE_LIST_FAILED`，请对比 `openclaw nodes list` 和 **Settings > Devices**；详细原因会标识需要修复的配对存储、节点注册表、权限或 Gateway 生命周期故障。
 
 ## 使用 operator CLI
 
@@ -207,17 +209,18 @@ codex unarchive <thread-id>
 
 ## 了解配对节点限制
 
-配对节点公开带版本的只读
+配对节点公开了带版本号的只读
 `codex.appServer.threads.list.v1` 和
-`codex.appServer.thread.turns.list.v1` 命令。Gateway 接收规范化的
-元数据以及显式请求的有界转录页面，绝不会接收原始 App Server
-端点。当前节点调用
-传输仅支持请求/响应，因此无法承载 Codex harness 所需的长期事件、
-审批和流式生命周期。
+`codex.appServer.thread.turns.list.v1` 命令。安装了 Codex CLI 的原生节点主机还公开了允许列表中的
+`codex.terminal.resume.v1`
+命令。Gateway 接收规范化的
+元数据以及显式请求的有界转录分页，而不会接收原始的 App Server
+端点。在操作员终端中打开某一行会在所属主机上运行 `codex resume <thread-id>`
+，并转发该命令的 PTY；它不会暴露通用的
+shell，也不会暴露由 gateway 提供的 argv。
 
-因此，即使远程线程处于空闲状态，远程行仍然可见，但不会提供 **Continue** 或
-**Archive**。请在那台电脑上使用 Codex，直到为继续操作存在一个节点侧流式 runner 桥接，
-并且为归档存在一个安全的 runner 所有权边界。
+终端转发不提供 harness 续接或归档所有权
+契约。因此，远程行仍然可见，但不会提供 **继续** 或 **归档**，即使远程线程处于空闲状态也是如此。请通过 **在终端中打开** 在该计算机上使用 Codex，或者在未来使用具有安全 runner 所有权边界的续接流程。
 
 ## 元数据和权限
 
@@ -275,7 +278,7 @@ Codex 的状态数据库中读取未归档的已存储行。可选的 `max_store
 
 **没有出现任何会话：** 请确认已安装 `@openclaw/codex`，插件和 `supervision.enabled` 都为 true，当前插件允许列表允许 `codex`，并且这些会话没有被归档。更改激活设置后，请重启 Gateway 或节点。
 
-**Continue 被禁用：** 存在一个未映射的行处于活动状态，或它属于配对节点，或其主机离线，或另一个操作正在等待中。Gateway 本地存储且空闲的行会提供 **Continue as branch**，而不是不安全的精确线程接管。已经有受监督 Chat 的行会提供 **Open Chat**。
+**Continue 被禁用：** 存在一个未映射的行处于活动状态，或其属于配对节点，或其主机离线，或另一个操作正在等待中。Gateway 本地存储且空闲的行会提供 **Continue as branch**，而不是不安全的精确线程接管。已经有受监督 Chat 的行会提供 **Open Chat**。
 
 **Archive 被禁用：** 在得到“没有其他运行器”的确认后，归档可用于已存储/活动状态未知以及空闲的 Gateway 本地行。活动、错误、离线、配对节点、待分支以及已知精确绑定所有者的行仍然是只读，不能归档。
 

@@ -18,7 +18,7 @@ sidebarTitle: "自学习"
 
 ## 启用自学习
 
-在 Control UI 中，打开 **Plugins → Workshop** 并开启 **Self-learning**。更改会立即生效；当其他配置写入器已更新该文件时，Control UI 会刷新配置快照，并在不重新加载页面或 Gateway 的情况下重试切换。
+在 Control UI 中，打开 **插件 → Workshop** 并开启 **自学习**。更改会立即生效；当其他配置写入器已更新该文件时，Control UI 会刷新配置快照，并在不重新加载页面或 Gateway 的情况下重试切换。
 
 使用 CLI：
 
@@ -47,6 +47,36 @@ openclaw config set skills.workshop.autonomous.enabled false --strict-json
 ```
 
 在自学习被禁用时，用户请求创建技能、`/learn` 以及手动 Skill Workshop 操作仍可继续正常工作。
+
+## 手动审查过去的会话
+
+手动历史审查是自主采集的保守替代方案。  
+在控制界面中打开 **Plugins → Workshop**，然后选择 **Find skill ideas**。  
+这不会更改 `skills.workshop.autonomous.enabled`。
+
+每次扫描：
+
+- 从最新的未审查会话开始，并向后移动；
+- 审查最多 20 个具有实质内容、且至少有六轮模型对话的会话；
+- 跳过 cron、heartbeat、hook、subagent、ACP、plugin-owned 以及内部审查
+  会话；
+- 在发送到所选代理已配置模型之前，会对识别出的密钥进行脱敏，并限制
+  转录包的大小；
+- 使用与自主经验审查相同的高标准；并且
+- 最多可以创建或修订三个待处理提案，绝不会创建实时技能。
+
+Workshop 会报告累计会话数量、日期覆盖范围以及找到的想法。  
+选择 **Scan earlier work** 以扫描下一个更早的窗口。当光标到达
+符合条件历史的起始位置时，该操作会变为 **Scan new work**。  
+OpenClaw 仅在共享状态数据库中保留光标和覆盖范围元数据；
+它不会创建第二份转录存档。
+
+只有当 OpenClaw 能证明其所有权并排除外部 hook 内容时，才会扫描会话。  
+升级后，当前升级前的转录可以在本地分类，但没有每次运行来源信息的
+已轮换升级前转录会被跳过。新的转录在轮换过程中会保留此来源信息。
+
+手动扫描仍会产生模型提供商费用，并将符合条件的对话内容发送到已配置的提供商。  
+只有在该审查符合工作区的隐私和数据处理要求时才使用它们。
 
 ## OpenClaw 可以学习什么
 
@@ -142,13 +172,13 @@ openclaw skills workshop quarantine <proposal-id> --reason "Needs security revie
 
 ## 配置
 
-| 设置                                       | 默认值      | 自学习效果                                                                                                               |
-| ------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `skills.workshop.autonomous.enabled`       | `false`     | 启用直接修正捕获和延迟经验审查。                                                                                           |
-| `skills.workshop.approvalPolicy`           | `"pending"` | 控制正常由代理发起的生命周期操作的审批提示；它不会扩展后台审查者的权限。                                                    |
-| `skills.workshop.maxPending`               | `50`        | 限制每个工作区的待处理和隔离提案数量。                                                                                     |
-| `skills.workshop.maxSkillBytes`            | `40000`     | 限制提案正文大小（以字节为单位）。                                                                                         |
-| `skills.workshop.allowSymlinkTargetWrites` | `false`     | 仅影响应用行为；自学习本身写入的是提案状态，而不是实时技能目标。                                                            |
+| 设置                                       | 默认值   | 自学习效果                                                                                                              |
+| ------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `skills.workshop.autonomous.enabled`       | `false`  | 启用直接修正捕获和延迟经验复盘。                                                                  |
+| `skills.workshop.approvalPolicy`           | `"auto"` | 控制正常代理发起的生命周期操作的审批提示；它不会扩展后台审阅者的权限。 |
+| `skills.workshop.maxPending`               | `50`     | 限制每个工作区中的待处理和隔离提案数量。                                                                             |
+| `skills.workshop.maxSkillBytes`            | `40000`  | 限制提案正文大小（字节）。                                                                                                 |
+| `skills.workshop.allowSymlinkTargetWrites` | `false`  | 仅影响应用行为；自学习本身写入的是提案状态，而不是实时技能目标。                                  |
 
 有关完整的 schema、范围以及相关技能设置，请参阅
 [技能配置](/tools/skills-config#workshop-skills-workshop)。

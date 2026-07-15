@@ -102,12 +102,16 @@ openclaw skills curator restore <skill>
 应用 morning-catchup 提案。
 ```
 
-代理发起的 `apply`、`reject` 和 `quarantine` 默认会显示审批提示。
-在受信任的环境中，将 `skills.workshop.approvalPolicy` 设置为 `"auto"` 可跳过该提示。
+Agent 触发的 `apply`、`reject` 和 `quarantine` 默认情况下在没有额外
+审批提示的情况下运行。将 `skills.workshop.approvalPolicy` 设置为 `"pending"`
+可在这些操作之前要求操作员批准。
 
-提示会标识提案 ID 和目标技能，并显示提案
-描述、支持文件数量和正文大小。审批请求有时间限制，必须在代理工具看门狗超时前完成。如果在提示过期前没有做出决定，则生命周期操作不会运行：提案保持待处理且未更改。稍后在 Skill Workshop UI 中决定，或运行
-`openclaw skills workshop apply|reject|quarantine <proposal-id>`。代理不应对已过期的生命周期操作循环重试。
+当需要批准时，提示会标识提案 ID 和目标技能，并显示提案描述、支持文件数量和正文大小。
+批准请求的执行时间受限，必须在代理工具看门狗超时前完成。如果在提示过期前没有
+收到决定，生命周期操作不会运行：
+提案将保持待处理且不变。可稍后在 Skill Workshop UI 中决定，或运行
+`openclaw skills workshop apply|reject|quarantine <proposal-id>`。代理不应在循环中重试
+已过期的生命周期操作。
 
 ## 命令行界面
 
@@ -200,7 +204,19 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 
 OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”、“记住要”，以及反应式纠正，包括失败的轮次。下一轮时，代理会通过 `skill_workshop` 提议保存最近检测到的工作流程；由用户决定是否创建一个提案。这个内置建议本身不会创建或更改任何技能。启用 `skills.workshop.autonomous.enabled` 可改为直接创建待处理提案。在控制界面中，Workshop 选项卡将相同设置作为页面标题栏中的 **Self-learning** 开关提供，并在空提案板上提供一个启用按钮。
 
-启用自主捕获后，OpenClaw 还可以在成功完成较大工作之后，以及整个代理系统变为空闲之后，执行一次保守审查。该独立审查最多可创建或修订一个待处理提案。即使 `approvalPolicy` 为 `"auto"`，它也不能更新正在运行的技能，或应用、拒绝、或隔离一个提案。
+### 扫描过往会话
+
+控制界面无需启用自主自学习也可以回顾更早的工作。
+打开 **Plugins → Workshop** 并选择 **Find skill ideas**。扫描会从最新的符合条件的会话开始，审查一个有限窗口内的重要工作。
+它会跳过 cron、heartbeat、hook、subagent、ACP、plugin-owned 和内部审查会话，以及模型轮次少于六轮的对话。
+
+审查器使用所选代理配置的模型，并接收一个经过秘密信息脱敏、大小受限的转录捆绑包。它采用与经验审查相同的保守门槛：一个具体的恢复模式，或一个稳定的流程，且能至少减少未来两次模型或工具调用。常规工作和一次性事实不应产生任何提案。
+
+一次扫描最多可以创建或修订三个待处理提案。它不能应用、拒绝、隔离或编辑一个正在运行的技能。Workshop 会显示累计覆盖情况，例如 **20 sessions reviewed · Jun 18–today · 2 ideas found**。选择 **Scan earlier work** 可从已持久化的最早会话游标继续。可用历史耗尽后，该操作会变为 **Scan new work**。
+
+即使 `skills.workshop.autonomous.enabled` 为 `false`，历史审查仍是手动的。每次点击都会启动一次模型运行，因此适用提供商定价和数据处理条款。游标和覆盖计数存储在共享的 OpenClaw 状态数据库中；转录内容不会被复制到扫描状态里。
+
+启用自主捕获后，OpenClaw 还可以在成功的、重要的工作之后，以及整个代理系统变为空闲之后执行一次保守审查。该独立审查最多可以创建或修订一个待处理提案。即使 `approvalPolicy` 为 `"auto"`，它也不能更新正在运行的技能，也不能应用、拒绝或隔离任何提案。
 
 有关启用方式、资格、隐私和成本详情、提案阈值以及故障排除，请参阅 [Self-learning](/tools/self-learning)。
 
@@ -214,7 +230,7 @@ OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”�
         enabled: false,
       },
       allowSymlinkTargetWrites: false,
-      approvalPolicy: "pending",
+      approvalPolicy: "auto",
       maxPending: 50,
       maxSkillBytes: 40000,
     },
@@ -222,13 +238,13 @@ OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”�
 }
 ```
 
-| 设置                       | 默认值      | 影响                                                                                                                                                                  |
-| -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `autonomous.enabled`       | `false`     | 会从显式更正中创建待处理提案，并在空闲延迟后，为可复用的恢复或有意义的往返节省所产生的实质性已完成工作创建待处理提案。                                                      |
-| `allowSymlinkTargetWrites` | `false`     | 允许通过工作区技能符号链接应用写入，其中其真实目标列在 `skills.load.allowSymlinkTargets` 中。                                                                             |
-| `approvalPolicy`           | `"pending"` | `"pending"` 要求在代理发起的 `apply`、`reject` 或 `quarantine` 之前显示批准提示。`"auto"` 会跳过提示（代理仍然必须调用该操作）。                                             |
-| `maxPending`               | `50`        | 限制每个工作区的待处理和隔离提案数量（1-200）。                                                                                                                          |
-| `maxSkillBytes`            | `40000`     | 限制提案正文大小（以字节为单位）（1024-200000）。                                                                                                                       |
+| 设置                       | 默认值     | 影响                                                                                                                                                                 |
+| -------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `autonomous.enabled`       | `false`    | 会根据显式更正创建待处理提案，并在空闲延迟后，根据可复用的恢复或有意义的往返节省，将实质性的已完成工作创建为提案。                                                         |
+| `allowSymlinkTargetWrites` | `false`    | 允许通过工作区技能符号链接应用写入操作，只要其真实目标列在 `skills.load.allowSymlinkTargets` 中。                                                                         |
+| `approvalPolicy`           | `"auto"`   | `"auto"` 会跳过针对代理发起的 `apply`、`reject` 或 `quarantine` 的额外提示（代理仍然必须调用该操作）。`"pending"` 则需要批准。                                          |
+| `maxPending`               | `50`       | 限制每个工作区的待处理和已隔离提案数量（1-200）。                                                                                                                       |
+| `maxSkillBytes`            | `40000`    | 限制提案正文大小，以字节为单位（1024-200000）。                                                                                                                        |
 
 自主捕获会识别前瞻性规则（例如，“从现在开始”）和反应式更正（例如，“那不是我要求的”）。它会按主题将新指令分组，每轮最多生成三个提案，将词汇匹配路由到现有的可写工作区技能，并在另一项更正针对同一技能时修订其自身的待处理提案。
 
@@ -244,6 +260,8 @@ OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”�
 | ---------------------------------- | ---------------- |
 | `skills.proposals.list`            | `operator.read`  |
 | `skills.proposals.inspect`         | `operator.read`  |
+| `skills.proposals.historyStatus`   | `operator.read`  |
+| `skills.proposals.historyScan`     | `operator.admin` |
 | `skills.proposals.create`          | `operator.admin` |
 | `skills.proposals.update`          | `operator.admin` |
 | `skills.proposals.revise`          | `operator.admin` |
@@ -257,6 +275,10 @@ OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”�
 | `skills.curator.restore`           | `operator.admin` |
 
 `requestRevision` 仅限 Gateway（没有对应的 CLI 或 agent-tool）：它会将自由文本的修订说明转发到所属 agent 的聊天会话中，而不是直接替换 `PROPOSAL.md`，适用于那些要求 agent 修改而不是提交字面新内容的 UI。
+
+`historyStatus` 和 `historyScan` 是 Control UI 支持方法。`historyScan`
+接受 `direction: "older" | "newer"`；它始终会将结果保留为待处理
+提案。
 
 ## 存储
 
@@ -281,15 +303,15 @@ OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”�
 - `PROPOSAL.md`：待处理的技能提案。
 - `rollback.json`：在应用更改生效文件之前写入的恢复元数据。
 
-## Restrictions
+## 限制
 
-| Restriction                      | Value                                                                 |
+| 限制                         | 值                                                                   |
 | -------------------------------- | -------------------------------------------------------------------- |
-| Description                      | 160 bytes                                                            |
-| Proposal body                   | `skills.workshop.maxSkillBytes` (default 40,000; hard limit 1 MiB)   |
-| Supported files                  | 64 per proposal                                                      |
-| Supported file size              | 256 KiB each, 2 MiB total                                           |
-| Pending + quarantined proposals  | Each workspace `skills.workshop.maxPending` (default 50)            |
+| 描述                         | 160 字节                                                            |
+| 提案正文                    | `skills.workshop.maxSkillBytes`（默认 40,000；硬性上限 1 MiB）   |
+| 支持的文件                   | 每个提案 64 个                                                      |
+| 支持的文件大小               | 每个 256 KiB，总计 2 MiB                                           |
+| 待处理 + 隔离的提案          | 每个工作区 `skills.workshop.maxPending`（默认 50）            |
 
 ## 故障排查
 

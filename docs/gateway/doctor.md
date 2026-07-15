@@ -145,11 +145,11 @@ Flags:
 ## 它做什么（摘要）
 
 <AccordionGroup>
-  <Accordion title="健康、UI 和更新">
-    - 可选的 git 安装预检更新（仅交互模式）。
-    - UI 协议新鲜度检查（当协议 schema 更新时会重建 Control UI）。
-    - 健康检查 + 重启提示。
-    - Skills 状态摘要（符合条件/缺失/被阻止）和插件状态。
+  <Accordion title="Health, UI, and updates">
+    - Optional pre-flight update for git installs (interactive only).
+    - UI protocol freshness check (rebuilds Control UI when the protocol schema is newer).
+    - Health check + restart prompt.
+    - Problem-only skill and plugin notes; healthy inventory stays in `openclaw skills check` and `openclaw plugins list`.
 
   </Accordion>
   <Accordion title="Config and migrations">
@@ -468,20 +468,21 @@ That stages grounded durable candidates into the short-term dreaming store while
     This distinguishes first-time pairing from pending role/scope upgrades and from stale token/device-identity drift, closing the common "already paired but still getting pairing required" hole.
 
   </Accordion>
-  <Accordion title="9. 安全警告">
-    当 provider 可以在没有允许列表的情况下接受 DM，或者策略配置方式存在危险时，doctor 会发出警告。
+  <Accordion title="9. Security warnings">
+    Doctor emits a Security note only when it finds a warning, such as a provider open to DMs without an allowlist or a dangerously configured policy. Use `openclaw security audit` for the full security inventory.
   </Accordion>
   <Accordion title="10. systemd linger（Linux）">
     如果作为 systemd 用户服务运行，doctor 会确保启用 lingering，以便 gateway 在退出登录后仍保持存活。
   </Accordion>
   <Accordion title="11. Workspace status (skills, plugins, and TaskFlows)">
-    Doctor 会打印默认 agent 的工作区状态摘要：
+    Doctor prints problems and actions for the default agent, not healthy-state inventory:
 
-    - **Skills 状态**：统计符合条件、缺少要求、被 allowlist 阻止的 skills。
-    - **插件状态**：统计已启用/已禁用/出错的插件；列出任何错误的插件 ID；报告 bundled 插件能力。
-    - **插件兼容性警告**：标记与当前运行时存在兼容性问题的插件。
-    - **插件诊断**：显示插件注册表在加载时发出的任何警告或错误。
-    - **TaskFlow 恢复**：显示需要人工检查或取消的可疑受管 TaskFlow。
+    - **Skills**: lists allowed but unusable skill names; use `openclaw skills check` for requirement details and full counts.
+    - **Plugins**: reports only errored plugin IDs; use `openclaw plugins list` for loaded, imported, disabled, and bundle-plugin inventory.
+    - **Plugin compatibility warnings**: flags plugins that have compatibility issues with the current runtime.
+    - **Plugin diagnostics**: surfaces any load-time warnings or errors emitted by the plugin registry.
+    - **TaskFlow recovery**: surfaces suspicious managed TaskFlows that need manual inspection or cancellation.
+    - **Claude CLI**: reports only binary, authentication, profile, workspace, or project-directory problems; healthy probe details are omitted.
 
   </Accordion>
   <Accordion title="11b. Bootstrap 文件大小">

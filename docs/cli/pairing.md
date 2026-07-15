@@ -52,7 +52,7 @@ openclaw pairing approve --channel telegram --account work <code> --notify
 
 如果在批准配对代码时 `commands.ownerAllowFrom` 为空，OpenClaw 还会将已批准的发送者记录为命令所有者，使用类似 `telegram:123456789` 的按通道作用域条目。这只会引导首个所有者——之后的配对批准不会替换或扩展 `commands.ownerAllowFrom`。
 
-命令所有者是允许运行仅所有者可用命令并批准危险操作（例如 `/diagnostics`、`/export-trajectory`、`/config` 以及 exec 批准）的人工操作员账户。配对只允许发送者与代理通信；它本身并不会授予除这一次性引导之外的所有者权限。
+该命令所有者是允许运行仅所有者可用命令并批准危险操作的人类操作员账户，例如 `/diagnostics`、`/export-session`、`/export-trajectory`、`/config` 和 exec 批准。配对只允许发送者与代理通信；它本身不会授予除这次一次性引导之外的所有者权限。
 
 如果你在此引导机制存在之前就批准过某个发送者，请运行 `openclaw doctor`；当未配置命令所有者时，它会发出警告，并显示用于修复的准确 `openclaw config set commands.ownerAllowFrom ...` 命令。
 

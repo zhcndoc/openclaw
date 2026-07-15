@@ -13,14 +13,15 @@ OpenClaw 会在上游 API 暴露这些计数器的地方，将提供方使用情
 
 提供方参考：
 
-- [Anthropic prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
-- [OpenAI prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)
+- [Anthropic 提示缓存](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
+- [OpenAI 提示缓存](https://developers.openai.com/api/docs/guides/prompt-caching)
 
 ## 主要控制项
 
 ### `cacheRetention`
 
-取值：`"none" | "short" | "long"`。可作为全局默认值、按模型配置，以及按代理配置。
+Values: `"none" | "short" | "long"`. 可配置为全局默认值、按模型配置以及按代理配置。
+`"standard"` 不是别名；请使用 `"short"` 作为提供方的默认缓存窗口。无效值会被忽略并给出警告。
 
 ```yaml
 agents:

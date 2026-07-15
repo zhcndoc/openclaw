@@ -1,7 +1,7 @@
 ---
 summary: "OpenClaw 代码模式：一种可选择启用的紧凑工具面，基于 QuickJS-WASI 和一个隐藏的运行范围工具目录"
-title: "Code mode"
-sidebarTitle: "Code mode"
+title: "代码模式"
+sidebarTitle: "代码模式"
 read_when:
   - 你想为一次代理运行启用 OpenClaw 代码模式
   - 你需要解释为什么代码模式不同于 Codex Code mode
@@ -20,21 +20,26 @@ read_when:
 
 ## 它的作用
 
-- 模型可见的工具列表变为 `exec`、`wait`，以及任何仅直连工具  
-  例如其图像结果无法通过 guest bridge 保留的 `computer`。
-- `exec` 会在一个隔离的 QuickJS-WASI worker 线程中执行模型生成的 JavaScript 或 TypeScript。
-- 每个符合目录条件且已启用的工具（OpenClaw core、plugin、MCP、client）都会对模型提示隐藏，并通过 `ALL_TOOLS`  
-  和 `tools` 暴露给 guest 程序。
-- guest 代码会搜索隐藏目录、描述某个工具的 schema，并通过与普通 agent 轮次相同的执行路径调用工具（策略、审批、hooks、遥测等仍然适用）。
-- MCP 工具按 `MCP` 命名空间分组；在代码模式下，这是调用它们的唯一受支持方式。
-- 当嵌套工具调用仍在等待时，`wait` 会恢复一个被挂起的代码模式运行。
+- 面向模型可见的工具列表变为 `exec`、`wait`，以及任何仅直接可用的工具
+  例如 `computer` 或原生视觉 `image` 加载器，因为它们的图像结果
+  无法通过 guest bridge 传递。
+- `exec` 在隔离的
+  QuickJS-WASI worker 线程中执行模型生成的 JavaScript 或 TypeScript。
+- 每个符合目录条件且已启用的工具（OpenClaw core、插件、MCP、客户端）都会从
+  模型提示词中隐藏，并通过 `ALL_TOOLS`
+  和 `tools` 暴露在 guest 程序内部。
+- Guest 代码会搜索隐藏目录，描述某个工具的 schema，并通过与正常 agent 回合相同的执行路径
+  调用工具（policy、approvals、hooks、telemetry 仍然全部适用）。
+- MCP 工具按 `MCP` 命名空间分组；在代码模式下，这是
+  调用它们的唯一受支持方式。
+- 当嵌套工具调用仍在等待时，`wait` 会恢复一个已挂起的代码模式运行。
 
 Code mode 只会改变面向模型的编排层表面。它不会替换 tools、plugin tools、MCP tools、auth、approval policy、channel 行为或 model selection。
 
 ## 为什么使用它
 
 - 更小的提示面：提供方只获得两个控制工具，以及少量
-  必需的直接工具，而不是几十或几百个完整的工具 schema。
+  必需的直接工具，而不是几十个或几百个完整的工具 schema。
 - 更好的编排：模型可以在一个代码单元中使用循环、连接、小型转换、
   条件逻辑以及并行的嵌套工具调用。
 - 提供方无关：适用于 OpenClaw、plugin、MCP 和客户端工具，而不依赖
@@ -151,41 +156,41 @@ Code mode 拥有已准备运行的面向模型的编排形态。它
   桥从 guest 代码发起的工具调用。
 - **Snapshot**: 保存的 QuickJS-WASI VM 序列化状态，使 `wait` 能够继续一个已挂起的 code-mode 运行。
 
-## Configuration
+## 配置
 
-`tools.codeMode.enabled` is the activation gate; setting other fields alone will not enable this feature independently.
+`tools.codeMode.enabled` 是激活门槛；仅设置其他字段不会单独启用此功能。
 
-| Field                | Default Value                  | Constraints                                     |
+| 字段                 | 默认值                         | 约束                                            |
 | -------------------- | ------------------------------ | ----------------------------------------------- |
-| `enabled`            | `false`                        | boolean; only `true` enables code mode          |
-| `runtime`            | `"quickjs-wasi"`               | only supported value                            |
-| `mode`               | `"only"`                       | exposes control/direct tools, catalogs the rest |
-| `languages`          | `["javascript", "typescript"]` | any subset of the two                           |
+| `enabled`            | `false`                        | boolean；只有 `true` 才会启用代码模式            |
+| `runtime`            | `"quickjs-wasi"`               | 仅支持的值                                      |
+| `mode`               | `"only"`                       | 暴露控制/直接工具，其余工具进入目录             |
+| `languages`          | `["javascript", "typescript"]` | 两者的任意子集                                  |
 | `timeoutMs`          | `10000`                        | `100`-`60000`                                   |
 | `memoryLimitBytes`   | `67108864`                     | `1048576`-`1073741824`                          |
 | `maxOutputBytes`     | `65536`                        | `1024`-`10485760`                               |
 | `maxSnapshotBytes`   | `10485760`                     | `1024`-`268435456`                              |
 | `maxPendingToolCalls`| `16`                           | `1`-`128`                                       |
 | `snapshotTtlSeconds` | `900`                          | `1`-`86400`                                     |
-| `searchDefaultLimit` | `8`                            | limited to `maxSearchLimit`                     |
+| `searchDefaultLimit` | `8`                            | 限制为 `maxSearchLimit`                          |
 | `maxSearchLimit`     | `50`                           | `1`-`50`                                        |
 
-If code mode is enabled but QuickJS-WASI cannot be loaded, OpenClaw fails closed for that run; it does not silently fall back to exposing normal tools.
+如果已启用代码模式但无法加载 QuickJS-WASI，OpenClaw 会在该次运行中直接失败关闭；它不会静默回退为暴露普通工具。
 
-## 激活
+## Activation
 
-代码模式的评估发生在确定有效工具策略之后、最终模型请求组装之前：
+Code mode evaluation happens after determining the effective tool strategy and before assembling the final model request:
 
-1. 解析 agent、model、provider、sandbox、channel、sender 和 run 策略。
-2. 构建生效的 OpenClaw 工具列表，添加符合条件的插件、MCP 和客户端工具。
-3. 应用允许/拒绝策略。
-4. 如果 `tools.codeMode.enabled` 为 false，则继续使用正常的工具暴露方式。
-5. 如果启用且该次运行存在可用工具，则保留所需的仅直连工具，并将每个目录中符合条件的有效工具注册到代码模式目录中。
-6. 将已收录到目录中的工具从模型可见列表中移除；将 `exec` 和 `wait` 与保留的仅直连工具一并加入。
+1. Parse the agent, model, provider, sandbox, channel, sender, and run strategies.
+2. Build the effective OpenClaw tool list, adding eligible plugin, MCP, and client tools.
+3. Apply allow/deny policies.
+4. If `tools.codeMode.enabled` is false, continue using the normal tool exposure approach.
+5. If enabled and this run has available tools, retain the required direct-only tools and register each eligible effective tool from each directory into the code mode directory.
+6. Remove tools already added to the directory from the model-visible list; add `exec` and `wait` together with the retained direct-only tools.
 
-那些刻意没有任何工具的运行（原始模型调用、`disableTools: true`，或空的 `tools.allow` 列表）不会激活代码模式表面，即使已配置 `tools.codeMode.enabled: true` 也是如此。代码模式和 OpenClaw 工具搜索对同一次运行来说是互斥的；如果代码模式被激活，工具搜索的压缩就不会发生。
+Runs that intentionally have no tools at all (raw model calls, `disableTools: true`, or an empty `tools.allow` list) will not activate the code mode surface, even if `tools.codeMode.enabled: true` is configured. Code mode and OpenClaw tool discovery are mutually exclusive for the same run; if code mode is activated, tool discovery compression will not occur.
 
-代码模式目录是按运行范围限定的，绝不能泄露来自其他 agent、session、sender 或 run 的工具。
+The code mode directory is scoped to the run and must never leak tools from other agents, sessions, senders, or runs.
 
 ## 模型可见工具
 
@@ -556,17 +561,17 @@ type CodeModeOutput = { type: "text"; text: string } | { type: "json"; value: un
 错误；不支持二进制值。图像和文件通过
 普通的 OpenClaw 工具传递，而不是通过代码模式桥接。
 
-## 工具目录
+## Tool Directory
 
-隐藏目录在经过有效策略过滤后包含以下工具，顺序如下：OpenClaw 核心工具、捆绑的插件工具、外部插件工具、MCP 工具，然后是当前运行中由客户端提供的工具。
+The hidden directory, after being filtered by effective policies, contains the following tools in order: OpenClaw core tools, bundled plugin tools, external plugin tools, MCP tools, and then the tools currently provided by the client at runtime.
 
-目录 ID 在一次运行中保持稳定，并在可能时对于等效工具集保持确定性。实际形式如下：
+Directory IDs remain stable within a single run and, when possible, deterministic for equivalent tool sets. The actual format is as follows:
 
 ```text
 <source>:<owner>:<tool-name>
 ```
 
-其中 `<source>` 为 `openclaw`、`mcp` 或 `client`（插件工具使用 `openclaw`，并将插件 ID 作为 `<owner>`；核心工具使用 `openclaw:core:*`）。例如：
+where `<source>` is `openclaw`, `mcp`, or `client` (plugin tools use `openclaw`, with the plugin ID as `<owner>`; core tools use `openclaw:core:*`). For example:
 
 ```text
 openclaw:core:message
@@ -575,12 +580,12 @@ mcp:github:create_issue
 client:app:select_file
 ```
 
-目录省略了代码模式控制工具（`exec`、`wait`、`tool_search_code`、
-`tool_search`、`tool_describe`、`tool_call`）以及仅直接调用工具。控制
-工具不得通过目录递归；仅直接调用工具仍对模型可见，
-因为它们的结构化结果无法跨越 QuickJS 桥接。
+The directory omits code-mode control tools (`exec`, `wait`, `tool_search_code`,
+`tool_search`, `tool_describe`, `tool_call`) as well as tools that can only be called directly. Control
+tools must not recurse through the directory; directly callable tools remain visible to the model
+because their structured results cannot cross the QuickJS bridge.
 
-MCP 条目保留在运行作用域的目录中，因此策略、审批、钩子、遥测、转录投影以及精确的工具 ID 都与正常工具执行保持共享。面向访客的 `ALL_TOOLS`、`tools.search(...)`、`tools.describe(...)` 和 `tools.call(...)` 视图会省略 MCP 条目。生成的 `MCP.<server>.<tool>({ ...input })` 命名空间会解析回精确的目录 ID，并通过相同的执行器路径进行分发。
+MCP entries are preserved in the runtime-scoped directory, so policies, approvals, hooks, telemetry, transcript projections, and exact tool IDs are shared just as with normal tool execution. The visitor-facing `ALL_TOOLS`, `tools.search(...)`, `tools.describe(...)`, and `tools.call(...)` views omit MCP entries. The generated `MCP.<server>.<tool>({ ...input })` namespace resolves back to the exact directory ID and dispatches through the same executor path.
 
 ## 工具搜索交互
 
@@ -729,14 +734,14 @@ openclaw gateway
 ## 实现布局
 
 - config contract: `tools.codeMode`
-- catalog builder: effective tools to compact entries and id map
-- model-surface adapter: replace visible tools with control/direct tools
-- QuickJS-WASI runtime adapter: load, eval, snapshot, restore, dispose
-- worker supervisor: timeout, abort, crash isolation
-- bridge adapter: JSON-safe host callbacks and result delivery
+- catalog builder: 有效工具，用于压缩条目和 id 映射
+- model-surface adapter: 用控制/直接工具替换可见工具
+- QuickJS-WASI runtime adapter: 加载、求值、快照、恢复、释放
+- worker supervisor: 超时、终止、崩溃隔离
+- bridge adapter: JSON 安全的宿主回调和结果传递
 - TypeScript transform adapter
-- snapshot store: TTL, size caps, run/session scoping
-- trajectory projection for nested tool calls
+- snapshot store: TTL、大小上限、运行/会话作用域
+- 嵌套工具调用的轨迹投影
 - telemetry counters and diagnostics
 
 该实现复用了 Tool Search 中的目录和执行器概念，但
@@ -775,29 +780,27 @@ openclaw gateway
 
 在更改运行时时，请将以下内容作为集成或端到端测试运行：
 
-1. Start a Gateway with `tools.codeMode.enabled: false`.
-2. Send an agent turn with a small direct tool set.
-3. Assert the model-visible tools are unchanged.
-4. Restart with `tools.codeMode.enabled: true`.
-5. Send an agent turn with OpenClaw, plugin, MCP, and client test tools.
-6. Assert the model-visible tool list is `exec`, `wait`, plus only configured
-   direct-only tools.
-7. In `exec`, read `ALL_TOOLS` and assert the catalog-eligible effective test
-   tools are present while direct-only tools are absent.
-8. In `exec`, call OpenClaw/plugin/client tools through `tools.search`,
-   `tools.describe`, and `tools.call`.
-9. In `exec`, call `API.list("mcp")` and `API.read("mcp/<server>.d.ts")` and
-   assert the declaration files describe visible MCP tools.
-10. In `exec`, call MCP tools through `MCP.<server>.<tool>({ ...input })` and
-    assert direct MCP catalog entries are absent from `ALL_TOOLS` and
-    `tools.*`.
-11. Assert denied tools are absent and cannot be called by guessed id.
-12. Start a nested tool call that resolves after `exec` returns `waiting`.
-13. Call `wait` and assert the restored VM receives the tool result.
-14. Assert the final answer contains output produced after restore.
-15. Assert timeout, abort, and snapshot expiry clean up runtime state.
-16. Export trajectory and assert nested calls are visible under the parent
-    code-mode call.
+1. 使用 `tools.codeMode.enabled: false` 启动一个 Gateway。
+2. 发送一次包含少量直接工具集的 agent turn。
+3. 断言模型可见的工具未发生变化。
+4. 重新启动并设置 `tools.codeMode.enabled: true`。
+5. 发送一次包含 OpenClaw、插件、MCP 和客户端测试工具的 agent turn。
+6. 断言模型可见的工具列表为 `exec`、`wait`，再加上仅已配置的
+   direct-only 工具。
+7. 在 `exec` 中读取 `ALL_TOOLS`，并断言可进入目录的有效测试
+   工具存在，而 direct-only 工具不存在。
+8. 在 `exec` 中，通过 `tools.search`、`tools.describe` 和 `tools.call`
+   调用 OpenClaw/插件/客户端工具。
+9. 在 `exec` 中，调用 `API.list("mcp")` 和 `API.read("mcp/<server>.d.ts")`，并
+   断言声明文件描述了可见的 MCP 工具。
+10. 在 `exec` 中，通过 `MCP.<server>.<tool>({ ...input })` 调用 MCP 工具，并
+   断言直接 MCP 目录条目不在 `ALL_TOOLS` 和 `tools.*` 中。
+11. 断言被拒绝的工具不存在，且无法通过猜测的 id 调用。
+12. 启动一个嵌套工具调用，使其在 `exec` 返回 `waiting` 后才完成。
+13. 调用 `wait`，并断言恢复后的 VM 收到了工具结果。
+14. 断言最终答案包含在恢复后生成的输出。
+15. 断言超时、取消和快照过期会清理运行时状态。
+16. 导出 trajectory，并断言嵌套调用在父级代码模式调用下可见。
 
 仅限文档的对此页面的更改仍应运行 `pnpm check:docs`。
 

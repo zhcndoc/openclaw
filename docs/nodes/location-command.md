@@ -1,5 +1,5 @@
 ---
-summary: "节点的位置命令（location.get）、权限模式以及 Android 前台行为"
+summary: "节点位置命令、平台权限模式以及 Linux GeoClue 设置"
 read_when:
   - 添加位置节点支持或权限 UI
   - 设计 Android 位置权限或前台行为
@@ -85,6 +85,32 @@ CLI 标志直接映射：`--location-timeout` -> `timeoutMs`，`--max-age` -> `m
 - Android 第三方构建仅在用户选择了 `Always` 且 Android 已授予后台定位权限时，才接受后台 `location.get`。现有的持久节点服务会添加 `location` 服务类型，并在激活时显示 `Location: Always`。
 - Android Play 构建和 `While Using` 模式在后台时会拒绝 `location.get`。
 - 其他 node 平台可能有所不同。
+
+## Linux 节点主机
+
+捆绑的 Linux Node 插件会向 CLI `openclaw node` 服务添加 `location.get`，包括没有 Linux 桌面应用的无头主机。位置默认关闭。请在插件条目下启用它，然后重启节点服务：
+
+```json5
+{
+  plugins: {
+    entries: {
+      "linux-node": {
+        config: {
+          location: { enabled: true },
+        },
+      },
+    },
+  },
+}
+```
+
+安装 GeoClue2 及其 `where-am-i` 演示程序（Debian 和 Ubuntu 上为 `geoclue-2-demo`）。节点服务用户必须被主机的 GeoClue 策略和授权代理允许。
+
+该插件使用 `where-am-i`，而不是一系列 `busctl` 调用。GeoClue 将客户端创建、属性设置、启动、更新和停止绑定到同一个 D-Bus 客户端连接；该演示程序会将整个生命周期保持在一起，而单独的 `busctl` 子进程则不会。不会新增 npm 依赖。
+
+Linux 将 `coarse`、`balanced` 和 `precise` 映射到 GeoClue 精度级别 `4`、`6` 和 `8`。它会根据返回的时间戳验证 `maxAgeMs`。GeoClue 的演示程序不公开所选提供方，因此 `source` 为 `unknown`；只有在报告的精度为 100 米或更好时，`isPrecise` 才为 true。
+
+Linux 使用相同的稳定错误：`LOCATION_DISABLED`、`LOCATION_TIMEOUT` 和 `LOCATION_UNAVAILABLE`。
 
 ## 模型/工具集成
 

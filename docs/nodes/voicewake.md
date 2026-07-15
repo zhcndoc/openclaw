@@ -8,9 +8,9 @@ title: "语音唤醒"
 
 唤醒词是**由 Gateway 持有的一个全局列表**——不存在每个节点各自的自定义列表。任何节点或应用 UI 都可以编辑该列表；Gateway 会持久化该更改，并将其广播给每个已连接的客户端。
 
-- **macOS**: 本地语音唤醒启用/禁用开关。需要 macOS 26+；运行时/PTT 详情请参见 [语音唤醒（macOS）](/platforms/mac/voicewake)。
+- **macOS**: 本地语音唤醒启用/禁用开关。需要 macOS 26+；运行时/PTT 详细信息请参见 [语音唤醒（macOS）](/platforms/mac/voicewake)。
 - **iOS**: 设置中的本地语音唤醒启用/禁用开关。
-- **Android**: 不实现语音唤醒。Voice 选项卡使用手动麦克风采集，而不是唤醒词触发。
+- **Android**: 设置 → 语音中的本地语音唤醒启用/禁用开关和唤醒词编辑器。需要 Android 设备端语音识别。
 
 ## 存储
 
@@ -60,11 +60,11 @@ title: "语音唤醒"
 
 两者都会广播给每个具有读取权限的 WebSocket 客户端（macOS 应用、WebChat 及类似客户端）以及每个已连接的节点。节点在连接后还会立即收到这两个事件作为初始快照推送。
 
-## 客户端行为
+## Client Behavior
 
-- **macOS**：调用 `voicewake.set`/`voicewake.get`，并监听 `voicewake.changed` 以与其他客户端保持同步。
-- **iOS**：调用 `voicewake.set`/`voicewake.get`，并监听 `voicewake.changed` 以保持本地唤醒词检测的响应性。
-- **Android**：不声明 `voiceWake` 能力，也不消费唤醒词更新。
+- **macOS**: 调用 `voicewake.set`/`voicewake.get` 并监听 `voicewake.changed`，以与其他客户端保持同步。
+- **iOS**: 调用 `voicewake.set`/`voicewake.get` 并监听 `voicewake.changed`，以保持本地唤醒词检测的响应性。
+- **Android**: 调用 `voicewake.set`/`voicewake.get`，监听 `voicewake.changed`，并在启用时公布 `voiceWake`。识别始终在设备上进行且仅在前台有效；当 Talk、手动听写、语音备忘录录制或消息语音占用音频时会暂停。
 
 ## 相关内容
 

@@ -18,11 +18,11 @@ pnpm plugins:inventory:gen
 
 ## 定义
 
-- **核心 npm 包：** Built into the `openclaw` npm package, usable without installing a separate plugin.
-- **官方外部包：** Plugins maintained by OpenClaw, not included in the core npm package, kept in this official list, and can be installed on demand via ClawHub and/or npm.
-- **仅源码检出：** Plugins retained only in the local repository, not included in the published npm artifacts, and not promoted as installable packages.
+- **核心 npm 包：** 内置于 `openclaw` npm 包中，无需安装单独的插件即可使用。
+- **官方外部包：** 由 OpenClaw 维护的插件，不包含在核心 npm 包中，保存在此官方列表中，并可通过 ClawHub 和/或 npm 按需安装。
+- **仅源码检出：** 仅保留在本地仓库中的插件，不包含在已发布的 npm 制品中，也不会作为可安装包进行推广。
 
-Source checkout differs from npm installation: after `pnpm install`, bundled plugins are loaded from `extensions/<id>`, so both local modifications and in-package workspace dependencies are available.
+源码检出与 npm 安装不同：在 `pnpm install` 之后，捆绑插件会从 `extensions/<id>` 加载，因此本地修改和包内工作区依赖都可用。
 
 ## 安装插件
 
@@ -47,7 +47,7 @@ openclaw plugins inspect discord --runtime --json
 
 ## 核心 npm 包
 
-66 plugins
+68 plugins
 
 - **[admin-http-rpc](/plugins/reference/admin-http-rpc)** (`@openclaw/admin-http-rpc`) - 包含在 OpenClaw 中。OpenClaw 管理 HTTP RPC 端点。
 
@@ -94,6 +94,10 @@ openclaw plugins inspect discord --runtime --json
 - **[huggingface](/plugins/reference/huggingface)** (`@openclaw/huggingface-provider`) - 包含在 OpenClaw 中。为 OpenClaw 添加 Hugging Face 模型提供方支持。
 
 - **[imessage](/plugins/reference/imessage)** (`@openclaw/imessage`) - 包含在 OpenClaw 中。添加用于发送和接收 OpenClaw 消息的 iMessage 频道表面。
+
+- **[linux-canvas](/plugins/reference/linux-canvas)** (`@openclaw/linux-canvas`) - 包含在 OpenClaw 中。OpenClaw Linux 桌面应用的画布渲染桥接。
+
+- **[linux-node](/plugins/reference/linux-node)** (`@openclaw/linux-node`) - 包含在 OpenClaw 中。Linux 节点主机的桌面通知、摄像头捕获和位置功能。
 
 - **[litellm](/plugins/reference/litellm)** (`@openclaw/litellm-provider`) - 包含在 OpenClaw 中。为 OpenClaw 添加 LiteLLM 模型提供方支持。
 
@@ -205,7 +209,7 @@ openclaw plugins inspect discord --runtime --json
 
 - **[cloudflare-ai-gateway](/plugins/reference/cloudflare-ai-gateway)** (`@openclaw/cloudflare-ai-gateway-provider`) - npm；ClawHub：`clawhub:@openclaw/cloudflare-ai-gateway-provider`。为 OpenClaw 添加 Cloudflare AI Gateway 模型提供方支持。
 
-- **[codex](/plugins/reference/codex)** (`@openclaw/codex`) - npm; ClawHub. Codex app-server harness, model provider, and native session catalog.
+- **[codex](/plugins/reference/codex)** (`@openclaw/codex`) - npm; ClawHub. Codex 应用服务器支架、模型提供方和原生会话目录。
 
 - **[copilot](/plugins/reference/copilot)** (`@openclaw/copilot`) - npm；ClawHub：`clawhub:@openclaw/copilot`。注册 GitHub Copilot 代理运行时。
 

@@ -1,23 +1,23 @@
 ---
-summary: "Use tokenjuice reducers to compress exec and bash tool results."
+summary: "使用 tokenjuice reducers 压缩 exec 和 bash 工具结果。"
 read_when:
   - You are installing, configuring, or auditing the tokenjuice plugin.
 title: "Tokenjuice Plugin"
 ---
 
-# Tokenjuice Plugin
+# Tokenjuice 插件
 
-Use tokenjuice reducers to compress exec and bash tool results.
+使用 tokenjuice reducers 压缩 exec 和 bash 工具结果。
 
-## Distribution
+## 分发
 
-- Package: `@openclaw/tokenjuice`
-- Install route: npm; ClawHub: `clawhub:@openclaw/tokenjuice`
+- 包：`@openclaw/tokenjuice`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/tokenjuice`
 
-## Interface
+## 接口
 
 contracts: agentToolResultMiddleware
 
-## Related Docs
+## 相关文档
 
-- [tokenjuice](/tools/tokenjuice)
+- [Tokenjuice](/tools/tokenjuice)

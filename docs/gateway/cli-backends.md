@@ -30,7 +30,7 @@ openclaw agent --agent main --message "hi" --model claude-cli/claude-sonnet-4-6
 
 当未配置显式的代理列表时，`main` 是默认的代理 ID；否则请替换为你自己的代理 ID。
 
-如果网关在 launchd/systemd 下运行，且 `PATH` 很精简，请显式指定二进制文件路径：
+如果网关在 launchd/systemd 下运行，且 `PATH` 非常精简，请显式指定二进制文件路径：
 
 ```json5
 {
@@ -125,9 +125,9 @@ openclaw agent --agent main --message "hi" --model claude-cli/claude-sonnet-4-6
 
 内置的 `claude-cli` 后端优先使用 Claude Code 的原生技能解析器。当当前技能快照中至少有一个已选择技能且具有已物化路径时，OpenClaw 会通过 `--plugin-dir` 传递一个临时的 Claude Code 插件，并从附加的系统提示中省略重复的 OpenClaw 技能目录。若没有已物化的插件技能，OpenClaw 会保留提示目录作为回退。技能环境变量/API 密钥覆盖在本次运行中仍会应用到子进程环境。
 
-Claude CLI 有自己的非交互权限模式；OpenClaw 会将其映射到现有的 exec 策略，而不是添加 Claude 专用配置。对于 OpenClaw 管理的 Claude 实时会话，生效的 exec 策略具有权威性：YOLO（`tools.exec.security: "full"` 且 `tools.exec.ask: "off"`）会以 `--permission-mode bypassPermissions` 启动 Claude，而限制性策略则会以 `--permission-mode default` 启动它。按代理配置的 `agents.list[].tools.exec` 设置会覆盖该代理的全局 `tools.exec`。原始后端参数仍然可以包含 `--permission-mode`，但实时 Claude 启动会将该标志规范化，以匹配生效的策略。
+Claude CLI 有自己的非交互式权限模式；OpenClaw 会将其映射到现有的 exec 策略，而不是添加 Claude 专用配置。对于 OpenClaw 管理的 Claude 实时会话，实际生效的 exec 策略具有权威性：YOLO（`tools.exec.security: "full"` 且 `tools.exec.ask: "off"`）通常会以 `--permission-mode bypassPermissions` 启动 Claude，而更严格的策略会以 `--permission-mode default` 启动。以 root 运行的网关也会使用 `default`，因为 Claude Code 会拒绝 root 下的 bypass 模式；OpenClaw 仍然会根据已配置的 exec 策略来响应 Claude 的 stdio 工具控制请求。每个代理的 `agents.list[].tools.exec` 设置会覆盖该代理的全局 `tools.exec`。原始后端参数仍可能包含 `--permission-mode`，但实时 Claude 启动会对该标志进行规范化，使其与实际生效的策略和主机限制相匹配。
 
-后端还会将 OpenClaw 的 `/think` 等级映射到 Claude Code 的原生 `--effort` 标志：`minimal`/`low` -> `low`，`medium` -> `medium`，`high`/`xhigh`/`max` 直接透传。`adaptive` 会移除已配置的 `--effort` 标志且不提供替代项，因此 Claude Code 会根据自身环境、设置和模型默认值解析有效的 effort。其他 CLI 后端需要其所属插件先声明等价的 argv 映射器，`/think` 才会影响启动的 CLI。
+该后端还会将 OpenClaw 的 `/think` 级别映射到 Claude Code 原生的 `--effort` 标志：`minimal`/`low` -> `low`，`medium` -> `medium`，以及 `high`/`xhigh`/`max` 直接透传。这样可以使订阅支持的 Claude CLI 和 API 密钥路径保持与受支持的 Fable 5 级别相同的 effort 等级。`adaptive` 会移除已配置的 `--effort` 标志且不提供替代项，因此 Claude Code 会根据自身环境、设置和模型默认值来解析实际 effort。其他 CLI 后端需要其所属插件先声明等效的 argv 映射器，之后 `/think` 才会影响启动的 CLI。
 
 在 OpenClaw 可以使用 `claude-cli` 之前，Claude Code 本身必须已在同一主机上登录：
 
@@ -209,7 +209,7 @@ Anthropic 负责 `claude-cli`，Google 负责 `google-gemini-cli`。OpenAI Codex
 | `output`              | `jsonl`                                                                                                                                                                                                       |
 | `input`               | `stdin`                                                                                                                                                                                                      |
 | `modelArg`            | `--model`                                                                                                                                                                                                     |
-| `sessionArg`          | `--session-id`                                                                                                                                                                                                |
+| `sessionArg`         | `--session-id`                                                                                                                                                                                                |
 | `sessionMode`         | `always`                                                                                                                                                                                                      |
 | `imageArg`            | `@`                                                                                                                                                                                                           |
 | `imagePathScope`      | `workspace`                                                                                                                                                                                                   |

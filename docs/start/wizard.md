@@ -1,5 +1,5 @@
 ---
-summary: "CLI 上手引导：先验证推理，然后将剩余设置交给 Crestodian"
+summary: "CLI 上手引导：先验证推理，再将剩余设置交给 OpenClaw"
 read_when:
   - 运行或配置 CLI 上手引导
   - 设置新机器
@@ -11,16 +11,17 @@ sidebarTitle: "上手引导：CLI"
 openclaw onboard
 ```
 
-CLI 上手引导是 macOS、Linux 和 Windows（原生或 WSL2）上推荐的终端设置路径。默认情况下，它会检测机器上已可用的 AI 访问，使用一次真实补全进行验证，然后启动 Crestodian 来配置工作区、Gateway 和可选功能。`openclaw setup` 运行相同流程（[设置](/cli/setup)涵盖了
-`--baseline` 仅配置变体）。Windows 桌面用户也可以从 [Windows Hub](/platforms/windows) 开始。
+CLI 上手引导是 macOS、Linux 和 Windows（原生或 WSL2）上推荐的终端设置路径。默认情况下，它会检测机器上已可用的 AI 访问，使用真实补全进行验证，然后启动 OpenClaw 来配置工作区、Gateway 和可选功能。`openclaw setup` 运行相同流程（[设置](/cli/setup) 介绍
+了 `--baseline` 仅配置配置项的变体）。Windows 桌面用户也可以从 [Windows Hub](/platforms/windows) 开始。
 
-引导式上手首先建立推理。它会检测可用的 AI 访问，要求进行一次真实补全，然后才启动 [Crestodian](/cli/crestodian) 来配置 OpenClaw 的其余部分。在引导流程中，不存在预推理的 Crestodian，也没有跳过 AI 的路径。
+引导式上手会先建立推理能力。它会检测可用的 AI 访问，要求进行一次真实补全，然后才启动 [OpenClaw](/cli/openclaw) 来配置 OpenClaw 的其余部分。选择 **暂时跳过** 会退出上手引导，而不会启动 OpenClaw。
 
-经典向导仍可用于提供商登录、远程 Gateway 设置、通道配对、守护进程控制、技能和导入。使用 `openclaw onboard --classic` 显式运行它；引导式推理候选界面不会切换到它。推理通过后，Crestodian 可以使用 `open channel
-wizard for <channel>` 将需要密钥的通道设置交给一个带遮蔽输入的终端向导。要更改模型提供商或其身份验证，请退出 Crestodian 并运行 `openclaw onboard`；Crestodian 不会打开引导式或经典提供商流程。
+经典向导仍可用于自定义提供方、远程 Gateway 设置、通道配对、守护进程控制、skills 和导入。通过 `openclaw onboard --classic` 显式运行它；引导式推理选择器不会委派到它。推理通过后，OpenClaw 可以使用 `open channel wizard for
+<channel>` 将需要密钥的通道设置交给带遮罩的终端向导。要更改模型提供方或其身份验证，请退出 OpenClaw 并运行
+`openclaw onboard`; OpenClaw 不会打开引导式或经典的提供方流程。
 
 <Info>
-最快首次聊天：完成引导式设置，运行 `openclaw dashboard`，然后通过 Control UI 在浏览器中聊天。文档：[仪表盘](/web/dashboard)。
+最快首次聊天：完成引导式设置，运行 `openclaw dashboard`，然后通过浏览器中的 Control UI 聊天。文档：[仪表盘](/web/dashboard)。
 </Info>
 
 ## 区域设置
@@ -62,14 +63,16 @@ Search、Perplexity、SearXNG 或 Tavily。其中一些需要 API 密钥；另�
 1. 接受安全提示。
 2. 检测已配置的模型、API 密钥环境变量，以及受支持的本地
    AI CLI。
-3. 使用一次真实补全测试检测到的第一个候选项。若失败，显示
-   原因并继续下一个可用候选项。
-4. 如果检测已耗尽，则重试一个已检测到的候选项，或在带掩码的提示中输入提供商
-   API 密钥。在推理可用之前，引导式入门
-   不提供 Crestodian，也不提供跳过 AI 的退出方式。
-5. 仅持久化已验证的模型路由以及它所需的任何凭据/插件状态。
+3. 使用一次真实补全测试第一个检测到的候选项。若失败，显示
+   原因并继续尝试下一个可用候选项。
+4. 如果检测已用尽，则选择 OpenAI、Anthropic、xAI（Grok）、Google 或
+   OpenRouter，或为其余提供商选择 **更多…**。每个提供商的
+   区域、套餐，以及受支持的浏览器、设备、API 密钥或 token 方法
+   都会出现在第二个菜单中，并使用相同的真实补全进行测试。
+   选择 **暂时跳过** 可在不启动 OpenClaw 的情况下退出。
+5. 仅持久化已验证的模型路由及其所需的任何凭据/插件状态。
    Workspace 和 Gateway 设置保持不变。
-6. 使用已验证的模型启动 Crestodian，以便它可以配置 workspace、
+6. 使用已验证的模型启动 OpenClaw，以便它可以配置 workspace、
    Gateway、channels、agents、plugins，以及其余可选设置。
 
 在已配置的安装上重新运行该命令时，会先测试当前默认
@@ -105,52 +108,47 @@ Search、Perplexity、SearXNG 或 Tavily。其中一些需要 API 密钥；另�
 
 本地模式（默认）会按以下步骤进行：
 
-1. **模型/认证** - 选择一种提供商认证流程（API 密钥、OAuth，或
-   提供商特定的手动认证），包括自定义提供商
-   （兼容 OpenAI、兼容 OpenAI Responses、兼容 Anthropic，或
-   未知自动检测）。选择一个默认模型。
-   全新的 OpenAI API 密钥设置默认使用 `openai/gpt-5.6`（裸的直接 API
-   ID 会解析为 Sol）；全新的 ChatGPT/Codex 设置默认使用
+1. **Model/Auth** - 选择一个提供商认证流程（API key、OAuth，或
+   提供商特定的手动认证），包括 Custom Provider
+   （OpenAI-compatible、OpenAI Responses-compatible、Anthropic-compatible，或
+   Unknown auto-detect）。选择默认模型。
+   新的 OpenAI API key 配置默认使用 `openai/gpt-5.6`（直接 API
+   id 的裸值会解析为 Sol）；新的 ChatGPT/Codex 配置默认使用
    `openai/gpt-5.6-sol`。重新运行设置会保留现有的显式模型，
-   包括 `openai/gpt-5.5`。如果账户未开放 GPT-5.6，请明确选择
+   包括 `openai/gpt-5.5`。如果账号没有暴露 GPT-5.6，请显式选择
    `openai/gpt-5.5`。
-   安全提示：如果此代理会运行工具或处理 webhook/hook
-   内容，请优先选择可用的最强最新一代模型，并保持工具策略严格——
-   较弱或较旧的模型更容易受到提示注入攻击。
+   安全提示：如果此代理将运行工具或处理 webhook/hook
+   内容，请优先选择可用的最强最新一代模型，并保持工具策略严格——较弱或较旧的档位更容易受到提示注入。
    对于非交互式运行，`--secret-input-mode ref` 会存储基于环境变量的引用，
-   而不是明文 API 密钥值；被引用的环境变量必须已设置，
-   否则入门流程会快速失败。交互式密钥引用模式可以指向环境变量或已配置的提供商引用（`file` 或 `exec`），
-   并在保存前进行快速预检。完成模型/认证设置后，向导会提供一个可选的实时补全测试；失败后可以返回到
-   模型/认证设置一次，也可以忽略而不阻塞经典向导的其余部分。忽略它不会解锁 Crestodian；
-   对话式设置仍然需要通过推理检查。
-2. **工作区** - 代理文件目录（默认 `~/.openclaw/workspace`）。会种子化引导文件。
-3. **网关** - 端口、绑定地址、认证模式、Tailscale 暴露方式。在
-   交互式令牌模式下，可选择明文令牌存储（默认）或
-   选择 SecretRef。非交互式 SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
-4. **通道** - 内置和官方插件聊天通道，包括
+   而不是明文 API key 值；被引用的环境变量必须已设置，否则入门会立即失败。
+   交互式 secret reference 模式可以指向环境变量或已配置的提供商引用（`file` 或
+   `exec`），并在保存前进行快速预检。完成 Model/Auth 设置后，向导会提供一个可选的实时补全测试；失败后可以返回到
+   Model/Auth 设置一次，或者忽略它而不阻塞经典向导的其余部分。
+   忽略它不会解锁 OpenClaw；对话式设置仍然需要通过推理检查。
+2. **Workspace** - 代理文件所在目录（默认 `~/.openclaw/workspace`）。会种植引导文件。
+3. **Gateway** - 端口、绑定地址、认证模式、Tailscale 暴露方式。在
+   交互式 token 模式下，可选择明文 token 存储（默认）或改用 SecretRef。
+   非交互式 SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
+4. **Channels** - 内置和官方插件聊天频道，包括
    Discord、飞书、Google Chat、iMessage、Mattermost、Microsoft Teams、
    QQ Bot、Signal、Slack、Telegram、WhatsApp 等。
-5. **守护进程** - 安装 LaunchAgent（macOS）、systemd 用户单元
-   （Linux/WSL2），或原生 Windows 计划任务，并提供按用户的
-   启动文件夹回退方案。
-   如果需要令牌认证且 `gateway.auth.token` 由 SecretRef 管理，
-   守护进程安装会验证它，但不会把已解析的令牌持久化到
+5. **Daemon** - 安装 LaunchAgent（macOS）、systemd 用户单元
+   （Linux/WSL2），或原生 Windows 计划任务，并提供按用户
+   Startup 文件夹作为回退方案。
+   如果需要 token 认证，且 `gateway.auth.token` 由 SecretRef 管理，
+   daemon 安装会验证它，但不会将解析后的 token 持久化到
    supervisor 服务环境元数据中；未解析的 SecretRef 会阻止
-   安装并给出指引。如果同时设置了 `gateway.auth.token` 和
-   `gateway.auth.password`，而 `gateway.auth.mode` 未设置，则安装
-   会被阻止，直到你显式设置模式。
-6. **健康检查** - 启动 Gateway 并验证其可达性。
-7. **技能** - 安装推荐技能及其可选依赖。
+   安装并给出指导。如果 `gateway.auth.token` 和
+   `gateway.auth.password` 都已设置，而 `gateway.auth.mode` 未设置，则安装会被
+   阻止，直到你显式设置模式。
+6. **Health check** - 启动 Gateway 并验证其可访问。
+7. **Skills** - 安装推荐技能及其可选依赖项。
 
 <Note>
 重新运行入门流程不会清除任何内容，除非你明确选择**重置**（或传入 `--reset`）。CLI 的 `--reset` 默认作用于配置、凭据和会话；使用 `--reset-scope full` 还会移除工作区。如果配置无效或包含旧版键，入门流程会要求你先运行 `openclaw doctor`。
 </Note>
 
-`--flow import` 会在经典向导中运行一个检测到的迁移流程（例如 Hermes），
-而不是全新设置；请参见 [迁移](/cli/migrate) 以及
-[安装](/install/migrating-hermes) 下的迁移指南。`openclaw onboard --modern` 是
-[Crestodian](/cli/crestodian) 的兼容别名。它使用与 `openclaw crestodian` 相同的推理门控：
-已验证的推理会启动助手，而交互式失败会返回到引导式推理设置。
+`--flow import` 会在经典向导中运行一个检测到的迁移流程（例如 Hermes），而不是进行全新设置；请参见 [Migrate](/cli/migrate) 以及 [Install](/install/migrating-hermes) 下的迁移指南。`openclaw onboard --modern` 是 [OpenClaw](/cli/openclaw) 的一个兼容别名。它使用与 `openclaw setup` 相同的推理门禁：经过验证的推理会启动助手，而交互式失败会返回到引导式推理设置。
 
 ## 添加另一个 agent
 

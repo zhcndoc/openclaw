@@ -11,7 +11,7 @@ macOS 应用是 OpenClaw 的 **菜单栏伴侣**：原生托盘界面、macOS
 权限提示、通知、WebChat、语音输入、Canvas，以及
 由 Mac 托管的节点工具，例如 `system.run`。
 
-只需要 CLI 和 Gateway？从 [Getting started](/start/getting-started) 开始。
+只需要 CLI 和 Gateway？从 [入门指南](/start/getting-started) 开始。
 
 ## 下载
 
@@ -28,20 +28,32 @@ macOS 应用是 OpenClaw 的 **菜单栏伴侣**：原生托盘界面、macOS
 ## 首次运行
 
 1. 安装并启动 **OpenClaw.app**。
-2. 为本地 Gateway 选择 **This Mac**，或连接到远程 Gateway。
-3. 等待应用安装匹配的 CLI 运行时。在本地模式下，它还会安装并启动 Gateway。
-4. 通过实时模型检查建立推理连接。通过后，Crestodian 会处理其余设置。
+2. 选择 **This Mac** 作为本地 Gateway，或连接到远程 Gateway。
+3. 等待应用安装匹配的 CLI 运行时。在本地模式下，它还会
+   安装并启动 Gateway。
+4. 通过实时模型检查建立推理。通过后，OpenClaw 会处理剩余的设置。
 5. 完成 macOS 权限清单，并发送入门测试消息。
 
-如果应用连接到一个已有的 Gateway，且其默认 agent 已配置模型，则会将该 Gateway 视为已完成设置，跳过提供方入门流程和 Crestodian，并打开仪表板。如果 Gateway 无法连接，或者其默认 agent 没有模型，推理入门仍可用于恢复。
+如果应用连接到一个现有 Gateway，且其默认 agent 已配置
+模型，则会将该 Gateway 视为已完成设置，跳过 provider onboarding 和
+OpenClaw，并打开仪表板。如果 Gateway 无法连接，或者其
+默认 agent 没有模型，则仍可进行推理入门以便恢复。
 
 对于 CLI/Gateway 设置路径，请使用 [入门指南](/start/getting-started)。
 如需恢复权限，请使用 [macOS 权限](/platforms/mac/permissions)。
 
 ## 更新
 
-仪表板更新卡片会先通过 Sparkle 更新已签名的 macOS 应用。
-在应用重新启动后，它会自动更新并重启与之匹配的、由应用管理的本地 Gateway。Homebrew 和其他用户管理的 CLI 安装会保留正常的 Gateway 更新流程（该卡片会直接运行 Gateway 更新），并且自动修复绝不会将较新的 Gateway 降级，也不会覆盖 `extended-stable` 频道固定。
+仪表板更新卡片和菜单栏更新操作会先通过 Sparkle 更新已签名的 macOS
+应用。重新启动后，会运行一个类似设置向导的窗口，为应用管理的 Gateway 执行
+标准的 `openclaw update` 流程，将其固定到 Mac
+应用版本，重启它，并验证连接。更新失败时，窗口会保留重试、
+[更新指南](/install/updating) 和 Discord 操作。Homebrew 和其他用户管理的 CLI 安装将保持在各自当前的所有者名下；
+应用绝不会降级更新的 Gateway，也不会覆盖 `extended-stable`
+通道固定。
+
+成功更新后，应用会找到最近一次由人使用的、顶层的直接会话，并向该代理发送一次性的更新事件。心跳和 cron
+活动不会影响这一选择。然后，代理可以从你最可能正在使用的对话中欢迎你回来。在远程模式下，应用只会更新本地 Mac 节点运行时，并且当远程 Gateway 版本比应用更旧时会跳过通知。
 
 Sparkle 遵循 Gateway 的 `update.channel` 设置。`beta` 和 `dev` 会启用 beta 应用构建；`stable`、`extended-stable`，以及缺失或未知的值都会保持在 stable 应用构建上。
 

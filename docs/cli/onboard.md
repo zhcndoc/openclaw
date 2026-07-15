@@ -1,16 +1,18 @@
 ---
 summary: "OpenClaw 上机引导的 CLI 参考（交互式引导）"
 read_when:
-  - 你想先建立推理能力，然后用 Crestodian 完成设置
+  - 你想先建立推理，再使用 OpenClaw 完成设置
 title: "Onboard"
 ---
 
 # `openclaw onboard`
 
-引导式设置会先建立推理能力：它会检测现有的 AI 访问方式，
-要求进行一次成功的实时补全，只持久化可工作的路由，然后启动
-Crestodian 来配置其余部分。`openclaw setup` 是相同的入口点；
-`openclaw setup --baseline` 只会写入基础配置/工作区。
+引导式设置会先建立推理：它会检测现有的 AI 访问权限，
+要求一次有效的完成结果，只持久化可用的路径，然后启动
+OpenClaw 以配置其余部分。`openclaw setup` 会在全新
+系统上或存在引导选项时进入此流程；已配置的系统则使用
+不带参数的 `openclaw setup` 进行系统代理聊天。`openclaw setup --baseline` 只会
+写入基础配置/工作区。
 
 <CardGroup cols={2}>
   <Card title="CLI 引导中心" href="/start/wizard" icon="rocket">
@@ -45,17 +47,17 @@ openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 ```
 
 - `--classic`：打开完整的逐步向导。它不能与
-  `--non-interactive` 组合使用；自动化设置时请省略 `--classic`。
-- `--flow quickstart`：打开带最少提示的经典向导，并
+  `--non-interactive` 组合使用；若用于自动化设置，请省略 `--classic`。
+- `--flow quickstart`：打开带有最少提示的经典向导，并
   自动生成一个网关令牌。
-- `--flow manual`（别名 `advanced`）：打开带完整提示的经典向导，
+- `--flow manual`（别名 `advanced`）：打开带有完整提示的经典向导，
   用于端口、绑定和认证。
-- `--flow import`：运行检测到的迁移提供程序（例如通过 `--import-from hermes` 的 Hermes），预览计划，然后在确认后应用。导入仅在全新的 OpenClaw 设置上运行——如果已存在，请先重置配置、凭据、会话和工作区状态。对于干运行计划、覆盖模式、报告和精确映射，请使用 [`openclaw migrate`](/cli/migrate)。
-- `--modern` 是 Crestodian 对话式设置助手的兼容别名。
-  它使用与 `openclaw crestodian` 相同的实时推理门控，并且
+- `--flow import`：运行检测到的迁移提供程序（例如通过 `--import-from hermes` 使用 Hermes），预览计划，然后在确认后应用。导入仅针对全新的 OpenClaw 设置运行——如果存在任何配置、凭据、会话和工作区状态，请先重置。有关试运行计划、覆盖模式、报告和精确映射，请使用 [`openclaw migrate`](/cli/migrate)。
+- `--modern` 是 OpenClaw 对话式设置助手的兼容别名。
+  它使用与 `openclaw setup` 相同的实时推理门控，并且
   仅接受 `--workspace`、`--accept-risk`、
-  `--non-interactive` 和 `--json`。其他设置标志会被拒绝，而不会
-  被静默忽略。
+  `--non-interactive` 和 `--json`。其他设置标志会被拒绝，
+  而不是被静默忽略。
 
 ## 引导流程
 
@@ -65,47 +67,50 @@ openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 推荐的候选项。如果该候选项失败，入门流程会显示
 原因并自动尝试下一个可用候选项。
 
-如果自动检测已用尽，请选择另一个已检测到的候选项，或在
-已遮蔽提示中输入提供方 API 密钥。手动输入的密钥会通过相同的
-实时补全路径进行测试。引导式入门
-在某个候选项通过之前，不会提供 Crestodian 或跳过 AI 的退出方式。OpenClaw
-只会在测试
-成功后持久化经过验证的模型路由及其凭据；失败的候选项不会替换已配置的模型，也不会保存
-所尝试的凭据。在 Crestodian 启动之前，Workspace 和 Gateway 的设置保持不变。
+如果自动检测已用尽，提供商选择器会首先显示 OpenAI、
+Anthropic、xAI（Grok）、Google 和 OpenRouter。为所有其他受支持的提供商选择 **More…**，
+它们会按提供商分组；然后区域、计划和认证方式会
+出现在第二个菜单中。受支持的浏览器或设备登录以及掩码
+API 密钥或令牌方式使用相同的实时补全路径。OpenClaw 只会在测试成功后持久化
+已验证的模型路由及其凭据；失败的候选项不会替换已配置的模型，也不会保存
+尝试过的凭据。选择 **Skip for now** 可在不启动 OpenClaw 的情况下退出，
+并在准备好后重新运行 `openclaw onboard`。在 OpenClaw 启动之前，Workspace 和 Gateway 的设置保持
+不变。
 
-在引导模式下，`--workspace <dir>` 会提供 Crestodian 建议的工作区
-和隔离的推理上下文。只有在你批准
-Crestodian 设置提案后，它才会被持久化。经典和非交互式入门会通过其
-正常的设置流程持久化工作区。
+在引导模式下，`--workspace <dir>` 提供 OpenClaw 建议的 workspace
+以及隔离的推理上下文。它不会被持久化，直到你批准 OpenClaw 的设置提案。
+经典和非交互式引导会通过其正常的设置流程持久化 workspace。
 
-推理通过后，引导式入门会立即使用已验证的模型启动 Crestodian。
-随后 Crestodian 可以配置工作区、Gateway、
-频道、代理、插件和其他可选功能。在 Crestodian 中，使用
-`open channel wizard for <channel>` 可将频道凭据收集交给
-一个已遮蔽的终端向导。若要更改模型提供方或其认证方式，
-请退出 Crestodian 并运行 `openclaw onboard`；Crestodian 不会打开引导式
-或经典的提供方流程。
+在推理通过后，引导流程会立即使用
+已验证的模型启动 OpenClaw。随后 OpenClaw 可以配置 workspace、Gateway、
+channels、agents、plugins 以及其他可选功能。在 OpenClaw 内部，使用
+`open channel wizard for <channel>` 将 channel 凭据收集交给一个
+带掩码的终端向导。要更改模型提供商或其认证方式，
+请退出 OpenClaw 并运行 `openclaw onboard`；OpenClaw 不会打开引导式
+或经典的提供商流程。
 
-在已配置的安装中，再次运行 `openclaw onboard` 会先验证当前
+在已配置的安装中，再次运行 `openclaw onboard` 会首先验证当前
 默认模型，因此同一流程也可作为验证和修复步骤。
 如果该检查失败，已配置的模型绝不会被自动替换——
-入门流程会停止并询问如何继续。该检查在你的
-工作区之外运行，因此由工作区插件提供的模型可能在此处失败，但仍能在代理中工作。
-使用 `openclaw onboard --classic` 进行特定提供方的认证、频道、技能、
-远程 Gateway 设置、导入或完整 Gateway 控制。对于以对话方式进行的
-非推理设置和修复，运行 `openclaw crestodian`；`openclaw onboard
---modern` 是通过相同推理门禁的兼容别名。经典
-向导可以选择性地通过一次真实补全来验证默认模型，但在其自身的实时推理检查通过之前，
-Crestodian 不会启动。
+引导会停止并询问接下来如何继续。该检查在你的
+workspace 之外运行，因此 workspace 插件提供的模型可能在这里失败，但仍可在 agent 中正常工作。
+对于特定提供商的认证、channels、skills、
+远程 Gateway 设置、导入或完整 Gateway 控制，请使用 `openclaw onboard --classic`。对于对话式的
+非推理设置和修复，请运行 `openclaw setup`；`openclaw onboard
+--modern` 是通过相同推理门的兼容别名。经典
+向导可以选择性地通过实时补全验证默认模型，但
+在 OpenClaw 自身的实时推理检查通过之前，不会启动 OpenClaw。
 
 在交互式终端中，直接执行 `openclaw`（不带子命令）会根据配置状态进行路由：
 
 - 如果当前配置文件缺失或没有已编写的设置（为空或
-  仅含元数据），则会启动引导式入门。
-- 如果配置文件存在但验证失败，则会启动经典的
-  入门路径，并提供 `openclaw doctor` 指引。Crestodian 需要可用的
-  推理能力，且不会用于修复这种推理前状态。
-- 如果配置文件有效，则会打开正常的代理 TUI。一个可达的、已配置的 Gateway，连同代理和模型，会直接进入该界面，而无需入门或 Crestodian。在已配置的安装中，可在 TUI 内使用 `/crestodian` 或运行 `openclaw crestodian` 进入 Crestodian。
+  仅含元数据），则会启动引导式 onboarding。
+- 如果配置文件存在但验证失败，则会启动经典
+  onboarding 路径，并提供 `openclaw doctor` 指引。OpenClaw 需要可工作的
+  推理能力，不会用于修复这一推理前状态。
+- 如果配置文件有效，则会打开正常的 agent TUI。可访问且已配置的 Gateway
+  与 agent 和 model 会直接进入该界面，无需 onboarding 或 OpenClaw。在已配置的安装中，通过
+  TUI 内的 `/openclaw` 或 `openclaw setup` 进入 OpenClaw。
 
 对于回环地址、私有 IP 字面量、`.local` 和 Tailnet `*.ts.net` 网关 URL，接受明文 `ws://`。对于其他受信任的私有 DNS 名称，请在入门过程的环境中设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。
 
@@ -118,17 +123,17 @@ openclaw onboard --reset --reset-scope full
 
 `--reset` 在运行设置之前清除状态。`--reset-scope` 控制清除范围：`config`（仅配置）、`config+creds+sessions`（当传入 `--reset` 但未指定范围时的默认值），或 `full`（同时重置工作区）。只有使用 `--reset-scope full` 时才会重置工作区。
 
-## Language Environment
+## 语言环境
 
-For fixed setup text in the interactive guide, use CLI wizard localization. Parsing order:
+对于交互式指南中的固定设置文本，请使用 CLI 向导本地化。解析顺序：
 
 1. `OPENCLAW_LOCALE`
 2. `LC_ALL`
 3. `LC_MESSAGES`
 4. `LANG`
-5. English fallback
+5. 英文回退
 
-Supported wizard locales are `en`, `zh-CN`, and `zh-TW`. Locale values can use underscores or POSIX suffix forms, for example `zh_CN.UTF-8`. Product names, command names, configuration keys, URLs, provider IDs, model IDs, and plugin/channel tags remain unchanged.
+支持的向导语言环境为 `en`、`zh-CN` 和 `zh-TW`。语言环境值可以使用下划线或 POSIX 后缀形式，例如 `zh_CN.UTF-8`。产品名称、命令名称、配置键、URL、提供商 ID、模型 ID 以及插件/频道标签保持不变。
 
 ```bash
 OPENCLAW_LOCALE=zh-CN openclaw onboard
@@ -265,8 +270,8 @@ UI 和 hook 设置：`--skip-ui`（跳过 Control UI/TUI 提示）、`--skip-hoo
 输出：`--suppress-gateway-token-output` 会抑制带有 token 的 Gateway/UI 输出（token 提示、包含嵌入式 token 的自动登录 URL，以及自动启动 Control UI）——在共享终端和 CI 中很有用。
 
 <Note>
-`--json` 在引导式或经典 onboarding 中并不意味着非交互模式。
-使用 `--modern` 时，JSON 只会输出一次 Crestodian 概览，然后在这单个结果之后退出。
+`--json` 并不意味着在引导式或经典安装流程中进入非交互模式。
+使用 `--modern` 时，JSON 只是一次性的 OpenClaw 概览，并会在该单一结果后退出。
 其他脚本请使用 `--non-interactive`。
 </Note>
 

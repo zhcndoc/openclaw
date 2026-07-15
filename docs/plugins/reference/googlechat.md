@@ -20,4 +20,4 @@ channels: googlechat
 
 ## 相关文档
 
-- [googlechat](/channels/googlechat)
+- [Google Chat](/channels/googlechat)

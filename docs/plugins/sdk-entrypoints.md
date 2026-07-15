@@ -126,7 +126,7 @@ export default definePluginEntry({
 | `configSchema`            | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | 否   | 空对象 schema       |
 | `reload`                  | `OpenClawPluginReloadRegistration`                               | 否   | -                   |
 | `nodeHostCommands`        | `OpenClawPluginNodeHostCommand[]`                                | 否   | -                   |
-| `securityAuditCollectors` | `OpenClawPluginSecurityAuditCollector[]`                         | 否   | -                   |
+| `securityAuditCollectors` | `OpenClawPluginSecurityAuditCollector[]`                          | 否   | -                   |
 | `register`                | `(api: OpenClawPluginApi) => void`                               | 是   | -                   |
 
 - `id` 必须与您的 `openclaw.plugin.json` 清单匹配。
@@ -315,12 +315,30 @@ register(api) {
 }
 ```
 
+长生命周期服务可以通过其服务上下文发出小型失效或生命周期事件：
+
+```typescript
+api.registerService({
+  id: "index-events",
+  start(ctx) {
+    ctx.gatewayEvents?.emit("changed", { revision: 1 }, { scope: "operator.read" });
+  },
+});
+```
+
+OpenClaw 将其命名空间化为 `plugin.<plugin-id>.changed`。事件名称必须是
+一个小写段，负载必须是有界 JSON，并且 scope 必须是
+`operator.read`、`operator.write` 或 `operator.admin`。发射器仅在
+服务生命周期内存在，并会在停止或启动失败后撤销。优先使用版本
+或失效负载，而不是完整记录，这样被授权的客户端可以通过插件的作用域
+Gateway 方法重新读取规范状态。
+
 发现模式会构建一个不会激活的注册表快照。它仍然可能
 评估插件入口和频道插件对象，以便 OpenClaw 可以
-注册频道能力和静态 CLI 描述符。请将发现模式下的模块
-求值视为受信任但轻量级：顶层不要有网络客户端、
+注册频道能力和静态 CLI 描述符。将发现模式下的模块
+评估视为可信但轻量：顶层不要进行网络客户端、
 子进程、监听器、数据库连接、后台 worker、
-凭证读取或其他实时运行时副作用。
+凭据读取或其他实时运行时副作用。
 
 将 `"setup-runtime"` 视为这样一个窗口：此时必须存在仅用于设置启动的入口，
 但不能重新进入完整打包的频道运行时。适合的内容包括

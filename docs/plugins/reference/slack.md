@@ -11,8 +11,8 @@ title: "Slack 插件"
 
 ## 分发
 
-- Package: `@openclaw/slack`
-- Install route: npm; ClawHub
+- 包：`@openclaw/slack`
+- 安装方式：npm；ClawHub
 
 ## 接口
 
@@ -20,4 +20,4 @@ channels: slack; skills
 
 ## 相关文档
 
-- [slack](/channels/slack)
+- [Slack](/channels/slack)

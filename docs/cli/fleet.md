@@ -10,7 +10,7 @@ title: "Fleet"
 
 `openclaw fleet` 用于管理称为 **单元** 的完整 OpenClaw 实例。每个单元都有自己独立的 Gateway、状态、凭据、频道账户、容器，以及仅限回环的主机端口。每个租户信任边界使用一个单元；不要将一个共享 Gateway 用作恶意的多租户边界。
 
-Fleet 处于**实验性**阶段。在表面稳定之前，命令名称、标志、输出形状和容器配置文件可能会在不同版本之间发生变化，且不会提供弃用窗口。
+Fleet 是**实验性**功能。命令名称、标志、输出形式以及容器配置文件可能会在不同版本之间更改，而不会提供弃用过渡期。
 
 Fleet 支持 Docker 和 Podman。默认镜像是 `ghcr.io/openclaw/openclaw:latest`。
 
@@ -86,7 +86,7 @@ openclaw fleet create acme \
 
 镜像引用会作为一个容器运行时参数传递。空引用以及以 `-` 开头的值会被拒绝，因此镜像不会被解释为 Docker 或 Podman 选项。
 
-所选的 Docker 或 Podman 端点必须是本地端点。Fleet 会在保留端口或创建本地状态之前，拒绝远程 Docker 上下文、`DOCKER_HOST` 端点和远程 Podman 服务；远程 cell 主机需要单独的存储和端点契约，并从这个 MVP 中延后处理。
+The selected Docker or Podman endpoint must be local. Fleet rejects remote Docker contexts, `DOCKER_HOST` endpoints, and remote Podman services before reserving a port or creating local state. Remote cell hosts are not supported.
 
 当 Fleet 启动一个新 cell 时，create 最多会等待大约一分钟，直到它的 Gateway 响应 `/healthz`。如果该 cell 没有变为健康状态，Fleet 会保留其容器和注册表行，以便 `fleet status`、`fleet logs` 或显式移除使用。`--no-start` 会跳过这个健康检查门。新建但不健康的 cell 所生成的 Gateway 令牌不会丢失——它仍保留在容器环境中（`docker|podman inspect` 可见），并且因为该 cell 还未服务任何流量，`fleet rm --force` 后再重新创建始终是安全的替代方案。
 
@@ -166,7 +166,7 @@ openclaw fleet logs acme --tail 200
 openclaw fleet logs acme --since 10m
 ```
 
-Fleet 在读取任何日志之前会验证已注册容器的所有权标签，因此如果使用预期的单元名称调用到一个外部容器，它会拒绝该请求。按 Ctrl-C 可结束 `--follow`，且不会将操作者停止视为命令失败。日志输出会经过脱敏过滤器处理，在到达终端之前将单元当前的 Gateway 令牌替换为 `<redacted>`。
+Fleet 在读取任何日志之前会验证已注册容器的所有权标签，因此它会拒绝使用期望单元名称的外部容器。该流会绑定到经过检查的容器 ID，因此并发替换不会将其重定向到更新的代际。按 Ctrl-C 可结束 `--follow`，且不会将操作员停止视为命令失败。日志输出会经过脱敏过滤器处理，该过滤器会在任何内容到达终端之前，将单元当前的 Gateway token 替换为 `<redacted>`。
 
 `fleet logs` 没有 `--json` 模式，因为容器日志是原始的 stdout/stderr 流。对于脚本，请使用 `--tail` 限制输出，并使用普通的 shell 重定向或管道。
 
@@ -219,7 +219,9 @@ openclaw fleet restore acme --from ./acme.tgz
 
 这些都是需要主机运维者权限的命令。归档包含租户状态和认证密钥，创建时权限为 `0600`，必须像凭据一样存储。备份会拒绝对运行中的 cell 执行，以便 SQLite 状态被一致地捕获。除非提供 `--force`，恢复会拒绝对运行中的 cell 执行；它只替换该租户的状态，轮换 Gateway token，并且只打印一次新的 token。Fleet 一次只备份一个租户；全租户备份是单独的运维操作。
 
-这两个命令都接受 `--max-bytes <bytes>` 来限制归档或提取的文件数据大小，并且都应用相同的固定一百万个归档路径段预算，这样仅包含元数据的归档炸弹就不会耗尽主机 inode，而且每个可接受的备份都能保持可恢复。备份接受 `--out <path>`，并且两个命令都支持 `--json`。
+恢复需要一个现有的已停止容器，因为其检查到的运行时配置会提供替换后的限制、用户映射、环境来源以及镜像。如果已注册的容器在外部被移除，请先在不使用 `--purge-data` 的情况下运行 `fleet rm <tenant> --force`，然后使用预期的镜像和 `--no-start` 重新创建该 cell，再重试恢复。第一次移除会保留两个租户数据目录不变。
+
+这两个命令都接受 `--max-bytes <bytes>` 来限制归档或解压后的文件数据大小，并且都应用相同的固定一百万档案路径段预算，这样仅包含元数据的归档炸弹就无法耗尽主机的 inode，同时每个被接受的备份都仍然可以恢复。备份接受 `--out <path>`，而这两个命令都支持 `--json`。
 
 归档仅包含普通文件和目录。备份从不跟随或存储符号链接、硬链接、套接字或设备节点；跳过的数量会在结果中报告。恢复会拒绝包含任何其他条目类型的归档。像工作区 `node_modules` 这样的可重建符号链接树，必须在恢复后在 cell 内重新安装。
 

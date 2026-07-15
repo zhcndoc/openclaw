@@ -11,13 +11,19 @@ read_when:
 
 ## 目标
 
-Codex supervision 让 OpenClaw 操作员能够发现原生 Codex 会话，并在安全时通过常规的 OpenClaw Chat 界面创建本地分支。Codex App Server 仍然是线程和模型循环的所有者。OpenClaw 提供舰队目录、经过身份验证的操作员 UI、会话绑定以及通道投递。
+Codex 监管让 OpenClaw 操作员能够发现原生 Codex 会话，并在安全时通过常规的 OpenClaw Chat 界面创建本地分支。Codex App Server 仍然是线程和模型循环的所有者。OpenClaw 提供舰队目录、经过身份验证的操作员 UI、会话绑定以及通道投递。
 
 该功能属于官方 `codex` 插件。不存在单独的 Supervisor 插件或第二套 Codex 协议实现。
 
 ## 产品边界
 
-每当 Codex 插件处于激活状态时，目录都会注册。使用以下方式启用面向代理的监督工具：
+只要 Codex 插件处于活动状态，目录就会注册，除非通过以下方式显式禁用原生会话发现：
+
+```text
+plugins.entries.codex.config.sessionCatalog.enabled = false
+```
+
+通过以下方式启用面向代理的监督工具：
 
 ```text
 plugins.entries.codex.config.supervision.enabled = true
@@ -35,7 +41,7 @@ plugins.entries.codex.config.supervision.enabled = true
 
 目录是未归档的集合。其中的某一行仍然可以具有空闲、活动、`notLoaded` 或错误的轮次状态。
 
-面向代理的监督仍然是可选开启的。在原生 Codex 安装检测成功且所选推理后端通过实时检查之后，引导式入门会尝试安装并启用它，而且这一点独立于用户选择的主要后端。只有当这种机会性的插件设置成功时，监督才会激活。显式禁用的插件、策略阻止，或 `supervision.enabled: false` 对监督工具仍然具有权威性，但不会禁用操作员会话目录。
+面向代理的监督功能仍然是可选启用的。引导式上手会在本地 Codex 安装检测成功，并且所选推理后端通过其实时检查后，尝试安装并启用它，而不受用户选择的主要后端影响。只有当这种机会式插件设置成功时，监督才会激活。显式禁用的插件、策略阻止，或 `supervision.enabled: false` 仍然是监督工具的权威设置，但不会禁用操作者会话目录。`sessionCatalog.enabled: false` 会禁用操作者发现和 paired-node 目录命令；Codex 提供方和 harness 仍然保持活动。
 
 ## 所有权
 
@@ -57,19 +63,19 @@ Codex rollout 文件，也不会实现另一个 App Server 客户端。
 Codex Desktop -> private stdio App Server -> user Codex home
                                              ^
 OpenClaw Codex plugin -> supervision App Server connection
-  (defaults to managed user-home stdio; explicit appServer settings are honored)
+  (默认为受管理的 user-home stdio；会遵守显式的 appServer 设置)
   -> passive source catalog and read
   -> snapshot pin -> canonical appServer-source branch
   -> visible-history injection and every later supervised Chat turn
 
-Ordinary OpenClaw Codex sessions -> managed agent-home stdio by default
+Ordinary OpenClaw Codex sessions -> 默认使用受管理的 agent-home stdio
   -> ordinary full harness threads -> OpenClaw Chat and channel delivery
 ```
 
 启用监督不会改变普通的 Codex harness：它默认仍然是
 agent 作用域。单独的监督连接默认
 使用受管理的 user-home stdio，因此它的目录和快照操作会看到原生
-已存储的线程。显式的 `appServer` 连接设置会被遵守。 当
+已存储的线程。显式的 `appServer` 连接设置会被遵守。当
 `homeScope` 未设置时，监督连接会将其解析为 stdio 或 Unix 的 `"user"`，
 以及 WebSocket 的 `"agent"`。只有当普通 harness 也应该共享原生 Codex
 home 时，才显式设置 `appServer.homeScope: "user"`。
@@ -212,7 +218,7 @@ Codex 会为同一 App Server 的客户端串行化某个线程的变更，但�
 
 ## 配对节点边界
 
-Node invoke 目前仅支持请求/响应。它可以安全地返回有界的目录元数据和 transcript turn pages，但无法承载 Codex harness 运行所需的长连接事件流、审批请求、工具调用、取消以及 assistant deltas。
+Node invoke 目前仅支持请求/响应。它可以安全地返回有界的目录元数据和 transcript turn 页，但无法承载 Codex harness 运行所需的长连接事件流、审批请求、工具调用、取消以及 assistant 增量。
 
 因此，节点契约支持 list 和 transcript-turn pages。远程行仍然可读，但无论空闲状态如何，**Continue** 和 **Archive** 都不可用。真正的远程续接需要一个节点侧 runner 和 streaming bridge，以保持与本地 harness 相同的审批和绑定不变式。
 

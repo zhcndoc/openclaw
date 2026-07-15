@@ -20,4 +20,4 @@ providers: synthetic
 
 ## 相关文档
 
-- [synthetic](/providers/synthetic)
+- [合成](/providers/synthetic)

@@ -325,14 +325,15 @@ OpenClaw 可以在会话进行过程中刷新技能列表：当 `SKILL.md` 发�
 
 插件与 Gateway 在同一进程中运行——请将它们视为受信任的代码。
 
-- 仅从你信任的来源安装；优先使用明确的 `plugins.allow` 白名单；在启用前检查插件配置；在插件变更后重启 Gateway。
-- 安装/更新（`openclaw plugins install <package>`、`openclaw plugins update <id>`）会运行不受信任的代码：
-  - 安装路径是当前插件安装根目录下每个插件对应的目录。
-  - OpenClaw 在安装/更新期间不会运行内置的本地危险代码阻止机制。请使用 `security.installPolicy` 进行由操作员拥有的本地允许/阻止决策，并使用 `openclaw security audit --deep` 进行诊断扫描。
-  - npm 和 git 插件安装仅在显式安装/更新流程中执行包管理器依赖收敛。本地路径和压缩包被视为自包含包；OpenClaw 会复制/引用它们，而不会运行 `npm install`。
-  - 优先使用固定的精确版本（`@scope/pkg@1.2.3`），并在启用前检查解压后的代码。
-  - `--dangerously-force-unsafe-install` 已弃用，且不再更改安装/更新行为。
-  - `security.installPolicy` 允许操作员运行受信任的本地命令，为技能和插件安装做出特定于主机的允许/阻止决策。它在源材料被暂存之后、安装继续之前运行，也适用于 ClawHub skills，并且不会被已弃用的不安全标志绕过。
+- Only install from sources you trust; prefer explicit `plugins.allow` allowlists; review plugin config before enabling; restart the Gateway after plugin changes.
+- Installing/updating plugins runs executable code:
+  - The install path is the per-plugin directory under the active plugin install root.
+  - ClawHub packages and OpenClaw's bundled/official catalog are trusted sources. A new arbitrary npm, `npm-pack:`, git, local path/archive, or marketplace source warns before install; noninteractive installs require `--force` after you review and trust that source. `--force` confirms provenance and permits overwrite; it does not bypass `security.installPolicy` or remaining install safety checks. Updates reuse the already selected source.
+  - OpenClaw does not run built-in local dangerous-code blocking during install/update. Use `security.installPolicy` for operator-owned local allow/block decisions and `openclaw security audit --deep` for diagnostic scanning.
+  - npm and git plugin installs run package-manager dependency convergence only during the explicit install/update flow. Local paths and archives are treated as self-contained packages; OpenClaw copies/references them without running `npm install`.
+  - Prefer pinned exact versions (`@scope/pkg@1.2.3`) and inspect the unpacked code before enabling.
+  - `--dangerously-force-unsafe-install` is deprecated and no longer changes install/update behavior.
+  - `security.installPolicy` lets operators run a trusted local command to make host-specific allow/block decisions for skill and plugin installs. It runs after source material is staged but before install continues, applies to ClawHub skills too, and is not bypassed by deprecated unsafe flags.
 
 详情： [插件](/tools/plugin)
 
@@ -755,10 +756,10 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 OpenClaw 会为代理和工具加载工作区本地的 `.env` 文件，但绝不会让它们悄悄覆盖网关运行时控制：
 
-- 来自不受信任的工作区 `.env` 文件的提供商凭证环境变量会被阻止——例如 `GEMINI_API_KEY`、`GOOGLE_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY`、`GROQ_API_KEY`、`DEEPSEEK_API_KEY`、`PERPLEXITY_API_KEY`、`BRAVE_API_KEY`、`TAVILY_API_KEY`、`EXA_API_KEY`、`FIRECRAWL_API_KEY`，以及已安装受信任插件声明的提供商认证密钥。请将提供商凭证放在 Gateway 进程环境、`~/.openclaw/.env`（`$OPENCLAW_STATE_DIR/.env`）、配置的 `env` 块，或可选的登录 shell 导入中。
-- 任何以 `OPENCLAW_` 开头的键都会被阻止从不受信任的工作区 `.env` 文件中加载，这样就保留了整个运行时命名空间，使未来的 `OPENCLAW_*` 控制项默认是 fail-closed，而不是会从已检入或攻击者提供的 `.env` 内容中悄悄继承。
-- Matrix、Mattermost、IRC 和 Synology Chat 的通道端点设置也会被阻止通过工作区 `.env` 覆盖（例如 `MATRIX_HOMESERVER`、`MATTERMOST_URL`、`IRC_HOST`、`SYNOLOGY_CHAT_INCOMING_URL`），因此克隆的工作区不能通过本地端点配置重定向捆绑的连接器流量。这些必须来自 gateway 进程环境或 `env.shellEnv`。
-- 受信任的进程/OS 环境变量、全局运行时 dotenv、配置 `env`，以及已启用的登录 shell 导入仍然适用——这里只限制工作区 `.env` 文件的加载。
+- Provider credential environment variables are blocked from untrusted workspace `.env` files - for example `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY`, `PERPLEXITY_API_KEY`, `BRAVE_API_KEY`, `TAVILY_API_KEY`, `EXA_API_KEY`, `FIRECRAWL_API_KEY`, and provider auth keys declared by installed trusted plugins. Put provider credentials in the Gateway process environment, `~/.openclaw/.env` (`$OPENCLAW_STATE_DIR/.env`), the config `env` block, or an optional login-shell import instead.
+- Any key starting with `OPENCLAW_` is blocked from untrusted workspace `.env` files, reserving the whole runtime namespace so a future `OPENCLAW_*` control is fail-closed by default rather than silently inheritable from checked-in or attacker-supplied `.env` content.
+- Channel and provider endpoint-routing settings are also blocked from workspace `.env` overrides (for example `MATRIX_HOMESERVER`, `MATTERMOST_URL`, `IRC_HOST`, `SYNOLOGY_CHAT_INCOMING_URL`, `AZURE_SPEECH_ENDPOINT`, and other keys ending in `_ENDPOINT`), so a cloned workspace cannot redirect bundled connector traffic through local endpoint config. These must come from the gateway process environment, global runtime dotenv, explicit config, or `env.shellEnv`.
+- Trusted process/OS environment variables, global runtime dotenv, config `env`, and enabled login-shell import still apply - this only constrains workspace `.env` file loading.
 
 工作区 `.env` 文件通常与代理代码放在一起，容易被误提交，或者被工具写入；阻止提供商凭证可以防止克隆的工作区替换为攻击者控制的提供商账户。
 

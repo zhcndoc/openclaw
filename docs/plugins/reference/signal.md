@@ -14,10 +14,10 @@ title: "Signal 插件"
 - Package: `@openclaw/signal`
 - Install route: npm; ClawHub: `clawhub:@openclaw/signal`
 
-## 表面
+## Surface
 
 channels: signal
 
 ## 相关文档
 
-- [signal](/channels/signal)
+- [Signal](/channels/signal)

@@ -60,7 +60,7 @@ openclaw plugins disable workboard
 openclaw gateway restart
 ```
 
-## Card Fields
+## 卡片字段
 
 | 字段       | 值                                                                                                        |
 | ----------- | ------------------------------------------------------------------------------------------------------------- |
@@ -82,7 +82,21 @@ openclaw gateway restart
 `protocol_violation`、`archived`、`unarchived`、`stale`）。这些元数据让
 操作员无需打开关联会话，就能看到卡片如何在看板中流转；它是本地运行上下文，不是会话记录或 GitHub issue 历史的替代品。
 
-卡片存储在插件自身的 Gateway 状态中，并随着该 Gateway 的其余 OpenClaw 状态一起移动（参见 [存储](#storage)）。
+插件和 Control UI 使用同一份 Workboard 卡片契约。因此，仪表板刷新会保留工作区来源与权限、认领状态、诊断
+操作以及通知序列号，而不是投影出一个更小的、仅供 UI 使用的
+卡片副本。未知的诊断类型、诊断严重性和通知类型会被忽略，直到两个界面都支持它们；它们绝不会
+被改写成另一种有效状态。
+
+打开的仪表板会根据 `plugin.workboard.changed` 失效通知进行更新。每个
+事件只包含存储时钟周期和修订号；随后 UI 会通过正常的 `operator.read` RPC
+重新读取规范化卡片。多个修订会合并为
+一次后续读取。Workboard 会在卡片被拖动、
+编辑或写入时延迟该读取，然后在本地交互结束后恢复。重新连接时总会执行一次规范化重新加载。没有常规的整卡轮询，**Refresh**
+仍可作为手动恢复手段。
+
+当存在多个看板时，工具栏会包含一个由持久化看板元数据支撑的 **Board** 筛选器，而不仅仅是当前可见的卡片。因此，空看板和已归档看板仍然可以被选择。没有明确看板 id 的卡片属于规范的 `default` 看板。所选看板会存储在 `?board=` 查询参数中，因此过滤后的 Workboard URL 可以加入书签或分享；选择 **All boards** 会移除该参数。
+
+卡片存储在插件自身的 Gateway 状态中，并随着该 Gateway 的其余 OpenClaw 状态一起移动（见 [存储](#storage)）。
 
 ## 从卡片开始工作
 
@@ -98,27 +112,28 @@ openclaw gateway restart
 ## 代理工具
 
 | 工具                                                                                                                                             | 用途                                                                                                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workboard_list`                                                                                                                                 | 列出紧凑卡片，包含认领/诊断状态；可选看板筛选。                                                                                                                                            |
-| `workboard_read`                                                                                                                                 | 返回一张卡片以及受限的 worker 上下文（备注、尝试、评论、链接、证据、工件、父结果、最近的执行者工作、活跃诊断）。                                                                              |
-| `workboard_create`                                                                                                                               | 创建一张卡片，可选包含父级、租户、技能、看板、工作区元数据、幂等键、运行时限、重试预算。                                                                                                   |
-| `workboard_link`                                                                                                                                 | 将父卡片链接到子卡片。子卡片会保持为 `todo`，直到每个父卡片都达到 `done`，然后通过调度晋升移动到 `ready`。                                                                                  |
-| `workboard_claim`                                                                                                                                | 为调用该工具的代理认领一张卡片；将 `backlog`/`todo`/`ready` 移入 `running`。                                                                                                                 |
-| `workboard_heartbeat`                                                                                                                            | 在较长运行期间刷新认领心跳。                                                                                                                                                           |
-| `workboard_release`                                                                                                                              | 在完成、暂停或交接后释放认领；可将卡片移动到下一个状态。                                                                                                                                   |
-| `workboard_complete` / `workboard_block`                                                                                                         | 用于最终摘要、证据、工件以及已创建卡片清单的结构化生命周期工具（必须引用链接回已完成卡片的卡片），或用于阻塞原因。                                                                               |
-| `workboard_attachment_add` / `workboard_attachment_read` / `workboard_attachment_delete`                                                         | 在插件 SQLite 状态中存储小型卡片附件，在卡片上建立索引，并在 worker 上下文中暴露。                                                                                                          |
-| `workboard_worker_log` / `workboard_protocol_violation`                                                                                          | 记录 worker 日志行，并在自动 worker 停止而未调用 `workboard_complete`/`workboard_block` 时阻塞卡片。                                                                                         |
-| `workboard_board_create` / `workboard_board_archive` / `workboard_board_delete`                                                                  | 管理持久化的看板元数据（显示名称、描述、归档状态、默认工作区）。                                                                                                                            |
-| `workboard_runs`                                                                                                                                 | 返回某张卡片持久化的运行尝试历史。                                                                                                                                                     |
-| `workboard_specify`                                                                                                                              | 将一张粗略的分诊/待办卡片转为明确的 `todo` 卡片；在卡片上记录规格摘要。                                                                                                                     |
-| `workboard_decompose`                                                                                                                            | 将一个父级编排卡片拆分为已链接的子卡片，继承看板/租户元数据；可使用已创建卡片清单完成父卡片。                                                                                                   |
-| `workboard_notify_subscribe` / `workboard_notify_list` / `workboard_notify_events` / `workboard_notify_advance` / `workboard_notify_unsubscribe` | 管理通知订阅。事件读取支持重放安全；`advance` 会移动持久游标，因此调用方可以在不丢失或重复读取已完成/失败/陈旧卡片事件的情况下继续。                                                            |
-| `workboard_boards` / `workboard_stats`                                                                                                           | 检查看板命名空间和队列统计。                                                                                                                                                           |
-| `workboard_promote` / `workboard_reassign` / `workboard_reclaim`                                                                                 | 恢复或转交卡住的工作。                                                                                                                                                                 |
-| `workboard_comment` / `workboard_proof`                                                                                                          | 添加交接备注或附加证据/工件引用。                                                                                                                                                       |
-| `workboard_unblock`                                                                                                                              | 将被阻塞的工作移回 `todo`。                                                                                                                                                            |
-| `workboard_dispatch`                                                                                                                             | 促发依赖晋升或陈旧认领清理。                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workboard_list`                                                                                                                                 | 列出紧凑卡片及其认领/诊断状态；可选的看板筛选。                                                                                                                                            |
+| `workboard_read`                                                                                                                                 | 返回一张卡片以及受限的工作上下文（备注、尝试、评论、链接、证据、工件、父结果、最近指派给该卡片的工作、当前诊断）。                                                                       |
+| `workboard_create`                                                                                                                               | 创建一张卡片，可选设置父项、租户、技能、看板、工作区元数据、幂等键、运行时限制、重试预算。                                                                                                 |
+| `workboard_link`                                                                                                                                 | 将父卡片链接到子卡片。子卡片会保持 `todo`，直到每个父卡片都达到 `done`，随后通过分派提升移动到 `ready`。                                                                                  |
+| `workboard_claim`                                                                                                                                | 为调用代理认领一张卡片；将 `backlog`/`todo`/`ready` 移入 `running`。                                                                                                                       |
+| `workboard_heartbeat`                                                                                                                            | 在较长运行期间刷新认领心跳。                                                                                                                                          |
+| `workboard_release`                                                                                                                              | 在完成、暂停或移交后释放认领；可将卡片移动到下一个状态。                                                                                                                                |
+| `workboard_complete` / `workboard_block`                                                                                                         | 用于最终摘要、证据、工件以及已创建卡片清单的结构化生命周期工具（必须引用链接回已完成卡片的卡片）或阻塞原因。                                                                             |
+| `workboard_attachment_add` / `workboard_attachment_read` / `workboard_attachment_delete`                                                         | 在插件 SQLite 状态中存储小型卡片附件，在卡片上建立索引，并在工作者上下文中暴露。                                                                                                         |
+| `workboard_worker_log` / `workboard_protocol_violation`                                                                                          | 记录工作者日志行，并在自动化工作者停止而未调用 `workboard_complete`/`workboard_block` 时阻塞一张卡片。                                                                                     |
+| `workboard_board_create` / `workboard_board_archive` / `workboard_board_delete`                                                                  | 管理持久化看板元数据（显示名称、描述、归档状态、默认工作区）。                                                                                                                            |
+| `workboard_runs`                                                                                                                                 | 返回某张卡片的持久化运行尝试历史。                                                                                                                                      |
+| `workboard_specify`                                                                                                                              | 将粗略的分诊/待办卡片转为明确的 `todo` 卡片；在卡片上记录规格摘要。                                                                                                                        |
+| `workboard_decompose`                                                                                                                            | 将父级编排卡片分解为链接的子卡片，继承看板/租户元数据；可用已创建卡片清单完成父卡片。                                                                                                     |
+| `workboard_notify_subscribe` / `workboard_notify_list` / `workboard_notify_events` / `workboard_notify_advance` / `workboard_notify_unsubscribe` | 管理通知订阅。事件读取支持重放安全；`advance` 会移动持久游标，使调用方在恢复时不会丢失或重复读取已完成/失败/过时的卡片事件。                                                              |
+| `workboard_boards` / `workboard_stats`                                                                                                           | 检查看板命名空间和队列统计。                                                                                                                                             |
+| `workboard_promote` / `workboard_reassign` / `workboard_reclaim`                                                                                 | 恢复或转交卡住的工作。                                                                                                                                                           |
+| `workboard_comment` / `workboard_proof`                                                                                                          | 添加移交备注或附加证据/工件引用。                                                                                                                                    |
+| `workboard_unblock`                                                                                                                              | 将被阻塞的工作移回 `todo`。                                                                                                                                                         |
+| `workboard_move`                                                                                                                                 | 将卡片移动到另一种状态；已认领的卡片需要调用方的代理认领作用域。                                                                                                      |
+| `workboard_dispatch`                                                                                                                             | 在不启动工作者的情况下，推动依赖提升或清理过期认领；工作者启动使用 Gateway 或斜杠命令分派。                                                        |
 
 已认领的卡片会拒绝来自其他代理的工具变更，除非调用方持有由 `workboard_claim` 返回的认领令牌。每个由代理工具或 Gateway RPC 调用返回的卡片都会将 `metadata.claim.token` 脱敏为 `[redacted]`（令牌本身仅在 `workboard_claim` 的顶层返回一次），因此仪表板操作员和其他代理可以检查认领状态，而始终看不到可用的令牌。恢复通过 `workboard_promote`/`workboard_reassign`/`workboard_reclaim` 进行，这些工具不需要该令牌。
 
@@ -136,6 +151,29 @@ OpenClaw 子代理会话仍然负责执行。一次调度流程：
 
 Worker 会获得受限的卡片上下文，以及通过 Workboard 工具执行心跳、
 完成或阻塞卡片所需的认领令牌。
+
+Workspace 路径遵循调用方现有的文件系统权限。具有 `operator.write` 的 Gateway
+客户端可以使用已配置的 agent 工作区；
+`operator.admin` 客户端可以使用其他主机检出目录。受沙箱限制的 agent 工具使用
+其沙箱工作区访问权限，而未受沙箱限制的仅工作区工具使用其
+配置的工作区根目录。Workboard 在分配工作区时记录该权限，并在调度时
+再次将其与当前调用方的权限求交，因此持久化的卡片不会扩大后续调用方的访问权限。
+较旧的卡片如果带有显式的主机工作区但没有记录的权限，则必须先将该工作区
+重新保存，才能进行完整主机调度；没有主机路径的卡片会在首次调度时采用
+当前调用方的权限。
+
+仅当工作区绑定的调度请求的仓库根目录与目标 agent 工作区完全匹配时，
+才接受目录或 Git 检出目录。worktree 请求会被缩小到该目录并持久化为目录工作区，
+因此主机不会物化该检出目录，也不会执行仓库设置代码。目标 worker 必须为该确切
+工作区使用可写、非共享的 Docker 沙箱，且不得使用提升执行权限、持久化的主机/节点 exec 覆盖，
+以及未分类的插件和 MCP 工具。Workboard 枚举其已注册工具，而不是信任
+`workboard_*` 前缀，并且如果活动挂载/配置哈希已过期，调度会拒绝热 Docker 容器。
+调度会报告不兼容的目标策略，而不是启动一个限制更少的 worker。
+完整主机调度可以针对其他本地检出目录，并保留正常的受管 worktree 设置。
+
+工作区权限不会创建第二套卡片生命周期权限模型。
+可以修改 Workboard 卡片的调用方，可以在所有界面上手动将其推进相同的状态；
+只读的工作区访问只会阻止需要写入的 worker 调度。
 
 ### Worker 选择
 
@@ -182,21 +220,26 @@ Gateway，因 `unknown method` 错误失败），并且没有显式的
 openclaw workboard list [--board <id>] [--status <status>] [--include-archived] [--json]
 openclaw workboard create "修复失效卡片生命周期" --priority high --labels bug,workboard
 openclaw workboard show <card-id> [--json]
+openclaw workboard move <card-id> --status <status> [--json]
 openclaw workboard dispatch [--board <id>] [--json]
 ```
 
 `list` 的文本输出默认隐藏已归档卡片（`--include-archived`
-会覆盖此行为）；`--json` 始终包含已归档卡片，与现有脚本使用的完整卡片
-契约保持一致。`show` 接受一个无歧义的 id 前缀。
-`list`、`create` 和 `show` 始终直接读写本地插件状态。
-只有 `dispatch` 会调用正在运行的 Gateway，并使用上面描述的回退方案。
+会覆盖这一行为）；`--json` 始终包含已归档卡片，与现有脚本使用的完整卡片
+契约保持一致。`show` 和 `move` 接受不含歧义的 id 前缀。`list`、`create`、`show` 和 `move` 始终直接读写本地插件
+状态。只有 `dispatch` 会调用正在运行的 Gateway，并采用上文
+所述的回退机制。
 
 有关完整标志、JSON 输出、Gateway
 回退行为、id 前缀处理、dispatch 选择规则以及故障排查，请参见 [Workboard CLI](/cli/workboard)。
 
-`/workboard list`、`/workboard show <card-id>`、`/workboard create <title>`，
-以及 `/workboard dispatch` 与 CLI 保持一致。对于任何经过授权的命令发送者，List 和 show 都是读取操作。
-在聊天界面上，Create 和 dispatch 需要 owner 状态，或者具有 `operator.write`/`operator.admin` 的 Gateway 客户端。
+`/workboard list`、`/workboard show <card-id>`、`/workboard create <title>`、
+`/workboard move <card-id> --status <status>` 和 `/workboard dispatch` 与
+CLI 保持一致。List 和 show 对任何已授权的命令发送者都是只读操作。
+Create、move 和 dispatch 在聊天界面上需要所有者权限，或者使用具有
+`operator.write`/`operator.admin` 的 Gateway 客户端。手动 operator 移动使用
+与仪表板拖放相同的认领覆盖行为。它们的 worktree 访问仍遵循上文
+所述的相同工作区边界。
 
 ## 会话生命周期同步
 
@@ -220,14 +263,16 @@ openclaw workboard dispatch [--board <id>] [--json]
 
 ## 仪表板工作流
 
-1. 在控制界面中打开 Workboard 选项卡。
-2. 创建一张卡片，填写标题、备注、优先级、标签、可选代理，以及
-   可选的关联会话；或者打开 Sessions，并为现有会话选择 **Add to Workboard**。
-3. 在列之间拖动卡片，或者聚焦其紧凑状态控件，并使用
-   菜单或 ArrowLeft/ArrowRight。
-4. 从卡片开始工作，以创建或复用一个仪表板会话。
-5. 当代理工作时，从卡片中打开关联的会话。
-6. 让生命周期同步将运行中的工作移入 `review`/`blocked`，然后在接受后手动将卡片移动到 `done`。
+1. 在 Control UI 中打开 Workboard 选项卡。
+2. 创建一张卡片，填写标题、备注、优先级、标签、可选 agent，以及
+   可选的关联 session；或者打开 Sessions，并为
+   现有 session 选择 **Add to Workboard**。
+3. 将卡片在各列之间拖动，或者聚焦其紧凑状态控件并使用
+   菜单或 ArrowLeft/ArrowRight。在拖动过程中，源卡片会变暗，
+   可放置的列会获得轮廓高亮。
+4. 从卡片开始工作，以创建或复用一个 dashboard session。
+5. 在 agent 工作时，从卡片打开关联的 session。
+6. 让 lifecycle sync 将运行中的工作移动到 `review`/`blocked`，然后在被接受时手动将卡片移至 `done`。
 
 ## 诊断
 
@@ -251,7 +296,8 @@ Gateway RPC 方法位于 `workboard.*` 下：
 | `operator.read`  | `cards.list`、`cards.export`、`cards.diagnostics`、附件列表/获取、通知事件读取、`boards.list`、`cards.stats`、`cards.runs`                                                                                                                                                                                                                                       |
 | `operator.write` | `cards.diagnostics.refresh`、创建/更新/移动/删除/评论/链接/链接依赖/证明/工件、附件添加/删除、worker 日志、协议违规、claim/heartbeat/release/promote/reassign/reclaim/complete/block/unblock、`cards.dispatch`、`cards.bulk`、归档、`boards.upsert`/`archive`/`delete`、`cards.specify`/`decompose`、通知订阅/删除/推进 |
 
-没有任何 RPC 方法需要 `operator.admin`。具有只读 operator 访问权限的浏览器可以检查看板，但不能修改卡片。
+没有任何 RPC 方法需要 `operator.admin`。以只读
+operator 访问连接的浏览器可以检查看板，但不能修改卡片。管理员作用域会扩大可接受的 Workboard 主机路径；它不会改变可用的方法。
 
 ## 存储
 

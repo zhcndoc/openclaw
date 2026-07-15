@@ -22,7 +22,8 @@ openclaw gateway restart
 openclaw workboard list [--board <id>] [--status <status>] [--include-archived] [--json]
 openclaw workboard create <title...> [--notes <text>] [--status <status>] [--priority <priority>] [--agent <id>] [--board <id>] [--labels <items>] [--json]
 openclaw workboard show <id> [--json]
-openclaw workboard dispatch [--board <id>] [--max-starts <count>] [--url <url>] [--token <token>] [--timeout <ms>] [--json]
+openclaw workboard move <id> --status <status> [--json]
+openclaw workboard dispatch [--board <id>] [--max-starts <count>] [--admin] [--url <url>] [--token <token>] [--timeout <ms>] [--json]
 ```
 
 该命令读取并写入与仪表板和 Workboard 代理工具使用的同一插件所属 SQLite 数据库。卡片 ID 为 UUID；接受卡片 ID 的命令也接受无歧义的 ID 前缀（紧凑文本输出会显示前 8 个字符）。
@@ -61,7 +62,7 @@ openclaw workboard create "修复失效的 worker 心跳" --priority high --labe
 openclaw workboard create "编写 Workboard 文档" --status ready --agent docs-agent --board docs --notes "涵盖 CLI、斜杠命令、dispatch 和 SQLite 状态。"
 ```
 
-| Flag                    | Purpose                                 |
+| 标志                    | 用途                                    |
 | ----------------------- | --------------------------------------- |
 | `--notes <text>`        | 初始卡片备注                             |
 | `--status <status>`     | 初始状态，默认 `todo`                    |
@@ -82,12 +83,22 @@ openclaw workboard show 7f4a2c10 --json
 
 文本输出会打印紧凑的卡片行和备注。JSON 输出会返回完整的卡片记录，包括执行元数据、尝试、评论、链接、证明、产物、工作线程日志、协议状态、诊断信息以及自动化元数据。
 
+## `move`
+
+```bash
+openclaw workboard move 7f4a2c10 --status review
+openclaw workboard move 7f4a2c10 --status done --json
+```
+
+`move` 使用与在仪表板中拖动卡片相同的手动操作员路径来更改卡片的状态。它接受完整的卡片 ID 或一个无歧义的前缀。活动中的依赖和计划阻塞仍然适用。操作员可以在没有其代理认领令牌的情况下移动已认领的卡片；认领令牌仍仅限于代理工具变更，并且会在 JSON 输出中被隐藏。
+
 ## `dispatch`
 
 ```bash
 openclaw workboard dispatch
 openclaw workboard dispatch --json
 openclaw workboard dispatch --max-starts 10
+openclaw workboard dispatch --admin
 openclaw workboard dispatch --url http://127.0.0.1:18789 --token "$OPENCLAW_GATEWAY_TOKEN"
 ```
 
@@ -132,19 +143,20 @@ JSON 输出包含 dispatch 结果。基于 Gateway 的 dispatch 可以包含 `st
 ```text
 /workboard list
 /workboard show 7f4a2c10
-/workboard create 修复失效的 worker 心跳
+/workboard create Fix stale worker heartbeat
+/workboard move 7f4a2c10 --status review
 /workboard dispatch
 ```
 
 斜杠命令 dispatch 也使用 Gateway 子代理运行时，因此它遵循与 dashboard 和 CLI Gateway 路径相同的 claim、worker-start 和失败行为。
 
-`/workboard list` 和 `/workboard show` 是供已授权命令发送者使用的读取命令。`/workboard create` 和 `/workboard dispatch` 会修改看板状态，并且在聊天界面上要求 owner 身份，或在 Gateway 客户端上要求 `operator.write` 或 `operator.admin`。
+`/workboard list` 和 `/workboard show` 是授权命令发送者的读取命令。`/workboard create`、`/workboard move` 和 `/workboard dispatch` 会修改看板状态，并且在聊天界面上需要 owner 状态，或者使用具有 `operator.write` 或 `operator.admin` 的 Gateway 客户端。
 
 ## 权限
 
-CLI 分发路径会使用 `operator.read` 和 `operator.write` 作用域调用 Gateway RPC。只读的 Gateway 令牌可以通过读取方法检查 Workboard 数据，但它不能创建卡片或分发 worker。
+CLI 分发路径通常请求 Gateway 的 `operator.write` 和 `operator.read` scope。绑定到工作区的卡片会直接运行在一个精确配置的 agent 工作区中；worktree 请求会被缩小到该目录，而不是让宿主机实例化由仓库控制的代码。所选 worker 必须对该精确工作区拥有可写的、非共享的 Docker sandbox 访问权限，拥有与请求的挂载和策略匹配的实时容器 hash，并且没有宿主机逃逸能力。传入 `--admin` 可显式请求 `operator.admin`，允许使用另一个宿主机 checkout，并使用正常的 managed-worktree 设置；如果该 scope 未获客户端批准，连接将失败。只读的 Gateway token 可以通过 read 方法检查 Workboard 数据，但不能创建卡片或分发 worker。对于拥有 Workboard mutation 权限的调用方，工作区限制不会以其他方式改变手动卡片移动。
 
-本地的 `list`、`create` 和 `show` 命令作用于当前配置文件使用的本地 OpenClaw 状态目录。当你需要不同的状态根目录时，请在顶层 `openclaw` 命令上使用 `--dev` 或 `--profile <name>`。
+本地的 `list`、`create`、`show` 和 `move` 命令作用于当前 profile 使用的本地 OpenClaw 状态目录。当你需要不同的 state root 时，请在顶层 `openclaw` 命令上使用 `--dev` 或 `--profile <name>`。
 
 ## 故障排查
 

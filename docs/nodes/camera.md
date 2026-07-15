@@ -1,12 +1,12 @@
 ---
-summary: "用于代理的摄像头采集（iOS/Android 节点 + macOS 应用）：照片（jpg）和短视频片段（mp4）"
+summary: "用于照片和短视频片段的 iOS、Android、macOS 和 Linux 节点上的摄像头捕获"
 read_when:
-  - 在 iOS/Android 节点或 macOS 上添加或修改摄像头采集
+  - 添加或修改节点平台上的摄像头捕获
   - 扩展代理可访问的 MEDIA 临时文件工作流
-title: "摄像头采集"
+title: "摄像头捕获"
 ---
 
-OpenClaw 支持面向代理工作流的摄像头采集，适用于配对的 **iOS**、**Android** 和 **macOS** 节点：可通过 Gateway `node.invoke` 拍摄照片（`jpg`）或短视频片段（`mp4`，可选音频）。
+OpenClaw 支持在配对的 **iOS**、**Android**、**macOS** 和 **Linux** 节点上为代理工作流进行摄像头捕获：通过 Gateway `node.invoke` 捕获照片（`jpg`）或短视频片段（`mp4`，可选音频）。
 
 所有摄像头访问都受每个平台上由用户控制的设置保护。
 
@@ -64,7 +64,7 @@ openclaw nodes camera clip --node <id> --no-audio
 
 ### Android 用户设置
 
-- Android 设置页 → **Camera** → **Allow Camera** (`camera.enabled`)。
+- Android 设置页 → **相机** → **允许相机** (`camera.enabled`)。
   - **新安装默认关闭。** 早于此设置的现有安装会迁移为 **开启**，以便升级后不会悄悄丢失此前可用的相机访问权限。
   - 关闭时：`camera.*` 命令返回 `CAMERA_DISABLED: enable Camera in Settings`。
 
@@ -102,7 +102,7 @@ macOS 配套应用提供一个复选框：
 
 - **Settings → General → Allow Camera** (`openclaw.cameraEnabled`).
   - 默认：**关闭**。
-  - 关闭时：摄像头请求会返回 `CAMERA_DISABLED: enable Camera in Settings`。
+  - 关闭时：摄像头请求会返回 `CAMERA_DISABLED: 在 Settings 中启用 Camera`。
 
 ### CLI 辅助工具（node invoke）
 
@@ -123,6 +123,38 @@ openclaw nodes camera clip --node <id> --no-audio
 - `openclaw nodes camera snap` 默认使用 `maxWidth=1600`，除非被覆盖。
 - `camera.snap` 会在预热/曝光稳定后等待 `delayMs`（默认 2000ms，范围限制在 `[0, 10000]`）再进行拍摄。
 - 照片负载会重新压缩，以使 base64 保持在 5MB 以下。
+
+## Linux 节点主机
+
+捆绑的 Linux Node 插件为 CLI `openclaw node` 服务添加了摄像头采集功能。它可在无头主机上运行，不需要 Linux 桌面应用程序。
+
+摄像头访问默认关闭。在插件条目下启用它，然后重新启动节点服务，以便重新构建其 Gateway 广播：
+
+```json5
+{
+  plugins: {
+    entries: {
+      "linux-node": {
+        config: {
+          camera: { enabled: true },
+        },
+      },
+    },
+  },
+}
+```
+
+要求：
+
+- 具备 V4L2 输入、`libx264` 和 AAC 支持的 FFmpeg
+- `/dev/video*` 设备可被 node-service 用户读取；在常见发行版上，将该用户加入 `video` 组
+- 对于默认 `includeAudio: true` 的片段，需要可用的 PulseAudio 服务器，或带有默认源的 PipeWire PulseAudio 兼容层
+
+Linux 会从 `camera.list` 返回可捕获、可读取的 V4L2 设备路径；FFmpeg 会探测每个 `/dev/video*` 候选项，并忽略元数据节点或仅输出节点。设备 `position` 为 `unknown`，因此在没有 `deviceId` 的情况下，请求面向摄像头时，会生成一张 `unknown` 位置的照片或一段视频，而不会声称是前置或后置摄像头。当主机有多个摄像头时，请使用 `deviceId`。`camera.snap` 使用 FFmpeg 输入预热来处理 `delayMs`，并在限制宽度的同时保持宽高比。`camera.clip` 将麦克风音频记录为 MP4 音轨；OpenClaw 有意不提供独立的麦克风命令。
+
+该插件使用 `libx264` 处理 MP4 视频，不会悄悄更改编解码器。若 FFmpeg 构建缺少所需输入或编码器，将返回 `CAMERA_UNAVAILABLE`。超过 25MB base64 载荷预算的照片和片段会失败，并返回 `PAYLOAD_TOO_LARGE`。
+
+`camera.snap` 和 `camera.clip` 仍然是危险命令。只有在你确实打算启用采集时，才将它们添加到 `gateway.nodes.allowCommands`；仅启用插件本身并不会绕过 Gateway 策略。
 
 ## 安全性 + 实际限制
 

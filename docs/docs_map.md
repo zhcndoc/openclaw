@@ -810,14 +810,15 @@ title: "文档映射"
 
 ## channels/reef.md
 
-- 路由：/channels/reef
-- 标题：
-  - H2：快速开始
-  - H2：配置
-  - H2：添加好友
-  - H2：发送和接收
-  - H2：守卫和所有者审核
-  - H2：故障排除
+- Route: /channels/reef
+- Headings:
+  - H2: Quick start
+  - H2: Agent-driven setup
+  - H2: Configuration
+  - H2: Adding a friend
+  - H2: Sending and receiving
+  - H2: Guards and owner review
+  - H2: Troubleshooting
 
 ## channels/signal.md
 
@@ -1381,20 +1382,8 @@ title: "文档映射"
 
 ## cli/crestodian.md
 
-- 路由: /cli/crestodian
-- 标题:
-  - H1: openclaw crestodian
-  - H2: 启动时
-  - H2: Crestodian 显示的内容
-  - H2: 示例
-  - H2: 操作与批准
-  - H3: 切换到 masked channel setup
-  - H2: 设置引导
-  - H2: AI 对话
-  - H3: CLI harness 信任模型
-  - H2: 切换到 agent
-  - H2: 消息救援模式
-  - H2: 相关内容
+- Route: /cli/crestodian
+- Headings: none
 
 ## cli/cron.md
 
@@ -1793,6 +1782,23 @@ title: "文档映射"
   - H2: 其他行为
   - H2: 常见后续命令
 
+## cli/openclaw.md
+
+- Route: /cli/openclaw
+- Headings:
+  - H1: openclaw setup
+  - H2: When it starts
+  - H2: What OpenClaw shows
+  - H2: Examples
+  - H2: Operations and approval
+  - H3: Switching to masked channel setup
+  - H2: Setup bootstrap
+  - H2: AI conversation
+  - H3: CLI harness trust model
+  - H2: Switching to an agent
+  - H2: Message rescue mode
+  - H2: Related
+
 ## cli/pairing.md
 
 - 路由：/cli/pairing
@@ -2157,20 +2163,21 @@ title: "文档映射"
 
 ## cli/workboard.md
 
-- 路由: /cli/workboard
-- 标题:
-  - H2: 用法
-  - H2: 列表
-  - H2: 创建
-  - H2: 显示
-  - H2: 派发
-  - H2: 斜杠命令一致性
-  - H2: 权限
-  - H2: 故障排除
-  - H3: 没有显示任何卡片
-  - H3: 派发提示仅限数据
-  - H3: 派发未启动任何内容
-  - H2: 相关
+- Route: /cli/workboard
+- Headings:
+  - H2: Usage
+  - H2: list
+  - H2: create
+  - H2: show
+  - H2: move
+  - H2: dispatch
+  - H2: Slash command parity
+  - H2: Permissions
+  - H2: Troubleshooting
+  - H3: No cards appear
+  - H3: Dispatch says data-only
+  - H3: Dispatch starts nothing
+  - H2: Related
 
 ## cli/worker.md
 
@@ -2765,24 +2772,24 @@ title: "文档映射"
 
 ## concepts/progress-drafts.md
 
-- 路由：/concepts/progress-drafts
-- 标题：
-  - H2: 快速开始
-  - H2: 用户看到的内容
-  - H2: 选择一种模式
-  - H2: 配置标签
-  - H2: 控制进度行
-  - H3: 详细模式
-  - H3: 命令/执行文本
-  - H3: 评论通道
-  - H3: 叙述式状态
-  - H3: 行数限制
-  - H3: 富渲染（Slack）
-  - H3: 隐藏工具/任务行
-  - H2: 通道行为
-  - H2: 最终定稿
-  - H2: 故障排查
-  - H2: 相关内容
+- Route: /concepts/progress-drafts
+- Headings:
+  - H2: Quick start
+  - H2: What users see
+  - H2: Choose a mode
+  - H2: Configure labels
+  - H2: Control progress lines
+  - H3: Detail mode
+  - H3: Command/exec text
+  - H3: Commentary lane
+  - H3: Status headline
+  - H3: Line limits
+  - H3: Rich rendering (Slack)
+  - H3: Hide tool/task lines
+  - H2: Channel behavior
+  - H2: Finalization
+  - H2: Troubleshooting
+  - H2: Related
 
 ## concepts/qa-e2e-automation.md
 
@@ -3579,16 +3586,16 @@ title: "文档映射"
 
 ## gateway/multi-tenant-hosting.md
 
-- 路由：/gateway/multi-tenant-hosting
-- 标题：
-  - H1：多租户托管
-  - H2：为什么每个租户都需要一个单元
-  - H2：架构
-  - H2：信任边界
-  - H2：隔离阶梯
-  - H2：快速开始
-  - H2：MVP 中暂缓
-  - H2：相关内容
+- Route: /gateway/multi-tenant-hosting
+- Headings:
+  - H1: Multi-tenant hosting
+  - H2: Why each tenant needs a cell
+  - H2: Architecture
+  - H2: Trust boundary
+  - H2: Isolation ladder
+  - H2: Quick start
+  - H2: Current scope
+  - H2: Related
 
 ## gateway/multiple-gateways.md
 
@@ -4831,14 +4838,15 @@ title: "文档映射"
   - H2: Android Node
   - H3: Android User Settings
   - H3: Permissions
-  - H3: Android Foreground Requirements
-  - H3: Android Commands (via Gateway node.invoke)
-  - H2: macOS App
-  - H3: macOS User Settings
-  - H3: CLI Helper Tool (node invoke)
-  - H2: Security + Practical Limitations
-  - H2: macOS Screen Video (System-Level)
-  - H2: Related Content
+  - H3: Android foreground requirement
+  - H3: Android commands (via Gateway node.invoke)
+  - H2: macOS app
+  - H3: macOS user setting
+  - H3: CLI helper (node invoke)
+  - H2: Linux node host
+  - H2: Safety + practical limits
+  - H2: macOS screen video (OS-level)
+  - H2: Related
 
 ## nodes/computer-use.md
 
@@ -4866,53 +4874,56 @@ title: "文档映射"
 
 ## nodes/index.md
 
-- 路由：/nodes
-- 标题：
-  - H2: 配对 + 状态
-  - H2: 版本偏差与升级顺序
-  - H2: 远程节点主机（system.run）
-  - H3: 启动节点主机（前台）
-  - H3: 通过 SSH 隧道的远程网关（回环绑定）
-  - H3: 启动节点主机（服务）
-  - H3: 配对 + 命名
-  - H3: 节点托管的 MCP 服务器
-  - H3: 节点托管的技能
-  - H3: 无头身份状态
-  - H3: 允许列表中的命令
-  - H3: 将 exec 指向节点
-  - H3: 本地模型推理
-  - H3: Codex 会话和转录
-  - H3: Claude 会话和转录
-  - H2: 调用命令
-  - H2: 命令策略
-  - H2: 配置（openclaw.json）
-  - H2: 截图（画布快照）
-  - H3: 画布控件
-  - H3: A2UI（画布）
-  - H2: 照片 + 视频（节点摄像头）
-  - H2: 屏幕录制（节点）
-  - H2: 位置（节点）
-  - H2: 短信（Android 节点）
-  - H2: 设备和个人数据命令
-  - H2: 系统命令（节点主机 / mac 节点）
-  - H2: Exec 节点绑定
-  - H2: 权限映射
-  - H2: 无头节点主机（跨平台）
-  - H2: Mac 节点模式
+- Route: /nodes
+- Headings:
+  - H2: Pairing + status
+  - H2: Version skew and upgrade order
+  - H2: Remote node host (system.run)
+  - H3: Start a node host (foreground)
+  - H3: Remote gateway via SSH tunnel (loopback bind)
+  - H3: Start a node host (service)
+  - H3: Pair + name
+  - H3: Node-hosted MCP servers
+  - H3: Node-hosted skills
+  - H3: Headless identity state
+  - H3: Allowlist the commands
+  - H3: Point exec at the node
+  - H3: Local model inference
+  - H3: Codex sessions and transcripts
+  - H3: Claude sessions and transcripts
+  - H3: OpenCode and Pi sessions
+  - H3: Terminal file uploads
+  - H2: Invoking commands
+  - H2: Command policy
+  - H2: Config (openclaw.json)
+  - H2: Screenshots (canvas snapshots)
+  - H3: Canvas controls
+  - H3: A2UI (Canvas)
+  - H2: Photos + videos (node camera)
+  - H2: Screen recordings (nodes)
+  - H2: Location (nodes)
+  - H2: SMS (Android nodes)
+  - H2: Device and personal data commands
+  - H2: System commands (node host / mac node)
+  - H2: Exec node binding
+  - H2: Permissions map
+  - H2: Headless node host (cross-platform)
+  - H2: Mac node mode
 
 ## nodes/location-command.md
 
 - 路由: /nodes/location-command
 - 标题:
   - H2: TL;DR
-  - H2: 为什么是选择器（而不只是一个开关）
-  - H2: 设置模型
-  - H2: 权限映射（node.permissions）
-  - H2: 命令：location.get
-  - H2: 后台行为
-  - H2: 模型/工具集成
-  - H2: UX 文案（建议）
-  - H2: 相关内容
+  - H2: Why a selector (not just a switch)
+  - H2: Settings model
+  - H2: Permissions mapping (node.permissions)
+  - H2: Command: location.get
+  - H2: Background behavior
+  - H2: Linux node host
+  - H2: Model/tooling integration
+  - H2: UX copy (suggested)
+  - H2: Related
 
 ## nodes/media-understanding.md
 
@@ -5158,14 +5169,16 @@ title: "文档映射"
 
 ## platforms/linux.md
 
-- 路由: /platforms/linux
-- 标题:
-  - H2: 桌面伴侣
-  - H2: CLI 和 SSH 替代方案
-  - H2: 安装
-  - H2: 网关服务（systemd）
-  - H2: 内存压力和 OOM 杀死
-  - H2: 相关内容
+- Route: /platforms/linux
+- Headings:
+  - H2: Desktop companion
+  - H3: Canvas
+  - H2: CLI and SSH alternative
+  - H2: Node capabilities
+  - H2: Install
+  - H2: Gateway service (systemd)
+  - H2: Memory pressure and OOM kills
+  - H2: Related
 
 ## platforms/mac/bundled-gateway.md
 
@@ -6002,12 +6015,13 @@ title: "文档映射"
 
 ## plugins/reference/acpx.md
 
-- 路由: /plugins/reference/acpx
-- 标题:
-  - H1: ACPx 插件
-  - H2: 分发
-  - H2: 表面
-  - H2: 相关文档
+- Route: /plugins/reference/acpx
+- Headings:
+  - H1: ACPx plugin
+  - H2: Distribution
+  - H2: Surface
+  - H2: Pi native sessions
+  - H2: Related docs
 
 ## plugins/reference/admin-http-rpc.md
 
@@ -6506,6 +6520,22 @@ title: "文档映射"
   - H2：表面
   - H2：相关文档
 
+## plugins/reference/linux-canvas.md
+
+- Route: /plugins/reference/linux-canvas
+- Headings:
+  - H1: Linux Canvas plugin
+  - H2: Distribution
+  - H2: Surface
+
+## plugins/reference/linux-node.md
+
+- Route: /plugins/reference/linux-node
+- Headings:
+  - H1: Linux Node plugin
+  - H2: Distribution
+  - H2: Surface
+
 ## plugins/reference/litellm.md
 
 - 路由: /plugins/reference/litellm
@@ -6791,12 +6821,13 @@ title: "文档映射"
 
 ## plugins/reference/opencode.md
 
-- 路由：/plugins/reference/opencode
-- 标题：
-  - H1：OpenCode 插件
-  - H2：分发
-  - H2：表面
-  - H2：相关文档
+- Route: /plugins/reference/opencode
+- Headings:
+  - H1: OpenCode plugin
+  - H2: Distribution
+  - H2: Surface
+  - H2: Native sessions
+  - H2: Related docs
 
 ## plugins/reference/openrouter.md
 
@@ -7353,25 +7384,26 @@ title: "文档映射"
 
 ## plugins/sdk-overview.md
 
-- 路由：/plugins/sdk-overview
-- 标题：
-  - H2: 导入约定
-  - H2: 子路径引用
-  - H2: 注册 API
-  - H3: 能力注册
-  - H3: 工具和命令
-  - H3: 基础设施
-  - H3: 工作流插件的宿主钩子
-  - H3: 网关发现注册
-  - H3: CLI 注册元数据
-  - H3: CLI 后端注册
-  - H3: 独占槽位
-  - H3: 已弃用的内存嵌入适配器
-  - H3: 事件和生命周期
-  - H3: 钩子决策语义
-  - H3: API 对象字段
-  - H2: 内部模块约定
-  - H2: 相关内容
+- Route: /plugins/sdk-overview
+- Headings:
+  - H2: Import convention
+  - H2: Subpath reference
+  - H2: Registration API
+  - H3: Capability registration
+  - H3: Tools and commands
+  - H3: Infrastructure
+  - H4: Requester-scoped MCP connections
+  - H3: Host hooks for workflow plugins
+  - H3: Gateway discovery registration
+  - H3: CLI registration metadata
+  - H3: CLI backend registration
+  - H3: Exclusive slots
+  - H3: Deprecated memory embedding adapters
+  - H3: Events and lifecycle
+  - H3: Hook decision semantics
+  - H3: API object fields
+  - H2: Internal module convention
+  - H2: Related
 
 ## plugins/sdk-provider-plugins.md
 
@@ -8967,6 +8999,60 @@ title: "文档映射"
   - H3: 安装和命令可靠性
   - H3: 工具和计划任务
 
+## releases/2026.7.1.md
+
+- Route: /releases/2026.7.1
+- Headings:
+  - H1: OpenClaw v2026.7.1 Release Notes (2026-07-13)
+  - H2: Highlights
+  - H3: Control UI overhaul: chat, sessions, workspaces, and usage
+  - H3: Easier setup from install to first chat
+  - H3: Official apps
+  - H4: Shared app improvements
+  - H4: iOS, iPadOS, and Apple Watch
+  - H4: Android
+  - H4: macOS
+  - H3: Models and providers
+  - H4: GPT-5.6 and Codex
+  - H4: Tencent Hy3
+  - H4: Meta Model API and Muse Spark 1.1
+  - H4: Claude models
+  - H4: Other provider routes
+  - H3: Codex and connected coding agents
+  - H3: Telegram
+  - H3: Signal
+  - H3: Slack
+  - H3: Discord
+  - H3: WhatsApp
+  - H3: Apple Messages
+  - H3: Crash loops now stop for repair
+  - H3: Scheduled work, remote browser control, and workspace terminals
+  - H4: Scheduled work that wakes only when needed
+  - H4: Remote browser pairing and downloads
+  - H4: Workspace terminals in web and mobile
+  - H2: More channel improvements
+  - H3: More fixes across messaging channels
+  - H2: More model and provider improvements
+  - H3: Sign-in, model choice, media, and reliability
+  - H2: Memory and conversations
+  - H3: Recall, long chats, and session continuity
+  - H2: Agents, background work, and connections
+  - H3: Keeping work moving and replies delivered
+  - H2: Accounts, devices, and private data
+  - H3: Credentials, permissions, pairing, and file safeguards
+  - H2: Official app details
+  - H3: Shared app changes
+  - H3: More iOS, iPadOS, and Apple Watch changes
+  - H3: More Android changes
+  - H3: More macOS changes
+  - H3: Terminal UI and other clients
+  - H2: Skills, plugins, and installs
+  - H3: Skills, connected apps, packages, and repairs
+  - H2: Setup, maintenance, and tools
+  - H3: Command-line setup, updates, and administration
+  - H3: Documentation and operating guides
+  - H3: Browser, schedules, files, and coding tools
+
 ## releases/index.md
 
 - 路由：/releases
@@ -9949,20 +10035,21 @@ title: "文档映射"
 
 ## tools/self-learning.md
 
-- 路由：/tools/self-learning
-- 标题：
-  - H2：启用自学习
-  - H2：OpenClaw 可以学习什么
-  - H2：何时运行经验回顾
-  - H2：审阅者会收到什么
-  - H2：提议安全性
-  - H2：审阅已学习的提议
-  - H2：配置
-  - H2：故障排除
-  - H3：长轮次后没有出现提议
-  - H3：Doctor 报告 Workshop 工具被隐藏
-  - H3：出现过多低价值提议
-  - H2：相关
+- Route: /tools/self-learning
+- Headings:
+  - H2: Enable self-learning
+  - H2: Review past sessions manually
+  - H2: What OpenClaw can learn
+  - H2: When experience review runs
+  - H2: What the reviewer receives
+  - H2: Proposal safety
+  - H2: Review learned proposals
+  - H2: Configuration
+  - H2: Troubleshooting
+  - H3: No proposal appears after a long turn
+  - H3: Doctor reports that the Workshop tool is hidden
+  - H3: Too many low-value proposals appear
+  - H2: Related
 
 ## tools/show-widget.md
 
@@ -9982,17 +10069,18 @@ title: "文档映射"
   - H2: 聊天
   - H3: 从近期工作中学习
   - H2: CLI
-  - H2: 提案内容
-  - H2: 支持文件
-  - H2: Agent 工具
-  - H2: 建议的技能
-  - H2: 审批与自主性
-  - H2: 网关方法
-  - H2: 存储
-  - H2: 限制
-  - H2: 故障排除
-  - H3: 工具策略诊断
-  - H2: 相关内容
+  - H2: Proposal content
+  - H2: Support files
+  - H2: Agent tool
+  - H2: Suggested skills
+  - H3: Scan past sessions
+  - H2: Approval and autonomy
+  - H2: Gateway methods
+  - H2: Storage
+  - H2: Limits
+  - H2: Troubleshooting
+  - H3: Tool-policy diagnostic
+  - H2: Related
 
 ## tools/skills-config.md
 
@@ -10350,27 +10438,27 @@ title: "文档映射"
 
 ## web/tui.md
 
-- 路由：/web/tui
-- 标题：
-  - H2：快速开始
-  - H3：网关模式
-  - H3：本地模式
-  - H2：你会看到什么
-  - H2：心智模型：agents + sessions
-  - H2：发送 + 传递
-  - H2：选择器 + 覆盖层
-  - H2：键盘快捷键
-  - H2：斜杠命令
-  - H2：本地 shell 命令
-  - H2：Crestodian 设置和修复助手
-  - H2：工具输出
-  - H2：终端颜色
-  - H2：历史 + 流式传输
-  - H2：连接详情
-  - H2：选项
-  - H2：故障排除
-  - H2：连接故障排除
-  - H2：相关内容
+- Route: /web/tui
+- Headings:
+  - H2: Quick start
+  - H3: Gateway mode
+  - H3: Local mode
+  - H2: What you see
+  - H2: Mental model: agents + sessions
+  - H2: Sending + delivery
+  - H2: Pickers + overlays
+  - H2: Keyboard shortcuts
+  - H2: Slash commands
+  - H2: Local shell commands
+  - H2: OpenClaw setup and repair helper
+  - H2: Tool output
+  - H2: Terminal colors
+  - H2: History + streaming
+  - H2: Connection details
+  - H2: Options
+  - H2: Troubleshooting
+  - H2: Connection troubleshooting
+  - H2: Related
 
 ## web/webchat.md
 

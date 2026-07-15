@@ -152,15 +152,15 @@ SDK.
 
     | 需求 | 导入 |
     | --- | --- |
-    | 配置类型，例如 `OpenClawConfig` | `openclaw/plugin-sdk/config-contracts` |
-    | 已加载配置断言和插件入口配置查找 | `openclaw/plugin-sdk/plugin-config-runtime` |
-    | 当前运行时快照读取 | `openclaw/plugin-sdk/runtime-config-snapshot` |
-    | 配置写入 | `openclaw/plugin-sdk/config-mutation` |
-    | 会话存储辅助工具 | `openclaw/plugin-sdk/session-store-runtime` |
-    | Markdown 表格配置 | `openclaw/plugin-sdk/markdown-table-runtime` |
-    | 组策略运行时辅助工具 | `openclaw/plugin-sdk/runtime-group-policy` |
-    | 密钥输入解析 | `openclaw/plugin-sdk/secret-input-runtime` |
-    | 模型/会话覆盖 | `openclaw/plugin-sdk/model-session-runtime` |
+    | Config types such as `OpenClawConfig` | `openclaw/plugin-sdk/config-contracts` |
+    | Already-loaded config assertions, plugin-entry config lookup, and config merging | `openclaw/plugin-sdk/plugin-config-runtime` |
+    | Current runtime snapshot reads | `openclaw/plugin-sdk/runtime-config-snapshot` |
+    | Config writes | `openclaw/plugin-sdk/config-mutation` |
+    | Session store helpers | `openclaw/plugin-sdk/session-store-runtime` |
+    | Markdown table config | `openclaw/plugin-sdk/markdown-table-runtime` |
+    | Group policy runtime helpers | `openclaw/plugin-sdk/runtime-group-policy` |
+    | Secret input resolution | `openclaw/plugin-sdk/secret-input-runtime` |
+    | Model/session overrides | `openclaw/plugin-sdk/model-session-runtime` |
 
     Bundled plugins and their tests are scanner-guarded against the broad
     barrel so imports and mocks stay local to the behavior they need. The
@@ -432,7 +432,7 @@ SDK.
   | `plugin-sdk/security-runtime` | Security helpers | Shared trust, DM gating, root-bounded file/path helpers, external-content, and secret-collection helpers |
   | `plugin-sdk/ssrf-policy` | SSRF policy helpers | Host allowlist and private-network policy helpers |
   | `plugin-sdk/ssrf-runtime` | SSRF runtime helpers | Pinned-dispatcher, guarded fetch, SSRF policy helpers |
-  | `plugin-sdk/system-event-runtime` | System event helpers | `enqueueSystemEvent`, `peekSystemEventEntries` |
+  | `plugin-sdk/system-event-runtime` | System event helpers | `enqueueSystemEvent` (including keyed replacement), `peekSystemEventEntries` |
   | `plugin-sdk/heartbeat-runtime` | Heartbeat helpers | Heartbeat wake, event, and visibility helpers |
   | `plugin-sdk/delivery-queue-runtime` | Delivery queue helpers | `drainPendingDeliveries` |
   | `plugin-sdk/channel-activity-runtime` | Channel activity helpers | `recordChannelActivity` |

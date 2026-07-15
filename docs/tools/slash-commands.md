@@ -1,19 +1,19 @@
 ---
-title: "Slash Commands"
-sidebarTitle: "Slash Commands"
-summary: "All available slash commands, instructions, and inline shortcuts—configuration, routing, and interface-specific behavior."
+title: "斜杠命令"
+sidebarTitle: "斜杠命令"
+summary: "所有可用的斜杠命令、说明和内联快捷方式——配置、路由以及特定界面的行为。"
 read_when:
   - when using or configuring chat commands
   - when debugging command routing or permissions
   - when understanding how skill commands are registered
 ---
 
-Gateway handles commands that begin with `/` and are sent as standalone messages.
-Host-only bash commands use `! <cmd>` (`/bash <cmd>` is an alias).
+Gateway 处理以 `/` 开头并作为独立消息发送的命令。
+仅限主机的 bash 命令使用 `! <cmd>`（`/bash <cmd>` 是别名）。
 
-When a session is bound to an ACP session, normal text is routed to the ACP
-harness. Gateway management commands remain local: `/acp ...` always reaches the
-OpenClaw command handler, while `/status` and `/unfocus` stay local when command handling is enabled in that interface.
+当会话绑定到 ACP 会话时，普通文本会路由到 ACP
+harness。Gateway 管理命令仍然保持本地：`/acp ...` 始终会到达
+OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` 和 `/unfocus` 会保持本地。
 
 ## 三种命令类型
 
@@ -148,15 +148,17 @@ Commands 来自三个来源：
   <Accordion title="会话与运行">
     | 命令 | 描述 |
     | --- | --- |
-    | `/new [model]` | 将当前会话归档并开始一个新会话 |
-    | `/reset [soft [message]]` | 原地重置当前会话。`soft` 会保留转录内容，丢弃复用的 CLI 后端会话 id，并重新运行启动流程 |
-    | `/name <title>` | 为当前会话命名或重命名。省略标题可查看当前名称和建议 |
-    | `/compact [instructions]` | 压缩会话上下文。参见 [压缩](/concepts/compaction) |
+    | `/new [model]` | 归档当前会话并启动一个新的会话 |
+    | `/reset [soft [message]]` | 原地重置当前会话。`soft` 会保留转录内容，丢弃复用的 CLI 后端会话 ID，并重新运行启动流程 |
+    | `/name <title>` | 为当前会话命名或重命名。省略标题可查看当前名称及建议 |
+    | `/compact [instructions]` | 压缩会话上下文。参见 [Compaction](/concepts/compaction) |
     | `/stop` | 中止当前运行 |
     | `/session idle <duration\|off>` | 管理线程绑定的空闲过期时间 |
     | `/session max-age <duration\|off>` | 管理线程绑定的最大存活过期时间 |
-    | `/export-session [path]` | 将当前会话导出为 HTML。别名：`/export` |
+    | `/export-session [path]` | 仅 owner 可用。将当前会话导出为工作区内的 HTML。别名：`/export` |
     | `/export-trajectory [path]` | 为当前会话导出 JSONL 轨迹包。别名：`/trajectory` |
+
+    显式的 `/export-session` 路径会替换工作区内已有文件。省略路径可生成一个避免冲突的文件名。
 
     <Note>
       控制界面会拦截输入的 `/new`，以创建并切换到新的
@@ -209,15 +211,15 @@ Commands 来自三个来源：
     | `/help` | 显示简短帮助摘要 |
     | `/commands` | 显示生成的命令目录 |
     | `/tools [compact\|verbose]` | 显示当前代理此刻可用的工具 |
-    | `/status` | 显示执行/运行时状态、Gateway 和系统运行时间、插件健康状态，以及提供方使用量/配额 |
-    | `/status plugins` | 显示详细的插件健康信息：加载错误、隔离、频道插件失败、依赖问题、兼容性提示。需要 `commands.plugins: true` |
+    | `/status` | 显示执行/运行时状态、Gateway 和系统运行时间、插件健康状况，以及提供方用量/配额 |
+    | `/status plugins` | 显示详细的插件健康状况：加载错误、隔离、频道插件失败、依赖问题、兼容性提示。需要 `commands.plugins: true` |
     | `/goal [status\|start\|edit\|pause\|resume\|complete\|block\|clear] ...` | 管理当前会话的持久化 [goal](/tools/goal) |
     | `/diagnostics [note]` | 仅 owner 可用的支持报告流程。每次都会请求 exec 批准 |
-    | `/crestodian <request>` | 从 owner DM 中运行 Crestodian 设置和修复助手 |
-    | `/tasks` | 列出当前会话活跃/最近的后台任务 |
-    | `/context [list\|detail\|map\|json]` | 解释上下文如何组装 |
-    | `/whoami` | 显示你的发送者 id。别名：`/id` |
-    | `/usage off\|tokens\|full\|reset\|cost` | 控制每次回复的 usage 页脚（`reset`/`inherit`/`clear`/`default` 会清除会话覆盖以重新继承已配置的默认值），或打印本地成本摘要 |
+    | `/openclaw <request>` | 从 owner 私聊运行 OpenClaw 的安装与修复助手 |
+    | `/tasks` | 列出当前会话中活跃/最近的后台任务 |
+    | `/context [list\|detail\|map\|json]` | 解释上下文是如何组装的 |
+    | `/whoami` | 显示你的发送者 ID。别名：`/id` |
+    | `/usage off\|tokens\|full\|reset\|cost` | 控制每次回复的用量页脚（`reset`/`inherit`/`clear`/`default` 会清除会话覆盖以重新继承已配置的默认值），或打印本地成本摘要 |
   </Accordion>
 
   <Accordion title="技能、允许列表、批准">
@@ -358,7 +360,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 ## `/mcp`: MCP 服务器配置
 
 <Note>
-  仅限 owner。默认禁用——通过启用 `commands.mcp: true` 打开。
+  仅限所有者。默认禁用——通过启用 `commands.mcp: true` 打开。
 </Note>
 
 ```text
@@ -370,7 +372,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 `/mcp` 将配置存储在 OpenClaw 配置中，而不是嵌入式代理项目设置中。
 `/mcp show` 会对含有凭据的字段、已识别的凭据标志值以及已知的密钥形参数组进行脱敏。  
-当在群组中运行时，配置会私下发送给 owner；如果没有可用的私有 owner 路由，命令将默认失败并要求 owner 从直接聊天中重试。
+当在群组中运行时，配置将私下发送给所有者；如果没有可用的私有所有者路由，命令将默认失败并要求所有者从直接聊天中重试。
 
 ## `/debug`：仅运行时覆盖
 
@@ -399,10 +401,21 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 /plugin show context7
 /plugins enable context7
 /plugins disable context7
-/plugins install ./path/to/plugin
+/plugins install clawhub:<package>
+/plugins install npm:@openclaw/<official-package>
+/plugins install npm:<package> --force
+/plugins install git:<repository>@<ref> --force
 ```
 
-`/plugins enable|disable` 会更新插件配置，并为新的代理轮次热重载 Gateway 插件运行时。`/plugins install` 会自动重启受管控的 Gateways，因为插件源码模块发生了变化。
+`/plugins enable|disable` 会更新插件配置，并为新的 agent turn 热重载 Gateway
+插件运行时。由于插件源模块已更改，`/plugins install` 会自动重启受管
+Gateway。受信任的 ClawHub 和官方目录安装不需要额外确认。任意的 npm、
+git、archive、`npm-pack:` 和本地路径来源会显示来源警告，并且在你审查
+来源后需要在末尾添加 `--force`。此标志表示你已确认该来源，并允许替换
+现有安装；它不会绕过 `security.installPolicy` 或安装器安全检查。带有
+风险警告的 ClawHub 发布版本仍然需要单独的仅 shell 使用的
+`--acknowledge-clawhub-risk` 标志。Marketplace、linked 和 pinned 安装也
+仍然仅限 shell 使用。
 
 ## `/trace`：插件跟踪输出
 
@@ -464,13 +477,13 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
   </Accordion>
 </AccordionGroup>
 
-## 提供方使用情况和状态
+## Provider Usage and Status
 
-- **Provider 使用量/配额**（例如“Claude 还剩 80%”）会在启用使用量追踪时，显示在当前模型 provider 的 `/status` 中。
-- `/status` 中的 **token/cache 行** 在实时会话快照较少时，可能回退到最新的 transcript 使用条目。
-- **执行 vs 运行时：** `/status` 会报告 `Execution` 表示有效的 sandbox 路径，以及 `Runtime` 表示当前是谁在运行会话：`OpenClaw Default`、`OpenAI Codex`、CLI backend 或 ACP backend。
-- **每次响应的 token/成本：** 由 `/usage off|tokens|full` 控制。
-- `/model status` 关注的是模型/认证/端点，而不是使用量。
+- **Provider usage/quota** (for example, “Claude has 80% left”) will be shown in the current model provider’s `/status` when usage tracking is enabled.
+- The **token/cache lines** in `/status` may fall back to the latest transcript usage entry when there are fewer real-time session snapshots.
+- **Execution vs runtime:** `/status` will report `Execution` to indicate the effective sandbox path, and `Runtime` to indicate who is currently running the session: `OpenClaw Default`, `OpenAI Codex`, CLI backend, or ACP backend.
+- **Tokens/cost per response:** controlled by `/usage off|tokens|full`.
+- `/model status` focuses on the model/authentication/endpoint, not usage.
 
 ## 相关内容
 

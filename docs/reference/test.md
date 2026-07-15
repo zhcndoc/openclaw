@@ -10,21 +10,16 @@ title: "测试"
 
 ## Agent default
 
-代理会话通过 Crabbox 远程运行测试和计算密集型验证。受信任维护者代码默认使用 Blacksmith Testbox。已配置的 Testbox 工作流会获取凭据，因此不受信任的贡献者或 fork 代码必须使用无密钥的 fork CI，或使用经过清理的直接 AWS Crabbox。
+Agent 会话仅在本地针对受信任源码、且现有依赖安装已准备就绪时，运行一个/少量聚焦测试和廉价静态检查。切勿在本地执行不受信任的仓库工具。更大的测试套件、包含 typecheck/lint 分流的变更门禁、构建、Docker、包流水线、E2E、线上验证以及跨平台验证，均通过 Crabbox 远程运行。受信任维护者的重型验证默认使用 Blacksmith Testbox。已配置的 Testbox 工作流会填充凭据，因此不受信任的贡献者或 fork 代码必须使用无密钥的 fork CI，或经过净化的直接 AWS Crabbox。
 
-当受信任的代码任务很可能需要测试或大量验证时，立即在后台命令会话中预热，在其完成 hydration 的同时继续工作，复用返回的 `tbx_...` id，每次运行都同步当前检出，并在交接前停止它：
-
-```bash
-node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --timing-json
-```
+不要为预期的工作预热。等第一个重型命令就绪时再惰性获取后端，在后续重型命令中复用返回的 `tbx_...` id，每次运行都同步当前检出，并在交接前停止它。
 
 第一次成功复用后，包装器会将该租约的 base、dependency 和 Testbox workflow fingerprint 记录到 `.crabbox/testbox-leases/` 下。仅有源码修改时会继续复用已预热的 box。若 merge base、lockfile、package-manager 输入、wrapper 或 Testbox workflow 发生变化，则会失败并要求新的租约。每次运行仍会同步当前检出。
 `OPENCLAW_TESTBOX_ALLOW_STALE=1` 仅用于有意进行诊断，不用于发布验证。
 
-下面的本地测试命令仅适用于人工工作流，或用户明确请求的代理回退方案。必须报告远程提供方不可用的情况；这不代表可以静默运行一个宽泛的本地门禁。
+下面的本地测试命令仅适用于人工工作流和受限的 agent 验证。若远程提供方不可用，必须上报；这不意味着可以在本地静默运行更宽泛的门禁。
 
-对于不受信任的代码，使用 `--provider aws` 预热。每次运行都必须设置 `CRABBOX_ENV_ALLOW=CI`，传入 `--provider aws --no-hydrate`，并在安装依赖或运行测试之前使用新的临时远程 `HOME`。为该不受信任来源使用新预热的专用租约；绝不要复用受信任的或之前已 hydrated 的租约。必须从干净的受信任 `main` 检出中启动已安装的受信任 Crabbox 二进制，并且只使用 `--fresh-pr` 获取远程 PR；绝不要在本地执行不受信任检出中的包装器或配置。取消设置 `CRABBOX_AWS_INSTANCE_PROFILE`，并在未解析出 `aws.instanceProfile` 为空时直接失败。 在任何安装/测试之前，使用受信任的绝对路径工具要求 IMDSv2 token，证明 IAM 凭据端点返回 404，并验证远程 `git rev-parse HEAD` 等于完整审查过的 PR head SHA。将租约绑定到该 SHA，并在 head 变更时停止/重新预热。与 `--fresh-pr` 一起，从干净的 `main` 上传受信任的 `scripts/crabbox-untrusted-bootstrap.sh`；它会安装固定版本的 Node/pnpm，验证 SHA 和包管理器 pin，隔离 `HOME`，安装依赖，然后执行所请求的测试。如果 broker 不能证明不存在 role 或不存在远程 PR，则使用无密钥的 fork CI。不要使用 `hydrate-github`、`--no-sync`，或带有凭据 hydration 的 Testbox 工作流。
-
+对于不受信任的重型验证，使用 `--provider aws` 惰性预热。每次运行都必须设置 `CRABBOX_ENV_ALLOW=CI`，传入 `--provider aws --no-hydrate`，并在安装依赖或运行测试前使用一个新的临时远程 `HOME`。为该不受信任源码使用一个新预热的专用租约；绝不要复用受信任或已预填充的租约。先从一个干净、受信任的 `main` 检出中启动已安装的受信任 Crabbox 二进制，并且只用 `--fresh-pr` 获取远程 PR；绝不要在本地执行不受信任检出的 wrapper 或配置。取消设置 `CRABBOX_AWS_INSTANCE_PROFILE`，并在未解析到空的 `aws.instanceProfile` 时失败关闭。在任何安装/测试之前，使用受信任的绝对路径工具要求 IMDSv2 token，证明 IAM 凭据端点返回 404，并验证远程 `git rev-parse HEAD` 等于完整审阅过的 PR head SHA。将该租约绑定到该 SHA，并在 head 变更时停止/重新预热。与 `--fresh-pr` 一起上传来自干净 `main` 的受信任 `scripts/crabbox-untrusted-bootstrap.sh`；它会安装固定版本的 Node/pnpm，验证 SHA 和 package-manager pin，隔离 `HOME`，安装依赖，然后执行所请求的测试。如果 broker 不能证明不存在 role 或不存在远程 PR，则使用无密钥的 fork CI。不要使用 `hydrate-github`、`--no-sync`，或带凭据填充的 Testbox 工作流。
 取消设置所有 `CRABBOX_TAILSCALE*` 覆盖项，强制使用 `--network public --tailscale=false`，清除 exit-node/LAN 标志，并要求 `crabbox inspect` 在上传任何脚本之前报告公共网络且没有 Tailscale 状态。
 
 ## 常规本地顺序
@@ -33,8 +28,13 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 2. 对于单个文件、目录或显式目标，使用 `pnpm test <path-or-filter>`。
 3. 仅当你有意需要完整的本地 Vitest 测试套件时，才使用 `pnpm test`。
 
-在 Codex worktree 或链接/稀疏检出中，代理应避免直接本地运行
-`pnpm test*` / `pnpm check*` / `pnpm crabbox:run`：
+- 有依赖已就绪时的有界聚焦证明：
+  `node scripts/run-vitest.mjs <path-or-filter>`.
+- 先分类的变更检查：`node scripts/check-changed.mjs`；仅文档、
+  无变更和小型元数据计划在依赖已就绪时保持本地执行，而重型或缺少依赖的计划则委派给 Testbox。
+- 显式保留租约的广泛证明：`node scripts/crabbox-wrapper.mjs run --provider blacksmith-testbox ... -- env OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 corepack pnpm check:changed`，这样 pnpm 会在 Testbox 内运行。
+- wrapper 最终的 `exitCode` 和计时 JSON 就是命令结果。一次委派的 Blacksmith GitHub Actions 运行在 SSH 命令成功后可能显示 `cancelled`，因为 Testbox 会从 keepalive action 外部被停止；在将其视为失败之前，请先检查 wrapper 摘要和命令输出。
+- `OPENCLAW_HEAVY_CHECK_LOCK_SCOPE=worktree <local-heavy-check command>`：将 heavy-check 的串行化保持在当前 worktree 内，而不是 Git common dir 中，适用于诸如 `pnpm check:changed` 和有针对性的 `pnpm test ...` 等命令。仅在高容量本地主机上、且你有意在链接的 worktree 之间运行独立检查时使用它。
 
 - 针对一个很小文件、且明确由用户要求的本地回退：
   `node scripts/run-vitest.mjs <path-or-filter>`。
@@ -44,18 +44,16 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 
 ## 核心命令
 
-测试包装器运行结束时会输出一条简短的 `[test] passed|failed|skipped ... in ...` 汇总；Vitest 自己的耗时行仍然保留为每个分片的详细信息。
-
-| 命令                                           | 作用                                                                                                                                                                                                                                                                                                                                          |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test`                                       | 显式文件/目录目标会路由到受限作用域的 Vitest 通道。未指定目标的运行属于全套验证：固定分片组会展开为叶子配置以便本地并行执行，启动前会打印预期的分片分发情况。扩展组始终会展开为按扩展名划分的分片配置，而不是一个巨大的根项目进程。 |
-| `pnpm test:changed`                               | 低成本的智能变更测试运行：基于直接测试改动、同级 `*.test.ts` 文件、显式源码映射以及本地导入图生成精确目标。除非广泛/配置/包级别的变更能映射到精确测试，否则会跳过这些变更。                                                                                                                     |
-| `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` | 显式的宽范围变更测试运行；当测试框架/配置/包的修改应退回到 Vitest 更宽泛的变更测试行为时使用。                                                                                                                                                                                                              |
-| `pnpm test:force`                                 | 释放已配置的 OpenClaw 网关端口（默认 `18789`），然后使用隔离的网关端口运行完整测试套件，这样服务器测试就不会与正在运行的实例发生冲突。                                                                                                                                                                          |
-| `pnpm test:coverage`                              | 为默认单元分支（`vitest.unit.config.ts`）输出一份信息性的 V8 覆盖率报告；不强制任何覆盖率阈值。                                                                                                                                                                                                                   |
-| `pnpm test:coverage:changed`                      | 仅对自 `origin/main` 以来发生变更的文件进行单元覆盖率统计。                                                                                                                                                                                                                                                                                             |
-| `pnpm changed:lanes`                              | 显示相对于 `origin/main` 的 diff 所触发的架构分支。                                                                                                                                                                                                                                                                            |
-| `pnpm check:changed`                              | 默认在 CI 之外委派给 Crabbox/Testbox，然后在远程子进程中运行智能变更检查门禁：针对受影响分支执行格式化以及类型检查、lint 和 guard 命令。不会运行 Vitest；如需测试验证，请使用 `pnpm test:changed` 或 `pnpm test <target>`。                                                                      |
+| Command                                           | 作用                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test`                                       | 显式的文件/目录目标会通过作用域化的 Vitest 车道运行。未指定目标的运行则是完整套件证明：固定的分片组会展开为叶子配置以便本地并行执行，并在开始前打印预期的分片扇出数。扩展组始终会展开为按扩展拆分的分片配置，而不是一个巨大的根项目进程。           |
+| `pnpm test:changed`                               | 经济的智能变更测试运行：根据直接的测试修改、同级的 `*.test.ts` 文件、显式源映射以及本地导入图精确定位目标。除非它们能映射到精确测试，否则会跳过大范围/配置/包的变更。                                                                                                                               |
+| `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` | 显式的大范围变更测试运行；当测试框架/配置/包的修改应回退到 Vitest 更宽泛的变更测试行为时使用。                                                                                                                                                                                                                        |
+| `pnpm test:force`                                 | 释放已配置的 OpenClaw 网关端口（默认 `18789`），然后使用隔离的网关端口运行完整套件，这样服务器测试就不会与正在运行的实例发生冲突。                                                                                                                                                                                    |
+| `pnpm test:coverage`                              | 为默认单元车道（`vitest.unit.config.ts`）输出一份信息性的 V8 覆盖率报告；不强制任何覆盖率阈值。                                                                                                                                                                                                                             |
+| `pnpm test:coverage:changed`                      | 仅针对自 `origin/main` 以来发生变更的文件进行单元覆盖率统计。                                                                                                                                                                                                                                                                                                       |
+| `pnpm changed:lanes`                              | 显示由相对于 `origin/main` 的差异触发的架构车道。                                                                                                                                                                                                                                                                                      |
+| `pnpm check:changed`                              | 在选择执行前对变更车道进行分类。只要依赖已就绪，纯文档、无变更以及小型元数据计划会保持在本地；具有类型检查/lint 扇出、其他重型车道或缺少本地依赖的计划会在 CI 之外委托给 Crabbox/Testbox。不会运行 Vitest；如需测试证明，请使用 `pnpm test:changed` 或 `pnpm test <target>`。 |
 
 ## 共享测试状态和进程辅助工具
 
@@ -90,7 +88,7 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 - 裸镜像（`OPENCLAW_DOCKER_E2E_BARE_IMAGE`）：安装器/更新/插件依赖通道；挂载预构建的 tarball，而不是复制仓库源码。
 - 功能镜像（`OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE`）：正常的已构建应用功能通道。
 - 通道定义：`scripts/lib/docker-e2e-scenarios.mjs`。规划器：`scripts/lib/docker-e2e-plan.mjs`。执行器：`scripts/test-docker-all.mjs`。
-- `node scripts/test-docker-all.mjs --plan-json` 会输出由调度器拥有的 CI 计划（通道、镜像类型、包/直播镜像需求、状态场景、凭据检查），而不会构建或运行 Docker。
+- `node scripts/test-docker-all.mjs --plan-json` 会输出由调度器拥有的 CI 计划（通道、镜像类型、包/ライブ镜像需求、状态场景、凭据检查），而不会构建或运行 Docker。
 
 调度参数（环境变量，括号内为默认值）：
 
@@ -131,9 +129,9 @@ node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --t
 | `pnpm test:docker:update-migration`                                         | `plugin-deps-cleanup` 场景中的 published-upgrade survivor 运行器，默认从 `openclaw@2026.4.23` 开始。`Update Migration` 工作流会将其扩展为 `baselines=all-since-2026.4.23`，以证明在 Full Release CI 之外的已配置插件依赖清理。                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `pnpm test:docker:plugins`                                                  | 本地路径、`file:`、带提升依赖的 npm registry 包、git 移动引用、ClawHub fixture、marketplace 更新，以及 Claude-bundle 启用/检查的安装/更新冒烟测试。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
-## Local PR Gates
+## 本地 PR 门禁
 
-For local PR merge/gate checks, run:
+对于本地 PR 合并/门禁检查，运行：
 
 - `pnpm check:changed`
 - `pnpm check`
@@ -142,7 +140,7 @@ For local PR merge/gate checks, run:
 - `pnpm test`
 - `pnpm check:docs`
 
-If `pnpm test` intermittently fails on heavily loaded hosts, rerun it once before treating it as a regression, then use `pnpm test <path/to/test>` to isolate it. For memory-constrained hosts:
+如果 `pnpm test` 在负载很高的主机上偶发失败，在将其视为回归之前先重新运行一次，然后使用 `pnpm test <path/to/test>` 将其隔离。对于内存受限的主机：
 
 - `OPENCLAW_VITEST_MAX_WORKERS=1 pnpm test`
 - `OPENCLAW_VITEST_FS_MODULE_CACHE_PATH=/tmp/openclaw-vitest-cache pnpm test:changed`

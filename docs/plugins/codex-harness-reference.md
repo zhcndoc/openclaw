@@ -40,17 +40,18 @@ read_when:
 
 | 字段                       | 默认值                   | 含义                                                                                                                                         |
 | -------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discovery`                | enabled                  | Codex app-server `model/list` 的模型发现设置。                                                                                               |
-| `appServer`                 | managed stdio app-server | 传输、命令、认证、审批、沙箱和超时设置。普通 harness 默认使用 agent 作用域状态。                                                            |
-| `codexDynamicToolsLoading` | `"searchable"`           | 使用 `"direct"` 将 OpenClaw 动态工具直接放入初始 Codex 工具上下文中。                                                                        |
-| `codexDynamicToolsExclude` | `[]`                     | 从 Codex app-server 回合中排除的额外 OpenClaw 动态工具名称。                                                                                  |
-| `codexPlugins`             | disabled                 | 原生 Codex 插件/app 支持，包括对已连接账户应用的可选访问权限。参见 [Native Codex plugins](/plugins/codex-native-plugins)。                    |
-| `computerUse`              | disabled                 | Codex Computer Use 设置。参见 [Codex Computer Use](/plugins/codex-computer-use)。                                                           |
-| `supervision`              | disabled                 | 非归档的原生会话目录、本地分支继续以及 agent 工具策略。参见 [Codex supervision](/plugins/codex-supervision)。                               |
+| `discovery`                | 已启用                  | Codex app-server `model/list` 的模型发现设置。                                                                                               |
+| `appServer`                | 托管的 stdio app-server | 传输、命令、认证、审批、沙箱和超时设置。普通 harness 默认使用 agent 作用域状态。                                                             |
+| `codexDynamicToolsLoading` | `"searchable"`           | 使用 `"direct"` 可将 OpenClaw 动态工具直接放入初始 Codex 工具上下文中。                                                                      |
+| `codexDynamicToolsExclude` | `[]`                     | 从 Codex app-server 轮次中排除的额外 OpenClaw 动态工具名称。                                                                                 |
+| `codexPlugins`             | 已禁用                   | 原生 Codex 插件/app 支持，包括对已连接账户应用的可选访问。参见 [原生 Codex 插件](/plugins/codex-native-plugins)。                              |
+| `computerUse`              | 已禁用                   | Codex Computer Use 配置。参见 [Codex Computer Use](/plugins/codex-computer-use)。                                                          |
+| `sessionCatalog`           | 已启用                   | 侧边栏的原生 Codex 会话发现。设置 `enabled: false` 可在不禁用 provider 或 harness 的情况下关闭发现。                                           |
+| `supervision`              | 已禁用                   | 面向 agent 的原生会话转录和写入控制策略。参见 [Codex supervision](/plugins/codex-supervision)。                                               |
 
 ## 监管
 
-监管会列出来自 Gateway 计算机以及已选择加入的配对节点中的未归档 Codex 会话。可独立于代理 harness 启用它：
+原生会话发现默认会列出来自 Gateway 计算机以及已选择加入的配对节点中的未归档 Codex 会话。仅通过以下方式禁用该目录：
 
 ```json5
 {
@@ -59,8 +60,8 @@ read_when:
       codex: {
         enabled: true,
         config: {
-          supervision: {
-            enabled: true,
+          sessionCatalog: {
+            enabled: false,
           },
         },
       },
@@ -69,14 +70,14 @@ read_when:
 }
 ```
 
-`supervision` 字段：
+`supervision` 单独控制面向代理的工具：
 
-| 字段                  | 默认值                  | 含义                                                                                                                                                                                                                                   |
-| --------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`             | `false`                 | 发布本地会话目录，并在 Gateway 上聚合已选择加入的配对节点目录，用于 Codex Sessions 页面。                                                                                                                                                |
-| `endpoints`           | 内置本地端点            | 保留的 Codex 监管代理和独立 MCP 工具的兼容性与高级端点目标。人工目录和分支流会忽略这些目标，并使用从 `appServer` 解析得到的监管 App Server。                                                                                           |
-| `allowRawTranscripts` | `false`                 | 在启用监管的情况下，允许自主代理或独立 MCP 读取 transcript 以及基于 transcript 的列表字段。`codex_threads` 的仅元数据读取仍然可用。不会控制已认证 Control UI 的继续操作。                                                           |
-| `allowWriteControls`  | `false`                 | 在启用监管的情况下，允许自主 `codex_threads` 的 fork、重命名、归档和取消归档变更，以及独立 MCP 的 send、steer 和 interrupt 操作。不会绕过其他绑定、主机、状态或确认检查。                                                             |
+| 字段                 | 默认值                   | 含义                                                                                                                                                                                                                                   |
+| --------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`            | `false`                  | 启用面向代理的 Codex 监管工具。这不控制已认证的操作员会话目录。                                                                                                                                |
+| `endpoints`          | 内置本地端点             | 为保留的 Codex 监管代理和独立 MCP 工具提供兼容性和高级端点目标。人类目录和分支流会忽略这些目标，并使用从 `appServer` 解析得到的监管 App Server。       |
+| `allowRawTranscripts` | `false`                 | 在启用监管的情况下，允许自主代理或独立 MCP 读取完整转录，以及基于转录派生的列表字段。`codex_threads` 的仅元数据读取仍然可用。不会控制已认证的 Control UI 续接。     |
+| `allowWriteControls`  | `false`                  | 在启用监管的情况下，允许自主的 `codex_threads` 分叉、重命名、归档和取消归档变更，以及独立 MCP 的发送、引导和中断操作。不会绕过其他绑定、主机、状态或确认检查。 |
 
 端点条目接受以下字段：
 
@@ -441,16 +442,16 @@ Codex 特定的超时文本：可重放安全的情况会说明响应可能不�
 
 如果发现失败或超时，OpenClaw 会使用捆绑的备用目录：
 
-| Model id       | Display name | Reasoning efforts        |
-| -------------- | ------------ | ------------------------ |
-| `gpt-5.5`      | gpt-5.5      | low, medium, high, xhigh |
+| Model id       | 显示名称 | 推理能力        |
+| -------------- | -------- | ---------------- |
+| `gpt-5.5`      | gpt-5.5  | low, medium, high, xhigh |
 | `gpt-5.4-mini` | GPT-5.4-Mini | low, medium, high, xhigh |
 
 <Note>
 当前捆绑的 harness 是 `@openai/codex` `0.144.3`。针对该捆绑的 app-server 进行的 `model/list` 探测返回了以下公开选择器行：
 
-| Model id        | Input modalities | Reasoning efforts                    |
-| --------------- | ---------------- | ------------------------------------ |
+| Model id        | 输入模态 | 推理能力                    |
+| --------------- | -------- | --------------------------- |
 | `gpt-5.6-sol`   | text, image      | low, medium, high, xhigh, max, ultra |
 | `gpt-5.6-terra` | text, image      | low, medium, high, xhigh, max, ultra |
 | `gpt-5.6-luna`  | text, image      | low, medium, high, xhigh, max        |
@@ -529,9 +530,9 @@ OpenClaw 不会为 persona 文件编写合成的 Codex 项目文档文件，也�
   或当前工作区与代理记忆工作区不同，则 `MEMORY.md` 会改为使用正常的受限轮次上下文路径。
 - `BOOTSTRAP.md` 在存在时，会作为 OpenClaw 轮次输入的参考上下文转发。
 
-## Environment Overrides
+## 环境覆盖
 
-Local testing can still use environment overrides:
+本地测试仍然可以使用环境覆盖：
 
 - `OPENCLAW_CODEX_APP_SERVER_BIN`
 - `OPENCLAW_CODEX_APP_SERVER_ARGS`
@@ -539,11 +540,11 @@ Local testing can still use environment overrides:
 - `OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY`
 - `OPENCLAW_CODEX_APP_SERVER_SANDBOX`
 
-When `appServer.command` is not set, `OPENCLAW_CODEX_APP_SERVER_BIN` bypasses the managed binary.
+当未设置 `appServer.command` 时，`OPENCLAW_CODEX_APP_SERVER_BIN` 会绕过托管二进制文件。
 
-`OPENCLAW_CODEX_APP_SERVER_GUARDIAN=1` has been removed. Please use
-`plugins.entries.codex.config.appServer.mode: "guardian"` instead, or for one-off local testing use
-`OPENCLAW_CODEX_APP_SERVER_MODE=guardian`. For repeatable deployments, configuration is preferred because it keeps plugin behavior together with the rest of the Codex harness settings in the same reviewed file.
+`OPENCLAW_CODEX_APP_SERVER_GUARDIAN=1` 已被移除。请改用
+`plugins.entries.codex.config.appServer.mode: "guardian"`，或者在进行一次性本地测试时使用
+`OPENCLAW_CODEX_APP_SERVER_MODE=guardian`。对于可重复的部署，建议优先使用配置，因为它能将插件行为与 Codex 其余的 harness 设置一起保存在同一个经过审查的文件中。
 
 ## 相关内容
 

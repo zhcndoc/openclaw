@@ -37,7 +37,10 @@ openclaw plugins install @openclaw/signal
     ```bash
     openclaw channels add
     ```
-    向导会检测 `signal-cli` 是否在 `PATH` 中；如果没有，它会提供安装选项：在 Linux x86-64 上下载官方原生 GraalVM 构建版本，或在 macOS 和其他架构上通过 Homebrew 安装。随后它会提示输入机器人号码和 `signal-cli` 路径。
+    向导会检测 `signal-cli` 是否在 `PATH` 中；如果缺失，它会提供安装方式：在 Linux x86-64 上下载官方原生 GraalVM 构建版本，或在 macOS 和其他架构上通过 Homebrew 安装。随后会提示输入机器人号码和 `signal-cli` 路径。
+
+    对于非交互式设置，`openclaw channels add --channel signal` 也接受 `--signal-number <e164>` 作为机器人电话号码，以及 `--http-host <host>` 和 `--http-port <port>` 作为 Signal 守护进程端点（默认 `127.0.0.1:8080`）。
+
   </Step>
   <Step title="关联或注册账户">
     - **QR 码关联（最快）：** `signal-cli link -n "OpenClaw"`，然后用 Signal 扫描。参见 [路径 A](#setup-path-a-link-existing-signal-account-qr)。
@@ -84,11 +87,11 @@ openclaw plugins install @openclaw/signal
 - 私信共享代理的主会话；群组彼此隔离（`agent:<agentId>:signal:group:<groupId>`）。
 - 默认情况下，Signal 可能会写入由 `/config set|unset` 触发的配置更新（需要 `commands.config: true`）。可通过将 `channels.signal.configWrites` 设置为 `false` 来禁用。
 
-## 设置路径 A：链接已有 Signal 账户（QR）
+## Set up path A: link an existing Signal account (QR)
 
-1. 安装 `signal-cli`（JVM 或原生构建版本），或者让 `openclaw channels add` 为你安装它。
-2. 链接一个机器人账户：`signal-cli link -n "OpenClaw"`，然后在 Signal 中扫描二维码。
-3. 配置 Signal 并启动网关。
+1. Install `signal-cli` (JVM or native build version), or let `openclaw channels add` install it for you.
+2. Link a bot account: `signal-cli link -n "OpenClaw"`, then scan the QR code in Signal.
+3. Configure Signal and start the gateway.
 
 ## 设置路径 B：注册专用机器人号码（SMS，Linux）
 
@@ -225,27 +228,27 @@ OpenClaw 配置：
 - 当 `httpUrl` 指向 bbernhard REST API 时，设置 `apiMode: "container"`；当它指向原生 `signal-cli` JSON-RPC/SSE 时，设置 `"native"`；当部署可能变化时，设置 `"auto"`。
 - 容器附件下载遵循与原生模式相同的媒体字节限制。如果服务器发送了 `Content-Length`，则在完整缓冲前会拒绝超出大小的响应；否则会在流式传输过程中拒绝。
 
-## 访问控制（私信 + 群组）
+## Access Control (DM + Groups)
 
-私信：
+Direct messages:
 
-- 默认：`channels.signal.dmPolicy = "pairing"`。
-- 未知发送者会获得一个配对码；在获得批准之前，消息会被忽略（配对码 1 小时后过期）。
-- 通过 `openclaw pairing list signal` 和 `openclaw pairing approve signal <CODE>` 进行批准。
-- 配对是 Signal 私信的默认令牌交换方式。详情： [配对](/channels/pairing)
-- 仅 UUID 的发送者（来自 `sourceUuid`）会以 `uuid:<id>` 的形式存储在 `channels.signal.allowFrom` 中。
+- Default: `channels.signal.dmPolicy = "pairing"`.
+- Unknown senders receive a pairing code; messages are ignored until approved (pairing codes expire after 1 hour).
+- Approve via `openclaw pairing list signal` and `openclaw pairing approve signal <CODE>`.
+- Pairing is the default token exchange method for Signal direct messages. Details: [Pairing](/channels/pairing)
+- UUID-only senders (from `sourceUuid`) are stored in `channels.signal.allowFrom` as `uuid:<id>`.
 
-群组：
+Groups:
 
 - `channels.signal.groupPolicy = open | allowlist | disabled`.
-- `channels.signal.groupAllowFrom` 控制在设置为 `allowlist` 时哪些群组或发送者可以触发群组回复；条目可以是 Signal 群组 ID（原始形式、`group:<id>` 或 `signal:group:<id>`）、发送者手机号、`uuid:<id>` 值或 `*`。
-- `channels.signal.groups["<group-id>" | "*"]` 可以通过 `requireMention`、`tools` 和 `toolsBySender` 覆盖群组行为。
-- 在多账号设置中，使用 `channels.signal.accounts.<id>.groups` 进行按账号覆盖。
-- 通过 `groupAllowFrom` 将某个 Signal 群组加入允许列表，并不会自动禁用提及门控。一个专门配置的 `channels.signal.groups["<group-id>"]` 条目会处理每条群消息，除非设置了 `requireMention=true`。
-- 当 `requireMention=true` 时，会根据结构化提及元数据将 Signal 原生 @mentions 与机器人账号手机号或 `accountUuid` 进行匹配。配置的 `mentionPatterns` 仍然是纯文本回退方案。
-- 运行时说明：如果 `channels.signal` 完全缺失，运行时会在群组检查中回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
+- `channels.signal.groupAllowFrom` controls which groups or senders can trigger group replies when set to `allowlist`; entries can be Signal group IDs (raw form, `group:<id>` or `signal:group:<id>`), sender phone numbers, `uuid:<id>` values, or `*`.
+- `channels.signal.groups["<group-id>" | "*"]` can override group behavior via `requireMention`, `tools`, and `toolsBySender`.
+- In multi-account setups, use `channels.signal.accounts.<id>.groups` for per-account overrides.
+- Adding a Signal group to the allowlist via `groupAllowFrom` does not automatically disable mention gating. A specifically configured `channels.signal.groups["<group-id>"]` entry will handle every group message unless `requireMention=true` is set.
+- When `requireMention=true`, Signal native @mentions are matched against the bot account phone number or `accountUuid` using structured mention metadata. Configured `mentionPatterns` remain a plain-text fallback.
+- Runtime note: if `channels.signal` is entirely missing, runtime falls back to `groupPolicy="allowlist"` for group checks (even if `channels.defaults.groupPolicy` is set).
 
-带有受限上下文的提及门控群组：
+Mention-gated groups with limited context:
 
 ```json5
 {
@@ -269,7 +272,7 @@ OpenClaw 配置：
 }
 ```
 
-未提及机器人的允许群消息会保持静默，并且只会保留在有限的待处理历史窗口中。当后续的原生 @mention 或回退文本提及触发机器人时，OpenClaw 会包含那段最近的上下文，并回复到同一个群组。被跳过的附件正文不会被下载；它们可能只会以紧凑的媒体占位符形式出现在待处理上下文中。
+Allowed group messages that do not mention the bot will stay silent and remain only in the limited pending history window. When a later native @mention or fallback text mention triggers the bot, OpenClaw will include that recent context and reply to the same group. Skipped attachment bodies will not be downloaded; they may only appear as compact media placeholders in the pending context.
 
 ## 工作原理（行为）
 
@@ -326,15 +329,15 @@ message action=react channel=signal target=signal:group:<groupId> targetAuthor=u
   - `minimal`/`extensive` 启用 agent reactions 并设置指导级别。
 - 按账户覆盖：`channels.signal.accounts.<id>.actions.reactions`、`channels.signal.accounts.<id>.reactionLevel`。
 
-## 批准反应
+## Approve Reactions
 
-Signal exec 和 plugin 批准提示使用顶层的 `approvals.exec` 和 `approvals.plugin` 路由块。Signal 没有 `channels.signal.execApprovals` 块。
+Signal exec and plugin approval prompts use the top-level `approvals.exec` and `approvals.plugin` routing blocks. Signal does not have a `channels.signal.execApprovals` block.
 
-- `👍` 批准一次。
-- `👎` 拒绝。
-- 当请求提供持久批准时，使用 `/approve <id> allow-always`。
+- `👍` Approve once.
+- `👎` Reject.
+- When requesting persistent approval, use `/approve <id> allow-always`.
 
-批准反应的解析需要来自 `channels.signal.allowFrom`、`channels.signal.defaultTo` 或匹配的账户级字段的显式 Signal 批准者。直接的同聊 exec 批准提示即使没有显式批准者，也仍然可以抑制重复的本地 `/approve` 回退；没有批准者的群组批准会保留本地回退可见。
+Approval reaction parsing requires explicit Signal approvers from `channels.signal.allowFrom`, `channels.signal.defaultTo`, or matching account-level fields. Direct same-chat exec approval prompts can still suppress duplicate local `/approve` fallbacks even without an explicit approver; group approvals without an approver will keep the local fallback visible.
 
 ## 传递目标（CLI/cron）
 
@@ -343,7 +346,7 @@ Signal exec 和 plugin 批准提示使用顶层的 `approvals.exec` 和 `approva
 - 群组：`signal:group:<groupId>`。
 - 用户名：`username:<name>`（如果你的 Signal 账户支持）。
 
-## 别名
+## Aliases
 
 为可重复使用的 Signal 目标配置稳定名称。别名仅用于 OpenClaw 侧配置；它们不会创建或编辑 Signal 联系人。
 

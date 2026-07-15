@@ -74,7 +74,7 @@ openclaw tui --local
 
   默认值为 `false`。回环和嵌入式本地连接从不显示主机标签。
 
-- 如果会话具有一个 [goal](/tools/goal)，页脚会显示其紧凑状态：
+- 如果会话具有一个 [目标](/tools/goal)，页脚会显示其紧凑状态：
   `Pursuing goal`、`Goal paused (/goal resume)`、`Goal blocked (/goal resume)` 或 `Goal achieved`。
 - 当在未指定 `--session` 的情况下启动时，gateway 模式的 TUI 会为同一 gateway、agent 和会话作用域恢复上一次选中的会话，前提是该会话仍然存在。传入 `--session`、`/session`、`/new` 或 `/reset` 仍然是显式指定。
 
@@ -138,33 +138,33 @@ openclaw tui --local
 
 - `/auth [provider]` 会在 TUI 内打开 provider 的认证/登录流程。
 
-Crestodian:
+OpenClaw:
 
-- `/crestodian [request]` 会从正常的 agent TUI 返回到 [Crestodian](#crestodian-setup-and-repair-helper) 设置/修复聊天，并可选择性地转发一条请求。
+- `/openclaw [request]` 会从正常的 agent TUI 返回到 [OpenClaw](#openclaw-setup-and-repair-helper) 设置/修复聊天，并可选择性地转发一条请求。
 
 其他 Gateway 斜杠命令（例如 `/context`）会转发给 Gateway，并作为系统输出显示。请参阅 [斜杠命令](/tools/slash-commands)。
 
-## Local shell commands
+## 本地 shell 命令
 
-- Add `!` at the beginning of a line to run a local shell command on the TUI host.
-- The TUI will prompt once per session whether to allow local execution; if refused, `!` will remain disabled for that session.
-- Commands run in a fresh, non-interactive shell in the TUI working directory (it will not preserve `cd`/environment variables).
-- Local shell commands receive `OPENCLAW_SHELL=tui-local` in their environment.
-- A standalone `!` will be sent as a normal message; a leading space will not trigger local execution.
+- 在行首添加 `!`，即可在 TUI 主机上运行本地 shell 命令。
+- TUI 会在每个会话中提示一次是否允许本地执行；如果拒绝，则该会话中 `!` 将保持禁用状态。
+- 命令会在 TUI 工作目录中的一个全新的、非交互式 shell 中运行（不会保留 `cd`/环境变量）。
+- 本地 shell 命令在其环境中会收到 `OPENCLAW_SHELL=tui-local`。
+- 单独的 `!` 会作为普通消息发送；前导空格不会触发本地执行。
 
-## Crestodian 设置与修复助手
+## OpenClaw 设置和修复助手
 
-Crestodian 是 ring-zero 设置/修复助手，在配置好的默认模型通过实时推理检查后，会以 `openclaw crestodian` 的形式暴露出来。如果推理不可用，交互式调用会回到推理引导流程，并且自动化会在提供修复指导的情况下失败。它运行在与 `openclaw tui --local` 相同的本地 TUI shell 中，由一个受 Crestodian 类型化、需审批操作限制的 AI agent 提供支持：
+OpenClaw 是 ring-zero 设置/修复助手，在配置好的默认模型通过实时推理检查后，会以 `openclaw setup` 的形式提供。若推理不可用，交互式调用会返回到推理引导流程，自动化则会失败并给出修复指导。它运行在与 `openclaw tui --local` 相同的本地 TUI shell 中，由一个受限于 OpenClaw 类型化、需要审批的操作的 AI agent 驱动：
 
 ```bash
-openclaw crestodian                       # 交互式启动
-openclaw crestodian -m "status"           # 运行一个请求后退出
-openclaw crestodian -m "set default model openai/gpt-5.2" --yes   # 应用配置写入
+openclaw setup                       # 交互式启动
+openclaw setup -m "status"           # 运行一次请求并退出
+openclaw setup -m "set default model openai/gpt-5.2" --yes   # 应用一次配置写入
 ```
 
-- 持久化配置写入需要审批：要么交互式确认，要么传入 `--yes`。
-- `--json` 会将启动概览以 JSON 形式输出，而不是启动聊天。
-- 在 Crestodian 内部，`open-tui` 请求（例如，要求与普通 agent 对话）会退出 Crestodian 并打开常规的 agent TUI；在其中使用 `/crestodian` 返回。
+- 持久化配置写入需要审批：可以交互式确认，或者传入 `--yes`。
+- `--json` 会以 JSON 格式打印启动概览，而不是启动聊天。
+- 在 OpenClaw 内部，`open-tui` 请求（例如，要求切换到普通 agent）会退出 OpenClaw 并打开常规的 agent TUI；在其中使用 `/openclaw` 可以返回。
 
 当当前配置已经通过验证，并且你希望内嵌 agent 在同一台机器上检查它、将它与文档对比，并在不依赖正在运行的 Gateway 的情况下帮助修复偏差时，请使用本地模式。
 

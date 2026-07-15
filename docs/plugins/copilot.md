@@ -222,7 +222,7 @@ OpenClaw 端的对话记录镜像（如下）会继续接收压缩后的
 
 镜像外层包裹了两层故障隔离，以确保转录写入失败绝不会导致尝试失败：一层是内部尽力而为的包装器，另一层是尝试级别上的防御性 `.catch(...)`。失败只会被记录，不会向外抛出。
 
-## 侧边问题（`/btw`）
+## Side Question（`/btw`）
 
 `/btw` 在这个 harness 中**不是**原生支持的。`createCopilotAgentHarness()`
 故意将 `harness.runSideQuestion` 留空未定义
@@ -257,7 +257,7 @@ OpenClaw 端的对话记录镜像（如下）会继续接收压缩后的
 `wrapToolWithBeforeToolCallHook`（`src/agents/agent-tools.before-tool-call.ts`）也被
 `createOpenClawCodingTools` 应用于每个编码工具：循环检测、受信任的插件策略、before-tool-call 钩子，以及通过网关（`plugin.approval.request`）进行的两阶段插件审批，全部都沿着与原生 PI 尝试完全相同的代码路径运行。
 
-`convertOpenClawToolToSdkTool` 返回的 SDK Tool 会被标记为：
+Each SDK tool returned by the Copilot tool bridge is marked with:
 
 - `overridesBuiltInTool: true` — 替换 Copilot CLI 中同名的内置工具（edit、read、write、bash、...），因此每次工具调用都会路由回 OpenClaw。
 - `skipPermission: true` — 告诉 SDK 在调用工具之前不要触发 `onPermissionRequest({kind: "custom-tool"})`。包装后的 `execute()` 已经执行了更丰富的 OpenClaw 策略检查；如果在 SDK 层再弹出提示，要么会短路 OpenClaw 的强制执行（全部允许），要么会阻止每一次工具调用（全部拒绝）——这两种情况都不符合 PI 的对等行为。

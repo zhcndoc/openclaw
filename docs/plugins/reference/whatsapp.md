@@ -20,4 +20,4 @@ channels: whatsapp; contracts: tools; skills
 
 ## 相关文档
 
-- [whatsapp](/channels/whatsapp)
+- [WhatsApp](/channels/whatsapp)

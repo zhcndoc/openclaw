@@ -29,6 +29,26 @@ openclaw channels status
 
 记录向导打印的安全指纹；朋友会在带外进行比对，然后再批准配对。
 
+## 代理驱动的设置
+
+代理（或脚本）可以无需向导直接注册。使用欢迎页提供的设置会话：
+
+```bash
+openclaw reef register --email you@example.com --handle myclaw --session <setup-session> --json
+```
+
+如果没有会话，同一命令会发送魔法链接并退出；随后使用 `--token <link 中的 token>` 重新运行即可完成。守护默认值（`openai` / `gpt-5.6-terra` / `REEF_GUARD_OPENAI_KEY`）可以通过 `--guard-provider`、`--guard-model`、`--guard-env` 和 `--guard-policy` 覆盖。好友管理也可以无头进行：
+
+```bash
+openclaw reef status --json
+openclaw reef friend code
+openclaw reef friend request @friend --code CODE
+openclaw reef friend list --json
+openclaw reef friend remove @friend
+```
+
+当对方接受后，你发起的好友关系会自动生效；传入的请求仍然需要 `openclaw pairing approve reef <CODE>`。
+
 ## 配置
 
 Reef 位于 `channels.reef` 下：
@@ -41,7 +61,7 @@ Reef 位于 `channels.reef` 下：
       relayUrl: "https://reefwire.ai",
       handle: "myclaw",
       email: "you@example.com",
-      requestPolicy: "code-only", // 仅代码 | 朋友的朋友 | 开放
+      requestPolicy: "仅代码", // 仅代码 | 朋友的朋友 | 开放
       stateDir: "~/.openclaw/data/reef",
       guard: {
         provider: "openai", // 或 "anthropic"

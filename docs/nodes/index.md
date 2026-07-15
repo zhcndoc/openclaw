@@ -7,7 +7,7 @@ read_when:
 title: "节点"
 ---
 
-**节点**是一个伴随设备（macOS/iOS/watchOS/Android/无头设备），它通过 `role: "node"` 连接到 Gateway，并通过 `node.invoke` 暴露一组命令接口（例如 `canvas.*`、`camera.*`、`device.*`、`notifications.*`、`system.*`）。大多数节点使用操作员端口上的 Gateway WebSocket。可选的直接 Apple Watch 节点则在同一端口上使用已签名的 HTTPS 轮询，因为 watchOS 会阻止普通应用进行通用的底层网络通信。协议详情：[Gateway protocol](/gateway/protocol)。
+**节点**是一个伴随设备（macOS/iOS/watchOS/Android/无头设备），它通过 `role: "node"` 连接到 Gateway，并通过 `node.invoke` 暴露一组命令接口（例如 `canvas.*`、`camera.*`、`device.*`、`notifications.*`、`system.*`）。大多数节点使用操作员端口上的 Gateway WebSocket。可选的直接 Apple Watch 节点则在同一端口上使用已签名的 HTTPS 轮询，因为 watchOS 会阻止普通应用进行通用的底层网络通信。协议详情：[Gateway 协议](/gateway/protocol)。
 
 旧版传输方式：[Bridge 协议](/gateway/bridge-protocol)（TCP JSONL；仅适用于当前节点的历史实现）。
 
@@ -67,9 +67,9 @@ N-1 节点在升级期间仍然可见且可管理；Gateway
 直接的 watchOS HTTPS 传输要求使用当前协议版本；在启用直连模式之前，
 请先随 Gateway 一起更新手表应用。
 
-## Remote node host (system.run)
+## 远程节点主机（system.run）
 
-When your Gateway is running on one machine and you want commands to be executed on another machine, use the **node host**. The model still talks to the **gateway**; when `host=node` is selected, the gateway forwards the `exec` call to the **node host**.
+当你的 Gateway 运行在一台机器上，而你希望命令在另一台机器上执行时，请使用 **node host**。模型仍然与 **gateway** 通信；当选择 `host=node` 时，gateway 会将 `exec` 调用转发到 **node host**。
 
 | 角色         | 职责                                                             |
 | ------------ | ---------------------------------------------------------------- |
@@ -207,7 +207,8 @@ frontmatter 字段匹配，这样抽象节点定位器就能映射到一个条�
 位置。技能文件、引用的相对路径以及二进制文件都保留在
 该节点上。代理使用普通的 `read` 工具读取所公布的
 `node://.../SKILL.md` 位置。`file_fetch` 接受经操作员批准的节点绝对路径，而不是节点技能定位符；没有普通读取工具的运行时可以改为通过
-`exec host=node node=<node-id>` 运行 `cat SKILL.md`，并将公布的 `node://.../skills/<name>` 目录作为 `workdir`。引用的文件和二进制文件使用相同的 exec 目标和 `workdir`。节点主机会根据其活动的 OpenClaw 状态目录解析该定位符，因此相对路径是在节点上解析，而不是在 Gateway 机器上解析。发布该技能的节点必须已批准 `system.run`，并且代理的 exec 策略必须允许 `host=node`；否则该技能会留在该代理的快照之外。
+`exec host=node node=<node-id>` 运行 `cat SKILL.md`，并将公布的
+`node://.../skills/<name>` 目录作为 `workdir`。引用的文件和二进制文件使用相同的 exec 目标和 `workdir`。节点主机会根据其活动的 OpenClaw 状态目录解析该定位符，因此相对路径是在节点上解析，而不是在 Gateway 机器上解析。发布该技能的节点必须已批准 `system.run`，并且代理的 exec 策略必须允许 `host=node`；否则该技能会留在该代理的快照之外。
 
 在节点上设置 `nodeHost.skills.enabled: false` 以停止发布。Gateway
 操作员可以通过 `gateway.nodes.skills.enabled: false` 忽略来自每个已配对节点的技能。
@@ -261,26 +262,33 @@ openclaw config set tools.exec.node "<id-or-name>"
 
 ### 本地模型推理
 
-桌面或服务器 node 可以从运行在该 node 上的 Ollama 服务器暴露支持聊天的模型。代理使用 Ollama 插件的 `node_inference` 工具来发现已安装的模型，并远程运行一个有边界的提示；Gateway 无需直接访问 Ollama 网络。有关设置、模型过滤和直接验证命令，请参见 [Ollama node-local inference](/providers/ollama#node-local-inference)。
+桌面或服务器 node 可以从运行在该 node 上的 Ollama 服务器暴露支持聊天的模型。代理使用 Ollama 插件的 `node_inference` 工具来发现已安装的模型，并远程运行一个有边界的提示；Gateway 无需直接访问 Ollama 网络。有关设置、模型过滤和直接验证命令，请参见 [Ollama 节点本地推理](/providers/ollama#node-local-inference)。
 
 ### Codex 会话和转录
 
-官方 `codex` 插件可以在无头节点主机或原生 macOS 节点上公开未归档的 Codex 会话。目录注册不再依赖 `supervision.enabled`；该选项用于控制面向代理的监督工具。插件在两台计算机上都必须保持启用，而节点设置仍然是本地同意：仅启用 Gateway 无法读取另一台计算机上的 Codex 状态。
+官方 `codex` 插件可以在无头节点主机或原生 macOS 节点上公开未归档的 Codex 会话。目录注册不再依赖于 `supervision.enabled`；该选项用于控制面向代理的监督工具。将 Codex 插件配置中的 `sessionCatalog.enabled: false` 设为 false，可在不禁用提供程序或 harness 的情况下禁用操作员目录和配对节点目录命令。
+该插件仍必须在两台计算机上处于活动状态，并且节点设置仍然是本地同意：仅启用 Gateway 无法读取另一台计算机的 Codex 状态。
 
-该节点会公布版本化的只读
+节点会公布带版本的只读
 `codex.appServer.threads.list.v1` 和
-`codex.appServer.thread.turns.list.v1` 命令。当这些命令首次出现时，请批准节点配对升级。Gateway 通过正常的插件节点策略调用它们，并按主机隔离故障。
+`codex.appServer.thread.turns.list.v1` 命令。可使用 Codex CLI 的原生节点主机还会公布 `codex.terminal.resume.v1`。当这些命令首次出现时，请批准节点配对升级。Gateway 会通过正常的插件节点策略调用它们，并按主机隔离故障。
 
-已配对节点的行会在常规会话侧边栏中显示为 **Codex** 分组。选择某一行会打开常规 Chat 面板，并通过带边界、带游标分页的
-`thread/turns/list` 调用，结合完整项投影读取其持久化转录。节点调用传输仅支持请求/响应，无法承载通过 Codex harness 继续原生线程所需的流式 turns、实时事件或审批。因此，**Continue** 和 **Archive** 对远程行不可用。在 Gateway 计算机上，已存储和空闲的行可以启动一个独立的、模型锁定的 Chat 分支。只有在操作员确认没有其他 Codex 客户端正在使用它之后，二者才可以归档；存储行的实时活动状态未知。活动中的行不能分支或归档。
+配对节点行会在常规会话侧边栏中显示为 **Codex** 组。默认情况下，选择某一行会打开常规 Chat 面板，并通过有边界限制、按游标分页的
+`thread/turns/list` 调用和完整项投影读取其持久化转录。使用行菜单、查看器标题，或 **Open Codex/Claude sessions in** 首选项，在拥有该会话的计算机上的操作员终端中启动 `codex resume <thread-id>`。配对节点终端路径是由 Codex 插件拥有的允许列表 PTY 中继，而不是任意的节点命令执行。
+
+该中继不提供完整的 OpenClaw harness 续接和归档所有权契约。因此，远程行不提供 **Continue** 和 **Archive**。在 Gateway 计算机上，已存储和空闲的
+行可以启动一个独立的、模型锁定的 Chat 分支。只有在操作员确认没有其他 Codex 客户端正在使用它之后，任一项才能归档；已存储行的实时活动仍然未知。活动行不能分支或归档。
 
 有关设置、分页、本地续接以及元数据安全边界，请参阅 [监督 Codex 会话](/plugins/codex-supervision)。
 
 ### Claude 会话和转录
 
-捆绑的 `anthropic` 插件会在 Gateway 和已配对节点上发现未归档的 Claude CLI 和 Claude Desktop 会话。与 Codex 监管不同，这不需要单独的主动选择：当 Anthropic 插件启用且 `~/.claude/projects/` 存在时，远程 macOS 应用节点会 الإعلان `anthropic.claude.sessions.list.v1` 和 `anthropic.claude.sessions.read.v1`。当这些命令首次出现时，批准节点配对升级。
+捆绑的 `anthropic` 插件默认会在 Gateway 和已配对节点上发现未归档的 Claude CLI 和 Claude Desktop 会话。将 `plugins.entries.anthropic.config.sessionCatalog.enabled: false` 设为 false，即可在不禁用 Anthropic 模型或 Claude CLI 后端的情况下，关闭操作员目录和已配对节点目录命令。
+当启用 Anthropic 插件且 `~/.claude/projects/` 存在时，远程 macOS 应用节点会声明 `anthropic.claude.sessions.list.v1` 和 `anthropic.claude.sessions.read.v1`。当这些命令首次出现时，批准节点配对升级。
 
-目录会将有效的 Claude CLI 项目索引记录与当前 `sdk-cli` JSONL 文件中受限的元数据前缀合并。Claude Desktop 的本地元数据提供 Desktop 标题和归档状态。当两种来源指向同一个 Claude Code 会话 ID 时，Desktop 元数据优先；CLI 专用转录仍然可见，因为 CLI 没有归档标志。转录读取使用不透明的字节偏移游标和受限的向后文件读取，因此选择大型会话或加载较旧页面时，不会将整个 JSONL 历史读入单个 Gateway 响应中。
+如果可用 Claude CLI，本机节点主机还会声明 `anthropic.claude.terminal.resume.v1`。符合条件的 CLI 和 Desktop 行可以在其所属主机上的操作员终端中打开 `claude --resume <session-id>`。这会接管本地会话；与 OpenClaw 采用不同，它不会先分叉 Claude 会话。
+
+目录会将有效的 Claude CLI 项目索引记录与当前 `sdk-cli` JSONL 文件中的受限元数据前缀结合起来。Claude Desktop 的本地元数据提供 Desktop 标题和归档状态。当两种来源指向同一个 Claude Code 会话 ID 时，Desktop 元数据优先生效；仅有 CLI 的转录仍然可见，因为 CLI 没有归档标志。转录读取使用不透明的字节偏移游标和受限的向后文件读取，因此，选择一个大型会话或加载更早的页面时，不会将整个 JSONL 历史一次性读入单个 Gateway 响应中。
 
 列表和读取命令是只读的。它们仅通过通用的 `sessions.catalog.list` 和 `sessions.catalog.read` 方法，将目录元数据和转录内容暴露给具有 `operator.write` 的已认证操作员连接。Gateway 本地的 Claude CLI 行可以从常规 Chat composer 中接管：OpenClaw 导入受限的可见历史，在第一轮使用 `--fork-session` 恢复，并保持源转录不变。
 
@@ -301,6 +309,32 @@ openclaw config set tools.exec.node "<id-or-name>"
 在节点上执行的轮次使用该节点的 Claude 默认配置。在 v1 中，它们不会接收 Gateway 回环 MCP 配置或 Gateway skills 插件，不能从 Gateway 转录重新播种，并且会拒绝附件和图像。Claude Desktop 行以及未声明运行命令的节点仍然只能查看。macOS 应用节点目前还不声明此命令，因此其行仍然是只读的。
 
 有关控制 UI 行为和存储来源，请参见 [Anthropic: 跨计算机的 Claude 会话](/providers/anthropic#claude-sessions-across-computers)。
+
+### OpenCode 和 Pi 会话
+
+捆绑的 OpenCode 和 ACPX 插件也会在 Gateway 和已配对节点上发现只读的原生会话
+目录。当安装了 `opencode`
+CLI 时，节点会声明 `opencode.sessions.list.v1` / `opencode.sessions.read.v1`，当存在 Pi 的会话目录时，会声明 `acpx.pi.sessions.list.v1` / `acpx.pi.sessions.read.v1`。
+当首次出现新命令时，请批准节点配对升级。当匹配的 CLI 也可用时，节点会添加
+`opencode.terminal.resume.v1` 或 `acpx.pi.terminal.resume.v1`；此时，现有的行
+菜单和查看器标题栏就可以使用 `opencode --session <id>` 或 `pi --session <id>`
+在其所属终端中重新打开所选会话。
+
+OpenCode 通过其官方 CLI JSON/export 接口读取。Pi 读取其
+文档化的 JSONL 会话存储，包括项目和全局 `settings.json`
+会话目录，以及 `PI_CODING_AGENT_DIR` 和
+`PI_CODING_AGENT_SESSION_DIR` 覆盖项。两个目录默认都启用；
+可在 Web UI 的 **Config > Plugins** 下将其关闭。
+
+终端恢复使用存储的会话工作目录，以及与 Codex 和 Claude 相同的
+允许列表双工 PTY 中继。它不会暴露任意
+节点命令执行。
+
+### 终端文件上传
+
+Control UI 可以将文件拖入已打开的配对节点终端。原生节点主机会公开仅限管理员的 `terminal.upload` 命令；当首次出现配对升级提示时，请予以批准。每个文件的大小限制为 16 MiB，会先暂存到该节点上的私有临时目录中，并以 shell 转义后的路径返回到终端，而不会执行该路径。
+
+路径插入支持 PowerShell、`cmd.exe` 以及可识别的 POSIX shell（`sh`、Bash、Dash、Ash、Ksh、Zsh 和 Fish），包括 Windows 上的 Git Bash。其他 shell 覆盖会被拒绝，因为无法安全推断其引用规则；若要使用原生 WSL 路径，请在 WSL 内运行节点主机。包含 `%` 或 `!` 的 `cmd.exe` 路径也会被拒绝，因为即使在双引号内，该 shell 也会展开这些字符。
 
 ## 调用命令
 
@@ -340,7 +374,7 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
 
 这些行描述的是网关策略的上限，而不是每个节点应用实际实现的命令。只有当已连接的节点也声明了该命令时，它才可用。特别是，当前 macOS 应用并未声明 macOS 策略行中列出的设备和个人数据类命令。
 
-`canvas.*` 命令（`canvas.present`、`canvas.hide`、`canvas.navigate`、`canvas.eval`、`canvas.snapshot`、`canvas.a2ui.*`）是在 iOS、Android、macOS、Windows 以及未知平台（非 Linux）上的插件默认命令；其中在 iOS 上全部都受到前台限制。
+`canvas.*` 命令（`canvas.present`、`canvas.hide`、`canvas.navigate`、`canvas.eval`、`canvas.snapshot`、`canvas.a2ui.*`）是 iOS、Android、macOS、Windows、Linux 以及未知平台上的插件默认命令。Linux 节点仅在桌面应用的本地 Canvas 套接字存在时才会声明它们。所有 Canvas 命令在 iOS 上都受前台限制。
 
 `talk.ptt.start`、`talk.ptt.stop`、`talk.ptt.cancel` 和 `talk.ptt.once` 对于任何声明了 `talk` 能力或声明了 `talk.*` 命令的节点，都会默认允许，与平台标记无关。
 
@@ -431,7 +465,7 @@ openclaw nodes canvas eval --node <idOrNameOrIp> --js "document.title"
 
 注意：
 
-- `canvas present` 接受 URL 或本地文件路径（`--target`），并可选提供 `--x/--y/--width/--height` 用于定位。
+- `canvas present` 接受 URL 或本地文件路径（`--target`），适用于支持本地路径的节点，并支持可选的 `--x/--y/--width/--height` 进行定位。Linux Canvas 接受 HTTP(S) URL 或其内置的 A2UI 渲染器。
 - `canvas eval` 接受内联 JS（`--js`）或位置参数。
 
 ### A2UI（Canvas）
@@ -444,36 +478,37 @@ openclaw nodes canvas a2ui reset --node <idOrNameOrIp>
 
 注意：
 
-- 移动端节点使用内置的、由应用拥有的 A2UI 页面来进行可执行操作的渲染。
+- 移动端和 Linux 桌面节点使用一个内置的、由应用拥有的 A2UI 页面来进行支持操作的渲染。
 - 仅支持 A2UI v0.8 JSONL（v0.9/createSurface 会被拒绝）。
-- iOS 和 Android 会渲染远程 Gateway Canvas 页面，但 A2UI 按钮操作只会从内置的、由应用拥有的 A2UI 页面分发。在这些移动客户端上，Gateway 托管的 HTTP/HTTPS A2UI 页面仅可用于渲染。
-- macOS 可以从应用选择的、具备精确能力范围的 Gateway A2UI 页面分发操作。其他 HTTP/HTTPS 页面仍然仅可用于渲染。
+- iOS 和 Android 渲染远程 Gateway Canvas 页面，但 A2UI 按钮操作只会从内置的、由应用拥有的 A2UI 页面分发。在这些移动客户端上，Gateway 托管的 HTTP/HTTPS A2UI 页面仅用于渲染。
+- macOS 可以从应用选择的、精确按能力范围隔离的 Gateway A2UI 页面分发操作。其他 HTTP/HTTPS 页面仍然仅用于渲染。
+- Linux 仅从内置的 A2UI 页面分发操作。其他 HTTP/HTTPS 页面仍然仅用于渲染，而且没有桌面应用的无头 Linux 节点不会公开 Canvas。
 
-## 照片 + 视频（node camera）
+## Photos + Videos (node camera)
 
-照片（`jpg`）：
+Photos (`jpg`):
 
 ```bash
 openclaw nodes camera list --node <idOrNameOrIp>
-openclaw nodes camera snap --node <idOrNameOrIp>            # 默认：两个朝向都拍摄（2 条 MEDIA 行）
+openclaw nodes camera snap --node <idOrNameOrIp>            # Default: capture both orientations (2 MEDIA lines)
 openclaw nodes camera snap --node <idOrNameOrIp> --facing front
 openclaw nodes camera snap --node <idOrNameOrIp> --device-id <id> --max-width 1200 --quality 0.9 --delay-ms 2000
 ```
 
-视频片段（`mp4`）：
+Video clips (`mp4`):
 
 ```bash
 openclaw nodes camera clip --node <idOrNameOrIp> --duration 10s
 openclaw nodes camera clip --node <idOrNameOrIp> --duration 3000 --no-audio
 ```
 
-注意：
+Note:
 
-- 节点必须处于**前台**才能使用 `canvas.*` 和 `camera.*`（后台调用会返回 `NODE_BACKGROUND_UNAVAILABLE`）。
-- 节点会对片段时长进行限制，以保持 base64 载荷可管理（各平台的精确限制请参见 [Camera capture](/nodes/camera)）。`nodes` 代理工具还会在转发调用前将请求的 `durationMs` 上限设为 300000（5 分钟）；节点本身会执行更严格的限制。
-- 在可能的情况下，Android 会提示授予 `CAMERA`/`RECORD_AUDIO` 权限；若权限被拒绝，则会失败并返回 `*_PERMISSION_REQUIRED`。
+- The node must be in the **foreground** to use `canvas.*` and `camera.*` (background calls will return `NODE_BACKGROUND_UNAVAILABLE`).
+- The node limits clip duration to keep the base64 payload manageable (see [Camera capture](/nodes/camera) for the exact limits on each platform). The `nodes` proxy tool also caps requested `durationMs` to 300000 (5 minutes) before forwarding the call; the node itself applies stricter limits.
+- Where possible, Android will prompt for `CAMERA`/`RECORD_AUDIO` permissions; if permission is denied, it will fail and return `*_PERMISSION_REQUIRED`.
 
-## 屏幕录制（nodes）
+## 屏幕录制（节点）
 
 受支持的节点会暴露 `screen.record`（mp4）。示例：
 
@@ -539,7 +574,7 @@ openclaw nodes invoke --node <idOrNameOrIp> --command sms.send --params '{"to":"
 
 ## 设备和个人数据命令
 
-iOS 和 Android 节点默认会公开若干只读数据命令（参见 [Command policy](#command-policy) 表）；Android 还额外公开一个更大的命令族，并由其自身的应用内设置进行限制。
+iOS 和 Android 节点默认会公开若干只读数据命令（参见 [命令策略](#command-policy) 表）；Android 还额外公开一个更大的命令族，并由其自身的应用内设置进行限制。
 
 可用族：
 

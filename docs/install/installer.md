@@ -171,7 +171,7 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 | `OPENCLAW_GIT_DIR=<path>`                         | 检出目录                                                            |
 | `OPENCLAW_GIT_UPDATE=0\|1`                        | 切换 git 更新                                                       |
 | `OPENCLAW_NO_PROMPT=1`                            | 禁用提示                                                            |
-| `OPENCLAW_VERIFY_INSTALL=1`                       | 运行安装后的冒烟验证                                                |
+| `OPENCLAW_VERIFY_INSTALL=1`                       | 运行安装后的烟雾验证                                                |
 | `OPENCLAW_NO_ONBOARD=1`                           | 跳过引导                                                            |
 | `OPENCLAW_DRY_RUN=1`                              | Dry run 模式                                                       |
 | `OPENCLAW_VERBOSE=1`                              | 调试模式                                                            |
@@ -192,7 +192,7 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 也支持在相同前缀流程下进行 git 检出安装。
 </Info>
 
-### Flow (install-cli.sh)
+### 流程 (install-cli.sh)
 
 <Steps>
   <Step title="安装本地 Node 运行时">
@@ -209,9 +209,9 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 
   </Step>
   <Step title="刷新已加载的网关服务">
-    如果已有网关服务从同一前缀加载，脚本会运行
-    `openclaw gateway install --force`，然后运行 `openclaw gateway restart`，
-    并尽力探测网关健康状态。
+    如果已经从同一前缀加载了网关服务，脚本会运行
+    `openclaw gateway install --force`，这会激活替换后的服务，
+    然后尽力探测网关健康状态。
   </Step>
 </Steps>
 
@@ -295,7 +295,7 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 ### 流程（install.ps1）
 
 <Steps>
-  <Step title="Ensure PowerShell + Windows 环境">
+  <Step title="确保 PowerShell + Windows 环境">
     需要 PowerShell 5+。
   </Step>
   <Step title="默认确保 Node.js 24">
@@ -429,7 +429,7 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
     运行 `npm config get prefix`，并将该目录添加到你的用户 PATH（在 Windows 上不需要 `\bin` 后缀），然后重新打开 PowerShell。
   </Accordion>
 
-  <Accordion title="Windows: how to get verbose installer output">
+  <Accordion title="Windows: 如何获取详细的安装程序输出">
     `install.ps1` 不提供 `-Verbose` 开关。
     使用 PowerShell 跟踪来进行脚本级诊断：
 

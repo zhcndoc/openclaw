@@ -78,7 +78,7 @@ title: "配置 — channels"
 
 ### Channel defaults and heartbeat
 
-使用 `channels.defaults` 为跨 provider 的共享 group-policy 和 heartbeat 行为进行设置：
+Use `channels.defaults` to set shared group-policy and heartbeat behavior across providers:
 
 ```json5
 {
@@ -96,11 +96,11 @@ title: "配置 — channels"
 }
 ```
 
-- `channels.defaults.groupPolicy`：当 provider 级别的 `groupPolicy` 未设置时使用的回退 group policy。
-- `channels.defaults.contextVisibility`：所有 channel 的默认补充上下文可见性模式。取值：`all`（默认，包含所有引用/线程/历史上下文）、`allowlist`（仅包含来自 allowlist 发件人的上下文）、`allowlist_quote`（与 allowlist 相同，但保留显式引用/回复上下文）。按 channel 覆盖：`channels.<channel>.contextVisibility`。
-- `channels.defaults.heartbeat.showOk`：在 heartbeat 输出中包含健康的 channel 状态（默认 `false`）。
-- `channels.defaults.heartbeat.showAlerts`：在 heartbeat 输出中包含降级/错误状态（默认 `true`）。
-- `channels.defaults.heartbeat.useIndicator`：以紧凑的 indicator 风格渲染 heartbeat 输出（默认 `true`）。
+- `channels.defaults.groupPolicy`: fallback group policy used when a provider-level `groupPolicy` is not set.
+- `channels.defaults.contextVisibility`: default supplemental context visibility mode for all channels. Values: `all` (default, includes all quoted/thread/history context), `allowlist` (includes only context from allowlist senders), `allowlist_quote` (same as allowlist, but preserves explicit quote/reply context). Can be overridden per channel: `channels.<channel>.contextVisibility`.
+- `channels.defaults.heartbeat.showOk`: include healthy channel states in heartbeat output (default `false`).
+- `channels.defaults.heartbeat.showAlerts`: include degraded/error states in heartbeat output (default `true`).
+- `channels.defaults.heartbeat.useIndicator`: render heartbeat output in a compact indicator style (default `true`).
 
 ### WhatsApp
 
@@ -350,45 +350,46 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-- Token：`channels.discord.token`，默认账户会回退使用 `DISCORD_BOT_TOKEN`。
-- 提供显式 Discord `token` 的直接出站调用会在该调用中使用该 token；账户重试/策略设置仍来自活动运行时快照中所选账户。
-- 可选的 `channels.discord.defaultAccount` 会在其匹配某个已配置账户 id 时覆盖默认账户选择。
-- 使用 `user:<id>`（DM）或 `channel:<id>`（guild 频道）作为投递目标；纯数字 ID 会被拒绝。
-- guild slug 使用小写，空格替换为 `-`；频道键使用 slug 后的名称（不带 `#`）。优先使用 guild ID。
-- 默认会忽略机器人作者发送的消息。`allowBots: true` 可启用；使用 `allowBots: "mentions"` 仅接受提及该机器人的机器人消息（自己的消息仍会被过滤）。
-- 支持机器人作者入站消息的频道可以使用共享的 [bot loop protection](/channels/bot-loop-protection)。将 `channels.defaults.botLoopProtection` 用作基础对等预算，然后仅在某个表面需要不同限制时再覆盖频道或账户。
-- `channels.discord.guilds.<id>.ignoreOtherMentions`（以及频道覆盖项）会丢弃提及其他用户或角色但未提及机器人的消息（不包括 @everyone/@here）。
-- `channels.discord.mentionAliases` 会在发送前将稳定的出站 `@handle` 文本映射到 Discord 用户 ID，因此即使临时目录缓存为空，也能确定性地提及已知队友。按账户的覆盖项位于 `channels.discord.accounts.<accountId>.mentionAliases`。
-- `maxLinesPerMessage`（默认 `17`）会在消息字符数少于 2000 时仍拆分过高的消息。
-- `channels.discord.suppressEmbeds` 默认是 `true`，因此出站 URL 不会展开为 Discord 链接预览，除非显式禁用。显式 `embeds` 负载仍会正常发送；每条消息的工具调用可以通过 `suppressEmbeds` 覆盖。
+- Token：`channels.discord.token`，默认账号可回退使用 `DISCORD_BOT_TOKEN`。
+- 提供显式 Discord `token` 的直接外发调用会使用该 token；账号重试/策略设置仍来自当前运行时快照中选定的账号。
+- 可选的 `channels.discord.defaultAccount` 在匹配已配置的账号 ID 时会覆盖默认账号选择。
+- 使用 `user:<id>`（DM）或 `channel:<id>`（公会频道）作为投递目标；纯数字 ID 会被拒绝。
+- 公会 slug 使用小写，空格替换为 `-`；频道键使用 slug 化后的名称（不带 `#`）。优先使用公会 ID。
+- 默认忽略机器人发出的消息。`allowBots: true` 可启用；使用 `allowBots: "mentions"` 仅接受提及机器人的机器人消息（自身消息仍会过滤）。
+- 支持机器人发起入站消息的频道可使用共享的 [bot 循环保护](/channels/bot-loop-protection)。设置 `channels.defaults.botLoopProtection` 作为基础配对预算，然后仅在某个表面需要不同限制时再覆盖频道或账号。
+- `channels.discord.guilds.<id>.ignoreOtherMentions`（以及频道覆盖项）会丢弃提及其他用户或角色但没有提及机器人的消息（不包括 @everyone/@here）。
+- `channels.discord.mentionAliases` 会在发送前把稳定的外发 `@handle` 文本映射到 Discord 用户 ID，因此即使临时目录缓存为空，也能确定性地提及已知队友。每账号覆盖项位于 `channels.discord.accounts.<accountId>.mentionAliases`。
+- `maxLinesPerMessage`（默认 `17`）会在消息长度未超过 2000 字符时，也将过高的消息拆分。
+- `channels.discord.suppressEmbeds` 默认是 `true`，因此外发 URL 不会展开为 Discord 链接预览，除非将其禁用。显式的 `embeds` 负载仍会正常发送；每条消息的工具调用可通过 `suppressEmbeds` 覆盖。
 - `channels.discord.threadBindings` 控制 Discord 线程绑定路由：
-  - `enabled`：线程绑定会话功能（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age` 以及绑定投递/路由）的 Discord 覆盖项
-  - `idleHours`：空闲自动 unfocus 的 Discord 覆盖小时数（`0` 表示禁用）
-  - `maxAgeHours`：硬性最大时长的 Discord 覆盖小时数（`0` 表示禁用）
-  - `spawnSessions`：`sessions_spawn({ thread: true })` 以及 ACP 线程 spawn 自动创建/绑定线程的开关（默认：`true`）
+  - `enabled`：线程绑定会话功能的 Discord 覆盖项（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age`，以及绑定投递/路由）
+  - `idleHours`：空闲后自动取消聚焦的小时数 Discord 覆盖项（`0` 为禁用）
+  - `maxAgeHours`：硬性最大时长（小时）的 Discord 覆盖项（`0` 为禁用）
+  - `spawnSessions`：`sessions_spawn({ thread: true })` 和 ACP 线程创建自动绑定的开关（默认：`true`）
   - `defaultSpawnContext`：线程绑定 spawn 的原生子代理上下文（默认 `"fork"`）
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目会为频道和线程配置持久化 ACP 绑定（在 `match.peer.id` 中使用 channel/thread id）。字段语义在 [ACP Agents](/tools/acp-agents#persistent-channel-bindings) 中是共享的。
-- `channels.discord.ui.components.accentColor` 设置 Discord components v2 容器的强调色。
-- `channels.discord.agentComponents.ttlMs` 控制已发送的 Discord 组件回调保持注册的时长。默认 `1800000`（30 分钟），最大 `86400000`（24 小时）。按账户的覆盖项位于 `channels.discord.accounts.<accountId>.agentComponents.ttlMs`。优先选择适合工作流的最短 TTL。
-- `channels.discord.voice` 启用 Discord 语音频道对话以及可选的自动加入 + LLM + TTS 覆盖项。仅文本的 Discord 配置默认关闭 voice；将 `channels.discord.voice.enabled=true` 以启用。
+- 顶层 `bindings[]` 中 `type: "acp"` 的条目会为频道和线程配置持久化的 ACP 绑定（在 `match.peer.id` 中使用频道/线程 id）。字段语义与 [ACP Agents](/tools/acp-agents#persistent-channel-bindings) 共用。
+- `channels.discord.ui.components.accentColor` 为 Discord components v2 容器设置强调色。
+- `channels.discord.agentComponents.ttlMs` 控制已发送的 Discord 组件回调保持注册的时长。默认 `1800000`（30 分钟），最大 `86400000`（24 小时）。每账号覆盖项位于 `channels.discord.accounts.<accountId>.agentComponents.ttlMs`。优先选择满足工作流的最短 TTL。
+- `channels.discord.voice` 启用 Discord 语音频道会话以及可选的自动加入 + LLM + TTS 覆盖项。仅文本 Discord 配置默认关闭语音；设置 `channels.discord.voice.enabled=true` 以启用。
 - `channels.discord.voice.model` 可选地覆盖用于 Discord 语音频道响应的 LLM 模型。
-- `channels.discord.voice.daveEncryption`（默认 `true`）和 `channels.discord.voice.decryptionFailureTolerance`（默认 `24`）会透传给 `@discordjs/voice` 的 DAVE 选项。
-- `channels.discord.voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时 `@discordjs/voice` 初始 Ready 等待时长（默认 `30000`）。
-- `channels.discord.voice.reconnectGraceMs` 控制一个已断开连接的语音会话在 OpenClaw 销毁前允许进入重连信号状态的时间（默认 `15000`）。
-- Discord 语音播放不会被其他用户的 speaking-start 事件中断。为避免反馈循环，OpenClaw 在 TTS 播放期间会忽略新的语音捕获。
-- OpenClaw 还会在多次解密失败后尝试通过离开/重新加入语音会话来恢复语音接收。
-- `channels.discord.streaming` 是规范的流模式键。Discord 默认 `streaming.mode: "progress"`，因此工具/工作进度会显示在一条编辑过的预览消息中；将 `streaming.mode: "off"` 可禁用。旧的扁平键（`streamMode`、`chunkMode`、`blockStreaming`、`draftChunk`、`blockStreamingCoalesce`）运行时已不再读取；运行 `openclaw doctor --fix` 以迁移持久化配置。
-- `channels.discord.autoPresence` 将运行时可用性映射为机器人状态（健康 => online，降级 => idle，耗尽 => dnd），并允许可选的状态文本覆盖。
-- `channels.discord.dangerouslyAllowNameMatching` 重新启用可变名称/标签匹配（紧急解锁兼容模式）。
-- `channels.discord.execApprovals`：Discord 原生的 exec 审批投递和审批者授权。
-  - `enabled`：`true`、`false` 或 `"auto"`（默认）。在自动模式下，当可从 `approvers` 或 `commands.ownerAllowFrom` 解析出审批者时，exec 审批会激活。
-  - `approvers`：允许批准 exec 请求的 Discord 用户 ID。若省略，则回退到 `commands.ownerAllowFrom`。
-  - `agentFilter`：可选的代理 ID 白名单。省略则向所有代理转发审批。
+- `channels.discord.voice.daveEncryption`（默认 `true`）和 `channels.discord.voice.decryptionFailureTolerance`（默认 `24`）会传递给 `@discordjs/voice` 的 DAVE 选项。
+- `channels.discord.voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时，`@discordjs/voice` 初始 Ready 等待时间（默认 `30000`）。
+- `channels.discord.voice.reconnectGraceMs` 控制断开的语音会话在 OpenClaw 销毁之前，进入重连信号阶段所允许的时间（默认 `15000`）。
+- Discord 语音播放不会因其他用户开始说话事件而中断。为避免反馈回路，OpenClaw 在 TTS 播放时会忽略新的语音捕获。
+- OpenClaw 还会在多次解密失败后，通过离开/重新加入语音会话来尝试恢复语音接收。
+- `channels.discord.streaming` 是标准的流模式键。Discord 默认 `streaming.mode: "progress"`，因此工具/工作进度会显示在一条已编辑的预览消息中；设置 `streaming.mode: "off"` 可禁用。旧的扁平键（`streamMode`、`chunkMode`、`blockStreaming`、`draftChunk`、`blockStreamingCoalesce`）在运行时不再读取；请运行 `openclaw doctor --fix` 迁移持久化配置。
+- `channels.discord.autoPresence` 将运行时可用性映射为机器人状态（healthy => online，degraded => idle，exhausted => dnd），并允许可选的状态文本覆盖。
+- `channels.discord.guilds.<id>.presenceEvents` 会将人类可用性到达路由到一个配置好的 Discord 频道，作为代理系统事件。它会从完整的 `GUILD_CREATE` 快照中为当前在线成员建立种子，路由观测到的离线到在线转换，并将首次后续出现的、此前未见成员的在线信号视为新可用，而不判断其是上线还是在快照后加入。超过 Discord 75,000 成员快照限制的公会需要先有一个显式的离线更新。它需要 `channels.discord.intents.presence=true`、Discord 开发者门户中的特权 Presence Intent，以及已启用的代理心跳。
+- `channels.discord.dangerouslyAllowNameMatching` 会重新启用可变名称/标签匹配（紧急兼容模式）。
+- `channels.discord.execApprovals`：Discord 原生的执行审批投递和审批者授权。
+  - `enabled`：`true`、`false` 或 `"auto"`（默认）。在自动模式下，当可从 `approvers` 或 `commands.ownerAllowFrom` 中解析出审批者时，执行审批会激活。
+  - `approvers`：允许批准执行请求的 Discord 用户 ID。若省略，则回退到 `commands.ownerAllowFrom`。
+  - `agentFilter`：可选的代理 ID 白名单。省略则转发所有代理的审批。
   - `sessionFilter`：可选的会话键模式（子串或正则）。
-  - `target`：审批提示发送位置。`"dm"`（默认）发送到审批者 DM，`"channel"` 发送到来源频道，`"both"` 两者都发。当 target 包含 `"channel"` 时，按钮仅可由已解析的审批者使用。
-  - `cleanupAfterResolve`：当为 `true` 时，在批准、拒绝或超时后删除审批 DM。
+  - `target`：审批提示发送位置。`"dm"`（默认）发送到审批者的 DM，`"channel"` 发送到原始频道，`"both"` 同时发送到两者。当前者包含 `"channel"` 时，按钮仅允许已解析的审批者使用。
+  - `cleanupAfterResolve`：为 `true` 时，在批准、拒绝或超时后删除审批 DM。
 
-**Reaction notification modes:** `off`（无）、`own`（机器人的消息，默认）、`all`（所有消息）、`allowlist`（来自 `guilds.<id>.users` 的所有消息）。
+**Reaction 通知模式：** `off`（无）、`own`（机器人的消息，默认）、`all`（所有消息）、`allowlist`（来自 `guilds.<id>.users` 的所有消息）。
 
 ### Google Chat
 
@@ -537,11 +538,11 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 
 | Action group | 默认 | 说明                  |
 | ------------ | ---- | ---------------------- |
-| reactions    | enabled | 添加 reaction + 列出 reactions |
-| messages     | enabled | 读/发/编辑/删除  |
-| pins         | enabled | 置顶/取消置顶/列出         |
-| memberInfo   | enabled | 成员信息            |
-| emojiList    | enabled | 自定义 emoji 列表      |
+| reactions    | 已启用 | 添加 reaction + 列出 reactions |
+| messages     | 已启用 | 读/发/编辑/删除  |
+| pins         | 已启用 | 置顶/取消置顶/列出         |
+| memberInfo   | 已启用 | 成员信息            |
+| emojiList    | 已启用 | 自定义 emoji 列表      |
 
 ### Mattermost
 
@@ -568,7 +569,7 @@ openclaw plugins install @openclaw/mattermost
         "team-channel-id": { requireMention: false },
       },
       commands: {
-        native: true, // opt-in
+        native: true, // 可选启用
         nativeSkills: true,
         callbackPath: "/api/channels/mattermost/command",
         // 可选的显式 URL，适用于反向代理/公网部署
@@ -704,7 +705,7 @@ Matrix 由插件支持，并在 `channels.matrix` 下配置。
       defaultAccount: "ops",
       accounts: {
         ops: {
-          name: "Ops",
+          name: "运维",
           userId: "@ops:example.org",
           accessToken: "syt_ops_xxx",
         },
@@ -745,7 +746,7 @@ Microsoft Teams 由插件支持，并在 `channels.msteams` 下配置。
     msteams: {
       enabled: true,
       configWrites: true,
-      // appId, appPassword, tenantId, webhook, team/channel policies:
+      // appId, appPassword, tenantId, webhook, 团队/频道策略：
       // 见 /channels/msteams
     },
   },
@@ -753,18 +754,18 @@ Microsoft Teams 由插件支持，并在 `channels.msteams` 下配置。
 ```
 
 - 此处涵盖的核心键路径：`channels.msteams`、`channels.msteams.configWrites`。
-- 完整的 Teams 配置（凭证、webhook、DM/group policy、每团队/每频道覆盖）见 [Microsoft Teams](/channels/msteams)。
+- 完整的 Teams 配置（凭证、webhook、DM/群组策略、每团队/每频道覆盖）见 [Microsoft Teams](/channels/msteams)。
 
 ### IRC
 
-IRC 由插件支持，并在 `channels.irc` 下配置。
+IRC is supported by a plugin and configured under `channels.irc`.
 
 ```json5
 {
   channels: {
     irc: {
       enabled: true,
-      dmPolicy: "配对",
+      dmPolicy: "pair",
       configWrites: true,
       nickserv: {
         enabled: true,
@@ -778,13 +779,13 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 }
 ```
 
-- 此处涵盖的核心键路径：`channels.irc`、`channels.irc.dmPolicy`、`channels.irc.configWrites`、`channels.irc.nickserv.*`。
-- 可选的 `channels.irc.defaultAccount` 会在其与已配置账号 id 匹配时覆盖默认账号选择。
-- 完整的 IRC 频道配置（host/port/TLS/channels/allowlists/mention gating）见 [IRC](/channels/irc)。
+- Core key paths covered here: `channels.irc`, `channels.irc.dmPolicy`, `channels.irc.configWrites`, `channels.irc.nickserv.*`.
+- The optional `channels.irc.defaultAccount` overrides the default account selection when it matches a configured account id.
+- See [IRC](/channels/irc) for the full IRC channel configuration (host/port/TLS/channels/allowlists/mention gating).
 
-### 多账号（所有频道）
+### Multiple Accounts (All Channels)
 
-每个频道可运行多个账号（每个都有自己的 `accountId`）：
+Each channel can run multiple accounts (each with its own `accountId`):
 
 ```json5
 {
@@ -792,11 +793,11 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
     telegram: {
       accounts: {
         default: {
-          name: "主机器人",
+          name: "Main Bot",
           botToken: "123456:ABC...",
         },
         alerts: {
-          name: "告警机器人",
+          name: "Alert Bot",
           botToken: "987654:XYZ...",
         },
       },
@@ -805,13 +806,13 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 }
 ```
 
-- 当省略 `accountId` 时使用 `default`（CLI + 路由）。
-- 环境变量 token 仅适用于**默认**账号。
-- 基础频道设置适用于所有账号，除非按账号覆盖。
-- 使用 `bindings[].match.accountId` 将每个账号路由到不同的 agent。
-- 如果你在仍处于单账号顶层频道配置时，通过 `openclaw channels add`（或 channel onboarding）添加非默认账号，OpenClaw 会先把账号作用域的顶层单账号值提升到频道账号映射中，这样原始账号仍可继续工作。大多数频道会将它们移动到 `channels.<channel>.accounts.default`；Matrix 也可以改为保留现有匹配的 named/default 目标。
-- 现有的仅频道绑定（没有 `accountId`）会继续匹配默认账号；账号作用域绑定仍然是可选的。
-- `openclaw doctor --fix` 也会通过把账号作用域的顶层单账号值移动到该频道选定的提升账号来修复混合结构。大多数频道使用 `accounts.default`；Matrix 也可以保留现有匹配的 named/default 目标。
+- Use `default` when `accountId` is omitted (CLI + routing).
+- Environment variable tokens apply to the **default** account only.
+- Base channel settings apply to all accounts unless overridden per account.
+- Use `bindings[].match.accountId` to route each account to a different agent.
+- If you add a non-default account while still on a single-account top-level channel config via `openclaw channels add` (or channel onboarding), OpenClaw will first promote the account-scoped top-level single-account values into the channel account map so the original account continues to work. Most channels will move them to `channels.<channel>.accounts.default`; Matrix can also preserve the existing matched named/default target.
+- Existing channel-only bindings (without `accountId`) will continue to match the default account; account-scoped bindings remain optional.
+- `openclaw doctor --fix` will also repair mixed structures by moving account-scoped top-level single-account values into the channel-selected promoted account. Most channels use `accounts.default`; Matrix can also preserve the existing matched named/default target.
 
 ### 其他插件渠道
 

@@ -207,9 +207,9 @@ bun add -g openclaw@latest
 
 通过实时 Gateway 控制平面（`update.run`）请求的包管理器更新，不会替换正在运行的 Gateway 进程内的包树。在受管服务安装中，Gateway 会启动一个分离的交接，退出，并让正常的 `openclaw update --yes --json` CLI 路径去停止服务、替换包、刷新服务元数据、重启、验证 Gateway 版本和可达性，并在可能时恢复已安装但未加载的 macOS LaunchAgent。如果 Gateway 无法安全地完成该交接，`update.run` 会返回一个安全的 shell 命令，而不是在进程内运行包管理器。
 
-控制台 UI 侧边栏的更新卡片会启动同样的 `update.run` 流程。在
-签名的 macOS 应用中，该卡片会先通过 Sparkle 更新应用；重新启动后，
-应用会将其托管的本地 Gateway 更新到匹配的版本。
+控制界面侧边栏中的更新卡片会启动相同的 `update.run` 流程。在带签名的 macOS 应用中，卡片或菜单栏的更新操作会先通过 Sparkle 更新应用。重新启动后，会运行一个类似设置向导的进度窗口，为由应用管理的 Gateway 执行 `openclaw update --tag <app-version> --json`，重启它并验证健康状态。失败详情会继续显示，并提供重试、[更新指南](/install/updating) 和 [Discord](https://discord.gg/clawd) 操作。非交互式运行不接受降级。外部管理的安装保持不变。
+
+当更新成功时，应用会为最近一次具有真实用户/频道交互的顶层直接会话排队一个一次性的欢迎事件。Cron 运行、心跳以及仅后台的会话更新都不会改变该选择。在远程模式下，应用只会更新其本地 Mac 节点运行时，并且仅当已连接的远程 Gateway 至少与应用一样新时才发送该事件。
 
 ## 更新后
 

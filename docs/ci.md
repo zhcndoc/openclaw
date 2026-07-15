@@ -8,46 +8,50 @@ read_when:
   - 你正在更改 ClawSweeper 派发或 GitHub 活动转发
 ---
 
-OpenClaw CI 会在推送到 `main` 时运行（触发时会忽略 Markdown 和 `docs/**` 路径），在非草稿 Pull Request 上运行（忽略仅 CHANGELOG 的差异），以及在手动触发时运行。规范的 `main` 推送首先会经过一个 90 秒的托管 runner 接纳窗口；当更新的提交到达时，`CI` 并发组会取消该等待中的运行，因此连续合并不会让每次都登记完整的 Blacksmith 矩阵。Pull Request 和手动触发会跳过等待。随后 `preflight` 作业会对 diff 进行分类，并在仅有无关区域发生更改时关闭昂贵的流水线。手动的 `workflow_dispatch` 运行会有意绕过智能范围控制，并展开完整图谱，用于发布候选和广泛验证。Android 流水线通过 `include_android`（或 `release_gate` 输入）保持为可选启用。仅发布相关的插件覆盖位于单独的 [`Plugin Prerelease`](#plugin-prerelease) 工作流中，并且只会从 [`Full Release Validation`](#full-release-validation) 或显式的手动触发中运行。
+OpenClaw CI 会在推送到 `main` 时运行（Markdown 和 `docs/**` 路径在触发时会被忽略），在每个非草稿 pull request 上运行，以及在手动派发时运行。规范的 `main` 推送会先经过 90 秒的托管运行器准入窗口；当有更新的提交到达时，`CI` 并发组会取消那个等待中的运行，因此连续合并不会让每次都登记一整套 Blacksmith 矩阵。pull request 和手动派发会跳过等待。随后 `preflight` 作业会对 diff 进行分类，并在只有无关区域发生变化时关闭昂贵的流水线。手动的 `workflow_dispatch` 运行会有意绕过智能范围控制，并展开完整图谱，用于发布候选和广泛验证。Android 流水线仍通过 `include_android`（或 `release_gate` 输入）保持为可选启用。仅发布相关的插件覆盖位于单独的 [`Plugin Prerelease`](#plugin-prerelease) 工作流中，并且只会从 [`Full Release Validation`](#full-release-validation) 或显式的手动派发中运行。
 
 ## 流水线概览
 
-| Job                                | Purpose                                                                                                                                                                                                               | When it runs                                        |
+| Job                                | 目的                                                                                                                                                                                                               | 运行时机                                        |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `preflight`                        | 检测仅文档变更、变更的作用域、变更的扩展，并构建 CI 清单                                                                                                                               | 始终在非草稿推送和 PR 上运行                  |
-| `runner-admission`                 | 在 Blacksmith 工作注册之前，为规范的 `main` 推送提供托管的 90 秒去抖                                                                                                                            | 每次 CI 运行；仅在规范的 `main` 推送上休眠 |
-| `security-fast`                    | 私钥检测、通过 `zizmor` 进行的变更工作流审计，以及生产锁文件审计                                                                                                                             | 始终在非草稿推送和 PR 上运行                  |
-| `pnpm-store-warmup`                | 在不阻塞 Linux Node 分片的情况下预热与锁文件固定的 pnpm 存储缓存                                                                                                                                          | 选择了 Node 或 docs-check 线路                   |
-| `build-artifacts`                  | 构建 `dist/`、Control UI、已构建 CLI 冒烟检查、启动内存，以及嵌入式构建产物检查                                                                                                                 | 与 Node 相关的变更                               |
-| `control-ui-i18n`                  | 验证生成的 Control UI 语言包、元数据和翻译记忆；自动运行时为建议性，在手动发布 CI 中为阻断性                                                                               | 与 Control UI i18n 相关的变更和手动 CI      |
-| `checks-fast-core`                 | 快速 Linux 正确性线路：变更文件 TypeScript LOC 棘轮、bundled + protocol、Bun 启动器，以及 CI 路由快速任务                                                                                     | 与 Node 相关或生产 TypeScript 变更      |
-| `qa-smoke-ci-profile`              | bounded automatic QA Smoke 代表集的两个自包含平衡部分；完整分类覆盖仍可通过显式 QA 配置文件获得                                                         | 与 Node 相关的变更                               |
-| `checks-fast-contracts-plugins-*`  | 两个加权的插件契约分片                                                                                                                                                                                   | 与 Node 相关的变更                               |
-| `checks-fast-contracts-channels-*` | 两个加权的通道契约分片                                                                                                                                                                                  | 与 Node 相关的变更                               |
-| `checks-node-*`                    | PR 上的变更目标 Node 测试；在 `main`、手动、发布和广泛回退运行中为完整核心分片                                                                                                      | 与 Node 相关的变更                               |
-| `check-*`                          | 分片的 main 本地门禁等价项：guards、shrinkwrap、bundled-channel 配置元数据、生产类型、lint、依赖、测试类型                                                                                   | 与 Node 相关的变更                               |
-| `check-additional-*`               | 边界检查条带（包括 prompt 快照漂移）、session accessor/transcript reader/SQLite 事务边界、扩展 lint 分组、包边界编译/canary，以及运行时拓扑架构 | 与 Node 相关的变更                               |
-| `checks-node-compat-node22`        | Node 22 兼容性构建和冒烟线路                                                                                                                                                                            | 发布的手动 CI 派发                     |
-| `check-docs`                       | 文档格式化、lint 和断链检查                                                                                                                                                                         | 文档已变更（PR 和手动派发）              |
-| `native-i18n`                      | 原生应用、Android 和 Apple 的 i18n 清单检查                                                                                                                                                                  | 与原生 i18n 相关的变更                        |
-| `skills-python`                    | 面向 Python 支持技能的 Ruff + pytest                                                                                                                                                                                | 与 Python 技能相关的变更                       |
+| `preflight`                        | 检测仅文档变更、变更的作用域、变更的扩展，并构建 CI 清单                                                                                                                               | 在非草稿推送和 PR 上始终运行                  |
+| `runner-admission`                 | 在 Blacksmith 工作注册之前，为规范的 `main` 推送提供托管的 90 秒去抖                                                                                                                            | 每次 CI 运行；仅在规范的 `main` 推送上睡眠 |
+| `security-fast`                    | 私钥检测、通过 `zizmor` 进行变更工作流审计，以及生产锁文件审计                                                                                                                             | 在非草稿推送和 PR 上始终运行                  |
+| `pnpm-store-warmup`                | 在不阻塞 Linux Node 分片的情况下，预热锁文件固定的 pnpm 存储缓存                                                                                                                                          | 选择了 Node 或 docs-check 车道                   |
+| `build-artifacts`                  | 构建 `dist/`、Control UI、已构建 CLI 烟雾检查、启动内存，以及嵌入式构建产物检查                                                                                                                 | 与 Node 相关的变更                               |
+| `control-ui-i18n`                  | 验证生成的 Control UI 区域设置包、元数据和翻译记忆；自动运行时仅作建议，手动发布 CI 时阻塞                                                                               | 与 Control UI i18n 相关的变更以及手动 CI      |
+| `checks-fast-core`                 | 快速 Linux 正确性车道：抑制基线最大行数递进、bundled + protocol、Bun 启动器，以及 CI 路由快速任务                                                                                  | 与 Node 相关的变更                               |
+| `qa-smoke-ci-profile`              | 有界自动 QA Smoke 代表集中的两个自包含平衡部分；完整分类覆盖仍可通过显式 QA 配置文件获得                                                         | 与 Node 相关的变更                               |
+| `checks-fast-contracts-plugins-*`  | 两个加权插件契约分片                                                                                                                                                                                   | 与 Node 相关的变更                               |
+| `checks-fast-contracts-channels-*` | 两个加权通道契约分片                                                                                                                                                                                  | 与 Node 相关的变更                               |
+| `checks-node-*`                    | PR 上的已变更目标 Node 测试；在 `main`、手动、发布和广泛回退运行中则为完整核心分片                                                                                                      | 与 Node 相关的变更                               |
+| `check-*`                          | 分片的本地主门禁等效项：guards、shrinkwrap、bundled-channel 配置元数据、生产类型、lint、依赖、测试类型                                                                                   | 与 Node 相关的变更                               |
+| `check-additional-*`               | 边界检查条带（包括 prompt 快照漂移）、会话访问器/转录读取器/SQLite 事务边界、扩展 lint 组、包边界编译/canary，以及运行时拓扑架构 | 与 Node 相关的变更                               |
+| `checks-node-compat-node22`        | Node 22 兼容性构建和烟雾车道                                                                                                                                                                            | 发布的手动 CI 分发                     |
+| `check-docs`                       | 文档格式、lint 和坏链检查                                                                                                                                                                         | 文档变更（PR 和手动分发）              |
+| `native-i18n`                      | 原生应用、Android 和 Apple i18n 清单检查                                                                                                                                                                  | 与原生 i18n 相关的变更                        |
+| `skills-python`                    | 基于 Python 的技能的 Ruff + pytest                                                                                                                                                                                | 与 Python 技能相关的变更                       |
 | `checks-windows`                   | Windows 特定的进程/路径测试，以及共享运行时导入说明符回归                                                                                                                                  | 与 Windows 相关的变更                            |
 | `macos-node`                       | 聚焦的 macOS TypeScript 测试：launchd、Homebrew、运行时路径、打包脚本、进程组包装器                                                                                                            | 与 macOS 相关的变更                              |
 | `macos-swift`                      | macOS 应用的 Swift lint、构建和测试                                                                                                                                                                        | 与 macOS 相关的变更                              |
-| `ios-build`                        | Xcode 项目生成以及 iOS 应用模拟器构建                                                                                                                                                             | iOS 应用、共享 app kit 或 Swabble 变更         |
+| `ios-build`                        | Xcode 项目生成以及 iOS 应用模拟器构建                                                                                                                                                             | iOS 应用、共享应用套件或 Swabble 变更         |
 | `android`                          | 两种 flavor 的 Android 单元测试以及一个 debug APK 构建                                                                                                                                                          | 与 Android 相关的变更                            |
-| `test-performance-agent`           | 独立工作流：在可信活动之后，每日进行 Codex 慢测试优化                                                                                                                                          | 主 CI 成功或手动派发                  |
-| `openclaw-performance`             | 独立工作流：使用 mock-provider、deep-profile 和 GPT 5.6 live 线路，按日/按需生成 Kova 运行时性能报告                                                                                          | 定时和手动派发                       |
+| `openclaw/ci-gate`                 | 最终汇总：要求 admission、preflight 和 security；仅接受对清单禁用的下游车道的跳过                                                                                               | 每次非草稿 CI 运行                              |
+| `test-performance-agent`           | 独立工作流：在受信任活动之后，每日进行 Codex 慢测试优化                                                                                                                                          | 主 CI 成功或手动分发                  |
+| `openclaw-performance`             | 独立工作流：带有 mock-provider、deep-profile 和 GPT 5.6 live 车道的每日/按需 Kova 运行时性能报告                                                                                          | 定时和手动分发                       |
 
 独立的 Periphery 工作流会强制 iOS 和 macOS 应用保持零死代码发现。共享的 OpenClawKit 工作流会并行扫描两个消费者，并且只有当 Periphery 在两个构建中都发出相同的 Swift USR 时，才会报告一个声明。其生成的 `OpenClawProtocol/GatewayModels.swift` schema 合同被保留为生成器拥有的代码，而不是被视为应用本地死代码。
 
 ## 先失败顺序
 
-1. `runner-admission` 仅等待规范的 `main` 推送；更新的推送会在 Blacksmith 注册之前取消该运行。
-2. `preflight` 决定哪些 lanes 实际存在。`docs-scope` 和 `changed-scope` 逻辑是这个作业内部的步骤，而不是独立作业。
+1. `runner-admission` 仅等待规范的 `main` 推送；更晚的推送会在 Blacksmith 注册之前取消此次运行。
+2. `preflight` 决定哪些 lane  वास्तव 存在。`docs-scope` 和 `changed-scope` 逻辑是这个作业内部的步骤，而不是独立作业。
 3. `security-fast`、`check-*`、`check-additional-*`、`check-docs` 和 `skills-python` 会快速失败，不会等待更重的 artifact 和平台矩阵作业。
-4. `build-artifacts` 和建议性的 `control-ui-i18n` 检查会与快速 Linux lanes 重叠。生成的 locale 漂移会持续可见，同时独立的刷新工作流会在后台修复它。
+4. `build-artifacts` 和建议性的 `control-ui-i18n` 检查会与快速 Linux lanes 重叠。生成的 locale 漂移会保持可见，同时独立的刷新工作流会在后台修复它。
 5. 更重的平台和运行时 lanes 随后展开：`checks-fast-core`、`checks-fast-contracts-plugins-*`、`checks-fast-contracts-channels-*`、`checks-node-*`、`checks-windows`、`macos-node`、`macos-swift`、`ios-build` 和 `android`。
+6. `openclaw/ci-gate` 会等待每个被选中的 lane。Admission、preflight 和 security 必须成功；下游作业只有在清单未选择它们时才可以跳过。任何一个失败或被取消的已选 lane 都会使聚合失败。
+
+合并协调器可以对同一个 pull request head 复用一个已认证且成功的 `openclaw/ci-gate`，最长可达 24 小时。这样可以避免在与无关的 `main` 变更之后重写贡献者分支。这个可复用结果并不能替代针对当前 `main` 的、由 App 拥有的独立严格 test-merge 检查。对于该未变化的 head，在 freshness 窗口内，后续的 pending 或 failed rerun 不会抹去先前的成功结果。
 
 当更新的推送落在同一个 PR 或 `main` ref 上时，GitHub 可能会将被取代的作业标记为 `cancelled`。除非同一 ref 的最新运行也失败了，否则应将其视为 CI 噪音。矩阵作业使用 `fail-fast: false`，而 `build-artifacts` 会直接报告嵌入式 channel、core-support-boundary 和 gateway-watch 的失败，而不是排队运行微小的验证作业。自动 CI 并发键是版本化的（`CI-v7-*`），因此 GitHub 侧旧队列组中的僵尸任务不会无限期阻塞更新的 main 运行。手动全套运行使用 `CI-manual-v1-*`，并且不会取消正在进行的运行。插件列表启动内存守卫在自托管 Blacksmith Linux 上将上限保持在 350 MiB，并允许 GitHub 托管 Linux 使用 425 MiB，因为同样构建的 CLI 在那里的 RSS 基线更高。
 
@@ -114,7 +118,7 @@ Android CI 会同时运行 `testPlayDebugUnitTest` 和 `testThirdPartyDebugUnitT
 
 手动 CI 派发运行与正常 CI 相同的作业图，但会强制开启所有非 Android 范围的泳道：Linux Node 分片、bundled-plugin 分片、plugin 和 channel contract 分片、Node 22 兼容性、`check-*`、`check-additional-*`、构建产物冒烟检查、文档检查、Python skills、Windows、macOS、iOS build，以及 Control UI i18n。由于独立的刷新工作流会在后台修复生成内容漂移，因此在自动 PR 和 `main` 运行中，Control UI locale parity 仅作为建议项；但在手动 CI 中它是阻塞项，因此在 Full Release Validation 中也是阻塞项。独立的手动 CI 派发仅在 `include_android=true` 时运行 Android（`release_gate` 输入也会强制启用 Android）；完整的发布总入口通过传递 `include_android=true` 来启用 Android。Plugin prerelease 静态检查、仅发布时才运行的 `agentic-plugins` 分片、完整扩展批量扫描，以及 plugin prerelease Docker 泳道都被排除在 CI 之外。Docker prerelease 套件仅在 `Full Release Validation` 派发启用 release-validation gate 的情况下，才会单独触发 `Plugin Prerelease` 工作流时运行。
 
-手动运行使用唯一的并发组，因此同一 ref 上的另一次 push 或 PR 运行不会取消某个 release-candidate full suite。可选的 `target_ref` 输入允许受信任的调用方使用所选派发 ref 上的工作流文件，将该作业图针对某个分支、标签或完整 commit SHA 运行。可选的 `loc_base_ref` 为独立的手动运行提供精确的比较 SHA。`release_gate` 输入是一个精确 SHA 的维护者后备方案，用于容量受限导致停滞的 PR CI：它要求 `target_ref` 必须是与已派发分支头匹配的完整 commit SHA，并且 `pr_number` 用于标识打开中的 pull request。该工作流会验证该 PR 当前的 head 和 base，等待 GitHub 完成 mergeability 计算，锁定报告的测试 merge commit，获取 GitHub 的合成 pull-request merge ref，验证其 SHA 和两个父提交，然后在安装依赖并运行变更文件 TypeScript LOC ratchet 之前检出该树。这与自动 PR CI 的合并树和策略实现一致。没有 `pr_number` 的、由目标拥有的工作流修订无法提供等效的合并树证据；请将 PR head 更新到当前工作流，并重新启动 exact-head proof，而不是使用该后备方案。
+PR max-lines 检查会从已检出的合成合并树中推导基线，并验证其头父提交与事件头提交一致。手动运行使用唯一的并发组，因此同一引用上的另一个 push 或 PR 运行不会取消某个 release-candidate 完整套件。可选的 `target_ref` 输入允许受信任的调用者使用所选派发 ref 上的工作流文件，将该作业图运行在分支、标签或完整 commit SHA 上；max-lines 基线会与该运行所解析出的默认分支 head 的目标合并基点进行比较。`release_gate` 输入是容量受阻 PR CI 的精确 SHA 维护者回退方案：它要求 `target_ref` 为完整 commit SHA，且与已派发分支 head 匹配，并要求 `pull_request_number` 用于标识其合并树将被验证的打开状态 PR。
 
 ```bash
 gh workflow run ci.yml --ref release/YYYY.M.PATCH
@@ -562,13 +566,35 @@ gh workflow run duplicate-after-merge.yml \
 
 ## Testbox 验证
 
-Crabbox 是仓库自有的远程盒子封装器，用于维护者 Linux 证明。Agent 会话默认使用它进行测试和计算密集型工作，包括构建、类型检查、lint 扇出、Docker、包流水线、E2E、实时证明和 CI 一致性。受信任的维护者代码默认使用 `blacksmith-testbox`，并且 `.crabbox.yaml` 现在也默认使用它。其已配置的工作流会注入提供商和 agent 凭据，因此不受信任的贡献者或 fork 代码必须使用无密钥的 fork CI，或经过清理的直接 AWS Crabbox。经过清理的 AWS 运行会设置 `CRABBOX_ENV_ALLOW=CI`，传递 `--no-hydrate`，并使用全新的临时远程 `HOME`；这可防止仓库的 `OPENCLAW_*` allowlist 和现有认证配置文件进入不受信任的代码。它们使用专门分配给该不受信任来源的新加热 lease，绝不会使用受信任或之前已注入凭据的 lease。应从干净、受信任的 `main` 检出中启动已安装的受信任 Crabbox 二进制文件，并仅使用 `--fresh-pr` 获取远程 PR；绝不要在本地执行不受信任检出的封装器或配置。取消设置 `CRABBOX_AWS_INSTANCE_PROFILE`，并且除非解析出的 `aws.instanceProfile` 为空，否则应直接失败。在任何安装/测试之前，使用受信任的绝对路径工具要求 IMDSv2 token，证明 IAM 凭据端点返回 404，并将远程 `git rev-parse HEAD` 与完整审查过的 PR head SHA 进行比较。将 lease 绑定到该 SHA，并在 head 变化时停止/重新加热。与 `--fresh-pr` 一起上传来自干净 `main` 的受信任 `scripts/crabbox-untrusted-bootstrap.sh`；它会安装固定版本的 Node/pnpm，验证 SHA 和包管理器 pin，隔离 `HOME`，安装依赖，然后执行所请求的测试。取消设置所有 `CRABBOX_TAILSCALE*` 覆盖项，强制使用 `--network public --tailscale=false`，清除 exit-node/LAN 标志，并要求 `crabbox inspect` 在上传任何脚本之前报告没有 Tailscale 状态的公共网络。拥有的 AWS/Hetzner 容量也仍然是 Blacksmith 故障、配额问题或显式自有容量测试时的后备方案。
+Crabbox 是仓库自有的远程盒子封装器，用于维护者的 Linux 证明。Agent
+会话会为本地受信任源码保留一项或少量聚焦测试和低成本静态检查，仅在
+现有依赖安装就绪时执行。它们使用 Crabbox 来运行更大规模的套件和
+计算密集型工作，包括构建、类型检查、lint 分发、
+Docker、包流水线、E2E、实时证明和 CI 对齐。受信任的维护者重型
+证明默认使用 `blacksmith-testbox`，而 `.crabbox.yaml` 现在也默认使用它。其配置的
+工作流会注入 provider 和 agent 凭据，因此不受信任的贡献者或
+fork 代码必须使用无密钥的 fork CI 或经过清理的直接 AWS Crabbox。经过清理的 AWS 运行会设置 `CRABBOX_ENV_ALLOW=CI`，传递
+`--no-hydrate`，并使用全新的临时远程 `HOME`；这可防止仓库中的
+`OPENCLAW_*` 白名单和现有身份验证配置文件被不受信任的代码访问。
+它们使用专门为该不受信任来源新加热的 lease，绝不使用
+受信任或之前已注入凭据的 lease。请从一个干净、受信任的 `main` 检出中启动已安装的受信任 Crabbox
+二进制文件，并且只使用 `--fresh-pr` 获取远程 PR；切勿在本地执行不受信任检出的封装器或配置。
+取消设置 `CRABBOX_AWS_INSTANCE_PROFILE`，并在未解析为
+空的 `aws.instanceProfile` 时默认失败关闭。在任何安装/测试之前，使用受信任的
+绝对路径工具要求 IMDSv2 令牌，证明 IAM 凭据
+端点返回 404，并将远程 `git rev-parse HEAD` 与完整的已审查 PR head SHA 进行比较。
+将 lease 绑定到该 SHA，并在 head 变更时停止/重新加热。
+从干净的 `main` 一并上传受信任的 `scripts/crabbox-untrusted-bootstrap.sh` 与 `--fresh-pr`；它会安装固定版本的 Node/pnpm，验证 SHA 和
+包管理器 pin，隔离 `HOME`，安装依赖，然后执行
+所请求的测试。
+取消设置所有 `CRABBOX_TAILSCALE*` 覆盖项，强制使用 `--network public
+--tailscale=false`，清除 exit-node/LAN 标志，并要求 `crabbox inspect` 在上传任何脚本之前
+报告公共网络且没有 Tailscale 状态。
+受 Blacksmith 宕机、配额问题或显式自有容量测试所驱动的自有 AWS/Hetzner 容量也仍然是回退方案。
 
-在一个很可能需要测试或大量证明的受信任代码任务开始时，agent 应立即在后台命令会话中预热，边做检查和编辑边等待注入，复用返回的 `tbx_...` id，在每次运行时同步当前检出，并在交接前停止它：
-
-```bash
-node scripts/crabbox-wrapper.mjs warmup --provider blacksmith-testbox --keep --timing-json
-```
+Agents 不会为预期工作提前预热。只有在
+第一个重型命令准备就绪时才懒加载获取 Testbox，后续重型命令复用返回的 `tbx_...` id，
+每次运行都同步当前检出，并在交接前停止它。
 
 由 Crabbox 驱动的 Blacksmith 运行会对单次 Testbox 执行预热、领取、同步、运行、报告和清理。内置的同步健全性检查会在同步后的盒子上运行 `git status --short` 时，如果发现至少 200 个跟踪文件删除，就会快速失败，这可捕捉到诸如 `pnpm-lock.yaml` 之类的根文件消失。对于有意进行的大规模删除 PR，请为远程命令设置 `CRABBOX_ALLOW_MASS_DELETIONS=1`。
 
@@ -608,7 +634,7 @@ pnpm crabbox:run -- --provider blacksmith-testbox \
   "corepack pnpm check:changed"
 ```
 
-聚焦测试重跑：
+在本地依赖不可用或目标会分发到多个分支时，在 Testbox 上重新运行聚焦测试：
 
 ```bash
 pnpm crabbox:run -- --provider blacksmith-testbox \

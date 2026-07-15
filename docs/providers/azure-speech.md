@@ -59,20 +59,19 @@ Azure Speech 是一个捆绑的 Azure AI Speech 文本转语音提供商。OpenC
 
 所有选项都位于 `messages.tts.providers["azure-speech"]` 下。
 
-| 选项                    | 描述                                                                                               |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| `apiKey`                | Azure Speech 资源密钥。回退到 `AZURE_SPEECH_KEY`、`AZURE_SPEECH_API_KEY` 或 `SPEECH_KEY`。      |
-| `region`                | Azure Speech 资源区域。回退到 `AZURE_SPEECH_REGION` 或 `SPEECH_REGION`。                         |
-| `endpoint`              | 可选的 Azure Speech endpoint 覆盖项。回退到 `AZURE_SPEECH_ENDPOINT`。                              |
-| `baseUrl`               | 可选的 Azure Speech 基础 URL 覆盖项。                                                              |
-| `voice`                 | Azure 语音 ShortName（默认 `en-US-JennyNeural`）。旧别名：`voiceId`。                             |
-| `lang`                  | SSML 语言代码（默认 `en-US`）。                                                                    |
-| `outputFormat`          | 音频文件输出格式（默认 `audio-24khz-48kbitrate-mono-mp3`）。                                       |
-| `voiceNoteOutputFormat` | 语音笔记输出格式（默认 `ogg-24khz-16bit-mono-opus`）。                                            |
-| `timeoutMs`             | 请求超时覆盖值，单位为毫秒。回退到全局 `messages.tts.timeoutMs`。                                  |
+| Option                  | Description                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `apiKey`                | Azure Speech 资源密钥。回退到 `AZURE_SPEECH_KEY`、`AZURE_SPEECH_API_KEY` 或 `SPEECH_KEY`。 |
+| `region`                | Azure Speech 资源区域。回退到 `AZURE_SPEECH_REGION` 或 `SPEECH_REGION`。                 |
+| `endpoint`              | 可选的 Azure Speech 端点覆盖。回退到受信任的 `AZURE_SPEECH_ENDPOINT`。               |
+| `baseUrl`               | 可选的 Azure Speech 基础 URL 覆盖。                                                              |
+| `voice`                 | Azure 语音 ShortName（默认 `en-US-JennyNeural`）。旧别名：`voiceId`。                         |
+| `lang`                  | SSML 语言代码（默认 `en-US`）。                                                                 |
+| `outputFormat`          | 音频文件输出格式（默认 `audio-24khz-48kbitrate-mono-mp3`）。                                 |
+| `voiceNoteOutputFormat` | 语音备忘录输出格式（默认 `ogg-24khz-16bit-mono-opus`）。                                       |
+| `timeoutMs`             | 请求超时覆盖，单位为毫秒。回退到全局 `messages.tts.timeoutMs`。          |
 
-当 `apiKey` 已设置，并且 `region`、`endpoint` 或 `baseUrl` 中至少有一个已设置时，
-该提供程序即视为已配置。环境变量仅作为未设置配置键的后备项进行检查。
+在设置了 `apiKey` 以及 `region`、`endpoint` 或 `baseUrl` 其中之一后，即视为该提供者已配置。仅当配置键未设置时，才会将环境变量作为回退项进行检查。工作区的 `.env` 文件不能设置 `AZURE_SPEECH_ENDPOINT`；请使用进程环境、全局运行时 dotenv，或显式配置来进行端点路由。
 
 ## 说明
 

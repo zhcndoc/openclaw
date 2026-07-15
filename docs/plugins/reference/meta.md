@@ -20,4 +20,4 @@ providers: meta
 
 ## 相关文档
 
-- [meta](/providers/meta)
+- [Meta](/providers/meta)

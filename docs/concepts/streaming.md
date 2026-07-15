@@ -131,16 +131,9 @@ top-level boolean/string spellings are rewritten by `openclaw doctor --fix`).
 | `block`    | 预览以分块/追加步骤更新                                                |
 | `progress` | 生成期间显示进度/状态预览，完成时输出最终答案                           |
 
-`streaming.mode: "block"` is a preview-streaming mode for edit-capable
-channels such as Discord and Telegram; it does not by itself enable channel
-block delivery there. Use `streaming.block.enabled` for normal block replies.
-Microsoft Teams is the
-exception: it has no draft-preview block transport, so `streaming.mode:
-"block"` disables native streaming entirely and the reply lands as regular
-block delivery instead of native partial/progress streaming. Mattermost also
-differs: in `block` mode it rotates the preview between completed text and
-tool-activity blocks, so earlier blocks stay visible as separate posts
-instead of being overwritten in one editable draft.
+`streaming.mode: "block"` 是适用于可编辑频道（如 Discord 和 Telegram）的预览流式模式；它本身不会在这些频道中启用频道块投递。正常的块回复请使用 `streaming.block.enabled`。
+Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streaming.mode:
+"block"` 会完全禁用原生流式传输，回复会作为普通块投递，而不是原生的 partial/progress 流式传输。Mattermost 也有所不同：在 `block` 模式下，它会在已完成文本和工具活动块之间轮换预览，因此较早的块会作为单独帖子保持可见，而不会在一个可编辑草稿中被覆盖。
 
 ### 频道映射
 
@@ -163,12 +156,12 @@ instead of being overwritten in one editable draft.
 
 | Channel  | Legacy keys                                                 | Status                                                                                                                                               |
 | ---------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Telegram | `streamMode`, scalar/boolean `streaming`                    | Rewritten to `streaming.mode` by `openclaw doctor --fix`; not read at runtime                                                                        |
-| Discord  | `streamMode`, boolean `streaming`                           | Rewritten to `streaming.mode` by `openclaw doctor --fix`; not read at runtime                                                                        |
-| Slack    | `streamMode`; boolean `streaming`; legacy `nativeStreaming` | Rewritten to `streaming.mode` (and `streaming.nativeTransport` for the boolean/legacy forms) by `openclaw doctor --fix`; not read at runtime         |
-| Matrix   | scalar/boolean `streaming`                                  | Rewritten to `streaming.mode` (including Matrix's `"quiet"` mode) by `openclaw doctor --fix`; not read at runtime                                    |
-| Feishu   | boolean `streaming`                                         | Rewritten to `streaming.mode` by `openclaw doctor --fix`; not read at runtime                                                                        |
-| QQ Bot   | boolean `streaming`; `streaming.c2cStreamApi`               | Rewritten to `streaming.mode` (and `streaming.nativeTransport` for the boolean/`c2cStreamApi` forms) by `openclaw doctor --fix`; not read at runtime |
+| Telegram | `streamMode`, scalar/boolean `streaming`                    | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                       |
+| Discord  | `streamMode`, boolean `streaming`                           | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                       |
+| Slack    | `streamMode`; boolean `streaming`; legacy `nativeStreaming` | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（以及布尔值/旧形式对应的 `streaming.nativeTransport`）；运行时不会读取                                 |
+| Matrix   | scalar/boolean `streaming`                                  | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（包括 Matrix 的 `"quiet"` 模式）；运行时不会读取                                                   |
+| Feishu   | boolean `streaming`                                         | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                       |
+| QQ Bot   | boolean `streaming`; `streaming.c2cStreamApi`               | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（以及布尔值/`c2cStreamApi` 形式对应的 `streaming.nativeTransport`）；运行时不会读取                   |
 
 ## 运行时行为
 
@@ -228,7 +221,7 @@ instead of being overwritten in one editable draft.
 - 工具进度编辑会遵循当前活动的预览流模式；当预览流为 `off` 或块流已经接管消息时，它们会被跳过。在 Telegram 上，`streaming.mode: "off"` 表示仅最终输出：通用进度闲聊也会被抑制，不会作为独立状态消息发送，而审批提示、媒体载荷和错误仍会正常路由。
 - 要保留预览流但隐藏工具进度行，可为该频道将 `streaming.preview.toolProgress` 设为 `false`（默认值为 `true`）。要在隐藏命令/执行文本的同时保留工具进度行可见，可将 `streaming.preview.commandText` 设为 `"status"`，或将 `streaming.progress.commandText` 设为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略适用于使用 OpenClaw 紧凑进度渲染器的草稿/进度通道，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
 
-## 进度草稿渲染
+## Progress 草稿渲染
 
 进度模式草稿（`streaming.progress.*`）是有上限且可按
 通道配置的：
@@ -245,8 +238,10 @@ instead of being overwritten in one editable draft.
 除了工具进度之外，紧凑进度渲染器还可以在草稿中显示另一条通道：
 
 - **`streaming.progress.commentary`** - 渲染模型在工具调用前的
-  **commentary**（简短的“我会先检查……然后……”式叙述），并与工具行交错显示在
-  进度草稿中。
+  **commentary**（一段简短的“我会检查……然后……”式叙述），并与
+  工具行交错显示在进度草稿中。在 Discord 和 Telegram 的进度模式下，
+  即使关闭了这个可选通道，同样的前导文本也会提供状态标题；其他通道则保留其现有的进度行为。参见
+  [进度草稿](/concepts/progress-drafts#status-headline)。
 
 ```json
 {

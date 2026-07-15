@@ -11,8 +11,8 @@ title: "Fireworks 插件"
 
 ## 分发
 
-- Package: `@openclaw/fireworks-provider`
-- Install route: npm; ClawHub: `clawhub:@openclaw/fireworks-provider`
+- 包：`@openclaw/fireworks-provider`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/fireworks-provider`
 
 ## 表面
 
@@ -20,4 +20,4 @@ providers: fireworks
 
 ## 相关文档
 
-- [fireworks](/providers/fireworks)
+- [Fireworks](/providers/fireworks)

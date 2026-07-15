@@ -23,7 +23,7 @@ Control UI 覆盖了常见的发现、安装、启用和禁用
 
 在 Control UI 中打开 **Plugins**，或者使用相对于已配置 Control UI 基础路径的 `/settings/plugins`。例如，基础路径为 `/openclaw` 时，使用 `/openclaw/settings/plugins`。该页面有两个选项卡：
 
-- **Installed** 显示按类别分组的完整本地清单（channels、model providers、memory、tools）。每一行都会打开详细视图；其溢出菜单（`…`）可启用或禁用插件，并且对于外部安装的插件，还提供 **Remove**。该选项卡还会列出已配置的 [MCP servers](/cli/mcp)，并通过相同的菜单驱动方式执行启用、禁用和移除操作，同时在 Gateway 配置中编辑 `mcp.servers`。
+- **Installed** 显示按类别分组的完整本地清单（channels、model providers、memory、tools）。每一行都会打开详细视图；其溢出菜单（`…`）可启用或禁用插件，并且对于外部安装的插件，还提供 **移除**。该选项卡还会列出已配置的 [MCP servers](/cli/mcp)，并通过相同的菜单驱动方式执行启用、禁用和移除操作，同时在 Gateway 配置中编辑 `mcp.servers`。
 - **Discover** 是商店：包含随 OpenClaw 提供的精选插件、官方外部插件，以及精选的连接器展示区。连接器卡片要么可一键添加托管的 MCP server（GitHub、Notion、Linear、Sentry、Home Assistant），要么会跳转到预填充的 ClawHub 搜索。在搜索框中输入内容会就地查询 [ClawHub](https://clawhub.ai/plugins)，并附加一个 **From ClawHub** 部分，其中包含下载量和来源验证徽章。
 
 内置插件不需要安装包。它们的菜单操作是 **Enable** 或 **Disable**。例如，Workboard 随 OpenClaw 一起提供且默认处于禁用状态，因此选择 **Enable** 即可启用它。捆绑插件不能被移除，只能被禁用。
@@ -91,9 +91,9 @@ openclaw plugins install ./my-plugin
 openclaw plugins install --link ./my-plugin
 ```
 
-裸包规范会在启动切换期间从 npm 安装，除非名称与捆绑或官方插件 id 匹配，在这种情况下 OpenClaw 会改用该本地/官方副本。请使用 `clawhub:`、`npm:`、`git:` 或 `npm-pack:` 以实现确定性的源选择。
+裸包规格在启动切换期间会从 npm 安装，除非名称与捆绑或官方插件 ID 匹配；在这种情况下，OpenClaw 会使用该本地/官方副本。请使用 `clawhub:`、`npm:`、`git:` 或 `npm-pack:` 来确定性地选择来源。OpenClaw 的捆绑和官方目录包与 ClawHub 包一样受信任。新的任意 npm、git、本地路径/归档、`npm-pack:` 或 marketplace 来源，在你审查并信任该来源后，非交互式安装需要 `--force`。
 
-仅在需要覆盖来自不同来源的现有安装目标时使用 `--force`。对于已跟踪的 npm、ClawHub 或 hook-pack 安装的常规升级，请改用 `openclaw plugins update`；`--link` 不支持 `--force`。
+`--force` 会在无需提示的情况下确认非 ClawHub 来源，并在需要时覆盖现有安装目标。对于已跟踪的 npm、ClawHub 或 hook-pack 安装的常规升级，请改用 `openclaw plugins update`。使用 `--link` 时，`--force` 只确认来源；链接目录不会被复制或覆盖。
 
 ## 重启和检查
 

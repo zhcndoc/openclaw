@@ -118,7 +118,7 @@ Core 会将已验证的 profile 设置与租约一并持久化，并将该快照
 对于固定工具名称的简单仅工具插件，请使用 [`defineToolPlugin`](/plugins/tool-plugins)。
 对于混合插件或完全动态的工具注册，请直接使用 `api.registerTool(...)`。
 
-| Method                                 | What it registers                                                                                                                        |
+| 方法                                 | 注册内容                                                                                                                        |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `api.registerTool(tool, opts?)`        | Agent 工具（必需，或 `{ optional: true }`）                                                                                            |
 | `api.registerCommand(def)`             | 自定义命令（绕过 LLM）                                                                                                        |
@@ -148,28 +148,71 @@ Node-host 命令运行在连接的 node host 上，而不是在 Gateway
 
 ### 基础设施
 
-| 方法                                          | 它注册的内容                                              |
-| ----------------------------------------------- | ------------------------------------------------------------ |
-| `api.registerHook(events, handler, opts?)`      | 事件钩子                                                   |
-| `api.registerHttpRoute(params)`                 | 网关 HTTP 端点                                             |
-| `api.registerGatewayMethod(name, handler)`      | 网关 RPC 方法                                              |
-| `api.registerGatewayDiscoveryService(service)`  | 本地网关发现公告器                                         |
-| `api.registerCli(registrar, opts?)`             | CLI 子命令                                                 |
-| `api.registerNodeCliFeature(registrar, opts?)`  | `openclaw nodes` 下的 Node 功能 CLI                        |
-| `api.registerService(service)`                  | 后台服务                                                   |
-| `api.registerInteractiveHandler(registration)`  | 交互式处理器                                               |
-| `api.registerAgentToolResultMiddleware(...)`    | 运行时工具结果中间件                                       |
-| `api.registerMemoryPromptSupplement(builder)`   | 追加式的、与记忆相邻的提示词部分                             |
-| `api.registerMemoryCorpusSupplement(adapter)`   | 追加式的记忆搜索/读取语料库                                 |
-| `api.registerHostedMediaResolver(resolver)`     | 浏览器风格托管媒体 URL 的解析器                             |
-| `api.registerTextTransforms(transforms)`        | 插件拥有的提示词/消息兼容性文本重写                         |
-| `api.registerConfigMigration(migrate)`          | 在插件运行时加载前执行的轻量级配置迁移                       |
-| `api.registerMigrationProvider(provider)`       | `openclaw migrate` 的导入器                                 |
-| `api.registerAutoEnableProbe(probe)`            | 可自动启用此插件的配置探针                                  |
-| `api.registerReload(registration)`              | 用于重载处理的重启/热重载/无操作配置前缀策略                 |
-| `api.registerNodeHostCommand(command)`          | 向配对节点暴露的命令处理器                                  |
-| `api.registerNodeInvokePolicy(policy)`          | 节点调用命令的允许列表/审批策略                              |
-| `api.registerSecurityAuditCollector(collector)` | `openclaw security audit` 的发现结果收集器                  |
+| 方法                                          | 注册内容                                                      |
+| ----------------------------------------------- | ---------------------------------------------------------------------- |
+| `api.registerHook(events, handler, opts?)`      | 事件钩子                                                             |
+| `api.registerHttpRoute(params)`                 | 网关 HTTP 端点                                                  |
+| `api.registerGatewayMethod(name, handler)`      | 网关 RPC 方法                                                     |
+| `api.registerGatewayDiscoveryService(service)`  | 本地网关发现发布器                                     |
+| `api.registerCli(registrar, opts?)`             | CLI 子命令                                                         |
+| `api.registerNodeCliFeature(registrar, opts?)`  | `openclaw nodes` 下的 Node 功能 CLI                                |
+| `api.registerService(service)`                  | 后台服务                                                     |
+| `api.registerInteractiveHandler(registration)`  | 交互式处理器                                                    |
+| `api.registerAgentToolResultMiddleware(...)`    | 运行时工具结果中间件                                         |
+| `api.registerMemoryPromptSupplement(builder)`   | 附加的、与 memory 相邻的提示词部分                                |
+| `api.registerMemoryCorpusSupplement(adapter)`   | 附加的 memory 搜索/读取语料库                                     |
+| `api.registerHostedMediaResolver(resolver)`     | 用于浏览器风格托管媒体 URL 的解析器                           |
+| `api.registerMcpServerConnectionResolver(...)`  | 针对静态服务器名称、按请求方区分的 MCP 传输（`url`/`headers`） |
+| `api.registerTextTransforms(transforms)`        | 由插件拥有的提示词/消息兼容性文本重写                |
+| `api.registerConfigMigration(migrate)`          | 在插件运行时加载前执行的轻量级配置迁移           |
+| `api.registerMigrationProvider(provider)`       | `openclaw migrate` 的导入器                                        |
+| `api.registerAutoEnableProbe(probe)`            | 可自动启用此插件的配置探测器                          |
+| `api.registerReload(registration)`              | 用于重载处理的重启/热重载/空操作配置前缀策略              |
+| `api.registerNodeHostCommand(command)`          | 公开给配对节点的命令处理器                                |
+| `api.registerNodeInvokePolicy(policy)`          | 节点调用命令的允许列表/审批策略                    |
+| `api.registerSecurityAuditCollector(collector)` | `openclaw security audit` 的问题收集器                       |
+
+#### 按请求方作用域划分的 MCP 连接
+
+将 MCP 服务器的**身份**保持静态（名称、工具过滤器），放在 `mcp.servers` 或 bundle manifest 中。也可以选择注册一个连接解析器，让每个受信任的消息请求方都获得自己的传输：
+
+```ts
+api.registerMcpServerConnectionResolver({
+  serverName: "user-email",
+  resolve: async (ctx) => {
+    // ctx.requesterSenderId 由宿主信任；绝不要在这里捏造发送方身份。
+    const token = await lookupUserToken(ctx.requesterSenderId);
+    if (!token) {
+      return null; // 在当前运行中省略此服务器
+    }
+    return {
+      url: "https://mcp.example.com/email",
+      headers: { Authorization: `Bearer ${token}` },
+    };
+  },
+});
+```
+
+契约说明：
+
+- 解析器上下文只携带受信任的宿主身份（`requesterSenderId`、
+  可选的 `agentAccountId` / `messageChannel`）。未来受信任字段（例如
+  cron/子代理用户上下文）可以以追加方式加入。
+- 一个插件只能拥有一个服务器名称：来自另一个插件、针对相同
+  `serverName` 的重复 `registerMcpServerConnectionResolver` 会被以错误诊断拒绝
+  （首次注册者获胜），因此连接所有权永远不依赖插件加载顺序。
+- 工具名称由完整声明的服务器集合派生，因此部分解析绝不会在不同请求方或轮次之间改变安全的服务器名称。Core 不会验证不同请求方端点是否提供完全相同的工具 schema；解析器必须让每个请求方指向同一个逻辑服务，否则工具 schema（以及提示缓存稳定性）会按请求方发生分歧。
+- 在没有受信任的 `requesterSenderId` 的运行中（cron、子代理、心跳、公共网关），永远不会实例化按请求方作用域划分的服务器。不存在共享的回退连接。
+- `resolve` 对每个服务器的执行上限为 10 秒；超时或抛错会在本次运行中省略该服务器，而不会使静态 MCP 失败。
+- 已解析的连接对每个请求方最多每 5 分钟重新校验一次：轮换会用新凭据重建传输，而 `null` 结果会撤销它（即使在会话中途，缓存的运行时也会被释放）。因此，已撤销或已轮换的凭据最多可能继续使用 5 分钟。
+- 已解析的 `headers` 绝不会被记录或持久化；core 只保留一个短暂的、仅进程内的键控摘要（进程本地 HMAC）来检测凭据轮换，并将已解析的 header/URL 凭据值注册到日志/调试捕获脱敏注册表中。
+- 按请求方作用域划分的服务器不会生成 MCP App 视图：视图的生命周期会超出经过请求方认证的运行，而且网关视图边界没有请求方身份，因此这些服务器的 app 预览会保持 fail-closed。工具结果不受影响。
+- 没有解析器的静态服务器会保留现有的会话作用域生命周期。
+- **Harness 传递规则：** 按请求方作用域划分的服务器绝不会进入 harness 原生 MCP 客户端配置（Codex 线程 `mcp_servers`、CLI `-c mcp_servers=…`，或任何其他会话共享的 MCP 投影）。harness 会将它们作为运行作用域工具传递：
+  - 嵌入式运行器：会话 MCP 运行时 + bundle 工具（静态 + 作用域）。
+  - Codex 应用服务器：通过 `materializeRequesterScopedMcpToolsForHarnessRun` 提供动态工具（仅作用域；静态服务器仍留在 Codex 的原生 MCP 客户端中）。
+- 作用域工具的**规范**在该会话中首次成功解析后保持会话稳定，因此共享线程 harness（Codex）不会因为发送方变化而切换线程。在任何请求方解析之前，不会公布作用域规范。
+- 共享线程 harness 上的未认证请求方仍会看到已公布的作用域工具；调用其中任意一个都会针对该请求方返回一个干净的未连接工具错误。OpenClaw 永远不会回退到其他请求方的凭据。
 
 Memory prompt supplement 构建器会接收可选的 `agentId`、`agentSessionKey` 和 `sandboxed` 上下文。Memory corpus supplement 的 `search` 和 `get` 调用会接收可选的 `agentId` 和 `sandboxed` 上下文。拥有代理所有存储的插件应当在每次调用时解析该存储，而不是在注册期间捕获某个全局路径。如果在多代理操作中需要 agent id 但未提供，应当直接失败并关闭，而不是选择任意一个代理。
 

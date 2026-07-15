@@ -9,7 +9,7 @@ title: "Matrix 插件"
 
 用于房间和直接消息的 OpenClaw Matrix 频道插件。
 
-## 分发
+## Distribution
 
 - Package: `@openclaw/matrix`
 - Install route: ClawHub: `clawhub:@openclaw/matrix`; npm
@@ -20,4 +20,4 @@ channels: matrix
 
 ## 相关文档
 
-- [matrix](/channels/matrix)
+- [Matrix](/channels/matrix)

@@ -20,4 +20,4 @@ channels: line
 
 ## 相关文档
 
-- [line](/channels/line)
+- [LINE](/channels/line)
