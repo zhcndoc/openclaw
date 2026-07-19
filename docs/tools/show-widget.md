@@ -15,11 +15,14 @@ read_when:
 
 When the agent calls `show_widget`, OpenClaw core wraps `widget_code` in a minimal HTML document, stores it as a Canvas document, and returns a preview handle. The Control UI renders that handle as a sandboxed iframe directly under the tool call, while native apps use an isolated web view. Both restore the widget after history reload.
 
-For browser embedding, the wrapper document injects three small host bridges around the widget code:
+In Control UI sessions, a Canvas widget can also be pinned to the session dashboard. Set `pin: true` in the tool call, or use **Pin to dashboard** on an existing transcript widget. Pinning reuses the exact hosted document; it does not fetch widget HTML through the browser.
+
+For browser embedding, the wrapper document injects four small host bridges around the widget code:
 
 - A size reporter posts the rendered content height to the embedding chat, which clamps it and fits the iframe (160 to 1200 pixels).
 - A prompt bridge defines a global `sendPrompt(text)` function that widget scripts can call to submit a follow-up message into the chat. The bridge creates a private message channel and offers one endpoint to the chat before any widget code runs; the chat adopts only that first offer. See [Interactive widgets](#interactive-widgets).
 - A theme bridge listens for the Control UI's current design tokens and applies them as CSS variables, on load and again on every theme change.
+- A snapshot bridge renders the current widget document as a PNG when the embedding chat requests an export.
 
 Everything else stays inside the frame: the document runs in an opaque origin with a strict Content Security Policy, so widget scripts cannot reach the Control UI, the Gateway, or the network.
 
@@ -70,6 +73,8 @@ Author widgets with three rules:
 2. Keep the page background transparent so the widget belongs to its host surface.
 3. Reserve `--accent-fill` for at most one primary action.
 
+**Export:** In web chat, open the widget card menu to copy the rendered widget to the clipboard or download it as a PNG. Older widget documents without the snapshot bridge fall back to an HTML file download.
+
 ## Use the tool
 
 Both implementations use the same required fields:
@@ -84,7 +89,15 @@ Both implementations use the same required fields:
 
 Discord also accepts optional `button_label` text for the Activity launch button. The Canvas schema intentionally omits this Discord-only field.
 
-The core result includes a Canvas preview handle, so the Control UI and supported native apps render the widget directly from the tool call and restore it after history reload. Discord returns the stored widget and posted-message identifiers.
+The core Canvas tool accepts these optional dashboard placement fields:
+
+- `pin`: also place the widget on the session dashboard.
+- `name`: stable widget name; defaults to a slug of `title`.
+- `tab`: destination tab slug.
+- `size`: one of `sm`, `md`, `lg`, `xl`, or `full`.
+- `after`: sibling widget name after which to place the widget.
+
+The core result includes a Canvas preview handle, so the Control UI and supported native apps render the widget directly from the tool call and restore it after history reload. Pinned results also retain the board widget name so the Control UI does not offer a duplicate pin after transcript reload. Discord returns the stored widget and posted-message identifiers.
 
 `discord_widget` remains registered as a deprecated alias for one release. New agent calls should use `show_widget`.
 
