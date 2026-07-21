@@ -18,12 +18,20 @@ The anchored compact chat panel from the menu bar keeps the compact single-colum
 
 ## Multiple Gateway windows
 
-Choose **File → New Gateway Window…** or press Cmd-N, then enter a `ws://` or
-`wss://` endpoint and its optional token or password. Each saved profile owns
-an independent Gateway connection, device-auth scope, transcript cache,
-offline outbox, route leases, and window restoration key. These windows can
-stay connected and run chats simultaneously; opening the same profile again
-focuses its existing window.
+Open **Settings → Gateways** to add or remove reusable Gateway profiles. Each
+profile contains a `ws://` or `wss://` endpoint and its optional token or
+password; credentials are stored in the macOS Keychain. Removing a profile
+also closes its open windows and shuts down its secondary connection.
+
+Choose **File → New Gateway Window…** or press Cmd-N, then select one of those
+saved profiles. The picker remembers the most recently used profile. Every
+selection creates a new independent window, so the same Gateway can appear in
+multiple windows with different active sessions and navigation state.
+
+Each saved profile owns one shared Gateway connection, device-auth scope,
+transcript cache, offline outbox, and route leases. Windows for that profile
+reuse those resources while staying independently navigable. Windows for
+different profiles stay connected and run chats simultaneously.
 
 The menu-bar app's configured Gateway remains the owner of Mac node
 capabilities and Talk Mode. Additional Gateway windows are operator-only, so a
@@ -36,7 +44,7 @@ Press Option-Space (⌥Space) or choose **Quick Chat** from the menu bar menu to
 
 Quick Chat shows the targeted agent (avatar or emoji, with the agent's name as the placeholder) and sends to that agent's main session. After Return accepts a send, the bar stays open and expands downward with the streamed Markdown reply and recent transcript. The bar input remains the composer. Press Command-Return to send and open the same target in the full chat window, Shift-Return for a newline, or Escape to dismiss the whole bar and reply area. Clicking outside also dismisses it. When relevant macOS permissions are missing, an attached strip offers **Grant** and **Not now** actions.
 
-Use the microphone button to dictate into the composer. Partial speech results replace the dictated span live while preserving text that was already in the composer. Press the button again, Return, or Escape to stop; sending, hiding, or unfocusing Quick Chat also releases the microphone. The first use asks for macOS Microphone and Speech Recognition access.
+Use the microphone button to dictate into the composer. Partial speech results replace the dictated span live while preserving text that was already in the composer. Press the button again, Return, or Escape to stop; sending, hiding, or unfocusing Quick Chat also releases the microphone. The first use asks for macOS Microphone and Speech Recognition access. Quick Chat uses Apple Speech and may use its network services; only passive Voice Wake requires on-device recognition.
 
 The compact model control shows the target session's current model and reasoning level. A model choice updates that session and therefore persists there, while a reasoning choice applies only to each message sent from the current Quick Chat presentation. Local choices reset when the bar hides. Switching agents or choosing a recent session keeps explicit choices but reloads the newly targeted session's underlying model state.
 

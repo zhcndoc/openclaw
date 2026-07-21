@@ -370,6 +370,10 @@ Native macOS nodes can also send authenticated `node.presence.activity` events
 with bounded input idle time. The Gateway derives activity timestamps on its
 own clock, exposes the freshest connected Mac through `node.list` and
 `node.describe`, and broadcasts `node.presence` updates to read-scoped clients.
+The app sends `{ "action": "clear" }` when the user disables activity sharing;
+the Gateway clears timestamps only for that exact authenticated node connection.
+Gateways that predate this acknowledged action return it as unhandled, so the Mac
+node reconnects once and lets disconnect cleanup remove the old connection state.
 See [Active computer presence](/nodes/presence) for selection, privacy, model
 context, and notification-routing behavior.
 
@@ -547,7 +551,7 @@ methods. Treat this as feature discovery, not a full enumeration of
   </Accordion>
 
   <Accordion title="Agent and workspace helpers">
-    - `agents.list` returns configured agent entries, including effective model and runtime metadata.
+    - `agents.list` returns gateway-visible agent entries, including effective model/runtime metadata and optional semantic `kind` (`agent` or `system`). Clients advertise the `agent-kind` handshake capability to receive the complete typed roster; clients without it keep the legacy selector-safe roster without system rows. Kind-aware clients exclude `system` rows from ordinary selectors while retaining them in diagnostic views. Older v4 gateways may return rows without `kind`.
     - `agents.create`, `agents.update`, and `agents.delete` manage agent records and workspace wiring.
     - `agents.files.list`, `agents.files.get`, and `agents.files.set` manage the bootstrap workspace files exposed for an agent.
     - `audit.activity.list` returns the versioned metadata-only activity ledger; `audit.list` remains the compatibility-safe run/tool RPC.
