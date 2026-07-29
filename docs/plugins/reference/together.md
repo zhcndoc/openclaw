@@ -16,7 +16,7 @@ title: "Together 插件"
 
 ## 接口
 
-providers: together; contracts: videoGenerationProviders
+providers: `together`; contracts: `videoGenerationProviders`
 
 ## 相关文档
 

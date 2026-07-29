@@ -11,15 +11,18 @@ read_when:
 做梦是 `memory-core` 中的后台记忆巩固系统。它会将强烈的短期信号转化为持久记忆，同时保持这一过程的可解释性和可审阅性。
 
 <Note>
-做梦默认是**可选开启**的，并且默认禁用。
+做梦默认已启用。设置
+`plugins.entries.memory-core.config.dreaming.enabled: false` 可将其禁用。
 </Note>
 
 ## 做梦会写入什么
 
-- **Machine state** in `memory/.dreams/` (回忆存储、阶段信号、摄取检查点、锁)。
-- **Human-readable output** in `DREAMS.md`（或已有的 `dreams.md`）以及 `memory/dreaming/<phase>/YYYY-MM-DD.md` 下可选的阶段报告文件。
+- **Machine state** in `memory/.dreams/`（recall store、phase signals、ingestion checkpoints、locks）。
+- 在接受 `MEMORY.md` 重写之前，SQLite 支持的插件状态中的 **Rewrite preimages**。
+- `DREAMS.md`（或现有的 `dreams.md`）中的 **Human-readable output**，以及 `memory/dreaming/<phase>/YYYY-MM-DD.md` 下可选的 phase report 文件。
 
 长期提升仍然只写入 `MEMORY.md`。
+每个新提升的条目都会带有从候选项派生的尾随回忆元数据：在 `<!-- trigger: phrase one, phrase two -->` 中最多三个概念标签，以及一个范围为 1 到 10 的受限 `<!-- importance: N -->` 值。整合会保持现有带注释的条目逐字节不变，除非它明确地合并或取代它们。
 
 ## 阶段模型
 
@@ -47,10 +50,12 @@ Dreaming 每次扫描会按顺序执行三个协作阶段：light -> REM -> deep
     - 从不写入 `MEMORY.md`。
 
   </Accordion>
-  <Accordion title="Deep 阶段">
-    - 使用加权评分和阈值门槛对候选项进行排序（`minScore`、`minRecallCount`、`minUniqueQueries` 必须全部通过）。
-    - 在写入前从实时每日文件中重新加载片段，因此会跳过过时/已删除的片段。
-    - 将晋升的条目追加到 `MEMORY.md`。
+  <Accordion title="Deep phase">
+    - 使用加权评分和阈值门控对候选项进行排序（`minScore`、`minRecallCount`、`minUniqueQueries` 必须全部通过）。
+    - 在写入前从实时每日文件中重新获取片段，因此会跳过过时/已删除的片段。
+    - 将通过门控的所有者和代理派生候选项连同当前的 `MEMORY.md` 一起传递给一个整合子代理。
+    - 只有在结果保留了足够多的先前条目、包含候选来源引用并且符合引导预算时，才会重写 `MEMORY.md`。
+    - 当模型不可用或重写未通过验证时，回退到之前的仅追加式提升路径。
     - 将 `## Deep Sleep` 摘要写入 `DREAMS.md`，并可选写入 `memory/dreaming/deep/YYYY-MM-DD.md`。
 
   </Accordion>
@@ -58,7 +63,24 @@ Dreaming 每次扫描会按顺序执行三个协作阶段：light -> REM -> deep
 
 ## 会话转录摄取
 
-Dreaming 可以将已脱敏的会话转录摄取到 dreaming 语料库中。若可用，转录内容会与每日记忆信号和回忆痕迹一起输入到 light phase。个人和敏感内容会在摄取前被脱敏处理。
+Dreaming 可以将已编辑的会话转录内容摄取到 dreaming 语料库中。只有交互式会话才有资格被摄取。Cron、heartbeat、subagent 和 unknown 会话不会进入持久候选摄取。个人和敏感内容会在摄取前被编辑，而运行时标记为已召回的上下文会被移除，因此已召回的片段不会再次作为新记忆被学习。
+
+## 整合安全性
+
+确定性分数、召回计数和查询多样性阈值仍然是候选门槛。整合仅在这些门槛通过后运行。
+
+在构建整合提示词之前，`memory-core` 会移除其索引来源为 `untrusted` 或 `system` 的候选项。这是一个结构性污点门槛，而不是分数惩罚。符合条件的候选项包括其来源、会话类型、观察时间、可选的后继替换键，以及日记来源引用。
+
+被接受的重写必须：
+
+- 保留 `phases.deep.maxPriorEntryLossFraction` 范围内的先前条目
+- 包含每个被提升候选项的 `Source: path#Lx-Ly` 引用
+- 保持在 `MEMORY.md` 的引导安全文件预算内
+- 解析为预期的结构化响应
+
+在文件更改之前，先前的 `MEMORY.md` 会存储在基于 SQLite 的插件状态中。`DREAMS.md` 会接收新增、合并和被替换的计数，以及简短的差异式高亮。这使得每次重写都可审查，而不会将《梦境日记》变成提升来源。
+
+后台整合受睡眠期间计算启发（arXiv:2504.13171）。来源与反思边界遵循《Generative Agents》研究中的持久记忆框架。
 
 ## 梦境日记
 
@@ -71,16 +93,31 @@ Dreaming 会在 `DREAMS.md` 中保留一份叙事性的 **Dream Diary**。在每
 此外还有一条用于审查和恢复工作的有依据历史回填通道：
 
 <AccordionGroup>
-  <Accordion title="回填命令">
-    - `memory rem-harness --path ... --grounded` 会预览来自历史 `YYYY-MM-DD.md` 笔记的有依据日记输出。
-    - `memory rem-backfill --path ...` 会将可逆的有依据日记条目写入 `DREAMS.md`。
-    - `memory rem-backfill --path ... --stage-short-term` 会把有依据的持久候选项暂存到正常深度阶段使用的同一短期证据存储中。
-    - `memory rem-backfill --rollback` 和 `--rollback-short-term` 会移除这些已暂存的回填产物，而不会影响普通日记条目或实时短期回忆。
+  <Accordion title="Backfill commands">
+    - `memory rem-harness --path ... --grounded` 预览来自历史 `YYYY-MM-DD.md` 笔记的有依据日记输出。
+    - `memory rem-backfill --path ...` 将可逆的有依据日记条目写入 `DREAMS.md`。
+    - `memory rem-backfill --path ... --stage-short-term` 将有依据的持久候选条目暂存到与正常深度阶段使用的相同短期证据存储中。
+    - `memory rem-backfill --rollback` 和 `--rollback-short-term` 会移除这些已暂存的回填产物，而不会触碰普通日记条目或实时短期回忆。
+    - `memory session-backfill --agent <id>` 预览来自该代理保留会话历史中的可信候选条目，按未处理的最早日期优先。
+    - `memory session-backfill --agent <id> --apply` 通过正常短期存储暂存这些候选条目，并写入可逆的日记块，而不会更改 `MEMORY.md` 或 `USER.md`。
+    - `memory session-backfill --agent <id> --rem` 为 `DREAMS.md` 中的每一天写入一个确定性的、有依据的预览，而不暂存候选条目或调用模型。
+    - `memory session-backfill --agent <id> --rollback` 清除共享的有依据回填候选条目和日记块，包括由 `rem-backfill` 创建的产物。
 
   </Accordion>
 </AccordionGroup>
 
-控制 UI 在代理的 Memory 选项卡（Agents 页面）中提供相同的日记回填/重置流程，因此你可以在梦境场景中检查结果，再决定有依据的候选项是否值得晋升。一个独立的、有依据的 Scene 轨道会显示哪些已暂存的短期条目来自历史回放，哪些已晋升项目是由有依据内容引导的，并且允许你只清除仅限有依据的已暂存条目，而不会影响实时短期状态。
+Session backfill 使用规范化保留的转录身份，包括
+跨轮换保留的会话。消息会按配置的
+dreaming 时区分桶，并与实时摄取的已跟踪消息哈希和信号
+上限共享，因此受限重试可以继续向前进行，而不会重新摄取先前消息。
+Rollback 会移除生成的产物，但保留那些摄取检查点。
+通过 `--archive-files` 提供的外来文件会被保守处理。它们
+嵌入的所有权字段由调用方控制，因此仍然不受信任；
+如果没有经过认证的来源契约，它们不能进入短期
+暂存。工具输出、网页内容以及非所有者回合也会被排除在
+规范的会话路径之外。
+
+Control UI 在代理的 Memory 选项卡（Agents 页面）中提供相同的日记回填/重置流程，因此你可以在决定这些有依据候选条目是否值得晋升之前，先在梦境场景中检查结果。一个独立的有依据 Scene 分区会显示哪些已暂存的短期条目来自历史回放、哪些已晋升项目是 grounded-led，并允许你只清除仅有依据的已暂存条目，而不影响实时短期状态。
 
 ## 深度排序信号
 
@@ -97,14 +134,6 @@ Dreaming 会在 `DREAMS.md` 中保留一份叙事性的 **Dream Diary**。在每
 
 Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加一个小幅、随时间衰减的提升。
 
-Shadow-trial 结果可以在任何持久写入之前，作为审查信号叠加到基础分数之上：有帮助的试验会给候选项一个小幅、受限的提升，中性的试验会使其保持延后，而有害的试验会在该次评分中将其标记为拒绝。这个信号仅用于报告——它可以改变候选项排序或审查元数据，但绝不会写入 `MEMORY.md`，也不会自行提升任何候选项。
-
-### QA shadow trial 报告覆盖
-
-QA Lab 包含一个仅报告的场景，用于探索未来的 dreaming shadow trial 在晋升前如何审查某个候选记忆：某个 agent 将基线答案与一个可以使用该候选记忆的答案进行比较，然后写入一份本地报告，其中包含裁决、原因和风险标记。此覆盖范围仅限于 QA——它验证报告产物与 `MEMORY.md` 保持分离，并且该 agent 从不声称候选项已被晋升。它不会添加生产环境的 shadow-trial 行为，也不会更改深度阶段的晋升引擎。
-
-`memory-core` 的 shadow-trial 运行器对需要稳定产物的代码路径保持相同的仅报告契约。它接受候选项、试验提示、基线结果、候选结果、裁决、原因、风险标记和证据引用，然后写入一份带有 `promotion action: report-only` 的报告。有帮助的裁决映射为 `promote` 建议，中性的裁决映射为 `defer`，有害的裁决映射为 `reject`——这些都不会写入 `MEMORY.md`，也不会应用深度阶段晋升。
-
 ## 调度
 
 启用后，`memory-core` 会自动管理一个用于完整 dreaming 扫描的 cron 任务，并在主运行时工作区以及任何已配置的代理工作区之间去重，因此子代理工作区的扩展不会排除主代理的 `DREAMS.md` 和记忆状态。
@@ -114,10 +143,10 @@ QA Lab 包含一个仅报告的场景，用于探索未来的 dreaming shadow tr
 | `dreaming.frequency` | `0 3 * * *`   |
 | `dreaming.model`     | 默认模型      |
 
-## Quick Start
+## 快速开始
 
 <Tabs>
-  <Tab title="Enable Dreaming">
+  <Tab title="启用 Dreaming">
     ```json
     {
       "plugins": {
@@ -134,7 +163,7 @@ QA Lab 包含一个仅报告的场景，用于探索未来的 dreaming shadow tr
     }
     ```
   </Tab>
-  <Tab title="Custom Scan Frequency">
+  <Tab title="自定义扫描频率">
     ```json
     {
       "plugins": {
@@ -204,8 +233,11 @@ QA Lab 包含一个仅报告的场景，用于探索未来的 dreaming shadow tr
 
 所有设置都位于 `plugins.entries.memory-core.config.dreaming` 下。
 
-<ParamField path="enabled" type="boolean" default="false">
+<ParamField path="enabled" type="boolean" default="true">
   启用或禁用做梦扫描。
+</ParamField>
+<ParamField path="phases.deep.maxPriorEntryLossFraction" type="number" default="0.25">
+  当一次整合重写删除的先前条目超过此比例时，拒绝该重写。
 </ParamField>
 <ParamField path="frequency" type="string" default="0 3 * * *">
   完整做梦扫描的 cron 频率。

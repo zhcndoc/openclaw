@@ -7,7 +7,9 @@ status: active
 
 管理用于隔离代理执行的沙箱运行时：Docker 容器、SSH 目标或 OpenShell 后端。
 
-## 命令
+[`openclaw agent exec`](/cli/agent#agent-exec) 不使用这些已配置的运行时。其隔离的隐式策略配置会关闭代理沙箱，允许对 Gateway 主机的完整执行，并将文件系统工具限制为 `--cwd`。
+
+## Commands
 
 ### `openclaw sandbox list`
 
@@ -92,7 +94,7 @@ Sandbox 运行时元数据存储在共享的 SQLite 状态数据库中。较旧�
 
 ## 配置
 
-沙箱设置位于 `~/.openclaw/openclaw.json` 中的 `agents.defaults.sandbox` 下（按代理的覆盖项放在 `agents.list[].sandbox` 中）：
+沙箱设置位于 `~/.openclaw/openclaw.json` 的 `agents.defaults.sandbox` 下（每个代理的覆盖配置放在 `agents.entries.*.sandbox` 中）：
 
 ```jsonc
 {

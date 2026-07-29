@@ -4,32 +4,33 @@ read_when:
   - 实现 macOS Canvas 面板
   - 为视觉工作区添加代理控制
   - 调试 WKWebView Canvas 加载
-title: "Canvas"
+title: "画布"
 ---
 
-macOS 应用使用 `WKWebView` 嵌入一个由代理控制的 **Canvas 面板**，这是一个轻量级的可视化工作区，用于 HTML/CSS/JS、A2UI 以及小型交互式 UI 界面。
+macOS 应用使用 `WKWebView` 嵌入一个由代理控制的 **画布面板**，这是一个轻量级的可视化工作区，用于 HTML/CSS/JS、A2UI 以及小型交互式 UI 界面。
 
 ## Canvas 的位置
 
-Canvas state is stored under Application Support:
+Canvas 状态存储在 Application Support 下：
 
 - `~/Library/Application Support/OpenClaw/canvas/<session>/...`
 
-The Canvas panel exposes these files through a custom URL scheme,
-`openclaw-canvas://<session>/<path>`:
+Canvas 面板通过自定义 URL scheme 公开这些文件，
+`openclaw-canvas://<session>/<path>`：
 
 - `openclaw-canvas://main/` -> `<canvasRoot>/main/index.html`
 - `openclaw-canvas://main/assets/app.css` -> `<canvasRoot>/main/assets/app.css`
 - `openclaw-canvas://main/widgets/todo/` -> `<canvasRoot>/main/widgets/todo/index.html`
 
-If there is no `index.html` in the root directory, the app will display a built-in scaffolding page.
+如果根目录中没有 `index.html`，应用将显示一个内置的脚手架页面。
 
 ## 面板行为
 
-- 无边框、可调整大小的面板，锚定在菜单栏附近（或鼠标光标附近）。
+- 无边框、可调整大小的面板，锚定在菜单栏（或鼠标光标）附近。
+- 显示 Canvas 不会切换应用或抢占键盘焦点。
 - 每个会话都会记住大小/位置。
-- 当本地画布文件发生更改时自动重新加载。
-- 同一时间只显示一个 Canvas 面板（会根据需要切换会话）。
+- 当本地 canvas 文件更改时会自动重新加载。
+- 同一时间只显示一个 Canvas 面板（必要时会切换会话）。
 
 可在 Settings -> **Allow Canvas** 中禁用 Canvas。禁用后，
 canvas 节点命令会返回 `CANVAS_DISABLED`。
@@ -46,6 +47,11 @@ openclaw nodes canvas navigate --node <id> "/"
 openclaw nodes canvas eval --node <id> --js "document.title"
 openclaw nodes canvas snapshot --node <id>
 ```
+
+`eval` 和 `a2ui.*` 会在不打开或显示面板的情况下更新内容。只有
+`present`、`navigate` 或用户操作才会显示它；在隐藏之后，内容更新
+仍会继续应用到隐藏的面板。`snapshot` 需要一个可见的面板，否则
+会返回 `CANVAS_HIDDEN`；请先运行 `present`。
 
 `canvas.navigate` 接受本地 canvas 路径、`http(s)` URL 和 `file://`
 URL。传入 `"/"` 会显示本地脚手架或 `index.html`。

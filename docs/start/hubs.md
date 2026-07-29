@@ -100,24 +100,24 @@ title: "文档中心"
 - [安全性](/gateway/security)
 - [故障排除](/gateway/troubleshooting)
 
-## Tools + Automation
+## 工具 + 自动化
 
-- [Tool Entry](/tools)
+- [工具入口](/tools)
 - [OpenProse](/prose)
-- [CLI Reference](/cli)
-- [Exec Tool](/tools/exec)
-- [PDF Tool](/tools/pdf)
-- [Elevated Mode](/tools/elevated)
-- [Cron Jobs](/automation/cron-jobs)
-- [Automation](/automation)
-- [Thinking + Detailed Mode](/tools/thinking)
-- [Models](/concepts/models)
-- [Subagents](/tools/subagents)
-- [Agent send CLI](/tools/agent-send)
-- [Terminal UI](/web/tui)
-- [Browser Control](/tools/browser)
-- [Browser (Linux Troubleshooting)](/tools/browser-linux-troubleshooting)
-- [Voting](/cli/message)
+- [CLI 参考](/cli)
+- [执行工具](/tools/exec)
+- [PDF 工具](/tools/pdf)
+- [提升模式](/tools/elevated)
+- [定时任务](/automation/cron-jobs)
+- [自动化](/automation)
+- [思考 + 详细模式](/tools/thinking)
+- [模型](/concepts/models)
+- [子代理](/tools/subagents)
+- [Agent 发送 CLI](/tools/agent-send)
+- [终端 UI](/web/tui)
+- [浏览器控制](/tools/browser)
+- [浏览器（Linux 故障排查）](/tools/browser-linux-troubleshooting)
+- [投票](/cli/message)
 
 ## 节点、媒体、语音
 
@@ -180,10 +180,10 @@ title: "文档中心"
 - [默认 AGENTS](/reference/AGENTS.default)
 - [模板：AGENTS](/reference/templates/AGENTS)
 - [模板：BOOTSTRAP](/reference/templates/BOOTSTRAP)
-- [模板：HEARTBEAT](/reference/templates/HEARTBEAT)
+- [已弃用的 HEARTBEAT.md 工作区文件](/reference/templates/HEARTBEAT)
 - [模板：IDENTITY](/reference/templates/IDENTITY)
 - [模板：SOUL](/reference/templates/SOUL)
-- [模板：TOOLS](/reference/templates/TOOLS)
+- [模板：AGENTS](/reference/templates/AGENTS)
 - [模板：USER](/reference/templates/USER)
 
 ## 项目

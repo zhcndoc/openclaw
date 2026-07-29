@@ -79,7 +79,7 @@ OpenClaw 版本的情况下更改此行为：
     ```json5
     {
       env: { ANTHROPIC_API_KEY: "example-anthropic-key-not-real" },
-      agents: { defaults: { model: { primary: "anthropic/claude-opus-4-8" } } },
+      agents: { defaults: { model: { primary: "anthropic/claude-opus-5" } } },
     }
     ```
 
@@ -125,7 +125,19 @@ OpenClaw 版本的情况下更改此行为：
     [OpenAI Codex](/providers/openai)。
     </Warning>
 
-    ### 配置示例
+    ### Get a setup token
+
+    Run `claude setup-token` on any machine with Claude Code installed. It prints
+    a long-lived token starting with `sk-ant-oat01-`.
+
+    During onboarding, paste the token in the macOS app by choosing
+    **Anthropic setup-token** under **Connect with an API key or token**, or use:
+
+    ```bash
+    openclaw models auth login --provider anthropic --method setup-token
+    ```
+
+    ### Config example
 
     建议使用规范的 Anthropic 模型引用，并通过 CLI 运行时覆盖：
 
@@ -133,9 +145,9 @@ OpenClaw 版本的情况下更改此行为：
     {
       agents: {
         defaults: {
-          model: { primary: "anthropic/claude-opus-4-8" },
+          model: { primary: "anthropic/claude-opus-5" },
           models: {
-            "anthropic/claude-opus-4-8": {
+            "anthropic/claude-opus-5": {
               agentRuntime: { id: "claude-cli" },
             },
           },
@@ -176,13 +188,30 @@ OpenClaw 版本的情况下更改此行为：
 
 捆绑的 Anthropic 插件会在普通会话侧边栏中添加一个 **Claude Code** 分组。各行会在普通聊天面板中打开。它会在 Gateway 以及已连接的节点主机上发现未归档的 Claude Code 会话：
 
-- Claude CLI 会话来自有效的项目索引记录，以及其受限元数据前缀标识为 `~/.claude/projects/` 下非 sidechain 的 `sdk-cli` 会话的当前 JSONL 文件。
-- Claude Desktop 会话在其元数据指向同一个 Claude Code 会话 ID 时，会使用 Desktop 标题、活动时间和归档状态。
-- 仅 CLI 会话没有归档标志，因此只要其转录内容仍然存在，就会保持可见。
+- Claude CLI sessions come from valid project-index records. For unindexed
+  transcripts, a bounded metadata fallback recognizes concurrent non-sidechain
+  interactive (`cli`) and headless Agent SDK CLI (`sdk-cli`) sessions under
+  `~/.claude/projects/`.
+- Claude Desktop sessions use the Desktop title, activity time, and
+  archive state when its metadata points to the same Claude Code session ID.
+- A CLI-only session has no archive flag, so it remains visible while its
+  transcript is present.
 
 发现过程不需要额外的 OpenClaw 配置。Anthropic 插件默认已捆绑并启用；当本地 `~/.claude/projects/` 目录存在时，原生 macOS 节点会公布只读的 Claude 会话命令。请在这些命令首次出现时批准节点配对升级。
 
-侧边栏会从每个主机显示最新的受限页面，并按正常的 30 秒周期刷新。对目录分组使用 **加载更多会话**，即可为每个拥有更多历史记录的主机追加下一页；已追加的行会保持可见，并在后续刷新中以相同深度重新获取。目录客户端使用 `sessions.catalog.list`；打开一行会使用 `sessions.catalog.read`。
+The sidebar groups rows by their Gateway or paired-node host and shows each
+host's newest bounded page as soon as that computer answers. It reconciles again
+after host-connectivity changes, when the page regains focus, and at most every
+30 seconds while visible, so Claude sessions created outside OpenClaw appear
+without a reload. A changed catalog gets a faster follow-up pass. Use **Load more
+sessions** below a catalog group to append the next page for every host that has
+more history; appended rows stay visible and are re-fetched to the same depth
+across refreshes. Catalog clients use `sessions.catalog.list`; opening a row uses
+`sessions.catalog.read`.
+
+Terminal takeover resolves `claude` from the owning host user's login-shell
+PATH before the service/daemon PATH. This keeps app-launched sessions aligned
+with the Claude CLI the operator gets in a normal terminal.
 
 选择某一行时会先读取最新的转录页面。**加载更早的转录项** 会遵循一个不透明的字节游标，并从 JSONL 文件中读取另一个受限区段，而不是加载全部历史。普通的用户、助手、推理、工具调用和工具结果内容都会被保留。单个条目如果大于节点/Gateway 的安全上限，会被清楚地标记为已截断。
 
@@ -210,14 +239,40 @@ OpenClaw 版本的情况下更改此行为：
 
 有关节点命令和安全边界，请参阅 [Nodes: Claude sessions and transcripts](/nodes#claude-sessions-and-transcripts)。
 
-## 思考默认值（Claude Sonnet 5、Mythos 5、Fable 5、4.8 和 4.6）
+## Live model discovery
 
-`anthropic/claude-sonnet-5` 默认使用 `high` effort 的自适应思考。
-使用 `/think off` 可禁用思考，或使用 `/think xhigh|max` 以启用该模型
-更高的原生 effort 级别。由于 Anthropic 不支持 Sonnet 5 的这些请求特性，
-OpenClaw 省略了手动思考预算、自定义采样参数、assistant 预填充以及 Priority Tier。
-该目录在 2026 年 8 月 31 日前采用 Anthropic 的入门价 `$2/$10` 输入/输出定价；
-标准 `$3/$15` 定价从 2026 年 9 月 1 日开始。
+With an Anthropic API key configured, OpenClaw refreshes the Claude catalog from
+Anthropic's models endpoint, so newly published snapshots of supported model
+families appear without an OpenClaw release. Models the shipped catalog already
+describes always keep their published metadata and pricing.
+
+A newly discovered model is only offered when Anthropic's advertised
+capabilities match the request shaping OpenClaw would apply to it. A brand-new
+model generation therefore stays hidden until OpenClaw adds support for it,
+rather than appearing in the picker and failing every request. Discovery is
+advisory: without an API key, or if the endpoint is unreachable, the shipped
+catalog is used unchanged.
+
+## Thinking defaults (Claude Opus 5, Sonnet 5, Mythos 5, Fable 5, 4.8, and 4.6)
+
+Bare family aliases are rolling: `opus` tracks the current supported Claude
+Opus generation and today resolves to `anthropic/claude-opus-5`, the same way
+`sonnet` tracks the current Sonnet. Upgrading OpenClaw can therefore move a
+config that says `opus` onto a newer model generation. Pin a version to opt
+out — versioned aliases such as `opus-4.8` keep resolving to their own model,
+and configs that already name `claude-opus-4-8` are never rewritten.
+
+`anthropic/claude-opus-5` uses adaptive thinking at `high` effort by default.
+Use `/think off` to disable thinking, or `/think xhigh|max` for the model's
+higher native effort levels. OpenClaw omits manual thinking budgets, custom
+sampling parameters, assistant prefills, and Priority Tier for Opus 5 because
+Anthropic does not support those request features on this model. The catalog
+publishes its 1,000,000-token context window, 128,000-token output limit, image
+input, and `$5/$25` input/output pricing.
+
+`anthropic/claude-sonnet-5` uses the same adaptive-thinking defaults and request
+restrictions. The catalog uses Anthropic's introductory `$2/$10` input/output
+pricing through August 31, 2026; standard `$3/$15` pricing begins September 1, 2026.
 
 `anthropic/claude-fable-5` 始终使用自适应思考，并默认设为 `high`
 effort。Anthropic 不允许为该模型禁用思考，因此
@@ -241,7 +296,7 @@ Claude 4.6 模型（Opus 4.6 和 Sonnet 4.6）默认使用 `adaptive`。
   agents: {
     defaults: {
       models: {
-        "anthropic/claude-opus-4-8": {
+        "anthropic/claude-opus-5": {
           params: { thinking: "high" },
         },
       },
@@ -257,60 +312,62 @@ Claude 4.6 模型（Opus 4.6 和 Sonnet 4.6）默认使用 `adaptive`。
 
 </Note>
 
-## Safety refusal fallback（Claude Fable 5）
+## Safety refusal fallback (Claude Opus 5 and Fable 5)
 
 <Warning>
-使用 Claude Fable 5 也意味着同时使用 Claude Opus 4.8。Fable 5 配备了
-安全分类器，可能会拒绝某些请求，而 Anthropic 认可的
-恢复方式是让 `claude-opus-4-8` 接管该轮。OpenClaw 对直接 API key 请求会
-自动启用这一点，因此某些 Fable 轮次会由 Claude Opus 4.8 回答并计费。若你的策略或预算无法接受
-由 Opus 提供服务的轮次，请不要选择 `anthropic/claude-fable-5`。
+Claude Opus 5 and Fable 5 can route a safety-classifier refusal to another
+Claude model. OpenClaw opts into Anthropic's recommended per-category routing
+for direct API-key requests. A fallback-served turn is billed at the model
+that answered. If your policy requires every turn to stay on the requested
+model, do not use these models through the automatic fallback path.
 </Warning>
 
 ### Why this exists
 
-Fable 5 分类器会对受限
-领域的请求返回 `stop_reason: "refusal"`，并且还会对看似无害但相近的工作产生误判（安全
-工具、生命科学，甚至要求模型复述其原始
-推理）。如果没有 fallback，即便
-另一个 Claude 模型本可以正常服务，这一轮也会因错误而失败 —— Anthropic 自己的拒绝消息
-会提示 API 集成方配置一个 fallback 模型。
+Opus 5 and Fable 5 classifiers return `stop_reason: "refusal"` on requests in
+restricted domains. Without a fallback, the turn ends with an error even when
+Anthropic has a recommended model for that refusal category.
 
 ### How it works
 
-1. 对每个发往 `anthropic/claude-fable-5` 的直接 API key 请求，OpenClaw 都会
-   发送 Anthropic 服务器端 fallback 的启用信号：
-   `server-side-fallback-2026-06-01` beta header 以及
-   `fallbacks: [{"model": "claude-opus-4-8"}]`。Claude Opus 4.8 是 Anthropic 允许 Fable 5 使用的唯一
-   fallback 目标。
-2. 只有安全分类器的拒绝才会触发 fallback。速率限制、
-   过载和服务器错误的行为与以往完全相同，并会走 OpenClaw 的常规 [model failover](/concepts/model-failover)。
-3. 救援发生在同一次调用内部。任何输出之前的拒绝除了延迟之外不可见；整段回答都由 Opus 4.8 提供。若在流式输出中途被拒绝，已生成的部分文本会被保留为 fallback
-   模型继续生成时的前缀，而被拒绝模型的推理和工具调用会依据 Anthropic 的重放规则被丢弃（它们不得回显或
-   执行）。
-4. 如果 Claude Opus 4.8 也拒绝了，该轮会像在此功能出现之前一样，将拒绝作为
-   错误呈现。
+1. For every direct API-key request to `anthropic/claude-opus-5` or
+   `anthropic/claude-fable-5`, OpenClaw sends the
+   `server-side-fallback-2026-07-01` beta header plus
+   `fallbacks: "default"`. Anthropic selects the recommended model for the
+   reported refusal category.
+2. Only a safety-classifier decline triggers the fallback. Rate limits,
+   overloads, and server errors behave exactly as before and go through
+   OpenClaw's normal [model failover](/concepts/model-failover).
+3. The rescue happens inside the same call. A decline before any output is
+   invisible apart from latency; the whole answer comes from the serving
+   model. On a
+   mid-stream decline the partial text is kept as the prefix the fallback
+   model continues from, while the declined model's reasoning and tool calls
+   are discarded per Anthropic's replay rules (they must not be echoed back or
+   executed).
+4. If the recommended model declines as well, the turn surfaces the refusal
+   as an error.
 
-fallback 发生在 Anthropic API 层面，因此 `claude-opus-4-8` 不需要
-出现在你配置的模型列表或 fallback 链中——具备 Fable 能力的 API key 始终可以提供 Opus 服务。
+The fallback happens at the Anthropic API level, so the serving model does not
+need to be in your configured OpenClaw fallback chain.
 
 ### Observability and billing
 
-- 由 fallback 提供服务的轮次会在 assistant 消息上记录一条 `provider_fallback` 诊断信息，标明
-  `fromModel` 和 `toModel`，并且该消息的 `responseModel` 会报告为 `claude-opus-4-8`。
-- Anthropic 按尝试次数计费：在输出前被拒绝是免费的，而救援
-  部分按 Claude Opus 4.8 的费率计费（当前为 Fable 5 费率的一半）。OpenClaw 的
-  每轮成本估算会按 Opus 费率为 fallback 提供服务的轮次定价，以保持一致。
-- 若在流式输出中途被拒绝，Anthropic 侧还会额外计费已经流出的 Fable 部分；该部分会在 API 的每次尝试使用量中报告，但不会折算进 OpenClaw 的每轮估算中。
+- A fallback-served turn records a `provider_fallback` diagnostic on the
+  assistant message naming `fromModel` and `toModel`, and the message's
+  `responseModel` reports the model that answered.
+- Anthropic bills the fallback attempt at the serving model's rates. OpenClaw
+  prices known Opus 4.8 fallback-served turns at Opus 4.8 rates.
+- A mid-stream decline additionally bills the already-streamed primary-model partial
+  on Anthropic's side; that portion is reported in the API's per-attempt
+  usage but not folded into OpenClaw's per-turn estimate.
 
 ### Scope
 
-适用于 `anthropic/claude-fable-5`，在 `api.anthropic.com` 上使用 API key 认证。
-OAuth（Claude CLI 订阅复用）、代理 base URL、Bedrock、Vertex 和 Foundry 请求都不受影响，并且在这些场景下仍会将拒绝
-作为错误返回。
-
-已在真实环境验证：当不带 fallback 发送时，要求 Fable 5 复述其原始思维链的良性提示会被拒绝，返回 `category: "reasoning_extraction"`；而同样的提示通过 OpenClaw 发送时，则会返回正常的、由 Opus 提供服务的
-答案，并附带 `provider_fallback` 诊断信息。
+Applies to `anthropic/claude-opus-5` and `anthropic/claude-fable-5` with
+API-key auth against `api.anthropic.com`. OAuth (including Claude CLI
+subscription reuse), proxy base URLs, Bedrock, Vertex, and Foundry requests
+are unchanged and still surface refusals as errors there.
 
 请参阅 Anthropic 的 [refusals and fallback
 guide](https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback) 了解其底层行为。
@@ -340,8 +397,8 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 ```
 
 <AccordionGroup>
-  <Accordion title="按代理覆盖缓存">
-    先以模型级参数作为基础，再通过 `agents.list[].params` 覆盖特定代理：
+  <Accordion title="Per-agent cache overrides">
+    Use model-level params as your baseline, then override specific agents via `agents.entries.*.params`:
 
     ```json5
     {
@@ -365,7 +422,7 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
     配置合并顺序：
 
     1. `agents.defaults.models["provider/model"].params`
-    2. `agents.list[].params`（匹配 `id`，按键覆盖）
+    2. `agents.entries.*.params` (matching `id`, overrides by key)
 
     这样一个代理可以保留长期缓存，而同一模型上的另一个代理可以为突发/低复用流量禁用缓存。
 
@@ -383,19 +440,20 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 
 <AccordionGroup>
   <Accordion title="Fast mode">
-    OpenClaw 共享的 `/fast` 切换会为直接发送到 `api.anthropic.com` 的 API key 流量设置 Anthropic 的 `service_tier` 字段。
+    For Claude Opus 5 and Opus 4.8, OpenClaw's shared `/fast` toggle uses
+    Anthropic's native fast mode for direct API-key traffic to `api.anthropic.com`.
 
-    | 命令 | 映射为 |
-    |------|--------|
-    | `/fast on` | `service_tier: "auto"` |
-    | `/fast off` | `service_tier: "standard_only"` |
+    | Command | Maps to |
+    | --- | --- |
+    | `/fast on` | `speed: "fast"` plus `fast-mode-2026-02-01` |
+    | `/fast off` | Standard speed; no `speed` field |
 
     ```json5
     {
       agents: {
         defaults: {
           models: {
-            "anthropic/claude-sonnet-4-6": {
+            "anthropic/claude-opus-5": {
               params: { fastMode: true },
             },
           },
@@ -405,9 +463,12 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
     ```
 
     <Note>
-    - 仅适用于使用 API key 直接请求 `api.anthropic.com`。OAuth/订阅令牌请求和代理路由不会携带 `service_tier` 字段。
-    - 当同时设置了显式的 `serviceTier` 或 `service_tier` 参数时，会覆盖 `/fast`。
-    - 对于没有 Priority Tier 容量的账户，`service_tier: "auto"` 可能会解析为 `standard`。
+    - Native fast mode is a research preview for Claude Opus 5 and Opus 4.8. It can deliver up to 2.5x higher output-token throughput and is billed at `$10/$50` per million input/output tokens. OpenClaw applies the same 2x multiplier to cache pricing in its cost estimate.
+    - Native fast mode only applies to direct `api.anthropic.com` requests made with an API key. OAuth/subscription-token requests, Claude CLI, proxies, Bedrock, Vertex, and Foundry never receive the beta or `speed` field.
+    - Accounts need fast-mode access and a non-zero fast-mode rate limit. Anthropic returns a fast-specific `429` when the separate fast quota is exhausted or zero.
+    - For other direct Anthropic models, `/fast` retains the existing Priority Tier mapping: on uses `service_tier: "auto"` and off uses `service_tier: "standard_only"`.
+    - Explicit `serviceTier` or `service_tier` params override `/fast` when both are set.
+    - Claude Sonnet 5 supports neither native fast mode nor Priority Tier, so OpenClaw omits both fields.
 
     </Note>
 
@@ -418,28 +479,30 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 
     | 属性            | 值                    |
     | --------------- | --------------------- |
-    | Default model   | `claude-opus-4-8`     |
-    | Supported input | 图片、PDF 文档 |
+    | Default model   | `claude-opus-5`       |
+    | Supported input | Images, PDF documents |
 
     当图片或 PDF 附加到对话中时，OpenClaw 会自动通过 Anthropic 媒体理解提供方进行路由。
 
   </Accordion>
 
   <Accordion title="1M context window">
-    Claude Sonnet 5、Mythos 5 和 Fable 5 具有精确的 1,000,000 token 输入
-    窗口，并支持最多 128,000 个输出 token。Anthropic 的 1M 上下文
-    窗口也已在启用自适应思考的 Claude 4.x 模型上正式可用：Opus 4.8、
-    Opus 4.7、Opus 4.6 和 Sonnet 4.6。OpenClaw 会自动为这些模型分配
-    大小，无需 `params.context1m`：
+    Claude Opus 5, Sonnet 5, Mythos 5, and Fable 5 have an exact
+    1,000,000-token input window and support up to 128,000 output tokens.
+    Anthropic's 1M context window is also GA on Claude 4.x models with adaptive
+    thinking: Opus 4.8,
+    Opus 4.7, Opus 4.6, and Sonnet 4.6. OpenClaw sizes these models
+    automatically, no `params.context1m` needed:
 
     ```json5
     {
       agents: {
         defaults: {
           models: {
+            "anthropic/claude-opus-5": {},
             "anthropic/claude-sonnet-5": {},
             "anthropic/claude-mythos-5": {},
-            "anthropic/claude-opus-4-6": {},
+            "anthropic/claude-opus-4-8": {},
           },
         },
       },
@@ -456,8 +519,9 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 
   </Accordion>
 
-  <Accordion title="Claude Opus 4.8 1M 上下文">
-    `anthropic/claude-opus-4-8` 及其 `claude-cli` 变体默认具有 1M 上下文窗口；无需 `params.context1m: true`。
+  <Accordion title="Claude Opus 5 1M context">
+    `anthropic/claude-opus-5` and its `claude-cli` variant have a 1M context
+    window by default; no `params.context1m: true` needed.
   </Accordion>
 </AccordionGroup>
 

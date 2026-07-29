@@ -16,7 +16,7 @@ title: "Node + tsx 崩溃"
 通过 `tsx` 运行 OpenClaw 开发脚本时，在启动阶段失败，并出现：
 
 ```text
-[openclaw] Failed to start CLI: TypeError: __name is not a function
+[openclaw] 启动 CLI 失败：TypeError: __name 不是一个函数
     at createSubsystemLogger (src/logging/subsystem.ts)
     at <caller> (src/agents/auth-profiles/constants.ts)
 ```
@@ -37,15 +37,7 @@ pnpm install
 node --import tsx src/entry.ts status
 ```
 
-最小隔离复现（仅加载原始堆栈跟踪中的模块）：
-
-```bash
-node --import tsx scripts/repro/tsx-name-repro.ts
-```
-
-这两个命令目前都会正常退出。如果其中任意一个再次抛出 `__name is not a
-function`，请在向上游提交问题之前，记录准确的 Node 版本、`tsx` 版本
-（`node_modules/tsx/package.json`）以及完整的堆栈跟踪。
+该命令目前会正常退出。如果再次抛出 `__name is not a function`，请在向上游提交问题前，记录确切的 Node 版本、`tsx` 版本（`node_modules/tsx/package.json`）以及完整的堆栈跟踪。
 
 ## 变通方案（如果崩溃再次出现）
 

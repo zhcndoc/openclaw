@@ -288,11 +288,11 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
 
 ## 资源生命周期和存储
 
-- 产物位于 `$TMPDIR/openclaw-diffs` 下。
-- 查看器元数据存储一个随机的 20 位十六进制产物 ID、一个随机的 48 位十六进制 token、`createdAt`/`expiresAt`，以及保存的 `viewer.html` 路径。
-- 默认产物 TTL：30 分钟。可接受的最大 TTL：6 小时。
-- 每次创建产物调用后会机会性地运行清理；过期产物会被删除。
-- 当元数据缺失时，回退扫描会移除超过 24 小时的陈旧文件夹。
+- Viewer HTML 和元数据保存在共享的 `state/openclaw.sqlite` 数据库中，位于 Diffs 插件 blob 命名空间下。HTML 采用 gzip 压缩；SQLite 只存储随机 URL token 的 SHA-256 哈希，而不存储 token 本身。
+- 渲染后的 PNG/PDF 文件仍作为临时物化内容保留在 `$TMPDIR/openclaw-diffs` 下，因为通道传递需要文件路径。SQLite 负责它们的过期元数据；不会写入任何 JSON 侧边文件。
+- 默认制品 TTL：30 分钟。可接受的最大 TTL：6 小时。
+- 清理会在每次 artifact create 调用后机会性运行。首先删除已过期的 SQLite 行，然后删除任何对应的 PNG/PDF 目录。
+- 兜底扫描会移除超过 24 小时且没有对应数据库行的临时文件夹。旧版 `meta.json`、`file-meta.json` 和 `viewer.html` 缓存不会被导入或读取。
 
 ## 查看器 URL 和网络行为
 
@@ -328,28 +328,28 @@ URL 解析顺序：tool-call `baseUrl`（经过严格校验后）-> 插件 `view
   </Accordion>
 </AccordionGroup>
 
-## Browser Requirements for File Mode
+## 文件模式的浏览器要求
 
-`mode: "file"` and `mode: "both"` need to be compatible with Chromium-based browsers.
+`mode: "file"` 和 `mode: "both"` 需要与基于 Chromium 的浏览器兼容。
 
-Resolution order:
+解析顺序：
 
 <Steps>
-  <Step title="Configuration">
-    `browser.executablePath` in the OpenClaw configuration.
+  <Step title="配置">
+    OpenClaw 配置中的 `browser.executablePath`。
   </Step>
-  <Step title="Environment Variables">
+  <Step title="环境变量">
     - `OPENCLAW_BROWSER_EXECUTABLE_PATH`
     - `BROWSER_EXECUTABLE_PATH`
     - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`
 
   </Step>
-  <Step title="Platform Fallback">
-    Common installation paths for Chrome, Chromium, Edge, and Brave, plus `PATH` lookup.
+  <Step title="平台回退">
+    Chrome、Chromium、Edge 和 Brave 的常见安装路径，以及 `PATH` 查找。
   </Step>
 </Steps>
 
-Common failure message: `Diff PNG/PDF rendering requires a Chromium-compatible browser...`. This can be fixed by installing Chrome, Chromium, Edge, or Brave, or by setting any of the executable path options above.
+常见失败信息：`Diff PNG/PDF rendering requires a Chromium-compatible browser...`。可以通过安装 Chrome、Chromium、Edge 或 Brave，或者设置上述任一可执行文件路径选项来解决。
 
 ## 故障排查
 
@@ -391,7 +391,7 @@ Common failure message: `Diff PNG/PDF rendering requires a Chromium-compatible b
 - 如果你的频道会对图片进行强压缩（例如 Telegram 或 WhatsApp），请优先使用 PDF 输出（`fileFormat: "pdf"`）。
 
 <Note>
-Diff 渲染引擎由 [Diffs](https://diffs.com) 提供支持。
+差异渲染引擎由 [Diffs](https://diffs.com) 提供支持。
 </Note>
 
 ## 另请参阅

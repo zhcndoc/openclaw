@@ -10,15 +10,17 @@ OpenClaw 通过在你的代理工作区中写入普通的 Markdown 文件来记�
 
 ## 它是如何工作的
 
-你的 agent 有三个与记忆相关的文件：
+Your agent has four memory-related files:
 
-- **`MEMORY.md`** — 长期记忆。持久化的事实、偏好和
-  决策。在会话开始时加载。
-- **`memory/YYYY-MM-DD.md`**（或 `memory/YYYY-MM-DD-<slug>.md`）— 每日日志。
-  运行上下文和观察记录。在空白的 `/new` 或 `/reset` 上，会自动加载今天和昨天的带日期笔记；像
-  bundled session-memory hook 写入的这类 slug 版本，会与仅含日期的文件一起被读取。
-- **`DREAMS.md`**（可选）— 梦境日记和梦境扫描摘要，供
-  人工审阅，包括有依据的历史回填条目。
+- **`USER.md`**（可选）— 以指令形式写入的稳定偏好、沟通风格、
+  关系以及活跃项目上下文。在会话开始时，使用单独的小预算加载。
+- **`MEMORY.md`** — 长期记忆。持久的非个人资料事实和决策。
+  在会话开始时加载。
+- **`memory/YYYY-MM-DD.md`**（或 `memory/YYYY-MM-DD-<slug>.md`）— 日常笔记。
+  运行中的上下文和观察。当天和前一天的带日期笔记会在裸 `/new` 或 `/reset` 时自动加载；
+  带 slug 的变体，例如捆绑的 session-memory hook 写入的文件，会与仅日期文件一起被拾取。
+- **`DREAMS.md`**（可选）— 梦境日记和梦境扫描摘要，供人类审阅，
+  包括有依据的历史回填条目。
 
 <Tip>
 如果你想让你的 agent 记住某件事，只需告诉它：“记住我
@@ -27,17 +29,19 @@ OpenClaw 通过在你的代理工作区中写入普通的 Markdown 文件来记�
 
 ## 放在哪里
 
-`MEMORY.md` 是精简、经过整理的一层：包含持久事实、偏好、固定决策，以及应在会话开始时可用的简短摘要。它不是原始记录、每日日志或详尽档案。
+`USER.md` 是紧凑的用户模型层。请将稳定的偏好和个人资料事实写成命令式指令，并附上观察日期以及 active/superseded 元数据。当某个偏好发生变化时，应在原处将其 supersede，而不是追加一条相互矛盾的 active 指令。参见 [User model](/concepts/user-model)。
+
+`MEMORY.md` 是紧凑、经过筛选的持久层，用于存放非个人资料类的持久事实、已作出的重要决定，以及在会话开始时应当可用的简短摘要。它不是原始对话记录、每日日志或穷尽式档案。
 
 `memory/YYYY-MM-DD.md` 文件是工作层：包含详细的每日笔记、观察、会话摘要，以及之后可能仍然有用的原始上下文。这些内容会被索引供 `memory_search` 和 `memory_get` 使用，但不会在每一轮都注入到启动提示中。
 
-随着时间推移，代理会将每日笔记中的有用内容提炼到 `MEMORY.md` 中，并删除过时的长期条目。生成的工作区指令和心跳流程会定期执行这项工作；你不需要为了每个细节手动编辑 `MEMORY.md`。
+随着时间推移，每日笔记中的有用内容会通过默认的 [dreaming](/concepts/dreaming) 扫描被提炼到 `MEMORY.md` 中。生成的工作区指令仍会鼓励代理在工作时记录持久事实，而 dreaming 负责后台整合。默认的 heartbeat 提示不会自行执行任何记忆维护。
 
 如果 `MEMORY.md` 超过了启动文件预算，OpenClaw 会保留磁盘上的文件完整不变，但会截断注入到上下文中的副本。请把这视为一个信号：将详细内容移到 `memory/*.md` 中，只在 `MEMORY.md` 中保留持久摘要，或者如果你想投入更多提示预算，就提高启动限制。使用 `/context list`、`/context detail` 或 `openclaw doctor` 查看原始大小与注入大小以及截断状态。
 
-## 从编码助手导入
+## 导入编码助手
 
-Control UI 可以从 Codex 和 Claude Code 导入现有的本地记忆。
+Control UI 可以从 Codex 和 Claude Code 导入现有的本地记忆。  
 打开 **Settings** → **Import Memory**，选择目标代理，查看检测到的文件，并确认导入。OpenClaw 只复制 Markdown 记忆：
 
 - Codex：位于 `~/.codex/memories`（或 `CODEX_HOME/memories`）下的汇总 `MEMORY.md` 和 `memory_summary.md` 文件。不导入原始 rollout 和 transcript 文件。
@@ -85,22 +89,30 @@ API 迁移正在另一个会话中设计。在迁移方案落地之前，未来�
 
 这不是每条记忆都必须遵循的必需模式；简单事实可以保持简洁。若丢失时机、权限、过期或可安全行动的上下文可能导致智能体日后做出错误决定，则应使用行动敏感边界。
 
-使用 [commitments](/concepts/commitments) 来表示推断出的、短期的后续行动。使用 [scheduled tasks](/automation/cron-jobs) 来表示精确提醒、定时检查和重复性工作。记忆仍然可以概括任一路径周围的持久上下文。
+使用 [scheduled tasks](/automation/cron-jobs) 进行精确提醒、定时检查和重复性工作。记忆仍可总结围绕该工作的持久上下文。
 
-## 推断出的承诺
+## 已退役的推断承诺
 
-某些未来跟进事项并不是持久事实。如果你提到明天有面试，那么有用的记忆可能是“面试后跟进”，而不是“把这件事永久存到 `MEMORY.md` 里”。
+有些未来的后续事项并不是持久的事实。如果某个未来事件应该触发
+一个动作，请使用 [持续意图](/concepts/standing-intents)。如果某个时钟时间
+应该触发它，请使用 [计划任务](/automation/cron-jobs)。
 
-[承诺](/concepts/commitments) 是可选择加入的、短期的后续记忆，适用于这种情况。OpenClaw 会在隐藏的后台流程中推断它们，将它们限定在相同的代理和频道范围内，并通过 heartbeat 发送到期的跟进检查。明确的提醒仍然使用 [计划任务](/automation/cron-jobs)。
+推断承诺实验已退役。OpenClaw 不再提取或
+交付这些后续事项。请使用 [计划任务](/automation/cron-jobs) 来处理
+未来动作；旧的 `openclaw commitments` 命令仍可用于
+查看或忽略现有已存储的记录。
 
 ## 记忆工具
 
-agent has two tools for handling memory:
+该代理有三个用于处理记忆的工具：
 
-- **`memory_search`** —— even if the wording differs from the original text, it can find related notes through semantic search.
-- **`memory_get`** —— reads a specified memory file or line range.
+- **`memory_search`** — 使用语义搜索查找相关笔记，即使
+  表述与原文不同。
+- **`memory_get`** — 读取特定的记忆文件或行范围。
+- **`intent`** — 创建、列出或显式取消事件条件的
+  常驻意图。基于时间的提醒仍然继续使用计划任务。
 
-These two tools are both provided by the currently active memory plugin (default: `memory-core`).
+这两个工具都由当前激活的记忆插件提供（默认：`memory-core`）。
 
 ## 记忆搜索
 
@@ -109,8 +121,8 @@ These two tools are both provided by the currently active memory plugin (default
 术语）。对于任何受支持的提供方，这都可以通过 API 密钥开箱即用。
 
 <Info>
-OpenClaw 默认使用 OpenAI 嵌入。显式设置
-`agents.defaults.memorySearch.provider` 可使用 Gemini、Voyage、
+OpenClaw 默认使用 OpenAI embeddings。显式设置
+`memory.search.provider` 以使用 Gemini、Voyage、
 Mistral、Bedrock、DeepInfra、本地 GGUF、Ollama、LM Studio、GitHub Copilot，或
 通用的 OpenAI 兼容端点。
 </Info>
@@ -175,17 +187,23 @@ Mistral、Bedrock、DeepInfra、本地 GGUF、Ollama、LM Studio、GitHub Copilo
 
 ## 梦境整理
 
-梦境整理是一个可选的后台记忆巩固过程。它会收集
-短期回忆信号，对候选项进行评分，并且只将符合条件的
-项目晋升到长期记忆（`MEMORY.md`）中：
+做梦是记忆的默认后台整合路径。它会收集短期回忆信号，对候选项进行评分，并且只将符合条件的
+owner 或 agent 派生条目提升到长期记忆（`MEMORY.md`）中：
 
-- **可选启用**：默认禁用。
-- **定时执行**：启用后，`memory-core` 会自动管理一个用于完整梦境整理扫描的循环 cron
-  任务。
-- **阈值控制**：晋升必须通过分数、回忆频率以及
+- **默认开启**：可通过
+  `plugins.entries.memory-core.config.dreaming.enabled: false` 将其关闭。
+- **按计划执行**：启用后，`memory-core` 会自动管理一个循环 cron
+  任务，执行完整的做梦扫描。
+- **带阈值**：提升必须通过评分、回忆频率和
   查询多样性门槛。
+- **已整合**：在确定性门槛之后，受限的子代理重写会合并重复项并
+  覆盖过时条目。无效或不可用的重写将使用仅追加的回退方式。
+- **污点门控**：不受信任和系统派生的候选项绝不会进入
+  整合提示词或持久化提升路径。
 - **可审阅**：阶段摘要和日记条目会写入
-  `DREAMS.md`，供人工审阅。
+  `DREAMS.md` 供人工审阅，包括重写次数和重点内容。
+
+这种后台模式遵循了睡眠时计算的动机（arXiv:2504.13171）。带来源感知的反思也遵循了 Generative Agents 研究中关于持久记忆的经验。
 
 有关阶段行为、评分信号以及
 梦境日记的详细信息，请参见 [Dreaming](/concepts/dreaming)。
@@ -226,13 +244,15 @@ openclaw memory index --force   # 强制重建索引
 
 ## 延伸阅读
 
-- [Memory search](/concepts/memory-search)：搜索管道、提供程序和调优。
-- [Builtin memory engine](/concepts/memory-builtin)：默认 SQLite 后端。
-- [QMD memory engine](/concepts/memory-qmd)：高级本地优先侧车。
-- [Honcho memory](/concepts/memory-honcho)：面向 AI 的跨会话记忆。
-- [Memory LanceDB](/plugins/memory-lancedb)：基于 LanceDB 的插件，支持与 OpenAI 兼容的嵌入。
-- [Memory Wiki](/plugins/memory-wiki)：编译后的知识库和 wiki 原生工具。
-- [Dreaming](/concepts/dreaming)：从短期回忆后台提升到长期记忆。
-- [Memory configuration reference](/reference/memory-config)：所有配置项。
-- [Compaction](/concepts/compaction)：压缩如何与记忆交互。
-- [Active memory](/concepts/active-memory)：用于交互式聊天会话的子代理记忆。
+- [Memory search](/concepts/memory-search): 搜索管线、提供方和调优。
+- [Builtin memory engine](/concepts/memory-builtin): 默认 SQLite 后端。
+- [QMD memory engine](/concepts/memory-qmd): 高级本地优先 sidecar。
+- [Honcho memory](/concepts/memory-honcho): AI 原生跨会话记忆。
+- [Memory LanceDB](/plugins/memory-lancedb): 基于 LanceDB 的插件，支持与 OpenAI 兼容的嵌入。
+- [Memory Wiki](/plugins/memory-wiki): 编译式知识库和 wiki 原生工具。
+- [Dreaming](/concepts/dreaming): 将信息从短期回忆后台提升到长期记忆。
+- [Memory configuration reference](/reference/memory-config): 所有配置项。
+- [Compaction](/concepts/compaction): 压缩如何与记忆交互。
+- [Active memory](/concepts/active-memory): 用于交互式聊天会话的子代理记忆。
+- [User model](/concepts/user-model): 基于指令的持久偏好和资料事实。
+- [Standing intents](/concepts/standing-intents): 事件条件化的前瞻性记忆。

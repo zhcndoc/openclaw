@@ -34,6 +34,15 @@ Policy 将编写的需求存储在 `policy.jsonc` 中，将现有 OpenClaw 设�
 
 `scopes.<scopeName>` 下的命名策略范围可以为它们列出的选择器增加更严格的普通策略部分。`agentIds` 支持 `tools`、`agents.workspace`、`sandbox` 和 `dataHandling.memory`；`channelIds` 支持 `ingress.channels`。未在 `agents.list[]` 中显式列出的运行时 agent id 会根据继承的全局/默认姿态进行检查，而不是在没有证据的情况下默默通过。`policy.jsonc` 中存在的每个范围都必须对其选择器有效且可执行。叠加规则是额外声明，因此它们不会削弱顶层策略，并且当同一被观察到的配置同时违反两个范围时，它们可以产生自己的 findings。
 
-## 相关文档
+Named policy scopes under `scopes.<scopeName>` can add stricter normal policy
+sections for the selector they list. `agentIds` supports `tools`,
+`agents.workspace`, `sandbox`, and `dataHandling.memory`; `channelIds` supports
+`ingress.channels`.
+Runtime agent ids that are not explicitly listed in `agents.entries.*` are checked
+against inherited global/default posture rather than silently passing with no
+evidence. Every scope present in `policy.jsonc` must be valid and enforceable
+for its selector. Overlay rules are additional claims, so they do not weaken
+top-level policy and can produce their own findings when the same observed
+config violates both scopes.
 
 - [policy](/cli/policy)

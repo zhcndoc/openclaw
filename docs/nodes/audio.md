@@ -35,7 +35,7 @@ title: "音频和语音笔记"
 
 用于媒体理解的 Gemini CLI 自动检测已被带沙箱的 Antigravity CLI（`agy`）回退方案取代，用于图像/视频；音频除上述本地二进制外不使用 CLI 回退。
 
-如需禁用自动检测，请设置 `tools.media.audio.enabled: false`。如需自定义，请设置 `tools.media.audio.models`。
+To disable auto-detection, set `tools.media.audio.enabled: false`. To customize, add capability-tagged entries to `tools.media.models`.
 
 <Note>
 二进制检测在 macOS/Linux/Windows 上尽力而为。请确保该 CLI 位于 `PATH` 中（会展开 `~`），或使用完整命令路径显式设置一个 CLI 模型。
@@ -48,7 +48,7 @@ openclaw capability audio providers
 openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-min info
 ```
 
-提供商清单会分别报告本地回退赢家与全局提供商选择，以及可用、已请求和已观察到的后端字段。在转写运行后，`/status` 会在媒体行中报告已请求或已观察到的后端。显式的 `tools.media.audio.models` CLI 条目仍会绕过自动选择；请使用其特定于后端的标志，例如 sherpa 的 `--provider=cuda` 或 whisper.cpp 的 `--no-gpu`/`--device`。
+The provider inventory reports the local fallback winner separately from global provider selection, plus capable, requested, and observed backend fields. After transcription runs, `/status` reports the requested or observed backend in the media line. Explicit audio-capable `tools.media.models` CLI entries still bypass auto-selection; use their backend-specific flags such as sherpa `--provider=cuda` or whisper.cpp `--no-gpu`/`--device`.
 
 ## 配置示例
 
@@ -58,38 +58,17 @@ openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-mi
 {
   tools: {
     media: {
-      audio: {
-        enabled: true,
-        maxBytes: 20971520,
-        models: [
-          { provider: "openai", model: "gpt-4o-transcribe" },
-          {
-            type: "cli",
-            command: "whisper",
-            args: ["--model", "base", "{{MediaPath}}"],
-            timeoutSeconds: 45,
-          },
-        ],
-      },
-    },
-  },
-}
-```
-
-### 仅提供方，并带范围控制
-
-```json5
-{
-  tools: {
-    media: {
-      audio: {
-        enabled: true,
-        scope: {
-          default: "allow",
-          rules: [{ action: "deny", match: { chatType: "group" } }],
+      models: [
+        { provider: "openai", model: "gpt-4o-transcribe", capabilities: ["audio"] },
+        {
+          type: "cli",
+          command: "whisper",
+          args: ["--model", "base", "{{AttachmentPath}}"],
+          timeoutSeconds: 45,
+          capabilities: ["audio"],
         },
-        models: [{ provider: "openai", model: "gpt-4o-transcribe" }],
-      },
+      ],
+      audio: { enabled: true, preferredModel: "openai/gpt-4o-transcribe" },
     },
   },
 }
@@ -101,10 +80,8 @@ openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-mi
 {
   tools: {
     media: {
-      audio: {
-        enabled: true,
-        models: [{ provider: "deepgram", model: "nova-3" }],
-      },
+      models: [{ provider: "deepgram", model: "nova-3", capabilities: ["audio"] }],
+      audio: { enabled: true },
     },
   },
 }
@@ -116,10 +93,8 @@ openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-mi
 {
   tools: {
     media: {
-      audio: {
-        enabled: true,
-        models: [{ provider: "mistral", model: "voxtral-mini-latest" }],
-      },
+      models: [{ provider: "mistral", model: "voxtral-mini-latest", capabilities: ["audio"] }],
+      audio: { enabled: true },
     },
   },
 }
@@ -131,10 +106,14 @@ openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-mi
 {
   tools: {
     media: {
-      audio: {
-        enabled: true,
-        models: [{ provider: "senseaudio", model: "senseaudio-asr-pro-1.5-260319" }],
-      },
+      models: [
+        {
+          provider: "senseaudio",
+          model: "senseaudio-asr-pro-1.5-260319",
+          capabilities: ["audio"],
+        },
+      ],
+      audio: { enabled: true },
     },
   },
 }
@@ -148,9 +127,8 @@ openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-mi
     media: {
       audio: {
         enabled: true,
-        echoTranscript: true, // 默认值为 false
-        echoFormat: '📝 "{transcript}"', // 可选，支持 {transcript}
-        models: [{ provider: "openai", model: "gpt-4o-transcribe" }],
+        echoTranscript: true,
+        echoFormat: '📝 "{transcript}"',
       },
     },
   },
@@ -159,23 +137,21 @@ openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-mi
 
 ## 注意和限制
 
-- Provider 认证遵循标准模型认证顺序（auth profiles、env vars、`models.providers.*.apiKey`）。
-- Groq 配置详情：[Groq](/providers/groq)。
-- 当使用 `provider: "deepgram"` 时，Deepgram 会读取 `DEEPGRAM_API_KEY`。配置详情：[Deepgram](/providers/deepgram)。
-- Mistral 配置详情：[Mistral](/providers/mistral)。
-- 当使用 `provider: "senseaudio"` 时，SenseAudio 会读取 `SENSEAUDIO_API_KEY`。配置详情：[SenseAudio](/providers/senseaudio)。
-- 音频 provider 可通过 `tools.media.audio` 覆盖 `baseUrl`、`headers` 和 `providerOptions`。
-- 默认大小上限为 20MB（`tools.media.audio.maxBytes`）。超出大小的音频会跳过该模型，并尝试下一个条目。
-- 小于 1024 字节的音频文件会在 provider/CLI 转写之前被跳过。
-- 音频的默认 `maxChars` 为 **未设置**（完整转写）。设置 `tools.media.audio.maxChars` 或单个条目的 `maxChars` 可截断输出。
-- OpenAI 自动检测默认使用 `gpt-4o-transcribe`；设置 `model: "gpt-4o-mini-transcribe"` 可获得更便宜/更快的选项。
-- 使用 `tools.media.audio.attachments` 处理多个语音笔记（`mode: "all"` 加上 `maxAttachments`，默认 1）。
-- 转写文本可通过模板中的 `{{Transcript}}` 获取。
-- `tools.media.audio.echoTranscript` 默认关闭；启用后，会在 agent 处理前将转写确认回传到发起聊天。
-- `tools.media.audio.echoFormat` 可自定义回显文本（占位符：`{transcript}`；默认 `📝 "{transcript}"`）。
-- CLI stdout 上限为 5MB；请保持 CLI 输出简洁。
-- CLI `args` 应使用 `{{MediaPath}}` 作为本地音频文件路径。运行 `openclaw doctor --fix` 可迁移旧版 `audio.transcription.command` 配置中的已弃用 `{input}` 占位符（已退役键：`audio.transcription`，现由 `tools.media.audio.models` 取代）。
-- `tools.media.concurrency` 限制媒体任务数量；它不是 GPU 调度器。
+- Provider auth follows the standard model auth order (auth profiles, env vars, `models.providers.*.apiKey`).
+- Groq setup details: [Groq](/providers/groq).
+- Deepgram picks up `DEEPGRAM_API_KEY` when `provider: "deepgram"` is used. Setup details: [Deepgram](/providers/deepgram).
+- Mistral setup details: [Mistral](/providers/mistral).
+- SenseAudio picks up `SENSEAUDIO_API_KEY` when `provider: "senseaudio"` is used. Setup details: [SenseAudio](/providers/senseaudio).
+- Audio providers can use defaults under `tools.media.audio` or override `baseUrl`, `headers`, `providerOptions`, and limits on their `tools.media.models[]` entry.
+- The built-in audio size cap is 20MB. An entry-level `maxBytes` override can change it; oversize audio is skipped for that model and the next entry is tried.
+- Audio files below 1024 bytes are skipped before provider/CLI transcription.
+- Default `maxChars` for audio is **unset** (full transcript). Set `tools.media.audio.maxChars` or per-entry `maxChars` to trim output.
+- OpenAI auto-detect default is `gpt-4o-transcribe`; set `model: "gpt-4o-mini-transcribe"` for a cheaper/faster option.
+- Transcript is available to templates as `{{Transcript}}`.
+- `tools.media.audio.echoTranscript` is off by default; `echoFormat` accepts a `{transcript}` placeholder.
+- CLI stdout is capped at 5MB; keep CLI output concise.
+- CLI `args` should use `{{AttachmentPath}}` for the local audio file path. Run `openclaw doctor --fix` to migrate deprecated `{input}` placeholders from older `audio.transcription.command` configs (retired key: `audio.transcription`, replaced by `tools.media.models`). `{{MediaPath}}` remains a deprecated compatibility alias.
+- `tools.media.concurrency` bounds media tasks; it is not a GPU scheduler.
 
 ### 常驻本地 STT
 

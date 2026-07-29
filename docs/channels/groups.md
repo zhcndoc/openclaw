@@ -117,7 +117,9 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
 | `"allowlist"`       | 仅注入来自允许名单发送者的历史/线程/引用/转发上下文。     |
 | `"allowlist_quote"` | `allowlist`，并保留来自任意发送者的被明确引用/回复的消息。 |
 
-可按渠道设置（`channels.<channel>.contextVisibility`）、按账号设置（`channels.<channel>.accounts.<accountId>.contextVisibility`），或全局设置（`channels.defaults.contextVisibility`）。会获取补充上下文的渠道（Discord、Feishu、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp）在构建入站上下文时会应用该策略；未知的策略组合将以失败关闭（fail closed）方式处理，并省略该上下文。
+按渠道设置（`channels.<channel>.contextVisibility`）、按账号设置（`channels.<channel>.accounts.<accountId>.contextVisibility`），或全局设置（`channels.defaults.contextVisibility`）。会拉取补充上下文的渠道（Discord、Feishu、iMessage、Matrix、Microsoft Teams、QQBot、Signal、Slack、Telegram、WhatsApp）在构建入站上下文时会应用该策略；未知的策略组合会以失败关闭的方式处理并省略该上下文。
+
+这些模式只会过滤渠道提供的补充上下文。工具策略和仅限所有者使用的工具清单，仍然是根据当前回合的原始请求者来选择，而不是提示中表示的每个发送者。参见 [请求者范围控制和提示上下文](/gateway/security#requester-scoped-controls-and-prompt-context)。
 
 ![群消息流程](/images/groups-flow.svg)
 
@@ -309,7 +311,15 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
 
 群组消息默认需要提及，除非按群组单独覆盖。默认值按子系统存放在 `*.groups."*"` 下。
 
-回复机器人消息在频道暴露回复元数据时会被视为隐式提及；在频道暴露引用元数据时，引用机器人消息也可能被视为提及。目前内置的情况包括：Discord、Microsoft Teams、QQBot、Slack、Telegram、WhatsApp 和 Zalo personal。
+支持的隐式提及事实因渠道而异：
+
+| 事实                  | 当前内置生成者                                   |
+| --------------------- | ------------------------------------------------ |
+| 回复机器人            | Discord、Microsoft Teams、QQBot、Slack、Telegram |
+| 引用机器人            | WhatsApp、Zalo personal                          |
+| 机器人加入线程        | Mattermost、Slack、Tlon                          |
+
+当渠道生成某个事实时，该事实默认启用。将相应的 `implicitMentions` 标志设为 `false`，即可阻止该事实绕过提及门控；原生显式提及不受影响。对于不生成该事实的渠道，该标志无效。
 
 ```json5
 {
@@ -334,15 +344,15 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
     },
   },
   agents: {
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
+        default: true,
         groupChat: {
           mentionPatterns: ["@openclaw", "openclaw", "\\+15555550123"],
           historyLimit: 50,
         },
       },
-    ],
+    },
   },
 }
 ```
@@ -415,16 +425,16 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
 
 <AccordionGroup>
   <Accordion title="提及门控说明">
-    - `mentionPatterns` 是大小写不敏感的安全正则模式；无效模式和不安全的嵌套重复形式会被忽略（并给出警告）。
-    - 模式优先级：`agents.list[].groupChat.mentionPatterns`（当多个代理共享同一群组时很有用）会覆盖 `messages.groupChat.mentionPatterns`；当两者都未设置时，模式会根据代理身份名称/表情符号派生。
-    - 只有在能够进行提及检测时才会强制执行提及门控（原生提及或已配置 `mentionPatterns`）。
-    - 将某个群组或发送者加入允许名单，并不会禁用提及门控；如果希望所有消息都能触发，请将该群组的 `requireMention` 设为 `false`。
+    - `mentionPatterns` 是大小写不敏感且安全的正则模式；无效模式和不安全的嵌套重复形式会被忽略（并给出警告）。
+    - 模式优先级：`agents.entries.*.groupChat.mentionPatterns`（在多个代理共享群组时很有用）会覆盖 `messages.groupChat.mentionPatterns`；当两者都未设置时，模式将根据代理身份名称/表情符号派生。
+    - 只有在能够进行提及检测时，才会强制执行提及门控（原生提及或已配置 `mentionPatterns`）。
+    - 将群组或发送者加入白名单不会关闭提及门控；如果所有消息都应触发，请将该群组的 `requireMention` 设为 `false`。
     - 自动群聊提示上下文会在每一轮携带已解析的静默回复指令；工作区文件不应重复 `NO_REPLY` 机制。
-    - 允许自动静默回复的群组会将干净的空输出或仅推理输出的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天永远不会收到 `NO_REPLY` 指引，而仅使用消息工具的群组回复则通过不调用 `message(action=send)` 来保持安静。
-    - 常驻开启的群聊默认使用用户请求语义。将 `messages.groupChat.unmentionedInbound: "room_event"` 设为将其作为安静上下文提交。有关设置示例请参见 [环境房间事件](/channels/ambient-room-events)。
-    - 房间事件不会被存储为伪造的用户请求，而没有消息工具的房间事件中的私有助手文本也不会作为聊天历史回放。
-    - Discord 的默认值位于 `channels.discord.guilds."*"`（可按 guild/channel 覆盖）。
-    - 群组历史上下文在各渠道间采用统一包装。受提及门控的群组会保留待处理的跳过消息；常驻开启的群组在渠道支持时也可能保留最近已处理的房间消息。全局默认使用 `messages.groupChat.historyLimit`，覆盖项使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
+    - 允许自动静默回复的群组会将干净的空回复或仅推理内容的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天永远不会收到 `NO_REPLY` 指导，而仅使用消息工具的群组回复则通过不调用 `message(action=send)` 来保持静默。
+    - 默认情况下，环境式常开群聊使用用户请求语义。将 `messages.groupChat.unmentionedInbound: "room_event"` 设为以静默上下文提交。有关设置示例，请参见 [环境房间事件](/channels/ambient-room-events)。
+    - 房间事件不会作为伪造的用户请求存储，且来自无消息工具房间事件的私有助手文本不会作为聊天历史重放。
+    - Discord 的默认值位于 `channels.discord.guilds."*"` 中（可按 guild/channel 覆盖）。
+    - 群历史上下文在各渠道中均以统一方式包装。受提及门控的群组会保留待处理的跳过消息；常开群组在渠道支持时，也可能保留最近已处理的房间消息。全局默认值使用 `messages.groupChat.historyLimit`，覆盖项使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
 
   </Accordion>
 </AccordionGroup>
@@ -477,25 +487,25 @@ always-on group chatter -> 用户请求，或在配置时生成房间事件
 群组/渠道工具限制会在全局/代理工具策略之上应用（deny 仍然优先）。某些渠道对房间/渠道使用不同的嵌套方式（例如 Discord `guilds.*.channels.*`、Slack `channels.*`、Microsoft Teams `teams.*.channels.*`）。
 </Note>
 
-## Group allowlist
+## 群组允许列表
 
-When `channels.whatsapp.groups`, `channels.telegram.groups`, or `channels.imessage.groups` is configured, these keys are used as a group allowlist. Use `"*"` to allow all groups while still setting the default mention behavior.
+当配置了 `channels.whatsapp.groups`、`channels.telegram.groups` 或 `channels.imessage.groups` 时，这些键会被用作群组允许列表。使用 `"*"` 可以允许所有群组，同时仍然设置默认的 @ 提及行为。
 
 <Warning>
-Common confusion: DM pairing authorization is not the same as group authorization. For channels that support DM pairing, pairing storage only unlocks DMs. Group commands still require explicit group sender authorization from the configured allowlist, such as `groupAllowFrom`, or the configuration fallback described in that channel's documentation.
+常见误解：DM 配对授权与群组授权并不相同。对于支持 DM 配对的通道，配对存储只会解锁私聊。群组命令仍然需要来自已配置允许列表的显式群组发送者授权，例如 `groupAllowFrom`，或者该通道文档中描述的配置回退。
 </Warning>
 
-Common intents (copy/paste):
+常见意图（可复制/粘贴）：
 
 <Tabs>
-  <Tab title="Disable all group replies">
+  <Tab title="禁用所有群组回复">
     ```json5
     {
       channels: { whatsapp: { groupPolicy: "disabled" } },
     }
     ```
   </Tab>
-  <Tab title="Only allow specific groups (WhatsApp)">
+  <Tab title="仅允许特定群组（WhatsApp）">
     ```json5
     {
       channels: {
@@ -509,7 +519,7 @@ Common intents (copy/paste):
     }
     ```
   </Tab>
-  <Tab title="Allow all groups but require mention">
+  <Tab title="允许所有群组但要求提及">
     ```json5
     {
       channels: {
@@ -520,7 +530,7 @@ Common intents (copy/paste):
     }
     ```
   </Tab>
-  <Tab title="Owner-only trigger (WhatsApp)">
+  <Tab title="仅限所有者触发（WhatsApp）">
     ```json5
     {
       channels: {
@@ -554,7 +564,7 @@ Common intents (copy/paste):
 - `WasMentioned`（提及门控结果）
 - Telegram 论坛主题还会包含 `MessageThreadId` 和 `IsForum`。
 
-代理系统提示会在新群组会话的第一轮（以及 `/activation` 变更之后）包含一个群组简介。它会提醒模型像人类一样回复，尽量减少空行并遵循正常的聊天间距，同时避免输入字面形式的 `\n` 序列。非 Telegram 群组也会避免使用 Markdown 表格；Telegram 的富文本指导来自 Telegram 频道提示。来自频道的群组名称和参与者标签会以带围栏的不可信元数据形式呈现，而不是以内联系统指令的形式呈现。
+代理系统提示词会在新的群组会话的第一轮（以及在 `/activation` 变更之后）包含一段群组介绍。它会提醒模型像人类一样回应，尽量减少空行并遵循正常的聊天间距，同时避免输入字面上的 `\n` 序列。其声明的表格模式不会保留原生或原始表格的频道，也会不鼓励使用 Markdown 表格。来自频道的群组名称和参与者标签会以带围栏的未受信元数据形式呈现，而不是作为行内系统指令。
 
 ## iMessage 细节
 
@@ -566,9 +576,9 @@ Common intents (copy/paste):
 
 请参阅 [WhatsApp](/channels/whatsapp#system-prompts) 以了解权威的 WhatsApp 系统提示词规则，包括群组和直接消息的提示词解析、通配符行为以及账户覆盖语义。
 
-## WhatsApp 细节
+## WhatsApp Details
 
-请参阅 [群组消息](/channels/group-messages) 了解仅适用于 WhatsApp 的行为（历史注入、提及处理细节）。
+Please refer to [Group Messages](/channels/group-messages) for behavior that applies only to WhatsApp (historical injection, mention handling details).
 
 ## 相关内容
 

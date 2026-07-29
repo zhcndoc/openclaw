@@ -12,30 +12,30 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 参数：
 
-| 参数         | 描述                                                                                                                                           |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `command`    | 必填。要运行的 Shell 命令。                                                                                                                     |
-| `workdir`    | 工作目录；省略则使用默认 cwd。                                                                                                                 |
-| `env`        | 命令的额外环境变量。                                                                                                                           |
-| `yieldMs`    | 在后台化前等待的毫秒数（默认 10000）。                                                                                                         |
-| `background` | 立即在后台运行。                                                                                                                             |
-| `timeout`    | 超时时间（秒，默认 `tools.exec.timeoutSec`）；到期后终止进程。设置 `timeout: 0` 可为该次调用禁用 exec 进程超时。                                  |
-| `pty`        | 在可用时以伪终端运行（需要 TTY 的 CLI、编码代理）。                                                                                             |
-| `elevated`   | 如果启用了/允许提权模式，则在沙箱外运行（默认 `gateway`，或当 exec 目标为 `node` 时为 `node`）。                                               |
-| `host`       | Exec 目标：`auto`、`sandbox`、`gateway` 或 `node`。                                                                                            |
-| `node`       | Node ID/名称，与 `host: "node"` 一起使用。                                                                                                     |
+| Parameter    | Description                                                                                                                                                |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command`    | Required. Shell command to run.                                                                                                                            |
+| `workdir`    | Working directory; omit to use the default cwd.                                                                                                            |
+| `env`        | Extra environment variables for the command.                                                                                                               |
+| `yieldMs`    | Milliseconds to wait before backgrounding (default 10000).                                                                                                 |
+| `background` | Run in background immediately.                                                                                                                             |
+| `timeout`    | Timeout in seconds (default `tools.exec.timeoutSeconds`); kills the process on expiry. Set `timeout: 0` to disable the exec process timeout for that call. |
+| `pty`        | Run in a pseudo-terminal when available (TTY-required CLIs, coding agents).                                                                                |
+| `elevated`   | Run outside the sandbox if elevated mode is enabled/allowed (`gateway` by default, or `node` when the exec target is `node`).                              |
+| `host`       | Exec target: `auto`, `sandbox`, `gateway`, or `node`.                                                                                                      |
+| `node`       | Node id/name, used with `host: "node"`.                                                                                                                    |
 
 行为：
 
-- 前台运行会直接返回输出。
-- 在后台运行时（显式指定或通过 `yieldMs` 超时），工具会返回 `status: "running"` + `sessionId` 以及一段简短的输出尾部。
-- 后台运行和 `yieldMs` 运行会继承 `tools.exec.timeoutSec`，除非调用时显式传入 `timeout`。
-- 输出会保留在内存中，直到会话被轮询或清除。
-- 如果 `process` 工具被禁止，`exec` 会同步运行并忽略 `yieldMs`/`background`。
-- 启动的 exec 命令会接收 `OPENCLAW_SHELL=exec`，用于上下文感知的 shell/profile 规则。
-- 对于现在开始的长时间运行任务：只启动一次，并依赖自动完成唤醒（如果已启用），在命令产生输出或失败时触发。
-- 如果自动完成唤醒不可用，或者你需要对无输出但正常退出的命令进行“成功确认”，请使用 `process` 轮询。
-- 不要用 `sleep` 循环或重复轮询来模拟提醒或延迟跟进——未来任务请使用 cron。
+- Foreground runs return output directly.
+- When backgrounded (explicit or via `yieldMs` timeout), the tool returns `status: "running"` + `sessionId` and a short output tail.
+- Backgrounded and `yieldMs` runs inherit `tools.exec.timeoutSeconds` unless the call passes an explicit `timeout`.
+- Output stays in memory until the session is polled or cleared.
+- If the `process` tool is disallowed, `exec` runs synchronously and ignores `yieldMs`/`background`.
+- Spawned exec commands receive `OPENCLAW_SHELL=exec` for context-aware shell/profile rules.
+- For long-running work that starts now: start it once and rely on automatic completion wake (when enabled) once the command emits output or fails.
+- If automatic completion wake is unavailable, or you need quiet-success confirmation for a command that exits cleanly with no output, poll with `process`.
+- Don't emulate reminders or delayed follow-ups with `sleep` loops or repeated polling — use cron for future work.
 
 ### 环境变量覆盖
 
@@ -49,13 +49,13 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 ### 配置（优先于环境变量覆盖）
 
-| 键                                     | 默认值 | 作用                                                                         |
-| -------------------------------------- | ------ | ---------------------------------------------------------------------------- |
-| `tools.exec.backgroundMs`             | 10000   | 与 `OPENCLAW_BASH_YIELD_MS` 相同。                                           |
-| `tools.exec.timeoutSec`               | 1800    | 每次调用的默认超时时间。                                                      |
-| `tools.exec.cleanupMs`                | 1800000 | 与 `OPENCLAW_BASH_JOB_TTL_MS` 相同。                                         |
-| `tools.exec.notifyOnExit`             | true    | 当后台执行的 exec 退出时，排队一个系统事件 + 请求心跳。                       |
-| `tools.exec.notifyOnExitEmptySuccess` | false   | 对于无输出且成功结束的后台运行，也排队完成事件。                              |
+| Key                                   | Default | Effect                                                                          |
+| ------------------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `tools.exec.backgroundMs`             | 10000   | Same as `OPENCLAW_BASH_YIELD_MS`.                                               |
+| `tools.exec.timeoutSeconds`           | 1800    | Default per-call timeout.                                                       |
+| `tools.exec.cleanupMs`                | 1800000 | Same as `OPENCLAW_BASH_JOB_TTL_MS`.                                             |
+| `tools.exec.notifyOnExit`             | true    | Enqueue a system event + request heartbeat when a backgrounded exec exits.      |
+| `tools.exec.notifyOnExitEmptySuccess` | false   | Also enqueue completion events for successful backgrounded runs with no output. |
 
 ## 子进程桥接
 

@@ -177,7 +177,9 @@ Beta 通道安装和更新在可用时优先使用 npm 的 `beta` dist-tag，
   <Accordion title="Config includes 和无效配置修复">
     如果你的 `plugins` 部分由单文件 `$include` 支持，`plugins install/update/enable/disable/uninstall` 会写回到那个被包含的文件，而保持 `openclaw.json` 不变。根级 includes、include 数组以及带有同级覆盖的 includes 会直接失败，而不是被扁平化。支持的形状请参见 [Config includes](/gateway/configuration)。
 
-    如果安装期间配置无效，`plugins install` 通常会失败并提示你先运行 `openclaw doctor --fix`。在 Gateway 启动和热重载期间，无效插件配置会像其他无效配置一样直接失败；`openclaw doctor --fix` 可以隔离无效的插件条目。唯一文档化的安装时例外，是一个狭窄的内置插件恢复路径，适用于显式选择加入 `openclaw.install.allowInvalidConfigRecovery` 的插件。
+    如果安装前配置无效，`plugins install` 通常会失败并提示你先运行 `openclaw doctor --fix`。在 Gateway 启动和热重载期间，无效的插件配置会像其他无效配置一样失败；`openclaw doctor --fix` 可以隔离无效的插件条目。唯一的既有配置例外是一条狭窄的捆绑插件恢复路径，适用于明确选择加入 `openclaw.install.allowInvalidConfigRecovery` 的插件。
+
+    当现有宿主配置有效，但新安装插件自身的配置缺失时，OpenClaw 会将该安装记录为禁用，而不是写入一个无效的启用条目。请先配置 `plugins.entries.<id>.config`，然后运行 `openclaw plugins enable <id>`。如果已存在的插件配置条目有效但无效，安装会失败且不会重写它。
 
   </Accordion>
   <Accordion title="--force 确认以及重新安装与更新">
@@ -383,7 +385,7 @@ id，并将受信任的 id 复制到 `openclaw.json` 中的 `plugins.allow`。�
 
 插件安装元数据是由机器管理的状态，不是用户配置。安装和更新会将其写入当前 OpenClaw 状态目录下共享的 SQLite 状态数据库。`installed_plugin_index` 行存储持久化的 `installRecords` 元数据，包括损坏或缺失插件清单的记录，以及由清单派生的冷 registry 缓存，供 `openclaw plugins update`、卸载、诊断和冷插件 registry 使用。
 
-当 OpenClaw 看到配置中附带的旧版 `plugins.installs` 记录时，运行时读取会将其视为兼容性输入，而不会重写 `openclaw.json`。显式的插件写入和 `openclaw doctor --fix` 会在允许配置写入时把这些记录移到插件索引中并移除该配置键；如果任一写入失败，则会保留配置中的记录，以免丢失安装元数据。
+`plugins.installs` 是一个已废弃的作者配置项。运行时和更新命令只读取 SQLite 已安装插件索引。请运行 `openclaw doctor --fix` 将旧配置记录导入索引，并在正常运行前移除该废弃键。
 
 ## 卸载
 
@@ -414,7 +416,7 @@ openclaw plugins update openclaw-codex-app-server --acknowledge-clawhub-risk
 openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-install
 ```
 
-更新会应用于托管插件索引中已跟踪的插件安装，以及 `hooks.internal.installs` 中已跟踪的 hook-pack 安装。它们会复用用户在安装插件时已选择的来源，因此不需要第二次来源确认。
+更新会应用于托管插件索引中已跟踪的插件安装，以及共享 SQLite 状态中已跟踪的 hook-pack 安装。它们会复用用户在安装插件时已经选择的源，因此不需要第二次来源确认。
 
 <AccordionGroup>
   <Accordion title="解析 plugin id 与 npm spec 的区别">
@@ -458,7 +460,7 @@ openclaw plugins inspect <id> --json
 openclaw plugins inspect --all
 ```
 
-检查会显示身份、加载状态、来源、清单能力、策略标志、诊断、安装元数据、捆绑包能力，以及任何检测到的 MCP 或 LSP server 支持，默认不会导入插件运行时。JSON 输出包括插件清单契约，例如 `contracts.agentToolResultMiddleware` 和 `contracts.trustedToolPolicies`，因此操作者可以在启用或重启插件之前审计受信任表面的声明。添加 `--runtime` 可加载插件模块，并包含已注册的 hooks、tools、commands、services、gateway methods 和 HTTP routes。运行时检查会直接报告缺失的插件依赖；安装和修复仍在 `openclaw plugins install`、`openclaw plugins update` 和 `openclaw doctor --fix` 中完成。
+检查会显示身份、加载状态、来源、清单能力、策略标志、诊断信息、安装元数据、捆绑包能力，以及任何检测到的 MCP 或 LSP server 支持，默认不会导入插件运行时。JSON 输出包括插件清单契约，例如 `contracts.agentToolResultMiddleware` 和 `contracts.trustedToolPolicies`，因此操作者可以在启用或重启插件之前审计受信任表面的声明。添加 `--runtime` 可加载插件模块，并包含已注册的 hooks、tools、commands、services、gateway methods 和 HTTP routes。运行时检查会直接报告缺失的插件依赖；安装和修复仍在 `openclaw plugins install`、`openclaw plugins update` 和 `openclaw doctor --fix` 中完成。
 
 插件拥有的 CLI 命令通常会作为根级 `openclaw` 命令组安装，但插件也可以在某个核心父命令下注册嵌套命令，例如 `openclaw nodes`。当 `inspect --runtime` 在 `cliCommands` 下显示某个命令时，请按照列出的路径直接运行它；例如，注册了 `demo-git` 的插件可以用 `openclaw demo-git ping` 验证。
 
@@ -501,11 +503,7 @@ openclaw plugins registry --json
 
 使用 `plugins registry` 来检查持久化注册表是否存在、是否最新或是否过期。使用 `--refresh` 可根据持久化插件索引、配置策略以及 manifest/package 元数据重建它。这是一条修复路径，不是运行时激活路径。
 
-`openclaw doctor --fix` 还会修复 registry 相关的受管理 npm 漂移：如果受管理插件 npm 项目或旧的扁平受管理 npm 根目录下一个孤立或恢复的 `@openclaw/*` 包遮蔽了捆绑插件，doctor 会移除该旧包并重建 registry，以便启动时按捆绑清单进行验证。Doctor 还会把主机 `openclaw` 包重新链接到声明了 `peerDependencies.openclaw` 的受管理 npm 插件中，因此诸如 `openclaw/plugin-sdk/*` 之类的包本地运行时导入在更新或 npm 修复后也能解析成功。
-
-<Warning>
-`OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY=1` 是一个已弃用的、用于 registry 读取失败的“破窗”兼容开关。请优先使用 `plugins registry --refresh` 或 `openclaw doctor --fix`；环境变量回退只用于迁移过程中的紧急启动恢复。
-</Warning>
+`openclaw doctor --fix` 还会修复与注册表相关的受管 npm 漂移。如果在受管插件 npm 项目下的孤立或已恢复的 `@openclaw/*` 包，或者旧的扁平受管 npm 根目录中的包，遮蔽了一个内置插件，doctor 会移除该过时包并重建注册表，使启动时能够根据内置 manifest 进行验证。当权威安装记录选择了某一个受管代际，但更早的扁平目录或代际目录仍然存在时，doctor 会将这些过时目录标记为待在网关重启后清理。Doctor 还会将宿主 `openclaw` 包重新链接到声明了 `peerDependencies.openclaw` 的受管 npm 插件中，以便像 `openclaw/plugin-sdk/*` 这样的包级运行时导入在更新或 npm 修复后能够正确解析。
 
 ## 市场
 
@@ -541,7 +539,19 @@ URL，使用 `--expected-sha256 <sha256>` 可要求负载校验和必须匹配
 刷新会在无法接受新的托管负载时失败，而成功的托管
 刷新如果 OpenClaw 无法持久化已验证的快照，也会失败。
 
-## 相关内容
+内置的 `clawhub-public` 配置文件期望负载标识
+`clawhub-official`。在 ClawHub 生成并移交该密钥后，OpenClaw 会捆绑 ClawHub 的生产公钥。在此之前，内置配置文件不会授予签名源安装权限。公钥必须来自可信的发布或运维渠道，而不是来自源主机上的密钥端点。
+
+OpenClaw 会验证 DSSE 封装，并且当配置文件声明 `feedId` 时，
+要求解码后的负载 ID 与之匹配。内置的 `clawhub-public`
+配置文件始终声明其标识，防止通过该配置文件重放另一个
+源的有效文档。
+
+在分阶段推出期间，现有的、未声明 `feedId`
+的自定义签名配置文件保留签名验证，但不绑定负载标识。新的自定义
+配置文件应声明 `feedId`。`feed-profile` 配置面正在单独落地，并提供 Control UI 所需的展示元数据；其 Doctor 诊断必须要求操作员提供缺失的标识，且不得从源 URL 推断标识。这种信任绑定不会恢复已废弃的根 `marketplaces` 密钥。
+
+## 相关
 
 - [构建插件](/plugins/building-plugins)
 - [CLI 参考](/cli)

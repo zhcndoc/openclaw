@@ -7,29 +7,37 @@ read_when:
   - 你想在一个地方找到当前已文档化的实验性标志
 ---
 
-实验性功能是通过显式标志启用的可选预览能力。在它们获得稳定默认值或长期契约之前，需要更多真实场景的验证。
+实验性功能是位于显式标志之后的预览界面。它们需要更多真实场景下的使用经验，才能成为稳定默认值或长期契约。
 
-- 默认关闭，除非文档告诉你启用某项功能。
-- 其形式和行为变化速度可能快于稳定配置。
+- 默认关闭，除非某个文档描述了一个狭义的自动设置规则。
+- 其形态和行为可能比稳定配置变化得更快。
 - 如果已经存在稳定路径，优先使用稳定路径。
-- 只有先在较小环境中测试后，才应大范围推广。
+- 仅在先于较小环境中测试之后，再广泛推广。
 
 ## 当前已文档化的标志
 
-| Surface                  | Key                                                                                        | Use it when                                                                                                                       | More                                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 本地模型运行时           | `agents.defaults.experimental.localModelLean`, `agents.list[].experimental.localModelLean` | 当更小或更严格的本地后端在处理 OpenClaw 的完整默认工具面板时会吃不消时                                                             | [本地模型](/gateway/local-models)                                                             |
-| 内存搜索                 | `agents.defaults.memorySearch.experimental.sessionMemory`                                  | 你希望 `memory_search` 为之前的会话转录建立索引，并接受额外的存储/索引成本                                                         | [内存配置参考](/reference/memory-config#session-memory-search-experimental)                  |
-| Codex harness            | `plugins.entries.codex.config.appServer.experimental.sandboxExecServer`                    | 你希望原生 Codex app-server 0.132.0 或更新版本将目标指向由 OpenClaw 沙箱支持的 exec-server，而不是禁用 Code Mode                | [Codex harness 参考](/plugins/codex-harness-reference#sandboxed-native-execution)           |
-| 结构化规划工具           | `tools.experimental.planTool`                                                              | 你希望在兼容的运行时和 UI 中暴露结构化的 `update_plan` 工具，用于多步骤工作跟踪                                                  | [网关配置参考](/gateway/config-tools#toolsexperimental)                                      |
+| Surface             | Key                                                                                           | 何时使用它                                                                                                                  | 更多                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Local model runtime | `agents.defaults.experimental.localModelLean`, `agents.entries.*.experimental.localModelLean` | 较小或更严格的本地后端无法处理 OpenClaw 完整的默认工具表面                                                                  | [本地模型](/gateway/local-models)                                                    |
+| Codex harness       | `plugins.entries.codex.config.appServer.experimental.sandboxExecServer`                       | 你希望原生 Codex app-server 0.143.0 或更新版本，直接针对 OpenClaw 基于沙箱的 exec-server，而不是禁用 Code Mode | [Codex harness 参考](/plugins/codex-harness-reference#sandboxed-native-execution) |
+| Code Mode           | `tools.codeMode.enabled`                                                                      | 你希望以紧凑的方式，通过代码编排访问隐藏的 OpenClaw 工具目录                                                                | [Code Mode](/tools/code-mode)                                                        |
+| Swarm               | `tools.swarm.enabled`                                                                         | 你希望 Code Mode 脚本并行编排受限数量的子代理                                                                        | [Swarm](/tools/swarm)                                                                |
+
+## 控制 UI 实验室
+
+打开 **Settings → Agents & Tools → Labs** 以管理带有 Control UI 开关的实验。启用或禁用某个实验会立即修补规范的 Gateway 配置；只有当某个功能需要重启时，页面才会显示重启提示。
+
+Code Mode 和 Swarm 是当前已发布的实验室条目。这两个开关都会写入现有的已验证配置键，并且通常会在不重启 Gateway 的情况下对后续的代理运行生效。
 
 ## 本地模型精简模式
 
-`agents.defaults.experimental.localModelLean: true` 会在每一轮从代理的直接工具面板中移除重量级的可选工具：`browser`、`cron`、`message`、`image_generate`、`music_generate`、`video_generate`、`tts` 和 `pdf`。明确允许或交付所必需的工具仍然可用，不过工具搜索可能会将它们编入目录而不是直接暴露。精简模式还会在 `tools.toolSearch` 尚未设置时，默认将插件/MCP/客户端目录切换为结构化工具搜索（`tool_search`、`tool_describe`、`tool_call`）。使用 `agents.list[].experimental.localModelLean` 可将其仅作用于某一个代理。
+`agents.defaults.experimental.localModelLean: true` 会在每一轮从代理的直接可见工具中移除重量级的可选工具：`browser`、`cron`、`message`、`image_generate`、`music_generate`、`video_generate`、`tts` 和 `pdf`。明确允许或因交付要求保留的工具仍然可用，不过工具搜索可能会将它们编入目录，而不是直接暴露。精简模式在 `tools.toolSearch` 尚未设置时，也会默认将插件/MCP/客户端目录切换为结构化工具搜索（`tool_search`、`tool_describe`、`tool_call`）。可使用 `agents.entries.*.experimental.localModelLean` 将其作用范围限定到单个代理。
+
+在入门配置过程中，如果 `ollama` 或 `lmstudio` 的推理路由已验证可用，而该值缺失，则会自动设置 `agents.defaults.experimental.localModelLean: true`。OpenClaw 会记录该设置来源于入门配置，因此之后若切换到已验证的非本地路由，只会取消这个自动设置。显式配置为 `true` 或 `false` 会被保留。其他自托管和 OpenAI 兼容提供商不会根据模型名称或 URL 推断。
 
 如果你已经在全局调优了工具搜索，OpenClaw 会保持该配置不变。将 `tools.toolSearch: false` 设为关闭，可退出精简模式下的工具搜索默认行为。
 
-In structured `tools` mode, lean runs keep `exec` directly visible beside the Tool Search controls so coding-tuned local models can still choose their familiar shell path. This changes schema visibility only: normal tool policy, sandboxing, and exec approvals still apply. Explicit `code` and `directory` modes keep their normal compaction behavior.
+在结构化 `tools` 模式下，精简运行会让 `exec` 仍然直接可见，并与工具搜索控制并列显示，这样面向代码调优的本地模型仍可选择它们熟悉的 shell 路径。这只会改变 schema 的可见性：正常的工具策略、沙箱和 exec 审批仍然适用。显式的 `code` 和 `directory` 模式会保持其正常的压缩行为。
 
 ### 为什么是这些工具
 

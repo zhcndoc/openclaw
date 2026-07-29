@@ -55,7 +55,13 @@ openclaw channels add --channel tlon --ship ~sampel-palnet --url https://your-sh
 
 直接编辑配置后请重启网关。然后向机器人发送私信，或在群聊中 @ 它。
 
-## 私有/LAN 船只
+## 入站持久性
+
+OpenClaw 在代理分发之前会持久化已接受的 Tlon DM 和群聊事件。待处理或可重试的轮次在 Gateway 重启后仍会保留，并且工作会继续按每个群组频道或直接对等方串行执行。稳定的 Urbit 消息 ID 也会在其队列记录或保留的完成记录存在时抑制重复投递的事件。
+
+在队列到代理的边界上，投递至少发生一次：在移交过程中发生崩溃可能会重放一个轮次。因此，产生外部副作用的代理操作在可行时应保持幂等。
+
+## 私有/LAN ship
 
 OpenClaw 默认会阻止私有/内部主机名和 IP 段，以防止 SSRF 攻击。如果你的
 ship 运行在私有网络上（localhost、LAN IP、内部主机名），请显式启用：
@@ -139,6 +145,8 @@ DM 白名单（为空 = 不允许任何 DM，除非发送者是 `ownerShip`）�
 
 一旦机器人在某个线程中回复过，它就会继续响应该线程后续的消息，而无需再次提及。
 
+将 `channels.tlon.implicitMentions.threadParticipation` 设置为 `false`，可要求对这些后续消息重新进行显式提及。账户覆盖使用 `channels.tlon.accounts.<id>.implicitMentions`。Tlon 目前不会生成 `replyToBot` 或 `quotedBot` 事实，因此这些标志在这里没有作用。
+
 ## 所有者和审批系统
 
 ```json5
@@ -215,21 +223,20 @@ Use with `openclaw message send` or cron delivery:
 - DM: `~sampel-palnet` 或 `dm/~sampel-palnet`
 - Group: `chat/~host-ship/channel` 或 `group:~host-ship/channel`
 
-## 捆绑技能
+## Bundled Skills
 
-该插件捆绑了 [`@tloncorp/tlon-skill`](https://github.com/tloncorp/tlon-skill)，这是一个用于
-直接进行 Urbit 操作的 CLI，插件安装后即可自动使用：
+This plugin bundles [`@tloncorp/tlon-skill`](https://github.com/tloncorp/tlon-skill), which is a CLI for directly performing Urbit operations and can be used automatically after the plugin is installed:
 
-- **活动**：提及、回复、未读
-- **频道**：列表、创建、重命名
-- **联系人**：列表/获取/更新资料
-- **群组**：创建、加入、邀请/请求流程、角色
-- **挂钩**：管理频道挂钩
-- **消息**：历史、搜索
-- **私信**：发送、表情反应、接受/拒绝
-- **帖子**：表情反应、删除
-- **笔记本**：发布到日记频道
-- **设置**：通过上方的设置存储热重载插件配置
+- **Activity**: mentions, replies, unread
+- **Channels**: list, create, rename
+- **Contacts**: list/get/update profile
+- **Groups**: create, join, invite/request flow, roles
+- **Hooks**: manage channel hooks
+- **Messages**: history, search
+- **Direct Messages**: send, react, accept/reject
+- **Posts**: react, delete
+- **Notebook**: publish to journal channels
+- **Settings**: hot-reload plugin configuration via the settings above
 
 ## 功能
 
@@ -240,9 +247,9 @@ Use with `openclaw message send` or cron delivery:
 | 线程           | 支持（加入后会持续回复）                       |
 | 富文本          | Markdown 转换为 Tlon 的原生格式               |
 | 图片            | 入站时下载，出站时上传                        |
-| 反应            | 仅可通过 [bundled skill](#bundled-skill)      |
+| 反应            | 仅可通过 [捆绑技能](#bundled-skill)      |
 | 投票            | 不支持                                       |
-| 原生命令        | 默认仅限所有者                               |
+| 原生命令      | 默认仅限所有者                               |
 
 ## 故障排除
 
@@ -267,22 +274,23 @@ openclaw doctor
 | Key                                                    | 含义                                                        |
 | ------------------------------------------------------ | -------------------------------------------------------------- |
 | `channels.tlon.enabled`                                | 启用/禁用频道启动。                                |
-| `channels.tlon.ship`                                   | 机器人的 Urbit ship 名称（例如 `~sampel-palnet`）。                 |
-| `channels.tlon.url`                                    | ship URL（例如 `https://sampel-palnet.tlon.network`）。          |
-| `channels.tlon.code`                                   | ship 登录码。                                               |
-| `channels.tlon.network.dangerouslyAllowPrivateNetwork` | 允许 localhost/LAN ship URL（SSRF 可选开启）。                   |
-| `channels.tlon.ownerShip`                              | 所有者 ship：始终被授权，接收审批请求。     |
-| `channels.tlon.dmAllowlist`                            | 允许私信的 ships（为空 = 除所有者外无）。              |
-| `channels.tlon.autoAcceptDmInvites`                    | 自动接受来自 `dmAllowlist` 中 ships 的私信邀请。                   |
+| `channels.tlon.ship`                                   | 机器人的 Urbit 船名（例如 `~sampel-palnet`）。                 |
+| `channels.tlon.url`                                    | 船只 URL（例如 `https://sampel-palnet.tlon.network`）。          |
+| `channels.tlon.code`                                   | 船只登录代码。                                               |
+| `channels.tlon.network.dangerouslyAllowPrivateNetwork` | 允许 localhost/LAN 船只 URL（SSRF 可选）。                   |
+| `channels.tlon.ownerShip`                              | 所有者船只：始终被授权，接收审批请求。     |
+| `channels.tlon.dmAllowlist`                            | 允许发送私信的船只（为空 = 除所有者外无其他）。              |
+| `channels.tlon.autoAcceptDmInvites`                    | 自动接受来自 `dmAllowlist` 中船只的私信。                   |
 | `channels.tlon.autoAcceptGroupInvites`                 | 自动接受来自 `groupInviteAllowlist` 的群组邀请。         |
-| `channels.tlon.groupInviteAllowlist`                   | 其群组邀请会被自动接受的 ships。                   |
-| `channels.tlon.autoDiscoverChannels`                   | 自动发现已加入的群组频道（默认：`false`）。        |
-| `channels.tlon.groupChannels`                          | 手动固定的频道 nest。                                 |
-| `channels.tlon.defaultAuthorizedShips`                 | 对所有频道都授权的 ships（在没有规则匹配时使用）。 |
-| `channels.tlon.authorization.channelRules`             | 按频道 nest 的认证模式 + allowlist。                        |
-| `channels.tlon.showModelSignature`                     | 在回复末尾追加 `_[Generated by <model>]_`。                  |
-| `channels.tlon.responsePrefix`                         | 预先添加到外发回复前的静态前缀。                   |
-| `channels.tlon.accounts.<id>`                          | 额外的命名账户（多 ship 设置）。                 |
+| `channels.tlon.groupInviteAllowlist`                   | 其群组邀请会被自动接受的船只。                   |
+| `channels.tlon.autoDiscoverChannels`                   | 自动发现已加入的群组频道（默认值：`false`）。        |
+| `channels.tlon.implicitMentions.threadParticipation`   | 允许参与过的线程后续消息绕过提及门控。      |
+| `channels.tlon.groupChannels`                          | 手动固定的频道嵌套。                                 |
+| `channels.tlon.defaultAuthorizedShips`                 | 所有频道都被授权的船只（在没有规则匹配时使用）。 |
+| `channels.tlon.authorization.channelRules`             | 按频道嵌套划分的授权模式 + 允许列表。                        |
+| `channels.tlon.showModelSignature`                     | 在回复后附加 `_[由 <model> 生成]_`。                  |
+| `channels.tlon.responsePrefix`                         | 追加到外发回复前的静态前缀。                   |
+| `channels.tlon.accounts.<id>`                          | 额外的命名账户（多船只设置）。                 |
 
 ## 说明
 

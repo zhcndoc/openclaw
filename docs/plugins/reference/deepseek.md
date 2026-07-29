@@ -16,7 +16,7 @@ title: "DeepSeek 插件"
 
 ## 接入点
 
-providers: deepseek; contracts: usageProviders
+providers: `deepseek`; contracts: `usageProviders`
 
 ## 相关文档
 

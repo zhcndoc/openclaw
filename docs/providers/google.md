@@ -22,7 +22,10 @@ Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时�
     **最佳适用场景：** 通过 Google AI Studio 进行标准 Gemini API 访问。
 
     <Steps>
-      <Step title="运行引导">
+      <Step title="Get an API key">
+        Create a free key in [Google AI Studio](https://aistudio.google.com/apikey).
+      </Step>
+      <Step title="Run onboarding">
         ```bash
         openclaw onboard --auth-choice gemini-api-key
         ```
@@ -58,10 +61,17 @@ Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时�
     `GEMINI_API_KEY` 和 `GOOGLE_API_KEY` 都可接受。请使用你已经配置好的那个。
     </Tip>
 
+    With a configured API key, OpenClaw refreshes Google AI Studio's text-model
+    catalog from the Gemini `models.list` API. Newly released Gemini 3 Pro, Flash,
+    and Flash-Lite variants therefore appear in
+    `openclaw models list --provider google` without waiting for an OpenClaw
+    release. If discovery is unavailable, OpenClaw keeps the bundled fallback
+    catalog.
+
   </Tab>
 
   <Tab title="Gemini CLI (OAuth)">
-    **最佳适用场景：** 通过 PKCE OAuth 复用现有的 Gemini CLI 登录，而不是单独使用 API 密钥。
+    **Best for:** signing in with your Google account through Gemini CLI OAuth instead of using a separate API key.
 
     <Warning>
     `google-gemini-cli` provider 是一个非官方集成。部分用户
@@ -116,9 +126,13 @@ Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时�
     命令已安装并位于 `PATH` 中。
     </Note>
 
-    `google-gemini-cli/*` model refs 是旧版兼容别名。新的
-    配置在需要本地 Gemini CLI 执行时，应使用 `google/*` model refs，并配合
-    `google-gemini-cli` runtime。
+    Onboarding auto-detection lists an existing Gemini CLI login but never
+    auto-tests it because Gemini CLI has no tool-free probe. Choose Gemini CLI
+    OAuth or a Gemini API key to continue.
+
+    `google-gemini-cli/*` model refs are legacy compatibility aliases. New
+    configs should use `google/*` model refs plus the `google-gemini-cli`
+    runtime when they want local Gemini CLI execution.
 
   </Tab>
 </Tabs>
@@ -196,13 +210,13 @@ Gemini 2.5 Pro 仅在思考模式下工作，并且会拒绝显式的
 
 ## 图像生成
 
-内置的 `google` 图像生成 provider 默认使用
-`google/gemini-3.1-flash-image-preview`。
+The bundled `google` image-generation provider defaults to
+`google/gemini-3.1-flash-image`.
 
-- 也支持 `google/gemini-3-pro-image-preview`
-- 生成：每次请求最多 4 张图片
-- 编辑模式：已启用，最多 5 张输入图片
-- 形状控制：`size`、`aspectRatio` 和 `resolution`
+- Also supports `google/gemini-3-pro-image`
+- Generate: up to 4 images per request
+- Edit mode: enabled, up to 5 input images
+- Geometry controls: `size`, `aspectRatio`, and `resolution`
 
 要将 Google 设为默认图像 provider：
 
@@ -211,7 +225,7 @@ Gemini 2.5 Pro 仅在思考模式下工作，并且会拒绝显式的
   agents: {
     defaults: {
       imageGenerationModel: {
-        primary: "google/gemini-3.1-flash-image-preview",
+        primary: "google/gemini-3.1-flash-image",
       },
     },
   },
@@ -285,10 +299,10 @@ Gemini 2.5 Pro 仅在思考模式下工作，并且会拒绝显式的
 内置的 `google` 语音 provider 使用 Gemini API 的 TTS 路径，
 并采用 `gemini-3.1-flash-tts-preview`。
 
-- 默认语音: `Kore`
-- Auth: `messages.tts.providers.google.apiKey`、`models.providers.google.apiKey`、`GEMINI_API_KEY` 或 `GOOGLE_API_KEY`
-- 输出：常规 TTS 附件为 WAV，语音便笺目标为 Opus，Talk/电话场景为 PCM
-- 语音便笺输出：Google PCM 会被包装为 WAV，并通过 `ffmpeg` 转码为 48 kHz Opus
+- Default voice: `Kore`
+- Auth: `tts.providers.google.apiKey`, `models.providers.google.apiKey`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY`
+- Output: WAV for regular TTS attachments, Opus for voice-note targets, PCM for Talk/telephony
+- Voice-note output: Google PCM is wrapped as WAV and transcoded to 48 kHz Opus with `ffmpeg`
 
 Google 的批量 Gemini TTS 路径会在完成的 `generateContent` 响应中返回生成的音频。
 对于最低延迟的语音对话，请使用由 Gemini Live API 支持的 Google 实时语音 provider，
@@ -298,16 +312,14 @@ Google 的批量 Gemini TTS 路径会在完成的 `generateContent` 响应中返
 
 ```json5
 {
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "google",
-      providers: {
-        google: {
-          model: "gemini-3.1-flash-tts-preview",
-          speakerVoice: "Kore",
-          audioProfile: "以平静的语气专业地朗读。",
-        },
+  tts: {
+    auto: "always",
+    provider: "google",
+    providers: {
+      google: {
+        model: "gemini-3.1-flash-tts-preview",
+        speakerVoice: "Kore",
+        audioProfile: "Speak professionally with a calm tone.",
       },
     },
   },
@@ -398,15 +410,21 @@ Gemini 3.1 Live 接受通过实时输入传入的会话文本，并使用
 </Note>
 
 <Note>
-Control UI Talk 支持带有限制性一次性令牌的 Google Live 浏览器会话。仅后端的实时语音 provider
-也可以通过通用的 Gateway relay transport 运行，这会将 provider 凭据保留在 Gateway 上。
+Control UI Talk supports Google Live browser sessions with constrained one-use
+tokens. In Video Talk, the browser sends bounded JPEG frames directly to
+Google Live at the provider's maximum of one frame per second. The
+`describe_view` function reports whether that camera stream is active.
+Camera frames do not pass through the Gateway. Backend-only realtime voice
+providers can also run through the generic Gateway relay transport, which
+keeps provider credentials on the Gateway.
 </Note>
 
 对于维护者的实时验证，请运行
 `OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`.
-该 smoke 也覆盖 OpenAI 后端/WebRTC 路径；Google 这一路会签发与 Control UI Talk 使用的相同
-受限 Live API 令牌形状，打开浏览器 WebSocket 端点，发送初始设置负载，并等待
-`setupComplete`。
+The smoke also covers OpenAI backend/WebRTC paths; the Google leg mints the same
+constrained Live API token shape used by Control UI Talk, opens the browser
+WebSocket endpoint, sends the initial setup payload plus a JPEG frame, and
+verifies a text response and `describe_view` function roundtrip.
 
 ## 高级配置
 

@@ -1,9 +1,9 @@
 ---
-summary: "从沙箱代理中以提升权限模式运行命令，在沙箱外执行 exec"
+summary: "Run commands from the sandbox agent in elevated mode, executing exec outside the sandbox"
 read_when:
-  - 调整提升模式默认值、允许列表或斜杠命令行为
-  - 了解沙箱代理如何访问宿主机
-title: "提升模式"
+  - Adjusting elevated mode default values, allowlists, or slash command behavior
+  - Understanding how the sandbox agent accesses the host machine
+title: "Elevated Mode"
 ---
 
 当代理在沙箱中运行时，其 `exec` 命令仅限于沙箱环境。**提升模式**允许代理突破沙箱，并在其外部运行命令，同时支持可配置的审批门控。
@@ -81,12 +81,12 @@ title: "提升模式"
 
 ## 可用性和允许列表
 
-- **全局开关**: `tools.elevated.enabled`（必须为 `true`）
-- **发送者允许列表**: `tools.elevated.allowFrom`，按频道分别配置列表
-- **每个代理的开关**: `agents.list[].tools.elevated.enabled`（只能进一步限制；全局和每个代理的开关都必须为 `true`）
-- **每个代理的允许列表**: `agents.list[].tools.elevated.allowFrom`（发送者必须同时匹配全局 + 每个代理）
-- **频道提供的回退允许列表**: 频道插件可以通过 SDK 适配器钩子可选地提供一个回退允许列表，当 `tools.elevated.allowFrom.<provider>` 未配置时使用。目前没有内置频道实现此钩子，因此实际上现在每个提供方都需要显式配置 `tools.elevated.allowFrom.<provider>` 条目。
-- **所有开关都必须通过**；否则 elevated 会被视为不可用
+- **Global gate**: `tools.elevated.enabled`（必须为 `true`）
+- **Sender allowlist**: `tools.elevated.allowFrom`，按频道分别配置列表
+- **Per-agent gate**: `agents.entries.*.tools.elevated.enabled`（只能进一步限制；全局和 per-agent gate 都必须为 `true`）
+- **Per-agent allowlist**: `agents.entries.*.tools.elevated.allowFrom`（发送者必须同时匹配全局 + per-agent）
+- **Channel-provided fallback allowlist**: 频道插件可以通过 SDK adapter hook 选择性提供一个回退允许列表，当未配置 `tools.elevated.allowFrom.<provider>` 时使用。目前没有任何内置频道实现这个 hook，因此实际上现在每个 provider 都需要显式配置一个 `tools.elevated.allowFrom.<provider>` 条目。
+- **All gates must pass**；否则 elevated 会被视为不可用
 
 允许列表条目格式：
 
@@ -98,14 +98,14 @@ title: "提升模式"
 | `tag:`                  | 发送者标签                     |
 | `id:`, `from:`, `e164:` | 显式身份标识目标               |
 
-## elevated 不控制的内容
+## elevated does not control
 
-- **工具策略**：如果工具策略拒绝 `exec`，elevated 也无法覆盖。
-- **主机选择策略**：elevated 不会把 `auto` 变成可自由跨主机覆盖。它使用已配置/会话中的 exec 目标规则，只有在目标本来就是 `node` 时才选择 `node`。
-- **与 `/exec` 分离**：`/exec` 指令会为被授权的发送者调整每个会话的 exec 默认值（主机、安全性、ask、node），并且不需要 elevated 模式。
+- **Tool policy**: If the tool policy denies `exec`, elevated cannot override it either.
+- **Host selection policy**: elevated does not turn `auto` into a freely cross-host override. It uses the configured/session exec target rules, and only chooses `node` when the target is already `node`.
+- **Separated from `/exec`**: The `/exec` command adjusts the exec defaults for each session for authorized senders (host, security, ask, node), and does not require elevated mode.
 
 <Note>
-  bash 聊天命令（`!` 前缀；`/bash` 别名）是一个独立门控，除了其自身的 `tools.bash.enabled` 标志外，还要求启用 `tools.elevated`。禁用 elevated 也会将 `!` shell 命令一并锁定。
+  The bash chat command (`!` prefix; `/bash` alias) is a separate gate. In addition to its own `tools.bash.enabled` flag, it also requires `tools.elevated` to be enabled. Disabling elevated also locks the `!` shell command.
 </Note>
 
 ## 相关内容

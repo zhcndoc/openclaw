@@ -1,19 +1,17 @@
 ---
 summary: "通过其 OpenClaw 插件使用 Qwen 云"
 read_when:
-  - 你想将 Qwen 与 OpenClaw 一起使用
-  - 你拥有阿里云 Token Plan 订阅
-  - 你之前使用过 Qwen OAuth
+  - You want to use Qwen with OpenClaw
+  - You have an Alibaba Cloud Token Plan subscription
 title: "Qwen"
 ---
 
-Qwen Cloud 是一个官方的外部 OpenClaw 提供商插件，规范 ID 为 `qwen`。它面向 Qwen Cloud / Alibaba DashScope Standard 和 Coding Plan 端点，Token Plan 以 `qwen-token-plan` 暴露，将 `modelstudio` 作为兼容别名，独立拥有阿里巴巴文档中的 `bailian-token-plan` 自定义提供商 ID，并将 Qwen 门户令牌流程以 [`qwen-oauth`](/providers/qwen-oauth) 的形式暴露。
+Qwen Cloud is an official external OpenClaw provider plugin with canonical id `qwen`. It targets Qwen Cloud / Alibaba DashScope Standard and Coding Plan endpoints, exposes Token Plan as `qwen-token-plan`, keeps `modelstudio` as a compatibility alias, and independently owns Alibaba's documented `bailian-token-plan` custom-provider id.
 
 | 属性                   | 值                                         |
 | ---------------------- | ------------------------------------------ |
 | Provider               | `qwen`                                     |
 | Token Plan provider    | `qwen-token-plan`                          |
-| Portal provider        | [`qwen-oauth`](/providers/qwen-oauth)      |
 | Preferred env var      | `QWEN_API_KEY`                             |
 | Token Plan env var     | `QWEN_TOKEN_PLAN_API_KEY`                  |
 | Also accepted (compat) | `MODELSTUDIO_API_KEY`, `DASHSCOPE_API_KEY` |
@@ -179,43 +177,6 @@ openclaw gateway restart
 
   </Tab>
 
-  <Tab title="Qwen OAuth / Portal">
-    **最适合：** 针对 `https://portal.qwen.ai/v1` 的 Qwen Portal 令牌。
-
-    请参见 [Qwen OAuth / Portal](/providers/qwen-oauth) 了解专用提供方
-    页面和迁移说明。
-
-    <Steps>
-      <Step title="提供你的 Portal 令牌">
-        ```bash
-        openclaw onboard --auth-choice qwen-oauth
-        ```
-      </Step>
-      <Step title="设置默认模型">
-        ```json5
-        {
-          agents: {
-            defaults: {
-              model: { primary: "qwen-oauth/qwen3.5-plus" },
-            },
-          },
-        }
-        ```
-      </Step>
-      <Step title="验证模型是否可用">
-        ```bash
-        openclaw models list --provider qwen-oauth
-        ```
-      </Step>
-    </Steps>
-
-    <Note>
-    `qwen-oauth` 使用与 Qwen Cloud 提供方相同的 `QWEN_API_KEY` 环境变量名，
-    但在通过 OpenClaw onboarding 配置时，会将认证信息存储在 `qwen-oauth`
-    提供方 id 下。
-    </Note>
-
-  </Tab>
 </Tabs>
 
 ## 计划类型和端点
@@ -224,11 +185,10 @@ openclaw gateway restart
 | -------------------------- | ------ | -------------------------- | ---------------------------------------------------------------- |
 | Coding Plan (subscription) | China  | `qwen-api-key-cn`          | `coding.dashscope.aliyuncs.com/v1`                               |
 | Coding Plan (subscription) | Global | `qwen-api-key`             | `coding-intl.dashscope.aliyuncs.com/v1`                          |
-| Qwen Portal                | Global | `qwen-oauth`               | `portal.qwen.ai/v1`                                              |
-| Standard (pay-as-you-go)   | China   | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`                      |
-| Standard (pay-as-you-go)   | Global  | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1`                 |
-| Token Plan (Team Edition)  | China   | `qwen-token-plan-cn`       | `token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`     |
-| Token Plan (Team Edition)  | Global  | `qwen-token-plan`          | `token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1` |
+| Standard (pay-as-you-go)   | China  | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`                      |
+| Standard (pay-as-you-go)   | Global | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1`                 |
+| Token Plan (Team Edition)  | China  | `qwen-token-plan-cn`       | `token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`     |
+| Token Plan (Team Edition)  | Global | `qwen-token-plan`          | `token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1` |
 
 提供方会根据你的认证选择自动选择端点。标准化
 选项使用 `qwen-*` 系列；`modelstudio-*` 仅保留兼容模式。
@@ -257,8 +217,7 @@ Plan 配置会省略那些仅适用于 Standard 端点的模型。
 | `qwen/MiniMax-M2.5`         | text        | 1,000,000 | 支持推理       |
 | `qwen/glm-5`                | text        | 202,752   | GLM                     |
 | `qwen/glm-4.7`              | text        | 202,752   | GLM                     |
-| `qwen/kimi-k2.5`            | text, image | 262,144   | 通过阿里巴巴接入的 Moonshot AI |
-| `qwen-oauth/qwen3.5-plus`   | text, image | 1,000,000 | Qwen Portal 默认        |
+| `qwen/kimi-k2.5`            | text, image | 262,144   | Moonshot AI via Alibaba |
 
 <Note>
 即使某个模型存在于静态目录中，可用性仍可能因端点和计费计划而异。
@@ -266,25 +225,20 @@ Plan 配置会省略那些仅适用于 Standard 端点的模型。
 
 ### Token Plan 目录
 
-Token Plan 使用单独的精确字符串允许列表。仅限图像生成的计划
-模型不包含在此处，因为它们使用不同的 API。
+Token Plan uses a separate exact-string allowlist. The built-in catalog shows
+Alibaba's currently recommended plan models and keeps the newer Qwen3-Coder
+compatibility tier selectable but hidden. Other allowlisted model IDs remain
+available as custom model refs. Image-generation-only plan models are not
+included here because they use different APIs.
 
-| Model ref                           | Input       | Context   |
-| ----------------------------------- | ----------- | --------- |
-| `qwen-token-plan/qwen3.7-max`       | text        | 1,000,000 |
-| `qwen-token-plan/qwen3.7-plus`      | text, image | 1,000,000 |
-| `qwen-token-plan/qwen3.6-plus`      | text, image | 1,000,000 |
-| `qwen-token-plan/qwen3.6-flash`     | text, image | 1,000,000 |
-| `qwen-token-plan/deepseek-v4-pro`   | text        | 1,000,000 |
-| `qwen-token-plan/deepseek-v4-flash` | text        | 1,000,000 |
-| `qwen-token-plan/deepseek-v3.2`     | text        | 131,072   |
-| `qwen-token-plan/kimi-k2.7-code`    | text, image | 262,144   |
-| `qwen-token-plan/kimi-k2.6`         | text, image | 262,144   |
-| `qwen-token-plan/kimi-k2.5`         | text, image | 262,144   |
-| `qwen-token-plan/glm-5.2`           | text        | 1,000,000 |
-| `qwen-token-plan/glm-5.1`           | text        | 202,752   |
-| `qwen-token-plan/glm-5`             | text        | 202,752   |
-| `qwen-token-plan/MiniMax-M2.5`      | text        | 196,608   |
+| Model ref                          | Input       | Context   | Picker status |
+| ---------------------------------- | ----------- | --------- | ------------- |
+| `qwen-token-plan/qwen3.7-plus`     | text, image | 1,000,000 | visible       |
+| `qwen-token-plan/qwen3.6-plus`     | text, image | 1,000,000 | visible       |
+| `qwen-token-plan/qwen3-coder-next` | text        | 262,144   | hidden        |
+| `qwen-token-plan/kimi-k2.5`        | text, image | 262,144   | visible       |
+| `qwen-token-plan/glm-5`            | text        | 202,752   | visible       |
+| `qwen-token-plan/MiniMax-M2.5`     | text        | 196,608   | visible       |
 
 ## 思考控制
 
@@ -306,8 +260,8 @@ Token Plan 模型也被标记为具备推理能力。`kimi-k2.7-code` 和
 `qwen` 插件仅在 **Standard** DashScope
 端点上公开多模态能力，不支持 Coding Plan 端点：
 
-- 通过 `qwen-vl-max-latest` 进行**图像和视频理解**
-- 通过 `wan2.6-t2v`（默认）、`wan2.6-i2v`、`wan2.6-r2v`、`wan2.6-r2v-flash`、`wan2.7-r2v` 进行 **Wan 视频生成**
+- **Image and video understanding** via `qwen3.6-plus`
+- **Wan video generation** via `wan2.6-t2v` (default), `wan2.6-i2v`, `wan2.6-r2v`, `wan2.6-r2v-flash`, `wan2.7-r2v`
 
 媒体理解会根据已配置的 Qwen 认证信息自动解析；无需额外
 配置。请确保你使用的是 Standard（按量付费）端点，以便媒体理解正常工作。

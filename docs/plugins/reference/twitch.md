@@ -16,7 +16,7 @@ OpenClaw Twitch 频道插件，用于聊天和审核工作流。
 
 ## 接口
 
-channels: twitch
+channels: `twitch`
 
 ## 相关文档
 

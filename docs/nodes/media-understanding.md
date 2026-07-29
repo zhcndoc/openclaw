@@ -15,7 +15,7 @@ OpenClaw 可以在回复流程运行之前对入站媒体（图像/音频/视频
 
 <Steps>
   <Step title="收集附件">
-    收集入站附件（`MediaPaths`、`MediaUrls`、`MediaTypes`）。
+    收集有序的传入媒体信息（`path`、`url`、`contentType` 和 `kind`）。
   </Step>
   <Step title="按能力选择">
     对于每个已启用的能力（图像/音频/视频），根据 `attachments` 策略选择附件（默认：仅第一个附件）。
@@ -33,21 +33,20 @@ OpenClaw 可以在回复流程运行之前对入站媒体（图像/音频/视频
 
 ## 配置
 
-`tools.media` 保存一份共享模型列表以及按能力覆盖的配置：
+`tools.media` 持有一个按能力标记的模型列表，以及少量按能力控制项：
 
 ```json5
 {
   tools: {
     media: {
       concurrency: 2, // 最大并发能力运行数（默认）
-      models: [/* 共享列表，按 capabilities 进行门控 */],
-      image: {/* 可选覆盖 */},
-      audio: {
-        /* 可选覆盖 */
-        echoTranscript: true,
-        echoFormat: '📝 "{transcript}"',
-      },
-      video: {/* 可选覆盖 */},
+      models: [
+        { provider: "openai", model: "gpt-4o-mini-transcribe", capabilities: ["audio"] },
+        { provider: "google", model: "gemini-3-flash-preview", capabilities: ["image", "video"] },
+      ],
+      image: { preferredModel: "google/gemini-3-flash-preview" },
+      audio: { enabled: true },
+      video: { enabled: true },
     },
   },
 }
@@ -55,22 +54,21 @@ OpenClaw 可以在回复流程运行之前对入站媒体（图像/音频/视频
 
 按能力（`image`/`audio`/`video`）的键：
 
-| 键                                              | 类型      | 默认值                                               | 说明                                                                                |
-| ----------------------------------------------- | --------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `enabled`                                       | `boolean` | 自动（`false` 会禁用）                               | 设置为 `false` 可关闭该能力的自动检测                                               |
-| `models`                                        | array     | 无                                                   | 在共享的 `tools.media.models` 列表之前优先使用                                       |
-| `prompt`                                        | `string`  | `"Describe the {media}."`（外加 maxChars 指引）      | 默认仅用于图片/视频                                                                  |
-| `maxChars`                                      | `number`  | `500`（图片/视频），未设置（音频）                  | 如果模型返回更多内容，会被截断                                                       |
-| `maxBytes`                                      | `number`  | 图片 `10485760`，音频 `20971520`，视频 `52428800`    | 超过大小的媒体会跳过并尝试下一个模型                                                 |
-| `timeoutSeconds`                                | `number`  | `60`（图片/音频），`120`（视频）                    |                                                                                     |
-| `language`                                      | `string`  | 未设置                                               | 音频转录提示                                                                        |
-| `baseUrl`/`headers`/`providerOptions`/`request` | -         | -                                                    | 提供方请求覆盖；参见 [Tools and custom providers](/gateway/config-tools)            |
-| `attachments`                                   | object    | `{ mode: "first", maxAttachments: 1 }`               | 参见 [Attachment policy](#attachment-policy)                                         |
-| `scope`                                         | object    | 未设置                                               | 按 channel/chatType/keyPrefix 进行门控                                               |
-| `echoTranscript`                                | `boolean` | `false`                                              | 仅音频：在 agent 处理之前把转录结果回显到聊天中                                       |
-| `echoFormat`                                    | `string`  | `'📝 "{transcript}"'`                                | 仅音频：`{transcript}` 占位符                                                        |
+| Key              | Type      | Default                                | Notes                                                                |
+| ---------------- | --------- | -------------------------------------- | -------------------------------------------------------------------- |
+| `enabled`        | `boolean` | auto (`false` disables)                | 将 `false` 设置为关闭该能力的自动检测                                   |
+| `preferredModel` | `string`  | first compatible entry                 | 优先使用 `provider/model`、model id、`provider:<id>` 或 `cli:command` |
+| `prompt`         | `string`  | capability default                     | 当某个条目未覆盖时使用的默认提示词                                       |
+| `maxChars`       | `number`  | `500` image/video, unset audio         | 默认输出限制                                                            |
+| `maxBytes`       | `number`  | 10MB image, 20MB audio, 50MB video     | 默认输入限制                                                            |
+| `timeoutSeconds` | `number`  | `60` image/audio, `120` video          | 默认请求超时                                                            |
+| `language`       | `string`  | unset                                  | 音频转写提示                                                            |
+| `scope`          | object    | unset                                  | 按 channel/chat type/source key 进行门控                                 |
+| `attachments`    | object    | `{ mode: "first", maxAttachments: 1 }` | 选择要处理的匹配附件                                                    |
+| `echoTranscript` | `boolean` | `false`                                | 仅音频：在代理处理前回显转写内容                                         |
+| `echoFormat`     | `string`  | `'📝 "{transcript}"'`                  | 仅音频：回显转写内容的格式                                              |
 
-Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram: { detectLanguage, punctuate, smartFormat }` 字段已弃用，但仍会读取）。
+提示词、限制、语言提示、请求覆盖项和提供方选项可以作为能力默认值设置，也可以在单独的 `tools.media.models[]` 条目中覆盖。即使未显式配置模型，能力默认值也会覆盖自动检测到的提供方。
 
 ### 模型条目
 
@@ -87,7 +85,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
       maxChars: 500,
       maxBytes: 10485760,
       timeoutSeconds: 60,
-      capabilities: ["image"], // 多模态共享条目时可选
+      capabilities: ["image"],
       profile: "vision-profile",
       preferredProfile: "vision-fallback",
     }
@@ -103,7 +101,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
         "gemini-3-flash",
         "--allowed-tools",
         "read_file",
-        "读取 {{MediaPath}} 处的媒体，并将其描述在 <= {{MaxChars}} 个字符内。",
+        "读取位于 {{AttachmentPath}} 的媒体，并用不超过 {{MaxChars}} 个字符进行描述。",
       ],
       maxChars: 500,
       maxBytes: 52428800,
@@ -112,14 +110,14 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
     }
     ```
 
-    CLI 模板也可以使用 `{{MediaDir}}`（包含媒体文件的目录）、`{{OutputDir}}`（为本次运行创建的临时目录）以及 `{{OutputBase}}`（临时文件基础路径，不含扩展名）。
+    CLI 模板还可以使用 `{{AttachmentUrl}}`、`{{AttachmentContentType}}`、`{{AttachmentDir}}`、`{{AttachmentIndex}}`、`{{OutputDir}}`（本次运行创建的临时目录）以及 `{{OutputBase}}`（临时文件基础路径，无扩展名）。较旧的 `{{MediaPath}}`、`{{MediaUrl}}`、`{{MediaType}}` 和 `{{MediaDir}}` 名称仍保留为已弃用的兼容别名。
 
   </Tab>
 </Tabs>
 
 ### 提供方凭证
 
-提供方媒体理解使用与普通模型调用相同的认证解析：认证配置文件、环境变量，然后是 `models.providers.<providerId>.apiKey`。`tools.media.*.models[]` 条目不接受内联的 `apiKey` 字段。
+Provider media understanding 使用与普通模型调用相同的认证解析方式：认证配置文件、环境变量，然后是 `models.providers.<providerId>.apiKey`。`tools.media.models[]` 条目不接受内联的 `apiKey` 字段。
 
 ```json5
 {
@@ -235,14 +233,14 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
 **MiniMax 注**：`minimax`, `minimax-cn`, `minimax-portal`, and `minimax-portal-cn` 的图像理解始终来自插件拥有的 `MiniMax-VL-01` 媒体提供方，即使旧版 MiniMax M2.x 聊天元数据声称支持图像输入。
 </Note>
 
-## 模型选择指南
+## Model Selection Guide
 
-- 当质量和安全很重要时，为每种媒体能力优先选择当前一代中最强的模型。
-- 对于处理不可信输入的工具型代理，避免使用较旧/较弱的媒体模型。
-- 每种能力至少保留一个备用方案以确保可用性（高质量模型 + 更快/更便宜的模型）。
-- 当提供方 API 不可用时，CLI 备用方案（`whisper-cli`、`whisper`、`gemini`）会派上用场。
-- 已知的文件输出模式具有权威性：空的或缺失的推断转录文件不会回退到 CLI 进度输出，而是不会生成转录内容。
-- `parakeet-mlx`：使用 `--output-format txt`（或 `all`）配合 `--output-dir` 和默认的 `{filename}` 输出模板。上游的 `PARAKEET_OUTPUT_FORMAT` 和 `PARAKEET_OUTPUT_TEMPLATE` 环境变量也会被遵循。OpenClaw 读取 `<output-dir>/<media-basename>.txt`；默认的 `srt` 格式、其他格式以及自定义输出模板仍然使用 stdout。
+- When quality and safety matter, prefer the strongest model from the current generation for each media capability.
+- For agentic tools that handle untrusted input, avoid older/weaker media models.
+- Keep at least one fallback option for each capability to ensure availability (a high-quality model + a faster/cheaper model).
+- When the provider API is unavailable, CLI fallbacks (`whisper-cli`, `whisper`, `gemini`) come in handy.
+- Known file output patterns are authoritative: empty or missing inferred transcription files do not fall back to CLI progress output, and instead no transcription content will be generated.
+- `parakeet-mlx`: use `--output-format txt` (or `all`) together with `--output-dir` and the default `{filename}` output template. Upstream `PARAKEET_OUTPUT_FORMAT` and `PARAKEET_OUTPUT_TEMPLATE` environment variables are also honored. OpenClaw reads `<output-dir>/<media-basename>.txt`; the default `srt` format, other formats, and custom output templates still use stdout.
 
 ## 附件策略
 
@@ -290,7 +288,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
                 "gemini-3-flash",
                 "--allowed-tools",
                 "read_file",
-                "读取位于 {{MediaPath}} 的媒体内容，并用不超过 {{MaxChars}} 个字符描述它。",
+                "Read the media at {{AttachmentPath}} and describe it in <= {{MaxChars}} characters.",
               ],
               capabilities: ["image", "video"],
             },
@@ -318,7 +316,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
               {
                 type: "cli",
                 command: "whisper",
-                args: ["--model", "base", "{{MediaPath}}"],
+                args: ["--model", "base", "{{AttachmentPath}}"],
               },
             ],
           },
@@ -335,7 +333,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
                   "gemini-3-flash",
                   "--allowed-tools",
                   "read_file",
-                  "读取位于 {{MediaPath}} 的媒体内容，并用不超过 {{MaxChars}} 个字符描述它。",
+                  "Read the media at {{AttachmentPath}} and describe it in <= {{MaxChars}} characters.",
                 ],
               },
             ],
@@ -356,7 +354,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
             maxChars: 500,
             models: [
               { provider: "openai", model: "gpt-5.6-sol" },
-              { provider: "anthropic", model: "claude-opus-4-8" },
+              { provider: "anthropic", model: "claude-opus-5" },
               {
                 type: "cli",
                 command: "gemini",
@@ -365,7 +363,7 @@ Deepgram 特定选项放在 `providerOptions.deepgram` 下（顶层的 `deepgram
                   "gemini-3-flash",
                   "--allowed-tools",
                   "read_file",
-                  "读取位于 {{MediaPath}} 的媒体内容，并用不超过 {{MaxChars}} 个字符描述它。",
+                  "Read the media at {{AttachmentPath}} and describe it in <= {{MaxChars}} characters.",
                 ],
               },
             ],

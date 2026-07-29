@@ -44,13 +44,14 @@ openclaw doctor
 
 常见原因：
 
-- `tools.profile: "minimal"` 只允许 `session_status`。
-- `tools.profile: "messaging"` 范围很窄，仅适用于仅聊天的代理。
-- `tools.profile: "coding"` 是新本地配置的默认值（仓库、文件、
-  shell 和运行时工作）。
-- `tools.profile: "full"` 会移除配置文件限制；仅限受信任的、
-  由操作员控制的代理使用。
-- 按代理配置的 `agents.list[].tools` 会为某个代理覆盖或扩展根配置文件。
+- `tools.profile: "minimal"` allows only `session_status`.
+- `tools.profile: "messaging"` is narrow, for chat-only agents.
+- `tools.profile: "coding"` is the default for new local configs (repo, file,
+  shell, and runtime work).
+- `tools.profile: "full"` removes profile restrictions; limit to trusted
+  operator-controlled agents.
+- Per-agent `agents.entries.*.tools` overrides narrow or expand the root profile
+  for one agent.
 
 更改配置文件，重启或重新加载 Gateway，然后使用
 `openclaw status --all` 重新检查。完整的配置文件/分组表：[工具配置文件](/gateway/config-tools#tool-profiles)。
@@ -308,13 +309,12 @@ flowchart TD
 
     日志特征：
 
-    - `cron: scheduler disabled; jobs will not run automatically` → cron 被禁用。
-    - `heartbeat skipped` reason `quiet-hours` → 超出配置的活动时段。
-    - `heartbeat skipped` reason `empty-heartbeat-file` → `HEARTBEAT.md` 存在，但只包含空白、注释、标题、代码块或空检查清单脚手架内容。
-    - `heartbeat skipped` reason `no-tasks-due` → 任务模式已激活，但还没有到达任何任务间隔。
-    - `heartbeat skipped` reason `alerts-disabled` → `showOk`、`showAlerts` 和 `useIndicator` 都关闭了。
-    - `requests-in-flight` → 主通道忙；heartbeat 唤醒被延后。
-    - `unknown accountId` → heartbeat 投递目标账户不存在。
+    - `cron: scheduler disabled; jobs will not run automatically` → cron is disabled.
+    - `heartbeat skipped` reason `quiet-hours` → outside configured active hours.
+    - `heartbeat skipped` reason `empty-heartbeat-file` → heartbeat monitor scratch contains only blank, comment, header, fence, or empty-checklist scaffolding.
+    - `heartbeat skipped` reason `alerts-disabled` → `showOk`, `showAlerts`, and `useIndicator` are all off.
+    - `requests-in-flight` → main lane busy; heartbeat wake deferred.
+    - `unknown accountId` → heartbeat delivery target account does not exist.
 
     深入页面：[Cron 和 heartbeat 投递](/gateway/troubleshooting#cron-and-heartbeat-delivery)，[计划任务：故障排查](/automation/cron-jobs#troubleshooting)，[Heartbeat](/gateway/heartbeat)
 

@@ -62,7 +62,11 @@ openclaw models list --provider featherless
 
 该插件使用 `Qwen/Qwen3-32B` 作为默认设置，因为 Featherless 为 Qwen 3 系列提供原生工具调用支持。OpenClaw 配置了其 32,768-token 的上下文窗口、保守的 4,096-token 输出上限，以及 Qwen 聊天模板的思考控制。
 
-目录中的成本字段为零，因为 Featherless 支持多种计费模式，而 OpenClaw 不会嵌入特定账户的套餐或请求定价费率。
+The catalog cost fields use Featherless's published request-pricing rates of
+$0.102 per million input tokens and $0.493 per million output tokens. Fixed
+subscription plans remain flat-rate; the cache cost fields stay zero because
+Featherless does not publish separate cache-read or cache-write rates for this
+model.
 
 ## 其他 Featherless 模型
 

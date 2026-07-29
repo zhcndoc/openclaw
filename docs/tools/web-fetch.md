@@ -34,6 +34,20 @@ await web_fetch({ url: "https://example.com/article" });
 将输出截断到这么多字符。会被限制为 `tools.web.fetch.maxCharsCap`。
 </ParamField>
 
+## 结果
+
+`web_fetch` 返回一个封闭的结构化结果，包含以下字段：
+
+- 请求元数据：`url`、`finalUrl`、`status`、`extractMode` 和 `extractor`
+- 可选的响应元数据：`contentType`、`title` 和 `warning`（在不存在时省略）
+- 包装内容元数据：`externalContent`、`truncated`、`length`、`rawLength`、
+  `fetchedAt`、`tookMs` 和 `text`
+- 命中缓存时可选的 `cached: true`
+- 当截断内容被写入私有临时文件时，可选 `spill: { path, chars, truncated? }`；
+  仅当该文件包含部分源内容时才会出现 `truncated`
+
+`length` 是包装后的 `text` 长度。`rawLength` 是外部内容包装前提取的内容长度。
+
 ## 工作原理
 
 <Steps>
@@ -182,7 +196,7 @@ HTTP(S) 代理，请设置 `tools.web.fetch.useTrustedEnvProxy: true`。
 
 ## 工具配置文件
 
-如果你使用工具配置文件或允许列表，请添加 `web_fetch` 或 `group:web`：
+如果您使用工具配置文件或允许列表，请添加 `web_fetch` 或 `group:web`：
 
 ```json5
 {

@@ -11,13 +11,13 @@ OpenClaw 提供终端和 macOS 应用的入门流程。两者都以推理优先�
 
 ## 我应该使用哪种路径？
 
-|                | CLI 入门                         | macOS 应用入门           |
-| -------------- | -------------------------------------- | ------------------------------ |
-| **平台**  | macOS、Linux、Windows（原生或 WSL2） | 仅限 macOS                     |
-| **界面**  | 推理设置，然后是 OpenClaw         | 推理设置，然后是 OpenClaw |
-| **最适合**   | 服务器、无头环境、完全控制        | 桌面 Mac、可视化设置      |
-| **自动化** | `--non-interactive` 适用于脚本        | 仅手动                    |
-| **命令**    | `openclaw onboard`                     | 启动应用                 |
+|                | CLI 上手                     | macOS 应用上手                                           |
+| -------------- | ---------------------------- | -------------------------------------------------------- |
+| **平台**       | macOS、Linux、Windows（原生或 WSL2） | 仅 macOS                                                  |
+| **界面**       | 推理设置，然后 OpenClaw      | 推理设置，然后 OpenClaw                                  |
+| **最适合**     | 服务器、无头环境、完全控制   | 桌面 Mac、可视化设置                                       |
+| **自动化**     | 脚本使用 `--non-interactive` | 仅手动                                                   |
+| **命令**       | `openclaw onboard`           | [下载应用程序](/platforms/macos#download)，然后启动它    |
 
 大多数用户应该从 **CLI 入门** 开始——它几乎处处可用，并且能让你拥有
 最大的控制权。
@@ -60,7 +60,10 @@ CLI 命令文档：[`openclaw onboard`](/cli/onboard)
 
 ## macOS 应用入门
 
-打开 OpenClaw 应用。如果其配置的本地或远程 Gateway 可访问，并且默认代理已经配置了模型，应用会跳过引导并立即打开正常的代理界面。
+[下载 macOS 应用](/platforms/macos#download)，然后打开它。如果其
+配置的本地或远程 Gateway 可访问，
+并且默认代理已经配置了模型，应用将跳过引导
+和 OpenClaw，并立即打开正常的代理 UI。
 
 对于一个全新的或配置不完整的 Gateway，首次运行流程会检测现有的 AI 访问方式（Claude Code、Codex 或 API 密钥），实时测试最佳选项，并且只在收到真实回复后才保存——在未找到任何内容时会自动回退，并提供经过验证的手动 API 密钥步骤。敏感凭据使用遮罩输入。一旦推理通过，OpenClaw 就会启动并帮助配置其余部分。
 
@@ -68,16 +71,16 @@ Gemini CLI 在设置完成后仍可供普通代理使用，但由于它无法强
 
 完整参考：[入门（macOS 应用）](/start/onboarding)
 
-## 自定义或未列出的提供商
+## Custom or Unlisted Providers
 
-如果你的提供商未列出，请运行 `openclaw onboard --classic`，选择
-**自定义提供商**，并输入：
+If your provider is not listed, run `openclaw onboard --classic`, select
+**Custom Provider**, and enter:
 
-- 端点兼容性：OpenAI 兼容（`/chat/completions`）、OpenAI Responses 兼容（`/responses`）、Anthropic 兼容（`/messages`），或者未知（会探测这三者并自动检测）
-- Base URL 和 API key（如果该端点不需要 API key，则为可选）
-- 模型 ID 和可选的模型别名
+- Endpoint compatibility: OpenAI-compatible (`/chat/completions`), OpenAI Responses-compatible (`/responses`), Anthropic-compatible (`/messages`), or unknown (will probe these three and auto-detect)
+- Base URL and API key (optional if the endpoint does not require an API key)
+- Model ID and optional model alias
 
-多个自定义端点可以共存——每个都会获得自己的端点 ID。
+Multiple custom endpoints can coexist—each will get its own endpoint ID.
 
 ## 相关内容
 

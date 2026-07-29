@@ -47,7 +47,7 @@ read_when:
 </ParamField>
 
 <ParamField path="maxBytesMb" type="number">
-每个 PDF 的大小上限，单位为 MB。默认为 `agents.defaults.pdfMaxBytesMb`，若未设置则为 `10`。
+每个 PDF 的大小上限，单位为 MB。默认值为 `agents.defaults.pdfMaxMb`，如果未设置则为 `10`。
 </ParamField>
 
 备注：
@@ -107,11 +107,11 @@ read_when:
 }
 ```
 
-| 键                              | 默认值   | 含义                                                                                   |
+| 键                              | 默认值    | 含义                                                                                   |
 | ----------------------------- | ------- | ----------------------------------------------------------------------------------------- |
-| `agents.defaults.pdfModel`      | 未设置   | 明确指定主/备用 PDF 模型；若未命中，则回退到 `imageModel`，然后是会话模型。 |
-| `agents.defaults.pdfMaxBytesMb` | `10`    | 每个 PDF 的大小上限，单位为 MB。                                                                   |
-| `agents.defaults.pdfMaxPages`   | `20`    | 每个 PDF 处理的最大页数。                                                              |
+| `agents.defaults.pdfModel`    | 未设置   | 显式指定主/备用 PDF 模型；若无则回退到 `imageModel`，再回退到会话模型。 |
+| `agents.defaults.pdfMaxMb`    | `10`    | 单个 PDF 的大小上限（MB）。                                                                   |
+| `agents.defaults.pdfMaxPages` | `20`    | 每个 PDF 处理的最大页数。                                                              |
 
 请参阅 [配置参考](/gateway/config-agents#agent-defaults) 以获取完整字段详情。
 

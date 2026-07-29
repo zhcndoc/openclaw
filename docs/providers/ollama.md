@@ -33,8 +33,8 @@ OpenClaw 通过 Ollama 的原生 API（`/api/chat`）进行通信，而不是使
   <Accordion title="远程和 Ollama Cloud 主机">
     公共远程主机和 `https://ollama.com` 需要真实凭证：`OLLAMA_API_KEY`、身份验证配置文件，或提供方的 `apiKey`。对于直接托管使用，建议优先使用 `ollama-cloud` 提供方。
   </Accordion>
-  <Accordion title="自定义提供方 id">
-    使用 `api: "ollama"` 的自定义提供方遵循相同规则。例如，指向私有局域网主机的 `ollama-remote` 提供方可以使用 `apiKey: "ollama-local"`；子代理会通过 Ollama 提供方钩子解析该标记，而不是将其视为缺失的凭证。`agents.defaults.memorySearch.provider` 也可以指向自定义提供方 id，这样嵌入就会使用该 Ollama 端点。
+  <Accordion title="Custom provider ids">
+    A custom provider with `api: "ollama"` follows the same rules. For example, an `ollama-remote` provider pointed at a private LAN host can use `apiKey: "ollama-local"`; sub-agents resolve that marker through the Ollama provider hook instead of treating it as a missing credential. `memory.search.provider` can also point at a custom provider id so embeddings use that Ollama endpoint.
   </Accordion>
   <Accordion title="身份验证配置文件">
     `auth-profiles.json` 会为某个 provider id 存储凭证；将端点设置（`baseUrl`、`api`、模型、请求头、超时）放在 `models.providers.<id>` 中。较旧的扁平文件，例如 `{ "ollama-windows": { "apiKey": "ollama-local" } }`，不是运行时格式；`openclaw doctor --fix` 会将它们重写为带备份的规范 `ollama-windows:default` API 密钥配置文件。该旧文件中的 `baseUrl` 值只是冗余信息，应移动到提供方配置中。
@@ -42,9 +42,9 @@ OpenClaw 通过 Ollama 的原生 API（`/api/chat`）进行通信，而不是使
   <Accordion title="内存嵌入范围">
     Ollama 内存嵌入的 bearer 认证仅作用于其声明时对应的主机：
 
-    - 级别为提供方的密钥只会发送到该提供方的主机。
-    - `agents.*.memorySearch.remote.apiKey` 只会发送到其远程嵌入主机。
-    - 纯 `OLLAMA_API_KEY` 环境变量值会被视为 Ollama Cloud 约定，默认不会发送到本地/自托管主机。
+    - A provider-level key is sent only to that provider's host.
+    - `memory.search.remote.apiKey` and per-agent overrides are sent only to their remote embedding host.
+    - A pure `OLLAMA_API_KEY` env value is treated as the Ollama Cloud convention and is not sent to local/self-hosted hosts by default.
 
   </Accordion>
 </AccordionGroup>
@@ -59,7 +59,16 @@ OpenClaw 通过 Ollama 的原生 API（`/api/chat`）进行通信，而不是使
         openclaw onboard
         ```
 
-        选择 **Ollama**，然后选择一种模式：**Cloud + Local**、**Cloud only** 或 **Local only**。
+        Select **Ollama**, then pick a mode: **Cloud + Local**, **Cloud only**, or **Local only**.
+
+        On a fresh guided setup, OpenClaw first checks the default or configured
+        Ollama host. An installed model is offered automatically only when
+        `/api/show` confirms tool support and a context window of at least 16K;
+        missing or smaller context metadata stays on the manual setup path. The
+        shared CLI/macOS setup ladder still verifies the selected route with a
+        real completion before saving it. This automatic check never pulls a
+        model; if no suitable installed model exists, onboarding continues to the
+        normal Ollama picker.
       </Step>
       <Step title="选择模型">
         `Cloud only` 会提示输入 `OLLAMA_API_KEY` 并建议使用托管的云端默认模型。`Cloud + Local` 和 `Local only` 会提示输入 Ollama 基础 URL，发现可用模型，并在缺失时自动拉取所选的本地模型。像 `gemma4:latest` 这样的已安装 `:latest` 标签只会显示一次，而不会重复显示 `gemma4`。`Cloud + Local` 还会检查主机是否已登录以获取云端访问权限。
@@ -970,14 +979,12 @@ OpenClaw 将 **Ollama 网页搜索** 作为 `web_search` 提供程序捆绑提�
 
     ```json5
     {
-      agents: {
-        defaults: {
-          memorySearch: {
-            provider: "ollama",
-            remote: {
-              // Ollama 的默认值。如果重新索引太慢，在更大的主机上可提高此值。
-              nonBatchConcurrency: 1,
-            },
+      memory: {
+        search: {
+          provider: "ollama",
+          remote: {
+            // Default for Ollama. Raise on larger hosts if reindexing is too slow.
+            nonBatchConcurrency: 1,
           },
         },
       },
@@ -988,16 +995,14 @@ OpenClaw 将 **Ollama 网页搜索** 作为 `web_search` 提供程序捆绑提�
 
     ```json5
     {
-      agents: {
-        defaults: {
-          memorySearch: {
-            provider: "ollama",
-            model: "nomic-embed-text",
-            remote: {
-              baseUrl: "http://gpu-box.local:11434",
-              apiKey: "ollama-local",
-              nonBatchConcurrency: 2,
-            },
+      memory: {
+        search: {
+          provider: "ollama",
+          model: "nomic-embed-text",
+          remote: {
+            baseUrl: "http://gpu-box.local:11434",
+            apiKey: "ollama-local",
+            nonBatchConcurrency: 2,
           },
         },
       },

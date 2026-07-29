@@ -135,9 +135,10 @@ URL 抓取默认值：
 - 每种输入类型都支持可选的主机名允许列表（`files.urlAllowlist`、`images.urlAllowlist`）：精确主机（`"cdn.example.com"`）或通配符子域（`"*.assets.example.com"`，不匹配根域）。空的或省略的允许列表表示不限制主机名允许列表。
 - 若要完全禁用基于 URL 的抓取，请设置 `files.allowUrl: false` 和/或 `images.allowUrl: false`。
 
-## 文件 + 图片限制（配置）
+## File + image limits
 
-默认值可在 `gateway.http.endpoints.responses` 下调整：
+The endpoint uses a built-in 20 MB request-body limit. File and image source
+policy remains configurable under `gateway.http.endpoints.responses`:
 
 ```json5
 {
@@ -146,7 +147,6 @@ URL 抓取默认值：
       endpoints: {
         responses: {
           enabled: true,
-          maxBodyBytes: 20000000,
           maxUrlParts: 8,
           files: {
             allowUrl: true,
@@ -195,7 +195,6 @@ URL 抓取默认值：
 
 | Key                      | Default   |
 | ------------------------ | --------- |
-| `maxBodyBytes`           | 20MB      |
 | `maxUrlParts`            | 8         |
 | `files.maxBytes`         | 5MB       |
 | `files.maxChars`         | 60k       |

@@ -45,6 +45,14 @@ LM Studio 在本地运行 llama.cpp（GGUF）或 MLX 模型，可作为 GUI 应�
 
     选择 `LM Studio`，然后在 `Default model` 提示处选择一个模型。
 
+    On a fresh guided setup, OpenClaw first queries `/api/v1/models` on the
+    default or configured LM Studio host. An existing LLM is offered automatically
+    only when LM Studio reports tool training and at least 16K of effective
+    context. For loaded models, the loaded instance context takes precedence over
+    the larger advertised maximum. The same CLI/macOS setup ladder verifies the
+    route with a real completion before saving it. The automatic check never
+    downloads a model and ignores embedding-only catalog entries.
+
   </Step>
 </Steps>
 

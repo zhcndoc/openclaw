@@ -12,10 +12,8 @@ read_when:
 Responses、Azure OpenAI Responses、ChatGPT/Codex Responses、Google Generative
 AI、Google Vertex、Mistral Conversations）。
 
-它会与根 `openclaw` 包一起在每次发布时发布，并锁定到
-相同版本，同时带有自己的 `npm-shrinkwrap.json`，因此其传递
-依赖树在安装时即被锁定。安装 `openclaw` 会自动安装
-匹配的 `@openclaw/ai`；库使用者可以直接依赖它，而无需任何 OpenClaw 应用代码。
+它会随根 `openclaw` 包在每次发布时一同发布，并固定为相同版本。其精确锁定的直接依赖会在安装时解析；
+该包不包含 npm 锁文件。安装 `openclaw` 会自动安装匹配的 `@openclaw/ai`，库使用者也可以直接依赖它，而无需任何 OpenClaw 应用代码。
 
 ## 快速开始
 
@@ -43,14 +41,14 @@ const result = await stream.result();
 - **`internal/*` 子路径不属于 API。** 它们仅供 OpenClaw 应用自身使用，不提供任何语义化版本保证。
 - Provider id、凭据、模型目录、重试和故障转移仍然属于应用层职责。OpenClaw 在该包之上封装这些能力；库的使用者直接提供一个 `Model` 对象和选项。
 
-## 子路径导出
+## Subpath Exports
 
-| 子路径           | 内容                                                                          |
-| ---------------- | ----------------------------------------------------------------------------- |
-| `.`              | 合同、`createApiRegistry`、`createLlmRuntime`、`configureAiTransportHost`     |
-| `./providers`    | `registerBuiltInApiProviders`、`resetApiProviders`                            |
-| `./types`        | 模型/消息/工具/流类型                                                          |
-| `./validation`   | 工具参数验证                                                                   |
-| `./diagnostics`  | 诊断合同                                                                      |
-| `./event-stream` | 共享的 `EventStream` 实现                                                     |
-| `./internal/*`   | OpenClaw 内部使用，不保证语义化版本兼容性                                      |
+| Subpath           | Contents                                                                         |
+| ----------------- | -------------------------------------------------------------------------------- |
+| `.`              | contracts, `createApiRegistry`, `createLlmRuntime`, `configureAiTransportHost`     |
+| `./providers`    | `registerBuiltInApiProviders`, `resetApiProviders`                            |
+| `./types`        | model/message/tool/stream types                                                          |
+| `./validation`   | tool parameter validation                                                                   |
+| `./diagnostics`  | diagnostics contracts                                                                      |
+| `./event-stream` | shared `EventStream` implementation                                                     |
+| `./internal/*`   | used internally by OpenClaw, semantic version compatibility is not guaranteed                                      |

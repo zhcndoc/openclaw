@@ -56,17 +56,17 @@ openclaw logs --follow
 | `location.get`               | 使用期间或始终允许（取决于模式）          | 根据模式使用前台/后台定位                   | 定位权限                       | `LOCATION_PERMISSION_REQUIRED`                |
 | `system.run`                 | 不适用（node 主机路径）                  | 不适用（node 主机路径）                     | 需要执行批准                   | `SYSTEM_RUN_DENIED`                           |
 
-## Pairing and approvals
+## 配对和审批
 
-There are three independent gates that determine whether a node command succeeds:
+有三个相互独立的门控决定一个节点命令是否成功：
 
-1. **Device pairing**: Can this node connect to the gateway?
-2. **Gateway node command policy**: Is the RPC command ID allowed by `gateway.nodes.allowCommands` / `denyCommands` and the platform default rules?
-3. **Exec approval**: Is this node allowed to run a particular shell command locally?
+1. **设备配对**：该节点能否连接到网关？
+2. **网关节点命令策略**：RPC 命令 ID 是否被 `gateway.nodes.commands.allow` / `gateway.nodes.commands.deny` 以及平台默认值允许？
+3. **执行审批**：该节点能否在本地运行特定的 shell 命令？
 
-Node pairing is an identity/trust gate, not a per-command approval panel. For `system.run`, the node-specific policy lives in that node’s exec approval file (`openclaw approvals get --node ...`), not in the gateway pairing record.
+节点配对是一个身份/信任门控，而不是按命令的审批面板。对于 `system.run`，节点特定的策略位于该节点的执行审批文件中（`openclaw approvals get --node ...`），而不是在网关配对记录中。
 
-Quick checks:
+快速检查：
 
 ```bash
 openclaw devices list
@@ -75,11 +75,11 @@ openclaw approvals get --node <idOrNameOrIp>
 openclaw approvals allowlist add --node <idOrNameOrIp> "/usr/bin/uname"
 ```
 
-- Missing pairing: approve the device for that node first.
-- `nodes describe` is missing a command: check the gateway node command policy, and whether the node actually advertised that command when it connected.
-- Pairing is fine but `system.run` fails: fix the exec approvals/allowlist on that node.
+- 缺少配对：先为该节点批准设备。
+- `nodes describe` 缺少某个命令：检查网关节点命令策略，以及该节点在连接时是否 वास्तव上通告了该命令。
+- 配对正常但 `system.run` 失败：修复该节点上的执行审批/允许列表。
 
-For approval-based `host=node` runs, the gateway also binds execution to a prebuilt normalized `systemRunPlan`. If the caller later mutates the command, cwd, or session metadata before the approved run is forwarded, the gateway treats it as an approval mismatch and rejects it rather than trusting the edited payload.
+对于基于审批的 `host=node` 运行，网关还会将执行绑定到预先构建的规范化 `systemRunPlan`。如果调用方在已批准的运行转发之前，随后修改了命令、cwd 或会话元数据，网关会将其视为审批不匹配并拒绝，而不是信任被编辑过的载荷。
 
 ## 常见节点错误代码
 
@@ -112,7 +112,7 @@ openclaw logs --follow
 - 重新授予操作系统权限。
 - 重新创建/调整执行审批策略。
 
-对于计算机控制，还要确认具备视觉能力的代理是否暴露了 `computer` 工具，`screen.snapshot` 在授予屏幕录制权限后是否成功，以及 `/phone status` 是否显示了你所期望的临时或持久网关授权。`gateway.nodes.denyCommands` 条目始终会覆盖 `allowCommands`。
+对于计算机控制，还要确认节点本地的 Computer Control 开关已启用，其配对更新已获批准，具备视觉能力的代理暴露了 `computer` 工具，并且在授予 Screen Recording 权限后 `screen.snapshot` 能够成功。`gateway.nodes.commands.deny` 条目始终会覆盖平台默认值或 `gateway.nodes.commands.allow`。
 
 ## 相关内容
 

@@ -22,7 +22,7 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 - 状态/启动/停止: `GET /`, `GET /doctor`, `POST /start`, `POST /stop`, `POST /reset-profile`
 - 配置文件: `GET /profiles`, `POST /profiles/create`, `DELETE /profiles/:name`
 - 标签页: `GET /tabs`, `POST /tabs/open`, `POST /tabs/focus`, `DELETE /tabs/:targetId`, `POST /tabs/action`
-- 快照/截图: `GET /snapshot`, `POST /screenshot`
+- 快照/截图/提取: `GET /snapshot`, `POST /screenshot`, `POST /extract`
 - 操作: `POST /navigate`, `POST /act`
 - 钩子: `POST /hooks/file-chooser`, `POST /hooks/dialog`
 - 下载: `POST /download`, `POST /wait/download`
@@ -45,6 +45,25 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 对于标签页端点，`targetId` 是兼容字段名。优先传递来自 `GET /tabs` 或 `POST /tabs/open` 的 `suggestedTargetId`；标签和 `tabId`
 句柄（如 `t1`）也被接受。原始 CDP target id 和唯一的原始
 target-id 前缀仍然可用，但它们是易变的诊断句柄。
+
+### 页面提取
+
+代理工具接受带有必需 `query` 和可选
+`targetId`、`timeoutMs`、`selector`、`ignoreSelectors` 和 `schema` 的 `action="extract"`。`selector`
+是一个 CSS 选择器，用于将捕获范围限制到匹配的子树；若没有匹配则
+视为错误，且绝不会回退到整个页面。`ignoreSelectors` 是一个 CSS 选择器数组，
+在可读文本转换之前会从捕获的子树中移除，因此导航、页脚、广告和横幅不会消耗模型
+上下文窗口。报告的 `chars` 计数反映的是该限定范围内转换后的文本。
+
+`schema` 是用于结构化提取的 JSON Schema 对象。成功结果会将验证后的值
+存储在 `details.json` 中，并在包装后的文本块里显示紧凑的 JSON。无效 JSON
+或 schema 不匹配会触发一次纠正重试；如果这也失败了，请在不使用 `schema` 的情况下重试，或调整 schema。没有
+`schema` 时，提取会保留其自由文本答案和 `NOT_FOUND` 行为。
+
+CLI 通过 `--selector <css>`、可重复的
+`--ignore-selector <css>` 和 `--schema <json>` 镜像这些字段。私有的 `POST /extract`
+捕获路由接受 `targetId`、`timeoutMs`、`selector` 和
+`ignoreSelectors`；schema 验证发生在调用的代理工具或 CLI 中。
 
 如果配置了共享密钥网关认证，浏览器 HTTP 路由也需要认证：
 
@@ -79,9 +98,9 @@ target-id 前缀仍然可用，但它们是易变的诊断句柄。
 
 ### Playwright 要求
 
-某些功能（navigate/act/AI 快照/role 快照、元素截图、
-PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回
-明确的 501 错误。
+某些功能（navigate/act/AI snapshot/role snapshot, extract, element
+screenshots, PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回
+清晰的 501 错误。
 
 不使用 Playwright 仍可用的功能：
 
@@ -98,9 +117,10 @@ PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回
 
 - `navigate`
 - `act`
-- 依赖于 Playwright 原生 AI 快照格式的 AI 快照
+- 依赖于 Playwright 原生 AI 快照格式的 AI snapshots
 - 基于 CSS 选择器的元素截图（`--element`）
-- 完整的浏览器 PDF 导出
+- 整个浏览器的 PDF 导出
+- 页面问题提取
 
 元素截图也会拒绝 `--full-page`；该路由会返回 `fullPage is
 not supported for element screenshots`。
@@ -119,17 +139,10 @@ OpenClaw，然后重启 gateway。对于 Docker，还请按如下所示安装 Ch
 OPENCLAW_INSTALL_BROWSER=1 ./scripts/docker/setup.sh
 ```
 
-对于现有镜像，请改为通过捆绑的 CLI 安装：
-
-```bash
-docker compose run --rm openclaw-cli \
-  node /app/node_modules/playwright-core/cli.js install chromium
-```
-
-要持久化浏览器下载，请设置 `PLAYWRIGHT_BROWSERS_PATH`（例如，
-`/home/node/.cache/ms-playwright`），并确保 `/home/node` 通过
-`OPENCLAW_HOME_VOLUME` 或绑定挂载进行持久化。OpenClaw 会在 Linux 上自动检测持久化的
-Chromium。参见 [Docker](/install/docker)。
+浏览器也需要系统库，因此在一次性 Compose 容器中安装 Chromium 并不持久。请改为使用
+`OPENCLAW_INSTALL_BROWSER=1` 重新构建镜像。若要持久化浏览器下载和其他
+缓存，请使用 `OPENCLAW_HOME_VOLUME` 或绑定挂载来持久化 `/home/node`。参见
+[Docker](/install/docker)。
 
 ## 工作原理（内部）
 
@@ -165,7 +178,7 @@ openclaw browser close abcd1234
 
 </Accordion>
 
-<Accordion title="Profiles: list, create, delete">
+<Accordion title="配置文件：列表、创建、删除">
 
 ```bash
 openclaw browser profiles
@@ -176,7 +189,7 @@ openclaw browser delete-profile --name research
 
 </Accordion>
 
-<Accordion title="Inspection: screenshot, snapshot, console, errors, requests">
+<Accordion title="检查：截图、快照、控制台、错误、请求">
 
 ```bash
 openclaw browser screenshot
@@ -192,6 +205,8 @@ openclaw browser snapshot --urls
 openclaw browser snapshot --selector "#main" --interactive
 openclaw browser snapshot --frame "iframe#main" --interactive
 openclaw browser snapshot --out snapshot.txt
+openclaw browser extract "这个页面的主要结论是什么？"
+openclaw browser extract "列出这些发布版本" --selector "main" --ignore-selector "nav" --schema '{"type":"array","items":{"type":"object"}}'
 openclaw browser console --level error
 openclaw browser errors --clear
 openclaw browser requests --filter api --clear
@@ -222,7 +237,7 @@ openclaw browser upload media://inbound/file.pdf
 openclaw browser fill --fields '[{"ref":"1","type":"text","value":"Ada"}]'
 openclaw browser dialog --accept
 openclaw browser dialog --dismiss --dialog-id d1
-openclaw browser wait --text "Done"
+openclaw browser wait --text "完成"
 openclaw browser wait "#main" --url "**/dash" --load networkidle --fn "window.ready===true"
 openclaw browser evaluate --fn '(el) => el.textContent' --ref 7
 openclaw browser evaluate --fn 'const title = document.title; return title;'
@@ -259,20 +274,13 @@ openclaw browser set device "iPhone 14"
 
 注意：
 
-- 面向代理的 `browser` 工具提供了 `action=download`（必需 `ref` 和
-  `path`）以及 `action=waitfordownload`（可选 `path`）。二者都会返回已保存的
-  下载 URL、建议文件名以及受保护的本地路径。显式下载
-  拦截仅对受管理的 Playwright 配置文件可用；existing-session
-  配置文件会返回不支持该操作的错误。
-- 优先使用原子化的选择器上传：在上传时传入触发用的 `--ref`，这样 OpenClaw 会在一次请求中完成布防和点击。仅传路径的 `upload` 仍然受支持，适用于刻意延后触发的场景。使用 `--input-ref` 或 `--element` 可直接设置文件输入框。`dialog` 是一个布防调用；请在触发对话框的点击/按键之前先运行它。若某个操作打开了模态框，该操作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；传入该 `dialogId` 可直接响应。OpenClaw 之外处理的对话框会出现在 `browserState.dialogs.recent` 中。
-- `click`/`type`/等操作需要来自 `snapshot` 的 `ref`（数字 `12`、角色 ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器有意不被动作支持。仅当可见视口位置是唯一可靠目标时，请使用 `click-coords`。
-- 下载和 trace 路径受 OpenClaw 临时根目录限制：`/tmp/openclaw{,/downloads}`（回退：`${os.tmpdir()}/openclaw/...`）。
-- `upload` 接受来自 OpenClaw 临时 uploads 根目录以及
-  OpenClaw 管理的传入媒体的文件。受管理的传入媒体可引用为
-  `media://inbound/<id>`、sandbox-relative `media/inbound/<id>`，或管理的 inbound media 目录中的已解析
-  路径。嵌套媒体引用、
-  路径穿越、符号链接、硬链接以及任意本地路径仍会被拒绝。
-- `upload` 也可以通过 `--input-ref` 或 `--element` 直接设置文件输入框。
+- 当你需要从当前页面获取答案，但不需要交互 refs 时，请使用 `browser extract "<question>"` 或 agent-tool `action="extract"`。它会对可读页面内容进行清理，截断到 80,000 个字符，执行一次模型调用，并且只返回包装后的答案。总体超时时间默认是 60 秒，并会限制在 5–120 秒之间。如果提取失败，请回退到 `snapshot`；现有会话配置文件不支持提取。
+- 面向 agent 的 `browser` 工具暴露了 `action=download`（必需 `ref` 和 `path`）以及 `action=waitfordownload`（可选 `path`）。两者都会返回已保存的下载 URL、建议文件名以及受保护的本地路径。对于受管的 Playwright 配置文件，可以显式拦截下载；现有会话配置文件会返回不支持该操作的错误。
+- 优先使用原子化的选择器上传：在上传时传入触发用的 `--ref`，这样 OpenClaw 就会在一个请求中完成准备和点击。仅传路径的 `upload` 仍然受支持，但适用于确实要稍后触发的场景。使用 `--input-ref` 或 `--element` 可以直接设置文件输入。`dialog` 是一个准备调用；请在触发该对话框的点击/按键之前先运行它。如果某个动作打开了模态框，动作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；传入该 `dialogId` 可直接响应。OpenClaw 之外处理的对话框会显示在 `browserState.dialogs.recent` 中。
+- `click`/`type` 等操作需要来自 `snapshot` 的 `ref`（数字 `12`、role ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器刻意不支持用于操作。当前可见视口位置是唯一可靠目标时，请使用 `click-coords`。
+- 下载和 trace 路径受 OpenClaw 临时根目录限制：`/tmp/openclaw{,/downloads}`（备用：`${os.tmpdir()}/openclaw/...`）。
+- `upload` 接受来自 OpenClaw 临时 uploads 根目录的文件，以及 OpenClaw 管理的传入媒体。受管传入媒体可通过 `media://inbound/<id>`、沙箱相对路径 `media/inbound/<id>`，或受管传入媒体目录中的解析后路径来引用。嵌套媒体引用、路径穿越、符号链接、硬链接以及任意本地路径仍会被拒绝。
+- `upload` 也可以通过 `--input-ref` 或 `--element` 直接设置文件输入。
 
 当 OpenClaw 能证明替换后的标签页时，稳定的 tab id 和 label 会在 Chromium 原始目标替换后保持不变，例如同一 URL 的唯一旧/新配对，或者表单提交后单个旧标签页变为单个新标签页。含糊的重复 URL 替换会获得新的句柄。原始目标 id 仍然是易变的；在脚本中请优先使用 `tabs` 返回的 `suggestedTargetId`。
 
@@ -310,21 +318,31 @@ OpenClaw 支持两种“快照”样式：
 
 - **ARIA 快照（类似 `ax12` 的 ARIA refs）**：`openclaw browser snapshot --format aria`
   - 输出：作为结构化节点的可访问性树。
-  - 操作：当快照路径能够通过 Playwright 和 Chrome 后端 DOM id 绑定
-    ref 时，`openclaw browser click ax12` 可正常工作。
-- 如果 Playwright 不可用，ARIA 快照仍然可用于
-  检查，但 refs 可能无法执行操作。在需要可操作 refs 时，请使用 `--format ai`
-  或 `--interactive` 重新生成快照。
+  - 操作：当快照路径可以通过 Playwright 和 Chrome 后端 DOM id 绑定 ref 时，`openclaw browser click ax12` 可正常工作。
+- 如果 Playwright 不可用，ARIA 快照仍可用于检查，但 refs 可能不可操作。在需要操作 refs 时，使用 `--format ai` 或 `--interactive` 重新快照。
+- 当驱动暴露稳定的文档标识时，同一配置文件、标签页、文档和选项族的连续 AI 和 role 快照会在前一快照中不存在的带 ref 行后追加 `[new]`。导航会开始一个不带标记的新基线；现有会话快照不会显示差异。第一次快照会在不带标记的情况下建立基线；后续响应还会暴露 `newElements`，并在该值非零时添加一个计数页脚。带有 `axN` refs 的结构化 `--format aria` 快照不使用差异标记。
 - 原始 CDP 回退路径的 Docker 证明：`pnpm test:docker:browser-cdp-snapshot`
-  会以 CDP 启动 Chromium，运行 `browser doctor --deep`，并验证 role
-  快照包含链接 URL、由鼠标指针提升为可点击的元素，以及 iframe 元数据。
+  启动带 CDP 的 Chromium，运行 `browser doctor --deep`，并验证 role
+  快照包含链接 URL、由光标提升为可点击项的元素，以及 iframe 元数据。
 
 Ref 行为：
 
-- Refs 在**导航之间不稳定**；如果某些操作失败，请重新运行 `snapshot` 并使用新的 ref。
-- 当 `/act` 能够证明替换标签页时，它会返回动作触发替换后的当前原始 `targetId`。后续命令请继续使用稳定的标签页 id/label。
-- 如果 role 快照是用 `--frame` 生成的，那么在下一次 role 快照之前，role refs 都限定在该 iframe 内。
-- 未知或过期的 `axN` refs 会快速失败，而不会退回到 Playwright 的 `aria-ref` 选择器。发生这种情况时，请在同一标签页上运行新的快照。
+- Refs 在**导航之间不稳定**；如果某项失败，请重新运行 `snapshot` 并使用新的 ref。
+- 批处理会在提交主框架导航后停止——包括同 URL 的
+  重新加载——或在页面关闭后停止。其 `aborted` 摘要会报告动作
+  编号和跳过数量；在发出后续相关动作之前，请先获取新的快照，或者在预期会发生导航时使用单独的 act 调用。
+- `/act` 会在动作触发替换后返回当前原始 `targetId`，前提是它能够证明替换后的标签页。后续命令请继续使用稳定的标签页 id/标签。
+- 如果 role 快照是使用 `--frame` 生成的，则 role refs 的作用域仅限于该 iframe，直到下一次 role 快照。
+- 未知或过期的 `axN` refs 会快速失败，而不会回退到 Playwright 的 `aria-ref` 选择器。发生这种情况时，请在同一标签页上运行新的快照。
+
+## 浏览器批量 CLI
+
+`openclaw browser batch` 会在一次 `/act` 调用中运行一个嵌套的 `/act` 动作数组（通过 agent 工具到达的同一个 `kind="batch"` 运行时），因此 CLI 用户和脚本可以将 `wait`、`click`、`type` 和 `evaluate` 等动作组合成一个可重复执行的计划，而无需每个动作都单独往返调用。`actions[]` 中的每一项都是一个 `BrowserActRequest`——也就是 `/act` 路由接受的闭合集合（`click`、`clickCoords`、`type`、`press`、`hover`、`scrollIntoView`、`drag`、`select`、`fill`、`resize`、`wait`、`evaluate`、`close`、`batch`）——而不是任意的 `openclaw browser` 子命令。`batch` 不支持 `profile="user"` 和其他现有会话（chrome-mcp）配置文件；在这些情况下请逐个发送动作。
+
+- CLI：`openclaw browser batch --actions '<json>'`、`openclaw browser batch --actions-file plan.json`，或 `openclaw browser batch --actions-file -` 从 stdin 读取 JSON 数组。`--continue` 会将 `stopOnError=false`；默认是在首次错误时停止。`--target-id` 将整个批次限定到一个标签页。
+- 引用生命周期：引用来自批次执行前的一次 `snapshot` 运行（`snapshot` 不是嵌套动作）。会改变页面状态的嵌套动作——例如触发导航的 `click`，或修改 DOM 的 `evaluate`——可能会使整个批次后续部分中更早的引用失效。请将会改变状态的动作放在前面，或者在重新执行 `snapshot` 后拆分到后续批次。导航和重新 `snapshot` 在批次外进行（`openclaw browser navigate` / `snapshot`），因为 `open`、`navigate` 和 `snapshot` 不是 `/act` 的 kind。
+- 目标 id 冲突：嵌套动作可以省略 `targetId`，也可以重复请求级别的 `targetId`；如果嵌套中显式提供的 `targetId` 解析到不同的标签页，则会在任何动作执行前被拒绝，并返回 `ACT_TARGET_ID_MISMATCH`。批量动作按设计共享请求的标签页。
+- 错误摘要：响应为 `{ "results": [{ "ok": true }, { "ok": false, "error": "<message>" }, ...] }`，按顺序每个动作对应一项。默认 `stopOnError` 时，数组会在首次失败处结束；使用 `--continue` 时则会覆盖全部动作。任何失败项都会使 CLI 以非零状态退出；脚本可传入 `--json` 以保留完整的有序响应。
 
 ## 等待增强功能
 

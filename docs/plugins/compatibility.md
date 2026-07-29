@@ -14,13 +14,15 @@ OpenClaw 会在移除旧的插件契约之前，通过命名的兼容性适配�
 插件兼容性契约记录在核心注册表中，位于
 `src/plugins/compat/registry.ts`。每条记录包括：
 
-- 一个稳定的兼容性代码
-- 状态：`active`、`deprecated`、`removal-pending` 或 `removed`
-- 负责人：`sdk`、`config`、`setup`、`channel`、`provider`、`plugin-execution`、
-  `agent-runtime` 或 `core`
-- 适用时的引入日期和弃用日期
-- 替代方案指引
-- 覆盖旧行为和新行为的文档、诊断和测试
+- a stable compatibility code
+- status: `active`, `deprecated`, `removal-pending`, or `removed`
+- owner: `sdk`, `config`, `setup`, `channel`, `provider`, `plugin-execution`,
+  `agent-runtime`, or `core`
+- introduction and deprecation dates when applicable
+- an exact removal date once the owning maintainer approves it; an omitted
+  `removeAfter` keeps a deprecated surface ineligible for removal
+- replacement guidance
+- docs, diagnostics, and tests that cover the old and new behavior
 
 该注册表是维护者规划以及未来插件检查器校验的依据。如果插件面向外部的行为发生变化，请在添加适配器的同一次变更中，添加或更新兼容性记录。
 
@@ -45,53 +47,65 @@ OpenClaw 不应在引入替代方案的同一版本中移除已文档化的插�
 
 ## 当前兼容性区域
 
-注册表目前在以下这些区域跟踪大约 70 个兼容性代码。新的插件代码应在每个区域以及对应的迁移指南中使用替代方案；现有插件可以继续使用兼容路径，直到文档、诊断信息和发布说明宣布移除窗口。
+The July 2026 sweep removed the expired root SDK, manifest, provider, runtime,
+registry-flag, and plugin-owned web-config aliases. Doctor migrations remain
+separately tracked so supported upgrade paths can still repair old config.
 
-- `openclaw/plugin-sdk/compat` 等旧的宽泛 SDK 导入
-- 旧的仅 hook 插件形态和 `before_agent_start`
-- 插件迁移到 `gateway_stop` 期间，旧的 `api.on("deactivate", ...)` 清理 hook 名称
-- 插件迁移到 `register(api)` 期间，旧的 `activate(api)` 插件入口点
-- 旧的 SDK 别名，例如 `openclaw/extension-api`、
-  `openclaw/plugin-sdk/channel-runtime`、`openclaw/plugin-sdk/command-auth`
-  状态构建器、`openclaw/plugin-sdk/test-utils`（已被更聚焦的
-  `openclaw/plugin-sdk/*` 测试子路径替代），以及 `ClawdbotConfig` /
-  `OpenClawSchemaType` 类型别名
-- 内置插件白名单和启用行为
-- 旧的 provider/channel 环境变量清单元数据
-- 旧的 provider 插件 hooks 和类型别名，随着 provider 迁移到
-  显式的 catalog、auth、thinking、replay 和 transport hooks
-- 旧的运行时别名，例如 `api.runtime.taskFlow`、
-  `api.runtime.subagent.getSession`、`api.runtime.stt`，以及已弃用的
-  `api.runtime.config.loadConfig()` / `api.runtime.config.writeConfigFile(...)`
-- WhatsApp `WebInboundMessage` 扁平回调字段（见下文）
-- WhatsApp `WebInboundMessage` 顶层 admission 字段（见下文）
-- 旧的内存插件分离注册方式，随着内存插件迁移到
-  `registerMemoryCapability`
-- 旧的、面向 memory 的 embedding provider 注册方式，随着 embedding
-  providers 迁移到 `api.registerEmbeddingProvider(...)` 和
-  `contracts.embeddingProviders`
-- 旧的 channel SDK 辅助函数，用于原生消息 schema、mention gate、
-  inbound envelope 格式化以及 approval capability 嵌套
-- 旧的 channel route key 和可比目标辅助别名，随着插件迁移到
-  `openclaw/plugin-sdk/channel-route`
-- 正在被 manifest 贡献归属替代的 activation hints
-- `setup-api` 运行时回退，随着 setup 描述符迁移到冷启动的
-  `setup.requiresRuntime: false` 元数据
-- provider `discovery` hooks，随着 provider catalog hooks 迁移到
-  `catalog.run(...)`
-- channel `showConfigured` / `showInSetup` 元数据，随着 channel 包
-  迁移到 `openclaw.channel.exposure`
-- 旧的 runtime-policy 配置键，随着 doctor 将操作员迁移到
-  `agentRuntime`
-- 生成的内置 channel 配置元数据回退，随着 registry-first 的
-  `channelConfigs` 元数据落地
-- 持久化的插件注册表禁用和安装迁移环境标志，随着修复流程将操作员迁移到
-  `openclaw plugins registry --refresh`
-  和 `openclaw doctor --fix`
-- 旧的、由插件拥有的 web search、web fetch 和 x_search 配置路径，
-  随着 doctor 将它们迁移到 `plugins.entries.<plugin>.config`
-- 旧的 `plugins.installs` 手写配置和内置插件 load-path 别名，随着安装元数据
-  迁移到由状态管理的插件账本中
+The remaining dated compatibility areas are:
+
+- the August and September SDK subpath windows listed in the migration guide
+- `api.on("deactivate", ...)` and `api.on("subagent_spawning", ...)` hook aliases
+- memory-specific embedding registration and the beta.5 session-store bridge
+- WhatsApp inbound callback aliases described below
+- explicit channel target parsing and `openclaw/plugin-sdk/messaging-targets`
+- embedded Pi agent aliases
+- the shipped agent-harness SDK aliases, whose removal is pending a new
+  externally documented migration decision
+- the October 2026 SDK annotation families listed below
+
+Active, undated registry records cover supported behavior rather than removal
+debt, including activation hints, plugin capture, bundled plugin enablement,
+and the generated channel-config fallback.
+
+The annotation-only compatibility audit added these dated records. Their
+`removeAfter` date is an earliest review date, not permission to remove a
+surface while its stated reader or migration condition remains unmet.
+
+| Compatibility code                        | Removal condition                                                                                       | `removeAfter` |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------- |
+| `plugin-sdk-channel-setup-input-fields`   | Repeat the published-plugin artifact sweep and remove only fields with no reader.                       | 2026-10-01    |
+| `plugin-sdk-broad-runtime-barrels`        | Move bundled and indexed external consumers to focused SDK subpaths.                                    | 2026-10-01    |
+| `plugin-sdk-provider-owned-helper-shims`  | Move each deprecated provider helper to its provider-local API and prove no published reader remains.   | 2026-10-01    |
+| `message-presentation-legacy-bridges`     | Move reply producers and official channel packages to `MessagePresentation`.                            | 2026-10-01    |
+| `plugin-sdk-focused-compat-aliases`       | Prove every enumerated alias has no bundled or published reader.                                        | 2026-10-01    |
+| `agent-harness-terminal-result-aliases`   | Move harnesses to `terminal` and `visibleReplies`, then prove the legacy result fields are unread.      | 2026-10-01    |
+| `official-plugin-export-aliases`          | Move users of Google Meet testing, channel presentation, and Discord timeout exports to canonical APIs. | 2026-10-01    |
+| `memory-host-compatibility-aliases`       | Use canonical memory tables and prepared runtime config everywhere.                                     | 2026-10-01    |
+| `plugin-runtime-api-compat-aliases`       | Move flat plugin registration/runtime calls to their namespaced or focused replacements.                | 2026-10-01    |
+| `plugin-provider-manifest-compat-aliases` | Move kind/setup/catalog ownership to manifests and model-catalog registration.                          | 2026-10-01    |
+| `deprecated-session-store-beta5-api`      | End the v2026.7.x whole-store upgrade window, including package-root aliases.                           | 2026-10-12    |
+
+`pnpm plugins:boundary-report` reports `removal-pending` records separately
+from deprecated records. A due `removal-pending` record remains blocked until
+its reported migration condition is satisfied and its reader references are
+cleared; the existing `--fail-on-eligible-compat` gate continues to apply only
+to dated `deprecated` records. Reader references are surface-token matches for
+triage; use the published-artifact sweep before authorizing removal.
+
+### Channel prompt-context identifier aliases
+
+New channel plugins should use `MsgContext.ChannelPromptContext`,
+`MsgContext.ChannelStructuredContext`, `ChannelStructuredContextEntry`, and
+`SupplementalContextFacts.channelStructuredContext`. The older
+`UntrustedContext`, `UntrustedStructuredContext`,
+`UntrustedStructuredContextEntry`, and supplemental `untrustedContext` names
+remain as deprecated SDK aliases until 2026-09-08 (registry record
+`sdk-untrusted-context-identifier-aliases`). Inbound finalization folds those
+deprecated fields into the channel-named fields and removes the old keys from
+runtime context.
+
+The security runtime similarly exports `buildChannelMetadata`; the deprecated
+`buildUntrustedChannelMetadata` alias remains available on the same schedule.
 
 ### WhatsApp inbound callback 扁平别名
 
@@ -106,16 +120,17 @@ WhatsApp 运行时回调会传递 `WebInboundMessage`：即规范的
 嵌套形态，后者才是规范的运行时契约。每个扁平别名的 TypeScript `@deprecated`
 注解都会写明其精确的嵌套替代项。常见示例如下：
 
-- `id`、`timestamp` 和 `isBatched` 移到 `event` 下。
-- `body`、`mediaPath`、`mediaType`、`mediaFileName`、`mediaUrl`、`location`
-  和 `untrustedStructuredContext` 移到 `payload` 下。
-- `to`、`chatId`、发送者/自身字段、`sendComposing`、`reply(...)` 和
-  `sendMedia(...)` 移到 `platform` 下。
-- `replyTo*` 字段移到 `quote` 下；群组 subject/participant/mention 字段移到
-  `group` 下。
+- `id`, `timestamp`, and `isBatched` move under `event`.
+- `body`, `mediaPath`, `mediaType`, `mediaFileName`, `mediaUrl`, `location`,
+  and `channelStructuredContext` move under `payload`.
+- `to`, `chatId`, sender/self fields, `sendComposing`, `reply(...)`, and
+  `sendMedia(...)` move under `platform`.
+- `replyTo*` fields move under `quote`; group subject/participant/mention
+  fields move under `group`.
 
-`payload.untrustedStructuredContext` 是从 inbound provider payload 中提取的。
-插件应先检查 `label`、`source` 和 `type`，再将其 `payload` 视为权威。
+`payload.channelStructuredContext` is extracted from inbound provider
+payloads. Plugins should inspect `label`, `source`, and `type` before
+treating its `payload` as authoritative.
 
 ### WhatsApp inbound admission 字段
 

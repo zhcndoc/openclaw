@@ -57,7 +57,12 @@ Webhooks 插件会添加经过身份验证的 HTTP 路由，使受信任的外�
 
 `secret` 可以接受纯字符串或 SecretRef：`{ source: "env" | "file" | "exec", provider: "default", id: "..." }`。
 
-每个已配置的路由都会在启动时注册，不管其 secret 当前是否能被解析。无法解析的 secret 不会禁用或跳过该路由——对该路由的请求会认证失败（`401`），直到 secret 能够被解析为止。SecretRef 的值会在每次请求时重新解析，因此轮换底层 secret（环境变量、文件或 exec 输出）后，无需重启 Gateway 即可生效。
+SecretRefs resolve into the Gateway's startup config snapshot. When one route's
+secret cannot resolve, the Gateway keeps running and that exact route stays
+registered but cold: requests receive a generic authentication failure (`401`).
+Other routes remain available. Fix the SecretRef source, then reload or restart
+the Gateway to activate the new snapshot. SecretRef values are never resolved
+on the public request path.
 
 ## 安全模型
 

@@ -42,14 +42,14 @@ OpenClaw 会在
 
 ## 侧车的工作方式
 
-- OpenClaw 会从你的工作区内存文件以及任何已配置的 `memory.qmd.paths` 创建集合，然后在 QMD 管理器打开时以及之后按周期运行 `qmd update`（`memory.qmd.update.interval`，默认 `5m`）。刷新通过 QMD 子进程执行，而不是通过进程内的文件系统遍历。语义搜索模式还会运行 `qmd embed`（`memory.qmd.update.embedInterval`，默认 `60m`）。
-- 默认的工作区集合会跟踪 `MEMORY.md` 以及 `memory/` 目录树。小写的 `memory.md` 不会作为根内存文件被索引。
-- QMD 自身的扫描器会忽略隐藏路径以及常见的依赖/构建目录，例如 `.git`、`.cache`、`node_modules`、`vendor`、`dist` 和 `build`。网关启动时默认不会初始化 QMD（`memory.qmd.update.startup` 默认是 `off`），因此在首次使用内存之前，冷启动不会导入内存运行时，也不会创建长生命周期的监视器。
-- 将 `memory.qmd.update.startup` 设为 `idle` 或 `immediate`，即可在网关启动时初始化 QMD。`memory.qmd.update.onBoot` 默认是 `true`，并会在启动时执行初次刷新；将其设为 `false` 可跳过这次立即刷新（不过当配置了更新或嵌入间隔时，长生命周期的管理器仍会打开，因此 QMD 仍会负责其常规的监视器/定时器）。
-- 搜索会使用已配置的 `searchMode`（默认：`search`；也支持 `vsearch` 和 `query`）。`search` 仅使用 BM25，因此 OpenClaw 在该模式下会跳过语义向量就绪探测和嵌入维护。如果某种模式失败，OpenClaw 会改用 `qmd query` 重试。
-- 当 `searchMode` 为 `query` 时，将 `memory.qmd.rerank` 设为 `false`，即可在不使用重排器的情况下走 QMD 的混合查询路径（需要 QMD 2.1 或更新版本）。OpenClaw 会向直接的 QMD CLI 路径传递 `--no-rerank`，并向 QMD 的 MCP 查询工具传递 `rerank: false`。
-- 对于声明支持多集合过滤的 QMD 版本，OpenClaw 会把同源集合分组到一次 QMD 搜索调用中。较旧的 QMD 版本则保留兼容的按集合回退方案。
-- 如果 QMD 完全失败，OpenClaw 会回退到内置的 SQLite 引擎。连续的聊天轮次尝试在打开失败后会短暂退避，因此缺失的二进制文件或损坏的 sidecar 依赖不会引发重试风暴；`openclaw memory status` 和一次性的 CLI 探测仍会直接重新检查 QMD。
+- OpenClaw 从工作区内存文件和已配置的 `memory.qmd.paths` 创建集合。QMD 适配器负责更新、嵌入、去抖和超时启发式；这些不属于用户配置。
+- QMD 继续拥有其 `index.sqlite`、YAML 集合配置，以及每个 agent 的 QMD home 下的模型下载；这些是外部工具产物，不是 OpenClaw 状态表。OpenClaw 拥有的协调逻辑只存在于 SQLite 中：一个共享租约限制所有 agent 之间的嵌入工作，而每个 agent 数据库中的一个租约会串行化该 agent 的集合、更新和嵌入写入。运行时不再创建 QMD 文件锁侧车。`openclaw doctor --fix` 只有在证明其旧进程所有者已失效后，才会移除已退役的侧车。升级采用干净切换：在使用新版本之前，先停止并重启所有共享状态目录的 OpenClaw 进程。旧版/新版 QMD 写入者混用不受支持；运行时有意不会对已退役的侧车进行双重加锁。
+- 默认工作区集合会跟踪 `MEMORY.md` 以及 `memory/` 目录树。小写的 `memory.md` 不会作为根内存文件被索引。
+- QMD 自身的扫描器会忽略隐藏路径以及常见的依赖/构建目录，例如 `.git`、`.cache`、`node_modules`、`vendor`、`dist` 和 `build`。网关启动会保持 QMD 懒加载；管理器会在内存首次使用时初始化。
+- 搜索使用配置的 `searchMode`（默认：`search`；也支持 `vsearch` 和 `query`）。`search` 仅使用 BM25，因此在该模式下 OpenClaw 会跳过语义向量就绪探测和嵌入维护。如果某个模式失败，OpenClaw 会重试 `qmd query`。
+- 当 `searchMode` 为 `query` 时，将 `memory.qmd.rerank` 设为 `false`，以在不使用重排器的情况下走 QMD 的混合查询路径（需要 QMD 2.1 或更新版本）。OpenClaw 会在直接 QMD CLI 路径中传递 `--no-rerank`，并在 QMD 的 MCP query 工具中传递 `rerank: false`。
+- 对于宣告支持多集合过滤的 QMD 版本，OpenClaw 会将同源集合分组为一次 QMD 搜索调用。较旧的 QMD 版本则保留兼容的按集合回退方案。
+- 如果 QMD 完全失败，OpenClaw 会回退到内置 SQLite 引擎。对话轮次中的重复尝试会在打开失败后短暂退避，以免缺失二进制文件或损坏的侧车依赖造成重试风暴；`openclaw memory status` 和一次性 CLI 探测仍会直接重新检查 QMD。
 
 <Info>
 第一次搜索可能较慢——QMD 会在首次运行 `qmd query` 时自动下载用于重排和查询扩展的 GGUF 模型（约 2 GB）。
@@ -91,7 +91,7 @@ export QMD_GENERATE_MODEL="/absolute/path/to/generator.gguf"
 
 ## 索引额外路径
 
-将 QMD 指向额外目录，使其可搜索：
+将 QMD 指向额外目录，使其可供搜索：
 
 ```json5
 {
@@ -109,20 +109,16 @@ export QMD_GENERATE_MODEL="/absolute/path/to/generator.gguf"
 ## 索引会话转录
 
 启用会话索引以回忆更早的对话。QMD 需要同时具备
-通用的 `memorySearch` 会话来源和 QMD 转录导出器：
+通用的 `memory.search` 会话来源和 QMD 转录导出器：
 
 ```json5
 {
-  agents: {
-    defaults: {
-      memorySearch: {
-        experimental: { sessionMemory: true },
-        sources: ["memory", "sessions"],
-      },
-    },
-  },
   memory: {
     backend: "qmd",
+    search: {
+      experimental: { sessionMemory: true },
+      sources: ["memory", "sessions"],
+    },
     qmd: {
       sessions: { enabled: true },
     },
@@ -130,15 +126,18 @@ export QMD_GENERATE_MODEL="/absolute/path/to/generator.gguf"
 }
 ```
 
-转录会以经过清理的 User/Assistant 回合导出到
+转录会以经过清理的 User/Assistant 回合形式导出到
 `~/.openclaw/agents/<id>/qmd/sessions/` 下的专用 QMD
-集合中。仅设置 `memorySearch.experimental.sessionMemory`
-不会将转录导出到 QMD。
+集合中。仅设置 `sources: ["sessions"]` 不会将转录导出到 QMD；还需要启用
+`rememberAcrossConversations` 或显式的 QMD 会话导出。
 
-会话命中结果仍会受到
-[`tools.sessions.visibility`](/gateway/config-tools#toolssessions) 的过滤。
-默认的 `tree` 可见性不会暴露无关的同代理会话。若希望某个由 gateway 分发的会话能从
-单独的 DM 会话中被回忆起来，请有意将 `tools.sessions.visibility: "agent"` 进行设置。
+会话命中结果仍会被
+[`tools.sessions.visibility`](/gateway/config-tools#toolssessions) 过滤。默认的
+`tree` 可见性包括当前会话、其派生会话，以及通过环境式组感知可见的同 agent 组会话。
+在 `session.dmScope: "main"` 时，多用户 DM 设置中的用户会共享主会话，
+并且可以回忆其被监视组中的内容。若要实现 DM 隔离，请为每个对等方使用单独的
+`dmScope`，或将可见性设置为 `"self"` 以退出环境式被监视会话读取。其他无关的同 agent 会话仍然需要
+`"agent"` 可见性。
 
 ## 搜索范围
 

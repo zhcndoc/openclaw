@@ -16,4 +16,4 @@ title: "Web Readability 插件"
 
 ## 表面
 
-contracts: webContentExtractors
+contracts: `webContentExtractors`

@@ -16,7 +16,7 @@ OpenClaw Amazon Bedrock Mantle 提供商插件，用于 OpenAI 兼容的模型�
 
 ## 接口
 
-providers: amazon-bedrock-mantle
+providers: `amazon-bedrock-mantle`
 
 ## 相关文档
 

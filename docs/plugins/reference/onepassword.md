@@ -1,5 +1,5 @@
 ---
-summary: "带有审批策略和 SQLite 审计历史的精选 1Password 密钥代理。"
+summary: "1Password SecretRef resolver and curated agent broker with approval policy and SQLite audit history."
 read_when:
   - You are installing, configuring, or auditing the onepassword plugin
 title: "Onepassword 插件"
@@ -7,7 +7,7 @@ title: "Onepassword 插件"
 
 # Onepassword 插件
 
-带有审批策略和 SQLite 审计历史的精选 1Password 密钥代理。
+1Password SecretRef resolver and curated agent broker with approval policy and SQLite audit history.
 
 ## 分发
 
@@ -16,7 +16,7 @@ title: "Onepassword 插件"
 
 ## 表面
 
-contracts: tools
+contracts: `tools`
 
 ## 相关文档
 

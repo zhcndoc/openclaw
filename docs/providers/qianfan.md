@@ -14,7 +14,7 @@ Qianfan 是百度的 MaaS 平台：一个统一的、兼容 OpenAI 的 API，通
 | Auth          | `QIANFAN_API_KEY`                        |
 | API           | 兼容 OpenAI (`openai-completions`) |
 | Base URL      | `https://qianfan.baidubce.com/v2`        |
-| Default model | `qianfan/deepseek-v3.2`                  |
+| Default model | `qianfan/deepseek-v4-pro`                |
 
 ## 安装插件
 
@@ -39,10 +39,10 @@ openclaw gateway restart
     openclaw onboard --auth-choice qianfan-api-key
     ```
 
-    非交互式运行会从 `--qianfan-api-key <key>` 或
-    `QIANFAN_API_KEY` 读取密钥。引导过程会写入提供商配置，为默认模型添加
-    `QIANFAN` 别名，并在未配置时将 `qianfan/deepseek-v3.2`
-    设为默认模型。
+    Non-interactive runs read the key from `--qianfan-api-key <key>` or
+    `QIANFAN_API_KEY`. Onboarding writes the provider config, adds the
+    `QIANFAN` alias for the default model, and sets `qianfan/deepseek-v4-pro`
+    as the default model when none is configured.
 
   </Step>
   <Step title="验证模型是否可用">
@@ -54,10 +54,13 @@ openclaw gateway restart
 
 ## 内置目录
 
-| 模型引用                            | 输入        | 上下文  | 最大输出 | 推理 | 备注         |
-| ----------------------------------- | ----------- | ------- | -------- | ---- | ------------- |
-| `qianfan/deepseek-v3.2`              | text        | 98,304  | 32,768   | Yes  | 默认模型      |
-| `qianfan/ernie-5.0-thinking-preview` | text, image | 119,000 | 64,000   | Yes  | 多模态        |
+| Model ref                            | Input       | Context   | Max output | Reasoning | Notes                                                                      |
+| ------------------------------------ | ----------- | --------- | ---------- | --------- | -------------------------------------------------------------------------- |
+| `qianfan/deepseek-v4-pro`            | text        | 1,000,000 | 393,216    | Yes       | Current DeepSeek flagship                                                  |
+| `qianfan/ernie-5.1`                  | text        | 128,000   | 65,536     | No        | Latest ERNIE text flagship                                                 |
+| `qianfan/ernie-5.0`                  | text, image | 128,000   | 65,536     | Yes       | Current multimodal and thinking model                                      |
+| `qianfan/deepseek-v3.2`              | text        | 128,000   | 32,768     | No        | Deprecated onboarding compatibility default; replaced by `deepseek-v4-pro` |
+| `qianfan/ernie-5.0-thinking-preview` | text, image | 128,000   | 65,536     | Yes       | Deprecated alias; replaced by `ernie-5.0`                                  |
 
 目录是静态的；没有实时模型发现。
 
@@ -67,14 +70,16 @@ openclaw gateway restart
 
 ## 配置示例
 
+This example explicitly selects the current DeepSeek flagship instead of the onboarding compatibility default.
+
 ```json5
 {
   env: { QIANFAN_API_KEY: "bce-v3/ALTAK-..." },
   agents: {
     defaults: {
-      model: { primary: "qianfan/deepseek-v3.2" },
+      model: { primary: "qianfan/deepseek-v4-pro" },
       models: {
-        "qianfan/deepseek-v3.2": { alias: "QIANFAN" },
+        "qianfan/deepseek-v4-pro": { alias: "QIANFAN" },
       },
     },
   },
@@ -85,22 +90,18 @@ openclaw gateway restart
         api: "openai-completions",
         models: [
           {
-            id: "deepseek-v3.2",
-            name: "DEEPSEEK V3.2",
+            id: "deepseek-v4-pro",
+            name: "DeepSeek V4 Pro",
             reasoning: true,
             input: ["text"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 98304,
-            maxTokens: 32768,
-          },
-          {
-            id: "ernie-5.0-thinking-preview",
-            name: "ERNIE-5.0-Thinking-Preview",
-            reasoning: true,
-            input: ["text", "image"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 119000,
-            maxTokens: 64000,
+            cost: {
+              input: 1.771957,
+              output: 3.543915,
+              cacheRead: 0.147663,
+              cacheWrite: 0,
+            },
+            contextWindow: 1000000,
+            maxTokens: 393216,
           },
         ],
       },
@@ -110,7 +111,7 @@ openclaw gateway restart
 ```
 
 <Note>
-模型引用使用 `qianfan/` 前缀（例如 `qianfan/deepseek-v3.2`）。
+Model refs use the `qianfan/` prefix (for example `qianfan/deepseek-v4-pro`).
 </Note>
 
 <AccordionGroup>

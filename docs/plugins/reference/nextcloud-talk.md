@@ -16,7 +16,7 @@ title: "Nextcloud Talk 插件"
 
 ## 接口
 
-channels: nextcloud-talk
+channels: `nextcloud-talk`
 
 ## 相关文档
 

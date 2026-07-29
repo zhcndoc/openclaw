@@ -115,10 +115,12 @@ Gateway 负责整个生命周期：
 
 必需索引：
 
-- `resolution_ref` 上唯一；插入时还要拒绝跨列的 `approval_id`/`resolution_ref` 歧义
-- `(status, expires_at_ms)`
-- `(source_session_key, created_at_ms DESC)`
-- `(resolved_at_ms)` 用于保留期清理
+| Index                                      | Purpose                                                                     |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| unique `(resolution_ref)`                  | 在插入期间拒绝 `approval_id`/`resolution_ref` 跨列歧义。 |
+| `(status, expires_at_ms)`                  | 查找待审批项并协调权威截止时间。               |
+| `(source_session_key, created_at_ms DESC)` | 为单个源会话重放最近的审批记录。                             |
+| `(resolved_at_ms)`                         | 根据固定保留策略清理保留的终态审批记录。  |
 
 Audience 数组较小且有界。会话过滤后的重放首先通过 Kysely 选择可见的 pending 行，然后在应用代码中解码并过滤有界的 audience 数组；它不使用字符串匹配或原始 SQL JSON 查询。
 
@@ -229,28 +231,28 @@ type MessagePresentationAction =
 
 将 `button.url`、`button.webApp` 以及由命令驱动的审批控件保留为已弃用的插件 SDK 兼容输入。在 SDK 边界对其进行规范化；并在同一个 PR 中迁移所有捆绑的内部调用方。`/approve {id} {decision}` 仍然是文本回退和 CLI/chat 命令，而不是按钮语义契约。
 
-## 控制 UI
+## Control UI
 
-路由是 `${basePath}/approve/{approvalId}`。ID 是唯一的路径参数；源会话身份来自记录。
+The route is `${basePath}/approve/{approvalId}`. The ID is the unique path parameter; the source session identity comes from the record.
 
-由于当前路由器具有精确的静态路由，并将未知路径重写到 Chat，因此需要在正常路由规范化之前，于 `ui/src/app/bootstrap.ts` 中检测此深链接。复用正常的 Gateway/认证设置，但在侧边栏外壳和全局模态之外渲染一个独立的审批页面。
+Because the current router has exact static routes and rewrites unknown paths to Chat, this deep link needs to be detected in `ui/src/app/bootstrap.ts` before normal route normalization. Reuse the normal Gateway/auth setup, but render a standalone approval page outside the sidebar shell and global modals.
 
-该文档归提供其 URL 的 Gateway 所有。其初始连接会忽略整个应用持久化的远程 Gateway 选择，而不会更改或复制该选择的设置；只有认证仍然以会话范围绑定到服务该文档的 Gateway。受信任的原生认证，或单独确认的 `gatewayUrl` 覆盖，可能会将其重新定向。核心会优先保留单段的 `/approve` 命名空间，早于插件 HTTP 路由和静态扩展检测，包括以 `.json` 或 `.js` 结尾的 ID；当 Control UI 服务被禁用时，该保留路由会以 `404` 失败关闭。将该页面保留在主 Control UI bundle 中，这样失败的懒加载 chunk 就不会让一个安全决策卡在加载转圈状态。
+This document is owned by the Gateway whose URL it provides. Its initial connection ignores the app-wide persisted remote Gateway selection without changing or copying that selection’s settings; only authentication remains session-scoped to the Gateway serving the document. Trusted native authentication, or a separately confirmed `gatewayUrl` override, may redirect it. The core will prefer keeping the single-segment `/approve` namespace ahead of plugin HTTP routes and static extension detection, including IDs ending in `.json` or `.js`; when the Control UI service is disabled, that reserved route fails closed with `404`. Keep this page in the main Control UI bundle so a failed lazy-load chunk cannot leave a security decision stuck on a loading spinner.
 
-页面状态：
+Page states:
 
-- 加载中
-- 需要认证
-- 待处理
-- 解析中
-- 在此处已批准或已拒绝
-- 在其他地方已解决
-- 已过期
-- 已取消
-- 被禁止/未找到
-- 连接错误，可重试
+- Loading
+- Authentication required
+- Pending
+- Resolving
+- Approved or rejected here
+- Resolved elsewhere
+- Expired
+- Canceled
+- Forbidden / not found
+- Connection error, retryable
 
-该页面调用 Gateway RPC，而不是第二个未认证的 REST API。浏览器刷新会重新读取持久状态。它绝不会在 URL、查询参数或片段中放置 Gateway 凭据。
+This page calls Gateway RPC, not a second unauthenticated REST API. A browser refresh re-reads persisted state. It never puts Gateway credentials in the URL, query parameters, or fragment.
 
 ## 授权与隐私
 
@@ -272,23 +274,23 @@ URL 是定位符，不是权限凭证。解析需要：
 
 `approval.get` 只暴露经过清理的审查者投影，并省略内部来源/受众路由键。PR 5 的 `session.approval` 事件在 Gateway 于服务器端应用持久化的受众快照后，会携带其唯一目标 `sessionKey` 以及 `sourceSessionKey`。现有的 exec/plugin 事件在消费者迁移之前，会保持其历史有效载荷和受限接收者不变。可执行请求、命令绑定和续传仍只保留在进程本地的等待器中。持久化行包含安全的展示内容以及生命周期、路由和审计元数据；它绝不会存储原始环境值、凭据、认证头或通道回调数据。
 
-## 受众投影
+## Audience Projection
 
-在插入之前先计算一次受众，并持久化有序快照。所有权是一个图，而不是总是一条单一的父链：一个子级可能同时拥有当前控制者和原始请求者，而这些所有者可以指向不同的根。
+Before insertion, compute the audience once and persist the ordered snapshot. Ownership is a graph, not always a single parent chain: a child may simultaneously have the current controller and the original requester, and those owners can point to different roots.
 
-使用确定性的广度优先遍历：
+Use a deterministic breadth-first traversal:
 
-1. 用源会话键初始化队列。
-2. 对于每个出队的键，读取最新的子代理注册表行，并按固定顺序将两个不同的所有权边入队：`controllerSessionKey`，然后是 `requesterSessionKey`。
-3. 当存在可用的注册表行时，不要再跟随可能在 steering 之后变得过时的 session-entry 血缘。否则，入队单个当前回退边 `parentSessionKey ?? spawnedBy`。
-4. 入队时进行规范化和去重，使第一个、最短的路径获胜。
-5. 在达到 64 个唯一键时停止；这个受众大小上限也限制了遍历深度。
+1. Initialize the queue with the source session key.
+2. For each dequeued key, read the latest subagent registry row and enqueue the two distinct ownership edges in a fixed order: `controllerSessionKey`, then `requesterSessionKey`.
+3. When a registry row is available, do not continue following session-entry ancestry that may have become stale after steering. Otherwise, enqueue the single current fallback edge `parentSessionKey ?? spawnedBy`.
+4. Normalize and deduplicate on enqueue so the first, shortest path wins.
+5. Stop when 64 unique keys are reached; this audience size cap also bounds traversal depth.
 
-注册表来源是 `src/agents/subagent-registry-read.ts`；所有权字段定义在 `src/agents/subagent-registry.types.ts` 中。会话回退字段定义在 `src/config/sessions/types.ts` 中。
+The registry source is `src/agents/subagent-registry-read.ts`; ownership fields are defined in `src/agents/subagent-registry.types.ts`. Session fallback fields are defined in `src/config/sessions/types.ts`.
 
-无论在审批待处理期间焦点/控制者所有权如何变化，请求和终态投影都使用相同的已持久化受众。这保证了：对于收到请求投影的每个受众会话流，终态清理都会执行。解析始终针对源审批 ID；受众会话绝不会接收到克隆的审批状态。转发的 channel-message 清理仍然是下面单独的交付定位器后续步骤。
+Regardless of how focus/controller ownership changes while approval is pending, request and terminal projections use the same persisted audience. This guarantees that terminal cleanup will execute for every audience session stream that received the request projection. Resolution always targets the source approval ID; audience sessions never receive cloned approval state. Forwarded channel-message cleanup remains the separate delivery locator follow-up step below.
 
-不要仅仅为了审批而编写转录消息、注入系统提示、启动所有者轮次，或发出 `sessions.changed`。
+Do not write transcript messages, inject system prompts, start owner turns, or emit `sessions.changed` just for approval.
 
 ## 已交付表面收敛
 
@@ -306,37 +308,38 @@ URL 是定位符，不是权限凭证。解析需要：
 
 这个传输生命周期是一个可选的交付适配器钩子，而不是渲染器或面向模型的消息操作。QQ C2C/群消息当前没有编辑、删除或键盘清除 API；该适配器仍然不受支持，并且在传输获得变更 API 之前，只能在后续点击后显示规范事实。
 
-## 重启、超时和路由语义
+## Restart, timeouts, and routing semantics
 
-SQLite 持久化并不意味着执行恢复。命令/工具绑定保留在内存中，因为它们可能包含安全敏感的运行时事实，而且它们并不是可恢复的作业契约。
+SQLite persistence does not imply execution recovery. Command/tool bindings are retained in memory because they may contain security-sensitive runtime facts, and they are not a recoverable job contract.
 
-在 Gateway 启动时：
+At Gateway startup:
 
-- 生成一个新的运行时纪元；
-- 原子地将较早纪元中的待处理行转换为 `cancelled`，原因是 `gateway-restart`；
-- 保留这些行，以便它们的 URL 说明发生了什么；
-- 绝不对缺失的运行时绑定执行后续批准。
+- Generate a new runtime epoch;
+- Atomically convert pending rows from earlier epochs to `cancelled` with reason `gateway-restart`;
+- Retain those rows so their URL explains what happened;
+- Never perform subsequent approval on missing runtime bindings.
 
-计时器只是唤醒优化。截止时间权威存储在 `expires_at_ms` 中；读取、等待和解析都会执行过期协调。
+Timers are only a wake-up optimization. Deadline authority lives in `expires_at_ms`; reads, waits, and parsing all perform expiration reconciliation.
 
-最终严格行为：
+Final strict behavior:
 
-- 超时 -> `expired`，拒绝；
-- 没有路由 -> `denied`，拒绝；
-- 运行中止 -> `cancelled`，拒绝；
-- 可信裁决格式错误 -> `denied`，拒绝；
-- 只有明确的允许决策才 -> `allowed`。
+- timeout -> `expired`, reject;
+- no route -> `denied`, reject;
+- runtime abort -> `cancelled`, reject;
+- trusted verdict malformed -> `denied`, reject;
+- only an explicit allow decision -> `allowed`.
 
-当前已发布的 exec 行为仍与此契约冲突：
+Current published exec behavior still conflicts with this contract:
 
-- `src/agents/bash-tools.exec-host-shared.ts` 可能应用 `askFallback`。
-- `docs/tools/exec-approvals.md` 和 `docs/cli/approvals.md` 记录了该行为面。
+- `src/agents/bash-tools.exec-host-shared.ts` may apply `askFallback`.
+- `docs/tools/exec-approvals.md` and `docs/cli/approvals.md` document that behavior surface.
 
-插件审批现在会在超时和格式错误的裁决上失败关闭；旧的
-`timeoutBehavior` 字段仍被接受，但会被忽略。exec 严格语义
-后续工作必须同时更新代码、类型、文档、测试和变更日志，并且
-明确经过负责人/安全审查。`askFallback` 在迁移期间可以继续描述
-预门控策略选择，但它绝不能把已创建的待处理记录的超时变成批准。
+Plugin approvals now fail closed on timeout and malformed verdicts; the legacy
+`timeoutBehavior` field is still accepted, but ignored. Exec strict semantics
+follow-up work must update code, types, docs, tests, and changelog together, and
+be explicitly owner/security reviewed. `askFallback` may continue to describe a
+pre-gate strategy choice during migration, but it must never turn a timeout on
+an already-created pending record into approval.
 
 ## 兼容性计划
 

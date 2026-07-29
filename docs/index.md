@@ -25,8 +25,9 @@ title: "OpenClaw"
 > _"EXFOLIATE! EXFOLIATE!"_ — 一只太空龙虾，大概吧
 
 <p align="center">
-  <strong>适用于跨 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等平台的任何操作系统 AI 代理网关。</strong><br />
-  发一条消息，就能从你的口袋里收到代理回复。通过频道插件、WebChat 和移动节点运行一个 Gateway。
+  <strong>Any OS gateway for AI agents across Discord, Google Chat, iMessage, Matrix, Microsoft Teams, Signal, Slack, Telegram, WhatsApp, Zalo, and more.</strong><br />
+  Send a message, get an agent response from your pocket. Run one Gateway across channel plugins, WebChat, and mobile nodes.<br />
+  Developed in the open by the <a href="https://openclaw.org">OpenClaw Foundation</a>, a non-profit.
 </p>
 
 <Columns>
@@ -98,7 +99,7 @@ OpenClaw 是一个**自托管网关**，可通过频道插件将你最喜欢的�
 - **面向代理**：为支持工具使用、会话、记忆和多代理路由的编码代理而构建
 - **开源**：MIT 许可，社区驱动
 
-**你需要什么？** Node 24.15+（推荐）、用于兼容性的 Node 22 LTS（`22.22.3+`），或 Node 25.9+；你所选提供商的 API 密钥，以及 5 分钟。为了获得最佳质量和安全性，请使用当前可用的最强最新一代模型。
+**What do you need?** Node 26 (recommended), or another supported release: Node 22.22.3+, Node 24.15+, or Node 25.9+. You also need an API key from your chosen provider and 5 minutes. For best quality and security, use the strongest latest-generation model available.
 
 ## 它是如何工作的
 

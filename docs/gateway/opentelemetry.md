@@ -81,17 +81,9 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
       metrics: true,
       logs: true,
       logsExporter: "otlp", // otlp | stdout | both
-      sampleRate: 0.2, // 根 span 采样器，0.0..1.0
-      flushIntervalMs: 60000, // 指标导出间隔（最小 1000ms）
-      captureContent: {
-        enabled: false,
-        inputMessages: false,
-        outputMessages: false,
-        toolInputs: false,
-        toolOutputs: false,
-        systemPrompt: false,
-        toolDefinitions: false,
-      },
+      sampleRate: 0.2, // root-span sampler, 0.0..1.0
+      flushIntervalMs: 60000, // metric export interval (min 1000ms)
+      captureContent: false,
     },
   },
 }
@@ -108,26 +100,61 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
 | `OTEL_SEMCONV_STABILITY_OPT_IN`                                                                                   | 设置为 `gen_ai_latest_experimental` 可发出最新的 GenAI 推理 span 形态：span 名称为 `{gen_ai.operation.name} {gen_ai.request.model}`，span kind 为 `CLIENT`，并使用 `gen_ai.provider.name` 代替旧的 `gen_ai.system`。无论如何，GenAI 指标始终使用有界、低基数属性。 |
 | `OPENCLAW_OTEL_PRELOADED`                                                                                         | 当其他 preload 或宿主进程已经注册了全局 OpenTelemetry SDK 时，设置为 `1`。此时插件会跳过自身的 NodeSDK 生命周期，但仍会挂接诊断监听器并遵循 `traces`/`metrics`/`logs`。                                                                                    |
 
-## 隐私与内容捕获
+## Continue an upstream WebSocket trace
 
-默认情况下，原始模型/工具内容**不会**导出。Span 仅携带有界识别信息（通道、提供方、模型、错误类别、仅哈希的请求 ID、工具来源、工具所有者、技能名称/来源），绝不会包含提示文本、响应文本、工具输入、工具输出、技能文件路径或会话密钥。看起来像作用域代理会话密钥的值（例如以 `agent:` 开头）会在低基数属性上被替换为 `unknown`。OTLP 日志记录默认保留严重级别、logger、代码位置、受信任的 trace 上下文以及已清理的属性；只有当 `diagnostics.otel.captureContent` 为布尔值 `true` 时，原始日志消息正文才会被导出。细粒度的 `captureContent.*` 子键永远不会启用日志正文。Talk 指标仅导出有界事件元数据（模式、传输、提供方、事件类型）——不包含转录文本、音频载荷、会话 ID、轮次 ID、通话 ID、房间 ID 或交接令牌。
+An authenticated Gateway WebSocket client can attach a W3C `traceparent` to
+each request frame:
+
+```json
+{
+  "type": "req",
+  "id": "eval-item-42",
+  "method": "agent",
+  "params": {},
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+
+The Gateway creates a child request context that preserves the upstream trace
+ID and sampling flags. Agent, harness, model-call, and provider spans created
+inside the request remain on that trace. This allows a local experiment runner
+to create one Langfuse/OpenTelemetry trace per dataset item and correlate the
+corresponding OpenClaw execution.
+
+Trace context is request-scoped, not connection-scoped. On a long-lived
+WebSocket, generate or inject the appropriate `traceparent` independently for
+every RPC. Concurrent requests remain isolated even when their work
+interleaves.
+
+The field is accepted only after the existing Gateway authentication handshake
+and does not affect authentication or method authorization. A `traceparent` on
+the initial `connect` frame is ignored. Missing or syntactically malformed
+values within the 128-character field limit silently fall back to a fresh
+request trace; longer values make the request frame invalid. `tracestate` and
+`baggage` are not accepted by the Gateway WebSocket protocol.
+
+## Privacy and content capture
+
+Raw model/tool content is **not** exported by default. Spans carry bounded
+identifiers (channel, provider, model, error category, hash-only request ids,
+tool source, tool owner, skill name/source) and never include prompt text,
+response text, tool inputs, tool outputs, skill file paths, or session keys.
+Values that look like scoped agent session keys (for example starting with
+`agent:`) are replaced with `unknown` on low-cardinality attributes. OTLP log
+records keep severity, logger, code location, trusted trace context, and
+sanitized attributes by default; the raw log message body is exported only
+when `diagnostics.otel.captureContent` is `true`. Talk metrics export only
+bounded event metadata (mode, transport, provider, event type) - no
+transcripts, audio payloads, session ids, turn ids, call ids, room ids, or
+handoff tokens.
 
 向外发出的模型请求可能包含一个 W3C `traceparent` 标头，该标头仅根据 OpenClaw 所拥有的、用于当前模型调用的诊断 trace 上下文生成。现有的调用方提供的 `traceparent` 标头会被替换，因此插件或自定义提供方选项无法伪造跨服务的 trace 祖先关系。
 
-仅当你的收集器和保留策略已获批准可处理提示、响应、工具或系统提示文本时，才将 `diagnostics.otel.captureContent.*` 设为 `true`。每个子键彼此独立：
-
-- `inputMessages` - 用户 prompt 内容。
-- `outputMessages` - 模型 response 内容。
-- `toolInputs` - tool 参数载荷。
-- `toolOutputs` - tool 结果载荷。
-- `systemPrompt` - 组装后的 system/developer prompt。
-- `toolDefinitions` - 模型 tool 名称、描述和 schema。
-
-启用任一子键后，模型和工具 span 只会为该类别获取有界、已脱敏的 `openclaw.content.*` 属性。
-
-<Note>
-布尔值 `captureContent: true` 会同时启用 `inputMessages`、`outputMessages`、`toolInputs`、`toolOutputs`、`toolDefinitions` 以及 OTLP 日志正文，但**不会**启用 `systemPrompt`——如果你也需要组装后的 system prompt，请显式设置 `captureContent.systemPrompt: true`。
-</Note>
+Set `diagnostics.otel.captureContent` to `true` only when your collector and
+retention policy are approved for prompt, response, tool, and tool-definition
+text. This enables bounded, redacted input messages, output messages, tool
+inputs, tool outputs, tool definitions, and OTLP log bodies. System prompts
+remain excluded.
 
 `toolInputs`/`toolOutputs` 内容会被内置 agent 运行时的工具执行捕获（在完成/错误 span 上对应 `openclaw.content.tool_input` 和 `gen_ai.tool.call.arguments`；在完成 span 上对应 `openclaw.content.tool_output` 和 `gen_ai.tool.call.result`）。`openclaw.content.*` 名称仍然是稳定的 OpenClaw 属性名；`gen_ai.tool.call.*` 副本则用于与 semconv 原生查看器保持一致。外部 harness 工具调用（Codex、Claude CLI）会发出不含内容载荷的 `tool.execution.*` span。被捕获的内容会通过受信任的、仅监听的通道传输，绝不会放到公共诊断事件总线上。
 
@@ -152,22 +179,113 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
   组件大小，并在 provider 结果暴露 usage 时包含每次调用的 token 属性。`openclaw.model.usage` 仍然是用于汇总成本、上下文和 channel 仪表板的 run 级
   计费 span，并且当发出它的运行时具有受信任的 trace 上下文时，会保持在同一条诊断 trace 上。
 
-## 已导出的指标
+### Model-call observation units
+
+Every `openclaw.model.call` span identifies what its lifecycle measures through
+`openclaw.model_call.observation_unit`:
+
+- `request` - one observable model/provider request. Native embedded model
+  calls use this unit, and exporters treat a missing value as `request` for
+  compatibility with older or external emitters.
+- `turn` - one opaque agent CLI turn that may contain hidden model requests,
+  retries, tool work, or background work. Claude Code CLI and Codex app-server
+  calls use this unit.
+
+Both units remain model-call spans so trace backends can render model input,
+output, usage, and hierarchy. Request spans use the API-derived GenAI operation
+(`chat`, `generate_content`, or `text_completion`), while turn spans use
+`gen_ai.operation.name = invoke_agent`. Both contribute to
+`gen_ai.client.operation.duration`, where the operation name keeps direct
+request latency separate from full-turn latency. OpenClaw's OTEL model-call
+metrics also include `openclaw.model_call.observation_unit`; the Prometheus
+model-call metrics expose the equivalent `observation_unit` label.
+
+### Claude Code CLI model-call fidelity
+
+Claude Code CLI turns emit one synthetic, turn-level `openclaw.model.call`
+span. These are not Anthropic HTTP request spans. They use `openclaw.api =
+claude-code`, `openclaw.model_call.observation_unit = turn`, and identify
+the operation as `gen_ai.operation.name = invoke_agent`. They identify
+OpenClaw's CLI boundary through
+`openclaw.transport`:
+
+- `stdio` - one-shot local Claude Code process.
+- `stdio-live` - one turn on a managed persistent Claude stdio session.
+- `paired-node-cli` - one-shot Claude Code execution delegated to a paired
+  node.
+
+Claude CLI diagnostics are instantiated only while the process diagnostic
+dispatcher is enabled and an internal or trusted event listener is attached.
+With no observability plugin or other listener active, Claude CLI turns skip
+the synthetic trace hierarchy, content buffers, and diagnostic stream-byte
+accounting. When content capture is enabled, prompt and system-prompt fields
+are capped at 128 KiB each; assistant output is capped at 128 KiB across at
+most 200 envelopes, with 16 KiB and one item reserved for a final visible
+fallback response. A marker records truncation when the limit is reached.
+
+OpenClaw gives Claude CLI turns the same ownership hierarchy used by other
+agent runtimes: `openclaw.harness.run` (`openclaw.harness.id = claude-cli`)
+contains `openclaw.run`, which contains the Claude `openclaw.model.call`
+span. The harness and run spans are synthetic OpenClaw turn boundaries, not
+Claude Code internal phases. One-shot and managed stdio turns use the same
+hierarchy; a real fresh-session retry creates another model-call child inside
+the same OpenClaw run.
+
+The span starts when OpenClaw admits the prepared CLI turn and ends only after
+that turn succeeds or fails. For managed sessions, an interim success result
+does not end the span while Claude reports result-holding background agents or
+workflows; the final post-drain result does. Abort, timeout, process failure,
+output/parse failure, and other turn failures end the same span with an error.
+
+Claude Code reports per-assistant-message usage and may also report cumulative
+usage on its terminal result. OpenClaw reply accounting continues to use the
+last assistant message so existing cost semantics do not change; the
+turn-level model-call span uses terminal cumulative usage when available,
+including cache-read and cache-creation tokens.
+
+For these CLI spans, byte and timing fields describe the observable OpenClaw
+CLI boundary:
+
+- `openclaw.model_call.request_bytes` is the UTF-8 size of the prompt value
+  sent over one-shot stdin/argv, or the managed stdio JSONL user envelope. It
+  is not the size of Claude Code's hidden model request.
+- `openclaw.model_call.response_bytes` is the UTF-8 size of Claude CLI stdout
+  observed during the turn. It is not Anthropic HTTP response size.
+- `openclaw.model_call.time_to_first_byte_ms` is time to the first observable
+  Claude CLI stdout or stderr output. It is not network TTFB.
+
+With `captureContent` enabled, the span exports the effective prompt OpenClaw
+sends to Claude Code and visible assistant text/reasoning/tool-call identity
+through `gen_ai.input.messages` and `gen_ai.output.messages`. Tool arguments,
+opaque thinking signatures, tool results, and system prompts are omitted from
+the Claude assistant envelope. OpenClaw does not
+claim access to Claude Code's private system prompt, hidden resumed or
+compacted request payload, native internal tool schemas, raw Anthropic HTTP
+request, internal retries, upstream request id, or true network TTFB. Because
+Claude Code does not expose its effective native tool definitions accurately,
+these spans do not populate `gen_ai.tool.definitions`.
+
+External Claude harness tool spans remain metadata-only even when tool content
+capture is enabled. As with every model span, captured Claude CLI content uses
+the trusted listener-only path and the exporter's existing redaction and size
+bounds; content remains off by default.
+
+## Exported metrics
 
 ### 模型使用
 
-- `openclaw.tokens` (计数器，属性：`openclaw.token`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`, `openclaw.agent`)
-- `openclaw.cost.usd` (计数器，属性：`openclaw.channel`, `openclaw.provider`, `openclaw.model`)
-- `openclaw.run.duration_ms` (直方图，属性：`openclaw.channel`, `openclaw.provider`, `openclaw.model`)
-- `openclaw.context.tokens` (直方图，属性：`openclaw.context`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`)
-- `gen_ai.client.token.usage` (直方图，GenAI 语义约定指标，属性：`gen_ai.token.type` = `input`/`output`, `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`)
-- `gen_ai.client.operation.duration` (直方图，秒，GenAI 语义约定指标，属性：`gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`, 可选 `error.type`)
-- `openclaw.model_call.duration_ms` (直方图，属性：`openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`，以及在分类错误上添加的 `openclaw.errorCategory` 和 `openclaw.failureKind`)
-- `openclaw.model_call.request_bytes` (直方图，最终模型请求负载的 UTF-8 字节大小；不包含原始负载内容)
-- `openclaw.model_call.response_bytes` (直方图，流式响应分块负载的 UTF-8 字节大小；高频文本、思考和工具调用增量仅按新增的 `delta` 字节计数；不包含原始响应内容)
-- `openclaw.model_call.time_to_first_byte_ms` (直方图，首个流式响应事件之前的耗时)
-- `openclaw.model.failover` (计数器，属性：`openclaw.provider`, `openclaw.model`, `openclaw.failover.to_provider`, `openclaw.failover.to_model`, `openclaw.failover.reason`, `openclaw.failover.suspended`, `openclaw.lane`)
-- `openclaw.skill.used` (计数器，属性：`openclaw.skill.name`, `openclaw.skill.source`, `openclaw.skill.activation`, 可选 `openclaw.agent`, 可选 `openclaw.toolName`)
+- `openclaw.tokens` (counter, attrs: `openclaw.token`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`, `openclaw.agent`)
+- `openclaw.cost.usd` (counter, attrs: `openclaw.channel`, `openclaw.provider`, `openclaw.model`)
+- `openclaw.run.duration_ms` (histogram, attrs: `openclaw.channel`, `openclaw.provider`, `openclaw.model`)
+- `openclaw.context.tokens` (histogram, attrs: `openclaw.context`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`)
+- `gen_ai.client.token.usage` (histogram, GenAI semantic-conventions metric, attrs: `gen_ai.token.type` = `input`/`output`, `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`)
+- `gen_ai.client.operation.duration` (histogram, seconds, GenAI semantic-conventions metric for model requests and synthetic agent turns; attrs: `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`, optional `error.type`; turn observations use `gen_ai.operation.name = invoke_agent`)
+- `openclaw.model_call.duration_ms` (histogram, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`, `openclaw.model_call.observation_unit`, plus `openclaw.errorCategory` and `openclaw.failureKind` on classified errors)
+- `openclaw.model_call.request_bytes` (histogram, UTF-8 byte size of the final model request payload; for Claude Code CLI, the observable prompt input/envelope described above; no raw payload content)
+- `openclaw.model_call.response_bytes` (histogram, UTF-8 byte size of streamed response chunk payloads; high-frequency text, thinking, and tool-call deltas count only incremental `delta` bytes; for Claude Code CLI, observed stdout bytes; no raw response content)
+- `openclaw.model_call.time_to_first_byte_ms` (histogram, elapsed time before the first streamed response event; for Claude Code CLI, first observable CLI output rather than network TTFB)
+- `openclaw.model.failover` (counter, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.failover.to_provider`, `openclaw.failover.to_model`, `openclaw.failover.reason`, `openclaw.failover.suspended`, `openclaw.lane`)
+- `openclaw.skill.used` (counter, attrs: `openclaw.skill.name`, `openclaw.skill.source`, `openclaw.skill.activation`, optional `openclaw.agent`, optional `openclaw.toolName`)
 
 ### 消息流
 
@@ -207,13 +325,21 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
 
 ### 会话存活遥测
 
-`diagnostics.stuckSessionWarnMs` 是用于会话存活诊断的无进展年龄阈值。只要 OpenClaw 还能观察到回复、工具、状态、block 或 ACP 运行时进度，`processing` 会话就不会按时间接近此阈值。输入中保持活跃（typing keepalive）不计为进度，因此静默的模型或 harness 仍然可以被检测到。
+A `processing` session does not age toward the built-in liveness threshold while OpenClaw observes reply, tool, status, block, or ACP runtime progress. Typing keepalives do not count as progress, so a silent model or harness can still be detected.
 
 OpenClaw 按其仍能观察到的工作对会话进行分类：
 
-- `session.long_running`：活动的嵌入式工作、模型调用或工具调用仍在推进。即使归属的模型调用在 `diagnostics.stuckSessionWarnMs` 之后仍保持静默，也会先报告为 long-running，直到 `diagnostics.stuckSessionAbortMs`，因此慢速或非流式模型提供方在可观察到中止前不会看起来像卡住的网关会话。
-- `session.stalled`：存在活动工作，但当前运行最近没有报告进度。归属的模型调用会在 `diagnostics.stuckSessionAbortMs` 时或之后从 `session.long_running` 切换为 `session.stalled`；无归属的陈旧模型/工具活动不被视为无害的长期运行工作。最初，卡住的嵌入式运行只进行观察；随后在 `diagnostics.stuckSessionAbortMs` 之后、在没有进度的情况下进入 abort-drain，因此队列中该 lane 后面的 turn 可以恢复。当未设置时，abort 阈值默认为更安全的扩展窗口：至少 5 分钟且为 `diagnostics.stuckSessionWarnMs` 的 3 倍。
-- `session.stuck`：没有活动工作的陈旧会话清理，或处于空闲队列中的会话且存在陈旧的无归属模型/工具活动。恢复门通过后，这会立即释放受影响的会话 lane。
+- `session.long_running`: active embedded work, model calls, or tool calls
+  are still making progress. Owned silent model calls also report as long-running before the built-in abort threshold, so slow or non-streaming model providers do not look like stalled gateway sessions while abort-observable.
+- `session.stalled`: active work exists, but the active run has not reported
+  recent progress. Owned model calls switch from `session.long_running` to
+  `session.stalled` at or after the built-in abort threshold; ownerless
+  stale model/tool activity is not treated as harmless long-running work.
+  Stalled embedded runs stay observe-only at first, then abort-drain after
+  the abort threshold with no progress so queued turns behind the lane can resume.
+- `session.stuck`: stale session bookkeeping with no active work, or an idle
+  queued session with stale ownerless model/tool activity. This releases the
+  affected session lane immediately after recovery gates pass.
 
 恢复会发出结构化的 `session.recovery.requested` 和 `session.recovery.completed` 事件。只有在变更型恢复结果（`aborted` 或 `released`）之后，且仅当相同的处理代次仍然是当前代次时，诊断会话状态才会标记为空闲。
 
@@ -260,14 +386,14 @@ Liveness 警告也会发出：
 - `openclaw.run`
   - `openclaw.outcome`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`, `openclaw.errorCategory`
 - `openclaw.model.call`
-  - 默认使用 `gen_ai.system`，或者在启用最新 GenAI 语义约定时使用 `gen_ai.provider.name`
-  - `gen_ai.request.model`, `gen_ai.operation.name`, `openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`
-  - `openclaw.errorCategory`, `error.type`，以及错误时可选的 `openclaw.failureKind`
+  - `gen_ai.system` by default, or `gen_ai.provider.name` when the latest GenAI semantic conventions are opted in
+  - `gen_ai.request.model`, `gen_ai.operation.name`, `openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`, `openclaw.model_call.observation_unit` (`request` or `turn`)
+  - `openclaw.errorCategory`, `error.type`, and optional `openclaw.failureKind` on errors
   - `openclaw.model_call.request_bytes`, `openclaw.model_call.response_bytes`, `openclaw.model_call.time_to_first_byte_ms`
-  - `openclaw.model_call.prompt.input_messages_count`, `openclaw.model_call.prompt.input_messages_chars`, `openclaw.model_call.prompt.system_prompt_chars`, `openclaw.model_call.prompt.tool_definitions_count`, `openclaw.model_call.prompt.tool_definitions_chars`, `openclaw.model_call.prompt.total_chars`（仅安全的组件大小，不包含提示词文本）
-  - 当模型调用结果携带该次调用的提供方使用量时，使用 `openclaw.model_call.usage.*` 和 `gen_ai.usage.*`
-  - 当上游提供方结果暴露请求 ID 时，带有属性 `openclaw.upstreamRequestIdHash`（有界、基于哈希）的 Span 事件 `openclaw.provider.request`；原始 ID 永不导出
-  - 使用 `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` 时，model-call spans 采用最新 GenAI 推理 span 名称 `{gen_ai.operation.name} {gen_ai.request.model}`，并使用 `CLIENT` span kind，而不是 `openclaw.model.call`。
+  - `openclaw.model_call.prompt.input_messages_count`, `openclaw.model_call.prompt.input_messages_chars`, `openclaw.model_call.prompt.system_prompt_chars`, `openclaw.model_call.prompt.tool_definitions_count`, `openclaw.model_call.prompt.tool_definitions_chars`, `openclaw.model_call.prompt.total_chars` (safe component sizes only, no prompt text)
+  - `openclaw.model_call.usage.*` and `gen_ai.usage.*` when the result carries usage for that request or aggregate turn
+  - Span event `openclaw.provider.request` with attribute `openclaw.upstreamRequestIdHash` (bounded, hash-based) when the upstream provider result exposes a request id; raw ids are never exported
+  - With `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`, request spans use the latest GenAI inference span name `{gen_ai.operation.name} {gen_ai.request.model}`. Turn spans use `invoke_agent` because OpenClaw does not claim a native agent name from the opaque CLI boundary. Both use `CLIENT` span kind instead of `openclaw.model.call`.
 - `openclaw.harness.run`
   - `openclaw.harness.id`, `openclaw.harness.plugin`, `openclaw.outcome`, `openclaw.provider`, `openclaw.model`, `openclaw.channel`
   - 完成时：`openclaw.harness.result_classification`, `openclaw.harness.yield_detected`, `openclaw.harness.items.started`, `openclaw.harness.items.completed`, `openclaw.harness.items.active`
@@ -298,7 +424,12 @@ Liveness 警告也会发出：
 
 ## 诊断事件目录
 
-以下事件支撑上述指标和跨度。插件也可以直接订阅它们，而无需 OTLP 导出。
+The events below back the metrics and spans above or are available for direct
+plugin subscription. `run.progress` and `run.execution_phase` are direct-only
+lifecycle signals; the diagnostics-otel plugin does not export them as
+standalone OTLP signals. Event kinds and `run.execution_phase.phase` values are
+additive. TypeScript consumers should keep default branches instead of assuming
+either union is permanently exhaustive.
 
 **模型使用**
 
@@ -318,7 +449,8 @@ Liveness 警告也会发出：
 - `queue.lane.enqueue` / `queue.lane.dequeue`
 - `session.state` / `session.long_running` / `session.stalled` / `session.stuck`
 - `run.attempt` / `run.progress`
-- `diagnostic.heartbeat`（聚合计数器：webhooks/queue/session）
+- `run.execution_phase` (public, session-correlated embedded-runner startup milestones)
+- `diagnostic.heartbeat` (aggregate counters: webhooks/queue/session)
 
 **Harness 生命周期**
 
@@ -363,8 +495,9 @@ Liveness 警告也会发出：
 OPENCLAW_DIAGNOSTICS=telegram.http,telegram.payload openclaw gateway
 ```
 
-标志输出会进入标准日志文件（`logging.file`），并且仍然会被 `logging.redactSensitive` 脱敏。完整指南：
-[诊断标志](/diagnostics/flags)。
+Flag output goes to the standard log file (`logging.file`) and is still
+redacted by the always-on log redaction policy. Full guide:
+[Diagnostics flags](/diagnostics/flags).
 
 ## 禁用
 

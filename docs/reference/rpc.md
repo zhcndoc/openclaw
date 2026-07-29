@@ -10,10 +10,10 @@ OpenClaw 通过 JSON-RPC 集成外部 CLI。目前使用两种模式。
 
 ## 模式 A：HTTP 守护进程（signal-cli）
 
-- `signal-cli` 作为带有 HTTP 上 JSON-RPC 的守护进程运行。
+- `signal-cli` 以守护进程方式运行，通过 HTTP 提供 JSON-RPC。
 - 事件流使用 SSE（`/api/v1/events`）。
-- 健康检查：`/api/v1/check`。
-- 当 `channels.signal.autoStart=true` 时，OpenClaw 负责生命周期管理。
+- 健康检查探针：`/api/v1/check`。
+- 当 `channels.signal.transport.kind="managed-native"`（默认值）时，OpenClaw 负责生命周期管理。
 
 有关设置和端点，请参见 [Signal](/channels/signal)。
 

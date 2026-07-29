@@ -10,17 +10,17 @@ title: "日志"
 
 通过 RPC 轮询 Gateway 文件日志。可在远程模式下使用。
 
-## 选项
+## Options
 
-- `--limit <n>`: 返回的最大日志行数（默认 `200`）
-- `--max-bytes <n>`: 从日志文件中读取的最大字节数（默认 `250000`）
-- `--follow`: 跟随日志流
-- `--interval <ms>`: 跟随时的轮询间隔（默认 `1000`）
-- `--json`: 输出按行分隔的 JSON 事件
-- `--plain`: 不带样式格式化的纯文本输出
-- `--no-color`: 禁用 ANSI 颜色
-- `--local-time`: 以本地时区显示时间戳（默认）
-- `--utc`: 以 UTC 显示时间戳
+- `--limit <n>`: Maximum number of log lines returned (default `200`)
+- `--max-bytes <n>`: Maximum number of bytes to read from the log file (default `250000`)
+- `--follow`: Follow the log stream
+- `--interval <ms>`: Polling interval when following (default `1000`)
+- `--json`: Output line-delimited JSON events
+- `--plain`: Plain text output without styling
+- `--no-color`: Disable ANSI colors
+- `--local-time`: Show timestamps in local time zone (default)
+- `--utc`: Show timestamps in UTC
 
 ## 共享的 Gateway RPC 选项
 
@@ -36,6 +36,8 @@ title: "日志"
 ```bash
 openclaw logs
 openclaw logs --follow
+openclaw --dev logs --follow
+openclaw --profile work logs --follow
 openclaw logs --follow --interval 2000
 openclaw logs --limit 500 --max-bytes 500000
 openclaw logs --json
@@ -45,6 +47,11 @@ openclaw logs --utc
 openclaw logs --follow --local-time
 openclaw logs --url ws://127.0.0.1:18789 --token "$OPENCLAW_GATEWAY_TOKEN"
 ```
+
+所选根配置文件与 Gateway 的滚动文件相匹配：默认
+配置文件使用 `openclaw-YYYY-MM-DD.log`，而命名配置文件使用
+`openclaw-<profile>-YYYY-MM-DD.log`（例如，
+`openclaw-dev-YYYY-MM-DD.log`）。
 
 ## 回退和恢复行为
 

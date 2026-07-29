@@ -8,7 +8,7 @@ read_when:
   - 调整 Skill Workshop 限制或审批策略
 ---
 
-大多数 skills 配置位于 `~/.openclaw/openclaw.json` 中的 `skills` 下。按 agent 的可见性位于 `agents.defaults.skills` 和 `agents.list[].skills` 下。
+大多数 skills 配置位于 `~/.openclaw/openclaw.json` 中的 `skills` 下。按 agent 的可见性位于 `agents.defaults.skills` 和 `agents.entries.*.skills` 中。
 
 ```json5
 {
@@ -18,7 +18,6 @@ read_when:
       extraDirs: ["~/Projects/agent-scripts/skills"],
       allowSymlinkTargets: ["~/Projects/manager/skills"],
       watch: true,
-      watchDebounceMs: 250,
     },
     install: {
       preferBrew: true,
@@ -46,9 +45,9 @@ read_when:
 ```
 
 <Note>
-  对于内置图像生成，请使用 `agents.defaults.imageGenerationModel`
-  加上核心 `image_generate` 工具，而不是 `skills.entries`。Skill
-  条目仅用于自定义或第三方 skill 工作流。
+  对于内置图像生成，请使用 `agents.defaults.mediaModels.image`
+  加上核心的 `image_generate` 工具，而不是 `skills.entries`。Skill
+  entries 仅用于自定义或第三方 skill 工作流。
 </Note>
 
 ## 加载（`skills.load`）
@@ -66,11 +65,7 @@ read_when:
   监视 skill 文件夹，并在 `SKILL.md` 文件变更时刷新 skills 快照。覆盖分组 skill 根目录下的嵌套文件。
 </ParamField>
 
-<ParamField path="skills.load.watchDebounceMs" type="number" default="250">
-  skill 监视器事件的防抖窗口，单位为毫秒。
-</ParamField>
-
-## 安装（`skills.install`）
+## 安装 (`skills.install`)
 
 <ParamField path="skills.install.preferBrew" type="boolean" default="true">
   在 `brew` 可用时优先使用 Homebrew 安装器。
@@ -161,7 +156,7 @@ read_when:
 
 策略会在 stdin 上接收一个 JSON 对象，其中包含 `protocolVersion: 1`、`openclawVersion`、`targetType`、`targetName`、`sourcePath`、`sourcePathKind`、可选的结构化 `source`、结构化 `origin` 和 `request`。它必须在 stdout 上写入一个 JSON 对象：`{ "protocolVersion": 1, "decision": "allow" }` 或 `{ "protocolVersion": 1, "decision": "block", "reason": "..." }`。非零退出、超时、JSON 格式错误、缺失字段或不支持的协议版本都会导致失败并关闭。
 
-OpenClaw 在正常 Gateway 启动期间不会执行安装策略。当启用策略但策略不可用时，安装和更新会失败并关闭。
+OpenClaw 在正常 Gateway 启动期间不会执行安装策略。当启用策略但策略不可用时，安装和更新会失败并关闭。  
 `openclaw doctor` 会执行静态验证；`openclaw doctor --deep` 会针对配置的命令执行一个合成安装探测。
 
 批量更新会按目标分别应用策略：被阻止的技能或插件更新只会使该目标失败，而不会禁用策略，也不会在批处理中跳过后续目标。
@@ -253,7 +248,7 @@ process.stdin.on("end", () => {
   自定义按 skill 配置字段的可选对象。
 </ParamField>
 
-## Agent 允许列表（`agents`）
+## Agent Allowlist（`agents`）
 
 当你希望使用相同的机器/工作区技能根目录，但为每个 agent 提供不同的可见技能集时，请使用 agent 配置。
 
@@ -273,13 +268,11 @@ process.stdin.on("end", () => {
 ```
 
 <ParamField path="agents.defaults.skills" type="string[]">
-  被 agent 继承的共享基线允许列表，当它们省略
-  `agents.list[].skills` 时适用。若完全省略，则默认情况下让技能不受限制。
+  被未指定 `agents.entries.*.skills` 的 agent 继承的共享基线允许列表。完全省略则默认不限制技能。
 </ParamField>
 
-<ParamField path="agents.list[].skills" type="string[]">
-  该 agent 的显式最终技能集合。显式列表会**替换**
-  继承的默认值——它们不会合并。设置为 `[]` 可让该 agent 暴露零技能。
+<ParamField path="agents.entries.*.skills" type="string[]">
+  该 agent 的显式最终技能集。显式列表会**替换**继承的默认值——不会合并。设置为 `[]` 可为该 agent 暴露零个技能。
 </ParamField>
 
 <Warning>

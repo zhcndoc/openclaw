@@ -22,8 +22,9 @@ title: "目录"
 
 ## 备注
 
-- 对于许多频道，结果是由配置支持的（允许列表 / 已配置的组），而不是来自实时提供方目录。
-- 已安装的频道插件可能不支持目录功能。在这种情况下，命令会报告不支持的操作；它不会尝试重新安装或升级插件来添加支持。
+- 对于许多渠道，结果是由配置支持的（允许列表 / 已配置的组），而不是实时的提供方目录。
+- WhatsApp 群组列表是实时的。网关查找会复用其拥有的连接；独立命令仅在没有其他进程拥有该账户时打开关联会话，否则会报告实时群组不可用。
+- 已安装的渠道插件可能不支持目录。在这种情况下，命令会报告该操作不受支持；它不会尝试重新安装或升级插件来添加支持。
 
 ## 与 `message send` 结合使用结果
 
@@ -36,15 +37,15 @@ openclaw message send --channel slack --target user:U012ABCDEF --message "hello"
 
 | 渠道                                | 目标 id 格式                                                                                                               |
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| WhatsApp                            | `+15551234567`（DM），`1234567890-1234567890@g.us`（群组），`120363123456789@newsletter`（频道/通讯，仅出站） |
-| Signal                              | 已配置的别名会解析为 E.164/UUID 的 DM 目标或 `group:<id>` 群组目标                                                         |
+| WhatsApp                            | `+15551234567`（私信），`1234567890-1234567890@g.us`（群组），`120363123456789@newsletter`（频道/通讯，仅出站） |
+| Signal                              | 已配置的别名会解析为 E.164/UUID 的私信目标或 `group:<id>` 群组目标                                                         |
 | Telegram                            | `@username` 或数字聊天 id；群组使用数字 id                                                                                 |
 | Slack                               | `user:U…` 和 `channel:C…`                                                                                                  |
 | Discord                             | `user:<id>` 和 `channel:<id>`                                                                                              |
 | Matrix (plugin)                     | `user:@user:server`、`room:!roomId:server` 或 `#alias:server`                                                              |
 | Microsoft Teams (plugin)            | `user:<id>` 和 `conversation:<id>`                                                                                         |
 | Zalo (plugin)                       | 用户 id（Bot API）                                                                                                         |
-| Zalo Personal / `zalouser` (plugin) | 线程 id（DM/群组），来自 `zca`（`me`、`friend list`、`group list`）                                                        |
+| Zalo Personal / `zalouser` (plugin) | 线程 id（私信/群组），来自 `zca`（`me`、`friend list`、`group list`）                                                        |
 
 ## 自己（“我”）
 

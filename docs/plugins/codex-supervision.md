@@ -8,7 +8,10 @@ read_when:
   - 你正在从已配对节点公开 Codex 会话和转录历史
 ---
 
-Codex 监督是官方 `codex` 插件的一项可选功能。它会在正常的会话侧边栏和 Chat 面板中，显示来自 Gateway 计算机以及已选择加入的已配对计算机的未归档 Codex Desktop 和 CLI 源会话。
+Codex supervision is an opt-in capability of the official `codex` plugin. It
+shows non-archived Codex CLI, VS Code, Atlas, and ChatGPT source sessions from
+the Gateway computer and opted-in paired computers in the normal sessions
+sidebar and Chat pane.
 
 初始版本刻意将所有权范围保持得很窄：
 
@@ -71,7 +74,18 @@ openclaw nodes approve <requestId>
 
 未归档的 Codex 会话也会出现在主 Control UI 侧边栏中，并按主机分组。选择其中一个即可读取其持久化转录。查看器使用最新的 Codex `thread/turns/list` API，带有 `itemsView: "full"`，并且每次请求最多加载 20 个回合；**加载更早的转录项** 会跟随来自最新页面的透明 App Server 游标。已加载页面按时间顺序渲染。查看器从不加载无限的 `thread/read` 历史。超过 20 MiB 传输安全上限的页面会失败关闭，而不是冒着节点或 Gateway 连接风险。
 
-在正常会话侧边栏中打开 **Codex** 组。它按主机列出相同的会话。**加载更多会话** 会为每个仍有更旧行的主机追加下一页，而这些追加的行会在侧边栏的周期性刷新中保留。每个返回的搜索页都会为每个主机扫描有限数量的本地页面，而不是将查询发送到 App Server，因为本地搜索也可能匹配转录预览。
+Open the **Codex** group in the normal sessions sidebar. It lists the same sessions
+grouped by host. **Load more sessions** appends the next page from each host that
+has older rows, and those appended rows survive the sidebar's periodic refresh.
+Each host appears as soon as its own native listing settles. The visible page
+reconciles after node-connectivity changes, when it regains focus, and at most
+every 30 seconds; a changed result gets a faster follow-up pass. Sessions created
+in Codex Desktop, the CLI, or another native client therefore appear without a
+full page reload. The first page follows Codex's own most-recently-updated order,
+so a newly created native session is eligible immediately.
+Each returned search page scans a bounded number of native pages per host rather
+than sending the query to App Server, because native search can also match
+transcript previews.
 
 主机可用性与线程状态是分开的。**Offline** 或 **Unavailable** 描述的是主机刷新；不可用主机不会返回新的会话行，也不会把线程的本地状态更改为 `offline`。会话行使用 Codex 状态，例如 `idle`、`active`、`notLoaded` 或 error。失败的主机不会隐藏健康主机的结果。
 
@@ -177,9 +191,11 @@ bind`、`/codex resume`（包括带有 `--bind here` 的节点会话），以及
 对无关且不受拥有的线程进行归档都需要  
 `allowWriteControls`。这两个选项都不能绕过锁定的绑定。
 
-OpenClaw 在仅列出源线程或显示待处理的 Chat 时，不会订阅  
-或响应审批请求。在第一轮开始一个独立的规范 harness 线程，  
-让另一个 Codex 进程继续拥有源，而不会创建竞争性的 rollout 写入者。
+The original CLI, VS Code, Atlas, or ChatGPT source remains visible to native
+clients and the OpenClaw catalog. The canonical branch is stored as a native
+Codex thread, but its source kind is `appServer`; Codex Desktop or another
+native client may filter that source kind, so the branch itself is not guaranteed
+to appear in every native history view.
 
 原始 CLI 或 VS Code 源对原生客户端和 OpenClaw 目录仍然可见。  
 规范分支以原生 Codex 线程的形式存储，但其源类型为 `appServer`；Codex Desktop  

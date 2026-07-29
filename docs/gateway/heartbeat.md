@@ -15,7 +15,11 @@ Heartbeat 会在主会话中运行**定期的 agent 回合**，这样模型就�
 
 Heartbeat 是一个安排好的主会话回合——它**不会**创建 [background task](/automation/tasks) 记录。任务记录用于分离的工作（ACP runs、subagents、隔离的 cron jobs）。
 
-故障排查：[计划任务](/automation/cron-jobs#troubleshooting)
+Under the hood, heartbeat cadence is owned by the cron scheduler: the gateway maintains one system-owned cron job per heartbeat-enabled agent (visible in `openclaw cron list --all` as `Heartbeat (agent-id)`). Heartbeat config remains the desired-state input, while the persisted monitor schedule owns the actual tick and the runner's later cooldown. The gateway writes config changes through at startup and on config reload; `openclaw doctor --fix` can materialize missing or stale monitor rows before the next gateway start. Edit `agents.*.heartbeat`, not the cron job.
+
+Scheduled heartbeats require cron. When `cron.enabled` is `false` or `OPENCLAW_SKIP_CRON=1`, the gateway logs a startup warning and does not run scheduled heartbeats; manual and event-driven heartbeat wakes remain available. There is no separate heartbeat fallback timer.
+
+Troubleshooting: [Scheduled Tasks](/automation/cron-jobs#troubleshooting)
 
 ## 快速开始（新手）
 
@@ -23,17 +27,16 @@ Heartbeat 是一个安排好的主会话回合——它**不会**创建 [backgro
   <Step title="选择一个频率">
     保持启用 heartbeats（默认是 `30m`，如果配置了 Anthropic OAuth/token auth，则为 `1h`，包括 Claude CLI 复用），或者设置你自己的频率。
   </Step>
-  <Step title="添加 HEARTBEAT.md（可选）">
-    在 agent 工作区中创建一个很小的 `HEARTBEAT.md` 检查清单或 `tasks:` 区块。
+  <Step title="Add monitor scratch (optional)">
+    Store a tiny checklist in the heartbeat monitor's scratch with `openclaw cron scratch <jobId> --set "..."`.
   </Step>
   <Step title="决定 heartbeat 消息发送到哪里">
     `target: "none"` 是默认值；设置 `target: "last"` 可路由到最后一个联系人。
   </Step>
-  <Step title="可选调优">
-    - 启用 heartbeat reasoning 传递以提高透明度。
-    - 如果 heartbeat 运行只需要 `HEARTBEAT.md`，则使用轻量级 bootstrap 上下文。
-    - 启用隔离会话，避免每次 heartbeat 都发送完整对话历史。
-    - 将 heartbeats 限制在活跃时段内（本地时间）。
+  <Step title="Optional tuning">
+    - Use lightweight bootstrap context if heartbeat runs only need the monitor scratch.
+    - Enable isolated sessions to avoid sending full conversation history each heartbeat.
+    - Restrict heartbeats to active hours (local time).
 
   </Step>
 </Steps>
@@ -46,13 +49,11 @@ Heartbeat 是一个安排好的主会话回合——它**不会**创建 [backgro
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 明确发送给最后一个联系人（默认是 "none"）
-        directPolicy: "allow", // 默认：允许直接/DM 目标；设置为 "block" 可抑制
-        lightContext: true, // 可选：仅从 bootstrap 文件中注入 HEARTBEAT.md
-        isolatedSession: true, // 可选：每次运行使用新会话（无对话历史）
-        skipWhenBusy: true, // 可选：当该 agent 的子 agent 或嵌套通道繁忙时也延后
+        target: "last", // explicit delivery to last contact (default is "none")
+        directPolicy: "allow", // default: allow direct/DM targets; set "block" to suppress
+        lightContext: true, // optional: skip workspace bootstrap files for heartbeat runs
+        isolatedSession: true, // optional: fresh session each run (no conversation history)
         // activeHours: { start: "08:00", end: "24:00" },
-        // includeReasoning: true, // 可选：同时发送单独的 `Thinking` 消息
       },
     },
   },
@@ -61,32 +62,48 @@ Heartbeat 是一个安排好的主会话回合——它**不会**创建 [backgro
 
 ## 默认值
 
-- 间隔：`30m`。应用 Anthropic 提供商默认值后，在解析到的认证模式为 OAuth/token（包括 Claude CLI 复用）时会将其提升为 `1h`，但仅在 `heartbeat.every` 未设置时生效。请设置 `agents.defaults.heartbeat.every` 或按 agent 设置 `agents.list[].heartbeat.every`；使用 `0m` 可禁用。
-- 提示正文（可通过 `agents.defaults.heartbeat.prompt` 配置）：`Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
-- 超时：未设置 heartbeat 时会使用 `agents.defaults.timeoutSeconds`（如果已设置）。否则，将使用 heartbeat 频率并上限为 600 秒。请设置 `agents.defaults.heartbeat.timeoutSeconds` 或按 agent 设置 `agents.list[].heartbeat.timeoutSeconds` 以执行更长的 heartbeat 工作。
-- heartbeat 提示会**原样**作为用户消息发送。仅当默认 agent 启用了 heartbeats（且 `includeSystemPromptSection` 不为 `false`）时，系统提示中才会包含 “Heartbeats” 部分，并且该运行会在内部被标记。
-- 当 heartbeat 通过 `0m` 禁用时，正常运行也会在启动上下文中省略 `HEARTBEAT.md`，以便模型看不到仅用于 heartbeat 的说明。
-- 活跃时段（`heartbeat.activeHours`）会在所配置的时区中检查。超出时间窗口时，heartbeats 会被跳过，直到下一次落在窗口内的 tick。
-- 当 cron 工作处于活跃或排队状态时，heartbeats 会自动延后。设置 `heartbeat.skipWhenBusy: true` 还会让 agent 在其自身基于 session-key 的子 agent 或嵌套命令通道上延后；兄弟 agents 不再因为另一个 agent 正在执行子 agent 工作而暂停。
+- Interval: `30m`. Applying Anthropic provider defaults bumps this to `1h` when the resolved auth mode is OAuth/token (including Claude CLI reuse), but only while `heartbeat.every` is unset. Set `agents.defaults.heartbeat.every` or per-agent `agents.entries.*.heartbeat.every`; use `0m` to disable.
+- Prompt body (configurable via `agents.defaults.heartbeat.prompt`): `Follow the heartbeat monitor scratch context when provided. Recurring tasks are cron jobs; create or change their schedules with cron tools or the openclaw cron CLI, not heartbeat scratch. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
+- Timeout: unset heartbeat turns use `agents.defaults.timeoutSeconds` when set. Otherwise, they use the heartbeat cadence capped at 600 seconds. Set `agents.defaults.heartbeat.timeoutSeconds` or per-agent `agents.entries.*.heartbeat.timeoutSeconds` for longer heartbeat work.
+- The heartbeat prompt is sent **verbatim** as the user message. The system prompt automatically includes a "Heartbeats" section when cadence is enabled for the default agent; that guidance has no separate heartbeat toggle.
+- When heartbeats are disabled with `0m`, the monitor cron job stays but is disabled, and its scratch is retained for when you re-enable the cadence.
+- When cron itself is disabled, scheduled heartbeats do not run even if heartbeat cadence remains enabled.
+- Active hours (`heartbeat.activeHours`) are checked in the configured timezone. Outside the window, heartbeats are skipped until the next tick inside the window.
+- Scheduled heartbeats defer while the main queue or cron work is active or queued, while any reply or embedded run for the same agent is active, and while the resolved target session has active or queued work. Immediate and manual wakes bypass the broad same-agent active-run check, but still honor the main, cron, and target-session busy guards. Sibling agents do not pause each other.
 
 ## heartbeat 提示的用途
 
-默认提示有意设计得较为宽泛：
+The default prompt is intentionally narrow: follow the heartbeat monitor scratch
+context when provided, keep recurring work in cron jobs, and reply
+`HEARTBEAT_OK` when nothing needs attention. It explicitly tells the agent
+**not** to infer or repeat old tasks from prior chats, so a default install stays
+quiet instead of rehashing stale conversation context.
 
-- **后台任务**："考虑未完成的任务" 会提示 agent 复查后续事项（收件箱、日历、提醒、排队中的工作），并提出任何紧急内容。
-- **人工签到**："白天时偶尔检查一下你的 human" 会提示偶尔发送轻量级的“你需要什么吗？”消息，但会使用你配置的本地时区来避免夜间刷屏（参见 [Timezone](/concepts/timezone)）。
+Proactive heartbeat behavior is opt-in:
+
+- **Recurring checks**: create [scheduled jobs](/automation/cron-jobs) for inbox
+  review, calendar sweeps, or queued follow-ups. Each job executes its configured
+  payload on its own schedule; the default heartbeat does not infer recurring
+  work from prior chats.
+- **Human check-in**: create a scheduled job if you want an occasional
+  lightweight "anything you need?" message, and constrain its schedule to avoid
+  night-time pings in your configured local timezone (see
+  [Timezone](/concepts/timezone)).
 
 Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heartbeat 运行本身不会创建任务记录。
 
-如果你希望 heartbeat 执行非常具体的操作（例如“检查 Gmail PubSub 状态”或“验证网关健康状况”），请将 `agents.defaults.heartbeat.prompt`（或 `agents.list[].heartbeat.prompt`）设置为自定义正文（逐字发送）。
+If you want a heartbeat to do something very specific (e.g. "check Gmail PubSub stats" or "verify gateway health"), set `agents.defaults.heartbeat.prompt` (or `agents.entries.*.heartbeat.prompt`) to a custom body (sent verbatim).
 
 ## 响应约定
 
-- 如果没有需要关注的内容，请回复 **`HEARTBEAT_OK`**。
-- 心跳运行也可以改为调用 `heartbeat_respond`，并将 `notify: false` 用于无可见更新，或将 `notify: true` 加上 `notificationText` 用于告警。当两者同时存在时，结构化工具响应优先于文本兜底。
-- 在心跳运行期间，OpenClaw 会在 `HEARTBEAT_OK` 出现在回复的**开头或结尾**时将其视为确认。该标记会被剥离，如果剩余内容**≤ `ackMaxChars`**（默认：300），则回复会被丢弃。
-- 如果 `HEARTBEAT_OK` 出现在回复的**中间**，则不会被特殊处理。
-- 对于告警，**不要**包含 `HEARTBEAT_OK`；只返回告警文本。
+- If nothing needs attention, reply with **`HEARTBEAT_OK`**.
+- Heartbeat runs may instead call `heartbeat_respond` with `notify: false` for no visible update, or `notify: true` plus `notificationText` for an alert. When present, the structured tool response takes precedence over the text fallback.
+- A meaningful `heartbeat_respond` result with `notify: false` remains silent but is remembered as bounded internal context for the next user turn in that session. `no_change` acknowledgments and visible notifications are not stored this way.
+- During heartbeat runs, OpenClaw treats `HEARTBEAT_OK` as an ack when it appears at the **start or end** of the reply. The token is stripped and the reply is dropped if the remaining content is at most 300 characters. This suppression budget is fixed, not configurable per heartbeat.
+- If `HEARTBEAT_OK` appears in the **middle** of a reply, it is not treated specially.
+- For alerts, **do not** include `HEARTBEAT_OK`; return only the alert text.
+- Delivery selects the last outbound-capable non-reasoning payload. Separate reasoning or thinking payloads remain internal; a reasoning-only result produces no alert.
+- Tool error warnings remain enabled during heartbeat turns.
 
 在 heartbeats 之外，消息开头/结尾多余的 `HEARTBEAT_OK` 会被去除并记录；只有 `HEARTBEAT_OK` 的消息会被丢弃。
 
@@ -99,16 +116,12 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
       heartbeat: {
         every: "30m", // 默认：30m（0m 会禁用）
         model: "anthropic/claude-opus-4-6",
-        includeReasoning: false, // 默认：false（在可用时单独发送 Thinking 消息）
-        lightContext: false, // 默认：false；为 true 时，仅保留工作区 bootstrap 文件中的 HEARTBEAT.md
-        isolatedSession: false, // 默认：false；为 true 时，每次 heartbeat 都在全新的会话中运行（没有对话历史）
-        skipWhenBusy: false, // 默认：false；为 true 时，也会等待该 agent 的子 agent/嵌套 lanes
-        target: "last", // 默认：none | 可选：last | none | <channel id>（核心或插件，例如 "imessage"）
-        to: "+15551234567", // 可选的按 channel 特定覆盖
-        accountId: "ops-bot", // 可选的多账户 channel id
-        prompt: "如果存在 HEARTBEAT.md（工作区上下文），请阅读它。严格遵循其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，回复 HEARTBEAT_OK。",
-        includeSystemPromptSection: true, // 默认：true；为 false 时会省略默认 agent 的 ## Heartbeats system prompt section
-        ackMaxChars: 300, // HEARTBEAT_OK 之后允许的最大字符数
+        lightContext: false, // default: false; true skips workspace bootstrap files for heartbeat runs
+        isolatedSession: false, // default: false; true runs each heartbeat in a fresh session (no conversation history)
+        target: "last", // default: none | options: last | none | <channel id> (core or plugin, e.g. "imessage")
+        to: "+15551234567", // optional channel-specific override
+        accountId: "ops-bot", // optional multi-account channel id
+        prompt: "Follow the heartbeat monitor scratch context when provided. Recurring tasks are cron jobs; create or change their schedules with cron tools or the openclaw cron CLI, not heartbeat scratch. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
       },
     },
   },
@@ -117,15 +130,15 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 
 ### 作用域和优先级
 
-- `agents.defaults.heartbeat` 设置全局 heartbeat 行为。
-- `agents.list[].heartbeat` 在其上进行合并；如果任何 agent 有 `heartbeat` 区块，**只有这些 agent** 会运行 heartbeats。
-- `channels.defaults.heartbeat` 设置所有 channels 的可见性默认值。
-- `channels.<channel>.heartbeat` 覆盖 channel 默认值。
-- `channels.<channel>.accounts.<id>.heartbeat`（多账户 channels）覆盖按 channel 的设置。
+- `agents.defaults.heartbeat` sets global heartbeat behavior.
+- `agents.entries.*.heartbeat` merges on top; if any agent has a `heartbeat` block, **only those agents** run heartbeats.
+- `channels.defaults.heartbeatVisibility` sets visibility defaults for all channels.
+- `channels.<channel>.heartbeatVisibility` overrides channel defaults.
+- `channels.<channel>.accounts.<id>.heartbeatVisibility` (multi-account channels) overrides per-channel settings.
 
 ### 按 agent 的 heartbeats
 
-如果任何 `agents.list[]` 条目包含 `heartbeat` 区块，**只有这些 agent** 会运行 heartbeats。按 agent 的区块会与 `agents.defaults.heartbeat` 进行合并（因此你可以只设置一次共享默认值，并按 agent 覆盖）。
+If any `agents.entries.*` entry includes a `heartbeat` block, **only those agents** run heartbeats. The per-agent block merges on top of `agents.defaults.heartbeat` (so you can set shared defaults once and override per agent).
 
 示例：两个 agent，只有第二个 agent 运行 heartbeats。
 
@@ -147,7 +160,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
           target: "whatsapp",
           to: "+15551234567",
           timeoutSeconds: 45,
-          prompt: "如果存在 HEARTBEAT.md（工作区上下文），请阅读它。严格遵循其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，回复 HEARTBEAT_OK。",
+          prompt: "Follow the heartbeat monitor scratch context when provided. Recurring tasks are cron jobs; create or change their schedules with cron tools or the openclaw cron CLI, not heartbeat scratch. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
         },
       },
     ],
@@ -227,17 +240,11 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 <ParamField path="model" type="string">
   heartbeat 运行的可选模型覆盖（`provider/model`）。
 </ParamField>
-<ParamField path="includeReasoning" type="boolean" default="false">
-  启用时，还会在可用时发送单独的 `Thinking` 消息（与 `/reasoning on` 的形状相同）。
-</ParamField>
 <ParamField path="lightContext" type="boolean" default="false">
-  为 true 时，heartbeat 运行使用轻量级 bootstrap 上下文，并且只保留工作区 bootstrap 文件中的 `HEARTBEAT.md`。
+  When true, heartbeat runs use lightweight bootstrap context and skip workspace bootstrap files. Monitor scratch is injected by the heartbeat runner either way.
 </ParamField>
 <ParamField path="isolatedSession" type="boolean" default="false">
   为 true 时，每次 heartbeat 都会在没有之前对话历史的新会话中运行。使用与 cron `sessionTarget: "isolated"` 相同的隔离模式。可大幅降低每次 heartbeat 的 token 成本。与 `lightContext: true` 结合可获得最大节省。传递路由仍然使用主会话上下文。
-</ParamField>
-<ParamField path="skipWhenBusy" type="boolean" default="false">
-  当为 true 时，heartbeat 会在该 agent 额外繁忙的通道上延后：它自己的 session 绑定子 agent 或嵌套命令工作。cron 通道总会延后 heartbeats，即使没有这个标志，因此本地模型主机不会同时运行 cron 和 heartbeat 提示。
 </ParamField>
 <ParamField path="session" type="string">
   heartbeat 运行的可选会话键。
@@ -269,18 +276,6 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
   覆盖默认提示正文（不进行合并）。
 
 </ParamField>
-<ParamField path="includeSystemPromptSection" type="boolean" default="true">
-  是否注入默认 agent 的 `## Heartbeats` system prompt section。设为 `false` 可保留 heartbeat 运行时行为（节奏、传递、HEARTBEAT.md），同时从 agent system prompt 中省略 heartbeat 指令。
-
-</ParamField>
-<ParamField path="ackMaxChars" type="number" default="300">
-  传递前 `HEARTBEAT_OK` 之后允许的最大字符数。
-
-</ParamField>
-<ParamField path="suppressToolErrorWarnings" type="boolean">
-  为 true 时，在 heartbeat 运行期间抑制工具错误警告负载。
-
-</ParamField>
 <ParamField path="timeoutSeconds" type="number" default="global timeout or min(every, 600)">
   在 heartbeat agent 回合被中止之前允许的最长秒数。若未设置，则使用 `agents.defaults.timeoutSeconds`（若已设置），否则使用 heartbeat 节奏上限 600 秒。
 
@@ -296,17 +291,20 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 
 </ParamField>
 
-## 投递行为
+<Note>
+Heartbeat configuration is strict: only the fields listed above are accepted. Acknowledgment suppression, reasoning visibility, system-prompt guidance, busy deferral, and tool-error warning behavior are fixed runtime policies rather than heartbeat configuration fields.
+</Note>
+
+## Delivery behavior
 
 <AccordionGroup>
-  <Accordion title="会话和目标路由">
-    - 心跳默认在代理的主会话中运行（`agent:<id>:<mainKey>`），或者在 `session.scope = "global"` 时使用 `global`。设置 `session` 可覆盖为特定的频道会话（Discord/WhatsApp 等）。
-    - `session` 只影响运行上下文；投递由 `target` 和 `to` 控制。
-    - 要投递到特定频道/收件人，请设置 `target` + `to`。使用 `target: "last"` 时，投递将使用该会话的最后一个外部频道。
-    - 心跳投递默认允许直接/DM 目标。设置 `directPolicy: "block"` 可在仍运行心跳轮次的同时禁止向直接目标发送。
-    - 如果主队列、目标会话通道、cron 通道或活跃的 cron 作业正忙，则会跳过心跳并稍后重试。
-    - 如果 `skipWhenBusy: true`，此代理按会话键划分的子代理和嵌套通道也会推迟心跳运行。其他代理繁忙的通道不会推迟此代理。
-    - 如果 `target` 解析后没有外部目的地，运行仍会发生，但不会发送任何出站消息。
+  <Accordion title="Session and target routing">
+    - Heartbeats run in the agent's main session by default (`agent:<id>:<mainKey>`), or `global` when `session.scope = "global"`. Set `session` to override to a specific channel session (Discord/WhatsApp/etc.).
+    - `session` only affects the run context; delivery is controlled by `target` and `to`.
+    - To deliver to a specific channel/recipient, set `target` + `to`. With `target: "last"`, delivery uses the last external channel for that session.
+    - Heartbeat deliveries allow direct/DM targets by default. Set `directPolicy: "block"` to suppress direct-target sends while still running the heartbeat turn.
+    - Scheduled heartbeats are skipped and retried later when the main queue or cron work is busy, any reply or embedded run for the same agent is active, or the resolved target session has active or queued work. Immediate and manual wakes bypass only the broad same-agent active-run precheck.
+    - If `target` resolves to no external destination, the run still happens but no outbound message is sent.
 
   </Accordion>
   <Accordion title="可见性和跳过行为">
@@ -384,19 +382,32 @@ channels:
 | 仅指示器（无消息） | `channels.defaults.heartbeat: { showOk: false, showAlerts: false, useIndicator: true }` |
 | 仅在一个频道中显示 OK | `channels.telegram.heartbeat: { showOk: true }` |
 
-## HEARTBEAT.md（可选）
+## Monitor scratch (optional)
 
-如果工作区中存在 `HEARTBEAT.md` 文件，默认提示会告诉代理读取它。可以把它看作你的“心跳检查清单”：简短、稳定，并且每 30 分钟都可以安全地查看一次。
+Each heartbeat monitor cron job owns a private scratch document stored in the shared state database. Think of it as your "heartbeat checklist": small, stable, and safe to consider every 30 minutes. When scratch exists, its content is appended to the heartbeat prompt.
 
-在正常运行时，只有当默认代理启用了心跳指引时，才会注入 `HEARTBEAT.md`。通过 `0m` 禁用心跳节奏，或设置 `includeSystemPromptSection: false`，会使其不进入正常的启动上下文。
+Manage it with the cron CLI (the job id comes from `openclaw cron list --all`):
 
-在原生 Codex harness 中，`HEARTBEAT.md` 的内容不会像其他启动文件那样注入到当前轮次中。如果文件存在且包含非空白内容，心跳协作模式注释会将 Codex 指向该文件，并要求它在继续之前先读取该文件。
+```bash
+openclaw cron scratch <jobId>                 # print the current scratch
+openclaw cron scratch <jobId> --set "..."     # replace it with exact text
+openclaw cron scratch <jobId> --file notes.md # replace it from a file (- for stdin)
+openclaw cron scratch <jobId> --unset         # remove it
+```
 
-如果 `HEARTBEAT.md` 存在但实际上是空的（只有空白行、Markdown/HTML 注释、Markdown 标题如 `# Heading`、代码围栏标记，或空的检查项占位），OpenClaw 会跳过心跳运行以节省 API 调用。该跳过会报告为 `reason=empty-heartbeat-file`。如果文件缺失，心跳仍会运行，由模型决定如何处理。
+Writes are compare-and-swap guarded: pass `--expected-revision <n>` to fail instead of overwriting a concurrent edit. Scratch is capped at 256 KiB and never appears in `cron list`/`cron runs` output.
+
+The agent can also update its own scratch: during a heartbeat turn, `heartbeat_respond` accepts an optional `scratch` string that fully replaces the monitor's scratch for future heartbeats.
+
+<Note>
+**Migrating from HEARTBEAT.md or config-only cadence?** Run `openclaw doctor --fix`. Doctor first creates or updates the system-owned monitor rows from `agents.*.heartbeat`, then imports each agent's workspace `HEARTBEAT.md` into the monitor's scratch, converts any valid legacy `tasks:` entries into cron jobs, archives the original under the state directory (`backups/heartbeat-migration/`), and removes the file. Runtime heartbeat instructions come from database scratch only; the runtime never reads `HEARTBEAT.md`.
+</Note>
+
+If scratch exists but is effectively empty (only blank lines, Markdown/HTML comments, Markdown headings like `# Heading`, fence markers, or empty checklist stubs), OpenClaw skips the heartbeat run to save API calls. That skip is reported as `reason=empty-heartbeat-file`. If no scratch exists, the heartbeat still runs and the model decides what to do.
 
 保持它足够小（简短清单或提醒），以避免提示词膨胀。
 
-`HEARTBEAT.md` 示例：
+Example scratch:
 
 ```md
 # 心跳检查清单
@@ -406,55 +417,20 @@ channels:
 - 如果某个任务被阻塞，记下_缺少什么_，下次问 Peter。
 ```
 
-### `tasks:` 块
+### Schedule recurring checks with cron
 
-`HEARTBEAT.md` 还支持一个小型结构化 `tasks:` 块，用于在心跳内部进行基于间隔的检查。
+Heartbeat scratch is prompt context, not a scheduler. Create each recurring check as a [cron job](/automation/cron-jobs) so it has its own cadence, enable/disable state, and run history. Cron jobs can still target the main session when the check should use the normal conversation context.
 
-示例：
+Older scratch may contain a structured `tasks:` block. Run `openclaw doctor --fix` once after upgrading: Doctor converts every valid entry into an independently scheduled cron job, preserves its interval and previous last-run timing, and removes the retired block while keeping surrounding scratch prose. Runtime heartbeat turns do not parse `tasks:` text as schedules.
 
-```md
-tasks:
+Doctor-created heartbeat task jobs keep heartbeat active-hours, cooldown, flood, and busy guards. Jobs due together can coalesce into one heartbeat turn. An occurrence outside active hours is skipped and tried again at its next cron occurrence.
 
-- name: inbox-triage
-  interval: 30m
-  prompt: "检查是否有紧急未读邮件，并标记任何时间敏感的内容。"
-- name: calendar-scan
-  interval: 2h
-  prompt: "检查即将到来的会议，看看是否需要准备或跟进。"
+### Can the agent update its scratch?
 
-# 其他说明
-
-- 保持告警简短。
-- 如果所有到期任务检查完后仍无需处理，回复 HEARTBEAT_OK。
-```
-
-<AccordionGroup>
-  <Accordion title="行为">
-    - OpenClaw 会解析 `tasks:` 块，并根据各自的 `interval` 检查每个任务。
-    - 只有**到期**的任务会包含在该次心跳提示中。
-    - 如果没有任务到期，心跳会被完全跳过（`reason=no-tasks-due`），以避免无谓的模型调用。
-    - `HEARTBEAT.md` 中非任务内容会被保留，并在到期任务列表之后作为额外上下文追加。
-    - 任务上次运行时间戳会存储在会话状态（`heartbeatTaskState`）中，因此间隔会在正常重启后继续生效。
-    - 任务时间戳只有在心跳运行完成其正常回复路径后才会前进。被跳过的 `empty-heartbeat-file` / `no-tasks-due` 运行不会将任务标记为已完成。
-
-  </Accordion>
-</AccordionGroup>
-
-当你希望一个心跳文件承载多个周期性检查，而不必在每个周期都为它们全部付费时，任务模式会很有用。
-
-### 代理可以更新 HEARTBEAT.md 吗？
-
-可以——如果你要求它这样做。
-
-`HEARTBEAT.md` 只是代理工作区中的普通文件，因此你可以在正常聊天中告诉代理，例如：
-
-- "更新 `HEARTBEAT.md`，添加每日日历检查。"
-- "重写 `HEARTBEAT.md`，让它更短一些，并聚焦于收件箱跟进。"
-
-如果你希望它主动执行，也可以在心跳提示中加入一行明确说明，例如：“如果清单已经过时，请用更好的内容更新 HEARTBEAT.md。”
+Yes. During a heartbeat turn, the agent can pass a `scratch` value to `heartbeat_respond` to fully replace the monitor prose for future heartbeats. You can also ask it in a normal chat to run `openclaw cron scratch <jobId> --set ...`, or edit the scratch yourself with the same command. Manage recurring schedules with cron instead of writing scheduler syntax into scratch.
 
 <Warning>
-不要把机密信息（API 密钥、电话号码、私有令牌）放进 `HEARTBEAT.md` 里——它会成为提示上下文的一部分。
+Don't put secrets (API keys, phone numbers, private tokens) into monitor scratch - it becomes part of the prompt context.
 </Warning>
 
 ## 手动唤醒（按需）
@@ -482,25 +458,15 @@ openclaw system heartbeat enable   # 启用心跳
 openclaw system heartbeat disable  # 禁用心跳
 ```
 
-## 推理投递（可选）
-
-默认情况下，心跳只投递最终的“答案”载荷。
-
-如果你希望透明一些，可以启用：
-
-- `agents.defaults.heartbeat.includeReasoning: true`
-
-启用后，心跳还会额外发送一条以 `Thinking` 为前缀的独立消息（与 `/reasoning on` 的格式相同）。当代理正在管理多个会话/codex，并且你想知道它为什么决定向你发送 ping 时，这会很有用——但它也可能泄露比你期望更多的内部细节。在群聊中，最好保持关闭。
-
-## 成本意识
+## Cost awareness
 
 心跳会运行完整的代理轮次。间隔越短，消耗的 token 越多。为了降低成本：
 
-- 使用 `isolatedSession: true`，避免发送完整对话历史（每次运行约从 100K token 降到 2-5K）。
-- 使用 `lightContext: true`，将启动文件限制为仅 `HEARTBEAT.md`。
-- 设置更便宜的 `model`（例如 `ollama/llama3.2:1b`）。
-- 保持 `HEARTBEAT.md` 简短。
-- 如果你只想要内部状态更新，请使用 `target: "none"`。
+- Use `isolatedSession: true` to avoid sending full conversation history (~100K tokens down to ~2-5K per run).
+- Use `lightContext: true` to skip workspace bootstrap files for heartbeat runs.
+- Set a cheaper `model` (e.g. `ollama/llama3.2:1b`).
+- Keep the monitor scratch small.
+- Use `target: "none"` if you only want internal state updates.
 
 ## 心跳后的上下文溢出
 

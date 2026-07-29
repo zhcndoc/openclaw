@@ -16,4 +16,4 @@ title: "文件传输插件"
 
 ## 接口
 
-contracts: tools
+contracts: `tools`

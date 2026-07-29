@@ -16,7 +16,7 @@ title: "LM Studio 插件"
 
 ## 暴露接口
 
-providers: lmstudio; contracts: memoryEmbeddingProviders
+providers: `lmstudio`; contracts: `memoryEmbeddingProviders`
 
 ## 相关文档
 

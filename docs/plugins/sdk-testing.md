@@ -34,7 +34,10 @@ import { describePluginRegistrationContract } from "openclaw/plugin-sdk/plugin-t
 import { registerSingleProviderPlugin } from "openclaw/plugin-sdk/plugin-test-runtime";
 import { describeOpenAIProviderRuntimeContract } from "openclaw/plugin-sdk/provider-test-contracts";
 import { getProviderHttpMocks } from "openclaw/plugin-sdk/provider-http-test-mocks";
+import { createOpenClawTestState } from "openclaw/plugin-sdk/test-state";
 import { withEnv, withFetchPreconnect, withServer } from "openclaw/plugin-sdk/test-env";
+import { isLiveTestEnabled } from "openclaw/plugin-sdk/test-live";
+import { createRequestCaptureJsonFetch } from "openclaw/plugin-sdk/test-media-understanding";
 import {
   bundledPluginRoot,
   createCliRuntimeCapture,
@@ -43,81 +46,86 @@ import {
 import { mockNodeBuiltinModule } from "openclaw/plugin-sdk/test-node-mocks";
 ```
 
-新的自带插件测试请优先使用这些聚焦的子路径。较宽泛的
-`openclaw/plugin-sdk/testing` 入口和 `openclaw/plugin-sdk/test-utils` 别名
-仅用于旧版兼容：`pnpm run lint:plugins:no-extension-test-core-imports`
-（`scripts/check-no-extension-test-core-imports.ts`）会拒绝扩展测试文件中新引入这两者中的任意一个，而且二者目前仅为了
-兼容性记录测试而保留。
+Use these focused subpaths for bundled plugin tests. The former
+`openclaw/plugin-sdk/testing` barrel was repo-local, excluded from shipped
+packages, and has been removed. The former `openclaw/plugin-sdk/test-utils`
+alias was removed with it. `pnpm run lint:plugins:no-extension-test-core-imports`
+(`scripts/check-no-extension-test-core-imports.ts`) keeps extension tests on
+the focused test subpaths above.
 
 ### 可用导出项
 
-| 导出项                                               | 用途                                                                                                                                  |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `createTestPluginApi`                                | 为直接注册的单元测试构建一个最小插件 API Mock。请从 `plugin-sdk/plugin-test-api` 导入                             |
-| `AUTH_PROFILE_RUNTIME_CONTRACT`                      | 原生代理运行时适配器共享的 auth-profile 合同夹具。请从 `plugin-sdk/agent-runtime-test-contracts` 导入            |
-| `DELIVERY_NO_REPLY_RUNTIME_CONTRACT`                 | 原生代理运行时适配器共享的禁止回复投递合同夹具。请从 `plugin-sdk/agent-runtime-test-contracts` 导入    |
-| `OUTCOME_FALLBACK_RUNTIME_CONTRACT`                  | 原生代理运行时适配器共享的回退分类合同夹具。请从 `plugin-sdk/agent-runtime-test-contracts` 导入 |
-| `createParameterFreeTool`                            | 为原生运行时合同测试构建动态工具 schema 夹具。请从 `plugin-sdk/agent-runtime-test-contracts` 导入              |
-| `expectChannelInboundContextContract`                | 断言 channel 入站上下文形状。请从 `plugin-sdk/channel-contract-testing` 导入                                                  |
-| `installChannelOutboundPayloadContractSuite`         | 安装 channel 出站负载合同测试用例。请从 `plugin-sdk/channel-contract-testing` 导入                                       |
-| `createStartAccountContext`                          | 构建 channel 账户生命周期上下文。请从 `plugin-sdk/channel-test-helpers` 导入                                                  |
-| `installChannelActionsContractSuite`                 | 安装通用 channel 消息动作合同测试用例。请从 `plugin-sdk/channel-test-helpers` 导入                                     |
-| `installChannelSetupContractSuite`                   | 安装通用 channel 设置合同测试用例。请从 `plugin-sdk/channel-test-helpers` 导入                                              |
-| `installChannelStatusContractSuite`                  | 安装通用 channel 状态合同测试用例。请从 `plugin-sdk/channel-test-helpers` 导入                                             |
-| `expectDirectoryIds`                                 | 断言目录列表函数返回的 channel 目录 id。请从 `plugin-sdk/channel-test-helpers` 导入                               |
-| `assertBundledChannelEntries`                        | 断言自带的 channel 入口暴露出预期的公共合同。请从 `plugin-sdk/channel-test-helpers` 导入                    |
-| `formatEnvelopeTimestamp`                            | 格式化确定性的 envelope 时间戳。请从 `plugin-sdk/channel-test-helpers` 导入                                                  |
-| `expectPairingReplyText`                             | 断言 channel 配对回复文本并提取其代码。请从 `plugin-sdk/channel-test-helpers` 导入                                    |
-| `describePluginRegistrationContract`                 | 安装插件注册合同检查。请从 `plugin-sdk/plugin-test-contracts` 导入                                              |
-| `registerSingleProviderPlugin`                       | 在加载器冒烟测试中注册一个 provider 插件。请从 `plugin-sdk/plugin-test-runtime` 导入                                         |
-| `registerProviderPlugin`                             | 捕获一个插件中的所有 provider 类型。请从 `plugin-sdk/plugin-test-runtime` 导入                                                 |
-| `registerProviderPlugins`                            | 跨多个插件捕获 provider 注册。请从 `plugin-sdk/plugin-test-runtime` 导入                                     |
-| `requireRegisteredProvider`                          | 断言 provider 集合包含某个 id。请从 `plugin-sdk/plugin-test-runtime` 导入                                           |
-| `createRuntimeEnv`                                   | 构建一个 mock 的 CLI/插件运行时环境。请从 `plugin-sdk/plugin-test-runtime` 导入                                              |
-| `createPluginRuntimeMock`                            | 构建一个 mock 的插件运行时表面。请从 `plugin-sdk/plugin-test-runtime` 导入                                                      |
-| `createPluginSetupWizardStatus`                      | 为 channel 插件构建设置状态辅助工具。请从 `plugin-sdk/plugin-test-runtime` 导入                                             |
-| `createTestWizardPrompter`                           | 构建一个 mock 的设置向导提示器。请从 `plugin-sdk/plugin-test-runtime` 导入                                                       |
-| `createRuntimeTaskFlow`                              | 创建隔离的运行时任务流状态。请从 `plugin-sdk/plugin-test-runtime` 导入                                                    |
-| `runProviderCatalog`                                 | 使用测试依赖执行一个 provider catalog 钩子。请从 `plugin-sdk/plugin-test-runtime` 导入                                     |
-| `resolveProviderWizardOptions`                       | 在合同测试中解析 provider 设置向导选项。请从 `plugin-sdk/plugin-test-runtime` 导入                                    |
-| `resolveProviderModelPickerEntries`                  | 在合同测试中解析 provider 模型选择器条目。请从 `plugin-sdk/plugin-test-runtime` 导入                                    |
-| `buildProviderPluginMethodChoice`                    | 为断言构建 provider 向导选项 id。请从 `plugin-sdk/plugin-test-runtime` 导入                                            |
-| `setProviderWizardProvidersResolverForTest`          | 为隔离测试注入 provider 向导提供者。请从 `plugin-sdk/plugin-test-runtime` 导入                                        |
-| `describeOpenAIProviderRuntimeContract`              | 安装 provider 家族运行时合同检查。请从 `plugin-sdk/provider-test-contracts` 导入                                        |
-| `expectPassthroughReplayPolicy`                      | 断言 provider 回放策略会透传 provider 自有工具和元数据。请从 `plugin-sdk/provider-test-contracts` 导入         |
-| `runRealtimeSttLiveTest`                             | 使用共享音频夹具运行实时语音转文字 provider 活测。请从 `plugin-sdk/provider-test-contracts` 导入                       |
-| `normalizeTranscriptForMatch`                        | 在模糊断言前规范化实时转写输出。请从 `plugin-sdk/provider-test-contracts` 导入                               |
-| `expectExplicitVideoGenerationCapabilities`          | 断言视频 provider 声明明确的生成模式能力。请从 `plugin-sdk/provider-test-contracts` 导入                   |
-| `expectExplicitMusicGenerationCapabilities`          | 断言音乐 provider 声明明确的生成/编辑能力。请从 `plugin-sdk/provider-test-contracts` 导入                   |
-| `mockSuccessfulDashscopeVideoTask`                   | 安装一个成功的 DashScope 兼容视频任务响应。请从 `plugin-sdk/provider-test-contracts` 导入                          |
-| `getProviderHttpMocks`                               | 访问可选启用的 provider HTTP/auth Vitest mocks。请从 `plugin-sdk/provider-http-test-mocks` 导入                                         |
-| `installProviderHttpMockCleanup`                     | 在每个测试后重置 provider HTTP/auth mocks。请从 `plugin-sdk/provider-http-test-mocks` 导入                                        |
-| `installCommonResolveTargetErrorCases`               | 用于目标解析错误处理的共享测试用例。请从 `plugin-sdk/channel-target-testing` 导入                                  |
-| `shouldAckReaction`                                  | 检查某个 channel 是否应添加确认表情反应。请从 `plugin-sdk/channel-feedback` 导入                                            |
-| `removeAckReactionAfterReply`                        | 在回复投递后移除确认表情反应。请从 `plugin-sdk/channel-feedback` 导入                                                      |
-| `createTestRegistry`                                 | 构建一个 channel 插件注册表示例。请从 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers` 导入               |
-| `createEmptyPluginRegistry`                          | 构建一个空的插件注册表示例。请从 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers` 导入                |
-| `setActivePluginRegistry`                            | 为插件运行时测试安装一个注册表夹具。请从 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers` 导入   |
-| `createRequestCaptureJsonFetch`                      | 在媒体辅助测试中捕获 JSON fetch 请求。请从 `plugin-sdk/test-env` 导入                                                     |
-| `withServer`                                         | 在一个可丢弃的本地 HTTP 服务器上运行测试。请从 `plugin-sdk/test-env` 导入                                                      |
-| `createMockIncomingRequest`                          | 构建一个最小的传入 HTTP 请求对象。请从 `plugin-sdk/test-env` 导入                                                          |
-| `withFetchPreconnect`                                | 在已安装 preconnect 钩子的情况下运行 fetch 测试。请从 `plugin-sdk/test-env` 导入                                                       |
-| `withEnv` / `withEnvAsync`                           | 临时修改环境变量。请从 `plugin-sdk/test-env` 导入                                                               |
-| `createTempHomeEnv` / `withTempHome` / `withTempDir` | 创建隔离的文件系统测试夹具。请从 `plugin-sdk/test-env` 导入                                                              |
-| `createMockServerResponse`                           | 创建一个最小的 HTTP 服务器响应 mock。请从 `plugin-sdk/test-env` 导入                                                            |
-| `createProviderUsageFetch`                           | 构建 provider usage fetch 夹具。请从 `plugin-sdk/test-env` 导入                                                                   |
-| `useFrozenTime` / `useRealTime`                      | 为对时间敏感的测试冻结并恢复定时器。请从 `plugin-sdk/test-env` 导入                                                    |
-| `createCliRuntimeCapture`                            | 在测试中捕获 CLI 运行时输出。请从 `plugin-sdk/test-fixtures` 导入                                                              |
-| `importFreshModule`                                  | 使用新的查询令牌导入 ESM 模块以绕过模块缓存。请从 `plugin-sdk/test-fixtures` 导入                             |
-| `bundledPluginRoot` / `bundledPluginFile`            | 解析自带插件源代码或 dist 夹具路径。请从 `plugin-sdk/test-fixtures` 导入                                              |
-| `mockNodeBuiltinModule`                              | 安装窄范围的 Node 内置 Vitest mocks。请从 `plugin-sdk/test-node-mocks` 导入                                                       |
-| `createSandboxTestContext`                           | 构建沙箱测试上下文。请从 `plugin-sdk/test-fixtures` 导入                                                                      |
-| `writeSkill`                                         | 写入 skill 夹具。请从 `plugin-sdk/test-fixtures` 导入                                                                             |
-| `makeAgentAssistantMessage`                          | 构建代理转写消息夹具。请从 `plugin-sdk/test-fixtures` 导入                                                          |
-| `peekSystemEvents` / `resetSystemEventsForTest`      | 检查并重置系统事件夹具。请从 `plugin-sdk/test-fixtures` 导入                                                          |
-| `sanitizeTerminalText`                               | 对终端输出进行清理以便断言。请从 `plugin-sdk/test-fixtures` 导入                                                          |
-| `countLines` / `hasBalancedFences`                   | 断言分块输出形状。请从 `plugin-sdk/test-fixtures` 导入                                                                     |
-| `typedCases`                                         | 为表驱动测试保留字面量类型。请从 `plugin-sdk/test-fixtures` 导入                                                    |
+| Export                                                                    | Purpose                                                                                                                                     |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createTestPluginApi`                                                     | Build a minimal plugin API mock for direct registration unit tests. Import from `plugin-sdk/plugin-test-api`                                |
+| `AUTH_PROFILE_RUNTIME_CONTRACT`                                           | Shared auth-profile contract fixture for native agent runtime adapters. Import from `plugin-sdk/agent-runtime-test-contracts`               |
+| `DELIVERY_NO_REPLY_RUNTIME_CONTRACT`                                      | Shared delivery suppression contract fixture for native agent runtime adapters. Import from `plugin-sdk/agent-runtime-test-contracts`       |
+| `OUTCOME_FALLBACK_RUNTIME_CONTRACT`                                       | Shared fallback-classification contract fixture for native agent runtime adapters. Import from `plugin-sdk/agent-runtime-test-contracts`    |
+| `createParameterFreeTool`                                                 | Build dynamic-tool schema fixtures for native runtime contract tests. Import from `plugin-sdk/agent-runtime-test-contracts`                 |
+| `expectChannelInboundContextContract`                                     | Assert channel inbound context shape. Import from `plugin-sdk/channel-contract-testing`                                                     |
+| `installChannelOutboundPayloadContractSuite`                              | Install channel outbound payload contract cases. Import from `plugin-sdk/channel-contract-testing`                                          |
+| `createStartAccountContext`                                               | Build channel account lifecycle contexts. Import from `plugin-sdk/channel-test-helpers`                                                     |
+| `installChannelActionsContractSuite`                                      | Install generic channel message-action contract cases. Import from `plugin-sdk/channel-test-helpers`                                        |
+| `installChannelSetupContractSuite`                                        | Install generic channel setup contract cases. Import from `plugin-sdk/channel-test-helpers`                                                 |
+| `installChannelStatusContractSuite`                                       | Install generic channel status contract cases. Import from `plugin-sdk/channel-test-helpers`                                                |
+| `expectDirectoryIds`                                                      | Assert channel directory ids from a directory-list function. Import from `plugin-sdk/channel-test-helpers`                                  |
+| `assertBundledChannelEntries`                                             | Assert bundled channel entrypoints expose the expected public contract. Import from `plugin-sdk/channel-test-helpers`                       |
+| `formatEnvelopeTimestamp`                                                 | Format deterministic envelope timestamps. Import from `plugin-sdk/channel-test-helpers`                                                     |
+| `expectPairingReplyText`                                                  | Assert channel pairing reply text and extract its code. Import from `plugin-sdk/channel-test-helpers`                                       |
+| `describePluginRegistrationContract`                                      | Install plugin registration contract checks. Import from `plugin-sdk/plugin-test-contracts`                                                 |
+| `registerSingleProviderPlugin`                                            | Register one provider plugin in loader smoke tests. Import from `plugin-sdk/plugin-test-runtime`                                            |
+| `registerProviderPlugin`                                                  | Capture all provider kinds from one plugin. Import from `plugin-sdk/plugin-test-runtime`                                                    |
+| `registerProviderPlugins`                                                 | Capture provider registrations across multiple plugins. Import from `plugin-sdk/plugin-test-runtime`                                        |
+| `requireRegisteredProvider`                                               | Assert that a provider collection contains an id. Import from `plugin-sdk/plugin-test-runtime`                                              |
+| `createRuntimeEnv`                                                        | Build a mocked CLI/plugin runtime environment. Import from `plugin-sdk/plugin-test-runtime`                                                 |
+| `createPluginRuntimeMock`                                                 | Build a mocked plugin runtime surface. Import from `plugin-sdk/plugin-test-runtime`                                                         |
+| `createPluginSetupWizardStatus`                                           | Build setup status helpers for channel plugins. Import from `plugin-sdk/plugin-test-runtime`                                                |
+| `createTestWizardPrompter`                                                | Build a mocked setup wizard prompter. Import from `plugin-sdk/plugin-test-runtime`                                                          |
+| `createRuntimeTaskFlow`                                                   | Create isolated runtime task-flow state. Import from `plugin-sdk/plugin-test-runtime`                                                       |
+| `runProviderCatalog`                                                      | Execute a provider catalog hook with test dependencies. Import from `plugin-sdk/plugin-test-runtime`                                        |
+| `resolveProviderWizardOptions`                                            | Resolve provider setup wizard choices in contract tests. Import from `plugin-sdk/plugin-test-runtime`                                       |
+| `resolveProviderModelPickerEntries`                                       | Resolve provider model-picker entries in contract tests. Import from `plugin-sdk/plugin-test-runtime`                                       |
+| `buildProviderPluginMethodChoice`                                         | Build provider wizard choice ids for assertions. Import from `plugin-sdk/plugin-test-runtime`                                               |
+| `setProviderWizardProvidersResolverForTest`                               | Inject provider wizard providers for isolated tests. Import from `plugin-sdk/plugin-test-runtime`                                           |
+| `describeOpenAIProviderRuntimeContract`                                   | Install provider-family runtime contract checks. Import from `plugin-sdk/provider-test-contracts`                                           |
+| `expectPassthroughReplayPolicy`                                           | Assert provider replay policies pass through provider-owned tools and metadata. Import from `plugin-sdk/provider-test-contracts`            |
+| `runRealtimeSttLiveTest`                                                  | Run a live realtime STT provider test with shared audio fixtures. Import from `plugin-sdk/provider-test-contracts`                          |
+| `normalizeTranscriptForMatch`                                             | Normalize live transcript output before fuzzy assertions. Import from `plugin-sdk/provider-test-contracts`                                  |
+| `expectExplicitVideoGenerationCapabilities`                               | Assert video providers declare explicit generation mode capabilities. Import from `plugin-sdk/provider-test-contracts`                      |
+| `expectExplicitMusicGenerationCapabilities`                               | Assert music providers declare explicit generation/edit capabilities. Import from `plugin-sdk/provider-test-contracts`                      |
+| `mockSuccessfulDashscopeVideoTask`                                        | Install a successful DashScope-compatible video task response. Import from `plugin-sdk/provider-test-contracts`                             |
+| `getProviderHttpMocks`                                                    | Access opt-in provider HTTP/auth Vitest mocks. Import from `plugin-sdk/provider-http-test-mocks`                                            |
+| `installProviderHttpMockCleanup`                                          | Reset provider HTTP/auth mocks after each test. Import from `plugin-sdk/provider-http-test-mocks`                                           |
+| `createOpenClawTestState` / `withOpenClawTestState` / `OpenClawTestState` | Create and clean up isolated OpenClaw state, config, workspace, environment, and auth-profile fixtures. Import from `plugin-sdk/test-state` |
+| `installCommonResolveTargetErrorCases`                                    | Shared test cases for target resolution error handling. Import from `plugin-sdk/channel-target-testing`                                     |
+| `shouldAckReaction`                                                       | Check whether a channel should add an ack reaction. Import from `plugin-sdk/channel-feedback`                                               |
+| `removeAckReactionAfterReply`                                             | Remove ack reaction after reply delivery. Import from `plugin-sdk/channel-feedback`                                                         |
+| `createTestRegistry`                                                      | Build a channel plugin registry fixture. Import from `plugin-sdk/plugin-test-runtime` or `plugin-sdk/channel-test-helpers`                  |
+| `createEmptyPluginRegistry`                                               | Build an empty plugin registry fixture. Import from `plugin-sdk/plugin-test-runtime` or `plugin-sdk/channel-test-helpers`                   |
+| `setActivePluginRegistry`                                                 | Install a registry fixture for plugin runtime tests. Import from `plugin-sdk/plugin-test-runtime` or `plugin-sdk/channel-test-helpers`      |
+| `createRequestCaptureJsonFetch`                                           | Capture JSON fetch requests in media helper tests. Import from `plugin-sdk/test-media-understanding`                                        |
+| `isLiveTestEnabled`                                                       | Gate opt-in live provider tests. Import from `plugin-sdk/test-live`                                                                         |
+| `collectProviderApiKeys`                                                  | Discover credentials for live provider tests. Import from `plugin-sdk/test-live-auth`                                                       |
+| `parseProviderModelMap`                                                   | Parse music/video live-test model overrides. Import from `plugin-sdk/test-media-generation`                                                 |
+| `withServer`                                                              | Run tests against a disposable local HTTP server. Import from `plugin-sdk/test-env`                                                         |
+| `createMockIncomingRequest`                                               | Build a minimal incoming HTTP request object. Import from `plugin-sdk/test-env`                                                             |
+| `withFetchPreconnect`                                                     | Run fetch tests with preconnect hooks installed. Import from `plugin-sdk/test-env`                                                          |
+| `withEnv` / `withEnvAsync`                                                | Temporarily patch environment variables. Import from `plugin-sdk/test-env`                                                                  |
+| `createTempHomeEnv` / `withTempHome` / `withTempDir`                      | Create isolated filesystem test fixtures. Import from `plugin-sdk/test-env`                                                                 |
+| `createMockServerResponse`                                                | Create a minimal HTTP server response mock. Import from `plugin-sdk/test-env`                                                               |
+| `createProviderUsageFetch`                                                | Build provider usage fetch fixtures. Import from `plugin-sdk/test-env`                                                                      |
+| `useFrozenTime` / `useRealTime`                                           | Freeze and restore timers for time-sensitive tests. Import from `plugin-sdk/test-env`                                                       |
+| `createCliRuntimeCapture`                                                 | Capture CLI runtime output in tests. Import from `plugin-sdk/test-fixtures`                                                                 |
+| `importFreshModule`                                                       | Import an ESM module with a fresh query token to bypass module cache. Import from `plugin-sdk/test-fixtures`                                |
+| `bundledPluginRoot` / `bundledPluginFile`                                 | Resolve bundled plugin source or dist fixture paths. Import from `plugin-sdk/test-fixtures`                                                 |
+| `mockNodeBuiltinModule`                                                   | Install narrow Node builtin Vitest mocks. Import from `plugin-sdk/test-node-mocks`                                                          |
+| `createSandboxTestContext`                                                | Build sandbox test contexts. Import from `plugin-sdk/test-fixtures`                                                                         |
+| `writeSkill`                                                              | Write skill fixtures. Import from `plugin-sdk/test-fixtures`                                                                                |
+| `makeAgentAssistantMessage`                                               | Build agent transcript message fixtures. Import from `plugin-sdk/test-fixtures`                                                             |
+| `peekSystemEvents` / `resetSystemEventsForTest`                           | Inspect and reset system event fixtures. Import from `plugin-sdk/test-fixtures`                                                             |
+| `sanitizeTerminalText`                                                    | Sanitize terminal output for assertions. Import from `plugin-sdk/test-fixtures`                                                             |
+| `countLines` / `hasBalancedFences`                                        | Assert chunking output shape. Import from `plugin-sdk/test-fixtures`                                                                        |
+| `typedCases`                                                              | Preserve literal types for table-driven tests. Import from `plugin-sdk/test-fixtures`                                                       |
 
 自带插件合同测试套件也会使用这些 SDK 测试子路径来获取仅供测试使用的注册表、清单、公共产物和运行时夹具辅助工具。
 依赖自带 OpenClaw 库存的核心专用套件则仍放在 `src/plugins/contracts` 下。
@@ -161,10 +169,9 @@ describe("my-channel target resolution", () => {
 
 ### 测试运行时配置访问
 
-优先使用来自 `openclaw/plugin-sdk/plugin-test-runtime` 的共享插件运行时 mock。
-其 `runtime.config.loadConfig()` 和 `runtime.config.writeConfigFile(...)`
-mock 默认会抛出异常，以便测试捕获对已废弃兼容性 API 的新使用。
-只有当测试明确覆盖旧版兼容行为时，才覆盖这些 mock。
+Prefer the shared plugin runtime mock from
+`openclaw/plugin-sdk/plugin-test-runtime`. Its runtime config helpers model the
+current snapshot and mutation APIs.
 
 ### 频道插件的单元测试
 
@@ -312,11 +319,11 @@ pnpm test src/plugins/contracts/runtime-seams.contract.test.ts
 `scripts/run-additional-boundary-checks.mjs` 会在 CI 中运行一组 `lint:plugins:*`
 import 边界检查；每一项也可以在本地单独运行：
 
-| Command                                                        | Enforces                                                                                                                    |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm run lint:plugins:no-monolithic-plugin-sdk-entry-imports` | 打包后的插件不能导入单体的 `openclaw/plugin-sdk` 根 barrel。                                             |
-| `pnpm run lint:plugins:no-extension-src-imports`               | 生产环境的扩展文件不能直接导入仓库的 `src/**` 树（`../../src/...`）。                                 |
-| `pnpm run lint:plugins:no-extension-test-core-imports`         | 扩展测试文件不能导入 `openclaw/plugin-sdk/testing`、`plugin-sdk/test-utils`，或其他仅供核心使用的测试辅助工具。 |
+| Command                                                        | Enforces                                                                                     |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `pnpm run lint:plugins:no-monolithic-plugin-sdk-entry-imports` | Bundled plugins cannot import the monolithic `openclaw/plugin-sdk` root barrel.              |
+| `pnpm run lint:plugins:no-extension-src-imports`               | Production extension files cannot import the repo `src/**` tree directly (`../../src/...`).  |
+| `pnpm run lint:plugins:no-extension-test-core-imports`         | Extension test files cannot import removed SDK test aliases or other core-only test helpers. |
 
 外部插件不受这些 lint 规则约束，但仍建议遵循相同模式。
 

@@ -78,6 +78,9 @@ channels
 channel info slack
 connect slack
 open channel wizard for slack
+configure skills
+configure web search
+open search wizard
 plugins list
 plugins search slack
 plugin install clawhub:openclaw-codex-app-server
@@ -93,7 +96,7 @@ OpenClaw 使用类型化操作，而不是临时编辑配置。
 
 只读操作会立即运行：显示概览、列出代理、列出已安装插件、搜索 ClawHub 插件、显示模型/后端状态、运行状态/健康检查、检查 Gateway 可达性、在不进行交互式修复的情况下运行 doctor、验证配置、显示审计日志路径。
 
-启动引导式频道设置（`connect telegram`）也会立即运行。其向导会收集明确答案，并负责后续写入。
+启动引导式设置流程也会立即运行：通道设置（`connect telegram`）、工作区技能设置（`configure skills`）以及网页搜索提供方设置（`configure web search`）。每个托管向导都会收集明确答案并负责相应写入；完成后会追加审计条目并重新验证配置。需要安装插件的网页搜索提供方只有在安装成功后才会写入配置——如果安装失败或超时，设置会停止并报告失败，而不会声称该提供方已配置完成。
 
 持久化操作需要对话式审批（或对直接命令使用 `--yes`）：写入配置、`config set`、`config set-ref`、setup/onboarding 启动引导、更改默认模型、启动/停止/重启 Gateway、创建代理，以及安装插件。
 
@@ -101,36 +104,35 @@ doctor 修复在 OpenClaw 内不可用，因为它们可能会重写为当前会
 
 新代理会继承已实时验证的默认推断路由。代理 id `openclaw` 和 `crestodian` 为系统代理保留，不能作为普通代理创建。已退役的 id 仍然被阻止，因此旧配置无法占用它。
 
-`config set` 和 `config set-ref` 不能更改推断路由状态，
-包括推断 provider 凭据、顶层 `auth.*`、模型目录、
-CLI backends、默认/按代理模型路由、代理参数/工具，或根级
-`tools.*`。对 `env.*`、`secrets.*`、`plugins.*` 和 `$include`
-下的原始写入也会被拒绝，因为它们可能替换凭据解析或 provider
-激活。Gateway 和 channel auth 仍然是普通配置入口。请使用类型化的插件/频道工作流以及
-`set default model <provider/model>` 来配置
-已存在的路由；它会在保存前对该路由进行实时测试。若要配置或
-修复 provider/auth 访问，请退出 OpenClaw 并运行 `openclaw onboard`。
+`config set` 和 `config set-ref` 可以更改用户可更改的任何设置，
+但有一个简短的仅人工拒绝名单：`$include`、`auth.*`、`env.*`、`models.*`
+以及 `secrets.*` 仍然会被拒绝，因为它们包含凭据材料、
+备用配置包含关系，或为推断路由提供输入的 provider/目录定义。
+推断路由本身也受保护：默认模型路由（`agents.defaults` 的 model/params/runtime 字段）以及当前默认路由所依赖代理的路由字段都会被拒绝，代理标识/拓扑字段（`id`、`agentDir`、`default`）也是如此。其他代理的路由字段在审批后仍可写入。Gateway 和通道认证仍然属于正常配置面。对于已经配置好的路由，请使用 `set default model <provider/model>`；它会在保存前对该路由进行实时测试。要配置或修复 provider/auth 访问，请退出 OpenClaw 并运行 `openclaw onboard`。
 
-在 OpenClaw 内卸载插件会被拒绝，因为移除 provider
-插件可能会禁用支撑当前会话的推断路由。请退出 OpenClaw，
-并在终端中运行 `openclaw plugins uninstall <id>`。
+`plugins.entries.<id>.*` 写入（已安装插件的启用/禁用/配置）是允许的，除非该插件支持当前活动的推断路由。插件安装来源和加载策略在类型化的插件安装工作流中保持其信任边界。出于同样原因，支持该路由的插件也不允许卸载；请退出 OpenClaw 并在终端中运行 `openclaw plugins uninstall <id>`。
 
 审批通过要用你自己的话来表示：明确无歧义的回复（"yes"、"sure"、"go ahead"、"not now"）会从一个封闭的确定性列表中解析。若已配置的路由支持单独的 completion 调用，则其他回复可以仅根据你的消息和待定提案进行分类——绝不会由对话模型本身分类，因为它无法自我审批。未分类或有歧义的回复会使提案保持待定，系统会再次询问。
 
-已应用的写入会记录在 `~/.openclaw/audit/system-agent.jsonl` 中。发现操作不会被审计；只有已应用的操作和写入会被审计。
+### Change history
 
-频道设置可以作为托管对话运行，直到它到达一个 secret。由于终端聊天输入是可见的，本地 OpenClaw TUI 不接受敏感的向导答案。它会立即提供 `open channel wizard`，将所选频道带入带掩码的终端向导；你也可以稍后运行 `openclaw channels add --channel <channel>`。
+Ask OpenClaw 页面可以显示最近已应用的系统代理操作、Doctor 迁移、Settings 和 CLI 配置写入，以及对 `openclaw.json` 的手动编辑。配置日志会在 Gateway 监视期间、OpenClaw 执行写入期间，或在离线编辑后的下一次启动时检测到外部编辑。
 
-### 切换到带掩码的频道设置
+历史记录存储在共享的 `~/.openclaw/state/openclaw.sqlite` 数据库的 `diagnostic_events` 表中，位于 `system-agent-audit` 和 `config-audit` 作用域下。每个作用域保留最近 50,000 条记录。不包含发现和只读操作。更改历史中永远不会出现密钥；配置日志记录包含变更路径而不是配置值，值比较使用受保护的指纹。
 
-本地聊天可以将控制权交给带掩码的频道向导：
+通道和网页搜索设置可以作为托管对话运行，直到触及密钥。由于终端聊天输入是可见的，本地 OpenClaw TUI 不接受敏感的向导答案。它会立即提供 `open channel wizard`（携带所选通道）或 `open search wizard`，并交接给受遮罩的终端向导；你也可以稍后运行 `openclaw channels add --channel <channel>` 或 `openclaw configure --section web`。
+
+### 切换到受遮罩的终端向导
+
+本地聊天可以将控制权交给受遮罩的终端向导：
 
 ```text
 open channel wizard for slack
 channel info slack
+open search wizard
 ```
 
-`open channel wizard for <channel>` 会在聊天 TUI 关闭后打开带掩码的频道设置。请先使用 `channel info <channel>` 查看频道标签、设置状态、前置条件摘要以及文档链接。
+`open channel wizard for <channel>` 会在聊天 TUI 关闭后打开受遮罩的通道设置。先使用 `channel info <channel>` 获取通道标签、设置状态、先决条件摘要和文档链接。`open search wizard` 对网页搜索提供方设置的工作方式相同，会在聊天 TUI 关闭后打开受遮罩的搜索向导。
 
 OpenClaw 从不在自身会话内更改 provider/auth 访问：该会话本身就依赖于那条推断路由。对于模型 provider 的设置或修复，`configure model provider` 会返回退出/引导说明，而不会启动向导或写入配置。请退出 OpenClaw 并运行 `openclaw onboard`；onboarding 会暂存凭据，并且只保存一条能够完成真实实时回合的路由。在 onboarding 成功后，请重新启动 OpenClaw。
 
@@ -146,7 +148,7 @@ setup workspace ~/Projects/work
 `setup` 会保留已验证的有效模型。它不会配置或
 替换推理。
 
-如果推理缺失，或者其实时检查失败，请离开 OpenClaw 并运行 `openclaw onboard`。引导式入门会检测已配置的模型、API 密钥以及已认证的本地 CLI，向每个候选项请求真实回复，并且只持久化通过验证的路径。OpenClaw 会在该边界之后立即启动，然后即可配置工作区、Gateway、通道、代理、插件以及其他可选功能。
+如果推理缺失，或者其实时检查失败，请离开 OpenClaw 并运行 `openclaw onboard`。引导式入门会先尝试已配置的模型，然后是已认证的订阅 CLI、API 密钥，以及其余受支持的 CLI；它会要求每个候选返回一个真实回复，并且只持久化通过测试的路由。在该边界之后，OpenClaw 会立即启动，然后可以配置工作区、Gateway、通道、代理、插件以及其他可选功能。
 
 当 macOS 应用程序到达一个已配置的 Gateway，且其默认代理已经配置了模型时，会完全跳过这一流程；它会打开普通的代理 UI。
 对于全新或不完整的 Gateway，应用程序会通过 `openclaw.setup.detect` 和 `openclaw.setup.activate` Gateway 方法驱动推理流程：detect 会列出它找到的每个候选后端，activate 会对一个候选进行实时测试（一次真实的“回复 OK”完成），并且只在测试通过后才持久化该路由所需的模型、凭据以及提供方/运行时状态。工作区和 Gateway 默认值会保留给 OpenClaw。失败的候选永远不会更改配置；应用程序会自动沿着该流程继续向下，并最终提供一个手动密钥/令牌步骤，该步骤会从 Gateway 当前可用的文本推理提供方插件中填充。所选提供方拥有其启动模型和配置，并且凭据会以相同方式在保存前进行验证。
@@ -228,36 +230,22 @@ create agent work workspace ~/Projects/work model openai/gpt-5.6-sol
 
 远程救援的安全约束：
 
-- 当代理/会话启用了沙箱时会被禁用；OpenClaw 会拒绝远程救援，并提示使用本地 CLI 修复。
-- 默认有效状态为 `auto`：仅在受信任的 YOLO 运行模式下允许远程救援，此时运行时已经拥有未沙箱化的本地权限（`tools.exec.security` 解析为 `full` 且 `tools.exec.ask` 解析为 `off`，并且沙箱模式为 `off`）。
-- 需要显式的所有者身份；不接受通配发送者规则、开放群组策略、未认证 webhook 或匿名通道。
-- 默认仅允许所有者私聊；群组/频道救援需要显式启用。
-- 插件搜索和列表是只读的。插件安装始终仅限本地（在救援模式中会被阻止，即使其他情况下已启用），因为它会下载可执行代码。插件卸载在本地 OpenClaw 和救援模式中都会被拒绝；请在终端中运行 `openclaw plugins uninstall <id>`。
-- 远程救援不能打开本地 TUI，也不能切换到交互式代理会话；请使用本地 `openclaw` 进行代理交接。
-- 持久化写入在救援模式下仍然需要批准。
-- 每个已应用的救援操作都会被审计。消息通道救援会记录通道、账户、发送者以及来源地址元数据；会修改配置的操作还会记录修改前后的配置哈希。
-- 绝不会回显密钥。SecretRef 检查只报告可用性，不报告值。
-- 如果 Gateway 仍然存活，救援模式会优先使用 Gateway 的类型化操作；如果它已死机，救援模式只使用不依赖正常代理循环的最小本地修复界面。
+- 当代理/会话启用了沙盒时会被禁用；OpenClaw 会拒绝远程救援并指向本地 CLI 修复。
+- 默认有效状态是 `auto`：仅在受信任的 YOLO 运行模式下允许远程救援，此时运行时已经拥有未沙盒化的本地权限（`tools.exec.security` 解析为 `full` 且 `tools.exec.ask` 解析为 `off`，并且沙盒模式为 `off`）。
+- 需要明确的所有者身份；不接受通配发送者规则、开放群组策略、未经验证的 Webhook 或匿名通道。
+- 救援仅限于所有者私聊。
+- 插件搜索和列表是只读的。插件安装始终仅限本地（在救援中会被阻止，即使在其他情况下已启用），因为它会下载可执行代码。插件卸载在本地 OpenClaw 和救援中都会被拒绝；请在终端中运行 `openclaw plugins uninstall <id>`。
+- 远程救援不能打开本地 TUI 或切换到交互式代理会话；请使用本地 `openclaw` 进行代理交接。
+- 持久化写入即使在救援模式下也仍然需要批准。
+- 待处理批准仅可使用一次。针对同一账户、通道和发送者的任何更新的救援命令都会撤销较早的计划；失败执行也会消耗批准，因此需要重新发送命令重试。
+- 每次已应用的救援操作都会被审计。消息通道救援会记录通道、账户、发送者和源地址元数据；会修改配置的操作还会记录修改前后的配置哈希。
+- 绝不回显密钥。SecretRef 检查只报告可用性，不报告值。
+- 如果 Gateway 仍然存活，救援会优先使用 Gateway 的类型化操作；如果它已死机，则仅使用不依赖正常代理循环的最小本地修复范围。
 
-配置结构：
-
-```jsonc
-{
-  "systemAgent": {
-    "rescue": {
-      "enabled": "auto",
-      "ownerDmOnly": true,
-      "pendingTtlMinutes": 15,
-    },
-  },
-}
-```
-
-- `enabled`：`"auto"`（默认）仅在运行时有效状态为 YOLO 且沙箱已关闭时允许救援；`false` 从不允许消息通道救援；`true` 在所有者/通道检查通过时显式允许救援（但仍受沙箱拒绝约束）。
-- `ownerDmOnly`：将救援限制为所有者直接消息。默认 `true`。
-- `pendingTtlMinutes`：一个待处理的救援写入在因 `/openclaw yes` 批准前保持开启的时长，超时后失效。默认 `15`。
-
-`openclaw doctor --fix` 会将旧的 `crestodian` 配置块迁移到 `systemAgent`。运行时只读取规范块。
+救援策略是内建的：仅当有效运行时为
+YOLO、沙盒关闭，并且请求来自所有者私聊时才可用。待处理的写入批准
+在 15 分钟后过期。`openclaw doctor --fix` 会移除已弃用的
+`systemAgent` 和 `crestodian` 配置块。
 
 远程救援由 Docker 线路覆盖：
 
@@ -265,7 +253,7 @@ create agent work workspace ~/Projects/work model openai/gpt-5.6-sol
 pnpm test:docker:system-agent-rescue
 ```
 
-一个可选启用的实时通道命令面烟雾检查会通过救援处理器对 `/openclaw status` 以及一次持久化批准往返进行验证：
+一个可选启用的实时通道命令烟雾检查会通过救援处理器对 `/openclaw status` 以及一次持久化批准往返进行验证：
 
 ```bash
 pnpm test:live:system-agent-rescue-channel

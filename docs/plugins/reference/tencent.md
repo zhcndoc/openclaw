@@ -16,7 +16,7 @@ title: "Tencent 插件"
 
 ## 接口
 
-providers: tencent-tokenhub, tencent-tokenplan
+providers: `tencent-tokenhub`, `tencent-tokenplan`
 
 ## 相关文档
 

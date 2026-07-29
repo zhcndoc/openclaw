@@ -16,7 +16,7 @@ title: "Moonshot 插件"
 
 ## 接口
 
-providers: moonshot; contracts: mediaUnderstandingProviders, webSearchProviders
+providers: `moonshot`; contracts: `mediaUnderstandingProviders`, `webSearchProviders`
 
 ## 相关文档
 

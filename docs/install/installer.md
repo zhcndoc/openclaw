@@ -15,7 +15,7 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
 | [`install-cli.sh`](#install-clish) | macOS / Linux / WSL  | 通过 npm 或 git 将 Node + OpenClaw 安装到本地前缀（`~/.openclaw`）。无需 root。 |
 | [`install.ps1`](#installps1)       | Windows (PowerShell) | 如有需要会安装 Node，通过 npm（默认）或 git 安装 OpenClaw，并可运行引导流程。       |
 
-这三个脚本都支持 Node **22.22.3+、24.15+ 或 25.9+**；对于全新安装，默认目标是 Node 24。
+All three support Node **22.22.3+, 24.15+, or 25.9+**. On macOS and Linux, fresh installs provision Node 26; on Windows, winget/Chocolatey/Scoop install the supported Node LTS line, and the portable fallback downloads Node 26.
 
 ## 快速命令
 
@@ -71,9 +71,9 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
   <Step title="检测操作系统">
     支持 macOS 和 Linux（包括 WSL）。
   </Step>
-  <Step title="默认确保 Node.js 24">
-    检查 Node 版本，并在需要时安装 Node 24（macOS 上使用 Homebrew，Linux 上使用 NodeSource 安装脚本，适用于 apt/dnf/yum）。在 macOS 上，仅当安装程序为 Node 或 Git 需要时才会安装 Homebrew。支持 Node 22.22.3+、Node 24.15+ 和 Node 25.9+；不支持 Node 23。
-    在 Alpine/musl Linux 上，安装程序会使用 apk 包而不是 NodeSource，并验证实际链接的 SQLite 版本。当前稳定的 Alpine 包流可能提供足够新的 Node，但系统 SQLite 存在漏洞；遇到这种情况时，请改用官方 `node:24-alpine` 容器或基于 glibc 的主机。
+  <Step title="Ensure Node.js 26 by default">
+    Checks Node version and installs Node 26 if needed (Homebrew `node` on macOS, NodeSource setup scripts on Linux apt/dnf/yum). On macOS, Homebrew is installed only when the installer needs it for Node or Git. Node 22.22.3+, Node 24.15+, and Node 25.9+ are supported; Node 23 is unsupported.
+    On Alpine/musl Linux, the installer uses apk packages instead of NodeSource and verifies the actual linked SQLite version. Current stable Alpine package streams can provide a new-enough Node with vulnerable system SQLite; when that happens, use an official `node:26-alpine` container or a glibc-based host instead.
   </Step>
   <Step title="确保 Git">
     如果缺少 Git，会使用检测到的包管理器安装，包括 macOS 上的 Homebrew 和 Alpine 上的 apk。
@@ -298,8 +298,8 @@ OpenClaw 提供三个安装脚本，托管在 `openclaw.ai` 上。
   <Step title="确保 PowerShell + Windows 环境">
     需要 PowerShell 5+。
   </Step>
-  <Step title="默认确保 Node.js 24">
-    如果缺失，脚本会先尝试通过 winget 安装，然后是 Chocolatey，接着是 Scoop。如果没有可用的包管理器，脚本会将官方 Node.js 24 Windows zip 下载到 `%LOCALAPPDATA%\OpenClaw\deps\portable-node`，并将其添加到当前进程和用户 PATH。支持 Node 22.22.3+、Node 24.15+ 和 Node 25.9+；不支持 Node 23。
+  <Step title="Ensure a supported Node.js runtime">
+    If missing, attempts install via winget, then Chocolatey, then Scoop. If no package manager is available, the script downloads the official Node.js 26 Windows zip into `%LOCALAPPDATA%\OpenClaw\deps\portable-node` and adds it to the current process and user PATH. Node 22.22.3+, Node 24.15+, and Node 25.9+ are supported; Node 23 is unsupported.
   </Step>
   <Step title="安装 OpenClaw">
     - `npm` 方法（默认）：使用所选的 `-Tag` 进行全局 npm 安装，并从可写的安装临时目录启动，因此即使在受保护的文件夹（如 `C:\`）中打开的 shell 也能正常工作

@@ -16,4 +16,4 @@ title: "Microsoft 插件"
 
 ## 接口
 
-contracts: speechProviders
+contracts: `speechProviders`

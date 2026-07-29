@@ -1,5 +1,5 @@
 ---
-summary: "Bot-to-bot 循环保护默认值和通道覆盖"
+summary: "Bot 到 bot 循环保护默认值和通道覆盖"
 read_when:
   - 配置由机器人撰写的频道消息
   - 调整机器人到机器人循环保护
@@ -26,7 +26,7 @@ OpenClaw 可以接受其他机器人在支持 `allowBots` 的频道上编写的�
 
 ## 配置共享默认值
 
-将 `channels.defaults.botLoopProtection` 只设置一次，即可为每个受支持的频道提供相同的基础配置。频道、账户和房间级别的覆盖仍然可以对各自的界面进行微调。
+设置 `channels.defaults.botLoopProtection` 一次，即可让每个受支持的频道使用相同的基础配置。频道也可以提供更窄范围的覆盖配置；飞书有意只使用这一共享基础配置。
 
 ```json5
 {
@@ -68,7 +68,7 @@ OpenClaw 可以接受其他机器人在支持 `allowBots` 的频道上编写的�
       },
       accounts: {
         secondary: {
-          allowBots: "mentions",
+          allowBots: true,
           botLoopProtection: {
             maxEventsPerWindow: 5,
             cooldownSeconds: 90,
@@ -108,10 +108,11 @@ OpenClaw 可以接受其他机器人在支持 `allowBots` 的频道上编写的�
 
 ## 频道支持
 
-- Discord：原生 `author.bot` 事实，按 Discord 账户、频道和 bot 对进行键控。
-- Google Chat：对于已接受的 bot-authored 消息，原生 `sender.type=BOT` 事实，按账户、空间和 bot 对进行键控。
-- Matrix：已配置的 Matrix bot 账户，按 Matrix 账户、房间和已配置的 bot 对进行键控。
-- Slack：对于已接受的 bot-authored 消息，原生 `bot_id` 事实，按 Slack 账户、频道和 bot 对进行键控。
+- Discord：原生 `author.bot` 事实，按 Discord 账号、频道和 bot 对进行键控。
+- 飞书：对被接纳的 bot 发送的群消息使用原生 `sender_type=bot` 事实，按飞书账号、会话和 bot 对进行键控。飞书仅使用 `channels.defaults.botLoopProtection`。
+- Google Chat：对被接纳的 bot 发送的消息使用原生 `sender.type=BOT` 事实，按账号、空间和 bot 对进行键控。
+- Matrix：已配置的 Matrix bot 账号，按 Matrix 账号、房间和已配置的 bot 对进行键控。
+- Slack：对被接纳的 bot 发送的消息使用原生 `bot_id` 事实，按 Slack 账号、频道和 bot 对进行键控。
 
 无法暴露可靠入站 bot 身份的频道将继续使用其正常的自消息和访问策略过滤器。在能够识别 bot 对中的两个参与者之前，它们不应启用此保护。
 

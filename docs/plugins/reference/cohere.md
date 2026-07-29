@@ -16,7 +16,7 @@ OpenClaw Cohere 提供程序插件。
 
 ## 接口
 
-providers: cohere
+providers: `cohere`
 
 ## 相关文章
 

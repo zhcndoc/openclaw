@@ -28,31 +28,31 @@ OpenClaw 分两个阶段处理失败：
   <Step title="在可故障转移错误时推进">
     如果该提供方因可故障转移错误而用尽，移动到下一个模型候选项。
   </Step>
-  <Step title="持久化回退覆盖">
-    在重试开始前持久化所选的回退覆盖，以便其他会话读取者看到运行器即将使用的相同提供方/模型。持久化的模型覆盖会标记为 `modelOverrideSource: "auto"`。
+  <Step title="当前轮次使用回退">
+    在不更改会话中所选提供方/模型的情况下，使用获胜的回退候选项运行。
   </Step>
-  <Step title="在失败时窄范围回滚">
-    如果回退候选失败，则仅回滚仍与该失败候选匹配的、由回退持有的会话覆盖字段。
+  <Step title="重试安全的纯超载耗尽">
+    如果每个候选都仅因提供方过载而失败，则在尚未开始任何工具执行或助手输出时，以指数退避方式对整个轮次本地链重试最多 10 次。30 秒后，发送一条状态通知，这样用户就不会一直无声等待。
   </Step>
   <Step title="在用尽时抛出 FallbackSummaryError">
     如果每个候选都失败，则抛出带有每次尝试细节以及已知情况下最早冷却到期时间的 `FallbackSummaryError`。
   </Step>
 </Steps>
 
-这有意比“保存并恢复整个会话”更窄。回复运行器只会为回退持久化其所拥有的模型选择字段：`providerOverride`、`modelOverride`、`modelOverrideSource`、`authProfileOverride`、`authProfileOverrideSource`、`authProfileOverrideCompactionCount`。这样可以避免失败的回退重试覆盖更新的、无关的会话变更，例如在尝试运行期间发生的手动 `/model` 更改或会话轮换更新。
+回退执行仅限于当前轮次。本回复运行器只持久化回退通知状态，因此 `/status` 和过渡通知可以区分所选模型与实际回答的模型；它不会将该回退持久化为下一轮的模型选择。
 
 ## 选择来源策略
 
 选择来源决定是否允许回退链：
 
-- **已配置默认值**：`agents.defaults.model.primary` 使用 `agents.defaults.model.fallbacks`。
-- **Agent 主模型**：`agents.list[].model` 默认是严格模式，除非该 agent 的 model 对象包含其自己的 `fallbacks`。使用 `fallbacks: []` 可以显式启用严格行为，或使用非空列表让该 agent 使用模型回退。
-- **自动回退覆盖**：运行时回退会在重试前写入 `providerOverride`、`modelOverride`、`modelOverrideSource: "auto"`，以及所选的原始模型。这个覆盖会在不每次消息都探测主模型的情况下继续沿着已配置的回退链向下尝试，但 OpenClaw 会每 5 分钟（不可配置）探测一次已配置的原始模型，并在恢复后清除该覆盖。`/new`、`/reset` 和 `sessions.reset` 也会清除自动来源的覆盖。当心跳在没有显式 `heartbeat.model` 的情况下运行时，如果其原始模型不再与当前已配置默认值匹配，也会清除直接自动覆盖。
-- **用户会话覆盖**：`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会写入 `modelOverrideSource: "user"`。这是一个精确的会话选择。如果所选 provider/model 在生成回复前失败，OpenClaw 会报告该失败，而不是从无关的已配置回退中回答。
-- **旧版会话覆盖**：较旧的会话条目可能只有 `modelOverride` 而没有 `modelOverrideSource`。OpenClaw 会将这些视为用户覆盖，因此显式的旧选择不会被悄悄转换为回退行为。
-- **Cron 负载模型**：cron 作业的 `payload.model` / `--model` 是作业主模型，不是用户会话覆盖。除非作业提供 `payload.fallbacks`，否则它会使用已配置回退；`payload.fallbacks: []` 会使 cron 运行保持严格模式。
+- **已配置默认值**: `agents.defaults.model.primary` 使用 `agents.defaults.model.fallbacks`。
+- **Agent 主模型**: `agents.entries.*.model` 默认是严格模式，除非该 agent 的 model 对象包含自己的 `fallbacks`。使用 `fallbacks: []` 可显式启用严格行为，或提供一个非空列表让该 agent 使用模型回退。
+- **运行时回退**: 回退候选项仅适用于当前轮次。下一轮会再次从所选主模型开始。OpenClaw 仍会识别之前保存的 `modelOverrideSource: "auto"` 条目，每 5 分钟探测其配置来源一次，并在来源恢复后将其清除。`/new`、`/reset` 和 `sessions.reset` 也会清除这些条目。
+- **用户会话覆盖**: `/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会写入 `modelOverrideSource: "user"`。这是一个精确的会话选择。如果所选 provider/model 在生成回复前失败，OpenClaw 会报告该失败，而不是从无关的已配置回退项中回答。
+- **旧版会话覆盖**: 较旧的会话条目可能只有 `modelOverride` 而没有 `modelOverrideSource`。OpenClaw 会将这些条目视为用户覆盖，因此显式的旧选择不会被悄然转换为回退行为。
+- **Cron 负载模型**: cron 作业的 `payload.model` / `--model` 是作业主模型，不是用户会话覆盖。除非作业提供 `payload.fallbacks`，否则它会使用已配置的回退；`payload.fallbacks: []` 会使 cron 运行保持严格模式。
 
-OpenClaw 会按会话和主模型记住最近的主模型探测结果，因此失败的主模型不会在每一轮都被重试。当会话切换到回退模型时，它会发送一条可见通知；当它返回到所选主模型时，也会发送另一条通知；在持续的回退轮次中不会每次都重复该通知。
+当某一轮切换到回退模型时，OpenClaw 会发送一条可见通知；当后续某一轮在所选主模型上成功时，也会发送另一条通知。持久化的通知状态可防止在连续轮次使用相同的 selected/active 对时重复通知，而模型选择本身保持不变。
 
 ## 认证失败跳过缓存
 
@@ -82,16 +82,18 @@ OPENCLAW_FALLBACK_SKIP_TTL_MS=60000
 ↪️ Model Fallback cleared: <primary> (was <fallback>)
 ```
 
-这些通知是操作性消息，不属于助手内容。它们会在每次状态变化时发送一次，包括在可行的情况下仅产生副作用的轮次，但粘性回退轮次不会重复发送。发送过程绕过正常的源回复抑制，不会在线程频道中占用第一个助手回复槽位，并且会从文本转语音和承诺提取中排除。
+这些通知属于运维消息，不是助手内容。它们会在每次状态变更时发送一次，包括在可行时仅有副作用的轮次，但不会对重复的、仅限于单轮内的回退切换重复发送。发送过程会绕过常规的来源回复抑制，不会在线程频道中占用首条助手回复槽位，并且会从文本转语音和承诺提取中排除。
 
 ## 认证存储（密钥 + OAuth）
 
 OpenClaw 对 API 密钥和 OAuth 令牌都使用**认证配置文件**。
 
-- 密钥和运行时认证路由状态存储在 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`。
-- 配置 `auth.profiles` / `auth.order` 仅用于**元数据 + 路由**（不包含密钥）。
-- 仅用于导入的旧版 OAuth 文件：`~/.openclaw/credentials/oauth.json`（首次使用时会导入到每个代理的认证存储中）。
-- 旧版 `auth-profiles.json`、`auth-state.json` 以及每个代理的 `auth.json` 文件会被 `openclaw doctor --fix` 导入。
+- Secrets and runtime auth-routing state live in `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`.
+- Config `auth.profiles` / `auth.order` are **metadata + routing only** (no secrets).
+- Legacy `credentials/oauth.json`, `auth-profiles.json`, `auth-state.json`, and
+  per-agent `auth.json` files are imported only by `openclaw doctor --fix`.
+  Runtime fails closed for the affected agent until credential-bearing legacy
+  files are migrated; it never silently imports or falls back to them.
 
 更多详情：[OAuth](/concepts/oauth)
 
@@ -128,9 +130,12 @@ OAuth 登录会创建不同的配置文件，以便多个账户可以共存。
 
 如果没有配置显式顺序，OpenClaw 会使用轮询顺序：
 
-- **主键:** 配置文件类型（**OAuth，然后是 static token，最后是 API key**）。
-- **次键:** `usageStats.lastUsed`（最久未使用者优先，在每种类型内）。
-- **冷却/已禁用配置文件** 会被移到末尾，并按最早到期时间排序。
+- **主键：** 配置文件类型（**OAuth，然后是静态 token，最后是 API key**）。
+- **OAuth 的次键：** 当前可用访问令牌的配置文件优先于
+  访问令牌已过期的配置文件。已过期的 OAuth 配置文件仍保留资格，
+  这样当没有可用的同类配置文件时，运行时可以刷新它们。
+- **下一个键：** `usageStats.lastUsed`（在每个类型/状态层级内按最久未使用优先）。
+- **冷却/已禁用配置文件** 会被移动到末尾，并按最早过期时间排序。
 
 ### 会话粘性（缓存友好）
 
@@ -174,7 +179,9 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
   <Accordion title="什么会进入速率限制 / 超时桶">
     这个速率限制桶比普通的 `429` 更宽泛：它还包括提供方消息，例如 `Too many concurrent requests`、`ThrottlingException`、`concurrency limit reached`、`workers_ai ... quota limit exceeded`、`throttled`、`resource exhausted`，以及周期性使用窗口限制，例如 `weekly limit reached` 或 `monthly limit exhausted`。
 
-    格式/无效请求错误通常是终止性的，因为重试相同载荷会以同样方式失败，所以 OpenClaw 会直接呈现这些错误，而不是轮换认证配置文件。已知的重试修复路径可以显式启用：例如，Cloud Code Assist 工具调用 ID 验证失败会被清理并通过 `allowFormatRetry` 策略重试一次。类似 `Unhandled stop reason: error`、`stop reason: error` 和 `reason: error` 这样的 OpenAI 兼容 stop-reason 错误会被归类为超时/故障转移信号。
+    格式/无效请求错误通常是终止性的，因为重试相同的负载会以相同方式失败，因此 OpenClaw 会直接报告这些错误，而不是轮换认证配置文件。已知的重试修复路径可以显式选择加入：例如，Cloud Code Assist 工具调用 ID 验证失败会经过清理，并通过 `allowFormatRetry` 策略重试一次。
+
+    OpenAI 兼容的**由提供方完成的**停止/完成原因，例如 `Unhandled stop reason: error`、`stop reason: error`、`reason: error` 和 `Provider finish_reason: error`，会被分类为 **`server_error`**（类似 HTTP 的状态码 500），而不是超时。它们仍符合故障转移条件，可用于模型/配置文件轮换，但诊断信息会保留提供方的完成原因文本，而不会将面向用户的文案改写为“LLM 请求超时”。传输层形式的完成原因，例如 `Provider finish_reason: abort`、`network_error` 和 `malformed_response`，仍会归入超时/故障转移桶（状态码 408）。
 
     当来源匹配已知的暂时性模式时，通用服务器文本也可能进入那个超时桶。例如，裸的模型运行时流包装器消息 `An unknown error occurred` 会被视为每个提供方都值得故障转移，因为共享模型运行时在提供方流以 `stopReason: "aborted"` 或 `stopReason: "error"` 结束且没有具体细节时会发出该消息。带有暂时性服务器文本的 JSON `api_error` 负载，例如 `internal server error`、`unknown error, 520`、`upstream error` 或 `backend error`，也会被视为值得故障转移的超时。
 
@@ -200,7 +207,7 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
 - 第 2 次失败：1 分钟
 - 第 3 次及以后失败：5 分钟（上限）
 
-一旦配置文件的失败窗口过去，计数器就会重置（`auth.cooldowns.failureWindowHours`，默认 24 小时）。
+一旦配置文件的内置失败窗口结束，计数器就会重置。
 
 状态存储在每个代理的 SQLite 认证状态中的 `usageStats` 下：
 
@@ -241,28 +248,17 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
 }
 ```
 
-默认值（`auth.cooldowns.*`）：
-
-| 键                            | 默认值 | 目的                                                                      |
-| ----------------------------- | ------ | ------------------------------------------------------------------------- |
-| `billingBackoffHours`         | 5      | 计费退避基础时间，每次计费失败都会翻倍                                     |
-| `billingMaxHours`             | 24     | 计费退避上限                                                              |
-| `authPermanentBackoffMinutes` | 10     | 高置信度永久性认证失败的基础退避时间                                       |
-| `authPermanentMaxMinutes`     | 60     | 该退避时间的上限                                                          |
-| `failureWindowHours`          | 24     | 如果在此时间窗口内没有失败，失败计数会重置                                |
-| `overloadedProfileRotations`  | 1      | 过载时，在切换到模型回退之前允许的同提供商配置文件轮换次数                |
-| `overloadedBackoffMs`         | 0      | 过载轮换重试前的固定延迟                                                 |
-| `rateLimitedProfileRotations` | 1      | 触发限流时，在切换到模型回退之前允许的同提供商配置文件轮换次数           |
-
-过载和限流错误的处理比计费冷却更激进：默认情况下，OpenClaw 允许一次同提供商 auth 配置文件重试，然后在不等待的情况下切换到下一个已配置的模型回退。
+过载和速率限制错误的处理比计费冷却更激进：默认情况下，OpenClaw 允许同一提供商的 auth-profile 重试一次，然后在不等待的情况下切换到下一个已配置的模型回退。
 
 ## 模型回退
 
 如果某个提供方的所有配置文件都失败了，OpenClaw 会切换到 `agents.defaults.model.fallbacks` 中的下一个模型。这适用于认证失败、速率限制以及耗尽配置文件轮换后的超时（其他错误不会推进回退）。没有暴露足够细节的提供商错误在回退状态中仍会被精确标记：`empty_response` 表示提供商没有返回可用消息或状态，`no_error_details` 表示提供商明确返回了 `Unknown error (no error details in response)`，而 `unclassified` 表示 OpenClaw 保留了原始预览，但当前还没有分类器匹配到它。
 
-Provider-busy signals such as `ModelNotReadyException` land in the overloaded bucket and follow the same one-rotation-then-fallback policy as rate limits (see the defaults table above).
+提供商繁忙信号，例如 `ModelNotReadyException`，会落入过载桶，并遵循与速率限制相同的“轮换一次后再回退”策略（参见上面的默认表）。
 
-当一次运行从已配置的默认主项、cron 作业主项、带有显式回退的 agent 主项，或自动选择的回退覆盖开始时，OpenClaw 可以沿着匹配的已配置回退链向下遍历。没有显式回退的 agent 主项，以及显式用户选择（例如 `/model ollama/qwen3.5:27b`、模型选择器、`sessions.patch`，或一次性的 CLI 提供商/模型覆盖）是严格的：如果该提供商/模型无法访问，或在生成回复前失败，OpenClaw 会报告失败，而不是从无关的回退中作答。
+如果整个候选链只因过载失败而耗尽，回复运行器会在同一轮次中最多重试该链 10 次。只有在工具执行或助手输出开始之前才允许整轮重试，以避免在过载出现在可观察工作之后时产生重复的修改或消息。退避从 2.5 秒开始，并指数翻倍，最高封顶 30 秒。一旦该轮次已经等待了 30 秒，OpenClaw 会发送一条一次性的临时状态通知：`The AI service is temporarily overloaded. I’m still retrying; this may take a few minutes.` 重试以及任何回退胜出项都只对当前轮次生效；普通的瞬时服务器错误仍保留其单次重试策略。
+
+当一次运行从已配置的默认主项、cron 作业主项、带有显式回退的代理主项，或自动选择的回退覆盖开始时，OpenClaw 可以沿着匹配的已配置回退链向下遍历。没有显式回退的代理主项以及显式的用户选择（例如 `/model ollama/qwen3.5:27b`、模型选择器、`sessions.patch`，或一次性的 CLI 提供方/模型覆盖）是严格的：如果该提供方/模型不可达，或者在生成回复之前失败，OpenClaw 会报告失败，而不是从无关的回退中回答。
 
 ### 候选链规则
 
@@ -319,71 +315,45 @@ OpenClaw 会根据当前请求的 `provider/model` 以及已配置的回退构�
 
 ## 会话覆盖与实时模型切换
 
-会话模型变更属于共享状态。活动运行器、`/model` 命令、压缩/会话更新，以及实时会话协调，都会读写同一个会话条目的部分内容。
+会话模型变更属于共享状态。活动运行器、`/model` 命令、压缩/会话更新，以及实时会话协调都会读取或写入同一会话条目的部分内容。回退执行不会写入模型选择字段，因此在重试时无法替换更新的手动选择。
 
-这意味着回退重试必须与实时模型切换协同：
+实时模型切换遵循以下规则：
 
-- 只有显式由用户驱动的模型变更才会标记一个待处理的实时切换。这包括 `/model`、`session_status(model=...)` 和 `sessions.patch`。
-- 诸如回退轮换、心跳覆盖或压缩之类的系统驱动模型变更，绝不会单独标记待处理的实时切换。
-- 用户驱动的模型覆盖会被视为回退策略中的精确选择，因此一个不可达的已选提供商会被视为失败，而不会被 `agents.defaults.model.fallbacks` 掩盖。
-- 在开始回退重试之前，回复运行器会将所选回退覆盖字段持久化到会话条目。
-- 自动回退覆盖会在后续轮次中保持选中状态，这样 OpenClaw 不会在每条消息上都探测一个已知有问题的主模型。OpenClaw 会周期性地重新探测配置的原始模型，并在其恢复后清除自动覆盖；`/new`、`/reset` 和 `sessions.reset` 会立即清除自动来源的覆盖。
-- 用户回复会在每次状态变化时播报回退切换以及回退清除后的恢复。粘性回退轮次不会重复提示。
-- `/status` 会显示所选模型，并在回退状态不同时时显示当前回退模型及原因。
-- 实时会话协调优先使用已持久化的会话覆盖，而不是过时的运行时模型字段。
-- 如果某个实时切换错误指向当前回退链中的后续候选项，OpenClaw 会直接跳转到该已选模型，而不是先遍历无关候选项。
-- 如果回退尝试失败，运行器只会回滚它写入的覆盖字段，并且仅在这些字段仍然与那个失败的候选项匹配时才会回滚。
+- 只有用户显式驱动的模型变更才会标记待处理的实时切换。其中包括 `/model`、`session_status(model=...)` 和 `sessions.patch`。
+- 由系统驱动的模型变更，例如回退轮换、心跳覆盖或压缩，绝不会自行标记待处理的实时切换。
+- 用户驱动的模型覆盖会被视为回退策略的精确选择，因此不可达的已选提供方会直接表现为失败，而不会被 `agents.defaults.model.fallbacks` 掩盖。
+- 运行时回退候选仍然局限于当前轮次。下一轮会从当前所选模型开始，包括上一轮运行期间到达的手动选择。
+- 先前存储的自动回退覆盖仍受支持：OpenClaw 会定期探测其配置的来源，并在恢复后清除该覆盖；`/new`、`/reset` 和 `sessions.reset` 会立即清除自动来源的覆盖。
+- 用户回复会在每次状态变更时通报回退转换和回退清除后的恢复。同一已选/活动配对的重复轮次不会重复该通知。
+- `/status` 会显示所选模型，以及在回退状态不同时，显示活动的回退模型和原因。
+- 实时会话协调优先使用持久化的会话覆盖，而不是过时的运行时模型字段。
+- 如果实时切换错误指向当前回退链中的更后一个候选，OpenClaw 会直接跳转到该所选模型，而不是先遍历无关候选。
 
-这可以避免经典竞态：
+活动运行会直接携带其选定的候选。实时协调仅在存在显式待处理的用户切换时才改变该候选，因此不需要临时回退覆盖或回滚。
 
-<Steps>
-  <Step title="主项失败">
-    所选主模型失败。
-  </Step>
-  <Step title="内存中选择了回退">
-    回退候选项在内存中被选中。
-  </Step>
-  <Step title="会话存储仍然显示旧主项">
-    会话存储仍然反映旧的主项。
-  </Step>
-  <Step title="实时协调读取到过时状态">
-    实时会话协调读取了过时的会话状态。
-  </Step>
-  <Step title="重试被弹回">
-    在回退尝试开始前，重试被弹回到旧模型。
-  </Step>
-</Steps>
+## Observability and Failure Summary
 
-持久化的回退覆盖关闭了这个窗口，而窄范围的回滚则保留了更新的手动或运行时会话变更。
+`runWithModelFallback(...)` logs detailed information for each attempt, and this information is surfaced in logs and user-facing cooldown messages:
 
-## 可观测性与失败摘要
+- The provider/model being attempted
+- The reason (`rate_limit`, `overloaded`, `billing`, `auth`, `model_not_found`, and similar fallback reasons)
+- Optional status/code
+- A human-readable error summary
 
-`runWithModelFallback(...)` 会记录每次尝试的详细信息，这些信息会进入日志以及面向用户的冷却消息中：
+The structured `model_fallback_decision` log also includes flattened `fallbackStep*` fields when candidates fail, are skipped, or when a later fallback succeeds. These fields explicitly record the transition that was attempted (`fallbackStepFromModel`, `fallbackStepToModel`, `fallbackStepFromFailureReason`, `fallbackStepFromFailureDetail`, `fallbackStepFinalOutcome`), so even if the final fallback also fails, the logs and diagnostic exporter can still reconstruct the primary failure information.
 
-- 尝试的提供商/模型
-- 原因（`rate_limit`、`overloaded`、`billing`、`auth`、`model_not_found`，以及类似的故障转移原因）
-- 可选的状态/代码
-- 人类可读的错误摘要
+When all candidates fail, OpenClaw throws `FallbackSummaryError`. The outer reply runner can use it to build a more specific message, such as “all models are currently rate-limited”, and include the earliest cooldown expiration time when known.
 
-结构化的 `model_fallback_decision` 日志在候选项失败、被跳过或后续回退成功时，也会包含扁平的 `fallbackStep*` 字段。这些字段会明确记录尝试过渡（`fallbackStepFromModel`、`fallbackStepToModel`、`fallbackStepFromFailureReason`、`fallbackStepFromFailureDetail`、`fallbackStepFinalOutcome`），因此即使最终回退也失败，日志和诊断导出器仍然可以重建主失败信息。
+This cooldown summary is model-aware:
 
-当所有候选项都失败时，OpenClaw 会抛出 `FallbackSummaryError`。外层回复运行器可以利用它构建更具体的消息，例如“所有模型目前都被速率限制”，并在已知时包含最早的冷却到期时间。
-
-该冷却摘要是模型感知的：
-
-- 与尝试的提供商/模型链无关的模型范围速率限制会被忽略
-- 如果剩余阻塞是一个匹配的模型范围速率限制，OpenClaw 会报告仍在阻塞该模型的最后一个匹配到期时间
+- Model-scoped rate limits that are unrelated to the attempted provider/model chain are ignored
+- If the remaining block is a matching model-scoped rate limit, OpenClaw reports the last matching expiration time that is still blocking that model
 
 ## 相关配置
 
 有关以下内容，请参见[网关配置](/gateway/configuration)：
 
 - `auth.profiles` / `auth.order`
-- `auth.cooldowns.billingBackoffHours` / `auth.cooldowns.billingBackoffHoursByProvider`
-- `auth.cooldowns.billingMaxHours` / `auth.cooldowns.failureWindowHours`
-- `auth.cooldowns.authPermanentBackoffMinutes` / `auth.cooldowns.authPermanentMaxMinutes`
-- `auth.cooldowns.overloadedProfileRotations` / `auth.cooldowns.overloadedBackoffMs`
-- `auth.cooldowns.rateLimitedProfileRotations`
 - `agents.defaults.model.primary` / `agents.defaults.model.fallbacks`
 - `agents.defaults.imageModel` 路由
 

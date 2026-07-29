@@ -13,7 +13,7 @@ sidebarTitle: "CLI 自动化"
 `--json` 并不意味着非交互式模式。请在脚本中显式传入 `--non-interactive --accept-risk`。
 </Note>
 
-## 基线非交互式示例
+## Baseline Non-Interactive Example
 
 ```bash
 openclaw onboard --non-interactive --accept-risk \
@@ -28,11 +28,11 @@ openclaw onboard --non-interactive --accept-risk \
   --skip-skills
 ```
 
-如需机器可读的摘要，请添加 `--json`。
+If you need a machine-readable summary, add `--json`.
 
-- `--gateway-port` 默认为 `18789`；仅在需要覆盖时传入。
-- `--skip-bootstrap` 会跳过创建默认工作区文件，适用于自动化场景中已预先填充自身工作区的情况。
-- `--secret-input-mode ref` 会在认证配置中存储一个基于环境变量的引用（`{ source: "env", provider: "default", id: "<ENV_VAR>" }`），而不是明文密钥。在非交互式 `ref` 模式下，provider 环境变量必须已经设置在进程环境中：如果传入内联密钥标志却没有对应的环境变量，将会快速失败。
+- `--gateway-port` defaults to `18789`; pass it only when you need to override it.
+- `--skip-bootstrap` skips creating the default workspace file, which is useful in automated scenarios where you have already prepopulated your own workspace.
+- `--secret-input-mode ref` stores an environment-variable-based reference in the authentication config (`{ source: "env", provider: "default", id: "<ENV_VAR>" }`) instead of a plaintext secret. In non-interactive `ref` mode, the provider environment variable must already be set in the process environment: if you pass an inline secret flag without the corresponding environment variable, it will fail fast.
 
 ```bash
 openclaw onboard --non-interactive --accept-risk \
@@ -176,9 +176,9 @@ openclaw onboard --non-interactive --accept-risk \
 
 Anthropic 的 setup-token 认证仍然受支持，但当本地 Claude CLI 已登录可用时，OpenClaw 会优先复用 Claude CLI。用于生产环境时，建议优先使用 Anthropic API key。
 
-## Add another agent
+## 添加另一个代理
 
-`openclaw agents add <name>` will create an independent agent with its own workspace, session, and authentication config files. Running it without `--workspace` (and without any other flags) will start an interactive wizard; passing any of `--workspace`, `--model`, `--agent-dir`, `--bind`, or `--non-interactive` will run it non-interactively, and then `--workspace` must be provided.
+`openclaw agents add <name>` 会创建一个独立的代理，拥有自己的工作区、会话和认证配置文件。不带 `--workspace`（且不带任何其他标志）运行时会启动交互式向导；传入 `--workspace`、`--model`、`--agent-dir`、`--bind` 或 `--non-interactive` 中的任意一个都会以非交互方式运行，此时必须提供 `--workspace`。
 
 ```bash
 openclaw agents add work \
@@ -189,18 +189,18 @@ openclaw agents add work \
   --json
 ```
 
-Configuration keys it writes (the new agent id's `agents.list[]` entry):
+它写入的配置键（新代理 id 对应的 `agents.entries.*` 条目）：
 
 - `name`
 - `workspace`
 - `agentDir`
-- `model` (only when `--model` is passed)
+- `model`（仅在传入 `--model` 时）
 
-Note:
+注意：
 
-- Default workspace (when `--workspace` is omitted in the interactive wizard): `~/.openclaw/workspace-<agentId>`.
-- `--bind <channel[:accountId]>` can be repeated; add bindings to route incoming messages to the new agent (this can also be done interactively in the wizard).
-- The agent name will be normalized into a valid agent id; `main` is a reserved name.
+- 默认工作区（当交互式向导中省略 `--workspace` 时）：`~/.openclaw/workspace-<agentId>`。
+- `--bind <channel[:accountId]>` 可以重复使用；添加绑定以将传入消息路由到新代理（这也可以在向导中以交互方式完成）。
+- 代理名称会被规范化为有效的代理 id；`main` 是保留名称。
 
 ## 相关文档
 

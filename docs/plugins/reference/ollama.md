@@ -16,7 +16,7 @@ title: "Ollama 插件"
 
 ## 作用域
 
-providers：ollama、ollama-cloud；contracts：memoryEmbeddingProviders、tools、webSearchProviders
+providers: `ollama`, `ollama-cloud`; contracts: `memoryEmbeddingProviders`, `tools`, `webSearchProviders`
 
 ## 相关文档
 

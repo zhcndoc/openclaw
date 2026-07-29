@@ -16,7 +16,7 @@ title: "Crabbox 插件"
 
 ## 表面
 
-contracts: workerProviders
+contracts: `workerProviders`
 
 <!-- openclaw-plugin-reference:manual-start -->
 

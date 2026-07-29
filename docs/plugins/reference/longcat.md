@@ -16,7 +16,7 @@ OpenClaw LongCat 提供程序插件。
 
 ## 表面
 
-providers: longcat
+providers: `longcat`
 
 ## 相关文档
 

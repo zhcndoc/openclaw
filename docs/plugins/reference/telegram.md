@@ -16,7 +16,7 @@ title: "Telegram 插件"
 
 ## 接口
 
-channels: telegram
+channels: `telegram`
 
 ## 相关文档
 

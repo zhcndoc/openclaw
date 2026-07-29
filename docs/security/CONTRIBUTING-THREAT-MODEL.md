@@ -1,6 +1,6 @@
 ---
 summary: "如何为 OpenClaw 威胁模型做出贡献"
-title: "为威胁模型做贡献"
+title: "为威胁模型做出贡献"
 read_when:
   - 你想贡献安全发现或威胁场景
   - 审查或更新威胁模型
@@ -14,7 +14,7 @@ read_when:
 
 ## 贡献方式
 
-**添加一个威胁。** 在 [openclaw/trust](https://github.com/openclaw/trust/issues) 上提交一个 issue，用你自己的话描述攻击场景。以下内容有帮助，但不是必需的：
+**添加一个威胁。** 打开一个 [文档 issue](https://github.com/openclaw/openclaw/issues/new?template=docs_bug_report.yml)，用你自己的话描述攻击场景。以下内容有帮助，但不是必须的：
 
 - 攻击场景以及它可能如何被利用。
 - 受影响的是哪些组件（CLI、网关、通道、ClawHub、MCP 服务器等）。
@@ -65,14 +65,13 @@ read_when:
 ## 资源
 
 - [ATLAS 网站](https://atlas.mitre.org/)
-- [ATLAS 技术](https://atlas.mitre.org/techniques/)
-- [ATLAS 案例研究](https://atlas.mitre.org/studies/)
+- [ATLAS 数据和贡献指南](https://github.com/mitre-atlas/atlas-data)
 
 ## 联系方式
 
-- **安全漏洞：** [信任页面](https://trust.openclaw.ai) 获取报告说明，或发送邮件至 `security@openclaw.ai`。
-- **威胁模型问题：** 在 [openclaw/trust](https://github.com/openclaw/trust/issues) 上创建一个 issue。
-- **一般交流：** Discord 的 `#security` 频道。
+- **安全漏洞：** [Trust 页面](https://trust.openclaw.ai) 查看报告说明，或联系 `security@openclaw.ai`。
+- **威胁模型问题：** 提交一个 [文档问题](https://github.com/openclaw/openclaw/issues/new?template=docs_bug_report.yml)。
+- **一般交流：** Discord `#security` 频道。
 
 ## 致谢
 

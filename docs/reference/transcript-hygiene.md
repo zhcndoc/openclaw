@@ -7,9 +7,7 @@ read_when:
 title: "转录卫生"
 ---
 
-OpenClaw 会在运行前（构建模型上下文时）对转录应用**提供商特定的修复**。其中大多数是用于满足严格提供商要求的**内存中**调整。另一个会话文件修复步骤也可能在会话加载前重写存储的 JSONL，但仅限于格式错误的行或作为持久化记录无效的会话轮次。已交付的 assistant 回复会保留在磁盘上；提供商特定的 assistant 预填充剥离仅在构造出站载荷时发生。
-
-当发生修复时，原始文件会在原子替换之前写入一个临时的 `*.bak-<pid>-<ts>` 兄弟文件，随后在替换成功后将其移除。只有在清理本身失败时才会保留备份，此时会将路径返回报告。
+OpenClaw 在运行前会对转录应用**提供商特定的修复**（构建模型上下文）。这些是用于满足严格提供商要求的**内存中**调整。运行时转录状态仍保存在 SQLite 中；提供商特定的 assistant 预填充剥离只会在构建出站负载时发生。
 
 范围包括：
 
@@ -38,8 +36,6 @@ OpenClaw 会在运行前（构建模型上下文时）对转录应用**提供商
 对于已经持久化了运行时包装器的旧会话，Gateway 历史界面会在将消息返回给 WebChat、
 TUI、REST 或 SSE 客户端之前应用显示投影。
 
----
-
 ## 适用位置
 
 所有转录清理都集中在嵌入式运行器中：
@@ -49,11 +45,8 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
 - 清理/修复应用：`sanitizeSessionHistory` 在
   `src/agents/embedded-agent-runner/replay-history.ts` 中
 
-与转录卫生处理分开，会话文件在加载之前会先修复（如有需要）：
-
-- `repairSessionFileIfNeeded` 在 `src/agents/session-file-repair.ts` 中
-- 由 `src/agents/embedded-agent-runner/run/attempt.ts` 和
-  `src/agents/embedded-agent-runner/compact.ts` 调用
+Legacy JSONL validation and import belong to `openclaw doctor --fix`; the
+embedded runner does not repair or reopen file-backed runtime transcripts。
 
 ---
 
@@ -73,11 +66,9 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
   和 tool-result 回合会收到一个非空的
   omitted-content 占位符。
 
----
-
 ## 全局规则：格式错误的工具调用
 
-Assistant 工具调用块如果同时缺少 `input` 和 `arguments`，会在构建模型上下文之前被丢弃。这样可以防止由于部分持久化的工具调用而导致提供方拒绝请求（例如，在速率限制失败之后）。
+如果 Assistant 工具调用块同时缺少 `input` 和 `arguments`，在构建模型上下文之前会将其丢弃。这样可以防止由于部分持久化的工具调用而导致提供方拒绝请求（例如，在速率限制失败之后）。
 
 实现：
 
@@ -87,13 +78,24 @@ Assistant 工具调用块如果同时缺少 `input` 和 `arguments`，会在构�
 
 ---
 
-## 全局规则：不完整的仅推理轮次
+## 全局规则：工具结果配对
 
-当助理轮次因提供方输出限制而仅包含思考内容或
-被遮蔽的思考内容时，这些轮次会从内存中的回放副本中省略。此类
-轮次包含不完整的提供方状态，可能带有部分思考签名。
+工具结果会在每个助手轮次中与工具调用出现位置进行配对，然后再重写提供方特定的调用 ID。提供方生成的 ID 可能会在后续轮次中重复，因此与重复调用相邻的结果会保留在该次出现处。只有在恰好有一个未解决的出现位置可以拥有它时，才会移动被挪位的结果；歧义性的多余结果会被丢弃，缺失的出现位置会收到合成的错误结果。
 
-空长度轮次保持不变，包含可见文本、工具调用或未知内容块的长度轮次也保持不变。已存储的转录不会被重写。
+实现：`sanitizeToolUseResultPairing` 位于
+
+`src/agents/session-transcript-repair.ts`
+
+## 全局规则：不完整或静默的仅推理回合
+
+当助理回合仅包含思考内容或被屏蔽的思考内容，并且在以下任一事件之后时，这些回合会从内存中的回放副本中省略：
+
+- 提供方输出限制以不完整的推理状态结束该回合。
+- 静默回复清理移除了该回合唯一可见的 `NO_REPLY` 文本。
+
+静默回复清理可防止隐藏推理在严格提供方重建会话时与后续的助理工具使用回合合并。
+
+空长度回合保持不变，具有可见文本、工具调用或未知内容块的长度回合也保持不变。带有工具调用或未知内容块的静默回复回合同样保持不变。已存储的转录不会被重写。
 
 实现：`normalizeAssistantReplayContent`，位于
 `src/agents/embedded-agent-runner/replay-history.ts`
@@ -113,8 +115,6 @@ OpenClaw 还会在路由后的提示文本之前，添加同一轮的 `[Inter-se
 
 在重建上下文期间，OpenClaw 会将相同标记应用于那些仅具有 provenance 元数据的旧持久化  
 会话间 user 轮次。
-
----
 
 ## 提供商矩阵（当前行为）
 

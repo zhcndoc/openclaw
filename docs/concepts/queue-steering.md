@@ -1,8 +1,9 @@
 ---
 summary: "运行时边界处的主动运行 steering 队列如何发送消息"
 read_when:
-  - 解释代理在使用工具时 steer 的行为
-  - 更改 active-run 队列行为或运行时 steering 集成
+  - 解释当代理正在使用工具时 steer 的行为
+  - 解释为什么 steering 不会取消正在进行中的工具调用批次
+  - 更改活动运行队列行为或运行时 steering 集成
   - 比较 steering 与 followup、collect 和 interrupt 队列模式
 title: "Steering 队列"
 ---
@@ -26,6 +27,16 @@ Steering 不会中断已经在运行的工具调用。OpenClaw 会在模型边�
 原生 Codex app-server harness 暴露的是 `turn/steer`，而不是 OpenClaw 运行时内部的 steering 队列。OpenClaw 会在配置的静默窗口内批量处理已排队的提示，然后发送一条包含所有按到达顺序收集到的用户输入的 `turn/steer` 请求。
 
 Codex review 和手动压缩回合会拒绝同回合 steering。当运行时无法在 `steer` 模式下接受 steering 时，OpenClaw 会等待当前运行完成后再开始提示。
+
+## 为什么 steering 要等待当前批次
+
+Steering 会在下一个模型步骤应用修正，而不是取消助手已经请求的工具调用。这是一个有意的设计决策，而不是缺少功能：
+
+- 一个工具调用批次是一个工作单元。当模型在一条 assistant 消息中请求多个工具调用时，它们通常彼此依赖，例如跨多个文件的编辑。取消尚未开始的调用会让这项工作只完成一半，而下一次模型步骤通常必须重做整个批次，才能回到一致状态。
+- 每个工具调用都会保留真实结果。丢弃已请求的调用意味着要为它们伪造被中止的结果，而模型经常会把这种合成失败误读为真实失败，然后重试，或者绕开那些实际上从未失败过的工具。
+- 上下文保持只追加。被 steering 的消息会追加到末尾，因此已经发送给模型的内容不会被重写，提供方的提示缓存也能保持有效。
+
+等待的范围仅受当前工具调用批次限制，而不是整个运行：steering 的修正会在模型下一次推理步骤中可见。停止当前工作与重定向当前工作是不同的意图；当最新消息应该中止当前运行而不是进行 steering 时，请使用 `/queue interrupt`（或 `/stop`）。
 
 ## 模式
 
@@ -52,7 +63,7 @@ Steering 始终针对当前活动的会话运行。它不会创建新会话、�
 
 ## 去抖
 
-`messages.queue.debounceMs` 适用于队列中的 `followup` 和 `collect` 投递。在使用原生 Codex harness 的 `steer` 模式下，它也会设置在发送批量 `turn/steer` 之前的静默窗口。对于 OpenClaw，主动 steering 本身不使用去抖计时器，因为 OpenClaw 会自然地将消息批量处理，直到下一个模型边界。
+内置的队列去抖适用于排队的 `followup` 和 `collect` 投递。在使用原生 Codex harness 的 `steer` 模式下，它还会在发送批量的 `turn/steer` 之前设置静默窗口。对于 OpenClaw，主动 steering 本身不使用去抖计时器，因为 OpenClaw 会自然地将消息批量处理，直到下一个模型边界。
 
 ## 相关内容
 

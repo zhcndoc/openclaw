@@ -101,7 +101,7 @@ openclaw gateway restart
   </Tab>
 </Tabs>
 
-## 内置目录
+## Direct Arcee catalog
 
 | Model ref                      | Name                   | Input | Context | Max output | Cost (in/out per 1M) | Tools | Notes                                     |
 | ------------------------------ | ---------------------- | ----- | ------- | ---------- | -------------------- | ----- | ----------------------------------------- |
@@ -113,7 +113,11 @@ openclaw gateway restart
 引导预设会将 `arcee/trinity-large-thinking` 设置为默认模型。
 </Tip>
 
-## 支持的功能
+## OpenRouter catalog
+
+OpenRouter onboarding exposes `arcee/trinity-large-preview` and `arcee/trinity-large-thinking`. OpenClaw keeps those provider-qualified model refs in config and sends OpenRouter's canonical `arcee-ai/*` runtime ids. Trinity Mini is no longer served by OpenRouter; use the direct Arcee API for that model.
+
+## Supported features
 
 | 功能                                       | 支持情况                                    |
 | --------------------------------------------- | -------------------------------------------- |
@@ -129,10 +133,12 @@ openclaw gateway restart
     `~/.openclaw/.env` 中，或通过 `env.shellEnv` 提供。
   </Accordion>
 
-  <Accordion title="OpenRouter 路由">
-    通过 OpenRouter 使用 Arcee 模型时，同样适用 `arcee/*` 模型引用。
-    OpenClaw 会根据你的认证方式透明地进行路由。有关 OpenRouter 的特定
-    配置详情，请参阅 [OpenRouter provider docs](/providers/openrouter)。
+  <Accordion title="OpenRouter routing">
+    OpenRouter uses the same `arcee/trinity-large-thinking` OpenClaw model ref.
+    OpenClaw routes it with the canonical `arcee-ai/trinity-large-thinking`
+    OpenRouter runtime id. See the
+    [OpenRouter provider docs](/providers/openrouter) for OpenRouter-specific
+    configuration details.
   </Accordion>
 </AccordionGroup>
 

@@ -16,7 +16,7 @@ title: "IRC 插件"
 
 ## 接口
 
-channels: irc
+channels: `irc`
 
 ## 相关文档
 

@@ -16,7 +16,7 @@ title: "Firecrawl 插件"
 
 ## 接口
 
-contracts: tools, webFetchProviders, webSearchProviders
+contracts: `tools`, `webFetchProviders`, `webSearchProviders`
 
 ## 相关文章
 

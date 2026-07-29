@@ -6,10 +6,10 @@ read_when:
 title: "GMI Cloud"
 ---
 
-GMI Cloud 是一个托管推理平台，提供面向前沿模型和开源权重模型的
-OpenAI 兼容 API。在 OpenClaw 中，它是一个官方外部提供方
-插件：只需安装一次，通过常规模型认证存储凭据，并使用
-类似 `gmi/google/gemini-3.1-flash-lite` 的模型引用。
+GMI Cloud is a hosted inference platform for frontier and open-weight models
+behind an OpenAI-compatible API. In OpenClaw it is an official external provider
+plugin: install it once, store credentials through normal model auth, and use
+model refs like `gmi/openai/gpt-5.6-sol`.
 
 当你希望用一个 API 密钥访问多个托管模型系列时，可以使用 GMI，包括
 Anthropic、DeepSeek、Google、Moonshot、OpenAI 和 Z.AI 等由 GMI 目录
@@ -26,7 +26,7 @@ Anthropic、DeepSeek、Google、Moonshot、OpenAI 和 Z.AI 等由 GMI 目录
 | Auth env var  | `GMI_API_KEY`                            |
 | API           | OpenAI-compatible (`openai-completions`) |
 | Base URL      | `https://api.gmi-serving.com/v1`         |
-| Default model | `gmi/google/gemini-3.1-flash-lite`       |
+| Default model | `gmi/openai/gpt-5.6-sol`                 |
 
 ## 设置
 
@@ -65,12 +65,11 @@ export GMI_API_KEY="<your-gmi-api-key>" # pragma: allowlist secret
 
 | Model ref                          | Input        | Context   | Max output |
 | ---------------------------------- | ------------ | --------- | ---------- |
-| `gmi/anthropic/claude-sonnet-4.6`  | 文本 + 图像  | 200,000   | 64,000     |
-| `gmi/deepseek-ai/DeepSeek-V3.2`    | 文本         | 163,840   | 65,536     |
-| `gmi/google/gemini-3.1-flash-lite` | 文本 + 图像  | 1,048,576 | 65,536     |
-| `gmi/moonshotai/Kimi-K2.5`         | 文本 + 图像  | 262,144   | 65,536     |
-| `gmi/openai/gpt-5.4`               | 文本 + 图像  | 400,000   | 128,000    |
-| `gmi/zai-org/GLM-5.1-FP8`          | 文本         | 202,752   | 65,536     |
+| `gmi/anthropic/claude-sonnet-5`    | text + image | 409,600   | 128,000    |
+| `gmi/deepseek-ai/DeepSeek-V4-Pro`  | text         | 1,048,576 | 384,000    |
+| `gmi/google/gemini-3.5-flash-lite` | text + image | 1,048,576 | 65,536     |
+| `gmi/openai/gpt-5.6-sol`           | text + image | 1,050,000 | 128,000    |
+| `gmi/zai-org/GLM-5.2-FP8`          | text         | 1,048,576 | 128,000    |
 
 目录只是一个种子，并不保证每个账号在任何时候都能调用每个模型。请列出你环境中配置的提供方所报告的内容：
 

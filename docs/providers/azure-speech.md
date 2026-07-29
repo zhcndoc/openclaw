@@ -31,18 +31,16 @@ Azure Speech 是一个捆绑的 Azure AI Speech 文本转语音提供商。OpenC
     ```
 
   </Step>
-  <Step title="在 messages.tts 中选择 Azure Speech">
+  <Step title="Select Azure Speech in tts">
     ```json5
     {
-      messages: {
-        tts: {
-          auto: "always",
-          provider: "azure-speech",
-          providers: {
-            "azure-speech": {
-              voice: "en-US-JennyNeural",
-              lang: "en-US",
-            },
+      tts: {
+        auto: "always",
+        provider: "azure-speech",
+        providers: {
+          "azure-speech": {
+            voice: "en-US-JennyNeural",
+            lang: "en-US",
           },
         },
       },
@@ -57,19 +55,19 @@ Azure Speech 是一个捆绑的 Azure AI Speech 文本转语音提供商。OpenC
 
 ## 配置选项
 
-所有选项都位于 `messages.tts.providers["azure-speech"]` 下。
+All options live under `tts.providers["azure-speech"]`.
 
 | Option                  | Description                                                                                           |
 | ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| `apiKey`                | Azure Speech 资源密钥。回退到 `AZURE_SPEECH_KEY`、`AZURE_SPEECH_API_KEY` 或 `SPEECH_KEY`。 |
-| `region`                | Azure Speech 资源区域。回退到 `AZURE_SPEECH_REGION` 或 `SPEECH_REGION`。                 |
-| `endpoint`              | 可选的 Azure Speech 端点覆盖。回退到受信任的 `AZURE_SPEECH_ENDPOINT`。               |
-| `baseUrl`               | 可选的 Azure Speech 基础 URL 覆盖。                                                              |
-| `voice`                 | Azure 语音 ShortName（默认 `en-US-JennyNeural`）。旧别名：`voiceId`。                         |
-| `lang`                  | SSML 语言代码（默认 `en-US`）。                                                                 |
-| `outputFormat`          | 音频文件输出格式（默认 `audio-24khz-48kbitrate-mono-mp3`）。                                 |
-| `voiceNoteOutputFormat` | 语音备忘录输出格式（默认 `ogg-24khz-16bit-mono-opus`）。                                       |
-| `timeoutMs`             | 请求超时覆盖，单位为毫秒。回退到全局 `messages.tts.timeoutMs`。          |
+| `apiKey`                | Azure Speech resource key. Falls back to `AZURE_SPEECH_KEY`, `AZURE_SPEECH_API_KEY`, or `SPEECH_KEY`. |
+| `region`                | Azure Speech resource region. Falls back to `AZURE_SPEECH_REGION` or `SPEECH_REGION`.                 |
+| `endpoint`              | Optional Azure Speech endpoint override. Falls back to trusted `AZURE_SPEECH_ENDPOINT`.               |
+| `baseUrl`               | Optional Azure Speech base URL override.                                                              |
+| `voice`                 | Azure voice ShortName (default `en-US-JennyNeural`). Legacy alias: `voiceId`.                         |
+| `lang`                  | SSML language code (default `en-US`).                                                                 |
+| `outputFormat`          | Audio-file output format (default `audio-24khz-48kbitrate-mono-mp3`).                                 |
+| `voiceNoteOutputFormat` | Voice-note output format (default `ogg-24khz-16bit-mono-opus`).                                       |
+| `timeoutMs`             | Request timeout override in milliseconds. Falls back to the global `tts.timeoutMs`.                   |
 
 在设置了 `apiKey` 以及 `region`、`endpoint` 或 `baseUrl` 其中之一后，即视为该提供者已配置。仅当配置键未设置时，才会将环境变量作为回退项进行检查。工作区的 `.env` 文件不能设置 `AZURE_SPEECH_ENDPOINT`；请使用进程环境、全局运行时 dotenv，或显式配置来进行端点路由。
 
@@ -102,11 +100,11 @@ Azure Speech 是一个捆绑的 Azure AI Speech 文本转语音提供商。OpenC
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="文本转语音" href="/tools/tts" icon="waveform-lines">
-    TTS 概览、提供程序以及 `messages.tts` 配置。
+  <Card title="Text-to-speech" href="/tools/tts" icon="waveform-lines">
+    TTS overview, providers, and `tts` config.
   </Card>
-  <Card title="配置" href="/gateway/configuration" icon="gear">
-    完整的配置参考，包括 `messages.tts` 设置。
+  <Card title="Configuration" href="/gateway/configuration" icon="gear">
+    Full config reference including `tts` settings.
   </Card>
   <Card title="提供程序" href="/providers" icon="grid">
     所有捆绑的 OpenClaw 提供程序。

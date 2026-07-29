@@ -75,18 +75,21 @@ npm 可能会将传递依赖提升到每插件项目的
 `node_modules`，位于插件包旁边。OpenClaw 在信任安装前会扫描受管项目根目录，并在卸载时移除该项目，因此
 提升的运行时依赖会留在该插件的清理边界内。
 
-已发布的 npm 插件包可以包含 `npm-shrinkwrap.json`；npm 会在安装期间使用该可发布的 lockfile，而 OpenClaw 的受管 npm 项目根目录通过正常安装路径支持它。OpenClaw 自有的可发布插件包必须包含一个包本地的 shrinkwrap，该文件由该包已发布的依赖图生成：
+OpenClaw-owned npm plugin packages never ship npm lockfiles. The repository
+uses `pnpm-lock.yaml` as its committed product dependency review boundary, then
+generates npm package locks only in temporary directories to validate the
+publishable dependency graph:
 
 ```bash
-pnpm deps:shrinkwrap:generate
-pnpm deps:shrinkwrap:check
+pnpm deps:npm-lock:check
+pnpm deps:npm-lock:check:changed
 ```
 
-生成器会去除插件的 `devDependencies`，应用工作区覆盖
-策略，并为每个 `openclaw.release.publishToNpm: true` 的插件写入
-`extensions/<id>/npm-shrinkwrap.json`。第三方插件包也可以
-附带 shrinkwrap；OpenClaw 对社区包不强制要求，但
-如果存在，npm 会尊重它。
+The checker strips plugin `devDependencies`, applies the workspace override
+policy, and rejects generated versions absent from `pnpm-lock.yaml`. Nothing
+is written into the checkout. Third-party plugin packages may still contain
+lockfiles according to their own packaging policy; OpenClaw's installer leaves
+that npm behavior to the installed npm version.
 
 在将本地包视为发布候选证明之前，请检查将要安装的
 tarball：
@@ -109,10 +112,19 @@ tmpdir=$(mktemp -d)
 rm -rf "$tmpdir"
 ```
 
-OpenClaw 自有的 npm 插件包也可以通过显式的 `bundledDependencies` 发布。npm 发布路径会覆盖运行时依赖名称列表，从已发布清单中剔除仅用于开发的工作区元数据，为包本地运行时依赖执行无脚本的 npm install，然后在打包或发布插件 tarball 时将这些依赖文件一并包含进去。依赖本地二进制较多的包（Codex、ACPX、Copilot、llama.cpp、
-memory-lancedb、Tlon）会通过
-`openclaw.release.bundleRuntimeDependencies: false` 选择退出；它们仍然会附带 shrinkwrap，但 npm 会在安装时解析运行时依赖，而不是将每个平台二进制都嵌入插件 tarball。根级 `openclaw`
-包不会打包其完整依赖树。
+OpenClaw-owned npm plugin packages can also publish with explicit
+`bundledDependencies`. The npm publish path overlays the runtime dependency
+name list, strips dev-only workspace metadata from the published manifest,
+runs a script-free npm install for the package-local runtime dependencies,
+then packs or publishes the plugin tarball with those dependency files
+included. Native-heavy packages (Codex, ACPX, Copilot, llama.cpp,
+memory-lancedb, Microsoft Teams, Tlon) opt out with
+`openclaw.release.bundleRuntimeDependencies: false`; they still ship a
+precisely pinned manifest, but npm resolves runtime dependencies during install
+instead of embedding every platform binary in the plugin tarball. The root
+`openclaw` package also resolves dependencies at install time and does not
+bundle its full dependency tree. See
+[dependency locking](/gateway/security/dependency-locking).
 
 导入 `openclaw/plugin-sdk/*` 的插件将 `openclaw` 声明为一个 peer 依赖。OpenClaw 不允许 npm 将宿主包的另一个 registry 副本安装到受管项目中，因为过期的宿主包会影响
 npm 在该插件内的 peer 解析。受管 npm 安装会跳过 npm peer

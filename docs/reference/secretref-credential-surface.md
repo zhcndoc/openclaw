@@ -36,18 +36,18 @@ title: "SecretRef 证书范围"
 - `models.providers.*.request.tls.key`
 - `models.providers.*.request.tls.passphrase`
 - `skills.entries.*.apiKey`
-- `agents.defaults.memorySearch.remote.apiKey`
-- `agents.list[].tts.providers.*.apiKey`
-- `agents.list[].memorySearch.remote.apiKey`
+- `memory.search.remote.apiKey`
+- `agents.entries.*.tts.providers.*.apiKey`
+- `agents.entries.*.memory.search.remote.apiKey`
 - `talk.providers.*.apiKey`
 - `talk.realtime.providers.*.apiKey`
-- `messages.tts.providers.*.apiKey`
-- `tools.web.fetch.firecrawl.apiKey`
+- `tts.providers.*.apiKey`
 - `plugins.entries.acpx.config.mcpServers.*.env.*`
 - `plugins.entries.brave.config.webSearch.apiKey`
 - `plugins.entries.codex.config.appServer.authToken`
 - `plugins.entries.codex.config.appServer.headers.*`
 - `plugins.entries.exa.config.webSearch.apiKey`
+- `plugins.entries.firecrawl.config.webFetch.apiKey`
 - `plugins.entries.google-meet.config.realtime.providers.*.apiKey`
 - `plugins.entries.google.config.webSearch.apiKey`
 - `plugins.entries.xai.config.webSearch.apiKey`
@@ -61,8 +61,7 @@ title: "SecretRef 证书范围"
 - `plugins.entries.voice-call.config.streaming.providers.*.apiKey`
 - `plugins.entries.voice-call.config.tts.providers.*.apiKey`
 - `plugins.entries.voice-call.config.twilio.authToken`
-- `tools.web.search.*.apiKey`
-- `tools.web.search.apiKey`
+- `plugins.entries.webhooks.config.routes.*.secret`
 - `gateway.auth.password`
 - `gateway.auth.token`
 - `gateway.remote.token`
@@ -84,6 +83,10 @@ title: "SecretRef 证书范围"
 - `channels.slack.accounts.*.signingSecret`
 - `channels.sms.authToken`
 - `channels.sms.accounts.*.authToken`
+- `channels.buzz.authTag`
+- `channels.buzz.privateKey`
+- `channels.clickclack.token`
+- `channels.clickclack.accounts.*.token`
 - `channels.discord.token`
 - `channels.discord.pluralkit.token`
 - `channels.discord.voice.tts.providers.*.apiKey`
@@ -129,11 +132,13 @@ title: "SecretRef 证书范围"
 
 说明：
 
-- Auth-profile 计划目标需要 `agentId`；计划条目目标为 `profiles.*.key` / `profiles.*.token`，并写入相邻引用（`keyRef` / `tokenRef`）。Auth-profile 引用包含在运行时解析和审计覆盖范围内。
-- 在 `openclaw.json` 中，SecretRef 必须使用结构化对象，例如 `{"source":"env","provider":"default","id":"DISCORD_BOT_TOKEN"}`。在 SecretRef 凭证路径上，旧版 `secretref-env:<ENV_VAR>` 标记字符串会被拒绝；请运行 `openclaw doctor --fix` 迁移有效标记。
-- OAuth 策略守卫：`auth.profiles.<id>.mode = "oauth"` 不能与该配置文件的 SecretRef 输入同时使用。违反此策略时，启动/重载和 auth-profile 解析会快速失败。
-- 对于由 SecretRef 管理的模型提供方，生成的 `agents/*/agent/models.json` 条目会保留非机密标记（而非已解析的机密值），用于 `apiKey`/header 表面。标记持久化以源配置为准：OpenClaw 从活动源配置快照（解析前）写入标记，而不是从解析后的运行时机密值写入。
-- 对于网页搜索：在显式提供方模式（设置了 `tools.web.search.provider`）下，仅所选提供方密钥处于活动状态。在自动模式（未设置 `tools.web.search.provider`）下，仅按优先级解析出的第一个提供方密钥处于活动状态，未被选中的提供方引用在被选中前视为非活动。旧版 `tools.web.search.*` 提供方路径在兼容窗口内仍会解析，但规范的 SecretRef 表面是 `plugins.entries.<plugin>.config.webSearch.*`。
+- Auth-profile 计划目标需要 `agentId`；计划条目以 `profiles.*.key` / `profiles.*.token` 为目标，并写入相邻引用（`keyRef` / `tokenRef`）。Auth-profile 引用包含在运行时解析和审计覆盖范围内。
+- 在 `openclaw.json` 中，SecretRef 必须使用结构化对象，例如 `{"source":"env","provider":"default","id":"DISCORD_BOT_TOKEN"}`。在 SecretRef 凭证路径上，旧式的 `secretref-env:<ENV_VAR>` 标记字符串会被拒绝；请运行 `openclaw doctor --fix` 以迁移有效标记。
+- OAuth 策略保护：`auth.profiles.<id>.mode = "oauth"` 不能与该配置文件的 SecretRef 输入结合使用。违反此策略时，启动/重载和 auth-profile 解析会立即失败。
+- 对于由 SecretRef 管理的模型提供方，生成的 `agents/*/agent/models.json` 条目会保留非密文标记（而不是解析后的密文值），用于 `apiKey`/header 相关字段。标记持久化以源配置为准：OpenClaw 从当前生效的源配置快照（解析前）写入标记，而不是使用解析后的运行时密文值。
+- 冷启动 Gateway 可以将可重试的解析失败隔离给已映射的、非 Gateway 所有者。当前已映射的类别包括模型提供方和技能、媒体/TTS/cron 提供方、符合条件的 auth profiles、按 agent 划分的内存、sandbox SSH、channel accounts，以及清单声明的插件路由。启动时会将每个失败所有者的显式引用保留在运行时快照中，通过 status 和 doctor 报告该所有者，并在不尝试更低优先级凭证的情况下拒绝该所有者的请求。重载和配置写入预检使用相同的所有者感知策略：健康的所有者会刷新；符合条件且失败的所有者仅在其引用标识、提供方定义以及完整的非密文所有者契约未发生变化时才保持陈旧状态；新的或已变化的失败会变为冷态。Gateway 入口认证、结构无效的引用或值、fail-closed 所有者，以及当前未映射的所有者仍然保持严格处理。
+- 对于网页搜索：在显式提供方模式下（设置了 `tools.web.search.provider`），只有所选提供方的键处于激活状态。在自动模式下（未设置 `tools.web.search.provider`），只有按优先级解析出的第一个提供方键处于激活状态，未被选中的提供方引用在被选中之前会被视为非激活状态。提供方凭证使用 `plugins.entries.<plugin>.config.webSearch.*`。
+- Slack 的 `identity: "user"` 使用 `channels.slack.userToken`，并在 Socket Mode 下配合 `channels.slack.appToken`，或在 HTTP 模式下配合 `channels.slack.signingSecret`。同样的配对规则也适用于 `channels.slack.accounts.*`；此身份不需要 bot token。
 
 ## 不支持的证书
 
@@ -141,7 +146,6 @@ title: "SecretRef 证书范围"
 
 [//]: # "secretref-unsupported-list-start"
 
-- `commands.ownerDisplaySecret`
 - `hooks.token`
 - `hooks.gmail.pushToken`
 - `hooks.mappings[].sessionKey`

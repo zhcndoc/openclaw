@@ -16,7 +16,7 @@ title: "Memory Wiki 插件"
 
 ## 表面
 
-contracts: tools; skills
+contracts: `tools`; skills
 
 ## 相关文档
 

@@ -1,22 +1,21 @@
 ---
-summary: "如何启用和调优用于检测重复工具调用循环的护栏"
+summary: "如何启用可检测重复工具调用循环的护栏"
 title: "工具循环检测"
 read_when:
-  - 用户报告智能体卡在重复调用工具的状态
-  - 你需要调优重复调用保护
-  - 你正在编辑智能体工具/运行时策略
-  - 你在上下文溢出重试后遇到 `compaction_loop_persisted` 中止
+  - 用户报告代理陷入重复的工具调用
+  - 你需要控制重复调用保护
+  - 你正在编辑代理工具/运行时策略
+  - 在上下文溢出重试后遇到 `compaction_loop_persisted` 中止
 ---
 
 OpenClaw 有两种协同工作的护栏，用于防止重复的工具调用模式，
 两者都在 `tools.loopDetection` 下配置：
 
 1. **循环检测** (`enabled`) - 默认禁用。监视滚动的
-   工具调用历史，以识别重复模式和未知工具重试。
-2. **压缩后护栏** (`postCompactionGuard`) - 当
-   `enabled` 没有被显式设为 `false` 时启用。每次压缩重试后都会武装，
-   如果智能体在窗口内重复相同的 `(tool, args, result)` 三元组，
-   就会中止运行。
+   工具调用历史，查找重复模式和未知工具重试。
+2. **压缩后护栏** - 只要
+   `enabled` 没有被显式设为 `false` 就会启用。每次压缩重试后都会武装，并在
+   代理在窗口内重复相同的 `(tool, args, result)` 三元组时中止运行。
 
 将 `tools.loopDetection.enabled: false` 设为静音两种护栏。
 
@@ -29,32 +28,19 @@ OpenClaw 有两种协同工作的护栏，用于防止重复的工具调用模�
 
 ## 配置块
 
-全局默认值，显示所有已文档化字段：
+全局设置：
 
 ```json5
 {
   tools: {
     loopDetection: {
-      enabled: false, // 滚动历史检测器的主开关
-      historySize: 30,
-      warningThreshold: 10,
-      criticalThreshold: 20,
-      unknownToolThreshold: 10,
-      globalCircuitBreakerThreshold: 30,
-      detectors: {
-        genericRepeat: true,
-        knownPollNoProgress: true,
-        pingPong: true,
-      },
-      postCompactionGuard: {
-        windowSize: 3, // 在压缩重试后启动；除非 enabled 明确为 false，否则会运行
-      },
+      enabled: false, // rolling-history 检测器的总开关
     },
   },
 }
 ```
 
-按代理覆盖（可选，位于 `agents.list[].tools.loopDetection`）：
+按代理覆盖（可选，位于 `agents.entries.*.tools.loopDetection`）：
 
 ```json5
 {
@@ -65,8 +51,6 @@ OpenClaw 有两种协同工作的护栏，用于防止重复的工具调用模�
         tools: {
           loopDetection: {
             enabled: true,
-            warningThreshold: 8,
-            criticalThreshold: 16,
           },
         },
       },
@@ -75,24 +59,13 @@ OpenClaw 有两种协同工作的护栏，用于防止重复的工具调用模�
 }
 ```
 
-每个代理的设置会逐字段覆盖全局块（包括嵌套的
-`detectors` 和 `postCompactionGuard`），因此代理只需要设置
-它想要更改的字段。
+按代理设置会覆盖全局设置。
 
 ### 字段行为
 
-| 字段                             | 默认值  | 作用                                                                                                                                       |
-| -------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `enabled`                        | `false` | 滚动历史检测器的主开关。`false` 也会禁用压缩后保护。                                                                                       |
-| `historySize`                    | `30`    | 用于分析保留的最近工具调用次数。                                                                                                           |
-| `warningThreshold`               | `10`    | 模式被分类为仅警告之前的重复次数。                                                                                                         |
-| `criticalThreshold`              | `20`    | 用于阻止无进展循环模式的重复次数。若配置错误，运行时会将其限制在高于 `warningThreshold` 的值。                                              |
-| `unknownToolThreshold`           | `10`    | 在多次未命中后，阻止对同一个不可用工具的重复调用。此项不受 `detectors` 约束。                                                              |
-| `globalCircuitBreakerThreshold`  | `30`    | 跨所有检测器的全局无进展断路器。若配置错误，运行时会将其限制在高于 `criticalThreshold` 的值。此项不受 `detectors` 约束。                   |
-| `detectors.genericRepeat`        | `true`  | 对重复的同工具 + 同参数调用发出警告；当这些调用也返回相同结果时则阻止。                                                                    |
-| `detectors.knownPollNoProgress`  | `true`  | 检测已知的无进展轮询模式（`process`，其中 `action: "poll"`/`"log"`，`command_status`）。                                                  |
-| `detectors.pingPong`             | `true`  | 检测两个调用之间交替出现的无进展 ping-pong 模式。                                                                                          |
-| `postCompactionGuard.windowSize` | `3`     | 压缩后保持该保护处于待命状态的尝试次数，以及会中止运行的相同三元组数量。                                                                   |
+| 字段 | 默认值 | 作用 |
+| --------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `enabled` | `false` | rolling-history 检测器的总开关。`false` 还会禁用压缩后保护。 |
 
 对于 `exec`，无进展哈希会比较稳定的命令结果（状态、
 退出码、超时标志、输出），并忽略诸如持续时间、PID、会话 ID 和工作目录
@@ -103,24 +76,15 @@ ID（消息 ID、文件 ID、时间戳），因此“已发送”结果不会看
 
 ## 推荐设置
 
-- 对于较小的模型，将 `enabled: true` 并将阈值保持在其
-  默认值。旗舰模型通常不需要滚动历史检测，并且可以保持主开关为 `false`，同时仍能受益于
-  压缩后防护。
-- 保持阈值顺序为 `warningThreshold < criticalThreshold <
-globalCircuitBreakerThreshold`；如果你将 `criticalThreshold` 和
-  `globalCircuitBreakerThreshold` 设置为不高于它们必须超过的
-  阈值，运行时会将其上调。
-- 如果出现误报：
-  - 提高 `warningThreshold` 和/或 `criticalThreshold`。
-  - 可选地提高 `globalCircuitBreakerThreshold`。
-  - 仅禁用导致问题的特定检测器（`detectors.<name>: false`）。
-  - 减小 `historySize` 以缩短历史窗口。
-- 若要禁用所有功能，包括压缩后防护，请显式设置
+- 对于较小的模型，设置 `enabled: true`。旗舰模型通常不需要滚动历史检测，并且可以将主开关保持为 `false`，同时仍然受益于压缩后保护机制。
+- 若要禁用所有功能，包括压缩后保护机制，请显式设置
   `tools.loopDetection.enabled: false`。
 
 ## 压缩后护栏
 
-在发生上下文溢出后的压缩重试之后，运行器会在接下来的几次工具调用上启用一个短窗口护栏。若代理在该窗口内多次发出相同的 `(toolName, argsHash, resultHash)` 三元组，且次数达到 `postCompactionGuard.windowSize`，护栏会判定压缩并未打破循环，并以 `compaction_loop_persisted` 错误中止运行。
+在因上下文溢出而进行一次压缩重试之后，运行器会在接下来的几次工具调用上启用一个短窗口护栏。如果代理在该窗口内多次发出相同的
+`(toolName, argsHash, resultHash)` 三元组，护栏就会判定压缩并未打破该
+循环，并以 `compaction_loop_persisted` 错误终止运行。
 
 该护栏受主开关 `tools.loopDetection.enabled` 控制，但有一个例外：当该标志未设置或为 `true` 时，它仍然保持**启用**，只有在该标志被显式设为 `false` 时才会关闭。这样设计是有意为之——护栏的存在就是为了跳出压缩循环，否则这些循环会无上限地消耗 token，因此即使是不配置的用户也能获得保护。
 
@@ -130,21 +94,16 @@ globalCircuitBreakerThreshold`；如果你将 `criticalThreshold` 和
     loopDetection: {
       // 主开关；设为 false 可连同滚动检测器一起禁用护栏
       enabled: true,
-      postCompactionGuard: {
-        windowSize: 3, // 默认值
-      },
     },
   },
 }
 ```
 
-- `windowSize` 越小，限制越严格（在中止前允许的尝试次数越少）。
-- `windowSize` 越大，代理获得的恢复尝试次数越多。
-- 护栏在结果发生变化时绝不会中止；只有窗口内结果字节级完全一致时才会触发。
-- 它只会在压缩重试后的紧接阶段启用，不会在运行的其他时点启用。
+- 当结果仍在变化时，护栏绝不会中止；只有窗口内结果字节级完全相同才会触发它。
+- 它只会在一次压缩重试后的紧接阶段启用，而不会在运行中的其他时刻启用。
 
 <Note>
-  As long as the master flag is not explicitly set to `false`, the post-compaction guard will run even if you never wrote a `tools.loopDetection` block. To verify this, check the gateway logs for `post-compaction guard armed for N attempts` immediately after a compaction event.
+  只要主标志没有被显式设为 `false`，即使你从未写过 `tools.loopDetection` 块，压缩后护栏也会运行。要验证这一点，请在一次压缩事件后立即检查网关日志中是否出现 `post-compaction guard armed for N attempts`。
 </Note>
 
 ## 日志和预期行为

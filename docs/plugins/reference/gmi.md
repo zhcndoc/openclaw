@@ -16,7 +16,7 @@ OpenClaw GMI 云提供程序插件。
 
 ## 接口
 
-providers: gmi, gmi-cloud, gmicloud
+providers: `gmi`, `gmi-cloud`, `gmicloud`
 
 ## 相关文档
 

@@ -16,7 +16,7 @@ title: "OpenAI 插件"
 
 ## 范围
 
-providers：openai；contracts：imageGenerationProviders、mediaUnderstandingProviders、memoryEmbeddingProviders、realtimeTranscriptionProviders、realtimeVoiceProviders、speechProviders、usageProviders、videoGenerationProviders
+providers: `openai`; contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `memoryEmbeddingProviders`, `realtimeTranscriptionProviders`, `realtimeVoiceProviders`, `speechProviders`, `usageProviders`, `videoGenerationProviders`
 
 ## 相关文档
 

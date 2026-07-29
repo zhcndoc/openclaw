@@ -22,13 +22,13 @@ read_when:
 
 ## 内置目录
 
-| Model ref                            | 输入       | 上下文 | 最大输出 | 备注                                          |
-| ------------------------------------ | ----------- | ------- | -------- | --------------------------------------------- |
-| `cohere/command-a-plus-05-2026`      | 文本、图像   | 128,000 | 64,000     | 默认；旗舰级 agentic 与推理模型               |
-| `cohere/command-a-03-2025`           | 文本        | 256,000 | 8,000      | 之前的 Command A 模型                         |
-| `cohere/command-a-reasoning-08-2025` | 文本        | 256,000 | 32,000     | Agentic 推理与工具使用                        |
-| `cohere/command-a-vision-07-2025`    | 文本、图像   | 128,000 | 8,000      | 视觉与文档分析；不支持工具使用                |
-| `cohere/north-mini-code-1-0`         | 文本、图像   | 256,000 | 64,000     | Agentic 编码；推理；免费额度                  |
+| Model ref                            | Visibility | Input       | Context | Max output | Notes                                         |
+| ------------------------------------ | ---------- | ----------- | ------- | ---------- | --------------------------------------------- |
+| `cohere/command-a-plus-05-2026`      | visible    | text, image | 128,000 | 64,000     | Default; flagship agentic and reasoning model |
+| `cohere/command-a-03-2025`           | hidden     | text        | 256,000 | 8,000      | Previous generation; replaced by Command A+   |
+| `cohere/command-a-reasoning-08-2025` | hidden     | text        | 256,000 | 32,000     | Previous generation; replaced by Command A+   |
+| `cohere/command-a-vision-07-2025`    | hidden     | text, image | 128,000 | 8,000      | Previous generation; replaced by Command A+   |
+| `cohere/north-mini-code-1-0`         | visible    | text, image | 256,000 | 64,000     | Agentic coding; reasoning; free limits        |
 
 支持推理的 Cohere 模型支持两种 Compatibility API 推理模式。OpenClaw 将 **off** 映射为 `none`，并将所有已启用的 thinking 级别映射为 `high`。Command A Vision 不支持工具使用，因此 OpenClaw 会为该模型保持 agent 工具禁用。
 

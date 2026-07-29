@@ -14,29 +14,26 @@ OpenClaw 不会提供、下载、启动、配置或认证代理。你运行适�
 
 ```yaml
 proxy:
-  enabled: true
   proxyUrl: http://127.0.0.1:3128
 ```
 
-你也可以在环境中设置 URL，同时保持 `proxy.enabled: true` 在配置中：
+您也可以通过环境变量设置该 URL：
 
 ```bash
 OPENCLAW_PROXY_URL=http://127.0.0.1:3128 openclaw gateway run
 ```
 
-`proxy.proxyUrl` 的优先级高于 `OPENCLAW_PROXY_URL`。如果 `proxy.enabled` 为 `true` 但没有解析出有效的 URL，受保护的命令会在启动时失败，而不是回退到直接网络访问。
+`proxy.proxyUrl` 的优先级高于 `OPENCLAW_PROXY_URL`。配置了 URL 会启用托管代理路由；移除这两个 URL 都会将其禁用。
 
 | Key                  | Type                                 | Default        | Notes                                                                                                                                 |
 | -------------------- | ------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `proxy.enabled`      | boolean                              | unset          | 必须为 `true` 才能激活路由。                                                                                                           |
-| `proxy.proxyUrl`     | string                               | unset          | `http://` 或 `https://` 的正向代理 URL。URL 中嵌入的凭据会被视为敏感信息，并在快照/日志中被脱敏。                                      |
-| `proxy.tls.caFile`   | string                               | unset          | 用于验证由私有 CA 签名的 `https://` 代理端点的 CA 证书包。                                                                             |
-| `proxy.loopbackMode` | `gateway-only` \| `proxy` \| `block` | `gateway-only` | 控制回环绕过行为；见下文。                                                                                                             |
+| `proxy.proxyUrl`     | string                               | unset          | `http://` 或 `https://` 正向代理 URL。嵌入 URL 中的凭据会被视为敏感信息，并在快照/日志中脱敏。 |
+| `proxy.tls.caFile`   | string                               | unset          | 用于验证由私有 CA 签名的 `https://` 代理端点的 CA 证书包。                                                          |
+| `proxy.loopbackMode` | `gateway-only` \| `proxy` \| `block` | `gateway-only` | 控制环回绕过行为；见下文。                                                                                         |
 
 对于托管网关服务，请将 URL 存储在配置中，这样即使重新安装也能保留，而不是依赖前台环境变量：
 
 ```bash
-openclaw config set proxy.enabled true
 openclaw config set proxy.proxyUrl http://127.0.0.1:3128
 openclaw gateway install --force
 openclaw gateway start
@@ -48,7 +45,6 @@ openclaw gateway start
 
 ```yaml
 proxy:
-  enabled: true
   proxyUrl: https://proxy.corp.example:8443
   tls:
     caFile: /etc/openclaw/proxy-ca.pem
@@ -57,7 +53,6 @@ proxy:
 `proxy.tls.caFile` 用于验证代理端点自身的 TLS 证书。它不是目标 MITM 信任设置，不是客户端证书，也不能替代代理的目标策略。只有在整个 Node 进程必须从启动时起信任额外 CA 时，才改用 `NODE_EXTRA_CA_CERTS`（例如企业 TLS 检查系统为每个 HTTPS 目标证书重新签名）——该变量是进程全局的，必须在 Node 启动前设置，因此 OpenClaw 无法像应用 `proxy.tls.caFile` 那样在运行中间应用它。对于 HTTPS 代理端点信任，优先使用 `proxy.tls.caFile`：它的作用范围仅限于受管理的代理路由，而不是整个进程。
 
 ```bash
-openclaw config set proxy.enabled true
 openclaw config set proxy.proxyUrl https://proxy.corp.example:8443
 openclaw config set proxy.tls.caFile /etc/openclaw/proxy-ca.pem
 openclaw gateway run
@@ -65,7 +60,7 @@ openclaw gateway run
 
 ## 路由工作原理
 
-当 `proxy.enabled: true` 且 URL 有效时，受保护的运行时进程（`openclaw gateway run`、`openclaw node run`、`openclaw agent --local`）会通过代理路由普通的 HTTP 和 WebSocket 出站流量：
+使用有效的代理 URL 时，受保护的运行时进程（`openclaw gateway run`、`openclaw node run`、`openclaw agent --local`）会将普通的 HTTP 和 WebSocket 出站流量通过代理路由：
 
 ```text
 OpenClaw process
@@ -91,12 +86,13 @@ OpenClaw process
 
 ```yaml
 proxy:
-  enabled: true
   proxyUrl: http://127.0.0.1:3128
   loopbackMode: gateway-only # gateway-only, proxy, or block
 ```
 
-| 模式                     | 行为                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+已配置的 `proxyUrl` 或 `OPENCLAW_PROXY_URL` 会启用受管路由。将 `proxy.enabled: false` 仅作为一种高级退出选项，它会保留已存储的 URL，但不会激活它。
+
+| Mode                     | 行为                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gateway-only`（默认）   | OpenClaw 会将当前活动的 Gateway 回环 authority 注册为直连例外，因此本地 Gateway WebSocket 流量无需经过代理即可连接。自定义回环端口也可工作，因为该例外会精确指向已配置的 host/port。内置浏览器插件会为 OpenClaw 启动的受管浏览器的精确本地 CDP 就绪和 DevTools WebSocket URL 注册同类例外；内置 Ollama memory embedding provider 则为其精确配置的、主机本地回环 embedding origin 提供更窄的受保护直连路径。 |
 | `proxy`                  | 不注册任何回环例外；Gateway 和 Ollama 的回环流量会通过代理。远程代理必须能够将流量路由回 OpenClaw 主机的回环服务（例如通过可达的 hostname、IP 或隧道）——标准的远程代理会把 `127.0.0.1`/`localhost` 解析到它自己，而不是 OpenClaw 主机。                                                                                                                                                                                                                                                                                                                                                |
@@ -150,7 +146,7 @@ openclaw proxy validate --proxy-url https://proxy.corp.example:8443 --proxy-ca-f
 | `--timeout-ms <ms>`      | 每个请求的超时时间。                                                 |
 | `--json`                 | 机器可读输出。                                             |
 
-如果 `proxy.enabled` 不是 `true` 且未提供 `--proxy-url`，该命令会报告配置问题而不是执行验证；在修改配置之前，先传入 `--proxy-url` 进行一次性预检。
+如果没有可用的配置、环境变量或 `--proxy-url` 值，命令会报告配置问题；在更改配置之前，可传入 `--proxy-url` 进行一次性预检。
 
 如果没有提供 `--allowed-url`/`--denied-url`，默认检查为：`https://example.com/` 必须成功，并且代理绝不能访问到一个临时的回环探针服务器，且必须将其阻止。回环检查在传输失败时通过，或者在返回一个不包含该探针每次运行唯一 token 的非 2xx 响应时通过；如果返回 2xx 响应但缺少 token（即来自非探针的意外成功），则失败；尤其是在任何带有匹配 token 的响应上也会失败，因为这证明代理实际上转发了它本应拒绝的回环目标。自定义的 `--denied-url` 目标没有这样的探针 token，因此它们采用“失败即关闭”的策略：任何 HTTP 响应都视为可达（失败），而传输错误则被报告为不确定，而不是证明已阻止，因为 OpenClaw 无法确认是你的代理拒绝了一个可达的源，还是其他地方出了问题。`--apns-reachable` 会发送一个故意无效的提供者 token，因此返回 `403 InvalidProviderToken` 响应就可证明隧道已到达 Apple。命令在任何验证失败时以 `1` 退出；代理 URL 凭据会在文本和 JSON 输出中被脱敏。
 

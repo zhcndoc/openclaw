@@ -84,8 +84,7 @@ pnpm qa:lab:up
 
 ## 相关内容
 
-- [QA 概览](/concepts/qa-e2e-automation) - 整体栈、传输适配器、场景编写
-- [Matrix QA](/concepts/qa-matrix) - 驱动真实频道的示例实时传输运行器
+- [QA 概览](/concepts/qa-e2e-automation) - 整体技术栈、传输适配器、Matrix 实时通道和场景编写
 - [配对](/channels/pairing)
 - [群组](/channels/groups)
-- [频道概览](/channels)
+- [渠道概览](/channels)

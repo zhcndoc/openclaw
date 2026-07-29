@@ -30,23 +30,25 @@ OpenClaw 会为每次 agent 运行构建自己的系统提示词；运行时没�
 
 提示词很紧凑，包含固定部分：
 
-- **工具链**：结构化工具的唯一事实来源提醒，以及运行时工具使用指导。当启用实验性的 `update_plan` 工具（`tools.experimental.planTool`）时，它自己的工具说明会补充：仅用于非平凡的多步骤工作，最多保持一个步骤处于 `in_progress` 状态，并且简单的一步工作要跳过它。
-- **执行偏向**：对可执行请求按顺序立即处理，持续执行直到完成或受阻，从较弱的工具结果中恢复，实时检查可变状态，并在最终确认前进行验证。
-- **安全性**：针对寻求权力行为或绕过监督的简短防护提醒。
-- **技能**（如可用）：告诉模型如何按需加载技能说明。
-- **OpenClaw 控制**：配置/重启相关工作优先使用 `gateway` 工具；不要臆造 CLI 命令。
-- **OpenClaw 自更新**：使用 `config.schema.lookup` 安全检查配置，使用 `config.patch` 打补丁，使用 `config.apply` 替换完整配置，并且仅在用户明确请求时运行 `update.run`。面向代理的 `gateway` 工具拒绝重写 `tools.exec.ask` / `tools.exec.security`，包括归一化到这些受保护路径的旧版 `tools.bash.*` 别名。
-- **工作区**：工作目录（`agents.defaults.workspace`）。
-- **文档**：本地文档/源码路径，以及何时读取它们。
-- **工作区文件（注入）**：说明启动文件包含在下方。
-- **沙箱**（如启用）：沙箱运行时、沙箱路径、提升执行可用性。
-- **当前日期与时间**：仅时区信息（可缓存稳定；实时钟表来自 `session_status`）。
-- **助手输出指令**：紧凑附件、语音备注和回复标签语法。
-- **心跳**：当默认代理启用心跳时，心跳提示和确认应答行为。
-- **运行时**：主机、操作系统、node、模型、仓库根目录（如检测到）、思考级别（一行）。
-- **推理**：当前可见级别以及 `/reasoning` 切换提示。
+- **工具链**: structured-tool 作为单一事实来源的提醒，以及运行时工具使用指导。当 `update_plan` 工具启用时（`tools.updatePlan`，默认开启），它自己的工具说明还会增加：仅用于非平凡的多步骤工作，最多保持一个步骤处于 `in_progress`，而且简单的一步工作要跳过它。
+- **执行偏向**: 对可执行的请求在轮次内直接行动，持续推进直到完成或受阻，从较弱的工具结果中恢复，实时检查可变状态，并在最终确定前进行验证。
+- **承诺的工作**: 对未来、后台、委派或持续进行的工作作出承诺会产生跟进责任：在结束本轮前安排推送式完成路径或监视路径，主动带着结果或明确阻碍返回，并且绝不把进展（如 `running`）当作完成。
+- **安全性**: 针对权力寻求行为或绕过监督的简短护栏提醒。
+- **技能**（如可用）: 告诉模型如何按需加载技能指令。
+- **OpenClaw 控制**: 配置/重启工作优先使用 `gateway` 工具；不要捏造 CLI 命令。
+- **OpenClaw 自更新**: 使用 `config.schema.lookup` 安全地检查配置，使用 `config.patch` 打补丁，使用 `config.apply` 替换完整配置，并且只有在用户明确请求时才运行 `update.run`。面向代理的 `gateway` 工具会拒绝重写 `tools.exec.mode`。
+- **工作区**: 工作目录（`agents.defaults.workspace`）。
+- **文档**: 本地文档/源路径以及何时阅读它们。
+- **工作区文件（注入）**: 说明引导文件已包含在下方。
+- **沙箱**（如启用）: 受沙箱限制的运行时、沙箱路径、提升执行可用性。
+- **当前日期与时间**: 仅时区信息（可缓存稳定；实时钟来自 `session_status`）。
+- **助手输出指令**: 紧凑附件、语音备注和回复标签语法。
+- **可折叠详情**（如支持）: 教导模型将可选深度内容放在 `<details>` 披露中，同时保持主要答案和所需操作可见。
+- **心跳**: 当默认代理启用心跳时，心跳提示与确认行为。
+- **运行时**: 主机、操作系统、node、模型、仓库根目录（如检测到）、思考级别（一行）。
+- **推理**: 当前可见级别以及 `/reasoning` 切换提示。
 
-大型稳定内容（包括 **项目上下文**）保留在内部提示缓存边界之上。每轮变化的部分（控制 UI 嵌入指南、**消息**、**语音**、**群聊上下文**、**反应**、**心跳**、**运行时**）会附加在该边界之下，因此本地后端可以通过前缀缓存，在各个通道轮次之间复用稳定的工作区前缀。工具说明应避免嵌入当前通道名称，因为已接受的 schema 已经携带了该运行时细节。
+大型稳定内容（包括 **项目上下文**）保留在内部提示缓存边界之上。易变的逐轮部分（控制 UI 嵌入指导、**消息传递**、**可折叠详情**、**语音**、**群聊上下文**、**反应**、**心跳**、**运行时**）附加在该边界之下，以便支持前缀缓存的本地后端能够在频道轮次之间复用稳定的工作区前缀。工具说明应避免嵌入当前频道名称，因为已接受的 schema 本身已经携带了该运行时细节。
 
 工具链还包含长期任务指导：
 
@@ -59,7 +61,9 @@ OpenClaw 会为每次 agent 运行构建自己的系统提示词；运行时没�
 
 `agents.defaults.subagents.delegationMode`（默认 `"suggest"`）可以加强这一点。`"prefer"` 会增加一个专门的 **子代理委派** 部分，告诉主代理充当响应式协调者，并将任何比直接回复更复杂的事情通过 `sessions_spawn` 发出。这里仅涉及提示词；工具策略仍然控制 `sessions_spawn` 是否可用。
 
-系统提示词中的安全防护条款只是建议性的，而非强制执行。应使用工具策略、exec 审批、沙箱和通道白名单来进行硬性约束；运营者可以按设计禁用提示词防护条款。
+在 `ultra` 思考级别下，当 `sessions_spawn` 可用时，还会添加一个 **主动的子代理编排** 部分：它告诉模型通过子代理并行化独立的调查、实现和验证工作，将简单或紧密耦合的工作保留在本地，为每个子代理设定有边界的目标，并在回复前综合结果。
+
+系统提示中的安全护栏只是建议性的，不具有强制执行力。要进行硬性约束，请使用工具策略、`exec` 审批、沙箱和通道允许列表；运营者可以按设计禁用提示词护栏。
 
 在带有原生审批卡片/按钮的通道中，提示词会要求代理优先依赖该 UI，并且仅当工具结果表明聊天审批不可用或手动审批是唯一途径时，才在聊天中包含手动的 `/approve` 命令。
 
@@ -67,9 +71,9 @@ OpenClaw 会为每次 agent 运行构建自己的系统提示词；运行时没�
 
 OpenClaw 会为子代理渲染更小的系统提示词。运行时会为每次运行设置一个 `promptMode`（不是面向用户的配置）：
 
-- `full`（默认）：包含上面的所有部分。
-- `minimal`：用于子代理；省略记忆提示部分（打包为 **Memory Recall**）、**OpenClaw Self-Update**、**Model Aliases**、**User Identity**、**Assistant Output Directives**、**Messaging**、**Silent Replies** 和 **Heartbeats**。工具、**Safety**、**Skills**（如有提供）、Workspace、Sandbox、已知时的当前日期和时间、Runtime，以及注入的上下文仍然可用。
-- `none`：仅返回基础身份行。
+- `full` (default): 所有上述部分。
+- `minimal`: 用于子代理；省略 memory prompt 部分（打包为 **Memory Recall**）、**OpenClaw Self-Update**、**Model Aliases**、**User Identity**、**Assistant Output Directives**、**Messaging**、**Collapsible Details**、**Silent Replies** 和 **Heartbeats**。工具、**Safety**、**Skills**（如提供）、Workspace、Sandbox、Current Date & Time（如已知）、Runtime，以及注入的上下文仍然可用。
+- `none`: 仅返回基础身份行。
 
 在 `promptMode=minimal` 下，额外注入的提示词会标记为 **Subagent Context**，而不是 **Group Chat Context**。
 
@@ -91,16 +95,16 @@ OpenClaw 会为 Codex 运行时的 happy path 保留已提交的提示词快照�
 
 - `AGENTS.md`
 - `SOUL.md`
-- `TOOLS.md`
 - `IDENTITY.md`
 - `USER.md`
-- `HEARTBEAT.md`
-- `BOOTSTRAP.md`（仅适用于全新的工作区）
-- `MEMORY.md`（如存在）
+- `BOOTSTRAP.md` (仅在全新工作区中)
+- `MEMORY.md`（如果存在）
 
-在原生 Codex harness 中，OpenClaw 会避免在每个用户轮次中重复注入稳定的工作区文件。Codex 通过其自身的项目文档发现机制加载 `AGENTS.md`。`TOOLS.md` 会作为继承的 Codex 开发者指令转发。`SOUL.md`、`IDENTITY.md` 和 `USER.md` 会作为按轮次范围协作的开发者指令转发，因此原生 Codex 子代理不会继承它们。`HEARTBEAT.md` 的内容不会被直接注入；当该文件存在且非空时，心跳轮次会得到一条协作模式提示，指向该文件。`MEMORY.md` 的内容也不会被粘贴到每个原生 Codex 轮次中：当工作区可用记忆工具时，Codex 轮次会得到一条简短的工作区记忆提示，引导模型使用 `memory_search` 或 `memory_get`。如果工具被禁用、记忆搜索不可用，或者活动工作区与代理记忆工作区不同，则 `MEMORY.md` 会回退到正常的有界轮次上下文路径。`BOOTSTRAP.md` 保持正常的轮次上下文角色。
+在原生 Codex harness 中，OpenClaw 会避免在每个用户回合中重复稳定的工作区文件。Codex 会通过原生项目文档发现机制加载 `AGENTS.md`，包括其 `## Tools` 部分。`SOUL.md`、`IDENTITY.md` 和 `USER.md` 会作为按回合范围的协作开发者指令转发，因此原生 Codex 子代理不会继承它们。`MEMORY.md` 的内容也不会在每个原生 Codex 回合中直接粘贴：当工作区可用记忆工具时，Codex 回合会收到一条简短的工作区记忆说明，指引模型使用 `memory_search` 或 `memory_get`。如果工具被禁用、记忆搜索不可用，或者当前工作区与代理记忆工作区不同，`MEMORY.md` 就会回退到普通的有界回合上下文路径。`BOOTSTRAP.md` 仍保持正常的回合上下文角色。
 
-在非 Codex harness 上，启动文件会根据其现有门控组合进 OpenClaw 提示中。默认代理禁用心跳，或者 `agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，正常运行下会省略 `HEARTBEAT.md`。请保持注入文件简洁，尤其是非 Codex 的 `MEMORY.md`：它应当保持为经过整理的长期摘要，详细的每日笔记则保存在 `memory/*.md` 中，并可通过 `memory_search` / `memory_get` 按需检索。过大的非 Codex `MEMORY.md` 文件会增加提示用量，并可能在下面的启动文件限制下被部分注入。
+Heartbeat 监控 scratch 不是启动文件。Heartbeat 运行器只会将其附加到 heartbeat 回合；普通回合不会收到它。默认代理的系统提示会在其节奏启用时自动包含 heartbeat 指导，无需单独的 heartbeat 设置来隐藏该部分。
+
+在非 Codex harness 上，其余启动文件会按现有门控组合成 OpenClaw 提示。请保持注入文件简洁，尤其是非 Codex 的 `MEMORY.md`：它应保持为经过整理的长期摘要，详细的每日笔记则放在 `memory/*.md` 中，并可通过 `memory_search` / `memory_get` 按需检索。过大的非 Codex `MEMORY.md` 文件会增加提示占用，并可能在下方启动文件限制下被部分注入。
 
 <Note>
 `memory/*.md` 每日文件**不属于**正常的启动 Project Context。对于普通轮次，它们通过 `memory_search` / `memory_get` 按需访问，因此不会计入上下文窗口，除非模型显式读取它们。裸 `/new` 和 `/reset` 轮次是例外：运行时可以在第一个轮次中预先附加最近的每日记忆，作为一次性的启动上下文块。
@@ -118,7 +122,7 @@ OpenClaw 会为 Codex 运行时的 happy path 保留已提交的提示词快照�
 
 对于记忆文件，截断并不意味着数据丢失：文件仍会完整保留在磁盘上。在原生 Codex 中，当记忆工具可用时，`MEMORY.md` 会通过记忆工具按需读取，否则回退到有界提示。对于其他 harness，模型只会看到被缩短后的注入副本，直到它直接读取或搜索记忆。如果 `MEMORY.md` 反复被截断，应将其提炼为更短的持久摘要，把详细历史移入 `memory/*.md`，或者有意提高启动限制。
 
-子代理会话只注入 `AGENTS.md` 和 `TOOLS.md`（其他启动文件会被过滤掉，以保持子代理上下文更小）。
+Sub-agent 会话只注入 `AGENTS.md`（其他启动文件会被过滤，以保持子代理上下文较小）。
 
 内部钩子可以通过 `agent:bootstrap` 事件拦截此步骤，以修改或替换注入的启动文件（例如用替代人格替换 `SOUL.md`）。
 
@@ -147,7 +151,7 @@ Native Codex 回合会将此列表作为按回合作用域的协作开发者指�
 
 该位置可以指向嵌套技能，例如 `skills/personal/foo/SKILL.md`。嵌套仅用于组织；提示使用的是来自 `SKILL.md` frontmatter 的扁平技能名称。
 
-符合条件包括技能元数据门控、运行时环境/配置检查，以及在配置了 `agents.defaults.skills` 或 `agents.list[].skills` 时的有效代理技能允许列表。只有当插件的所有者插件启用时，插件捆绑的技能才符合条件，这使得工具插件能够暴露更深层的操作指南，而无需将所有这些指导都嵌入到每个工具说明中。
+资格包括技能元数据门控、运行时环境/配置检查，以及当配置了 `agents.defaults.skills` 或 `agents.entries.*.skills` 时的有效代理技能允许列表。插件捆绑的技能仅在其所属插件启用时才具备资格，这使得工具插件能够暴露更深入的操作指南，而无需将所有这些指导都嵌入到每个工具描述中。
 
 ```xml
 <available_skills>
@@ -162,10 +166,10 @@ Native Codex 回合会将此列表作为按回合作用域的协作开发者指�
 
 这在保持基础提示较小的同时，仍能支持有针对性的技能使用。大小控制由技能子系统负责，独立于通用运行时读取/注入大小控制：
 
-| 范围     | 技能提示预算                              | 运行时摘录预算                    |
-| -------- | ----------------------------------------- | --------------------------------- |
-| 全局     | `skills.limits.maxSkillsPromptChars`      | `agents.defaults.contextLimits.*` |
-| 每代理   | `agents.list[].skillsLimits.maxSkillsPromptChars` | `agents.list[].contextLimits.*`   |
+| 范围      | 技能提示预算                                          | 运行时摘录预算                     |
+| --------- | ----------------------------------------------------- | ---------------------------------- |
+| 全局      | `skills.limits.maxSkillsPromptChars`                 | `agents.defaults.contextLimits.*`  |
+| 按代理    | `agents.entries.*.skillsLimits.maxSkillsPromptChars` | `agents.entries.*.contextLimits.*` |
 
 运行时摘录预算涵盖 `memory_get`、实时工具结果以及压缩后 `AGENTS.md` 的刷新。
 

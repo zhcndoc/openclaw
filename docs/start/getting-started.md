@@ -10,8 +10,8 @@ title: "入门"
 
 ## 你需要什么
 
-- **Node.js 22.22.3+、24.15+ 或 25.9+**（24 是推荐默认版本）
-- **来自模型提供商的 API key**（Anthropic、OpenAI、Google 等）—— onboarding 会提示你
+- **Node.js 22.22.3+, 24.15+, or 25.9+**（推荐使用 Node 26 运行时）
+- **模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）——入门流程会提示你
 
 <Tip>
 使用 `node --version` 检查你的 Node 版本。
@@ -103,7 +103,7 @@ mkdir -p "$HOME/.openclaw/control-ui-custom"
   "gateway": {
     "controlUi": {
       "enabled": true,
-      "root": "$HOME/.openclaw/control-ui-custom"
+      "root": "~/.openclaw/control-ui-custom"
     }
   }
 }

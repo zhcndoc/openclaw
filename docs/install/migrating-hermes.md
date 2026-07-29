@@ -7,7 +7,7 @@ read_when:
 title: "从 Hermes 迁移"
 ---
 
-随附的 Hermes 迁移提供程序会跟随 `HERMES_HOME` 和当前激活的 Hermes 配置文件，并在 macOS/Linux 上回退到 `~/.hermes`，在 Windows 上回退到 `%LOCALAPPDATA%\hermes`。它会在应用之前预览每一项更改，在计划和报告中会对密钥进行脱敏，并在接触任何内容之前写入经过验证的 OpenClaw 备份。显式的 `--from` 路径始终优先生效。
+The bundled Hermes migration provider follows `HERMES_HOME` and the active Hermes profile, falling back to `~/.hermes` on macOS/Linux or `%LOCALAPPDATA%\hermes` on Windows. It previews every change before applying and redacts secrets in plans and reports. Standalone `openclaw migrate` writes a verified backup; the fresh onboarding path stages config, credentials, and files and publishes them only after imported inference verifies. An explicit `--from` path always wins.
 
 <Note>
 导入需要一个全新的 OpenClaw 设置。如果你已经有本地 OpenClaw 状态，请先重置配置、凭据、会话和工作区，或者在查看计划后直接使用带有 `--overwrite` 的 `openclaw migrate apply hermes`。
@@ -54,9 +54,10 @@ title: "从 Hermes 迁移"
   <Accordion title="MCP servers">
     来自 `mcp_servers` 或 `mcp.servers` 的 MCP 服务器定义，包括禁用状态、超时、并行工具支持、OAuth 范围、兼容的 TLS 字段，以及原生/资源/提示工具策略。字面量环境变量和标头需要凭据导入同意。仅适用于 Hermes 的生命周期、采样、引发、预检、保活、CA 证书包、受密码保护的客户端密钥，以及预注册的 OAuth 客户端设置，会被标记为需要人工审查的项目，而不是无效的 OpenClaw 配置。
   </Accordion>
-  <Accordion title="工作区文件">
-    - `SOUL.md` 和 `AGENTS.md` 会被复制到 OpenClaw 的 agent 工作区中。
-    - `memories/MEMORY.md` 和 `memories/USER.md` 会**追加**到对应的 OpenClaw memory 文件中，而不是覆盖它们。
+  <Accordion title="Workspace files">
+    - `SOUL.md` and `AGENTS.md` are copied into the OpenClaw agent workspace.
+    - `memories/MEMORY.md` and `memories/USER.md` are **appended** to the matching OpenClaw memory files instead of overwriting them.
+    - Memory-only surfaces behave differently: the onboarding memory page and the Control UI Memory import page copy these two files under `memory/imports/hermes/` for indexed recall and leave existing workspace memory untouched.
 
   </Accordion>
   <Accordion title="记忆配置">

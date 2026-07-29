@@ -11,7 +11,7 @@ sidebarTitle: "图像生成"
 `image_generate` 工具会通过你配置的提供方来创建和编辑图像。在聊天会话中，它以异步方式运行：OpenClaw 会记录一个后台任务，立即返回任务 ID，并在提供方完成时唤醒 agent。完成后的 agent 会遵循会话的正常可见回复模式：如果已配置，则自动发送最终回复；如果会话需要使用消息工具，则使用 `message(action="send")`。如果请求方会话处于非活动状态，或者其激活唤醒失败，OpenClaw 会发送一个幂等的直接回退结果，其中包含生成的图像，以免结果丢失。
 
 <Note>
-仅在至少有一个图像生成提供方可用时才会显示。如果你在 agent 的工具中看不到 `image_generate`，请配置 `agents.defaults.imageGenerationModel`，设置提供方 API 密钥，或通过 OpenAI ChatGPT/Codex OAuth 登录。
+该工具仅在至少有一个图像生成提供方可用时才会显示。如果你在 agent 的工具中看不到 `image_generate`，请配置 `agents.defaults.mediaModels.image`，设置提供方 API 密钥，或通过 OpenAI ChatGPT/Codex OAuth 登录。
 </Note>
 
 ## 快速开始
@@ -60,15 +60,15 @@ sidebarTitle: "图像生成"
 
 | 目标                                                 | 模型引用                                           | 认证                                   |
 | ---------------------------------------------------- | -------------------------------------------------- | -------------------------------------- |
-| 使用 API 计费的 OpenAI 图像生成                     | `openai/gpt-image-2`                               | `OPENAI_API_KEY`                       |
-| 使用 Codex 订阅认证的 OpenAI 图像生成               | `openai/gpt-image-2`                               | OpenAI ChatGPT/Codex OAuth             |
-| OpenAI 透明背景 PNG/WebP                           | `openai/gpt-image-1.5`                             | `OPENAI_API_KEY` 或 OpenAI Codex OAuth |
-| DeepInfra 图像生成                                  | `deepinfra/black-forest-labs/FLUX-1-schnell`       | `DEEPINFRA_API_KEY`                    |
-| fal Krea 2 表现力/风格引导生成                      | `fal/krea/v2/medium/text-to-image`                 | `FAL_KEY`                              |
-| OpenRouter 图像生成                                 | `openrouter/google/gemini-3.1-flash-image-preview` | `OPENROUTER_API_KEY`                   |
-| LiteLLM 图像生成                                    | `litellm/gpt-image-2`                              | `LITELLM_API_KEY`                      |
-| Microsoft Foundry MAI 图像生成                      | `microsoft-foundry/<deployment-name>`              | `AZURE_OPENAI_API_KEY` 或 Entra ID     |
-| Google Gemini 图像生成                              | `google/gemini-3.1-flash-image-preview`            | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`   |
+| OpenAI 使用 API 计费进行图像生成             | `openai/gpt-image-2`                               | `OPENAI_API_KEY`                       |
+| 使用 Codex 订阅认证的 OpenAI 图像生成 | `openai/gpt-image-2`                               | OpenAI ChatGPT/Codex OAuth             |
+| OpenAI 透明背景 PNG/WebP               | `openai/gpt-image-1.5`                             | `OPENAI_API_KEY` 或 OpenAI Codex OAuth |
+| DeepInfra 图像生成                           | `deepinfra/black-forest-labs/FLUX-1-schnell`       | `DEEPINFRA_API_KEY`                    |
+| fal Krea 2 表达式/风格导向生成      | `fal/krea/v2/medium/text-to-image`                 | `FAL_KEY`                              |
+| OpenRouter 图像生成                          | `openrouter/google/gemini-3.1-flash-image-preview` | `OPENROUTER_API_KEY`                   |
+| LiteLLM 图像生成                             | `litellm/gpt-image-2`                              | `LITELLM_API_KEY`                      |
+| Microsoft Foundry MAI 图像生成               | `microsoft-foundry/<deployment-name>`              | `AZURE_OPENAI_API_KEY` or Entra ID     |
+| Google Gemini 图像生成                       | `google/gemini-3.1-flash-image`                    | `GEMINI_API_KEY` or `GOOGLE_API_KEY`   |
 
 同一个工具同时处理文本到图像和参考图像编辑。对单个参考图像使用 `image`，对多个参考图像使用 `images`。对于 fal 上的 Krea 2 模型，这些参考图像会作为风格参考发送，而不是作为编辑输入。  
 当可用时，诸如 `quality`、`outputFormat` 和 `background` 之类的提供方支持的输出提示会被转发；当某个提供方未声明支持时，则会报告为被忽略。内置的透明背景支持是 OpenAI 特有的；其他提供方如果其后端输出了 PNG alpha 通道，仍可能保留该通道。
@@ -77,12 +77,12 @@ sidebarTitle: "图像生成"
 
 | 提供方            | 默认模型                                | 编辑支持                          | 认证                                                  |
 | ----------------- | --------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
-| ComfyUI           | `workflow`                              | 是（1 张图片，工作流配置）          | 云端使用 `COMFY_API_KEY` 或 `COMFY_CLOUD_API_KEY`    |
+| ComfyUI           | `workflow`                              | 是（1 张图片，按工作流配置）       | 云端使用 `COMFY_API_KEY` 或 `COMFY_CLOUD_API_KEY`     |
 | DeepInfra         | `black-forest-labs/FLUX-1-schnell`      | 是（1 张图片）                     | `DEEPINFRA_API_KEY`                                   |
-| fal               | `fal-ai/flux/dev`                       | 是（特定于模型的限制）              | `FAL_KEY`                                             |
-| Google            | `gemini-3.1-flash-image-preview`        | 是（最多 5 张图片）                | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`                  |
+| fal               | `fal-ai/flux/dev`                       | 是（模型特定限制）                 | `FAL_KEY`                                             |
+| Google            | `gemini-3.1-flash-image`                | 是（最多 5 张图片）                | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`                  |
 | LiteLLM           | `gpt-image-2`                           | 是（最多 5 张输入图片）            | `LITELLM_API_KEY`                                     |
-| Microsoft Foundry | `<deployment-name>`                     | 是（仅限 MAI-Image-2.5 模型）       | `AZURE_OPENAI_API_KEY` 或 Entra ID（`az login`）      |
+| Microsoft Foundry | `<deployment-name>`                     | 是（仅 MAI-Image-2.5 模型）        | `AZURE_OPENAI_API_KEY` 或 Entra ID（`az login`）       |
 | MiniMax           | `image-01`                              | 是（主体参考）                     | `MINIMAX_API_KEY` 或 MiniMax OAuth（`minimax-portal`） |
 | OpenAI            | `gpt-image-2`                           | 是（最多 5 张图片）                | `OPENAI_API_KEY` 或 OpenAI ChatGPT/Codex OAuth        |
 | OpenRouter        | `google/gemini-3.1-flash-image-preview` | 是（最多 5 张输入图片）            | `OPENROUTER_API_KEY`                                  |
@@ -180,7 +180,7 @@ sidebarTitle: "图像生成"
         timeoutMs: 180_000,
         fallbacks: [
           "openrouter/google/gemini-3.1-flash-image-preview",
-          "google/gemini-3.1-flash-image-preview",
+          "google/gemini-3.1-flash-image",
           "fal/fal-ai/flux/dev",
         ],
       },
@@ -207,16 +207,15 @@ OpenClaw 会按以下顺序尝试提供方：
     单次调用的 `model` 覆盖只会尝试该提供方/模型，不会继续使用已配置的 primary/fallback
     或自动检测到的提供方。
   </Accordion>
-  <Accordion title="自动检测会感知认证">
-    只有当 OpenClaw 实际能够认证该提供方时，该提供方默认值才会进入候选列表。将
-    `agents.defaults.mediaGenerationAutoProviderFallback: false` 设置为仅使用
-    显式的 `model`、`primary` 和 `fallbacks` 条目。
+  <Accordion title="自动检测是感知认证的">
+    只有当 OpenClaw 实际能够对该提供方进行认证时，提供方默认值才会进入候选列表。
+    已认证提供方之间的自动回退始终启用；每次调用的 `model` 仍然具有最高优先级。
   </Accordion>
-  <Accordion title="超时设置">
-    为较慢的图像后端设置 `agents.defaults.imageGenerationModel.timeoutMs`。单次调用的
-    `timeoutMs` 工具参数会覆盖已配置的默认值，而已配置的默认值会覆盖插件作者提供的
-    提供方默认值。Google 和 OpenRouter 托管的图像提供方使用 180 秒默认值；Microsoft Foundry MAI、xAI 和 Azure OpenAI 图像生成使用 600 秒。Codex 动态工具调用使用 120 秒的 `image_generate`
-    桥接默认值，并在配置后遵循相同的超时预算，但受 OpenClaw 的 600000 ms 动态工具桥接最大值限制。
+  <Accordion title="超时">
+    为较慢的图像后端设置 `agents.defaults.mediaModels.image.timeoutMs`。
+    每次调用的 `timeoutMs` 工具参数会覆盖已配置默认值，而已配置默认值会覆盖插件编写的提供方默认值。
+    Google 和 OpenRouter 托管的图像提供方默认使用 180 秒；Microsoft Foundry MAI、xAI 和 Azure OpenAI 图像生成默认使用 600 秒。
+    Codex 动态工具调用使用 120 秒的 `image_generate` 桥接默认值，并在已配置时遵守相同的超时预算，上限受 OpenClaw 的 600000 毫秒动态工具桥接最大值限制。
   </Accordion>
   <Accordion title="运行时检查">
     使用 `action: "list"` 检查当前已注册的提供方、
@@ -337,10 +336,10 @@ OpenAI、OpenRouter 和 Google 通过 `images` 参数支持最多 5 张参考图
 
     OpenClaw 会将 `prompt`、`count`、参考图，以及
     与 Gemini 兼容的 `aspectRatio` / `resolution` 提示转发给 OpenRouter。
-    目前内置的 OpenRouter 图像模型快捷项包括
-    `google/gemini-3.1-flash-image-preview`、
-    `google/gemini-3-pro-image-preview` 和 `openai/gpt-5.4-image-2`。使用
-    `action: "list"` 来查看你的已配置插件暴露了哪些内容。
+    当前内置的 OpenRouter 图像模型快捷方式包括
+    `google/gemini-3.1-flash-image`、
+    `google/gemini-3-pro-image` 和 `openai/gpt-5.4-image-2`。使用
+    `action: "list"` 查看你配置的插件暴露了哪些模型。
 
   </Accordion>
   <Accordion title="fal Krea 2">
@@ -411,12 +410,12 @@ OpenAI、OpenRouter 和 Google 通过 `images` 参数支持最多 5 张参考图
 <Tabs>
   <Tab title="生成（4K 横版）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="Design a clean editorial-style poster for OpenClaw image generation" size=3840x2160 count=1
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="为 OpenClaw 图像生成设计一张干净的编辑风格海报" size=3840x2160 count=1
 ```
   </Tab>
   <Tab title="生成（透明 PNG）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-1.5 prompt="A simple red circular sticker on a transparent background" outputFormat=png background=transparent
+/tool image_generate action=generate model=openai/gpt-image-1.5 prompt="一个简单的红色圆形贴纸，透明背景" outputFormat=png background=transparent
 ```
 
 等效 CLI：
@@ -426,14 +425,14 @@ openclaw infer image generate \
   --model openai/gpt-image-1.5 \
   --output-format png \
   --background transparent \
-  --prompt "A simple red circular sticker on a transparent background" \
+  --prompt "一个简单的红色圆形贴纸，透明背景" \
   --json
 ```
 
   </Tab>
   <Tab title="生成（OpenAI 低质量）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="Low-cost draft poster for a quiet productivity app" quality=low openai='{"moderation":"low"}'
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="为一款安静的效率应用制作一张低成本草稿海报" quality=low openai='{"moderation":"low"}'
 ```
 
 等效 CLI：
@@ -443,29 +442,29 @@ openclaw infer image generate \
   --model openai/gpt-image-2 \
   --quality low \
   --openai-moderation low \
-  --prompt "Low-cost draft poster for a quiet productivity app" \
+  --prompt "为一款安静的效率应用制作一张低成本草稿海报" \
   --json
 ```
 
   </Tab>
   <Tab title="生成（两个正方形）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="Provide two visual directions for a calm productivity app icon" size=1024x1024 count=2
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="为一款平静的效率应用图标提供两个视觉方向" size=1024x1024 count=2
 ```
   </Tab>
   <Tab title="编辑（一个参考图）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="Keep the subject, but replace the background with a bright studio setting" image=/path/to/reference.png size=1024x1536
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="保留主体，但将背景替换为明亮的工作室场景" image=/path/to/reference.png size=1024x1536
 ```
   </Tab>
   <Tab title="编辑（多个参考图）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="Combine the character identity from the first image with the color palette from the second image" images='["/path/to/character.png","/path/to/palette.jpg"]' size=1536x1024
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="将第一张图中的角色身份与第二张图中的配色方案结合起来" images='["/path/to/character.png","/path/to/palette.jpg"]' size=1536x1024
 ```
   </Tab>
   <Tab title="Krea 样式参考">
 ```text
-/tool image_generate action=generate model=fal/krea/v2/medium/text-to-image prompt="An expressive editorial portrait using this color palette and print texture" images='["/path/to/palette.png","/path/to/texture.jpg"]' aspectRatio=9:16 fal='{"creativity":"high"}'
+/tool image_generate action=generate model=fal/krea/v2/medium/text-to-image prompt="使用这套配色和印刷纹理制作一张富有表现力的编辑风格肖像" images='["/path/to/palette.png","/path/to/texture.jpg"]' aspectRatio=9:16 fal='{"creativity":"high"}'
 ```
   </Tab>
 </Tabs>

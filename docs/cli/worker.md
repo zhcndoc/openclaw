@@ -14,27 +14,29 @@ title: "Worker"
 
 ## 启动合约
 
-该命令会从标准输入中准确读取一个有界 JSON 启动封套。
-该封套携带本地套接字位置、已铸造的 worker 凭证、bundle
-和协议标识、所有者 epoch，以及唯一分配的会话和轮次。
-该凭证绝不会通过命令行参数接收，并且此页面
-有意不提供任何凭证或手工编写的封套示例。
+该命令从标准输入中恰好读取一个有界的 JSON 启动信封。
+该信封包含本地套接字位置、已签发的 worker 凭证、bundle
+和协议标识、所有者 epoch、单个分配的会话与轮次，以及该轮次被授权的
+精确 worker 本地工具名称。网关在交接前会根据当前策略解析出这
+一最终工具集合；原始配置和计划中的所有者标识永远不会进入 worker 信封。
+凭证绝不会通过命令行参数接收，并且本页面有意不提供任何凭证或手工编写的信封示例。
 
-如果封套无效、凭证被拒绝、
-bundle 或协议特性不匹配，或者会话和所有者 epoch
-已不再是当前值，则准入将以关闭方式失败。操作员应通过云 worker
-协调器启动 worker，而不是直接调用此入口点。
+如果信封无效、凭证被拒绝、bundle 或协议特性不匹配，或者会话和所有者 epoch
+已不再是当前值，则准入将以关闭失败的方式处理。缺失、重复或未知的工具名称也会使
+信封失效。建议操作员通过云 worker
+编排器启动 worker，而不是直接调用此入口点。
 
 ## 运行边界
 
 该进程运行标准的嵌入式 agent 循环，但后端受限：
 
-- `read`、`write`、`edit`、`apply_patch`、`exec` 和 `process` 编码工具
-  在 worker 工作区内本地运行。
-- 模型调用使用网关推理代理。不加载本地模型认证配置文件。
-- Transcript 写入使用网关 transcript-commit RPC。
-- 流式传输和工具生命周期更新使用网关 live-event RPC。
-- 仅接受分配的 session 和 turn。
+- `read`、`write`、`edit`、`apply_patch`、`exec` 和 `process` 代码工具
+  在 Gateway 发起的 turn 授权中存在时，会在 worker 工作区本地运行。
+  空授权会以无工具方式运行模型。
+- 模型调用使用 gateway 推理代理。不会加载本地模型 auth profile。
+- Transcript 写入使用 gateway transcript-commit RPC。
+- 流式传输和工具生命周期更新使用 gateway live-event RPC。
+- 只接受已分配的 session 和 turn。
 
 Worker 模式不会启动 channels、Gateway HTTP 表面或插件自动启动，
 超出已分配 session 工具集的部分也不会启动。它使用一次性状态目录，并且没有

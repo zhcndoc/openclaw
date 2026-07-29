@@ -99,6 +99,13 @@ channels:
 样式范围），并在 Telegram 中被解析（映射为 `<tg-spoiler>`）。其他渠道会将
 `||...||` 视为普通文本。
 
+## 可折叠详情
+
+启用 `richMessages: true` 的 Control UI 和 Telegram 账户会将
+`<details><summary>Label</summary>` 披露内容渲染为原生可折叠区块。
+OpenClaw 只会在当前回复界面支持该选项时将其告知模型。其他渠道，包括未启用富消息的 Telegram 账户，
+会将每个披露内容展平为 `**Summary**`，然后接上可见正文，这样就不会隐藏或丢失任何内容。
+
 ## 添加或更新通道格式化器
 
 1. **解析一次**，使用 `markdownToIR(...)`，并传入与通道相适配的
@@ -113,7 +120,7 @@ channels:
 
 ## 常见陷阱
 
-- Slack angle-bracket tokens (`<@U123>`, `<#C123>`, `<https://...>`) 必须
+- Slack 角括号标记（`<@U123>`、`<#C123>`、`<https://...>`）必须
   在转义后仍然保留；原始 HTML 仍需要安全地进行转义。
 - Telegram HTML 要求对标签外的文本进行转义，以避免标记损坏。
 - Signal 样式范围使用 UTF-16 偏移量，而不是代码点偏移量。

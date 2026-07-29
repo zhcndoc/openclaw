@@ -18,16 +18,19 @@ title: "诊断标志"
 
 ## 已知标志
 
-| 标志              | 启用内容                                                  |
-| ----------------- | --------------------------------------------------------- |
-| `telegram.http`    | Telegram Bot API HTTP 错误日志记录                       |
-| `brave.http`       | Brave Search 请求/响应/缓存日志记录                      |
-| `profiler`         | 回复阶段性能分析器和 Codex 应用服务器性能分析器（两者） |
-| `reply.profiler`   | 仅回复阶段性能分析器                                      |
-| `codex.profiler`   | 仅 Codex 应用服务器性能分析器                            |
-| `timeline`         | 结构化 JSONL 时间线工件（见下文）                         |
+| 标志                  | 启用内容                                                  |
+| --------------------- | --------------------------------------------------------- |
+| `telegram.http`       | Telegram Bot API HTTP 错误日志记录                       |
+| `brave.http`          | Brave Search 请求/响应/缓存日志记录                      |
+| `profiler`            | 回复阶段分析器和 Codex 应用服务器分析器（两者）            |
+| `reply.profiler`      | 仅回复阶段分析器                                          |
+| `codex.profiler`      | 仅 Codex 应用服务器分析器                                 |
+| `health`              | 网关健康探测/账户/绑定调试详情                             |
+| `ingress.timing`      | 会话加载、模型选择和模型目录计时                          |
+| `plugin.load-profile` | 同步插件模块加载计时                                       |
+| `timeline`            | 结构化 JSONL 时间线工件（见下文）                          |
 
-## Enable via configuration
+## 通过配置启用
 
 ```json
 {
@@ -37,7 +40,7 @@ title: "诊断标志"
 }
 ```
 
-Multiple flags:
+多个标志：
 
 ```json
 {
@@ -149,34 +152,37 @@ openclaw gateway run
 /tmp/openclaw/openclaw-YYYY-MM-DD.log
 ```
 
-如果你设置了 `logging.file`，则改用该路径。日志采用 JSONL 格式（每行一个 JSON
-对象）。脱敏仍会根据 `logging.redactSensitive` 生效。
+命名的配置文件会使用 `/tmp/openclaw/openclaw-<profile>-YYYY-MM-DD.log`；例如，`--dev` 会使用 `openclaw-dev-YYYY-MM-DD.log`。
+
+如果你设置了 `logging.file`，则改用该路径。日志采用 JSONL 格式（每行一个 JSON 对象）。脱敏仍然适用；它始终启用。
 有关完整的日志路径解析、轮转和脱敏模型，请参见 [Logging](/logging)。
 
 ## 提取日志
 
-选择最新的日志文件：
+读取当前活动配置文件的最新日志文件：
 
 ```bash
-ls -t /tmp/openclaw/openclaw-*.log | head -n 1
+openclaw logs --plain
+# 命名配置文件示例：
+openclaw --profile work logs --plain
 ```
 
 筛选 Telegram HTTP 诊断日志：
 
 ```bash
-rg "telegram http error" /tmp/openclaw/openclaw-*.log
+openclaw logs --plain --limit 5000 | rg "telegram http error"
 ```
 
 筛选 Brave Search HTTP 诊断日志：
 
 ```bash
-rg "brave http" /tmp/openclaw/openclaw-*.log
+openclaw logs --plain --limit 5000 | rg "brave http"
 ```
 
 或者在复现时持续查看：
 
 ```bash
-tail -f /tmp/openclaw/openclaw-$(date +%F).log | rg "telegram http error"
+openclaw logs --follow --plain | rg "telegram http error"
 ```
 
 对于远程网关，请改用 `openclaw logs --follow`（参见

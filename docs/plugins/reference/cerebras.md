@@ -16,7 +16,7 @@ title: "Cerebras 插件"
 
 ## 接口
 
-providers: cerebras
+providers: `cerebras`
 
 ## 相关文档
 

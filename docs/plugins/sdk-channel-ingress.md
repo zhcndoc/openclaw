@@ -14,8 +14,7 @@ Channel ingress 是入站
 命令闸门、事件授权、提及激活、脱敏诊断以及
 准入。
 
-新接收路径请使用 `openclaw/plugin-sdk/channel-ingress-runtime`。较旧的
-`openclaw/plugin-sdk/channel-ingress` 子路径仍作为已弃用的兼容门面导出，供第三方插件使用。
+Use `openclaw/plugin-sdk/channel-ingress-runtime` for receive paths.
 
 ## 运行时解析器
 
@@ -104,7 +103,17 @@ route: {
 
 当插件具有多个可选路由描述符时，使用 `channelIngressRoutes(...)`；它会在保持路由事实通用且按每个描述符的 `precedence` 顺序排列的同时，过滤掉已禁用的分支。
 
-提及闸门是一个激活闸门。未命中提及会返回 `admission: "skip"`，这样转发内核就不会处理仅观察的轮次。大多数通道应在发送者和命令闸门之后再进行激活。若公共聊天界面需要在发送者允许名单噪音之前先静默处理未提及流量，并且已禁用文本命令绕过，则可以选择 `activation.order: "before-sender"`。具有隐式激活的通道（例如机器人线程中的回复）可以传入 `activation.allowedImplicitMentionKinds`；此时投影出的 `activationAccess.shouldBypassMention` 会报告命令或隐式激活何时绕过了显式提及。
+Mention gating is an activation gate. A mention miss returns
+`admission: "skip"` so the turn kernel does not process an observe-only turn.
+Most channels should leave activation after sender and command gates. Public
+chat surfaces that must quiet non-mentioned traffic before sender allowlist
+noise can opt into `activation.order: "before-sender"` when text-command
+bypass is disabled. Channels with implicit activation, such as replies in bot
+threads, resolve `channels.defaults.implicitMentions` plus channel and account
+overrides with `resolveChannelImplicitMentions(...)`, then pass the result as
+`activation.implicitMentions`. The projected
+`activationAccess.shouldBypassMention` reports when command or implicit
+activation bypassed an explicit mention.
 
 ## 脱敏
 

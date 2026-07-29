@@ -93,7 +93,8 @@ OpenRouter 将请求路由到多个模型，统一使用一个 API 和一个密�
 
 ## 图像生成
 
-OpenRouter 可以支持 `image_generate` 工具。请在 `agents.defaults.imageGenerationModel` 下设置一个 OpenRouter 图像模型：
+OpenRouter can back the `image_generate` tool. Set an OpenRouter image model
+under `agents.defaults.mediaModels.image`:
 
 ```json5
 {
@@ -109,11 +110,17 @@ OpenRouter 可以支持 `image_generate` 工具。请在 `agents.defaults.imageG
 }
 ```
 
-OpenClaw 会向 OpenRouter 的 chat-completions 图像 API 发送图像请求，并使用 `modalities: ["image", "text"]`。Gemini 图像模型还会通过 OpenRouter 的 `image_config` 额外接收 `aspectRatio` 和 `resolution` 提示；其他图像模型则不会。对于较慢的模型，请使用 `agents.defaults.imageGenerationModel.timeoutMs`；不过，`image_generate` 工具每次调用时的 `timeoutMs` 仍然优先生效。
+OpenClaw sends image requests to OpenRouter's chat-completions image API with
+`modalities: ["image", "text"]`. Gemini image models additionally receive
+`aspectRatio` and `resolution` hints through OpenRouter's `image_config`; other
+image models do not. Use `agents.defaults.mediaModels.image.timeoutMs` for
+slower models; the `image_generate` tool's per-call `timeoutMs` still wins.
 
 ## Video Generation
 
-OpenRouter can support the `video_generate` tool through its asynchronous `/videos` API. Set an OpenRouter video model under `agents.defaults.videoGenerationModel`:
+OpenRouter can back the `video_generate` tool through its asynchronous
+`/videos` API. Set an OpenRouter video model under
+`agents.defaults.mediaModels.video`:
 
 ```json5
 {
@@ -132,8 +139,9 @@ OpenClaw will submit text-to-video and image-to-video tasks, poll the returned `
 
 ## 音乐生成
 
-OpenRouter 可以通过 chat-completions 音频输出为 `music_generate` 工具提供支持。请在
-`agents.defaults.musicGenerationModel` 下设置一个 OpenRouter 音频模型：
+OpenRouter can back the `music_generate` tool through chat-completions audio
+output. Set an OpenRouter audio model under
+`agents.defaults.mediaModels.music`:
 
 ```json5
 {
@@ -163,24 +171,22 @@ OpenRouter 可以通过其与 OpenAI 兼容的
 
 ```json5
 {
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "openrouter",
-      providers: {
-        openrouter: {
-          model: "hexgrad/kokoro-82m",
-          speakerVoice: "af_alloy",
-          responseFormat: "mp3",
-        },
+  tts: {
+    auto: "always",
+    provider: "openrouter",
+    providers: {
+      openrouter: {
+        model: "hexgrad/kokoro-82m",
+        speakerVoice: "af_alloy",
+        responseFormat: "mp3",
       },
     },
   },
 }
 ```
 
-如果省略 `messages.tts.providers.openrouter.apiKey`，TTS 将回退到
-`models.providers.openrouter.apiKey`，然后是 `OPENROUTER_API_KEY`。
+If `tts.providers.openrouter.apiKey` is omitted, TTS falls back to
+`models.providers.openrouter.apiKey`, then `OPENROUTER_API_KEY`.
 
 ## 语音转文本（入站音频）
 

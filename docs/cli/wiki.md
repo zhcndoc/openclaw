@@ -8,7 +8,12 @@ title: "Wiki"
 
 # `openclaw wiki`
 
-检查并维护 `memory-wiki` vault。由捆绑的 `memory-wiki` 插件提供。
+检查并维护 `memory-wiki` vault。由捆绑的可选 `memory-wiki` 插件提供。首次使用前请启用它：
+
+```bash
+openclaw plugins enable memory-wiki
+openclaw gateway restart
+```
 
 相关：[Memory Wiki 插件](/plugins/memory-wiki)，[Memory 概览](/concepts/memory)，[CLI: memory](/cli/memory)
 
@@ -117,10 +122,7 @@ openclaw wiki get <path-from-json-result>
 
 ### `wiki compile`
 
-重建索引、相关 blocks、dashboard 和编译后的摘要。将稳定的机器可读工件写入：
-
-- `.openclaw-wiki/cache/agent-digest.json`
-- `.openclaw-wiki/cache/claims.jsonl`
+重建索引、相关块、仪表盘以及已编译的查询/提示快照。快照会持久化到 OpenClaw 的共享 SQLite 插件状态中，并保留在内存中以便同步提示投射；它不会在 vault 中创建缓存文件。
 
 如果启用了 `render.createDashboards`，编译还会刷新报告页面。
 
@@ -228,9 +230,9 @@ openclaw wiki chatgpt import --export ./conversations.json --dry-run
 - 当数据目录、文档导出或 agent 富化流水线已经输出 OKF markdown bundles 时，使用 `wiki okf import`。
 - 当 bridge 模式依赖于新导出的 memory artifacts 时，使用 `wiki bridge import`。
 
-## Configuration Relationships
+## 配置关系
 
-The behavior of `openclaw wiki` is determined by the following configuration items:
+`openclaw wiki` 的行为由以下配置项决定：
 
 - `plugins.entries.memory-wiki.config.vaultMode`
 - `plugins.entries.memory-wiki.config.vault.scope`
@@ -243,7 +245,7 @@ The behavior of `openclaw wiki` is determined by the following configuration ite
 - `plugins.entries.memory-wiki.config.render.*`
 - `plugins.entries.memory-wiki.config.context.includeCompiledDigestPrompt`
 
-For the complete configuration model, see [Memory Wiki Plugin](/plugins/memory-wiki).
+完整的配置模型请参见 [Memory Wiki Plugin](/plugins/memory-wiki)。
 
 ## 相关
 

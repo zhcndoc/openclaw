@@ -134,9 +134,15 @@ openclaw plugins install clawhub:<package-name>
           name: "my_tool",
           description: "回显一个输入值",
           parameters: Type.Object({ input: Type.String() }),
+          outputSchema: Type.Object(
+            { input: Type.String() },
+            { additionalProperties: false },
+          ),
           async execute(_id, params) {
+            const details = { input: params.input };
             return {
               content: [{ type: "text", text: `Got: ${params.input}` }],
+              details,
             };
           },
         });
@@ -237,8 +243,15 @@ register(api) {
       name: "workflow_tool",
       description: "运行一个工作流",
       parameters: Type.Object({ pipeline: Type.String() }),
+      outputSchema: Type.Object(
+        { pipeline: Type.String() },
+        { additionalProperties: false },
+      ),
       async execute(_id, params) {
-        return { content: [{ type: "text", text: params.pipeline }] };
+        return {
+          content: [{ type: "text", text: params.pipeline }],
+          details: { pipeline: params.pipeline },
+        };
       },
     },
     { optional: true },
@@ -246,7 +259,14 @@ register(api) {
 }
 ```
 
-通过 `api.registerTool(...)` 注册的每个工具也必须在插件清单中声明：
+`outputSchema` is optional. It describes the structured `details` value used by
+[Code Mode](/tools/code-mode) and [Tool Search](/tools/tool-search). Catalog
+calls reject invalid schemas before execution and validate the final value after
+tool hooks. Omit it for tools without a stable JSON result. See
+[Tool plugins](/plugins/tool-plugins#output-contracts) for the full contract.
+
+Every tool registered with `api.registerTool(...)` must also be declared in the
+plugin manifest:
 
 ```json
 {
@@ -299,14 +319,10 @@ import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
 ```
 
-不要从已弃用的根入口导入：
-
-```typescript
-import { definePluginEntry } from "openclaw/plugin-sdk";
-```
-
-在你的插件包内，内部导入请使用本地的 barrel 文件，例如 `api.ts` 和
-`runtime-api.ts`。不要通过 SDK 路径导入你自己的插件。特定于提供者的辅助工具应保留在提供者包中，除非该边界确实是共享的。
+Within your plugin package, use local barrel files such as `api.ts` and
+`runtime-api.ts` for internal imports. Do not import your own plugin through an
+SDK path. Provider-specific helpers should stay in the provider package unless
+the seam is truly generic.
 
 自定义 Gateway RPC 方法是高级入口点。为它们保留插件专用前缀；核心管理命名空间如 `config.*`、
 `exec.approvals.*`、`operator.admin.*`、`wizard.*` 和 `update.*` 是保留的，
@@ -315,7 +331,13 @@ import { definePluginEntry } from "openclaw/plugin-sdk";
 
 请参阅 [插件 SDK 概览](/plugins/sdk-overview) 中的完整导入映射。
 
-## 提交前检查清单
+OpenClaw SDK compatibility fields carry TypeScript `@deprecated` annotations,
+which editors surface as migration warnings. To enforce them at build time,
+enable a type-aware rule such as
+[`@typescript-eslint/no-deprecated`](https://typescript-eslint.io/rules/no-deprecated/).
+Oxlint is not type-aware, so it cannot enforce these annotations.
+
+## Pre-submission checklist
 
 <Check>**package.json** 具有正确的 `openclaw` 元数据</Check>
 <Check>**openclaw.plugin.json** 清单文件已存在且有效</Check>

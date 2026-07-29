@@ -40,7 +40,7 @@ Ready:
 openclaw hooks info <name> [--json]
 ```
 
-`<name>` 是 hook 名称或 hook 键（例如 `session-memory`）。显示来源、文件/处理程序路径、主页、事件以及每项需求状态（二进制文件、环境、配置、操作系统）。
+`<name>` is the hook name or hook key (for example, `session-memory`). Displays the source, file/handler path, homepage, events, and the status of each requirement (binary, environment, config, operating system).
 
 ## 检查资格
 
@@ -86,23 +86,23 @@ openclaw plugins update --dry-run
 
 钩子包通过统一的 plugins 安装/更新器进行安装；`openclaw hooks install` / `openclaw hooks update` 仍然可作为已弃用的别名使用，它们会打印警告并转发到 `plugins` 命令。
 
-- Npm 规范仅限注册表：包名加上可选的精确版本或 dist-tag。不接受 Git/URL/file 规范和 semver 范围。依赖安装以项目本地方式运行，并带有 `--ignore-scripts`。
-- 纯包名和 `@latest` 保持在稳定通道；如果 npm 解析到预发布版本，OpenClaw 会停止并要求你显式选择加入（`@beta`、`@rc` 或精确的预发布版本）。
+- Npm 规格仅限注册表：包名加上可选的精确版本或 dist-tag。不接受 Git/URL/file 规格和 semver 范围。依赖安装在项目本地运行，并使用 `--ignore-scripts`。
+- 裸规格和 `@latest` 会保持在稳定发布轨道；如果 npm 解析到预发布版本，OpenClaw 会停止并要求你显式选择加入（`@beta`、`@rc`，或精确的预发布版本）。
 - 支持的归档格式：`.zip`、`.tgz`、`.tar.gz`、`.tar`。
-- `-l, --link` 会链接本地目录而不是复制它（会将其添加到 `hooks.internal.load.extraDirs`）；被链接的钩子包是来自运维者配置目录的已管理钩子，而不是工作区钩子。
-- `--pin` 会将 npm 安装记录为 `hooks.internal.installs` 中精确解析的 `name@version`。
-- 安装会将包复制到 `~/.openclaw/hooks/<id>`，在 `hooks.internal.entries.*` 下启用其钩子，并将安装记录到 `hooks.internal.installs`。
-- 如果存储的完整性哈希与获取到的制品不再匹配，OpenClaw 会在继续前发出警告并提示；可传入全局 `--yes` 以绕过提示（例如在 CI 中）。
+- `-l, --link` 会链接本地目录而不是复制它（会将其添加到 `hooks.internal.load.extraDirs`）；被链接的钩子包是来自运维配置目录的受管钩子，而不是工作区钩子。
+- `--pin` 会将 npm 安装记录为共享 SQLite 状态中的精确解析结果 `name@version`。
+- 安装会将包复制到 `~/.openclaw/hooks/<id>`，在 `hooks.internal.entries.*` 下启用其钩子，并在共享 SQLite 状态中记录安装来源。
+- 如果已存储的完整性哈希与获取到的制品不再匹配，OpenClaw 会发出警告并在继续之前提示；可传入全局 `--yes` 跳过提示（例如在 CI 中）。
 
 ## 内置钩子
 
-| Hook                  | Events                                            | 功能                                                                                               |
-| --------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| boot-md               | `gateway:startup`                                 | 在网关启动时，为每个已配置的代理作用域运行 `BOOT.md`                                  |
-| bootstrap-extra-files | `agent:bootstrap`                                 | 在代理启动期间注入额外的引导文件（例如单仓库中的 `AGENTS.md`/`TOOLS.md`） |
-| command-logger        | `command`                                         | 将命令事件记录到 `~/.openclaw/logs/commands.log`                                             |
-| compaction-notifier   | `session:compact:before`, `session:compact:after` | 在会话压缩开始和结束时发送可见的聊天通知                             |
-| session-memory        | `command:new`, `command:reset`                    | 在 `/new` 或 `/reset` 时将会话上下文保存到内存                                              |
+| Hook                  | 事件                                              | 功能                                                                                     |
+| --------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| boot-md               | `gateway:startup`                                 | 在网关启动时为每个已配置的代理作用域运行 `BOOT.md`                                                |
+| bootstrap-extra-files | `agent:bootstrap`                                 | 在代理引导期间注入额外的引导文件（例如 monorepo 的 `AGENTS.md`）                              |
+| command-logger        | `command`                                         | 将命令事件记录到 `~/.openclaw/logs/commands.log`                                          |
+| compaction-notifier   | `session:compact:before`, `session:compact:after` | 在会话压缩开始和结束时发送可见的聊天通知                                                    |
+| session-memory        | `command:new`, `command:reset`                    | 在执行 `/new` 或 `/reset` 时将会话上下文保存到内存中                                     |
 
 使用 `openclaw hooks enable <hook-name>` 启用任意内置钩子。完整详情、配置键和默认值： [Bundled hooks](/automation/hooks#bundled-hooks)。
 

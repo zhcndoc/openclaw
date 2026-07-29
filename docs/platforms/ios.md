@@ -15,10 +15,13 @@ title: "iOS 应用"
 - 通过 WebSocket 连接到网关（LAN 或 tailnet）。
 - 暴露节点能力：Canvas、屏幕截图、摄像头捕获、位置、对话模式、语音唤醒，以及可选的健康摘要。
 - 接收 `node.invoke` 命令并报告节点状态事件。
-- 从 Agents 界面的 Files 中只读浏览所选代理的工作区：目录逐级展开、带语法高亮的文本预览、图片预览以及分享菜单导出。不执行写入操作；预览大小受网关限制。
-- 为每个已配对网关保留一份小型只读离线缓存，缓存最近的聊天会话和转写内容：冷启动时会立即显示上次已知的转写内容，并在网关响应后刷新；断开连接时最近聊天仍可浏览；执行 reset/forget 会清除受保护的本地缓存。
-- 为断开连接期间发送的文本消息在每个网关维护一个持久化发件箱（最多 50 条）：排队中的气泡会显示在转写中，重新连接后按顺序发送并支持幂等重试，在权威历史确认发送前保持持久化，重试会采用退避策略后再显示重试/删除操作；离线 48 小时后会过期而不发送；reset/forget 会连同缓存一起清空队列。
-- 按需朗读助手消息：在 Chat 中长按消息并选择 **Listen**。应用会使用已配置的 TTS 提供商播放受支持的网关 `tts.speak` 片段，并在网关音频不可用或无法播放时回退到设备端语音。会话切换或应用进入后台时停止播放。
+- 从 Agents 界面（Files）只读浏览所选代理的工作区：目录下钻、带语法高亮的文本预览、图片预览，以及分享面板导出。不执行任何写入操作；预览大小受网关限制。
+- 为每个已配对网关保留一份小型只读离线缓存，存放最近的聊天会话和转录：冷启动打开时会立即显示最后已知的转录，并在网关响应后刷新；断开连接时最近的聊天仍可浏览；重置/忘记会清除受保护的本地缓存。
+- 将断开连接时发送的文本消息排入每个网关各自持久化的发件箱（最多 50 条）：排队气泡会显示在转录中，重连后按顺序刷新并进行幂等重试，在规范历史确认发送之前保持持久化，在向用户显示重试/删除操作之前会以退避策略重试；离线 48 小时后会过期而不是发送；重置/忘记会连同缓存一起清空队列。
+- 聊天是唯一的文本和语音界面。聊天操作可在不离开聊天的情况下打开完整的 Sessions 屏幕，并可显示或隐藏助手推理和工具活动。点击麦克风可进行草稿听写，打开其菜单可录制语音备注，或使用内联的 Talk 控件进行实时语音；Talk 控件在监听或讲话时会根据实时麦克风或播放音量进行动画变化。
+- 聊天支持来自照片选择器、相机、Files、粘贴以及 iOS 分享面板的图片。助手生成的图片会以内联方式从短生命周期的 Gateway 资源 URL 渲染，可在全屏预览中打开，并且在重连或历史重新加载后仍可用，而不会将图片字节存储在转录缓存中。
+- **Settings -> OpenClaw** 会在操作员连接具有 `operator.admin` 且网关支持 `openclaw.chat` 时打开一个专用的 Gateway 设置助手。其设置对话与普通聊天分离，会在本地对秘密回复进行脱敏，且只有在你点击 **Open Chat** 后才会切换到 Chat。
+- 按需朗读助手消息：在 Chat 中长按一条消息并选择 **Listen**。应用会使用配置的 TTS 提供方播放受支持网关的 `tts.speak` 片段；当网关音频不可用或无法播放时，则回退到设备端语音。切换会话或进入后台时会停止播放。
 
 ## 要求
 
@@ -49,7 +52,9 @@ openclaw gateway --port 18789 --tailscale serve
 
    如果 setup code 同时包含 LAN 和 Tailscale Serve 路由，应用会按顺序探测这些路由，并保存第一个可达的端点。
 
-4. 官方应用会自动连接。如果显示 **Pending approval** 请求，请在批准前先查看其角色和权限范围。
+   已配对的 gateways 会保留在 **Gateways** 列表中。勾选标记表示当前聚焦的 gateway；使用另一行上的 bolt 控件可以让它的 operator 会话同时保持连接。切换聚焦不会断开其他已启用的 gateways。只有聚焦的 gateway 会接收 iPhone 的、带能力凭证的 node 会话，因此相机、屏幕、位置以及其他设备命令始终只有一个明确的拥有者。iOS 在应用进入后台后可能会暂停这些前台连接。
+
+4. 官方应用会自动连接。如果 **Pending approval** 显示有一条请求，请在批准前先查看其角色和权限范围。
 
    **Settings → Gateway** 会显示已保存的 operator 连接是 **Full** 还是 **Limited** 访问。明文 LAN `ws://` setup 会因 bearer-token 安全性而自动受限。如果它是受限的，请配置 `wss://` 或 Tailscale Serve，从 Control UI 或 `openclaw qr` 扫描一个新的 full-access code，然后重新连接以启用设置和升级。
 
@@ -87,10 +92,10 @@ openclaw gateway call node.list --params "{}"
 
 ## 健康摘要
 
-iOS 节点可以返回一个可选择加入的、只读的 HealthKit 汇总，用于当前
-日历日。iPhone 授权同意和显式的 Gateway 命令授权是
-彼此独立的门控。有关
-设置、调用、有效负载字段、隐私行为和故障排除，请参见 [HealthKit 摘要](/platforms/ios-healthkit)。
+The iOS node can return an opt-in, read-only HealthKit aggregate for the current
+calendar day. iOS device consent and explicit Gateway command authorization are
+independent gates. See [HealthKit summaries](/platforms/ios-healthkit) for
+setup, invocation, payload fields, privacy behavior, and troubleshooting.
 
 默认情况下，Apple Watch 配套端会继续使用现有的 iPhone 中继，并且
 不需要单独的 Gateway 配对。请在 Apple 的 Watch app 中将 Watch 与 iPhone 配对，
@@ -104,7 +109,11 @@ iOS 节点可以返回一个可选择加入的、只读的 HealthKit 汇总，�
 
 审批归属绑定到所选的 Gateway。切换 Gateway 不会将旧提示应用到替换后的连接。早于统一审批方法的 Gateway 会回退到随附的特定于 exec 的方法；保留的终端状态以及更丰富的跨界面结果需要更新后的 Gateway。
 
-## 可选的 Apple Watch 直接节点
+## 回答代理问题
+
+聊天会将待处理的 Gateway 问题显示为原生卡片，供通过 `operator.questions`（或 `operator.admin`）连接的操作员使用。卡片支持单选和多选选项、选项描述、自由文本的 **其他** 答案，以及过期倒计时。重新连接时会从 Gateway 重新加载待处理问题。当本设备回答了某张卡片、另一端先回答了它，或者问题过期或被取消时，该卡片会锁定。
+
+## 可选的直接 Apple Watch 节点
 
 直接模式会为手表提供其自己的已签名节点身份和 Gateway 连接。  
 当 OpenClaw 处于活动状态时，即使配对的 iPhone 不可用，支持的节点命令仍可通过手表的 Wi-Fi 或蜂窝网络工作。
@@ -251,7 +260,7 @@ iOS 应用在 `local.` 上浏览 `_openclaw-gw._tcp`，并且在配置后，也�
 iOS 节点渲染一个 WKWebView 画布。使用 `node.invoke` 来驱动它：
 
 ```bash
-openclaw nodes invoke --node "iOS Node" --command canvas.navigate --params '{"url":"http://<gateway-host>:18789/__openclaw__/canvas/"}'
+openclaw nodes invoke --node "iOS 节点" --command canvas.navigate --params '{"url":"http://<gateway-host>:18789/__openclaw__/canvas/"}'
 ```
 
 说明：

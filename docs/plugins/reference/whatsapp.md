@@ -16,7 +16,7 @@ title: "WhatsApp 插件"
 
 ## 接入层
 
-channels: whatsapp; contracts: tools; skills
+channels: `whatsapp`; contracts: `tools`; skills
 
 ## 相关文档
 

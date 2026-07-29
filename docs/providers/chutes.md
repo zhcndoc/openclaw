@@ -30,7 +30,7 @@ openclaw gateway restart
 
 ## 开始使用
 
-Both paths set the default model to `chutes/zai-org/GLM-4.7-TEE` and register
+Both paths set the default model to `chutes/zai-org/GLM-5.2-TEE` and register
 the Chutes catalog.
 
 <Tabs>
@@ -46,9 +46,9 @@ the Chutes catalog.
   </Tab>
   <Tab title="API 密钥">
     <Steps>
-      <Step title="获取 API 密钥">
-        在
-        [chutes.ai/settings/api-keys](https://chutes.ai/settings/api-keys) 创建一个密钥。
+      <Step title="Get an API key">
+        Create a key at
+        [chutes.ai/app/settings/api-keys](https://chutes.ai/app/settings/api-keys).
       </Step>
       <Step title="运行 API 密钥引导流程">
         ```bash
@@ -65,28 +65,28 @@ the Chutes catalog.
 
 ## 默认别名
 
-OpenClaw 为 Chutes 目录注册了三个便捷别名：
+OpenClaw registers two convenience aliases for the Chutes catalog:
 
-| 别名            | 目标模型                                            |
-| --------------- | --------------------------------------------------- |
-| `chutes-fast`   | `chutes/zai-org/GLM-4.7-FP8`                          |
-| `chutes-pro`    | `chutes/deepseek-ai/DeepSeek-V3.2-TEE`                |
-| `chutes-vision` | `chutes/chutesai/Mistral-Small-3.2-24B-Instruct-2506` |
+| Alias           | Target model                           |
+| --------------- | -------------------------------------- |
+| `chutes-pro`    | `chutes/deepseek-ai/DeepSeek-V3.2-TEE` |
+| `chutes-vision` | `chutes/moonshotai/Kimi-K2.6-TEE`      |
 
 ## 内置起始目录
 
-捆绑的回退目录包含 47 个模型。以下是当前引用的代表性样本：
+The bundled fallback catalog contains these current starter models plus two
+compatible prior-generation refs that remain selectable but are hidden from
+pickers:
 
-| 模型引用                                              |
-| ----------------------------------------------------- |
-| `chutes/zai-org/GLM-4.7-TEE`                          |
-| `chutes/zai-org/GLM-5-TEE`                            |
-| `chutes/deepseek-ai/DeepSeek-V3.2-TEE`                |
-| `chutes/deepseek-ai/DeepSeek-R1-0528-TEE`             |
-| `chutes/moonshotai/Kimi-K2.5-TEE`                     |
-| `chutes/chutesai/Mistral-Small-3.2-24B-Instruct-2506` |
-| `chutes/Qwen/Qwen3-Coder-Next-TEE`                    |
-| `chutes/openai/gpt-oss-120b-TEE`                      |
+| Model ref                              | Picker status |
+| -------------------------------------- | ------------- |
+| `chutes/zai-org/GLM-5.2-TEE`           | Visible       |
+| `chutes/deepseek-ai/DeepSeek-V3.2-TEE` | Visible       |
+| `chutes/moonshotai/Kimi-K2.6-TEE`      | Visible       |
+| `chutes/MiniMaxAI/MiniMax-M2.5-TEE`    | Visible       |
+| `chutes/Qwen/Qwen3.6-27B-TEE`          | Visible       |
+| `chutes/moonshotai/Kimi-K2.5-TEE`      | Hidden        |
+| `chutes/Qwen/Qwen3.5-397B-A17B-TEE`    | Hidden        |
 
 运行 `openclaw models list --all --provider chutes` 获取完整列表。
 
@@ -96,9 +96,9 @@ OpenClaw 为 Chutes 目录注册了三个便捷别名：
 {
   agents: {
     defaults: {
-      model: { primary: "chutes/zai-org/GLM-4.7-TEE" },
+      model: { primary: "chutes/zai-org/GLM-5.2-TEE" },
       models: {
-        "chutes/zai-org/GLM-4.7-TEE": { alias: "Chutes GLM 4.7" },
+        "chutes/zai-org/GLM-5.2-TEE": { alias: "Chutes GLM 5.2" },
         "chutes/deepseek-ai/DeepSeek-V3.2-TEE": { alias: "Chutes DeepSeek V3.2" },
       },
     },
@@ -140,7 +140,7 @@ OpenClaw 为 Chutes 目录注册了三个便捷别名：
   <Card title="Chutes" href="https://chutes.ai" icon="arrow-up-right-from-square">
     Chutes 控制台和 API 文档。
   </Card>
-  <Card title="Chutes API 密钥" href="https://chutes.ai/settings/api-keys" icon="key">
-    创建和管理 Chutes API 密钥。
+  <Card title="Chutes API keys" href="https://chutes.ai/app/settings/api-keys" icon="key">
+    Create and manage Chutes API keys.
   </Card>
 </CardGroup>

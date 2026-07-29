@@ -16,7 +16,7 @@ OpenClaw Featherless AI provider plugin.
 
 ## 表面
 
-providers: featherless
+providers: `featherless`
 
 ## 相关文档
 

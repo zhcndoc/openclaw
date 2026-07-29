@@ -10,6 +10,11 @@ sidebarTitle: "上手引导：macOS 应用"
 macOS 应用的首次运行流程：选择 Gateway 运行位置，连接已验证的 AI 后端，授予权限，然后交由代理自身的启动仪式继续。
 关于 CLI 上手流程以及两种路径的对比，请参见 [上手概览](/start/onboarding-overview)。
 
+<Tip>
+需要先获取应用？[下载适用于 macOS 的 OpenClaw](/platforms/macos#download)，
+然后返回这里进行首次运行设置。
+</Tip>
+
 <Steps>
 <Step title="批准 macOS 警告">
 <Frame>
@@ -67,15 +72,23 @@ macOS 应用的首次运行流程：选择 Gateway 运行位置，连接已验�
   页面并打开正常的代理界面。OpenClaw 和提供方设置
   仅会在全新或未完整配置的 Gateway 上运行。
 
-完成 Gateway 就绪后，上手流程会查找你已经拥有的 AI 访问权限：
-Claude Code 或 Codex 登录，或者 `OPENAI_API_KEY` /
-`ANTHROPIC_API_KEY`。最佳选项会通过一次真实补全进行测试，并且
-只有在成功回答后才会保存；当测试失败时，应用会自动尝试
-下一个选项，并显示前一个选项失败的原因。如果找到多个选项，
-你可以在继续之前在它们之间切换。
+一旦 Gateway 就绪，上手流程会查找你已经拥有的 AI 访问权限：
+Claude Code 或 Codex 登录、`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`，或者
+一个具备工具能力且已经安装在可访问的 Ollama 或 LM Studio 服务器中的模型，
+其测得的有效上下文至少为 16K。检测会在 Gateway 主机上运行，
+包括 macOS 应用连接到 Linux Gateway 的情况。系统会用真实补全测试最佳
+选项，并且只有在其成功响应后才会保存；如果测试失败，应用会自动尝试
+下一个选项，并显示前一个选项失败的原因。如果找到多个选项，你可以在继续之前
+在它们之间切换。自动本地发现不会拉取或下载模型。
 
-Gemini CLI 在设置完成后的正常代理中仍然可用，但这里不会提供，
-因为它无法强制执行无工具推理探测。
+如果 Gateway 主机上没有 Claude CLI 登录，但你想使用 Claude 订阅，请在任意
+安装了 Claude Code 的机器上运行 `claude setup-token`，然后将打印出的 token 作为
+**Anthropic setup-token** 粘贴到 **Connect with an API key or token** 中。
+
+已安装的 Gemini CLI、Antigravity、Pi 和 OpenCode CLI 会在它们不能作为
+可复用的引导式设置推理路径被选中时显示为上下文信息。Gemini 和 Antigravity
+无法强制执行免工具推理探测。Pi 和 OpenCode 是完整代理的运行框架，而不是
+设置推理路径；它们的会话集成需要单独的运行时和插件设置。
 
 你也可以通过提供方自己的 OAuth 或设备配对流程登录。
 内置选项包括 OpenAI/ChatGPT、OpenRouter、GitHub Copilot、Google
@@ -83,12 +96,23 @@ Gemini CLI、xAI、MiniMax Global 和 CN，以及 Chutes。该列表来自
 Gateway 当前启用的文本推理提供方插件，而不是固定的应用列表，
 因此其他提供方无需添加特定于提供方的 macOS 代码也可以选择接入。
 
-手动密钥/token 选择器使用相同的提供方注册表。无论哪条路径，
-提供方都会提供其起始模型和配置；OpenClaw 会使用相同的实时测试
-验证凭据，然后再存储其身份验证配置文件。只有在某个后端通过后，
-下一步才会解锁，因此首次代理对话不能在没有可用推理的情况下开始。
-在该实时检查通过后，OpenClaw 就会可用，用于帮助配置其余的工作区、
-Gateway、通道和其他可选功能；之后也可以在 设置 → OpenClaw 中找到它。
+The manual key/token picker uses the same provider registry. In every route,
+the provider supplies its starter model and configuration; OpenClaw verifies
+the credential with the same live test before storing its auth profile. Next
+remains locked until one backend has passed, so the first agent chat cannot
+start without working inference. After that live check passes, OpenClaw becomes
+available to help configure the remaining workspace, Gateway, channels, and
+other optional features. When OpenClaw offers a short list of choices, the app
+shows native option cards; choosing one sends the selection, and **Skip for
+now** always leaves the choice optional. OpenClaw is also available later under
+Settings → OpenClaw.
+</Step>
+<Step title="导入记忆（检测到时显示）">
+对于本地 Gateway，上手流程会检查 Mac 上来自受支持 AI 工具的记忆：Claude Code
+自动记忆、Codex 汇总记忆以及 Hermes 记忆文件。找到任何内容时，此页面会列出每个来源及其记忆数量，
+并允许你将选中的来源导入到代理工作区的 `memory/imports/` 中以便索引回忆。已导入的文件会被跳过，
+且当没有任何可导入内容时该页面不会出现。跳过是安全的；仪表板中的 Memory 导入页面稍后也提供
+相同的导入功能，并支持按文件控制。
 </Step>
 <Step title="权限">
 

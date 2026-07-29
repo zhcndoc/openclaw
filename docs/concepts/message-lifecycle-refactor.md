@@ -121,13 +121,14 @@ cancelled`；`canFinalizeInPlace` 用于控制预览能否通过编辑而不是�
 ### 公共 SDK 收缩
 
 此次重构吸收或弃用了：`reply-runtime`、`reply-dispatch-runtime`、
-`reply-reference`、`reply-chunking`、作为公共 API 暴露的 `reply-payload` 辅助函数、
-`inbound-reply-dispatch`、`channel-reply-pipeline`，以及大部分公开使用的 `outbound-runtime`。
-`src/plugin-sdk/channel-message.ts` 现在是一个 `@deprecated` 的重导出汇总入口，指向 `channel-outbound` /
-`channel-inbound`；`channel.turn` 运行时别名已移除，旧的
-`/plugins/sdk-channel-turn` 文档页已重定向到
-[Channel inbound API](/plugins/sdk-channel-inbound)。新的插件代码应直接面向
-`channel-outbound` 和 `channel-inbound`。
+`reply-reference`、`reply-chunking`、作为公共
+API 暴露的 `reply-payload` 辅助函数、`inbound-reply-dispatch`、
+`channel-reply-pipeline`，以及旧出站门面的绝大多数公共用法。`src/plugin-sdk/channel-message.ts` 现在是一个
+`@deprecated` 的重导出汇总入口，指向 `channel-outbound` /
+`channel-inbound`；`channel.turn` 运行时别名已被移除，旧的
+`/plugins/sdk-channel-turn` 文档页会重定向到
+[Channel inbound API](/plugins/sdk-channel-inbound)。新的插件代码应
+直接面向 `channel-outbound` 和 `channel-inbound`。
 
 ## 实现与原始设计的偏差
 
@@ -210,7 +211,7 @@ manual`，并带有一个 webhook 超时原因字段；该结构并未实现。
 - 在共享的 bot-enabled 房间中，网关失败的回声抑制是否需要
   最初计划的 origin-tagging 机制、更简单的按通道协议，或者是否超出范围。
 - 哪些通道原生支持用于跨 bot 回声抑制的 origin/metadata，
-  以及哪些通道需要一个持久化的 outbound registry。
+  以及哪些通道需要一个持久化的 outbound registry.
 
 ## 相关
 

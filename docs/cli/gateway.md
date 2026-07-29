@@ -2,10 +2,11 @@
 summary: "OpenClaw Gateway CLI (`openclaw gateway`) —— 运行、查询和发现网关"
 read_when:
   - 从 CLI 运行 Gateway（开发或服务器）
-  - 调试 Gateway 认证、绑定模式和连通性
+  - 调试 Gateway 认证、绑定模式和连接性
   - 通过 Bonjour 发现网关（本地 + 广域 DNS-SD）
-title: "网关"
-sidebarTitle: "网关"
+  - 集成外部 Gateway 进程监督器
+title: "Gateway"
+sidebarTitle: "Gateway"
 ---
 
 Gateway 是 OpenClaw 的 WebSocket 服务器（channels、nodes、sessions、hooks）。以下所有子命令都位于 `openclaw gateway ...` 下。
@@ -31,12 +32,13 @@ openclaw gateway run   # 等价，显式形式
 
 <AccordionGroup>
   <Accordion title="启动行为">
-    - 除非在 `~/.openclaw/openclaw.json` 中设置了 `gateway.mode=local`，否则拒绝启动。对于临时/开发运行，可使用 `--allow-unconfigured`；它会绕过该保护，但不会写入或修复配置。
-    - `openclaw onboard --mode local` 和 `openclaw setup` 会写入 `gateway.mode=local`。如果配置文件存在但缺少 `gateway.mode`，会被视为损坏/被覆盖的配置，Gateway 不会替你猜测为 `local` —— 请重新运行 onboarding、手动设置该键，或传入 `--allow-unconfigured`。
-    - 未经认证的情况下，阻止绑定到 loopback 以外的地址。
-    - 目前 `--bind` 的 `lan`、`tailnet` 和 `custom` 值仅通过 IPv4 路径解析；仅 IPv6 的自带主机（bring-your-own-host）部署需要在 Gateway 前面放置一个 IPv4 sidecar 或代理。
-    - 授权后，`SIGUSR1` 会触发进程内重启。`commands.restart`（默认：启用）会限制外部发送的 `SIGUSR1`；将其设为 `false` 可阻止手动 OS 信号重启，同时仍允许通过 `gateway restart` 命令、gateway 工具以及 config-apply/update 进行重启。
-    - `SIGINT`/`SIGTERM` 会停止进程，但不会恢复自定义终端状态——如果你将 CLI 包装在 TUI 或原始模式输入中，请在退出前自行恢复终端。
+    - 除非在 `~/.openclaw/openclaw.json` 中设置了 `gateway.mode=local`，否则拒绝启动。临时/开发运行可使用 `--allow-unconfigured`；它会绕过此保护，但不会写入或修复配置。
+    - 当启动时发现可修复的无效配置，交互式终端会提示运行 `openclaw doctor --fix`，并在获得同意后重新尝试启动一次。非交互式运行不会自动修复；它们只会打印该命令。如果修复后的配置仍然无效，启动仍会停止。
+    - `openclaw onboard --mode local` 和 `openclaw setup` 会写入 `gateway.mode=local`。如果配置文件存在但缺少 `gateway.mode`，会被视为损坏/被清空的配置，Gateway 不会替你猜测 `local`——请重新运行 onboarding、手动设置该键，或传入 `--allow-unconfigured`。
+    - 未经认证而绑定到 loopback 之外的地址会被阻止。
+    - `--bind` 的 `lan`、`tailnet` 和 `custom` 目前只会通过仅 IPv4 的路径解析；仅 IPv6 的自带主机场景需要在 Gateway 前放置一个 IPv4 sidecar 或代理。
+    - 在获得授权时，`SIGUSR1` 会触发进程内重启。`commands.restart`（默认：启用）控制外部发送的 `SIGUSR1`；将其设为 `false` 可阻止手动 OS 信号重启。面向代理的 `gateway` 工具是只读的；代理需要通过经人工批准的 `openclaw` 委托工具来请求重启。
+    - `SIGINT`/`SIGTERM` 会停止进程，但不会恢复自定义终端状态——如果你把 CLI 包装在 TUI 或原始模式输入中，请在退出前自行恢复终端。
 
   </Accordion>
 </AccordionGroup>
@@ -73,11 +75,14 @@ openclaw gateway run   # 等价，显式形式
 <ParamField path="--dev" type="boolean">
   如果缺失，则创建开发配置和工作区（跳过 `BOOTSTRAP.md`）。
 </ParamField>
+<ParamField path="--dev-ambient-channels" type="boolean">
+  允许开发版 Gateway 从环境变量自动配置通道。需要 `--dev`。
+</ParamField>
 <ParamField path="--reset" type="boolean">
   重置开发配置、凭据、会话和工作区。需要 `--dev`。
 </ParamField>
 <ParamField path="--force" type="boolean">
-  启动前终止目标端口上已有的监听进程。
+  在启动前终止目标端口上任何已存在的监听。在非交互式 shell 中，这会拒绝终止已验证的 Gateway 监听；请改用 `--dev` 或使用空闲端口的隔离 `--profile`。
 </ParamField>
 <ParamField path="--verbose" type="boolean">
   向 stdout/stderr 输出详细日志。
@@ -112,7 +117,7 @@ openclaw gateway restart --force
 openclaw gateway restart --wait 30s
 ```
 
-`--safe` 会要求正在运行的 Gateway 先对当前活跃工作进行预检，并在这些工作排空后安排一次合并后的重启。等待时间上限由 `gateway.reload.deferralTimeoutMs` 决定（默认：5 分钟 / `300000`）；当预算耗尽时，重启将被强制执行。将 `deferralTimeoutMs: 0` 设为无限等待（并定期输出仍在等待的警告），而不是强制重启。`--safe` 不能与 `--force` 或 `--wait` 同时使用。
+`--safe` 会要求正在运行的 Gateway 预检活跃工作，并在这些工作排空后安排一次合并重启。等待时间上限为 5 分钟；当预算耗尽时，重启会被强制执行。`--safe` 不能与 `--force` 或 `--wait` 组合使用。
 
 `--skip-deferral` 会在安全重启时绕过活跃工作延迟门，因此即使存在已报告的阻塞项，Gateway 也会立即重启。它必须与 `--safe` 一起使用——当某个延迟被失控任务卡住时，可使用它。
 
@@ -124,7 +129,29 @@ openclaw gateway restart --wait 30s
 行内 `--password` 可能会暴露在本地进程列表中。建议使用 `--password-file`、环境变量或由 SecretRef 支持的 `gateway.auth.password`。
 </Warning>
 
-### Gateway 性能剖析
+### 外部监督器
+
+仅当另一个进程管理器负责 Gateway 生命周期时，才设置 `OPENCLAW_SUPERVISOR_MODE=external`。在此模式下：
+
+- `openclaw gateway restart` 会保留现有的安全、强制和有界等待行为，但目标会转向已验证正在运行的 Gateway，而不是 launchd、systemd 或 Task Scheduler。
+- 原生的服务安装、启动、停止和卸载操作会被拒绝，并提示使用外部监督器。
+- OpenClaw 自更新会被拒绝，以便由监督器停止 Gateway、替换并完成运行时，然后安全地重新启动它。
+- 从新进程发起的重启会在干净退出前写入一个有界的 SQLite 交接记录。若持久化失败，Gateway 会回退到进程内重启，而不是在没有可消费交接记录的情况下退出。
+
+`OPENCLAW_SERVICE_REPAIR_POLICY=external` 仍然是一个独立的 Doctor 修复策略。它并不声明运行时所有权；需要同时具备这两种行为的监督器应同时设置这两个变量。
+
+外部监督器可以通过隐藏的机器契约协商并消费重启交接：
+
+```bash
+openclaw gateway restart-handoff capabilities --json
+openclaw gateway restart-handoff consume --expected-pid <pid> --json
+```
+
+协议版本 `1` 支持 `consume` 操作。消费会在一次立即的 SQLite 事务中验证预期 PID 和有界交接字段。被接受的交接会在返回成功之前被删除，因此并发或重放的消费者不能同时接受它。PID 不匹配会保留给匹配的所有者；缺失、过期和无效的记录都不会授权重启。
+
+有效的机器请求会返回 JSON，退出码为 `0`，包括非重启结果。无效参数会返回 `reason: "invalid-expected-pid"`，退出码为 `2`；状态存储失败会返回 `reason: "store-unavailable"`，退出码为 `1`。监督器应在其将要使用的确切运行时或启动器上探测 `capabilities`，而不是从 OpenClaw 版本字符串推断支持情况，或直接读取私有的 SQLite schema。
+
+### Gateway 性能分析
 
 - `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 在启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟以及插件查找表耗时（installed-index、manifest registry、startup planning、owner-map work）。
 - `OPENCLAW_GATEWAY_RESTART_TRACE=1` 记录重启范围内的 `restart trace:` 行：信号处理、活跃工作排空、关闭阶段、下次启动、就绪时间以及内存指标。
@@ -145,11 +172,11 @@ openclaw gateway restart --wait 30s
 
   </Tab>
   <Tab title="共享选项">
-    - `--url <url>`: Gateway WebSocket URL.
-    - `--token <token>`: Gateway token.
-    - `--password <password>`: Gateway password.
-    - `--timeout <ms>`: timeout/budget (default varies per command; see each command below).
-    - `--expect-final`: wait for a "final" response (agent calls).
+    - `--url <url>`: Gateway WebSocket URL。
+    - `--token <token>`: Gateway 令牌。
+    - `--password <password>`: Gateway 密码。
+    - `--timeout <ms>`: 超时时间/预算（默认值因命令而异；请参见下面的各个命令）。
+    - `--expect-final`: 等待“final”响应（agent 调用）。
 
   </Tab>
 </Tabs>
@@ -234,7 +261,7 @@ openclaw gateway stability --json
 
 ### `gateway diagnostics export`
 
-写入一个本地诊断 zip，专为 bug 报告设计。有关隐私模型和捆绑包内容，请参阅 [Diagnostics Export](/gateway/diagnostics)。
+Writes a local diagnostic zip designed for bug reports. See [Diagnostics Export](/gateway/diagnostics) for the privacy model and bundle contents.
 
 ```bash
 openclaw gateway diagnostics export
@@ -243,36 +270,36 @@ openclaw gateway diagnostics export --json
 ```
 
 <ParamField path="--output <path>" type="string">
-  输出 zip 路径。默认为状态目录下的支持导出。
+  Output zip path. Defaults to the support export in the state directory.
 </ParamField>
 <ParamField path="--log-lines <count>" type="number" default="5000">
-  要包含的最大已净化日志行数。
+  Maximum number of sanitized log lines to include.
 </ParamField>
 <ParamField path="--log-bytes <bytes>" type="number" default="1000000">
-  要检查的最大日志字节数。
+  Maximum number of log bytes to inspect.
 </ParamField>
 <ParamField path="--url <url>" type="string">
-  用于健康快照的 Gateway WebSocket URL。
+  Gateway WebSocket URL for health snapshots.
 </ParamField>
 <ParamField path="--token <token>" type="string">
-  用于健康快照的 Gateway 令牌。
+  Gateway token for health snapshots.
 </ParamField>
 <ParamField path="--password <password>" type="string">
-  用于健康快照的 Gateway 密码。
+  Gateway password for health snapshots.
 </ParamField>
 <ParamField path="--timeout <ms>" type="number" default="3000">
-  状态/健康快照超时。
+  Status/health snapshot timeout.
 </ParamField>
 <ParamField path="--no-stability-bundle" type="boolean">
-  跳过已持久化稳定性 bundle 的查找。
+  Skip searching for a persisted stability bundle.
 </ParamField>
 <ParamField path="--json" type="boolean">
-  以 JSON 形式打印写入路径、大小和清单。
+  Print write path, size, and manifest as JSON.
 </ParamField>
 
-导出包含：`manifest.json`（文件清单）、`summary.md`（Markdown 摘要）、`diagnostics.json`（顶层配置/日志/发现/稳定性/状态/健康摘要）、`config/sanitized.json`、`status/gateway-status.json`、`health/gateway-health.json`、`logs/openclaw-sanitized.jsonl`，以及在存在 bundle 时的 `stability/latest.json`。
+The export contains: `manifest.json` (file manifest), `summary.md` (Markdown summary), `diagnostics.json` (top-level config/logs/findings/stability/status/health summary), `config/sanitized.json`, `status/gateway-status.json`, `health/gateway-health.json`, `logs/openclaw-sanitized.jsonl`, and, if present, `stability/latest.json`.
 
-它的设计用途是便于共享。它保留对调试有用的运行细节——安全的日志字段、子系统名称、状态码、持续时间、已配置模式、端口、插件/提供方 id、非敏感功能设置以及经过脱敏的运行日志消息——并省略或脱敏聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符、提示/指令文本、主机名和密钥值。当日志消息看起来像用户/聊天/工具负载文本时（例如“用户说”“聊天文本”“工具输出”“webhook 正文”），导出只保留该消息已被省略这一事实及其字节数。
+It is designed for sharing. It preserves debugging-useful runtime details—safe log fields, subsystem names, status codes, durations, configured modes, ports, plugin/provider ids, non-sensitive feature settings, and sanitized runtime log messages—and omits or redacts chat text, webhook bodies, tool output, credentials, cookies, account/message identifiers, prompt/instruction text, hostnames, and secret values. When a log message looks like user/chat/tool payload text (for example, “user said”, “chat text”, “tool output”, “webhook body”), the export keeps only that the message was omitted and its byte count.
 
 ### `gateway status`
 
@@ -307,19 +334,20 @@ openclaw gateway status --require-rpc
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="Status semantics">
+  <Accordion title="状态语义">
     - 即使本地 CLI 配置缺失或无效，也仍可用于诊断。
-    - 默认输出证明服务状态、WebSocket 连接，以及在握手时可见的认证能力——而不是读/写/管理员操作。
-    - 对于首次设备认证，探测不会产生变更：如果已存在缓存的设备令牌，就复用它，但不会仅为了检查状态而创建新的 CLI 设备身份或只读配对记录。
-    - 在可能的情况下，会为探测认证解析已配置的 SecretRef。若必需的 SecretRef 未解析，且探测连通性/认证失败，则 `--json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或修复密钥来源。探测成功后，将抑制未解析认证警告。
-    - 当运行中的 Gateway 报告版本时，JSON 输出会包含 `gateway.version`；如果握手探测无法提供版本元数据，`--require-rpc` 可以回退到 `status.runtimeVersion` RPC 载荷。
-    - 当仅有监听服务还不够，而你还需要读作用域的 RPC 也正常时，请在脚本/自动化中使用 `--require-rpc`。
-    - `--deep` 会扫描额外的 launchd/systemd/schtasks 安装；当发现多个类似 gateway 的服务时，人工输出会打印清理提示（通常建议每台机器只运行一个 gateway），并在相关时报告最近一次 supervisor 重启接手。
-    - `--deep` 还会以插件感知模式运行配置校验（`pluginValidation: "full"`），并暴露插件清单警告（例如缺少 channel 配置元数据）。默认的 `gateway status` 保持快速的只读路径，跳过插件校验。
-    - 人工输出会包含解析后的文件日志路径，以及 CLI 与服务配置路径/有效性，帮助诊断 profile 或 state-dir 漂移。
+    - 默认输出证明服务状态、WebSocket 连接，以及握手时可见的认证能力——而不是读/写/管理操作。
+    - 对于首次设备认证，探测不会产生变更：如果已存在缓存的设备令牌就复用它，但绝不会为了检查状态而新建 CLI 设备身份或只读配对记录。
+    - 在可能的情况下，会为探测认证解析已配置的 SecretRef。若必需的 SecretRef 未解析，且探测连通性/认证失败，则 `--json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或修复 secret 来源。一旦探测成功，未解析认证警告将被抑制。
+    - 当运行中的 Gateway 报告 `gateway.version` 时，JSON 输出会包含它；如果握手探测无法提供版本元数据，`--require-rpc` 可以回退到 `status.runtimeVersion` RPC 载荷。
+    - 当监听服务不足以满足需求、你还需要读取作用域的 RPC 也正常时，请在脚本/自动化中使用 `--require-rpc`。
+    - `--deep` 会扫描额外的 launchd/systemd/schtasks 安装；当发现多个类似 gateway 的服务时，人工输出会打印清理提示（通常建议每台机器只运行一个 gateway），并在相关时报告最近一次 supervisor 重启接力。
+    - `--deep` 还会以插件感知模式运行配置校验（`pluginValidation: "full"`），并显示插件清单警告（例如缺少 channel 配置元数据）。默认的 `gateway status` 保持快速的只读路径，会跳过插件校验。
+    - 人工输出会包含已解析的文件日志路径，以及 CLI 与服务的配置路径/有效性，帮助诊断 profile 或 state-dir 漂移。
+    - 人工输出会包含 `Gateway heap:`，其中显示应用的限制及其自适应推导方式。JSON 输出会将相同报告暴露为 `service.gatewayHeap`。
 
   </Accordion>
-  <Accordion title="Linux systemd auth-drift checks">
+  <Accordion title="Linux systemd 认证漂移检查">
     - 服务认证漂移检查会同时读取单元中的 `Environment=` 和 `EnvironmentFile=`（包括 `%h`、带引号的路径、多个文件以及可选的 `-` 文件）。
     - 使用合并后的运行时环境（先取服务命令环境，再回退到进程环境）解析 `gateway.auth.token` 的 SecretRef。
     - 当令牌认证并未实际启用时，令牌漂移检查会跳过配置中的令牌解析（`gateway.auth.mode` 明确为 `password`/`none`/`trusted-proxy`，或模式未设置且密码可能生效、同时没有可生效的令牌候选）。
@@ -400,6 +428,11 @@ openclaw gateway probe --ssh user@gateway-host
 <ParamField path="--ssh <target>" type="string">
   `user@host` 或 `user@host:port`（端口默认为 `22`）。
 </ParamField>
+
+OpenClaw 仅启动在操作系统管理的系统目录中找到的 SSH 客户端。在原生 Windows 上，
+请安装 **OpenSSH Client** 可选功能；Windows 会将其放在
+`%SystemRoot%\System32\OpenSSH`。
+
 <ParamField path="--ssh-identity <path>" type="string">
   身份文件。
 </ParamField>
@@ -490,21 +523,32 @@ openclaw gateway restart
     - `gateway install`: `--port`, `--runtime <node>` (默认: `node`), `--token`, `--wrapper <path>`, `--force`, `--json`
     - `gateway restart`: `--safe`, `--skip-deferral`, `--force`, `--wait <duration>`, `--json`
     - `gateway uninstall|start`: `--json`
-    - `gateway stop`: `--disable`, `--json`
+    - `gateway stop`: `--disable`, `--force`, `--json`
 
   </Accordion>
   <Accordion title="生命周期行为">
-    - 使用 `gateway restart` 来重启托管服务。不要将 `gateway stop` 和 `gateway start` 作为重启的替代方案串联使用。
-    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，它会从当前启动会话中移除 LaunchAgent，而不会持久化禁用；KeepAlive 自动恢复仍会对未来的崩溃保持 सक्रिय状态，并且 `gateway start` 可以干净地重新启用，而无需手动执行 `launchctl enable`。传入 `--disable` 可持久化地抑制 KeepAlive 和 RunAtLoad，使 gateway 在下一次显式 `gateway start` 之前不会重新启动；当手动停止应跨重启保持时请使用此选项。
-    - 生命周期命令支持 `--json`，便于脚本编写。
+    - `gateway start` 是幂等的：当受管服务已经运行时，它会报告正在运行的进程并保持原样。对于已加载但已停止的服务，则会照常启动。
+    - 使用 `gateway restart` 来重启受管服务。不要把 `gateway stop` 和 `gateway start` 串联起来作为重启的替代方案。
+    - 在非交互式 shell 中，`gateway stop` 需要 `--force`。交互式终端仍保持现有的无提示行为。对于自动化和测试，建议使用 `gateway run --dev` 或带有空闲端口的隔离 `--profile`。
+    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，它会将 LaunchAgent 从当前启动会话中移除，而不会持久化禁用——KeepAlive 自动恢复在未来崩溃时仍然有效，并且 `gateway start` 可以干净地重新启用，而无需手动 `launchctl enable`。传入 `--disable` 可持久地抑制 KeepAlive 和 RunAtLoad，这样 gateway 就不会再次启动，直到下一次显式执行 `gateway start`；当手动停止需要跨重启持续生效时使用此选项。
+    - Gateway 生命周期变更会尽力向 `<state-dir>/logs/gateway-restart.log` 追加键值审计记录，包括 CLI 的启动、停止和重启操作、安全重启请求、监督进程重启以及分离式交接。
+    - 生命周期命令支持 `--json`，便于脚本化使用。
 
   </Accordion>
-  <Accordion title="安装时的认证和 SecretRef">
-    - 当令牌认证需要 token 且 `gateway.auth.token` 由 SecretRef 管理时，`gateway install` 会验证该 SecretRef 是否可解析，但不会将解析出的 token 持久化到服务环境元数据中。
-    - 如果令牌认证需要 token，而已配置的 token SecretRef 未解析，则安装会闭合失败，而不是持久化回退的明文值。
-    - 对于 `gateway run` 的密码认证，优先使用 `OPENCLAW_GATEWAY_PASSWORD`、`--password-file`，或由 SecretRef 支持的 `gateway.auth.password`，而不是内联 `--password`。
-    - 在推断认证模式下，仅在 shell 中设置的 `OPENCLAW_GATEWAY_PASSWORD` 不会降低安装所需的 token 要求；安装托管服务时请使用持久配置（`gateway.auth.password` 或配置中的 `env`）。
-    - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且 `gateway.auth.mode` 未设置，则在显式设置模式之前会阻止安装。
+  <Accordion title="受管 Gateway 堆大小设置">
+    - `gateway install` 会为受管 Gateway 服务写入仅堆使用的 `NODE_OPTIONS` 值。当 Node 报告容器或服务限制时，它会以受限内存的 50% 为目标；否则以物理内存的 50% 为目标。
+    - 标称目标范围为 2048–8192 MiB，并额外设置 75% 的 native-headroom 上限。在小型主机上，该 headroom 上限可能会使实际应用的限制低于标称的 2048 MiB 下限。
+    - 已安装服务中已存储的有效显式 `--max-old-space-size` 会在强制重新安装和 doctor 修复期间保留。其他 `NODE_OPTIONS` 标志不会带入受管服务。
+    - 环境中的 shell `NODE_OPTIONS` 不会覆盖此策略。使用 `gateway status` 或 `doctor` 检查已安装的值；运行 `openclaw gateway install --force` 可为缺少受管堆设置的旧服务元数据重新生成配置。
+    - 该策略仅适用于受管 Gateway 服务。前台运行的 `gateway run`、node 服务以及手写的 supervisor 单元仍保留各自的运行时配置。
+
+  </Accordion>
+  <Accordion title="安装时的身份验证和 SecretRef">
+    - 当令牌认证需要令牌且 `gateway.auth.token` 由 SecretRef 管理时，`gateway install` 会验证该 SecretRef 是否可解析，但不会将解析后的令牌持久化到服务环境元数据中。
+    - 如果令牌认证需要令牌而配置的令牌 SecretRef 未解析，安装会直接失败，而不会持久化回退的明文内容。
+    - 对于 `gateway run` 的密码认证，优先使用 `OPENCLAW_GATEWAY_PASSWORD`、`--password-file` 或由 SecretRef 支持的 `gateway.auth.password`，而不是内联 `--password`。
+    - 在推断认证模式下，仅 shell 变量 `OPENCLAW_GATEWAY_PASSWORD` 不会放宽安装时的令牌要求；在安装受管服务时，请使用持久配置（`gateway.auth.password` 或配置中的 `env`）。
+    - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且未设置 `gateway.auth.mode`，则在显式设置模式之前会阻止安装。
 
   </Accordion>
 </AccordionGroup>

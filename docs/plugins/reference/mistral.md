@@ -16,7 +16,7 @@ title: "Mistral 插件"
 
 ## 表面
 
-providers: mistral; contracts: mediaUnderstandingProviders, memoryEmbeddingProviders, realtimeTranscriptionProviders
+providers: `mistral`; contracts: `mediaUnderstandingProviders`, `memoryEmbeddingProviders`, `realtimeTranscriptionProviders`
 
 ## 相关文档
 

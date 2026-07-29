@@ -16,4 +16,4 @@ title: "SearXNG 插件"
 
 ## 接口
 
-contracts: webSearchProviders
+contracts: `webSearchProviders`

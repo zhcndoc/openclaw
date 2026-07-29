@@ -50,12 +50,12 @@ openclaw security audit --json
 **沙箱/工具**
 
 - 当配置了沙箱 Docker 设置但沙箱模式关闭时发出警告。
-- 当 `gateway.nodes.denyCommands` 使用了无效的类似模式/未知条目时发出警告（匹配仅按节点命令名精确匹配，不是 shell 文本过滤）。
-- 当 `gateway.nodes.allowCommands` 明确启用危险节点命令时发出警告。
-- 当全局 `tools.profile="minimal"` 被 agent 工具配置文件覆盖时发出警告。
-- 当写入/编辑工具被禁用但 `exec` 仍可用且没有受约束的沙箱文件系统边界时发出警告。
+- 当 `gateway.nodes.commands.deny` 使用了无效的类模式/未知条目时发出警告（匹配仅限于精确的 node 命令名，而不是 shell 文本过滤）。
+- 当 `gateway.nodes.commands.allow` 明确启用危险的 node 命令时发出警告。
+- 当全局 `tools.profile="minimal"` 被代理工具配置覆盖时发出警告。
+- 当写入/编辑工具被禁用，但在没有约束性的沙箱文件系统边界时 `exec` 仍可用时发出警告。
 - 当开放 DM 或群组在没有沙箱/工作区保护的情况下暴露运行时/文件系统工具时发出警告。
-- 当已安装的插件工具在宽松的工具策略下可能可达时发出警告。
+- 当已安装的插件工具可能在宽松的工具策略下可达时发出警告。
 
 **沙箱浏览器**
 
@@ -80,9 +80,9 @@ openclaw security audit --json
 
 `security audit` 会在其目标路径中以只读模式解析受支持的 SecretRef。如果在当前命令路径中某个 SecretRef 不可用，审计会继续进行，并报告 `secretDiagnostics`，而不是崩溃。`--token` 和 `--password` 仅会覆盖该次命令调用的 deep-probe 认证；它们不会重写配置或 SecretRef 映射。
 
-## 抑制
+## Suppressions
 
-使用 `security.audit.suppressions` 接受有意保留的发现。每个抑制项都匹配一个精确的 `checkId`，并且可以通过不区分大小写的 `titleIncludes` 和/或 `detailIncludes` 子字符串进一步缩小范围：
+Use `security.audit.suppressions` to accept findings you intend to keep. Each suppression matches a precise `checkId`, and can be further narrowed with case-insensitive `titleIncludes` and/or `detailIncludes` substrings:
 
 ```json
 {
@@ -91,8 +91,8 @@ openclaw security audit --json
       "suppressions": [
         {
           "checkId": "plugins.tools_reachable_permissive_policy",
-          "detailIncludes": "启用的扩展插件：gbrain",
-          "reason": "受信任的本地操作员插件"
+          "detailIncludes": "Enabled extension plugin: gbrain",
+          "reason": "Trusted local operator plugin"
         }
       ]
     }
@@ -100,9 +100,9 @@ openclaw security audit --json
 }
 ```
 
-被抑制的发现会从活动的 `summary` 和 `findings` 列表中移除。JSON 输出会将它们保留在 `suppressedFindings` 下以便审计。当配置了抑制项时，活动输出还会保留一个无法被抑制的 `security.audit.suppressions.active` 信息性发现，以便读者知道审计经过了过滤。危险配置标志会按每个发现单独输出，因此接受一个危险标志不会隐藏共享相同 `config.insecure_or_dangerous_flags` `checkId` 的其他已启用标志。
+Suppressed findings are removed from the active `summary` and `findings` lists. JSON output keeps them under `suppressedFindings` for auditing. When suppressions are configured, the active output also retains an unsuppressible informational finding `security.audit.suppressions.active` so readers know the audit was filtered. Dangerous configuration flags are emitted per finding, so accepting one dangerous flag will not hide other enabled flags that share the same `config.insecure_or_dangerous_flags` `checkId`.
 
-由于抑制项可能隐藏长期存在的风险，通过 agent 运行的 shell 命令添加或移除它们需要 exec 批准，除非 exec 已经在受信任的本地自动化场景下以 `security="full"` 且 `ask="off"` 运行。
+Because suppressions can hide long-lived risks, adding or removing them via shell commands run through the agent requires exec approval, unless exec is already running in a trusted local automation scenario with `security="full"` and `ask="off"`.
 
 ## JSON 输出
 
@@ -121,11 +121,10 @@ openclaw security audit --fix --json | jq '{fix: .fix.ok, summary: .report.summa
 
 应用安全、确定性的修复：
 
-- 将常见的 `groupPolicy="open"` 更改为 `groupPolicy="allowlist"`（包括受支持通道中的账号变体）
-- 当 WhatsApp 群组策略切换为 `allowlist` 时，如果该列表存在且配置尚未定义 `allowFrom`，则从已存储的 `allowFrom` 文件中为 `groupAllowFrom` 设定初始值
-- 将 `logging.redactSensitive` 从 `"off"` 设置为 `"tools"`
-- 收紧状态/配置以及常见敏感文件的权限（`credentials/*.json`、`auth-profiles.json`、`openclaw-agent.sqlite` 和旧版会话工件）
-- 也会收紧从 `openclaw.json` 引用的配置包含文件的权限
+- 将常见的 `groupPolicy="open"` 改为 `groupPolicy="allowlist"`（包括受支持渠道中的账户变体）
+- 当 WhatsApp 组策略切换为 `allowlist` 时，如果该列表存在且配置尚未定义 `allowFrom`，则从已存储的 `allowFrom` 文件中为 `groupAllowFrom` 设定初始值
+- 收紧 state/config 以及常见敏感文件（`credentials/*.json`、`auth-profiles.json`、`openclaw-agent.sqlite` 和旧版会话工件）的权限
+- 也会收紧 `openclaw.json` 中引用的 config include 文件的权限
 - 在 POSIX 主机上使用 `chmod`，在 Windows 上使用 `icacls` 重置
 
 `--fix` **不会**：

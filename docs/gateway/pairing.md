@@ -81,11 +81,11 @@ openclaw nodes rename --node <id|name|ip> --name "客厅 iPad"
 <Warning>
 节点配对批准会记录受信任的能力表面。它**不会**按节点固定实时 node 命令表面。
 
-- 实时 node 命令来自节点在连接时声明的内容，并经过
-  gateway 全局 node 命令策略（`gateway.nodes.allowCommands` 和
-  `denyCommands`）过滤。
-- 每个节点的 `system.run` 允许和询问策略保存在节点上的
-  `exec.approvals.node.*` 中，而不是配对记录中。
+- Live node commands come from what the node declares on connect, filtered by
+  the gateway's global node command policy (`gateway.nodes.commands.allow` and
+  `gateway.nodes.commands.deny`).
+- Per-node `system.run` allow and ask policy lives on the node in
+  `exec.approvals.node.*`, not in the pairing record.
 
 </Warning>
 

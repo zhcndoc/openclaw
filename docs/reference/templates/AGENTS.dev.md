@@ -51,7 +51,18 @@ git commit -m "Add agent workspace"
 
 ## 心跳（可选）
 
-- HEARTBEAT.md 可以保存一个用于心跳运行的小检查清单；请保持简短。
+- 心跳监控器的 cron scratch 可以保存一个用于心跳运行的简短检查清单；请保持它尽量小。
+
+## 工具
+
+技能定义工具的工作方式。将环境特定的细节保留在这里，这样共享技能就可以独立更新，而不会暴露你的本地设置。
+
+示例占位符（替换或删除它们）：
+
+```markdown
+- SSH: dev-server -> 192.168.1.100, user admin
+- TTS: preferred voice "Nova"; default speaker Office
+```
 
 ## 自定义
 

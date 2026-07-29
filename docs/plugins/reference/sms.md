@@ -16,7 +16,7 @@ title: "Sms 插件"
 
 ## 接口
 
-channels: sms
+channels: `sms`
 
 ## 相关文档
 

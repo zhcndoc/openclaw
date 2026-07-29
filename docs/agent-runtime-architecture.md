@@ -49,6 +49,12 @@ Core 通过 OpenClaw 模块和 SDK barrel 调用内置运行时；不再保留�
 - `auto` 会选择一个支持有效提供商路由的已注册插件宿主，否则使用内置 OpenClaw 运行时。仅提供商或模型前缀本身绝不会选择宿主。
 - OpenAI 仅在精确的官方 HTTPS Platform Responses 或 ChatGPT Responses 路由且没有自定义请求覆盖时，才可能隐式选择 `codex`。Completions 适配器、自定义端点，以及带有自定义请求行为的路由都会保持在 `openclaw`；纯文本官方 HTTP 端点会被拒绝。参见 [OpenAI 隐式代理运行时](/providers/openai#implicit-agent-runtime)。
 
+## 模型运行时代
+
+Gateway 的启动以及配置、插件或认证发布，会为每个已配置的 agent 构建一个预备的模型运行时代。每个运行时代都拥有已发现的认证模板、模型注册表以及投影后的模型目录，作为一个原子快照。Agent 运行会从该快照分叉出可变的认证和注册表存储；browse、status、cron、doctor、TUI、PDF 和 image 路径读取已发布的目录，而不是重复进行文件系统发现。
+
+独立的嵌入式运行时在其激活边界发布相同形状的快照。失败或过期的运行时代绝不会与更新的部分运行时代同时提供；生命周期所有者必须先发布一个完整的替代版本。
+
 ## 相关
 
 - [OpenClaw 代理运行时工作流](/openclaw-agent-runtime)

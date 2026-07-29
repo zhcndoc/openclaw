@@ -1,13 +1,15 @@
 ---
-summary: "配置 Moonshot K2 与 Kimi Coding（分离的提供方 + 密钥）"
+summary: "Configure Moonshot Kimi models vs Kimi Coding (separate providers + keys)"
 read_when:
-  - 你想了解 Moonshot K2（Moonshot Open Platform）与 Kimi Coding 的设置
-  - 你需要理解独立的端点、密钥和模型引用
-  - 你想要可直接复制粘贴的任一提供方配置
+  - You want Moonshot Kimi K3/K2 (Moonshot Open Platform) vs Kimi Coding setup
+  - You need to understand separate endpoints, keys, and model refs
+  - You want copy/paste config for either provider
 title: "Moonshot AI"
 ---
 
-Moonshot 提供与 OpenAI 兼容的 Kimi API 端点。将默认模型设置为 `moonshot/kimi-k2.6`（适用于 Moonshot Open Platform），或设置为 `kimi/kimi-for-coding`（适用于 Kimi Coding）。
+Moonshot provides the Kimi API with OpenAI-compatible endpoints. Fresh Moonshot
+onboarding selects `moonshot/kimi-k3`; use `kimi/kimi-for-coding` for the
+separate Kimi Coding provider.
 
 <Warning>
 Moonshot 和 Kimi Coding 是**独立的提供方**，并且各自作为单独的外部插件提供。密钥不能互换，端点也不同，模型引用也不同（`moonshot/...` vs `kimi/...`）。
@@ -17,29 +19,28 @@ Moonshot 和 Kimi Coding 是**独立的提供方**，并且各自作为单独的
 
 [//]: # "moonshot-kimi-k2-ids:start"
 
-| Model ref                         | 名称                   | 推理 | 输入        | 上下文   | 最大输出   |
-| --------------------------------- | ---------------------- | ---- | ----------- | -------- | ---------- |
-| `moonshot/kimi-k2.6`              | Kimi K2.6              | 否   | text, image | 262,144  | 262,144    |
-| `moonshot/kimi-k2.7-code`         | Kimi K2.7 代码         | 始终开启 | text, image | 262,144 | 262,144    |
-| `moonshot/kimi-k2.5`              | Kimi K2.5              | 否   | text, image | 262,144  | 262,144    |
-| `moonshot/kimi-k2-thinking`       | Kimi K2 思考       | 是   | text        | 262,144  | 262,144    |
-| `moonshot/kimi-k2-thinking-turbo` | Kimi K2 思考 Turbo | 是   | text        | 262,144  | 262,144    |
-| `moonshot/kimi-k2-turbo`          | Kimi K2 Turbo          | 否   | text        | 256,000  | 16,384     |
+| Model ref                           | Name                     | Reasoning        | Input              | Context   | Max output |
+| ----------------------------------- | ------------------------ | ---------------- | ------------------ | --------- | ---------- |
+| `moonshot/kimi-k3`                  | Kimi K3                  | low / high / max | text, image, video | 1,048,576 | 1,048,576  |
+| `moonshot/kimi-k2.7-code`           | Kimi K2.7 Code           | Always on        | text, image, video | 262,144   | 262,144    |
+| `moonshot/kimi-k2.7-code-highspeed` | Kimi K2.7 Code HighSpeed | Always on        | text, image, video | 262,144   | 262,144    |
 
 [//]: # "moonshot-kimi-k2-ids:end"
 
-目录成本估算使用 Moonshot 公布的按量付费费率：Kimi
-K2.7 Code 为每百万 token 缓存命中 $0.19、输入 $0.95、输出 $4.00；Kimi
-K2.6 为每百万 token 缓存命中 $0.16、输入 $0.95、输出 $4.00；Kimi K2.5
-为每百万 token 缓存命中 $0.10、输入 $0.60、输出 $3.00。除非你在配置中覆盖，其他目录
-条目保持零成本占位符。
+Catalog cost estimates use Moonshot's published pay-as-you-go rates. Check the
+live vendor pages for [Kimi K3](https://platform.kimi.ai/docs/pricing/chat-k3)
+and [Kimi K2.7 Code](https://platform.kimi.ai/docs/pricing/chat-k27-code)
+before making cost decisions.
 
-Kimi K2.7 Code 始终使用原生思考。OpenClaw 仅为该模型暴露 `on`
-思考状态，并省略出站 `thinking` 和
-`reasoning_effort` 字段，这符合 Moonshot 的要求。它还省略采样
-覆盖项（`temperature`、`top_p`、`n`、`presence_penalty`、
-`frequency_penalty`），因为 K2.7 将它们固定为提供方默认值。Kimi K2.6 仍然是
-入门默认项。
+Kimi K3 always reasons and accepts `reasoning_effort` values `low`, `high`,
+and `max` (the default). OpenClaw exposes those exact levels and maps `/think
+xhigh` to `max`; it omits the K2-only `thinking` field and removes sampling
+overrides (`temperature`, `top_p`, `n`, `presence_penalty`, and
+`frequency_penalty`) that K3 fixes to provider defaults. Kimi K2.7 Code also
+always uses native thinking but requires both `thinking` and
+`reasoning_effort` to be omitted; the HighSpeed variant uses the same contract.
+Kimi K3 is the onboarding default.
+See Moonshot's [Kimi K3 quickstart](https://platform.kimi.ai/docs/guide/kimi-k3-quickstart).
 
 ## 开始使用
 
@@ -48,7 +49,7 @@ Moonshot 和 Kimi Coding 都是外部插件 - 请先安装其中一个再进行
 
 <Tabs>
   <Tab title="Moonshot API">
-    **最适合：** 通过 Moonshot Open Platform 使用 Kimi K2 模型。
+    **Best for:** Kimi K3 and K2 models via the Moonshot Open Platform.
 
     <Steps>
       <Step title="安装插件">
@@ -74,15 +75,11 @@ Moonshot 和 Kimi Coding 都是外部插件 - 请先安装其中一个再进行
         openclaw onboard --auth-choice moonshot-api-key-cn
         ```
       </Step>
-      <Step title="设置默认模型">
-        ```json5
-        {
-          agents: {
-            defaults: {
-              model: { primary: "moonshot/kimi-k2.6" },
-            },
-          },
-        }
+      <Step title="Confirm the Kimi K3 default">
+        Fresh onboarding selects Kimi K3. Existing installations can switch explicitly:
+
+        ```bash
+        openclaw models set moonshot/kimi-k3
         ```
       </Step>
       <Step title="验证模型可用">
@@ -99,15 +96,15 @@ Moonshot 和 Kimi Coding 都是外部插件 - 请先安装其中一个再进行
         OPENCLAW_STATE_DIR=/tmp/openclaw-kimi \
         openclaw agent --local \
           --session-id live-kimi-cost \
-          --message '精确回复：KIMI_LIVE_OK' \
-          --thinking off \
+          --message 'Reply exactly: KIMI_LIVE_OK' \
+          --thinking max \
           --json
         ```
 
-        JSON 响应应报告 `provider: "moonshot"` 和
-        `model: "kimi-k2.6"`。助手的转录条目会在 Moonshot 返回
-        usage 元数据时，将归一化后的 token 使用量以及估算成本存储在
-        `usage.cost` 下。
+        The JSON response should report `provider: "moonshot"` and
+        `model: "kimi-k3"`. The assistant transcript entry stores normalized
+        token usage plus estimated cost under `usage.cost` when Moonshot returns
+        usage metadata.
       </Step>
     </Steps>
 
@@ -118,15 +115,12 @@ Moonshot 和 Kimi Coding 都是外部插件 - 请先安装其中一个再进行
       env: { MOONSHOT_API_KEY: "sk-..." },
       agents: {
         defaults: {
-          model: { primary: "moonshot/kimi-k2.6" },
+          model: { primary: "moonshot/kimi-k3" },
           models: {
             // moonshot-kimi-k2-aliases:start
-            "moonshot/kimi-k2.6": { alias: "Kimi K2.6" },
+            "moonshot/kimi-k3": { alias: "Kimi K3" },
             "moonshot/kimi-k2.7-code": { alias: "Kimi K2.7 Code" },
-            "moonshot/kimi-k2.5": { alias: "Kimi K2.5" },
-            "moonshot/kimi-k2-thinking": { alias: "Kimi K2 Thinking" },
-            "moonshot/kimi-k2-thinking-turbo": { alias: "Kimi K2 Thinking Turbo" },
-            "moonshot/kimi-k2-turbo": { alias: "Kimi K2 Turbo" },
+            "moonshot/kimi-k2.7-code-highspeed": { alias: "Kimi K2.7 Code HighSpeed" },
             // moonshot-kimi-k2-aliases:end
           },
         },
@@ -141,58 +135,40 @@ Moonshot 和 Kimi Coding 都是外部插件 - 请先安装其中一个再进行
             models: [
               // moonshot-kimi-k2-models:start
               {
-                id: "kimi-k2.6",
-                name: "Kimi K2.6",
-                reasoning: false,
-                input: ["text", "image"],
-                cost: { input: 0.95, output: 4, cacheRead: 0.16, cacheWrite: 0 },
-                contextWindow: 262144,
-                maxTokens: 262144,
+                id: "kimi-k3",
+                name: "Kimi K3",
+                reasoning: true,
+                thinkingLevelMap: {
+                  off: null,
+                  minimal: null,
+                  low: "low",
+                  medium: null,
+                  high: "high",
+                  xhigh: "max",
+                  max: "max",
+                },
+                input: ["text", "image", "video"],
+                cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 0 },
+                contextWindow: 1048576,
+                maxTokens: 1048576,
               },
               {
                 id: "kimi-k2.7-code",
                 name: "Kimi K2.7 Code",
                 reasoning: true,
-                input: ["text", "image"],
+                input: ["text", "image", "video"],
                 cost: { input: 0.95, output: 4, cacheRead: 0.19, cacheWrite: 0 },
                 contextWindow: 262144,
                 maxTokens: 262144,
               },
               {
-                id: "kimi-k2.5",
-                name: "Kimi K2.5",
-                reasoning: false,
-                input: ["text", "image"],
-                cost: { input: 0.6, output: 3, cacheRead: 0.1, cacheWrite: 0 },
-                contextWindow: 262144,
-                maxTokens: 262144,
-              },
-              {
-                id: "kimi-k2-thinking",
-                name: "Kimi K2 Thinking",
+                id: "kimi-k2.7-code-highspeed",
+                name: "Kimi K2.7 Code HighSpeed",
                 reasoning: true,
-                input: ["text"],
-                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+                input: ["text", "image", "video"],
+                cost: { input: 1.9, output: 8, cacheRead: 0.38, cacheWrite: 0 },
                 contextWindow: 262144,
                 maxTokens: 262144,
-              },
-              {
-                id: "kimi-k2-thinking-turbo",
-                name: "Kimi K2 Thinking Turbo",
-                reasoning: true,
-                input: ["text"],
-                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-                contextWindow: 262144,
-                maxTokens: 262144,
-              },
-              {
-                id: "kimi-k2-turbo",
-                name: "Kimi K2 Turbo",
-                reasoning: false,
-                input: ["text"],
-                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-                contextWindow: 256000,
-                maxTokens: 16384,
               },
               // moonshot-kimi-k2-models:end
             ],
@@ -208,8 +184,24 @@ Moonshot 和 Kimi Coding 都是外部插件 - 请先安装其中一个再进行
     **最适合：** 通过 Kimi Coding 端点进行以代码为中心的任务。
 
     <Note>
-    Kimi Coding 使用与 Moonshot（`moonshot/...`）不同的 API 密钥和提供商前缀（`kimi/...`）。稳定的模型引用是 `kimi/kimi-for-coding`；旧版引用 `kimi/kimi-code` 和 `kimi/k2p5` 仍然被接受，并会规范化为该模型 id。
+    Kimi Coding uses a different API key and provider prefix (`kimi/...`) than Moonshot (`moonshot/...`). Current refs are `kimi/k3` for up to 1M context (tier-gated), `kimi/k3-256k` for 256K context with lower quota use, `kimi/kimi-for-coding`, and `kimi/kimi-for-coding-highspeed`. Legacy refs `kimi/kimi-code` and `kimi/k2p5` normalize to `kimi/kimi-for-coding`; legacy `kimi/k3[1m]` normalizes to `kimi/k3`.
     </Note>
+
+    The coding service accepts both OpenAI-compatible
+    `https://api.kimi.com/coding/v1` and Anthropic-compatible
+    `https://api.kimi.com/coding/` clients. This plugin uses Anthropic Messages.
+    Create membership keys in the
+    [Kimi Code Console](https://www.kimi.com/code/console); current membership
+    pricing lives on [Kimi's pricing page](https://www.kimi.com/membership/pricing).
+
+    | Model ref | Name | Reasoning | Input | Context | Max output |
+    | --- | --- | --- | --- | --- | --- |
+    | `kimi/k3` | Kimi K3 | adaptive; low / high / max effort | text, image | 1,048,576 | 131,072 |
+    | `kimi/k3-256k` | Kimi K3 (256k) | adaptive; low / high / max effort | text, image | 262,144 | 131,072 |
+
+    The K3 catalog estimates $3/MTok input, $15/MTok output, $0.30/MTok
+    cache reads, and $0/MTok cache writes. The catalog reports K3's maximum
+    context; your Kimi membership may enforce a lower live limit.
 
     <Steps>
       <Step title="安装插件">
@@ -241,7 +233,14 @@ Moonshot 和 Kimi Coding 都是外部插件 - 请先安装其中一个再进行
       </Step>
     </Steps>
 
-    ### 配置示例
+    Kimi Code K3 always uses adaptive thinking when reasoning is enabled and
+    defaults to high effort. `/think minimal|low` maps to low effort,
+    `/think medium|high|adaptive` maps to high effort, and `/think xhigh|max`
+    maps to max effort. `/think off` sends `thinking.type: "disabled"`.
+
+    See the official [Kimi Code model table](https://www.kimi.com/code/docs/en/kimi-code/models.html) for current plan availability.
+
+    ### Config example
 
     ```json5
     {
@@ -315,12 +314,27 @@ Moonshot 插件还会将 **Kimi** 注册为 `web_search` 提供方，由 Moonsho
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="原生思考模式">
-    Kimi K2.7 Code 始终使用原生思考。Moonshot 要求客户端为该模型
-    省略 `thinking` 字段，因此 OpenClaw 只暴露 `on`，并忽略过时的
-    `off` 设置。K2.7 还固定了 `temperature`、`top_p`、`n`、
-    `presence_penalty` 和 `frequency_penalty`；OpenClaw 会忽略这些字段
-    的已配置覆盖项。
+  <Accordion title="Native thinking mode">
+    Moonshot API Kimi K3 always reasons at maximum effort. OpenClaw exposes only
+    `/think max`, sends `reasoning_effort: "max"`, and ignores stale lower or
+    `off` settings.
+
+    Kimi Code K3 exposes `/think off|minimal|low|medium|high|adaptive|xhigh|max`.
+    Its Anthropic-compatible endpoint receives `thinking.type: "disabled"` for
+    off. Every enabled level uses adaptive thinking; minimal/low maps to low
+    effort, medium/high/adaptive maps to high effort, and xhigh/max maps to max
+    effort. This applies to both `kimi/k3` and `kimi/k3-256k`. Legacy
+    `kimi/k3[1m]` normalizes to `kimi/k3`.
+    Moonshot API K3 supports `auto`, `none`, `required`, and pinned tool choices,
+    so OpenClaw preserves the requested `tool_choice`. For multi-turn tool use,
+    OpenClaw preserves the assistant reasoning content required by Moonshot's
+    replay contract.
+
+    Kimi K2.7 Code always uses native thinking. Moonshot requires clients to
+    omit the `thinking` field for this model, so OpenClaw exposes only `on` and
+    ignores stale `off` settings. K2.7 also fixes `temperature`, `top_p`, `n`,
+    `presence_penalty`, and `frequency_penalty`; OpenClaw omits configured
+    overrides for those fields.
 
     其他 Moonshot Kimi 模型支持二进制原生思考：
 
@@ -353,7 +367,7 @@ Moonshot 插件还会将 **Kimi** 注册为 `web_search` 提供方，由 Moonsho
     | 任何非 off 级别      | `thinking.type=enabled`    |
 
     <Warning>
-    当启用 Moonshot thinking 时，`tool_choice` 必须为 `auto` 或 `none`。固定的工具选择（`type: "tool"` 或 `type: "function"`）会将 thinking 强制设回 `disabled`，这样请求的工具仍会运行；`tool_choice: "required"` 会改为规范化为 `auto`。这适用于除 Kimi K2.7 Code 之外的所有 Moonshot 模型，因为该模型的思考模式无法关闭——当 `tool_choice` 不兼容时，其 `tool_choice` 会被规范化为 `auto`。
+    When Moonshot K2 thinking is enabled, `tool_choice` must be `auto` or `none`. A pinned tool choice (`type: "tool"` or `type: "function"`) forces thinking back to `disabled` instead, so the requested tool still runs; `tool_choice: "required"` is normalized to `auto` instead. Kimi K2.7 Code cannot disable thinking, so its incompatible `tool_choice` is normalized to `auto`. Kimi K3 uses its separate reasoning-effort contract and preserves supported tool choices.
     </Warning>
 
     Kimi K2.6 还接受一个可选的 `thinking.keep` 字段，用于控制
@@ -391,9 +405,10 @@ Moonshot 插件还会将 **Kimi** 注册为 `web_search` 提供方，由 Moonsho
     `https://api.moonshot.cn/v1`）声明支持流式 usage 兼容性。
     OpenClaw 是根据端点 host 而不是 provider id 来判断的，因此指向相同原生 Moonshot host 的自定义 provider id 也会继承相同的流式 usage 行为。
 
-    使用目录中 K2.6 的定价，包含输入、输出和缓存读取 token 的流式 usage
-    也会转换为本地估算美元成本，用于 `/status`、`/usage full`、`/usage cost`
-    以及基于转录的会话记账。
+    With the catalog K3 pricing, streamed usage that includes input, output,
+    and cache-read tokens is also converted into local estimated USD cost for
+    `/status`, `/usage full`, `/usage cost`, and transcript-backed session
+    accounting.
 
   </Accordion>
 

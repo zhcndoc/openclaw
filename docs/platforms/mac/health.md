@@ -37,8 +37,8 @@ title: "健康检查（macOS）"
 ## 如有疑问
 
 使用 [Gateway health](/gateway/health) 中的 CLI 流程（`openclaw status`、
-`openclaw status --deep`、`openclaw health --json`），并持续查看
-`/tmp/openclaw/openclaw-*.log`，筛选 `web-heartbeat` / `web-reconnect`。
+`openclaw status --deep`、`openclaw health --json`），并运行
+`openclaw logs --follow`，筛选 `web-heartbeat` / `web-reconnect`。
 
 ## 相关
 

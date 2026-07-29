@@ -16,4 +16,4 @@ title: "迁移 Claude 插件"
 
 ## 表面
 
-contracts: migrationProviders
+contracts: `migrationProviders`

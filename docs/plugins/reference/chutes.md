@@ -16,7 +16,7 @@ title: "Chutes 插件"
 
 ## 接口
 
-providers: chutes
+providers: `chutes`
 
 ## 相关文档
 

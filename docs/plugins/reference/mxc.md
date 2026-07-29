@@ -1,5 +1,5 @@
 ---
-summary: "通过 MXC 在支持 MXC 的 Windows 主机上进行操作系统级沙箱化工具执行：使用已配置的 MXC 策略文件在 ProcessContainer（Windows）中运行命令。"
+summary: "OS-level sandboxed tool execution via MXC: runs commands in a Windows ProcessContainer with configured MXC policy files."
 read_when:
   - 你正在安装、配置或审计 mxc 插件
 title: "Mxc 插件"
@@ -7,7 +7,7 @@ title: "Mxc 插件"
 
 # Mxc 插件
 
-通过 MXC 在支持 MXC 的 Windows 主机上进行操作系统级沙箱化工具执行：使用已配置的 MXC 策略文件在 ProcessContainer（Windows）中运行命令。
+OS-level sandboxed tool execution via MXC: runs commands in a Windows ProcessContainer with configured MXC policy files.
 
 ## 分发
 

@@ -40,9 +40,11 @@ ClawRouter 为 OpenClaw 提供一个面向多家上游模型提供方的策略�
     openclaw models list --all --provider clawrouter
     ```
 
-    请严格按显示的原样使用返回的模型引用。它们会保留上游命名空间，例如 `clawrouter/openai/gpt-5.5`、
-    `clawrouter/anthropic/claude-sonnet-4-6` 或
-    `clawrouter/google/gemini-3.5-flash`。如果你的配置中 `agents.defaults.models` 是一个允许列表，请将每个选中的 ClawRouter 引用添加进去。
+    Use the returned model refs exactly as shown. They retain the upstream
+    namespace, such as `clawrouter/openai/gpt-5.5`,
+    `clawrouter/anthropic/claude-sonnet-4-6`, or
+    `clawrouter/google/gemini-3.5-flash`. If `agents.defaults.modelPolicy.allow`
+    is configured, add each selected ClawRouter ref to it.
 
   </Step>
   <Step title="选择一个模型">
@@ -165,9 +167,15 @@ ClawRouter 拥有上游凭据；其目录会告知 OpenClaw 应使用哪种
 | `llm.messages` + `anthropic.messages` 路由                 | `anthropic-messages`   |
 | `llm.stream` + 流式 `google.generate_content` 路由         | `google-generative-ai` |
 
-该插件还会为这些家族应用匹配的重放和工具模式策略（OpenAI/DeepSeek/Gemini 工具模式兼容性；原生 Anthropic 和
-Google Gemini 重放策略）。仅暴露不受支持请求格式的目录提供方，故意不会被声明为 OpenClaw
-文本模型。请在 ClawRouter 中将这些提供方规范化为受支持的某一种契约，而不是发送不兼容的载荷。
+The plugin also applies the matching replay and tool-schema policies for those
+families (OpenAI/DeepSeek/Gemini/Perplexity tool-schema compat; native
+Anthropic and Google Gemini replay policies). Perplexity models get a strict
+schema rewrite: `patternProperties` and `additionalProperties` are removed and
+every object schema declares `properties`, because Perplexity rejects tool
+schemas without them. A catalog provider exposing only an
+unsupported request format is intentionally not advertised as an OpenClaw
+text model. Normalize those providers to one of the supported contracts in
+ClawRouter rather than sending an incompatible payload.
 
 ## 配额与用量
 
@@ -192,12 +200,12 @@ openclaw models status
 
 | 症状                                  | 检查                                                                                                                                          |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 没有 ClawRouter 模型                     | 确认插件已启用并且被 `plugins.allow` 允许，然后检查该凭据是否处于活动状态并且至少授予了一个就绪提供商。 |
-| 已配置的 ClawRouter 模型缺失 | 检查其 `/v1/catalog` 能力和路由支持。不支持的传输契约会被有意过滤掉。                            |
-| `Unknown model: clawrouter/...`          | 当该配置映射被用作允许列表时，将精确的 catalog ref 添加到 `agents.defaults.models`。                               |
-| 来自 catalog 或 usage 的 `401` 或 `403`     | 重新签发或重新配置作用域后的 ClawRouter 凭据；OpenClaw 不会回退到上游提供商密钥。                                          |
-| 模型调用在发现后失败         | 检查 ClawRouter 中的提供商连接和上游健康状态，然后在其就绪状态恢复后重试。                                |
-| usage 有总量但没有百分比       | 该策略是非计量的；在 ClawRouter 中添加月度预算以显示百分比窗口。                                                     |
+| No ClawRouter models                     | Confirm the plugin is enabled and allowed by `plugins.allow`, then check that the credential is active and grants at least one ready provider. |
+| A configured ClawRouter model is missing | Inspect its `/v1/catalog` capability and route support. Unsupported transport contracts are intentionally filtered.                            |
+| Model override rejected by policy        | Add the exact catalog ref or `clawrouter/*` to `agents.defaults.modelPolicy.allow`.                                                            |
+| `401` or `403` from catalog or usage     | Reissue or re-scope the ClawRouter credential; OpenClaw does not fall back to upstream provider keys.                                          |
+| Model call fails after discovery         | Check the provider connection and upstream health in ClawRouter, then retry after its readiness state recovers.                                |
+| Usage has totals but no percentage       | The policy is unmetered; add a monthly budget in ClawRouter to expose a percentage window.                                                     |
 
 ## 安全行为
 

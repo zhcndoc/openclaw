@@ -86,7 +86,7 @@ openclaw fleet create acme \
 
 镜像引用会作为一个容器运行时参数传递。空引用以及以 `-` 开头的值会被拒绝，因此镜像不会被解释为 Docker 或 Podman 选项。
 
-The selected Docker or Podman endpoint must be local. Fleet rejects remote Docker contexts, `DOCKER_HOST` endpoints, and remote Podman services before reserving a port or creating local state. Remote cell hosts are not supported.
+所选的 Docker 或 Podman 端点必须是本地端点。Fleet 会在保留端口或创建本地状态之前，拒绝远程 Docker 上下文、`DOCKER_HOST` 端点以及远程 Podman 服务。不支持远程 cell 主机。
 
 当 Fleet 启动一个新 cell 时，create 最多会等待大约一分钟，直到它的 Gateway 响应 `/healthz`。如果该 cell 没有变为健康状态，Fleet 会保留其容器和注册表行，以便 `fleet status`、`fleet logs` 或显式移除使用。`--no-start` 会跳过这个健康检查门。新建但不健康的 cell 所生成的 Gateway 令牌不会丢失——它仍保留在容器环境中（`docker|podman inspect` 可见），并且因为该 cell 还未服务任何流量，`fleet rm --force` 后再重新创建始终是安全的替代方案。
 
@@ -223,7 +223,7 @@ openclaw fleet restore acme --from ./acme.tgz
 
 这两个命令都接受 `--max-bytes <bytes>` 来限制归档或解压后的文件数据大小，并且都应用相同的固定一百万档案路径段预算，这样仅包含元数据的归档炸弹就无法耗尽主机的 inode，同时每个被接受的备份都仍然可以恢复。备份接受 `--out <path>`，而这两个命令都支持 `--json`。
 
-归档仅包含普通文件和目录。备份从不跟随或存储符号链接、硬链接、套接字或设备节点；跳过的数量会在结果中报告。恢复会拒绝包含任何其他条目类型的归档。像工作区 `node_modules` 这样的可重建符号链接树，必须在恢复后在 cell 内重新安装。
+归档只包含普通文件和目录。备份从不跟随或存储符号链接、硬链接、套接字或设备节点；跳过的数量会在结果中报告。恢复会拒绝包含任何其他条目类型的归档，忽略归档中的所有权信息，并在应用 cell 运行时所有者之前对恢复的文件和目录模式进行夹紧。像工作区 `node_modules` 这类可重建的符号链接树，在恢复后必须在 cell 内重新安装。
 
 ## `fleet doctor`
 

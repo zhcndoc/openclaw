@@ -16,7 +16,7 @@ title: "Synology Chat 插件"
 
 ## 界面
 
-channels: synology-chat
+channels: `synology-chat`
 
 ## 相关文档
 

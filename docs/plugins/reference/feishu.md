@@ -16,7 +16,7 @@ OpenClaw 飞书/Lark 频道插件，用于聊天和办公工具（由 @m1heng �
 
 ## 界面
 
-channels: feishu; contracts: tools; skills
+channels: `feishu`; contracts: `tools`; skills
 
 ## 相关文档
 

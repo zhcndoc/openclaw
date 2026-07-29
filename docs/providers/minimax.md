@@ -227,24 +227,24 @@ MiniMax 插件在 `minimax` 和 `minimax-portal` 上都为 `image_generate` 工�
 
 ### 文本转语音
 
-内置的 `minimax` 插件将 MiniMax T2A v2 注册为 `messages.tts` 的语音提供程序。
+The bundled `minimax` plugin registers MiniMax T2A v2 as a speech provider for `tts`.
 
-- 默认 TTS 模型：`speech-2.8-hd`
-- 默认音色：`English_expressive_narrator`
-- 内置模型 id：`speech-2.8-hd`、`speech-2.8-turbo`、`speech-2.6-hd`、`speech-2.6-turbo`、`speech-02-hd`、`speech-02-turbo`、`speech-01-hd`、`speech-01-turbo`、`speech-01-240228`
-- 认证解析顺序：`messages.tts.providers.minimax.apiKey`，然后是 `minimax-portal` OAuth/token 认证配置文件，然后是 Token Plan 环境密钥（`MINIMAX_OAUTH_TOKEN`、`MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`），最后是 `MINIMAX_API_KEY`
-- 如果未配置 TTS 主机，OpenClaw 会复用已配置的 `minimax-portal` OAuth 主机，并去除诸如 `/anthropic` 之类的 Anthropic 兼容路径后缀
-- 普通音频附件保持为 MP3。语音消息目标（飞书、Telegram，以及其他请求语音消息兼容附件的渠道）会通过 `ffmpeg` 从 MiniMax MP3 转码为 48kHz Opus，因为例如飞书/Lark 文件 API 对原生音频消息只接受 `file_type: "opus"`
-- MiniMax T2A 接受小数 `speed` 和 `vol`，但 `pitch` 以整数发送；OpenClaw 会在 API 请求前截断 `pitch` 的小数值
+- Default TTS model: `speech-2.8-hd`
+- Default voice: `English_expressive_narrator`
+- Bundled model ids: `speech-2.8-hd`, `speech-2.8-turbo`, `speech-2.6-hd`, `speech-2.6-turbo`, `speech-02-hd`, `speech-02-turbo`, `speech-01-hd`, `speech-01-turbo`
+- Auth resolution order: `tts.providers.minimax.apiKey`, then `minimax-portal` OAuth/token auth profiles, then Token Plan environment keys (`MINIMAX_OAUTH_TOKEN`, `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`), then `MINIMAX_API_KEY`
+- If no TTS host is configured, OpenClaw reuses the configured `minimax-portal` OAuth host and strips Anthropic-compatible path suffixes such as `/anthropic`
+- Normal audio attachments stay MP3. Voice-note targets (Feishu, Telegram, and other channels that request a voice-note-compatible attachment) are transcoded from MiniMax MP3 to 48kHz Opus with `ffmpeg`, because e.g. the Feishu/Lark file API only accepts `file_type: "opus"` for native audio messages
+- MiniMax T2A accepts fractional `speed` and `vol`, but `pitch` is sent as an integer; OpenClaw truncates fractional `pitch` values before the API request
 
-| 设置                                     | 环境变量               | 默认值                        | 描述                         |
-| ---------------------------------------- | ---------------------- | ----------------------------- | ---------------------------- |
-| `messages.tts.providers.minimax.baseUrl` | `MINIMAX_API_HOST`     | `https://api.minimax.io`      | MiniMax T2A API 主机。       |
-| `messages.tts.providers.minimax.model`   | `MINIMAX_TTS_MODEL`    | `speech-2.8-hd`               | TTS 模型 id。                |
-| `messages.tts.providers.minimax.voiceId` | `MINIMAX_TTS_VOICE_ID` | `English_expressive_narrator` | 语音输出使用的音色 id。       |
-| `messages.tts.providers.minimax.speed`   |                        | `1.0`                         | 播放速度，`0.5..2.0`。       |
-| `messages.tts.providers.minimax.vol`     |                        | `1.0`                         | 音量，`(0, 10]`。            |
-| `messages.tts.providers.minimax.pitch`   |                        | `0`                           | 整数音高偏移，`-12..12`。     |
+| Setting                         | Env var                | Default                       | Description                      |
+| ------------------------------- | ---------------------- | ----------------------------- | -------------------------------- |
+| `tts.providers.minimax.baseUrl` | `MINIMAX_API_HOST`     | `https://api.minimax.io`      | MiniMax T2A API host.            |
+| `tts.providers.minimax.model`   | `MINIMAX_TTS_MODEL`    | `speech-2.8-hd`               | TTS model id.                    |
+| `tts.providers.minimax.voiceId` | `MINIMAX_TTS_VOICE_ID` | `English_expressive_narrator` | Voice id used for speech output. |
+| `tts.providers.minimax.speed`   |                        | `1.0`                         | Playback speed, `0.5..2.0`.      |
+| `tts.providers.minimax.vol`     |                        | `1.0`                         | Volume, `(0, 10]`.               |
+| `tts.providers.minimax.pitch`   |                        | `0`                           | Integer pitch shift, `-12..12`.  |
 
 ### 音乐生成
 
@@ -328,12 +328,13 @@ MiniMax 插件还通过 MiniMax Token Plan 搜索 API（`/v1/coding_plan/search`
   <Accordion title="配置选项">
     | 选项 | 描述 |
     | --- | --- |
-    | `models.providers.minimax.baseUrl` | 优先使用 `https://api.minimax.io/anthropic`（兼容 Anthropic）；`https://api.minimax.io/v1` 可选，用于兼容 OpenAI 的负载 |
-    | `models.providers.minimax.api` | 优先使用 `anthropic-messages`；`openai-completions` 可选，用于兼容 OpenAI 的负载 |
-    | `models.providers.minimax.apiKey` | MiniMax API 密钥（`MINIMAX_API_KEY`） |
-    | `models.providers.minimax.models` | 定义 `id`、`name`、`reasoning`、`contextWindow`、`maxTokens`、`cost` |
-    | `agents.defaults.models` | 为你想要加入允许列表的模型设置别名 |
-    | `models.mode` | 如果你想在内置模型之外添加 MiniMax，请保持 `merge` |
+    | `models.providers.minimax.baseUrl` | Prefer `https://api.minimax.io/anthropic` (Anthropic-compatible); `https://api.minimax.io/v1` is optional for OpenAI-compatible payloads |
+    | `models.providers.minimax.api` | Prefer `anthropic-messages`; `openai-completions` is optional for OpenAI-compatible payloads |
+    | `models.providers.minimax.apiKey` | MiniMax API key (`MINIMAX_API_KEY`) |
+    | `models.providers.minimax.models` | Define `id`, `name`, `reasoning`, `contextWindow`, `maxTokens`, `cost` |
+    | `agents.defaults.models` | Per-model aliases, parameters, and metadata |
+    | `agents.defaults.modelPolicy.allow` | Optional explicit model allowlist |
+    | `models.mode` | Keep `merge` if you want to add MiniMax alongside built-ins |
   </Accordion>
 
   <Accordion title="Thinking defaults">

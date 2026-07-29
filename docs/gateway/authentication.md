@@ -58,7 +58,9 @@ openclaw models auth login --provider anthropic --method cli --set-default
 
 这分两步完成：先在主机上将 Claude Code 登录到 Anthropic，然后告诉 OpenClaw 通过本地 `claude-cli` 后端路由 Anthropic 模型选择，并保存匹配的 OpenClaw 认证配置文件。
 
-如果 `claude` 不在 `PATH` 中，请安装 Claude Code，或者将 `agents.defaults.cliBackends.claude-cli.command` 设置为二进制文件路径。
+The gateway service must resolve `claude` on `PATH`. If a deployment needs a
+nonstandard executable path, register a wrapper through a
+[CLI backend plugin](/plugins/cli-backend-plugins).
 
 ## 手动输入令牌
 

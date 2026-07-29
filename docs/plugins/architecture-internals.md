@@ -24,11 +24,8 @@ title: "插件架构内部"
 7. 调用原生 `register(api)` 钩子，并将注册内容收集到插件注册表中
 8. 将注册表暴露给命令/运行时界面
 
-<Note>
-`activate` 是 `register` 的旧别名 —— 加载器会解析两者中的任意一个（`def.register ?? def.activate`），并在同一时刻调用它。所有捆绑插件都使用 `register`；新插件请优先使用 `register`。
-</Note>
-
-安全门会在**运行时执行之前**运行。当满足以下任一条件时，发现流程会阻止某个候选项：
+Safety gates run **before** runtime execution. Discovery blocks a candidate
+when:
 
 - 其解析后的入口逃逸出了插件根目录
 - 其路径（或其根目录）是全局可写的
@@ -159,21 +156,30 @@ export default {
 
 提供方插件有三层：
 
-- **清单元数据**：用于在运行时之前进行廉价查找：
-  `setup.providers[].envVars`、已弃用的兼容字段 `providerAuthEnvVars`、
-  `providerAuthAliases`、`providerAuthChoices` 和 `channelEnvVars`。
-- **配置阶段钩子**：`catalog`（旧称 `discovery`）和
-  `applyConfigDefaults`。
-- **运行时钩子**：40+ 个可选钩子，涵盖认证、模型解析、
-  流包装、思考级别、重放策略以及使用情况端点。参见
-  [钩子顺序和用法](#hook-order-and-usage)。
+- **Manifest metadata** for cheap pre-runtime lookup:
+  `setup.providers[].envVars`, `providerAuthAliases`, `providerAuthChoices`,
+  and `channelConfigs`.
+- **Config-time hooks**: `catalog` plus `applyConfigDefaults`.
+- **Runtime hooks**: 40+ optional hooks covering auth, model resolution,
+  stream wrapping, thinking levels, replay policy, and usage endpoints. See
+  [Hook order and usage](#hook-order-and-usage).
 
 OpenClaw 仍然负责通用的代理循环、故障切换、转录处理和工具策略。
 这些钩子是面向提供方特定行为的扩展接口，而不需要完全自定义的推理传输。
 
-当某个提供方具有基于环境变量的凭据，并且通用的认证/状态/模型选择路径应在不加载插件运行时的情况下看到它们时，请使用清单中的 `setup.providers[].envVars`。已弃用的 `providerAuthEnvVars` 在弃用窗口内仍会由兼容适配器读取；使用它的非打包插件将收到清单诊断。当某个提供方 id 需要复用另一个提供方 id 的环境变量、认证配置、基于配置的认证以及 API key 启动选择时，请使用清单中的 `providerAuthAliases`。当用于引导/认证选择的 CLI 界面应在不加载提供方运行时的情况下了解某个提供方的选项 id、分组标签和简单的一键认证接线时，请使用清单中的 `providerAuthChoices`。将提供方运行时的 `envVars` 保留给面向操作员的提示，例如引导标签或 OAuth client-id/client-secret 设置变量。
+Use manifest `setup.providers[].envVars` when the provider has env-based
+credentials that generic auth/status/model-picker paths should see without
+loading plugin runtime. Use manifest `providerAuthAliases`
+when one provider id should reuse another provider id's env vars, auth profiles,
+config-backed auth, and API-key onboarding choice. Use manifest
+`providerAuthChoices` when onboarding/auth-choice CLI surfaces should know the
+provider's choice id, group labels, and simple one-flag auth wiring without
+loading provider runtime. Keep provider runtime
+`envVars` for operator-facing hints such as onboarding labels or OAuth
+client-id/client-secret setup vars.
 
-当某个通道具有基于环境变量的认证或设置，并且通用的 shell-env 回退、配置/状态检查或设置提示应在不加载通道运行时的情况下看到它们时，请使用清单中的 `channelEnvVars`。
+Describe env-driven channel setup and auth through the owning
+`channelConfigs.<id>.schema` and setup descriptors.
 
 ### 钩子顺序与使用
 
@@ -350,13 +356,13 @@ const voices = await api.runtime.tts.listVoices({
 
 注释：
 
-- `textToSpeech` 返回用于文件/语音笔记界面的标准核心 TTS 输出载荷。
-- 使用核心 `messages.tts` 配置和提供方选择。
-- 返回 PCM 音频缓冲区 + 采样率。插件必须为提供方进行重采样/编码。
-- `listVoices` 对每个提供方是可选的。可将其用于供应商自有的声音选择器或设置流程。
-- 核心会将已解析的请求截止时间传递给提供方的 `listVoices` 钩子；提供方特定的超时设置可能会覆盖它。
-- 语音列表可以包含更丰富的元数据，例如区域设置、性别和个性标签，以便为感知提供方的选择器提供支持。
-- OpenAI 和 ElevenLabs 目前支持电话语音。Microsoft 不支持。
+- `textToSpeech` returns the normal core TTS output payload for file/voice-note surfaces.
+- Uses core `tts` configuration and provider selection.
+- Returns PCM audio buffer + sample rate. Plugins must resample/encode for providers.
+- `listVoices` is optional per provider. Use it for vendor-owned voice pickers or setup flows.
+- Core passes a resolved request deadline to provider `listVoices` hooks; provider-specific timeout settings may override it.
+- Voice listings can include richer metadata such as locale, gender, and personality tags for provider-aware pickers.
+- OpenAI and ElevenLabs support telephony today. Microsoft does not.
 
 插件也可以通过 `api.registerSpeechProvider(...)` 注册语音提供方。
 
@@ -457,11 +463,14 @@ const { text } = await api.runtime.mediaUnderstanding.transcribeAudioFile({
 
 注释：
 
-- `api.runtime.mediaUnderstanding.*` 是用于图像/音频/视频理解的首选共享接口。
-- `extractStructuredWithModel(...)` 是面向插件的边界，用于受限的、由提供方拥有的、以图像优先的抽取。至少包含一个图像输入；文本输入只是补充上下文。产品插件拥有自己的路由和 schema，而 OpenClaw 拥有提供方/运行时边界。
-- 使用核心媒体理解音频配置（`tools.media.audio`）和提供方回退顺序。
-- 当未生成转写输出时，返回 `{ text: undefined }`（例如跳过/不支持的输入）。
-- `api.runtime.stt.transcribeAudioFile(...)` 仍然作为兼容别名保留。
+- `api.runtime.mediaUnderstanding.*` is the preferred shared surface for
+  image/audio/video understanding.
+- `extractStructuredWithModel(...)` is the plugin-facing seam for bounded
+  provider-owned image-first extraction. Include at least one image input;
+  text inputs are supplemental context. Product plugins own their routes and
+  schemas while OpenClaw owns the provider/runtime boundary.
+- Uses core media-understanding audio configuration (`tools.media.audio`) and provider fallback order.
+- Returns `{ text: undefined }` when no transcription output is produced (for example skipped/unsupported input).
 
 插件还可以通过 `api.runtime.subagent` 启动后台子代理运行：
 
@@ -555,29 +564,30 @@ api.registerHttpRoute({
 
 注释：
 
-- `api.registerHttpHandler(...)` 已被移除，调用将导致插件加载错误。请改用 `api.registerHttpRoute(...)`。
-- 插件路由必须显式声明 `auth`。
-- 相同 `path + match` 的冲突会被拒绝，除非设置 `replaceExisting: true`，且一个插件不能替换另一个插件的路由。
-- 不同 `auth` 级别的重叠路由会被拒绝。请仅在同一 `auth` 级别内保留 `exact`/`prefix` 的兜底链。
-- `auth: "plugin"` 路由不会自动获得运营者运行时作用域。它们用于插件管理的 webhook/签名校验，而不是特权的 Gateway 辅助调用。
-- `auth: "gateway"` 路由在 Gateway 请求运行时作用域内执行。默认面（`gatewayRuntimeScopeSurface: "write-default"`）是刻意保守的：
-  - 共享密钥 bearer 认证（`gateway.auth.mode = "token"` / `"password"`）以及任何非可信代理认证方式，即使调用方发送了 `x-openclaw-scopes`，也只会获得单个 `operator.write` 作用域
-  - 没有显式 `x-openclaw-scopes` 头的 `trusted-proxy` 调用方也会保留旧版仅 `operator.write` 的面
-  - 发送了 `x-openclaw-scopes` 的 `trusted-proxy` 调用方则会直接使用所声明的作用域
-  - 路由可以选择 `gatewayRuntimeScopeSurface: "trusted-operator"`，以便在所有具备身份的认证模式下始终遵循 `x-openclaw-scopes`（如果没有该头，则回退到 CLI 默认的完整作用域集合）
-- 实践规则：不要把一个 gateway-auth 插件路由当作隐式管理员入口。如果你的路由需要仅管理员可用的行为，请启用 `trusted-operator` 作用域面，要求使用具备身份的认证模式，并记录明确的 `x-openclaw-scopes` 头部契约。
-- 路由匹配和认证之后，普通处理器会参与 Gateway 根工作接纳流程。处于预备或重启中的 Gateway 会在调用处理器之前返回 `503`。一个狭义例外是：具有清单授权的 `auth: "gateway"` 路由，同时还启用了路由专用的 `trusted-operator` 面；它仍然保持可达，因此不会使暂停控制分发被困住，而同一插件中的普通同级路由仍然受接纳边界保护。WebSocket `handleUpgrade` 的所有权使用相同的原子接纳边界；一旦处理器接受了一个 socket，该 socket 之后的生命周期就归插件所有，不再受此边界跟踪。
+- `api.registerHttpHandler(...)` was removed and will cause a plugin-load error. Use `api.registerHttpRoute(...)` instead.
+- Plugin routes must declare `auth` explicitly.
+- Exact `path + match` conflicts are rejected unless `replaceExisting: true`, and one plugin cannot replace another plugin's route.
+- Overlapping routes with different `auth` levels are rejected. Keep `exact`/`prefix` fallthrough chains on the same auth level only.
+- `auth: "plugin"` routes do **not** receive operator runtime scopes automatically. They are for plugin-managed webhooks/signature verification, not privileged Gateway helper calls.
+- `auth: "gateway"` routes run inside a Gateway request runtime scope. The default surface (`gatewayRuntimeScopeSurface: "write-default"`) is intentionally conservative:
+  - shared-secret bearer auth (`gateway.auth.mode = "token"` / `"password"`) and any non-trusted-proxy auth method get a single `operator.write` scope, even if the caller sends `x-openclaw-scopes`
+  - `trusted-proxy` callers without an explicit `x-openclaw-scopes` header also keep the legacy `operator.write`-only surface
+  - `trusted-proxy` callers that do send `x-openclaw-scopes` get the declared scopes instead
+  - a route can opt into `gatewayRuntimeScopeSurface: "trusted-operator"` to always honor `x-openclaw-scopes` for identity-bearing auth modes (falling back to the full CLI default scope set when the header is absent)
+- Sandboxed external Control UI tabs backed by `auth: "gateway"` routes use a short-lived signed cookie grant minted only by authenticated bootstrap; plugin-auth tabs keep their direct iframe path. Before mounting, the parent runs a route-owned probe inside the same opaque sandbox and fails closed when browser privacy policy blocks the cookie. The grant is bound to the owning plugin, matched route root, and current auth generation; its process-random cookie name prevents trusted same-host Gateways from overwriting one another, but cookies never isolate TCP ports. The Gateway hostname is therefore one credential boundary: do not cohost mutually untrusted services on that hostname, including other ports. Route dispatch rejects reuse against a nested route owned by another plugin. Because sandbox descendants are cross-site for cookie purposes, the grant accepts only `GET` and `HEAD` with `operator.read`; mutations and WebSocket upgrades stay on explicit Gateway-authenticated surfaces. The cookie intentionally cannot use CHIPS: current browsers include a cross-site-ancestor bit in the partition key, so nested opaque sandbox frames would lose access to same-route assets. The cookie requires a secure context and browser permission for cross-site cookies, so gateway-auth external tabs are unavailable on plain-HTTP LAN origins or under full third-party-cookie blocking; use HTTPS/Tailscale Serve or browser-trusted loopback with a compatible cookie policy.
+- The grant prevents Gateway bearer-token disclosure and accidental route/scope reuse; it does not create a security boundary between native plugins. Native plugin code and the UI content it serves remain part of the same trusted in-process plugin boundary.
+- Practical rule: do not assume a gateway-auth plugin route is an implicit admin surface. If your route needs admin-only behavior, opt into `trusted-operator` scope surface, require an identity-bearing auth mode, and document the explicit `x-openclaw-scopes` header contract.
+- After route matching and authentication, ordinary handlers participate in Gateway root-work admission. A prepared or restarting Gateway returns `503` before invoking the handler. The narrow exception is a manifest-entitled `auth: "gateway"` route that also opts into the route-specific `trusted-operator` surface; it remains reachable so suspension control dispatch cannot be stranded, while ordinary sibling routes from the same plugin remain behind the admission boundary. WebSocket `handleUpgrade` ownership uses the same atomic admission boundary; once the handler accepts a socket, the socket's later lifetime is plugin-owned and is not tracked by this boundary.
 
 ## 插件 SDK 导入路径
 
 在编写新插件时，请使用更窄的 SDK 子路径，而不是单体的 `openclaw/plugin-sdk` 根 barrel。核心子路径：
 
-| 子路径                              | 用途                                               |
-| ----------------------------------- | -------------------------------------------------- |
-| `openclaw/plugin-sdk/plugin-entry`  | 插件注册原语                                       |
-| `openclaw/plugin-sdk/channel-core`  | 通道入口/构建辅助工具                                |
-| `openclaw/plugin-sdk/core`          | 通用共享辅助工具和总括契约                           |
-| `openclaw/plugin-sdk/config-schema` | 根 `openclaw.json` Zod 模式（`OpenClawSchema`） |
+| Subpath                            | Purpose                                      |
+| ---------------------------------- | -------------------------------------------- |
+| `openclaw/plugin-sdk/plugin-entry` | Plugin registration primitives               |
+| `openclaw/plugin-sdk/channel-core` | Channel entry/build helpers                  |
+| `openclaw/plugin-sdk/core`         | Generic shared helpers and umbrella contract |
 
 通道插件会从一组更窄的接入点中选择——`channel-setup`、
 `setup-runtime`、`setup-tools`、`channel-pairing`、
@@ -595,10 +605,10 @@ api.registerHttpRoute({
 而不是宽泛的 `config-runtime` 兼容 barrel。
 
 <Info>
-`openclaw/plugin-sdk/channel-runtime`, `openclaw/plugin-sdk/channel-lifecycle`,
-小型通道辅助 facades，`openclaw/plugin-sdk/outbound-runtime`,
-`openclaw/plugin-sdk/outbound-send-deps`, `openclaw/plugin-sdk/config-runtime`,
-以及 `openclaw/plugin-sdk/infra-runtime` 都是为旧插件保留的弃用兼容 shim。新代码应改为导入更窄的通用原语。
+`openclaw/plugin-sdk/channel-lifecycle`, small channel helper facades,
+`openclaw/plugin-sdk/config-runtime`, and `openclaw/plugin-sdk/infra-runtime`
+are deprecated compatibility shims for older plugins. New code should import
+narrower generic primitives instead.
 </Info>
 
 仓库内部入口点（按打包插件包根目录）：
@@ -813,18 +823,17 @@ id 会变为 `<manifestOrPackageName>/<fileBase>`（如果存在，则优先使�
 
 除了最小示例之外，`openclaw.channel` 还有几个有用的字段：
 
-- `detailLabel`：用于更丰富的目录/状态界面的次级标签
-- `docsLabel`：覆盖文档链接的链接文本
-- `preferOver`：该目录条目应优先于哪些低优先级插件/频道 id
-- `selectionDocsPrefix`、`selectionDocsOmitLabel`、`selectionExtras`：用于选择界面的复制控制
-- `markdownCapable`：标记该频道支持用于出站格式化决策的 markdown
-- `exposure.configured`：设置为 `false` 时，在已配置频道列表中隐藏该频道
-- `exposure.setup`：设置为 `false` 时，在交互式设置/配置选择器中隐藏该频道
-- `exposure.docs`：在文档导航中将该频道标记为内部/私有
-- `showConfigured` / `showInSetup`：仍可接受的旧别名；更推荐使用 `exposure`
-- `quickstartAllowFrom`：允许频道参与标准的 quickstart `allowFrom` 流程
-- `forceAccountBinding`：即使只有一个账户，也要求显式账户绑定
-- `preferSessionLookupForAnnounceTarget`：在解析 announce 目标时优先使用会话查找
+- `detailLabel`: secondary label for richer catalog/status surfaces
+- `docsLabel`: override link text for the docs link
+- `preferOver`: lower-priority plugin/channel ids this catalog entry should outrank
+- `selectionDocsPrefix`, `selectionDocsOmitLabel`, `selectionExtras`: selection-surface copy controls
+- `markdownCapable`: marks the channel as markdown-capable for outbound formatting decisions
+- `exposure.configured`: hide the channel from configured-channel listing surfaces when set to `false`
+- `exposure.setup`: hide the channel from interactive setup/configure pickers when set to `false`
+- `exposure.docs`: mark the channel as internal/private for docs navigation surfaces
+- `quickstartAllowFrom`: opt the channel into the standard quickstart `allowFrom` flow
+- `forceAccountBinding`: require explicit account binding even when only one account exists
+- `preferSessionLookupForAnnounceTarget`: prefer session lookup when resolving announce targets
 
 OpenClaw 还可以合并**外部频道目录**（例如 MPM 注册表导出）。把 JSON 文件放在以下任一位置：
 
@@ -857,7 +866,6 @@ OpenClaw 还可以合并**外部频道目录**（例如 MPM 注册表导出）�
 
 ```ts
 import { buildMemorySystemPromptAddition } from "openclaw/plugin-sdk/core";
-import { resolveSessionAgentId } from "openclaw/plugin-sdk/memory-host-core";
 
 export default function (api) {
   api.registerContextEngine("lossless-claw", (ctx) => ({
@@ -872,7 +880,6 @@ export default function (api) {
         systemPromptAddition: buildMemorySystemPromptAddition({
           availableTools: availableTools ?? new Set(),
           citationsMode,
-          agentId: resolveSessionAgentId({ config: ctx.config, sessionKey }),
           agentSessionKey: sessionKey,
         }),
       };
@@ -886,7 +893,21 @@ export default function (api) {
 
 工厂函数 `ctx` 提供可选的 `config`、`agentDir` 和 `workspaceDir` 值，用于构造时初始化。
 
-`assemble()` 在当前宿主具有持久化后端线程时，可能返回 `contextProjection`。若是传统的按轮次投影，则省略它。当组装后的上下文应当只注入一次到后端线程中，并在 epoch 改变前重复使用时，返回 `{ mode: "thread_bootstrap", epoch }`。当引擎的语义上下文发生变化后，例如在引擎自有的压缩流程之后，应更改 epoch。宿主可以在 thread-bootstrap 投影中保留工具调用元数据、输入形状以及已脱敏的工具结果，这样新的后端线程就能保留工具连续性，而无需复制原始的含密钥载荷。
+The host completes registered async memory prompt preparation before calling a
+non-legacy engine's `assemble()`. `buildMemorySystemPromptAddition(...)` stays
+synchronous and reads that immutable run snapshot while `assemble()` is active.
+Pass the supplied tool and citation context through unchanged so the snapshot
+cannot cross run boundaries.
+
+`assemble()` may return `contextProjection` when the active harness has a
+persistent backend thread. Omit it for legacy per-turn projection. Return
+`{ mode: "thread_bootstrap", epoch }` when the assembled context should be
+injected once into a backend thread and reused until the epoch changes. Change
+the epoch after the engine's semantic context changes, such as after an
+engine-owned compaction pass. Hosts may preserve tool-call metadata, input
+shape, and redacted tool results in a thread-bootstrap projection so fresh
+backend threads retain tool continuity without copying raw secret-bearing
+payloads.
 
 如果你的引擎**不**负责压缩算法，请保留 `compact()` 的实现，并显式委托它：
 
@@ -895,7 +916,6 @@ import {
   buildMemorySystemPromptAddition,
   delegateCompactionToRuntime,
 } from "openclaw/plugin-sdk/core";
-import { resolveSessionAgentId } from "openclaw/plugin-sdk/memory-host-core";
 
 export default function (api) {
   api.registerContextEngine("my-memory-engine", (ctx) => ({
@@ -914,7 +934,6 @@ export default function (api) {
         systemPromptAddition: buildMemorySystemPromptAddition({
           availableTools: availableTools ?? new Set(),
           citationsMode,
-          agentId: resolveSessionAgentId({ config: ctx.config, sessionKey }),
           agentSessionKey: sessionKey,
         }),
       };

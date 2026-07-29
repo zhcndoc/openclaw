@@ -1,11 +1,11 @@
 ---
-summary: "内存搜索、嵌入提供方、QMD、混合搜索和多模态索引的所有配置项"
+summary: "Memory search providers, retrieval modes, QMD, and multimodal indexing"
 title: "内存配置参考"
 sidebarTitle: "内存配置"
 read_when:
   - 你想配置内存搜索提供方或嵌入模型
   - 你想设置 QMD 后端
-  - 你想调整混合搜索、MMR 或时间衰减
+  - 你想启用混合搜索、MMR 或时间衰减
   - 你想启用多模态内存索引
 ---
 
@@ -29,22 +29,60 @@ read_when:
   </Card>
 </CardGroup>
 
-所有内存搜索设置都位于 `openclaw.json` 中的 `agents.defaults.memorySearch` 下（或者在每个 agent 的 `agents.list[].memorySearch` 中进行覆盖），除非另有说明。
+所有共享内存设置都位于 `openclaw.json` 顶层的 `memory` 下。搜索默认值使用 `memory.search`；按代理的搜索覆盖使用 `agents.entries.*.memory.search`。
 
 <Note>
-如果你在寻找 **活动内存** 功能开关和子代理配置，它位于 `plugins.entries.active-memory` 下，而不是 `memorySearch`。
+对于推荐的个人代理工作流，请使用
+`memory.search.rememberAcrossConversations`。高级活动内存定位、
+模型、提示词和延迟控制位于 `plugins.entries.active-memory` 下。
 
-活动内存使用双门控模型：
-
-1. 插件必须启用并且目标指向当前 agent id
-2. 请求必须是符合条件的交互式持久聊天会话
-
-有关激活模型、插件拥有的配置、对话转录持久化以及安全发布模式，请参见 [活动内存](/concepts/active-memory)。
+请参见 [活动内存](/concepts/active-memory)，了解两种激活路径、
+会话记录持久化以及安全发布指南。
 </Note>
 
 ---
 
-## 提供方选择
+## 跨会话记忆
+
+| Key                           | Type      | Default                                                    | Description                                                                    |
+| ----------------------------- | --------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `rememberAcrossConversations` | `boolean` | 对个人安装为开启；在配置了 DM 隔离时为关闭 | 使用该代理的其他已识别私密对话中的相关上下文。 |
+
+仅当只有受信任的个人代理应使用跨会话转录回忆时，按代理进行配置：
+
+```json5
+{
+  agents: {
+    entries: {
+      personal: {
+        memory: {
+          search: {
+            rememberAcrossConversations: true,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+该值遵循正常的 `memory.search` 继承规则，并可按代理覆盖。未设置时，仅当全局 `session.dmScope` 未设置或为 `"main"`，且没有绑定项覆盖 `session.dmScope` 时，默认开启。任何已配置的 DM 隔离都会使其默认关闭。显式设置为 `true` 或 `false` 始终优先生效。启用它意味着会对会话转录进行索引，并将 `sessions` 添加到该代理解析后的记忆来源中。使用 QMD 时，它还会启用该代理的会话导出；在此模式下不需要单独设置 `memory.qmd.sessions.enabled`。
+
+OpenClaw 的内置记忆提供程序通过 builtin 和 QMD 后端都支持这条受保护路径。其他记忆提供程序仍可继续使用它们自己的回忆钩子和高级 Active Memory 工具，但除非当前提供程序支持受保护的私密转录回忆，否则会跳过此设置。`openclaw doctor` 会报告不受支持的提供程序，或报告一个明确的 Active Memory `toolsAllow` 列表中省略了 `memory_search` 的情况。
+
+检索边界比一般会话搜索更窄：
+
+- 仅同一代理已识别的私密对话符合条件
+- 正在回答的对话会被排除
+- 群组和频道会被排除为来源和目标
+- 未知的对话类型会失败并关闭
+- 沙箱化回忆不能使用特殊的跨会话授权
+
+该设置不会更改 `tools.sessions.visibility`、会话密钥、转录存储、传递路由，也不会更改 `sessions_list`、`sessions_history` 和 `sessions_send` 的权限。Active Memory 会执行一次有边界的只读检索；不可用或超时的检索不会阻塞回复。
+
+---
+
+## Provider selection
 
 | Key        | Type      | Default          | Description                                                                                                                                                                                                                                                                                 |
 | ---------- | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -71,17 +109,17 @@ OpenClaw 会暂停向量搜索并报告索引身份警告，而不是
 `provider: "none"` 用于有意选择仅 FTS 模式时，内存召回在嵌入不可用时仍可
 使用词法 FTS 排名。
 
-显式的非本地提供方会失败关闭。如果你将 `memorySearch.provider` 设置为
+明确指定的非本地提供方会在失败时直接返回错误。如果你将 `memory.search.provider` 设置为
 Bedrock、DeepInfra、Gemini、GitHub
-Copilot、LM Studio、Mistral、Ollama、OpenAI、Voyage，或 OpenAI 兼容的
+Copilot、LM Studio、Mistral、Ollama、OpenAI、Voyage 或 OpenAI 兼容的
 自定义提供方等具体的远程后端提供方，并且该提供方在运行时不可用，`memory_search`
-会返回不可用结果，而不是悄悄退回为仅 FTS 召回。请修复
-提供方/认证配置，切换到可访问的提供方，或在你想要有意使用仅 FTS 召回时设置
-`provider: "none"`。
+会返回不可用结果，而不是静默退回到仅 FTS 检索。请修复
+提供方/身份验证配置，切换到可访问的提供方，或者如果你希望有意使用仅 FTS 检索，
+请设置 `provider: "none"`。
 
 ### 自定义 provider id
 
-`memorySearch.provider` 可以指向自定义的 `models.providers.<id>` 条目，用于内存专用的提供方适配器，例如 `ollama`，或用于 OpenAI 兼容的模型 API，例如 `openai-responses` / `openai-completions`。OpenClaw 会解析该提供方的 `api` 所属方以用于嵌入适配器，同时保留自定义提供方 id 以处理端点、认证和模型前缀逻辑。这使多 GPU 或多主机部署可以将内存嵌入专门指向某个本地端点：
+`memory.search.provider` can point at a custom `models.providers.<id>` entry for memory-specific provider adapters such as `ollama`, or for OpenAI-compatible model APIs such as `openai-responses` / `openai-completions`. OpenClaw resolves that provider's `api` owner for the embedding adapter while preserving the custom provider id for endpoint, auth, and model-prefix handling. This lets multi-GPU or multi-host setups dedicate memory embeddings to a specific local endpoint:
 
 ```json5
 {
@@ -95,12 +133,10 @@ Copilot、LM Studio、Mistral、Ollama、OpenAI、Voyage，或 OpenAI 兼容的
       },
     },
   },
-  agents: {
-    defaults: {
-      memorySearch: {
-        provider: "ollama-5080",
-        model: "qwen3-embedding:0.6b",
-      },
+  memory: {
+    search: {
+      provider: "ollama-5080",
+      model: "qwen3-embedding:0.6b",
     },
   },
 }
@@ -144,15 +180,13 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ```json5
 {
-  agents: {
-    defaults: {
-      memorySearch: {
-        provider: "openai-compatible",
-        model: "text-embedding-3-small",
-        remote: {
-          baseUrl: "https://api.example.com/v1/",
-          apiKey: "YOUR_KEY",
-        },
+  memory: {
+    search: {
+      provider: "openai-compatible",
+      model: "text-embedding-3-small",
+      remote: {
+        baseUrl: "https://api.example.com/v1/",
+        apiKey: "YOUR_KEY",
       },
     },
   },
@@ -187,18 +221,16 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
     ```json5
     {
-      agents: {
-        defaults: {
-          memorySearch: {
-            provider: "openai-compatible",
-            remote: {
-              baseUrl: "https://embeddings.example/v1",
-              apiKey: "${EMBEDDINGS_API_KEY}",
-            },
-            model: "asymmetric-embedder",
-            queryInputType: "query",
-            documentInputType: "passage",
+      memory: {
+        search: {
+          provider: "openai-compatible",
+          remote: {
+            baseUrl: "https://embeddings.example/v1",
+            apiKey: "${EMBEDDINGS_API_KEY}",
           },
+          model: "asymmetric-embedder",
+          queryInputType: "query",
+          documentInputType: "passage",
         },
       },
     }
@@ -214,12 +246,10 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
     ```json5
     {
-      agents: {
-        defaults: {
-          memorySearch: {
-            provider: "bedrock",
-            model: "amazon.titan-embed-text-v2:0",
-          },
+      memory: {
+        search: {
+          provider: "bedrock",
+          model: "amazon.titan-embed-text-v2:0",
         },
       },
     }
@@ -247,7 +277,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
     带吞吐量后缀的变体（例如 `amazon.titan-embed-text-v1:2:8k`）以及带区域前缀的推理配置文件 ID（例如 `us.amazon.titan-embed-text-v2:0`）会继承基础模型的配置。
 
-    **区域：** 按以下顺序解析：`memorySearch.remote.baseUrl` 覆盖项、`models.providers.amazon-bedrock.baseUrl` 配置、`AWS_REGION`、`AWS_DEFAULT_REGION`，然后默认使用 `us-east-1`。
+    **Region:** resolved in this order: the `memory.search.remote.baseUrl` override, the `models.providers.amazon-bedrock.baseUrl` config, `AWS_REGION`, `AWS_DEFAULT_REGION`, then a default of `us-east-1`.
 
     **身份验证：** OpenClaw 会先检查 `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` 或 `AWS_BEARER_TOKEN_BEDROCK`，然后回退到标准 AWS SDK 默认凭证提供链：
 
@@ -299,95 +329,40 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
   </Accordion>
 </AccordionGroup>
 
-### 内联嵌入超时
-
-<ParamField path="sync.embeddingBatchTimeoutSeconds" type="number">
-  覆盖内存索引期间内联嵌入批次的超时时间。
-
-未设置时使用提供方默认值：本地/自托管提供方（如 `local`、`ollama` 和 `lmstudio`）为 600 秒，托管提供方为 120 秒。当本地 CPU 受限的嵌入批次运行正常但较慢时，可增大该值。
-</ParamField>
-
----
-
 ## 索引行为
 
-除非另有说明，否则均属于 `memorySearch.sync`：
-
-| 键                             | 类型      | 默认值 | 描述                                                               |
-| ------------------------------ | --------- | ------ | ------------------------------------------------------------------ |
-| `onSessionStart`               | `boolean` | `true` | 会话开始时同步内存索引                                               |
-| `onSearch`                     | `boolean` | `true` | 在搜索时检测到内容变化后延迟同步                                       |
-| `watch`                        | `boolean` | `true` | 监视内存文件（chokidar），并在变更时安排重新索引                         |
-| `watchDebounceMs`              | `number`  | `1500` | 用于合并快速文件监听事件的防抖窗口                                       |
-| `intervalMinutes`              | `number`  | `0`    | 定期重新索引的时间间隔（分钟）（`0` 表示禁用）                             |
-| `sessions.postCompactionForce` | `boolean` | `true` | 在压缩触发的转录更新后强制重新进行会话索引                                |
-
-<ParamField path="chunking.tokens" type="number">
-  在拆分内存源以进行嵌入之前使用的分块大小（以 token 计，默认值：400）。
-</ParamField>
-<ParamField path="chunking.overlap" type="number">
-  相邻分块之间的 token 重叠，用于在拆分边界附近保留上下文（默认值：80）。
-</ParamField>
-
-<Note>
-更改 `chunking.tokens` 或 `chunking.overlap` 会改变分块边界，并使现有索引标识失效（参见 Provider 选择下的 Warning）。
-</Note>
-
----
+内存引擎负责同步、批处理、watch 以及压缩后
+索引启发式。OpenClaw 保持这些行为启用，并维持
+默认设置，而不是暴露按安装实例划分的时序开关。
 
 ## 混合搜索配置
 
-都位于 `memorySearch.query` 下：
+位于 `memory.search.query` 下的所有配置：
 
 | 键           | 类型     | 默认值 | 描述                               |
 | ------------ | -------- | ------ | ---------------------------------- |
 | `maxResults` | `number` | `6`    | 注入前返回的最大记忆命中数         |
 | `minScore`   | `number` | `0.35` | 纳入命中的最低相关性分数          |
 
-以及位于 `memorySearch.query.hybrid` 下：
+混合检索仍然启用。内置引擎始终对带日期的日记笔记应用固定的
+30 天时效半衰期，并在混合相关性之后应用固定的重要性
+乘数。`MEMORY.md`、`USER.md` 以及其他常青
+记忆文件不会衰减。可为空的重要性值视为中性，因此现有索引无需迁移或
+新增调优键。
 
-| 键                   | 类型      | 默认值  | 描述                        |
-| --------------------- | --------- | ------- | ---------------------------------- |
-| `enabled`             | `boolean` | `true`  | 启用混合 BM25 + 向量搜索 |
-| `vectorWeight`        | `number`  | `0.7`   | 向量分数权重（0-1）     |
-| `textWeight`          | `number`  | `0.3`   | BM25 分数权重（0-1）       |
-| `candidateMultiplier` | `number`  | `4`     | 候选池大小乘数     |
-
-<Tabs>
-  <Tab title="MMR（多样性）">
-    | 键           | 类型      | 默认值 | 描述                          |
-    | ------------- | --------- | ------ | ------------------------------------- |
-    | `mmr.enabled` | `boolean` | `false` | 启用 MMR 重排序                |
-    | `mmr.lambda`  | `number`  | `0.7`   | 0 = 最大多样性，1 = 最大相关性 |
-  </Tab>
-  <Tab title="时间衰减（新近性）">
-    | 键                          | 类型      | 默认值 | 描述               |
-    | ---------------------------- | --------- | ------ | -------------------------- |
-    | `temporalDecay.enabled`      | `boolean` | `false` | 启用新近性提升      |
-    | `temporalDecay.halfLifeDays` | `number`  | `30`    | 分数每 N 天减半 |
-
-    常青文件（`MEMORY.md`、`memory/` 中非日期文件）永不衰减。
-
-  </Tab>
-</Tabs>
+对已提升、受信任条目的强触发匹配，可在符合条件的交互轮次中注入最多三条
+紧凑记忆。目前，根目录下的 `MEMORY.md` 和 `USER.md` 是精选的可注入层级。日记和转录内容绝不会
+被自动注入。
 
 ### 完整示例
 
 ```json5
 {
-  agents: {
-    defaults: {
-      memorySearch: {
-        query: {
-          maxResults: 6,
-          minScore: 0.35,
-          hybrid: {
-            vectorWeight: 0.7,
-            textWeight: 0.3,
-            mmr: { enabled: true, lambda: 0.7 },
-            temporalDecay: { enabled: true, halfLifeDays: 30 },
-          },
-        },
+  memory: {
+    search: {
+      query: {
+        maxResults: 6,
+        minScore: 0.35,
       },
     },
   },
@@ -404,11 +379,9 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ```json5
 {
-  agents: {
-    defaults: {
-      memorySearch: {
-        extraPaths: ["../team-docs", "/srv/shared-notes"],
-      },
+  memory: {
+    search: {
+      extraPaths: ["../team-docs", "/srv/shared-notes"],
     },
   },
 }
@@ -416,89 +389,84 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 路径可以是绝对路径或相对于工作区的路径。目录会递归扫描 `.md` 文件。符号链接的处理取决于当前启用的后端：内置引擎会跳过符号链接，而 QMD 则遵循底层 QMD 扫描器的行为。
 
-对于按 agent 作用域的跨 agent 会话记录搜索，请使用 `agents.list[].memorySearch.qmd.extraCollections`，而不是 `memory.qmd.paths`。这些额外集合遵循相同的 `{ path, name, pattern? }` 结构，但它们会按 agent 合并，并且当路径指向当前工作区之外时，可以保留显式的共享名称。如果同一个解析后的路径同时出现在 `memory.qmd.paths` 和 `memorySearch.qmd.extraCollections` 中，QMD 会保留第一条并跳过重复项。
+对于代理作用域的跨代理转录搜索，请使用 `agents.entries.*.memory.search.qmd.extraCollections`，而不是 `memory.qmd.paths`。这些额外集合遵循相同的 `{ path, name, pattern? }` 结构，但会按代理合并，并且当路径指向当前工作区之外时，可以保留显式的共享名称。如果同一个解析后的路径同时出现在 `memory.qmd.paths` 和 `memory.search.qmd.extraCollections` 中，QMD 会保留第一条条目并跳过重复项。
 
----
+## Multimodal Memory (Gemini)
 
-## 多模态内存（Gemini）
+Use Gemini Embedding 2 to index images and audio together with Markdown:
 
-使用 Gemini Embedding 2 将图片和音频与 Markdown 一起建立索引：
-
-| 键                       | 类型       | 默认值    | 描述                            |
+| Key                       | Type       | Default    | Description                            |
 | ------------------------- | ---------- | ---------- | -------------------------------------- |
-| `multimodal.enabled`      | `boolean`  | `false`    | 启用多模态索引             |
-| `multimodal.modalities`   | `string[]` | --         | `["image"]`、`["audio"]` 或 `["all"]` |
-| `multimodal.maxFileBytes` | `number`   | `10485760` | 用于索引的最大文件大小（10 MiB）    |
+| `multimodal.enabled`      | `boolean`  | `false`    | Enable multimodal indexing             |
+| `multimodal.modalities`   | `string[]` | --         | `["image"]`, `["audio"]`, or `["all"]` |
+| `multimodal.maxFileBytes` | `number`   | `10485760` | Maximum file size for indexing (10 MiB)    |
 
 <Note>
-仅适用于 `extraPaths` 中的文件。默认内存根目录仍然只支持 Markdown。需要 `gemini-embedding-2-preview`。`fallback` 必须为 `"none"`。
+Only applies to files in `extraPaths`. The default memory root still supports only Markdown. Requires `gemini-embedding-2-preview`. `fallback` must be `"none"`.
 </Note>
 
-支持的格式：`.jpg`、`.jpeg`、`.png`、`.webp`、`.gif`、`.heic`、`.heif`（图片）；`.mp3`、`.wav`、`.ogg`、`.opus`、`.m4a`、`.aac`、`.flac`（音频）。
+Supported formats: `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`, `.heic`, `.heif` (images); `.mp3`, `.wav`, `.ogg`, `.opus`, `.m4a`, `.aac`, `.flac` (audio).
 
 ---
 
 ## 嵌入缓存
 
-| Key                | Type      | Default | Description                                  |
-| ------------------ | --------- | ------- | -------------------------------------------- |
-| `cache.enabled`    | `boolean` | `true`  | 将分块嵌入缓存到 SQLite 中             |
-| `cache.maxEntries` | `number`  | unset   | 缓存嵌入的尽力而为的上限 |
+| Key             | Type      | Default | Description                      |
+| --------------- | --------- | ------- | -------------------------------- |
+| `cache.enabled` | `boolean` | `true`  | 将分块嵌入缓存到 SQLite 中 |
 
-可防止在重新索引或转录更新期间对未更改的文本重复进行嵌入。将 `maxEntries` 保持为 unset 可获得无上限缓存；当磁盘增长比重新索引峰值速度更重要时再设置它。设置后，一旦缓存超过限制，最旧的条目（按最后更新时间）会优先被清除。
+在重新索引或转录更新期间，防止对未更改的文本重新生成嵌入。
 
 ## 批量索引
 
-| 键                           | 类型      | 默认值  | 描述                |
-| ----------------------------- | --------- | ------- | -------------------------- |
-| `remote.nonBatchConcurrency`  | `number`  | `4`     | 并行内联嵌入 |
-| `remote.batch.enabled`        | `boolean` | `false` | 启用批量嵌入 API |
-| `remote.batch.concurrency`    | `number`  | `2`     | 并行批量任务        |
-| `remote.batch.wait`           | `boolean` | `true`  | 等待批量完成  |
-| `remote.batch.pollIntervalMs` | `number`  | `2000`  | 轮询间隔              |
-| `remote.batch.timeoutMinutes` | `number`  | `60`    | 批量超时              |
+## 批量索引
+
+| Key                          | Type      | Default | Description                |
+| ---------------------------- | --------- | ------- | -------------------------- |
+| `remote.nonBatchConcurrency` | `number`  | `4`     | 并行内联嵌入 |
+| `remote.batch.enabled`       | `boolean` | `false` | 启用批量嵌入 API |
 
 可用于 `gemini`、`openai` 和 `voyage`。对于大规模回填，OpenAI 批量通常是最快且最便宜的。
 
-`remote.nonBatchConcurrency` 控制本地/自托管提供方以及在提供方批处理 API 未启用时的托管提供方所使用的内联嵌入调用。Ollama 在非批量索引时默认使用 `1`，以避免压垮较小的本地主机；在更大的机器上可设置更高的值。
-
-这与 `sync.embeddingBatchTimeoutSeconds` 是分开的，后者控制内联嵌入调用的超时时间。
+并发、轮询和超时行为由提供方负责。
 
 ---
 
-## 会话内存搜索（实验性）
+## 会话记忆搜索
 
 索引会话记录，并通过 `memory_search` 暴露它们：
 
-| 键                           | 类型       | 默认值      | 描述                             |
-| ----------------------------- | ---------- | ------------ | --------------------------------------- |
-| `experimental.sessionMemory`  | `boolean`  | `false`      | 启用会话索引                           |
-| `sources`                     | `string[]` | `["memory"]` | 添加 `"sessions"` 以包含会话记录       |
-| `sync.sessions.deltaBytes`    | `number`   | `100000`     | 重新索引的字节阈值                     |
-| `sync.sessions.deltaMessages` | `number`   | `50`         | 重新索引的消息阈值                     |
+| Key                           | Type       | Default                                                    | Description                              |
+| ----------------------------- | ---------- | ---------------------------------------------------------- | ---------------------------------------- |
+| `rememberAcrossConversations` | `boolean`  | 对个人安装为开启；在配置了 DM 隔离时为关闭                      | 允许跨会话的私密回忆                        |
+| `sources`                     | `string[]` | `["memory"]`                                               | 添加 `"sessions"` 以包含转录内容           |
 
 <Warning>
 会话索引需要显式启用，并且以异步方式运行。结果可能会略有延迟。会话日志保存在磁盘上，因此请将文件系统访问视为信任边界。
 </Warning>
 
-会话转录命中也遵循
+普通模型调用的会话转录搜索遵循
 [`tools.sessions.visibility`](/gateway/config-tools#toolssessions)。默认的
-`tree` 可见性仅公开当前会话及其派生的会话。要从其他会话中召回一个无关的、同代理网关分发的会话，例如 DM，请有意将可见性扩大到 `agent`（仅当还需要跨代理召回且代理到代理策略允许时，才使用 `all`）。
+`tree` 可见性会暴露当前会话、它派生出的会话，以及通过环境组感知监视到的同代理组会话。其他
+无关会话需要 `agent` 可见性（或者仅在同样需要跨代理回忆且代理间策略允许时使用 `all`）。
 
-下面的示例将这些设置放在 `agents.defaults` 下。当只有一个代理应索引并搜索会话转录时，你也可以在按代理覆盖中应用等效的 `memorySearch` 设置。
+`rememberAcrossConversations` 不会扩大该设置。它提供了一个仅在运行时生效的单独授权，限制为
+同代理私有转录，并且仅在有界的 Active Memory 过程期间有效。
 
-用于同代理从网关到 DM 的召回：
+下面的示例将这些设置放在顶层 `memory.search` 下。你也可以
+在按代理的 `memory.search` 覆盖中应用等效设置，当只有一个
+代理应当索引和搜索会话转录时。
+
+用于同代理从网关到 DM 的回忆：
 
 <Tabs>
   <Tab title="Builtin backend">
     ```json5
     {
-      agents: {
-        defaults: {
-          memorySearch: {
-            experimental: { sessionMemory: true },
-            sources: ["memory", "sessions"],
-          },
+      memory: {
+        search: {
+          experimental: { sessionMemory: true },
+          sources: ["memory", "sessions"],
         },
       },
       tools: {
@@ -510,16 +478,12 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
   <Tab title="QMD backend">
     ```json5
     {
-      agents: {
-        defaults: {
-          memorySearch: {
-            experimental: { sessionMemory: true },
-            sources: ["memory", "sessions"],
-          },
-        },
-      },
       memory: {
         backend: "qmd",
+        search: {
+          experimental: { sessionMemory: true },
+          sources: ["memory", "sessions"],
+        },
         qmd: {
           sessions: { enabled: true },
         },
@@ -532,9 +496,14 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
   </Tab>
 </Tabs>
 
-使用 QMD 时，`agents.defaults.memorySearch.experimental.sessionMemory` 和
-`sources: ["sessions"]` 本身不会将转录导出到 QMD。也要设置
-`memory.qmd.sessions.enabled: true`。
+使用 QMD 时，`sources: ["sessions"]` 本身并不会将转录导出到 QMD。还需要设置
+`memory.qmd.sessions.enabled: true`。更高层级的
+`rememberAcrossConversations: true` 设置是例外：它会为该代理隐含所需的 QMD 会话导出。隐含导出仍保持私有：
+它们始终使用默认的内部导出位置（配置的
+`sessions.exportDir` 仅适用于显式导出），它们只会在该代理的跨会话回忆期间被搜索，
+并且普通的 `memory_get`
+无法读取它们。显式的
+`memory.qmd.sessions.enabled: true` 保持其现有行为，并使导出的转录成为普通记忆语料库的一部分。
 
 ---
 
@@ -585,34 +554,8 @@ OpenClaw 更倾向于使用当前的 QMD collection 和 MCP 查询形态，但�
 QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需要全局覆盖 QMD 的模型，请在网关运行时环境中设置 `QMD_EMBED_MODEL`、`QMD_RERANK_MODEL` 和 `QMD_GENERATE_MODEL` 等环境变量。
 </Note>
 
-### mcporter 集成
-
-所有配置都位于 `memory.qmd.mcporter` 下。它通过一个长期运行的 `mcporter` MCP 守护进程来路由 QMD 搜索，而不是每次查询都启动 `qmd`，从而为较大的模型降低冷启动开销。
-
-| 键           | 类型      | 默认值 | 描述                                                            |
-| ------------- | --------- | ------ | ---------------------------------------------------------------------- |
-| `enabled`     | `boolean` | `false` | 通过 mcporter 路由 QMD 调用，而不是每次请求都启动 `qmd` |
-| `serverName`  | `string`  | `qmd`   | 运行 `qmd mcp` 且 `lifecycle: keep-alive` 的 mcporter 服务器名称  |
-| `startDaemon` | `boolean` | `true`  | 当 `enabled` 为 true 时自动启动 mcporter 守护进程         |
-
-需要安装 `mcporter` 并将其放在 PATH 上，同时还需要配置一个运行 `qmd mcp` 的 mcporter 服务器。对于更简单的本地设置，如果可以接受每次查询启动进程的成本，请保持禁用。
-
 <AccordionGroup>
-  <Accordion title="更新计划">
-    | 键                       | 类型      | 默认值 | 描述                           |
-    | --------------------------- | --------- | -------- | ---------------------------------------- |
-    | `update.interval`         | `string`  | `5m`    | 刷新间隔                      |
-    | `update.debounceMs`       | `number`  | `15000` | 文件变更去抖                 |
-    | `update.onBoot`          | `boolean` | `true`  | 当长期运行的 QMD 管理器打开时刷新；设为 false 可跳过启动时的立即更新 |
-    | `update.startup`          | `string`  | `off`   | 可选的网关启动时 QMD 初始化：`off`、`idle` 或 `immediate` |
-    | `update.startupDelayMs`   | `number`  | `120000` | `startup: "idle"` 刷新运行前的延迟 |
-    | `update.waitForBootSync`  | `boolean` | `false` | 在初始刷新完成之前阻止管理器打开 |
-    | `update.embedInterval`    | `string`  | `60m`   | 单独的嵌入周期                |
-    | `update.commandTimeoutMs` | `number`  | `30000` | QMD 维护命令（collection list/add）的超时时间 |
-    | `update.updateTimeoutMs`  | `number`  | `120000` | 每个 `qmd update` 周期的超时时间   |
-    | `update.embedTimeoutMs`   | `number`  | `120000` | 每个 `qmd embed` 周期的超时时间    |
-  </Accordion>
-  <Accordion title="限制">
+  <Accordion title="Limits">
     | 键                       | 类型     | 默认值 | 描述                |
     | --------------------------- | -------- | ------- | ------------------------------ |
     | `limits.maxResults`       | `number` | `4`     | 最多搜索结果         |
@@ -651,7 +594,7 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
   </Accordion>
 </AccordionGroup>
 
-当启用 gateway-start QMD 初始化时，OpenClaw 仅为符合条件的 agent 启动 QMD。如果 `update.onBoot` 为 true 且未配置间隔/嵌入维护，则启动时会使用一次性管理器执行启动刷新并关闭它。如果配置了更新或嵌入间隔，则启动时会打开长期运行的 QMD 管理器，使其接管 watcher 和间隔计时器；`update.onBoot: false` 只会跳过立即的启动刷新。
+QMD 在首次使用内存时才会延迟初始化；其适配器负责刷新和嵌入调度。
 
 ### 完整 QMD 示例
 
@@ -678,7 +621,7 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
 
 ## 梦境
 
-Dreaming 配置在 `plugins.entries.memory-core.config.dreaming` 下，而不是在 `agents.defaults.memorySearch` 下。
+Dreaming 配置在 `plugins.entries.memory-core.config.dreaming` 下，而不是在 `memory.search` 下。
 
 Dreaming 作为一次计划性扫描运行，并将内部的浅层/深层/REM 阶段作为实现细节。
 
@@ -686,12 +629,13 @@ Dreaming 作为一次计划性扫描运行，并将内部的浅层/深层/REM �
 
 ### 用户设置
 
-| Key                                    | Type      | Default       | Description                                                                                                                      |
-| -------------------------------------- | --------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`                              | `boolean` | `false`       | 完全启用或禁用 dreaming                                                                                                           |
-| `frequency`                            | `string`  | `0 3 * * *`   | 可选的完整 dreaming 扫描 cron 频率                                                                                               |
-| `model`                                | `string`  | default model | 可选的 Dream Diary 子代理模型覆盖                                                                                              |
-| `phases.deep.maxPromotedSnippetTokens` | `number`  | `160`         | 每个提升到 `MEMORY.md` 的短期回忆片段所保留的最大估计 token 数；来源元数据仍保持可见 |
+| 键                                      | 类型      | 默认值        | 描述                                                                                                                        |
+| --------------------------------------- | --------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`                               | `boolean` | `true`        | 完全启用或禁用 dreaming                                                                                                     |
+| `frequency`                             | `string`  | `0 3 * * *`   | 用于完整 dreaming 扫描的可选 cron 频率                                                                                      |
+| `model`                                 | `string`  | default model | 可选的 Dream Diary 子代理模型覆盖                                                                                          |
+| `phases.deep.maxPromotedSnippetTokens`  | `number`  | `160`         | 从每个被提升到 `MEMORY.md` 的短期回忆片段中保留的最大估计 token 数；来源元数据仍然可见                                     |
+| `phases.deep.maxPriorEntryLossFraction` | `number`  | `0.25`        | 拒绝会移除超过此前条目该比例的合并重写                                                                                       |
 
 ### 示例
 
@@ -719,9 +663,11 @@ Dreaming 作为一次计划性扫描运行，并将内部的浅层/深层/REM �
 
 <Note>
 - Dreaming 会将机器状态写入 `memory/.dreams/`。
-- Dreaming 会将可读的叙述性输出写入 `DREAMS.md`（或现有的 `dreams.md`）。
-- `dreaming.model` 使用现有插件子代理的信任门控；在启用它之前，请设置 `plugins.entries.memory-core.subagent.allowModelOverride: true`。
-- 当配置的模型不可用时，Dream Diary 会使用会话默认模型重试一次。信任或允许列表失败会被记录日志，不会被静默重试。
+- Dreaming 会将人类可读的叙述输出写入 `DREAMS.md`（或已有的 `dreams.md`）。
+- 深度整合会将之前的 `MEMORY.md` 存储在基于 SQLite 的插件状态中，并在 `DREAMS.md` 中记录重写次数和要点。
+- 在整合和持久化提升之前，不受信任和系统生成的候选项会在结构上被排除。
+- `dreaming.model` 使用现有的插件子代理信任门控；在启用它之前，请设置 `plugins.entries.memory-core.subagent.allowModelOverride: true`。
+- 当配置的模型不可用时，Dream Diary 会使用会话默认模型重试一次。信任或允许列表失败会被记录，不会被静默重试。
 - 浅层/深层/REM 阶段策略和阈值属于内部行为，不是面向用户的配置。
 
 </Note>

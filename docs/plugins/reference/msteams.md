@@ -16,6 +16,8 @@ title: "Microsoft Teams 插件"
 
 ## 界面
 
-## 相关文档
+channels: `msteams`
+
+## Related docs
 
 - [Microsoft Teams](/channels/msteams)

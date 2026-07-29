@@ -274,7 +274,7 @@ pnpm openclaw qa mantis telegram-desktop-builder \
 @openclaw-mantis discord status reactions baseline=origin/main candidate=HEAD
 @openclaw-mantis telegram
 @openclaw-mantis telegram scenario=telegram-status-command
-@openclaw-mantis telegram scenarios=telegram-status-command,telegram-mentioned-message-reply
+@openclaw-mantis telegram scenarios=telegram-status-command,channel-canary
 @openclaw-mantis web ui chat
 @openclaw-mantis web-ui-chat candidate=HEAD
 ```
@@ -298,16 +298,24 @@ ClawSweeper 也可以直接分发一个场景：
 
 VM 基线：Linux，配备可用于桌面的 Chrome/Chromium、CDP 访问、VNC/noVNC、Node 22.22.3+、24.15+ 或 25.9+ 以及 pnpm、OpenClaw 检出目录，并且能够向目标传输通道、GitHub、模型提供方和凭据代理服务进行出站访问。
 
-Mantis 工作流中使用的密钥名称：
+Mantis 命令和工作流中使用的凭据与环境变量名称：
 
 - `OPENCLAW_QA_DISCORD_MANTIS_BOT_TOKEN`
-- `OPENCLAW_QA_DISCORD_DRIVER_BOT_TOKEN`
-- `OPENCLAW_QA_DISCORD_SUT_BOT_TOKEN`
 - `OPENCLAW_QA_DISCORD_GUILD_ID`
 - `OPENCLAW_QA_DISCORD_CHANNEL_ID`
+- 本地 `qa mantis run --credential-source env` 还需要
+  `OPENCLAW_QA_DISCORD_DRIVER_BOT_TOKEN`、`OPENCLAW_QA_DISCORD_SUT_BOT_TOKEN`
+  和 `OPENCLAW_QA_DISCORD_SUT_APPLICATION_ID`。GitHub 工作流通常使用
+  `--credential-source convex` 以及下面的 broker 凭据，而不是原始的
+  Discord bot token。
 - `OPENCLAW_QA_REDACT_PUBLIC_METADATA=1` 用于公开制品上传
 - `OPENCLAW_QA_CONVEX_SITE_URL`、`OPENCLAW_QA_CONVEX_SECRET_CI`
-- `CRABBOX_COORDINATOR` / `CRABBOX_COORDINATOR_TOKEN`（工作流也接受 `OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR` / `_TOKEN` 作为回退，并在调用 Crabbox 之前将它们映射到普通名称）
+- `OPENAI_API_KEY`（或 Telegram Desktop 证据专用的
+  `OPENCLAW_MANTIS_AGENT_OPENAI_API_KEY`）
+- `CRABBOX_COORDINATOR` / `CRABBOX_COORDINATOR_TOKEN`（工作流也接受
+  `OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR` / `_TOKEN` 作为后备，并在调用 Crabbox 之前将
+  它们映射为普通名称）
+- `CRABBOX_ACCESS_CLIENT_ID`、`CRABBOX_ACCESS_CLIENT_SECRET`
 - `MANTIS_GITHUB_APP_ID`、`MANTIS_GITHUB_APP_PRIVATE_KEY`
 
 Mantis 运行器绝不能打印 Discord/Slack/Telegram bot token、provider API key、浏览器 cookie、认证配置文件内容、VNC 密码或原始凭据载荷。如果 token 泄漏到 issue、PR、聊天或日志中，在替换密钥存储之后必须轮换它。

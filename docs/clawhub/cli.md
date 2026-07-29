@@ -22,6 +22,7 @@ title: "ClawHub CLI"
 openclaw skills search "calendar"
 openclaw skills install @owner/<slug>
 openclaw skills install @owner/<slug> --version <version> --global
+openclaw skills install skills-sh:<owner>/<repo>/<slug>
 openclaw skills update @owner/<slug>
 openclaw skills update --all --acknowledge-clawhub-risk
 openclaw skills verify @owner/<slug> --card
@@ -38,6 +39,12 @@ openclaw plugins update --all
 `clawhub:` 前缀，以强制优先通过 ClawHub 解析，而不是 npm、git 或
 本地路径。完整标志参考：[`openclaw skills`](/cli/skills) 和
 [`openclaw plugins`](/cli/plugins)。
+
+`skills-sh:` 是一个明确的外部目录引用。OpenClaw 会将其发送到
+ClawHub，并安装解析器返回的、精确到提交并固定的 GitHub 源码；
+它绝不会直接从 skills.sh 下载技能内容。未认领的条目会标记为
+**未被 ClawHub 扫描**。已认领且经过 ClawHub 扫描的技能则使用
+原生的 `@owner/<slug>` 形式。
 
 ### 发布信任
 

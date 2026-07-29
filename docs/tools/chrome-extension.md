@@ -76,20 +76,55 @@ openclaw config set browser.defaultProfile chrome
 - 代理也可以打开新标签页；这些标签页会自动进入该组。
 - 撤销：再次点击按钮，将标签页拖出该组，或者关闭 Chrome 的调试横幅。代理会立即失去对该标签页的访问权限。
 
+### Tab copilot 侧边栏
+
+配对扩展后，在其工具栏弹出窗口中点击 **Open tab copilot**。
+
+OpenClaw 会为那个特定的 Chrome 标签页配置 `sidepanel.html`；manifest 中没有全局侧边栏路径。因此，每个标签页都会获得一个单独的面板文档、Gateway 会话、消息订阅以及类型化的浏览器工具绑定。
+
+该面板不会在你的消息中放入页面 URL、标题、DOM 或可见文本。它只发送你输入的文本。浏览器操作会携带一个单独的 Gateway 认证绑定，其中包含 Chrome 标签页和 CDP 目标，而浏览器工具会拒绝尝试替换该目标或使用全局浏览器操作。回复会留在面板中（`deliver: false`）；它们不会继承 Telegram、Discord 或其他渠道路由。
+
+copilot 是一个专用的已配对 Gateway 设备，具有 `operator.read` 和 `operator.write` 范围。首次使用时，请检查并批准其请求：
+
+```bash
+openclaw devices list
+openclaw devices approve <requestId>
+```
+
+扩展会保留该设备身份以及 Gateway 签发的设备令牌，并将其限定在签发它们的规范 Gateway 端点上。配对不同的 Gateway 会创建独立的身份、令牌和会话托管；凭据和会话绝不会跨端点复用。扩展不会持久保存 Gateway 共享密钥。面板只能订阅其自己的标签页会话，Gateway 会在投递前过滤这些事件。
+
+如果在运行期间 Gateway 连接中断，扩展会保留该运行 ID 的持久托管。重连时，它会在重新启用任何面板之前终止未解决的运行，然后重新加载会话记录。这种故障关闭步骤可防止浏览器操作在投递间隙中无形继续执行。
+
+关闭标签页会立即移除其实时订阅、中止任何可见运行，并将该标签页的会话标记为已归档。如果 Gateway 暂时离线，扩展会持久保存待处理的归档，并仅在同一 Gateway 端点重新连接时重试；它绝不会向不同的 Gateway 发送归档请求。在浏览器崩溃后，下一次启动会归档由前一个浏览器实例留下的会话。已归档会话会拒绝新工作，而其会话记录仍可在会话历史中查看。Browser-copilot 键属于线程会话，因此正常的年龄和条目数维护会保留它们。每个代理的会话磁盘预算仍然适用（默认 `2gb`），并且在压力下可能会逐出最旧的会话；请参阅 [会话维护](/reference/session-management-compaction#store-maintenance-and-disk-controls)。
+
+侧边栏当前需要 Gateway 托管的扩展中继或直接的远程 Gateway 中继。浏览器节点上的回环中继目前无法提供类型化标签页绑定所需的节点路由，因此该面板会拒绝这种拓扑，而不是回退到全局浏览器路由。
+
+## 将页面发送到 OpenClaw
+
+在工具栏弹出窗口中使用 **Send page to OpenClaw**，将可读的页面文本分享给你的主 OpenClaw 会话。你可以添加可选备注，使用页面或选中文本的右键菜单，或按 `Alt+Shift+S`。OpenClaw 会优先使用你当前的选区（如果存在），将分享排队为系统事件，并立即唤醒主会话。
+
+该标签页不需要位于 OpenClaw 标签组中。这是一次性、显式的分享：页面上不会暴露任何其他内容，并且不会授予任何持续访问权限。Google Docs 会使用你已登录的浏览器会话导出为纯文本，无需 Google API 设置。X 和 Twitter 线程会在去除周围界面外壳后提取。
+
+页面文本被包裹在 OpenClaw 的外部内容安全边界中。你的可选备注保留在该边界之外，作为你自己的指令。页面文本和选区上限约为 120,000 个字符，超出时会包含截断标记。
+
+当扩展中继由 Gateway 托管时，页面共享可正常工作，使用同主机配对或直接的 `wss://` Gateway 配对。目前由 Node 托管的中继会返回一个明确的错误。要重新映射键盘快捷键，请打开 `chrome://extensions/shortcuts`。
+
 ## 远程 / 跨机器
 
 Chrome 不必运行在 Gateway 主机上。有三种拓扑可行：
 
-- **同一主机**（Gateway + Chrome 在一台机器上）：在那台机器上使用
-  `openclaw browser extension pair` 进行配对。中继仅限回环地址。
-- **直接连接到远程 Gateway**（Chrome 在你的笔记本上，Gateway 在一台 VPS 上，而笔记本上
-  **没有其他任何东西**）：在 Gateway 上运行
+- **同一主机**（Gateway + Chrome 在一台机器上）：在该机器上使用
+  `openclaw browser extension pair` 进行配对。中继仅限于本机回环。
+  如果本地 Gateway 使用 TLS，请显式传入其证书主机名
+  `--gateway-url wss://gateway-host.example`；配对过程绝不会替换为回环 IP。
+- **直接连接远程 Gateway**（Chrome 在你的笔记本上，Gateway 在 VPS 上，并且
+  笔记本上**没有其他任何东西**）：在 Gateway 上运行
   `openclaw browser extension pair --gateway-url wss://your-gateway.example.com`。
-  它会打印一个 `wss://…/browser/extension#<secret>` 字符串；在笔记本上加载并配对该
-  扩展。扩展会通过 `wss://` **直接连接到 Gateway**——笔记本上不需要安装 OpenClaw、Node、
-  CLI，也不需要开放入站端口。这是托管主机场景的路径。
-- **通过浏览器节点主机**（Chrome 在一台已经运行 OpenClaw 节点的机器上）：在该节点上运行
-  `pair` 并在本地配对；Gateway 通过该节点现有的已认证节点连接，将浏览器操作代理到该节点。
+  它会打印一个 `wss://…/browser/extension#<secret>` 字符串；在笔记本上加载并配对
+  扩展。扩展会通过 `wss://` **直接连接到 Gateway** —— 笔记本上不需要 OpenClaw 安装、Node、CLI，也不需要开放入站端口。
+  这是托管主机路径。
+- **通过浏览器节点主机**（Chrome 在一台已经运行 OpenClaw
+  节点的机器上）：在该节点上运行 `pair` 并在本地配对；Gateway 会通过其现有的已认证节点链接将浏览器操作代理到该节点。
 
 配对密钥按主机区分（在直接连接的情况下是 Gateway 的主机），由 Gateway 的
 `/browser/extension` 路由进行验证。对于直接路径，请通过 TLS（`wss://`）提供 Gateway，
@@ -108,9 +143,10 @@ openclaw browser doctor --browser-profile chrome
 
 ## 安全模型
 
-- 代理仅绑定本地回环；WebSocket 两端都使用派生令牌进行身份验证，扩展端还会将来源检查限制为 `chrome-extension://`。
-- 直接 Gateway 配对不会在请求 URL 中接受 relay 令牌；捆绑的扩展会在 WebSocket 子协议列表中携带它。
-- agent 只能查看和控制 **OpenClaw 标签页组** 中的标签页。你的其他标签页将保持私密。
-- 与 `user`（Chrome MCP）配置文件相比，后者在你批准远程调试提示后会暴露整个已登录浏览器，而扩展会将共享范围限制在你一眼就能掌控的标签页组内。
+- 中继仅绑定本地回环接口；WebSocket 双端都使用派生令牌进行身份验证，并且扩展端会将来源校验为 `chrome-extension://`。
+- 直接 Gateway 配对不会在请求 URL 中接受中继令牌；捆绑的扩展会改为在 WebSocket 子协议列表中携带它。
+- 代理只能查看和操作 **OpenClaw 标签组** 中的标签页。你的其他标签页仍然保持私有。
+- 侧边栏运行会经过双重范围限制：Gateway 投递使用每个会话的允许列表，而浏览器工具会强制执行在提示之外传递的 Chrome 标签页/目标绑定。
+- 与 `user`（Chrome MCP）配置文件相比，后者在你批准远程调试提示后会暴露你整个已登录的浏览器，而扩展只会将共享范围限制在一个你一眼就能掌控的标签组中。
 
 另请参阅：[Browser](/tools/browser)，以了解完整的配置文件模型，以及受管理的 `openclaw` 和 Chrome MCP `user` 配置文件。

@@ -1,0 +1,299 @@
+---
+summary: "将 OpenClaw 代理连接到 Buzz 房间"
+read_when:
+  - 你希望人们从 Buzz 访问 OpenClaw 代理
+  - 你正在设置 Buzz 机器人身份和房间访问权限
+  - 你正在排查 Buzz 连接问题
+title: "Buzz"
+---
+
+Buzz 是一个官方频道插件，可将 OpenClaw 代理连接到托管或自托管的 Buzz 工作区中的团队房间。
+
+## 它的作用
+
+- 接收来自已批准 Buzz 房间的文本消息
+- 在同一房间和线程中回复
+- 通过 OpenClaw 内置的 `message` 工具发送文本消息
+- 支持提及要求和发送者允许列表
+- 在机器人获得批准后发现房间
+- 重新连接并避免对同一条消息处理两次
+
+当前插件支持群组房间和文本消息。直接消息、
+媒体和文件、原生反应、房间创建以及自动管理员批准
+目前尚不支持。
+
+## Buzz 身份和房间模型
+
+Buzz 使用 Nostr 密钥对作为身份：
+
+- **私钥**用于让 OpenClaw 进行身份验证并签署消息。它保留在 Gateway 中。
+- **公钥**用于标识机器人。Buzz 所有者用它进行中继审批，房间管理员用它授予 **Bot** 角色，OpenClaw 也可以在发送者允许列表中使用公钥。
+
+中继 URL 指向一个 Buzz 工作区。每个房间都有一个 UUID，OpenClaw 会将每个已配置的 UUID 视为一个单独的群组会话。一个 Gateway 和机器人身份可以服务多个房间；你不需要为每个代理或房间都配置一个 Gateway。
+
+## 开始之前
+
+你需要：
+
+1. 你的 Buzz 工作区的 `wss://` 中继 URL。
+2. 一位可以批准机器人身份的 Buzz 所有者或管理员。
+3. 至少一个可以将机器人以 **Bot** 角色添加进去的房间。
+
+<Warning>
+切勿将人类 Buzz 所有者的私钥提供给 OpenClaw。OpenClaw 会创建或使用一个专用的机器人身份，并显示管理员审批所需的公钥。
+</Warning>
+
+## 安装
+
+```bash
+openclaw plugins install @openclaw/buzz
+```
+
+安装或更新插件后，请重启 Gateway。
+
+## 指导性设置
+
+运行：
+
+```bash
+openclaw channels add --channel buzz
+```
+
+设置流程将按以下步骤进行：
+
+1. 如果尚未配置，则输入 Buzz 中继 URL。
+2. OpenClaw 复用已配置的机器人身份，或自动生成一个。
+3. 如果机器人尚未拥有房间访问权限，请将显示的公钥提供给
+   Buzz 房间所有者或管理员。
+4. OpenClaw 等待 Buzz 确认 **Bot** 角色并自动继续。
+   如果自动等待超时，请重新尝试已认证的发现，或返回而不更改已生成的身份。
+5. 如果 Buzz 只返回一个房间，OpenClaw 将选择它。如果 Buzz 返回多个房间，
+   请选择要使用的房间以及默认的出站房间。
+6. OpenClaw 保存配置，并在 Gateway 运行时静默验证已认证的
+   房间。
+
+全新设置会接受来自已配置房间当前成员的普通消息，而不要求 composer 提及。
+当重新运行设置时，现有的显式提及和发送者允许名单设置会被保留。
+
+自动房间访问等待是有时间上限的。如果未能在时间内授予访问权限，设置将保持打开状态，并提供已认证的重试/返回控制。每次重试都会复用相同的中继和机器人身份；该超时不会禁用 Buzz，也不会退出设置。
+
+### 机器人批准
+
+每个目标房间都必须包含带有 **Bot** 角色的机器人身份。现有的人类成员或普通房间成员角色都不够。
+
+Buzz 桌面版无法可靠地为由外部管理的 OpenClaw 身份分配 Bot 角色。请作为现有的人类房间所有者或管理员使用 Buzz CLI：
+
+```bash
+buzz channels add-member \
+  --channel <ROOM_UUID> \
+  --pubkey <BOT_PUBLIC_KEY> \
+  --role bot
+```
+
+请以现有的人类所有者或管理员身份运行该命令。绝不要把那个
+人类私钥交给 OpenClaw。
+
+Gateway 连接后，OpenClaw 会保留现有的非空 Buzz 个人资料显示名称。对于新个人资料，它会先使用已配置的 Buzz channel 账户名，然后使用路由到已配置 Buzz 房间的单个 agent 的身份名称，最后使用 `OpenClaw`。这会在 Buzz 的个人资料缓存刷新后替换缩短的公钥。
+
+OpenClaw 还会在 Buzz 的 agent 目录中注册相同的公共身份。它会保留现有的 agent 目录个人资料和 channel-add 策略；对于新个人资料，它会允许经授权的 Buzz 用户添加该身份。这样当该身份被邀请到其他房间时，Buzz 就能分配 **Bot** 角色，而不是将其视为普通成员。OpenClaw 仍然只会接收来自 `channels.buzz.groups` 中明确选定房间的消息。
+
+当 bot 个人资料没有有效的 NIP-OA 所有者证明时，Buzz 会显示 `owner unavailable`。这并不意味着房间访问失败。配置了 `channels.buzz.authTag` 时，OpenClaw 会在发布的个人资料中包含该证明，以便 Buzz 显示已验证的人类所有者。
+
+在 Gateway 连接期间，OpenClaw 每 30 秒发布并刷新一次 bot 的临时 Buzz 在线状态。当该 bot 身份的最后一个已认证 Gateway 连接关闭时，Buzz 会移除该在线状态，因此多个 Gateway 实例不会错误地将彼此标记为离线。
+
+本地 Buzz `just dev` 中继默认不需要单独的中继成员资格。托管或封闭中继可能要求先将 bot 公钥添加到工作区社区。添加社区成员资格会授予中继访问权限；它不会将该身份以 Bot 角色添加到房间中。
+
+```bash
+buzz-admin add-member --pubkey <BOT_PUBLIC_KEY> --role member
+```
+
+OpenClaw 无法授予房间或中继访问权限。它只会显示授权人类所需的 bot 公钥。
+
+## Agent 工具和消息传递
+
+Buzz 插件不会添加一个单独的仅限 Buzz 的 agent 工具。它会将 Buzz 注册为 OpenClaw 内置 `message` 工具和正常回复投递的目标。
+
+agents 可以：
+
+- 回复进入其房间或线程中的 Buzz 消息
+- 向已获批准的 Buzz 房间发送文本
+- 当工作流未指定目标时，使用已配置的默认房间
+- 使用所路由 agent 的正常技能、记忆和允许的工具
+
+人类和自动化也可以通过 CLI 测试相同的出站路径：
+
+```bash
+openclaw message send \
+  --channel buzz \
+  --target buzz:<ROOM_UUID> \
+  --message "Hello from OpenClaw"
+```
+
+### 将房间路由到不同的 agents
+
+标准 OpenClaw 绑定可以将每个 Buzz 房间发送给不同的 agent、workspace 或 model，而一个 Gateway 和 Buzz bot 为它们全部提供服务：
+
+```json5
+{
+  agents: {
+    list: [
+      { id: "support", workspace: "~/.openclaw/workspace-support" },
+      { id: "engineering", workspace: "~/.openclaw/workspace-engineering" },
+    ],
+  },
+  bindings: [
+    {
+      agentId: "support",
+      match: {
+        channel: "buzz",
+        peer: { kind: "group", id: "buzz:<SUPPORT_ROOM_UUID>" },
+      },
+    },
+    {
+      agentId: "engineering",
+      match: {
+        channel: "buzz",
+        peer: { kind: "group", id: "buzz:<ENGINEERING_ROOM_UUID>" },
+      },
+    },
+  ],
+}
+```
+
+如果没有特定于房间的绑定，正常的 OpenClaw 路由会选择默认 agent。有关匹配优先级，请参见 [Channel routing](/channels/channel-routing)。
+
+## 访问控制
+
+Buzz 采用两种独立的控制：
+
+- **Require mentions**：仅当机器人被提及（@）时，代理才会响应。
+- **Sender access**：允许经过批准房间中的所有当前成员，禁用
+  房间进入，或者进一步将房间成员限制为选定的 Buzz 公钥。
+
+全新的引导式设置允许选定房间中的当前成员发送普通消息。OpenClaw 在接受消息之前会加载 Buzz 的中继签名房间名册，在持久化去重或代理工作之前先在内存中检查成员资格，并在 Buzz 成员变更事件后刷新名册。没有逐条消息的中继查询或 Gateway 轮询。
+
+在手动配置中，当只有特定房间成员应能够激活代理时，请使用带有 `groupAllowFrom` 的 `groupPolicy: "allowlist"`。
+仅当这些成员所使用的 Buzz 客户端可以指向机器人身份时，才设置 `requireMention: true`。
+
+这些控制决定了谁可以启动一次代理运行；它们不会限制路由后的代理在消息被接受后可以做什么。请将房间消息视为不受信任的输入，并根据房间的信任级别为该代理配置 [sandbox and tool policy](/gateway/sandbox-vs-tool-policy-vs-elevated)。
+
+## 手动配置
+
+建议使用引导式设置。等效配置如下：
+
+```json5
+{
+  channels: {
+    buzz: {
+      name: "OpenClaw",
+      relayUrl: "wss://buzz.example.com",
+      privateKey: "nsec1...",
+      groupPolicy: "open",
+      groups: {
+        "7c4a6d2a-2ed9-4b4e-a5e2-4d705ee9b34c": {
+          requireMention: false,
+        },
+      },
+      defaultTo: "7c4a6d2a-2ed9-4b4e-a5e2-4d705ee9b34c",
+    },
+  },
+}
+```
+
+对于更严格的发送者策略：
+
+```json5
+{
+  channels: {
+    buzz: {
+      groupPolicy: "allowlist",
+      groupAllowFrom: ["<64_CHARACTER_HEX_SENDER_PUBLIC_KEY>"],
+    },
+  },
+}
+```
+
+房间目标是 UUID。在发现过程中使用显示的房间 UUID，或者向房间管理员询问；像 `general` 这样的显示名称不是有效目标。
+
+对于手动配置，`groupAllowFrom` 条目必须使用 64 个字符的十六进制格式。
+
+### Bot 密钥存储
+
+默认的引导式路径会复用当前 bot 身份，或生成一个私钥并将其存储在 `channels.buzz.privateKey` 中，遵循 OpenClaw 当前的明文配置约定。
+
+对于现有密钥，设置可以使用明文或现有的 `env`、`file` 或 `exec` SecretRef。有关提供方设置，请参见 [Secrets management](/gateway/secrets)。默认账户也可以读取：
+
+```bash
+export BUZZ_RELAY_URL="wss://buzz.example.com"
+export BUZZ_PRIVATE_KEY="nsec1..."
+```
+
+如果托管工作区运营方提供给你一个身份授权值，请设置 `channels.buzz.authTag` 或 `BUZZ_AUTH_TAG`。它可以使用与私钥相同的明文或 SecretRef 形式。请将这个委托的、可重复使用的值视为机密：不要将其放在日志、截图、聊天和源代码管理中，并且对于持久化部署，优先使用 SecretRef。每当 bot 身份或中继授权发生变化，或者任一凭据可能已泄露时，都应请求替换并撤销旧值。
+
+自托管运营方可以手动生成密钥用于恢复或高级设置：
+
+```bash
+buzz-admin generate-key
+```
+
+## 验证连接
+
+运行已认证的通道探测：
+
+```bash
+openclaw channels status --channel buzz --probe
+```
+
+探测成功表明机器人可以完成身份验证，并且 Buzz 会以 **Bot** 角色报告所选房间。
+
+然后发送一条真实消息：
+
+```bash
+openclaw message send \
+  --channel buzz \
+  --target buzz:<ROOM_UUID> \
+  --message "OpenClaw Buzz test"
+```
+
+要完成一次完整的往返测试，请让一个被允许的 Buzz 用户提及机器人，并确认 OpenClaw 会在房间中回复。
+
+## 轮换机器人身份
+
+机器人身份轮换需要管理员批准新的公钥：
+
+1. 生成一个新的专用机器人身份。
+2. 让管理员为中继和每个已配置的房间批准其公钥。
+3. 替换已配置的私钥并重启或重新加载 Gateway。
+4. 测试出站和入站消息。
+5. 从房间和中继中移除旧公钥。
+
+在切换密钥之前完成批准，以尽量减少停机时间。轮换目前不是自动的。
+
+## 当前限制和路线图
+
+以下后续功能已列入计划，但不属于当前插件的一部分：
+
+- 直接消息
+- 媒体和文件上传或下载
+- 原生表情回应
+- 从 OpenClaw 创建或管理房间
+- 自动中继成员资格和房间角色审批
+- 引导式机器人身份轮换
+
+## 故障排查
+
+| 症状                                         | 需要检查的内容                                                                                                   |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 未发现任何房间                               | 确认这个确切的 bot 公钥已在房间中并具有 **Bot** 角色，然后重新运行相同的设置命令。                               |
+| 身份验证失败                                 | 检查 relay URL、bot 私钥、关闭的 relay 成员资格，以及操作员提供的任何授权值。                                   |
+| 无法发送消息                                 | 确认 bot 是房间成员并具有 **Bot** 角色，并且 UUID 已配置。                                                       |
+| bot 收到消息但不回复                          | 确认发送者仍然是房间成员，然后检查可选的发送者允许列表和提及要求。                                                 |
+| 设置提示 Gateway 未运行                       | 使用 `openclaw gateway` 启动它，然后运行 `openclaw channels status --probe`。                                     |
+| 自动房间发现过期                               | 授予 Bot 角色，然后选择重试；相同的身份将保持激活。                                                                |
+
+## 相关内容
+
+- [频道概览](/channels)
+- [频道访问控制](/channels/groups)
+- [密钥管理](/gateway/secrets)
+- [频道故障排除](/channels/troubleshooting)

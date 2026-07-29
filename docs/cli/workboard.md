@@ -41,7 +41,7 @@ openclaw workboard list --json
 文本输出非常紧凑：
 
 ```text
-7f4a2c10  ready     high    default agent-a  修复失效的 worker 心跳
+7f4a2c10  准备就绪     高    default agent-a  修复失效的 worker 心跳
 ```
 
 各列分别是 id 前缀、状态、优先级、board id、可选的 agent id，以及标题。
@@ -82,6 +82,8 @@ openclaw workboard show 7f4a2c10 --json
 ```
 
 文本输出会打印紧凑的卡片行和备注。JSON 输出会返回完整的卡片记录，包括执行元数据、尝试、评论、链接、证明、产物、工作线程日志、协议状态、诊断信息以及自动化元数据。
+
+JSON 中的证明状态是由工作线程报告的结果。`passed` 记录的是工作线程对所附命令或检查的自我评估；它不是独立的验证结果。
 
 ## `move`
 

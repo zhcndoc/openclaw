@@ -16,7 +16,7 @@ title: "Elevenlabs 插件"
 
 ## 表面
 
-contracts: mediaUnderstandingProviders, realtimeTranscriptionProviders, speechProviders
+contracts: `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`, `speechProviders`
 
 ## 相关文档
 

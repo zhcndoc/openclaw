@@ -28,8 +28,8 @@ Gateway 会在共享的 OpenClaw 状态数据库中保留一个有界的、仅�
 
 ## 消息生命周期事件
 
-将 [`audit.messages`](/gateway/configuration-reference#audit) 设置为选择要
-记录的内容，然后重启 Gateway：
+Set [`logging.audit.messages`](/gateway/configuration-reference#audit) to choose what
+is recorded, then restart the Gateway:
 
 - `off`（默认）：不记录消息。
 - `direct`：仅记录直接对话中的消息。

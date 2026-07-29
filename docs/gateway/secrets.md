@@ -15,20 +15,23 @@ OpenClaw 支持附加式 SecretRef，因此受支持的凭据不需要以明文�
 </Note>
 
 <Warning>
-如果明文凭据位于代理可检查的文件中，代理仍然可以读取它们，包括 `openclaw.json`、`auth-profiles.json`、`.env`，或生成的 `agents/*/agent/models.json` 文件。只有当所有受支持的凭据都已迁移，并且 `openclaw secrets audit --check` 不再报告任何明文残留时，SecretRef 才能真正缩小本地影响范围。
+Plaintext credentials remain agent-readable when they sit in files the agent can inspect, including `openclaw.json`, `.env`, retired auth-profile JSON archives, or generated `agents/*/agent/models.json` files. SecretRefs reduce that local blast radius once every supported credential is migrated and `openclaw secrets audit --check` reports no plaintext residue.
 </Warning>
 
 ## 运行时模型
 
-- Secrets 在激活时会主动解析为内存中的运行时快照，而不是在请求路径上惰性解析。
-- 当一个实际处于激活状态的 SecretRef 无法解析时，启动会快速失败。
-- 重新加载是一次原子替换：要么完全成功，要么保留上一次已知可用的快照。
-- 策略违规（例如 OAuth 模式的 auth profile 与 SecretRef 输入同时使用）会在运行时替换之前导致激活失败。
-- 运行时请求只读取当前激活的内存快照。模型提供方的 SecretRef 凭据会通过认证存储和流式选项，以进程内哨兵的形式传递，直到出站。出站投递路径（Discord 回复/线程投递、Telegram 动作发送）也会读取该快照，不会在每次发送时重新解析引用。
+- Secrets resolve into an in-memory runtime snapshot, eagerly during activation, not lazily on request paths.
+- Cold Gateway startup isolates a retryable SecretRef failure to a known non-Gateway owner when that owner supports isolation. Mapped owner classes include model providers and skills, media/TTS/cron providers, eligible auth profiles, per-agent memory, sandbox SSH, channel accounts, and manifest-declared plugin routes. The Gateway starts, records the owner as configured-unavailable, and emits a redacted degradation warning. Gateway ingress auth, structurally invalid refs or resolved values, fail-closed owners, and refs whose runtime owner is not mapped still fail startup.
+- Reload validates each mapped owner independently, then publishes one atomic snapshot. Healthy owners refresh. An eligible failed owner keeps its last-known-good value and becomes stale only when its ref identities, provider definitions, and complete non-secret owner contract are unchanged; a changed or new failed owner becomes cold. A strict failure rejects the reload and preserves the active snapshot.
+- Policy violations (for example an OAuth-mode auth profile combined with SecretRef input) fail activation before the runtime swap.
+- Runtime requests read only the active in-memory snapshot. Model-provider SecretRef credentials pass through auth storage and stream options as process-local sentinels until egress. Outbound delivery paths (Discord reply/thread delivery, Telegram action sends) also read that snapshot and do not re-resolve refs per send.
+- Read-only channel capability discovery evaluates accounts independently. A configured-but-unavailable account does not hide healthy sibling accounts' message actions, while direct sends through the unavailable account still fail closed.
 
 这可以让 secret-provider 故障不影响热点请求路径。
 
-## 出站时注入（哨兵值）
+Gateway ingress protection, structurally invalid config or resolved values, policy violations, and unknown ownership still fail closed. Isolated owners never fall through to a lower-precedence credential source.
+
+## Egress-time injection (sentinels)
 
 对于由 SecretRefs 支持的模型提供方凭据，OpenClaw 会在模型认证解析期间生成一个不可解析、仅进程本地可见的哨兵值。因此，认证存储、流选项、SDK 配置、日志、错误对象以及大多数运行时自省看到的值都会类似于 `oc-sent-v1-...`，而不是提供方凭据。受保护的模型获取和受管理的本地提供方健康探测会在每次请求离开进程之前，立即在 URL 和 header 值中替换已知哨兵值。
 
@@ -49,10 +52,10 @@ SecretRefs 可防止凭据被持久化到配置和生成的模型文件中，但
 
 对于代理可访问文件纳入范围的生产部署，只有在满足以下所有条件时，才应视为迁移完成：
 
-- 支持的凭据使用 SecretRefs，而不是明文值。
-- 旧的明文残留已从 `openclaw.json`、`auth-profiles.json`、`.env` 和生成的 `models.json` 文件中清除。
-- 迁移后 `openclaw secrets audit --check` 结果干净。
-- 任何仍然存在的不受支持或会轮换的凭据，都通过操作系统隔离、容器隔离或外部凭据代理进行保护。
+- Supported credentials use SecretRefs instead of plaintext values.
+- Legacy plaintext residue is scrubbed from `openclaw.json`, the SQLite auth-profile store, `.env`, and generated `models.json` files. Retired auth JSON is doctor-owned migration input and is never rewritten by `secrets apply`.
+- `openclaw secrets audit --check` is clean after migration.
+- Any remaining unsupported or rotating credentials are protected by OS isolation, container isolation, or an external credential proxy.
 
 这就是为什么 audit/configure/apply 工作流是一个安全迁移门禁，而不仅仅是一个便捷辅助工具。
 
@@ -64,8 +67,8 @@ SecretRefs 并不能让任意可读文件变得安全。备份、复制的配置
 
 SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 
-- **已启用的表面**：未解析的引用会阻止启动/重载。
-- **非活动表面**：未解析的引用不会阻止启动/重载；它们会发出非致命的 `SECRETS_REF_IGNORED_INACTIVE_SURFACE` 诊断。
+- **Enabled surfaces**: retryable failures for mapped, isolatable owners enter cold or stale degradation. Strict, fail-closed, Gateway-required, or unmapped failures block startup/reload.
+- **Inactive surfaces**: unresolved refs do not block startup/reload; they emit a non-fatal `SECRETS_REF_IGNORED_INACTIVE_SURFACE` diagnostic.
 
 <Accordion title="非活动表面的示例">
 - 已禁用的通道/账户条目。
@@ -75,10 +78,10 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 - Sandbox SSH 认证材料（`agents.defaults.sandbox.ssh.identityData`、`certificateData`、`knownHostsData`，以及每个 agent 的覆盖项）仅在有效的 sandbox 后端为 `ssh` 且 sandbox 模式不是 `off` 时才处于活动状态，适用于默认 agent 或已启用的 agent。
 - `gateway.remote.token` / `gateway.remote.password` SecretRefs 在满足以下任一条件时处于活动状态：
   - `gateway.mode=remote`
-  - 已配置 `gateway.remote.url`
-  - `gateway.tailscale.mode` 为 `serve` 或 `funnel`
-  - 在没有这些远程表面的本地模式下：当 token 认证可以胜出且未配置 env/auth token 时，`gateway.remote.token` 处于活动状态；当 password 认证可以胜出且未配置 env/auth password 时，`gateway.remote.password` 仅在此时处于活动状态。
-- 当设置了 `OPENCLAW_GATEWAY_TOKEN` 时，`gateway.auth.token` SecretRef 在启动时的认证解析中处于非活动状态，因为该运行时会优先使用 env token 输入。
+  - `gateway.remote.url` is configured
+  - `gateway.tailscale.mode` is `serve` or `funnel`
+  - In local mode without those remote surfaces: `gateway.remote.token` is active when token auth can win and no env/auth token is configured; `gateway.remote.password` is active only when password auth can win and no env/auth password is configured.
+- Active `gateway.auth.token` / `gateway.auth.password` SecretRefs stay authoritative over `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`; environment credentials are fallbacks when the corresponding local config input is absent.
 
 </Accordion>
 
@@ -188,11 +191,6 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
       file: "filemain",
       exec: "vault",
     },
-    resolution: {
-      maxProviderConcurrency: 4,
-      maxRefsPerProvider: 512,
-      maxBatchBytes: 262144,
-    },
   },
 }
 ```
@@ -285,19 +283,24 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 有关服务账户、捆绑代理技能和故障排除的专门 1Password 指南，请参见 [1Password](/gateway/1password)。
 
 <AccordionGroup>
-  <Accordion title="1Password CLI">
+  <Accordion title="1Password">
     ```json5
     {
+      plugins: {
+        entries: {
+          onepassword: {
+            enabled: true,
+          },
+        },
+      },
       secrets: {
         providers: {
-          onepassword_openai: {
+          onepassword: {
             source: "exec",
-            command: "/opt/homebrew/bin/op",
-            allowSymlinkCommand: true, // Homebrew 符号链接二进制文件所必需
-            trustedDirs: ["/opt/homebrew"],
-            args: ["read", "op://Personal/OpenClaw QA API Key/password"],
-            passEnv: ["HOME"],
-            jsonOnly: false,
+            pluginIntegration: {
+              pluginId: "onepassword",
+              integrationId: "onepassword",
+            },
           },
         },
       },
@@ -306,12 +309,20 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
           openai: {
             baseUrl: "https://api.openai.com/v1",
             models: [{ id: "gpt-5", name: "gpt-5" }],
-            apiKey: { source: "exec", provider: "onepassword_openai", id: "value" },
+            apiKey: {
+              source: "exec",
+              provider: "onepassword",
+              id: "op://Engineering/OpenAI/apiKey",
+            },
           },
         },
       },
     }
     ```
+
+    The bundled [1Password plugin](/plugins/onepassword) uses the official
+    `op` CLI and the plugin's service-account token file.
+
   </Accordion>
   <Accordion title="Bitwarden Secrets Manager (`bws`)">
     使用一个解析器包装器将 SecretRef ids 映射到 Bitwarden Secrets Manager item keys。仓库包含 `scripts/secrets/openclaw-bws-resolver.mjs`；请将其安装或复制到运行 Gateway 的主机上一个绝对可信路径。
@@ -575,28 +586,30 @@ Canonical 支持和不支持的凭据列在 [SecretRef Credential Surface](/refe
 
 警告和审计信号：
 
-- `SECRETS_REF_OVERRIDES_PLAINTEXT`（运行时警告）
-- `REF_SHADOWED`（当 `auth-profiles.json` 中的凭据优先于 `openclaw.json` 引用时的审计发现）
+- `SECRETS_REF_OVERRIDES_PLAINTEXT` (runtime warning)
+- `REF_SHADOWED` (audit finding when SQLite auth-profile credentials take precedence over `openclaw.json` refs)
 
-Google Chat 兼容性：`serviceAccountRef` 优先于明文 `serviceAccount`；一旦设置了同级 ref，明文值将被忽略。
+Google Chat `serviceAccount` accepts inline JSON or a SecretRef. Doctor moves the retired sibling `serviceAccountRef` into this canonical field when it is unset.
 
 ## 激活触发器
 
 密钥激活在以下情况下运行：
 
-- 启动（预检加最终激活）
-- 配置重载热应用路径
-- 配置重载重启检查路径
-- 通过 `secrets.reload` 手动重载
-- 网关配置写入 RPC 预检（`config.set` / `config.apply` / `config.patch`），在持久化编辑之前，检查所提交配置载荷中 active-surface 的 `SecretRef` 可解析性
+- Startup (preflight plus final activation)
+- Config reload hot-apply path
+- Config reload restart-check path
+- Manual reload via `secrets.reload`
+- Gateway config write RPC preflight (`config.set` / `config.apply` / `config.patch`), validating active-surface SecretRefs within the submitted config payload before persisting edits
 
 激活契约：
 
-- 成功会以原子方式交换快照。
-- 启动失败会中止网关启动。
-- 运行时重载失败会保留上一个已知可用快照。
-- 写入 RPC 预检失败会拒绝所提交的配置；磁盘配置和活动运行时快照都保持不变。
-- 向外部辅助工具/工具调用显式提供逐次调用的 channel token 不会触发 `SecretRef` 激活；激活点仍然是启动、重载以及显式的 `secrets.reload`。
+- Success swaps the snapshot atomically.
+- A strict startup failure aborts Gateway startup.
+- During cold startup, a retryable resolution failure for a mapped, isolatable non-Gateway owner may publish the snapshot with that exact owner configured-unavailable. Requests for the owner fail with `SECRET_SURFACE_UNAVAILABLE`; model-provider owners do not fall back to environment or auth-profile credentials after an explicit ref fails.
+- Reload and restart-check isolate eligible mapped owners. Unchanged ref identities with unchanged provider definitions and an unchanged complete non-secret owner contract retain their exact last-known-good values as stale; changed or newly configured unresolved refs publish cold for only that owner. A strict reload failure preserves the previously active snapshot.
+- `config.set`, `config.apply`, and `config.patch` accept syntactically valid unresolved refs for isolatable owners and return a redacted `degradedSecretOwners` report. Gateway ingress auth, structurally invalid config or resolved values, policy violations, and unknown owners still reject before disk mutation.
+- Healthy sibling owners resolve and publish normally even when another owner is cold or stale.
+- Providing an explicit per-call channel token to an outbound helper/tool call does not trigger SecretRef activation; activation points remain startup, reload, and explicit `secrets.reload`.
 
 ## 降级与恢复信号
 
@@ -607,10 +620,12 @@ Google Chat 兼容性：`serviceAccountRef` 优先于明文 `serviceAccount`；�
 
 行为：
 
-- 降级：运行时保留最后已知的良好快照。
-- 恢复：在下一次成功激活后只发出一次。
-- 在已经降级的情况下再次发生失败时会记录警告，但不会重新发出该事件。
-- 启动时快速失败永远不会发出降级事件，因为运行时从未变为活动状态。
+- Degraded: healthy owners refresh, stale owners keep last-known-good, and cold owners remain unavailable.
+- Recovered: emitted once after the next successful activation.
+- Repeated failures while already degraded log warnings but do not re-emit the event.
+- A strict startup failure never emits a degraded event, because runtime never became active. A successful startup with cold owners logs the owner degradation but does not emit a reloader event.
+- Ref-scoped startup and reload failures emit a structured `SECRETS_DEGRADED` warning for each affected owner. Provider-scoped outages emit one `SECRETS_PROVIDER_DEGRADED` warning with the provider and complete affected-owner list instead of repeating the provider failure per owner. Warnings include a redacted reason, `cold` or `stale` owner state, and the `openclaw secrets reload` retry hint. They never include resolved values or SecretRef ids.
+- `openclaw doctor` lists cold and stale owners with their affected config paths, redacted reason, and retry guidance.
 
 ## 命令路径解析
 
@@ -668,11 +683,10 @@ Google Chat 兼容性：`serviceAccountRef` 优先于明文 `serviceAccount`；�
   <Accordion title="secrets 审计">
     发现项包括：
 
-    - 静态存储中的明文值（`openclaw.json`、`auth-profiles.json`、`.env` 以及生成的 `agents/*/agent/models.json`）。
-    - 生成的 `models.json` 条目中残留的明文敏感提供方头部。
-    - 未解析的引用。
-    - 优先级遮蔽（`auth-profiles.json` 优先于 `openclaw.json` 中的 refs）。
-    - 遗留残留项（`auth.json`、OAuth 提醒）。
+    - Plaintext values at rest (`openclaw.json`, SQLite auth-profile rows, `.env`, and generated `agents/*/agent/models.json`).
+    - Plaintext sensitive provider header residues in generated `models.json` entries.
+    - Unresolved refs.
+    - Precedence shadowing (SQLite auth profiles taking priority over `openclaw.json` refs).
 
     执行说明：默认情况下，审计会跳过 exec SecretRef 可解析性检查，以避免命令副作用。使用 `openclaw secrets audit --allow-exec` 可在审计期间执行 exec provider。
 
@@ -682,11 +696,11 @@ Google Chat 兼容性：`serviceAccountRef` 优先于明文 `serviceAccount`；�
   <Accordion title="secrets 配置">
     交互式助手，功能包括：
 
-    - 首先配置 `secrets.providers`（`env`/`file`/`exec`，添加/编辑/移除）。
-    - 让你为一个代理作用域选择 `openclaw.json` 以及 `auth-profiles.json` 中受支持的含密钥字段。
-    - 可在目标选择器中直接创建新的 `auth-profiles.json` 映射。
-    - 捕获 SecretRef 详情（`source`、`provider`、`id`）。
-    - 运行预检解析，并可立即应用。
+    - Configures `secrets.providers` first (`env`/`file`/`exec`, add/edit/remove).
+    - Lets you select supported secret-bearing fields in `openclaw.json` plus the SQLite auth-profile store for one agent scope.
+    - Can create a new auth-profile mapping directly in the target picker.
+    - Captures SecretRef details (`source`, `provider`, `id`).
+    - Runs preflight resolution and can apply immediately.
 
     执行说明：除非设置了 `--allow-exec`，否则预检会跳过 exec SecretRef 检查。如果你通过 `configure --apply` 直接应用，并且计划中包含 exec refs/providers，那么在应用步骤中也要保持设置 `--allow-exec`。
 
@@ -698,9 +712,9 @@ Google Chat 兼容性：`serviceAccountRef` 优先于明文 `serviceAccount`；�
 
     `configure` 的默认应用行为：
 
-    - 清除 `auth-profiles.json` 中与目标提供方匹配的静态凭据。
-    - 清除 `auth.json` 中遗留的静态 `api_key` 条目。
-    - 清除 `<config-dir>/.env` 中匹配的已知 secret 行。
+    - Scrub matching static credentials from SQLite auth-profile rows for targeted providers.
+    - Leave retired `auth.json` untouched; run `openclaw doctor --fix` to migrate and archive it.
+    - Scrub matching known secret lines from the effective state and active-config `.env` files (deduplicated when both paths match).
 
   </Accordion>
   <Accordion title="secrets 应用">

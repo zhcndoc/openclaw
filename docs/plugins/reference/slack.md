@@ -16,7 +16,7 @@ title: "Slack 插件"
 
 ## 接口
 
-channels: slack; skills
+channels: `slack`; skills
 
 ## 相关文档
 

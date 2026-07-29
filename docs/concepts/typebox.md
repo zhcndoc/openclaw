@@ -46,10 +46,11 @@ Client                    Gateway
 
 ## 模式定义所在位置
 
-- 源聚合导出：`packages/gateway-protocol/src/schema.ts` 重新导出位于 `packages/gateway-protocol/src/schema/*.ts` 下的领域模块（`frames.ts` 用于顶层封装和握手，`agent.ts`、`sessions.ts`、`cron.ts` 等按功能区域划分）。`protocol-schemas.ts` 是中央 `ProtocolSchemas` 注册表，用于将模式名称映射到它们的 TypeBox 定义。
+- 源 barrel：`packages/gateway-protocol/src/schema-modules.ts` 维护规范的领域模块列表，而公共的 `schema.ts` 包装器也会导出 `ProtocolSchemas`。
+- 生成器注册表：按顺序排列的 `protocol-schema-fragment-*.ts` 文件将稳定名称映射到其所属模块中的规范 TypeBox 对象。`protocol-schemas.ts` 按固定顺序组合这些片段，并拒绝重复键。
 - 运行时校验器（AJV）：`packages/gateway-protocol/src/index.ts`
 - 对外声明的功能/发现注册表：`src/gateway/server-methods-list.ts`
-- 服务端握手与方法分发：`src/gateway/server.impl.ts`
+- 服务器握手和方法分发：`src/gateway/server.impl.ts`
 - Node 客户端：`src/gateway/client.ts`
 - 生成的 JSON Schema：`dist/protocol.schema.json`（构建产物，不提交）
 - 生成的 Swift 模型：`apps/shared/OpenClawKit/Sources/OpenClawProtocol/GatewayModels.swift`
@@ -58,7 +59,8 @@ Client                    Gateway
 
 - `pnpm protocol:gen` 将 JSON Schema（draft-07）写入 `dist/protocol.schema.json`。
 - `pnpm protocol:gen:swift` 生成 Swift 网关模型。
-- `pnpm protocol:check` 运行两个生成器，并验证 Swift 输出已提交（JSON Schema 输出是一个被 gitignore 忽略的构建产物）。
+- `pnpm protocol:gen:kotlin` 生成 Android 协议模型和常量。
+- `pnpm protocol:check` 检查注册表结构，运行所有三个生成器，并验证已提交的 Swift 和 Kotlin 输出（JSON Schema 输出是一个被 git 忽略的构建产物）。
 
 ## 这些 schema 在运行时如何使用
 
@@ -193,12 +195,20 @@ export const SystemEchoResultSchema = Type.Object(
 );
 ```
 
-将二者导入到 `packages/gateway-protocol/src/schema/protocol-schemas.ts`，把它们加入 `ProtocolSchemas` 注册表，并导出派生类型：
+将这两个条目添加到最接近其语义的 `packages/gateway-protocol/src/schema/protocol-schema-fragment-*.ts` 文件中。如果该片段尚未使用所有者模块，请将其作为命名空间导入，然后将稳定的注册表名称映射到规范的 Schema 对象：
 
 ```ts
-  SystemEchoParams: SystemEchoParamsSchema,
-  SystemEchoResult: SystemEchoResultSchema,
+import * as system from "./system.js";
+
+export const OperationsProtocolSchemas = {
+  // 现有条目保持当前顺序。
+  // ...
+  SystemEchoParams: system.SystemEchoParamsSchema,
+  SystemEchoResult: system.SystemEchoResultSchema,
+} as const;
 ```
+
+不要对片段键进行排序，也不要移动现有条目：原生代码生成会遵循注册表的插入顺序。`protocol-schemas.ts` 负责维护片段的明确顺序，只有在引入新的语义片段时才应修改它。
 
 ```ts
 export type SystemEchoParams = Static<typeof SystemEchoParamsSchema>;
@@ -266,17 +276,17 @@ Swift 生成器会输出：
 
 ## 实时 schema JSON
 
-生成的 JSON Schema 是构建产物，不会提交到仓库。发布的原始文件通常可在以下地址获取：
+生成的 JSON Schema 是构建产物，不会提交到仓库。在包发布期间，当前的 beta schema 可在以下位置获取：
 
-- [https://raw.githubusercontent.com/openclaw/openclaw/main/dist/protocol.schema.json](https://raw.githubusercontent.com/openclaw/openclaw/main/dist/protocol.schema.json)
+- [`protocol.schema.json`](https://unpkg.com/@openclaw/gateway-protocol@beta/protocol.schema.json)
 
 ## 当你更改 schema 时
 
-1. 更新所属的 `packages/gateway-protocol/src/schema/*.ts` 模块中的 TypeBox schema，并将它们注册到 `protocol-schemas.ts` 中。
-2. 在 `src/gateway/server-methods-list.ts` 中注册该方法/事件。
+1. 在所属的 `packages/gateway-protocol/src/schema/*.ts` 模块中更新 TypeBox schemas，并将它们注册到最近的 `protocol-schema-fragment-*.ts` 文件中，且不要重新排序现有键。
+2. 在 `src/gateway/server-methods-list.ts` 中注册该 method/event。
 3. 当新的 RPC 需要 operator 或 node scope 分类时，更新 `src/gateway/method-scopes.ts`。
 4. 运行 `pnpm protocol:check`。
-5. 提交重新生成的 Swift 模型。
+5. 提交重新生成的 Swift models。
 
 ## 相关
 

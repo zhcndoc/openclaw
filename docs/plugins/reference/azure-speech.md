@@ -16,7 +16,7 @@ Azure AI 语音文本转语音（MP3、原生 Ogg/Opus 语音笔记、PCM 电话
 
 ## 接口
 
-contracts: speechProviders
+contracts: `speechProviders`
 
 ## 相关文章
 

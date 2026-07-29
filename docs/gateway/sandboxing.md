@@ -6,7 +6,7 @@ read_when: "你想要了解沙箱化的专门说明，或者需要调整 agents.
 status: active
 ---
 
-OpenClaw 可以在沙箱后端中运行工具执行，以减少影响范围。沙箱默认关闭，并由 `agents.defaults.sandbox`（全局）或 `agents.list[].sandbox`（按代理）控制。Gateway 进程始终保留在主机上；只有工具执行在启用后才会移动到沙箱中。
+OpenClaw can run tool execution inside a sandbox backend to reduce blast radius. Sandboxing is off by default and controlled by `agents.defaults.sandbox` (global) or `agents.entries.*.sandbox` (per-agent). The Gateway process always stays on the host; only tool execution moves into the sandbox when enabled.
 
 <Note>
 这并不是完美的安全边界，但当模型做出一些愚蠢操作时，它确实能显著限制文件系统和进程访问。
@@ -56,13 +56,66 @@ OpenClaw 可以在沙箱后端中运行工具执行，以减少影响范围。�
 | **绑定挂载**        | `docker.binds`                   | 不适用                         | 不适用                                                |
 | **最适合**          | 本地开发、完全隔离               | 卸载到远程机器                  | 带可选双向同步的托管远程沙箱                            |
 
-## Docker 后端
+## Supported capability matrix
+
+Sandbox backends isolate tool execution. They do not move the Gateway, native
+plugins, or control-plane RPC into the sandbox.
+
+| Capability                 | Docker                                                                  | SSH                                                  | OpenShell                                                         |
+| -------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| Shell and child processes  | Supported inside the container                                          | Supported on the remote host                         | Supported inside the managed sandbox                              |
+| File tools                 | Supported through the container filesystem bridge                       | Supported through the SSH filesystem bridge          | Supported through the SSH bridge in `mirror` or `remote` mode     |
+| Workspace access           | `none`, `ro`, and `rw`                                                  | `none`, `ro`, and `rw`                               | `none`, `ro`, and `rw`                                            |
+| Network restriction        | `docker.network`; defaults to `"none"`                                  | Controlled by the remote host                        | Controlled by the selected OpenShell policy                       |
+| Sandboxed browser          | Supported in a separate browser container                               | Not supported                                        | Not supported                                                     |
+| Additional host folders    | `docker.binds` with explicit `:ro` or `:rw`                             | Not supported as mounts; seed or copy files instead  | Not supported as mounts; use workspace sync or remote files       |
+| Packages and runtimes      | Bake a custom image, or use `setupCommand` with the required privileges | Provision them on the remote host                    | Include them in the source image or install when policy permits   |
+| Private certificate roots  | Bake or mount them into the image and configure the consuming runtime   | Configure the remote host trust store                | Include them in the source image or configure them inside sandbox |
+| Plugin and MCP tool access | Gateway-side execution, additionally gated by sandbox tool policy       | Gateway-side execution, additionally gated by policy | Gateway-side execution, additionally gated by sandbox tool policy |
+
+Native plugins remain in-process with the Gateway and share its trust boundary.
+Sandboxed sessions can use plugin-owned and MCP tools only when normal tool
+policy and `tools.sandbox.tools` both allow them. See
+[MCP and plugin tools inside sandbox tool policy](/gateway/config-tools#mcp-and-plugin-tools-inside-sandbox-tool-policy)
+and [Plugin execution model](/plugins/architecture#execution-model).
+
+## Docker backend
 
 一旦启用沙箱，Docker 就是默认后端。它通过 Docker 守护进程 socket（`/var/run/docker.sock`）在本地运行工具和沙箱浏览器；隔离来自 Docker 命名空间。
 
 默认值：`network: "none"`（无外部网络访问）、`readOnlyRoot: true`、`capDrop: ["ALL"]`、镜像 `openclaw-sandbox:bookworm-slim`。
 
-要暴露主机 GPU，请将 `agents.defaults.sandbox.docker.gpus`（或按代理覆盖项）设置为类似 `"all"` 或 `"device=GPU-uuid"` 的值。这会传递给 Docker 的 `--gpus` 标志，并且需要兼容的主机运行时，例如 NVIDIA Container Toolkit。
+This explicit configuration keeps the agent workspace read-only and preserves
+the default restricted runtime posture:
+
+```json5
+{
+  agents: {
+    defaults: {
+      sandbox: {
+        mode: "all",
+        backend: "docker",
+        scope: "session",
+        workspaceAccess: "ro",
+        docker: {
+          image: "openclaw-sandbox:bookworm-slim",
+          readOnlyRoot: true,
+          tmpfs: ["/tmp", "/var/tmp", "/run"],
+          network: "none",
+          capDrop: ["ALL"],
+        },
+      },
+    },
+  },
+}
+```
+
+OpenClaw also creates Docker sandbox containers with an init process and
+`no-new-privileges`. With `workspaceAccess: "ro"`, the agent workspace is
+mounted read-only at `/agent`; write operations to the agent workspace are
+rejected, while the configured tmpfs paths remain writable.
+
+To expose host GPUs, set `agents.defaults.sandbox.docker.gpus` (or the per-agent override) to a value like `"all"` or `"device=GPU-uuid"`. This is passed to Docker's `--gpus` flag and requires a compatible host runtime such as NVIDIA Container Toolkit.
 
 <Warning>
 **Docker-out-of-Docker（DooD）限制**
@@ -78,12 +131,13 @@ OpenClaw 可以在沙箱后端中运行工具执行，以减少影响范围。�
 
 ### 沙箱浏览器
 
-- 当浏览器工具需要时，沙箱浏览器会自动启动（确保 CDP 可达）。可通过 `agents.defaults.sandbox.browser.autoStart` 配置（默认 `true`）以及 `autoStartTimeoutMs`（默认 12 秒）。
-- 沙箱浏览器容器使用专用的 Docker 网络（`openclaw-sandbox-browser`），而不是全局的 `bridge` 网络。可通过 `agents.defaults.sandbox.browser.network` 配置。
-- `agents.defaults.sandbox.browser.cdpSourceRange` 使用 CIDR 白名单限制容器边缘的 CDP 入口访问（例如 `172.21.0.1/32`）。
-- noVNC 观察者访问默认受密码保护；OpenClaw 会生成一个短期有效的令牌 URL，该 URL 提供本地引导页，并通过 URL 片段（而非查询字符串或头部日志）携带 noVNC 密码。
-- `agents.defaults.sandbox.browser.allowHostControl`（默认 `false`）允许沙箱会话显式将目标指向主机浏览器。
-- 可选白名单用于限制 `target: "custom"`：`allowedControlUrls`、`allowedControlHosts`、`allowedControlPorts`。
+- The sandbox browser auto-starts (ensures CDP is reachable) when the browser tool needs it. Configure via `agents.defaults.sandbox.browser.autoStart` (default `true`) and `autoStartTimeoutMs` (default 12s).
+- Sandbox browser containers use a dedicated Docker network (`openclaw-sandbox-browser`) instead of the global `bridge` network. Configure with `agents.defaults.sandbox.browser.network`.
+- Sandbox browser network mode `"none"` is unsupported because browser control requires host-published CDP ports. Use the dedicated default, `bridge`, or another custom bridge network. `openclaw doctor --fix` disables affected persisted sidecars and restores the dedicated network without silently enabling egress.
+- `agents.defaults.sandbox.browser.cdpSourceRange` restricts container-edge CDP ingress with a CIDR allowlist (for example `172.21.0.1/32`).
+- noVNC observer access is password-protected by default; OpenClaw emits a short-lived token URL that serves a local bootstrap page and opens noVNC with the password in the URL fragment (not query string or header logs).
+- `agents.defaults.sandbox.browser.allowHostControl` (default `false`) lets sandboxed sessions target the host browser explicitly.
+- Optional allowlists gate `target: "custom"`: `allowedControlUrls`, `allowedControlHosts`, `allowedControlPorts`.
 
 ## SSH 后端
 
@@ -177,11 +231,70 @@ OpenClaw 可以在沙箱后端中运行工具执行，以减少影响范围。�
 **技能**：`read` 工具以沙箱为根。对于 `workspaceAccess: "none"`，OpenClaw 会将符合条件的技能镜像到沙箱工作区（`.../skills`），以便读取。对于 `"rw"`，工作区技能可从 `/workspace/skills` 读取，而符合条件的受管理、捆绑或插件技能会被实体化到生成的只读路径 `/workspace/.openclaw/sandbox-skills/skills`。
 </Note>
 
-## 自定义绑定挂载
+## Multiple folders for one agent
 
-`agents.defaults.sandbox.docker.binds` 会将额外的主机目录挂载到容器中。格式为 `host:container:mode`（例如：`"/home/user/source:/source:rw"`）。
+Use Docker bind mounts when one sandboxed agent needs more than its primary workspace. Each entry maps a host folder to a container path with an explicit access mode:
 
-全局和按 agent 的绑定会进行合并（而不是替换）。在 `scope: "shared"` 下，会忽略按 agent 的绑定。
+```text
+host-directory:container-directory:ro
+host-directory:container-directory:rw
+```
+
+- `ro` makes the mounted folder read-only inside the sandbox.
+- `rw` lets sandboxed tools and processes change the host folder.
+- The container path is the path the agent uses. Host paths are not exposed automatically.
+
+This example gives the `research` agent a writable primary workspace, read-only reference material at `/reference`, and a separate writable output folder at `/drafts`:
+
+```json5
+{
+  agents: {
+    defaults: {
+      sandbox: {
+        mode: "all",
+        scope: "agent",
+      },
+    },
+    list: [
+      {
+        id: "research",
+        workspace: "/srv/openclaw/research-workspace",
+        sandbox: {
+          workspaceAccess: "rw",
+          docker: {
+            binds: ["/srv/shared/reference:/reference:ro", "/srv/shared/drafts:/drafts:rw"],
+            // Required because these sources are outside the agent workspace.
+            dangerouslyAllowExternalBindSources: true,
+          },
+        },
+      },
+    ],
+  },
+}
+```
+
+`workspaceAccess` and bind modes are independent:
+
+| Setting                          | Controls                                                                    |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| `workspaceAccess: "none"`        | Uses an isolated sandbox workspace; does not expose the agent workspace.    |
+| `workspaceAccess: "ro"`          | Mounts the agent workspace read-only at `/agent`.                           |
+| `workspaceAccess: "rw"`          | Mounts the agent workspace read/write at `/workspace`.                      |
+| `docker.binds` entry `:ro`/`:rw` | Controls only that additional host folder at its configured container path. |
+
+Changing `workspaceAccess` does not change an additional bind from `ro` to `rw`, or vice versa. Global and per-agent `docker.binds` are merged. Keep `scope: "agent"` or `"session"` for per-agent binds; `scope: "shared"` ignores all per-agent Docker overrides and uses only global binds.
+
+Bind mounts are the supported multi-folder boundary because Docker constructs the container's filesystem view with mount isolation, and the `ro`/`rw` mode applies to every process in the sandbox. That boundary covers `exec`, filesystem tools, child processes, and libraries without duplicating path-authorization checks across each OpenClaw code path. A host-side path allowlist cannot provide the same complete boundary when an allowed shell or dependency can access files directly.
+
+The opt-in `dangerouslyAllowExternalBindSources` only permits sources outside the workspace roots. It does not disable OpenClaw's blocked system, credential, Docker socket, symlink-parent, or reserved-target checks. Prefer the smallest folder, use `ro` unless writes are required, and recreate the sandbox after changing mounts:
+
+```bash
+openclaw sandbox recreate --agent research
+```
+
+### Other bind behavior
+
+`agents.defaults.sandbox.docker.binds` configures global mounts. The format is the same `host:container:mode` form (for example, `"/home/user/source:/source:rw"`).
 
 `agents.defaults.sandbox.browser.binds` 仅将额外的主机目录挂载到 **sandbox browser** 容器中。设置该项时（包括 `[]`），它会替换 browser 容器的 `docker.binds`；如果未设置，browser 容器会回退到 `docker.binds`。
 
@@ -285,12 +398,22 @@ OpenClaw 可以在沙箱后端中运行工具执行，以减少影响范围。�
     scripts/sandbox-browser-setup.sh
     ```
 
-    从 npm 安装时，请使用仓库中的 [`scripts/docker/sandbox/Dockerfile.browser`](https://github.com/openclaw/openclaw/blob/main/scripts/docker/sandbox/Dockerfile.browser) 构建。
+    The npm package does not include the browser Dockerfile or entrypoint. Use a source checkout to build this image.
 
   </Step>
 </Steps>
 
 默认情况下，Docker 沙箱容器以**无网络**方式运行。可通过 `agents.defaults.sandbox.docker.network` 覆盖。
+
+<Note>
+Package installation and certificate-store changes are image provisioning, not
+normal sandbox-turn behavior. The defaults deliberately combine no network,
+a read-only root filesystem, and a non-root image user, so an in-turn package
+install should fail. Prefer a custom image that already contains packages and
+private certificate roots. If a Node process needs a private CA, also configure
+the CA path for Node, for example with `NODE_EXTRA_CA_CERTS`, through the custom
+image or `sandbox.docker.env`.
+</Note>
 
 <AccordionGroup>
   <Accordion title="沙箱浏览器 Chromium 默认值">
@@ -309,11 +432,11 @@ OpenClaw 可以在沙箱后端中运行工具执行，以减少影响范围。�
     - `--metrics-recording-only`
     - `--password-store=basic`
     - `--use-mock-keychain`
-    - 在启用 `browser.headless` 时使用 `--headless=new`。
-    - 在启用 `browser.noSandbox` 时使用 `--no-sandbox --disable-setuid-sandbox`。
-    - 默认使用 `--disable-3d-apis`、`--disable-gpu`、`--disable-software-rasterizer`；这些图形加固标志有助于没有 GPU 支持的容器。如果你的工作负载需要 WebGL 或其他 3D 功能，请设置 `OPENCLAW_BROWSER_DISABLE_GRAPHICS_FLAGS=0`。
-    - 默认禁用 `--disable-extensions`；对于依赖扩展的流程，请设置 `OPENCLAW_BROWSER_DISABLE_EXTENSIONS=0`。
-    - 默认使用 `--renderer-process-limit=2`；由 `OPENCLAW_BROWSER_RENDERER_PROCESS_LIMIT=<N>` 控制，其中 `0` 保持 Chromium 的默认值。
+    - `--headless=new` when `browser.headless` is enabled.
+    - `--no-sandbox --disable-setuid-sandbox` (always enabled in the sandbox browser container).
+    - `--disable-3d-apis`, `--disable-gpu`, `--disable-software-rasterizer` by default; these graphics-hardening flags help containers without GPU support. Set `OPENCLAW_BROWSER_DISABLE_GRAPHICS_FLAGS=0` if your workload needs WebGL or other 3D features.
+    - `--disable-extensions` by default; set `OPENCLAW_BROWSER_DISABLE_EXTENSIONS=0` for extension-reliant flows.
+    - `--renderer-process-limit=2` by default; controlled by `OPENCLAW_BROWSER_RENDERER_PROCESS_LIMIT=<N>`, where `0` keeps Chromium's default.
 
     如果你需要不同的运行时配置，请使用自定义浏览器镜像并提供自己的入口点。对于本地（非容器）Chromium 配置文件，请使用 `browser.extraArgs` 追加额外的启动标志。
 
@@ -336,8 +459,8 @@ Docker 安装和容器化网关位于此处：[Docker](/install/docker)
 
 路径：
 
-- 全局：`agents.defaults.sandbox.docker.setupCommand`
-- 按代理：`agents.list[].sandbox.docker.setupCommand`
+- Global: `agents.defaults.sandbox.docker.setupCommand`
+- Per-agent: `agents.entries.*.sandbox.docker.setupCommand`
 
 <AccordionGroup>
   <Accordion title="常见问题">
@@ -366,7 +489,7 @@ Docker 安装和容器化网关位于此处：[Docker](/install/docker)
 
 ## 多代理覆盖
 
-每个代理都可以覆盖沙箱 + 工具：`agents.list[].sandbox` 和 `agents.list[].tools`（以及用于沙箱工具策略的 `agents.list[].tools.sandbox.tools`）。有关优先级，请参见 [多代理沙箱与工具](/tools/multi-agent-sandbox-tools)。
+Each agent can override sandbox + tools: `agents.entries.*.sandbox` and `agents.entries.*.tools` (plus `agents.entries.*.tools.sandbox.tools` for sandbox tool policy). See [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) for precedence.
 
 ## 最小启用示例
 

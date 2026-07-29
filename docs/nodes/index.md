@@ -34,19 +34,14 @@ openclaw nodes describe --node <idOrNameOrIp>
 
 待处理的配对请求会在设备最后一次重试后的 5 分钟过期——持续重连的设备会让其唯一的待处理请求（以及 `requestId`）保持有效，而不是每隔几分钟生成一个新的提示；完整的请求/批准生命周期请参见 [节点配对](/gateway/pairing)。如果节点在重试时认证细节发生变化（role/scopes/public key），先前的待处理请求会被替换，并创建一个新的 `requestId`——客户端会收到该被替换请求的 `device.pair.resolved` 事件，你应在批准前重新运行 `openclaw devices list`。
 
-- 当设备配对角色包含 `node` 时，`nodes status` 会将节点标记为 **paired**。
-- 连接中的原生 Mac 在获得 Accessibility 权限后，可以报告合并后的
-  物理输入活动。网关会将最新的、符合条件的 Mac 标记为
-  `active`，向代理提供稳定的 node-id 提示，并在延迟回退前将节点连接
-  告警路由到那里。有关设置、隐私、时序和
-  故障排除，请参见
-  [Active computer presence](/nodes/presence)。
-- 设备配对记录是持久化的已批准角色契约。令牌轮换始终发生在该契约内；它不能将已配对节点升级为配对批准未曾授予的角色。
-- `node.pair.*`（CLI：`openclaw nodes pending/approve/reject/remove/rename`）是一个独立的、由网关拥有的节点配对存储，用于跟踪节点在重新连接期间已批准的命令/能力范围。它**不**负责传输身份验证——设备配对负责这一点。
-- `openclaw nodes remove --node <id|name|ip>` 会移除一个节点配对。对于由设备支持的节点，它会在已配对设备存储中撤销该设备的 `node` 角色，并断开该设备的 node-role 会话：混合角色设备会保留其条目，只失去 `node` 角色，而仅节点设备的条目会被删除。它还会清除独立节点配对存储中任何匹配的条目。`operator.pairing` 可以移除其他设备上的非 operator 节点条目；对于混合角色设备，使用设备令牌的调用者若要撤销自己的 node 角色，还额外需要 `operator.admin`。
-- 批准范围遵循待处理请求所声明的命令：
+- `nodes status` 会在节点的设备配对角色包含 `node` 时将其标记为 **paired**。
+- 已连接的原生 Mac 可以选择接收来自 **Settings -> Permissions -> Active computer detection** 的合并物理输入活动。还需要启用辅助功能权限。网关会将最新的、符合条件的 Mac 标记为 `active`，为代理提供稳定的 node-id 提示，并在延迟回退之前将节点连接提醒路由到那里。有关设置、隐私、时序和故障排查，请参见 [Active computer presence](/nodes/presence)。
+- 设备配对记录是持久化的已批准角色契约。令牌轮换始终发生在该契约之内；它不能将已配对节点升级为配对批准未曾授予的角色。
+- `node.pair.*`（CLI：`openclaw nodes pending/approve/reject/remove/rename`）是一个独立的、由网关拥有的节点配对存储，用于跟踪节点在重新连接期间已批准的命令/能力范围。它**不会**控制传输认证——设备配对才会控制。
+- `openclaw nodes remove --node <id|name|ip>` 会移除一个节点配对。对于由设备支持的节点，它会撤销已配对设备存储中的该设备 `node` 角色，并断开该设备的 node-role 会话：混合角色设备会保留其记录行，只会失去 `node` 角色，而仅节点设备的记录行会被删除。它还会清除独立节点配对存储中的任何匹配条目。`operator.pairing` 可以移除其他设备上的非 operator 节点记录；设备令牌调用方若要撤销其在混合角色设备上的自身 node 角色，则还需要 `operator.admin`。
+- 批准范围遵循待处理请求中声明的命令：
   - 无命令请求：`operator.pairing`
-  - 非执行节点命令：`operator.pairing` + `operator.write`
+  - 非 exec 节点命令：`operator.pairing` + `operator.write`
   - `system.run` / `system.run.prepare` / `system.which`：`operator.pairing` + `operator.admin`
 
 ## 版本偏移与升级顺序
@@ -71,11 +66,11 @@ N-1 节点在升级期间仍然可见且可管理；Gateway
 
 当你的 Gateway 运行在一台机器上，而你希望命令在另一台机器上执行时，请使用 **node host**。模型仍然与 **gateway** 通信；当选择 `host=node` 时，gateway 会将 `exec` 调用转发到 **node host**。
 
-| 角色         | 职责                                                             |
-| ------------ | ---------------------------------------------------------------- |
-| Gateway host | 接收消息、运行模型、路由工具调用。                                |
-| Node host    | 在 node 机器上执行 `system.run`/`system.which`。                 |
-| Approvals    | 通过 `~/.openclaw/exec-approvals.json` 在 node 主机上强制执行。 |
+| Role         | Responsibility                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| Gateway host | 接收消息、运行模型、路由工具调用。                                    |
+| Node host    | 在 node 机器上执行 `system.run`/`system.which`。                                |
+| Approvals    | 通过 node host 上的 `~/.openclaw/state/openclaw.sqlite#exec_approvals_config` 强制执行。 |
 
 批准说明：
 
@@ -91,7 +86,7 @@ N-1 节点在升级期间仍然可见且可管理；Gateway
 openclaw node run --host <gateway-host> --port 18789 --display-name "Build Node"
 ```
 
-`node run` 还支持 `--context-path`（Gateway WS 上下文路径）、`--tls`、`--tls-fingerprint <sha256>` 和 `--node-id`（覆盖旧版客户端实例 ID；这不会重置配对）。
+`node run` 还接受 `--context-path`（Gateway WS 上下文路径）、`--tls`、`--tls-fingerprint <sha256>` 和 `--node-id`（覆盖旧版客户端实例 ID；这不会重置配对）。在 macOS 上，传入 `--share-installed-apps` 以发布 `device.apps`；默认情况下共享是关闭的。使用 `--no-share-installed-apps` 可禁用先前保存的可选共享设置。
 
 ### 通过 SSH 隧道连接远程 gateway（回环绑定）
 
@@ -126,7 +121,7 @@ openclaw node start
 openclaw node restart
 ```
 
-`node install` 还接受 `--context-path`、`--tls`、`--tls-fingerprint`、`--node-id`（仅限旧版客户端实例 ID）、`--runtime <node>`（默认：node）以及用于重新安装的 `--force`。`node status`、`node stop` 和 `node uninstall` 也可用。
+`node install` 还支持 `--context-path`、`--tls`、`--tls-fingerprint`、`--node-id`（仅限旧版客户端实例 ID）、`--share-installed-apps` / `--no-share-installed-apps`、`--runtime <node>`（默认：node）以及用于重新安装的 `--force`。此外，还提供 `node status`、`node stop` 和 `node uninstall`。
 
 ### 配对 + 命名
 
@@ -142,7 +137,7 @@ openclaw nodes status
 
 命名选项：
 
-- `--display-name` 在 `openclaw node run` / `openclaw node install` 上使用（会持久化到 node 上的 `~/.openclaw/node.json` 中，并与 client instance ID 和 Gateway 连接元数据一同保存）。
+- `--display-name` on `openclaw node run` / `openclaw node install`（会与客户端实例 ID 和 Gateway 连接元数据一起持久保存到共享的 `node_host_config` SQLite 行中）。
 - `openclaw nodes rename --node <id|name|ip> --name "Build Node"`（gateway 覆盖）。
 
 ### 节点托管的 MCP 服务器
@@ -186,10 +181,7 @@ Gateway 上配置：
 都不需要重新配对，因为已批准的命令家族没有变化。要应用节点 MCP 配置更改，
 请重启 `openclaw node run` 或 `openclaw node restart`；节点主机不会监视此配置。
 
-Gateway 运维人员可以忽略所有由已配对节点发布、对代理可见的工具，
-包括节点托管的 MCP 工具，方法是设置
-`gateway.nodes.pluginTools.enabled: false`。精确的命令拒绝，例如
-`gateway.nodes.denyCommands: ["mcp.tools.call.v1"]`，也会阻止执行。
+Gateway 运营者可以通过 `gateway.nodes.pluginTools.enabled: false` 忽略所有由已配对节点发布、对代理可见的工具，包括节点托管的 MCP 工具。像 `gateway.nodes.commands.deny: ["mcp.tools.call.v1"]` 这样的精确命令拒绝也会阻止执行。
 
 ### 节点托管技能
 
@@ -210,20 +202,22 @@ frontmatter 字段匹配，这样抽象节点定位器就能映射到一个条�
 `exec host=node node=<node-id>` 运行 `cat SKILL.md`，并将公布的
 `node://.../skills/<name>` 目录作为 `workdir`。引用的文件和二进制文件使用相同的 exec 目标和 `workdir`。节点主机会根据其活动的 OpenClaw 状态目录解析该定位符，因此相对路径是在节点上解析，而不是在 Gateway 机器上解析。发布该技能的节点必须已批准 `system.run`，并且代理的 exec 策略必须允许 `host=node`；否则该技能会留在该代理的快照之外。
 
-在节点上设置 `nodeHost.skills.enabled: false` 以停止发布。Gateway
-操作员可以通过 `gateway.nodes.skills.enabled: false` 忽略来自每个已配对节点的技能。
+将节点上的 `nodeHost.skills.enabled` 设为 `false` 可停止发布。Gateway
+操作员可以通过 `gateway.nodes.allowSkills: false` 忽略来自所有已配对节点的技能。
 
 ### 无头身份状态
 
-无头节点会保留三个独立的状态文件：
+无头节点在共享 SQLite 中保留三条独立的状态记录：
 
-- `~/.openclaw/node.json`：旧版客户端实例 ID（存储为 `nodeId`）、显示名称以及 Gateway 连接元数据。
-- `~/.openclaw/identity/device.json`：已签名的设备密钥对以及派生的加密设备 ID。
-- `~/.openclaw/identity/device-auth.json`：按加密设备 ID 和角色作为键的已配对设备认证令牌。
+- `~/.openclaw/state/openclaw.sqlite`（`node_host_config`）：客户端实例 ID、显示名称以及 Gateway 连接元数据。
+- `~/.openclaw/state/openclaw.sqlite`（`device_identities`，键 `primary`）：已签名的设备密钥对以及派生出的加密设备 ID。
+- `~/.openclaw/state/openclaw.sqlite`（`device_auth_tokens`）：按加密设备 ID 和角色键控的已配对设备认证令牌。
 
-对于已签名的节点，Gateway 使用加密设备 ID 进行配对和节点路由。客户端实例 ID 仅作为连接元数据。因此，修改 `--node-id` 或仅删除 `node.json` 都不会重置配对。有关受支持的撤销并重新配对流程以及升级说明，请参见[身份和配对状态](/cli/node#identity-and-pairing-state)。
+对于已签名节点，Gateway 使用加密设备 ID 进行配对和节点路由。客户端实例 ID 仅是连接元数据。因此，更改 `--node-id` 或迁移已退役的 `node.json` 不会重置配对。有关受支持的撤销并重新配对流程以及升级说明，请参见[身份和配对状态](/cli/node#identity-and-pairing-state)。
 
-### 将命令加入允许列表
+已退役的 `identity/device.json` 和 `identity/device-auth.json` 文件是由 Doctor 管理的迁移输入。停止节点主机并运行 `openclaw doctor --fix`；Doctor 会在删除旧文件之前，将它们的行导入并验证到 SQLite 中。
+
+### 允许命令加入白名单
 
 exec 批准是**按 node 主机**进行的。通过 gateway 添加允许列表条目：
 
@@ -232,7 +226,8 @@ openclaw approvals allowlist add --node <id|name|ip> "/usr/bin/uname"
 openclaw approvals allowlist add --node <id|name|ip> "/usr/bin/sw_vers"
 ```
 
-批准保存在 node 主机上的 `~/.openclaw/exec-approvals.json`。
+批准信息保存在 node 主机上的
+`~/.openclaw/state/openclaw.sqlite#exec_approvals_config` 中。
 
 ### 将 exec 指向 node
 
@@ -240,7 +235,7 @@ openclaw approvals allowlist add --node <id|name|ip> "/usr/bin/sw_vers"
 
 ```bash
 openclaw config set tools.exec.host node
-openclaw config set tools.exec.security allowlist
+openclaw config set tools.exec.mode allowlist
 openclaw config set tools.exec.node "<id-or-name>"
 ```
 
@@ -273,8 +268,10 @@ openclaw config set tools.exec.node "<id-or-name>"
 `codex.appServer.threads.list.v1` 和
 `codex.appServer.thread.turns.list.v1` 命令。可使用 Codex CLI 的原生节点主机还会公布 `codex.terminal.resume.v1`。当这些命令首次出现时，请批准节点配对升级。Gateway 会通过正常的插件节点策略调用它们，并按主机隔离故障。
 
-配对节点行会在常规会话侧边栏中显示为 **Codex** 组。默认情况下，选择某一行会打开常规 Chat 面板，并通过有边界限制、按游标分页的
-`thread/turns/list` 调用和完整项投影读取其持久化转录。使用行菜单、查看器标题，或 **Open Codex/Claude sessions in** 首选项，在拥有该会话的计算机上的操作员终端中启动 `codex resume <thread-id>`。配对节点终端路径是由 Codex 插件拥有的允许列表 PTY 中继，而不是任意的节点命令执行。
+配对节点行会在常规会话侧边栏中显示为一个 **Codex** 组。
+在每个主机内，行默认按项目文件夹分组；位于 `.claude/worktrees/<name>` 下的工作目录会折叠到其源仓库中，并且项目组的折叠方式与其他侧边栏部分相同。使用目录标题中的文件夹图标可展开或恢复项目组。相同的分组规则也适用于 Claude 会话目录。
+默认情况下，选择一行会打开常规 Chat 面板，并通过带边界、游标分页的
+`thread/turns/list` 调用读取其持久化转录，且返回完整项目投影。可使用行菜单、查看器标题，或 **在以下位置打开 Codex/Claude 会话** 首选项，在拥有该会话的计算机上的操作员终端中启动 `codex resume <thread-id>`。配对节点终端路径是由 Codex 插件拥有的白名单 PTY 中继，而不是任意节点命令执行。
 
 该中继不提供完整的 OpenClaw harness 续接和归档所有权契约。因此，远程行不提供 **Continue** 和 **Archive**。在 Gateway 计算机上，已存储和空闲的
 行可以启动一个独立的、模型锁定的 Chat 分支。只有在操作员确认没有其他 Codex 客户端正在使用它之后，任一项才能归档；已存储行的实时活动仍然未知。活动行不能分支或归档。
@@ -288,7 +285,7 @@ openclaw config set tools.exec.node "<id-or-name>"
 
 如果可用 Claude CLI，本机节点主机还会声明 `anthropic.claude.terminal.resume.v1`。符合条件的 CLI 和 Desktop 行可以在其所属主机上的操作员终端中打开 `claude --resume <session-id>`。这会接管本地会话；与 OpenClaw 采用不同，它不会先分叉 Claude 会话。
 
-目录会将有效的 Claude CLI 项目索引记录与当前 `sdk-cli` JSONL 文件中的受限元数据前缀结合起来。Claude Desktop 的本地元数据提供 Desktop 标题和归档状态。当两种来源指向同一个 Claude Code 会话 ID 时，Desktop 元数据优先生效；仅有 CLI 的转录仍然可见，因为 CLI 没有归档标志。转录读取使用不透明的字节偏移游标和受限的向后文件读取，因此，选择一个大型会话或加载更早的页面时，不会将整个 JSONL 历史一次性读入单个 Gateway 响应中。
+目录会将有效的 Claude CLI 项目索引记录与针对未索引 JSONL 转录的有界元数据回退相结合。该回退会识别并发的非 sidechain 交互式（`cli`）会话以及无头 Agent SDK CLI（`sdk-cli`）会话。Claude Desktop 的本地元数据会提供 Desktop 标题和归档状态。当两种来源指向同一个 Claude Code 会话 ID 时，以 Desktop 元数据为准；仅限 CLI 的转录仍然可见，因为 CLI 没有归档标志。转录读取使用不透明的字节偏移游标和有界的向后文件读取，因此选择大型会话或加载较旧页面时，不会将整个 JSONL 历史一次性读入单个 Gateway 响应中。
 
 列表和读取命令是只读的。它们仅通过通用的 `sessions.catalog.list` 和 `sessions.catalog.read` 方法，将目录元数据和转录内容暴露给具有 `operator.write` 的已认证操作员连接。Gateway 本地的 Claude CLI 行可以从常规 Chat composer 中接管：OpenClaw 导入受限的可见历史，在第一轮使用 `--fork-session` 恢复，并保持源转录不变。
 
@@ -361,30 +358,30 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
 1. 该节点必须在其经过身份验证的连接元数据（`connect.commands`）中声明该命令。
 2. 网关基于平台和审批得出的允许列表必须包含该已声明的命令。
 
-按平台划分的默认允许列表（在插件默认值以及 `allowCommands`/`denyCommands` 覆盖之前）：
+按平台划分的默认允许列表（在插件默认值以及 `commands.allow`/`commands.deny` 覆盖之前）：
 
-| 平台 | 默认允许的命令                                                                                                                                                                                                                                                                                           |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| iOS      | `camera.list`, `location.get`, `device.info`, `device.status`, `contacts.search`, `calendar.events`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `system.notify`                                                                                                                        |
-| watchOS   | `device.info`, `device.status`, `system.notify`                                                                                                                                                                                                                                                                       |
-| Android   | `camera.list`, `location.get`, `notifications.list`, `notifications.actions`, `system.notify`, `device.info`, `device.status`, `device.permissions`, `device.health`, `device.apps`, `contacts.search`, `calendar.events`, `callLog.search`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer` |
-| macOS    | `camera.list`, `location.get`, `device.info`, `device.status`, `contacts.search`, `calendar.events`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `system.notify`                                                                                                                        |
-| Windows  | `camera.list`, `location.get`, `device.info`, `device.status`, `system.notify`                                                                                                                                                                                                                                        |
-| Linux    | `system.notify`（如 `system.run` 之类的节点主机命令需要审批门控，见下文）                                                                                                                                                                                                                                  |
+| 平台 | 默认允许的命令                                                                                                                                                                                                                                                                                                                                 |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| iOS      | `camera.list`, `location.get`, `device.info`, `device.status`, `contacts.search`, `calendar.events`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `system.notify`                                                                                                                                                              |
+| watchOS  | `device.info`, `device.status`, `system.notify`                                                                                                                                                                                                                                                                                                             |
+| Android  | `camera.list`, `location.get`, `notifications.list`, `notifications.actions`, `system.notify`, `device.info`, `device.status`, `device.permissions`, `device.health`, `device.apps`, `contacts.search`, `calendar.events`, `callLog.search`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `mobile.ui.observe`, `mobile.ui.act` |
+| macOS    | `camera.list`, `location.get`, `device.info`, `device.status`, `device.apps`, `contacts.search`, `calendar.events`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `system.notify`, `computer.act`                                                                                                                               |
+| Windows  | `camera.list`, `location.get`, `device.info`, `device.status`, `system.notify`, `computer.act`                                                                                                                                                                                                                                                              |
+| Linux    | `system.notify`, `computer.act`（像 `system.run` 这样的节点主机命令需要审批门控，见下文）                                                                                                                                                                                                                                                        |
 
-这些行描述的是网关策略的上限，而不是每个节点应用实际实现的命令。只有当已连接的节点也声明了该命令时，它才可用。特别是，当前 macOS 应用并未声明 macOS 策略行中列出的设备和个人数据类命令。
+这些行描述的是网关策略上限，而不是每个节点应用实现的命令。只有当已连接节点也声明了该命令时，该命令才可用。特别是，Android 仅在启用辅助功能控制时才会公开移动端 UI 命令，而桌面节点仅在其本地 Computer Control 实现器启用时才会公开 `computer.act`。当前 macOS 应用并不声明 macOS 策略行中列出的设备与个人数据相关命令族。
 
 `canvas.*` 命令（`canvas.present`、`canvas.hide`、`canvas.navigate`、`canvas.eval`、`canvas.snapshot`、`canvas.a2ui.*`）是 iOS、Android、macOS、Windows、Linux 以及未知平台上的插件默认命令。Linux 节点仅在桌面应用的本地 Canvas 套接字存在时才会声明它们。所有 Canvas 命令在 iOS 上都受前台限制。
 
 `talk.ptt.start`、`talk.ptt.stop`、`talk.ptt.cancel` 和 `talk.ptt.once` 对于任何声明了 `talk` 能力或声明了 `talk.*` 命令的节点，都会默认允许，与平台标记无关。
 
-桌面主机命令（`system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`mcp.tools.call.v1`，以及 macOS/Windows 上的 `screen.snapshot`）不属于上面的静态平台默认表。它们会在操作员批准了声明这些命令的配对请求后变为可用，之后该节点已批准的命令集会在重新连接时继续保留这些命令。
+桌面主机命令（`system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`mcp.tools.call.v1`，以及 macOS/Windows/Linux 上的 `screen.snapshot`）不属于上方的静态平台默认表。它们会在操作员批准了一个声明这些命令的配对请求后变为可用，此后节点在重新连接时会携带其已批准的命令集。
 
-即使节点声明了以下危险或隐私密集型命令，也仍然需要通过 `gateway.nodes.allowCommands` 显式选择加入：`camera.snap`、`camera.clip`、`screen.record`、`computer.act`、`contacts.add`、`calendar.add`、`reminders.add`、`health.summary`、`sms.send`、`sms.search`。`gateway.nodes.denyCommands` 总是优先于默认值和额外的允许列表条目。关于 iPhone 的同意门控，请参见 [HealthKit summaries](/platforms/ios-healthkit)；关于桌面输入周围的额外 macOS、工具策略和武装门控，请参见 [Computer use](/nodes/computer-use)。
+危险或隐私敏感的命令需要通过 `gateway.nodes.commands.allow` 一次性持久同意，即使节点已声明它们也是如此：`camera.snap`、`camera.clip`、`screen.record`、`contacts.add`、`calendar.add`、`reminders.add`、`health.summary`、`sms.send`、`sms.search`。`gateway.nodes.commands.deny` 永远优先于默认值和额外允许列表条目。有关 iPhone 同意门控，请参阅 [HealthKit 摘要](/platforms/ios-healthkit)；有关桌面输入的本地启用、配对、能力和工具策略门控，请参阅 [计算机使用](/nodes/computer-use)。
 
-插件拥有的节点命令可以添加 Gateway 节点调用策略。该策略会在允许列表检查之后、转发到节点之前运行，因此原始的 `node.invoke`、CLI 辅助工具以及专用代理工具共享同一插件权限边界。危险的插件节点命令仍然需要通过 `gateway.nodes.allowCommands` 显式选择加入。
+插件拥有的节点命令可以添加网关节点调用策略。该策略会在允许列表检查之后、转发到节点之前执行，因此原始 `node.invoke`、CLI 帮助工具和专用代理工具共享相同的插件权限边界。危险的插件节点命令仍然需要显式的 `gateway.nodes.commands.allow` 同意。
 
-当节点更改其声明的命令列表后，拒绝旧的设备配对并批准新的请求，这样网关才会存储更新后的命令快照。
+当节点更改其声明的命令列表后，必须拒绝旧的设备配对并批准新的请求，这样网关才会存储更新后的命令快照。
 
 ## 配置（`openclaw.json`）
 
@@ -407,10 +404,12 @@ Node 相关设置位于 `gateway.nodes` 和 `tools.exec` 下：
       pluginTools: {
         enabled: true,
       },
-      // 允许危险/高隐私开销的节点命令（camera.snap 等）。
-      allowCommands: ["camera.snap", "screen.record"],
-      // 即使默认值或 allowCommands 包含，也阻止精确命令名。
-      denyCommands: ["camera.clip"],
+      // 持久化启用高风险/隐私敏感的节点命令（camera.snap 等）。
+      commands: {
+        allow: ["camera.snap", "screen.record"],
+        // 即使默认配置或 commands.allow 中包含，也会阻止精确命令名。
+        deny: ["camera.clip"],
+      },
     },
   },
   tools: {
@@ -426,7 +425,7 @@ Node 相关设置位于 `gateway.nodes` 和 `tools.exec` 下：
 }
 ```
 
-使用精确的节点命令名。即使平台默认值或 `allowCommands` 条目原本会允许某个命令，`denyCommands` 也会将其移除。默认情况下，已配对节点可以发布 agent 可见的插件工具描述符，但每个描述符的命令仍必须位于该节点已批准的命令范围内。将 `gateway.nodes.pluginTools.enabled` 设为 `false` 可忽略所有此类描述符。有关网关节点配对和命令策略字段的详细信息，请参见 [Gateway 配置参考](/gateway/configuration-reference#gateway)。
+使用精确的节点命令名称。`commands.deny` 会移除某个命令，即使平台默认值或 `commands.allow` 条目本来会允许它。已配对节点默认可以发布 agent 可见的插件工具描述，但每个描述中的命令仍必须位于节点已批准的命令范围内。将 `gateway.nodes.pluginTools.enabled` 设为 `false` 可忽略所有此类描述。有关 gateway 节点配对和命令策略字段的详细信息，请参阅 [Gateway 配置参考](/gateway/configuration-reference#gateway)。
 
 按 agent 覆盖 exec 节点：
 
@@ -484,29 +483,29 @@ openclaw nodes canvas a2ui reset --node <idOrNameOrIp>
 - macOS 可以从应用选择的、精确按能力范围隔离的 Gateway A2UI 页面分发操作。其他 HTTP/HTTPS 页面仍然仅用于渲染。
 - Linux 仅从内置的 A2UI 页面分发操作。其他 HTTP/HTTPS 页面仍然仅用于渲染，而且没有桌面应用的无头 Linux 节点不会公开 Canvas。
 
-## Photos + Videos (node camera)
+## 照片 + 视频（node camera）
 
-Photos (`jpg`):
+照片（`jpg`）：
 
 ```bash
 openclaw nodes camera list --node <idOrNameOrIp>
-openclaw nodes camera snap --node <idOrNameOrIp>            # Default: capture both orientations (2 MEDIA lines)
+openclaw nodes camera snap --node <idOrNameOrIp>            # 默认：同时捕获两个方向（2 行 MEDIA）
 openclaw nodes camera snap --node <idOrNameOrIp> --facing front
 openclaw nodes camera snap --node <idOrNameOrIp> --device-id <id> --max-width 1200 --quality 0.9 --delay-ms 2000
 ```
 
-Video clips (`mp4`):
+视频片段（`mp4`）：
 
 ```bash
 openclaw nodes camera clip --node <idOrNameOrIp> --duration 10s
 openclaw nodes camera clip --node <idOrNameOrIp> --duration 3000 --no-audio
 ```
 
-Note:
+注意：
 
-- The node must be in the **foreground** to use `canvas.*` and `camera.*` (background calls will return `NODE_BACKGROUND_UNAVAILABLE`).
-- The node limits clip duration to keep the base64 payload manageable (see [Camera capture](/nodes/camera) for the exact limits on each platform). The `nodes` proxy tool also caps requested `durationMs` to 300000 (5 minutes) before forwarding the call; the node itself applies stricter limits.
-- Where possible, Android will prompt for `CAMERA`/`RECORD_AUDIO` permissions; if permission is denied, it will fail and return `*_PERMISSION_REQUIRED`.
+- 节点必须处于**前台**才能使用 `canvas.*` 和 `camera.*`（后台调用将返回 `NODE_BACKGROUND_UNAVAILABLE`）。
+- 节点会限制片段时长，以保持 base64 负载可管理（关于各平台的具体限制，请参见 [Camera capture](/nodes/camera)）。`nodes` 代理工具在转发调用前也会将请求的 `durationMs` 上限设为 300000（5 分钟）；节点本身会应用更严格的限制。
+- 在可能的情况下，Android 会提示请求 `CAMERA`/`RECORD_AUDIO` 权限；如果权限被拒绝，将失败并返回 `*_PERMISSION_REQUIRED`。
 
 ## 屏幕录制（节点）
 
@@ -544,7 +543,7 @@ openclaw nodes location get --node <idOrNameOrIp> --accuracy precise --max-age 1
 
 ## SMS（Android 节点）
 
-当用户授予 **SMS** 权限且设备支持电话功能时，Android 节点可以暴露 `sms.send` 和 `sms.search`。这两个命令默认是危险的：网关操作员还必须将它们添加到 `gateway.nodes.allowCommands`，之后才能调用它们（参见 [命令策略](#command-policy)）。
+当用户授予 **SMS** 权限且设备支持电话功能时，Android 节点可以提供 `sms.send` 和 `sms.search`。这两个命令默认都是危险的：网关操作员还必须将它们添加到 `gateway.nodes.commands.allow`，之后才能调用（请参见 [命令策略](#command-policy)）。
 
 对于只读的 SMS 搜索，请在 `openclaw.json` 中显式启用：
 
@@ -552,7 +551,7 @@ openclaw nodes location get --node <idOrNameOrIp> --accuracy precise --max-age 1
 {
   gateway: {
     nodes: {
-      allowCommands: ["sms.search"],
+      commands: { allow: ["sms.search"] },
     },
   },
 }
@@ -568,25 +567,26 @@ openclaw nodes invoke --node <idOrNameOrIp> --command sms.send --params '{"to":"
 
 注意：
 
-- `sms.search` 可能会在授予 `READ_SMS` 之前声明，因此一次调用可以返回权限诊断；读取消息仍然需要该 Android 权限。
-- 仅支持 Wi-Fi、没有电话功能的设备不会声明 `sms.send`。
-- 出现 `requires explicit gateway.nodes.allowCommands opt-in` 错误意味着手机已声明该命令，但 Gateway 操作员尚未授权它。
+- `sms.search` 可以在授予 `READ_SMS` 之前声明，因此一次调用可能会返回权限诊断；读取消息仍然需要该 Android 权限。
+- 仅支持 Wi-Fi、没有电话功能的设备不会公布 `sms.send`。
+- `requires explicit gateway.nodes.commands.allow opt-in` 错误表示手机已经声明了该命令，但 Gateway 操作员尚未授权。
 
 ## 设备和个人数据命令
 
-iOS 和 Android 节点默认会公开若干只读数据命令（参见 [命令策略](#command-policy) 表）；Android 还额外公开一个更大的命令族，并由其自身的应用内设置进行限制。
+iOS 和 Android 节点默认会公开若干只读数据命令（参见 [命令策略](#command-policy) 表）；Android 还会额外公开一组受其应用内设置控制的命令。macOS 或无头 mac 的 TypeScript 节点宿主只有在操作员通过 `--share-installed-apps` 启用已安装应用共享后，才会公开 `device.apps`。
 
 可用族：
 
 - `device.status`, `device.info` — iOS, Android, Windows.
-- `device.permissions`, `device.health`, `device.apps` — 仅限 Android；`device.apps` 需要在 Android 设置中启用已安装应用共享，并默认返回对启动器可见的应用。
-- `notifications.list`, `notifications.actions` — 仅限 Android。
+- `device.permissions`, `device.health` — 仅 Android。
+- `device.apps` — Android、macOS 和无头 mac 节点。Android 需要在设置中启用已安装应用共享，并默认返回启动器可见的应用。TypeScript 节点宿主默认关闭共享，并接受 `query`、`limit` 和 `includeSystem`；macOS 结果包含 `label`、`bundleId`、`path` 和 `system`。
+- `notifications.list`, `notifications.actions` — 仅 Android。
 - `photos.latest` — iOS, Android.
-- `contacts.search` — iOS, Android（默认只读）；`contacts.add` 是危险操作，且需要 `gateway.nodes.allowCommands`。
-- `calendar.events` — iOS, Android（默认只读）；`calendar.add` 是危险操作，且需要 `gateway.nodes.allowCommands`。
-- `reminders.list` — iOS, Android（默认只读）；`reminders.add` 是危险操作，且需要 `gateway.nodes.allowCommands`。
-- `callLog.search` — 仅限 Android。
-- `motion.activity`, `motion.pedometer` — iOS, Android；由可用传感器能力决定。
+- `contacts.search` — iOS、Android（默认只读）；`contacts.add` 是危险操作，需要 `gateway.nodes.commands.allow`。
+- `calendar.events` — iOS、Android（默认只读）；`calendar.add` 是危险操作，需要 `gateway.nodes.commands.allow`。
+- `reminders.list` — iOS、Android（默认只读）；`reminders.add` 是危险操作，需要 `gateway.nodes.commands.allow`。
+- `callLog.search` — 仅 Android。
+- `motion.activity`, `motion.pedometer` — iOS, Android；由可用传感器能力控制。
 
 示例调用：
 
@@ -611,18 +611,18 @@ openclaw nodes invoke --node <idOrNameOrIp> --command system.which --params '{"b
 注意：
 
 - `system.run` 在载荷中返回 stdout/stderr/退出码。
-- Shell 执行现在通过带有 `host=node` 的 `exec` 工具进行；`nodes` 仍然是显式节点命令的直接 RPC 接口。
-- `nodes invoke` 不暴露 `system.run` 或 `system.run.prepare`；这些只保留在 exec 路径上。
-- exec 路径会在审批前准备一个规范化的 `systemRunPlan`。一旦审批被授予，网关会转发该已存储的计划，而不是随后调用方编辑过的 command/cwd/session 字段。
-- `system.notify` 会遵循 macOS 应用中的通知权限状态；支持 `--priority <passive|active|timeSensitive>` 和 `--delivery <system|overlay|auto>`。
-- 未识别的节点 `platform` / `deviceFamily` 元数据会使用保守的默认允许列表，并排除 `system.run` 和 `system.which`。如果你有意需要这些命令用于未知平台，请通过 `gateway.nodes.allowCommands` 显式添加它们。
+- Shell 执行现在通过 `host=node` 的 `exec` 工具进行；`nodes` 仍然是显式节点命令的直接 RPC 接口。
+- `nodes invoke` 不会暴露 `system.run` 或 `system.run.prepare`；它们仍然只走 exec 路径。
+- exec 路径在审批前会先准备一个规范化的 `systemRunPlan`。一旦审批通过，网关会转发已存储的那个计划，而不是之后调用方编辑过的 command/cwd/session 字段。
+- `system.notify` 会尊重 macOS 应用中的通知权限状态；支持 `--priority <passive|active|timeSensitive>` 和 `--delivery <system|overlay|auto>`。
+- 未识别的节点 `platform` / `deviceFamily` 元数据会使用保守的默认允许列表，并排除 `system.run` 和 `system.which`。如果你确实需要在未知平台上使用这些命令，请通过 `gateway.nodes.commands.allow` 显式添加。
 - `system.run` 支持 `--cwd`、`--env KEY=VAL`、`--command-timeout` 和 `--needs-screen-recording`。
-- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求作用域内的 `--env` 值会被缩减为显式允许列表（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
-- 对于允许始终（allow-always）决策，在允许列表模式下，已知的分发包装器（`env`、`flock`、`nice`、`nohup`、`stdbuf`、`timeout`）会保留内部可执行文件路径，而不是包装器路径。如果无法安全解包，则不会自动持久化任何允许列表条目。
-- 在允许列表模式下的 Windows 节点主机上，通过 `cmd.exe /c` 运行的 shell 包装器需要审批（仅有允许列表条目不会自动允许该包装器形式）。
-- 节点主机会在 `--env` 中忽略 `PATH` 覆盖，并在运行命令前剥离一大组维护中的解释器/shell 启动变量（例如 `NODE_OPTIONS`、`PYTHONPATH`、`BASH_ENV`、`DYLD_*`、`LD_*`）。如果你需要额外的 PATH 条目，请配置节点主机服务环境（或将工具安装到标准位置），而不是通过 `--env` 传递 `PATH`。
-- 在 macOS 节点模式下，`system.run` 受 macOS 应用中的执行审批（Settings → Exec approvals）控制。ask/allowlist/full 的行为与无头节点主机相同；被拒绝的提示会返回 `SYSTEM_RUN_DENIED`。
-- 在无头节点主机上，`system.run` 受执行审批（`~/.openclaw/exec-approvals.json`）控制；在 macOS 上，尤其请参见下面 [无头节点主机](#headless-node-host-cross-platform) 中的 exec-host 路由环境变量。
+- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的 `--env` 值会被缩减为显式允许列表（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
+- 在 allowlist 模式下，对于始终允许的决策，已知的分发包装器（`env`、`flock`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久化内部可执行文件路径，而不是包装器路径。如果无法安全展开，则不会自动持久化 allowlist 条目。
+- 在 Windows 节点主机的 allowlist 模式下，通过 `cmd.exe /c` 运行的 shell 包装器需要审批（仅有 allowlist 条目并不会自动允许这种包装器形式）。
+- 节点主机会忽略 `--env` 中的 `PATH` 覆盖，并在运行命令前剥离一大组已维护的解释器/ shell 启动变量（例如 `NODE_OPTIONS`、`PYTHONPATH`、`BASH_ENV`、`DYLD_*`、`LD_*`）。如果你需要额外的 PATH 条目，请配置节点主机服务环境（或将工具安装到标准位置），而不是通过 `--env` 传递 `PATH`。
+- 在 macOS 节点模式下，`system.run` 受 macOS 应用中的 exec 审批（Settings → Exec approvals）控制。ask/allowlist/full 的行为与无头节点主机相同；被拒绝的提示会返回 `SYSTEM_RUN_DENIED`。
+- 在无头节点主机上，`system.run` 受本地 SQLite exec approvals 行控制；在 macOS 上，特别请参见下面 [无头节点主机](#headless-node-host-cross-platform) 中的 exec-host 路由环境变量。
 
 ## Exec 节点绑定
 
@@ -637,15 +637,15 @@ openclaw config set tools.exec.node "node-id-or-name"
 按 agent 覆盖：
 
 ```bash
-openclaw config get agents.list
-openclaw config set 'agents.list[0].tools.exec.node' "node-id-or-name"
+openclaw config get agents.entries
+openclaw config set 'agents.entries.main.tools.exec.node' "node-id-or-name"
 ```
 
 取消设置以允许任意节点：
 
 ```bash
 openclaw config unset tools.exec.node
-openclaw config unset 'agents.list[0].tools.exec.node'
+openclaw config unset 'agents.entries.main.tools.exec.node'
 ```
 
 ## 权限映射
@@ -665,9 +665,10 @@ openclaw node run --host <gateway-host> --port 18789
 注意：
 
 - 仍然需要配对（Gateway 将显示设备配对提示）。
-- 客户端实例元数据、已签名的设备标识以及配对认证使用独立文件；请参见 [无界面身份状态](#headless-identity-state)。
-- Exec 审批通过本地的 `~/.openclaw/exec-approvals.json` 强制执行（参见 [Exec 审批](/tools/exec-approvals)）。
-- 在 macOS 上，无界面节点宿主默认在本地执行 `system.run`。设置 `OPENCLAW_NODE_EXEC_HOST=app` 可将 `system.run` 路由到伴随应用的 exec 宿主；再添加 `OPENCLAW_NODE_EXEC_FALLBACK=0` 可要求使用应用宿主，并在其不可用时以失败关闭。
+- 客户端实例元数据、已签名的设备身份以及配对认证使用独立的状态记录；请参见 [无界面身份状态](#headless-identity-state)。
+- 执行审批会在本地强制执行，位于
+  `~/.openclaw/state/openclaw.sqlite#exec_approvals_config`（参见 [执行审批](/tools/exec-approvals)）。
+- 在 macOS 上，无界面节点宿主默认会在本地执行 `system.run`。设置 `OPENCLAW_NODE_EXEC_HOST=app` 可将 `system.run` 路由到配套应用的执行宿主；再添加 `OPENCLAW_NODE_EXEC_FALLBACK=0` 可要求必须使用应用宿主，并在其不可用时直接失败。
 - 当 Gateway WS 使用 TLS 时，添加 `--tls` / `--tls-fingerprint`。
 
 ## Mac 节点模式

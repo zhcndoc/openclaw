@@ -16,7 +16,7 @@ title: "Mattermost 插件"
 
 ## 界面
 
-channels: mattermost
+channels: `mattermost`
 
 ## 相关文档
 

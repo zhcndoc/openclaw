@@ -16,7 +16,7 @@ title: "Kimi 插件"
 
 ## 接口
 
-providers: kimi, kimi-coding
+providers: `kimi`, `kimi-coding`
 
 ## 相关文档
 

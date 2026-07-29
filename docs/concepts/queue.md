@@ -10,16 +10,16 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
 
 ## 原因
 
-- 自动回复运行可能成本很高（LLM 调用），并且当多条传入消息几乎同时到达时可能发生冲突。
-- 串行化可以避免对共享资源的竞争（会话文件、日志、CLI stdin），并降低触发上游速率限制的可能性。
+- 自动回复运行可能成本较高（LLM 调用），并且当多个传入消息几乎同时到达时可能发生冲突。
+- 串行化可以避免对共享资源（会话状态、日志、CLI stdin）的竞争，并降低触发上游速率限制的可能性。
 
 ## 工作原理
 
-- 一个感知 lane 的 FIFO 队列会以可配置的并发上限来处理每个 lane（未配置的 lane 默认是 1；`main` 默认为 4，`subagent` 默认为 8）。
-- `runEmbeddedAgent` 按 **session key** 入队（lane `session:<key>`），以保证每个 session 同时只会有一个活跃运行。
-- 然后每个 session 的运行会被排入一个 **全局 lane**（默认是 `main`），因此总体并行度会受 `agents.defaults.maxConcurrent` 限制。
-- 当启用详细日志时，如果排队的运行在开始前等待了超过约 2 秒，便会输出一条简短提示。
-- 输入中提示状态仍会在入队时立即触发（当频道支持时），因此在运行等待轮到它时，用户体验不会改变。
+- 一个感知 lane 的 FIFO 队列会以可配置的并发上限清空每个 lane（未配置的 lane 默认值为 1；`main` 使用 `min(16, max(8, available CPU parallelism))`，而 `subagent` 默认为 8）。
+- `runEmbeddedAgent` 按 **会话键** 入队（lane `session:<key>`），以确保每个会话同时只运行一个任务。
+- 然后每个会话运行都会进入一个 **全局 lane**（默认是 `main`），从而将总体并行度限制为 `agents.defaults.maxConcurrent`。
+- 启用详细日志时，如果排队的运行在开始前等待超过约 2 秒，会输出一条简短提示。
+- 在入队时，输入中指示器仍会立即触发（当通道支持时），因此在运行等待轮到它时，用户体验不会改变。
 
 ## 默认值
 
@@ -107,26 +107,28 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
 - 不经过逐请求方检查而清空整个会话队列，并不是多所有者会话的停止路径。
 - 排队等待不会在 `sessions.list` 中被投影为活动代理运行，也不适用活动运行的超时语义；只有活动阶段才适用。
 
-客户端（包括 TUI）会转发运行中的提示，并让 Gateway 应用队列模式。Esc `/stop` 使用会话范围的中止，因此丢失本地句柄不会让仍在排队中的提示继续运行。
+由 Gateway 支持的客户端（包括 `openclaw tui`）会转发运行中的提示，并让 Gateway 应用队列模式。Esc/`/stop` 使用会话范围的 abort，因此丢失本地句柄也不会让仍处于队列中的提示继续运行。
+
+`openclaw chat` 和 `openclaw tui --local` 在嵌入式运行时中应用相同的四种模式。Local `steer` 会在该运行时接受 steering 时注入到一个活动的嵌入式运行中，否则会变成 followup；`followup` 和 `collect` 仍然是本地待处理工作；`interrupt` 会在启动最新消息之前中止活动的本地运行。显式的 `/steer <message>` 命令不是本地模式命令。
 
 ## 范围与保证
 
-- 适用于所有使用网关回复管道的传入渠道上的自动回复代理运行（WhatsApp web、Telegram、Slack、Discord、Signal、iMessage、webchat 等）。
-- 默认 lane（`main`）是进程级的，适用于传入 + main 心跳；设置 `agents.defaults.maxConcurrent` 可允许多个会话并行。
-- 还可能存在额外的 lane（例如 `cron`、`cron-nested`、`nested`、`subagent`），这样后台作业可以并行运行而不会阻塞传入回复。隔离的 cron 代理轮次会占用一个 `cron` 槽位，而其内部代理执行则使用 `cron-nested`；两者都使用 `cron.maxConcurrentRuns`。共享的非 cron `nested` 流保持其各自的 lane 行为。这些分离的运行被跟踪为 [后台任务](/automation/tasks)。
-- 按会话划分的 lane 保证同一时间只有一个代理运行会触及给定会话。
-- 不依赖外部组件或后台工作线程；纯 TypeScript + promises。
+- 适用于通过网关回复管线的所有入站渠道中的自动回复代理运行（WhatsApp web、Telegram、Slack、Discord、Signal、iMessage、webchat 等）。
+- 默认通道（`main`）在整个进程范围内用于入站 + 主心跳；设置 `agents.defaults.maxConcurrent` 可允许多个会话并行。
+- 可能还存在额外通道（例如 `cron`、`cron-nested`、`nested`、`subagent`），因此后台任务可以并行运行而不会阻塞入站回复。隔离的 cron 代理轮次会占用一个 `cron` 槽位，而其内部代理执行则使用 `cron-nested`。共享的非 cron `nested` 流程保持其自身的通道行为。这些分离的运行会被跟踪为[后台任务](/automation/tasks)。
+- 按会话划分的通道可保证同一时间只有一个代理运行会接触到给定会话。
+- 不依赖外部库或后台工作线程；仅使用纯 TypeScript + promises。
 
 ## 故障排查
 
-- 如果命令看起来卡住了，请启用详细日志，并查找 `"queued for ...ms"` 行以确认队列正在排空。
-- Codex app-server 运行在接受一个回合后又停止输出进度时，会被 Codex 适配器中断，这样活动会话通道就可以释放，而不是等待外层运行超时。
-- 启用诊断后，若会话在 `processing` 状态下停留超过 `diagnostics.stuckSessionWarnMs`，且没有观察到回复、工具、状态、阻塞或 ACP 进度，则会按当前活动类型进行分类：
-  - 近期有进度日志的活动工作归类为 `session.long_running`。受管的静默模型调用也会保持为 `session.long_running`，直到 `diagnostics.stuckSessionAbortMs`，这样缓慢或非流式的提供方不会过早被报告为卡住。
-  - 没有近期进度日志的活动工作归类为 `session.stalled`；受管模型调用、被阻塞的工具调用以及卡住的嵌入式运行会在达到或超过中止阈值时切换为 `session.stalled`。只要尚未达到长时间运行的条件，属于 ownerless 的过期模型/工具活动就不会被隐藏为长时间运行。
-  - `session.stuck` 仅保留给可恢复的过期会话账本状态，包括空闲队列中的会话及其过期的 ownerless 模型/工具活动。
-  - `session.stuck` 始终会触发恢复，从而释放受影响的会话通道。超过 `diagnostics.stuckSessionAbortMs` 的 `session.stalled` 分类（被阻塞的工具调用、卡住的模型调用或卡住的嵌入式运行）也可以触发主动中止恢复，因此这两种分类都能解除队列阻塞，而不只是 `session.stuck`。
-  - 在会话保持不变时，重复的 `session.stuck` 和 `session.long_running` 警告日志行会指数退避；但无论这种退避如何，恢复尝试都会在每次心跳 tick 上运行。
+- 如果命令看起来卡住了，请启用详细日志，并查找 “queued for ...ms” 行，以确认队列正在被清空。
+- Codex app-server 运行在接受一个 turn 之后便停止输出进度时，会被 Codex adapter 中断，这样当前会话 lane 就能释放，而不是一直等待外层运行超时。
+- 当启用诊断时，对于那些在内置警告阈值之后仍停留在 `processing` 状态、且未观察到回复、工具、状态、阻塞或 ACP 进度的会话，会根据当前活动分类：
+  - 有近期进度日志的活跃工作归类为 `session.long_running`。有所有权的静默模型调用也会保持为 `session.long_running`，直到内置中止阈值，因此不会过早将缓慢或非流式提供方报告为卡住。
+  - 没有近期进度日志的活跃工作归类为 `session.stalled`；有所有权的模型调用、被阻塞的工具调用以及卡住的嵌入式运行会在中止阈值处或之后切换为 `session.stalled`。无所有者的过期模型/工具活动只要尚未处于 long-running，就不会被隐藏。
+  - `session.stuck` 专用于可恢复的过期会话账本状态，包括处于空闲队列中的、且存在过期无所有者模型/工具活动的会话。
+  - `session.stuck` 总是会触发恢复，并可释放受影响的会话 lane。超过中止阈值的 `session.stalled` 分类（被阻塞的工具调用、卡住的模型调用或卡住的嵌入式运行）也可能触发主动中止恢复，因此这两种分类都能让队列恢复，而不只是 `session.stuck`。
+  - 当会话保持不变时，重复出现的 `session.stuck` 和 `session.long_running` 警告日志行会指数退避；但无论该退避如何，恢复尝试仍会在每个 heartbeat tick 上运行。
 
 ## 相关内容
 

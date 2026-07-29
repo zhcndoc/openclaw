@@ -16,7 +16,7 @@ title: "Raft 插件"
 
 ## 表面
 
-channels: raft
+channels: `raft`
 
 ## 相关文档
 

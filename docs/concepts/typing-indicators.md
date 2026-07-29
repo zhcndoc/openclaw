@@ -42,24 +42,26 @@ title: "输入中指示器"
 }
 ```
 
-按会话覆盖模式或频率：
+为某个代理覆盖策略：
 
 ```json5
 {
-  session: {
-    typingMode: "message",
-    typingIntervalSeconds: 4,
+  agents: {
+    entries: {
+      support: {
+        typingMode: "message",
+      },
+    },
   },
-}
-```
+}```
 
 ## 注意
 
-- `message` 模式不会从静默回复 token 开始，但主动执行在任何助手文本可用之前仍然可能显示正在输入。
-- `thinking` 仍然会响应流式推理（`reasoningLevel: "stream"`），并且也可以在推理增量到达之前从主动执行开始。
-- 心跳输入状态是已解析投递目标的存活信号。它从心跳运行开始时启动，而不是跟随 `message` 或 `thinking` 的流式时序。将 `typingMode: "never"` 设置为可禁用它。
-- 当心跳目标为 `"none"`、目标无法解析、心跳的聊天投递被禁用，或者该频道不支持输入状态时，心跳不会显示输入状态。
-- `typingIntervalSeconds` 控制的是**刷新频率**，而不是开始时间。默认值：6 秒。
+- `message` 模式不会从静默回复令牌开始，但主动执行仍可能在任何助手文本可用之前显示输入中状态。
+- `thinking` 仍会对流式推理（`reasoningLevel: "stream"`）作出响应，并且也可以在推理增量到达之前从主动执行开始。
+- 心跳输入中状态是已解析投递目标的存活信号。它从心跳运行开始时触发，而不是跟随 `message` 或 `thinking` 流的时序。将 `typingMode: "never"` 设置为禁用它。
+- 当心跳目标为 `"none"`、目标无法解析、心跳的聊天投递被禁用，或者通道不支持输入中状态时，心跳不会显示输入中状态。
+- `agents.defaults.typingIntervalSeconds` 控制每个 agent 的**刷新频率**，而不是开始时间。默认值：6 秒。
 
 ## 相关
 

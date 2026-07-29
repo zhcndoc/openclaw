@@ -31,16 +31,15 @@ title: "配置示例"
       workspace: "~/.openclaw/workspace",
       model: { primary: "anthropic/claude-sonnet-4-6" },
     },
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
         identity: {
           name: "Clawd",
           theme: "helpful assistant",
           emoji: "🦞",
         },
       },
-    ],
+    },
   },
   channels: {
     whatsapp: {
@@ -90,7 +89,7 @@ title: "配置示例"
     },
   },
 
-  // 身份是按 agent 区分的——请在下方的 agents.list[].identity 中设置。
+  // Identity is per agent — set it on agents.entries.<id>.identity below.
 
   // 日志
   logging: {
@@ -98,12 +97,10 @@ title: "配置示例"
     file: "/tmp/openclaw/openclaw.log",
     consoleLevel: "info",
     consoleStyle: "pretty",
-    redactSensitive: "tools",
   },
 
   // 消息格式
   messages: {
-    messagePrefix: "[openclaw]",
     visibleReplies: "automatic",
     responsePrefix: ">",
     ackReaction: "👀",
@@ -115,7 +112,6 @@ title: "配置示例"
     },
     queue: {
       mode: "followup",
-      debounceMs: 500,
       cap: 20,
       drop: "summarize",
       byChannel: {
@@ -130,28 +126,7 @@ title: "配置示例"
     },
   },
 
-  // 工具
-  tools: {
-    media: {
-      audio: {
-        enabled: true,
-        maxBytes: 20971520,
-        models: [
-          { provider: "openai", model: "gpt-4o-transcribe" },
-          // 可选的 CLI 回退（Whisper 二进制）：
-          // { type: "cli", command: "whisper", args: ["--model", "base", "{{MediaPath}}"] }
-        ],
-        timeoutSeconds: 120,
-      },
-      video: {
-        enabled: true,
-        maxBytes: 52428800,
-        models: [{ provider: "google", model: "gemini-3-flash-preview" }],
-      },
-    },
-  },
-
-  // 会话行为
+  // Session behavior
   session: {
     scope: "per-sender",
     dmScope: "per-channel-peer", // 推荐用于多用户收件箱
@@ -173,7 +148,6 @@ title: "配置示例"
       maxDiskBytes: "500mb", // 可选
       highWaterBytes: "400mb", // 可选（默认值为 maxDiskBytes 的 80%）
     },
-    typingIntervalSeconds: 5,
     sendPolicy: {
       default: "allow",
       rules: [{ action: "deny", match: { channel: "discord", chatType: "group" } }],
@@ -202,7 +176,8 @@ title: "配置示例"
     discord: {
       enabled: true,
       token: "YOUR_DISCORD_BOT_TOKEN",
-      dm: { enabled: true, allowFrom: ["123456789012345678"] },
+      dmPolicy: "allowlist",
+      allowFrom: ["123456789012345678"],
       guilds: {
         "123456789012345678": {
           slug: "friends-of-openclaw",
@@ -222,7 +197,8 @@ title: "配置示例"
       channels: {
         "#general": { enabled: true, requireMention: true },
       },
-      dm: { enabled: true, allowFrom: ["U123"] },
+      dmPolicy: "allowlist",
+      allowFrom: ["U123"],
       slashCommand: {
         enabled: true,
         name: "openclaw",
@@ -279,15 +255,6 @@ title: "配置示例"
         directPolicy: "allow", // allow（默认）| block
         to: "+15555550123",
         prompt: "HEARTBEAT",
-        ackMaxChars: 300,
-      },
-      memorySearch: {
-        provider: "gemini",
-        model: "gemini-embedding-001",
-        remote: {
-          apiKey: "${GEMINI_API_KEY}",
-        },
-        extraPaths: ["../team-docs", "/srv/shared-notes"],
       },
       sandbox: {
         mode: "non-main",
@@ -306,9 +273,8 @@ title: "配置示例"
         },
       },
     },
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
         default: true,
         identity: {
           name: "Samantha",
@@ -323,21 +289,39 @@ title: "配置示例"
         reasoningDefault: "on", // 每个 agent 的 reasoning 可见性
         fastModeDefault: false, // 每个 agent 的快速模式
       },
-      {
-        id: "quick",
-        skills: [], // 此 agent 不使用任何 skills
-        fastModeDefault: true, // 此 agent 始终以快速模式运行
+      quick: {
+        skills: [], // no skills for this agent
+        fastModeDefault: true, // this agent always runs fast
         thinkingDefault: "off",
       },
-    ],
+    },
+  },
+
+  memory: {
+    search: {
+      provider: "gemini",
+      model: "gemini-embedding-001",
+      remote: {
+        apiKey: "${GEMINI_API_KEY}",
+      },
+      extraPaths: ["../team-docs", "/srv/shared-notes"],
+    },
   },
 
   tools: {
+    media: {
+      models: [
+        { provider: "openai", model: "gpt-4o-transcribe", capabilities: ["audio"] },
+        { provider: "google", model: "gemini-3-flash-preview", capabilities: ["video"] },
+      ],
+      audio: { enabled: true, maxBytes: 20971520, timeoutSeconds: 120 },
+      video: { enabled: true, maxBytes: 52428800 },
+    },
     allow: ["exec", "process", "read", "write", "edit", "apply_patch"],
     deny: ["browser", "canvas"],
     exec: {
       backgroundMs: 10000,
-      timeoutSec: 1800,
+      timeoutSeconds: 1800,
       cleanupMs: 1800000,
     },
     elevated: {
@@ -384,7 +368,6 @@ title: "配置示例"
   cron: {
     enabled: true,
     store: "~/.openclaw/cron/jobs.json",
-    maxConcurrentRuns: 8, // 默认值；cron 调度 + 隔离的 cron agent-turn 执行
     sessionRetention: "24h",
   },
 
@@ -444,7 +427,7 @@ title: "配置示例"
     },
     tailscale: { mode: "serve", resetOnExit: false },
     remote: { url: "ws://gateway-host.ts.net:18789", token: "remote-token" },
-    reload: { mode: "hybrid", debounceMs: 300 },
+    reload: { mode: "hybrid" },
   },
 
   skills: {
@@ -500,17 +483,17 @@ title: "配置示例"
       workspace: "~/.openclaw/workspace",
       skills: ["github", "weather"],
     },
-    list: [
-      { id: "main", default: true },
-      { id: "docs", workspace: "~/.openclaw/workspace-docs", skills: ["docs-search"] },
-    ],
+    entries: {
+      main: { default: true },
+      docs: { workspace: "~/.openclaw/workspace-docs", skills: ["docs-search"] },
+    },
   },
 }
 ```
 
-- `agents.defaults.skills` 是共享基线。
-- `agents.list[].skills` 会为某个代理替换该基线。
-- 当某个代理不应看到任何技能时，使用 `skills: []`。
+- `agents.defaults.skills` is the shared baseline.
+- `agents.entries.*.skills` replaces that baseline for one agent.
+- Use `skills: []` when an agent should see no skills.
 
 ### 多平台设置
 
@@ -518,7 +501,7 @@ title: "配置示例"
 {
   agents: { defaults: { workspace: "~/.openclaw/workspace" } },
   channels: {
-    whatsapp: { allowFrom: ["+15555550123"] },
+    whatsapp: { allowFrom: ["+15555550123"], responsePrefix: "[openclaw]" },
     telegram: {
       enabled: true,
       botToken: "YOUR_TOKEN",
@@ -527,7 +510,7 @@ title: "配置示例"
     discord: {
       enabled: true,
       token: "YOUR_TOKEN",
-      dm: { allowFrom: ["123456789012345678"] },
+      allowFrom: ["123456789012345678"],
     },
   },
 }
@@ -571,7 +554,7 @@ title: "配置示例"
     discord: {
       enabled: true,
       token: "YOUR_DISCORD_BOT_TOKEN",
-      dm: { enabled: true, allowFrom: ["123456789012345678", "987654321098765432"] },
+      allowFrom: ["123456789012345678", "987654321098765432"],
     },
   },
 }
@@ -625,15 +608,14 @@ title: "配置示例"
       workspace: "~/work-openclaw",
       elevatedDefault: "off",
     },
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
         identity: {
           name: "WorkBot",
           theme: "专业助手",
         },
       },
-    ],
+    },
   },
   channels: {
     slack: {

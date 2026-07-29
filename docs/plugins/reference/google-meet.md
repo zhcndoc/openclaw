@@ -16,7 +16,7 @@ OpenClaw Google Meet 参与者插件，用于通过 Chrome 或 Twilio 传输加�
 
 ## Surface
 
-contracts: tools
+contracts: `tools`, `transcriptSourceProviders`
 
 ## 相关文档
 

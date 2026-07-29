@@ -43,7 +43,7 @@ Docker 是**可选的**。当你需要一个隔离的、一次性使用的网关
     ./scripts/docker/setup.sh
     ```
 
-    请使用 `ghcr.io/openclaw/openclaw` 或 `openclaw/openclaw`，并避免使用非官方镜像，因为它们不共享 OpenClaw 的发布时机或保留策略。官方标签包括：`main`、`latest`、`<version>`（例如 `2026.2.26`），以及类似 `2026.2.26-beta.1` 的 beta 标签（beta 版本不会移动 `latest`/`main`）。默认的 `main`/`latest`/`<version>` 镜像包含 `codex` 和 `diagnostics-otel` 插件。`-browser` 变体（例如 `latest-browser`）还会内置 Chromium，适用于 [沙箱浏览器](/gateway/sandboxing#sandboxed-browser) 工具，无需首次运行时安装 Playwright。
+    Use `ghcr.io/openclaw/openclaw` or `openclaw/openclaw` and avoid unofficial mirrors, which don't share OpenClaw's release timing or retention policy. Version-specific tags include releases such as `2026.2.26` and prereleases such as `2026.2.26-beta.1`. Stable releases move `latest` and `main`; trailing-month Gateway releases move only `extended-stable`. Variants include `slim`, `main-slim`, `extended-stable-slim`, `latest-browser`, `main-browser`, and `extended-stable-browser`. The default images bundle the `codex` and `diagnostics-otel` plugins. A `-browser` variant also ships with Chromium baked in, useful for the [sandboxed browser](/gateway/sandboxing#sandboxed-browser) tool without a first-run Playwright install.
 
   </Step>
 
@@ -325,14 +325,9 @@ docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
   'curl -fsSL https://claude.ai/install.sh | bash'
 ```
 
-原生安装程序会把 `claude` 写入 `/home/node/.local/bin/claude`。请让 OpenClaw 指向该路径：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
-  openclaw-cli config set \
-  agents.defaults.cliBackends.claude-cli.command \
-  /home/node/.local/bin/claude
-```
+The native installer writes `claude` to `/home/node/.local/bin/claude`. The
+OpenClaw image includes `/home/node/.local/bin` on `PATH`, so the bundled
+Anthropic plugin resolves it without an adapter config override.
 
 使用同一个已持久化的 home 目录登录并验证：
 
@@ -486,16 +481,11 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
   <Accordion title="Power-user container options">
     默认镜像以安全优先方式运行，并以非 root 的 `node` 用户运行。若要使用功能更完整的容器：
 
-    1. **持久化 `/home/node`**：`export OPENCLAW_HOME_VOLUME="openclaw_home"`
-    2. **烘焙系统依赖**：`export OPENCLAW_IMAGE_APT_PACKAGES="git curl jq"`
-    3. **烘焙 Python 依赖**：`export OPENCLAW_IMAGE_PIP_PACKAGES="requests==2.32.5 humanize==4.14.0"`
-    4. **烘焙 Playwright Chromium**：`export OPENCLAW_INSTALL_BROWSER=1`，或使用官方 `-browser` 镜像标签
-    5. **或者将 Playwright 浏览器安装到持久化卷中**：
-       ```bash
-       docker compose run --rm openclaw-cli \
-         node /app/node_modules/playwright-core/cli.js install chromium
-       ```
-    6. **持久化浏览器下载**：使用 `OPENCLAW_HOME_VOLUME` 或 `OPENCLAW_EXTRA_MOUNTS`。OpenClaw 会在 Linux 上自动检测镜像中由 Playwright 管理的 Chromium。
+    1. **Persist `/home/node`**: `export OPENCLAW_HOME_VOLUME="openclaw_home"`
+    2. **Bake system deps**: `export OPENCLAW_IMAGE_APT_PACKAGES="git curl jq"`
+    3. **Bake Python deps**: `export OPENCLAW_IMAGE_PIP_PACKAGES="requests==2.32.5 humanize==4.14.0"`
+    4. **Bake Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`, or use the official `-browser` image tag
+    5. **Persist browser downloads and caches**: use `OPENCLAW_HOME_VOLUME` or `OPENCLAW_EXTRA_MOUNTS`. OpenClaw auto-detects the image's Playwright-managed Chromium on Linux.
 
   </Accordion>
 

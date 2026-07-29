@@ -13,9 +13,9 @@ OpenClaw 代理通过 `video_generate` 从文本提示、参考图像或
 可用的 API 密钥自动选择合适的后端。
 
 <Note>
-只有在至少有一个视频生成提供商可用时，`video_generate` 才会出现。
+`video_generate` 仅在至少有一个视频生成提供商可用时才会显示。
 如果它没有出现在你的代理工具中，请设置提供商 API 密钥或
-配置 `agents.defaults.videoGenerationModel`。
+配置 `agents.defaults.mediaModels.video`。
 </Note>
 
 `video_generate` 有三种运行模式，会根据调用中的参考输入来解析：
@@ -29,8 +29,8 @@ OpenClaw 代理通过 `video_generate` 从文本提示、参考图像或
 ## 快速开始
 
 <Steps>
-  <Step title="配置认证">
-    为任意受支持的提供商设置 API 密钥：
+  <Step title="设置身份验证">
+    为任何受支持的提供商设置 API 密钥：
 
     ```bash
     export GEMINI_API_KEY="your-key"
@@ -39,13 +39,13 @@ OpenClaw 代理通过 `video_generate` 从文本提示、参考图像或
   </Step>
   <Step title="选择默认模型（可选）">
     ```bash
-    openclaw config set agents.defaults.videoGenerationModel.primary "google/veo-3.1-fast-generate-preview"
+    openclaw config set agents.defaults.mediaModels.video.primary "google/veo-3.1-fast-generate-preview"
     ```
   </Step>
   <Step title="让代理执行">
     > 生成一段 5 秒的电影感视频，内容是一只友好的龙虾在日落时冲浪。
 
-    代理会自动调用 `video_generate`。无需配置工具白名单。
+    代理将自动调用 `video_generate`。无需配置工具白名单。
 
   </Step>
 </Steps>
@@ -98,17 +98,17 @@ openclaw tasks cancel <lookup>
 
 | 提供商                | 默认模型                        | 文本 | 图像引用                                           | 视频引用                                      | 认证                                     |
 | --------------------- | ------------------------------- | :--: | ---------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
-| Alibaba               | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                      | 是（远程 URL）                                 | `MODELSTUDIO_API_KEY`                    |
-| BytePlus (1.0)        | `seedance-1-0-pro-250528`       |  ✓   | 最多 2 张图片（仅限 I2V 模型；第一帧 + 最后一帧）    | -                                               | `BYTEPLUS_API_KEY`                       |
-| BytePlus Seedance 1.5 | `seedance-1-5-pro-251215`       |  ✓   | 最多 2 张图片（通过角色指定第一帧 + 最后一帧）       | -                                               | `BYTEPLUS_API_KEY`                       |
-| BytePlus Seedance 2.0 | `dreamina-seedance-2-0-260128`  |  ✓   | 最多 9 张参考图片                                   | 最多 3 个视频                                   | `BYTEPLUS_API_KEY`                       |
-| ComfyUI               | `workflow`                      |  ✓   | 1 张图片                                             | -                                               | `COMFY_API_KEY` 或 `COMFY_CLOUD_API_KEY` |
+| Alibaba               | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                      | 是（远程 URL）                                | `MODELSTUDIO_API_KEY`                    |
+| BytePlus (bundled)    | `seedance-1-0-pro-250528`       |  ✓   | 最多 2 张图片（首帧 + 末帧）                         | -                                               | `BYTEPLUS_API_KEY`                       |
+| BytePlus 1.5 plugin   | `seedance-1-5-pro-251215`       |  ✓   | 最多 2 张图片（通过角色指定首帧 + 末帧）             | -                                               | `BYTEPLUS_API_KEY`                       |
+| BytePlus Seedance 2.0 | `dreamina-seedance-2-0-260128`  |  ✓   | 最多 9 张参考图                                      | 最多 3 个视频                                    | `BYTEPLUS_API_KEY`                       |
+| ComfyUI               | `workflow`                      |  ✓   | 1 张图片                                              | -                                               | `COMFY_API_KEY` or `COMFY_CLOUD_API_KEY` |
 | DeepInfra             | `Pixverse/Pixverse-T2V`         |  ✓   | -                                                    | -                                               | `DEEPINFRA_API_KEY`                      |
 | fal                   | `fal-ai/minimax/video-01-live`  |  ✓   | 1 张图片；使用 Seedance reference-to-video 时最多 9 张 | 使用 Seedance reference-to-video 时最多 3 个视频 | `FAL_KEY`                                |
 | Google                | `veo-3.1-fast-generate-preview` |  ✓   | 1 张图片                                              | 1 个视频                                        | `GEMINI_API_KEY`                         |
 | MiniMax               | `MiniMax-Hailuo-2.3`            |  ✓   | 1 张图片                                              | -                                               | `MINIMAX_API_KEY` 或 MiniMax OAuth       |
 | OpenAI                | `sora-2`                        |  ✓   | 1 张图片                                              | 1 个视频                                        | `OPENAI_API_KEY`                         |
-| OpenRouter            | `google/veo-3.1-fast`           |  ✓   | 最多 4 张图片（第一帧/最后一帧或参考图）              | -                                               | `OPENROUTER_API_KEY`                     |
+| OpenRouter            | `google/veo-3.1-fast`           |  ✓   | 最多 4 张图片（首帧/末帧或参考图）                    | -                                               | `OPENROUTER_API_KEY`                     |
 | Qwen                  | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                      | 是（远程 URL）                                | `QWEN_API_KEY`                           |
 | Runway                | `gen4.5`                        |  ✓   | 1 张图片                                              | 1 个视频                                        | `RUNWAYML_API_SECRET`                    |
 | Together              | `Wan-AI/Wan2.2-T2V-A14B`        |  ✓   | 仅 `Wan-AI/Wan2.2-I2V-A14B`                         | -                                               | `TOGETHER_API_KEY`                       |
@@ -209,7 +209,7 @@ Seedance 会用它根据输入图像尺寸自动检测比例）。
 </ParamField>
 <ParamField path="model" type="string">提供方/模型覆盖（例如 `runway/gen4.5`）。</ParamField>
 <ParamField path="filename" type="string">输出文件名提示。</ParamField>
-<ParamField path="timeoutMs" type="number">可选的提供方操作超时时间，单位为毫秒。若省略，OpenClaw 会在已配置时使用 `agents.defaults.videoGenerationModel.timeoutMs`，否则使用插件作者提供方默认值（如果存在）。</ParamField>
+<ParamField path="timeoutMs" type="number">可选的提供方操作超时，单位为毫秒。若省略，OpenClaw 会在配置存在时使用 `agents.defaults.mediaModels.video.timeoutMs`，否则使用插件作者指定的提供方默认值（如果存在）。</ParamField>
 <ParamField path="providerOptions" type="object">
   作为 JSON 对象的提供方特定选项（例如 `{"seed": 42, "draft": true}`）。
   声明了类型化 schema 的提供方会验证键和值类型；未知键或类型不匹配会在回退时跳过该候选项。未声明 schema 的提供方会原样接收这些选项。运行 `video_generate action=list`
@@ -265,20 +265,20 @@ run on a capable fallback:
 | `status`     | 检查当前会话中正在进行的视频任务状态，不会启动新的生成。 |
 | `list`       | 显示可用的提供方、模型及其能力。                                        |
 
-## 模型选择
+## Model Selection
 
-OpenClaw 按以下顺序解析模型：
+OpenClaw resolves models in the following order:
 
-1. **`model` 工具参数** - 如果代理在调用中指定了该参数。
-2. 配置中的 **`videoGenerationModel.primary`**。
-3. 按顺序使用 **`videoGenerationModel.fallbacks`**。
-4. **自动检测** - 具有有效认证的提供方，从当前默认提供方开始，然后按字母顺序处理其余提供方。
+1. **`model` tool parameter** - if specified by the agent in the call.
+2. **`videoGenerationModel.primary`** in the configuration.
+3. Use **`videoGenerationModel.fallbacks`** in order.
+4. **Auto-detection** - providers with valid authentication, starting from the current default provider and then processing the remaining providers in alphabetical order.
 
-如果某个提供方失败，会自动尝试下一个候选项。如果所有
-候选项都失败，错误会包含每次尝试的详细信息。
+If a provider fails, the next candidate is automatically tried. If all
+candidates fail, the error will include details of each attempt.
 
-将 `agents.defaults.mediaGenerationAutoProviderFallback: false` 设置为只使用
-明确指定的 `model`、`primary` 和 `fallbacks` 条目。
+Automatic fallback across authenticated providers is always enabled. A per-call
+`model` remains authoritative.
 
 ```json5
 {
@@ -287,7 +287,7 @@ OpenClaw 按以下顺序解析模型：
       videoGenerationModel: {
         primary: "google/veo-3.1-fast-generate-preview",
         fallbacks: ["runway/gen4.5", "qwen/wan2.6-t2v"],
-        timeoutMs: 180000, // 可选的每个工具提供方请求超时覆盖
+        timeoutMs: 180000, // Optional per-tool provider request timeout override
       },
     },
   },
@@ -301,23 +301,21 @@ OpenClaw 按以下顺序解析模型：
     使用 DashScope / Model Studio 异步端点。参考图像和
     视频必须是远程 `http(s)` URL。
   </Accordion>
-  <Accordion title="BytePlus (1.0)">
-    提供方 id：`byteplus`。
+  <Accordion title="BytePlus (bundled)">
+    提供方 id: `byteplus`。
 
-    模型：`seedance-1-0-pro-250528`（默认），
-    `seedance-1-0-pro-t2v-250528`、`seedance-1-0-pro-fast-251015`、
-    `seedance-1-0-lite-t2v-250428`、`seedance-1-0-lite-i2v-250428`。
+    模型：`seedance-1-0-pro-250528`（默认）、
+    `seedance-1-5-pro-251215`。
 
-    T2V 模型（`*-t2v-*`）不接受图像输入；I2V 模型和通用
-    `*-pro-*` 模型支持单张参考图像（首帧）。将图像按位置传入或
-    设置 `role: "first_frame"`。当提供图像时，T2V 模型 ID 会自动
-    切换到对应的 I2V 变体。
+    使用统一的 `content[]` API。支持最多 2 张输入图像
+    （`first_frame` + `last_frame`）。可以按位置传入图像，或为每张图像显式设置
+    `role`。
 
     支持的 `providerOptions` 键：`seed`（number）、`draft`（boolean -
     强制 480p）、`camera_fixed`（boolean）。
 
   </Accordion>
-  <Accordion title="BytePlus Seedance 1.5">
+  <Accordion title="BytePlus Seedance 1.5 plugin">
     需要 [`@openclaw/byteplus-modelark`](https://www.npmjs.com/package/@openclaw/byteplus-modelark)
     插件（外部插件，未内置）。提供方 id：`byteplus-seedance15`。模型：
     `seedance-1-5-pro-251215`。
@@ -410,11 +408,11 @@ OpenClaw 按以下顺序解析模型：
   </Accordion>
 </AccordionGroup>
 
-## Provider Capability Modes
+## 提供方能力模式
 
-The shared video generation contract supports mode-specific capabilities,
-rather than only using flat aggregate limits. New provider implementations
-should prefer explicit mode blocks:
+共享的视频生成契约支持特定于模式的能力，
+而不是仅使用扁平的聚合限制。新的提供方实现
+应优先使用显式的模式块：
 
 ```typescript
 capabilities: {
@@ -439,15 +437,15 @@ capabilities: {
 }
 ```
 
-Flat aggregate fields such as `maxInputImages` and `maxInputVideos`
-are **not sufficient** to declare transform mode support. Providers should
-explicitly declare `generate`, `imageToVideo`, and `videoToVideo` so that
-live tests, contract tests, and the shared `video_generate` tool can
-deterministically validate mode support.
+诸如 `maxInputImages` 和 `maxInputVideos` 之类的扁平聚合字段
+**不足以**声明转换模式支持。提供方应当
+显式声明 `generate`、`imageToVideo` 和 `videoToVideo`，以便
+实时测试、契约测试以及共享的 `video_generate` 工具能够
+确定性地验证模式支持。
 
-When a model within a provider supports a broader range of reference inputs than
-other models, use `maxInputImagesByModel`, `maxInputVideosByModel`, or
-`maxInputAudiosByModel` instead of raising the limit for the entire mode.
+当提供方中的某个模型支持比
+其他模型更广泛的参考输入范围时，请使用 `maxInputImagesByModel`、`maxInputVideosByModel` 或
+`maxInputAudiosByModel`，而不是提高整个模式的限制。
 
 ## 实时测试
 
@@ -509,7 +507,7 @@ pnpm test:live:media video --video-providers fal
 或者通过 CLI：
 
 ```bash
-openclaw config set agents.defaults.videoGenerationModel.primary "qwen/wan2.6-t2v"
+openclaw config set agents.defaults.mediaModels.video.primary "qwen/wan2.6-t2v"
 ```
 
 ## 相关内容

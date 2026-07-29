@@ -93,7 +93,7 @@ openclaw acp client --server "node" --server-args openclaw.mjs acp --url ws://12
 - `read` 的自动批准仅限于当前工作目录范围内（设置了 `--cwd` 时则以该目录为准）。
 - ACP 仅自动批准窄范围的只读类别：在当前 `cwd` 范围内的 `read` 调用，以及只读搜索工具（`search`、`web_search`、`memory_search`）。未知/非核心工具、超出范围的读取、具备执行能力的工具、控制平面工具、会修改状态的工具以及交互式流程，始终需要显式的提示批准。
 - 服务器提供的 `toolCall.kind` 被视为不受信任的元数据，而不是授权来源。
-- 此 ACP 桥接策略与 ACPX harness 权限是分开的。如果你通过 `acpx` 后端运行 OpenClaw，`plugins.entries.acpx.config.permissionMode=approve-all` 是该 harness 会话的紧急“yolo”开关。
+- 该 ACP 桥接策略与 ACPX harness 权限是分开的。如果你通过 `acpx` 后端运行 OpenClaw，`plugins.entries.acpx.config.permissionMode=approve-all` 是该 harness 会话的紧急“yolo”开关。
 
 ## 协议冒烟测试
 
@@ -297,9 +297,9 @@ env OPENCLAW_HIDE_BANNER=1 OPENCLAW_SUPPRESS_NOTES=1 node openclaw.mjs acp ...
 
 - `--token` 和 `--password` 在某些系统上可能会在本地进程列表中可见。建议优先使用 `--token-file`/`--password-file` 或环境变量（`OPENCLAW_GATEWAY_TOKEN`、`OPENCLAW_GATEWAY_PASSWORD`）。
 - Gateway 认证解析遵循其他 Gateway 客户端使用的共享契约：
-  - 本地模式：先使用 env（`OPENCLAW_GATEWAY_*`），再使用 `gateway.auth.*`；仅当 `gateway.auth.*` 未设置时才回退到 `gateway.remote.*`（已配置但未解析的本地 SecretRef 会直接失败，而不会静默回退）
-  - 远程模式：使用 `gateway.remote.*`，并根据远程优先级规则回退到 env/config
-  - `--url` 可安全覆盖配置，不会复用隐式配置/env 凭据；请显式传入 `--token`/`--password`（或文件变体）
+  - 本地模式：先查找 `gateway.auth.*`，然后是环境变量（`OPENCLAW_GATEWAY_*`）；仅当 `gateway.auth.*` 未设置时才回退到 `gateway.remote.*`（已配置但未解析的本地 SecretRef 会直接失败，而不会静默回退）
+  - 远程模式：`gateway.remote.*`，并按远程优先级规则进行环境/配置回退
+  - `--url` 可安全覆盖配置，不会复用隐式配置/环境凭据；请显式传入 `--token`/`--password`（或其文件版本）
 
 ### `acp client` 选项
 

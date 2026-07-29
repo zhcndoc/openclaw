@@ -9,9 +9,9 @@ title: "安装"
 
 ## 系统要求
 
-- **Node 22.22.3+、24.15+ 或 25.9+** - Node 24 是默认目标；安装脚本会自动处理这一点。
-- **macOS、Linux 或 Windows** - Windows 用户可以从原生 Windows Hub 应用、PowerShell CLI 安装程序或 WSL2 Gateway 开始。参见 [Windows](/platforms/windows)。
-- 仅在你从源代码构建时才需要 `pnpm`。
+- **Node 22.22.3+, 24.15+, or 25.9+** - Node 26 is the recommended default; the installer script provisions it automatically when Node is missing.
+- **macOS, Linux, or Windows** - Windows users can start with the native Windows Hub app, the PowerShell CLI installer, or a WSL2 Gateway. See [Windows](/platforms/windows).
+- `pnpm` is only needed if you build from source.
 
 ## 推荐：安装脚本
 

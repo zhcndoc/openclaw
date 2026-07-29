@@ -50,6 +50,12 @@ Webhook 认证详情：
 - 空 token 或缺失 token 会直接拒绝。
 - Payload 可以是 `application/x-www-form-urlencoded` 或 `application/json`；`token`、`user_id` 和 `text` 是必需的。
 
+## 入站持久性
+
+在令牌、sender-policy 和速率限制检查通过后，OpenClaw 会从已存储的 envelope 中移除 webhook 令牌，并在确认之前将事件持久化入队。只有在该追加操作成功后，路由才会返回 `204`；如果持久化失败，则返回 `503`，以便 Synology Chat 可以重试，而不是悄悄丢失消息。
+
+待处理或可重试的事件在 Gateway 重启后仍会保留。Synology 稳定的 `post_id` 会在对应的活动或保留完成记录存在时，抑制重复的队列条目。跨越队列到 agent 交接的投递仍然是至少一次，因此该边界处的崩溃仍可能重放一次 turn。
+
 最小配置：
 
 ```json5

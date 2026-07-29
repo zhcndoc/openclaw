@@ -20,7 +20,7 @@ title: "Cron"
 
 ## 快速创建作业
 
-`openclaw cron create` 是 `openclaw cron add` 的别名。对于新作业，请先放置调度，再放置提示：
+`openclaw cron create` 是 `openclaw cron add` 的别名。对于新作业，请先提供调度，再提供提示：
 
 ```bash
 openclaw cron create "0 7 * * *" \
@@ -55,6 +55,8 @@ openclaw cron create "*/15 * * * *" \
 ## 会话
 
 `--session` 接受 `main`、`isolated`、`current` 或 `session:<id>`。
+
+Agent-turn 作业在可用会话上下文时，默认使用创建它们的对话。若没有会话键，包括普通 CLI 调用和省略该参数的 API 调用，目标都会回退为 `isolated`。
 
 <AccordionGroup>
   <Accordion title="会话键">
@@ -100,8 +102,8 @@ openclaw cron create "*/15 * * * *" \
 
 失败通知按以下顺序解析：
 
-1. `delivery.failureDestination` 作业上的设置。
-2. 全局 `cron.failureDestination`。
+1. 作业上的 `delivery.failureDestination`。
+2. `cron.failureAlert` 上的全局目标字段（`mode`、`channel`、`to`、`accountId`）。已退役的 `cron.failureDestination` 块会由 `openclaw doctor --fix` 合并到这些字段中。
 3. 作业的主 announce 目标（当以上两者都无法解析为具体目标时）。
 
 <Note>
@@ -218,7 +220,7 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 ## 迁移旧作业
 
 <Note>
-如果你在当前投递和存储格式之前已有 cron 作业，请运行 `openclaw doctor --fix`。Doctor 会规范化旧版 cron 字段（`jobId`、`schedule.cron`、顶层投递字段，包括旧的 `threadId`、payload `provider` 投递别名），并将 `notify: true` 的 webhook 回退作业从 `cron.webhook` 迁移到显式 webhook 投递。已经向聊天发送公告的作业会保留该投递，并获得一个完成 webhook 目标。当 `cron.webhook` 未设置时，对于没有迁移目标的作业，会移除无效的顶层 `notify` 标记（现有投递保持不变），因此 `doctor --fix` 不会再反复提醒这些作业。
+如果你在当前投递和存储格式之前有 cron 作业，请运行 `openclaw doctor --fix`。Doctor 会规范化旧版 cron 字段（`jobId`、`schedule.cron`、顶层投递字段，包括旧版 `threadId`、payload `provider` 投递别名），并在移除该配置键之前，将 `notify: true` 的 webhook 回退作业从已弃用的原始 `cron.webhook` 值迁移为显式的 webhook 投递。已经向聊天公告的作业会保留该投递，并获得一个完成 webhook 目标。对于没有旧版 webhook 的作业，如果没有可迁移目标，则会移除无效的顶层 `notify` 标记（现有投递保持不变），因此 `doctor --fix` 不会再反复提醒这些作业。
 </Note>
 
 ## 常见编辑
@@ -298,13 +300,25 @@ openclaw cron runs --id <job-id> --limit 50
 openclaw cron runs --id <job-id> --run-id <run-id>
 ```
 
-`openclaw cron list` 默认显示所有匹配的作业。传入 `--agent <id>` 仅显示其有效规范化代理 id 匹配的作业；没有存储代理 id 的作业将计为已配置的默认代理。
+`openclaw cron list` 默认显示已启用的作业。传入 `--all` 可包含已禁用的作业，或传入 `--agent <id>` 仅显示其有效规范化 agent id 匹配的作业；没有存储 agent id 的作业会被视为使用已配置的默认 agent。
 
 `openclaw cron get <job-id>` 直接返回存储的作业 JSON。想要带投递路由预览的人类可读视图时，请使用 `cron show <job-id>`。
 
 `cron list --json` 和 `cron show <job-id> --json` 会在每个作业中包含一个顶层 `status` 字段，该字段由 `enabled`、`state.runningAtMs` 和 `state.lastRunStatus` 计算得出。取值：`disabled`、`running`、`ok`、`error`、`skipped` 或 `idle`。JSON 状态保持规范且不加修饰，因此外部工具可以读取作业状态而无需重新推导；人类可读输出可能会为重复的 `error` 状态附加失败次数。
 
 `cron runs` 条目包含投递诊断信息，涵盖预期的 cron 目标、解析后的目标、message 工具发送、回退使用情况以及已投递状态。
+
+每个作业的私有临时存储（心跳检查清单和类似的监控上下文）：
+
+```bash
+openclaw cron scratch <job-id>                  # 打印当前临时存储内容
+openclaw cron scratch <job-id> --json           # 临时存储加修订元数据
+openclaw cron scratch <job-id> --set "text"     # 用精确文本替换临时存储
+openclaw cron scratch <job-id> --file notes.md  # 从文件替换临时存储（- 表示 stdin）
+openclaw cron scratch <job-id> --unset          # 删除临时存储行
+```
+
+Scratch 存储在共享状态数据库中，上限为 256 KiB，且绝不会包含在 `cron list`/`cron get`/`cron runs` 输出中。写入操作受 compare-and-swap 保护，并以命令开始时读取到的修订版本为准；如需固定到显式修订版本，请改用 `--expected-revision <n>`。有关心跳监控如何使用 scratch，请参见 [Heartbeat](/gateway/heartbeat#monitor-scratch-optional)。
 
 代理和会话重定向：
 

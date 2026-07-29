@@ -73,8 +73,22 @@ type MessagePresentationAction =
       approvalKind: "exec" | "plugin";
       decision: "allow-once" | "allow-always" | "deny";
     }
+  | {
+      type: "question";
+      questionId: string;
+      optionValue: string;
+    }
   | { type: "url"; url: string }
-  | { type: "web-app"; url: string };
+  | {
+      type: "web-app";
+      url: string;
+      widgetId?: string;
+    }
+  | {
+      type: "web-app";
+      url?: string;
+      widgetId: string;
+    };
 
 type MessagePresentationButton = {
   label: string;
@@ -113,18 +127,52 @@ type ReplyPayloadDelivery = {
 
 按钮语义：
 
-- `action.type: "command"` 通过 core 的命令路径运行原生斜杠命令。用于内置命令按钮和菜单。
-- `action.type: "callback"` 通过频道的交互路径携带不透明的插件数据。频道插件不得将回调数据重新解释为斜杠命令。
-- `action.type: "approval"` 标识一个持久化的操作员审批、其明确的 `exec` 或 `plugin` 类型，以及请求的决策。频道插件将该动作编码为传输私有的回调，并通过审批服务解析；它们不得解析 `/approve` 命令文本或从 ID 推断类型。
-- `action.type: "url"` 打开普通链接。
-- `action.type: "web-app"` 启动频道原生 Web 应用。
-- `value` 是旧版不透明回调值。新控件应使用 `action`，这样频道插件就可以在不根据文本猜测的情况下映射命令和回调。
-- `url`、`webApp` 和 `web_app` 仍作为已弃用的边界输入被接受。规范化器会保留这些字段，以便渲染器能够区分已发送的旧版语义和显式的类型化动作。新的生产者应使用 `action`。
-- `label` 是必需项，也用于文本回退。
-- `style` 仅作为建议。渲染器应将不支持的样式映射为安全默认值，而不是发送失败。
-- `priority` 是可选项。当频道声明动作数量限制且必须丢弃控件时，core 会优先保留更高优先级的按钮，并在相同优先级按钮之间保持原始顺序。当所有控件都能放下时，保持作者编写顺序。
-- `disabled` 是可选项。频道必须通过 `supportsDisabled` 明确启用；否则 core 会将禁用控件降级为非交互式回退文本。即使携带 `command` 动作，禁用按钮在回退文本中也始终只渲染标签。
-- `reusable` 是可选项。支持可复用原生回调的频道可以在一次成功交互后仍保留该动作可用。用于可重复或幂等的动作，例如刷新、查看、更多详情；普通的一次性审批和破坏性动作应保持未设置。
+- `action.type: "command"` runs a native slash command through core's command
+  path. Use this for built-in command buttons and menus.
+- `action.type: "callback"` carries opaque plugin data through the channel's
+  interaction path. Channel plugins must not reinterpret callback data as slash
+  commands.
+- `action.type: "approval"` identifies one durable operator approval, its
+  explicit `exec` or `plugin` kind, and the requested decision. Channel plugins
+  encode that action into a transport-private callback and resolve it through
+  the approval service; they must not parse `/approve` command text or infer
+  kind from the ID.
+- `action.type: "question"` identifies one choice for a live, runtime-authored
+  `ask_user` question. Like `approval`, this is an OpenClaw runtime action;
+  agents and plugins must not synthesize question IDs. Telegram, Discord, and
+  Slack map it to transport-private native callbacks and resolve the choice
+  through the Gateway. When the question becomes answered, expired, or
+  cancelled, those channels edit the delivered message, remove its actions,
+  and append the terminal status. WhatsApp, Signal, and iMessage render up to
+  four single-select choices as `1️⃣` through `4️⃣` reactions. Other question
+  shapes degrade to label text, and the user can answer with a plain-text
+  reply.
+- `action.type: "url"` opens a normal link.
+- `action.type: "web-app"` launches a channel-native web app. Set `url` for a
+  URL-backed app or `widgetId` for an OpenClaw-hosted widget whose launch
+  mechanics are owned by the channel; at least one is required. When both are
+  present, a channel can prefer its native hosted-widget launch and use the URL
+  where that mechanism is unavailable.
+- `value` is the legacy opaque callback value. New controls should use `action`
+  so channel plugins can map commands and callbacks without guessing from text.
+- `url`, `webApp`, and `web_app` remain accepted as deprecated boundary inputs.
+  Normalizers preserve these fields so renderers can distinguish shipped legacy
+  semantics from explicit typed actions. New producers should use `action`.
+- `label` is required and is also used in text fallback.
+- `style` is advisory. Renderers should map unsupported styles to a safe
+  default, not fail the send.
+- `priority` is optional. When a channel advertises action limits and controls
+  must be dropped, core keeps higher-priority buttons first and preserves
+  original order among equal priority buttons. When all controls fit, authored
+  order is preserved.
+- `disabled` is optional. Channels must opt in with `supportsDisabled`; otherwise
+  core degrades the disabled control to non-interactive fallback text. A
+  disabled button always renders label-only in fallback text, even when it
+  carries a `command` action.
+- `reusable` is optional. Channels that support reusable native callbacks may
+  keep the action available after a successful interaction. Use it for
+  repeatable or idempotent actions such as refresh, inspect, or more details;
+  leave it unset for normal one-shot approvals and destructive actions.
 
 选择器语义：
 
@@ -440,16 +488,17 @@ core 会在渲染前将通用限制应用于语义化控件。渲染器仍然负
 
 当某个频道无法渲染交互控件时，按钮和值选择会回退为纯文本。此回退行为在保持可用性的同时，会保护不透明的回调数据私密：
 
-- **`command`-typed actions** render as `label: \`command\`` so users can
+- **`command`-typed actions** render as `` label: `command` `` so users can
   copy the command and run it manually in the channel input.
 - **`callback`-typed actions** and legacy **`value`** fields render as
   label-only. The opaque callback value is not exposed in fallback text.
 - **`approval`-typed actions** render label-only. Approval IDs and decisions are
   transport data and are not exposed through generic scalar helpers or fallback
   text.
-- **`url` / `web-app` actions** and deprecated **`url` / `webApp` / `web_app`**
-  inputs render the URL text alongside the button label, since the URL is
-  user-facing.
+- **`url` actions**, URL-backed **`web-app` actions**, and deprecated **`url` /
+  `webApp` / `web_app`** inputs render the URL text alongside the button label,
+  since the URL is user-facing. Hosted-widget-only actions render label-only on
+  channels without a native widget launch.
 - **Select options** render as label-only. The underlying option value is not
   exposed in fallback text.
 
@@ -550,9 +599,8 @@ import {
 SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 `@deprecated`：
 
-- `InteractiveReply`、`InteractiveReplyBlock`、`InteractiveReplyButton`、
-  `InteractiveReplyOption`、`InteractiveReplySelectBlock` 和
-  `InteractiveReplyTextBlock`
+- `InteractiveReply`, `InteractiveReplyBlock`, `InteractiveReplyButton`, and
+  `InteractiveReplyOption`
 - `normalizeInteractiveReply(...)`
 - `hasInteractiveReplyBlocks(...)`
 - `interactiveReplyToPresentation(...)`
@@ -567,9 +615,7 @@ SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 
 审批辅助工具也有以 presentation 为优先的替代方案：
 
-- 使用 `buildApprovalPresentationFromActionDescriptors(...)` 代替
-  `buildApprovalInteractiveReplyFromActionDescriptors(...)`
-- 使用 `buildApprovalPresentation(...)` 代替
+- use `buildApprovalPresentation(...)` instead of
   `buildApprovalInteractiveReply(...)`
 - 使用 `buildExecApprovalPresentation(...)` 代替
   `buildExecApprovalInteractiveReply(...)`

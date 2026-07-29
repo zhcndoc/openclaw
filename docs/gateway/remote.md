@@ -90,19 +90,19 @@ ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
 
 Gateway 凭据解析在调用 / 探测 / 状态路径以及 Discord exec-approval 监控中遵循同一共享契约。Node-host 使用相同契约，但有一个本地模式例外（它会忽略 `gateway.remote.*`）。
 
-- 显式凭据（`--token`、`--password`，或工具的 `gatewayToken`）在接受显式认证的调用路径上始终优先。
-- URL 覆盖安全性：
-  - CLI `--url` 绝不会复用隐式配置 / 环境凭据。
-  - 环境变量 `OPENCLAW_GATEWAY_URL` 只能使用环境凭据（`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`）。
-- 本地模式默认值：
-  - token: `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token` -> `gateway.remote.token`（仅在本地 token 未设置时才回退到远程）
-  - password: `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.auth.password` -> `gateway.remote.password`（仅在本地 password 未设置时才回退到远程）
-- 远程模式默认值：
+- Explicit credentials (`--token`, `--password`, or a tool's `gatewayToken`) always win on call paths that accept explicit auth.
+- URL override safety:
+  - CLI `--url` never reuses implicit config/env credentials.
+  - Env `OPENCLAW_GATEWAY_URL` may use env credentials only (`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`).
+- Local mode defaults:
+  - token: `gateway.auth.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.remote.token` (remote fallback only when the local token is unset)
+  - password: `gateway.auth.password` -> `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` (remote fallback only when the local password is unset)
+- Remote mode defaults:
   - token: `gateway.remote.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token`
   - password: `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` -> `gateway.auth.password`
-- Node-host 本地模式例外：`gateway.remote.token` / `gateway.remote.password` 会被忽略。
-- 远程 probe/status 的 token 检查默认是严格的：当目标为远程模式时，它们只使用 `gateway.remote.token`（不回退到本地 token）。
-- Gateway 环境覆盖只使用 `OPENCLAW_GATEWAY_*`。
+- Node-host local-mode exception: environment credentials stay first and `gateway.remote.token` / `gateway.remote.password` are ignored because node commands target an explicit host and port.
+- Remote probe/status token checks are strict by default: they use `gateway.remote.token` only (no local token fallback) when targeting remote mode.
+- Gateway env overrides use `OPENCLAW_GATEWAY_*` only.
 
 ## Chat UI 远程访问
 
@@ -120,16 +120,16 @@ macOS 菜单栏应用端到端驱动相同的设置：远程状态检查、WebCh
 
 除非你确定需要绑定，否则请让 Gateway 保持为 **仅限 loopback**。
 
-- **Loopback + SSH/Tailscale Serve** 是最安全的默认方式（无公网暴露）。
-- 明文 `ws://` 仅对 loopback、私有/LAN（RFC 1918）、link-local、CGNAT、`.local` 和 `.ts.net` 主机被接受。公网远程主机必须使用 `wss://`。
-- **非 loopback 绑定**（`lan`/`tailnet`/`custom`，或者在 loopback 不可用时的 `auto`）必须使用 Gateway 认证：token、password，或带有 `gateway.auth.mode: "trusted-proxy"` 的身份感知反向代理。
-- `gateway.remote.token` / `.password` 是客户端凭据来源；它们本身不会配置服务端认证。
-- 本地调用路径仅可在 `gateway.auth.*` 未设置时，将 `gateway.remote.*` 作为回退。
-- 如果通过 SecretRef 显式配置了 `gateway.auth.token` / `gateway.auth.password` 且尚未解析，则解析会失败并关闭（不会被远程回退掩盖）。
-- `gateway.remote.tlsFingerprint` 会为 `wss://` 的远程 TLS 证书进行 pin，包括 macOS 直接模式。没有已存储的 pin 时，macOS 只会在正常系统信任通过后的首次使用时进行 pin；自签名或私有 CA 的 Gateway 需要显式 fingerprint 或通过 SSH 使用 Remote。
-- **Tailscale Serve** 可以在 `gateway.auth.allowTailscale: true` 时通过身份头为 Control UI/WebSocket 流量进行认证。HTTP API 端点不使用该头部认证，而是遵循 Gateway 的正常 HTTP 认证模式。此无 token 流程假定 Gateway 主机是可信的；若希望所有地方都使用共享密钥认证，请将其设为 `false`。
-- **Trusted-proxy** 认证默认期望一个非 loopback 的身份感知代理。同主机 loopback 反向代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
-- 将浏览器控制视为运维者访问：仅限 tailnet，并且需要有意的节点配对。
+- **Loopback + SSH/Tailscale Serve** is the safest default (no public exposure).
+- Plaintext `ws://` is accepted for loopback, private/LAN (RFC 1918), link-local, CGNAT, `.local`, and `.ts.net` hosts. Public remote hosts must use `wss://`.
+- **Non-loopback binds** (`lan`/`tailnet`/`custom`, or `auto` when loopback is unavailable) must use Gateway auth: token, password, or an identity-aware reverse proxy with `gateway.auth.mode: "trusted-proxy"`.
+- `gateway.remote.token` / `.password` are client credential sources; they do not configure server auth by themselves.
+- Local call paths can use `gateway.remote.*` as a fallback only when `gateway.auth.*` is unset.
+- If `gateway.auth.token` / `gateway.auth.password` is explicitly configured via SecretRef and unresolved, resolution fails closed (no remote fallback masking).
+- `gateway.remote.tlsFingerprint` pins the remote TLS cert for `wss://`, including both operator/control traffic and the companion node in macOS direct mode. Without a stored pin, macOS pins on first use only after normal system trust passes; self-signed or private-CA Gateways need an explicit fingerprint or Remote over SSH.
+- **Tailscale Serve** can authenticate Control UI/WebSocket traffic via identity headers when `gateway.auth.allowTailscale: true`. HTTP API endpoints do not use that header auth and instead follow the Gateway's normal HTTP auth mode. This tokenless flow assumes the Gateway host is trusted; set it to `false` for shared-secret auth everywhere.
+- **Trusted-proxy** auth expects a non-loopback identity-aware proxy by default. Same-host loopback reverse proxies require explicit `gateway.auth.trustedProxy.allowLoopback = true`.
+- Treat browser control like operator access: tailnet-only plus deliberate node pairing.
 
 深入了解：[安全](/gateway/security)。
 

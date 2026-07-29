@@ -71,15 +71,14 @@ openclaw onboard --non-interactive \
 
 模型引用使用 `huggingface/<org>/<model>` 形式（Hub 风格 ID）。OpenClaw 内置目录：
 
-| 模型                         | 引用（前缀为 `huggingface/`）          |
-| ---------------------------- | ----------------------------------------- |
-| DeepSeek R1                  | `deepseek-ai/DeepSeek-R1`                 |
-| DeepSeek V3.1                | `deepseek-ai/DeepSeek-V3.1`               |
-| GPT-OSS 120B                 | `openai/gpt-oss-120b`                     |
-| Llama 3.3 70B Instruct Turbo | `meta-llama/Llama-3.3-70B-Instruct-Turbo` |
+| Model         | Ref (prefix with `huggingface/`) |
+| ------------- | -------------------------------- |
+| DeepSeek R1   | `deepseek-ai/DeepSeek-R1`        |
+| DeepSeek V3.1 | `deepseek-ai/DeepSeek-V3.1`      |
+| GPT-OSS 120B  | `openai/gpt-oss-120b`            |
 
 <Tip>
-当你的 token 有效时，OpenClaw 还会在入门设置和 Gateway 启动时，从 **GET** `https://router.huggingface.co/v1/models` 发现任何其他模型，因此你的目录可以包含远不止上面四个模型。你可以在任何模型 ID 后附加 `:fastest` 或 `:cheapest`；HF 的路由器会将请求路由到匹配的推理提供方。请在[推理提供方设置](https://hf.co/settings/inference-providers)中设置默认提供方顺序。
+When your token is valid, OpenClaw also discovers any other model from **GET** `https://router.huggingface.co/v1/models` at onboarding time and Gateway startup, so your catalog can include far more than the three models above. You can append `:fastest` or `:cheapest` to any model id; HF's router routes to the matching inference provider. Set your default provider order in [Inference Provider settings](https://hf.co/settings/inference-providers).
 </Tip>
 
 ## 高级配置
@@ -172,21 +171,17 @@ openclaw onboard --non-interactive \
     ```
   </Accordion>
 
-  <Accordion title="配置：DeepSeek + Llama + GPT-OSS，带别名">
+  <Accordion title="Config: DeepSeek + GPT-OSS with aliases">
     ```json5
     {
       agents: {
         defaults: {
           model: {
             primary: "huggingface/deepseek-ai/DeepSeek-V3.1",
-            fallbacks: [
-              "huggingface/meta-llama/Llama-3.3-70B-Instruct-Turbo",
-              "huggingface/openai/gpt-oss-120b",
-            ],
+            fallbacks: ["huggingface/openai/gpt-oss-120b"],
           },
           models: {
             "huggingface/deepseek-ai/DeepSeek-V3.1": { alias: "DeepSeek V3.1" },
-            "huggingface/meta-llama/Llama-3.3-70B-Instruct-Turbo": { alias: "Llama 3.3 70B Turbo" },
             "huggingface/openai/gpt-oss-120b": { alias: "GPT-OSS 120B" },
           },
         },

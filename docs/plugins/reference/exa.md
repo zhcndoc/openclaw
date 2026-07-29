@@ -16,7 +16,7 @@ title: "Exa 插件"
 
 ## 接口
 
-contracts: webSearchProviders
+contracts: `webSearchProviders`
 
 ## 相关文档
 

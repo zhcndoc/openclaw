@@ -147,11 +147,11 @@ export default handler;
 
 **命令事件**（`command:stop`）：`context.sessionEntry`、`context.sessionId`、`context.commandSource`、`context.senderId`。
 
-**消息事件**（`message:received`）：`context.from`、`context.content`、`context.channelId`、`context.metadata`（提供方特定数据，包括 `senderId`、`senderName`、`guildId`）。`context.content` 会优先使用命令类消息中非空白的命令正文，然后回退到原始入站正文和通用正文；它不包含仅代理可见的增强内容，例如线程历史或链接摘要。
+**消息事件** (`message:received`): `context.from`, `context.content`, `context.channelId`, `context.media` (按顺序暂存的附件事实)，`context.originalMedia` 以及当远程媒体尚未在本地暂存时的 `context.mediaStagingPending`，还有 `context.metadata`（提供方特定数据，包括 `senderId`、`senderName`、`guildId`）。`context.content` 优先使用命令类消息中非空的命令正文，然后回退到原始传入正文和通用正文；它不包含仅供 agent 使用的增强内容，例如线程历史或链接摘要。`metadata` 中的旧媒体别名已弃用。
 
 **消息事件**（`message:sent`）：`context.to`、`context.content`、`context.success`、`context.channelId`，发送失败时还包括 `context.error`。
 
-**消息事件**（`message:transcribed`）：`context.transcript`、`context.from`、`context.channelId`、`context.mediaPath`。
+**消息事件** (`message:transcribed`): `context.transcript`, `context.from`, `context.channelId`, and `context.media`. `context.mediaPath` and `context.mediaType` 仍然是第一个事实的弃用别名。
 
 **消息事件**（`message:preprocessed`）：`context.bodyForAgent`（最终增强后的正文）、`context.from`、`context.channelId`。
 
@@ -250,7 +250,7 @@ openclaw hooks enable <hook-name>
       "entries": {
         "bootstrap-extra-files": {
           "enabled": true,
-          "paths": ["packages/*/AGENTS.md", "packages/*/TOOLS.md"]
+          "paths": ["packages/*/AGENTS.md"]
         }
       }
     }
@@ -258,7 +258,9 @@ openclaw hooks enable <hook-name>
 }
 ```
 
-`patterns` 和 `files` 也可作为 `paths` 的别名使用。路径相对于工作区解析，并且必须保留在工作区内。只会加载被识别的 bootstrap 基名（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md`、`MEMORY.md`）。
+`patterns` 和 `files` 可作为 `paths` 的别名使用。路径将相对于工作区解析，且必须保持在工作区内部。只会加载可识别的 bootstrap 基本文件名（`AGENTS.md`、`SOUL.md`、`IDENTITY.md`、`USER.md`、`BOOTSTRAP.md`、`MEMORY.md`）。
+
+`TOOLS.md` 不再被识别为 bootstrap 基本文件名，也不会加载到运行时上下文中。`openclaw doctor --fix` 会将工作区根目录下的 `TOOLS.md` 迁移到 `AGENTS.md` 的 `## Tools` 部分；命名其他 `TOOLS.md` 文件的模式不会被迁移，应改指向 `AGENTS.md`。
 
 <a id="command-logger"></a>
 
@@ -360,12 +362,12 @@ openclaw hooks enable <hook-name>
 openclaw hooks disable <hook-name>
 ```
 
-## 最佳实践
+## Best Practices
 
-- **保持处理函数快速。** Hook 会在命令处理期间运行。对于耗时较重的工作，请使用 `void processInBackground(event)` 进行即发即弃处理。
-- **优雅地处理错误。** 将有风险的操作包裹在 try/catch 中；不要抛出异常，这样其他处理函数才能继续运行。
-- **尽早过滤事件。** 如果事件类型/动作不相关，立即返回。
-- **使用具体的事件键。** 相比 `"events": ["command"]`，更推荐使用 `"events": ["command:new"]`，以减少开销。
+- **Keep handlers fast.** Hooks run during command processing. For heavier work, use `void processInBackground(event)` for fire-and-forget handling.
+- **Handle errors gracefully.** Wrap risky operations in try/catch; do not throw exceptions so other handlers can continue running.
+- **Filter events early.** If the event type/action is not relevant, return immediately.
+- **Use specific event keys.** Compared with `"events": ["command"]`, it is recommended to use `"events": ["command:new"]` to reduce overhead.
 
 ## 故障排查
 

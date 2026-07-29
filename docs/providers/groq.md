@@ -16,8 +16,8 @@ read_when:
 | Auth env var           | `GROQ_API_KEY`                           |
 | API                    | 兼容 OpenAI（`openai-completions`）       |
 | Base URL               | `https://api.groq.com/openai/v1`         |
-| Audio transcription    | `whisper-large-v3-turbo`（默认）          |
-| Suggested chat default | `groq/llama-3.3-70b-versatile`           |
+| Audio transcription    | `whisper-large-v3-turbo` (default)       |
+| Suggested chat default | `groq/openai/gpt-oss-120b`               |
 
 ## 安装插件
 
@@ -44,7 +44,7 @@ export GROQ_API_KEY=gsk_...
     {
       agents: {
         defaults: {
-          model: { primary: "groq/llama-3.3-70b-versatile" },
+          model: { primary: "groq/openai/gpt-oss-120b" },
         },
       },
     }
@@ -64,7 +64,7 @@ export GROQ_API_KEY=gsk_...
   env: { GROQ_API_KEY: "gsk_..." },
   agents: {
     defaults: {
-      model: { primary: "groq/llama-3.3-70b-versatile" },
+      model: { primary: "groq/openai/gpt-oss-120b" },
     },
   },
 }
@@ -74,17 +74,16 @@ export GROQ_API_KEY=gsk_...
 
 OpenClaw 会随附一个由清单支持的 Groq 目录，其中既包含推理模型，也包含非推理模型。运行 `openclaw models list --provider groq` 可查看你已安装版本的静态条目，或查看 [console.groq.com/docs/models](https://console.groq.com/docs/models) 获取 Groq 的权威列表。
 
-| 模型引用                                        | 名称                    | 推理      | 输入         | 上下文  |
-| ------------------------------------------------ | ----------------------- | --------- | ------------ | ------- |
-| `groq/llama-3.3-70b-versatile`                   | Llama 3.3 70B Versatile | 否        | 文本         | 131,072 |
-| `groq/llama-3.1-8b-instant`                      | Llama 3.1 8B Instant    | 否        | 文本         | 131,072 |
-| `groq/meta-llama/llama-4-scout-17b-16e-instruct` | Llama 4 Scout 17B       | 否        | 文本 + 图像 | 131,072 |
-| `groq/openai/gpt-oss-120b`                       | GPT OSS 120B            | 是        | 文本         | 131,072 |
-| `groq/openai/gpt-oss-20b`                        | GPT OSS 20B             | 是        | 文本         | 131,072 |
-| `groq/openai/gpt-oss-safeguard-20b`              | Safety GPT OSS 20B      | 是        | 文本         | 131,072 |
-| `groq/qwen/qwen3-32b`                            | Qwen3 32B               | 是        | 文本         | 131,072 |
-| `groq/groq/compound`                             | Compound                | 是        | 文本         | 131,072 |
-| `groq/groq/compound-mini`                        | Compound Mini           | 是        | 文本         | 131,072 |
+| Model ref                           | Name               | Reasoning | Input        | Context |
+| ----------------------------------- | ------------------ | --------- | ------------ | ------- |
+| `groq/openai/gpt-oss-120b`          | GPT OSS 120B       | yes       | text         | 131,072 |
+| `groq/openai/gpt-oss-20b`           | GPT OSS 20B        | yes       | text         | 131,072 |
+| `groq/openai/gpt-oss-safeguard-20b` | Safety GPT OSS 20B | yes       | text         | 131,072 |
+| `groq/qwen/qwen3.6-27b`             | Qwen 3.6 27B       | yes       | text + image | 131,072 |
+| `groq/groq/compound`                | Compound           | no        | text         | 131,072 |
+| `groq/groq/compound-mini`           | Compound Mini      | no        | text         | 131,072 |
+
+The manifest also retains `groq/llama-3.1-8b-instant` and `groq/llama-3.3-70b-versatile` as hidden deprecated compatibility rows until Groq's August 16, 2026 shutdown. Use `groq/openai/gpt-oss-20b` and `groq/openai/gpt-oss-120b`, respectively, for new configurations.
 
 <Tip>
   目录会随着每个 OpenClaw 版本演进。`openclaw models list --provider groq` 会显示你已安装版本已知的条目；请与 [console.groq.com/docs/models](https://console.groq.com/docs/models) 交叉核对新添加或已弃用的模型。

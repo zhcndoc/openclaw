@@ -8,12 +8,12 @@ title: "WhatsApp 群组消息"
 sidebarTitle: "WhatsApp 群组"
 ---
 
-对于跨渠道群组模型（Discord、iMessage、Matrix、Microsoft Teams、QQBot、Signal、Slack、Telegram、WhatsApp、Zalo），请参见 [Groups](/channels/groups)。本页涵盖在该模型之上的 WhatsApp 特定行为：激活、群组允许列表、按群组会话键，以及待处理消息上下文注入。
+对于跨渠道群组模型（Discord、iMessage、Matrix、Microsoft Teams、QQBot、Signal、Slack、Telegram、WhatsApp、Zalo），请参见 [Groups](/channels/groups)。本页涵盖该模型之上的 WhatsApp 特定行为：激活、群组允许列表、按群组会话键，以及待处理消息上下文注入。
 
-目标：让 OpenClaw 留在 WhatsApp 群组中，仅在被提及时唤醒，并将该线程与个人 DM 会话分开。
+目标：让 OpenClaw 保持在 WhatsApp 群组中，仅在被提及时唤醒，并将该线程与个人 DM 会话分开。
 
 <Note>
-`agents.list[].groupChat.mentionPatterns` 与其他渠道的提及门控共享。对于多智能体设置，请为每个智能体单独设置，或使用 `messages.groupChat.mentionPatterns` 作为全局兜底。若两者都未设置，则模式将根据智能体身份名称/表情符号生成。
+`agents.entries.*.groupChat.mentionPatterns` 与其他渠道的提及门控共享。对于多代理设置，请为每个代理单独设置，或使用 `messages.groupChat.mentionPatterns` 作为全局回退。如果两者都未设置，则模式将根据代理身份名称/表情符号生成。
 </Note>
 
 ## 行为
@@ -42,14 +42,14 @@ sidebarTitle: "WhatsApp 群组"
     },
   },
   agents: {
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
+        default: true,
         groupChat: {
           mentionPatterns: ["@?openclaw", "\\+?15555550123"],
         },
       },
-    ],
+    },
   },
 }
 ```
@@ -85,10 +85,10 @@ sidebarTitle: "WhatsApp 群组"
 
 ## 已知注意事项
 
-- 心跳运行在代理的主会话中；群组会话从不进行心跳运行。
-- 回声抑制会记住每个会话的组合提示（历史 + 当前消息），因此机器人自身已送达的消息不会再次触发它；相同的重复批次可以被跳过，视为回声。
+- 心跳运行在代理的主会话中；群组会话从不获取心跳运行。
+- 回声抑制会按会话记住组合后的提示词（历史 + 当前消息），因此机器人自己已发送的消息不会再次触发；完全相同的重复批次可以作为回声被跳过。
 - 会话存储条目在每个代理的 SQLite 会话存储中显示为 `agent:<agentId>:whatsapp:group:<jid>`；缺失条目只表示该群组尚未触发过运行。
-- 输入中指示器遵循 `session.typingMode` / `agents.defaults.typingMode`。当可见回复选择进入仅消息工具模式时，默认会立即开始输入，这样即使没有发布任何自动最终回复，群组成员也能看到代理正在工作。显式的输入模式配置仍然优先生效。
+- 输入状态指示器遵循 `agents.entries.*.typingMode` / `agents.defaults.typingMode`。当可见回复选择进入仅消息工具模式时，默认会立即开始输入，这样即使没有自动发布最终回复，群组成员也能看到代理正在工作。明确的 typing-mode 配置仍然优先生效。
 
 ## 相关内容
 

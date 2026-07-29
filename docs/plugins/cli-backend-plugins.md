@@ -86,7 +86,8 @@ acme-cli/acme-large
     }
     ```
 
-    `cliBackends` 是运行时所有权列表；当配置或模型选择提到 `acme-cli/...` 时，它会让 OpenClaw 自动加载该插件。
+    `cliBackends` is the runtime ownership list; it lets OpenClaw auto-load the
+    plugin when model selection or `agentRuntime.id` mentions `acme-cli`.
 
     `setup.cliBackends` 是仅基于描述符的 setup 接口。若模型发现、引导流程或状态需要在不加载插件运行时的情况下识别该后端，请添加它。仅当这些静态描述符已足够用于 setup 时，才使用 `requiresRuntime: false`。
 
@@ -115,17 +116,33 @@ acme-cli/acme-large
         },
         config: {
           command: "acme",
-          args: ["chat", "--json"],
-          output: "json",
-          input: "stdin",
+          args: ["chat", "--output-format", "stream-json", "--prompt", "{prompt}"],
+          resumeArgs: [
+            "chat",
+            "--resume",
+            "{sessionId}",
+            "--output-format",
+            "stream-json",
+            "--prompt",
+            "{prompt}",
+          ],
+          output: "jsonl",
+          resumeOutput: "jsonl",
+          jsonlDialect: "gemini-stream-json",
+          input: "arg",
           modelArg: "--model",
-          sessionArg: "--session",
+          modelAliases: {
+            large: "acme-large-2026",
+            fast: "acme-fast-2026",
+          },
+          sessionArgs: ["--session", "{sessionId}"],
           sessionMode: "existing",
           sessionIdFields: ["session_id", "conversation_id"],
           systemPromptFileArg: "--system-file",
           systemPromptWhen: "first",
           imageArg: "--image",
           imageMode: "repeat",
+          imagePathScope: "workspace",
           reliability: {
             watchdog: {
               fresh: { ...CLI_FRESH_WATCHDOG_DEFAULTS },
@@ -147,41 +164,45 @@ acme-cli/acme-large
     });
     ```
 
-    后端 id 必须与 manifest 中的 `cliBackends` 条目匹配。注册的 `config` 只是默认值；运行时用户配置中的 `agents.defaults.cliBackends.acme-cli` 会覆盖并合并到它之上。
+    The backend id must match the manifest `cliBackends` entry. The registered
+    adapter is authoritative plugin code; OpenClaw config selects the backend
+    but does not rewrite its command contract.
 
   </Step>
 </Steps>
 
 ## 配置结构
 
-`CliBackendConfig` 描述了 OpenClaw 应该如何启动并解析 CLI：
+`CliBackendConfig` describes how OpenClaw should launch and parse the CLI. The
+worked example above intentionally exercises the same command, resume, JSONL,
+model-alias, session, image, and watchdog fields as the bundled
+`google-gemini-cli` adapter:
 
 | Field                                                     | Use                                                                               |
 | --------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `command`                                                 | 二进制名称或绝对命令路径                                                          |
-| `args`                                                    | 新运行的基础 argv                                                                   |
-| `resumeArgs`                                              | 恢复会话时的替代 argv；支持 `{sessionId}`                                           |
-| `output` / `resumeOutput`                                 | 解析器：`json`、`jsonl` 或 `text`                                                  |
-| `jsonlDialect`                                            | JSONL 事件方言：`claude-stream-json` 或 `gemini-stream-json`                       |
-| `liveSession`                                             | 长生命周期 CLI 进程模式（`claude-stdio`）                                          |
-| `input`                                                   | 提示传输方式：`arg` 或 `stdin`                                                     |
-| `maxPromptArgChars`                                       | 在回退到 stdin 之前，`arg` 模式下提示词的最大长度                                  |
-| `env` / `clearEnv`                                        | 要注入的额外环境变量，或在启动前要移除的变量名                                      |
-| `modelArg`                                                | 在模型 id 之前使用的标志                                                           |
-| `modelAliases`                                            | 将 OpenClaw 模型 id 映射到 CLI 原生 id                                             |
-| `sessionArg` / `sessionArgs`                              | 传递会话 id 的方式                                                                  |
-| `sessionMode`                                             | `always`、`existing` 或 `none`                                                     |
-| `sessionIdFields`                                         | OpenClaw 从 CLI 输出中读取的 JSON 字段                                             |
-| `systemPromptArg` / `systemPromptFileArg`                 | 系统提示词传输方式                                                                  |
-| `systemPromptFileConfigArg` / `systemPromptFileConfigKey` | 系统提示词文件的配置覆盖传输方式（例如 `-c`）                                       |
-| `systemPromptMode`                                        | `append` 或 `replace`                                                              |
-| `systemPromptWhen`                                        | `first`、`always` 或 `never`                                                       |
-| `imageArg` / `imageMode`                                  | 图片路径标志，以及如何传递多张图片（`repeat` 或 `list`）                            |
-| `imagePathScope`                                          | 交接前暂存图片文件所在位置：`temp` 或 `workspace`                                   |
-| `serialize`                                               | 保持同一后端的运行顺序                                                              |
-| `reseedFromRawTranscriptWhenUncompacted`                  | 选择启用在压缩前基于有界原始转录内容重新播种，以便安全重置会话                        |
-| `reliability.outputLimits`                                | 单次 live CLI 轮次保留的原始 JSONL 最大字符数/行数（live-session 后端）              |
-| `reliability.watchdog`                                    | 无输出超时调优，分别适用于新运行和恢复运行                                          |
+| `command`                                                 | Binary name or absolute command path                                              |
+| `args`                                                    | Base argv for fresh runs                                                          |
+| `resumeArgs`                                              | Alternate argv for resumed sessions; supports `{sessionId}`                       |
+| `output` / `resumeOutput`                                 | Parser: `json`, `jsonl`, or `text`                                                |
+| `jsonlDialect`                                            | JSONL event dialect: `claude-stream-json` or `gemini-stream-json`                 |
+| `liveSession`                                             | Long-lived CLI process mode (`claude-stdio`)                                      |
+| `input`                                                   | Prompt transport: `arg` or `stdin`                                                |
+| `maxPromptArgChars`                                       | Max prompt length for `arg` mode before falling back to stdin                     |
+| `env` / `clearEnv`                                        | Extra env vars to inject, or names to strip before launch                         |
+| `modelArg`                                                | Flag used before the model id                                                     |
+| `modelAliases`                                            | Map OpenClaw model ids to CLI-native ids                                          |
+| `sessionArgs`                                             | How to pass a session id using `{sessionId}`                                      |
+| `sessionMode`                                             | `always`, `existing`, or `none`                                                   |
+| `sessionIdFields`                                         | JSON fields OpenClaw reads from CLI output                                        |
+| `systemPromptArg` / `systemPromptFileArg`                 | System prompt transport                                                           |
+| `systemPromptFileConfigArg` / `systemPromptFileConfigKey` | Config-override transport for a system prompt file (for example `-c`)             |
+| `systemPromptMode`                                        | `append` or `replace`                                                             |
+| `systemPromptWhen`                                        | `first`, `always`, or `never`                                                     |
+| `imageArg` / `imageMode`                                  | Image path flag and how to pass multiple images (`repeat` or `list`)              |
+| `imagePathScope`                                          | Where staged image files live before handoff: `temp` or `workspace`               |
+| `serialize`                                               | Keep same-backend runs ordered                                                    |
+| `reseedFromRawTranscriptWhenUncompacted`                  | Opt in to bounded raw-transcript reseed before compaction for safe session resets |
+| `reliability.watchdog`                                    | No-output timeout tuning, separate for fresh vs resumed runs                      |
 
 优先选择与 CLI 匹配的最小静态配置。仅为真正属于后端的行为添加插件回调。
 
@@ -191,31 +212,75 @@ acme-cli/acme-large
 
 | Hook                               | Use                                                                         |
 | ---------------------------------- | --------------------------------------------------------------------------- |
-| `normalizeConfig(config, context)` | 在合并后重写旧版用户配置                                      |
-| `resolveExecutionArgs(ctx)`        | 添加请求作用域标志，例如思考力度或 side-question 隔离 |
-| `prepareExecution(ctx)`            | 在启动前创建临时认证、配置或环境桥接         |
-| `transformSystemPrompt(ctx)`       | 应用最终的 CLI 特定系统提示词转换                          |
-| `textTransforms`                   | 双向提示词/输出替换                                    |
-| `defaultAuthProfileId`             | 优先使用特定的 OpenClaw 认证配置文件                                     |
-| `authEpochMode`                    | 决定认证变更如何使已存储的 CLI 会话失效                      |
-| `nativeToolMode`                   | 声明原生工具是不存在、始终开启，还是可由宿主选择      |
-| `sideQuestionToolMode`             | 为 `/btw` side questions 声明已禁用的原生工具                     |
-| `bundleMcp` / `bundleMcpMode`      | 选择接入 OpenClaw 的 loopback MCP 工具桥                                |
-| `ownsNativeCompaction`             | 后端拥有自己的压缩——OpenClaw 让步                           |
-| `runtimeArtifact`                  | 将脚本启动器绑定到其完整的打包包树                |
+| `normalizeConfig(config, context)` | Normalize the registered static adapter with runtime context                |
+| `resolveExecutionArgs(ctx)`        | Add request-scoped flags such as thinking effort or side-question isolation |
+| `prepareExecution(ctx)`            | Create temporary auth, config, or environment bridges before launch         |
+| `transformSystemPrompt(ctx)`       | Apply a final CLI-specific system prompt transform                          |
+| `textTransforms`                   | Bidirectional prompt/output replacements                                    |
+| `defaultAuthProfileId`             | Prefer a specific OpenClaw auth profile                                     |
+| `authEpochMode`                    | Decide how auth changes invalidate stored CLI sessions                      |
+| `nativeToolMode`                   | Declare whether native tools are absent, always on, or host-selectable      |
+| `toolAvailabilityEnforcement`      | Declare whether exact tool caps are enforced in argv or execution staging   |
+| `sideQuestionToolMode`             | Declare disabled native tools for `/btw` side questions                     |
+| `bundleMcp` / `bundleMcpMode`      | Opt into OpenClaw's loopback MCP tool bridge                                |
+| `ownsNativeCompaction`             | Backend owns its own compaction - OpenClaw defers                           |
+| `subscriptionAuthDispatch`         | Opted-in embedded runs on subscription credentials execute via this backend |
+| `runtimeArtifact`                  | Bound a script launcher to its complete bundled package tree                |
 
 保持这些钩子的提供方所有权。不要在核心中为 CLI 添加特定分支，若某个后端钩子可以表达该行为。
 
 `prepareExecution(ctx)` 接收 `ctx.contextTokenBudget`，即为本次运行选择的有效 token
 上限。拥有原生压缩的后端可以将该预算映射到其 CLI 特定的启动契约中。
 
-`runtimeArtifact` 由插件拥有，且用户不可覆盖。只有在一次实时推理轮次铸造或重新验证已验证的设置权限时才会查询它；正常的 CLI 运行不需要它。没有该声明的后端无法铸造已验证的 CLI 设置权限。`bundled-package-tree` 声明会命名精确的 `package.json` 所有者，并要求包入口点就是该命令。OpenClaw 会对已边界化的完整已安装包树进行哈希，包括嵌套依赖，并对重定向 symlink、声明包之外的启动器、必需的外部依赖声明、过大的树以及未知脚本采取失败关闭。只有当该树包含完整的推理实现时才声明它；可选的工具集成不会让外部实现图变得安全。
+`runtimeArtifact` is plugin-owned. It is consulted
+only when a live inference turn mints or revalidates verified setup authority;
+normal CLI runs do not require it. A backend without this declaration cannot
+mint verified CLI setup authority. A `bundled-package-tree` declaration names
+the exact `package.json` owner and requires the package entrypoint to be the
+command. OpenClaw hashes the bounded complete installed package tree, including
+nested dependencies, and fails closed for redirecting symlinks,
+launchers outside the declared package, required external dependency
+declarations, oversized trees, and unknown scripts. Declare this only when that
+tree contains the complete inference implementation; optional tool integrations
+do not make an external implementation graph safe.
 
-如果同一个后端还提供了一个自包含的原生可执行文件，请在 `nativeExecutableNames` 中列出其规范 basename。即便用户覆盖了后端命令，其他原生命令仍然是不受验证的。
+If the same backend also ships a self-contained native executable, list its
+canonical basenames in `nativeExecutableNames`. Other native commands remain
+unverified.
 
 `ctx.executionMode` 在正常轮次中为 `"agent"`，在临时的 `/btw` 调用中为 `"side-question"`。当 CLI 需要不同的一次性标志时使用它，例如为 BTW 禁用原生工具、会话持久化或恢复行为。如果某个后端通常具有 `nativeToolMode: "always-on"`，但其 side-question argv 能可靠地禁用这些工具，也请设置 `sideQuestionToolMode: "disabled"`；否则当 BTW 需要无工具 CLI 运行时，OpenClaw 会失败关闭。
 
-仅当 `resolveExecutionArgs` 能为单次运行禁用每一个后端原生工具时，才将 `nativeToolMode` 设置为 `"selectable"`。对于这些受限运行，`ctx.toolAvailability.native` 是一个空元组，且 `ctx.toolAvailability.mcp` 是精确的宿主隔离 MCP allowlist。该钩子必须替换冲突的工具标志，并返回强制执行这两个值的 argv；OpenClaw 会在最终的新鲜或恢复 argv 上调用一次，并在后端无法强制执行该限制时失败关闭。此上下文中的 MCP 名称之所以可以安全地自动批准，仅仅是因为宿主已经将生成的 MCP 配置限制到了那些服务器和工具。
+Set `nativeToolMode: "selectable"` only when the backend can disable every
+backend-native tool for an individual run. Restricted runs receive a canonical
+contract: `ctx.toolAvailability.native` is the exact backend-native list and
+`ctx.toolAvailability.openClaw` is the exact list of OpenClaw tool names. The
+host independently limits the generated MCP configuration and grant to that
+OpenClaw list; plugins must not translate it in core or add transport prefixes.
+
+Declare how the backend enforces that contract:
+
+- `toolAvailabilityEnforcement: "execution-args"` requires
+  `resolveExecutionArgs`. The hook must replace conflicting tool flags, disable
+  customization surfaces that can execute outside the selected tools, and
+  return enforcing argv for both fresh and resumed runs.
+- `toolAvailabilityEnforcement: "prepare-execution"` requires
+  `prepareExecution`. The hook must stage an exact per-run policy and return
+  `toolAvailabilityEnforced: true`; missing acknowledgement fails closed and
+  OpenClaw cleans up the staged resources before launch.
+
+Runtime caps such as cron `toolsAllow` are normalized and group-expanded by
+OpenClaw before this contract is built. Native tools are disabled, and a
+backend without a complete declared enforcement path fails before execution.
+
+Plugins built against `v2026.7.2-beta.1` through `v2026.7.2-beta.3` may still
+read the deprecated `ctx.toolAvailability.mcp` transport-name projection and
+may omit `toolAvailabilityEnforcement` when a selectable backend implements
+`resolveExecutionArgs`. OpenClaw recognizes that shipped beta path from the
+plugin package's required `openclaw.build.openclawVersion` metadata and
+preserves it through the `2026.8.x` line. New and updated plugins should use canonical
+`ctx.toolAvailability.openClaw` names and declare
+`toolAvailabilityEnforcement: "execution-args"` explicitly; the beta
+compatibility path is scheduled for removal after that window.
 
 ### `ownsNativeCompaction`: opting out of OpenClaw compaction
 
@@ -259,23 +324,16 @@ return {
 工具时，OpenClaw 就可以安全失败。如果它可以在每次运行时禁用所有原生工具，请使用 `"selectable"` 并配合上面的
 `resolveExecutionArgs` 契约。
 
-## 用户配置
+## Selecting the backend
 
-用户可以覆盖任意后端默认值：
+Users select a standalone backend through its model-ref prefix. A backend that
+declares a canonical `modelProvider` can instead be selected through that
+provider model's `agentRuntime.id`. Adapter mechanics remain in the plugin:
 
 ```json5
 {
   agents: {
     defaults: {
-      cliBackends: {
-        "acme-cli": {
-          command: "/opt/acme/bin/acme",
-          args: ["chat", "--json", "--profile", "work"],
-          modelAliases: {
-            large: "acme-large-2026",
-          },
-        },
-      },
       model: {
         primary: "openai/gpt-5.6-sol",
         fallbacks: ["acme-cli/large"],
@@ -285,7 +343,9 @@ return {
 }
 ```
 
-请记录用户最可能需要的最小覆盖项——通常只有当二进制文件不在 `PATH` 中时才需要设置 `command`。
+Put credentials in OpenClaw auth profiles or plugin-owned config. Ensure the
+registered command is on the gateway service's `PATH`; deployments that need a
+different path or argv should change or wrap the plugin registration.
 
 ## 验证
 
@@ -306,18 +366,18 @@ openclaw agent --message "回复必须完全是：backend ok" --model acme-cli/a
 
 ## 清单
 
-<Check>`package.json` 包含 `openclaw.extensions` 以及发布包的构建后运行时条目</Check>
-<Check>`openclaw.plugin.json` 声明了 `cliBackends` 和有意设置的 `activation.onStartup`</Check>
-<Check>当 setup/model 发现应在冷启动时看到后端时，`setup.cliBackends` 已存在</Check>
-<Check>`api.registerCliBackend(...)` 使用与 manifest 相同的后端 id</Check>
-<Check>`agents.defaults.cliBackends.<id>` 下的用户覆盖仍然优先级更高</Check>
-<Check>Session、system prompt、image 和 output parser 设置与真实 CLI 合约一致</Check>
-<Check>有针对性的测试以及至少一个实时 CLI 冒烟测试证明了后端路径</Check>
+<Check>`package.json` has `openclaw.extensions` and built runtime entries for published packages</Check>
+<Check>`openclaw.plugin.json` declares `cliBackends` and intentional `activation.onStartup`</Check>
+<Check>`setup.cliBackends` is present when setup/model discovery should see the backend cold</Check>
+<Check>`api.registerCliBackend(...)` uses the same backend id as the manifest</Check>
+<Check>The backend model prefix or model-scoped `agentRuntime.id` selects the registration</Check>
+<Check>Session, system prompt, image, and output parser settings match the real CLI contract</Check>
+<Check>Targeted tests and at least one live CLI smoke prove the backend path</Check>
 
 ## 相关内容
 
-- [CLI 后端](/gateway/cli-backends) - 用户配置和运行时行为
-- [构建插件](/plugins/building-plugins) - 包和 manifest 基础
-- [插件 SDK 概览](/plugins/sdk-overview) - 注册 API 参考
-- [插件清单](/plugins/manifest) - `cliBackends` 和 setup 描述符
-- [Agent harness](/plugins/sdk-agent-harness) - 完整的外部 agent 运行时
+- [CLI backends](/gateway/cli-backends) - runtime selection and behavior
+- [Building plugins](/plugins/building-plugins) - package and manifest basics
+- [Plugin SDK overview](/plugins/sdk-overview) - registration API reference
+- [Plugin manifest](/plugins/manifest) - `cliBackends` and setup descriptors
+- [Agent harness](/plugins/sdk-agent-harness) - full external agent runtimes

@@ -16,7 +16,7 @@ title: "Tavily 插件"
 
 ## 表面
 
-contracts: tools, webSearchProviders; skills
+contracts: `tools`, `webSearchProviders`; skills
 
 ## 相关文档
 

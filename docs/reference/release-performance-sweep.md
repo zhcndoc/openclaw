@@ -3,7 +3,7 @@ summary: "用于 2026 年 5 月性能、包大小、依赖和 shrinkwrap 清理�
 read_when:
   - 你正在验证 2026 年 5 月的性能和包大小清理
   - 你需要 OpenClaw 性能和依赖博客文章背后的数据
-  - 你正在更改发布门槛、包 shrinkwrap 或插件依赖边界
+  - 你需要在更改 /gateway/security/dependency-locking 的当前策略之前了解历史背景
 title: "发布性能扫描"
 ---
 
@@ -179,7 +179,7 @@ mock-provider 运行的 `v2026.4.14`（重复 3 次；那次运行仅因未输�
 
 代表性的源探针数据点：
 
-| Release             | Default `readyz` p50 | 50 plugins `readyz` p50 | CLI health p50 | Plugin max RSS |
+| Release             | 默认 `readyz` p50 | 50 个插件 `readyz` p50 | CLI health p50 | 插件最大 RSS |
 | ------------------- | -------------------: | ----------------------: | -------------: | -------------: |
 | `v2026.4.29`        |              2,819ms |                 2,618ms |        1,679ms |        389.0MB |
 | `v2026.5.2`         |              2,324ms |                 2,013ms |        1,384ms |        377.2MB |
@@ -230,7 +230,8 @@ mock-provider 运行的 `v2026.4.14`（重复 3 次；那次运行仅因未输�
 
 关键区别在于：**问题并不在 shrinkwrap 本身**。`v2026.5.28` 仍然包含根 shrinkwrap。问题在于包的形态导致 npm 物化出一个很大的嵌套 OpenClaw 依赖树，以及全部 12 个 `@napi-rs/canvas` 平台包。`v2026.5.28` 中嵌套树更小了，而且 canvas 平台分发也 აღარ在本地审计中落地。
 
-关于 shrinkwrap 的通俗解释，以及维护者级别的包检查，请参阅 [npm shrinkwrap](/gateway/security/shrinkwrap)。
+有关当前依赖审查和包策略，请参见
+[dependency locking](/gateway/security/dependency-locking)。
 
 ## 供应链解读
 

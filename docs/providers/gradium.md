@@ -38,14 +38,12 @@ openclaw gateway restart
   <Tab title="配置键">
     ```json5
     {
-      messages: {
-        tts: {
-          auto: "always",
-          provider: "gradium",
-          providers: {
-            gradium: {
-              apiKey: "${GRADIUM_API_KEY}",
-            },
+      tts: {
+        auto: "always",
+        provider: "gradium",
+        providers: {
+          gradium: {
+            apiKey: "${GRADIUM_API_KEY}",
           },
         },
       },
@@ -58,27 +56,25 @@ openclaw gateway restart
 
 ```json5
 {
-  messages: {
-    tts: {
-      auto: "始终",
-      provider: "gradium",
-      providers: {
-        gradium: {
-          speakerVoiceId: "YTpq7expH9539ERJ",
-          // apiKey: "${GRADIUM_API_KEY}",
-          // baseUrl: "https://api.gradium.ai",
-        },
+  tts: {
+    auto: "always",
+    provider: "gradium",
+    providers: {
+      gradium: {
+        speakerVoiceId: "YTpq7expH9539ERJ",
+        // apiKey: "${GRADIUM_API_KEY}",
+        // baseUrl: "https://api.gradium.ai",
       },
     },
   },
 }
 ```
 
-| Key                                             | Type   | Description                                                                                             |
-| ----------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
-| `messages.tts.providers.gradium.apiKey`         | string | 解析后的 API 密钥。支持 `${ENV}` 和密钥引用。                                                            |
-| `messages.tts.providers.gradium.baseUrl`         | string | `api.gradium.ai` 上的 HTTPS Gradium API URL。会去除尾部斜杠。默认值为 `https://api.gradium.ai`。 |
-| `messages.tts.providers.gradium.speakerVoiceId` | string | 当没有指令覆盖时使用的默认语音 ID。                                            |
+| Key                                    | Type   | Description                                                                                             |
+| -------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
+| `tts.providers.gradium.apiKey`         | string | Resolved API key. Supports `${ENV}` and secret refs.                                                    |
+| `tts.providers.gradium.baseUrl`        | string | HTTPS Gradium API URL on `api.gradium.ai`. Trailing slashes stripped. Default `https://api.gradium.ai`. |
+| `tts.providers.gradium.speakerVoiceId` | string | Default voice id used when no directive override is present.                                            |
 
 输出格式会根据目标平台自动选择（见 [输出](#output)），并且不能在 `openclaw.json` 中配置。
 
@@ -120,7 +116,7 @@ openclaw gateway restart
 
 ## 自动选择顺序
 
-在已配置的 TTS 提供商中，Gradium 的自动选择顺序为 `30`。关于当 `messages.tts.provider` 未固定时 OpenClaw 如何选择当前提供商，请参见 [文本转语音](/tools/tts)。
+Among configured TTS providers, Gradium's auto-select order is `30`. See [Text-to-Speech](/tools/tts) for how OpenClaw picks the active provider when `tts.provider` is not pinned.
 
 ## 相关内容
 

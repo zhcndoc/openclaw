@@ -95,7 +95,12 @@ openclaw plugins install --link ./my-plugin
 
 `--force` 会在无需提示的情况下确认非 ClawHub 来源，并在需要时覆盖现有安装目标。对于已跟踪的 npm、ClawHub 或 hook-pack 安装的常规升级，请改用 `openclaw plugins update`。使用 `--link` 时，`--force` 只确认来源；链接目录不会被复制或覆盖。
 
-## 重启和检查
+If a newly installed plugin requires configuration that is not present yet,
+OpenClaw records the install but leaves the plugin disabled. Configure
+`plugins.entries.<id>.config`, then run `openclaw plugins enable <id>`. If an
+existing config entry is present but invalid, install fails without rewriting it.
+
+## Restart and inspect
 
 启用了配置重载的正在运行的托管 Gateway 在安装、更新或卸载插件代码后会自动重启。  
 如果 Gateway 是非托管的，或者已禁用重载，请在检查在线运行时表面之前手动重启它：

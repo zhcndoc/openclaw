@@ -16,7 +16,7 @@ title: "Groq 插件"
 
 ## 表面
 
-providers: groq; contracts: mediaUnderstandingProviders
+providers: `groq`; contracts: `mediaUnderstandingProviders`
 
 ## 相关文档
 

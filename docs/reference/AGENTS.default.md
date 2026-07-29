@@ -21,7 +21,6 @@ mkdir -p ~/.openclaw/workspace
 ```bash
 cp docs/reference/templates/AGENTS.md ~/.openclaw/workspace/AGENTS.md
 cp docs/reference/templates/SOUL.md ~/.openclaw/workspace/SOUL.md
-cp docs/reference/templates/TOOLS.md ~/.openclaw/workspace/TOOLS.md
 ```
 
 3. 可选：使用此文件中的个人助手技能清单，而不是通用模板：
@@ -67,18 +66,21 @@ cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 
 ## 记忆系统（推荐）
 
-- 每日日志：`memory/YYYY-MM-DD.md`（如需要请创建 `memory/`）。
-- 长期记忆：`MEMORY.md`，用于保存持久化事实、偏好和决定。
-- 小写的 `memory.md` 只是旧版修复输入；不要刻意同时保留这两个根文件。
-- 在会话开始时，如存在，请读取今天、昨天以及 `MEMORY.md`。
-- 在写入记忆文件之前，先读取它们；只写入具体更新，不要写空占位符。
-- 记录：决定、偏好、约束、未完成事项。
-- 除非明确要求，否则避免记录秘密。
+- 每日日志：`memory/YYYY-MM-DD.md`（如有需要，请创建 `memory/`）。
+- 用户模型：`USER.md`，用于记录带日期的、仍然有效或已被取代的关于稳定偏好和个人资料事实的指令。
+- 长期记忆：`MEMORY.md`，用于记录持久的、非个人资料类事实和决策。
+- 小写的 `memory.md` 仅作为旧版修复输入；不要有意同时保留这两个根目录文件。
+- 在会话开始时，读取今天 + 昨天 + `MEMORY.md`（如果存在）。
+- 在写入记忆文件之前，先读取它们；只写入具体更新，不要写空占位内容。
+- 将偏好作为指令记录到 `USER.md`；将决策、约束和未闭环事项按适当方式记录到持久记忆或每日记忆中。
+- 除非明确要求，否则避免记录机密信息。
 
-## 工具和技能
+## 工具
 
-- 工具存在于技能中；当你需要时，请遵循每个技能的 `SKILL.md`。
-- 将环境相关的说明保存在 `TOOLS.md` 中（供技能使用的说明）。
+### 本地说明
+
+- 工具存在于 skills 中；在需要时请遵循每个 skill 的 `SKILL.md`。
+- 将环境相关的说明保留在此文件的 `## 工具` 部分。
 
 ## 备份提示（推荐）
 

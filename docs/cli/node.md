@@ -42,7 +42,7 @@ Gateway 运维人员可以通过以下配置禁用发布功能：
 之后更改服务器列表不需要重新配对。参见
 [节点托管的 MCP 服务器](/nodes#node-hosted-mcp-servers)。
 
-## Browser proxy（零配置）
+## 浏览器代理（零配置）
 
 如果节点上未禁用 `browser.enabled`，节点主机会自动声明一个浏览器代理。这使代理可以在该节点上使用浏览器自动化，而无需额外配置。
 
@@ -73,11 +73,11 @@ openclaw node run --host <gateway-host> --port 18789
 
 - `--host <host>`: Gateway WebSocket 主机（默认：`127.0.0.1`）
 - `--port <port>`: Gateway WebSocket 端口（默认：`18789`）
-- `--context-path <path>`: Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。将附加到 WebSocket URL。
-- `--tls`: 为 gateway 连接使用 TLS
+- `--context-path <path>`: Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。会追加到 WebSocket URL。
+- `--tls`: 为网关连接使用 TLS
 - `--no-tls`: 即使本地 Gateway 配置启用了 TLS，也强制使用明文 Gateway 连接
 - `--tls-fingerprint <sha256>`: 期望的 TLS 证书指纹（sha256）
-- `--node-id <id>`: 覆盖存储在 `node.json` 中的旧版客户端实例 ID（不会重置配对）
+- `--node-id <id>`: 覆盖存储在共享 SQLite 状态中的客户端实例 ID（不会重置配对）
 - `--display-name <name>`: 覆盖节点显示名称
 
 ## 节点主机的 Gateway 认证
@@ -113,9 +113,9 @@ openclaw node install --host <gateway-host> --port 18789
 - `--host <host>`: Gateway WebSocket 主机（默认：`127.0.0.1`）
 - `--port <port>`: Gateway WebSocket 端口（默认：`18789`）
 - `--context-path <path>`: Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。会附加到 WebSocket URL。
-- `--tls`: 为网关连接使用 TLS
-- `--tls-fingerprint <sha256>`: 预期的 TLS 证书指纹（sha256）
-- `--node-id <id>`: 覆盖存储在 `node.json` 中的旧版客户端实例 ID（不会重置配对）
+- `--tls`: 为 gateway 连接使用 TLS
+- `--tls-fingerprint <sha256>`: 期望的 TLS 证书指纹（sha256）
+- `--node-id <id>`: 覆盖存储在共享 SQLite 状态中的客户端实例 ID（不会重置配对）
 - `--display-name <name>`: 覆盖 node 显示名称
 - `--runtime <runtime>`: 服务运行时（`node`）
 - `--force`: 如果已安装，则重新安装/覆盖
@@ -130,7 +130,7 @@ openclaw node restart
 openclaw node uninstall
 ```
 
-前台节点主机请使用 `openclaw node run`（不使用服务）。
+前台 node 主机请使用 `openclaw node run`（不使用服务）。
 
 服务命令接受 `--json` 以输出机器可读格式。
 
@@ -156,7 +156,7 @@ openclaw devices approve <requestId>
 openclaw node identity --json
 ```
 
-它会输出来自 `identity/device.json` 的设备 ID 和公钥，且绝不会创建或修改身份文件。
+它会打印来自 `state/openclaw.sqlite` 中 `primary` 行的设备 ID 和公钥，并且不会创建数据库或新身份。
 
 在严格受控的节点网络中，Gateway 操作员可以显式选择自动批准来自受信任 CIDR 的首次节点配对：
 
@@ -179,15 +179,15 @@ openclaw node identity --json
 
 ### 身份和配对状态
 
-无头节点会将其旧版客户端实例 ID 与 Gateway 用于配对和路由的签名设备身份分开处理。这些文件位于 OpenClaw 状态目录中（默认是 `~/.openclaw`，或在设置了 `$OPENCLAW_STATE_DIR` 时使用该目录）：
+无头节点将其客户端实例 ID 与 Gateway 用于配对和路由的已签名设备身份分开管理。这些状态保存在 OpenClaw 状态目录中（默认是 `~/.openclaw`，或者在设置了 `$OPENCLAW_STATE_DIR` 时使用该目录）：
 
-| 文件                        | 作用                                                                                                                                           |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `node.json`                 | 旧版 `nodeId` 键下的客户端实例 ID、显示名称以及 Gateway 连接元数据。客户端会将该值作为 `instanceId` 发送。 |
-| `identity/device.json`      | 签名的 Ed25519 密钥对及派生出的设备 ID。对于签名连接，此设备 ID 就是路由中的节点 ID 和配对身份。              |
-| `identity/device-auth.json` | 已配对的设备令牌，按加密设备 ID 和角色进行键控。                                                                              |
+| State                                                    | Purpose                                                                                                                          |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `state/openclaw.sqlite` (`node_host_config`)             | 客户端实例 ID、显示名称以及 Gateway 连接元数据。客户端将此 ID 作为 `instanceId` 发送。                                             |
+| `state/openclaw.sqlite` (`device_identities`, `primary`) | 已签名的 Ed25519 密钥对和派生的设备 ID。对于已签名连接，此设备 ID 即为路由中的节点 ID 和配对身份。                                     |
+| `state/openclaw.sqlite` (`device_auth_tokens`)           | 已配对的设备令牌，按加密设备 ID 和角色键入。                                                                                         |
 
-`--node-id` 只会更改 `node.json` 中的客户端实例 ID。它不会更改加密设备 ID，也不会清除配对认证。仅删除 `node.json` 同样不会重置配对。要撤销并重新配对节点：
+`--node-id` 只会更改共享 SQLite 状态中的客户端实例 ID。它不会更改加密设备 ID，也不会清除配对认证。使用 `openclaw doctor --fix` 迁移已退役的 `node.json` 同样不会重置配对。要撤销并重新配对某个节点：
 
 1. 在 Gateway 上运行 `openclaw nodes remove --node <id|name|ip>`。
 2. 在节点上，使用 `openclaw node restart` 重启已安装的服务，或者停止后重新运行前台的 `openclaw node run` 命令。这会启动设备配对流程。如果 `openclaw devices list` 没有显示请求，且节点报告 `AUTH_DEVICE_TOKEN_MISMATCH`，请再重启或重新运行一次。被拒绝的尝试会清除已被撤销的本地令牌；下一次尝试可以请求配对。
@@ -197,15 +197,14 @@ openclaw node identity --json
 
 这两个请求 ID 是不同的。适用的受信任 CIDR 策略可以自动批准首次设备配对步骤；命令面批准仍然是单独的检查。
 
-较早版本的 OpenClaw 可能会在 `node.json` 中保留一个旧版 `token` 字段。
-当前的 OpenClaw 不再使用该字段，并会在节点主机下次保存该文件时将其移除。请将 `identity/` 下的这两个文件都妥善保密；它们包含设备密钥对和认证令牌。
+较早版本的 OpenClaw 将节点主机状态存储在 `node.json` 中，将已签名身份存储在 `identity/device.json` 中，将已配对认证存储在 `identity/device-auth.json` 中。停止节点主机后运行一次 `openclaw doctor --fix`；Doctor 会接管每个已退役来源，验证它，导入并验证规范的 SQLite 行，然后删除旧文件。当任何已退役文件仍然存在，或者 Doctor 的接管被中断时，正常的节点命令都会按失败关闭，并给出此修复说明。请将 `state/openclaw.sqlite` 保持私密；它包含设备密钥对和认证令牌。
 
 ## Exec 批准
 
 `system.run` 受本地 exec 批准控制：
 
-- `$OPENCLAW_STATE_DIR/exec-approvals.json`，或
-  当变量未设置时为 `~/.openclaw/exec-approvals.json`
+- `$OPENCLAW_STATE_DIR/state/openclaw.sqlite#exec_approvals_config`, or
+  `~/.openclaw/state/openclaw.sqlite#exec_approvals_config` when the variable is unset
 - [Exec 批准](/tools/exec-approvals)
 - `openclaw approvals --node <id|name|ip>`（从 Gateway 编辑）
 

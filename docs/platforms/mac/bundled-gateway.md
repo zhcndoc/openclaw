@@ -20,8 +20,8 @@ OpenClaw.app 不捆绑 Node 或 Gateway 运行时。macOS 应用
 
 ## 手动恢复
 
-推荐在手动安装时使用 Node 24.15+；Node 22.22.3+ 也可正常使用。全局安装
-`openclaw`：
+对于手动安装，请使用 Node 26（推荐）或其他受支持的版本：
+Node 22.22.3+、Node 24.15+ 或 Node 25.9+。全局安装 `openclaw`：
 
 ```bash
 npm install -g openclaw@<version>
@@ -44,7 +44,7 @@ CLI 也可以直接安装：`openclaw gateway install`
 
 行为：
 
-- “OpenClaw Active” 启用/禁用 LaunchAgent。
+- “OpenClaw 活动” 启用/禁用 LaunchAgent。
 - 退出应用不会**停止** Gateway（launchd 会保持它存活）。
 - 如果配置端口上已经有一个 Gateway 在运行，应用会连接到它，
   而不是启动一个新的。

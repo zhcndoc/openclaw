@@ -14,7 +14,7 @@ Exec 审批是用于让一个沙箱化代理在真实主机（`gateway` 或 `nod
 [权限模式](/tools/permission-modes)。
 
 <Note>
-生效策略取 `tools.exec.*` 和审批默认值中**更严格**的那个：审批只能收紧由配置派生的 security/ask，不能放宽它们。如果省略某个审批字段，则使用 `tools.exec` 的值。Host exec 还会使用该机器上的本地审批状态——执行主机审批文件中的 host-local `ask: "always"` 会持续提示，即使会话或配置默认值请求的是 `ask: "on-miss"`。
+有效策略是 `tools.exec.*` 与审批默认值中**更严格**的那个：审批只能收紧基于配置的安全/ask 设置，不能放宽它们。如果省略了某个审批字段，则使用 `tools.exec` 的值。Host exec 也会使用该机器上的本地审批状态——执行主机审批文档中主机本地的 `ask: "always"` 会持续提示，即使会话或配置默认值要求 `ask: "on-miss"`。
 </Note>
 
 ## 适用范围
@@ -41,11 +41,11 @@ Exec 审批是用于让一个沙箱化代理在真实主机（`gateway` 或 `nod
 
 ## 检查生效策略
 
-| 命令                                                          | 显示内容                                                                          |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `openclaw approvals get` / `--gateway` / `--node <id\|name\|ip>` | 请求的策略、主机策略来源以及最终生效结果。                       |
-| `openclaw exec-policy show`                                      | 本地机器的合并视图。                                                             |
-| `openclaw exec-policy set` / `preset`                            | 将本地请求的策略与本地主机审批文件一步同步。 |
+| Command                                                          | What it shows                                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `openclaw approvals get` / `--gateway` / `--node <id\|name\|ip>` | 请求的策略、主机策略来源，以及最终生效结果。                           |
+| `openclaw exec-policy show`                                      | 本地机器合并后的视图。                                                                 |
+| `openclaw exec-policy set` / `preset`                            | 将本地请求的策略与本地主机审批文档一步同步。 |
 
 <Note>
 每个会话的 `/exec` 覆盖项不包含在内。请在相关会话中运行 `/exec` 以检查其当前默认值。参见 [session overrides](/tools/exec#session-overrides-exec)。
@@ -68,25 +68,30 @@ Exec 审批是用于让一个沙箱化代理在真实主机（`gateway` 或 `nod
 
 ## 设置与存储
 
-审批保存在执行主机上的本地 JSON 文件中。当
-`OPENCLAW_STATE_DIR` 被设置时，该文件会使用该状态目录；
+批准项存储在执行主机上的共享 SQLite 状态数据库中。当
+`OPENCLAW_STATE_DIR` 被设置时，数据库会使用该状态目录；
 否则使用默认的 OpenClaw 状态目录：
 
 ```text
-$OPENCLAW_STATE_DIR/exec-approvals.json
+$OPENCLAW_STATE_DIR/state/openclaw.sqlite#exec_approvals_config
 # 否则
-~/.openclaw/exec-approvals.json
+~/.openclaw/state/openclaw.sqlite#exec_approvals_config
 ```
 
-默认审批 socket 也遵循相同的根目录：
-`$OPENCLAW_STATE_DIR/exec-approvals.sock`，或者当变量未设置时使用
+`#exec_approvals_config` 后缀是用于单例 SQLite 行的显示定位符，
+不是数据库文件名的一部分。该行保存下面展示的 JSON 文档作为其权威值，
+因此 CLI 和 Gateway 的比较并交换哈希值保持稳定。
+
+默认批准 socket 采用相同的根路径：
+`$OPENCLAW_STATE_DIR/exec-approvals.sock`，或者在变量未设置时使用
 `~/.openclaw/exec-approvals.sock`。
 
-2026.6.6 之前的版本始终将文件保存在 `~/.openclaw` 中。如果
-`OPENCLAW_STATE_DIR` 指向其他位置，而审批文件仍存在于默认目录中，请直接运行一次
-`openclaw doctor --fix`，将其导入状态目录（原始文件会以
-`.migrated` 后缀归档）。交互式 doctor 也可以预览并确认导入。自动更新和 Gateway watch 修复运行从不跨状态目录导入：临时或暂存状态目录绝不应捕获默认安装的审批。相同的边界也适用于将旧的
-`plugin-binding-approvals.json` 导入共享的 SQLite 状态。
+状态目录彼此独立，属于不同的信任范围。当 `OPENCLAW_STATE_DIR`
+指向其他位置时，OpenClaw 绝不会从默认状态目录导入或归档批准项；
+请为自定义状态目录单独配置批准项。从基于文件的版本升级后，请停止 Gateway，
+并运行一次 `openclaw doctor --fix`，以导入当前状态目录中已退役的
+`exec-approvals.json`。Doctor 也只会在 `plugin-binding-approvals.json`
+属于当前状态目录时才导入其旧版文件。
 
 示例 schema：
 
@@ -113,10 +118,13 @@ $OPENCLAW_STATE_DIR/exec-approvals.json
         {
           "id": "B0C8C0B3-2C2D-4F8A-9A3C-5A4B3C2D1E0F",
           "pattern": "~/Projects/**/bin/rg",
+          "argPattern": "sha256:argv:...",
           "source": "allow-always",
           "lastUsedAt": 1737150000000,
-          "lastUsedCommand": "rg -n TODO",
           "lastResolvedPath": "/Users/user/Projects/.../bin/rg"
+        },
+        {
+          "pattern": "~/Projects/**/bin/git"
         }
       ]
     }
@@ -138,8 +146,8 @@ $OPENCLAW_STATE_DIR/exec-approvals.json
 | `auto`     | 使用允许列表策略，直接运行确定性匹配项，并在回退到人工审批流程之前，先通过 OpenClaw 的原生自动审核器处理审批未命中的项。 |
 | `full`     | 运行主机执行时不显示审批提示。                                                                                                                                          |
 
-旧版的 `tools.exec.security` / `tools.exec.ask` 仍然受支持，并且在该作用域下
-`mode` 未设置的任何地方仍然适用。
+Doctor 会将已弃用并持久化的 `tools.exec.security` / `tools.exec.ask`
+组合迁移到 `tools.exec.mode`。
 
 ### `exec.security`
 
@@ -202,21 +210,19 @@ $OPENCLAW_STATE_DIR/exec-approvals.json
   行为、审批转发或命令执行。
 </ParamField>
 
-可在全局 `tools.exec.commandHighlighting` 下设置，或在每个代理的
-`agents.list[].tools.exec.commandHighlighting` 下设置。
+在全局范围下可设置为 `tools.exec.commandHighlighting`，或在单个 agent 下设置为
+`agents.entries.*.tools.exec.commandHighlighting`。
 
 ## YOLO 模式（无需批准）
 
-要在不出现批准提示的情况下运行 host exec，需同时打开**两个**策略层：
-OpenClaw 配置中的请求执行策略（`tools.exec.*`）和执行主机审批文件中的本地审批策略。
+要在不显示批准提示的情况下运行 host exec，请同时打开 **两个** 策略层：OpenClaw 配置中的请求 exec 策略（`tools.exec.*`）以及执行主机审批文档中的本地审批策略。
 
 省略 `askFallback` 时默认为 `deny`。若希望在无 UI 的批准提示中回退为允许，请显式将 host 的 `askFallback` 设为 `full`。
 
-| 层                    | YOLO 设置                   |
-| --------------------- | -------------------------- |
-| `tools.exec.security` | `gateway`/`node` 上设为 `full` |
-| `tools.exec.ask`      | `off`                      |
-| Host `askFallback`    | `full`                     |
+| Layer              | YOLO setting               |
+| ------------------ | -------------------------- |
+| `tools.exec.mode`  | `full` on `gateway`/`node` |
+| Host `askFallback` | `full`                     |
 
 <Warning>
 **重要区别：**
@@ -238,12 +244,11 @@ OpenClaw 配置中的请求执行策略（`tools.exec.*`）和执行主机审批
   <Step title="设置请求的配置策略">
     ```bash
     openclaw config set tools.exec.host gateway
-    openclaw config set tools.exec.security full
-    openclaw config set tools.exec.ask off
+    openclaw config set tools.exec.mode full
     openclaw gateway restart
     ```
   </Step>
-  <Step title="匹配 host 审批文件">
+  <Step title="匹配 host 审批文档">
     ```bash
     openclaw approvals set --stdin <<'EOF'
     {
@@ -271,7 +276,7 @@ openclaw exec-policy preset yolo
 
 ### Node host
 
-请在 node 上应用相同的审批文件：
+在 node 上应用相同的审批文档：
 
 ```bash
 openclaw approvals set --node <id|name|ip> --stdin <<'EOF'
@@ -297,10 +302,10 @@ EOF
 
 ### 仅会话内快捷方式
 
-- `/exec security=full ask=off` 只更改当前会话。
-- `/elevated full` 是一个紧急开关快捷方式，它仅在请求的策略和 host 审批文件都解析为 `security: "full"` 且 `ask: "off"` 时，才会跳过 exec 审批。更严格的 host 文件，例如 `ask: "always"`，仍然会提示。
+- `/exec security=full ask=off` 只会更改当前会话。
+- `/elevated full` 是一个 break-glass 快捷方式，仅当请求的策略和 host 审批文档都解析为 `security: "full"` 且 `ask: "off"` 时，才会跳过 exec 审批。更严格的 host 文件（例如 `ask: "always"`）仍然会提示。
 
-如果 host 审批文件比配置更严格，则更严格的 host 策略仍然优先生效。
+如果 host 审批文档比配置更严格，则更严格的 host 策略仍然生效。
 
 ## 白名单（按 agent）
 
@@ -341,18 +346,22 @@ EOF
 
 通过审批流程保存的条目会使用内部分隔符格式进行精确的 `argv` 匹配。请优先使用 UI 或审批流程来重新生成这些条目，而不是手动编辑编码后的值。如果 OpenClaw 无法解析某个命令片段的 `argv`，带有 `argPattern` 的条目将不会匹配。
 
-每个白名单条目都支持：
+Generated `allow-always` entries are argv-bound. New generated entries include
+`argPattern`; older generated path-only entries are ignored and need a fresh
+approval. For a manual path-only rule, omit both `source` and `argPattern`.
 
-| Field              | Meaning                                              |
-| ------------------ | ---------------------------------------------------- |
-| `pattern`          | 已解析的二进制路径 glob 或裸命令名 glob              |
-| `argPattern`       | 可选的 ECMAScript argv 正则表达式；省略则仅按路径匹配 |
-| `id`               | 稳定的透明 ID；缺失时会生成 UUID                   |
-| `source`           | 条目来源，例如 `allow-always`                     |
-| `commandText`      | 旧版明文输入；加载时会被丢弃                       |
-| `lastUsedAt`       | 上次使用时间戳                                      |
-| `lastUsedCommand`  | 上次匹配的命令                                       |
-| `lastResolvedPath` | 上次解析到的二进制路径                            |
+Each allowlist entry supports:
+
+| Field              | Meaning                                                                  |
+| ------------------ | ------------------------------------------------------------------------ |
+| `pattern`          | 解析后的二进制路径 glob 或裸命令名 glob                      |
+| `argPattern`       | ECMAScript argv 正则表达式或生成的精确 argv 哈希；省略则仅限路径 |
+| `id`               | 稳定的透明 ID；缺失时生成 UUID                        |
+| `source`           | 生成条目的来源，例如 `allow-always`；手工条目省略 |
+| `commandText`      | 旧版纯文本输入；加载时会丢弃                            |
+| `lastUsedAt`       | 最近使用时间戳                                                      |
+| `lastUsedCommand`  | 最近一次匹配的命令；生成的哈希 argv 条目省略 |
+| `lastResolvedPath` | 上次解析到的二进制路径                                                |
 
 ## 自动允许技能 CLI
 
@@ -379,13 +388,13 @@ EOF
 调整策略，添加/移除允许列表模式，然后点击 **Save**。UI
 会显示每个模式最近使用的元数据，方便你保持列表整洁。
 
-目标选择器可选择 **Gateway**（本地审批）或 **Node**。
-节点必须声明 `system.execApprovals.get/set`（macOS 应用或无头
-node 主机）。如果某个节点尚未声明 exec approvals，请直接编辑其
-本地审批文件。
+目标选择器会选择 **Gateway**（本地审批）或一个 **Node**。
+节点必须上报 `system.execApprovals.get/set`（macOS 应用或无头
+node 主机）。如果某个节点尚未上报 exec approvals，请直接编辑其
+本地审批文档。
 
 一些节点主机，包括 Windows companion，使用不同的审批
-策略格式。Control UI 会以只读方式显示这些主机原生策略。使用
+策略格式。Control UI 会以只读方式显示这些主机的原生策略。使用
 companion 应用或带有原生策略形状的 `openclaw approvals set --node <id|name|ip>` 来编辑它们；请参见 [Approvals CLI](/cli/approvals)。
 
 CLI：`openclaw approvals` 支持 gateway 或 node 编辑 - 请参见 [Approvals CLI](/cli/approvals)。

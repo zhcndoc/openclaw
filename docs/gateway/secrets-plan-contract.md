@@ -9,7 +9,13 @@ title: "Secrets apply 计划契约"
 
 本页定义了 `openclaw secrets apply` 强制执行的严格契约。如果某个目标不符合这些规则，`apply` 会在修改任何文件之前失败。
 
-## Plan 文件形状
+## Plan file requirements
+
+`openclaw secrets apply --from <plan.json>` accepts regular files up to 16 MiB (16,777,216 bytes). The limit applies to the complete serialized file, including whitespace. Directories, FIFOs, device files, and files larger than the limit are rejected before JSON parsing or target validation.
+
+`openclaw secrets configure --plan-out <plan.json>` enforces the same limit on the UTF-8 serialized output before creating the file. Hand-written plans and external plan generators must also keep the serialized file within this boundary.
+
+## Plan file shape
 
 `openclaw secrets apply --from <plan.json>` 期望一个 `targets` 数组，其中包含计划目标：
 
@@ -120,8 +126,8 @@ Invalid plan target path for models.providers.apiKey: models.providers.openai.ba
 
 ## 运行时与审计范围说明
 
-- 仅引用的 `auth-profiles.json` 条目（`keyRef`/`tokenRef`）会包含在运行时凭证解析和审计覆盖范围内。
-- `secrets apply` 会写入受支持的 `openclaw.json` 目标、受支持的 `auth-profiles.json` 目标，以及三个可选的清理流程，且默认全部启用：`scrubEnv`（从 `.env` 中移除已迁移的明文值）、`scrubAuthProfilesForProviderTargets`（清除 `auth-profiles.json` 中针对计划刚迁移的提供方所遗留的明文/未使用引用残留）、以及 `scrubLegacyAuthJson`（从旧的 `auth.json` 存储中删除已迁移的 `api_key` 条目）。在计划中将 `options.scrubEnv`、`options.scrubAuthProfilesForProviderTargets`、`options.scrubLegacyAuthJson` 中任意项设为 `false`，即可跳过对应流程。
+- Ref-only `auth-profiles.json` entries (`keyRef`/`tokenRef`) are included in runtime credential resolution and audit coverage.
+- `secrets apply` writes supported `openclaw.json` targets, supported `auth-profiles.json` targets, and three optional scrub passes, each on by default: `scrubEnv` (removes migrated plaintext values from `.env` files in the effective state and active-config directories), `scrubAuthProfilesForProviderTargets` (clears plaintext/unused-ref residue in `auth-profiles.json` for providers a plan just migrated), and `scrubLegacyAuthJson` (drops migrated `api_key` entries from legacy `auth.json` stores). Set any of `options.scrubEnv`, `options.scrubAuthProfilesForProviderTargets`, `options.scrubLegacyAuthJson` to `false` in the plan to skip that pass.
 
 ## 操作检查
 

@@ -32,20 +32,33 @@ title: "配对"
 - **1 小时后过期**。机器人仅在创建新请求时发送配对消息（每个发送者大约每小时一次）。
 - 待处理的 DM 配对请求上限为**每个频道账号 3 个**；在某个请求过期或被批准之前，额外请求将被忽略。
 
-### 批准发送者
+### 从控制界面批准
+
+打开 **设置 → 频道 → DM 访问请求**。队列会合并所有已配置频道账号中 `dmPolicy` 为 `pairing` 的待处理请求。
+可按频道或账号筛选，查看发送者 ID 和元数据，然后选择 **批准**。
+
+批准只会授予直接消息访问权限，不会授予群组访问权限。
+如果支持，批准对话还提供以下明确选项：
+
+- **批准后通知请求者**
+- **同时将此发送者设为第一个命令拥有者**，仅在当前不存在命令拥有者且 Control UI 会话具有 `operator.admin` 时显示
+
+选择 **忽略** 可在不批准的情况下移除待处理请求。忽略不是永久封禁；发送者之后仍可再次请求访问。
+
+### 从 CLI 批准
 
 ```bash
 openclaw pairing list telegram
 openclaw pairing approve telegram <CODE>
 ```
 
-在批准命令中添加 `--notify`，会在同一频道通知请求者。多账号频道需要使用 `--account <id>`。
+添加 `--notify` 可在同一频道通知请求者。多账号频道使用 `--account <id>`。
 
-如果尚未配置命令拥有者，批准一个 DM 配对码还会引导
-`commands.ownerAllowFrom` 指向被批准的发送者，例如 `telegram:123456789`。
-这会为首次设置提供一个明确的拥有者，用于特权命令和 exec
-批准提示。在拥有者存在之后，后续的配对批准只会授予 DM
-访问权限；不会再添加更多拥有者。
+不同于 Control UI 中的显式复选框，CLI 在未配置命令拥有者时会自动引导创建 `commands.ownerAllowFrom`，使用类似 `telegram:123456789` 的条目。这会为首次配置提供一个明确的拥有者，用于特权命令和 exec 批准提示。拥有者存在后，后续配对批准只会授予 DM 访问权限；不会再添加更多拥有者。
+
+<Note>
+WhatsApp 的登录二维码会将一个 WhatsApp 账号链接到 OpenClaw。DM 访问请求则是批准向该账号发消息的人。这是两个独立的流程。
+</Note>
 
 支持的频道（任何声明配对功能的已安装频道插件；像 `openclaw-weixin` 这样的外部插件可以添加更多）：`discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `matrix`, `mattermost`, `msteams`, `nextcloud-talk`, `nostr`, `signal`, `slack`, `sms`, `synology-chat`, `telegram`, `twitch`, `whatsapp`, `zalo`, `zalouser`。
 

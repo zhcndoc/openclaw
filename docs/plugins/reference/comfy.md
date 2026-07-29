@@ -16,7 +16,7 @@ title: "ComfyUI 插件"
 
 ## 接口
 
-providers: comfy; contracts: imageGenerationProviders, musicGenerationProviders, videoGenerationProviders
+providers: `comfy`; contracts: `imageGenerationProviders`, `musicGenerationProviders`, `videoGenerationProviders`
 
 ## 相关文档
 

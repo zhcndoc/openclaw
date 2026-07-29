@@ -103,7 +103,7 @@ openclaw configure --section channels
 
 ### 缓存的凭据
 
-Matrix 会将凭据缓存到 `~/.openclaw/credentials/matrix/` 下：默认账户使用 `credentials.json`，命名账户使用 `credentials-<account>.json`。当缓存的凭据存在时，即使配置文件中没有 `accessToken`，OpenClaw 也会将 Matrix 视为已配置——这适用于设置流程、`openclaw doctor` 以及渠道状态探测。
+Matrix 会将账户凭据缓存在共享的 `state/openclaw.sqlite` 插件状态中。当存在缓存凭据时，即使配置文件中没有 `accessToken`，OpenClaw 也会将 Matrix 视为已配置——这适用于设置、`openclaw doctor` 和通道状态探测。升级会通过 `openclaw doctor --fix` 导入已弃用的 `~/.openclaw/credentials/matrix/credentials*.json` 文件，验证 SQLite 行，然后将这些文件归档。
 
 ### 环境变量
 
@@ -200,7 +200,7 @@ Matrix 回复流式传输是可选启用的。`streaming.mode` 控制 OpenClaw �
         mode: "progress",
         progress: {
           label: "auto", // 从已配置或内置标签中选择（false 表示隐藏）
-          labels: ["Thinking", "Writing", "Searching"], // 当 label 为 "auto" 时的候选标签
+          labels: ["思考中", "写作中", "搜索中"], // 当 label 为 "auto" 时的候选标签
           maxLines: 8, // 保留的最大滚动进度行数（默认：8）
           maxLineChars: 120, // 每行在截断前的最大字符数（默认：120）
           toolProgress: true, // 显示工具/进度活动（默认：true）
@@ -261,7 +261,7 @@ Matrix 原生审批提示是普通的 `m.room.message` 事件，其下的 OpenCl
 
 `streaming.mode: "quiet"` 仅在一个块或一轮内容完成定稿后才通知接收者——每个用户的推送规则必须匹配已完成的预览标记。完整配置请参见 [Matrix 静默预览的推送规则](/channels/matrix-push-rules)。
 
-## 机器人到机器人房间
+## Bot 到 Bot 房间
 
 默认情况下，来自其他已配置的 OpenClaw Matrix 账号的 Matrix 消息会被忽略。使用 `allowBots` 来有意允许代理间流量：
 
@@ -299,11 +299,12 @@ Matrix 原生审批提示是普通的 `m.room.message` 事件，其下的 OpenCl
 
 ```bash
 openclaw matrix encryption setup
+printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix encryption setup --recovery-key-stdin
 ```
 
 初始化 secret 存储和交叉签名，必要时创建房间密钥备份，然后打印状态和后续步骤。实用标志：
 
-- `--recovery-key <key>` 在引导前应用恢复密钥（优先使用下面的 stdin 形式）
+- `--recovery-key-stdin` 从 stdin 读取恢复密钥，而不会将其暴露在进程参数中；`--recovery-key <key>` 仍可用于兼容性
 - `--force-reset-cross-signing` 丢弃当前交叉签名身份并创建新的身份（仅限有意使用）
 
 对于新账户，请在创建时启用 E2EE：
@@ -569,8 +570,8 @@ Matrix 会继承来自 `session.threadBindings` 的全局默认值，并支持�
 - `threadBindings.enabled`
 - `threadBindings.idleHours`
 - `threadBindings.maxAgeHours`
-- `threadBindings.spawnSessions`：同时限制子代理和 ACP 线程的创建。
-- `threadBindings.spawnSubagentSessions` / `threadBindings.spawnAcpSessions`：更细粒度的覆盖，仅用于子代理或仅用于 ACP 的创建。
+- `threadBindings.spawnSessions`: 同时限制子代理和 ACP 线程的创建。
+- 已弃用的 `threadBindings.spawnSubagentSessions` / `threadBindings.spawnAcpSessions` 键会由 `openclaw doctor --fix` 迁移为 `spawnSessions`。
 - `threadBindings.defaultSpawnContext`
 
 Matrix 中线程绑定会话的创建默认开启。将 `threadBindings.spawnSessions: false` 设为关闭，可阻止顶层 `/focus` 和 `/acp spawn --thread auto|here` 创建/绑定 Matrix 线程。当原生子代理线程创建不应分叉父级转录内容时，将 `threadBindings.defaultSpawnContext: "isolated"`。
@@ -596,23 +597,23 @@ Matrix 支持外发反应、入站反应通知和确认反应。
 
 `reactionNotifications: "own"` 会在反应指向机器人发出的 Matrix 消息时，转发新增的 `m.reaction` 事件；`"off"` 会禁用反应系统事件。反应移除不会被合成为系统事件——Matrix 会将其表现为 redactions，而不是作为独立的 `m.reaction` 移除事件。
 
-## Historical Context
+## 历史上下文
 
-- `channels.matrix.historyLimit` controls how many recent room messages are included as `InboundHistory` when a room message triggers the agent. If unset, it falls back to `messages.groupChat.historyLimit`; if neither is set, the final default value is `0` (disabled).
-- Matrix room history is room-only; DMs still use normal conversation history.
-- Room history applies only to pending messages: OpenClaw buffers room messages that have not yet triggered a reply, then snapshots that window when a mention or other trigger appears.
-- The current triggering message is not included in `InboundHistory`; it remains in the main inbound body for that turn.
-- Retries of the same Matrix event reuse the original history snapshot rather than continuing to drift forward with new room messages.
+- `channels.matrix.historyLimit` 控制当房间消息触发代理时，作为 `InboundHistory` 包含多少条最近的房间消息。若未设置，则回退到 `messages.groupChat.historyLimit`；如果两者都未设置，最终默认值为 `0`（禁用）。
+- Matrix 房间历史仅适用于房间；DM 仍然使用正常的对话历史。
+- 房间历史仅适用于待处理消息：OpenClaw 会缓冲尚未触发回复的房间消息，然后在出现提及或其他触发条件时对该窗口进行快照。
+- 当前触发消息不包含在 `InboundHistory` 中；它仍保留在该轮的主入站正文中。
+- 同一 Matrix 事件的重试会复用原始历史快照，而不是随着新的房间消息继续向前漂移。
 
-## 上下文可见性
+## Context Visibility
 
-Matrix 支持共享的 `contextVisibility` 控制，用于附加的房间上下文，例如获取到的回复文本、线程根消息和待处理历史。
+Matrix supports a shared `contextVisibility` control for additional room context, such as fetched reply text, thread root messages, and pending history.
 
-- `contextVisibility: "all"` 为默认值。附加上下文会按接收时的样子保留。
-- `contextVisibility: "allowlist"` 会将附加上下文过滤为仅向当前房间/用户允许名单检查中被允许的发送者可见。
-- `contextVisibility: "allowlist_quote"` 的行为类似 `allowlist`，但仍会保留一条明确引用的回复。
+- `contextVisibility: "all"` is the default. Attached context is preserved as received.
+- `contextVisibility: "allowlist"` filters attached context so that it is visible only to senders permitted by the current room/user allowlist check.
+- `contextVisibility: "allowlist_quote"` behaves like `allowlist`, but still preserves a clearly quoted reply.
 
-这仅影响补充上下文的可见性，而不影响传入消息本身是否可以触发回复。触发授权仍然来自 `groupPolicy`、`groups`、`groupAllowFrom` 和 DM 策略设置。
+This only affects the visibility of supplemental context, and does not affect whether the incoming message itself can trigger a reply. Trigger authorization still comes from `groupPolicy`, `groups`, `groupAllowFrom`, and DM policy settings.
 
 ## DM 和房间策略
 
@@ -861,20 +862,20 @@ Matrix 房间 ID 区分大小写。配置显式投递目标、cron 作业、绑�
 
 ### 访问与策略
 
-- `groupPolicy`: `"open"`, `"allowlist"`, 或 `"disabled"`。默认值：`"allowlist"`。
-- `groupAllowFrom`：房间流量的用户 ID 允许名单。
-- `mentionPatterns`：用于房间提及的作用域正则表达式模式。对象格式为 `{ mode: "allow"|"deny", allowIn: [roomId, ...], denyIn: [roomId, ...] }`。控制已配置的 `agents.list[].groupChat.mentionPatterns` 是否按房间生效。
-- `dm.enabled`：当为 `false` 时，忽略所有 DM。默认值：`true`。
-- `dm.policy`：`"pairing"`（默认）、`"allowlist"`、`"open"` 或 `"disabled"`。在机器人已加入并将房间分类为 DM 之后生效；不影响邀请处理。
-- `dm.allowFrom`：DM 流量的用户 ID 允许名单。
-- `dm.sessionScope`：`"per-user"`（默认）或 `"per-room"`。
-- `dm.threadReplies`：仅限 DM 的回复线程覆盖（`"off"`、`"inbound"`、`"always"`）。
-- `allowBots`：接受来自其他已配置 Matrix 机器人账户的消息（`true` 或 `"mentions"`）。
-- `allowlistOnly`：当为 `true` 时，强制所有启用中的 DM 策略（除 `"disabled"` 外）以及 `"open"` 组策略改为 `"allowlist"`。不会更改 `"disabled"` 策略。
-- `dangerouslyAllowNameMatching`：当为 `true` 时，允许对用户允许名单条目进行 Matrix 显示名称目录查询，并对房间允许名单键进行已加入房间名称查询。优先使用完整的 `@user:server` ID 以及房间 ID 或别名。
-- `autoJoin`：`"always"`、`"allowlist"` 或 `"off"`。默认值：`"off"`。适用于所有 Matrix 邀请，包括类似 DM 的邀请。
-- `autoJoinAllowlist`：当 `autoJoin` 为 `"allowlist"` 时允许加入的房间/别名。别名条目按 homeserver 解析，而不是按被邀请房间声明的状态解析。
-- `contextVisibility`：补充上下文可见性（默认 `"all"`，也可为 `"allowlist"`、`"allowlist_quote"`）。
+- `groupPolicy`: `"open"`, `"allowlist"`, or `"disabled"`. Default: `"allowlist"`.
+- `groupAllowFrom`: allowlist of user IDs for room traffic.
+- `mentionPatterns`: scoped regex patterns for room mentions. Object with `{ mode: "allow"|"deny", allowIn: [roomId, ...], denyIn: [roomId, ...] }`. Controls whether configured `agents.entries.*.groupChat.mentionPatterns` apply per-room.
+- `dm.enabled`: when `false`, ignore all DMs. Default: `true`.
+- `dm.policy`: `"pairing"` (default), `"allowlist"`, `"open"`, or `"disabled"`. Applies after the bot has joined and classified the room as a DM; it does not affect invite handling.
+- `dm.allowFrom`: allowlist of user IDs for DM traffic.
+- `dm.sessionScope`: `"per-user"` (default) or `"per-room"`.
+- `dm.threadReplies`: DM-only override for reply threading (`"off"`, `"inbound"`, `"always"`).
+- `allowBots`: accept messages from other configured Matrix bot accounts (`true` or `"mentions"`).
+- `allowlistOnly`: when `true`, forces all active DM policies (except `"disabled"`) and `"open"` group policies to `"allowlist"`. Does not change `"disabled"` policies.
+- `dangerouslyAllowNameMatching`: when `true`, allows Matrix display-name directory lookup for user allowlist entries and joined-room name lookup for room allowlist keys. Prefer full `@user:server` IDs and room IDs or aliases.
+- `autoJoin`: `"always"`, `"allowlist"`, or `"off"`. Default: `"off"`. Applies to every Matrix invite, including DM-style invites.
+- `autoJoinAllowlist`: rooms/aliases allowed when `autoJoin` is `"allowlist"`. Alias entries resolve against the homeserver, not against state claimed by the invited room.
+- `contextVisibility`: supplemental context visibility (`"all"` default, `"allowlist"`, `"allowlist_quote"`).
 
 ### 回复行为
 

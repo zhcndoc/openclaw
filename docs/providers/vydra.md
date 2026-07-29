@@ -10,7 +10,7 @@ title: "Vydra"
 
 - 使用 `vydra/grok-imagine` 进行图像生成
 - 使用 `vydra/veo3`（文生视频）和 `vydra/kling`（图生视频）进行视频生成
-- 使用 Vydra 基于 ElevenLabs 的 TTS 路由进行语音合成
+- 使用基于 ElevenLabs 的 Vydra TTS 路由进行语音合成
 
 OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 
@@ -137,14 +137,12 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 
     ```json5
     {
-      messages: {
-        tts: {
-          provider: "vydra",
-          providers: {
-            vydra: {
-              apiKey: "${VYDRA_API_KEY}",
-              voiceId: "21m00Tcm4TlvDq8ikWAM",
-            },
+      tts: {
+        provider: "vydra",
+        providers: {
+          vydra: {
+            apiKey: "${VYDRA_API_KEY}",
+            voiceId: "21m00Tcm4TlvDq8ikWAM",
           },
         },
       },

@@ -41,7 +41,9 @@ title: "常见问题"
     ```
     如果 RPC 挂了，可改用：
     ```bash
-    tail -f "$(ls -t /tmp/openclaw/openclaw-*.log | head -1)"
+    tail -f "/tmp/openclaw/openclaw-$(date +%F).log"
+    # Named profile example:
+    tail -f "/tmp/openclaw/openclaw-dev-$(date +%F).log"
     ```
     文件日志与服务日志是分开的；参见 [Logging](/logging) 和 [Troubleshooting](/gateway/troubleshooting)。
   </Step>
@@ -127,12 +129,12 @@ title: "常见问题"
 ## 技能与自动化
 
 <AccordionGroup>
-  <Accordion title="如何在不让仓库变脏的情况下自定义技能？">
-    使用托管覆盖，而不是直接编辑仓库副本。将更改放在 `~/.openclaw/skills/<name>/SKILL.md` 中（或者在 `~/.openclaw/openclaw.json` 里通过 `skills.load.extraDirs` 添加一个文件夹）。优先级顺序为：`<workspace>/skills` -> `<workspace>/.agents/skills` -> `~/.agents/skills` -> `~/.openclaw/skills` -> bundled -> `skills.load.extraDirs`，因此托管覆盖会优先于内置技能，而不会触碰 git。若要全局安装但仅限制部分智能体可见，请将共享副本保存在 `~/.openclaw/skills`，并通过 `agents.defaults.skills` / `agents.list[].skills` 控制可见性。只有确实需要上游采纳的改动才应作为 PR 提交到仓库副本。
+  <Accordion title="How do I customize skills without keeping the repo dirty?">
+    Use managed overrides instead of editing the repo copy. Put changes in `~/.openclaw/skills/<name>/SKILL.md` (or add a folder via `skills.load.extraDirs` in `~/.openclaw/openclaw.json`). Precedence: `<workspace>/skills` -> `<workspace>/.agents/skills` -> `~/.agents/skills` -> `~/.openclaw/skills` -> bundled -> `skills.load.extraDirs`, so managed overrides win over bundled skills without touching git. To install globally but limit visibility to some agents, keep the shared copy in `~/.openclaw/skills` and control visibility with `agents.defaults.skills` / `agents.entries.*.skills`. Only upstream-worthy edits should go out as PRs against the repo copy.
   </Accordion>
 
-  <Accordion title="我可以从自定义文件夹加载技能吗？">
-    可以：通过 `~/.openclaw/openclaw.json` 中的 `skills.load.extraDirs` 添加目录（在上面的顺序里优先级最低）。`clawhub` 默认安装到 `./skills`，OpenClaw 会在下个会话中将其视为 `<workspace>/skills`。若要限制某些智能体可见，可配合 `agents.defaults.skills` 或 `agents.list[].skills`。
+  <Accordion title="Can I load skills from a custom folder?">
+    Yes: add directories via `skills.load.extraDirs` in `~/.openclaw/openclaw.json` (lowest precedence in the order above). `clawhub` installs into `./skills` by default, which OpenClaw treats as `<workspace>/skills` on the next session. To limit visibility to certain agents, pair with `agents.defaults.skills` or `agents.entries.*.skills`.
   </Accordion>
 
   <Accordion title="如何为不同任务使用不同的模型或设置？">
@@ -165,7 +167,7 @@ title: "常见问题"
     }
     ```
 
-    将共享的按模型默认值放在 `agents.defaults.models["provider/model"].params` 中，然后在扁平的 `agents.list[].params` 中放入智能体特定覆盖。不要在嵌套的 `agents.list[].models["provider/model"].params` 下重复同一个模型；该路径用于按智能体的模型目录和运行时覆盖。
+    Put shared per-model defaults in `agents.defaults.models["provider/model"].params`, then agent-specific overrides in flat `agents.entries.*.params`. Do not duplicate the same model under nested `agents.entries.*.models["provider/model"].params`; that path is for per-agent model catalog and runtime overrides.
 
     参见 [Cron 任务](/automation/cron-jobs)、[多智能体路由](/concepts/multi-agent)、[配置](/gateway/config-agents)、[斜杠命令](/tools/slash-commands)。
 
@@ -189,7 +191,7 @@ title: "常见问题"
     - `/session idle <duration|off>` 和 `/session max-age <duration|off>` 控制自动取消聚焦。
     - `/unfocus` 会解除线程绑定。
 
-    配置：`session.threadBindings.enabled`（全局开关）、`session.threadBindings.idleHours`（默认 `24`，`0` 表示禁用）、`session.threadBindings.maxAgeHours`（默认 `0` = 无硬性上限），以及按频道覆盖的 `channels.discord.threadBindings.{enabled,idleHours,maxAgeHours}`。`channels.discord.threadBindings.spawnSessions` 控制在 spawn 时是否自动绑定（默认 `true`）。
+    Config: `session.threadBindings.enabled` (global switch), `session.threadBindings.idleHours` (default `24`, `0` disables), `session.threadBindings.maxAgeHours` (default `0` = no hard cap), and `session.threadBindings.spawnSessions` for auto-bind on spawn (default `true`).
 
     文档：[子智能体](/tools/subagents)、[Discord](/channels/discord)、[配置参考](/gateway/configuration-reference)、[斜杠命令](/tools/slash-commands)。
 
@@ -279,7 +281,7 @@ title: "常见问题"
     openclaw skills check
     ```
 
-    原生的 `openclaw skills install` 默认会写入当前工作区的 `skills/` 目录。添加 `--global` 可安装到为所有本地智能体共享的托管技能目录。只有在你想发布或同步自己技能时，才需要单独安装 `clawhub` CLI。使用 `agents.defaults.skills` 或 `agents.list[].skills` 缩小可见这些共享技能的智能体范围。
+    Native `openclaw skills install` writes into the active workspace `skills/` directory by default. Add `--global` to install into the shared managed skills directory for all local agents. Install the separate `clawhub` CLI only to publish or sync your own skills. Use `agents.defaults.skills` or `agents.entries.*.skills` to narrow which agents see shared skills.
 
   </Accordion>
 
@@ -339,7 +341,7 @@ title: "常见问题"
     openclaw skills update --all
     ```
 
-    原生安装会落在当前工作区的 `skills/` 目录；使用 `--global` 可供所有本地智能体使用，或者通过配置 `agents.defaults.skills` / `agents.list[].skills` 限制可见性。某些技能需要通过 Homebrew 安装的二进制文件；在 Linux 上则意味着 Linuxbrew。
+    Native installs land in the active workspace `skills/` directory; use `--global` for all local agents, or configure `agents.defaults.skills` / `agents.entries.*.skills` to limit visibility. Some skills expect Homebrew-installed binaries; on Linux that means Linuxbrew.
 
     参见 [技能](/tools/skills)、[技能配置](/tools/skills-config)、[ClawHub](/tools/clawhub)。
 
@@ -446,12 +448,75 @@ title: "常见问题"
     - **因需求而远程**：发送给模型提供方（Anthropic/OpenAI 等）的消息会传到它们的 API，而聊天平台（Slack/Telegram/WhatsApp 等）会将消息数据存储在它们自己的服务器上。
     - **你可以控制足迹**：本地模型会把提示词保留在你的机器上，但通道流量仍会经过该通道的服务器。
 
-    相关：[Agent workspace](/concepts/agent-workspace), [Memory](/concepts/memory)。
+    - Persist `/home/node` with `OPENCLAW_HOME_VOLUME` so caches survive.
+    - Bake system deps into the image with `OPENCLAW_IMAGE_APT_PACKAGES`.
+    - Bake Playwright Chromium and its system dependencies into the image with `OPENCLAW_INSTALL_BROWSER=1`.
+
+    Docs: [Docker](/install/docker), [Browser](/tools/browser).
 
   </Accordion>
 
-  <Accordion title="OpenClaw 把数据存储在哪里？">
-    一切都位于 `$OPENCLAW_STATE_DIR` 下（默认：`~/.openclaw`）：
+  <Accordion title="Can I keep DMs personal but make groups public/sandboxed with one agent?">
+    Yes, if private traffic is **DMs** and public traffic is **groups**. Set `agents.defaults.sandbox.mode: "non-main"` so group/channel sessions (non-main keys) run in the configured sandbox backend while the main DM session stays on-host. Docker is the default backend once sandboxing is enabled. Restrict tools available in sandboxed sessions via `tools.sandbox.tools`.
+
+    Setup walkthrough: [Groups: personal DMs + public groups](/channels/groups#pattern-personal-dms-public-groups-single-agent). Key reference: [Gateway configuration](/gateway/config-agents#agentsdefaultssandbox).
+
+  </Accordion>
+
+  <Accordion title="How do I bind a host folder into the sandbox?">
+    Set `agents.defaults.sandbox.docker.binds` to `["host:container:mode"]` (for example `"/home/user/src:/src:ro"`). Global and per-agent binds merge; per-agent binds are ignored when `scope: "shared"`. Use `:ro` for anything sensitive; binds bypass the sandbox filesystem walls.
+
+    OpenClaw validates bind sources against both the normalized path and the canonical path resolved through the deepest existing ancestor, so symlink-parent escapes fail closed even when the final path segment does not exist yet.
+
+    See [Sandboxing](/gateway/sandboxing#custom-bind-mounts) and [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated#bind-mounts-security-quick-check).
+
+  </Accordion>
+
+  <Accordion title="How does memory work?">
+    OpenClaw memory is Markdown files in the agent workspace: daily notes in `memory/YYYY-MM-DD.md`, curated long-term notes in `MEMORY.md` (main/private sessions only).
+
+    OpenClaw also runs a silent **pre-compaction memory flush** before compaction summarizes the conversation, reminding the model to write durable notes first. It only runs when the workspace is writable (read-only sandboxes skip it); disable with `agents.defaults.compaction.memoryFlush.enabled: false`. See [Memory](/concepts/memory).
+
+  </Accordion>
+
+  <Accordion title="Memory keeps forgetting things. How do I make it stick?">
+    Ask the bot to **write the fact to memory**: long-term notes go in `MEMORY.md`, short-term context in `memory/YYYY-MM-DD.md`. Reminding the model to store memories usually resolves it. If it keeps forgetting, verify the Gateway uses the same workspace on every run.
+
+    Docs: [Memory](/concepts/memory), [Agent workspace](/concepts/agent-workspace).
+
+  </Accordion>
+
+  <Accordion title="Does memory persist forever? What are the limits?">
+    Memory files live on disk and persist until deleted; the limit is your storage, not the model. **Session context** is still limited by the model context window, so long conversations can compact or truncate - that is why memory search exists, pulling only the relevant parts back into context.
+
+    Docs: [Memory](/concepts/memory), [Context](/concepts/context).
+
+  </Accordion>
+
+  <Accordion title="Does semantic memory search require an OpenAI API key?">
+    Only if you use **OpenAI embeddings**, which is the default provider. Codex OAuth covers chat/completions and does **not** grant embeddings access, so signing in with Codex (OAuth or the Codex CLI login) does not enable semantic memory search. OpenAI embeddings still need a real API key (`OPENAI_API_KEY` or `models.providers.openai.apiKey`).
+
+    To stay local, set `memory.search.provider: "local"` (GGUF/llama.cpp). Other supported providers: Bedrock, DeepInfra, Gemini (`GEMINI_API_KEY` or `memory.search.remote.apiKey`), GitHub Copilot, LM Studio, Mistral, Ollama, OpenAI-compatible, and Voyage. See [Memory](/concepts/memory) and [Memory search](/concepts/memory-search) for setup details.
+
+  </Accordion>
+</AccordionGroup>
+
+## Where things live on disk
+
+<AccordionGroup>
+  <Accordion title="Is all data used with OpenClaw saved locally?">
+    No: **OpenClaw's own state is local**, but **external services still see what you send them**.
+
+    - **Local by default**: sessions, memory files, config, and workspace live on the Gateway host (`~/.openclaw` plus your workspace directory).
+    - **Remote by necessity**: messages sent to model providers (Anthropic/OpenAI/etc.) go to their APIs, and chat platforms (Slack/Telegram/WhatsApp/etc.) store message data on their servers.
+    - **You control the footprint**: local models keep prompts on your machine, but channel traffic still goes through the channel's servers.
+
+    Related: [Agent workspace](/concepts/agent-workspace), [Memory](/concepts/memory).
+
+  </Accordion>
+
+  <Accordion title="Where does OpenClaw store its data?">
+    Everything lives under `$OPENCLAW_STATE_DIR` (default: `~/.openclaw`):
 
     | Path                                                               | Purpose                                                            |
     | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
@@ -474,8 +539,8 @@ title: "常见问题"
   <Accordion title="AGENTS.md / SOUL.md / USER.md / MEMORY.md 应该放在哪里？">
     它们位于**agent 工作区**中，而不是 `~/.openclaw`。
 
-    - **工作区（每个 agent 一个）**：`AGENTS.md`、`SOUL.md`、`IDENTITY.md`、`USER.md`、`MEMORY.md`、`memory/YYYY-MM-DD.md`、可选的 `HEARTBEAT.md`。根目录小写的 `memory.md` 只是旧版修复输入；当两者都存在时，`openclaw doctor --fix` 可以将其合并到 `MEMORY.md` 中。
-    - **状态目录（`~/.openclaw`）**：配置、通道/提供方状态、身份验证配置文件、会话、日志、共享 skills（`~/.openclaw/skills`）。
+    - **Workspace (per agent)**: `AGENTS.md`, `SOUL.md`, `IDENTITY.md`, `USER.md`, `MEMORY.md`, `memory/YYYY-MM-DD.md`. Lowercase root `memory.md` is legacy repair input only; `openclaw doctor --fix` can merge it into `MEMORY.md` when both exist.
+    - **State dir (`~/.openclaw`)**: config, channel/provider state, auth profiles, sessions, logs, shared skills (`~/.openclaw/skills`).
 
     默认工作区是 `~/.openclaw/workspace`，可配置：
 
@@ -509,7 +574,7 @@ title: "常见问题"
     }
     ```
 
-    或者在 `agents.list[].bootstrapMaxChars` / `bootstrapTotalMaxChars` 下为某个 agent 单独覆盖。
+    Or override one agent under `agents.entries.*.bootstrapMaxChars` / `bootstrapTotalMaxChars`.
 
     使用 `/context` 查看原始大小与注入后大小，以及是否发生了截断。保持 `SOUL.md` 重点描述语气、立场和个性；把操作规则放在 `AGENTS.md` 中，把持久事实放在 memory 中。
 
@@ -583,7 +648,9 @@ title: "常见问题"
   <Accordion title="为什么我现在在 localhost 上也需要 token？">
     OpenClaw 默认强制启用 gateway 认证，包括回环。若未配置显式认证路径，启动时会解析为 token 模式，并为该次启动生成仅运行时可用的 token，因此本地 WS 客户端必须进行认证。这会阻止其他本地进程调用 Gateway。
 
-    当客户端需要跨重启保持稳定密钥时，请显式配置 `gateway.auth.token`、`gateway.auth.password`、`OPENCLAW_GATEWAY_TOKEN` 或 `OPENCLAW_GATEWAY_PASSWORD`。你也可以选择密码模式，或者为支持身份感知的反向代理使用 `trusted-proxy`。如果希望开放回环访问，请显式设置 `gateway.auth.mode: "none"`。`openclaw doctor --generate-gateway-token` 可以随时生成一个 token。
+    On a fresh loopback start, the Gateway prepares the canonical same-user CLI device credential before `/readyz`, so normal `openclaw` CLI calls can authenticate without persisting the generated token. Other clients still need an explicit shared secret or an approved device pairing.
+
+    Configure `gateway.auth.token`, `gateway.auth.password`, `OPENCLAW_GATEWAY_TOKEN`, or `OPENCLAW_GATEWAY_PASSWORD` explicitly when clients need a stable secret across restarts. You can also choose password mode, or `trusted-proxy` for identity-aware reverse proxies. For open loopback, set `gateway.auth.mode: "none"` explicitly. `openclaw doctor --generate-gateway-token` generates a token any time.
 
   </Accordion>
 
@@ -591,28 +658,8 @@ title: "常见问题"
     Gateway 会监视配置并支持热重载：`gateway.reload.mode: "hybrid"`（默认）会热应用安全的更改，并在关键更改时重启。`hot`、`restart` 和 `off` 也受支持。大多数 `tools.*`、`agents.*` 策略、`session.*` 和 `messages.*` 的更改会立即生效，完全不需要任何重载操作；`gateway.*` 的绑定/端口更改则需要重启。
   </Accordion>
 
-  <Accordion title="如何禁用有趣的 CLI 标语？">
-    设置 `cli.banner.taglineMode`：
-
-    ```json5
-    {
-      cli: {
-        banner: {
-          taglineMode: "off", // random | default | off
-        },
-      },
-    }
-    ```
-
-    - `off`：隐藏标语文本，但保留横幅标题/版本行。
-    - `default`：始终使用 `All your chats, one OpenClaw.`。
-    - `random`：轮换显示有趣/季节性标语（默认行为）。
-    - 如果连横幅也不要，设置环境变量 `OPENCLAW_HIDE_BANNER=1`。
-
-  </Accordion>
-
-  <Accordion title="如何启用网页搜索（以及网页抓取）？">
-    `web_fetch` 不需要 API key。`web_search` 取决于你选择的提供商：
+  <Accordion title="How do I enable web search (and web fetch)?">
+    `web_fetch` works without an API key. `web_search` depends on your selected provider:
 
     | 提供商 | 无需 key | 环境变量 |
     | --- | --- | --- |
@@ -958,8 +1005,8 @@ title: "常见问题"
     发送 `/new` 或 `/reset` 作为独立消息。参见 [Session management](/concepts/session)。
   </Accordion>
 
-  <Accordion title="如果我从不发送 /new，会话会自动重置吗？">
-    会。默认重置策略是 **daily**：会话会在网关主机上配置的本地小时数重置（`session.reset.atHour`，默认 `4`，取值 0-23），具体取决于当前会话开始的时间。也可以改为基于空闲时间的重置，使用 `mode: "idle"` 和 `session.reset.idleMinutes`；它会在一段不活动时间后使会话过期（基于最近一次真实交互，而不是 heartbeat/cron/exec 系统事件）。
+  <Accordion title="Do sessions reset automatically if I never send /new?">
+    No, not by default. Sessions keep the same `sessionId`, and compaction bounds the active model context as conversations grow. `/new` and `/reset` remain available, or you can opt into automatic resets with `mode: "daily"` or `mode: "idle"`. Daily mode rolls over at `session.reset.atHour` (default `4`, 0-23) on the gateway host; idle mode uses `session.reset.idleMinutes` since the last real interaction, not heartbeat/cron/exec system events.
 
     ```json5
     {
@@ -976,7 +1023,7 @@ title: "常见问题"
     }
     ```
 
-    `resetByType` 支持 `direct`（旧别名 `dm`）、`group` 和 `thread`。如果未设置 `session.reset`/`resetByType` 配置块，顶层旧配置 `session.idleMinutes` 仍可作为空闲模式默认值的兼容别名使用。对于具有活跃的、由提供方拥有的 CLI 会话的会话，不会被隐式的 daily 默认策略切断。完整生命周期见 [Session management](/concepts/session)。
+    `resetByType` supports `direct`, `group`, and `thread`. Doctor migrates legacy `dm` entries to `direct`; the schema rejects `dm`. Legacy top-level `session.idleMinutes` still works as a compatibility alias for an idle-mode default when no `session.reset`/`resetByType` block is set. See [Session management](/concepts/session) for the full lifecycle.
 
   </Accordion>
 
@@ -1053,9 +1100,9 @@ title: "常见问题"
     }
     ```
 
-    如果存在 `HEARTBEAT.md`，但它实际上是空的（只有空白行、Markdown/HTML 注释、ATX 标题、代码块围栏标记或空的列表项占位），OpenClaw 会跳过 heartbeat 运行以节省 API 调用。如果文件缺失，heartbeat 仍会运行，由模型决定要做什么。
+    Heartbeat instructions live in the monitor's cron scratch. Effectively empty scratch skips the heartbeat run to save API calls; without scratch, the heartbeat still runs and the model decides what to do.
 
-    每个代理的覆盖项使用 `agents.list[].heartbeat`。文档：[Heartbeat](/gateway/heartbeat)。
+    Per-agent overrides use `agents.entries.*.heartbeat`. Docs: [Heartbeat](/gateway/heartbeat).
 
   </Accordion>
 
@@ -1258,8 +1305,8 @@ title: "常见问题"
 ## 日志和调试
 
 <AccordionGroup>
-  <Accordion title="日志在哪里？">
-    文件日志（结构化）：`/tmp/openclaw/openclaw-YYYY-MM-DD.log`。通过 `logging.file` 设置稳定路径；通过 `logging.level` 设置文件日志级别；通过 `--verbose` 和 `logging.consoleLevel` 设置控制台详细程度。
+  <Accordion title="Where are logs?">
+    File logs (structured): `/tmp/openclaw/openclaw-YYYY-MM-DD.log` for the default profile, or `/tmp/openclaw/openclaw-<profile>-YYYY-MM-DD.log` for a named profile. Set a stable path via `logging.file`; file log level via `logging.level`; console verbosity via `--verbose` and `logging.consoleLevel`.
 
     最快的尾随查看：
 
@@ -1587,7 +1634,7 @@ title: "常见问题"
 
 ---
 
-Still stuck? 请在 [Discord](https://discord.com/invite/clawd) 提问，或打开一个 [GitHub discussion](https://github.com/openclaw/openclaw/discussions)。
+Still stuck? Ask in [Discord](https://discord.com/invite/clawd) or use the [GitHub issue chooser](https://github.com/openclaw/openclaw/issues/new/choose).
 
 ## 相关内容
 

@@ -16,7 +16,7 @@ title: "Venice 插件"
 
 ## 接口
 
-providers：venice；contracts：usageProviders
+providers: `venice`; contracts: `usageProviders`
 
 ## 相关文档
 

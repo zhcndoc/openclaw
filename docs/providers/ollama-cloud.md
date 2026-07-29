@@ -12,7 +12,7 @@ OpenClaw 将 `ollama-cloud` 注册为其自己的提供方 ID，因此仅云端�
 
 ## 设置
 
-在 [ollama.com/settings/keys](https://ollama.com/settings/keys) 创建一个 Ollama Cloud API 密钥，然后运行：
+Follow [Ollama's API key instructions](https://docs.ollama.com/api/authentication#api-keys), then run:
 
 ```bash
 openclaw onboard --auth-choice ollama-cloud
@@ -30,15 +30,15 @@ export OLLAMA_API_KEY="<your-ollama-cloud-api-key>" # pragma: allowlist secret
 openclaw onboard --auth-choice ollama-cloud --ollama-cloud-api-key "<key>"
 ```
 
-onboarding 会将默认模型设置为 `ollama-cloud/kimi-k2.5:cloud`。
+Onboarding sets the default model to `ollama-cloud/minimax-m2.7`.
 
 ## 默认值
 
-- 提供商: `ollama-cloud`
-- 基础 URL: `https://ollama.com`
-- 环境变量: `OLLAMA_API_KEY`
-- API 风格: Ollama 原生 `/api/chat`
-- 引导默认模型: `ollama-cloud/kimi-k2.5:cloud`
+- Provider: `ollama-cloud`
+- Base URL: `https://ollama.com`
+- Env var: `OLLAMA_API_KEY`
+- API style: Ollama native `/api/chat`
+- Onboarding default model: `ollama-cloud/minimax-m2.7`
 
 ## 何时选择 Ollama Cloud
 
@@ -60,10 +60,11 @@ openclaw models list --provider ollama-cloud
 openclaw models set ollama-cloud/kimi-k2.6
 ```
 
-实时目录中的托管 id 包括 `deepseek-v4-flash`、`glm-5`、
-`gpt-oss:20b`、`kimi-k2.6` 和 `minimax-m2.7`。当实时发现没有返回
-任何内容时，OpenClaw 会回退到内置条目 `kimi-k2.5:cloud`、
-`minimax-m2.7:cloud`、`glm-5.1:cloud` 和 `glm-5.2:cloud`。
+Hosted ids in the live catalog include `deepseek-v4-flash`, `glm-5.2`,
+`gpt-oss:20b`, `kimi-k2.6`, and `minimax-m2.7`. When live discovery returns
+nothing, OpenClaw falls back to the bundled rows `minimax-m2.7`, `glm-5.1`,
+and `glm-5.2`. The retiring `kimi-k2.5` model is hidden from model pickers but
+remains selectable by exact reference until Ollama retires it on July 31, 2026.
 
 模型 id 是云目录 id，而不是本地拉取名称。如果某个模型名称在
 本地 Ollama 主机上可用，但在托管目录中不存在，请改用 `ollama`

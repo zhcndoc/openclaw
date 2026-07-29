@@ -37,6 +37,12 @@ openclaw channels add --channel qqbot --token "AppID:AppSecret"
 
 5. 重启 Gateway。
 
+## 入站持久性
+
+对于 QQ 网关转发事件，OpenClaw 会在推进已保存的网关恢复序列之前先持久化原始事件。待处理或可重试的转发在 Gateway 重启后仍会保留，且会按会话序列化，并在活跃或保留的完成记录存在时使用提供方事件 ID 来抑制重复的队列条目。
+
+如果持久化接纳失败，OpenClaw 会在不推进序列的情况下终止当前的网关 socket。随后重新连接/恢复路径可以再次请求该未提交事件。在队列到代理边界之间，投递仍然是至少一次，因此在交接过程中发生崩溃时可能会重放一个转发。
+
 交互式设置：
 
 ```bash
@@ -127,11 +133,18 @@ Env SecretRef AppSecret：
 
 ### 访问策略
 
-- `allowFrom` / `groupAllowFrom` 控制谁可以在 C2C / 群聊场景中与机器人聊天。`dmPolicy` / `groupPolicy`（`open` | `allowlist` | `disabled`）
-  控制执行模式。只要 `allowFrom` 有具体的（非通配符）条目，`dmPolicy` 默认是 `allowlist`，否则为 `open`。
-  只要 `groupAllowFrom` 或 `allowFrom` 中有具体条目，`groupPolicy` 默认是 `allowlist`，否则为 `open`。
-- “Auth: allowlist” 斜杠命令要求 `allowFrom` 中存在明确的非通配符条目（群聊调用则要求 `groupAllowFrom`），
-  不受 `dmPolicy` / `groupPolicy` 影响——见 [Slash commands](#slash-commands)。
+- `allowFrom` / `groupAllowFrom` 门控谁可以在 C2C /
+  群上下文中与机器人聊天。`dmPolicy` / `groupPolicy`（`open` | `allowlist` | `disabled`）
+  控制执行模式。当 `allowFrom` 有一个具体的（非通配符）条目时，
+  `dmPolicy` 默认变为 `allowlist`，否则为 `open`。
+  当 `groupAllowFrom` 或 `allowFrom` 其中任一具有具体条目时，
+  `groupPolicy` 默认变为 `allowlist`，否则为 `open`。
+- `contextVisibility` 控制 QQ 作为补充上下文提供的引用消息文本。默认值 `"all"` 会保留收到的引用文本。
+  设为 `"allowlist"` 时，仅在被引用发送者通过配置的发送者策略时才包含引用正文，
+  或设为 `"allowlist_quote"` 以保留显式引用，同时过滤其他补充上下文。参见 [群聊](/channels/groups#context-visibility-and-allowlists)。
+- `"Auth: allowlist"` 斜杠命令要求在 `allowFrom` 中存在明确的非通配符条目
+  （群调用则为 `groupAllowFrom`），不受 `dmPolicy` / `groupPolicy` 影响 —
+  参见 [斜杠命令](#slash-commands)。
 
 ### 多账号设置
 
@@ -205,7 +218,7 @@ openclaw channels add --channel qqbot --account bot2 --token "222222222:secret-o
 | `ignoreOtherMentions` | `false`              | 丢弃提及了别人但没有提及机器人的消息。                                                         |
 | `historyLimit`        | `50`                 | 为下一次被提及时保留的最近非提及消息上下文数量。`0` 可禁用历史记录。                           |
 | `tools`               | —                    | 为整个群允许/拒绝工具。                                                                        |
-| `toolsBySender`       | —                    | 按发送者覆盖工具设置；见 [Groups](/channels/groups#groupchannel-tool-restrictions-optional)。 |
+| `toolsBySender`       | —                    | 按发送者覆盖工具设置；见 [群聊](/channels/groups#groupchannel-tool-restrictions-optional)。 |
 | `name`                | openid 前缀          | 日志和群上下文中使用的友好名称。                                                               |
 | `prompt`              | 内置默认值            | 附加到代理上下文中的群级行为提示词。                                                           |
 
@@ -229,10 +242,10 @@ openclaw channels add --channel qqbot --account bot2 --token "222222222:secret-o
 
 STT 和 TTS 支持两级配置，并按优先级回退：
 
-| 设置    | 插件专用                                               | 框架回退                     |
-| ------- | ------------------------------------------------------ | ---------------------------- |
-| STT     | `channels.qqbot.stt`                                   | `tools.media.audio.models[0]` |
-| TTS     | `channels.qqbot.tts`, `channels.qqbot.accounts.<id>.tts` | `messages.tts`              |
+| Setting | Plugin-specific                                          | Framework fallback                               |
+| ------- | -------------------------------------------------------- | ------------------------------------------------ |
+| STT     | `channels.qqbot.stt`                                     | first audio-capable `tools.media.models[]` entry |
+| TTS     | `channels.qqbot.tts`, `channels.qqbot.accounts.<id>.tts` | `tts`                                            |
 
 ```json5
 {
@@ -261,12 +274,9 @@ STT 和 TTS 支持两级配置，并按优先级回退：
 }
 ```
 
-将任一项设置为 `enabled: false` 即可禁用。账号级 TTS 覆盖的结构与 `messages.tts` 相同，并会在 channel/global TTS 配置之上进行深度合并。
+将任一项设为 `enabled: false` 可禁用。账号级 TTS 覆盖的结构与 `tts` 相同，并会在频道/全局 TTS 配置之上进行深度合并。
 
-STT 请求默认在 60 秒后超时。插件专用 STT 使用
-所选的 `models.providers.<id>.timeoutSeconds` 覆盖。框架音频 STT
-依次使用 `tools.media.audio.models[0].timeoutSeconds`、
-`tools.media.audio.timeoutSeconds`，然后使用所选 provider 的覆盖值。
+STT 请求默认在 60 秒后超时。插件专用 STT 使用所选 `models.providers.<id>.timeoutSeconds` 覆盖值。框架音频 STT 使用所选支持音频的 `tools.media.models[]` 条目的 `timeoutSeconds`，然后再使用所选提供方覆盖值。
 
 进入的 QQ 语音附件会作为音频媒体元数据暴露给代理，
 同时不会将原始语音文件放入通用的 `MediaPaths` 中。`[[audio_as_voice]]`

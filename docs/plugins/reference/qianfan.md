@@ -16,7 +16,7 @@ title: "Qianfan 插件"
 
 ## 接口
 
-providers: qianfan
+providers: `qianfan`
 
 ## 相关文档
 

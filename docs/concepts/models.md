@@ -53,12 +53,13 @@ OpenAI API 密钥和 ChatGPT/Codex 订阅凭证仍然是不同的。参见
 
 相关的模型配置入口：
 
-- `agents.defaults.models` 是 OpenClaw 可使用的模型白名单/目录，以及别名。使用 `provider/*` 条目可允许某个提供方发现的所有模型，而无需逐一列出。
-- `agents.defaults.utilityModel` 是一个可选的低成本模型，用于生成仪表板会话标题、受支持的频道线程/主题标题以及进度播报等简短内部任务。按代理级别的 `agents.list[].utilityModel` 会覆盖它。未设置时，OpenClaw 会在存在主提供方声明的小模型默认值时使用该默认值（OpenAI → `gpt-5.6-luna`，Anthropic → `claude-haiku-4-5`），否则使用该代理的主模型；将其设置为空字符串可禁用 utility 路由。Utility 任务是独立的模型调用，可能会向所选模型提供方发送有界的任务内容。
+- `agents.defaults.models` 存储别名和每个模型的设置。添加条目不会限制模型覆盖。
+- `agents.defaults.modelPolicy.allow` 是可选的覆盖允许列表。使用精确引用或以 `provider/*` 和 `provider/namespace/*` 形式的尾部前缀通配符；省略它或将其设为 `[]` 可允许任意模型。按代理的 `agents.entries.*.modelPolicy.allow` 会替换该代理的默认策略。
+- `agents.defaults.utilityModel` 是一个可选的低成本模型，用于简短的内部任务，例如生成仪表板会话标题、受支持的频道线程/主题标题以及进度叙述。按代理的 `agents.entries.*.utilityModel` 会覆盖它。未设置时，OpenClaw 会在存在主提供方声明的小模型默认值时使用该默认值（OpenAI → `gpt-5.6-luna`，Anthropic → `claude-haiku-4-5`），否则使用该代理的主模型；将其设置为空字符串可禁用 utility 路由。生成的标题在不同的 utility 模型失败后，会使用主模型重试一次。对于仪表板标题，自动 utility 推导和常规回退会遵循有效的会话提供方和认证配置文件；显式的 utility 模型会保留其配置的提供方/认证。空的 utility 模型仅会跳过备用小模型路径，不会跳过仪表板标题生成。utility 任务是独立的模型调用，可能会向所选模型提供方发送有限范围的任务内容。
 - `agents.defaults.imageModel` 仅在主模型无法接受图像时使用。
-- `agents.defaults.pdfModel` 由 `pdf` 工具使用。若未设置，该工具会回退到 `imageModel`，然后回退到已解析的会话/默认模型。
-- `agents.defaults.imageGenerationModel`、`musicGenerationModel` 和 `videoGenerationModel` 为共享的媒体生成工具提供支持。若未设置，每个工具都会推断一个带认证的提供方默认值：先使用当前默认提供方，然后按 provider-id 顺序使用该能力的其余已注册提供方。设置 `agents.defaults.mediaGenerationAutoProviderFallback: false` 可在保留显式回退的同时禁用这种跨提供方推断。
-- 按代理级别的 `agents.list[].model`（加上绑定）会覆盖 `agents.defaults.model` — 参见 [多代理路由](/concepts/multi-agent)。
+- `agents.defaults.pdfModel` 由 `pdf` 工具使用。若未设置，该工具会回退到 `imageModel`，然后回退到解析后的会话/默认模型。
+- `agents.defaults.mediaModels.{image,music,video}` 为共享的媒体生成工具提供支持。若未设置，每个工具都会推断一个基于认证的提供方默认值：先使用当前默认提供方，然后按提供方 ID 顺序使用该能力的其余已注册提供方。跨提供方回退是固定的默认行为。
+- 按代理的 `agents.entries.*.model`（以及绑定）会覆盖 `agents.defaults.model` —— 参见 [多代理路由](/concepts/multi-agent)。
 
 完整键参考、默认值和 JSON5 示例：[配置参考](/gateway/config-agents#agent-defaults)。
 
@@ -75,10 +76,10 @@ OpenAI API 密钥和 ChatGPT/Codex 订阅凭证仍然是不同的。参见
 
 其他选择规则：
 
-- 更改 `agents.defaults.model.primary` 不会重写现有会话的固定绑定。如果状态报告显示 `This session is pinned to X; config primary Y will apply to new/unpinned sessions.`，请运行 `/model default` 来清除绑定。
-- CLI 默认模型和允许列表选择器会遵循 `models.mode: "replace"`，此时只列出 `models.providers.*.models`，而不是完整的内置目录。
-- Control UI 的模型选择器会向 Gateway 请求其配置后的模型视图：当设置了 `agents.defaults.models` 时（包括 `provider/*` 通配符条目），否则使用 `models.providers.*.models` 加上具有可用认证信息的 provider。完整的内置目录仅保留给显式浏览视图（`models.list` 且 `view: "all"`，或 `openclaw models list --all`）。
-- Provider 清单 UI 使用 `models.list` 并设置 `view: "provider-config"`，以显示源头配置的 `models.providers.*.models` 行，而不应用选择器允许列表。
+- 更改 `agents.defaults.model.primary` 不会重写现有会话的固定选择。如果状态报告 `This session is pinned to X; config primary Y will apply to new/unpinned sessions.`，请运行 `/model default` 来清除固定选择。
+- CLI 默认模型和允许列表选择器会尊重 `models.mode: "replace"`，仅列出 `models.providers.*.models`，而不是完整的内置目录。
+- Control UI 的模型选择器会向 Gateway 请求其已配置的模型视图。显式的 `modelPolicy.allow` 会对其进行过滤，包括尾随前缀通配符条目；否则它会显示已配置的模型以及具有可用认证的提供方。默认和已配置的选择器视图会隐藏标记为 `deprecated` 或 `disabled` 的目录行，除非该精确模型被配置为 primary、fallback、utility/tool model、别名/设置键，或精确的策略条目。隐藏行仍可通过精确的 `provider/model` 引用进行选择。完整的内置目录（包括隐藏行）仅保留给显式浏览视图（`models.list` 且 `view: "all"`，或 `openclaw models list --all`）。
+- Provider inventory 界面使用带有 `view: "provider-config"` 的 `models.list` 来显示源头编写的 `models.providers.*.models` 行，而不应用选择器允许列表。
 
 完整机制：[模型故障切换](/concepts/model-failover)。
 
@@ -105,26 +106,25 @@ ChatGPT/Codex OAuth 设置会选择精确的 `openai/gpt-5.6-sol` 目录引用�
 
 ## “模型不被允许”（以及为什么回复会停止）
 
-如果设置了 `agents.defaults.models`，它就会成为 `/model` 和会话覆盖的允许列表。选择该允许列表之外的模型时，在生成任何正常回复之前会返回：
+如果 `agents.defaults.modelPolicy.allow` 非空，它就会成为 `/model`、会话覆盖以及 `--model` 的允许列表。选择该允许列表之外的模型会在生成任何正常回复之前直接返回。针对单个 agent 的 `agents.entries.*.modelPolicy.allow` 会替换该 agent 的默认策略。
 
 ```text
-Model "provider/model" is not allowed. Use /models to list providers, or /models <provider> to list models.
-Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' --strict-json --merge
+模型覆盖 "provider/model" 不被 agents.defaults.modelPolicy.allow 允许。
+将 "provider/model"、"provider/*" 或更窄的 "provider/namespace/*" 前缀添加到 agents.defaults.modelPolicy.allow，或者移除/清空该列表以允许任意模型。
 ```
 
-通过将模型添加到 `agents.defaults.models`、完全清空允许列表（删除该键），或从 `/model list` 中选择一个模型来修复它。如果被拒绝的命令包含运行时覆盖，例如 `/model openai/gpt-5.5 --runtime codex`，请先修复允许列表，然后重试相同的 `/model ... --runtime ...` 命令。
+通过将模型或 provider 通配符添加到指定的 `modelPolicy.allow` 键中、移除/清空该列表，或者从 `/model list` 中选择一个模型来修复它。如果被拒绝的命令包含运行时覆盖，例如 `/model openai/gpt-5.5 --runtime codex`，请先修复允许列表，然后重试同一命令。
 
 对于本地/GGUF 模型，允许列表需要完整的带提供方前缀的引用，例如 `ollama/gemma4:26b` 或 `lmstudio/Gemma4-26b-a4-it-gguf` —— 请使用 `openclaw models list --provider <provider>` 查看精确字符串。一旦允许列表启用，裸文件名或显示名称就不够了。
 
-要在不逐个列出每个模型的情况下限制提供方，请使用 `provider/*` 通配符条目：
+要在不列出每个模型的情况下限制提供方，请使用结尾前缀通配符条目。`provider/*` 会匹配该提供方下的所有模型；更窄的前缀例如 `clawrouter/anthropic/*` 只匹配该命名空间：
 
 ```json5
 {
   agents: {
     defaults: {
-      models: {
-        "openai/*": {},
-        "vllm/*": {},
+      modelPolicy: {
+        allow: ["openai/*", "vllm/*"],
       },
     },
   },
@@ -133,13 +133,16 @@ Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' 
 
 然后 `/model`、`/models` 和模型选择器只会显示这些提供方的已发现目录，而且无需编辑允许列表就能出现新模型。可以将精确的 `provider/model` 条目与 `provider/*` 条目混合使用，以从另一个提供方引入某一个特定模型。
 
-带别名的允许列表示例：
+带别名和按模型设置的允许表示例：
 
 ```json5
 {
   agents: {
     defaults: {
       model: { primary: "anthropic/claude-sonnet-4-6" },
+      modelPolicy: {
+        allow: ["anthropic/claude-sonnet-4-6", "anthropic/claude-opus-4-6"],
+      },
       models: {
         "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
         "anthropic/claude-opus-4-6": { alias: "Opus" },
@@ -149,14 +152,14 @@ Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' 
 }
 ```
 
-<Accordion title="通过 CLI 安全编辑允许列表">
-添加性更改请使用 `--merge`：
+<Accordion title="显式编辑允许列表">
+直接设置完整列表：
 
 ```bash
-openclaw config set agents.defaults.models '{"openai/gpt-5.4":{}}' --strict-json --merge
+openclaw config set agents.defaults.modelPolicy.allow '["openai/gpt-5.4","anthropic/*"]' --strict-json
 ```
 
-当 `openclaw config set` 对 `agents.defaults.models`、`models.providers` 或 `models.providers.<id>.models` 的普通对象赋值会丢弃现有条目时，它会拒绝该操作；只有在新值应成为完整目标值时才使用 `--replace`。交互式提供方设置和 `openclaw configure --section model` 已经会将按提供方范围的选择合并到允许列表中，因此添加提供方不会丢弃无关条目；`configure` 会保留现有的 `agents.defaults.model.primary`。像 `openclaw models auth login --provider <id> --set-default` 和 `openclaw models set <model>` 这样的显式命令仍会替换 primary。
+`openclaw models set`、提供方设置以及 `openclaw models aliases add` 可以在 `agents.defaults.models` 下添加条目，但它们从不更改 `modelPolicy.allow`。这使模型元数据和别名与覆盖策略保持独立。
 </Accordion>
 
 ## 聊天中的 `/model`
@@ -207,7 +210,17 @@ openclaw models auth list|add|login|paste-api-key|paste-token|setup-token|order
 
 ## 模型注册表（`models.json`）
 
-在 `models.providers` 下配置的自定义提供商会写入代理目录下的 `models.json`（默认 `~/.openclaw/agents/<agentId>/agent/models.json`）。提供商插件目录会作为单独生成的、由插件拥有的目录分片进行存储，并自动加载。默认情况下，此文件会与配置合并；设置 `models.mode: "replace"` 可仅使用你配置的提供商。
+### 托管目录更新
+
+OpenClaw 可以在不等待新的 OpenClaw 版本发布的情况下，刷新已安装提供商插件所附带的模型元数据。网关会在启动时在后台进行一次 JSON `GET` 请求，然后最多每六小时检查一次。该请求不会发送任何提示词、凭据、模型使用情况或配置负载，只会携带常规的 HTTP user agent 和条件缓存头。
+
+下载的捆绑包会存储在共享的 SQLite 状态数据库中，并在下一次网关重启后变得可见。远程数据只能为已安装插件清单中声明的提供商更新或添加模型。它不能提供 API 基础 URL 或请求头，并且会忽略比已安装发布版本构建时间戳更旧的目录。
+
+托管文件发布自公开的 [`openclaw/catalog`](https://github.com/openclaw/catalog) GitHub 仓库。其定时工作流会根据 OpenClaw 随附的插件清单和定价来源进行刷新；每一次目录内容变更都会作为公开提交保留。
+
+运行 `openclaw models refresh` 可立即进行元数据和定价检查，或通过设置 `models.catalogRefresh.enabled: false` 来禁用所有托管目录请求。禁用后，定价将保持为捆绑值和显式配置值。也可以通过 HTTPS 的 `models.catalogRefresh.url` 选择自托管镜像（测试时也可使用 localhost HTTP）；请参见[配置参考](/gateway/configuration-reference#models)。
+
+在 `models.providers` 下配置的自定义提供商会写入代理目录中的 `models.json`（默认 `~/.openclaw/agents/<agentId>/agent/models.json`）。提供商插件目录会作为单独生成的、由插件拥有的目录分片存储，并自动加载。默认情况下，此文件会与配置合并；设置 `models.mode: "replace"` 可仅使用你配置的提供商。
 
 <AccordionGroup>
   <Accordion title="合并模式优先级">

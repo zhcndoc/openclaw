@@ -11,6 +11,9 @@ title: "配对"
 
 相关：[配对流程](/channels/pairing)
 
+相同的待处理请求也可以在 Control UI 中的 **Settings →
+Channels → DM access requests** 下查看。Control UI 支持批准、可选的请求者通知以及忽略。忽略会移除当前请求，但不会永久阻止发送者。
+
 ## 命令
 
 ```bash
@@ -50,7 +53,7 @@ openclaw pairing approve --channel telegram --account work <code> --notify
 
 ### 所有者引导
 
-如果在批准配对代码时 `commands.ownerAllowFrom` 为空，OpenClaw 还会将已批准的发送者记录为命令所有者，使用类似 `telegram:123456789` 的按通道作用域条目。这只会引导首个所有者——之后的配对批准不会替换或扩展 `commands.ownerAllowFrom`。
+如果你在批准配对代码时 `commands.ownerAllowFrom` 为空，CLI 也会将已批准的发送者记录为命令所有者，使用类似 `telegram:123456789` 的按通道作用域条目。这只会引导第一个所有者——后续的配对批准不会替换或扩展 `commands.ownerAllowFrom`。Control UI 将此权限提升显示为一个单独的、受 `operator.admin` 保护的复选框，而不是自动应用它。
 
 该命令所有者是允许运行仅所有者可用命令并批准危险操作的人类操作员账户，例如 `/diagnostics`、`/export-session`、`/export-trajectory`、`/config` 和 exec 批准。配对只允许发送者与代理通信；它本身不会授予除这次一次性引导之外的所有者权限。
 

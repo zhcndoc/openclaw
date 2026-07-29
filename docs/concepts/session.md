@@ -9,11 +9,14 @@ title: "会话管理"
 
 OpenClaw 会根据每条入站消息的来源将其路由到一个 **会话**：私信、群聊、定时任务等。所有会话状态都由 **gateway** 持有；UI 客户端会向 gateway 查询会话数据。
 
+关于 personal-agent 默认设置——即一个由你所有 DM 渠道共享的滚动会话，群组活动和后台工作都流入其中——请参阅
+[主会话](/concepts/main-session)。
+
 ## 消息如何路由
 
 | 来源             | 行为                     |
 | ---------------- | ------------------------ |
-| 直接消息         | 默认共享会话            |
+| 直接消息         | 默认共享会话             |
 | 群聊             | 每个群组独立             |
 | 房间/频道        | 每个房间独立             |
 | Cron 任务        | 每次运行生成新会话       |
@@ -37,12 +40,12 @@ OpenClaw 会根据每条入站消息的来源将其路由到一个 **会话**：
 
 `session.dmScope` 可选值：
 
-| 值                         | 行为                                   |
-| -------------------------- | -------------------------------------- |
-| `main`（默认）             | 所有 DM 共享一个会话                  |
-| `per-peer`                 | 按发送者隔离，跨频道生效               |
-| `per-channel-peer`         | 按频道 + 发送者隔离（推荐）            |
-| `per-account-channel-peer` | 按账号 + 频道 + 发送者隔离            |
+| 值                         | 行为                                                     |
+| -------------------------- | -------------------------------------------------------- |
+| `main`（默认）             | 所有 DM 共享[主会话](/concepts/main-session)             |
+| `per-peer`                 | 按发送者隔离，跨频道生效                                 |
+| `per-channel-peer`         | 按频道 + 发送者隔离（推荐）                              |
+| `per-account-channel-peer` | 按账户 + 频道 + 发送者隔离                                |
 
 <Tip>
 如果同一个人会通过多个频道联系你，请使用 `session.identityLinks` 将他们的身份映射到一个统一的 peer id，这样他们就能共享同一个会话。
@@ -51,31 +54,59 @@ OpenClaw 会根据每条入站消息的来源将其路由到一个 **会话**：
 ### 已链接频道的 Dock
 
 Dock 命令会将当前直接聊天会话的回复路由移动到另一个已链接的频道，而不会开启新会话。有关示例、配置和故障排除，请参见
-[Channel docking](/concepts/channel-docking)。
+[频道停靠](/concepts/channel-docking)。
 
 使用 `openclaw security audit` 验证你的设置。
 
+## 隐身会话
+
+隐身会话仅可从 Control UI 的 **New thread** 屏幕使用。在开始线程之前打开 **Incognito**，即可将其会话条目、对话记录和压缩状态保存在进程内存中，而不是磁盘上。网关重启时，该线程会消失，不会运行 OpenClaw 的自动内存刷新，并且在你重置或删除它时不会创建对话记录归档。基于 Codex 的运行也会以临时模式启动其 harness 线程，因此 Codex 不会写入 rollout 或本地会话状态文件；其他模型提供方使用 HTTP API，并且不会在 OpenClaw 中保留本地提供方对话记录。
+
+`incognito-` 前缀段保留给 dashboard、subagent 和隐藏的内部会话键；`openclaw doctor --fix` 会重命名任何发生冲突的旧版持久化键。
+
+Incognito 不会限制代理的常规工具。明确请求保存信息，或任何由工具驱动的文件写入，仍然可能将数据持久化到隐身会话存储之外。你配置的模型提供方仍会处理你发送的消息，诊断日志保持不变，而 OpenClaw 仍会记录不包含内容的审计元数据，例如 HMAC 引用。
+
+在多用户网关上，隐身线程仅对 admin 范围的连接可见，不会通过其他会话的代理会话工具或对话记录搜索出现。这可以防止它们被存储以及其他由网关中介的用户看到，但不能防止网关所有者或进程操作员看到，因为他们始终可以观察实时会话。
+
+## 跨会话记住
+
+单独的转录会控制每个会话的本地历史。对于个人
+或完全受信任的代理，`memory.search.rememberAcrossConversations: true`
+会在该代理的其他私有
+会话中增加一个可选的检索步骤；它不会合并这些转录内容。
+
+私有直接对话和持久的显式 UI 对话可以彼此提供相关
+上下文。群组和频道在两个方向上都保持隔离：它们的转录内容不是私有回忆来源，而这些
+对话中的回复也不会接收私有转录上下文。当前
+会话也被排除在外，因为其历史已经加载。
+
+此设置不会更改会话密钥、DM 范围、路由、传递，或
+`tools.sessions.visibility`。`MEMORY.md` 和 `memory/*.md` 中的共享工作区记忆也保持其现有行为。当前记忆提供程序
+必须支持受保护的私有转录回忆；像
+Lossless Claw 这样的上下文引擎仍然相互独立，并且可以与其并行运行。有关设置
+和运行时详细信息，请参见
+[Active Memory](/concepts/active-memory#remember-across-conversations)。
+
 ## 会话生命周期
 
-Sessions 会在 `session.reset` 下到期前重复使用：
+会话会一直复用，直到你手动重置会话，或选择启用自动重置策略：
 
-- **每日重置**（默认 `mode: "daily"`）- 在网关主机上配置的本地
-  小时（`session.reset.atHour`，默认 `4`，0-23）创建新会话。每日
-  新鲜度基于当前 `sessionId` 的开始时间，而不是后续
-  元数据写入时间。
-- **空闲重置**（`mode: "idle"`）- 在 `session.reset.idleMinutes`
-  的不活动后创建新会话。空闲新鲜度基于最后一次真实的用户/频道
-  交互，因此 heartbeat、cron 和 exec 系统事件不会让
-  会话保持存活。
-- **手动重置** - 在聊天中输入 `/new` 或 `/reset`。`/new <model>` 也会
-  切换模型。
+- **不自动重置**（默认 `mode: "none"`）——会话保持相同的
+  `sessionId`；随着对话增长，压缩机制会管理活跃上下文。
+- **每日重置**（`mode: "daily"`）——在网关主机配置的本地时间
+  (`session.reset.atHour`，默认为 `4`，范围为 0-23) 到达时启用新会话。
+  每日新鲜度取决于当前 `sessionId` 的启动时间，而不是之后的元数据写入时间。
+- **空闲重置**（`mode: "idle"`）——在 `session.reset.idleMinutes`
+  分钟无活动后启用新会话。空闲新鲜度取决于上一次真实的用户/频道交互，因此 heartbeat、cron
+  和 exec 系统事件不会使会话保持活跃。
+- **手动重置**——在聊天中输入 `/new` 或 `/reset`。`/new <model>` 还会切换模型。
 
 当同时配置了每日和空闲重置时，以先到期的那个为准。heartbeat、cron、exec 和其他系统事件轮次可能会写入会话元数据，但这些写入不会延长每日或空闲重置的新鲜度。当重置使会话滚动时，旧会话中排队的系统事件通知会被
 丢弃，因此过时的后台更新不会被追加到新会话的第一条提示前。
 
-当存在由提供方拥有的活动 CLI 会话时，隐式的每日默认重置不会切断这些会话。对于应按计时器过期的会话，请使用 `/reset` 或显式配置 `session.reset`。
+具有活跃的、由提供商拥有的 CLI 会话的会话，也遵循相同的不自动重置默认设置。当这些会话应按计时器过期时，请使用 `/reset` 或显式配置 `session.reset`。
 
-按聊天类型或频道覆盖默认设置：
+全局启用自动重置，然后按聊天类型或频道进行覆盖：
 
 ```json5
 {
@@ -92,9 +123,7 @@ Sessions 会在 `session.reset` 下到期前重复使用：
 }
 ```
 
-`resetByType` 支持 `direct`（旧别名 `dm`）、`group` 和 `thread`。
-旧的顶层 `session.idleMinutes` 在未设置 `session.reset`/`resetByType` 块时，
-仍可作为空闲模式默认值的兼容别名。
+`resetByType` 支持 `direct`、`group` 和 `thread`。Doctor 会将旧版的 `dm` 条目迁移为 `direct`，并将 `session.idleMinutes` 迁移为 `session.reset.idleMinutes`；该架构会拒绝这两种已弃用的形式。
 
 ## 状态存放位置
 
@@ -141,7 +170,9 @@ Gateway 的 model-run 探测会话默认是短生命周期。匹配 `agent:*:exp
 
 维护会保留持久的外部会话指针，包括群组会话和线程范围的聊天会话，同时仍允许合成的 cron、hook、heartbeat、ACP 和子代理条目过期。
 
-如果你之前使用过 DM 隔离，随后又将 `session.dmScope` 改回 `main`，可以使用 `openclaw sessions cleanup --dry-run --fix-dm-scope` 预览按 peer-key 归类的旧 DM 行。应用同样的标志会让这些旧的 direct-DM 行退役，并将其转录保留为已删除归档。
+归档会话由用户手动搁置，不受任何自动维护路径影响，包括按年龄修剪、条目上限、model-run 清理和磁盘预算逐出。它们会一直保持归档状态，直到你取消归档或明确删除它们。
+
+如果你之前使用过 DM 隔离，后来又将 `session.dmScope` 恢复为 `main`，可以使用 `openclaw sessions cleanup --dry-run --fix-dm-scope` 预览那些按同伴键区分、已过期的 DM 行。应用同一标志后，会退役这些旧的直接 DM 行，并将其记录保留为已删除的归档。
 
 可以使用 `openclaw sessions cleanup --dry-run` 预览任何维护运行。
 

@@ -11,6 +11,9 @@ title: "Agent 发送"
 程序化投递。完整的标志和行为参考：
 [Agent CLI 参考](/cli/agent)。
 
+对于严格、短暂的 CI 或代码自动化场景，如果需要自行负责设置、清理、
+输出投影以及进程状态，请使用 [`openclaw agent exec`](/cli/agent#agent-exec)。
+
 ## 快速开始
 
 <Steps>
@@ -64,37 +67,37 @@ title: "Agent 发送"
 
 ## 标志
 
-| Flag                        | 描述                                                                 |
+| 标志                        | 描述                                                                 |
 | --------------------------- | -------------------------------------------------------------------- |
-| `--message <text>`          | 行内要发送的消息                                                     |
-| `--message-file <path>`     | 从有效的 UTF-8 文件中读取消息                                        |
-| `--to <dest>`               | 从目标（手机号、聊天 ID）推导会话密钥                                 |
-| `--session-key <key>`       | 使用显式指定的会话密钥                                               |
-| `--agent <id>`              | 指定一个已配置的 agent（使用其 `main` 会话）                         |
-| `--session-id <id>`         | 通过 id 复用现有会话                                                |
-| `--model <id>`              | 覆盖本次运行所用的模型（`provider/model` 或模型 id）                  |
-| `--local`                   | 强制使用本地嵌入式运行时（跳过 Gateway）                              |
-| `--deliver`                 | 将回复发送到聊天频道                                                 |
-| `--channel <name>`          | 传递频道；配合 `--agent` + `--to` 使用时，也适用于 DM 范围           |
-| `--reply-to <target>`       | 覆盖传递目标                                                       |
-| `--reply-channel <name>`    | 覆盖传递频道                                                       |
-| `--reply-account <id>`      | 覆盖传递账户 ID                                                    |
-| `--thinking <level>`        | 为所选模型配置文件设置思考级别                                       |
-| `--verbose <on\|full\|off>` | 为会话持久化详细级别（`full` 也会记录工具输出）                        |
-| `--timeout <seconds>`       | 覆盖 agent 超时时间（默认 600，或配置值）                             |
-| `--json`                    | 输出结构化 JSON                                                     |
+| `--message <text>`          | 要发送的内联消息                                               |
+| `--message-file <path>`     | 从有效的 UTF-8 文件中读取消息（最大 4 MiB）                 |
+| `--to <dest>`               | 从目标（手机号、聊天 ID）推导会话密钥                    |
+| `--session-key <key>`       | 使用显式会话密钥                                          |
+| `--agent <id>`              | 目标为已配置的代理（使用其 `main` 会话）                  |
+| `--session-id <id>`         | 按 ID 复用现有会话                                      |
+| `--model <id>`              | 本次运行的模型覆盖（`provider/model` 或模型 ID）           |
+| `--local`                   | 强制使用本地嵌入式运行时（跳过 Gateway）                          |
+| `--deliver`                 | 将回复发送到聊天频道                                     |
+| `--channel <name>`          | 投递频道；与 `--agent` + `--to` 一起使用时，也适用于 DM 范围     |
+| `--reply-to <target>`       | 投递目标覆盖                                             |
+| `--reply-channel <name>`    | 投递频道覆盖                                            |
+| `--reply-account <id>`      | 投递账户 ID 覆盖                                         |
+| `--thinking <level>`        | 为所选模型配置文件设置思考等级                    |
+| `--verbose <on\|full\|off>` | 为会话持久化详细级别（`full` 也会记录工具输出） |
+| `--timeout <seconds>`       | 覆盖代理超时时间（默认 600，或配置值）                |
+| `--json`                    | 输出结构化 JSON                                               |
 
 ## 行为
 
-- 默认情况下，CLI 会**通过 Gateway**运行。添加 `--local` 可强制在当前机器上使用嵌入式运行时。
-- `--message` 和 `--message-file` 必须且只能传入其中一个。文件消息在移除可选的 UTF-8 BOM 后，会保留多行内容。
-- 如果 Gateway 请求失败，CLI 会**回退**到本地嵌入式运行；Gateway 超时会使用新的会话回退，而不是与原始对话记录竞争。
-- 会话选择：`--to` 会派生会话键（群组/频道目标会保留隔离；直接聊天会折叠为 `main`）。当 `--agent`、`--channel` 和 `--to` 同时使用时，路由会遵循频道的规范收件人和 `session.dmScope`。稳定的仅出站身份会使用由提供方拥有的会话，并与代理的主会话隔离。
-- `--session-key` 用于选择显式键。以 agent 为前缀的键必须使用 `agent:<agent-id>:<session-key>`，并且当同时提供时，`--agent` 必须与该 agent id 匹配。裸的非 sentinel 键在提供 `--agent` 时会按 `--agent` 作用域处理；例如，`--agent ops --session-key incident-42` 会路由到 `agent:ops:incident-42`。不提供 `--agent` 时，裸的非 sentinel 键会按已配置的默认 agent 作用域处理。字面量 `global` 和 `unknown` 仅在未提供 `--agent` 时保持无作用域；嵌入式回退路径会将这些 sentinel 会话解析到已配置的默认 agent。
-- `--reply-channel` 和 `--reply-account` 仅影响投递。
+- 默认情况下，CLI 通过 **Gateway** 运行。添加 `--local` 可强制使用当前机器上的嵌入式运行时。
+- 必须且只能传入 `--message` 或 `--message-file` 之一。文件消息在移除可选的 UTF-8 BOM 后会保留多行内容。大于 4 MiB 的文件会在分发前被拒绝。
+- 在经过临时握手重试后，如果出现 Gateway 超时或连接关闭，命令会失败并在 stderr 中给出提示；CLI 不会静默地改为在嵌入式环境中重新执行该轮。Gateway 可能仍会完成一个已接受的轮次，因此在重试或使用 `--local` 重新运行之前，请先检查 Gateway 和会话状态。
+- 会话选择：`--to` 会派生会话键（群组/频道目标会保留隔离；私聊会折叠为 `main`）。当 `--agent`、`--channel` 和 `--to` 一起使用时，路由遵循频道的规范收件人和 `session.dmScope`。稳定的仅出站身份会使用一个由提供方拥有、且与代理主会话隔离的会话。
+- `--session-key` 用于选择显式键。带代理前缀的键必须使用 `agent:<agent-id>:<session-key>`，并且当同时提供时，`--agent` 必须与该 agent id 匹配。裸的非哨兵键在提供 `--agent` 时会限定到 `--agent`；例如，`--agent ops --session-key incident-42` 会路由到 `agent:ops:incident-42`。如果没有 `--agent`，裸的非哨兵键会限定到已配置的默认代理。字面量 `global` 和 `unknown` 仅在未提供 `--agent` 时才保持不限定范围。
+- `--reply-channel` 和 `--reply-account` 只影响投递。
 - 思考和详细输出标志会持久化到会话存储中。
-- 输出：默认是纯文本，或者使用 `--json` 输出结构化负载 + 元数据。
-- 使用 `--json --deliver` 时，JSON 会包含已发送、已抑制、部分发送和发送失败的投递状态。参见
+- 输出：默认是纯文本，或使用 `--json` 输出结构化负载 + 元数据。
+- 使用 `--json --deliver` 时，JSON 会包含发送、抑制、部分发送和失败发送的投递状态。参见
   [JSON 投递状态](/cli/agent#json-delivery-status)。
 
 ## 示例

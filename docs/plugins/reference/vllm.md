@@ -16,7 +16,7 @@ title: "vLLM 插件"
 
 ## 接口
 
-providers: vllm
+providers: `vllm`
 
 ## 相关文档
 

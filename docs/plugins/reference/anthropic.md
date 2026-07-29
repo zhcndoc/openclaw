@@ -16,7 +16,7 @@ Anthropic 模型、Claude CLI 和原生 Claude 会话目录。
 
 ## 接口
 
-providers: anthropic; contracts: mediaUnderstandingProviders, usageProviders
+providers: `anthropic`; contracts: `mediaUnderstandingProviders`, `usageProviders`
 
 <!-- openclaw-plugin-reference:manual-start -->
 

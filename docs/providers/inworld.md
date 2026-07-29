@@ -41,18 +41,16 @@ openclaw gateway restart
     ```
 
   </Step>
-  <Step title="在 messages.tts 中选择 Inworld">
+  <Step title="Select Inworld in tts">
     ```json5
     {
-      messages: {
-        tts: {
-          auto: "always",
-          provider: "inworld",
-          providers: {
-            inworld: {
-              voiceId: "Sarah",
-              modelId: "inworld-tts-1.5-max",
-            },
+      tts: {
+        auto: "always",
+        provider: "inworld",
+        providers: {
+          inworld: {
+            voiceId: "Sarah",
+            modelId: "inworld-tts-1.5-max",
           },
         },
       },
@@ -66,13 +64,13 @@ openclaw gateway restart
 
 ## 配置选项
 
-| Option        | Path                                         | Description                                                         |
-| ------------- | -------------------------------------------- | ------------------------------------------------------------------- |
-| `apiKey`      | `messages.tts.providers.inworld.apiKey`      | Base64 仪表板凭据。回退到 `INWORLD_API_KEY`。       |
-| `baseUrl`     | `messages.tts.providers.inworld.baseUrl`     | 覆盖 Inworld API 基础 URL（默认 `https://api.inworld.ai`）。   |
-| `voiceId`     | `messages.tts.providers.inworld.voiceId`     | 语音标识符（默认 `Sarah`）。旧别名：`speakerVoiceId`。 |
-| `modelId`     | `messages.tts.providers.inworld.modelId`     | TTS 模型 id（默认 `inworld-tts-1.5-max`）。                       |
-| `temperature` | `messages.tts.providers.inworld.temperature` | 采样温度，`0`（不含）到 `2`（可选）。            |
+| Option        | Path                                | Description                                                         |
+| ------------- | ----------------------------------- | ------------------------------------------------------------------- |
+| `apiKey`      | `tts.providers.inworld.apiKey`      | Base64 dashboard credential. Falls back to `INWORLD_API_KEY`.       |
+| `baseUrl`     | `tts.providers.inworld.baseUrl`     | Override Inworld API base URL (default `https://api.inworld.ai`).   |
+| `voiceId`     | `tts.providers.inworld.voiceId`     | Voice identifier (default `Sarah`). Legacy alias: `speakerVoiceId`. |
+| `modelId`     | `tts.providers.inworld.modelId`     | TTS model id (default `inworld-tts-1.5-max`).                       |
+| `temperature` | `tts.providers.inworld.temperature` | Sampling temperature, `0` (exclusive) to `2` (optional).            |
 
 ## 说明
 
@@ -87,18 +85,18 @@ openclaw gateway restart
     回复默认使用 MP3。当天渠道目标是 `voice-note` 时，OpenClaw 会请求 Inworld 返回 `OGG_OPUS`，以便音频作为原生语音气泡播放。电话合成使用 22050 Hz 的原始 `PCM`，以供电话桥接使用。
   </Accordion>
   <Accordion title="Custom endpoints">
-    使用 `messages.tts.providers.inworld.baseUrl` 覆盖 API 主机。发送请求前会去除尾部斜杠。
+    Override the API host with `tts.providers.inworld.baseUrl`. Trailing slashes are stripped before requests are sent.
   </Accordion>
 </AccordionGroup>
 
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="文本转语音" href="/tools/tts" icon="waveform-lines">
-    TTS 概览、提供商，以及 `messages.tts` 配置。
+  <Card title="Text-to-speech" href="/tools/tts" icon="waveform-lines">
+    TTS overview, providers, and `tts` config.
   </Card>
-  <Card title="配置" href="/gateway/configuration" icon="gear">
-    包含 `messages.tts` 设置在内的完整配置参考。
+  <Card title="Configuration" href="/gateway/configuration" icon="gear">
+    Full config reference including `tts` settings.
   </Card>
   <Card title="Providers" href="/providers" icon="grid">
     所有受支持的 OpenClaw 提供商。

@@ -16,7 +16,7 @@ title: "Kilocode 插件"
 
 ## 作用范围
 
-providers: kilocode
+providers: `kilocode`
 
 ## 相关文档
 

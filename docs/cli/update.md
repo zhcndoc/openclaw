@@ -108,8 +108,8 @@ openclaw update repair --json
 
 交互式流程，用于选择更新通道并确认之后是否重启 Gateway（默认会重启）。在没有 git 检出版本的情况下选择 `dev` 会提供创建一个的选项。
 
-| Flag                  | Default | Description                   |
-| --------------------- | ------- | ----------------------------- |
+| 标志                  | 默认值 | 描述                   |
+| --------------------- | ------ | ---------------------- |
 | `--timeout <seconds>` | `1800`  | 每个更新步骤的超时时间。 |
 
 ## 它做什么
@@ -125,16 +125,13 @@ openclaw update repair --json
 
 Gateway 核心自动更新器（在配置中启用时）会在实时 Gateway 请求处理程序之外启动 CLI 更新路径。控制平面 `update.run` 的包管理器更新和受监管的 git 检出更新使用相同的受管服务交接方式，而不是替换包树或在实时 Gateway 进程内重建 `dist/`：Gateway 会启动一个分离的辅助进程并退出，然后该辅助进程从 Gateway 进程树之外运行 `openclaw update --yes --json`。如果交接不可用，`update.run` 会返回一个结构化响应，其中包含可手动执行的安全 shell 命令。
 
-Stored extended-stable selections receive read-only startup and 24-hour update
-hints when `update.checkOnStart` is enabled. These checks never apply an update,
-start a handoff, restart the Gateway, use stable delay/jitter, or use beta
-polling cadence. Explicit foreground updates, bare foreground updates with
-stored `update.channel: "extended-stable"`, on-demand status, and their managed
-Gateway handoff remain supported.
+存储的 extended-stable 选择在启用 `update.checkOnStart` 时会收到只读启动和 24 小时更新提示。这些检查绝不会应用更新、启动交接、重启 Gateway、使用 stable 延迟/抖动，或使用 beta 轮询频率。显式前台更新、带有存储 `update.channel: "extended-stable"` 的裸前台更新、按需状态检查，以及它们受管的 Gateway 交接仍然受支持。
 
 当本地安装了受管 Gateway 服务并启用了重启时，包管理器和 git 检出更新会先停止正在运行的服务，然后再替换包树或修改检出/构建输出。随后更新器会刷新服务元数据，重启服务，并在报告 `Gateway: restarted and verified.` 之前验证重启后的 Gateway。包管理器更新还会额外验证重启后的 Gateway 报告了预期的包版本；git 检出更新会在重建后验证 gateway 健康状况和服务就绪状态。
 
-在 macOS 上，更新后的检查还会验证当前配置文件对应的 LaunchAgent 已加载/正在运行，并且配置的回环端口是健康的。如果 plist 已安装但 launchd 没有托管它，OpenClaw 会自动重新引导 LaunchAgent，并重新执行健康/版本/通道就绪检查（新的引导会直接加载 `RunAtLoad` 作业，因此恢复过程不会立刻对新启动的 Gateway 执行 `kickstart -k`）。如果 Gateway 仍然没有变得健康，命令会以非零状态退出，并打印重启日志路径以及重启、重新安装和包回滚说明。
+包管理器更新通常会继续使用记录在受管服务中的 Node 二进制文件。如果该 Node 无法运行目标版本，但当前 CLI 使用的 Node 可以，并且已确认该服务确实属于正在更新的包，那么启用重启的更新会在最终完成时使用当前 Node，并将服务元数据重写为该运行时。`--no-restart` 无法修复服务元数据，因此同样的运行时不匹配会在包变更之前停止。
+
+在 macOS 上，更新后的检查还会验证当前配置文件对应的 LaunchAgent 已加载/运行，并且已配置的 loopback 端口健康。如果 plist 已安装但 launchd 没有监督它，OpenClaw 会自动重新引导 LaunchAgent，并重新运行健康/版本/通道就绪检查（新的引导会直接加载 `RunAtLoad` 作业，因此恢复不会立即对新生成的 Gateway 执行 `kickstart -k`）。如果 Gateway 仍未变得健康，命令会以非零状态退出，并打印重启日志路径以及重启、重新安装和包回滚说明。
 
 如果无法执行重启，命令会打印 `Gateway: restart skipped (...)` 或 `Gateway: restart failed: ...`，并附带手动执行 `openclaw gateway restart` 的提示。使用 `--no-restart` 时，包替换或 git 重建仍会执行，但受管服务不会停止或重启，因此正在运行的 Gateway 会继续使用旧代码，直到你手动重启它。
 
@@ -207,7 +204,7 @@ OpenClaw 也会回退。这些回退警告不会
 </Warning>
 
 <Note>
-更新后，针对受管插件且同步路径可以绕开的同步失败（例如非关键插件无法访问的 npm registry）会在核心更新成功后以警告形式报告。JSON 结果会保留顶层更新 `status: "ok"`，并报告 `postUpdate.plugins.status: "warning"`，同时给出 `openclaw update repair` 和 `openclaw plugins inspect <id> --runtime --json` 的指导。意外的更新器或同步异常仍会使更新结果失败。请修复插件安装或更新错误，然后重新运行 `openclaw update repair`。
+更新后、针对受管插件且同步路径能够绕开的同步失败（例如某个非关键插件的 npm 注册表不可达）会在核心更新成功后作为警告报告。JSON 结果会保留顶层更新 `status: "ok"`，并报告 `postUpdate.plugins.status: "warning"`，同时给出 `openclaw update repair` 和 `openclaw plugins inspect <id> --runtime --json` 的指引。意外的更新器或同步异常仍会使更新结果失败。先修复插件安装或更新错误，然后重新运行 `openclaw update repair`。当一次失败的更新使某个受管插件不可用时，OpenClaw 会禁用其运行时条目并重置活动槽位，但不会更改操作员编写的 `plugins.allow` 或 `plugins.deny` 策略。
 
 在逐插件同步步骤之后，`openclaw update` 会在 gateway 重启之前运行一个强制性的 **post-core convergence**（核心后收敛）流程：它会修复缺失的已配置插件负载，验证磁盘上每个_处于激活状态_的跟踪安装记录，并静态验证其 `package.json` 可被解析（以及任何明确声明的 `main` 是否存在）。来自该流程的失败，以及无效的配置快照，会返回 `postUpdate.plugins.status: "error"` 并将顶层更新 `status` 置为 `"error"`，因此 `openclaw update` 会以非零状态退出，并且 gateway _不会_ 在未验证的插件集下重启。错误信息包含结构化的 `postUpdate.plugins.warnings[].guidance` 行，指向 `openclaw update repair` 和 `openclaw plugins inspect <id> --runtime --json`。已禁用的插件条目，以及不是受信任来源关联的官方同步目标的记录，会在此处被跳过（与缺失负载检查所使用的 `skipDisabledPlugins` 策略一致），因此过期的禁用插件记录不会阻止本来有效的更新。
 
@@ -216,18 +213,11 @@ OpenClaw 也会回退。这些回退警告不会
 
 在扩展稳定版核心更新成功后，核心后插件完整性和一致性会将符合条件的官方 npm 插件目标到精确安装的核心版本。对于默认/`latest` 意图，OpenClaw 不会查询插件 `@extended-stable`，也不会回退到 npm `latest`；它会根据已安装的核心推导包版本。显式版本固定、显式非 `latest` 标签、第三方包以及非 npm 来源会保留其现有意图。
 
-对于包管理器安装，`openclaw update` 会在调用包管理器之前解析目标包
-版本。npm 全局安装使用分阶段安装：OpenClaw 先将新包安装到一个临时的 npm 前缀中，
-在那里验证打包后的 `dist` 清单，然后再把这个干净的包树交换到真实的全局前缀中。
-如果验证失败，则不会从可疑的树中运行更新后的 doctor、插件同步和重启工作。即使
-已安装版本已经与目标版本一致，该命令仍会刷新
-全局包安装，然后运行插件同步、核心命令完成度刷新以及重启工作。
-这使得打包的 sidecar 和渠道所属的插件记录与已安装的 OpenClaw 构建保持一致，同时将完整的插件命令完成度重建留给显式的
-`openclaw completion --write-state` 运行。
+对于包管理器安装，`openclaw update` 会在调用包管理器之前解析目标包版本。npm 全局安装使用分阶段安装：OpenClaw 会先将新包安装到临时 npm 前缀中，让候选包在 `preinstall` 期间验证主机 Node 版本，并在那里验证打包后的 `dist` 清单。一个打包完成保护机制会在 `preinstall` 成功之前保持在该清单之外，因此会跳过生命周期脚本的包管理器也会在激活前停止。在 npm 12 及更新版本上，更新器只批准候选 OpenClaw 生命周期；传递性依赖脚本仍会被阻止。随后 OpenClaw 会将干净的包树交换到真实的全局前缀中。如果验证失败，后更新 doctor、插件同步和重启工作都不会从可疑树中运行。即使已安装版本已经与目标版本匹配，命令也会刷新全局包安装，然后运行插件同步、核心命令完成刷新以及重启工作。这样可以让打包的 sidecar 和渠道拥有的插件记录与已安装的 OpenClaw 构建保持一致，同时将完整的插件命令完成重建留给显式的 `openclaw completion --write-state` 运行。
 
 ## 相关内容
 
-- `openclaw doctor`（在 git 检出上会提供先运行更新）
+- `openclaw doctor`（在 git 检出上会提示先运行更新）
 - [开发渠道](/install/development-channels)
 - [更新](/install/updating)
 - [CLI 参考](/cli)

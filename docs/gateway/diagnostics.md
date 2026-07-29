@@ -152,21 +152,9 @@ openclaw gateway diagnostics export \
 禁用诊断会减少 bug 报告的详细程度；它不会影响正常的
 Gateway 日志记录。
 
-关键内存压力快照默认关闭。若要在正常诊断事件之外捕获
-OOM 前的稳定性快照：
-
-```json5
-{
-  diagnostics: {
-    memoryPressureSnapshot: true,
-  },
-}
-```
-
-仅在能够承受关键内存压力期间额外的文件系统扫描和
-快照写入的主机上使用此功能。当快照关闭时，正常的内存压力事件
-仍会记录 RSS、heap、threshold 和 growth 事实（`rss_threshold`、
-`heap_threshold`、`rss_growth`）。
+Memory pressure events record RSS, heap, threshold, and growth facts
+(`rss_threshold`, `heap_threshold`, `rss_growth`) without performing a
+file-system scan or writing a pre-OOM snapshot.
 
 ## 相关内容
 

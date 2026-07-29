@@ -45,7 +45,11 @@ pnpm test src/plugins/uninstall.test.ts src/infra/package-dist-inventory.test.ts
 pnpm release:check
 ```
 
-`release:check` 会运行配置/文档/API 漂移检查（配置 schema、配置文档基线、插件 SDK API 基线和导出、插件版本/清单），写入包的 dist 清单，执行 `npm pack --dry-run`，拒绝被禁止的打包文件，将 tarball 安装到临时前缀，运行 postinstall，并对捆绑的 channel 入口点进行冒烟测试。
+`release:check` runs config/docs/API drift checks (config schema, config docs
+baseline, plugin SDK API contract manifest and exports, plugin versions/inventory),
+writes the package dist inventory, runs `npm pack --dry-run`, rejects forbidden
+packed files, installs the tarball into a temp prefix, runs postinstall, and
+smokes bundled channel entrypoints.
 
 ## Docker lanes
 

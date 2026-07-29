@@ -208,11 +208,64 @@ catalog, API-key auth, and dynamic model resolution.
 
     ### Live model discovery
 
-    如果你的提供方暴露了一个 `/models` 风格的 API，请将提供方特定的
-    端点和行投影保留在插件中，并使用
-    `openclaw/plugin-sdk/provider-catalog-live-runtime` 来处理共享的获取生命周期。
-    该辅助函数为你提供受保护的 HTTP 获取、提供方认证头、
-    结构化 HTTP 错误、TTL 缓存和静态回退行为，而不会把提供方策略放进 OpenClaw 核心。
+    If your provider exposes an OpenAI-compatible `/models` API, opt the
+    single-provider helper into shared discovery:
+
+    ```typescript
+    catalog: {
+      buildProvider: () => ({
+        api: "openai-completions",
+        baseUrl: "https://api.acme-ai.com/v1",
+        models: [...STATIC_MODELS],
+      }),
+      buildStaticProvider: () => ({
+        api: "openai-completions",
+        baseUrl: "https://api.acme-ai.com/v1",
+        models: [...STATIC_MODELS],
+      }),
+      liveModelDiscovery: true,
+    },
+    ```
+
+    `liveModelDiscovery: true` is a public Plugin SDK contract with these
+    behaviors:
+
+    | Area | Contract |
+    | --- | --- |
+    | Credentials | Discovery uses the catalog's resolved provider credential, preferring `discoveryApiKey` when auth supplies one. Secret-reference markers are never sent as tokens. The default request uses `Authorization: Bearer <token>`; use `buildRequestHeaders` for another vendor auth scheme. |
+    | Endpoint | The default URL is `models` relative to the effective provider `baseUrl`, including an operator override when `allowExplicitBaseUrl` is enabled. Use `endpointPath` for another relative path. Use `endpointUrl: { url, requireBaseUrl }` only for a fixed vendor URL; discovery is skipped unless the effective base URL still equals `requireBaseUrl`, so a custom proxy credential is not sent to the vendor. |
+    | Network limits | Fetches use OpenClaw's SSRF guard, one 5-second timeout budget across pagination, a 4 MiB response limit per page, and a 50-page limit. Cross-origin pagination links are rejected; credentials are removed after a cross-origin redirect. |
+    | Cache | Successful, non-empty catalogs are cached for 60 seconds by provider, endpoint, and resolved credential. Empty or unusable results are not cached. |
+    | Filtering | Exact live IDs keep their trusted static metadata. New rows are projected conservatively as text/chat models. Disabled, archived, deprecated, explicitly non-chat, embedding, reranking, moderation, speech, image-only, and video-only rows are excluded. Use `readRows` only to select rows from a nonstandard response envelope; provider-specific model semantics still belong in a custom catalog. |
+    | Admission | Optional. Set `acceptUnknownModel: ({ id, record }) => boolean` when your request shaping is model-version specific, so discovery cannot publish a model you cannot yet build a valid request for. It is called only for IDs your static catalog does not already publish; known IDs bypass it and keep their published metadata. Return `false` to drop the row. Providers that omit it keep the previous behavior unchanged. Prefer comparing the vendor's advertised capabilities against your own contract checks over a hand-maintained model list, and fail closed when the row carries no capability data. |
+    | Failure | Live discovery is advisory. Auth, network, timeout, pagination, parsing, empty-catalog, and filtering failures return the provider-owned static seed instead of removing the provider. |
+
+    For a non-Bearer or nonstandard list endpoint, pass options instead of
+    `true`:
+
+    ```typescript
+    liveModelDiscovery: {
+      endpointPath: "model-catalog",
+      buildRequestHeaders: ({ apiKey, discoveryApiKey }) => ({
+        "vendor-version": "2026-01-01",
+        "x-api-key": discoveryApiKey ?? apiKey ?? "",
+      }),
+      readRows: (body) =>
+        body && typeof body === "object" &&
+        Array.isArray((body as { models?: unknown }).models)
+          ? (body as { models: unknown[] }).models
+          : [],
+    },
+    ```
+
+    Do not use `endpointUrl` as an unconditional alternate host. Its
+    `requireBaseUrl` check is the credential-isolation boundary for providers
+    whose model-list host differs from their inference host.
+
+    If the provider needs custom model semantics rather than the conservative
+    OpenAI-compatible projection, keep only that projection in the plugin. Pass
+    it as `projectRows`; the shared runtime still owns guarded fetches,
+    provider-auth headers, cache admission, and static fallback.
 
     当 live API 只告诉你哪些由提供方拥有的静态目录行当前可用时，请使用 `buildLiveModelProviderConfig`：
 
@@ -262,6 +315,11 @@ catalog, API-key auth, and dynamic model resolution.
         fetchGuard: params.fetchGuard,
         ttlMs: 60_000,
         auditContext: "acme-ai-model-discovery",
+        projectRows: (rows, fallback) =>
+          rows.flatMap((row) => {
+            const model = projectAcmeModel(row, fallback);
+            return model ? [model] : [];
+          }),
       });
     }
 
@@ -302,40 +360,13 @@ catalog, API-key auth, and dynamic model resolution.
     });
     ```
 
-    当提供方 API 返回更丰富的元数据，而插件需要自行将行投影为 OpenClaw 模型定义时，请使用
-    `getCachedLiveProviderModelRows`：
-
-    ```typescript index.ts
-    import {
-      getCachedLiveProviderModelRows,
-      LiveModelCatalogHttpError,
-    } from "openclaw/plugin-sdk/provider-catalog-live-runtime";
-
-    async function discoverAcmeModels(apiKey: string) {
-      try {
-        const rows = await getCachedLiveProviderModelRows({
-          providerId: "acme-ai",
-          endpoint: "https://api.acme-ai.com/v1/models",
-          apiKey,
-          ttlMs: 60_000,
-          auditContext: "acme-ai-model-discovery",
-        });
-        return rows
-          .map((row) => projectAcmeModel(row))
-          .filter((model) => model !== null);
-      } catch (error) {
-        if (error instanceof LiveModelCatalogHttpError) {
-          return STATIC_MODELS;
-        }
-        throw error;
-      }
-    }
-    ```
-
-    `run` 应保持认证门控，并在没有可用凭据时返回 `null`。保留一个离线的 `staticRun` 或静态回退，
-    这样设置、文档、测试和选择器界面就不会依赖实时网络访问。使用适合模型列表新鲜度的 TTL，
-    避免请求时文件系统轮询，并且只有在上游响应不是 OpenAI 兼容的 `{ data: [{ id, object }] }`
-    形状时，才传入提供方特定的 `readRows` / `readModelId`。
+    `run` should stay auth-gated and return `null` when no usable credential is
+    available. Keep an offline `staticRun` or static fallback so setup, docs,
+    tests, and picker surfaces do not depend on live network access. Use a TTL
+    appropriate for model-list freshness, avoid request-time filesystem polling,
+    and pass a provider-specific `readRows` / `readModelId` only when the
+    upstream response is not an OpenAI-compatible `{ data: [{ id, object }] }`
+    shape.
 
     如果上游提供方使用的控制标记与 OpenClaw 不同，请添加一个小型的双向文本变换，而不是替换流路径：
 
@@ -486,13 +517,13 @@ catalog, API-key auth, and dynamic model resolution.
 
     | Family | 作用 | 打包示例 |
     | --- | --- | --- |
-    | `google-thinking` | 共享流路径上的 Gemini thinking 载荷规范化 | `google`, `google-gemini-cli` |
-    | `kilocode-thinking` | 共享代理流路径上的 Kilo reasoning 包装器，带有 `kilo/auto` 和不受支持的代理 reasoning id 跳过注入 thinking 的处理 | `kilocode` |
-    | `moonshot-thinking` | 来自配置 + `/think` 等级的 Moonshot 二进制原生 thinking 载荷映射 | `moonshot` |
-    | `minimax-fast-mode` | 共享流路径上的 MiniMax fast-mode 模型重写 | `minimax`, `minimax-portal` |
-    | `openai-responses-defaults` | 共享的原生 OpenAI/Codex Responses 包装器：归因头、`/fast`/`serviceTier`、文本详细程度、原生 Codex 网页搜索、reasoning-compat 载荷塑形，以及 Responses 上下文管理 | `openai` |
-    | `openrouter-thinking` | 用于代理路由的 OpenRouter reasoning 包装器，集中处理不支持模型/`auto` 跳过 | `openrouter` |
-    | `tool-stream-default-on` | 适用于 Z.AI 等默认启用 `tool_stream` 的提供方的默认开启 `tool_stream` 包装器，除非明确禁用 | `zai` |
+    | `google-thinking` | Gemini thinking payload normalization on the shared stream path | `google`, `google-gemini-cli` |
+    | `kilocode-thinking` | Kilo reasoning wrapper on the shared proxy stream path, with `kilo-auto/balanced` and unsupported proxy reasoning ids skipping injected thinking | `kilocode` |
+    | `moonshot-thinking` | Moonshot binary native-thinking payload mapping from config + `/think` level | `moonshot` |
+    | `minimax-fast-mode` | MiniMax fast-mode model rewrite on the shared stream path | `minimax`, `minimax-portal` |
+    | `openai-responses-defaults` | Shared native OpenAI/Codex Responses wrappers: attribution headers, `/fast`/`serviceTier`, text verbosity, native Codex web search, reasoning-compat payload shaping, and Responses context management | `openai` |
+    | `openrouter-thinking` | OpenRouter reasoning wrapper for proxy routes, with unsupported-model/`auto` skips handled centrally | `openrouter` |
+    | `tool-stream-default-on` | Default-on `tool_stream` wrapper for providers like Z.AI that want tool streaming unless explicitly disabled | `zai` |
 
     <Accordion title="驱动这些家族构建器的 SDK 接口">
       每个家族构建器都由同一软件包导出的更底层公共辅助函数组合而成；当某个提供方需要脱离通用模式时，

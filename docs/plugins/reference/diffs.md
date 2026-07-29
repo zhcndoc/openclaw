@@ -16,4 +16,4 @@ OpenClaw 只读 diff 查看器插件和文件渲染器，面向代理。
 
 ## 接口
 
-contracts: tools; skills
+contracts: `tools`; skills

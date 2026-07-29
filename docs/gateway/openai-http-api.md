@@ -104,9 +104,12 @@ OpenClaw 将 OpenAI 的 `model` 字段视为**代理目标**，而不是原始�
 
 如果请求包含 OpenAI 的 `user` 字符串，网关会据此派生一个稳定的会话密钥，因此重复调用可以共享同一个代理会话。对于自定义应用，请在每个对话线程中复用相同的 `user` 值；除非你希望多个对话/设备共享一个 OpenClaw 会话，否则应避免使用账户级标识符。仅当你需要在多个客户端/线程之间进行显式路由控制时，才使用 `x-openclaw-session-key`，并使用由应用自行管理的密钥，以避开上述保留命名空间。
 
-## 请求限制（配置）
+## Request limits
 
-默认值可在 `gateway.http.endpoints.chatCompletions` 下调整：
+The endpoint uses built-in limits of 20 MB per request body, 8 `image_url`
+parts from the latest user message, and 20 MB of cumulative decoded image
+data. Image source policy remains configurable under
+`gateway.http.endpoints.chatCompletions.images`:
 
 ```json5
 {
@@ -115,9 +118,6 @@ OpenClaw 将 OpenAI 的 `model` 字段视为**代理目标**，而不是原始�
       endpoints: {
         chatCompletions: {
           enabled: true,
-          maxBodyBytes: 20000000,
-          maxImageParts: 8,
-          maxTotalImageBytes: 20000000,
           images: {
             allowUrl: false,
             urlAllowlist: ["cdn.example.com", "*.assets.example.com"],
@@ -140,17 +140,14 @@ OpenClaw 将 OpenAI 的 `model` 字段视为**代理目标**，而不是原始�
 }
 ```
 
-省略时的默认值：
+Image settings default to:
 
-| 键                   | 默认值                                                                       |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `maxBodyBytes`       | 20MB                                                                         |
-| `maxImageParts`      | 8（从最新用户消息中读取的 `image_url` 部分最大数量）                          |
-| `maxTotalImageBytes` | 20MB（一次请求中所有 `image_url` 部分的累计解码字节数）                      |
-| `images.allowUrl`    | `false`（除非启用，否则会拒绝来源于 URL 的 `image_url` 部分）               |
-| `images.maxBytes`    | 每张图片 10MB                                                                |
-| `images.maxRedirects`| 3                                                                            |
-| `images.timeoutMs`   | 10秒                                                                         |
+| Key                   | Default                                                             |
+| --------------------- | ------------------------------------------------------------------- |
+| `images.allowUrl`     | `false` (URL-sourced `image_url` parts are rejected unless enabled) |
+| `images.maxBytes`     | 10MB per image                                                      |
+| `images.maxRedirects` | 3                                                                   |
+| `images.timeoutMs`    | 10s                                                                 |
 
 HEIC/HEIF `image_url` 来源会被接受，并在通过共享的 OpenClaw 图像处理器（Rastermill）交付给提供方之前规范化为 JPEG；对于需要外部编解码器支持的格式，它会回退到系统转换器（`sips`、ImageMagick、GraphicsMagick 或 ffmpeg）。
 

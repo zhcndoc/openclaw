@@ -16,11 +16,12 @@ OpenClaw 可以运行一个由代理控制的**专用 Chrome/Brave/Edge/Chromium
 ## 你将获得什么
 
 - 一个名为 **openclaw** 的独立浏览器配置文件（默认橙色强调色）。
-- 确定性的标签页控制（列出/打开/聚焦/关闭）。
+- 确定性的标签页控制（列表/打开/聚焦/关闭）。
 - 代理操作（点击/输入/拖拽/选择）、快照、截图、PDF。
-- 基于 Playwright 的配置文件会在托管下载目录下保存直接附件导航，并在最终 URL 策略验证后返回包含 `{ url, suggestedFilename, path }` 的元数据。
-- 基于 Playwright 的代理操作在某个操作立即开始一个或多个下载时，会返回一个 `downloads` 数组，其中包含相同的托管元数据。
-- 一个内置的 `browser-automation` 技能，当浏览器插件启用时，它会教代理进行快照、稳定标签页、stale-ref 和手动阻塞器恢复循环。
+- 针对可读页面文本的问答，无需返回完整快照。
+- 基于 Playwright 的配置文件会将直接附件导航保存在受管理的下载目录中，并在最终 URL 策略验证后返回 `{ url, suggestedFilename, path }` 元数据。
+- 基于 Playwright 的代理操作在该操作立即开始一个或多个下载时，会返回一个包含相同受管理元数据的 `downloads` 数组。
+- 一个捆绑的 `browser-automation` 技能，在浏览器插件启用时，教导代理使用快照、稳定标签页、失效引用和手动阻塞恢复循环。
 - 可选的多配置文件支持（`openclaw`、`work`、`remote`、...）。
 
 这个浏览器**不是**你的日常主力浏览器。它是一个安全、隔离的表面，供
@@ -80,8 +81,8 @@ Tool-profile note: `tools.profile: "coding"` 包括 `web_search` 和
 }
 ```
 
-对于单个代理，请使用 `agents.list[].tools.alsoAllow: ["browser"]`。
-仅有 `tools.subagents.tools.allow: ["browser"]` 不够，因为子代理
+对于单个代理，请使用 `agents.entries.*.tools.alsoAllow: ["browser"]`。
+仅有 `tools.subagents.tools.allow: ["browser"]` 还不够，因为子代理
 策略是在配置文件过滤之后应用的。
 
 浏览器插件提供两级代理指导：
@@ -92,7 +93,17 @@ Tool-profile note: `tools.profile: "coding"` 包括 `web_search` 和
 
 当插件启用时，插件捆绑的技能会列在代理可用的技能中。完整的技能说明按需加载，因此常规轮次不会消耗全部 token 成本。
 
-## 缺少 browser 命令或工具
+对于“读取此页面并回答 X”，请使用 browser 的 `action="extract"` 并提供
+`query`。它通过一次模型调用发送经过清理、受限的可读文本，
+并且只返回答案；`snapshot` 则用于选择操作和获取引用。提取
+需要支持 Playwright 的配置文件，如果无法完成，则会回退到快照工作流。
+
+在大型页面上，传入 `selector` 仅捕获相关的 CSS 子树，并传入
+`ignoreSelectors` 在转换前移除重复的界面部分。当调用方需要在
+`details.json` 中获得经过验证、可供机器使用的字段时，传入 JSON
+`schema`；如果没有它，提取结果仍然只是自由文本答案。
+
+## 缺少浏览器命令或工具
 
 如果升级后 `openclaw browser` 变成未知命令、`browser.request` 缺失，或者代理报告浏览器工具不可用，通常原因是 `plugins.allow` 列表中未包含 `browser`，且不存在根级 `browser` 配置块。请添加它：
 
@@ -139,17 +150,9 @@ channel 配置行为一致。`plugins.entries.browser.enabled=true` 和
       // hostnameAllowlist: ["*.example.com", "example.com"],
       // allowedHostnames: ["localhost"],
     },
-    // cdpUrl: "http://127.0.0.1:18792", // 旧的单配置文件覆盖项
-    remoteCdpTimeoutMs: 1500, // 远程 CDP HTTP 超时（ms）
-    remoteCdpHandshakeTimeoutMs: 3000, // 远程 CDP WebSocket 握手超时（ms）
-    localLaunchTimeoutMs: 15000, // 本地受管理 Chrome 发现超时（ms）
-    localCdpReadyTimeoutMs: 8000, // 本地受管理启动后 CDP 就绪超时（ms）
-    actionTimeoutMs: 60000, // 默认浏览器 act 超时（ms）
+    // cdpUrl: "http://127.0.0.1:18792", // 旧版单配置文件覆盖
     tabCleanup: {
       enabled: true, // 默认：true
-      idleMinutes: 120, // 设为 0 可禁用空闲清理
-      maxTabsPerSession: 8, // 设为 0 可禁用每会话上限
-      sweepMinutes: 5,
     },
     // snapshotDefaults: { mode: "efficient" }, // 当调用方未指定时的默认 snapshot 模式
     defaultProfile: "openclaw",
@@ -186,7 +189,19 @@ channel 配置行为一致。`plugins.entries.browser.enabled=true` 和
 `browser.snapshotDefaults.mode: "efficient"` 会在调用方未传入显式 `snapshotFormat` 或 `mode` 时，改变默认的 `snapshot`
 提取模式；有关每次调用的 snapshot 选项，请参见 [Browser control API](/tools/browser-control)。
 
-### 截图视觉支持（仅文本模型支持）
+在具有稳定文档标识的驱动上，对同一标签页、文档和选项族重复进行 AI 或角色 snapshot 时，会将新出现的、带 ref 的元素标记为 `[new]`。第一次 snapshot——以及导航后的第一次 snapshot——会建立一个无标记基线。现有会话 snapshot 会省略差异。
+
+### Tab cleanup ownership
+
+会话标签页清理仅适用于由 OpenClaw 浏览器工具通过 `action: "open"` 创建的标签页。OpenClaw 不会接管已经打开的标签页、由用户打开的标签页，或所有权未知的其他标签页。`browser.tabCleanup` 区块控制主会话的周期性空闲和上限清理；禁用它并不会禁用显式的会话生命周期清理。
+
+对于本地打开的主机，具有稳定原生 CDP target 和浏览器身份的所有权会保存在共享的 SQLite 状态中。这些记录在 Gateway 重启后仍然保留，并且仍然可以参与 `/new` 和其他会话生命周期清理；会话生命周期清理包括 subagent、cron 和 ACP 会话结束。其工具可见 target 也是原生 CDP target 的记录，在重启后仍然可以参与空闲和每会话上限清理。Chrome MCP target 句柄是进程本地的，因此冷的现有会话记录会等待生命周期清理，而不是冒险对重启后无法安全归因的活动执行空闲清理。这个持久路径可以覆盖 OpenClaw 管理的配置文件、常规远程 CDP 配置文件，以及带有显式 `cdpUrl` 的现有会话配置文件，只要 OpenClaw 能解析原生 target 和稳定的浏览器身份即可。在关闭持久记录之前，OpenClaw 会验证配置的配置文件和浏览器实例仍然匹配。
+
+Chrome MCP `--autoConnect`、其 `/json/version` 响应缺少稳定浏览器身份的 CDP 端点，以及其原生 target 无法解析的打开项，仍然属于进程本地的尽力追踪。它们可以在该 Gateway 进程运行时被清理，但不会在 Gateway 重启后自动关闭。对于在持久追踪可用之前就已打开的标签页，不会事后接管；请手动关闭这些标签页。
+
+清理是尽力而为的，并不保证每个符合条件的标签页都会立即关闭。一次短暂的所有权检查或关闭失败会使持久清理保持待处理状态，等待稍后重试。重试不是无限的：当浏览器一直不可达且标签页已闲置超过一天时，跟踪行会被退役，这样持久存储就不会被那些再也无法验证的标签页占满。
+
+### 截图视觉能力（仅文本模型支持）
 
 当主模型是纯文本模型（不具备视觉/多模态支持）时，浏览器
 截图会返回模型无法读取的图像块。浏览器截图会复用现有的图像理解配置，
@@ -237,13 +252,10 @@ channel 配置行为一致。`plugins.entries.browser.enabled=true` 和
 
 <Accordion title="端口与可达性">
 
-- 控制服务绑定到回环地址上的一个端口，该端口由 `gateway.port` 派生（默认 `18791` = gateway + 2）。`OPENCLAW_GATEWAY_PORT` 优先于 `gateway.port`；任一项都会在同一端口族内平移派生端口。
-- 本地 `openclaw` 配置会自动从控制端口上方 9 个端口开始的范围内分配 `cdpPort`/`cdpUrl`（默认 `18800`-`18899`）；仅在远程 CDP 配置或现有会话端点附加时手动设置这些值。未设置时，`cdpUrl` 默认为受管的本地 CDP 端口。
-- `remoteCdpTimeoutMs` 适用于远程和 `attachOnly` 的 CDP HTTP 可达性检查以及打开标签页的 HTTP 请求；`remoteCdpHandshakeTimeoutMs` 适用于它们的 CDP WebSocket 握手。持续的远程 Playwright 标签页枚举会使用两者中较大的那个作为操作截止时间。
-- `localLaunchTimeoutMs` 是本地启动的受管 Chrome 进程暴露其 CDP HTTP 端点的预算时间。`localCdpReadyTimeoutMs` 是进程被发现后，等待 CDP WebSocket 就绪的后续预算。在 Raspberry Pi、低端 VPS 或 Chromium 启动较慢的老旧硬件上应提高这些值。数值必须是正整数且不超过 `120000` 毫秒；无效配置值会被拒绝。
-- 对重复的受管 Chrome 启动/就绪失败，会按配置文件进行熔断。若连续多次失败，OpenClaw 会短暂暂停新的启动尝试，而不是在每次浏览器工具调用时都生成 Chromium。请修复启动问题；如果不需要浏览器，则禁用它；或者在修复后重启 Gateway。
-- 当调用方未传入 `timeoutMs` 时，`actionTimeoutMs` 是浏览器 `act` 请求的默认预算。客户端传输会额外增加一个小的缓冲窗口，以便长等待能够完成，而不是在 HTTP 边界处超时。
-- `tabCleanup` 用于尽力清理由主 agent 浏览器会话打开的标签页。子 agent、cron 和 ACP 生命周期清理仍会在会话结束时关闭其显式跟踪的标签页；主会话会保持活动标签页可复用，然后在后台关闭空闲或多余的跟踪标签页。
+- Control service 绑定到回环地址上的一个端口，该端口由 `gateway.port` 派生而来（默认 `18791` = gateway + 2）。`OPENCLAW_GATEWAY_PORT` 的优先级高于 `gateway.port`；任一项都会在同一端口族中平移派生端口。
+- 本地 `openclaw` 配置文件会从控制端口上方 9 个端口开始的范围内自动分配 `cdpPort`/`cdpUrl`（默认 `18800`-`18899`）；仅对远程 CDP 配置文件或现有会话端点附加设置这些值。`cdpUrl` 在未设置时默认指向受管本地 CDP 端口。
+- 远程和 `attachOnly` 的 CDP 可达性、WebSocket 握手以及本地受管 Chrome 启动都使用内置截止时间。
+- 对受管 Chrome 的反复启动/就绪失败会按配置文件触发断路器。连续失败若干次后，OpenClaw 会短暂暂停新的启动尝试，而不是在每次浏览器工具调用时都生成 Chromium。请修复启动问题、在不需要时禁用浏览器，或者在修复后重启 Gateway。
 
 </Accordion>
 
@@ -388,8 +400,6 @@ WebSocket URL。
   browser: {
     enabled: true,
     defaultProfile: "browserless",
-    remoteCdpTimeoutMs: 2000,
-    remoteCdpHandshakeTimeoutMs: 4000,
     profiles: {
       browserless: {
         cdpUrl: "wss://production-sfo.browserless.io?token=<BROWSERLESS_API_KEY>",
@@ -479,8 +489,6 @@ CDP URL 形式，并会自动选择正确的连接策略：
   browser: {
     enabled: true,
     defaultProfile: "browserbase",
-    remoteCdpTimeoutMs: 3000,
-    remoteCdpHandshakeTimeoutMs: 5000,
     profiles: {
       browserbase: {
         cdpUrl: "wss://connect.browserbase.com?apiKey=<BROWSERBASE_API_KEY>",
@@ -511,8 +519,6 @@ CDP URL 形式，并会自动选择正确的连接策略：
   browser: {
     enabled: true,
     defaultProfile: "notte",
-    remoteCdpTimeoutMs: 3000,
-    remoteCdpHandshakeTimeoutMs: 5000,
     profiles: {
       notte: {
         cdpUrl: "wss://us-prod.notte.cc/sessions/connect?token=<NOTTE_API_KEY>",
@@ -648,24 +654,22 @@ Agent 使用方式：
 
 注意：
 
-- This path is higher-risk than the isolated `openclaw` profile because it can
-  act inside your signed-in browser session.
-- OpenClaw does not launch the browser for this driver; it only attaches.
-- OpenClaw uses the official Chrome DevTools MCP `--autoConnect` flow here. If
-  `userDataDir` is set, it is passed through to target that user data directory.
-- Existing-session can attach on the selected host or through a connected
-  browser node. If Chrome lives elsewhere and no browser node is connected, use
-  remote CDP or a node host instead.
-- Chrome MCP targets and snapshot refs are scoped to one MCP subprocess. After
-  that process restarts, run `browser tabs` again, explicitly select a fresh
-  target before target-specific work, and take a new snapshot before using refs.
-  Each ref is valid only for its target and latest snapshot. Old aliases are not
-  transferred to a replacement tab, even when its URL matches.
-- Chrome DevTools MCP currently routes page tools by a process-local numeric page
-  ID. Process-scoped handles prevent reuse across subprocess replacement, but an
-  in-process browser-context replacement between adjacent tool calls can still
-  retarget an action. Fully atomic routing requires upstream page-tool support
-  for stable target IDs.
+- 这条路径比隔离的 `openclaw` 配置文件风险更高，因为它可以
+  在你已登录的浏览器会话内执行操作。
+- OpenClaw 不会为这个驱动启动浏览器；它只会进行附加。
+- OpenClaw 在这里使用官方的 Chrome DevTools MCP `--autoConnect` 流程。如果
+  设置了 `userDataDir`，它会被传递过去，用于定位该用户数据目录。
+- existing-session 可以在所选主机上附加，也可以通过已连接的
+  browser node 附加。如果 Chrome 在别处运行且没有连接 browser node，
+  请改用 remote CDP 或 node 主机。
+- Chrome MCP 的目标和 snapshot refs 仅作用于一个 MCP 子进程。该进程
+  重启后，请再次运行 `browser tabs`，在进行特定目标工作前显式选择新的目标，
+  并在使用 refs 前获取新的 snapshot。每个 ref 只对其对应的目标和最新快照有效。
+  即使 URL 相同，旧别名也不会转移到替换后的标签页。
+- Chrome DevTools MCP 目前通过进程本地的数字页面 ID 路由页面工具。
+  进程作用域的句柄可防止跨子进程替换复用，但在相邻工具调用之间，
+  进程内的 browser-context 替换仍可能重新定向某个动作。要实现完全原子化的路由，
+  需要上游页面工具支持稳定的目标 ID。
 
 ### 自定义 Chrome MCP 启动
 
@@ -783,16 +787,20 @@ Agent 只有 **一个工具** 用于浏览器自动化：
 
 映射关系：
 
-- `browser snapshot` 返回稳定的 UI 树（AI 或 ARIA）。
-- `browser act` 使用快照中的 `ref` ID 来点击/输入/拖拽/选择。
+- `browser snapshot` 返回一个稳定的 UI 树（AI 或 ARIA）。
+- `browser navigate` 也会返回已加载页面的内联快照（高效
+  交互层，因此有效载荷保持紧凑且有界），所以 agent
+  不需要后续再调用 snapshot。批量 `act` 结果中，如果报告了
+  跨文档导航，也会包含同样的新鲜页面状态。解析为下载的导航则会跳过它。
+- `browser act` 使用快照的 `ref` ID 来点击/输入/拖拽/选择。
 - `browser screenshot` 捕获像素（整页、元素或带标签的 refs）。
-- `browser doctor` 检查 Gateway、插件、配置文件、浏览器和标签页就绪状态。
+- `browser doctor` 检查 Gateway、插件、配置文件、浏览器和标签页是否就绪。
 - `browser` 接受：
-  - `profile` 用于选择命名浏览器配置文件（`openclaw`、`chrome` 或远程 CDP）。
-  - `target`（`sandbox` | `host` | `node`）用于选择浏览器运行的位置。
-  - 在 sandbox 会话中，`target: "host"` 需要 `agents.defaults.sandbox.browser.allowHostControl=true`。
-  - 如果省略 `target`：sandbox 会话默认为 `sandbox`，非 sandbox 会话默认为 `host`。
-  - 如果连接了具备浏览器能力的节点，该工具可能会自动路由到该节点，除非你将 `target` 固定为 `"host"` 或 `"node"`。
+  - `profile` 用于选择一个命名的浏览器配置文件（openclaw、chrome 或 remote CDP）。
+  - `target`（`sandbox` | `host` | `node`）用于选择浏览器所在位置。
+  - 在沙箱会话中，`target: "host"` 需要 `agents.defaults.sandbox.browser.allowHostControl=true`。
+  - 如果省略 `target`：沙箱会话默认使用 `sandbox`，非沙箱会话默认使用 `host`。
+  - 如果已连接一个支持浏览器的节点，除非你将 `target="host"` 或 `target="node"` 固定指定，否则该工具可能会自动路由到它。
 
 这使得 agent 更具确定性，并避免脆弱的选择器。
 

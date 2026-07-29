@@ -39,15 +39,15 @@ sidebarTitle: "广播组"
 
 **结果：**当 OpenClaw 本来会在此聊天中回复时，它会同时运行这三个代理。
 
-每个列出的代理 id 都必须存在于 `agents.list` 中：配置校验会报告未知 id，运行时会跳过它们，并给出 `Broadcast agent <id> not found in agents.list; skipping` 警告。
+每个列出的代理 id 都必须存在于 `agents.entries` 中：配置校验会报告未知 id，运行时会跳过它们，并输出 `Broadcast agent <id> not found in agents.entries; skipping` 警告。
 
 ### 处理策略
 
 `broadcast.strategy` 用于设置代理如何处理消息：
 
-| Strategy             | Behavior                                                              |
+| 策略                 | 行为                                                              |
 | -------------------- | --------------------------------------------------------------------- |
-| `parallel` (default) | 所有代理同时处理；回复可能以任意顺序到达。       |
+| `parallel`（默认）   | 所有代理同时处理；回复可能以任意顺序到达。       |
 | `sequential`         | 代理按数组顺序处理；每个代理都要等前一个完成后才开始。 |
 
 ```json
@@ -247,9 +247,9 @@ sidebarTitle: "广播组"
   <Accordion title="代理没有响应">
     **检查：**
 
-    1. Agent IDs 存在于 `agents.list` 中（配置校验会拒绝未知的 id）。
-    2. Peer ID 格式正确（群组 JID 形如 `120363403215116621@g.us`，或者用于私信的 E.164 形式如 `+15551234567`）。
-    3. 消息通过了正常的门控条件（仍需满足提及/激活规则）。
+    1. Agent IDs 存在于 `agents.entries` 中（配置校验会拒绝未知的 ids）。
+    2. Peer ID 格式正确（群组 JID 如 `120363403215116621@g.us`，或用于 DM 的 E.164 如 `+15551234567`）。
+    3. 消息通过了正常的门控（仍然适用 mention/activation 规则）。
 
     **调试：**
 

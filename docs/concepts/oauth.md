@@ -52,18 +52,21 @@ OAuth 提供商通常会在每次登录/刷新时新铸造一个新的刷新令�
 
 ## 存储（令牌存放在哪里）
 
-Secrets 按 agent 分开存储，以逻辑名称 `auth-profiles.json` 作为键（底层存储是 agent 的 SQLite 数据库；保留 JSON 名称是为了兼容性和工具展示）：
+Secrets and auth-routing state live in each agent's canonical SQLite database:
 
-- Auth profiles（OAuth + API keys + 可选的值级引用）：
-  `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- 旧版兼容文件：`~/.openclaw/agents/<agentId>/agent/auth.json`
-  （发现静态 `api_key` 条目时会被清理）
+- `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
+- Credential rows: `auth_profile_store`
+- Order, last-good, cooldown, and usage rows: `auth_profile_state`
 
-仅用于旧版导入的文件（仍受支持，但不是主存储）：
+Older installations may still contain `auth-profiles.json`, `auth-state.json`,
+per-agent `auth.json`, or shared `credentials/oauth.json`. Run
+`openclaw doctor --fix` once after upgrading. Doctor imports verified values,
+records a migration receipt, and renames the original file to a timestamped
+archive. Runtime never reads these retired files and reports
+`AUTH_PROFILE_MIGRATION_REQUIRED` when a legacy credential source has not been
+migrated.
 
-- `~/.openclaw/credentials/oauth.json`（首次使用时会导入到 auth profile 存储中）
-
-以上所有路径也都会遵循 `$OPENCLAW_STATE_DIR`（状态目录覆盖）。完整参考：[/gateway/configuration-reference#auth-storage](/gateway/configuration-reference#auth-storage)
+The database and migration sources respect `$OPENCLAW_STATE_DIR`. Full reference: [/gateway/configuration-reference#auth-storage](/gateway/configuration-reference#auth-storage)
 
 关于静态密钥引用和运行时快照激活行为，见 [Secrets Management](/gateway/secrets)。
 
@@ -99,10 +102,10 @@ OpenClaw 的交互式登录流程实现在 `openclaw/plugin-sdk/llm.ts` 中，�
 
 流程形态：
 
-1. 从 OpenClaw 启动 Anthropic setup-token 或 paste-token
-2. OpenClaw 将生成的 Anthropic 凭据存入认证配置文件
-3. 模型选择保持在 `anthropic/...`
-4. 现有的 Anthropic 认证配置文件仍可用作回滚/顺序控制
+1. 通过在任何安装了 Claude Code 的机器上运行 `claude setup-token` 创建令牌，然后从 OpenClaw 启动 Anthropic setup-token 或 paste-token
+2. OpenClaw 将生成的 Anthropic 凭据存储在认证配置文件中
+3. 模型选择保持为 `anthropic/...`
+4. 现有的 Anthropic 认证配置文件仍然可用，可用于回滚/顺序控制
 
 ### OpenAI Codex（ChatGPT OAuth）
 
@@ -138,7 +141,7 @@ Profiles 会存储一个 `expires` 时间戳。在运行时：
 - 如果 `expires` 在未来，则使用已存储的访问令牌
 - 如果已过期，则进行刷新（在文件锁下），并覆盖已存储的凭据
 - 如果某个辅助 agent 读取了继承的主 agent OAuth profile，则刷新会写回主 agent 存储，而不是把刷新令牌复制到辅助 agent 存储中
-- 外部管理的 CLI 凭据（Claude CLI、窄化的 Codex CLI 引导；见 [The token sink](#the-token-sink-why-it-exists)）会被重新读取，而不是消耗一个复制来的刷新令牌。如果受管刷新失败，OpenClaw 会报告受影响的 profile 需要重新认证，而不是返回外部 CLI 令牌内容。
+- 外部管理的 CLI 凭据（Claude CLI、窄化的 Codex CLI 引导；见 [令牌汇](#the-token-sink-why-it-exists)）会被重新读取，而不是消耗一个复制来的刷新令牌。如果受管刷新失败，OpenClaw 会报告受影响的 profile 需要重新认证，而不是返回外部 CLI 令牌内容。
 
 刷新流程是自动的；通常你无需手动管理令牌。
 

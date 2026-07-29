@@ -16,4 +16,4 @@ title: "BytePlus 插件"
 
 ## 接口
 
-providers: byteplus, byteplus-plan; contracts: videoGenerationProviders
+providers: `byteplus`, `byteplus-plan`; contracts: `videoGenerationProviders`

@@ -16,4 +16,4 @@ title: "TTS 本地 CLI 插件"
 
 ## 接口
 
-contracts: speechProviders
+contracts: `speechProviders`

@@ -36,6 +36,7 @@ OpenClaw 以配置其余部分。`openclaw setup` 会在全新
 
 ```bash
 openclaw onboard
+openclaw onboard --tui
 openclaw onboard --classic
 openclaw onboard --modern
 openclaw onboard --flow quickstart
@@ -43,29 +44,43 @@ openclaw onboard --flow manual
 openclaw onboard --flow import
 openclaw onboard --import-from hermes --import-source ~/.hermes
 openclaw onboard --skip-bootstrap
+openclaw onboard recommendations --json
+openclaw onboard recommendations acknowledge
+openclaw onboard recommendations acknowledge --retry "<failed-id>"
+openclaw onboard recommendations refresh
 openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 ```
 
-- `--classic`：打开完整的逐步向导。它不能与
-  `--non-interactive` 组合使用；若用于自动化设置，请省略 `--classic`。
-- `--flow quickstart`：打开带有最少提示的经典向导，并
-  自动生成一个网关令牌。
-- `--flow manual`（别名 `advanced`）：打开带有完整提示的经典向导，
-  用于端口、绑定和认证。
-- `--flow import`：运行检测到的迁移提供程序（例如通过 `--import-from hermes` 使用 Hermes），预览计划，然后在确认后应用。导入仅针对全新的 OpenClaw 设置运行——如果存在任何配置、凭据、会话和工作区状态，请先重置。有关试运行计划、覆盖模式、报告和精确映射，请使用 [`openclaw migrate`](/cli/migrate)。
-- `--modern` 是 OpenClaw 对话式设置助手的兼容别名。
-  它使用与 `openclaw setup` 相同的实时推理门控，并且
-  仅接受 `--workspace`、`--accept-risk`、
-  `--non-interactive` 和 `--json`。其他设置标志会被拒绝，
-  而不是被静默忽略。
+`openclaw onboard recommendations` 会读取在引导过程中存储的待处理应用推荐匹配项。添加 `--json` 可输出供首次启动引导使用的机器可读列表。该命令不会重新扫描已安装的应用，也不会调用模型。其输出仅包含已验证的安装 ID、来源和等级；它会刻意省略不受信任的市场文案、模型原因以及本地应用标签。推荐提议被答复后，该命令会返回空列表，后续的 onboarding 运行将完全跳过这一步。
+`openclaw onboard recommendations refresh` 会清除已存储的提议，因此下一次 onboarding 运行会重新扫描已安装的应用并生成新的提议。
+
+新的工作区会将推荐选择延后到引导对话中。
+在该对话处理完用户选择后，
+`openclaw onboard recommendations acknowledge` 会将已存储的提议标记为已答复。
+该确认操作是幂等的。如果所选安装失败，请将每个失败的透明 ID 与 `--retry <id...>` 一起传入；成功和已拒绝的匹配会被消耗，而失败的匹配会保留待以后一次 onboarding 运行处理。未知 ID 会失败且不会更改已存储的提议。在一次中断的 ClawHub 技能安装之后，现有目标仅在
+`openclaw skills verify "@owner/slug"` 对相同的
+带发布者限定的推荐 ID 成功，并且其 JSON 输出报告
+`openclaw.resolution.source: "installed"` 时，才算成功。仅有注册表验证并不能证明本地安装。否则请使用 `--retry` 保留该 ID 为待处理状态，不要覆盖现有技能。
+
+- `--classic`：打开完整的逐步向导。它不能与 `--non-interactive` 组合使用；自动化设置时请省略 `--classic`。
+- `--flow quickstart`：打开带最少提示的经典向导，默认使用令牌认证，并在没有已存储或显式凭据适用时生成令牌。显式的本地 Gateway 标志，例如 `--gateway-port`、`--gateway-bind`、`--gateway-auth` 和 `--tailscale`，会覆盖相应的已存储或默认 quickstart 值；省略的选项将保留其当前值。
+- `--flow manual`（别名 `advanced`）：打开具有端口、绑定和认证完整提示的经典向导。
+- `--flow import`：在全新设置上运行检测到的迁移提供程序（例如通过 `--import-from hermes` 使用 Hermes）。确认后，引导会将配置、凭据、工作区文件、内存和技能阶段性放入私有临时目标；导入后的推理必须先通过一次实时完成，工作区和代理状态才会提升并提交配置。如果在提升之前失败或取消，则不会触及当前实时目标。无法回滚的外部激活步骤（例如 Codex 插件安装）会在之后运行，并可在迁移报告中重试。如果已存在任何内容，请先重置配置、凭据、会话和工作区状态。使用 [`openclaw migrate`](/cli/migrate) 可进行 dry-run 计划、覆盖模式、已验证备份、报告以及精确映射。
+- `--remote-url` 和 `--remote-token`：预填经典远程 Gateway 步骤并覆盖本次运行的已存储远程值。更改 URL 不会复用已存储凭据，除非你同时传入令牌。令牌在提示中保持遮罩，并遵循向导现有的明文或 SecretRef 存储选择。
+- `--tailscale-reset-on-exit` 和 `--no-tailscale-reset-on-exit`：显式控制 Gateway 退出时是否重置 Tailscale Serve 或 Funnel 配置。两者都不提供时，在非交互式重复运行期间会保留当前设置。
+- `--modern` 是 OpenClaw 对话式设置助手的兼容别名。它使用与 `openclaw setup` 相同的实时推理门控，并且仅接受 `--workspace`、`--accept-risk`、`--non-interactive` 和 `--json`。其他设置标志会被拒绝，而不会被静默忽略。
 
 ## 引导流程
 
-直接运行 `openclaw onboard` 会启动引导流程。它会显示安全提示，
-检测已通过已配置模型、API 密钥
-环境变量以及受支持的本地 CLI 可用的 AI 访问，然后用一次真实补全测试
-推荐的候选项。如果该候选项失败，入门流程会显示
-原因并自动尝试下一个可用候选项。
+直接运行 `openclaw onboard` 会启动引导式流程。它会显示安全提示，
+然后先询问一个问题：**full access**（推荐 — 安装程序会自动查找
+AI 应用、密钥和本地运行时）或 **ask first**（安装程序会先询问，
+然后再查看，或者让你手动配置）。该选择会以 `wizard.accessMode` 持久保存。
+在允许发现的情况下，引导会检测已通过已配置模型、API 密钥环境变量
+和受支持的本地 CLI 可用的 AI 访问，然后使用真实补全测试推荐的候选项。
+如果某个候选项失败，引导会静默尝试下一个可用项，并用一行文字概括
+所有未响应的项；正在工作的路径会被宣布，并提供一个单键选项以改为查看
+其他所有项。
 
 如果自动检测已用尽，提供商选择器会首先显示 OpenAI、
 Anthropic、xAI（Grok）、Google 和 OpenRouter。为所有其他受支持的提供商选择 **More…**，
@@ -77,29 +92,50 @@ API 密钥或令牌方式使用相同的实时补全路径。OpenClaw 只会在�
 并在准备好后重新运行 `openclaw onboard`。在 OpenClaw 启动之前，Workspace 和 Gateway 的设置保持
 不变。
 
-在引导模式下，`--workspace <dir>` 提供 OpenClaw 建议的 workspace
-以及隔离的推理上下文。它不会被持久化，直到你批准 OpenClaw 的设置提案。
-经典和非交互式引导会通过其正常的设置流程持久化 workspace。
+在引导模式下，`--workspace <dir>` 会提供 OpenClaw 建议的工作区
+和隔离的推理上下文。在你批准 OpenClaw 安装提案之前，它不会被持久化。
+经典和非交互式 onboarding 会通过其正常安装流程持久化工作区。
+在已有 agent 编排重新运行时，onboarding 会保留已配置的 fleet 工作区：经典
+向导会展示两条路径，并要求在移动它之前明确确认，
+而非交互式安装会发出警告并保留当前值。
 
-在推理通过后，引导流程会立即使用
-已验证的模型启动 OpenClaw。随后 OpenClaw 可以配置 workspace、Gateway、
-channels、agents、plugins 以及其他可选功能。在 OpenClaw 内部，使用
-`open channel wizard for <channel>` 将 channel 凭据收集交给一个
-带掩码的终端向导。要更改模型提供商或其认证方式，
-请退出 OpenClaw 并运行 `openclaw onboard`；OpenClaw 不会打开引导式
-或经典的提供商流程。
+在推理通过后，onboarding 会检查受支持本地 AI 工具中的记忆：
+Claude Code auto-memory、Codex consolidated memories 和 Hermes memory
+files。找到任何内容时，会提供一个页面，将它们复制到 agent 工作区中的
+`memory/imports/` 以便索引回忆。未经确认不会导入任何内容，先前已导入的文件会被跳过，
+并且你始终可以稍后从 Control UI 的 [Memory import page](/web/control-ui) 导入，
+它提供相同的仅记忆范围。（完整的 [`openclaw migrate`](/cli/migrate) 运行范围更广：
+它还可以导入配置、技能和凭据。）经典向导在准备好工作区后也会显示相同的页面。
 
-在已配置的安装中，再次运行 `openclaw onboard` 会首先验证当前
-默认模型，因此同一流程也可作为验证和修复步骤。
+在推理通过后（以及记忆导入提议之后），引导式 onboarding 会自动应用标准设置——
+workspace、Gateway 和 sessions，这与对话式 `openclaw setup` 聊天在回答“yes”时应用的方案相同——
+然后从已安装的应用中提供插件和技能推荐；应用名称会通过你配置的模型和 ClawHub 搜索进行匹配，
+并且该步骤可以通过 [`wizard.appRecommendations`](/gateway/configuration-reference#wizard) 禁用。
+在 macOS、Linux 或 Windows 桌面会话中，它随后会打开已认证的
+Control UI 仪表盘，并等待最多 60 秒让浏览器客户端连接。
+在无头 Linux 或通过 SSH 的情况下，它会打印一个醒目的、可复制粘贴的
+仪表盘 URL，包括用于 loopback Gateway 的 SSH 端口转发命令，
+并等待最多五分钟。连接成功后会在浏览器中继续；如果 Gateway 无法访问或超时，
+则会回退到与之前相同的终端出口。传入 `--tui` 可跳过浏览器交接并强制使用该终端出口。
+如果应用设置失败，引导会回退到对话式 OpenClaw
+聊天以交互完成。Channels、agents、
+plugins 和其他可选功能仍属于 OpenClaw 聊天的范围：运行 `openclaw`
+并使用 `open channel wizard for <channel>` 将 channel 凭据收集交给一个带掩码的终端向导。
+要更改模型提供商或其认证方式，请退出 OpenClaw 并运行 `openclaw onboard`；
+OpenClaw 不会打开引导式或经典的提供商流程。
+
+在已配置的安装中，再次运行 `openclaw onboard` 会先验证当前
+默认模型，因此同一流程也可作为验证和修复步骤——
+它不会重新应用设置、重新安装或重启 Gateway 服务。
 如果该检查失败，已配置的模型绝不会被自动替换——
-引导会停止并询问接下来如何继续。该检查在你的
-workspace 之外运行，因此 workspace 插件提供的模型可能在这里失败，但仍可在 agent 中正常工作。
-对于特定提供商的认证、channels、skills、
-远程 Gateway 设置、导入或完整 Gateway 控制，请使用 `openclaw onboard --classic`。对于对话式的
-非推理设置和修复，请运行 `openclaw setup`；`openclaw onboard
---modern` 是通过相同推理门的兼容别名。经典
-向导可以选择性地通过实时补全验证默认模型，但
-在 OpenClaw 自身的实时推理检查通过之前，不会启动 OpenClaw。
+onboarding 会停止并询问如何继续。该检查在你的
+工作区之外运行，因此由工作区插件提供的模型可能在这里失败，但在 agent 中仍然可用。
+对 provider-specific auth、channels、skills、
+remote Gateway setup、imports 或完整 Gateway 控制，请使用 `openclaw onboard --classic`。对于对话式
+非推理安装和修复，请运行 `openclaw setup`；`openclaw onboard
+--modern` 是通过同一推理门的兼容别名。经典
+向导可以选择用实时补全验证默认模型，但
+OpenClaw 直到其自身的实时推理检查通过之前都不会启动。
 
 在交互式终端中，直接执行 `openclaw`（不带子命令）会根据配置状态进行路由：
 
@@ -125,7 +161,7 @@ openclaw onboard --reset --reset-scope full
 
 ## 语言环境
 
-对于交互式指南中的固定设置文本，请使用 CLI 向导本地化。解析顺序：
+交互式引导会使用 CLI 向导语言环境来显示固定的设置文案。它按以下顺序使用第一个非空值：
 
 1. `OPENCLAW_LOCALE`
 2. `LC_ALL`
@@ -137,6 +173,7 @@ openclaw onboard --reset --reset-scope full
 
 ```bash
 OPENCLAW_LOCALE=zh-CN openclaw onboard
+OPENCLAW_LOCALE=en openclaw onboard # 明确覆盖为英文
 ```
 
 ## 非交互式设置
@@ -214,11 +251,11 @@ openclaw onboard --non-interactive \
 
 ### 本地网关健康检查
 
-- 除非你传入 `--skip-health`，否则引导在成功退出前会等待可访问的本地网关。
-- `--install-daemon` 会先启动受管网关安装路径。若不使用该选项，本地网关必须已经在运行（例如 `openclaw gateway run`）。
-- 如果你只想在自动化中写入配置/工作区/初始化内容，`--skip-health` 会跳过等待。
-- `--skip-bootstrap` 会设置 `agents.defaults.skipBootstrap: true`，并跳过创建 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md` 和 `BOOTSTRAP.md`。
-- 在原生 Windows 上，`--install-daemon` 会先尝试计划任务，若任务创建被拒绝，则回退到按用户的 Startup 文件夹登录项。
+- 除非你传入 `--skip-health`，否则引导在成功退出前会等待本地网关可达。
+- `--install-daemon` 会先启动受管理的网关安装流程。若不使用它，本地网关必须已经在运行（例如 `openclaw gateway run`）。
+- `--skip-health` 会跳过等待，适用于你在自动化中只想进行配置/工作区/引导写入。
+- `--skip-bootstrap` 会设置 `agents.defaults.skipBootstrap: true`，并跳过创建 `AGENTS.md`、`SOUL.md`、`IDENTITY.md`、`USER.md` 和 `BOOTSTRAP.md`。
+- 在原生 Windows 上，`--install-daemon` 会先尝试计划任务；如果创建任务被拒绝，则回退到按用户的 Startup 文件夹登录项。
 
 ### 交互式引用模式
 

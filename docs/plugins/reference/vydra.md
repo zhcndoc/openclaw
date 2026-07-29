@@ -16,7 +16,7 @@ title: "Vydra 插件"
 
 ## 表面
 
-providers: vydra; contracts: imageGenerationProviders, speechProviders, videoGenerationProviders
+providers: `vydra`; contracts: `imageGenerationProviders`, `speechProviders`, `videoGenerationProviders`
 
 ## 相关文档
 

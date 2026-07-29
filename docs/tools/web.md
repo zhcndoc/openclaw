@@ -15,7 +15,7 @@ read_when:
 轻量级 URL 获取的 `web_fetch`。`web_fetch` 始终在本地运行；当提供商是 Grok 时，`web_search` 通过 xAI Responses 路由，而 `x_search` 始终使用 xAI Responses。
 
 <Info>
-  `web_search` 是一个轻量级 HTTP 工具，不是浏览器自动化。对于 JS 重度依赖的网站或登录场景，请使用 [Web Browser](/tools/browser)。对于获取特定 URL，请使用 [Web Fetch](/tools/web-fetch)。
+  `web_search` 是一个轻量级 HTTP 工具，不是浏览器自动化。对于 JS 重度依赖的网站或登录场景，请使用 [网页浏览器](/tools/browser)。对于获取特定 URL，请使用 [网页获取](/tools/web-fetch)。
 </Info>
 
 ## 快速开始
@@ -28,8 +28,16 @@ read_when:
     ```bash
     openclaw configure --section web
     ```
-    这会存储提供商和任何所需的凭据。对于基于 API 的提供商，你也可以直接设置该提供商的环境变量（例如
-    `BRAVE_API_KEY`），并跳过这一步。
+    这会存储提供商和任何所需的凭据。对于基于 API 的
+    提供商，你也可以改为设置该提供商的环境变量（例如
+    `BRAVE_API_KEY`），并跳过此步骤。
+
+    你也可以通过与
+    [OpenClaw](/cli/openclaw) 对话来配置搜索：在 `openclaw setup`
+    中，或在 Control UI 的 **Settings → Ask OpenClaw** 聊天中说 `configure web search`。
+    托管流程会负责提供商选择和凭据输入——API 密钥会在浏览器中被隐藏，终端聊天会通过
+    `open search wizard` 转交给带掩码的向导。
+
   </Step>
   <Step title="使用它">
     ```javascript
@@ -114,6 +122,66 @@ read_when:
 | [Perplexity](/tools/perplexity-search)           | 结构化摘要                                                | 国家、语言、时间、域名、内容限制 | `PERPLEXITY_API_KEY` / `OPENROUTER_API_KEY`                                             |
 | [SearXNG](/tools/searxng-search)                 | 结构化摘要                                                | 类别、语言                             | 无（自托管）                                                                      |
 | [Tavily](/tools/tavily)                          | 结构化摘要                                                | 通过 `tavily_search` 工具                         | `TAVILY_API_KEY`                                                                        |
+
+## 结果形状
+
+`web_search` 在核心工具边界统一规范化每个内置和外部插件提供方。调用者会收到以下闭合形状之一：
+
+```typescript
+type WebSearchOutput =
+  | {
+      kind: "error";
+      provider: string;
+      error: "provider_error";
+      message: string;
+      docs?: string;
+    }
+  | {
+      kind: "results";
+      provider: string;
+      query: string;
+      count: number;
+      tookMs?: number;
+      results: Array<{
+        title: string;
+        url: string;
+        snippet?: string;
+        published?: string;
+        siteName?: string;
+      }>;
+      externalContent: {
+        untrusted: true;
+        source: "web_search";
+        wrapped: true;
+        provider: string;
+      };
+      cached?: true;
+    }
+  | {
+      kind: "answer";
+      provider: string;
+      query: string;
+      tookMs?: number;
+      content: string;
+      citations?: Array<{ url: string; title?: string }>;
+      externalContent: {
+        untrusted: true;
+        source: "web_search";
+        wrapped: true;
+        provider: string;
+      };
+      cached?: true;
+    }
+  | {
+      kind: "raw";
+      provider: string;
+      data: unknown;
+    };
+```
+
+结构化提供方使用 `kind: "results"`；合成提供方使用 `kind: "answer"`。负载既不匹配这两种形状的外部插件提供方会按原样通过，作为 `kind: "raw"` 以保证兼容性。诸如原始分数、摘录、相关搜索、行内引用偏移、模型 id 或会话元数据等提供方特定字段，不会在规范化分支中透传。若某个提供方的更丰富响应是你工作流的一部分，请使用该提供方专用的工具。
+
+`externalContent.wrapped: true` 是一个信任标记，由边界本身置为 true：提供方文案（`title`、`snippet`、`siteName`、`content`、引用标题、错误 `message`）会剥离任何预先存在的包裹行，并在核心边界只重新包裹一次，因此不会有任何提供方元数据伪造该标记。`query` 始终是请求的查询，引用和结果 URL 必须能解析为 http(s)，`published` 必须是 ISO 日期形状，URL 会以规范化形式输出，而携带 `error` 键的负载总会被报告为 `kind: "error"`，并将原始提供方代码保留在包裹后的消息中。原始透传负载会保留提供方设置的任何标记。
 
 ## 自动检测
 
@@ -358,12 +426,7 @@ OpenClaw 会按请求构建内置的 xAI `x_search`
 
 ### x_search 配置
 
-With `enabled` omitted, `x_search` is exposed only when the active model's
-provider is `xai` and xAI credentials resolve. For an active model with a known
-non-xAI provider, set `plugins.entries.xai.config.xSearch.enabled` to `true` to
-opt in to cross-provider use. If the active model provider is missing or
-unresolved, the tool stays hidden. Set `enabled` to `false` to disable it for
-every provider. xAI credentials are always required.
+如果省略 `enabled`，则仅当当前模型的提供商是 `xai` 且 xAI 凭据已解析时，`x_search` 才会被暴露。对于提供商已知且非 xAI 的当前模型，将 `plugins.entries.xai.config.xSearch.enabled` 设置为 `true`，即可启用跨提供商使用。如果当前模型提供商缺失或未解析，则该工具保持隐藏。将 `enabled` 设为 `false` 可对所有提供商禁用它。始终需要 xAI 凭据。
 
 ```json5
 {
@@ -391,23 +454,19 @@ every provider. xAI credentials are always required.
 }
 ```
 
-当
-`plugins.entries.xai.config.xSearch.baseUrl` 已设置时，`x_search` 会将请求发送到 `<baseUrl>/responses`。如果省略该字段，
-它会回退到 `plugins.entries.xai.config.webSearch.baseUrl`，然后回退到
-旧版 `tools.web.search.grok.baseUrl`，最后使用公共 xAI 端点
-（`https://api.x.ai/v1`）。
+当 `plugins.entries.xai.config.xSearch.baseUrl` 已设置时，`x_search` 会将请求发送到 `<baseUrl>/responses`。如果省略该字段，则会回退到 `plugins.entries.xai.config.webSearch.baseUrl`，再回退到公开的 xAI 端点（`https://api.x.ai/v1`）。
 
 ### x_search 参数
 
-| Parameter                    | Description                                            |
+| 参数                         | 描述                                                   |
 | ---------------------------- | ------------------------------------------------------ |
 | `query`                      | 搜索查询（必填）                                        |
-| `allowed_x_handles`          | 将结果限制为最多 20 个 X 账号                                |
-| `excluded_x_handles`          | 排除最多 20 个 X 账号                                    |
+| `allowed_x_handles`          | 将结果限制为最多 20 个 X 账号                            |
+| `excluded_x_handles`         | 排除最多 20 个 X 账号                                    |
 | `from_date`                  | 仅包含此日期当天及之后的帖子（YYYY-MM-DD）              |
 | `to_date`                    | 仅包含此日期当天及之前的帖子（YYYY-MM-DD）              |
-| `enable_image_understanding` | 允许 xAI 检查匹配帖子所附图片                        |
-| `enable_video_understanding` | 允许 xAI 检查匹配帖子所附视频                        |
+| `enable_image_understanding` | 允许 xAI 检查匹配帖子所附图片                            |
+| `enable_video_understanding` | 允许 xAI 检查匹配帖子所附视频                            |
 
 `allowed_x_handles` 和 `excluded_x_handles` 互斥。
 

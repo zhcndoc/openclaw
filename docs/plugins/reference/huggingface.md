@@ -16,7 +16,7 @@ title: "Hugging Face 插件"
 
 ## 接口
 
-providers: huggingface
+providers: `huggingface`
 
 ## 相关文档
 

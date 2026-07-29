@@ -94,7 +94,14 @@ openclaw gateway restart
 编辑或写入时延迟该读取，然后在本地交互结束后恢复。重新连接时总会执行一次规范化重新加载。没有常规的整卡轮询，**Refresh**
 仍可作为手动恢复手段。
 
-当存在多个看板时，工具栏会包含一个由持久化看板元数据支撑的 **Board** 筛选器，而不仅仅是当前可见的卡片。因此，空看板和已归档看板仍然可以被选择。没有明确看板 id 的卡片属于规范的 `default` 看板。所选看板会存储在 `?board=` 查询参数中，因此过滤后的 Workboard URL 可以加入书签或分享；选择 **All boards** 会移除该参数。
+When more than one board exists, the toolbar includes a **Board** filter backed
+by persisted board metadata rather than only the currently visible cards. Empty
+and archived boards therefore remain selectable. Cards without an explicit
+board id belong to the canonical `default` board. Each board has a canonical
+`/workboard/<boardId>` page that can be bookmarked, shared, or pinned in the
+sidebar. The previously shipped `/workboard?board=<boardId>` form remains a
+compatibility alias and redirects to that page while preserving other query
+parameters. Choosing **All boards** returns to `/workboard`.
 
 卡片存储在插件自身的 Gateway 状态中，并随着该 Gateway 的其余 OpenClaw 状态一起移动（见 [存储](#storage)）。
 
@@ -135,7 +142,24 @@ openclaw gateway restart
 | `workboard_move`                                                                                                                                 | 将卡片移动到另一种状态；已认领的卡片需要调用方的代理认领作用域。                                                                                                      |
 | `workboard_dispatch`                                                                                                                             | 在不启动工作者的情况下，推动依赖提升或清理过期认领；工作者启动使用 Gateway 或斜杠命令分派。                                                        |
 
-已认领的卡片会拒绝来自其他代理的工具变更，除非调用方持有由 `workboard_claim` 返回的认领令牌。每个由代理工具或 Gateway RPC 调用返回的卡片都会将 `metadata.claim.token` 脱敏为 `[redacted]`（令牌本身仅在 `workboard_claim` 的顶层返回一次），因此仪表板操作员和其他代理可以检查认领状态，而始终看不到可用的令牌。恢复通过 `workboard_promote`/`workboard_reassign`/`workboard_reclaim` 进行，这些工具不需要该令牌。
+Proof statuses are worker-reported outcomes, not independent verification. A `passed`
+entry means the worker reports that its command or check succeeded; consumers that need
+an independent quality gate should inspect the attached command, URL, or artifact and
+run their own verifier. `workboard_proof` returns the new record's `proofId`. When
+`workboard_complete` reports that same proof's terminal status, pass `proofId` so the
+pending record is resolved in place without losing its identity or timestamp. A proof that
+already has the same terminal status is reused unchanged. Completion proof without
+`proofId` remains append-only, so a later retry cannot rewrite older history merely because
+its command or note is identical.
+
+Claimed cards reject agent-tool mutations from other agents unless the caller
+holds the claim token returned by `workboard_claim`. Every card returned by an
+agent tool or Gateway RPC call redacts `metadata.claim.token` to `[redacted]`
+(the token itself is returned once, top-level, only from `workboard_claim`),
+so dashboard operators and other agents can inspect claim state without ever
+seeing a usable token. Recovery goes through
+`workboard_promote`/`workboard_reassign`/`workboard_reclaim`, which do not
+require the token.
 
 ## 调度
 
@@ -274,7 +298,21 @@ Create、move 和 dispatch 在聊天界面上需要所有者权限，或者使�
 5. 在 agent 工作时，从卡片打开关联的 session。
 6. 让 lifecycle sync 将运行中的工作移动到 `review`/`blocked`，然后在被接受时手动将卡片移至 `done`。
 
-## 诊断
+### Session-board widgets
+
+Workboard ships two native widgets for session dashboards (see
+[Dashboards](/web/dashboards)). The agent pins them with its `dashboard` tool
+using `content: { kind: "plugin", pluginKind, props }`, and they render as
+first-party UI with live data — no sandbox frame or capability grant:
+
+- `workboard:card` with `props: { cardId }` shows one card with its status
+  control, priority, and assigned agent.
+- `workboard:mini` with optional `props: { boardId, limit }` shows per-status
+  counts plus the top ready/running cards, and links to the full board page.
+  Without `boardId` it aggregates every board; with `boardId` it scopes to that
+  board (cards created without an explicit board id live on `default`).
+
+## Diagnostics
 
 诊断结果由本地卡片元数据计算得出。内置检查会标记：
 

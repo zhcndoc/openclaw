@@ -22,7 +22,69 @@ Workspace `.env` 文件属于低信任来源：OpenClaw 在应用优先级规则
 
 如果配置文件完全缺失，则跳过第 4 步；如果启用了 shell 导入，第 5 步仍会运行。
 
-## 提供方凭据和工作区 `.env`
+## Supported operator-facing variables
+
+The variables below are the supported environment contract for operators. Undocumented `OPENCLAW_*` variables are internal implementation details and may disappear without notice.
+
+### Paths and instances
+
+| Variable                 | Purpose                                                           |
+| ------------------------ | ----------------------------------------------------------------- |
+| `OPENCLAW_HOME`          | Override the home directory used for OpenClaw path defaults.      |
+| `OPENCLAW_STATE_DIR`     | Override the mutable state directory.                             |
+| `OPENCLAW_CONFIG_PATH`   | Override the active config file path.                             |
+| `OPENCLAW_WORKSPACE_DIR` | Override the default agent workspace.                             |
+| `OPENCLAW_PROFILE`       | Select a named profile and its isolated defaults.                 |
+| `OPENCLAW_GIT_DIR`       | Override the source checkout used by development-channel updates. |
+| `OPENCLAW_INCLUDE_ROOTS` | Allow `$include` to resolve from additional roots.                |
+
+### Gateway and authentication
+
+| Variable                    | Purpose                                                         |
+| --------------------------- | --------------------------------------------------------------- |
+| `OPENCLAW_GATEWAY_URL`      | Override the remote Gateway URL used by clients.                |
+| `OPENCLAW_GATEWAY_PORT`     | Override the local Gateway port.                                |
+| `OPENCLAW_GATEWAY_TOKEN`    | Supply token authentication for Gateway servers and clients.    |
+| `OPENCLAW_GATEWAY_PASSWORD` | Supply password authentication for Gateway servers and clients. |
+
+### Provider credentials
+
+Core and bundled provider plugins recognize the following credential and provider-selection variables. Prefer each provider's config or SecretRef fields when you need scoped credentials rather than one process-wide value.
+
+`AI_GATEWAY_API_KEY`, `ANTHROPIC_ADMIN_API_KEY`, `ANTHROPIC_ADMIN_KEY`, `ANTHROPIC_API_KEY`, `ANTHROPIC_OAUTH_TOKEN`, `ARCEEAI_API_KEY`, `AZURE_OPENAI_API_KEY`, `AZURE_SPEECH_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`, `BASETEN_API_KEY`, `BRAVE_API_KEY`, `BYTEPLUS_API_KEY`, `BYTEPLUS_SEED_SPEECH_API_KEY`, `CEREBRAS_API_KEY`, `CHUTES_API_KEY`, `CHUTES_OAUTH_TOKEN`, `CLAWROUTER_API_KEY`, `CLOUDFLARE_AI_GATEWAY_API_KEY`, `CODEX_API_KEY`, `COHERE_API_KEY`, `COMFY_API_KEY`, `COMFY_CLOUD_API_KEY`, `COPILOT_GITHUB_TOKEN`, `DASHSCOPE_API_KEY`, `DEEPGRAM_API_KEY`, `DEEPINFRA_API_KEY`, `DEEPSEEK_API_KEY`, `ELEVENLABS_API_KEY`, `EXA_API_KEY`, `FAL_API_KEY`, `FAL_KEY`, `FEATHERLESS_API_KEY`, `FIRECRAWL_API_KEY`, `FIREWORKS_API_KEY`, `GCLOUD_PROJECT`, `GEMINI_API_KEY`, `GH_TOKEN`, `GITHUB_TOKEN`, `GMI_API_KEY`, `GOOGLE_API_KEY`, `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_CLOUD_API_KEY`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_CLOUD_PROJECT`, `GRADIUM_API_KEY`, `GROQ_API_KEY`, `HF_TOKEN`, `HUGGINGFACE_HUB_TOKEN`, `INWORLD_API_KEY`, `KILOCODE_API_KEY`, `KIMICODE_API_KEY`, `KIMI_API_KEY`, `LITELLM_API_KEY`, `LM_API_TOKEN`, `LONGCAT_API_KEY`, `MINIMAX_API_KEY`, `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`, `MINIMAX_OAUTH_TOKEN`, `MISTRAL_API_KEY`, `MODELSTUDIO_API_KEY`, `MODEL_API_KEY`, `MOONSHOT_API_KEY`, `NOVITA_API_KEY`, `NVIDIA_API_KEY`, `OLLAMA_API_KEY`, `OPENAI_ADMIN_KEY`, `OPENAI_API_KEY`, `OPENCODE_API_KEY`, `OPENCODE_ZEN_API_KEY`, `OPENROUTER_API_KEY`, `PARALLEL_API_KEY`, `PERPLEXITY_API_KEY`, `PIXVERSE_API_KEY`, `QIANFAN_API_KEY`, `QWEN_API_KEY`, `QWEN_TOKEN_PLAN_API_KEY`, `RUNWAYML_API_SECRET`, `RUNWAY_API_KEY`, `SENSEAUDIO_API_KEY`, `SGLANG_API_KEY`, `SPEECH_KEY`, `SPEECH_REGION`, `STEPFUN_API_KEY`, `SYNTHETIC_API_KEY`, `TAVILY_API_KEY`, `TOGETHER_API_KEY`, `TOKENHUB_API_KEY`, `TOKENPLAN_API_KEY`, `VENICE_API_KEY`, `VLLM_API_KEY`, `VOLCANO_ENGINE_API_KEY`, `VOLCENGINE_TTS_API_KEY`, `VOLCENGINE_TTS_APPID`, `VOLCENGINE_TTS_TOKEN`, `VOYAGE_API_KEY`, `VYDRA_API_KEY`, `XAI_API_KEY`, `XIAOMI_API_KEY`, `XIAOMI_TOKEN_PLAN_API_KEY`, `XI_API_KEY`, `ZAI_API_KEY`, and `Z_AI_API_KEY`.
+
+Installed third-party plugins may declare additional credential variables in their plugin manifests; those variables are contracts of the plugin that declares them, not core OpenClaw variables.
+
+### Logging and diagnostics
+
+| Variable                             | Purpose                                                       |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `OPENCLAW_LOG_LEVEL`                 | Override file and console log levels.                         |
+| `OPENCLAW_DEBUG_MODEL_TRANSPORT`     | Enable model transport timing diagnostics.                    |
+| `OPENCLAW_DEBUG_MODEL_PAYLOAD`       | Select redacted model payload diagnostics.                    |
+| `OPENCLAW_DEBUG_SSE`                 | Select SSE timing or event-peek diagnostics.                  |
+| `OPENCLAW_DEBUG_CODE_MODE`           | Enable code-mode surface diagnostics.                         |
+| `OPENCLAW_DIAGNOSTICS`               | Enable named diagnostic flags, or disable all flags with `0`. |
+| `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH` | Select the JSONL path for timeline diagnostics.               |
+| `OPENCLAW_DIAGNOSTICS_EVENT_LOOP`    | Add event-loop samples to timeline diagnostics.               |
+
+### Feature and runtime toggles
+
+| Variable                             | Purpose                                                                      |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
+| `OPENCLAW_LOAD_SHELL_ENV`            | Import missing expected variables from the login shell.                      |
+| `OPENCLAW_SHELL_ENV_TIMEOUT_MS`      | Set the login-shell import timeout.                                          |
+| `OPENCLAW_EXEC_SHELL_SNAPSHOT`       | Disable exec shell snapshots with `0`.                                       |
+| `OPENCLAW_OFFLINE`                   | Prevent downloads of pinned agent helper binaries.                           |
+| `OPENCLAW_BROWSER_HEADLESS`          | Force managed browser launches headed (`0`) or headless (`1`).               |
+| `OPENCLAW_DISABLE_BONJOUR`           | Force Bonjour advertising on (`0`) or off (`1`).                             |
+| `OPENCLAW_NO_AUTO_UPDATE`            | Disable automatic update applies.                                            |
+| `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS` | Allow trusted private-DNS `ws://` connections as a break-glass override.     |
+| `OPENCLAW_ALLOW_MULTI_GATEWAY`       | Allow multiple Gateway processes while preserving per-state ownership locks. |
+| `OPENCLAW_SKIP_CHANNELS`             | Start the Gateway without channel transports for troubleshooting.            |
+| `OPENCLAW_THEME`                     | Force the TUI palette to `light` or `dark`.                                  |
+
+## Provider credentials and workspace `.env`
 
 不要只把提供方 API 密钥保存在工作区 `.env` 中。OpenClaw 会阻止工作区 `.env` 文件中一大批提供方凭据和端点重定向密钥，包括所有已知的提供方认证环境变量（例如 `GEMINI_API_KEY`、`GOOGLE_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY`、`GROQ_API_KEY`、`DEEPSEEK_API_KEY`、`PERPLEXITY_API_KEY`、`BRAVE_API_KEY`、`TAVILY_API_KEY`、`EXA_API_KEY`、`FIRECRAWL_API_KEY`），以及任何以 `_API_HOST`、`_BASE_URL`、`_ENDPOINT` 或 `_HOMESERVER` 结尾的键，还有整个 `OPENCLAW_*`、`CLAWHUB_*`、`ANTHROPIC_API_KEY_*` 和 `OPENAI_API_KEY_*` 命名空间。
 
@@ -161,7 +223,14 @@ OpenClaw 支持两种基于环境变量的模式：
 | `OPENCLAW_CONFIG_PATH`   | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                                                                                    |
 | `OPENCLAW_INCLUDE_ROOTS` | 可供 `$include` 指令解析配置目录之外文件的一组目录路径（默认：无——`$include` 仅限于配置目录）。支持波浪号展开。                                                         |
 
-## 日志
+## Agent helper tool downloads
+
+Set `OPENCLAW_OFFLINE=1` to prevent OpenClaw from downloading its pinned `fd`
+and `ripgrep` helper binaries. Existing helpers under the OpenClaw tools
+directory and working system binaries remain eligible; a missing helper stays
+unavailable instead of triggering a network request.
+
+## Logging
 
 | 变量                           | 用途                                                                                                                                                                                      |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

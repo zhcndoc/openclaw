@@ -38,10 +38,10 @@ OpenClaw 从以下来源加载，**优先级从高到低**。当同名
 | ----------- | ---------------------- | --------------------------------------- |
 | 1 — 最高 | 工作区技能             | `<workspace>/skills`                    |
 | 2           | 项目代理技能           | `<workspace>/.agents/skills`            |
-| 3           | 个人代理技能           | `~/.agents/skills`                      |
-| 4           | 托管 / 本地技能        | `~/.openclaw/skills`                    |
-| 5           | 捆绑技能               | 随安装包一起提供                        |
-| 6 — 最低   | 额外目录               | `skills.load.extraDirs` + 插件技能       |
+| 3           | 个人代理技能           | `~/.agents/skills`（仅默认状态）        |
+| 4           | 托管 / 本地技能        | `<state-dir>/skills`                    |
+| 5           | 捆绑技能               | 随安装包提供                            |
+| 6 — 最低  | 额外目录               | `skills.load.extraDirs` + 插件技能      |
 
 技能根目录支持分组布局。只要在已配置的根目录下任意位置出现 `SKILL.md`，OpenClaw 就会发现该技能（最多向下 6 层）：
 
@@ -76,13 +76,15 @@ frontmatter 字段匹配。
 
 在多代理设置中，每个代理都有自己的工作区。请使用与你期望可见性匹配的路径：
 
-| 范围           | 路径                         | 可见对象                   |
-| -------------- | ---------------------------- | --------------------------- |
-| 每代理         | `<workspace>/skills`         | 仅该代理                   |
-| 项目代理       | `<workspace>/.agents/skills` | 仅该工作区的代理           |
-| 个人代理       | `~/.agents/skills`           | 此机器上的所有代理         |
-| 共享托管       | `~/.openclaw/skills`         | 此机器上的所有代理         |
-| 额外目录       | `skills.load.extraDirs`      | 此机器上的所有代理         |
+| 作用范围         | 路径                         | 对谁可见                      |
+| -------------- | ---------------------------- | ------------------------------ |
+| 每个代理        | `<workspace>/skills`         | 仅该代理                        |
+| 项目代理        | `<workspace>/.agents/skills` | 仅该工作区的代理                |
+| 个人代理        | `~/.agents/skills`           | 使用默认状态的代理              |
+| 共享托管        | `<state-dir>/skills`         | 使用该状态的所有代理            |
+| 额外目录        | `skills.load.extraDirs`      | 使用该配置的所有代理            |
+
+当 `OPENCLAW_STATE_DIR` 指向默认 `~/.openclaw` 以外的位置时，会话技能索引会排除基于主目录的个人或兼容性技能根目录，例如 `~/.agents/skills`。工作区、项目、捆绑、额外以及由状态拥有的托管技能仍会照常加载。
 
 ## 代理允许列表
 
@@ -105,22 +107,22 @@ frontmatter 字段匹配。
 
 <AccordionGroup>
   <Accordion title="允许列表规则">
-    - 省略 `agents.defaults.skills`，则默认情况下所有技能都不受限制。
-    - 省略 `agents.list[].skills`，则继承 `agents.defaults.skills`。
-    - 将 `agents.list[].skills: []` 设置为不向该代理暴露任何技能。
-    - 非空的 `agents.list[].skills` 列表是**最终**集合——它不会与默认值合并。
-    - 生效的允许列表适用于提示词构建、斜杠菜单命令发现、沙盒同步和技能快照。
-    - 这不是主机 shell 的授权边界。如果同一代理可以使用 `exec`，请通过沙盒、OS 用户隔离、exec 拒绝/允许列表以及按资源的凭据单独限制该 shell。
+    - 省略 `agents.defaults.skills` 可使默认情况下所有技能都不受限制。
+    - 省略 `agents.entries.*.skills` 可继承 `agents.defaults.skills`。
+    - 将 `agents.entries.*.skills` 设置为 `[]` 可使该代理不暴露任何技能。
+    - 非空的 `agents.entries.*.skills` 列表是**最终**集合——它不会与默认值合并。
+    - 生效的允许列表适用于提示词构建、斜杠命令发现、沙箱同步以及技能快照。
+    - 这不是宿主 shell 的授权边界。如果同一个代理可以使用 `exec`，请通过沙箱、OS 用户隔离、exec 拒绝/允许列表以及按资源凭据单独约束该 shell。
   </Accordion>
 </AccordionGroup>
 
-## 插件和技能
+## Plugins and Skills
 
-插件可以通过在 `openclaw.plugin.json` 中列出 `skills` 目录来提供自己的技能（路径相对于插件根目录）。当插件启用时，会加载插件技能——例如，浏览器插件提供了一个用于多步骤浏览器控制的 `browser-automation` 技能。
+Plugins can provide their own skills by listing the `skills` directory in `openclaw.plugin.json` (the path is relative to the plugin root). When a plugin is enabled, its plugin skills are loaded—for example, the browser plugin provides a `browser-automation` skill for multi-step browser control.
 
-插件技能目录的合并优先级与 `skills.load.extraDirs` 处于相同的较低优先级层级，因此同名的内置、托管、代理或工作区技能会覆盖它们。可以通过其 frontmatter 中的 `metadata.openclaw.requires` 来控制插件技能自身的适用性，方式与其他技能相同。
+Plugin skill directories are merged at the same lower-priority level as `skills.load.extraDirs`, so built-in, hosted, agent, or workspace skills with the same name will override them. The applicability of plugin skills themselves can be controlled via `metadata.openclaw.requires` in their frontmatter, in the same way as other skills.
 
-有关完整插件系统，请参见 [插件](/tools/plugin) 和 [工具](/tools)。
+For the complete plugin system, see [Plugins](/tools/plugin) and [Tools](/tools).
 
 ## 技能工作坊
 
@@ -141,18 +143,19 @@ openclaw skills workshop apply <proposal-id>
 `openclaw skills` 命令进行安装和更新，或使用 `clawhub` CLI 进行
 发布和同步。
 
-| 操作                               | 命令                                                |
-| ---------------------------------- | ---------------------------------------------- |
+| 操作                               | 命令                                                   |
+| ---------------------------------- | ------------------------------------------------------ |
 | 将技能安装到工作区                 | `openclaw skills install @owner/<slug>`                |
-| 从 Git 仓库安装                   | `openclaw skills install git:owner/repo@ref`           |
-| 安装本地技能目录                 | `openclaw skills install ./path/to/skill --as my-tool` |
-| 为所有本地代理安装               | `openclaw skills install @owner/<slug> --global`       |
-| 更新所有工作区技能               | `openclaw skills update --all`                         |
+| 安装外部 skills.sh 引用           | `openclaw skills install skills-sh:owner/repo/slug`    |
+| 从 Git 仓库安装                    | `openclaw skills install git:owner/repo@ref`           |
+| 安装本地技能目录                   | `openclaw skills install ./path/to/skill --as my-tool` |
+| 为所有本地代理安装                 | `openclaw skills install @owner/<slug> --global`       |
+| 更新所有工作区技能                 | `openclaw skills update --all`                         |
 | 更新共享托管技能                 | `openclaw skills update @owner/<slug> --global`        |
-| 更新所有共享托管技能             | `openclaw skills update --all --global`                |
-| 验证技能的信任封装               | `openclaw skills verify @owner/<slug>`                 |
-| 打印生成的 Skill Card          | `openclaw skills verify @owner/<slug> --card`          |
-| 通过 ClawHub CLI 发布 / 同步      | `clawhub sync --all`                                   |
+| 更新所有共享托管技能               | `openclaw skills update --all --global`                |
+| 验证技能的信任封装                 | `openclaw skills verify @owner/<slug>`                 |
+| 打印生成的 Skill Card              | `openclaw skills verify @owner/<slug> --card`          |
+| 通过 ClawHub CLI 发布 / 同步       | `clawhub sync --all`                                   |
 
 <AccordionGroup>
   <Accordion title="安装详情">
@@ -198,7 +201,7 @@ openclaw skills workshop apply <proposal-id>
 <AccordionGroup>
   <Accordion title="路径包含性">
     Workspace、project-agent 和 extra-dir 的技能发现仅接受其解析后的 realpath 仍位于已配置根目录内的技能根目录，除非
-    `skills.load.allowSymlinkTargets` 明确信任某个目标根目录。
+    `skills.load.allowSymlinkTargets` 明确可信任某个目标根目录。
     只有在启用 `skills.workshop.allowSymlinkTargetWrites` 时，Skill Workshop 才会通过这些受信任的目标进行写入。
     托管的 `~/.openclaw/skills` 和个人的 `~/.agents/skills` 可以包含带有符号链接的技能文件夹，但每个 `SKILL.md` 的 realpath 仍必须保持在其解析后的技能目录内。
   </Accordion>
@@ -292,7 +295,7 @@ metadata:
 </ParamField>
 
 <ParamField path="homepage" type="string">
-  在 macOS Skills UI 中显示为“Website”的可选 URL。
+  在 macOS Skills UI 中显示为“网站”的可选 URL。
 </ParamField>
 
 <ParamField path="os" type='("darwin" | "linux" | "win32")[]'>
@@ -478,14 +481,13 @@ OpenClaw 会在会话开始时对符合条件的 skills 进行快照，并在该
           extraDirs: ["~/Projects/agent-scripts/skills"],
           allowSymlinkTargets: ["~/Projects/manager/skills"],
           watch: true, // 默认
-          watchDebounceMs: 250, // 默认
         },
       },
     }
     ```
 
-    对于有意使用符号链接布局的场景，其中 skill 根目录的符号链接指向已配置根目录之外的位置，例如
-    `<workspace>/skills/manager -> ~/Projects/manager/skills`，请使用 `allowSymlinkTargets`。
+    观察器事件使用内置的 250 ms 防抖。对于有意使用符号链接布局、且 skill 根符号链接指向配置根目录之外的情况，请使用 `allowSymlinkTargets`，例如
+    `<workspace>/skills/manager -> ~/Projects/manager/skills`。
     仅当 Skill Workshop 也应通过这些受信任的符号链接路径应用提案时，才启用 `skills.workshop.allowSymlinkTargetWrites`。
 
   </Accordion>

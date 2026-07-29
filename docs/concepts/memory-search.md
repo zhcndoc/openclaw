@@ -15,11 +15,9 @@ OpenClaw 默认使用 OpenAI embeddings。要使用其他提供商，请显式�
 
 ```json5
 {
-  agents: {
-    defaults: {
-      memorySearch: {
-        provider: "openai", // 或 "gemini"、"voyage"、"mistral"、"bedrock"、"local"、"ollama"、"lmstudio"、"github-copilot"、"openai-compatible"
-      },
+  memory: {
+    search: {
+      provider: "openai", // 或 "gemini"、"voyage"、"mistral"、"bedrock"、"local"、"ollama"、"lmstudio"、"github-copilot"、"openai-compatible"
     },
   },
 }
@@ -48,16 +46,16 @@ openclaw plugins install @openclaw/llama-cpp-provider
 | 提供方              | ID                  | 需要 API key | 备注                              |
 | ------------------- | ------------------- | ------------ | --------------------------------- |
 | Bedrock             | `bedrock`           | 否           | 使用 AWS 凭证链                   |
-| DeepInfra           | `deepinfra`           | 是           | 默认模型 `BAAI/bge-m3`            |
+| DeepInfra           | `deepinfra`         | 是           | 默认模型 `BAAI/bge-m3`            |
 | Gemini              | `gemini`             | 是           | 支持图片/音频索引                  |
 | GitHub Copilot      | `github-copilot`     | 否           | 使用你的 Copilot 订阅              |
-| 本地                | `local`              | 否           | GGUF 模型，约 0.6 GB 自动下载      |
-| LM Studio           | `lmstudio`           | 否           | 本地/自托管服务器                  |
-| Mistral             | `mistral`            | 是           |                                   |
-| Ollama              | `ollama`             | 否           | 本地/自托管服务器                  |
-| OpenAI              | `openai`             | 是           | 默认                               |
+| 本地                | `local`             | 否           | GGUF 模型，约 0.6 GB 自动下载      |
+| LM Studio           | `lmstudio`          | 否           | 本地/自托管服务器                  |
+| Mistral             | `mistral`           | 是           |                                   |
+| Ollama              | `ollama`            | 否           | 本地/自托管服务器                  |
+| OpenAI              | `openai`            | 是           | 默认                               |
 | OpenAI 兼容         | `openai-compatible`  | 通常需要      | 通用 `/v1/embeddings` 端点         |
-| Voyage              | `voyage`             | 是           |                                   |
+| Voyage              | `voyage`            | 是           |                                   |
 
 ## 搜索如何工作
 
@@ -82,8 +80,21 @@ flowchart LR
 
 如果只有一条路径可用，另一条将单独运行。
 
-**仅 FTS 模式。** 设置 `provider: "none"` 可有意禁用嵌入，并仅使用关键词进行搜索。将 `provider` 留空或设为 `"auto"`，如果没有配置嵌入认证，也会回退到仅关键词排名，而不会报错；当 `provider: "local"`（GGUF/llama.cpp
-提供方）失败时也是如此。
+内置引擎随后应用确定性的排序：
+
+```text
+hybrid relevance × recency decay × importance multiplier
+```
+
+重要性只在条目被写入时评估一次，而写入该条目的记忆工作流中已经有模型参与。如果缺少重要性，则视为中性，因此现有索引会保留其之前的相关性信号。带日期的日记笔记会按照 30 天半衰期衰减；像 `MEMORY.md` 和 `USER.md` 这样的整理文件则始终有效。这沿用了 [Generative Agents (arXiv:2304.03442)](https://arxiv.org/abs/2304.03442) 中相关性、时效性和重要性的结果，但没有增加一次查询时的模型调用。
+
+## 确定性触发词召回
+
+在符合条件的交互轮次中，内置引擎还会将传入消息与存储在已索引条目中的短触发短语进行比较。强匹配可以在回复前向隐藏上下文中添加最多三条精简条目。预过滤使用现有的关键词和向量检索路径，不会运行召回模型。
+
+自动注入的范围刻意比 `memory_search` 更窄：只有已提升、受信任的条目才符合条件。在可用索引来源信息之前，这意味着仅来自根目录 `MEMORY.md` 和 `USER.md` 的条目。日记、导入的转录文本以及会话转录文本仍可通过显式记忆工具或 Active Memory 升级来访问，但绝不会自动注入。
+
+**仅 FTS 模式。** 将 `provider: "none"` 设为值即可有意禁用嵌入，并仅使用关键词搜索。将 `provider` 留空或设为 `"auto"` 时，如果未配置嵌入认证，也会在不报错的情况下回退到仅关键词排序；当 `provider: "local"`（GGUF/llama.cpp 提供方）失败时也是如此。
 
 **显式提供方不可用。** 如果你显式指定了其他任何提供方（例如 `openai`、`ollama`、`gemini`），并且它在请求时变得不可用（认证错误、网络故障），`memory_search` 会报告记忆不可用，而不是静默降级为仅 FTS 结果。这样可以让已损坏的已配置提供方保持可见。若要有意进行仅 FTS 的召回，请设置 `provider: "none"`；或者修复提供方/认证配置以恢复语义排名。
 
@@ -91,15 +102,11 @@ flowchart LR
 
 两个可选功能有助于处理大量笔记历史。
 
-### 时间衰减
+### 新近度衰减
 
 旧笔记会逐渐失去排名权重，因此较新的信息会优先显示。
 在默认的 30 天半衰期下，来自上个月的笔记得分为其原始权重的 50%。
 `MEMORY.md` 和 `memory/` 下其他未标注日期的文件会长期保留，不会衰减；只有带日期的 `memory/YYYY-MM-DD.md` 文件会衰减。
-
-<Tip>
-如果你的 agent 有数月的每日笔记，而且过时信息总是比最新上下文排名更高，就启用这个功能。
-</Tip>
 
 ### MMR（多样性）
 
@@ -109,28 +116,13 @@ flowchart LR
 如果 `memory_search` 不断从不同的每日笔记中返回几乎重复的片段，就启用这个功能。
 </Tip>
 
-### 同时启用两者
-
-```json5
-{
-  agents: {
-    defaults: {
-      memorySearch: {
-        query: {
-          hybrid: {
-            mmr: { enabled: true },
-            temporalDecay: { enabled: true },
-          },
-        },
-      },
-    },
-  },
-}
-```
-
 ## 多模态记忆
 
-借助 `gemini-embedding-2-preview`，你可以将图像和音频与 Markdown 一起编入索引。这仅适用于 `memorySearch.extraPaths` 下的文件；默认的记忆根目录（`MEMORY.md`、`memory/*.md`）仍然只支持 Markdown。搜索查询仍然是文本，但它们可以与视觉和音频内容匹配。有关设置，请参阅[记忆配置参考](/reference/memory-config#multimodal-memory-gemini)。
+使用 `gemini-embedding-2-preview`，你可以将图像和音频与
+Markdown 一起建立索引。这仅适用于 `memory.search.extraPaths` 下的文件；默认
+记忆根目录（`MEMORY.md`、`memory/*.md`）仍然仅支持 Markdown。搜索查询
+仍然是文本，但它们也会与视觉和音频内容进行匹配。有关
+设置，请参阅 [记忆配置参考](/reference/memory-config#multimodal-memory-gemini)。
 
 ## 会话记忆搜索
 
@@ -142,9 +134,12 @@ flowchart LR
 对话。这是可选功能：设置 `experimental.sessionMemory: true` 并将
 `"sessions"` 添加到 `sources` 中（默认的 `sources` 为 `["memory"]`）。
 
-会话命中遵循 `tools.sessions.visibility`：默认的 `"tree"` 只会
-暴露当前会话及其派生出的会话。若要从另一个会话中回忆一个无关的
-同代理会话（例如，从 DM 中由网关分发的会话），请将可见性扩大到 `"agent"`。
+会话命中遵循 `tools.sessions.visibility`：默认的 `"tree"` 会公开
+当前会话、它派生出的会话，以及通过环境组感知被监视的同一代理组会话。
+在 `session.dmScope: "main"` 下，多用户 DM 设置会共享该主会话，因此路由到那里
+的用户可以回忆其所监视组中的内容。若要实现 DM 隔离，请为每个对等方
+使用单独的 `dmScope`，或者将 visibility 设为 `"self"` 以退出环境式被监视会话读取。
+其他无关的同一代理会话仍然需要 `"agent"` 级可见性。
 
 使用 QMD 后端时，还需要设置 `memory.qmd.sessions.enabled: true`，这样
 转录内容才会导出到 QMD 集合；仅设置 `experimental.sessionMemory`
@@ -157,9 +152,8 @@ flowchart LR
 
 **只有关键词匹配？** 你的嵌入提供方可能尚未配置。检查 `openclaw memory status --deep`。
 
-**本地嵌入超时？** `ollama`、`lmstudio` 和 `local` 默认使用更长的
-内联批处理超时。如果主机只是较慢，请设置
-`agents.defaults.memorySearch.sync.embeddingBatchTimeoutSeconds` 并重新运行
+**本地嵌入超时？** `ollama`、`lmstudio` 和 `local` 使用更长的
+提供方拥有的批处理截止时间。检查提供方健康状态并重新运行
 `openclaw memory index --force`。
 
 **找不到 CJK 文本？** 使用 `openclaw memory index --force` 重建 FTS 索引。

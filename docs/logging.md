@@ -17,17 +17,33 @@ Control UI 的 **Logs** 选项卡会跟随 gateway 文件日志。本页解释�
 
 ## 日志存放位置
 
-默认情况下，Gateway 每天会写入一个滚动日志文件：
+By default, the Gateway writes a rolling log file per day. The default profile
+keeps the historical path:
 
 `/tmp/openclaw/openclaw-YYYY-MM-DD.log`
 
-日期使用网关主机的本地时区。当 `/tmp/openclaw` 不安全
-或不可用时（在 Windows 上始终如此），OpenClaw 会改用位于操作系统临时目录下、按用户作用域划分的
-`openclaw-<uid>` 目录。带日期的日志文件会在 24 小时后清理。
+Named profiles use a profile-qualified filename in the same directory:
 
-当下一次写入将超过 `logging.maxFileBytes`
-（默认：100 MB）时，每个文件会轮转。OpenClaw 会在活动文件旁保留最多五个带编号的归档文件，例如
-`openclaw-YYYY-MM-DD.1.log`，并继续写入新的活动日志，而不是停止输出诊断信息。
+`/tmp/openclaw/openclaw-<profile>-YYYY-MM-DD.log`
+
+The filename profile segment is lowercase and limited to letters, numbers, and
+dashes. Simple lowercase names stay readable, so the `--dev` shorthand writes
+`openclaw-dev-YYYY-MM-DD.log`. Case, underscores, and literal dashes use a
+reversible dash escape so distinct profile names never share a log file.
+Oversized values set directly through the environment use a bounded hash suffix
+to stay within filesystem filename limits. An explicit `logging.file` overrides
+these defaults.
+
+The date uses the gateway host's local timezone. When `/tmp/openclaw` is unsafe
+or unavailable (and always on Windows), OpenClaw uses a user-scoped
+`openclaw-<uid>` directory under the OS temp dir instead. Dated log files are
+pruned after 24 hours.
+
+Each file rotates when the next write would exceed `logging.maxFileBytes`
+(default: 100 MB). OpenClaw keeps up to five numbered archives beside the
+active file, such as `openclaw-YYYY-MM-DD.1.log` or
+`openclaw-dev-YYYY-MM-DD.1.log`, and keeps writing to a fresh active log instead
+of suppressing diagnostics.
 
 你可以在 `~/.openclaw/openclaw.json` 中覆盖该路径：
 
@@ -47,9 +63,14 @@ Control UI 的 **Logs** 选项卡会跟随 gateway 文件日志。本页解释�
 
 ```bash
 openclaw logs --follow
+openclaw --dev logs --follow
+openclaw --profile work logs --follow
 ```
 
-选项：
+The root profile selector resolves the same profile-specific file used by the
+Gateway, including CLI fallback reads when local RPC is unavailable.
+
+Options:
 
 | 标志                | 默认值   | 行为                                                                                 |
 | ------------------- | -------- | ------------------------------------------------------------------------------------ |
@@ -168,10 +189,9 @@ openclaw gateway --verbose --ws-log full
 {
   "logging": {
     "level": "info",
-    "file": "/tmp/openclaw/openclaw-YYYY-MM-DD.log",
+    "file": "/path/to/openclaw.log",
     "consoleLevel": "info",
     "consoleStyle": "pretty",
-    "redactSensitive": "tools",
     "redactPatterns": ["sk-.*"]
   }
 }
@@ -256,21 +276,25 @@ OTEL 模型调用 spans/metrics。
 
 ### 控制台样式
 
-`logging.consoleStyle`：
+`logging.consoleStyle` accepts `pretty` or `json`:
 
-- `pretty`：对人友好，带颜色，带时间戳。
-- `compact`：更紧凑的输出（适合长会话）。
-- `json`：每行一个 JSON（供日志处理器使用）。
+- `pretty`: human-friendly, colored, with timestamps.
+- `json`: JSON per line (for log processors).
 
-### 脱敏
+A third rendering style, `compact` (tighter output, best for long sessions), is
+applied automatically when stdout is not a TTY. It is no longer a settable
+config value; `openclaw doctor --fix` maps a stored `consoleStyle: "compact"`
+to `"pretty"`.
+
+### Redaction
 
 OpenClaw 可以在敏感令牌到达控制台输出、文件日志、
 OTLP 日志记录、持久化会话转录文本或 Control UI 工具事件负载
 之前对其进行脱敏（工具开始参数、部分/最终结果负载、派生的
 exec 输出以及 patch 摘要）：
 
-- `logging.redactSensitive`: `off` | `tools`（默认：`tools`）
-- `logging.redactPatterns`: 用于日志/转录输出、替换默认集合的正则字符串列表。对于 Control UI 工具负载，自定义模式会叠加在内置默认规则之上，因此添加新模式不会削弱对默认规则已捕获值的脱敏效果。
+- Sensitive-value redaction is always enabled.
+- `logging.redactPatterns`: list of regex strings that replaces the default set for log/transcript output. For Control UI tool payloads, custom patterns apply on top of the built-in defaults, so adding a pattern never weakens redaction of values already caught by the defaults.
 
 文件日志和会话转录仍然保持 JSONL 格式，但匹配到的密钥值会在
 写入磁盘之前被掩码。脱敏是尽力而为的：它适用于带文本内容的消息
@@ -279,12 +303,9 @@ exec 输出以及 patch 摘要）：
 内置默认规则覆盖常见的 API 凭据和支付凭据字段名，例如卡号、CVC/CVV、共享支付令牌和 payment credential，
 当它们以 JSON 字段、URL 参数、CLI 标志或赋值形式出现时。
 
-`logging.redactSensitive: "off"` 只会禁用这种通用日志/转录
-策略。OpenClaw 仍会对可展示给 UI 客户端、支持包、诊断观察器、
-审批提示或 agent 工具的安全边界负载进行脱敏。示例包括 Control UI
-工具调用事件、`sessions_history` 输出、诊断支持导出、provider 错误观察、
-exec 审批命令显示以及 Gateway WebSocket 协议日志。自定义
-`logging.redactPatterns` 仍可在这些表面上添加项目特定模式。
+OpenClaw also redacts safety-boundary payloads shown to UI clients, support
+bundles, diagnostics observers, approval prompts, or agent tools. Custom
+`logging.redactPatterns` can add project-specific patterns on those surfaces.
 
 ## 诊断与 OpenTelemetry
 

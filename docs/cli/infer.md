@@ -182,8 +182,8 @@ openclaw infer image describe --file ./photo.jpg --model ollama/qwen2.5vl:7b --p
   ```bash
   openclaw infer image providers --json
   openclaw infer image generate \
-    --model google/gemini-3.1-flash-image-preview \
-    --prompt "最小化的扁平测试图像：白色背景上的一个蓝色方块，不要文字。" \
+    --model google/gemini-3.1-flash-image \
+    --prompt "最小化平面测试图像：白色背景上的一个蓝色方块，不要文字。" \
     --output ./openclaw-infer-image-smoke.png \
     --json
   ```
@@ -213,7 +213,8 @@ openclaw infer audio transcribe --file ./memo.m4a --model openai/whisper-1 --jso
 
 ```bash
 openclaw infer tts convert --text "hello from openclaw" --output ./hello.mp3 --json
-openclaw infer tts convert --text "你的构建已完成" --output ./build-complete.mp3 --json
+openclaw infer tts convert --text "Your build is complete" --output ./build-complete.mp3 --json
+openclaw infer tts convert --provider xiaomi --text "Provider-only selection" --output ./xiaomi.mp3 --json
 openclaw infer tts providers --json
 openclaw infer tts personas --json
 openclaw infer tts status --json
@@ -221,8 +222,9 @@ openclaw infer tts status --json
 
 注意：
 
-- `tts status` 仅支持 `--gateway`（它反映由网关管理的 TTS 状态）。
-- 使用 `tts providers`、`tts voices`、`tts personas`、`tts set-provider` 和 `tts set-persona` 来查看和配置 TTS 行为。
+- `tts status` 仅支持 `--gateway`（它反映的是网关管理的 TTS 状态）。
+- 在选择提供方且不覆盖其模型时，请使用 `tts convert --provider <id>`。
+- 使用 `tts providers`、`tts voices`、`tts personas`、`tts set-provider` 和 `tts set-persona` 来检查和配置 TTS 行为。
 
 ## 视频
 

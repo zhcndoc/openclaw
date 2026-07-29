@@ -16,7 +16,7 @@ OpenClaw Amazon Bedrock 提供者插件，支持模型发现、嵌入和护栏�
 
 ## 范围
 
-providers: amazon-bedrock; contracts: memoryEmbeddingProviders
+providers: `amazon-bedrock`; contracts: `memoryEmbeddingProviders`
 
 ## 相关文档
 

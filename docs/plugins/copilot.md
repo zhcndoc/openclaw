@@ -199,7 +199,12 @@ BYOK 端点或凭证，分别单独标识。轮换密钥、请求头、模型或
 | `permissionPolicy`       | 可选的 SDK `onPermissionRequest` 处理器覆盖项，适用于内置 SDK 工具类型（`shell`、`write`、`read`、`url`、`mcp`、`memory`、`hook`）。默认是 `rejectAllPolicy` 作为安全兜底；参见 [Permissions and ask_user](#permissions-and-ask_user)，了解它为什么实际上从不会触发。 |
 | `enableSessionTelemetry` | 可选的 SDK session telemetry 标志。                                                                                                                                                                                                                                                            |
 
-OpenClaw 插件 hooks 不需要任何 Copilot 特定的尝试配置。harness 会通过标准的 harness helpers 运行 `before_prompt_build`（以及旧版的 `before_agent_start` 兼容性 hook）、`llm_input`、`llm_output` 和 `agent_end`。成功的 SDK 压缩也会运行 `before_compaction` 和 `after_compaction`。桥接的 OpenClaw 工具会运行 `before_tool_call` 并报告 `after_tool_call`；`hooksConfig` 仍然保留给原生 SDK 专用、且没有可移植对应物的回调。
+OpenClaw plugin hooks need no Copilot-specific attempt configuration. The
+harness runs `before_prompt_build`, `llm_input`, `llm_output`, and `agent_end` through the
+standard harness helpers. Successful SDK compactions also run
+`before_compaction` and `after_compaction`. Bridged OpenClaw tools run
+`before_tool_call` and report `after_tool_call`; `hooksConfig` remains for
+native SDK-only callbacks with no portable equivalent.
 
 OpenClaw 中没有其他内容需要了解这些字段。其他插件、通道和核心代码只会看到标准的 `AgentHarnessAttemptParams` /
 `AgentHarnessAttemptResult` 形状。
@@ -244,12 +249,17 @@ OpenClaw 端的对话记录镜像（如下）会继续接收压缩后的
 
 ## 局限性
 
-- 该 harness 声称 `github-copilot` 以及未拥有的自定义 BYOK provider ids。
-  由 manifest 拥有的原生 provider ids 即使在 `agentRuntime.id` 被强制设为 `copilot` 时，也仍留在其所属的 runtime 上。
-- 没有 TUI 界面；对于没有 peer 界面的 runtimes，PI 的 TUI 仍然是回退方案。
-- 当 agent 切换到 `copilot` 时，PI 会话状态不会迁移。
-  选择按每次尝试单独决定；现有的 PI 会话仍然有效。
-- `ask_user` 使用与 Codex harness 相同的 OpenClaw prompt-and-reply 路径：当 Copilot SDK 请求用户输入时，OpenClaw 会向活动 channel/TUI 发布一个阻塞式提示，随后排队中的下一条用户消息会解决该 SDK 请求。
+- The harness claims `github-copilot` plus unowned custom BYOK provider ids.
+  Manifest-owned native provider ids stay on their owning runtime even when
+  `agentRuntime.id` is forced to `copilot`.
+- No TUI surface; PI's TUI remains the fallback for runtimes without a peer
+  surface.
+- PI session state does not migrate when an agent switches to `copilot`.
+  Selection is per attempt; existing PI sessions remain valid.
+- `ask_user` uses the provider-neutral gateway question runtime. The Control
+  UI shows the same question card as other OpenClaw questions, supported
+  channels render choice buttons, and the next queued plain-text message
+  resolves that gateway record before the SDK request returns.
 
 ## 权限和 ask_user
 
@@ -286,7 +296,11 @@ Copilot SDK 合同区分**客户端级** GitHub token
 （`CopilotClientOptions.gitHubToken`，用于认证 CLI 进程本身）
 和**会话级** token（`SessionConfig.gitHubToken`，决定该会话的内容排除、模型路由和配额；在 `createSession` 和 `resumeSession` 中都会生效）。harness 只通过一次 `resolveCopilotAuth` 解析认证，并在认证模式为 `gitHubToken` 时设置这两个字段（即显式的 `auth.gitHubToken`，或者从已配置的 `github-copilot` 认证配置中由契约解析出的 `resolvedApiKey`）。当解析出的模式是 `useLoggedInUser` 时，会省略会话级字段，这样 SDK 就会继续从已登录身份中推导身份信息。
 
-`ask_user` 使用 `SessionConfig.onUserInputRequest`。桥接会接受固定选项请求的选择索引或标签，在 SDK 请求允许自由输入时接受自由格式答案，并在 OpenClaw 尝试被中止时取消挂起的请求。
+`ask_user` uses `SessionConfig.onUserInputRequest`. The bridge registers SDK
+choices or option-less free-text prompts as gateway questions, accepts choice
+indexes or labels for fixed-choice requests, and accepts free-form answers
+when the SDK request allows them. Aborting the OpenClaw attempt cancels the
+gateway record and returns an empty SDK answer.
 
 ## 相关
 

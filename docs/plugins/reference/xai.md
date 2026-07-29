@@ -16,7 +16,7 @@ title: "xAI 插件"
 
 ## Surface
 
-providers: xai; contracts: imageGenerationProviders, mediaUnderstandingProviders, realtimeTranscriptionProviders, realtimeVoiceProviders, speechProviders, tools, videoGenerationProviders, webSearchProviders
+providers: `xai`; contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`, `realtimeVoiceProviders`, `speechProviders`, `tools`, `videoGenerationProviders`, `webSearchProviders`
 
 ## 相关文档
 

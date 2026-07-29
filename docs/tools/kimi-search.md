@@ -63,8 +63,7 @@ Kimi 是由 Moonshot 原生网页搜索支持的 `web_search` 提供方。Moonsh
 `tools.web.search.provider` 在省略时会根据可用的 API 密钥自动检测；
 如果配置了多个搜索凭据，请将其显式设置为 `kimi`。
 
-在 `tools.web.search.kimi` 下的等效作用域形式（`apiKey`、`baseUrl`、`model`）
-也可正常工作；这两种结构都会合并为同一个解析后的配置。
+在 `plugins.entries.moonshot.config.webSearch` 下配置 Kimi 专用的 `apiKey`、`baseUrl` 和 `model` 值。
 
 默认值：省略时 `baseUrl` 默认为 `https://api.moonshot.ai/v1`，`model`
 默认为 `kimi-k2.6`。

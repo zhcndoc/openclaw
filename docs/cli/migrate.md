@@ -114,7 +114,7 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 
 ### Claude 导入内容
 
-- Claude Code auto-memory Markdown 来自 `~/.claude/projects/*/memory` 以及一个
+- Claude Code 自动记忆 Markdown 来自 `~/.claude/projects/*/memory` 以及一个
   用户配置的 `autoMemoryDirectory`，会复制到
   `memory/imports/claude-code/` 下以供索引检索。
 - 项目 `CLAUDE.md` 和 `.claude/CLAUDE.md` 会导入到 OpenClaw agent 工作区（`AGENTS.md`）。
@@ -182,16 +182,17 @@ Migration 绝不会写入 `plugins["*"]`，也绝不会存储本地 marketplace 
 
 ### Hermes 导入内容
 
-- 来自 `config.yaml` 的默认模型配置。
-- 来自 `model`、`providers` 和 `custom_providers` 的已配置模型提供程序以及自定义 OpenAI 兼容端点。
-- 来自 `mcp_servers` 或 `mcp.servers` 的 MCP 服务器定义。精确的 OpenClaw 映射覆盖默认的 Streamable HTTP 路由、OAuth 作用域、布尔型 TLS 验证、独立的客户端证书/密钥路径，以及 Hermes 原生/资源/提示词工具策略。不支持的仅限 Hermes 运行时或凭据字段会被报告以供人工审查。
-- `SOUL.md` 和 `AGENTS.md` 到 OpenClaw 代理工作区。
-- `memories/MEMORY.md` 和 `memories/USER.md` 追加到工作区记忆文件中。
-- OpenClaw 文件记忆的默认记忆配置，以及外部记忆提供程序（例如 Honcho）的归档或人工审查项。
-- 任何包含 `SKILL.md` 文件的 `skills/` 下技能；嵌套技能会被展平到工作区技能目录中。
-- 来自 `skills.config` 的每个技能配置值。
-- 在接受交互式凭据迁移时，或设置了 `--include-secrets` 时，当前 Hermes OpenAI Codex OAuth 凭据和 OpenCode OpenAI OAuth 凭据。不要让 Hermes 和 OpenClaw 使用同一个已导入的刷新授权。
-- 在接受交互式凭据迁移时，或设置了 `--include-secrets` 时，来自 Hermes `.env` 和 OpenCode `auth.json` 的受支持 API 密钥和令牌。
+- 默认模型配置来自 `config.yaml`。
+- 从 `model`、`providers` 和 `custom_providers` 导入已配置的模型提供程序和自定义 OpenAI 兼容端点。
+- 从 `mcp_servers` 或 `mcp.servers` 导入 MCP 服务器定义。精确的 OpenClaw 映射覆盖默认的 Streamable HTTP 路由、OAuth 作用域、布尔值 TLS 验证、独立的客户端证书/密钥路径，以及 Hermes 原生/资源/提示工具策略。不支持的仅 Hermes 运行时或凭据字段会被报告以供人工审查。
+- 将 `SOUL.md` 和 `AGENTS.md` 导入 OpenClaw 代理工作区。
+- 将 `memories/MEMORY.md` 和 `memories/USER.md` 追加到工作区记忆文件中。
+  仅记忆表面（入门记忆页面和控制 UI 记忆导入页面）会改为将这些文件复制到 `memory/imports/hermes/` 下，以便在不触碰现有工作区记忆的情况下进行索引式检索。
+- OpenClaw 文件记忆的记忆配置默认值，以及外部记忆提供程序（如 Honcho）的归档或人工审查项。
+- 包含 `SKILL.md` 文件的技能，位于 `skills/` 下的任意位置；嵌套技能会被展平到工作区技能目录中。
+- 来自 `skills.config` 的每项技能配置值。
+- 当接受交互式凭据迁移时，或设置了 `--include-secrets` 时，当前 Hermes OpenAI Codex OAuth 凭据和 OpenCode OpenAI OAuth 凭据。不要让 Hermes 和 OpenClaw 使用同一个已导入的刷新授权。
+- 当接受交互式凭据迁移时，或设置了 `--include-secrets` 时，来自 Hermes `.env` 和 OpenCode `auth.json` 的受支持 API 密钥和令牌。
 
 ### 支持的 `.env` 密钥
 
@@ -219,13 +220,13 @@ openclaw doctor
 }
 ```
 
-运行时插件调用 `api.registerMigrationProvider(...)`。该提供程序实现 `detect`、`plan` 和 `apply`。核心负责 CLI 编排、备份策略、提示、JSON 输出和冲突预检。核心将审阅后的计划传入 `apply(ctx, plan)`；为了兼容性，只有当该参数缺失时，提供程序才可重建计划。
+运行时，插件调用 `api.registerMigrationProvider(...)`。该 provider 实现 `detect`、`plan` 和 `apply`。核心负责 CLI 编排、备份策略、提示、JSON 输出以及冲突预检。核心会将已审核的计划传入 `apply(ctx, plan)`，并且为兼容性考虑，只有在该参数缺失时，provider 才可以重建计划。迁移条目可以设置 `applyPhase: "after-promotion"`，用于外部激活动作；引导流程必须将这类操作延后，直到分阶段的本地数据已被持久化发布。此类 provider 必须声明 `deferredApply: { retrySafe: true }`，并使每个延后操作在进程中断后能够安全重放；未声明的延后操作会被引导流程拒绝。幂等的空操作应返回一个不可变更的条目，并设置 `deferredCompletion: true`，以便恢复流程能够将其记录为已完成。独立的 `openclaw migrate` 仍然会通过其正常的、带备份的流程来应用完整计划。
 
 提供程序插件可以使用 `openclaw/plugin-sdk/migration` 进行条目构建和摘要计数，也可以使用 `openclaw/plugin-sdk/migration-runtime` 进行具备冲突感知的文件复制、仅归档报告复制、缓存的 config-runtime 包装器以及迁移报告。
 
 ## 引导集成
 
-当提供程序检测到已知来源时，引导流程可以提供迁移。`openclaw onboard --flow import` 和 `openclaw setup --wizard --import-from hermes` 都使用相同的插件迁移提供程序，并且在应用前仍会显示预览。
+当提供方检测到已知源时，引导流程可以提供迁移。`openclaw onboard --flow import` 和 `openclaw setup --wizard --import-from hermes` 都使用相同的插件迁移提供方，并且在应用前仍会显示预览。不同于独立迁移，全新的目标引导路径会暂存本地工件和导入的凭据，在暂存区内验证或修复导入的推理，然后在提交配置之前提升工作区和代理状态。一个模式为 `0600` 的提升日志可让下一次运行完成或回滚中断的发布，包括任何延迟的外部激活，而无需重放已导入的本地数据。
 
 <Note>
 引导导入需要全新的 OpenClaw 安装。如果你已经有本地状态，请先重置配置、凭据、会话和工作区。现有安装的备份加覆盖或合并导入属于功能开关控制。

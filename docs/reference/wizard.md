@@ -204,7 +204,7 @@ openclaw agents add work \
 
 `main` 是保留的 agent id，不能用于 `openclaw agents add`。
 
-## Gateway 向导 RPC
+## 网关向导 RPC
 
 Gateway 通过 RPC 暴露上手引导流程（`wizard.start`、`wizard.next`、`wizard.cancel`、`wizard.status`）。
 客户端（macOS 应用、Control UI）可以无需重新实现上手引导逻辑而渲染步骤。
@@ -213,10 +213,10 @@ Gateway 通过 RPC 暴露上手引导流程（`wizard.start`、`wizard.next`、`
 
 Onboarding 会检测 `signal-cli` 是否在 `PATH` 中，如果缺失，会提示安装：
 
-- Linux x86-64：从 `signal-cli` 的 GitHub releases 下载官方原生 GraalVM 构建，并将其存储在 `~/.openclaw/tools/signal-cli/<version>/`。
+- Linux x86-64：从 `signal-cli` GitHub releases 下载官方原生 GraalVM 构建，并将其存储在 `~/.openclaw/tools/signal-cli/<version>/` 下。
 - macOS 和其他架构：改为通过 Homebrew 安装。
-- 原生 Windows：目前不支持；请在 WSL2 中运行 onboarding 以获得 Linux 安装路径。
-- 无论哪种方式，都会将 `channels.signal.cliPath` 写入你的配置。
+- 原生 Windows：暂不支持；请在 WSL2 中运行 onboarding 以获取 Linux 安装路径。
+- 无论哪种方式，都会将 `channels.signal.transport.cliPath` 写入为 `kind: "managed-native"`。
 
 ## 向导写入的内容
 
@@ -225,11 +225,11 @@ Onboarding 会检测 `signal-cli` 是否在 `PATH` 中，如果缺失，会提�
 - `agents.defaults.workspace`
 - `agents.defaults.skipBootstrap` 当传入 `--skip-bootstrap` 时
 - `agents.defaults.model` / `models.providers`（如果选择了 Minimax）
-- `tools.profile`（本地引导在未设置时默认为 `"coding"`；已存在的显式值会被保留）
+- `tools.profile`（本地引导在未设置时默认为 `"coding"`；现有显式值会被保留）
 - `gateway.*`（模式、绑定、认证、tailscale）
-- `session.dmScope`（本地引导在未设置时默认为 `"per-channel-peer"`；已存在的显式值会被保留。详情：[CLI 设置参考](/start/wizard-cli-reference#outputs-and-internals)）
+- `session.dmScope`（引导会保留显式值，否则保持未设置，因此 `"main"` 默认会将所有跨频道的直接消息保留在代理的滚动主会话中——个人代理默认值。对于共享或多用户收件箱，请使用 `"per-channel-peer"`；当 `openclaw security audit` 检测到多用户 DM 流量时，会建议隔离。详情：[CLI 设置参考](/start/wizard-cli-reference#outputs-and-internals)）
 - `channels.telegram.botToken`、`channels.discord.token`、`channels.matrix.*`、`channels.signal.*`、`channels.imessage.*`
-- 在频道提示过程中如果你选择启用，则会写入频道 DM 允许列表。Discord、Matrix、Microsoft Teams 和 Slack 会在可能时将名称解析为 ID；其他频道则直接使用 ID（例如数字形式的 Telegram 发送者 ID 或 WhatsApp 电话号码）。
+- 在频道提示过程中选择启用时的频道 DM 白名单。Discord、Matrix、Microsoft Teams 和 Slack 会在可能时将名称解析为 ID；其他频道直接接受 ID（例如数字形式的 Telegram 发送者 ID 或 WhatsApp 电话号码）。
 - `skills.install.nodeManager`
   - `setup --node-manager` 接受 `npm`、`pnpm` 或 `bun`。
   - 通过直接设置 `skills.install.nodeManager`，手动配置仍然可以使用 `yarn`。
@@ -240,7 +240,7 @@ Onboarding 会检测 `signal-cli` 是否在 `PATH` 中，如果缺失，会提�
 - `wizard.lastRunMode`
 - `wizard.securityAcknowledgedAt`
 
-`openclaw agents add` 会写入 `agents.list[]` 和可选的 `bindings`。
+`openclaw agents add` 会写入 `agents.entries.*` 和可选的 `bindings`。
 
 WhatsApp 凭据保存在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
 活动会话和转录内容存储在
@@ -249,7 +249,7 @@ WhatsApp 凭据保存在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
 以及归档/支持工件。
 
 某些频道以插件形式提供。你在设置过程中选择它们时，引导流程
-会在其可配置之前提示安装它（npm 或本地路径）。
+会在它们可配置之前提示安装它（npm 或本地路径）。
 
 ## 相关文档
 

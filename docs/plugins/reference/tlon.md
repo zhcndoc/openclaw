@@ -16,7 +16,7 @@ title: "Tlon 插件"
 
 ## 表面
 
-channels: tlon; skills
+channels: `tlon`; skills
 
 ## 相关文档
 

@@ -43,7 +43,7 @@ OpenClaw 支持 Brave Search API 作为 `web_search` 提供方。
 }
 ```
 
-Provider-specific Brave 搜索设置位于 `plugins.entries.brave.config.webSearch.*` 下；这是标准配置路径。共享的顶层 `tools.web.search.apiKey` 和作用域化的 `tools.web.search.brave.*` 仍会通过兼容性合并加载，但新的配置应使用上面的插件作用域路径。
+特定于提供方的 Brave 搜索设置位于 `plugins.entries.brave.config.webSearch.*` 下；这是规范的配置路径。
 
 `webSearch.mode` 控制 Brave 的传输方式：
 

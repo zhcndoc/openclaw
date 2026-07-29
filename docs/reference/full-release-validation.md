@@ -1,5 +1,6 @@
 ---
-summary: "完整发布验证阶段、子工作流、发布配置、重跑句柄和证据"
+doc-schema-version: 1
+summary: "完整发布验证阶段、子工作流、发布配置文件、重运行句柄和证据"
 title: "完整发布验证"
 read_when:
   - 运行或重运行完整发布验证
@@ -7,7 +8,11 @@ read_when:
   - 调试发布验证阶段失败
 ---
 
-`Full Release Validation` 是发布产品验证的总入口。大部分工作都发生在子工作流中，因此某个 box 失败后可以单独重跑，而无需重新启动整个发布流程。
+`Full Release Validation` 是发布产品验证的总入口。大部分工作
+都发生在子工作流中，因此失败的分支可以单独重运行，而无需重新开始
+整个发布流程。在冻结 Code SHA 之前先运行发布准备；当后台机器人尚未
+提交时，它会刷新 Control UI 的 locale 输出，然后强制执行与发布 CI 相同的
+严格零回退检查。
 
 先将 product-complete pre-changelog commit 冻结为 **Code SHA**，然后运行：
 
@@ -23,73 +28,94 @@ pnpm ci:full-release \
 `-f reuse_evidence=false` 可强制重新运行，或传入
 `--workflow-sha <trusted-main-sha>` 以选择一个仍可从当前 `origin/main` 访问到的更旧工作流提交。该工作流绝不会自行创建或更新仓库 refs。
 
-当 Code SHA 通过检查后，只生成并提交 `CHANGELOG.md`。这个新提交就是 **Release SHA**。对 Release SHA 运行同一个辅助工具。只有当 GitHub 证明 Release SHA 源自 Code SHA，且完整变更路径集合恰好只有 `CHANGELOG.md` 时，才会复用产品证据；不过 npm 预检和 package/install 验收仍会在 Release SHA 上运行。
+## Extended-stable 异常情况
+
+Extended-stable 发布要求运行的工作流和目标都位于规范分支：
+
+```bash
+gh workflow run full-release-validation.yml \
+  --ref extended-stable/YYYY.M.33 \
+  -f ref=extended-stable/YYYY.M.33 \
+  -f release_profile=stable
+```
+
+不要使用 `pnpm ci:full-release` 或 `release-ci/*`。发布会将运行的分支、head/target SHA、清单 `workflowRef`、ID 和尝试绑定到规范分支和发布提交。
+
+回溯产品失败；对于冻结目标工具，做最小的、保持行为不变的修复；对于提供者、审批或运行器失败，在不更改源代码的情况下重试。任何分支变更都需要一次完整的新运行。不要因为目标较旧就省略所需的包、安装程序、更新、通道或 live 行为。
+
+对于常规发布，当 Code SHA 变为绿色后，只生成并提交 `CHANGELOG.md`。这个新提交就是 **Release SHA**。对 Release SHA 运行同样的辅助程序。只有当 GitHub 证明 Release SHA 是从 Code SHA 派生而来，并且完整的变更路径集合恰好是 `CHANGELOG.md` 时，才会复用产品证据；npm 预检和包/安装接受测试仍然会在 Release SHA 上运行。
 
 `release_profile=stable` 和 `release_profile=full` 始终会运行完整的 live/Docker soak。传入 `run_release_soak=true` 可在 `beta` 配置下包含相同的 soak 线路。Stable 发布会拒绝没有此 soak 和阻塞性产品性能证据的验证清单。
 
-Package Acceptance 通常会根据解析后的 `ref` 构建候选 tarball，包括通过 `pnpm ci:full-release` 分发的完整 SHA 运行。Beta 发布之后，传入 `release_package_spec=openclaw@YYYY.M.PATCH-beta.N`，以便在发布检查、Package Acceptance、跨操作系统、release-path Docker 和 package Telegram 中复用已发布的 npm 包。只有当 Package Acceptance 需要有意证明不同包时，才使用 `package_acceptance_package_spec`。Codex 插件 live 包线路遵循相同状态：已发布的 `release_package_spec` 值会推导出 `codex_plugin_spec=npm:@openclaw/codex@<version>`；SHA/制品运行会从所选 ref 打包 `extensions/codex`；并且操作员可以直接为 `npm:`、`npm-pack:` 或 `git:` 插件源设置 `codex_plugin_spec`。该线路会授予该插件所需的显式 Codex CLI 安装批准，然后运行 Codex CLI 预检和同会话 OpenAI agent 回合。
+Package Acceptance 通常会根据解析后的 `ref` 构建候选 tarball，包括通过 `pnpm ci:full-release` 分派的完整 SHA 运行。在 beta 发布之后，传入 `release_package_spec=openclaw@YYYY.M.PATCH-beta.N`，以在发布检查、Package Acceptance、跨 OS、release-path Docker 和 package Telegram 中复用已发布的 npm 包。仅当 Package Acceptance 需要有意证明不同的包时，才使用 `package_acceptance_package_spec`。Codex plugin live package 线路遵循相同状态：已发布的 `release_package_spec` 值派生出 `codex_plugin_spec=npm:@openclaw/codex@<version>`；SHA/artifact 运行会从所选 `ref` 打包 `extensions/codex`；操作员也可以直接为 `npm:`、`npm-pack:` 或 `git:` 插件源设置 `codex_plugin_spec`。该线路会授予该插件所需的显式 Codex CLI 安装批准，然后运行 Codex CLI 预检和同会话 OpenAI agent 回合。其最后一个零重试、中等思考的回合会发送可见进度，但省略 Codex `final`，读取随机化的工作区输入，写入其精确的产物，并发送明确的完成信号。这可以捕获 v2026.7.1 回归，即一次普通的进度发送终止了该回合。
 
 ## 顶层阶段
 
 对于 `rerun_group=all`，会首先运行一个 `Check for reusable validation evidence` 作业。它会查找与相同发布配置、有效浸泡设置和验证输入相匹配的最新先前绿色完整验证。精确目标重跑使用 `exact-target-full-validation-v1`。其后代中完整 delta 恰好为 `CHANGELOG.md` 的使用 `changelog-only-release-v1`；所有产品泳道都会被跳过，验证器会独立重新检查 GitHub commit 比较、不可变父工件、子运行和派发日志。任何其他目标变更都需要全新的 Code SHA 验证。传入 `reuse_evidence=false` 可强制执行全新的完整运行。证据复用仅在 `main` 或规范化、固定 SHA 的 `release-ci/*` ref 上运行，且其工作流提交仍位于受信任的 `main` 血缘上；其他工作流 ref 会重新运行所选泳道。
 
-同样对于 `rerun_group=all`，会运行一个 `Verify Docker runtime image assets` 作业，使用 `OPENCLAW_EXTENSIONS=diagnostics-otel,codex` 构建 `runtime-assets` Docker 目标。它与其他阶段并行运行，并由总验证器强制执行；各泳道不再需要在派发前等待它完成。更窄的 `rerun_group` 会跳过此预检。
+新的面向包的验证会在派发 Plugin Prerelease 和 OpenClaw Release Checks 之前，准备一个不可变 tarball 和一个 Docker 镜像工件。两个子流程都会在使用前验证相同的包 SHA、工件 ID、服务摘要、生产者运行尝试和 Docker 归档摘要。与包无关的裸 Docker 层使用内容寻址的 GHCR 缓存；候选特定镜像仍然是不可变的 GitHub 工件。针对显式已发布包规范的聚焦运行则会保留现有的包路径。
+
+对于 `rerun_group=all`，还会运行一个 `Verify Docker runtime image assets` 作业，它使用 `OPENCLAW_EXTENSIONS=diagnostics-otel,codex` 构建 `runtime-assets` Docker 目标。它与其他阶段并行运行，并由总验证器强制执行；在派发之前，各泳道不再等待它。更窄的 `rerun_group` 会跳过此预检。
 
 | 阶段                   | 详情                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 目标解析               | **作业：** `Resolve target ref`<br />**子工作流：** 无<br />**证明：** 解析发布分支、标签或完整提交 SHA，并记录所选输入。<br />**重跑：** 如果此步骤失败，则重跑总任务。                                                                                                                                                                                                                                                                                                            |
-| Docker 资产预检        | **作业：** `Verify Docker runtime image assets`<br />**子工作流：** 无<br />**证明：** 在任何其他阶段派发之前，`runtime-assets` Docker 构建目标仍然成功。仅在 `rerun_group=all` 时运行。<br />**重跑：** 使用 `rerun_group=all` 重跑总任务。                                                                                                                                                                                                                                         |
-| Vitest 和普通 CI       | **作业：** `Run normal full CI`<br />**子工作流：** `CI`<br />**证明：** 针对目标 ref 的手动完整 CI 图，包括 Linux Node 泳道、打包插件分片、插件和通道契约分片、Node 22 兼容性、`check-*`、`check-additional-*`、构建产物冒烟检查、文档检查、Python skills、Windows、macOS、Control UI i18n，以及通过总任务运行的 Android。<br />**重跑：** `rerun_group=ci`。                                                                                          |
-| 插件预发布             | **作业：** `Run plugin prerelease validation`<br />**子工作流：** `Plugin Prerelease`<br />**证明：** 仅发布用插件静态检查、agentic 插件覆盖、完整插件批处理分片、插件预发布 Docker 泳道，以及用于兼容性分诊的非阻塞 `plugin-inspector-advisory` 产物。<br />**重跑：** `rerun_group=plugin-prerelease`。                                                                                                                                                          |
-| 发布检查               | **作业：** `Run release/live/Docker/QA validation`<br />**子工作流：** `OpenClaw Release Checks`<br />**证明：** 安装冒烟、跨操作系统包检查、Package Acceptance、QA Lab 一致性、live Matrix，以及 live Telegram。稳定版和完整配置文件还会运行详尽的 live/E2E 套件和 Docker 发布路径分块；beta 可通过 `run_release_soak=true` 选择加入。<br />**重跑：** `rerun_group=release-checks` 或更窄的 release-checks 处理器。                                                                |
-| Package Telegram       | **作业：** `Run package Telegram E2E`<br />**子工作流：** `NPM Telegram Beta E2E`<br />**证明：** 当设置了 `release_package_spec` 或 `npm_telegram_package_spec` 时，针对已发布包的聚焦 Telegram E2E。完整候选验证使用规范化的 Package Acceptance Telegram E2E 代替。<br />**重跑：** 在设置了 `release_package_spec` 或 `npm_telegram_package_spec` 时，使用 `rerun_group=npm-telegram`。                                                                                                              |
-| 产品性能               | **作业：** `Run product performance evidence`<br />**子工作流：** `OpenClaw Performance`<br />**证明：** 针对目标 SHA 的发布配置文件性能运行（`profile=release`、`repeat=3`、`fail_on_regression=true`、`publish_reports=false`）。Kova 输出保留在工作流产物中，且子工作流必须证明其报告发布器被跳过。仅在 `rerun_group=all` 或 `rerun_group=performance` 时是必需的（阻塞）；更窄的重跑组不需要。<br />**重跑：** `rerun_group=performance`。 |
-| 总验证器               | **作业：** `Verify full validation`<br />**子工作流：** 无<br />**证明：** 重新检查已记录的子运行结论，并附加来自子工作流的最慢作业表。<br />**重跑：** 仅在将失败的子任务重跑为绿色之后，再重跑此作业。                                                                                                                                                                                                                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 目标解析               | **作业：** `Resolve target ref`<br />**子工作流：** 无<br />**证明：** 解析发布分支、标签或完整 commit SHA，并记录所选输入。<br />**重跑：** 如果此项失败，则重跑总流程。                                                                                                                                                                                                                                                                                                            |
+| 共享候选               | **作业：** `Prepare shared release candidate`<br />**子工作流：** `OpenClaw Live And E2E Checks (Reusable)`<br />**证明：** 打包并验证一个精确 SHA 的包，构建一个功能性 Docker 镜像，并为两个面向包的子工作流记录不可变的包和镜像工件元组。<br />**重跑：** 重跑受影响的 package、plugin-prerelease、cross-OS 或 live/E2E 组。                                                                                                                 |
+| Docker 工件预检        | **作业：** `Verify Docker runtime image assets`<br />**子工作流：** 无<br />**证明：** 在任何其他阶段派发之前，`runtime-assets` Docker 构建目标仍然成功。仅在 `rerun_group=all` 时运行。<br />**重跑：** 使用 `rerun_group=all` 重跑总流程。                                                                                                                                                                                                                                         |
+| Vitest 和正常 CI       | **作业：** `Run normal full CI`<br />**子工作流：** `CI`<br />**证明：** 针对目标 ref 的手动完整 CI 图，包括 Linux Node 泳道、打包的 plugin 分片、plugin 和 channel contract 分片、Node 22 兼容性、`check-*`、`check-additional-*`、构建产物 smoke 检查、docs 检查、Python skills、Windows、macOS、Control UI i18n，以及通过总流程的 Android。<br />**重跑：** `rerun_group=ci`。                                                                                          |
+| Plugin 预发布          | **作业：** `Run plugin prerelease validation`<br />**子工作流：** `Plugin Prerelease`<br />**证明：** 仅发布所需的插件静态检查、agentic plugin 覆盖、完整插件批处理分片、plugin 预发布 Docker 泳道，以及用于兼容性分流的非阻塞 `plugin-inspector-advisory` 工件。<br />**重跑：** `rerun_group=plugin-prerelease`。                                                                                                                                                          |
+| 发布检查               | **作业：** `Run release/live/Docker/QA validation`<br />**子工作流：** `OpenClaw Release Checks`<br />**证明：** 安装 smoke、跨 OS 包检查、Package Acceptance、QA Lab 一致性、live Matrix 和 Telegram，以及受门控的 advisory Discord、WhatsApp 和 Slack 泳道。稳定版和完整配置文件还会运行详尽的 live/E2E 套件和 Docker 发布路径分块；beta 可通过 `run_release_soak=true` 选择加入。<br />**重跑：** `rerun_group=release-checks` 或更窄的 release-checks 处理句柄。              |
+| 包 Telegram            | **作业：** `Run package Telegram E2E`<br />**子工作流：** `NPM Telegram Beta E2E`<br />**证明：** 当设置了 `release_package_spec` 或 `npm_telegram_package_spec` 时，执行一次聚焦的已发布包 Telegram E2E。完整候选验证则改用规范的 Package Acceptance Telegram E2E。<br />**重跑：** 在 `release_package_spec` 或 `npm_telegram_package_spec` 存在时使用 `rerun_group=npm-telegram`。                                                                                                              |
+| 产品性能               | **作业：** `Run product performance evidence`<br />**子工作流：** `OpenClaw Performance`<br />**证明：** 针对目标 SHA 的发布配置性能运行（`profile=release`、`repeat=3`、`fail_on_regression=true`、`publish_reports=false`）。Kova 输出保留在工作流工件中，且子流程必须证明其报告发布器已被跳过。仅在 `rerun_group=all` 或 `rerun_group=performance` 时为必需（阻塞）；更窄的重跑组不需要。<br />**重跑：** `rerun_group=performance`。 |
+| 总验证器              | **作业：** `Verify full validation`<br />**子工作流：** 无<br />**证明：** 重新检查已记录的子运行结论，并附加来自子工作流的最慢作业表。<br />**重跑：** 仅在重跑失败的子流程转绿后，重跑此作业。                                                                                                                                                                                                                                                                 |
 
 总任务始终以仅产物模式派发产品性能。
 `OpenClaw Performance` 仅允许在计划运行或显式设置 `publish_reports=true` 的手动派发中发布报告。仅产物守卫必须成功完成，以证明报告发布器作业保持跳过。新的和复用的证据记录都带有
 `controls.performanceReportPublication=artifact-only`；验证器和复用选择器会拒绝没有匹配的规范化性能子任务证明的证据。
 
 验证器会将规范化清单上传为
-`full-release-validation-<run-id>-<run-attempt>`。证据工具在下载该精确产物 ID 之前，会验证其产物 ID、摘要、生产者运行和尝试次数。它会限制下载的 ZIP 大小，使用 REST `sha256:` 摘要校验其字节，并且在不解压归档的情况下流式读取唯一允许的受限清单条目。为了兼容旧版发布消费者，稳定名称别名会暂时保留。验证器始终优先使用带尝试号的产物；作为过渡，它仅接受由 attempt-1 的 manifest v2 生产者生成的稳定名称。对于更后面的尝试和 manifest v3，它会拒绝这种旧名称。
+`full-release-validation-<run-id>-<run-attempt>`。证据工具在下载该精确工件 ID 之前，会验证其工件 ID、摘要、生产者运行和尝试次数。它会限制下载的 ZIP 大小，使用 REST `sha256:` 摘要校验其字节，并且在不解压归档的情况下流式读取唯一允许的受限清单条目。为了兼容旧版发布消费者，稳定名称别名会暂时保留。验证器始终优先使用带尝试号的工件；作为过渡，它仅接受由 attempt-1 的 manifest v2 生产者生成的稳定名称。对于更后面的尝试和 manifest v3，它会拒绝这种旧名称。
 
 对于 `ref=main` 且 `rerun_group=all` 的情况、对于 `release/*` refs，以及对于 Tideclaw alpha refs，一个更新的总运行会取代同一 ref 和 rerun group 的较旧运行。当父任务被取消时，其监视器会取消它已经派发的任何子工作流。标签和固定 SHA 的验证运行不会相互取消。
 
 ## 发布检查阶段
 
-`OpenClaw Release Checks` 是最大的子工作流。它会先解析目标一次，并在包或 Docker 面向的阶段需要时准备一个共享的 `release-package-under-test` 制品。
+`OpenClaw Release Checks` 是最大的子工作流。它会先解析目标一次，并在可用时验证 umbrella 的共享包制品。对于直接或定向触发的调度，当包或面向 Docker 的阶段需要时，它会准备自己的 `release-package-under-test` 制品。
 
-| Stage                    | Details                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------------------------ | ------------------------ |
-| Release target           | **Job:** `Resolve target ref`<br />**Backing workflow:** none<br />**Tests:** 选定的 ref、可选的预期 SHA、profile、rerun group，以及聚焦的 live suite 过滤器。<br />**Rerun:** `rerun_group=release-checks`.                                                                                                                                                                                                                                                                                                                                                             |
-| Package artifact         | **Job:** `Prepare release package artifact`<br />**Backing workflow:** none<br />**Tests:** 打包或解析一个候选 tarball，并上传 `release-package-under-test` 供下游面向 package 的检查使用。<br />**Rerun:** 受影响的 package、cross-OS，或 live/E2E 组。                                                                                                                                                                                                                                                                                             |
-| Install smoke            | **Job:** `Run install smoke`<br />**Backing workflow:** `Install Smoke`<br />**Tests:** 完整安装路径，包括 root Dockerfile smoke 镜像复用、QR package 安装、root 和 gateway Docker smoke、installer Docker 测试，以及 Bun 全局安装 image-provider smoke。<br />**Rerun:** `rerun_group=install-smoke`.                                                                                                                                                                                                                                                           |
-| Cross-OS                 | **Job:** `cross_os_release_checks`<br />**Backing workflow:** `OpenClaw Cross-OS Release Checks (Reusable)`<br />**Tests:** 针对所选 provider 和模式，在 Linux、Windows 和 macOS 上进行 fresh 与 upgrade 线路测试，使用候选 tarball 加上基线 package。<br />**Rerun:** `rerun_group=cross-os`.                                                                                                                                                                                                                                                                 |
-| Repo and live E2E        | **Job:** `Run repo/live E2E validation`<br />**Backing workflow:** `OpenClaw Live And E2E Checks (Reusable)`<br />**Tests:** repository E2E、live cache、OpenAI websocket streaming、原生 live provider 和 plugin 分片，以及由 `release_profile` 选择的 Docker-backed live model/backend/gateway harnesses。<br />**Runs:** `run_release_soak=true`、`release_profile=full`，或聚焦的 `rerun_group=live-e2e`。<br />**Rerun:** `rerun_group=live-e2e`，可选配 `live_suite_filter`。                                                                                |
-| Docker release path      | **Job:** `Run Docker release-path validation`<br />**Backing workflow:** `OpenClaw Live And E2E Checks (Reusable)`<br />**Tests:** 针对共享 package 制品的 release-path Docker chunks。<br />**Runs:** `run_release_soak=true`、`release_profile=full`，或聚焦的 `rerun_group=live-e2e`。<br />**Rerun:** `rerun_group=live-e2e`.                                                                                                                                                                                                                                     |
-| Package Acceptance       | **Job:** `Run package acceptance`<br />**Backing workflow:** `Package Acceptance`<br />**Tests:** 离线插件 package fixture、插件更新、规范化的 mock-OpenAI Telegram package E2E，以及针对同一 tarball 的已发布升级幸存者检查。阻塞性发布检查使用默认的最新已发布基线；soak 检查（`run_release_soak=true`）会扩展到最近 4 个稳定 npm 版本，以及 3 个固定历史版本（`2026.4.23`、`2026.5.2`、`2026.4.15`），并针对已报告问题的升级 fixture 运行。<br />**Rerun:** `rerun_group=package`. |
-| Maturity scorecard       | **Job:** `Render maturity scorecard release docs`<br />**Backing workflow:** `maturity-scorecard.yml`<br />**Tests:** 针对目标 ref 渲染建议性 maturity scorecard 文档。仅在传入 `run_maturity_scorecard=true` 时运行。<br />**Rerun:** `rerun_group=qa` with `run_maturity_scorecard=true`.                                                                                                                                                                                                                                                           |
-| QA parity                | **Job:** `Run QA Lab parity lane` and `Run QA Lab parity report`<br />**Backing workflow:** 直接 job<br />**Tests:** 候选与基线的 agentic parity packs，随后生成 parity report。<br />**Rerun:** `rerun_group=qa-parity` or `rerun_group=qa`.                                                                                                                                                                                                                                                                                                                         |
-| QA runtime parity        | **Job:** `Run QA Lab runtime parity lane`<br />**Backing workflow:** 直接 job<br />**Tests:** 一个 `openclaw`/`codex` runtime-pair agentic parity lane（`pnpm openclaw qa suite --runtime-pair openclaw,codex`），包括标准 tier，以及在 `run_release_soak=true` 时的 soak tier。提示：单个失败不会阻止 release-check verifier。<br />**Rerun:** `rerun_group=qa-parity` or `rerun_group=qa`.                                                                                                                                                    |
-| QA runtime tool coverage | **Job:** `Enforce QA Lab runtime tool coverage`<br />**Backing workflow:** 直接 job<br />**Tests:** 在标准 runtime-parity tier 中（`pnpm openclaw qa coverage --tools`）检测 `openclaw` 与 `codex` 之间的动态工具漂移，使用 QA runtime parity lane 的输出。阻塞：此 job 不可被建议性覆盖。<br />**Rerun:** `rerun_group=qa-parity` or `rerun_group=qa`.                                                                                                                                                                                        |
-| QA live Matrix           | **Job:** `Run QA Lab live Matrix lane`<br />**Backing workflow:** 直接 job<br />**Tests:** 在 `qa-live-shared` 环境中运行快速 live Matrix QA profile。<br />**Rerun:** `rerun_group=qa-live` or `rerun_group=qa`.                                                                                                                                                                                                                                                                                                                                                          |
-| QA live Telegram         | **Job:** `Run QA Lab live Telegram lane`<br />**Backing workflow:** 直接 job<br />**Tests:** 使用 Convex CI credential leases 运行 live Telegram QA。<br />**Rerun:** `rerun_group=qa-live` or `rerun_group=qa`.                                                                                                                                                                                                                                                                                                                                                                      |
-| Release verifier         | **Job:** `Verify release checks`<br />**Backing workflow:** none<br />**Tests:** 所选 rerun group 所需的 release-check jobs。<br />**Rerun:** 在聚焦的子 job 通过后重新运行。                                                                                                                                                                                                                                                                                                                                                                                   |
+| 阶段                    | 详情                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 发布目标                 | **作业：** `Resolve target ref`<br />**关联工作流：** 无<br />**测试：** 选定的 ref、可选的预期 SHA、配置文件、重新运行组，以及聚焦的 live suite 过滤器。<br />**重跑：** `rerun_group=release-checks`。                                                                                                                                                                                                                                                                                                                                                             |
+| 包制品                   | **作业：** `Prepare release package artifact`<br />**关联工作流：** 无<br />**测试：** 验证 umbrella 的不可变包元组，或为直接/定向的 Release Checks 触发打包一个候选 tarball，然后将其暴露给下游的面向包检查。<br />**重跑：** 受影响的 package、cross-OS 或 live/E2E 组。                                                                                                                                                                                                                                |
+| 安装冒烟                 | **作业：** `Run install smoke`<br />**关联工作流：** `Install Smoke`<br />**测试：** 完整安装路径，包括根 Dockerfile 冒烟镜像复用、QR 包安装、根和 gateway Docker 冒烟、安装器 Docker 测试，以及 Bun 全局安装镜像提供器冒烟。<br />**重跑：** `rerun_group=install-smoke`。                                                                                                                                                                                                                                                           |
+| 跨操作系统               | **作业：** `cross_os_release_checks`<br />**关联工作流：** `OpenClaw Cross-OS Release Checks (Reusable)`<br />**测试：** 针对所选 provider 和模式，在 Linux、Windows 和 macOS 上运行全新与升级两条线，使用候选 tarball 加上一个基线 package。<br />**重跑：** `rerun_group=cross-os`。                                                                                                                                                                                                                                                                 |
+| 仓库和 live E2E          | **作业：** `Run repo/live E2E validation`<br />**关联工作流：** `OpenClaw Live And E2E Checks (Reusable)`<br />**测试：** 仓库 E2E、live 缓存、OpenAI websocket 流式传输、原生 live provider 和插件分片，以及由 `release_profile` 选择的 Docker 支持的 live 模型/后端/gateway 测试框架。<br />**运行：** `run_release_soak=true`、`release_profile=full`，或聚焦的 `rerun_group=live-e2e`。<br />**重跑：** `rerun_group=live-e2e`，可选配 `live_suite_filter`。                                                                                |
+| Docker 发布路径          | **作业：** `Run Docker release-path validation`<br />**关联工作流：** `OpenClaw Live And E2E Checks (Reusable)`<br />**测试：** 针对共享包制品的 release-path Docker 分块。<br />**运行：** `run_release_soak=true`、`release_profile=full`，或聚焦的 `rerun_group=live-e2e`。<br />**重跑：** `rerun_group=live-e2e`。                                                                                                                                                                                                                                     |
+| 包验收                   | **作业：** `Run package acceptance`<br />**关联工作流：** `Package Acceptance`<br />**测试：** 离线插件包固定样本、插件更新、规范化的 mock-OpenAI Telegram 包 E2E，以及针对同一 tarball 的已发布升级幸存者检查。阻塞性发布检查使用默认的最新已发布基线；浸泡检查（`run_release_soak=true`）会扩展为最近 4 个稳定 npm 发布版加上 3 个固定历史版本（`2026.4.23`、`2026.5.2`、`2026.4.15`），并针对已报告问题的升级固定样本运行。<br />**重跑：** `rerun_group=package`。 |
+| 成熟度评分卡           | **作业：** `Render maturity scorecard release docs`<br />**关联工作流：** `maturity-scorecard.yml`<br />**测试：** 针对目标 ref 渲染建议性的成熟度评分卡文档。仅在传入 `run_maturity_scorecard=true` 时运行。<br />**重跑：** `rerun_group=qa` 且 `run_maturity_scorecard=true`。                                                                                                                                                                                                                                                           |
+| QA parity               | **作业：** `Run QA Lab parity lane` 和 `Run QA Lab parity report`<br />**关联工作流：** 直接作业<br />**测试：** 候选和基线 agentic parity 包，然后生成 parity 报告。<br />**重跑：** `rerun_group=qa-parity` 或 `rerun_group=qa`。                                                                                                                                                                                                                                                                                                                         |
+| QA 运行时 parity        | **作业：** `Verify QA Lab runtime-pair lanes`<br />**关联工作流：** 直接作业<br />**测试：** 规范的核心 `openclaw`/`codex` 线路（`pnpm openclaw qa suite --runtime-pair openclaw,codex --runtime-pair-lane core`），以及在 `run_release_soak=true` 时的浸泡线路。说明：单个线路作业不会阻塞 release-check 验证器。<br />**重跑：** `rerun_group=qa-parity` 或 `rerun_group=qa`。                                                                                                                                                             |
+| QA 运行时工具覆盖       | **作业：** `Enforce QA Lab runtime tool coverage`<br />**关联工作流：** 直接作业<br />**测试：** 在规范的核心 runtime-pair 线路中，`openclaw` 与 `codex` 之间的动态工具漂移（`pnpm openclaw qa coverage --tools`），使用该线路的输出。阻塞：此作业不可通过建议性覆盖绕过。<br />**重跑：** `rerun_group=qa-parity` 或 `rerun_group=qa`。                                                                                                                                                                                                     |
+| QA live Matrix          | **作业：** `Run QA Live Matrix catalog`<br />**关联工作流：** `QA-Lab - All Lanes` 可复用工作流<br />**测试：** 通过共享 Matrix live 适配器，在 `qa-live-shared` 环境中执行基于目录生成的 YAML 场景，并分布到确定性分片中。<br />**重跑：** `rerun_group=qa-live` 或 `rerun_group=qa`；使用 `live_suite_filter=qa-live-matrix` 可进行聚焦的 Matrix 重跑。                                                                                                                                                                         |
+| QA live Telegram        | **作业：** `Run QA Lab live Telegram lane`<br />**关联工作流：** 受信任的 `OpenClaw Release Telegram QA` 调度<br />**测试：** 使用 Convex CI 凭证租约进行 live Telegram QA。<br />**重跑：** `rerun_group=qa-live` 或 `rerun_group=qa`。                                                                                                                                                                                                                                                                                                                                 |
+| QA live Discord         | **作业：** `Run QA Lab live Discord lane`<br />**关联工作流：** 直接建议性作业<br />**测试：** 当启用 `OPENCLAW_RELEASE_QA_DISCORD_LIVE_CI_ENABLED` 时，使用 Convex CI 凭证租约进行 live Discord QA。<br />**重跑：** `rerun_group=qa-live` 并带上 `live_suite_filter=qa-live-discord`。                                                                                                                                                                                                                                                                            |
+| QA live WhatsApp        | **作业：** `Run QA Lab live WhatsApp lane`<br />**关联工作流：** 直接建议性作业<br />**测试：** 当启用 `OPENCLAW_RELEASE_QA_WHATSAPP_LIVE_CI_ENABLED` 时，使用 Convex CI 凭证租约进行 live WhatsApp QA。<br />**重跑：** `rerun_group=qa-live` 并带上 `live_suite_filter=qa-live-whatsapp`。                                                                                                                                                                                                                                                                        |
+| QA live Slack           | **作业：** `Run QA Lab live Slack lane`<br />**关联工作流：** 直接建议性作业<br />**测试：** 当启用 `OPENCLAW_RELEASE_QA_SLACK_LIVE_CI_ENABLED` 时，使用 Convex CI 凭证租约进行 live Slack QA。<br />**重跑：** `rerun_group=qa-live` 并带上 `live_suite_filter=qa-live-slack`。                                                                                                                                                                                                                                                                                    |
+| 发布验证器               | **作业：** `Verify release checks`<br />**关联工作流：** 无<br />**测试：** 所选 rerun 组所需的 release-check 作业。<br />**重跑：** 在聚焦的子作业通过后再次重跑。                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## Docker 发布路径分片
 
 当 `live_suite_filter` 为空时，Docker 发布路径阶段会运行这些分片：
 
-| 分片                                                           | 覆盖范围                                                                                                                   |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `core`                                                          | Core Docker 发布路径冒烟通道。                                                                                      |
-| `package-update-openai`                                         | OpenAI 包安装/更新行为、Codex 按需安装、Codex 插件 live 转换，以及 Chat Completions 工具调用。 |
-| `package-update-anthropic`                                      | Anthropic 包安装和更新行为。                                                                             |
-| `package-update-core`                                           | 与提供方无关的包和更新行为。                                                                              |
-| `plugins-runtime-plugins`                                       | 运行插件行为的插件运行时通道。                                                                        |
-| `plugins-runtime-services`                                      | 基于服务和 live 插件运行时通道。                                                                              |
-| `plugins-runtime-install-a` through `plugins-runtime-install-h` | 为并行发布验证拆分的插件安装/运行批次。                                                      |
-| `openwebui`                                                     | 在需要时，在专用的大磁盘 runner 上隔离运行 OpenWebUI 兼容性冒烟测试。                                    |
+| Chunk                                                           | Coverage                                                                                                                                     |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core`                                                          | Core Docker release-path smoke lanes.                                                                                                        |
+| `package-update-openai`                                         | OpenAI package install/update behavior, Codex on-demand install, Codex plugin live progress follow-through, and Chat Completions tool calls. |
+| `package-update-anthropic`                                      | Anthropic package install and update behavior.                                                                                               |
+| `package-update-core`                                           | Provider-neutral package and update behavior.                                                                                                |
+| `plugins-runtime-plugins`                                       | Plugin runtime lanes that exercise plugin behavior.                                                                                          |
+| `plugins-runtime-services`                                       | Service-backed and live plugin runtime lanes.                                                                                                |
+| `plugins-runtime-install-a` through `plugins-runtime-install-h` | Plugin install/runtime batches split for parallel release validation.                                                                        |
+| `openwebui`                                                     | Requested 时在专用大磁盘 runner 上隔离运行的 OpenWebUI 兼容性 smoke。                                                      |
 
 当只有一个 Docker 通道失败时，请在可复用的 live/E2E 工作流中使用有针对性的 `docker_lanes=<lane[,lane]>`。发布制品在可用时包含每个通道的重新运行命令，以及包制品和镜像复用输入。
 
@@ -100,8 +126,8 @@ Package Acceptance 通常会根据解析后的 `ref` 构建候选 tarball，包�
 | 配置文件  | 预期用途                      | 包含的 live/provider 覆盖范围                                                                                                                                                                            |
 | --- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `beta`   | 最快的发布关键冒烟测试。   | OpenAI/core live 路径、用于 OpenAI 的 Docker live models、native gateway core、native OpenAI gateway profile、native OpenAI plugin，以及 Docker live gateway OpenAI。                                            |
-| `stable` | 默认发布批准配置文件。 | `beta` 加上 Anthropic smoke、Google、MiniMax、backend、native live test harness、Docker live CLI backend、Docker ACP bind、Docker Codex harness、Docker subagent-announce，以及一个 OpenCode Go smoke shard。 |
-| `full`   | 广泛的建议性全量扫描。             | `stable` 加上建议性 providers、plugin live shards 和 media live shards。                                                                                                                               |
+| `stable` | 默认发布批准配置文件。 | `beta` 加上 Anthropic 冒烟测试、Google、MiniMax、backend、native live test harness、Docker live CLI backend、Docker ACP bind、Docker Codex harness、Docker subagent-announce，以及一个 OpenCode Go 冒烟测试分片。 |
+| `full`   | 广泛的建议性全量扫描。             | `stable` 加上建议性 providers、plugin live 分片和 media live 分片。                                                                                                                               |
 
 ## 仅 full 额外包含的内容
 
@@ -148,27 +174,27 @@ Anthropic 和 OpenCode Go model 分片。定向重跑仍然可以使用聚合的
 `live-cli-backend-docker`、`live-acp-bind-docker`，以及
 `live-codex-harness-docker`。
 
-`live-gateway-advisory-docker` 句柄是其三个提供方分片的聚合重跑句柄，因此它仍会分发到所有 advisory Docker gateway 作业。
+如需进行有针对性的 QA 传输重跑，请设置 `rerun_group=qa-live` 并使用标准选择器 `qa-live-matrix`、`qa-live-telegram`、`qa-live-discord`、`qa-live-whatsapp` 或 `qa-live-slack`。
+
+`live-gateway-advisory-docker` handle 是其三个 provider 分片的聚合重跑 handle，因此它仍然会扩展到所有 advisory Docker gateway 作业。
 
 当一个跨 OS 泳道失败时，使用 `rerun_group=cross-os` 搭配 `cross_os_suite_filter`。该过滤器接受一个 OS id、一个 suite id，或一个 OS/suite 对，例如 `windows/packaged-upgrade`、`windows`，或 `packaged-fresh`。跨 OS 摘要包含 packaged upgrade 泳道按阶段划分的耗时，并且长时间运行的命令会打印心跳行，因此在作业超时之前，卡住的更新是可见的。
 
-QA 发布检查失败会阻止正常的发布验证。QA 运行时工具覆盖检查（`openclaw` 与 `codex` 在标准层级之间的动态工具漂移）也会阻止发布检查验证器，即使底层的 QA 运行时一致性泳道只是建议性的。Tideclaw alpha 运行仍可能将非包安全性的发布检查泳道视为建议性的。使用 `release_profile=beta` 时，`Run repo/live E2E validation` 的 live-provider 泳道是建议性的：第三方模型部署会在发布过程中发生变化，因此 beta 会将其失败显示为警告，而稳定版和完整配置文件仍会将其视为阻断项。 当
-`live_suite_filter` 明确请求受门控的 QA live 泳道，例如 Discord、WhatsApp 或 Slack 时，匹配的 `OPENCLAW_RELEASE_QA_*_LIVE_CI_ENABLED` 仓库变量必须启用；否则输入捕获会失败，而不是静默跳过该泳道。
-当你需要新的 QA 证据时，请重跑 `rerun_group=qa`、`qa-parity` 或 `qa-live`。
+QA release-check failures 仅会阻塞为选定的 Matrix、Telegram 和 QA runtime tool 覆盖泳道准备的常规发布验证。QA parity、runtime parity，以及受门控的 Discord、WhatsApp 和 Slack live 泳道仅作参考，并发布状态工件，而不会阻塞发布验证器。Tideclaw alpha 运行仍可能将非 package-safety 的 release-check 泳道视为参考。当 `release_profile=beta` 时，`Run repo/live E2E validation` live-provider 套件仅作参考：第三方模型部署会在发布过程中发生变化，因此 beta 会将其失败显示为警告，而 stable 和 full 配置文件仍会将其作为阻塞项。当 `live_suite_filter` 明确请求受门控的 QA live 泳道，例如 Discord、WhatsApp 或 Slack 时，匹配的 `OPENCLAW_RELEASE_QA_*_LIVE_CI_ENABLED` 仓库变量必须启用；否则输入捕获会失败，而不是悄悄跳过该泳道。需要新的 QA 证据时，请重跑 `rerun_group=qa`、`qa-parity` 或 `qa-live`。
 
 ## 需保留的证据
 
 将 `Full Release Validation` 摘要保留为发布级索引。它会链接子运行 ID，并包含最慢任务表。对于失败，先检查子工作流，然后重新运行上面的最小匹配处理程序。
 
-记录 Code SHA 和 Release SHA、复用策略以及变更路径集合、绿色的 Code SHA 父运行，以及轻量级的 Release SHA 父运行。
+对于常规发布，记录 Code SHA 和 Release SHA、复用策略和变更路径集、绿色 Code SHA 父运行，以及轻量级 Release SHA 父运行。对于 extended-stable，记录规范分支、精确的 release SHA、新的父运行 ID 和尝试次数、workflow ref、每个子运行，以及任何 frozen-target 兼容性修复或有意省略。
 
 有用的工件：
 
-- 来自 `OpenClaw Release Checks` 的 `release-package-under-test`
+- `release-package-under-test` 来自 `OpenClaw Release Checks`
 - `.artifacts/docker-tests/` 下的 Docker release-path 工件
-- Package Acceptance 的 `package-under-test` 和 Docker acceptance 工件
-- 每个 OS 和套件的跨 OS release-check 工件
-- QA parity、runtime parity、Matrix 和 Telegram 工件
+- Package Acceptance `package-under-test` 和 Docker acceptance 工件
+- 每个 OS 和 suite 的 Cross-OS release-check 工件
+- QA parity、runtime parity，以及选定的 Matrix、Telegram、Discord、WhatsApp 或 Slack 工件
 
 ## 工作流文件
 

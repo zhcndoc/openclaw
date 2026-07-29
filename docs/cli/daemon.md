@@ -23,8 +23,8 @@ openclaw daemon uninstall
 
 ## 子命令和选项
 
-| Subcommand  | Options                                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------ |
+| 子命令  | 选项                                                                                          |
+| --------- | ------------------------------------------------------------------------------------------------ |
 | `status`    | `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json` |
 | `install`   | `--port`, `--runtime <node>`, `--token`, `--wrapper <path>`, `--force`, `--json`                 |
 | `uninstall` | `--json`                                                                                         |
@@ -34,8 +34,8 @@ openclaw daemon uninstall
 
 - `status`：显示服务安装状态（launchd/systemd/schtasks）并探测 Gateway 健康状态。
 - `install`：安装服务；`--force` 会重新安装/覆盖现有安装。
-- `restart --safe`：要求正在运行的 Gateway 预检查当前活跃工作，并在工作清空后安排一次合并后的重启，受 `gateway.reload.deferralTimeoutMs` 限制（默认 300000ms/5 分钟；设为 `0` 表示无限期等待）。当该预算过期时，仍会强制重启。普通 `restart` 直接使用服务管理器；`--force` 是立即覆盖。
-- `restart --safe --skip-deferral`：绕过活跃工作延迟门控，因此即使报告了阻塞项，Gateway 也会立即重启。需要 `--safe`。
+- `restart --safe`：请求正在运行的 Gateway 对活动工作进行预检，并在工作清空后安排一次合并的重启，最长等待 5 分钟。这个预算耗尽后，仍会强制重启。普通的 `restart` 直接使用服务管理器；`--force` 是立即覆盖。
+- `restart --safe --skip-deferral`：跳过活动工作延迟门控，即使报告了阻塞项，Gateway 也会立即重启。需要 `--safe`。
 
 ## 注意事项
 

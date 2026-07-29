@@ -67,16 +67,16 @@ openclaw agents delete work
 选项：`--force`、`--json`。
 
 - `main` 不能被删除。
-- 如果不使用 `--force`，则需要交互式确认（在非 TTY 会话中会失败；请使用 `--force` 重新运行）。
-- 工作区、agent 状态和会话记录目录会移动到废纸篓，而不是被永久删除。
-- 当 Gateway 可达时，删除会通过 Gateway 路由，因此配置和会话存储清理与运行时流量共享同一个写入端。如果 Gateway 不可达，CLI 会回退到离线本地路径。
-- 如果另一个 agent 的工作区与此工作区相同、位于此工作区内，或包含此工作区，则会保留该工作区，并且 `--json` 会报告 `workspaceRetained`、`workspaceRetainedReason` 和 `workspaceSharedWith`。
+- 如果没有 `--force`，则需要交互式确认（在非 TTY 会话中会失败；请使用 `--force` 重新运行）。
+- 工作区、agent 状态和会话转录目录会移动到 Trash，而不是直接硬删除。如果 Trash 不可用，agent 配置删除仍会成功，并报告需要手动清理的路径。
+- 当 Gateway 可达时，删除会通过 Gateway 路由，因此配置和会话存储清理会与运行时流量使用同一个写入端。如果 Gateway 不可达，CLI 会回退到离线本地路径。
+- 如果另一个 agent 的工作区与此工作区是同一路径、位于此工作区内，或包含此工作区，则会保留该工作区，并且 `--json` 会报告 `workspaceRetained`、`workspaceRetainedReason` 和 `workspaceSharedWith`。
 
 ## 路由绑定
 
 使用路由绑定将入站频道流量固定到特定的 agent。
 
-如果你还希望每个 agent 显示不同的技能，请在 `openclaw.json` 中配置 `agents.defaults.skills` 和 `agents.list[].skills`。参见 [Skills config](/tools/skills-config) 和 [Configuration reference](/gateway/config-agents#agentsdefaultsskills)。
+如果你还想为不同的 agent 显示不同的可见技能，请在 `openclaw.json` 中配置 `agents.defaults.skills` 和 `agents.entries.*.skills`。参见 [Skills config](/tools/skills-config) 和 [Configuration reference](/gateway/config-agents#agentsdefaultsskills)。
 
 列出绑定：
 
@@ -152,7 +152,7 @@ openclaw agents unbind --agent work --all
 
 ## 设置身份
 
-`set-identity` 会将字段写入 `agents.list[].identity`：`name`、`theme`、`emoji`、`avatar`（工作区相对路径、http(s) URL 或 data URI）。
+`set-identity` 会将字段写入 `agents.entries.*.identity`：`name`、`theme`、`emoji`、`avatar`（工作区相对路径、http(s) URL 或 data URI）。
 
 - `--agent` 或 `--workspace` 用于选择目标代理。如果 `--workspace` 匹配多个代理，命令会失败，并提示你传入 `--agent`。
 - 本地工作区相对路径的头像图片文件大小限制为 2 MB。HTTP(S) URL 和 `data:` URI 不受本地文件大小限制检查。

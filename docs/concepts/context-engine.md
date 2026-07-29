@@ -8,7 +8,7 @@ title: "上下文引擎"
 sidebarTitle: "上下文引擎"
 ---
 
-**上下文引擎** 控制 OpenClaw 在每次运行时如何构建模型上下文：包含哪些消息、如何总结较早的历史，以及如何在子代理边界之间管理上下文。
+**上下文引擎** 控制 OpenClaw 在每次运行时如何构建模型上下文：包含哪些消息、如何总结更早的历史，以及如何在子代理边界之间管理上下文。
 
 OpenClaw 自带一个内置的 `legacy` 引擎，并默认使用它。只有当你希望获得不同的组装、压缩或跨会话记忆行为时，才安装并选择插件引擎。
 
@@ -122,7 +122,6 @@ legacy 引擎不会注册工具，也不会提供 `systemPromptAddition`。
 
 ```ts
 import { buildMemorySystemPromptAddition } from "openclaw/plugin-sdk/core";
-import { resolveSessionAgentId } from "openclaw/plugin-sdk/memory-host-core";
 
 export default function register(api) {
   api.registerContextEngine("my-engine", (ctx) => ({
@@ -152,7 +151,6 @@ export default function register(api) {
         systemPromptAddition: buildMemorySystemPromptAddition({
           availableTools: availableTools ?? new Set(),
           citationsMode,
-          agentId: resolveSessionAgentId({ config: ctx.config, sessionKey }),
           agentSessionKey: sessionKey,
         }),
       };
@@ -167,7 +165,8 @@ export default function register(api) {
 ```
 
 工厂函数 `ctx` 包含可选的 `config`、`agentDir` 和 `workspaceDir`
-值，因此插件可以在第一个生命周期钩子运行之前初始化按代理或按工作区的状态。
+值，因此插件可以在第一次生命周期调用之前为每个代理或每个工作区初始化状态。对于非 legacy 的 `assemble()` 调用之前，宿主会完成已注册的异步内存提示词准备。同步的
+`buildMemorySystemPromptAddition(...)` 帮助函数会读取该不可变的运行快照；请将提供的工具、引用、代理和会话上下文原样传入。
 
 然后在配置中启用它：
 
@@ -338,8 +337,8 @@ OpenClaw 将所选插件引擎与核心回复路径隔离。如果一个非 lega
   <Accordion title="压缩">
     压缩是上下文引擎的一项职责。legacy 引擎会委托给 OpenClaw 内置的摘要功能。插件引擎可以实现任何压缩策略（DAG 摘要、向量检索等）。
   </Accordion>
-  <Accordion title="内存插件">
-    内存插件（`plugins.slots.memory`）与上下文引擎是分开的。内存插件提供搜索/检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎可能会在组装期间使用内存插件数据。希望使用活动内存提示词路径的插件引擎，应优先使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将活动内存提示词分段转换为可直接前置的 `systemPromptAddition`。如果引擎需要更底层的控制，也仍然可以通过 `openclaw/plugin-sdk/memory-host-core` 中的 `buildActiveMemoryPromptSection(...)` 获取原始行。
+  <Accordion title="Memory plugins">
+    Memory 插件（`plugins.slots.memory`）与上下文引擎是分开的。Memory 插件提供搜索/检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎在组装过程中可能会使用 Memory 插件数据。希望使用活动 memory 提示路径的插件引擎，应使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将主机预先准备好的 memory 提示部分转换为可直接前置的 `systemPromptAddition`，而不会暴露 memory-plugin 的布局。
   </Accordion>
   <Accordion title="会话裁剪">
     无论当前激活的是哪个上下文引擎，内存中对旧工具结果的裁剪都会继续运行。

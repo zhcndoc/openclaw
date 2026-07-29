@@ -16,7 +16,7 @@ title: "Z.AI 插件"
 
 ## 表面
 
-providers: zai; contracts: mediaUnderstandingProviders, usageProviders
+providers: `zai`; contracts: `mediaUnderstandingProviders`, `usageProviders`
 
 ## 相关文档
 

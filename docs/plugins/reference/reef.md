@@ -16,7 +16,7 @@ title: "Reef 插件"
 
 ## 表面
 
-channels: reef
+channels: `reef`
 
 ## 相关文档
 

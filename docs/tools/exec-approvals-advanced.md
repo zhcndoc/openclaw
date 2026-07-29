@@ -92,7 +92,7 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 
 ### 安全二进制与 allowlist 的对比
 
-| 主题             | `tools.exec.safeBins`                                  | Allowlist (`exec-approvals.json`)                                                  |
+| Topic            | `tools.exec.safeBins`                                  | Allowlist (SQLite exec approvals document)                                         |
 | ---------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
 | 目标             | 自动允许窄范围的 stdin 过滤器                         | 显式信任特定可执行文件                                                           |
 | 匹配类型         | 可执行文件名 + 安全二进制 argv 策略                  | 已解析可执行文件路径通配，或 PATH 调用命令的裸命令名通配                           |
@@ -102,11 +102,11 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 
 配置位置：
 
-- `safeBins` 来自配置（`tools.exec.safeBins` 或 per-agent `agents.list[].tools.exec.safeBins`）。
-- `safeBinTrustedDirs` 来自配置（`tools.exec.safeBinTrustedDirs` 或 per-agent `agents.list[].tools.exec.safeBinTrustedDirs`）。
-- `safeBinProfiles` 来自配置（`tools.exec.safeBinProfiles` 或 per-agent `agents.list[].tools.exec.safeBinProfiles`）。per-agent 配置文件键会覆盖全局键。
-- allowlist 条目保存在主机本地审批文件中的 `agents.<id>.allowlist` 下（或通过 Control UI / `openclaw approvals allowlist ...`）。
-- 当解释器/运行时二进制出现在 `safeBins` 中但没有显式配置文件时，`openclaw security audit` 会以 `tools.exec.safe_bins_interpreter_unprofiled` 发出警告。
+- `safeBins` 来自配置（`tools.exec.safeBins` 或每个代理的 `agents.entries.*.tools.exec.safeBins`）。
+- `safeBinTrustedDirs` 来自配置（`tools.exec.safeBinTrustedDirs` 或每个代理的 `agents.entries.*.tools.exec.safeBinTrustedDirs`）。
+- `safeBinProfiles` 来自配置（`tools.exec.safeBinProfiles` 或每个代理的 `agents.entries.*.tools.exec.safeBinProfiles`）。按代理的配置文件键会覆盖全局键。
+- allowlist 条目存放在主机本地的 approvals 文档中，位于 `agents.<id>.allowlist` 下（或通过 Control UI / `openclaw approvals allowlist ...`）。
+- 当 `safeBins` 中出现解释器/运行时二进制但没有显式配置文件时，`openclaw security audit` 会以 `tools.exec.safe_bins_interpreter_unprofiled` 发出警告。
 - `openclaw doctor --fix` 可以将缺失的自定义 `safeBinProfiles.<bin>` 条目脚手架化为 `{}`（之后请复查并收紧）。解释器/运行时二进制不会自动脚手架化。
 
 自定义配置文件示例：
@@ -160,7 +160,11 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 - 如果调用方显式请求严格的外部投递但没有可解析的外部频道，请求会以 `INVALID_REQUEST` 失败。
 - 如果启用了 `bestEffortDeliver` 且无法解析任何外部频道，则投递会降级为仅会话内，而不是失败。
 
-## 将审批转发到聊天频道
+## 第三方客户端的最小作用域
+
+网关审批解析受专用的 `operator.approvals` 作用域保护。这同时适用于仅限所有者的 `exec.approval.resolve` 方法和不区分类型的 `approval.resolve` 方法；`operator.write` 并不包含它。仪表板和集成应仅请求其所使用方法所需的作用域。应将审批解析访问视为与远程执行同等级别的权限，并有意识地授予 `operator.approvals`，即使客户端只展示一个小型审批界面也是如此。
+
+## 审批转发到聊天频道
 
 你可以将 exec 审批提示转发到任何聊天频道（包括插件频道），并通过 `/approve`
 来批准它们。这使用标准的外向投递管道。
@@ -318,9 +322,10 @@ Gateway -> Node 服务 (WS)
 
 安全说明：
 
-- Unix socket 模式为 `0600`，token 存储在 `exec-approvals.json` 中。
-- 同 UID 对等方检查。
-- 挑战/响应（nonce + HMAC token + request hash）+ 短 TTL。
+- Unix socket mode `0600`, token stored in the `exec_approvals_config` row of
+  `state/openclaw.sqlite`.
+- Same-UID peer check.
+- Challenge/response (nonce + HMAC token + request hash) + short TTL.
 
 ## 常见问题
 

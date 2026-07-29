@@ -148,8 +148,7 @@ Logbook 使用两条独立的模型路由：
 Logbook 按以下顺序解析观察模型：
 
 1. `plugins.entries.logbook.config.visionModel`
-2. `tools.media.image.models` 下第一个支持图像的 Codex 条目
-3. `tools.media.models` 下第一个支持图像的 Codex 条目
+2. the first image-capable Codex entry under `tools.media.models`
 
 其他媒体提供方会被跳过，因为它们目前没有暴露 Logbook 所需的结构化提取契约。设置
 `tools.media.image.enabled: false` 会禁用借用的媒体默认值，但显式指定的 Logbook `visionModel` 仍然会生效。
@@ -188,12 +187,22 @@ Logbook 注册了以下 Gateway RPC 方法：
 
 ## 隐私说明
 
-- 快照可能包含屏幕上的任何内容，包括机密信息。帧不会离开机器，除非作为已配置观察模型的采样输入。
-- 在卡片合成、站会生成或问答期间，观察内容、最近的卡片和问题可能会通过默认代理模型离开机器。请对这两条模型路径都应用提供商的数据处理政策。
-- 当你需要一个完全本地的流水线时，请为结构化观察模型和默认代理模型都使用本地路由。
-- 帧、时间线数据库和临时捕获内容都会以仅所有者可读写的文件权限写入。
-- 将 `screen.snapshot` 添加到 `gateway.nodes.denyCommands` 中，就是屏幕捕获的终止开关：它会同时阻止应用节点捕获和 Logbook 自身的 `logbook.snapshot` 命令。
-- 将 `tools.media.image.enabled: false` 也会停止 Logbook 借用媒体图像模型进行分析；此时只会使用插件配置中显式指定的 `visionModel`。
+- Snapshots can contain anything on screen, including secrets. Frames never
+  leave the machine except as sampled input to the configured observation
+  model.
+- Observations, recent cards, and questions can leave the machine through the
+  default agent model during card synthesis, standup generation, or Q&A. Apply
+  the provider's data-handling policy to both model routes.
+- Use local routes for both the structured observation model and default agent
+  model when you need a fully local pipeline.
+- Frames, the timeline database, and temporary captures are written with
+  owner-only file permissions.
+- Adding `screen.snapshot` to `gateway.nodes.commands.deny` is the
+  screen-capture kill switch: it blocks app-node capture and Logbook's own
+  `logbook.snapshot` command alike.
+- Setting `tools.media.image.enabled: false` also stops Logbook from borrowing
+  the media image models for analysis; only an explicit `visionModel` in the
+  plugin config is used then.
 
 ## 故障排查
 
@@ -216,11 +225,11 @@ openclaw nodes describe --node <idOrNameOrIp>
 openclaw logs --follow
 ```
 
-- 确认节点暴露了 `screen.snapshot` 或 `logbook.snapshot`。
-- 在用于捕获的 Mac 上授予屏幕录制权限。
-- 如果配置了 `nodeId`，确认它与节点 id 或显示名称匹配。
-- 检查 `gateway.nodes.denyCommands` 是否不包含
-  `screen.snapshot`。
+- Confirm the node exposes `screen.snapshot` or `logbook.snapshot`.
+- Grant Screen Recording permission on the capture Mac.
+- If `nodeId` is configured, confirm it matches the node id or display name.
+- Check that `gateway.nodes.commands.deny` does not contain
+  `screen.snapshot`.
 
 连续失败三次后，Logbook 会退避十个 capture ticks，
 然后重试。未固定的设置可能会轮换到另一个符合条件的节点。

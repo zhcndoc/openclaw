@@ -27,20 +27,21 @@ openclaw reset --scope full --yes --non-interactive
 
 ## 范围
 
-| 范围                    | 删除内容                                                                                               | 先停止网关 |
-| ----------------------- | ----------------------------------------------------------------------------------------------------- | ---------- |
-| `config`                | 仅配置文件                                                                                              | 否         |
-| `config+creds+sessions` | 配置文件、OAuth/凭据目录、每个代理的会话目录                                                             | 是         |
-| `full`                  | 状态目录（包括嵌套其中的 config/creds，如果有的话），以及工作区目录和工作区证明                         | 是         |
+| 范围                   | 删除内容                                                                     | 先停止网关 |
+| ---------------------- | --------------------------------------------------------------------------- | ---------- |
+| `config`                | 仅配置文件                                                            | 否                  |
+| `config+creds+sessions` | 配置文件、OAuth/凭据目录、每个代理的会话目录           | 是                 |
+| `full`                  | 状态目录（包括共享的 SQLite 数据库）以及工作区目录 | 是                 |
 
 `config+creds+sessions` 和 `full` 会在删除状态之前停止正在运行的受管网关服务。
 
 ## 说明
 
-- 在移除本地状态之前，先运行 `openclaw backup create` 以创建可恢复的快照。
-- 不使用 `--scope` 时，`openclaw reset` 会以交互方式提示选择要移除的作用域。
-- 只有同时设置了 `--scope` 和 `--yes` 时，`--non-interactive` 才有效。
-- `config+creds+sessions` 和 `full` 完成后会输出 `Next: openclaw onboard --install-daemon`。
+- 先运行 `openclaw backup create`，以便在移除本地状态之前创建一个可恢复的快照。
+- 工作区设置状态和证明记录位于共享的 SQLite 数据库中的行，因此 `full` 会随状态目录一起将它们移除；目前没有需要单独移除的证明旁路文件。
+- 如果不指定 `--scope`，`openclaw reset` 会以交互方式提示选择要移除的范围。
+- 仅当同时设置了 `--scope` 和 `--yes` 时，`--non-interactive` 才有效。
+- 完成后，`config+creds+sessions` 和 `full` 会输出 `Next: openclaw onboard --install-daemon`。
 
 ## 相关
 

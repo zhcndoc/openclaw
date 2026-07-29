@@ -16,7 +16,7 @@ title: "Signal 插件"
 
 ## Surface
 
-channels: signal
+channels: `signal`
 
 ## 相关文档
 

@@ -16,7 +16,7 @@ title: "StepFun 插件"
 
 ## 接口
 
-providers: stepfun, stepfun-plan
+providers: `stepfun`, `stepfun-plan`
 
 ## 相关文档
 

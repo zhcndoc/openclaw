@@ -141,11 +141,11 @@ openclaw plugins enable bonjour
 
 启用后，Bonjour 会使用 `discovery.mdns.mode` 来决定要发布多少 TXT 元数据；同样的模式也会控制广域 DNS-SD 记录中的可选 TXT 提示。模式如下：
 
-| 模式                | 行为                                                                                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `minimal`（默认）   | 仅包含核心 TXT 键；省略 `sshPort`、`cliPath`、`tailnetDns`。                                                                                                 |
-| `full`              | 添加 `sshPort`、`cliPath`、`tailnetDns` —— 当客户端需要这些提示时使用。                                                                                      |
-| `off`               | 在不改变插件启用状态的情况下抑制局域网多播；当 `discovery.wideArea.enabled` 为 true 时，广域 DNS-SD 仍可发布最小信标。 |
+| Mode                | Behavior                                                                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `minimal` (default) | Core TXT keys only; omits `sshPort`, `cliPath`, `tailnetDns`.                                                                            |
+| `full`              | Adds `sshPort`, `cliPath`, `tailnetDns` — use when clients need those hints.                                                             |
+| `off`               | Suppresses LAN multicast without changing plugin enablement; wide-area DNS-SD can still publish when `discovery.wideArea.domain` is set. |
 
 ## 何时禁用 Bonjour
 

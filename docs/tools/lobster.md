@@ -225,6 +225,24 @@ steps:
 - `stdin: $step.stdout` 和 `stdin: $step.json` 传递前一步的输出。
 - `condition`（或 `when`）可以根据 `$step.approved` 对步骤进行门控。
 
+### 注入的环境变量
+
+每个步骤的 shell 都会继承父环境以及这些由 Lobster 注入的
+变量，因此命令可以引用已解析的工作流参数，而无需将原始值嵌入
+命令字符串中：
+
+- `LOBSTER_ARG_<NAME>` - 每个工作流参数对应一个。名称会转换为大写，
+  并将每一段非字母数字字符折叠为 `_`，因此参数 `user-id` 会变成
+  `LOBSTER_ARG_USER_ID`。
+- `LOBSTER_ARGS_JSON` - 所有已解析参数组成的单个 JSON 字符串。
+
+这就是完整的注入集合。不存在诸如 `LOBSTER_STEP_<id>_STDOUT` 或
+`LOBSTER_STEP_<id>_JSON_<field>` 之类的逐步输出变量；shell 会将这些名称
+视为未设置，因此参数展开默认值可能会掩盖错误。请改为通过步骤引用读取前一
+步骤的输出——在 `stdin:`、`env:` 或 `condition:` 值中使用
+`$step.stdout`、`$step.json` 或 `$step.json.<field>`。（`LOBSTER_STATE_DIR`
+是状态目录的单独运行时设置，不是每次运行的参数。）
+
 ## 工具参数
 
 ### `run`

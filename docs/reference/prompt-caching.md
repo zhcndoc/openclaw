@@ -20,7 +20,7 @@ OpenClaw 会在上游 API 暴露这些计数器的地方，将提供方使用情
 
 ### `cacheRetention`
 
-Values: `"none" | "short" | "long"`. 可配置为全局默认值、按模型配置以及按代理配置。
+值：`"none" | "short" | "long"`。可配置为全局默认值、按模型配置以及按代理配置。
 `"standard"` 不是别名；请使用 `"short"` 作为提供方的默认缓存窗口。无效值会被忽略并给出警告。
 
 ```yaml
@@ -42,7 +42,7 @@ agents:
 
 1. `agents.defaults.params` - 所有模型的全局默认值
 2. `agents.defaults.models["provider/model"].params` - 按模型覆盖
-3. `agents.list[].params` - 按代理覆盖，按代理 id 匹配
+3. `agents.entries.*.params` - 按代理覆盖，按代理 id 匹配
 
 来源：`src/agents/embedded-agent-runner/extra-params.ts`（`resolveExtraParams`）。
 
@@ -62,7 +62,7 @@ agents:
 
 ### 心跳保温
 
-Heartbeat 可以保持缓存窗口“保温”，并减少空闲间隔后重复的缓存写入。可全局配置（`agents.defaults.heartbeat`）或按代理配置（`agents.list[].heartbeat`）。
+Heartbeat 可保持缓存窗口处于温热状态，并减少空闲间隔后重复的缓存写入。可全局配置（`agents.defaults.heartbeat`）或按代理配置（`agents.entries.*.heartbeat`）。
 
 ```yaml
 agents:
@@ -80,7 +80,7 @@ agents:
 - 原生 Anthropic Messages 响应会暴露 `cache_read_input_tokens` 和 `cache_creation_input_tokens`，分别映射为 `cacheRead` 和 `cacheWrite`。
 - `cacheRetention: "short"` 映射到默认的 5 分钟临时缓存。`cacheRetention: "long"` 在显式设置时会请求 1 小时 TTL（`cache_control: { type: "ephemeral", ttl: "1h" }`）。隐式/由环境驱动的长保留（`OPENCLAW_CACHE_RETENTION=long` 且未显式设置 `cacheRetention`）仅在 `api.anthropic.com` 或 Vertex AI（`aiplatform.googleapis.com` / `*-aiplatform.googleapis.com`）主机上升级为 1 小时 TTL；其他主机仍保持 5 分钟缓存。
 
-来源：`src/agents/anthropic-payload-policy.ts`（`resolveAnthropicEphemeralCacheControl`、`isLongTtlEligibleEndpoint`）。
+来源: `packages/ai/src/transports/anthropic-payload-policy.ts`（`resolveAnthropicEphemeralCacheControl`, `isLongTtlEligibleEndpoint`）。
 
 ### OpenAI（直接 API）
 
@@ -129,14 +129,14 @@ OpenRouter 上的 DeepSeek 缓存构建尽力而为，可能需要几秒钟；�
 
 ## 系统提示缓存边界
 
-OpenClaw 将系统提示拆分为一个 **稳定前缀** 和一个 **易变后缀**，分隔点位于内部缓存前缀边界处。边界上方的内容（工具定义、技能元数据、工作区文件）会被安排为在各轮之间保持字节级完全一致。边界下方的内容（例如 `HEARTBEAT.md`、运行时时间戳、其他每轮元数据）可以变化，而不会使已缓存的前缀失效。
+OpenClaw 将系统提示拆分为一个**稳定前缀**和一个**易变后缀**，并在内部缓存前缀边界处进行划分。边界之上的内容（工具定义、技能元数据、工作区文件）会被安排为在各轮之间保持字节级完全一致。边界之下的内容（例如运行时时间戳和其他每轮元数据）可以变化，而不会使已缓存的前缀失效。
 
 关键设计选择：
 
-- 稳定的工作区项目上下文文件会被排在 `HEARTBEAT.md` 之前，这样心跳波动就不会破坏稳定前缀。
-- 该边界适用于 Anthropic 系列、OpenAI 系列、Google 以及 CLI 的传输整形，因此所有受支持的提供方都能从相同的前缀稳定性中受益。
-- Codex Responses 和 Anthropic Vertex 请求会通过感知边界的缓存整形进行路由，从而使缓存复用与提供方实际接收到的内容保持一致。
-- 系统提示指纹会进行归一化处理（空白字符、行尾、hook 添加的上下文、运行时能力排序），因此语义上未变化的提示可以在各轮之间共享缓存。
+- 稳定的工作区项目上下文文件会被排在易变的每轮元数据之前，因此常规变动不会破坏稳定前缀。
+- 该边界适用于 Anthropic 系列、OpenAI 系列、Google 和 CLI 的传输形态，因此所有受支持的提供方都能受益于同样的前缀稳定性。
+- Codex Responses 和 Anthropic Vertex 请求会通过感知边界的缓存形状进行路由，以便缓存复用与提供方实际接收到的内容保持一致。
+- 系统提示指纹会被规范化（空白字符、换行符、hook 添加的上下文、运行时能力顺序），因此语义上未变化的提示在各轮之间可以共享缓存。
 
 如果在配置或工作区变更后看到意外的 `cacheWrite` 激增，请检查该变更是落在缓存边界之上还是之下。将易变内容移到边界下方（或使其稳定）通常可以解决该问题。
 
@@ -234,7 +234,7 @@ diagnostics:
 | `filePath`        | `$OPENCLAW_STATE_DIR/logs/cache-trace.jsonl` |
 | `includeMessages` | `true`                                       |
 | `includePrompt`   | `true`                                       |
-| `includeSystem`   | `true`                                       |
+| `includeSystem`    | `true`                                       |
 
 ### 环境变量开关（一次性调试）
 

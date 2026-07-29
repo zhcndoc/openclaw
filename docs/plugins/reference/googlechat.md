@@ -16,7 +16,7 @@ title: "Google Chat 插件"
 
 ## 界面
 
-channels: googlechat
+channels: `googlechat`
 
 ## 相关文档
 

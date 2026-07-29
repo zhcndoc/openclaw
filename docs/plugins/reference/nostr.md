@@ -16,7 +16,7 @@ OpenClaw Nostr 频道插件，用于 NIP-04 加密直接消息。
 
 ## 表面
 
-channels: nostr
+channels: `nostr`
 
 ## 相关文档
 

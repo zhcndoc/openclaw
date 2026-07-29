@@ -1,8 +1,9 @@
 ---
-summary: "openclaw channels 的 CLI 参考（账户、状态、能力、resolve、日志、登录/注销）"
+summary: "openclaw channels 的 CLI 参考（账户、状态、死信、能力、解析、日志、登录/登出）"
 read_when:
   - 你想添加或移除频道账户（Discord、Google Chat、iMessage、Matrix、Signal、Slack、Telegram、WhatsApp 等）
   - 你想检查频道状态或跟踪频道日志
+  - 你需要检查或重新提交失败的入站频道事件
 title: "频道"
 ---
 
@@ -25,6 +26,7 @@ openclaw channels capabilities
 openclaw channels capabilities --channel discord --target channel:123
 openclaw channels resolve --channel slack "#general" "@jane"
 openclaw channels logs --channel all
+openclaw channels dead-letters list --channel telegram --account default
 ```
 
 `channels list` 仅显示聊天频道：默认显示已配置的账户，并按账户显示 `installed`、`configured` 和 `enabled` 状态标签（`--json` 用于机器输出）。传入 `--all` 还会显示尚未配置账户的内置频道，以及尚未下载到本地的可安装目录频道。提供方认证和模型使用情况在其他地方：`openclaw models auth list` 用于提供方认证配置文件，`openclaw status` 或 `openclaw models list` 用于查看使用量/配额。
@@ -42,11 +44,31 @@ openclaw channels logs --channel all
 如果 gateway 不可达，`channels status` 会退回到仅基于配置的摘要，
 而不是实时探测输出。
 
-不要使用 `openclaw sessions`、Gateway `sessions.list` 或 agent 的
-`sessions_list` 工具作为频道 socket 健康状态信号。这些界面报告的是
-已存储的会话行，而不是提供商运行时状态。Discord 提供商重启后，
-一个已连接但安静的账户可能是健康的，但在下一次入站或出站会话事件之前，
-不会出现任何 Discord 会话行。
+## 入站死信
+
+已经用尽重试策略的入站事件会在共享状态数据库中保留，保留时间与该队列现有的失败条目保留期一致。使用以下命令检查某个通道账号：
+
+```bash
+openclaw channels dead-letters list --channel telegram --account default
+openclaw channels dead-letters list --channel telegram --account default --json
+```
+
+文本视图会显示事件 ID、失败原因、尝试次数以及失败时长。JSON 输出还会包含保留的负载、元数据、lane 和尝试时间戳，供诊断使用。
+
+在修正底层问题后，使用其原始事件 ID 将某个事件重新入队：
+
+```bash
+openclaw channels dead-letters resubmit <event-id> --channel telegram --account default
+```
+
+请在 Gateway 主机上运行这些命令，以便它们访问与通道运行时相同的共享状态数据库。重新提交会保留负载、元数据和 lane，但会重置尝试计数和队列时长。它会原子性地替换该事件的失败标记，因此当事件处于待处理或已认领状态时重复执行该命令会被拒绝，而不会创建第二次分发。运行中的通道会在下一次入站清理时将其取出。已完成的事件仍然是终态，不能重新提交。对于在添加负载保留之前创建的失败行，它们仍可能出现在列表中，但由于其负载不可用，重新提交会被拒绝。
+
+`openclaw health` 会报告每个通道账号的死信数量以及最早失败时长。`openclaw doctor` 会指出受影响的账号，并返回到检查命令。
+
+不要使用 `openclaw sessions`、Gateway `sessions.list` 或代理的
+`sessions_list` 工具作为通道 socket 健康信号。这些界面报告的是
+已存储的会话记录，而不是提供方运行时状态。在 Discord 提供方
+重启后，一个已连接但安静的账号可能仍然是健康的，而在下一次入站或出站会话事件到来之前，可能不会出现任何 Discord 会话记录。
 
 ## 添加 / 移除账户
 
@@ -57,27 +79,40 @@ openclaw channels remove --channel telegram --delete
 ```
 
 <Tip>
-`openclaw channels add --help` 会显示各频道专用的标志（token、private key、app token、signal-cli 路径等）。
+`openclaw channels add telegram --help` 或 `openclaw channels add --channel telegram --help` 只会显示 Telegram 的设置标志。`openclaw channels add --help` 只会显示共享的命令外壳。
 </Tip>
 
 `channels remove` 仅对已安装/已配置的频道插件生效。对于可安装的目录频道，请先使用 `channels add`。如果不带 `--delete`，它会询问是否禁用该账户并保留其配置；`--delete` 则会在不提示的情况下移除配置项。
 对于运行时支持的频道插件，`channels remove` 还会先请求正在运行的 Gateway 在更新配置之前停止所选账户，因此禁用或删除账户不会让旧监听器一直保持活动状态直到重启。
 
-跨频道共享的非交互式添加标志：`--account <id>`、`--name <name>`、`--token`、`--token-file`、`--bot-token`、`--app-token`、`--secret`、`--secret-file`、`--password`、`--cli-path`、`--url`、`--base-url`、`--http-url`、`--auth-dir` 和 `--use-env`（基于环境变量的认证，仅默认账户，在支持时可用）。频道特定标志包括：
+共享控制外壳只包含 `--channel`、`--account`，以及可选的账户显示 `--name`。每个现代频道插件都拥有自己的凭据、传输方式和特定于提供方的语义。一旦通过位置参数 id 或 `--channel <id>` 选定频道，CLI 只会根据捆绑或已安装的插件包元数据构建该频道的选项，而不会加载频道运行时代码。
+
+像 `--token`、`--url` 或 `--use-env` 这类看起来通用的标志，在现代契约处理它们时仍然属于频道所有。当所选第三方插件仍使用旧的共享设置适配器时，core 只会为该频道注册已发布的兼容标志集，并连同其旧的 `cliAddOptions` 一起使用。无关的旧字段不会泄漏到其他频道中，而现代被选中的频道会拒绝它未声明的兼容标志。
+
+频道专有标志的示例包括：
 
 | Channel     | Flags                                                                                                |
 | ----------- | ---------------------------------------------------------------------------------------------------- |
-| Google Chat | `--webhook-path`、`--webhook-url`、`--audience-type`、`--audience`                                   |
-| iMessage    | `--cli-path`、`--db-path`、`--service`、`--region`                                                   |
-| Matrix      | `--homeserver`、`--user-id`、`--access-token`、`--password`、`--device-name`、`--initial-sync-limit` |
-| Nostr       | `--private-key`、`--relay-urls`                                                                      |
-| Signal      | `--signal-number`、`--cli-path`、`--http-url`、`--http-host`、`--http-port`                          |
-| Tlon        | `--ship`、`--url`、`--code`、`--group-channels`、`--dm-allowlist`、`--auto-discover-channels`        |
+| Google Chat | `--webhook-path`, `--webhook-url`, `--audience-type`, `--audience`                                   |
+| iMessage    | `--cli-path`, `--db-path`, `--service`, `--region`                                                   |
+| Matrix      | `--homeserver`, `--user-id`, `--access-token`, `--password`, `--device-name`, `--initial-sync-limit` |
+| Nostr       | `--private-key`, `--relay-urls`                                                                      |
+| Signal      | `--signal-number`, `--signal-transport`, `--cli-path`, `--http-url`, `--http-host`, `--http-port`    |
+| Tlon        | `--ship`, `--url`, `--code`, `--group-channels`, `--dm-allowlist`, `--auto-discover-channels`        |
 | WhatsApp    | `--auth-dir`                                                                                         |
 
 如果频道插件需要在基于标志的添加命令期间安装，OpenClaw 会使用该频道的默认安装来源，而不会打开交互式插件安装提示。
 
-当你在不带标志的情况下运行 `openclaw channels add` 时，交互式向导可能会提示：
+引导式设置和基于标志的设置都会经过所选频道的解析器、验证器、账户解析、配置写入器以及写入后的钩子。未支持的标志会以所属频道的设置错误失败，而不会作为全局输入袋被接受。
+
+当你运行不带直接账户、凭据或频道配置标志的 `openclaw channels add` 时，交互式向导可以进行提示。位置参数中的频道 id 和 `--channel <id>` 都会立即打开该频道的引导式设置。Back 会返回到完整的频道选择器：
+
+```bash
+openclaw channels add telegram
+openclaw channels add --channel telegram
+```
+
+向导可以提示填写：
 
 - 所选频道的账户 ID
 - 这些账户的可选显示名称

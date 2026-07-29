@@ -14,13 +14,13 @@ title: "使用情况跟踪"
 
 ## 显示位置
 
-- `/status` in chats: 状态卡片，显示会话 token 和预估成本（仅适用于 API key 模型）。在可用时，提供商使用情况会显示为**当前模型提供商**的规范化 `X% left` 窗口或提供商摘要文本。
-- `/usage off|tokens|full` in chats: 每条回复的使用情况页脚。
-- `/usage cost` in chats: 从 OpenClaw 会话日志汇总的本地成本摘要。
-- CLI: `openclaw status --usage` 打印完整的按提供商使用量/配额明细。
-- CLI: `openclaw models status` 列出 OAuth/token 认证配置文件，并在每个有使用窗口的提供商旁显示其摘要。
-- Control UI: **Usage** 在 OpenClaw 基于会话的 token 和预估成本分析上方显示提供商套餐和账单卡片。Anthropic 和 OpenAI Admin API 凭据会额外添加提供商报告的今日、7 天和 30 天支出、每日趋势、token 总数、热门模型和成本分类。
-- Control UI: 聊天撰写器的 context ring 弹出层会为订阅型提供商显示**套餐使用情况**——按窗口的进度条（5 小时、每周、按模型范围）及其重置时间、已知时的提供商套餐（例如 `Max (20x)`），以及额外使用积分。通过套餐计费的会话会隐藏按 token 计算的美元预估；按 API 计费的会话会保留 `Est. cost` 和按费用类型划分的明细。Claude Code CLI（`claude-cli`）设置会复用相同的 Anthropic 订阅使用情况。
+- `/status` 在聊天中：状态卡片，显示会话 token 和预估成本（仅适用于 API key 模型）。在可用时，提供商使用情况会显示为**当前模型提供商**的规范化 `X% left` 窗口或提供商摘要文本。
+- `/usage off|tokens|full` 在聊天中：每条回复的使用情况页脚。
+- `/usage cost` 在聊天中：从 OpenClaw 会话日志汇总的本地成本摘要。
+- CLI：`openclaw status --usage` 打印完整的按提供商使用量/配额明细。
+- CLI：`openclaw models status` 列出 OAuth/token 认证配置文件，并在每个有使用窗口的提供商旁显示其摘要。
+- Control UI：**Usage** 在 OpenClaw 基于会话的 token 和预估成本分析上方显示提供商套餐和账单卡片。Anthropic 和 OpenAI Admin API 凭据会额外添加提供商报告的今日、7 天和 30 天支出、每日趋势、token 总数、热门模型和成本分类。
+- Control UI：聊天撰写器的 context ring 弹出层会为订阅型提供商显示**套餐使用情况**——按窗口的进度条（5 小时、每周、按模型范围）及其重置时间、已知时的提供商套餐（例如 `Max (20x)`），以及额外使用积分。通过套餐计费的会话会隐藏按 token 计算的美元预估；按 API 计费的会话会保留 `Est. cost` 和按费用类型划分的明细。Claude Code CLI（`claude-cli`）设置会复用相同的 Anthropic 订阅使用情况。
 - macOS 菜单栏：当可用提供商使用快照时，Context 下方会显示一个根级 "Usage" 区域。参见 [Menu bar](/platforms/mac/menu-bar)。
 
 `openclaw channels list` 不再打印提供商使用情况；它会改为引导用户使用 `openclaw status` 或 `openclaw models list`。
@@ -230,12 +230,18 @@ JSON 文件路径（支持 `~`）或一个内联对象；当其有效时，会�
 | 动词            | 效果                                | 示例                           |
 | --------------- | ------------------------------------- | --------------------------------- |
 | `num`           | 紧凑计数                         | `272000 -> 272k`                  |
-| `fixed:N`       | N 位小数（默认 2）                | `0.0377`                          |
-| `dur`           | 秒数转时长                   | `14820 -> 4h07m`                  |
+| `fixed:N`       | N 位小数 (`0..100`，默认 2)      | `0.0377`                          |
+| `dur`           | 秒数转持续时间                   | `14820 -> 4h07m`                  |
 | `pct`           | 追加 `%`                            | `96 -> 96%`                       |
-| `inv`           | `100 - x`                             | 用于从已用转换为剩余             |
+| `inv`           | `100 - x`                             | 用于从已使用量得到剩余量             |
 | `alias:TABLE`   | 在 `aliases` 中查找，未列出则原样输出 | `medium -> 🌗`                    |
-| `meter:W:SCALE` | 基于 0-100 值的 W 格字形条   | `[⣿⣿⠐⠐⠐]`（`meter:1` = 一个字形） |
+| `meter:W:SCALE` | 基于 0-100 值的 W 单元字形条   | `[⣿⣿⠐⠐⠐]`（`meter:1` = 一个字形） |
+
+`fixed:N` 仅接受 0 到 100 之间的完整十进制整数。无效的
+精度参数会使该插值结果为空。
+
+`meter:W:SCALE` 仅接受 1 到 100 之间的完整十进制整数宽度。留空宽度可使用默认值 5（`meter::braille`）；无效
+宽度会使该插值结果为空。
 
 ### 片段形式
 

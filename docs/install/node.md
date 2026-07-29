@@ -7,7 +7,7 @@ read_when:
   - "`npm install -g` 因权限或 PATH 问题失败"
 ---
 
-OpenClaw 需要 **Node 22.22.3+、Node 24.15+ 或 Node 25.9+**。**Node 24 是安装、CI 和发布工作流的默认且推荐运行时**；Node 22 仍通过当前的 LTS 版本线受到支持。Node 23 不受支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——当你想自行设置 Node（版本、PATH、全局安装）时，请使用此页面。
+OpenClaw requires **Node 22.22.3+, Node 24.15+, or Node 25.9+** (which includes Node 26). **Node 26 is the default and recommended runtime** — it starts the Gateway noticeably faster and uses less memory than Node 24, and the installer script provisions it when Node is missing. CI and release workflows still pin Node 24; Node 22 remains supported via its LTS line. Node 23 is unsupported. The [installer script](/install#alternative-install-methods) detects and installs Node automatically — use this page when you want to set up Node yourself (versions, PATH, global installs).
 
 ## 检查你的版本
 
@@ -15,7 +15,7 @@ OpenClaw 需要 **Node 22.22.3+、Node 24.15+ 或 Node 25.9+**。**Node 24 是�
 node -v
 ```
 
-`v24.15.0` 或更高版本的 24.x 是推荐的默认版本。`v22.22.3` 或更高版本的 22.x 是受支持的 Node 22 LTS 路径；Node `v25.9.0+` 也受支持。不支持 Node 23。如果缺少 Node 或版本超出受支持范围，请选择下面的一种安装方法。
+`v26` (any release) is the recommended default. `v24.15.0` or newer 24.x remains fully supported (and is what CI pins); `v22.22.3` or newer 22.x is the supported Node 22 LTS path; Node `v25.9.0+` is also supported. Node 23 is unsupported. If Node is missing or outside the supported range, pick an install method below.
 
 ## 安装 Node
 
@@ -34,7 +34,7 @@ node -v
     **Ubuntu / Debian：**
 
     ```bash
-    curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash -
     sudo apt-get install -y nodejs
     ```
 
@@ -75,8 +75,8 @@ node -v
 使用 fnm 的示例：
 
 ```bash
-fnm install 24
-fnm use 24
+fnm install 26
+fnm use 26
 ```
 
   <Warning>

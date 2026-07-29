@@ -16,7 +16,7 @@ title: "Tokenjuice Plugin"
 
 ## 接口
 
-contracts: agentToolResultMiddleware
+contracts: `agentToolResultMiddleware`
 
 ## 相关文档
 

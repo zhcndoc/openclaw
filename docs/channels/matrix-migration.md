@@ -10,10 +10,10 @@ title: "Matrix 迁移"
 
 对大多数用户来说，这是就地升级：
 
-- 插件仍然是 `@openclaw/matrix`
-- channel 仍然是 `matrix`
-- 你的配置仍然位于 `channels.matrix`
-- 缓存凭据仍然位于 `~/.openclaw/credentials/matrix/`
+- 该插件仍然是 `@openclaw/matrix`
+- 该频道仍然是 `matrix`
+- 你的配置仍然位于 `channels.matrix` 下
+- 缓存的凭据会迁移到共享的 `state/openclaw.sqlite` 插件状态中
 - 运行时状态仍然位于 `~/.openclaw/matrix/`
 
 你不需要重命名配置键，也不需要以新名称重新安装插件。
@@ -23,14 +23,14 @@ title: "Matrix 迁移"
 
 ## 迁移会自动执行的内容
 
-当你运行 [`openclaw doctor --fix`](/gateway/doctor) 时会执行 Matrix 迁移；另外，当 Matrix 客户端启动时，如果在其 SQLite 存储旁边仍然发现基于文件的 sidecar 状态，也会作为兜底方案执行迁移。
+当你运行 [`openclaw doctor --fix`](/gateway/doctor) 时，会执行 Matrix 迁移。专用 Matrix 存储旁边基于文件的 sidecar 仍保留其客户端启动回退，但凭据文件导入仅限 Doctor 执行；运行时只读取规范的 SQLite 凭据状态。
 
-自动迁移涵盖：
+Doctor 迁移包括：
 
-- 复用你缓存的 Matrix 凭据
+- 在归档已退役的 `~/.openclaw/credentials/matrix/credentials*.json` 文件之前，对其进行导入和验证
 - 保持相同的账户选择和 `channels.matrix` 配置
 - 将基于文件的 sidecar 状态（`bot-storage.json` 同步缓存、`recovery-key.json`、`legacy-crypto-migration.json`、IndexedDB 快照）导入到 Matrix SQLite 状态中；已迁移的文件会以 `.migrated` 后缀归档
-- 当访问令牌之后发生变化时，针对同一个 Matrix 账户、homeserver、用户和设备，复用最完整的现有 token-hash 存储根目录
+- 当访问令牌后续发生变化时，为同一 Matrix 账户、homeserver、用户和设备复用最完整的现有 token-hash 存储根目录
 
 ## 从早于 2026.4 的 OpenClaw 版本升级
 

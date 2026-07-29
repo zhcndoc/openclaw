@@ -19,7 +19,9 @@ title: "常设指令"
 
 常设指令定义在你的 [代理工作区](/concepts/agent-workspace) 文件中。推荐直接将它们写入 `AGENTS.md`（它会在每次会话中自动注入），这样代理始终能在上下文中获取它们。对于更大的配置，你也可以把它们放到诸如 `standing-orders.md` 之类的专用文件中，并在 `AGENTS.md` 中引用它。
 
-每个程序都指定：
+对于严格的、临时的 CI 或脚本入口点，请使用 [`openclaw agent exec`](/cli/agent#agent-exec)。它会跳过工作区引导文件，因此每次一次性运行都是自包含的，而不是受常设指令约束。
+
+每个程序指定：
 
 1. **范围** - 代理被授权做什么
 2. **触发条件** - 何时执行（按计划、事件或条件）
@@ -29,7 +31,7 @@ title: "常设指令"
 代理会通过工作区引导文件在每次会话中加载这些指令（完整的自动注入文件列表见 [Agent Workspace](/concepts/agent-workspace)），并结合 [cron 任务](/automation/cron-jobs) 按时间执行进行操作。
 
 <Tip>
-将常设指令放在 `AGENTS.md` 中，以确保它们在每个会话中都能被加载。工作区引导会自动注入 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md` 和 `MEMORY.md`——但不会注入子目录中的任意文件。
+将常设指令放在 `AGENTS.md` 中，以确保每次会话都会加载它们。工作区引导会自动注入 `AGENTS.md`、`SOUL.md`、`IDENTITY.md`、`USER.md`、`BOOTSTRAP.md` 和 `MEMORY.md`——但不会注入子目录中的任意文件。
 </Tip>
 
 ## 常设指令的结构
@@ -37,10 +39,10 @@ title: "常设指令"
 ```markdown
 ## Program: 每周状态报告
 
-**Authority:** 汇总数据、生成报告、交付给利益相关者
-**Trigger:** 每周五下午 4 点（通过 cron 任务强制执行）
-**Approval gate:** 标准报告无需审批。将异常标记供人工审查。
-**Escalation:** 如果数据源不可用或指标看起来异常（偏离常态 >2σ）
+**权限：** 汇总数据、生成报告、交付给利益相关者
+**触发条件：** 每周五下午 4 点（通过 cron 任务强制执行）
+**审批门：** 标准报告无需审批。将异常标记供人工审查。
+**升级处理：** 如果数据源不可用或指标看起来异常（偏离常态 >2σ）
 
 ### 执行步骤
 
@@ -52,9 +54,9 @@ title: "常设指令"
 
 ### 不要做的事
 
-- Do not send reports to external parties
-- Do not modify source data
-- Do not skip delivery if metrics look bad - report accurately
+- 不要将报告发送给外部方
+- 不要修改源数据
+- 即使指标看起来很差，也不要跳过交付——要如实报告
 ```
 
 ## 常设指令 + cron 任务

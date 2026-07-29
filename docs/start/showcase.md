@@ -117,8 +117,8 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
 用于在 Agents、Claude、Codex 和 OpenClaw 之间管理技能和命令的桌面应用。
 </Card>
 
-<Card title="Telegram 语音消息（papla.media）" icon="microphone" href="https://papla.media/docs">
-  **社区** • `voice` `tts` `telegram`
+<Card title="Telegram 语音消息（papla.media）" icon="microphone">
+  **Community** • `voice` `tts` `telegram`
 
 封装 papla.media TTS，并将结果作为 Telegram 语音消息发送（没有烦人的自动播放）。
 
@@ -320,19 +320,19 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 </Card>
 
 <Card title="X 帖子分析流水线" icon="hashtag" href="https://x.com/andrewjiang/status/2008388427180630155">
-  **@andrewjiang** • `analysis` `x` `pipeline`
+  **@andrewjiang** • `分析` `x` `流水线`
 
 抓取了 100 个顶级 X 账号的 400 万条帖子，并将它们转化为可查询的分析流水线。
 </Card>
 
 <Card title="Lab results to Notion" icon="flask" href="https://x.com/danpeguine/status/2013388700479058068">
-  **@danpeguine** • `health` `notion` `organization`
+  **@danpeguine** • `健康` `notion` `组织`
 
 将多年来的血液检测化验结果整理成了结构化的 Notion 数据库。
 </Card>
 
 <Card title="Obsidian 第二大脑" icon="book" href="https://notesbylex.com/openclaw-the-missing-piece-for-obsidians-second-brain">
-  **@lexandstuff** • `obsidian` `whatsapp` `memory`
+  **@lexandstuff** • `obsidian` `whatsapp` `记忆`
 
 在 WhatsApp 上运行的日常助手，所有记忆都以 markdown 形式存储在一个受版本控制的 Obsidian vault 中：卡路里和锻炼追踪、待办事项清单、生活事务管理。
 
@@ -340,7 +340,7 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 </Card>
 
 <Card title="Family history bot" icon="people-roof" href="https://news.ycombinator.com/item?id=47783940">
-  **@brtkwr** • `telegram` `memory` `family`
+  **@brtkwr** • `telegram` `记忆` `家庭`
 
 生活在一个家庭 Telegram 群聊中，记录跨越 50 多位亲属的故事，并提出有见地的后续问题——还会用尼泊尔语与母语使用者交流。
 </Card>
@@ -407,7 +407,7 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 
 ## 基础设施与部署
 
-让 OpenClaw 更易运行和扩展的打包、部署和集成。
+让 OpenClaw 更易于运行和扩展的打包、部署与集成。
 
 <CardGroup cols={2}>
 
@@ -495,7 +495,7 @@ OpenClaw 在本地网络中找到了 HomePod，并为它们编写了一个技能
 完整的天文器材市集。围绕 OpenClaw 生态构建。
 </Card>
 
-<Card title="Clinch agent negotiation protocol" icon="handshake" href="https://clawhub.ai/publicstringapps/clinch">
+<Card title="Clinch agent 协商协议" icon="handshake" href="https://clawhub.ai/publicstringapps/clinch">
   **@publicstringapps** • `protocol` `p2p` `skill`
 
 开放的 agent-to-agent 协商：你的代理会与其他节点讨价还价、安排日程和服务协议，并对结果进行加密签名——你只需批准或拒绝。

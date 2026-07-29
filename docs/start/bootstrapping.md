@@ -17,10 +17,11 @@ onboarding 之后、agent 的第一次正式回合时执行。
 在首次针对一个全新的工作区（默认 `~/.openclaw/workspace`）运行时，
 OpenClaw 会：
 
-- 初始化 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md` 和 `BOOTSTRAP.md`。
-- 让代理遵循 `BOOTSTRAP.md`：进行一段自由形式的对话（不是固定的问答表单），以确定名称、性格和风格。
-- 将它学到的内容写入 `IDENTITY.md`、`USER.md` 和 `SOUL.md`。
-- 一旦工作区看起来已配置完成，就删除 `BOOTSTRAP.md`，因此这个仪式只会运行一次。
+- 种下 `AGENTS.md`、`SOUL.md`、`IDENTITY.md`、`USER.md` 和 `BOOTSTRAP.md`。环境特定的工具说明应放在 `AGENTS.md` 的 `## Tools` 部分。
+- 让代理遵循一个受限的三拍出生序列：它会询问你希望如何称呼它，分享一句简短的灵魂/氛围语句，并询问你想要最小推荐插件集还是最大便利性。
+- 将协商好的身份持久化两次：写入 `IDENTITY.md` 和 `SOUL.md`（代理读取自身信息的地方），以及通过 `openclaw agents set-identity`（渠道和 UI 的显示内容）。
+- 读取在 onboarding 期间已存储的应用推荐，而不重新扫描。官方插件使用 `openclaw plugins install <id>`；第三方 ClawHub 技能仍然保持为明确的可选加入。处理完选择后，代理会确认已存储的提议，因此以后再也不会询问。
+- 一旦工作区看起来已配置完成，就删除 `BOOTSTRAP.md`，这样该仪式只会运行一次。
 
 当 `SOUL.md`、`IDENTITY.md` 或 `USER.md` 中有任意一个
 与其初始模板发生偏离，或者存在 `memory/` 文件夹时，工作区就算作已配置完成。

@@ -6,10 +6,10 @@ read_when:
 title: "NovitaAI"
 ---
 
-NovitaAI 是一个提供托管 AI 基础设施的服务商，提供 OpenAI 兼容的 API。
-它作为内置的 OpenClaw 提供商随附提供（无需单独安装插件），因此
-凭据会通过正常的模型认证流程传递，模型引用看起来像
-`novita/deepseek/deepseek-v3-0324`。
+NovitaAI is a hosted AI infrastructure provider with an OpenAI-compatible API.
+It ships as a bundled OpenClaw provider (no separate plugin install), so
+credentials go through the normal model auth flow and model refs look like
+`novita/deepseek/deepseek-v4-pro`.
 
 ## 设置
 
@@ -27,22 +27,26 @@ export NOVITA_API_KEY="<your-novita-api-key>" # pragma: allowlist secret
 
 ## 默认值
 
-| 设置          | 值                                 |
-| ------------- | ---------------------------------- |
-| 提供方 ID     | `novita`                           |
-| 别名          | `novita-ai`, `novitaai`            |
-| 基础 URL      | `https://api.novita.ai/openai/v1`  |
-| 环境变量      | `NOVITA_API_KEY`                   |
-| 默认模型      | `novita/deepseek/deepseek-v3-0324` |
+| Setting       | Value                             |
+| ------------- | --------------------------------- |
+| Provider id   | `novita`                          |
+| Aliases       | `novita-ai`, `novitaai`           |
+| Base URL      | `https://api.novita.ai/openai/v1` |
+| Env var       | `NOVITA_API_KEY`                  |
+| Default model | `novita/deepseek/deepseek-v4-pro` |
 
 ## 捆绑模型目录
 
-- `novita/moonshotai/kimi-k2.5`
-- `novita/minimax/minimax-m2.7`
-- `novita/zai-org/glm-5`
-- `novita/deepseek/deepseek-v3-0324`
-- `novita/deepseek/deepseek-r1-0528`
-- `novita/qwen/qwen3-235b-a22b-fp8`
+- `novita/moonshotai/kimi-k3`
+- `novita/moonshotai/kimi-k2.7-code`
+- `novita/minimax/minimax-m3`
+- `novita/zai-org/glm-5.2`
+- `novita/deepseek/deepseek-v4-pro`
+- `novita/deepseek/deepseek-v4-flash`
+- `novita/qwen/qwen3.7-max`
+
+`novita/minimax/minimax-m2.7` remains selectable as a deprecated compatibility
+entry but is hidden from model pickers.
 
 这只是一个起点，不是一个实时目录。你的账户、地区，或者
 Novita 当前的服务内容可能会添加、移除或限制路由。请在设置

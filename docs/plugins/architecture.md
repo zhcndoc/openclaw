@@ -33,23 +33,23 @@ sidebarTitle: "内部"
 
 能力是 OpenClaw 内部公开的**原生插件**模型。每个原生 OpenClaw 插件都会针对一种或多种能力类型进行注册：
 
-| Capability             | Registration method                              | Example plugins                |
-| ---------------------- | ------------------------------------------------ | ------------------------------ |
-| Text inference         | `api.registerProvider(...)`                      | `anthropic`, `openai`          |
-| CLI inference backend  | `api.registerCliBackend(...)`                    | `anthropic`, `openai`          |
-| Embeddings             | `api.registerEmbeddingProvider(...)`             | Provider-owned vector plugins  |
-| Speech                 | `api.registerSpeechProvider(...)`                | `elevenlabs`, `microsoft`      |
-| Realtime transcription | `api.registerRealtimeTranscriptionProvider(...)` | `openai`                       |
-| Realtime voice         | `api.registerRealtimeVoiceProvider(...)`         | `google`, `openai`             |
-| Media understanding    | `api.registerMediaUnderstandingProvider(...)`    | `google`, `openai`             |
-| Transcripts source     | `api.registerTranscriptSourceProvider(...)`      | `discord`                      |
-| Image generation       | `api.registerImageGenerationProvider(...)`       | `fal`, `google`, `openai`      |
-| Music generation       | `api.registerMusicGenerationProvider(...)`       | `fal`, `google`, `minimax`     |
-| Video generation       | `api.registerVideoGenerationProvider(...)`       | `fal`, `google`, `qwen`        |
-| Web fetch              | `api.registerWebFetchProvider(...)`              | `firecrawl`                    |
-| Web search             | `api.registerWebSearchProvider(...)`             | `brave`, `firecrawl`, `google` |
-| Channel / messaging    | `api.registerChannel(...)`                       | `matrix`, `msteams`            |
-| Gateway discovery      | `api.registerGatewayDiscoveryService(...)`       | `bonjour`                      |
+| Capability             | Registration method                              | Example plugins                                             |
+| ---------------------- | ------------------------------------------------ | ----------------------------------------------------------- |
+| Text inference         | `api.registerProvider(...)`                      | `anthropic`, `openai`                                       |
+| CLI inference backend  | `api.registerCliBackend(...)`                    | `anthropic`, `openai`                                       |
+| Embeddings             | `api.registerEmbeddingProvider(...)`             | Provider-owned vector plugins                               |
+| Speech                 | `api.registerSpeechProvider(...)`                | `elevenlabs`, `microsoft`                                   |
+| Realtime transcription | `api.registerRealtimeTranscriptionProvider(...)` | `openai`                                                    |
+| Realtime voice         | `api.registerRealtimeVoiceProvider(...)`         | `google`, `openai`                                          |
+| Media understanding    | `api.registerMediaUnderstandingProvider(...)`    | `google`, `openai`                                          |
+| Transcripts source     | `api.registerTranscriptSourceProvider(...)`      | `discord`, `google-meet`, `teams-meetings`, `zoom-meetings` |
+| Image generation       | `api.registerImageGenerationProvider(...)`       | `fal`, `google`, `openai`                                   |
+| Music generation       | `api.registerMusicGenerationProvider(...)`       | `fal`, `google`, `minimax`                                  |
+| Video generation       | `api.registerVideoGenerationProvider(...)`       | `fal`, `google`, `qwen`                                     |
+| Web fetch              | `api.registerWebFetchProvider(...)`              | `firecrawl`                                                 |
+| Web search             | `api.registerWebSearchProvider(...)`             | `brave`, `firecrawl`, `google`                              |
+| Channel / messaging    | `api.registerChannel(...)`                       | `matrix`, `msteams`                                         |
+| Gateway discovery      | `api.registerGatewayDiscoveryService(...)`       | `bonjour`                                                   |
 
 <Note>
 一个只注册零个能力、但提供 hooks、tools、discovery services 或后台服务的插件，是一个**仅 hook 的旧式**插件。该模式仍然完全受支持。
@@ -88,29 +88,16 @@ OpenClaw 会根据插件实际的注册行为（而不仅仅是静态元数据�
 
 使用 `openclaw plugins inspect <id>` 查看插件的形态和能力拆分。详情请参见 [CLI 参考](/cli/plugins#inspect)。
 
-### 旧式 hooks
-
-`before_agent_start` hook 仍然作为仅 hook 插件的兼容路径被支持。现实中的旧插件仍依赖它。
-
-方向：
-
-- 保持其可用
-- 将其文档化为旧式
-- 模型/提供者覆盖工作优先使用 `before_model_resolve`
-- 提示词变更工作优先使用 `before_prompt_build`
-- 仅在真实使用量下降且 fixture 覆盖证明迁移安全后再移除
-
-### 兼容性信号
+### Compatibility signals
 
 `openclaw doctor`, `openclaw plugins inspect <id>`, `openclaw status --all`, 和 `openclaw plugins doctor` 会显示这些兼容性提示：
 
 | Signal                                     | Meaning                                                                                                       |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| **config valid**                           | 配置解析正常且插件可成功解析                                                                                   |
-| **hook-only** (info)                       | 插件仅注册 hooks；这是受支持的路径，但尚未迁移到能力注册                                                     |
-| **legacy `before_agent_start`** (warn)     | 插件使用已弃用的 `before_agent_start` hook，而不是 `before_model_resolve`/`before_prompt_build`            |
-| **deprecated memory-embedding API** (warn) | 非捆绑插件使用旧的、仅面向 memory 的 embedding provider API，而不是 `registerEmbeddingProvider`            |
-| **hard error**                             | 配置无效或插件加载失败                                                                                         |
+| **config valid**                           | Config parses fine and plugins resolve                                                                        |
+| **hook-only** (info)                       | Plugin registers only hooks; a supported path, but not migrated to capability registration yet                |
+| **deprecated memory-embedding API** (warn) | Non-bundled plugin uses the old memory-specific embedding provider API instead of `registerEmbeddingProvider` |
+| **hard error**                             | Config is invalid or plugin failed to load                                                                    |
 
 这些建议/警告信号今天不会破坏你的插件。这些信号也会出现在 `openclaw status --all` 和 `openclaw plugins doctor` 中。
 
@@ -200,7 +187,9 @@ Gateway 启动会为当前配置快照构建一个 `PluginMetadataSnapshot`。�
 
 对于频道插件，SDK 表面是 `ChannelMessageActionAdapter.describeMessageTool(...)`。这个统一的发现调用让插件能够将其可见动作、能力和 schema 贡献一起返回，从而避免这些部分彼此偏离。
 
-当某个频道专属的 message-tool 参数携带媒体源，例如本地路径或远程媒体 URL 时，插件还应从 `describeMessageTool(...)` 返回 `mediaSourceParams`。核心会使用这个显式列表应用沙箱路径规范化和出站媒体访问提示，而无需硬编码插件拥有的参数名。这里应优先使用按动作范围划分的映射，而不是整个频道的扁平列表，这样仅用于 profile 的媒体参数就不会在诸如 `send` 之类不相关的动作上被规范化。
+Message action names use a deliberately closed, core-owned vocabulary so every transport can render every action. Plugins add action names through a core PR; runtime registration is intentionally unsupported.
+
+When a channel-specific message-tool param carries a media source such as a local path or remote media URL, the plugin should also return `mediaSourceParams` from `describeMessageTool(...)`. Core uses that explicit list to apply sandbox path normalization and outbound media-access hints without hardcoding plugin-owned param names. Prefer action-scoped maps there, not one channel-wide flat list, so a profile-only media param does not get normalized on unrelated actions like `send`.
 
 核心会在该发现步骤中传入运行时作用域。重要字段包括：
 
@@ -217,7 +206,7 @@ Gateway 启动会为当前配置快照构建一个 `PluginMetadataSnapshot`。�
 
 这也是为什么嵌入式运行器的路由变更仍然属于插件工作：运行器负责将当前聊天/会话身份传递到插件发现边界，以便共享的 `message` 工具为当前轮次暴露正确的频道拥有表面。
 
-对于频道拥有的执行辅助器，捆绑插件应将执行运行时保留在自己的插件模块内部。核心不再在 `src/agents/tools` 下拥有 Discord、Slack、Telegram 或 WhatsApp 的消息动作运行时。我们不发布单独的 `plugin-sdk/*-action-runtime` 子路径，捆绑插件应直接从其自身拥有的模块中导入本地运行时代码。
+For channel-owned execution helpers, channel plugins should keep the execution runtime inside their own plugin modules. Core no longer owns the Discord, Slack, Telegram, or WhatsApp message-action runtimes under `src/agents/tools`. We do not publish separate `plugin-sdk/*-action-runtime` subpaths, and those plugins should import their own local runtime code directly from their plugin-owned modules.
 
 同样的边界也普遍适用于按提供者命名的 SDK 断点：核心不应导入 Discord、Signal、Slack、WhatsApp 或类似插件的频道专用便捷导出桶。如果核心需要某种行为，要么消费捆绑插件自己的 `api.ts` / `runtime-api.ts` 导出桶，要么将需求提升为共享 SDK 中一个狭窄的通用能力。
 
@@ -315,16 +304,13 @@ OpenClaw 将原生插件视为 **公司** 或 **功能** 的所有权边界，�
 从外部看，公司插件应该是内聚的。如果 OpenClaw 对模型、语音、实时转录、实时语音、媒体理解、图像生成、视频生成、网页抓取和网页搜索拥有共享契约，那么某个厂商可以在一个地方拥有它的全部表面：
 
 ```ts
-import type { OpenClawPluginDefinition } from "openclaw/plugin-sdk/plugin-entry";
-import {
-  describeImageWithModel,
-  transcribeOpenAiCompatibleAudio,
-} from "openclaw/plugin-sdk/media-understanding";
-import { createPluginBackedWebSearchProvider } from "openclaw/plugin-sdk/provider-web-search";
+import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
+import { exampleAiMedia } from "./exampleai-media.js";
 
-const plugin: OpenClawPluginDefinition = {
+export default definePluginEntry({
   id: "exampleai",
   name: "ExampleAI",
+  description: "ExampleAI models and media capabilities.",
   register(api) {
     api.registerProvider({
       id: "exampleai",
@@ -339,38 +325,28 @@ const plugin: OpenClawPluginDefinition = {
     api.registerMediaUnderstandingProvider({
       id: "exampleai",
       capabilities: ["image", "audio", "video"],
-      async describeImage(req) {
-        return describeImageWithModel({
-          ...req,
-          provider: "exampleai",
-        });
-      },
-      async transcribeAudio(req) {
-        return transcribeOpenAiCompatibleAudio({
-          ...req,
-          provider: "exampleai",
-        });
-      },
+      describeImage: (req) => exampleAiMedia.describeImage(req),
+      transcribeAudio: (req) => exampleAiMedia.transcribeAudio(req),
+      describeVideo: (req) => exampleAiMedia.describeVideo(req),
     });
 
-    api.registerWebSearchProvider(
-      createPluginBackedWebSearchProvider({
-        id: "exampleai-search",
-        // 凭证 + 抓取逻辑
-      }),
-    );
+    api.registerWebSearchProvider({
+      id: "exampleai-search",
+      createTool() {
+        // Return the vendor-owned web search tool.
+      },
+    });
   },
-};
-
-export default plugin;
+});
 ```
 
 重要的不是这些辅助函数的准确名称，而是这种形态：
 
-- 一个插件拥有厂商表面
-- core 仍然拥有能力契约
-- 通道和功能插件消费 `api.runtime.*` 辅助工具，而不是厂商代码
-- 契约测试可以断言插件注册了它声称拥有的能力
+- one plugin owns the vendor surface
+- core still owns the capability contracts
+- provider request translation and HTTP helpers stay in the vendor plugin
+- channels and feature plugins consume `api.runtime.*` helpers, not vendor code
+- contract tests can assert that the plugin registered the capabilities it claims to own
 
 ### 能力示例：视频理解
 
@@ -470,7 +446,7 @@ OpenClaw 导出的是能力，而不是实现便利性。
 - 供应商特定的便利辅助工具
 - 作为实现细节的设置/引导辅助工具
 
-保留的打包插件辅助子路径已从生成的 SDK 导出映射中移除。将特定所有者的辅助工具保留在对应的插件包内；仅将可复用的宿主行为提升为通用的 SDK 契约，例如 `plugin-sdk/gateway-runtime`、`plugin-sdk/security-runtime` 和 `plugin-sdk/plugin-config-runtime`。
+Reserved bundled-plugin helper subpaths have been retired from the generated SDK export map. Keep owner-specific helpers inside the owning plugin package; promote only reusable host behavior to generic SDK contracts such as `plugin-sdk/gateway-runtime`, `plugin-sdk/security-runtime`, and injected plugin API capabilities.
 
 ## 内部实现与参考
 

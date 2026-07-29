@@ -54,11 +54,11 @@ Agent -> Gateway -> Node Service (WS)
 
 ## 加固说明
 
-- 优先要求所有特权面都进行 TeamID 匹配。
-- PeekabooBridge：`PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1`（仅 DEBUG）可允许同 UID 调用者用于本地开发。
-- 所有通信仍保持仅本地；不会暴露网络 socket。
-- TCC 提示仅来自 GUI 应用程序包；请在每次重新构建时保持已签名的 bundle ID 稳定。
-- Exec 授权 socket 加固：文件模式 `0600`、共享令牌、peer-UID 检查（`getpeereid`）、HMAC-SHA256 挑战/响应，以及请求的短 TTL。
+- 优先要求所有特权表面都匹配 TeamID。
+- PeekabooBridge：`PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1`（仅 DEBUG）可能允许相同 UID 的调用者用于本地开发。
+- 所有通信始终仅限本地；不会暴露网络套接字。
+- TCC 提示仅来自 GUI 应用程序包；请在重建之间保持已签名的 bundle ID 稳定。
+- Exec approvals 套接字加固：文件模式 `0600`、共享令牌存储在 `state/openclaw.sqlite` 的 `exec_approvals_config` 行中、对端 UID 检查（`getpeereid`）、HMAC-SHA256 挑战/响应，以及请求的短 TTL。
 
 ## 相关内容
 

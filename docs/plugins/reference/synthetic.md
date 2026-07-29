@@ -16,7 +16,7 @@ title: "Synthetic 插件"
 
 ## 接口
 
-providers: synthetic
+providers: `synthetic`
 
 ## 相关文档
 

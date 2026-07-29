@@ -44,8 +44,8 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
 
     apt update && apt upgrade -y
 
-    # 安装 Node.js 24
-    curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+    # Install Node.js 26
+    curl -fsSL https://deb.nodesource.com/setup_26.x | bash -
     apt install -y nodejs
 
     # 安装 OpenClaw

@@ -1,24 +1,25 @@
 ---
-summary: "通过 computer 工具和 computer.act 节点命令在配对的 macOS 节点上进行代理驱动的桌面控制"
+summary: "通过 computer 工具和 computer.act 节点命令实现基于能力的桌面控制"
 read_when:
-  - 让网关代理查看并控制 Mac 桌面
-  - 启用、权限或 computer use 的安全性
-  - 扩展 computer.act 节点命令或其执行器
-title: "Computer use"
+  - 让网关代理看到并控制已配对的桌面
+  - 启用、权限或 computer 使用的安全性
+  - 扩展 computer.act 节点命令或其实现器
+title: "计算机使用"
 ---
 
-Computer use 让网关代理能够查看并控制一个配对的 **macOS** 桌面：它使用现有的 `screen.snapshot` 节点命令捕获屏幕截图，并通过一个单一且危险的节点命令 `computer.act` 来驱动鼠标指针和键盘。动作集合遵循 Anthropic computer-use 的核心动作；可选的 `computer_20251124` 缩放未暴露。一个具备视觉能力的模型通过内置的 `computer` 代理工具来驱动它。
+计算机使用允许网关代理查看并控制一个具备能力的已配对桌面。资格基于能力：已连接的节点必须同时声明 `computer.act` 和 `screen.snapshot`，其结果必须包含 `displayFrameId`。该工具会捕获一张截图作为参考帧，然后通过 `computer.act` 驱动指针和键盘。动作集遵循核心 Anthropic computer-use 动作；可选的 `computer_20251124` 缩放不对外暴露。一个具备视觉能力的模型通过内置的 `computer` 代理工具来驱动它。
 
-代理只发出一个统一的命令，`computer.act`；它无法知道某个节点是如何实现它的。macOS 节点通过进程内实现来完成 `computer.act`，结合嵌入式 Peekaboo 服务和有限的 CoreGraphics 原语（正确的 TCC 权限，无额外进程）。其他平台之后也可以实现同样的命令，而无需更改面向代理的契约。
+代理只发出一个统一命令 `computer.act`；它无法知道节点如何实现该命令。随附的 macOS 应用会在进程内处理该命令，结合嵌入式 Peekaboo 服务和较小范围的 CoreGraphics 原语（正确的 TCC 权限，无额外进程）。Windows 和 Linux 可以使用可选的、实验性的 `cua-computer` 插件，并配合单独安装的 `cua-driver` 二进制文件。两种实现器都使用相同的持久本地启用和配对策略。
 
 ## 要求
 
-- 一个配对的 **macOS** 节点（以 node 模式运行的 OpenClaw macOS 应用）。
-- 在 macOS 应用中启用 **Allow Computer Control** 设置（默认：关闭）。
-- 已向 OpenClaw 授予 macOS **Accessibility** 权限（用于指针/键盘注入）以及 **Screen Recording** 权限（用于 `screen.snapshot`）。
-- 在网关上已启用 `computer.act` 命令（它是危险的，默认处于未启用状态）。
-- 一个具备视觉能力的 agent 模型。
-- 公开 `computer` 的工具策略。默认的 `coding` 配置不提供它。将 `computer` 添加到 `tools.alsoAllow`；沙箱化 agent 还需要将其添加到 `tools.sandbox.tools.alsoAllow`。
+- 一个成对、连通的节点，同时提供 `computer.act` 和 `screen.snapshot`，其中 `screen.snapshot` 返回 `displayFrameId`。
+- **macOS 执行器：** 已启用应用设置 **允许计算机控制**。它默认开启；如果明确选择关闭，则保持关闭。
+- **macOS 执行器：** 已向 OpenClaw 授予 **辅助功能** 和事件注入访问权限（用于指针/键盘注入），以及 **屏幕录制** 权限（用于 `screen.snapshot`）。
+- **Windows/Linux 执行器：** 已启用捆绑的 `cua-computer` 插件，并安装了兼容的 `cua-driver` 0.10.x 可执行文件。
+- 已在网关上批准包含 `computer.act` 的配对更新。
+- 一个具备视觉能力的代理模型。
+- 暴露 `computer` 的工具策略。默认的 `coding` 配置文件不会暴露它。将 `computer` 添加到 `tools.alsoAllow`；沙箱化代理还需要将其添加到 `tools.sandbox.tools.alsoAllow`。
 
 ## `computer` 代理工具
 
@@ -34,18 +35,52 @@ Computer use 让网关代理能够查看并控制一个配对的 **macOS** 桌�
 
 截图仅供**模型内部使用**：它们绝不会自动传送到聊天频道。请将所有屏幕内容视为不受信任的输入；工具会警告模型不要遵循与用户请求相冲突的屏幕上的指令。
 
+## Windows 和 Linux（实验性，通过 cua-driver）
+
+捆绑的 `cua-computer` 插件为 Windows 和 Linux 节点主机提供了一个实验性的执行器。它默认禁用，并且需要预发布版 0.10.x 驱动契约：
+
+1. 从 [上游发布](https://github.com/trycua/cua/releases) 中安装 `cua-driver` 0.10.x 二进制文件，并使其可在 `PATH` 中使用。若要使用其他可执行文件位置，请设置 `plugins.entries.cua-computer.config.driverPath`。
+2. 启用插件：
+
+   ```bash
+   openclaw plugins enable cua-computer
+   ```
+
+3. 在交互式桌面会话中启动 `openclaw node run`。当第一个截图或操作到来时，插件会按需启动本地驱动守护进程。
+
+此执行器目前仅控制主显示器。X11/XWayland 是 Linux 的首选路径。原生 Wayland 仍然是上游的可选启用项：请在启动节点之前自行设置 `CUA_DRIVER_RS_ENABLE_WAYLAND`；OpenClaw 从不自动设置它。上游原生 Wayland 输入路径不支持 KDE/KWin。由于 cua-driver 0.10.x 没有跨平台的桌面范围按住契约，`hold_key`、`left_mouse_down` 和 `left_mouse_up` 不可用。带修饰键的滚动和拖拽在两个平台上都不可用，而在 Linux 上带修饰键的点击也不可用。`key` 操作接受命名按键、字母和修饰键组合（例如 `cmd+c` 或 `Return`）；数字和标点按键会被拒绝，因为驱动会丢弃其与布局相关的 Shift 状态，因此请改用 `type` 操作发送这些文本。文本输入在 `type_text` 驱动调用过程中无法中途取消。
+
+由于 cua-driver 不报告稳定的显示身份，帧授权会绑定到驱动连接以及当前主显示器几何信息。守护进程或会话重连会使未完成的帧失效，但若保持连接打开，且主显示器在几何信息相同的情况下被替换，则无法检测到；对于此执行器，建议使用稳定的单显示器会话。
+
+OpenClaw 会为其管理的 `mcp` 和 `serve` 进程禁用 cua-driver 遥测和更新检查。它不会下载或更新驱动二进制文件。
+
+### 故障排除
+
+`cua-computer` 执行器会在工具结果和节点日志中显示类型化错误代码。常见的有：
+
+| Code                                                 | Cause                                                                                                                                                           | Fix                                                                                                                                                                                                                                  |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `COMPUTER_DRIVER_UNAVAILABLE`                        | `cua-driver` 二进制文件不在 `PATH` 中（或 `driverPath` 配置错误）、守护进程未能及时就绪，或者该节点不是 Windows/Linux。                 | 将 `cua-driver` 0.10.x 安装到 `PATH` 中，或设置 `driverPath`。请在交互式桌面会话中运行 `openclaw node run`；在 Linux 上，请确保存在 X11 `DISPLAY`（或带有 `CUA_DRIVER_RS_ENABLE_WAYLAND` 的 `WAYLAND_DISPLAY`）。 |
+| `COMPUTER_DRIVER_UNSUPPORTED`                        | 已连接的驱动不是 `cua-driver` 0.10.x，或者其能力/模式版本不同。                                                                      | 安装受支持的 0.10.x 构建版本。插件在你修正后大约 30 秒会重新探测，因此无需重启节点。                                                                                                          |
+| `COMPUTER_REFUSED_<code>`                            | 驱动以结构化代码拒绝了该操作，例如 `background_unavailable`、`background_occluded` 或 `foreground_unavailable`（KDE/KWin Wayland）。   | 将目标窗口置于前台，切换到 X11，或使用受支持的合成器。请参见上面的兼容性说明。                                                                                                                    |
+| `COMPUTER_STALE_FRAME`                               | 这些坐标引用的是一个已不再是当前状态的截图（上下文压缩、显示几何变化，或参考宽度变化）。                 | 在执行坐标操作前，先拍摄一张新的 `screenshot`。                                                                                                                                                                              |
+| `COMPUTER_UNSUPPORTED_ACTION`                        | 此执行器无法忠实完成的操作：`hold_key`、`left_mouse_down`、`left_mouse_up`、带修饰键的拖拽/滚动，或在 Linux 上带修饰键的点击。 | 使用受支持的操作。cua-driver 0.10.x 没有桌面范围的按住输入契约。                                                                                                                                                  |
+| `COMPUTER_UNSUPPORTED_DISPLAY`                       | 非主 `screenIndex`、捕获/屏幕几何不匹配，或光标位于主显示器之外。                                                       | 仅驱动主显示器。                                                                                                                                                                                                      |
+| `COMPUTER_UNSUPPORTED_KEY`                           | 驱动无法可靠复现的 `key` 值：数字键或其 Shift 状态依赖布局的标点键，或者未知按键。                        | 改用 `type` 操作发送这些文本。                                                                                                                                                                                    |
+| `COMPUTER_DRIVER_ERROR` / `COMPUTER_INVALID_REQUEST` | 驱动失败但没有结构化代码，或者操作参数格式错误。                                                                            | 检查驱动状态并重新截图；更正操作参数。                                                                                                                                                        |
+
 ## `computer.act` 节点命令
 
 `computer.act` 是工具路由输入所使用的唯一节点命令（通过 `node.invoke`，命令为 `"computer.act"`）。它具有以下特点：
 
-- **默认危险**：列在内置的危险节点命令中，并且在显式启用之前会被排除在运行时允许列表之外。macOS 节点在配对时仍可能声明它，以便该能力一旦开放就已获批准。
-- **目前仅限 macOS**：只有启用了 **允许电脑控制** 的 macOS 节点才会公开该命令。
+- **本地启用**：只有在启用 Computer Control 时，节点才会宣告该能力。网关可以在配对时一次性批准该已宣告的能力面。
+- **基于能力**：该工具要求已连接节点同时宣告 `computer.act` 和 `screen.snapshot`。内置的 macOS 应用和可选择启用的实验性 `cua-computer` 插件提供相同的命令对。
 
 读取会复用 `screen.snapshot`；没有第二种捕获路径。有关共享捕获命令，请参见 [Camera and screen nodes](/nodes/camera)。
 
-## 启用并武装
+## 授权
 
-1. 在 macOS 应用中，启用 **Settings → Allow Computer Control**。然后打开 **Settings → Permissions**，并在 macOS 系统设置中授予 **Accessibility** 和 **Screen Recording**。
+1. 启用平台执行器：在 macOS 上，**Settings → Allow Computer Control** 默认已开启，然后在 **Settings → Permissions** 下授予 **Accessibility** 和 **Screen Recording**；在 Windows/Linux 上，请按照上方实验性的 `cua-computer` 设置进行。
 2. 在网关上批准配对更新（新命令会强制重新配对）。
 3. 将该工具暴露给具备视觉能力的代理。对于默认的 `coding` 配置文件：
 
@@ -59,26 +94,24 @@ Computer use 让网关代理能够查看并控制一个配对的 **macOS** 桌�
    }
    ```
 
-4. 为受限时间窗口武装 `computer.act`。`phone-control` 插件暴露了一个 `computer` 组：
+一旦启用节点本地控制并批准配对更新，只要节点继续声明该能力，`computer.act` 就会持续可用。这里没有租约、过期或 arm/disarm 命令。本地禁用 Computer Control 会移除已声明的命令，且节点会在调用时重新检查该开关。
 
-   ```text
-   /phone arm computer 30m
-   /phone status
-   /phone disarm
-   ```
+在 macOS 上，默认开启意味着，一旦所需的 macOS 授权存在，已配对的网关就可以立即驱动指针和键盘输入。没有逐次操作确认。请在配对之前，或之后的任何时候，关闭 **Allow Computer Control**，以停止声明并接受 `computer.act`。
 
-   武装需要 `operator.admin`（或所有者）权限，并会自动过期。旧的 `/phone arm all` 组有意不包含桌面控制；请使用显式的 `computer` 组。武装只会切换网关可调用的内容；macOS 应用仍会强制执行其 **Allow Computer Control** 设置和操作系统权限。
-
-对于持久授权，请将 `computer.act` 添加到 `gateway.nodes.allowCommands`，并**将其从** `gateway.nodes.denyCommands` 中移除；拒绝列表优先。持久授权不会自动过期。`/phone arm` 之前已存在的条目在 `/phone disarm` 之后仍会保留；不要在其处于武装状态时将临时授权转换为持久授权。
-
-授权在启用和使用之间被刻意拆分。武装或持久配置 `computer.act` 需要管理员权限。一旦武装，具有 `operator.write` 的已认证操作员即可通过 `node.invoke` 调用 `computer.act`，直到授权过期或解除武装为止；每次操作都不会再单独进行管理员检查。批准声明 `computer.act` 的节点只会记录该能力，以便之后可以武装，并不会自行启用调用。
+`gateway.nodes.commands.deny` 仍然是显式的全局撤销，并且始终优先生效。`computer.act` 不需要 `gateway.nodes.commands.allow` 条目。拥有 `operator.write` 的已认证操作员可以通过 `node.invoke` 调用已启用且已配对的命令；这里没有逐次操作的管理员检查。
 
 ## 安全
 
-- 在授权之前，每一层（工具策略、网关命令策略、macOS 设置、辅助功能和屏幕录制）都必须一致。一旦进入武装状态，操作会在不逐项确认的情况下执行，直到过期或执行 `/phone disarm`。
-- 文本输入按每个字素逐个发送。取消、断开、暂停、禁用或替换端点会在下一个字素之前停止它，而不是让过期的剩余内容继续发送。
-- 截图仅供模型使用，绝不会自动发送到聊天中（问题 [#44759](https://github.com/openclaw/openclaw/issues/44759)）。
-- 请将屏幕内容视为不可信；其中可能包含提示注入。
+- 每一层（工具策略、网关命令策略、配对、node-app 设置，以及平台权限）都必须一致。对于当前的 macOS 执行器，这包括 **允许控制计算机**、辅助功能和屏幕录制。只要这些持久性控制保持启用，操作就会执行；没有每次操作的确认。
+- macOS 执行器一次发送一个字素的文本，因此取消、断开连接、暂停、禁用或端点替换都会在下一个字素之前将其停止。实验性的 cua-driver 执行器无法在 `type_text` 调用进行到一半时取消。
+- 截图仅供模型使用，不会自动发送到聊天（问题 [#44759](https://github.com/openclaw/openclaw/issues/44759)）。
+- 将屏幕内容视为不可信；它可能包含提示注入。
+
+## macOS 权限故障排除
+
+**设置 → 通用 → 功能** 中的计算机控制状态会分别检查辅助功能、事件发布和屏幕录制。即使输入仍被拒绝，屏幕捕获也可能正常工作，因为 macOS 会将这些授权存储在不同的 TCC 存储桶中。
+
+如果状态显示 **辅助功能授权可能已过期**，即使 macOS 拒绝它，OpenClaw 也可能已经在 **系统设置 → 隐私与安全性 → 辅助功能** 下显示为已启用。当辅助功能条目固定到较旧的应用构建版本时，就会发生这种情况。在该列表中选择 OpenClaw，使用 **−** 将其移除，然后重新添加 `/Applications/OpenClaw.app`。更改授权后，请退出并重新打开 OpenClaw，因为 macOS 可能会在进程生命周期内缓存辅助功能信任。
 
 ## 与其他桌面控制路径的关系
 

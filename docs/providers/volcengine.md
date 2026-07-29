@@ -71,27 +71,27 @@ openclaw onboard --non-interactive \
 两个提供方均通过单个 API key 进行配置。设置过程会自动注册两者，而编码提供方的模型选择器也会复用通用提供方的认证（`volcengine-plan` 是 `volcengine` 的认证别名）。
 </Note>
 
-## 内置目录
+## Built-in directory
 
 <Tabs>
   <Tab title="General (volcengine)">
-    | Model ref                                    | Name                            | Input       | Context |
-    | -------------------------------------------- | ------------------------------- | ----------- | ------- |
-    | `volcengine/deepseek-v3-2-251201`            | DeepSeek V3.2                   | text, image | 128,000 |
-    | `volcengine/doubao-seed-1-8-251228`          | Doubao Seed 1.8                 | text, image | 256,000 |
-    | `volcengine/doubao-seed-code-preview-251028` | doubao-seed-code-preview-251028 | text, image | 256,000 |
-    | `volcengine/glm-4-7-251222`                  | GLM 4.7                         | text, image | 200,000 |
-    | `volcengine/kimi-k2-5-260127`                | Kimi K2.5                       | text, image | 256,000 |
+    | Model ref                                      | Name                    | Input              | Context   |
+    | ---------------------------------------------- | ----------------------- | ------------------ | --------- |
+    | `volcengine/doubao-seed-evolving`              | Doubao Seed Evolving    | text, image, video | 1,024,000 |
+    | `volcengine/doubao-seed-2-1-pro-260628`        | Doubao Seed 2.1 Pro     | text, image, video | 256,000   |
+    | `volcengine/doubao-seed-2-1-turbo-260628`      | Doubao Seed 2.1 Turbo   | text, image, video | 256,000   |
+    | `volcengine/glm-5-2-260617`                    | GLM 5.2                 | text               | 1,024,000 |
+    | `volcengine/deepseek-v4-pro-260425`            | DeepSeek V4 Pro         | text               | 1,024,000 |
+    | `volcengine/deepseek-v4-flash-260425`          | DeepSeek V4 Flash       | text               | 1,024,000 |
   </Tab>
-  <Tab title="编码（volcengine-plan）">
-    | 模型引用                                          | 名称                    | 输入  | 上下文   |
-    | ------------------------------------------------- | ------------------------ | ----- | ------- |
-    | `volcengine-plan/ark-code-latest`                 | Ark Coding Plan          | text  | 256,000 |
-    | `volcengine-plan/doubao-seed-code`                | Doubao Seed Code         | text  | 256,000 |
-    | `volcengine-plan/doubao-seed-code-preview-251028` | Doubao Seed Code Preview | text  | 256,000 |
-    | `volcengine-plan/glm-4.7`                         | GLM 4.7 Coding           | text  | 200,000 |
-    | `volcengine-plan/kimi-k2-thinking`                | Kimi K2 Thinking         | text  | 256,000 |
-    | `volcengine-plan/kimi-k2.5`                       | Kimi K2.5 Coding         | text  | 256,000 |
+  <Tab title="Coding (volcengine-plan)">
+    | Model ref                                  | Name                  | Input              | Context   |
+    | ------------------------------------------ | --------------------- | ------------------ | --------- |
+    | `volcengine-plan/ark-code-latest`          | Ark Coding Plan       | text               | 256,000   |
+    | `volcengine-plan/doubao-seed-2.1-turbo`    | Doubao Seed 2.1 Turbo | text, image, video | 256,000   |
+    | `volcengine-plan/glm-5.2`                  | GLM 5.2               | text               | 1,024,000 |
+    | `volcengine-plan/deepseek-v4-pro`          | DeepSeek V4 Pro       | text               | 1,024,000 |
+    | `volcengine-plan/deepseek-v4-flash`        | DeepSeek V4 Flash     | text               | 1,024,000 |
   </Tab>
 </Tabs>
 
@@ -110,23 +110,21 @@ export VOLCENGINE_TTS_RESOURCE_ID="seed-tts-1.0"
 
 ```json5
 {
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "volcengine",
-      providers: {
-        volcengine: {
-          apiKey: "byteplus_seed_speech_api_key",
-          voice: "en_female_anna_mars_bigtts",
-          speedRatio: 1.0,
-        },
+  tts: {
+    auto: "always",
+    provider: "volcengine",
+    providers: {
+      volcengine: {
+        apiKey: "byteplus_seed_speech_api_key",
+        voice: "en_female_anna_mars_bigtts",
+        speedRatio: 1.0,
       },
     },
   },
 }
 ```
 
-`messages.tts.providers.volcengine` 下可用的字段有：`apiKey`、`voice`、`speedRatio`（0.2-3.0）、`emotion`、`cluster`、`resourceId`、`appKey` 和 `baseUrl`。当允许覆盖语音设置时，`!emotion=<value>` 也可以作为行内语音指令使用。
+`tts.providers.volcengine` 下可用字段：`apiKey`、`voice`、`speedRatio`（0.2-3.0）、`emotion`、`cluster`、`resourceId`、`appKey` 和 `baseUrl`。当允许覆盖语音设置时，`!emotion=<value>` 也可以作为行内语音指令使用。
 
 对于语音笔记目标，OpenClaw 会请求提供方原生的 `ogg_opus`。对于普通音频附件，它会请求 `mp3`。提供方别名 `bytedance` 和 `doubao` 也会解析到这个语音提供方。
 
@@ -144,7 +142,7 @@ export VOLCENGINE_TTS_TOKEN="speech_access_token"
 export VOLCENGINE_TTS_CLUSTER="volcano_tts"
 ```
 
-其他可选的 TTS 环境变量：`VOLCENGINE_TTS_VOICE`、`VOLCENGINE_TTS_APP_KEY` 和 `VOLCENGINE_TTS_BASE_URL`，在设置后会覆盖 `messages.tts.providers.volcengine` 中对应的配置字段。
+其他可选的 TTS 环境变量：`VOLCENGINE_TTS_VOICE`、`VOLCENGINE_TTS_APP_KEY` 和 `VOLCENGINE_TTS_BASE_URL` 在设置后会覆盖对应的 `tts.providers.volcengine` 配置字段。
 
 ## 高级配置
 

@@ -13,21 +13,22 @@ OpenAI 风格的模型在英文文本中平均每个 token 约 4 个字符。
 
 OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 
-- 工具列表 + 简要描述
-- 技能列表（仅元数据；说明会在需要时通过 `read` 加载）。原生
-  Codex 回合会将紧凑的技能块作为轮次范围内协作开发者指令获取；其他 harness 会在常规提示表面中获取。
+- 工具列表 + 简短描述
+- 技能列表（仅元数据；指令会在需要时通过 `read` 加载）。原生
+  Codex 运行会将紧凑的技能块作为作用域限定于轮次的协作开发者指令；其他运行环境会在正常提示表面中获得它。
   受 `skills.limits.maxSkillsPromptChars` 限制，并可通过
-  `agents.list[].skillsLimits.maxSkillsPromptChars` 进行按代理覆盖。
-- 自更新说明
-- 工作区 + 引导文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、
-  `IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、新的 `BOOTSTRAP.md`，以及
-  存在时的 `MEMORY.md`）。较大的注入文件会被
-  `agents.defaults.bootstrapMaxChars` 截断（默认：`20000`）；引导注入总量上限为
-  `agents.defaults.bootstrapTotalMaxChars`（默认：`60000`）。
-  - 当该工作区可用 memory 工具时，原生 Codex 回合不会粘贴原始 `MEMORY.md`；它们会在轮次范围内的协作开发者指令中改为获取一个简短的 memory 指针，并按需使用 memory 工具。如果工具被禁用、memory 搜索不可用，或当前活动工作区与代理的 memory 工作区不同，则 `MEMORY.md` 会回退到常规的有界轮次上下文路径。
-  - 以小写形式存在于根目录的 `memory.md` 从不注入。它是供 `openclaw doctor --fix` 使用的遗留修复输入，该命令会将其迁移为 `MEMORY.md`。
-  - `memory/*.md` 每日文件不属于正常的 bootstrap 提示；它们在普通回合中仍通过 memory 工具按需获取。重置/启动模型运行可以在首次回合前预先附加一个一次性的启动上下文块，其中包含最近的每日 memory，由 `agents.defaults.startupContext` 控制。空闲聊天中的 `/new` 和 `/reset` 会被确认，但不会调用模型。
-  - 事后压缩后的 `AGENTS.md` 摘录是独立的，并且需要显式选择启用 `agents.defaults.compaction.postCompactionSections`。
+  `agents.entries.*.skillsLimits.maxSkillsPromptChars` 为单个 agent 进行可选覆盖。
+- 自更新指令
+- 工作区 + 引导文件（`AGENTS.md`、`SOUL.md`、
+  `IDENTITY.md`、`USER.md`、新建时的 `BOOTSTRAP.md`，以及存在时的
+  `MEMORY.md`）。较大的注入文件会被 `agents.defaults.bootstrapMaxChars` 截断（默认：`20000`）；引导注入总量上限为 `agents.defaults.bootstrapTotalMaxChars`（默认：
+  `60000`）。
+  - 当该工作区可用记忆工具时，原生 Codex 轮次不会粘贴原始 `MEMORY.md`；它们会在作用域限定于轮次的协作开发者指令中改为获得一个简短的记忆指针，并按需使用记忆工具。如果工具被禁用、记忆搜索不可用，或当前工作区与 agent 记忆工作区不同，则 `MEMORY.md` 会回退到普通的有界轮次上下文路径。
+  - 小写根目录 `memory.md` 永远不会被注入。它是给 `openclaw doctor --fix` 使用的遗留修复输入，该命令会将其迁移到 `MEMORY.md`。
+  - `memory/*.md` 日常文件不属于正常的引导提示；它们在普通轮次中保持为可通过记忆工具按需访问。重置/启动模型运行可以为第一次轮次预先附加一个一次性的启动上下文块，其中包含最近的日常记忆，该行为由
+    `agents.defaults.startupContext` 控制。裸聊天 `/new` 和 `/reset` 会被确认，但不会调用模型。
+  - 进行压缩后，`AGENTS.md` 摘录需要显式启用
+    `agents.defaults.compaction.postCompactionSections`；插件可以通过 `before_prompt_build` 添加其他上下文。
 - 时间（UTC + 用户时区）
 - 回复标签 + 心跳行为
 - 运行时元数据（主机/操作系统/模型/思考）
@@ -49,24 +50,24 @@ OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 - Compaction summaries and pruning artifacts
 - Provider wrappers or safety headers (not visible, but still counted)
 
-运行时占用较大的内容有各自明确的上限，位于
-`agents.defaults.contextLimits` 下（每个代理的覆盖项位于
-`agents.list[].contextLimits` 下）：
+Runtime-heavy surfaces have their own explicit caps under
+`agents.defaults.contextLimits` (per-agent overrides under
+`agents.entries.*.contextLimits`):
 
-| 键                      | 作用                                                                   |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `memoryGetMaxChars`      | `memory_get` 返回并在截断前保留的最大字符数。                           |
-| `memoryGetDefaultLines`  | 当请求省略 `lines` 时，`memory_get` 的默认行窗口。                      |
-| `toolResultMaxChars`     | 单个实时工具结果的高级上限（最高可达 `1000000` 个字符）。              |
-| `postCompactionMaxChars` | 压缩后刷新期间从 `AGENTS.md` 保留的最大字符数。                         |
+| Key                      | Purpose                                                                  |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `memoryGetMaxChars`      | `memory_get` 返回结果在截断前的最大字符数。                   |
+| `postCompactionMaxChars` | 在压缩后刷新期间，从 `AGENTS.md` 保留的最大字符数。 |
 
 这些都是有界的运行时摘录和注入的运行时所有块，
 它们与启动引导限制、启动上下文限制以及技能提示词
 限制是分开的。
 
-`toolResultMaxChars` 默认未设置，因此 OpenClaw 会根据生效的模型上下文窗口来推导实时
-工具结果上限：在少于 100K tokens 时为 `16000` 个字符，100K+ tokens 时为 `32000` 个字符，200K+ tokens 时为 `64000` 个字符。
-即使配置了更大的显式上限，运行时上下文共享保护机制仍会将单个工具结果限制在上下文窗口的 30%。
+OpenClaw 会根据有效模型上下文窗口推导实时工具结果上限：
+在 100K tokens 以下为 `16000` 字符，在 100K+ tokens 时为 `32000` 字符，在 200K+ tokens 时为 `64000` 字符。运行时上下文共享保护也会将单个工具结果限制为上下文窗口的 30%。
+
+大型提供方窗口不会在显著增加成本或延迟时自动启用。例如，直接使用 OpenAI GPT-5.5 和 GPT-5.6 模型时，会公布 `1050000` token 的总窗口，但 OpenClaw 默认将其活动运行时预算设为 `272000` tokens。可选启用的 `922000` 输入预算会保留完整的 `128000` 输出额度，而一旦输入超过 `272000` tokens，OpenAI 会对整个请求应用更高的长上下文定价。另请参阅
+[OpenAI 上下文窗口默认值](/providers/openai#context-window-defaults-and-long-context-opt-in)。
 
 对于图片，OpenClaw 会在调用提供方之前对转录/工具图片载荷进行降采样。可通过
 `agents.defaults.imageMaxDimensionPx` 调整（默认：
@@ -130,7 +131,7 @@ models.providers.<provider>.models[].cost
 
 这些是 `input`、`output`、`cacheRead` 和 `cacheWrite` 的 **每 100 万 token 的 USD 价格**。如果缺少定价，`/usage full` 会省略成本；当你需要在每次回复中都包含 token/cache 详情时，请使用 `/usage tokens` 或自定义 `messages.usageTemplate`。成本显示不局限于 API key 认证：像 `aws-sdk` 这样的非 API key 提供方，如果其配置的模型条目包含本地定价且提供方返回了使用情况元数据，也可以显示估算成本。
 
-在 sidecars 和 channels 到达 Gateway ready 路径之后，OpenClaw 会为尚未具有本地定价的已配置模型引用启动一个可选的后台定价引导流程。该引导流程会获取远程的 OpenRouter 和 LiteLLM 定价目录。将 `models.pricing.enabled: false` 设为 false，可在离线或受限网络中跳过这些目录获取；显式的 `models.providers.*.models[].cost` 条目仍然会驱动本地成本估算。
+定价更新会与模型元数据一起随托管模型目录发布。OpenClaw 不会直接从 OpenRouter 或 LiteLLM 拉取数据。将 `models.catalogRefresh.enabled: false` 设置为 false 可在离线或受限网络中禁用托管目录流量；捆绑的定价和显式的 `models.providers.*.models[].cost` 条目仍然会驱动本地成本估算。
 
 ## Cache TTL 和剪枝影响
 
@@ -145,14 +146,14 @@ Heartbeat 可以在空闲间隔期间保持缓存 **温热**。如果你的模�
 避免重新缓存完整提示词，从而降低缓存写入成本。
 
 In multi-agent setups, you can keep one shared model config and tune cache
-behavior per agent with `agents.list[].params.cacheRetention`.
+behavior per agent with `agents.entries.*.params.cacheRetention`.
 
 关于逐项旋钮指南，请参见 [Prompt Caching](/reference/prompt-caching)。
 
-对于 Anthropic API 定价，cache read 的费用显著低于 input
-token，而 cache write 的计费倍率更高。请参阅 Anthropic 的
-prompt caching 定价以了解最新费率和 TTL 倍率：
-[https://docs.anthropic.com/docs/build-with-claude/prompt-caching](https://docs.anthropic.com/docs/build-with-claude/prompt-caching)
+For Anthropic API pricing, cache reads are significantly cheaper than input
+tokens, while cache writes are billed at a higher multiplier. See Anthropic's
+prompt caching pricing for the latest rates and TTL multipliers:
+[https://platform.claude.com/docs/en/build-with-claude/prompt-caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 
 ### 示例：使用 heartbeat 保持 1h 缓存温热
 
@@ -190,9 +191,9 @@ agents:
         cacheRetention: "none" # 避免为突发通知写入缓存
 ```
 
-`agents.list[].params` 会在所选模型的 `params` 之上进行合并，因此你
-可以只覆盖 `cacheRetention`，而其他模型默认值保持
-不变。
+`agents.entries.*.params` merges on top of the selected model's `params`, so you
+can override only `cacheRetention` and inherit other model defaults
+unchanged.
 
 ### Anthropic 1M context
 
@@ -228,7 +229,7 @@ older config.
 - 保持技能描述简短（技能列表会被注入到提示中）。
 - 对于冗长、探索性工作，优先使用更小的模型。
 
-准确的技能列表开销公式请参见 [Skills](/tools/skills)。
+准确的技能列表开销公式请参见 [技能](/tools/skills)。
 
 ## 相关
 

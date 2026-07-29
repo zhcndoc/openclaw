@@ -91,6 +91,14 @@ export default defineToolPlugin({
       parameters: Type.Object({
         symbol: Type.String({ description: "股票代码，例如 OPEN。" }),
       }),
+      outputSchema: Type.Object(
+        {
+          symbol: Type.String(),
+          configured: Type.Boolean(),
+          baseUrl: Type.String(),
+        },
+        { additionalProperties: false },
+      ),
       async execute({ symbol }, config, context) {
         context.signal?.throwIfAborted();
         return {
@@ -170,7 +178,55 @@ tool({
 
 当你需要自定义 `AgentToolResult`，或者希望复用现有的 `api.registerTool` 实现时，请使用工厂工具。
 
-## 配置
+## Output contracts
+
+Add `outputSchema` when a tool returns stable JSON-compatible data. It describes
+the original value stored in `AgentToolResult.details`, not the formatted text
+in `content`:
+
+```typescript
+tool({
+  name: "shipment_list",
+  description: "List shipments.",
+  parameters: Type.Object({
+    buyer: Type.Optional(Type.String()),
+  }),
+  outputSchema: Type.Array(
+    Type.Object(
+      {
+        id: Type.String(),
+        buyer: Type.String(),
+        paid: Type.Boolean(),
+        tons: Type.Number(),
+      },
+      { additionalProperties: false },
+    ),
+  ),
+  execute: ({ buyer }) => listShipments(buyer),
+});
+```
+
+[Code Mode](/tools/code-mode) and [Tool Search](/tools/tool-search) turn this
+schema into a bounded TypeScript-style output hint. That lets a model call and
+transform a known result in one program instead of spending another model turn
+observing its shape.
+
+OpenClaw compiles the schema before executing a catalog call, then validates the
+final `details` value after tool hooks before returning it through the bridge.
+An invalid schema cannot run the tool; a result mismatch fails the completed
+call. Include every non-throwing result variant, including structured error
+variants, or omit the schema when the result is not stable. Do not put secrets
+or sensitive values in schema descriptions because trusted output metadata can
+become model-visible.
+Use `{ additionalProperties: false }` on object layers when you want a complete
+compact output hint; open or truncated schemas remain available through
+`tools.describe(...)` but are not advertised as complete quick-index contracts.
+
+Factory tools declare `outputSchema` on the concrete `AnyAgentTool` they
+return. The static `tool({ factory })` declaration does not accept a separate
+output schema because it could drift from the runtime tool.
+
+## Configuration
 
 `configSchema` 是可选的。省略它时，OpenClaw 会应用严格的空对象
 schema；生成的 manifest 仍然包含 `configSchema`。
@@ -282,7 +338,14 @@ openclaw plugins validate --entry ./dist/index.js
 npm test
 ```
 
-`plugins validate` 会检查以下内容：
+OpenClaw SDK compatibility fields carry TypeScript `@deprecated` annotations,
+which editors surface as migration warnings. To enforce them in CI, enable a
+type-aware rule such as
+[`@typescript-eslint/no-deprecated`](https://typescript-eslint.io/rules/no-deprecated/).
+Oxlint is not type-aware, so it cannot enforce these annotations. The generated
+`plugins init` scaffold therefore does not add a deprecation lint config.
+
+`plugins validate` checks that:
 
 - `openclaw.plugin.json` 是否存在并通过常规清单加载器。
 - 当前入口是否导出 `defineToolPlugin` 元数据。

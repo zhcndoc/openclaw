@@ -34,9 +34,13 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
 <AccordionGroup>
   <Accordion title="指令行为详情">
     - 指令会在模型看到消息之前从消息中剥离。
-    - 在**仅指令**消息中（消息只包含指令），它们会持久化到会话并返回确认信息。
-    - 在包含其他文本的**普通聊天**消息中，它们作为行内提示，不会持久化会话设置。
-    - 指令只适用于**授权发送者**。如果设置了 `commands.allowFrom`，则它是唯一使用的允许列表；否则授权来自频道允许列表/配对以及 `commands.useAccessGroups`。未授权发送者看到的指令会被当作纯文本处理。
+    - 在 **仅指令** 消息中（消息只有指令），它们会
+      持久化到会话中并返回确认。
+    - 在包含其他文本的 **普通聊天** 消息中，它们作为行内提示生效，
+      并且**不会**持久化会话设置。
+    - 指令仅适用于**授权发送者**。如果设置了 `commands.allowFrom`，
+      它就是唯一使用的允许列表；否则授权来源于频道允许列表、配对，以及始终启用的访问组强制执行。未授权的
+      发送者会将指令视为纯文本。
   </Accordion>
 </AccordionGroup>
 
@@ -104,7 +108,7 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
 </ParamField>
 
 <ParamField path="commands.restart" type="boolean" default="true">
-  启用 `/restart` 和 gateway 重启工具操作。
+  启用 `/restart` 和外部 `SIGUSR1` 重启请求。
 </ParamField>
 
 <ParamField path="commands.ownerAllowFrom" type="string[]">
@@ -125,10 +129,6 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
 
 <ParamField path="commands.allowFrom" type="object">
   按提供方划分的命令授权允许列表。配置后，它是命令和指令的**唯一**授权来源。使用 `"*"` 作为全局默认值；特定提供方的键会覆盖它。
-</ParamField>
-
-<ParamField path="commands.useAccessGroups" type="boolean" default="true">
-  当未设置 `commands.allowFrom` 时，对命令强制执行允许列表/策略。
 </ParamField>
 
 ## 命令列表
@@ -225,11 +225,14 @@ Commands 来自三个来源：
   <Accordion title="技能、允许列表、批准">
     | 命令 | 描述 |
     | --- | --- |
-    | `/skill <name> [input]` | 以名称运行某个技能 |
-    | `/learn [request]` | 通过 [Skill Workshop](/tools/skill-workshop) 根据当前对话或命名来源草拟一个可审阅的技能 |
+    | `/skill <name> [input]` | 按名称运行一个技能 |
+    | `/learn [request]` | 通过 [Skill Workshop](/tools/skill-workshop) 从当前对话或命名来源草拟一个可审阅的技能 |
+    | `/loop [interval] <prompt>` | 仅 owner 可用。在此对话中重复一个提示；省略间隔可用于自定节奏检查 |
+    | `/loop status` | 仅 owner 可用。列出绑定到此对话的循环 |
+    | `/loop stop [name]` | 仅 owner 可用。停止匹配到的、绑定到此对话的循环 |
     | `/allowlist [list\|add\|remove] ...` | 管理允许列表条目。仅文本 |
-    | `/approve <id> <decision>` | 处理 exec 或插件批准提示 |
-    | `/btw <question>` | 在不更改会话上下文的情况下提出旁支问题。别名：`/side`。参见 [BTW](/tools/btw) |
+    | `/approve <id> <decision>` | 处理 exec 或插件审批提示 |
+    | `/btw <question>` | 在不更改会话上下文的情况下提出一个附带问题。别名：`/side`。参见 [BTW](/tools/btw) |
   </Accordion>
 
   <Accordion title="子代理与 ACP">
@@ -283,12 +286,11 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 | 命令                                                 | 描述                                                                                                                                                                                    |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dreaming [on\|off\|status\|help]`                     | 切换记忆做梦（owner 或 Gateway 管理员）。参见 [Dreaming](/concepts/dreaming)                                                                                                            |
+| `/dreaming [on\|off\|status\|help]`                     | 切换记忆梦境（owner 或 Gateway 管理员）。参见 [Dreaming](/concepts/dreaming)                                                                                                            |
 | `/pair [qr\|status\|pending\|approve\|cleanup\|notify]` | 管理设备配对。参见 [Pairing](/channels/pairing)                                                                                                                                        |
-| `/phone status\|arm ...\|disarm`                        | 临时武装高风险节点命令（camera/screen/computer/writes）。参见 [Computer use](/nodes/computer-use)                                                                               |
 | `/voice status\|list\|set <voiceId>`                    | 管理 Talk 语音配置。Discord 原生命令名：`/talkvoice`                                                                                                                                    |
 | `/card ...`                                             | 发送 LINE 富卡片预设。参见 [LINE](/channels/line)                                                                                                                                        |
-| `/codex <action> ...`                                   | 绑定、指引并检查 Codex 应用服务器支架（status、threads、resume、model、fast、permissions、compact、review、mcp、skills 等）。参见 [Codex harness](/plugins/codex-harness) |
+| `/codex <action> ...`                                   | 绑定、指引和检查 Codex 应用服务器脚手架（status、threads、resume、model、fast、permissions、compact、review、mcp、skills 等）。参见 [Codex harness](/plugins/codex-harness) |
 
 仅 QQBot：`/bot-ping`、`/bot-version`、`/bot-help`、`/bot-upgrade`、`/bot-logs`
 
@@ -299,7 +301,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 - `/skill <name> [input]` 始终作为通用入口可用。
 - 技能可以注册为直接命令（例如 OpenProse 的 `/prose`）。
 - 原生技能命令注册由 `commands.nativeSkills` 和
-  `channels.<provider>.commands.nativeSkills` 控制。
+- `channels.<provider>.commands.nativeSkills` 控制。
 - 名称会被规范化为 `a-z0-9_`（最多 32 个字符）；冲突会追加数字后缀。
 
 <AccordionGroup>
@@ -327,6 +329,10 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 结果按会话范围生效。更换代理、通道、线程、发送者授权或模型都可能改变输出。要编辑 profile 和 override，请使用 Control UI 的 Tools 面板或配置界面。
 
+## `/loop`：循环对话工作
+
+`/loop` 仅限所有者使用，因为它使用 cron 控制平面工具。`/loop 5m check deploy status` 会要求代理在当前对话中创建一个固定频率的 cron 作业。没有间隔时，`/loop watch for new issues` 会创建一个自适应循环，在活跃时更频繁地检查，并在安静时逐步退避到 1 小时。`/loop status` 会列出该对话的循环作业；`/loop stop [name]` 会将其移除。
+
 ## `/model`: 模型选择
 
 ```text
@@ -339,7 +345,10 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 /model status      # 带端点和 API 模式的详细视图
 ```
 
-在 Discord 中，`/model` 和 `/models` 会打开一个交互式选择器，包含 provider 和 model 下拉框。该选择器会遵循 `agents.defaults.models`，包括 `provider/*` 条目。
+在 Discord 中，`/model` 和 `/models` 会打开一个交互式选择器，包含提供方和
+模型下拉菜单。该选择器会遵守 `agents.defaults.modelPolicy.allow`，
+包括 `provider/*` 条目。若没有显式的允许列表，模型条目和
+别名不会限制选择。
 
 ## `/config`：磁盘上的配置写入
 
@@ -349,10 +358,10 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 ```text
 /config show
-/config show messages.responsePrefix
-/config get messages.responsePrefix
-/config set messages.responsePrefix="[openclaw]"
-/config unset messages.responsePrefix
+/config show channels.whatsapp.responsePrefix
+/config get channels.whatsapp.responsePrefix
+/config set channels.whatsapp.responsePrefix="[openclaw]"
+/config unset channels.whatsapp.responsePrefix
 ```
 
 写入前会进行配置校验。无效更改会被拒绝。`/config` 的更新会在重启后保留。
@@ -370,7 +379,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 /mcp unset context7
 ```
 
-`/mcp` 将配置存储在 OpenClaw 配置中，而不是嵌入式代理项目设置中。
+`/mcp` 将配置存储在 OpenClaw 配置中，而不是嵌入式代理项目设置中。  
 `/mcp show` 会对含有凭据的字段、已识别的凭据标志值以及已知的密钥形参数组进行脱敏。  
 当在群组中运行时，配置将私下发送给所有者；如果没有可用的私有所有者路由，命令将默认失败并要求所有者从直接聊天中重试。
 
@@ -383,9 +392,9 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 ```text
 /debug show
-/debug set messages.responsePrefix="[openclaw]"
+/debug set channels.whatsapp.responsePrefix="[openclaw]"
 /debug set channels.whatsapp.allowFrom=["+1555","+4477"]
-/debug unset messages.responsePrefix
+/debug unset channels.whatsapp.responsePrefix
 /debug reset
 ```
 
@@ -443,7 +452,9 @@ git、archive、`npm-pack:` 和本地路径来源会显示来源警告，并且�
 - 不会更改未来的会话上下文。
 - 不会写入 transcript 历史。
 
-查看 [BTW side questions](/tools/btw) 了解完整行为。
+在 Control UI 中，`/btw` 和 `/side` 会打开会话侧栏，并询问其只读伴随对象，而不是启动分离的 BTW 路径。上文所述的 TUI 和外部通道行为保持不变。
+
+参见 [BTW side questions](/tools/btw) 了解完整行为。
 
 ## 界面说明
 
@@ -477,13 +488,13 @@ git、archive、`npm-pack:` 和本地路径来源会显示来源警告，并且�
   </Accordion>
 </AccordionGroup>
 
-## Provider Usage and Status
+## 提供者使用情况和状态
 
-- **Provider usage/quota** (for example, “Claude has 80% left”) will be shown in the current model provider’s `/status` when usage tracking is enabled.
-- The **token/cache lines** in `/status` may fall back to the latest transcript usage entry when there are fewer real-time session snapshots.
-- **Execution vs runtime:** `/status` will report `Execution` to indicate the effective sandbox path, and `Runtime` to indicate who is currently running the session: `OpenClaw Default`, `OpenAI Codex`, CLI backend, or ACP backend.
-- **Tokens/cost per response:** controlled by `/usage off|tokens|full`.
-- `/model status` focuses on the model/authentication/endpoint, not usage.
+- **提供者使用量/配额**（例如，“Claude 还剩 80%”）会在启用使用情况跟踪时显示在当前模型提供者的 `/status` 中。
+- `/status` 中的 **token/缓存行** 在实时会话快照较少时，可能会回退到最新的转录使用条目。
+- **执行 vs 运行时：** `/status` 会报告 `Execution`，以指示实际的沙箱路径；并报告 `Runtime`，以指示当前正在运行会话的是谁：`OpenClaw Default`、`OpenAI Codex`、CLI backend 或 ACP backend。
+- **每次响应的 token/成本：** 由 `/usage off|tokens|full` 控制。
+- `/model status` 重点关注模型/认证/端点，而不是使用情况。
 
 ## 相关内容
 

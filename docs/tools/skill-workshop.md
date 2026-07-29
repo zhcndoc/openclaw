@@ -9,24 +9,22 @@ title: "Skill Workshop"
 sidebarTitle: "Skill Workshop"
 ---
 
-Skill Workshop 是 OpenClaw 用于创建和更新工作区技能的受管路径。代理和操作员永远不会通过此路径直接写入 `SKILL.md`——他们会创建一个**提案**（包含内容、目标绑定、扫描器状态、哈希和回滚元数据的待处理草稿），只有在应用后才会成为一个生效的技能。
+Skill Workshop 是 OpenClaw 用于创建和更新工作区技能的受管路径。通过这一路径，代理和操作员会创建一个 **提案**（包含内容、目标绑定、扫描器状态、哈希和回滚元数据的待定草稿），只有在应用后它才会成为一个生效的技能。
 
 Skill Workshop 只会写入工作区技能。它绝不会触碰捆绑、插件、ClawHub、额外根目录、受管、个人代理或系统技能。
 
 ## 工作方式
 
-- **优先提案：** 生成的内容将存储为 `PROPOSAL.md`，而不是
+- **先提议：** 生成的内容会存储为 `PROPOSAL.md`，而不是
   `SKILL.md`。
-- **仅 Apply 为实时写入：** create、update 和 revise 都不会更改
-  现有技能。
-- **工作区作用域：** create 的目标是工作区 `skills/` 根目录；update
-  仅允许用于可写的工作区技能。
-- **不覆盖：** 如果目标技能已存在，create 会失败。
-- **哈希绑定：** update 提案绑定到当前目标哈希，如果在 apply 之前
-  现有技能发生变化，则会变为 `stale`。
-- **扫描器门控：** apply 会在写入前重新运行安全扫描器。
-- **可恢复：** apply 在接触现有文件之前会先写入回滚元数据。
-- **一致的表面：** chat、CLI 和 Gateway 都调用同一个服务。
+- **仅通过应用进行实时写入：** 创建、更新和修订都不会更改
+  活跃技能。
+- **工作区范围限定：** 创建目标为工作区 `skills/` 根目录；仅允许对可写的工作区技能进行更新。
+- **不覆盖：** 如果目标技能已存在，则创建失败。
+- **哈希绑定：** 更新提议会绑定到当前目标哈希，并且如果在应用之前实时技能发生变化，就会变为 `stale`。
+- **扫描器门控：** 应用会在写入前重新运行安全扫描器。只有严重级别的发现会阻止应用；警告级别的发现仍然可见，但不会阻止它。
+- **可恢复：** 应用会在触及实时文件之前写入回滚元数据。
+- **一致的表面：** 聊天、CLI 和 Gateway 都调用同一服务。
 
 ## 生命周期
 
@@ -43,7 +41,7 @@ Skill Workshop 只会写入工作区技能。它绝不会触碰捆绑、插件�
 
 ## 生命周期管理
 
-Gateway 在共享状态数据库中跟踪技能的整体使用情况。它每天会审查由 Skill Workshop 创建并应用的技能。超过 30 天未使用的技能会变为 `stale`；超过 90 天后会变为 `archived`，并且不会再包含在新的 agent 技能快照中。已归档的技能文件在磁盘上保持不变。手动编写的技能从不会被管理；只有由 Skill Workshop 提案创建的技能才会进入生命周期管理。
+Gateway 会在共享状态数据库中跟踪聚合的技能使用情况。每天一次，它会审查通过 agent autocapture 创建的已应用技能。超过 30 天未使用的技能会变为 `stale`；超过 90 天后会变为 `archived`，并从新的 agent 技能快照中排除。已归档的技能文件在磁盘上保持不变。由操作员创建的技能，包括通过 CLI 或 Gateway/Control UI 创建的提案，都被视为手动技能，且不会被整理。
 
 置顶技能会绕过生命周期转换。陈旧的技能在被使用后，会在下一次扫描运行时恢复为 `active`。已归档的技能只能通过显式恢复来返回：
 
@@ -193,8 +191,9 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 | `reason`                 | `apply`, `reject`, `quarantine`                      | 可选                                                                 |
 | `query`, `status`, `limit` | `list`                                              | 过滤/分页；`limit` 最大 50，默认 20                                  |
 
-代理在生成技能工作时必须使用 `skill_workshop`。它们不得通过 `write`、`edit`、`exec`、shell
-命令或直接的文件系统操作来创建或更改提案文件。
+Agents must use `skill_workshop` for generated skill work and must not create or
+change skill or proposal files directly. This rule is advisory and
+prompt-enforced. A hard guard is not currently possible at the tool-policy seam.
 
 <Note>
 `skill_workshop` 是一个内置代理工具，并包含在 `tools.profile: "coding"` 中。如果更严格的策略隐藏了它，请将 `skill_workshop` 添加到当前的 `tools.allow` 列表，或者在使用不带显式 `tools.allow` 的 profile 时，使用 `tools.alsoAllow: ["skill_workshop"]`。沙箱运行不会构造宿主侧的 Skill Workshop 工具，因此请从正常的宿主侧代理会话或 CLI 中运行提案审查操作。
@@ -283,12 +282,10 @@ OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”�
 ## 存储
 
 ```text
-<OPENCLAW_STATE_DIR>/skill-workshop/
-  proposals.json
-  proposals/<proposal-id>/
-    proposal.json
+<OPENCLAW_STATE_DIR>/
+  state/openclaw.sqlite
+  skill-workshop/proposals/<proposal-id>/
     PROPOSAL.md
-    rollback.json
     assets/
     examples/
     references/
@@ -298,20 +295,24 @@ OpenClaw 会在交互轮次结束时检测持久化指令，例如“下次”�
 
 默认状态目录：`~/.openclaw`。
 
-- `proposal.json`：规范化的提案记录。
-- `proposals.json`：用于快速列出的索引，可由提案文件夹重建。
+- `state/openclaw.sqlite`：规范化的提案记录、生命周期状态、来源归属以及应用回滚元数据。
 - `PROPOSAL.md`：待处理的技能提案。
-- `rollback.json`：在应用更改生效文件之前写入的恢复元数据。
+- 支持文件保留在 `PROPOSAL.md` 旁边，以便操作员可以像查看普通目录一样审查拟议的技能。
+
+`openclaw doctor --fix` 会在验证每个提案后，将之前的 `proposals.json`、`proposal.json` 和
+`rollback.json` 元数据导入到 SQLite 中，然后移除
+已迁移的 JSON 文件。如果某个代理配置的工作区发生变化，其较早的
+提案仍会带有“之前的工作区”标记列出，而不会消失。
 
 ## 限制
 
-| 限制                         | 值                                                                   |
-| -------------------------------- | -------------------------------------------------------------------- |
-| 描述                         | 160 字节                                                            |
-| 提案正文                    | `skills.workshop.maxSkillBytes`（默认 40,000；硬性上限 1 MiB）   |
-| 支持的文件                   | 每个提案 64 个                                                      |
-| 支持的文件大小               | 每个 256 KiB，总计 2 MiB                                           |
-| 待处理 + 隔离的提案          | 每个工作区 `skills.workshop.maxPending`（默认 50）            |
+| 限制                            | 数值                                                                          |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| 描述                            | 160 字节                                                                     |
+| 提案正文                        | `skills.workshop.maxSkillBytes`（默认 40,000；硬上限 200,000 字节）         |
+| 支持文件                        | 每个提案 64 个                                                              |
+| 支持文件大小                    | 每个 256 KiB，总计 2 MiB                                                    |
+| 待处理 + 隔离的提案              | 每个工作区 `skills.workshop.maxPending`（默认 50）                         |
 
 ## 故障排查
 

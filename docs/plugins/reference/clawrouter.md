@@ -16,7 +16,7 @@ title: "ClawRouter 插件"
 
 ## Surface
 
-providers: clawrouter; contracts: usageProviders
+providers: `clawrouter`; contracts: `usageProviders`
 
 ## 相关文档
 

@@ -39,13 +39,13 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在合适的时间
 
 ## Cron 的工作方式
 
-- Cron 运行在 **Gateway 进程内部**，而不是在模型内部。必须先运行 Gateway，计划任务才会触发。
-- 作业定义、运行时状态和运行历史都保存在 OpenClaw 共享的 SQLite 状态数据库中，因此重启不会丢失计划任务。
+- Cron 运行在 **Gateway 进程内部**，而不是在模型内部。必须运行 Gateway，计划任务才会触发。
+- 作业定义、运行时状态和运行历史都持久化在 OpenClaw 共享的 SQLite 状态数据库中，因此重启不会丢失计划任务。
 - 每次 cron 执行都会创建一条 [后台任务](/automation/tasks) 记录。
-- 一次性作业（`--at`）默认在成功后自动删除；如需保留，请传入 `--keep-after-run`。
-- 每次运行的墙钟时间预算：在设置了 `--timeout-seconds` 时按该值计算。否则，隔离/分离的 agent-turn 作业会受 cron 自身 60 分钟看门狗限制，随后才会触发底层 agent-turn 超时（`agents.defaults.timeoutSeconds`，默认 48 小时）；命令类作业默认 10 分钟。
-- Gateway 启动时，逾期的隔离 agent-turn 作业会被重新调度，而不是立即回放，从而避免模型/工具初始化工作占用 channel-connect 窗口。
-- 如果你通过系统 cron 或其他外部调度器驱动 `openclaw agent`，即使 CLI 已经处理了 `SIGTERM`/`SIGINT`，也应再包一层强制终止升级处理。由 Gateway 支持的运行会请求 Gateway 中止已接受的运行；本地和嵌入式回退运行会收到同样的中止信号。对于 GNU `timeout`，应优先使用 `timeout -k 60 600 openclaw agent ...`，而不是单纯的 `timeout 600 ...` ——`-k` 值是进程无法及时退出时的后备措施。对于 systemd 单元，应使用 `SIGTERM` 作为停止信号，并设置宽限窗口（`TimeoutStopSec`），之后再进行最终杀死。若在原始 Gateway 运行仍处于活动状态时重复使用 `--run-id`，重复项会被报告为正在执行中，而不会启动第二次运行。
+- 一次性作业（`--at`）默认在成功后自动删除；可传入 `--keep-after-run` 以保留它们。
+- 每次运行的墙钟时间预算：设置了 `--timeout-seconds` 时使用该值。否则，隔离/分离的 agent-turn 作业会受 cron 自身 60 分钟看门狗限制；在此之前，底层 agent-turn 超时（`agents.defaults.timeoutSeconds`，默认 48 小时）不会生效。命令作业默认 10 分钟，脚本载荷默认 5 分钟。
+- 在 Gateway 启动时，超期的隔离 agent-turn 作业会被重新调度，而不是立即回放，从而避免模型/工具初始化工作占用通道连接窗口。
+- 如果你通过系统 cron 或其他外部调度器驱动 `openclaw agent`，即使 CLI 已经处理了 `SIGTERM`/`SIGINT`，也应包一层强制终止升级机制。Gateway 支持的运行会请求 Gateway 中止已接受的运行；`--local` 运行会收到同样的中止信号。对于 GNU `timeout`，优先使用 `timeout -k 60 600 openclaw agent ...`，而不是直接用 `timeout 600 ...` —— `-k` 的值是进程无法及时退出时的兜底。对于 systemd 单元，在最终杀死进程前，使用带宽限窗口（`TimeoutStopSec`）的 `SIGTERM` 停止信号。若在原始 Gateway 运行仍处于活跃状态时重复使用 `--run-id`，重复项会被报告为进行中，而不会启动第二次运行。
 
 <AccordionGroup>
   <Accordion title="隔离运行加固">
@@ -65,18 +65,60 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在合适的时间
 
 ## 计划类型
 
-| 类型      | CLI 标志    | 描述                                                                                              |
-| --------- | ----------- | -------------------------------------------------------------------------------------------------------- |
-| `at`      | `--at`      | 一次性时间戳（ISO 8601 或相对时间，如 `20m`）                                                     |
-| `every`   | `--every`   | 固定间隔（`10m`、`1h`、`1d`）                                                                       |
-| `cron`    | `--cron`    | 5 字段或 6 字段的 cron 表达式，可选 `--tz`                                                  |
-| `on-exit` | `--on-exit` | 当被监视的命令退出时触发一次（事件触发；在 turn 清理后仍可保留；可选 `--on-exit-cwd`） |
+| Kind      | CLI flag           | Description                                                                                              |
+| --------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `at`      | `--at`             | 一次性时间戳（ISO 8601，或类似 `20m` 的相对时间）                                                         |
+| `every`   | `--every`          | 固定间隔（`10m`、`1h`、`1d`）                                                                             |
+| `cron`    | `--cron`           | 5 字段或 6 字段的 cron 表达式，可选 `--tz`                                                                 |
+| `on-exit` | `--on-exit`        | 当被监视的命令退出时触发一次（事件触发；在 turn teardown 后仍然有效；可选 `--on-exit-cwd`）               |
+| `stream`  | `--stream-command` | 从受监督的长生命周期命令产生的批量行中触发                                                                 |
 
 不带时区的时间戳会被视为 UTC。添加 `--tz America/New_York` 可将不带偏移的 `--at` 日期时间按该 IANA 时区解释，或按该 IANA 时区计算 cron 表达式。不带 `--tz` 的 cron 表达式使用 Gateway 主机时区。`--tz` 不能与 `--every` 或 `--on-exit` 一起使用。
 
 每小时整点的重复表达式（分钟为 `0` 且小时字段为通配符）会自动错开最多 5 分钟，以减少负载峰值。使用 `--exact` 可强制精确时间，或使用 `--stagger 30s` 指定明确的窗口（仅适用于 cron 调度）。
 
-### 月中的日期和星期采用 OR 逻辑
+### 心跳任务迁移
+
+旧版 heartbeat scratch 支持结构化的 `tasks:` 块。升级后运行 `openclaw doctor --fix`，可将每个条目转换为普通、可编辑的主会话 cron 作业。Doctor 会保留间隔和上一次运行时间，在移除该块之前创建这些作业，并在再次运行时安全地收敛相同的声明键。
+
+这些迁移后的作业携带公开的 `systemEvent` 负载，因此 `openclaw cron list`、`get`、`edit` 和 `remove` 以及 cron 工具都会像管理其他作业一样管理它们。它们的执行使用受保护的心跳任务唤醒机制：活跃时段、最小间隔、洪泛控制和忙碌重试仍然适用，而 cron 负责每个任务独立的节奏。在相同合并窗口内到期的作业可以共享一次心跳 turn。若计划发生在 heartbeat 活跃时段之外，则会跳过，并在作业的下一次出现时重试。
+
+Heartbeat scratch 现在仅用于监控说明。运行时 heartbeat 不会将 `tasks:` 文本解析为调度；请使用 cron 创建新的周期性工作。
+
+### 流来源
+
+流调度会让操作员编写的 argv 命令在 Gateway 下持续运行，并根据其 stdout 和 stderr 输出的行来触发作业。流调度是事件驱动的，从不按时间到期，并且需要 `cron.triggers.enabled: true`，因为这个长生命周期命令与触发脚本具有相同的无人值守信任级别。禁用或移除该作业会停止进程；Gateway 关闭时会等待进程树拆除完成。快速失败会使用 cron 内置的错误退避机制重启。连续 5 次运行时间短于 60 秒会使作业进入错误状态，并使用正常的失败告警路径；手动重新启用该作业即可清除重启上限。
+
+```bash
+openclaw cron add \
+  --name "Build event stream" \
+  --stream-command '["node","scripts/build-events.mjs"]' \
+  --stream-mode match \
+  --stream-match '^(failed|recovered):' \
+  --stream-batch-ms 250 \
+  --session isolated \
+  --message "调查这些构建事件。"
+```
+
+`mode: "line"`（默认值）接受每一行。`mode: "match"` 仅接受与编译后的 `match` 正则表达式匹配的行。一个批次会在静默 `batchMs` 后关闭（默认 250 ms，限制在 50–5000 之间）或在达到 `maxBatchBytes` 时关闭（默认 16384，限制在 1024–65536 之间）。达到字节上限时，批次会以 `[truncated]` 结尾。匹配模式始终会将完整行与其完整文本进行比对，即使超过 `maxBatchBytes` 也是如此（只有传送出去的批次会被截断）；在受限的原始输入上限处被切断的行只有前缀，因此会被视为不匹配，而不会让一个以行尾锚定的模式在截断处触发。该批次会附加到系统事件文本或 agent-turn 消息中。由于来源命令与负载命令会产生歧义的进程所有权，因此流调度不接受命令负载。
+
+每个作业只保留一次负载触发和一个受限的待处理批次。当负载正在运行时，或内置的 30 秒触发间隔尚未过去时到达的行，会合并到该待处理批次中，而不是构建一个无限队列。一个串行化的所有者会将门控丢弃、负载错误和未运行的分发记录到 `streamDroppedBatches` 中；受限合并会增加 `streamCoalescedBatches`。失败的负载不会重试，因为它们可能不是幂等的。逻辑源身份在受监督的子进程重启之间保持稳定，但在来源被禁用、移除或替换时会轮换，因此来自已退役来源的排队批次即使在 A 到 B 再到 A 的编辑之后也无法触发。停止完成后，旧子进程的延迟回调不会再生效。V1 不包含原生 WebSocket 来源；可以用诸如 `websocat wss://example.invalid/events` 这样的 argv 命令进行桥接。
+
+当流作业还具有 `trigger.script` 时，门控会在每个关闭的批次上运行一次。当前批次可通过深度冻结的 `trigger.streamBatch` 字符串获取，并与 `trigger.state` 并列存在。`fire: false` 会在持久化门控状态后丢弃该批次。`fire: true` 会保留现有触发消息语义，然后将该批次追加到最终负载中。流作业也可以改为使用不带条件门控的脚本负载；该脚本会通过相同的 `trigger.streamBatch` 值接收批次。将脚本负载与条件门控组合会被拒绝，因为两者都会占用持久化的 `trigger.state` 槽位。
+
+### 动态节奏（pacing）
+
+周期性作业可以设置 `pacing.min` 和/或 `pacing.max` 为类似 `15m` 或 `4h` 的持续时间字符串；至少需要一个边界。与 `cron add|edit` 一起使用 `--pacing-min` 和 `--pacing-max`（`--clear-pacing` 会移除两个边界）。
+
+在 agent-turn 运行期间，一个受节奏控制的作业可以调用 `cron` 工具，并使用 `action: "next_check"` 和 `in: "30m"`。该提议仅适用于当前运行中的作业，并从成功运行完成时开始计时。OpenClaw 会静默地将其限制到已配置的边界内。
+
+没有提议的 pacing 不会改变正常调度。失败、超时和跳过的运行会丢弃该提议，因此现有的重试和错误退避行为具有优先级。手动强制运行周期性作业属于带外操作，并会保留其待定的自然或 pacing 槽位。对于条件触发的作业，即使提议请求更早检查，内置的最小间隔仍然是下限。
+
+### `/loop` 聊天快捷方式
+
+在聊天中，仅所有者可用的 `/loop [interval] <prompt>` 命令会创建一个绑定到该对话的周期性 agent-turn 作业。提供一个间隔，例如 `5m`，用于固定节奏；或者省略它，让 loop 在 1 分钟到 1 小时之间通过 `next_check` 自行节奏控制。使用 `/loop status` 列出绑定到对话的 loops，使用 `/loop stop [name]` 将其移除。
+
+### 月内日期和星期几使用 OR 逻辑
 
 Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月中的日期字段和星期字段都不是通配符时，croner 会在**任一**字段匹配时触发，而不是两者都匹配。这是标准的 Vixie cron 行为。
 
@@ -90,7 +132,7 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月中
 
 ## 事件触发器（条件监视器）
 
-事件触发器会向 `every` 或 `cron` 计划添加一个无头条件脚本。Cron 会在任务到期时评估该脚本，并且只在脚本返回 `fire: true` 时运行正常负载：
+事件触发器会为 `every`、`cron` 或 `stream` 调度添加一个无头条件脚本。时间类调度会在到期时对其进行评估；流式调度会在每个已关闭的批次上对其进行评估。只有当脚本返回 `fire: true` 时，Cron 才会运行正常负载：
 
 ```json5
 {
@@ -104,12 +146,14 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月中
 }
 ```
 
-脚本必须返回 `{ fire, message?, state? }`。先前的 JSON 状态可通过深度冻结的 `trigger.state` 获取；返回一个新的 `state` 值即可将其持久化。状态上限为 16 KB。 当触发结果包含 `message` 时，cron 会在执行前将其追加到系统事件文本或 agent-turn 消息中。`once: true` 会在第一次成功触发并执行负载后禁用该任务。
+脚本必须返回 `{ fire, message?, state? }`。之前的 JSON 状态可通过深度冻结的 `trigger.state` 获取；流式门控还会接收到当前批次作为 `trigger.streamBatch`。返回一个新的 `state` 值以将其持久化。状态上限为 16 KB。当天触发结果包含 `message` 时，cron 会在执行前将其附加到系统事件文本或 agent-turn 消息中。`once: true` 会在首次成功触发并执行负载后禁用该任务。
 
-`fire: false` 会持久化评估状态和计数器，然后重新安排执行，但不会创建运行历史。如果已触发的负载运行失败，返回的 `state` **不会** 被持久化——下一次评估会看到之前的状态并且可以再次触发，因此请将脚本写成只读检查，并把动作保留在负载中。触发器计划具有可配置的最小间隔（默认 30 秒）。每次评估都有 30 秒的墙钟时间预算，并且最多允许 5 次工具调用。
+`fire: false` 会持久化评估状态和计数器，然后重新调度，但不会创建运行历史。如果已触发的负载运行失败，返回的 `state` **不会** 被持久化——下一次评估仍会看到之前的状态并可能再次触发，因此脚本应编写为只读检查，并将动作保留在负载中。触发器调度内置最小间隔为 30 秒。每次评估都有 30 秒的墙钟时间预算，最多可进行 5 次工具调用。
+
+编写 watcher 时应围绕**可操作状态**，而不仅仅是成功状态：如果某个 watcher 在检查失败或超时时就悄然停止，它看起来会是健康的，但实际上已经坏了。将观察结果与 `trigger.state` 进行比较并返回新的状态以去重；不要依赖模型或进程内存。触发时，`message` 应保持自包含，因为它会成为已触发运行的完整事件上下文。
 
 <Warning>
-启用 `cron.triggers.enabled` 会让代理编写的脚本以无头方式运行，并使用所属代理的**完整工具策略，包括 `exec`**。请将其视为带有该代理权限的无人值守代码执行；除非所有允许创建 cron 任务的代理都已被相应信任，否则请保持禁用。
+启用 `cron.triggers.enabled` 允许条件触发脚本和 `script` 负载在无头模式下运行，并使用所属 agent 的**完整工具策略，包括 `exec`**。请将其视为带有该 agent 权限的无人值守代码执行；除非允许创建 cron 任务的每个 agent 都经过相应信任，否则请保持禁用。
 </Warning>
 
 从本地脚本文件创建一个监视器（`-` 表示从 stdin 读取脚本）：
@@ -127,11 +171,14 @@ openclaw cron add \
 
 每个作业都恰好携带一种载荷类型，由标志位决定：
 
-| 载荷          | 标志                                           | 运行方式                                              |
-| ------------- | ---------------------------------------------- | ----------------------------------------------------- |
-| 系统事件      | `--system-event <text>`                        | 排队到主会话中，本身不会触发模型调用                   |
-| 代理消息      | `--message <text>`                             | 由模型支持的代理轮次                                 |
-| 命令          | `--command <shell>` 或 `--command-argv <json>` | 在 Gateway 主机上的 shell/进程，不会触发模型调用     |
+| Payload       | Flag                                           | Runs                                                       |
+| ------------- | ---------------------------------------------- | ---------------------------------------------------------- |
+| 系统事件      | `--system-event <text>`                        | 入队到主会话，本身不调用模型                                     |
+| 代理消息      | `--message <text>`                             | 一个由模型支持的代理轮次                                          |
+| 命令          | `--command <shell>` or `--command-argv <json>` | Gateway 主机上的 shell/process，不调用模型                         |
+| 脚本          | `--script <file\|->`                           | 使用所属 agent 工具的无头代码模式脚本                              |
+
+还有一种额外的载荷类型 `heartbeat`，由系统拥有：gateway 会为每个启用 heartbeat 的 agent 汇聚一个 heartbeat 监控作业（参见 [Heartbeat](/gateway/heartbeat)）。它会出现在 `cron list --all` 中，但不能通过 CLI 或 API 创建或编辑。Heartbeat 配置会在启动、配置重载时，或通过 `openclaw doctor --fix` 写入到持久化的监控计划中。当 cron 被禁用时，监控不会触发，也不会运行任何回退 heartbeat 定时器。
 
 ### 代理轮次选项
 
@@ -163,7 +210,9 @@ openclaw cron add \
   限制作业可使用的工具，例如 `--tools exec,read`。
 </ParamField>
 
-`--model` 设置作业的主模型；它不会替换会话中的 `/model` 覆盖，因此已配置的回退链仍会在其之上继续适用。未解析或不被允许的模型会使运行以明确的校验错误失败，而不会静默回退到默认值。如果作业有 `--model` 但没有显式或已配置的回退列表，OpenClaw 会传入一个空的回退覆盖，而不是静默地将 agent 主模型追加为隐藏的重试目标。
+可运行工具的新作业始终会存储显式的工具策略。由 agent 创建的作业会被限制为该创建轮次可用的工具，且 agent 不能扩大已存储的列表。由已认证操作员在未指定 `--tools` 的情况下创建的作业会存储一个不受限制的 `*` 策略；`cron edit --clear-tools` 会恢复该显式的不受限制策略。早于显式工具策略存在的作业会保留其当前行为，直到其工具策略被显式编辑或作业被重新创建。
+
+`--model` 会设置作业的主模型；它不会替换会话中的 `/model` 覆盖，因此已配置的回退链仍会叠加其上。无法解析或不被允许的模型会使运行以显式校验错误失败，而不会悄悄回退到默认值。如果某个作业有 `--model` 但没有显式或已配置的回退列表，OpenClaw 会传入一个空的回退覆盖，而不是悄悄把 agent 主模型追加为隐藏的重试目标。
 
 孤立作业的模型选择优先级，从高到低：
 
@@ -200,6 +249,31 @@ openclaw cron create "*/15 * * * *" \
 
 发送的文本取自进程输出：非空 stdout 优先；如果 stdout 为空且 stderr 非空，则发送 stderr；如果两者都存在，cron 会发送一个简短的 `stdout:` / `stderr:` 块。退出码 `0` 会将运行记录为 `ok`；非零退出、信号、超时或无输出超时会记录为 `error`，并可能触发失败告警。若某个命令只打印 `NO_REPLY`，则会使用正常的 cron 静默令牌抑制机制，并且不会向聊天中回传任何内容。
 
+### 脚本载荷
+
+脚本载荷会以无头方式在与触发脚本相同的代码模式执行器中运行，而不会启动一次对话式代理轮次。在创建或运行它们之前，请启用 `cron.triggers.enabled`；这个危险自动化开关同时涵盖触发脚本和脚本载荷。脚本作业只支持 `main` 和 `isolated` 会话目标。
+
+```bash
+openclaw cron create "0 * * * *" \
+  --name "每小时队列检查" \
+  --script ./automation/check-queue.js \
+  --script-timeout-seconds 300 \
+  --script-tool-budget 50 \
+  --session isolated \
+  --announce
+```
+
+使用 `--script <file|->` 可从文件或 stdin 读取 JavaScript。超时默认是 300 秒，上限为 900；工具预算默认是 50 次调用，上限为 200。这些载荷预算与更小的触发门评估预算是分开的。
+
+脚本可以返回一个包含以下可选字段的对象：
+
+- `notify`: 通过作业的 `announce`、`webhook` 或 `none` 投递模式发送的文本。若省略，则不发送任何内容。对于 `main` 作业，该文本会变成一个系统事件。
+- `wake`: `"now"` 会在入队 `notify`（或一个紧凑的完成事件）后立即请求一次 heartbeat；`"next-heartbeat"` 会将事件安排到下一次 heartbeat。
+- `state`: JSON 状态，上限为 16 KB，且仅在成功运行后持久化。下一次运行会收到其冻结副本作为 `trigger.state`，与触发脚本一致。由于该命名空间只有一个持久化拥有者，因此脚本载荷不能与同一作业上的条件触发器组合使用。
+- `nextCheck`: 例如 `"15m"` 这样的持续时间。它仅对启用了 pacing 的作业有效，并使用与代理轮次提议相同的 pacing 限制。
+
+抛错、超时、工具预算耗尽、无效结果，以及在未启用 pacing 时出现的 `nextCheck`，都属于正常的 cron 运行错误：它们会进入运行历史、退避和失败告警处理，但不会持久化返回的状态。
+
 ## 执行样式
 
 | 样式            | `--session` 值      | 运行位置                   | 最适合用于                     |
@@ -209,18 +283,26 @@ openclaw cron create "*/15 * * * *" \
 | 当前会话       | `current`           | 在创建时绑定              | 上下文感知的周期性工作          |
 | 自定义会话     | `session:custom-id` | 持久化的命名会话          | 基于历史记录构建的工作流        |
 
+当创建请求携带会话上下文时，Agent-turn 作业默认使用创建它们的对话。没有会话键的调用方（包括未提供会话键的 CLI 和 API 调用方）会回退到 `isolated`。系统事件和心跳仍默认使用 `main`；命令和脚本负载仍默认使用 `isolated`。
+
 <AccordionGroup>
   <Accordion title="主会话、隔离会话与自定义会话的区别">
     **主会话** 作业会将系统事件入队到 cron 所拥有的运行通道，并可选择唤醒 heartbeat（`--wake now` 或 `--wake next-heartbeat`）。它们可以使用目标主会话的最后一次交付上下文进行回复，但不会将常规 cron 回合追加到人工聊天通道，也不会延长目标会话的每日/空闲重置新鲜度。**隔离会话** 作业会在一个新的会话中运行专用的代理回合。**自定义会话**（`session:xxx`）会在多次运行之间持久化上下文，从而支持像每日站会这样基于先前摘要构建的工作流。
 
-    主会话 cron 事件是独立的系统事件提醒。它们不会自动包含默认 heartbeat 提示中的“阅读 HEARTBEAT.md”指令；如果某个提醒应当查阅 `HEARTBEAT.md`，请在 cron 事件文本中明确写出这一点。
+    Main-session cron events are self-contained system-event reminders. They do not automatically include the default heartbeat prompt or the heartbeat monitor scratch; say it explicitly in the cron event text if a reminder should consult that context.
 
   </Accordion>
   <Accordion title="隔离作业中的“新鲜会话”是什么意思">
     每次运行都会生成一个新的转录/会话 ID。OpenClaw 会保留安全偏好（thinking/fast/verbose 设置、标签、用户显式选择的模型/认证覆盖），但不会从旧的 cron 行中继承环境中的对话上下文：通道/组路由、发送或排队策略、提升权限、来源或 ACP 运行时绑定。当周期性作业需要有意沿用同一对话上下文时，请使用 `current` 或 `session:<id>`。
   </Accordion>
-  <Accordion title="子代理和 Discord 交付">
-    当隔离 cron 运行编排子代理时，交付会优先采用最终后代输出，而不是过时的父级中间文本。如果后代仍在运行，OpenClaw 会抑制该部分父级更新，而不是直接宣布它。
+  <Accordion title="Unattended run contract">
+    Isolated cron and hook agent turns are explicitly unattended: no one is present to clarify or approve. The final reply must be the deliverable rather than a plan, acknowledgement, or request for input. The agent returns `HEARTBEAT_OK` when nothing needs doing and states failures plainly; cron owns retry and failure-alert policy.
+
+    For trusted scheduled jobs, the job's own instructions win when they intentionally ask for a question or plan, and the agent may remove a job that is no longer needed. External hook turns receive only the common unattended contract; they do not receive that override or self-removal guidance across the external-content boundary.
+
+  </Accordion>
+  <Accordion title="Subagent and Discord delivery">
+    When isolated cron runs orchestrate subagents, delivery prefers the final descendant output over stale parent interim text. If descendants are still running, OpenClaw suppresses that partial parent update instead of announcing it.
 
     对于仅文本的 Discord 通知目标，OpenClaw 只发送一次规范化的最终助手文本，而不会同时回放流式/中间文本和最终答案。媒体和结构化 Discord 负载仍会单独交付，以确保附件和组件不会丢失。
 
@@ -249,11 +331,11 @@ openclaw cron create "*/15 * * * *" \
 
 失败通知遵循单独的目标路径：
 
-- `cron.failureDestination` 设置失败通知的全局默认值。
+- `cron.failureAlert` 上的目标字段（`mode`、`channel`、`to`、`accountId`）为失败通知设置全局默认值。已废弃的 `cron.failureDestination` 块会通过 `openclaw doctor --fix` 合并到其中。
 - `job.delivery.failureDestination` 可按作业覆盖该设置。
-- 如果两者都未设置，并且作业已经通过 `announce` 交付，则失败通知会回退到该主要 announce 目标。
-- `delivery.failureDestination` 仅支持 `sessionTarget="isolated"` 的作业，除非主要交付模式是 `webhook`。
-- `failureAlert.includeSkipped: true` 会让某个作业或全局 cron 告警策略纳入重复的跳过运行告警。跳过运行会保持单独的连续跳过计数，因此不会影响执行错误退避。
+- 如果两者都未设置且作业已经通过 `announce` 进行交付，则失败通知会回退到该主要 announce 目标。
+- `delivery.failureDestination` 仅在 `sessionTarget="isolated"` 的作业上受支持，除非主要交付模式是 `webhook`。
+- `failureAlert.includeSkipped: true` 会让作业或全局 cron 告警策略纳入重复的跳过运行告警。跳过运行会单独维护连续跳过计数，因此不会影响执行错误退避。
 - `openclaw cron edit` 提供按作业的告警调优：`--failure-alert`/`--no-failure-alert`、`--failure-alert-after <n>`、`--failure-alert-channel`、`--failure-alert-to`、`--failure-alert-cooldown`、`--failure-alert-include-skipped`/`--failure-alert-exclude-skipped`、`--failure-alert-mode` 和 `--failure-alert-account-id`。
 
 ### 输出语言
@@ -329,10 +411,13 @@ openclaw cron edit <jobId> \
 ## 管理作业
 
 ```bash
-# 列出所有作业
+# 列出已启用的作业
 openclaw cron list
 
-# 获取一个已存储作业的 JSON
+# 包括已禁用的作业
+openclaw cron list --all
+
+# 以 JSON 格式获取一个已存储的作业
 openclaw cron get <jobId>
 
 # 显示一个作业，包括已解析的投递路由
@@ -421,7 +506,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
     curl -X POST http://127.0.0.1:18789/hooks/wake \
       -H 'Authorization: Bearer SECRET' \
       -H 'Content-Type: application/json' \
-      -d '{"text":"收到新邮件","mode":"now"}'
+      -d '{"text":"Received a new email","mode":"now"}'
     ```
 
     <ParamField path="text" type="string" required>
@@ -439,7 +524,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
     curl -X POST http://127.0.0.1:18789/hooks/agent \
       -H 'Authorization: Bearer SECRET' \
       -H 'Content-Type: application/json' \
-      -d '{"message":"总结收件箱","name":"Email","model":"openai/gpt-5.6-sol"}'
+      -d '{"message":"Summarize the inbox","name":"Email","model":"openai/gpt-5.6-sol"}'
     ```
 
     字段：`message`（必填）、`name`、`agentId`、`sessionKey`（需要 `hooks.allowRequestSessionKey=true`）、`idempotencyKey`、`wakeMode`、`deliver`、`channel`、`to`、`model`、`thinking`、`timeoutSeconds`。
@@ -541,15 +626,8 @@ Gmail 预设的按消息会话会分离对话上下文；它不会限制目标�
   cron: {
     enabled: true,
     store: "~/.openclaw/cron/jobs.json",
-    maxConcurrentRuns: 8,
     triggers: {
       enabled: false,
-      minIntervalMs: 30000,
-    },
-    retry: {
-      maxAttempts: 3,
-      backoffMs: [30000, 60000, 300000],
-      retryOn: ["rate_limit", "overloaded", "network", "timeout", "server_error"],
     },
     webhookToken: "replace-with-dedicated-webhook-token",
     sessionRetention: "24h",
@@ -557,17 +635,15 @@ Gmail 预设的按消息会话会分离对话上下文；它不会限制目标�
 }
 ```
 
-上面的 `retry` 值是默认值：最多重试 3 次，退避时间为 `30s/60s/5m`，会重试这五类瞬态错误。`webhookToken` 会在 cron webhook 的 POST 请求中以 `Authorization: Bearer <token>` 的形式发送。
-
-`maxConcurrentRuns` 同时限制计划中的 cron 分发和独立的 agent-turn 执行，默认值为 8。独立的 cron agent-turn 会在内部使用队列专用的 `cron-nested` 执行通道，因此提高此值可以让彼此独立的 cron LLM 运行并行推进，而不只是启动它们各自外层的 cron 包装器。共享的非 cron `nested` 通道不会因该设置而扩宽。
+`webhookToken` 会作为 `Authorization: Bearer <token>` 在 cron webhook 的 POST 请求中发送。
 
 `cron.store` 是逻辑存储键和 doctor 迁移路径，不是一个可直接手工编辑的实时 JSON 文件。作业数据存放在 SQLite 中；请使用 CLI 或 Gateway API 进行更改。
 
 禁用 cron：`cron.enabled: false` 或 `OPENCLAW_SKIP_CRON=1`。
 
 <AccordionGroup>
-  <Accordion title="重试行为">
-    **一次性重试**：瞬态错误（限流、过载、网络、超时、服务器错误）会使用 `retry.backoffMs`（默认 30s、60s、5m）最多重试 `retry.maxAttempts` 次（默认 3 次）。永久性错误会立即禁用该作业。
+  <Accordion title="Retry behavior">
+    **一次性重试**：临时错误（速率限制、过载、网络、超时、服务器错误）会使用内置重试计划。永久性错误会立即禁用该作业。
 
     **周期性重试**：连续执行错误会按扩展后的计划退避（30s、60s、5m、15m、60m）。在下一次成功运行后，退避计时会重置。
 

@@ -22,9 +22,9 @@ openclaw channels status --probe
 
 健康基线：
 
-- `Runtime: running`
-- `Connectivity probe: ok`
-- `Capability: read-only`, `write-capable`, or `admin-capable`
+- `运行时：运行中`
+- `连接性探测：正常`
+- `能力：只读`、`可写` 或 `具备管理员权限`
 - 频道探测显示传输已连接，并且在支持的情况下显示 `works` 或 `audit ok`
 
 ## 更新后
@@ -59,15 +59,15 @@ openclaw status --all
 
 ### Telegram 失败特征
 
-| 症状                              | 最快检查项                                    | 修复方法                                                                                                                        |
-| -------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `/start` 但没有可用的回复流程    | `openclaw pairing list telegram`                 | 批准配对或更改 DM 策略。                                                                                                       |
-| 机器人在线但群组保持沉默        | 验证提及要求和机器人隐私模式                   | 对群组可见性禁用隐私模式，或提及机器人。                                                                                        |
-| 发送失败并伴随网络错误            | 检查日志中的 Telegram API 调用失败             | 修复到 `api.telegram.org` 的 DNS/IPv6/代理路由。                                                                                |
-| 启动时报告 `getMe returned 401` | 检查已配置的令牌来源                            | 重新复制或重新生成 BotFather token，并更新 `botToken`、`tokenFile` 或默认账户的 `TELEGRAM_BOT_TOKEN`。                      |
-| 轮询卡住或重连很慢                | 使用 `openclaw logs --follow` 查看轮询诊断      | 升级；如果重启是假阳性，则调整 `pollingStallThresholdMs`。持续卡住仍然指向代理/DNS/IPv6 问题。                                 |
-| 启动时 `setMyCommands` 被拒绝    | 检查日志中的 `BOT_COMMANDS_TOO_MUCH`           | 减少插件/技能/自定义 Telegram 命令，或禁用原生菜单。                                                                           |
-| 升级后允许列表阻止了你            | `openclaw security audit` 和配置允许列表        | 运行 `openclaw doctor --fix`，或用数字发送者 ID 替换 `@username`。                                                              |
+| 症状                                 | 最快检查                                           | 修复                                                                                                                    |
+| ------------------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `/start` 但没有可用的回复流程        | `openclaw pairing list telegram`                 | 批准配对或更改 DM 策略。                                                                                                  |
+| Bot 在线但群组保持沉默               | 检查提及要求和 bot 隐私模式                         | 为了群组可见性关闭隐私模式，或提及 bot。                                                                                 |
+| 发送失败并出现网络错误               | 检查 Telegram API 调用失败的日志                    | 修复到 `api.telegram.org` 的 DNS/IPv6/proxy 路由。                                                                       |
+| 启动时报告 `getMe returned 401`      | 检查已配置的 token 来源                             | 重新复制或重新生成 BotFather token，并更新 `botToken`、`tokenFile` 或默认账户 `TELEGRAM_BOT_TOKEN`。                    |
+| 轮询停滞或重连缓慢                   | 使用 `openclaw logs --follow` 查看轮询诊断信息      | 升级；持续停滞通常指向 proxy/DNS/IPv6。                                                                                  |
+| 启动时 `setMyCommands` 被拒绝         | 检查日志中的 `BOT_COMMANDS_TOO_MUCH`                | 减少插件/技能/自定义 Telegram 命令，或禁用原生菜单。                                                                     |
+| 升级后 allowlist 阻止你               | 执行 `openclaw security audit` 并检查配置 allowlists | 运行 `openclaw doctor --fix`，或将 `@username` 替换为数字发送者 ID。                                                     |
 
 完整故障排查：[Telegram 故障排查](/channels/telegram#troubleshooting)
 
@@ -75,12 +75,15 @@ openclaw status --all
 
 ### Discord 失败特征
 
-| 症状                                   | 最快检查项                                                                                                                | 修复方法                                                                                                                                                                                                                                                                   |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 机器人在线但没有 guild 回复           | `openclaw channels status --probe`                                                                                           | 允许 guild/channel 并验证消息内容意图。                                                                                                                                                                                                                |
-| 群组消息被忽略                          | 检查日志中提及门控丢弃                                                                                          | 提及机器人，或将 guild/channel 设置为 `requireMention: false`。                                                                                                                                                                                                             |
-| 有打字/令牌使用但没有 Discord 消息     | 检查这是否是环境房间事件，或是一个选择加入的 `message_tool` 房间，其中模型遗漏了 `message(action=send)` | 检查网关详细日志中被抑制的最终负载元数据，验证 `messages.groupChat.unmentionedInbound`，阅读 [环境房间事件](/channels/ambient-room-events)，或者在正常群组请求中保持 `messages.groupChat.visibleReplies: "automatic"`。 |
-| DM 回复缺失                            | `openclaw pairing list discord`                                                                                              | 批准 DM 配对或调整 DM 策略。                                                                                                                                                                                                                               |
+| 症状                                                      | 最快检查方法                                                                                                                | 修复                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bot 在线但没有 guild 回复                              | `openclaw channels status --probe`                                                                                           | 允许 guild/channel 并验证消息内容意图。                                                                                                                                                                                                                |
+| 群消息被忽略                                       | 检查日志中是否有 mention gating 丢弃                                                                                          | 提及 bot，或设置 guild/channel `requireMention: false`。                                                                                                                                                                                                             |
+| 有输入/令牌使用但没有 Discord 消息                    | 检查这是否是 ambient room 事件，或者是一个已选择加入的 `message_tool` room，但模型遗漏了 `message(action=send)` | 检查 gateway verbose 日志中是否有被抑制的最终 payload 元数据，验证 `messages.groupChat.unmentionedInbound`，阅读 [Ambient room events](/channels/ambient-room-events)，或者将普通群组请求的 `messages.groupChat.visibleReplies` 保持为 `"automatic"`。 |
+| DM 回复缺失                                           | `openclaw pairing list discord`                                                                                              | 批准 DM 配对或调整 DM 策略。                                                                                                                                                                                                                               |
+| 以前能工作的频道里 bot 沉默                    | 检查 guild 条目是否新增了 `channels` map                                                                        | channel map 是一个 allowlist：未列出的频道会被拒绝。添加一个 `"*"` 通配符条目。参见 [Guild channel maps are allowlists](/channels/discord#guild-channel-maps-are-allowlists)。                                                                                |
+| Agent 无法看到来自其他 bot 的 room 历史或附件 | 检查 room 的 `requireMention` 和账户的 `allowBots`                                                              | `requireMention: true` 会在未提及消息成为 room 事件之前将其丢弃，因此不会有 backlog。bot 发送的消息及其附件需要 `allowBots`（`"mentions"` 是更安全的设置）。参见 [Ambient room events](/channels/ambient-room-events)。 |
+| Agent 监视一个 ambient room 但从不发帖                | 检查该 agent 的工具配置文件中是否有 `message` 工具                                                                        | room 事件需要 `message(action=send)`，而 `minimal` 和 `coding` 配置文件会省略它。为该 agent 授予 `tools.alsoAllow: ["message"]`。                                                                                                                      |
 
 完整故障排查：[Discord 故障排查](/channels/discord#troubleshooting)
 
@@ -147,7 +150,16 @@ openclaw status --all
 
 完整设置和配置：[Matrix](/channels/matrix)
 
-## 相关内容
+## 网关已启动但通道始终无法连接
+
+如果网关进程运行正常，但在多次
+非正常启动后某个通道仍处于停止状态，[崩溃循环保护器](/gateway/restart-recovery#safety-valves-and-observability)
+可能正在抑制通道自动启动。使用
+`openclaw gateway call channels.start --params '{"channel":"<id>"}'` 来
+覆盖此行为，或者等待非正常启动窗口耗尽后再重启
+网关。
+
+## 相关
 
 - [配对](/channels/pairing)
 - [频道路由](/channels/channel-routing)

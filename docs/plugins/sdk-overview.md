@@ -33,13 +33,12 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 更广泛的总入口面和共享辅助函数，例如
 `buildChannelConfigSchema`。
 
-对于渠道配置，请通过
-`openclaw.plugin.json#channelConfigs` 发布渠道拥有的 JSON Schema。`plugin-sdk/channel-config-schema`
-子路径用于共享 schema 基元和通用构建器。OpenClaw 的
-捆绑插件使用 `plugin-sdk/bundled-channel-config-schema` 来保留
-捆绑渠道 schema。已弃用的兼容导出仍保留在
-`plugin-sdk/channel-config-schema-legacy`；这两个捆绑 schema 子路径都不应
-作为新插件的模式。
+For channel config, publish the channel-owned JSON Schema through
+`openclaw.plugin.json#channelConfigs`. The `plugin-sdk/channel-config-schema`
+subpath is for shared schema primitives and the generic builder. OpenClaw's
+bundled plugins use `plugin-sdk/bundled-channel-config-schema` for retained
+bundled-channel schemas. That bundled schema subpath is not a pattern for new
+plugins.
 
 <Warning>
   不要导入提供方或渠道品牌化的便捷入口（例如
@@ -66,42 +65,52 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 捆绑插件辅助函数）。完整目录——按组整理并带链接——请参见
 [插件 SDK 子路径](/plugins/sdk-subpaths)。
 
-编译器入口点清单位于
-`scripts/lib/plugin-sdk-entrypoints.json`；包导出是在
-从公共子集减去 `scripts/lib/plugin-sdk-private-local-only-subpaths.json` 中列出的仓库本地测试/内部子路径后生成的。
-运行
-`pnpm plugin-sdk:surface` 可审计公共导出数量。已弃用且历史足够久、并且未被捆绑扩展生产代码使用的公共
-子路径记录在 `scripts/lib/plugin-sdk-deprecated-public-subpaths.json` 中；广泛的
-已弃用重导出 barrel 记录在
-`scripts/lib/plugin-sdk-deprecated-barrel-subpaths.json` 中。
+The compiler entrypoint inventory lives in
+`scripts/lib/plugin-sdk-entrypoints.json`; typed public exports exclude the
+internal subpaths listed in
+`scripts/lib/plugin-sdk-private-local-only-subpaths.json`. Production entries
+on that list retain JavaScript-only host runtime exports for separately
+published official plugins, while test-only entries remain unexported. Run
+`pnpm plugin-sdk:surface` to audit the public export count. Deprecated public
+subpaths that are old enough and unused by bundled extension production code are
+tracked in `scripts/lib/plugin-sdk-deprecated-public-subpaths.json`; broad
+deprecated re-export barrels are tracked in
+`scripts/lib/plugin-sdk-deprecated-barrel-subpaths.json`.
 
 ## 注册 API
 
 `register(api)` 回调会接收一个 `OpenClawPluginApi` 对象，其中包含这些
 方法：
 
-### 能力注册
+Plugins that provide an external team-chat surface for a session can register
+the single process-wide provider exported by
+`openclaw/plugin-sdk/session-discussion`. Its `info({ sessionKey })` method
+reports whether a discussion is unavailable, ready to open, or already open;
+`open({ sessionKey })` creates or resolves the discussion and returns its embed
+and external URLs. Registering another provider replaces the current provider.
 
-| 方法                                             | 注册内容                                                                              |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `api.registerProvider(...)`                      | 文本推理（LLM）                                                                        |
-| `api.registerWorkerProvider(...)`                | 云工作器生命周期租约                                                                   |
-| `api.registerModelCatalogProvider(...)`          | 用于文本和媒体生成的模型目录行                                                        |
-| `api.registerAgentHarness(...)`                  | [实验性](/plugins/sdk-agent-harness) 原生代理执行器（Codex、Copilot）                 |
-| `api.registerCliBackend(...)`                   | 本地 CLI 推理后端                                                                      |
-| `api.registerChannel(...)`                       | 消息通道                                                                              |
-| `api.registerEmbeddingProvider(...)`             | 可复用的向量嵌入提供者                                                                |
-| `api.registerSpeechProvider(...)`                 | 文本转语音 / STT 合成                                                                 |
-| `api.registerRealtimeTranscriptionProvider(...)`  | 流式实时转写                                                                          |
-| `api.registerRealtimeVoiceProvider(...)`          | 双工实时语音会话                                                                      |
-| `api.registerMediaUnderstandingProvider(...)`     | 图像 / 音频 / 视频分析                                                                |
-| `api.registerTranscriptSourceProvider(...)`       | 实时或导入的会议转录来源                                                              |
-| `api.registerImageGenerationProvider(...)`        | 图像生成                                                                              |
-| `api.registerMusicGenerationProvider(...)`        | 音乐生成                                                                              |
-| `api.registerVideoGenerationProvider(...)`        | 视频生成                                                                              |
-| `api.registerWebFetchProvider(...)`               | Web 获取 / 抓取提供者                                                                 |
-| `api.registerWebSearchProvider(...)`              | Web 搜索                                                                              |
-| `api.registerCompactionProvider(...)`             | 可插拔的转录压缩后端                                                                  |
+### Capability registration
+
+| Method                                           | What it registers                                                                                                                         |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.registerProvider(...)`                      | Text inference (LLM)                                                                                                                      |
+| `api.registerWorkerProvider(...)`                | Cloud-worker lifecycle leases                                                                                                             |
+| `api.registerModelCatalogProvider(...)`          | Model catalog rows for text and media generation                                                                                          |
+| `api.registerAgentHarness(...)`                  | [Experimental](/plugins/sdk-agent-harness) native agent executor (Codex, Copilot)                                                         |
+| `api.registerCliBackend(...)`                    | Local CLI inference backend                                                                                                               |
+| `api.registerChannel(...)`                       | Messaging channel                                                                                                                         |
+| `api.registerEmbeddingProvider(...)`             | Reusable vector embedding provider                                                                                                        |
+| `api.registerSpeechProvider(...)`                | Text-to-speech / STT synthesis                                                                                                            |
+| `api.registerRealtimeTranscriptionProvider(...)` | Streaming realtime transcription                                                                                                          |
+| `api.registerRealtimeVoiceProvider(...)`         | Duplex realtime voice sessions                                                                                                            |
+| `api.registerMediaUnderstandingProvider(...)`    | Image/audio/video analysis                                                                                                                |
+| `api.registerTranscriptSourceProvider(...)`      | Live or imported meeting transcript source; meeting plugins can use `createMeetingTranscriptSourceProvider` from `plugin-sdk/transcripts` |
+| `api.registerImageGenerationProvider(...)`       | Image generation                                                                                                                          |
+| `api.registerMusicGenerationProvider(...)`       | Music generation                                                                                                                          |
+| `api.registerVideoGenerationProvider(...)`       | Video generation                                                                                                                          |
+| `api.registerWebFetchProvider(...)`              | Web fetch / scrape provider                                                                                                               |
+| `api.registerWebSearchProvider(...)`             | Web search                                                                                                                                |
+| `api.registerCompactionProvider(...)`            | Pluggable transcript-compaction backend                                                                                                   |
 
 Worker provider 还必须在 `contracts.workerProviders` 中声明其 id。  
 Core 会在 `provision(profile, operationId)` 之前持久化持久化意图。Provider 在外部分配之前验证设置，并在永久性拒绝 profile 时抛出 `WorkerProviderError`。当 operation id 重复时，`provision` 必须接管同一个租约。  
@@ -143,38 +152,72 @@ agentPromptGuidance: [
 
 原生 Codex app-server 开发者指令比其他提示界面更严格：只有明确作用域为 `codex_app_server` 的 guidance 才会被提升到那个更高优先级的通道。传统字符串 guidance 和未指定作用域的结构化 guidance 仍然可用于非 Codex 提示界面以保持兼容性。
 
-Node-host 命令运行在连接的 node host 上，而不是在 Gateway
-进程内。如果存在 `agentTool`，节点会在成功连接 Gateway 后发布一个描述符；Gateway 只有在该节点连接期间，且仅当描述符的 `command` 位于节点已批准的命令范围内时，才会将其暴露给 agent 运行。将 `agentTool.defaultPlatforms` 设置为把一个非危险命令纳入默认 node 命令允许列表；否则需要显式的 `gateway.nodes.allowCommands` 或 node-invoke policy。`agentTool.name` 必须对提供方安全：以字母开头，只能使用字母、数字、下划线或连字符，并且长度不超过 64 个字符。基于 MCP 的 node 工具可以设置 `agentTool.mcp` 元数据，以便目录和工具搜索界面显示远程 MCP 服务器/工具身份，但执行仍然通过所公开的 node 命令进行。
+Node-host commands run on the connected node host, not inside the Gateway
+process. If `agentTool` is present, the node publishes a descriptor after a
+successful Gateway connect; the Gateway exposes it to agent runs only while that
+node is connected and only if the descriptor's `command` is in the node's
+approved command surface. Set `agentTool.defaultPlatforms` to opt a
+non-dangerous command into the default node command allowlist; otherwise require
+explicit `gateway.nodes.commands.allow` or a node-invoke policy. `agentTool.name`
+must be provider-safe: start with a letter, use only letters, digits,
+underscores, or hyphens, and stay within 64 characters. MCP-backed node tools
+can set `agentTool.mcp` metadata so catalog and tool-search surfaces can show
+the remote MCP server/tool identity, but execution still goes through the
+advertised node command.
 
 ### 基础设施
 
 | 方法                                          | 注册内容                                                      |
 | ----------------------------------------------- | ---------------------------------------------------------------------- |
-| `api.registerHook(events, handler, opts?)`      | 事件钩子                                                             |
-| `api.registerHttpRoute(params)`                 | 网关 HTTP 端点                                                  |
-| `api.registerGatewayMethod(name, handler)`      | 网关 RPC 方法                                                     |
-| `api.registerGatewayDiscoveryService(service)`  | 本地网关发现发布器                                     |
-| `api.registerCli(registrar, opts?)`             | CLI 子命令                                                         |
-| `api.registerNodeCliFeature(registrar, opts?)`  | `openclaw nodes` 下的 Node 功能 CLI                                |
-| `api.registerService(service)`                  | 后台服务                                                     |
-| `api.registerInteractiveHandler(registration)`  | 交互式处理器                                                    |
-| `api.registerAgentToolResultMiddleware(...)`    | 运行时工具结果中间件                                         |
-| `api.registerMemoryPromptSupplement(builder)`   | 附加的、与 memory 相邻的提示词部分                                |
-| `api.registerMemoryCorpusSupplement(adapter)`   | 附加的 memory 搜索/读取语料库                                     |
-| `api.registerHostedMediaResolver(resolver)`     | 用于浏览器风格托管媒体 URL 的解析器                           |
-| `api.registerMcpServerConnectionResolver(...)`  | 针对静态服务器名称、按请求方区分的 MCP 传输（`url`/`headers`） |
-| `api.registerTextTransforms(transforms)`        | 由插件拥有的提示词/消息兼容性文本重写                |
-| `api.registerConfigMigration(migrate)`          | 在插件运行时加载前执行的轻量级配置迁移           |
-| `api.registerMigrationProvider(provider)`       | `openclaw migrate` 的导入器                                        |
-| `api.registerAutoEnableProbe(probe)`            | 可自动启用此插件的配置探测器                          |
-| `api.registerReload(registration)`              | 用于重载处理的重启/热重载/空操作配置前缀策略              |
-| `api.registerNodeHostCommand(command)`          | 公开给配对节点的命令处理器                                |
-| `api.registerNodeInvokePolicy(policy)`          | 节点调用命令的允许列表/审批策略                    |
-| `api.registerSecurityAuditCollector(collector)` | `openclaw security audit` 的问题收集器                       |
+| `api.registerHook(events, handler, opts?)`      | Event hook                                                             |
+| `api.registerHttpRoute(params)`                 | Gateway HTTP endpoint                                                  |
+| `api.registerGatewayMethod(name, handler)`      | Gateway RPC method                                                     |
+| `api.registerGatewayDiscoveryService(service)`  | Local Gateway discovery advertiser                                     |
+| `api.registerCli(registrar, opts?)`             | CLI subcommand                                                         |
+| `api.registerNodeCliFeature(registrar, opts?)`  | Node feature CLI under `openclaw nodes`                                |
+| `api.registerService(service)`                  | Background service                                                     |
+| `api.registerInteractiveHandler(registration)`  | Interactive handler                                                    |
+| `api.registerAgentToolResultMiddleware(...)`    | Runtime tool-result middleware                                         |
+| `api.registerMemoryPromptSupplement(builder)`   | Additive memory-adjacent prompt section                                |
+| `api.registerMemoryPromptPreparation(prepare)`  | Async preparation for a memory-adjacent prompt section                 |
+| `api.registerMemoryCorpusSupplement(adapter)`   | Additive memory search/read corpus                                     |
+| `api.registerHostedMediaResolver(resolver)`     | Resolver for browser-style hosted media URLs                           |
+| `api.registerMcpServerConnectionResolver(...)`  | Per-requester MCP transport (`url`/`headers`) for a static server name |
+| `api.registerTextTransforms(transforms)`        | Plugin-owned prompt/message compatibility text rewrites                |
+| `api.registerConfigMigration(migrate)`          | Lightweight config migration run before plugin runtime loads           |
+| `api.registerMigrationProvider(provider)`       | Importer for `openclaw migrate`                                        |
+| `api.registerAutoEnableProbe(probe)`            | Config probe that can auto-enable this plugin                          |
+| `api.registerReload(registration)`              | Restart/hot/noop config-prefix policy for reload handling              |
+| `api.registerNodeHostCommand(command)`          | Command handler exposed to paired nodes                                |
+| `api.registerNodeInvokePolicy(policy)`          | Allowlist/approval policy for node-invoked commands                    |
+| `api.registerSecurityAuditCollector(collector)` | Findings collector for `openclaw security audit`                       |
 
-#### 按请求方作用域划分的 MCP 连接
+#### Post-ack webhook work
 
-将 MCP 服务器的**身份**保持静态（名称、工具过滤器），放在 `mcp.servers` 或 bundle manifest 中。也可以选择注册一个连接解析器，让每个受信任的消息请求方都获得自己的传输：
+Webhook routes that acknowledge a request before processing finishes must move
+that detached work onto its own tracked admission root:
+
+```typescript
+import { runDetachedWebhookWork } from "openclaw/plugin-sdk/webhook-request-guards";
+
+void runDetachedWebhookWork(() => processWebhookEvent(event)).catch((error) => {
+  runtime.error?.(`webhook dispatch failed: ${String(error)}`);
+});
+```
+
+Call `runDetachedWebhookWork(...)` synchronously while the HTTP request is still
+admitted. The helper reserves an independent root immediately, then starts the
+callback in the next microtask so the request handler can write its
+acknowledgement first. The returned promise adopts the callback result; callers
+still own rejection handling. This keeps post-ack queue work accepted and makes
+restart or suspension drains wait for it. Handlers that await all processing
+before returning do not need this helper.
+
+#### Requester-scoped MCP connections
+
+Keep the MCP server **identity** static (name, tool filter) in `mcp.servers`, a
+native plugin's `mcpServers` manifest field, or a bundle manifest. Optionally register a connection resolver so each trusted
+message requester gets their own transport:
 
 ```ts
 api.registerMcpServerConnectionResolver({
@@ -216,7 +259,20 @@ api.registerMcpServerConnectionResolver({
 
 Memory prompt supplement 构建器会接收可选的 `agentId`、`agentSessionKey` 和 `sandboxed` 上下文。Memory corpus supplement 的 `search` 和 `get` 调用会接收可选的 `agentId` 和 `sandboxed` 上下文。拥有代理所有存储的插件应当在每次调用时解析该存储，而不是在注册期间捕获某个全局路径。如果在多代理操作中需要 agent id 但未提供，应当直接失败并关闭，而不是选择任意一个代理。
 
-Telegram 交互式处理器在处理成功后可以返回 `{ submitText }`，以便将文本通过 Telegram 的正常入站代理路径进行路由。若入站策略跳过该文本或处理失败，OpenClaw 会保留回调按钮，因此用户可以在阻止条件变化后重试。这个结果字段是 Telegram 特有的；其他渠道会保留各自的交互结果契约。
+Use `registerMemoryPromptPreparation(...)` when prompt text depends on async
+plugin state. The callback runs once before each full agent prompt and receives
+the same tool, agent, session, and sandbox context as synchronous memory prompt
+builders. Validate the current storage-owner instance before loading persisted
+state, then return only lines for that run. OpenClaw freezes those lines and
+hands the immutable result to synchronous prompt assembly. Keep persistence,
+atomic replacement, and owner-removal deletion inside the owning plugin; do not
+poll or read files from a prompt builder.
+
+Telegram interactive handlers can return `{ submitText }` to route text through
+Telegram's normal inbound agent path after the handler succeeds. OpenClaw keeps
+the callback button when inbound policy skips the text or processing fails, so
+the user can retry after the blocking condition changes. This result field is
+Telegram-specific; other channels keep their own interactive result contracts.
 
 ### 工作流插件的宿主钩子
 
@@ -250,6 +306,30 @@ hello（`controlUiTabs`）中向 dashboard 客户端通告，因此该标签页�
 `icon` 是 dashboard 图标名称提示，`group` 选择侧边栏分区
 （`control` 或 `agent`），`order` 用于在插件标签页之间排序，而 `requiredScopes`
 会将缺少这些操作员作用域的连接隐藏该标签页：
+
+For a gateway-protected external tab, register the descriptor `path` under a
+same-plugin `auth: "gateway"` HTTP route. After authenticated bootstrap, the browser gets a
+short-lived, HttpOnly grant scoped to that plugin and route root so the
+sandboxed frame can load without copying the Gateway bearer token into its URL
+or JavaScript. The authenticated parent renews the grant while the external tab
+is active and before mounting it after navigation or browser resume. It also
+probes the grant from the same opaque sandbox before mounting, so browser
+privacy modes that block the cookie fail closed with an unavailable panel.
+The frame grant accepts only `GET` and `HEAD` and always carries
+`operator.read`; `requiredScopes` controls tab visibility but never widens the
+cookie grant. Mutations remain on explicit Gateway-authenticated parent or
+bearer surfaces. External tabs require HTTPS/Tailscale Serve or a
+browser-trusted loopback origin; plain HTTP on a LAN host shows the
+secure-context error instead of mounting a panel that cannot authenticate.
+Full third-party-cookie blocking also makes gateway-protected tabs unavailable.
+As with all native plugin surfaces, the frame remains inside the installed
+plugin trust boundary; OpenClaw does not treat installed plugins as mutually
+isolated browser security principals.
+Cookie grants use the browser's hostname boundary, not its port boundary. Do
+not cohost mutually untrusted services on the Gateway hostname, even on other
+ports.
+Tabs backed by plugin-managed auth keep their direct iframe behavior and do not
+request or require this Gateway grant.
 
 ```typescript
 api.session.controls.registerControlUiDescriptor({
@@ -294,16 +374,18 @@ Cron 调度器之上的会话作用域便捷封装。Cron 负责时序，并在�
 
 这些契约刻意分离了权限：
 
-- 外部插件可以拥有会话扩展、UI 描述符、命令、工具
-  元数据、下一回合注入以及普通钩子。
-- 受信任的工具策略在普通 `before_tool_call` 钩子之前运行，并且是宿主受信任的。捆绑策略最先运行；已安装插件策略需要显式启用，并且其本地 id 需要出现在
-  `contracts.trustedToolPolicies` 中，然后才会按插件加载顺序运行。策略 id 的作用域限定为注册它的插件。
-- 保留命令的所有权仅限捆绑包。外部插件应使用其
-  自己的命令名称或别名。
-- `allowPromptInjection=false` 会禁用会改变提示词的钩子，包括
-  `agent_turn_prepare`、`before_prompt_build`、`heartbeat_prompt_contribution`、
-  旧版 `before_agent_start` 中的提示词字段，以及
-  `enqueueNextTurnInjection`。
+- External plugins can own session extensions, UI descriptors, commands, tool
+  metadata, next-turn injections, and normal hooks.
+- Trusted tool policies run before ordinary `before_tool_call` hooks and are
+  host-trusted. Bundled policies run first; installed-plugin policies require
+  explicit enablement plus their local ids in
+  `contracts.trustedToolPolicies`, and run next in plugin-load order. Policy ids
+  are scoped to the registering plugin.
+- Reserved command ownership is bundled-only. External plugins should use their
+  own command names or aliases.
+- `allowPromptInjection=false` disables prompt-mutating hooks including
+  `agent_turn_prepare`, `before_prompt_build`, `heartbeat_prompt_contribution`,
+  and `enqueueNextTurnInjection`.
 
 非 Plan 消费者的示例：
 
@@ -386,7 +468,20 @@ api.registerCli(
 );
 ```
 
-嵌套命令会将解析后的父命令作为 `program` 传入：
+A root descriptor can also declare `machineOutput({ argv, stdoutIsTTY })` when
+the command reserves stdout for JSON, JSONL, or another machine-readable format
+without relying exclusively on a literal `--json` flag. OpenClaw evaluates this
+resolver before plugin activation so startup diagnostics can be routed to
+stderr. The resolver must be synchronous, pure, and dependency-light: inspect
+only the supplied raw argv and stdout TTY state. Reuse the same resolver in
+lightweight CLI metadata and full registration so discovery and execution do
+not disagree. Use `getRootOptionAwareCommandPath` from
+`openclaw/plugin-sdk/cli-argv` when the resolver needs command-path tokens; it
+accepts supported root options before or after the command root. `machineOutput`
+is root metadata; nested descriptors cannot use it because their owning root
+must already be active before they are visible.
+
+Nested commands receive the resolved parent command as `program`:
 
 ```typescript
 api.registerCli(
@@ -416,23 +511,33 @@ api.registerCli(
 `api.registerCliBackend(...)` 允许插件拥有本地
 AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
-- 后端 `id` 会成为模型引用中的提供者前缀，例如 `my-cli/gpt-5`。
-- 后端 `config` 使用与 `agents.defaults.cliBackends.<id>` 相同的结构。
-- 用户配置仍然优先。OpenClaw 会在运行 CLI 之前，将 `agents.defaults.cliBackends.<id>` 与插件默认值合并。
-- 当后端在合并后需要进行兼容性重写时，请使用 `normalizeConfig`
-  （例如规范化旧的标志位结构）。
-- 对于属于 CLI 方言的、按请求作用域生效的 argv 重写，请使用 `resolveExecutionArgs`，
-  例如将 OpenClaw 的思考级别映射为原生的努力度标志。该钩子会接收 `ctx.executionMode`；
-  当值为 `"side-question"` 时，用于为临时的 `/btw` 调用添加后端原生的隔离标志。
-  如果这些标志能够可靠地为一个原本始终开启工具的 CLI 禁用原生工具，也请将
-  `sideQuestionToolMode` 声明为 `"disabled"`。
-- 当后端需要拥有自己的启动环境或临时的认证/配置桥接时，请使用 `prepareExecution`。
-  其中的 `ctx.contextTokenBudget` 是本次运行所选定的有效 token 上限，因此支持原生压缩的后端
-  可以据此对齐自己的阈值，而不需要依赖 provider-specific 的核心分支。
-- 能够为特定运行禁用所有原生工具的后端，可以声明 `nativeToolMode: "selectable"`。
-  受限调用会传入一个空的 `ctx.toolAvailability.native` 元组，以及一份精确的、宿主隔离的 MCP 允许列表；
-  `resolveExecutionArgs` 必须在最终全新的或恢复的 argv 中同时强制执行这两者。
-  如果后端无法做到这一点，OpenClaw 会以失败关闭。
+- The backend `id` becomes the provider prefix in model refs like `my-cli/gpt-5`.
+- The backend `config` is the authoritative command adapter: argv, environment,
+  parser, session, image, and reliability behavior live in plugin code.
+- Users select the backend through model refs or model-scoped `agentRuntime.id`;
+  `openclaw.json` does not rewrite the adapter.
+- Use `normalizeConfig` when registered static fields need a runtime-aware
+  normalization pass.
+- Use `resolveExecutionArgs` for request-scoped argv rewrites that belong to
+  the CLI dialect, such as mapping OpenClaw thinking levels to a native effort
+  flag. The hook receives `ctx.executionMode`; use `"side-question"` to add
+  backend-native isolation flags for ephemeral `/btw` calls. If those flags
+  reliably disable native tools for an otherwise always-on CLI, declare
+  `sideQuestionToolMode: "disabled"` too.
+- Use `prepareExecution` for backend-owned launch environment or temporary
+  auth/config bridges. Its `ctx.contextTokenBudget` is the effective token
+  limit selected for the run, so native-compaction backends can align their
+  own threshold without provider-specific core branches. It also receives the
+  core-prepared `ctx.env` when backend staging must extend bundled MCP settings.
+- Backends that can disable all native tools for a specific run may declare
+  `nativeToolMode: "selectable"`. Restricted calls pass an exact
+  `ctx.toolAvailability.native` list plus canonical
+  `ctx.toolAvailability.openClaw` names. Declare
+  `toolAvailabilityEnforcement: "execution-args"` and enforce the contract in
+  final fresh/resume argv, or declare `"prepare-execution"`, enforce it in
+  staged policy, and return `toolAvailabilityEnforced: true`. OpenClaw disables
+  native tools for runtime caps such as cron `toolsAllow` and fails closed when
+  the declared enforcement path is incomplete.
 
 有关端到端编写指南，请参见
 [CLI backend plugins](/plugins/cli-backend-plugins)。
@@ -441,11 +546,8 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
 | 方法                                     | 注册内容                                                                                                                                                                                  |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api.registerContextEngine(id, factory)`   | 上下文引擎（一次仅可有一个处于活动状态）。当宿主能够提供模型/提供方/模式诊断时，生命周期回调会收到 `runtimeSettings`；旧的严格引擎会在没有该键的情况下重试。 |
-| `api.registerMemoryCapability(capability)` | 统一的内存能力                                                                                                                                                                          |
-| `api.registerMemoryPromptSection(builder)` | 内存提示词部分构建器                                                                                                                                                                      |
-| `api.registerMemoryFlushPlan(resolver)`    | 内存清空计划解析器                                                                                                                                                                         |
-| `api.registerMemoryRuntime(runtime)`       | 内存运行时适配器                                                                                                                                                                             |
+| `api.registerContextEngine(id, factory)`   | Context engine (one active at a time). Lifecycle callbacks receive `runtimeSettings` when the host can provide model/provider/mode diagnostics; older strict engines are retried without that key. |
+| `api.registerMemoryCapability(capability)` | Unified memory capability                                                                                                                                                                          |
 
 ### 已弃用的 memory embedding 适配器
 
@@ -453,18 +555,21 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 | ---------------------------------------------- | ---------------------------------------------- |
 | `api.registerMemoryEmbeddingProvider(adapter)` | 当前插件的内存嵌入适配器 |
 
-- `registerMemoryCapability` 是首选的独占内存插件 API。
-- `registerMemoryCapability` 还可以暴露 `publicArtifacts.listArtifacts(...)`
-  以便伴随插件通过 `openclaw/plugin-sdk/memory-host-core` 消费导出的内存工件，而无需深入某个特定内存插件的私有布局。
-- `registerMemoryPromptSection`、`registerMemoryFlushPlan` 和
-  `registerMemoryRuntime` 是与旧版兼容的独占内存插件 API。
-- `MemoryFlushPlan.model` 可以将清空回合固定为一个精确的 `provider/model`
-  引用，例如 `ollama/qwen3:8b`，而不会继承当前的回退链。
-- `registerMemoryEmbeddingProvider` 已弃用。新的 embedding 提供方
-  应使用 `api.registerEmbeddingProvider(...)` 和
-  `contracts.embeddingProviders`。
-- 现有的内存专用提供方在迁移窗口期间仍可继续工作，但插件检查会将其报告为
-  非捆绑插件的兼容性债务。
+- `registerMemoryCapability` is the exclusive memory-plugin API.
+- `registerMemoryCapability` may also expose `publicArtifacts.listArtifacts(...)`
+  for host-managed exports. Companion plugins that enumerate those declared
+  artifacts still use `listActiveMemoryPublicArtifacts(...)` from the retained
+  `openclaw/plugin-sdk/memory-host-core` facade until a focused public consumer
+  API exists; they must not reach into another plugin's private layout.
+- `MemoryFlushPlan.model` can pin the flush turn to an exact `provider/model`
+  reference, such as `ollama/qwen3:8b`, without inheriting the active fallback
+  chain.
+- `registerMemoryEmbeddingProvider` is deprecated. New embedding providers
+  should use `api.registerEmbeddingProvider(...)` and
+  `contracts.embeddingProviders`.
+- Existing memory-specific providers continue to work during the migration
+  window, but plugin inspection reports this as compatibility debt for
+  non-bundled plugins.
 
 ### 事件和生命周期
 

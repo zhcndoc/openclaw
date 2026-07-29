@@ -10,6 +10,10 @@ title: "医生"
 
 针对网关、通道、插件、技能、模型路由、本地状态和配置迁移的健康检查与快速修复。只要某些内容没有按预期运行，并且你希望通过一个命令来说明问题所在，就使用它。
 
+当 Gateway 状态报告 SecretRef 所有者降级时，doctor 会打印一个 **Secret 运行时降级** 警告，列出每个冷却或过期的所有者、受影响的配置路径、已脱敏的原因，以及 `openclaw secrets reload` 重试命令。
+
+当通道入口事件被投递到 dead-letter 时，doctor 会指出每个受影响的通道账户，并指向 [`openclaw channels dead-letters list`](/cli/channels#inbound-dead-letters) 以便检查和恢复。
+
 相关：
 
 - 故障排查: [疑难解答](/gateway/troubleshooting)
@@ -176,7 +180,7 @@ repair?(ctx, findings) -> HealthRepairResult
 
 现代化的 core doctor 检查仍然附着在有序的 doctor contribution 上，由其负责对应的人类可见 `doctor` / `doctor --fix` 行为。共享的结构化健康注册表是扩展点：捆绑和插件支持的检查会在其所属包在当前命令路径中注册后，排在 core doctor 检查之后运行。`openclaw/plugin-sdk/health` 为插件作者暴露了相同的契约。
 
-## Check Selection
+## 检查选择
 
 ```bash
 openclaw doctor --lint --only core/doctor/gateway-config --json
@@ -184,7 +188,7 @@ openclaw doctor --lint --skip core/doctor/skills-readiness
 openclaw doctor --lint --all --skip core/doctor/session-locks
 ```
 
-`--only` and `--skip` accept full check IDs and can be used multiple times. If a `--only` ID is not registered, that ID will not run any checks; use `checksRun`/`checksSkipped` in the output to confirm that your targeted gate selected the checks you expected.
+`--only` 和 `--skip` 接受完整的检查 ID，并且可以多次使用。如果 `--only` 中的某个 ID 未注册，那么该 ID 将不会运行任何检查；请使用输出中的 `checksRun`/`checksSkipped` 来确认你所针对的门禁是否选择了你期望的检查。
 
 ## 升级后模式
 
@@ -192,17 +196,17 @@ openclaw doctor --lint --all --skip core/doctor/session-locks
 
 容器镜像启动是常规“更新后运行 doctor”流程的例外。当 `openclaw gateway run` 在新的 OpenClaw 版本上启动时，它会在报告就绪之前运行安全的状态和插件修复。如果修复无法安全完成，启动将退出，并提示你先使用 `openclaw doctor --fix` 针对相同挂载的 state/config 在同一镜像上运行一次，然后再正常重启容器。
 
+## 旧版状态迁移
+
+`openclaw doctor --fix` 是持久化文件到 SQLite 迁移的唯一负责者。它会验证并接管每个已识别的源，写入并校验规范化行，记录迁移回执，然后移除已退役的源。运行时代码不会执行惰性导入或回退读取。
+
+这包括 `<state-dir>/mcp-oauth/*.json` 下已退役的 MCP OAuth 文件。修复前请停止 Gateway。Doctor 会将有效凭证导入到 `<state-dir>/state/openclaw.sqlite`，在两个存储都存在时保留现有的规范 SQLite 会话，删除已废弃的持久化 OAuth `state` 值，并使用其回执防止重新创建的过期文件复活已注销的凭证。已退役的 `.lock` 旁车文件会安全失败关闭：如果 Doctor 报告存在过期所有者，请确认没有更旧的 OpenClaw 进程在运行，移除该旁车文件，然后重新运行 Doctor。
+
 ## 共享状态 SQLite 压缩
 
-`openclaw doctor --state-sqlite compact` 是针对位于
-`<state-dir>/state/openclaw.sqlite` 的规范共享状态数据库的显式离线维护操作。它不接受任意数据库
-路径，不会在正常的 Gateway 运行期间被调用，也不是
-`openclaw doctor --fix` 的一部分。该命令获取与
-Gateway 启动相同的状态所有权锁，并在验证、checkpoint、`VACUUM` 以及
-最终完整性检查期间一直持有该锁。当该锁已被 Gateway 或其他
-SQLite 维护命令占用时，它会拒绝运行。即使 `OPENCLAW_ALLOW_MULTI_GATEWAY=1`
-跳过了按配置的 Gateway 单例，状态锁仍然保持有效，因此操作员 shell
-不需要继承 Gateway 服务的环境变量，维护操作也能检测到它。
+请参阅 [数据库模式](/reference/database-schemas) 以了解 schema 版本控制、完整性检查和降级恢复。
+
+`openclaw doctor --state-sqlite compact` 是针对规范共享状态数据库 `<state-dir>/state/openclaw.sqlite` 的显式离线维护。它不接受任意数据库路径，正常 Gateway 运行不会调用它，也不属于 `openclaw doctor --fix` 的一部分。该命令会获取与 Gateway 启动相同的状态所有权锁，并在验证、checkpoint、`VACUUM` 和最终完整性检查期间一直持有该锁。只要 Gateway 或另一个 SQLite 维护命令拥有该锁，它就会拒绝运行。即使 `OPENCLAW_ALLOW_MULTI_GATEWAY=1` 跳过了按配置划分的 Gateway 单例，状态锁仍然保持有效，因此运维 shell 不需要继承 Gateway 服务的环境变量也能检测到它。
 
 请先停止 Gateway 并创建已验证的备份：
 
@@ -215,34 +219,25 @@ openclaw gateway start
 
 该命令：
 
-1. 要求在规范的共享状态路径上存在一个普通文件。缺失的
-   数据库会被报告为 `skipped` 并成功退出。
-2. 在 checkpoint 或修改文件之前，验证当前受支持的 schema 版本以及
-   `schema_meta.role = "global"`。
-3. 要求非忙碌状态下的 `wal_checkpoint(TRUNCATE)`。如果 checkpoint 忙碌，
-   请停止任何仍在运行的 OpenClaw 进程后重试。
-4. 将 `auto_vacuum` 设为 `INCREMENTAL`，执行完整的 `VACUUM`，然后再次
-   checkpoint。
-5. 运行 `quick_check`、`integrity_check` 和 `foreign_key_check`，然后重新应用仅所有者可访问的数据库
-   及 SQLite sidecar 文件权限。
+1. 要求在规范的共享状态路径上存在一个普通文件。缺失的数据库会被报告为 `skipped` 并成功退出。
+2. 在 checkpoint 或修改文件之前，验证当前受支持的 schema 版本以及 `schema_meta.role = "global"`。
+3. 要求非忙碌状态下的 `wal_checkpoint(TRUNCATE)`。如果 checkpoint 忙碌，请停止任何仍在运行的 OpenClaw 进程后重试。
+4. 将 `auto_vacuum` 设为 `INCREMENTAL`，执行完整的 `VACUUM`，然后再次 checkpoint。
+5. 运行 `quick_check`、`integrity_check` 和 `foreign_key_check`，然后重新应用仅所有者可访问的数据库及 SQLite sidecar 文件权限。
 
-JSON 输出会在压缩前后报告数据库和 WAL 大小、freelist 页数、页大小，以及
-`auto_vacuum` 值，并给出回收的字节数以及
-`quick_check` 和 `integrity_check` 的结果。`foreign_key_check` 采用
-失败即关闭（fail-closed）的方式强制执行，没有单独的成功字段。SQLite 将 `auto_vacuum`
-报告为 `0` 表示 none，`1` 表示 full，`2` 表示 incremental。
+JSON 输出会在压缩前后报告数据库和 WAL 大小、freelist 页数、页大小，以及 `auto_vacuum` 值，并给出回收的字节数以及 `quick_check` 和 `integrity_check` 的结果。`foreign_key_check` 采用失败即关闭（fail-closed）的方式强制执行，没有单独的成功字段。SQLite 将 `auto_vacuum` 报告为 `0` 表示 none，`1` 表示 full，`2` 表示 incremental。
 
-如果 schema 过旧、比当前运行的 OpenClaw 构建更新，或者属于 agent 数据库，
-压缩都会在不发生修改的情况下失败。对于较旧的共享状态 schema，请先运行
-`openclaw doctor --fix`。对于较新的 schema，请恢复兼容的备份或升级 OpenClaw。
+如果 schema 过旧、比当前运行的 OpenClaw 构建更新，或者属于 agent 数据库，压缩都会在不发生修改的情况下失败。对于较旧的共享状态 schema，请先运行 `openclaw doctor --fix`。对于较新的 schema，请恢复兼容的备份或升级 OpenClaw。
 
 ## Session SQLite 迁移
 
 OpenClaw 会在网关启动期间以及运行 `openclaw doctor --fix` 期间，自动将旧版会话行和转录历史导入到每个代理的 SQLite 数据库中。`openclaw doctor --session-sqlite <mode>` 是用于该迁移的定向检查和验证工具。当前运行时会话行位于 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`。旧版 `sessions.json` 文件是迁移源。热转录 JSONL 文件在成功导入后会从活动会话目录中导入并归档；归档层 JSONL 文件仍然是支持性工件，不是运行时回退来源。
 
+常规的 `openclaw doctor` 检查还会报告那些其初始会话头从未持久化的标准 SQLite 转录。`openclaw doctor --fix` 会在一个事务中添加当前头并重建转录索引，同时保留现有事件 ID、父链接、行时间戳和会话列表的最近性。没有头的旧版或格式错误的转录会继续被拒绝，直到其所属迁移能够验证它们为止。
+
 模式：
 
-| Mode       | Behavior                                                                                                               |
+| 模式       | 行为                                                                                                               |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `inspect`  | 读取旧版和 SQLite 计数，以及未引用的 JSONL 文件，但不执行导入。                                                       |
 | `dry-run`  | 解析旧版条目和转录 JSONL 文件，统计可导入的行，并报告问题，但不向 SQLite 写入任何行。                                 |
@@ -298,38 +293,41 @@ openclaw doctor --session-sqlite restore --session-sqlite-all-agents
 
 ## 说明
 
-- 在 Nix 模式（`OPENCLAW_NIX_MODE=1`）下，只读的 doctor 检查仍然可用，但 `doctor --fix`、`doctor --repair`、`doctor --yes` 和 `doctor --generate-gateway-token` 会被禁用，因为 `openclaw.json` 是不可变的。请改为编辑此安装对应的 Nix 源；对于 nix-openclaw，请使用 agent-first 的[快速开始](https://github.com/openclaw/nix-openclaw#quick-start)。
+- 在 Nix 模式（`OPENCLAW_NIX_MODE=1`）下，只读的 doctor 检查仍然可用，但 `doctor --fix`、`doctor --repair`、`doctor --yes` 和 `doctor --generate-gateway-token` 会被禁用，因为 `openclaw.json` 是不可变的。请改为编辑此次安装对应的 Nix 源；对于 nix-openclaw，请使用 agent-first 的 [快速开始](https://github.com/openclaw/nix-openclaw#quick-start)。
 - 交互式提示（keychain/OAuth 修复等）仅在 stdin 是 TTY 且未设置 `--non-interactive` 时运行。无头运行（cron、Telegram、无终端）会跳过提示。
-- 非交互式的 `doctor` 运行会跳过急切的插件加载，因此无头健康检查会保持快速。交互式会话仍会加载遗留健康/修复流程所需的插件表面。
-- `--lint` 比 `--non-interactive` 更严格：始终只读，绝不提示，绝不应用安全迁移。当你希望 doctor 进行更改时，请使用 `doctor --fix` 或 `doctor --repair`。
-- Doctor 在检查 secrets 时默认不会执行 `exec` SecretRefs。仅当你有意让 doctor 运行这些已配置的 secret resolver 时，才使用 `--allow-exec`（可与 `--lint` 一起或单独使用）。
-- 任何配置写入（包括 `--fix` 修复）都会将备份轮转到 `~/.openclaw/openclaw.json.bak`（带编号的 `.bak.1`..`.bak.4` 环形备份）。`--fix` 还会删除 schema 校验报告的未知配置键，并逐项列出移除内容；在更新进行中时会跳过这一步，以免在迁移尚未完成前清除部分写入的升级状态。
-- 当另一个 supervisor 管理 gateway 生命周期时，请设置 `OPENCLAW_SERVICE_REPAIR_POLICY=external`。Doctor 仍会报告 gateway/service 健康状况并应用非服务类修复，但会跳过 service 的 install/start/restart/bootstrap 以及遗留服务清理。
-- 在 Linux 上，doctor 会忽略不活动的额外 gateway-like systemd 单元，并且在修复期间不会为正在运行的 systemd gateway 服务重写 command/entrypoint 元数据。请先停止该服务，或者使用 `openclaw gateway install --force` 替换当前启动器。
-- `doctor --fix --non-interactive` 会报告缺失或过时的 gateway 服务定义，但不会在更新修复模式之外安装或重写它们。缺少服务时运行 `openclaw gateway install`，或使用 `openclaw gateway install --force` 替换启动器。
-- 状态完整性检查会检测 sessions 目录中的孤立 transcript 文件。将它们归档为 `.deleted.<timestamp>` 需要交互式确认；`--fix`、`--yes` 和无头运行会让它们保持原样。
-- Doctor 会扫描 `~/.openclaw/cron/jobs.json`（或 `cron.store`）中的遗留 cron 任务结构，并在将规范化的行导入 SQLite 之前重写它们。
-- Doctor 会报告带有显式 `payload.model` 覆盖的 cron 任务，包括 provider-namespace 计数以及与 `agents.defaults.model` 的不匹配，因此在进行认证或计费调查时，可以看到没有继承默认模型的计划任务。
-- Doctor 会报告仍被标记为进行中（`state.runningAtMs`）的 cron 任务，这会使 `openclaw cron list` 将它们显示为 `running`。此检查是只读的：如果当前没有 Gateway 在执行某个已标记任务，下一次 cron 服务启动时会记录这次中断运行并清除标记。
-- 在 Linux 上，doctor 会在用户的 crontab 仍运行未维护的遗留 `~/.openclaw/bin/ensure-whatsapp.sh` 时发出警告；当 cron 缺少 systemd user-bus 环境时，它可能会误报 `Gateway inactive`。
-- 当启用 WhatsApp 时，doctor 会检查是否存在退化的 Gateway 事件循环，同时本地 `openclaw-tui` 客户端仍在运行。`doctor --fix` 只会停止经过验证的本地 TUI 客户端，这样 WhatsApp 回复就不会排在过时的 TUI 刷新循环后面。
-- Doctor 会将遗留的 `openai-codex/*` 模型引用重写为规范的 `openai/*` 引用，覆盖主模型、fallback、图像/视频生成模型、heartbeat/subagent/compaction 覆盖、hooks、channel 模型覆盖以及过时的 session route pin。`--fix` 还会迁移遗留的 `openai-codex:*` 认证配置和 `auth.order.openai-codex` 条目到 `openai:*`，把 Codex 意图迁移到 provider/model 作用域的 `agentRuntime.id: "codex"` 条目，移除过时的整 agent/session runtime pin，并让修复后的 OpenAI agent 引用保留在 Codex 认证路由上，而不是直接使用 OpenAI API key 认证。
-- Doctor 会报告非空的 `auth.order.<provider>` 列表：这些列表所引用的配置文件都已消失，但仍存在兼容的已存储凭据。`doctor --fix` 只会删除这些过时覆盖项，从而恢复按 agent 自动选择凭据；显式的空顺序、部分有效列表，以及没有兼容已存储凭据的顺序都保持不变。如果活跃的 SQLite auth 存储不可读或格式错误，doctor 会解释为何跳过此修复。如果运行中的 Gateway 的配置重载模式不会自动应用写入，请在重新检查 auth 状态前重启该 Gateway。
-- Doctor 会清理旧 OpenClaw 版本遗留的插件依赖 staging 状态，并为声明它为 peer dependency 的托管 npm 插件重新链接宿主 `openclaw` 包。它还会修复配置中引用的缺失可下载插件（`plugins.entries`、已配置的 channels、已配置的 provider/search 设置、已配置的 agent runtimes）。在包更新期间，doctor 会在包切换完成前跳过 package-manager 插件修复；如果某个已配置插件之后仍需要恢复，请重新运行 `openclaw doctor --fix`。如果下载失败，doctor 会报告安装错误，并保留已配置的插件条目以便下次修复重试。
-- 当插件发现正常时，Doctor 会通过从 `plugins.allow`/`plugins.deny`/`plugins.entries` 中移除缺失的插件 id，以及匹配的悬挂 channel 配置、heartbeat targets 和 channel model 覆盖，来修复过时的插件配置。
-- Doctor 会通过禁用受影响的 `plugins.entries.<id>` 条目并移除其无效的 `config` 负载，来隔离无效的插件配置。Gateway 启动时本就只会跳过这个有问题的插件，因此其他插件和 channels 仍会继续运行。
-- Doctor 会移除已退役的 `plugins.entries.codex.config.codexDynamicToolsProfile`；Codex app-server 始终会将 Codex 原生 workspace tools 保持为原生。
-- Doctor 会自动迁移遗留的扁平 Talk 配置（`talk.voiceId`、`talk.modelId` 等）到 `talk.provider` + `talk.providers.<provider>`。重复运行 `doctor --fix` 时，如果唯一差异只是对象键顺序，便不再报告/应用 Talk 规范化。
-- Doctor 包含 memory-search 就绪检查，并且在缺少 embedding 凭据时可建议运行 `openclaw configure --section model`。
-- 当未配置命令所有者时，Doctor 会发出警告。命令所有者是被允许运行仅限 owner 命令并批准危险操作的人类操作者账号。DM 配对只允许有人与机器人对话；如果你在首次 owner bootstrap 之前已经批准过某个发送者，请显式设置 `commands.ownerAllowFrom`。
-- 当配置了 Codex-mode agents 且操作者的 Codex home 中存在个人 Codex CLI 资产时，Doctor 会报告一条信息提示。本地 Codex app-server 启动会使用按 agent 隔离的 home；如有需要，先安装 Codex 插件，然后使用 `openclaw migrate plan codex` 来清点应当有意识地提升的资产。
-- 当默认 agent 允许的 skills 在当前运行环境中不可用（缺少二进制、环境变量、配置或操作系统要求）时，Doctor 会发出警告。`doctor --fix` 可以通过设置 `skills.entries.<skill>.enabled=false` 来禁用这些不可用的 skills；如果你想保留该 skill 为启用状态，则应安装/配置缺失的要求。
-- 如果启用了 sandbox 模式但 Docker 不可用，doctor 会报告高信号警告并给出修复建议（`install Docker` 或 `openclaw config set agents.defaults.sandbox.mode off`）。
-- 如果存在遗留的 sandbox 注册表文件或分片目录（`~/.openclaw/sandbox/containers.json`、`~/.openclaw/sandbox/browsers.json`、`~/.openclaw/sandbox/containers/` 或 `~/.openclaw/sandbox/browsers/`），doctor 会报告它们；`--fix` 会把有效条目迁移到 SQLite，并隔离无效的遗留文件。
-- 如果 `gateway.auth.token`/`gateway.auth.password` 由 SecretRef 管理且在当前命令路径中不可用，doctor 会报告只读警告，并且不会写入明文备用凭据。对于基于 exec 的 SecretRef，除非存在 `--allow-exec`，否则 doctor 会跳过执行。
-- 如果在修复路径中 channel SecretRef 检查失败，doctor 会继续执行并报告警告，而不是提前退出。
-- 在状态目录迁移之后，如果启用的默认 Telegram 或 Discord 账号依赖 env fallback，而 `TELEGRAM_BOT_TOKEN` 或 `DISCORD_BOT_TOKEN` 对 doctor 进程不可用，doctor 会发出警告。
-- Telegram 的 `allowFrom` 用户名自动解析（`doctor --fix`）要求当前命令路径中存在可解析的 Telegram token。如果无法检查 token，doctor 会报告警告并在该次运行中跳过自动解析。
+- 非交互式的 `doctor` 运行会跳过急切的插件加载，以便无头健康检查保持快速。交互式会话仍会加载旧版健康/修复流程所需的插件表面。
+- `--lint` 比 `--non-interactive` 更严格：始终只读，绝不提示，也绝不应用安全迁移。当你希望 doctor 做出更改时，请使用 `doctor --fix` 或 `doctor --repair`。
+- doctor 在检查密钥时默认不会执行 `exec` SecretRef。只有在你明确希望 doctor 运行这些已配置的密钥解析器时，才使用 `--allow-exec`（可与 `--lint` 一起或单独使用）。
+- 任何配置写入（包括 `--fix` 修复）都会将备份轮转到 `~/.openclaw/openclaw.json.bak`（带编号的 `.bak.1`..`.bak.4` 环形备份）。`--fix` 还会删除架构验证报告的未知配置键，并逐项列出移除内容；在更新进行中它会跳过这一步，以免在迁移尚未完成前删掉部分写入的升级状态。
+- 如果 `openclaw.json` 无法解析，且无法恢复最后一个已知良好配置，`doctor --fix` 会将原文件保留为 `openclaw.json.clobbered.<timestamp>`，保持当前文件不变，并以错误退出，而不是写入一个不完整的替代文件。
+- 当由其他管理器负责 gateway 生命周期时，设置 `OPENCLAW_SERVICE_REPAIR_POLICY=external`。doctor 仍会报告 gateway/服务健康状况并应用非服务类修复，但会跳过服务安装/启动/重启/bootstrap 以及旧版服务清理。
+- Doctor 会报告受管理的 Gateway 已应用的堆限制，以及用于当前主机或容器内存限制的自适应推导值。若要在修复流程之外获取同样的报告，请使用 `openclaw gateway status`。
+- 在 Linux 上，doctor 在修复期间会忽略未激活的额外 gateway 类 systemd 单元，并且不会为正在运行的 systemd gateway 服务重写命令/入口点元数据。请先停止该服务，或使用 `openclaw gateway install --force` 替换当前启动器。
+- `doctor --fix --non-interactive` 会报告缺失或过期的 gateway 服务定义，但不会在更新修复模式之外安装或重写它们。若要为缺失服务运行安装，请执行 `openclaw gateway install`；若要替换启动器，请执行 `openclaw gateway install --force`。
+- 状态完整性检查会检测 sessions 目录中的孤立 transcript 文件。将它们归档为 `.deleted.<timestamp>` 需要交互式确认；`--fix`、`--yes` 和无头运行会让它们保留原位。
+- Doctor 会扫描 `~/.openclaw/cron/jobs.json`（或 `cron.store`）中的旧版 cron 作业结构，并在将规范化行导入 SQLite 之前重写它们。
+- Doctor 会报告带有显式 `payload.model` 覆盖的 cron 作业，包括提供商命名空间计数以及与 `agents.defaults.model` 的不匹配情况，因此在进行认证或计费排查时，那些不继承默认模型的定时作业也能被看见。
+- Doctor 会报告仍被标记为执行中的 cron 作业（`state.runningAtMs`），这可能会让 `openclaw cron list` 将其显示为 `running`。此检查是只读的：如果当前没有 Gateway 在执行被标记的作业，下一次 cron 服务启动会记录这次中断运行并清除该标记。
+- 在 Linux 上，当用户的 crontab 仍在运行未维护的旧版 `~/.openclaw/bin/ensure-whatsapp.sh` 时，doctor 会发出警告；在 cron 缺少 systemd user-bus 环境时，这可能会误报 `Gateway inactive`。
+- 当启用 WhatsApp 时，doctor 会检查是否存在降级的 Gateway 事件循环，同时本地 `openclaw-tui` 客户端仍在运行。`doctor --fix` 只会停止已验证的本地 TUI 客户端，以免 WhatsApp 回复排在过时的 TUI 刷新循环之后。
+- 当存在 HTTP(S) 代理环境变量但 `tools.web.fetch.useTrustedEnvProxy` 被禁用时，doctor 会解释 `web_fetch` 仍然使用直连路由，运行一个简短的直连 TLS 连通性探测，并指出显式的启用方式。它绝不会自动启用代理信任。
+- Doctor 会将旧版 `codex/*` 和 `openai-codex/*` 模型引用重写为规范的 `openai/*` 引用，覆盖主模型、fallback、模型允许列表、图像/视频生成模型、heartbeat/subagent/compaction 覆盖、hooks、channel 模型覆盖、cron 载荷以及过期的 session/transcript 路由固定项。`--fix` 还会在安全的情况下合并旧版 `models.providers.codex` 和 `models.providers.openai-codex` 配置，迁移旧版 `openai-codex:*` 认证配置文件和 `auth.order.openai-codex` 条目到 `openai:*`，将 Codex 意图迁移到按 provider/model 作用域的 `agentRuntime.id: "codex"` 条目，移除过期的整 agent/session runtime 固定项，并让修复后的 OpenAI agent 引用继续走 Codex 认证路由，而不是直接使用 OpenAI API key 认证。
+- Doctor 会报告非空的 `auth.order.<provider>` 列表：这些列表引用的配置文件都已不存在，但仍有兼容的已存储凭据可用。`doctor --fix` 只会删除这些过时覆盖项，从而恢复按 agent 自动选择凭据；显式的空顺序、部分仍有效的列表，以及没有兼容已存储凭据的顺序都会保持不变。如果活动的 SQLite auth 存储不可读或格式错误，doctor 会解释为何跳过此修复。如果运行中的 Gateway 的配置重载模式不会自动应用写入，请在重新检查认证状态前重启它。
+- Doctor 会清理旧版 OpenClaw 版本遗留的插件依赖暂存状态，并为声明其为 peer dependency 的受管理 npm 插件重新链接主机 `openclaw` 包。它还会修复由配置引用但缺失的可下载插件（`plugins.entries`、已配置的渠道、已配置的 provider/search 设置、已配置的 agent runtimes）。在包更新期间，doctor 会在包切换完成前跳过包管理器插件修复；如果某个已配置插件之后仍需要恢复，请重新运行 `openclaw doctor --fix`。如果下载失败，doctor 会报告安装错误，并保留已配置的插件条目，以便下次修复尝试。
+- 当插件发现正常时，Doctor 会通过从 `plugins.allow`/`plugins.deny`/`plugins.entries` 中移除缺失的插件 id，并清理匹配的悬空 channel 配置、heartbeat 目标和 channel 模型覆盖，来修复过时的插件配置。
+- Doctor 会通过禁用受影响的 `plugins.entries.<id>` 条目并移除其无效的 `config` 载荷来隔离无效插件配置。Gateway 启动时本来就只会跳过那个坏插件，因此其他插件和 channel 仍会继续运行。
+- Doctor 会移除已退役的 `plugins.entries.codex.config.codexDynamicToolsProfile`；Codex 应用服务器始终会将 Codex 原生的工作区工具保持为原生。
+- Doctor 会自动迁移旧版扁平 Talk 配置（`talk.voiceId`、`talk.modelId` 等）到 `talk.provider` + `talk.providers.<provider>`。重复运行 `doctor --fix` 时，如果唯一差异只是对象键顺序，则不再报告/应用 Talk 规范化。
+- Doctor 包含内存搜索就绪性检查，并且在缺少 embedding 凭据时可以建议使用 `openclaw configure --section model`。
+- 当未配置命令所有者时，Doctor 会发出警告。命令所有者是允许运行仅限所有者的命令并批准危险操作的人类操作员账户。DM 配对只会让某人与机器人对话；如果你在首次 owner 引导存在之前就已批准过某个发送者，请显式设置 `commands.ownerAllowFrom`。
+- 当配置了 Codex 模式的 agents，且操作员的 Codex 主目录中存在个人 Codex CLI 资产时，Doctor 会报告一条信息提示。本地 Codex 应用服务器启动使用的是按 agent 隔离的主目录；如有需要，请先安装 Codex 插件，然后使用 `openclaw migrate plan codex` 清点应当有意提升的资产。
+- 当允许给默认 agent 使用的 skills 在当前运行环境中不可用（缺少 bin、环境变量、配置或操作系统要求）时，Doctor 会发出警告。`doctor --fix` 可以通过 `skills.entries.<skill>.enabled=false` 禁用这些不可用的 skills；如果你希望保持该 skill 处于启用状态，则应改为安装/配置缺失的依赖。
+- 如果已启用 sandbox 模式但 Docker 不可用，doctor 会报告高信号警告，并给出修复建议（`install Docker` 或 `openclaw config set agents.defaults.sandbox.mode off`）。
+- 如果存在旧版 sandbox 注册文件或分片目录（`~/.openclaw/sandbox/containers.json`、`~/.openclaw/sandbox/browsers.json`、`~/.openclaw/sandbox/containers/` 或 `~/.openclaw/sandbox/browsers/`），doctor 会将其报告出来；`--fix` 会把有效条目迁移到 SQLite，并隔离无效的旧版文件。
+- 如果 `gateway.auth.token`/`gateway.auth.password` 由 SecretRef 管理且在当前命令路径中不可用，doctor 会报告只读警告，并且不会写入明文回退凭据。对于由 exec 支持的 SecretRef，除非存在 `--allow-exec`，否则 doctor 会跳过执行。
+- 如果在修复路径中渠道 SecretRef 检查失败，doctor 会继续执行并报告警告，而不是提前退出。
+- 在状态目录迁移之后，如果启用的默认 Telegram 或 Discord 账户依赖环境变量回退，而 `TELEGRAM_BOT_TOKEN` 或 `DISCORD_BOT_TOKEN` 对 doctor 进程不可用，doctor 会发出警告。
+- Telegram 的 `allowFrom` 用户名自动解析（`doctor --fix`）要求当前命令路径中存在可解析的 Telegram token。如果无法进行 token 检查，doctor 会报告警告并在该次运行中跳过自动解析。
 
 ## macOS：`launchctl` 环境变量覆盖
 

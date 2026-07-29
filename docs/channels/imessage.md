@@ -265,9 +265,9 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
   <Tab title="DM 策略">
     `channels.imessage.dmPolicy` 控制私信：
 
-    - `pairing` (default)
-    - `allowlist` (requires at least one `allowFrom` entry)
-    - `open` (requires `allowFrom` to include `"*"`)
+    - `pairing` (默认)
+    - `allowlist`（至少需要一个 `allowFrom` 条目）
+    - `open`（要求 `allowFrom` 包含 `"*"`)
     - `disabled`
 
     允许列表字段：`channels.imessage.allowFrom`。
@@ -279,7 +279,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
   <Tab title="群组策略 + 提及">
     `channels.imessage.groupPolicy` 控制群组处理：
 
-    - `allowlist` (default)
+    - `allowlist` (默认)
     - `open`
     - `disabled`
 
@@ -323,8 +323,8 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
     群组提及门控：
 
     - iMessage 没有原生提及元数据
-    - 提及检测使用正则表达式模式（`agents.list[].groupChat.mentionPatterns`，回退为 `messages.groupChat.mentionPatterns`）
-    - 如果没有配置模式，则无法执行提及门控
+    - 提及检测使用正则表达式模式（`agents.entries.*.groupChat.mentionPatterns`，回退到 `messages.groupChat.mentionPatterns`）
+    - 如果未配置模式，则无法强制执行提及门控
     - 来自授权发送者的控制命令会绕过提及门控
 
     每组 `systemPrompt`：
@@ -583,8 +583,8 @@ iMessage 聊天可以绑定到 ACP 会话。
 
   </Accordion>
 
-  <Accordion title="消息 ID">
-    入站 iMessage 上下文在可用时同时包含简短的 `MessageSid` 值和完整的消息 GUID（`MessageSidFull`）。简短 ID 仅作用于最近的、基于 SQLite 的回复缓存，并且在使用前会先与当前聊天进行校验。如果简短 ID 已过期或属于其他聊天，请改用完整的 `MessageSidFull` 重试。
+  <Accordion title="Message IDs">
+    入站 iMessage 上下文在可用时同时包含简短的 `MessageSid` 值和完整消息 GUID（`MessageSidFull`）。简短 ID 仅适用于最近的基于 SQLite 的回复缓存，并会在使用前与当前聊天进行检查。如果简短 ID 过期，请在定位到提供该 ID 的对话后改用其 `MessageSidFull` 重试。完整 ID 不能绕过对话或账号绑定，因此如果 ID 来自其他聊天，请用当前目标聊天中的 ID 替换它。当当前对话证据不可用时，远程委派调用可能会拒绝过期的完整 ID。
 
   </Accordion>
 
@@ -623,22 +623,31 @@ iMessage 聊天可以绑定到 ACP 会话。
 
   </Accordion>
 
-  <Accordion title="审批反应（👍 / 👎）">
-    当 `approvals.exec.enabled` 或 `approvals.plugin.enabled` 为 true 且请求路由到 iMessage 时，网关会原生投递批准请求并接受 tapback 来解决它：
+  <Accordion title="批准投票和反应">
+    当 `approvals.exec.enabled` 或 `approvals.plugin.enabled` 为 true 且请求原生路由到 iMessage 时，网关会提供带原生控件的批准提示：
 
-    - `👍`（Like tapback）→ `allow-once`
-    - `👎`（Dislike tapback）→ `deny`
-    - `allow-always` 仍然是手动回退方式：作为普通回复发送 `/approve <id> allow-always`。
+    - 在经过探测、且支持投票和隐藏说明的私有 API 桥接上，提示会包含一个 Messages 投票，每个允许的决策各占一项。缺少 `poll send --no-comment` 的旧版 `imsg` 仍会使用文本控件。
+    - 如果通过 `channels.imessage.actions.polls: false` 禁用了投票、桥接不支持投票、发送投票失败，或者可用决策少于两个，则提示会保留文本和 tapback 控件。
+    - 文本回退会将 `👍`（Like）映射为 `allow-once`，将 `👎`（Dislike）映射为 `deny`。它还包含 `/approve <id> <decision>` 命令，在请求允许时也包括 `allow-always`。
 
-    反应处理要求作出反应的用户句柄必须是显式批准者。批准者列表从 `channels.imessage.allowFrom`（或 `channels.imessage.accounts.<id>.allowFrom`）读取；将用户的 E.164 格式电话号码或其 Apple ID 邮箱加入其中即可（如 `chat_id:*` 这样的聊天目标不是有效的批准者条目）。通配条目 `"*"` 会被接受，但会允许任何发送者批准；空批准者列表会完全禁用该反应快捷方式。该反应快捷方式刻意绕过 `reactionNotifications`、`dmPolicy` 和 `groupAllowFrom`，因为显式批准者白名单才是审批解析真正需要的唯一门槛。
+    投票和反应要求执行操作的用户句柄必须是显式批准者。批准者列表从 `channels.imessage.allowFrom`（或 `channels.imessage.accounts.<id>.allowFrom`）读取；请添加用户的 E.164 格式电话号码或其 Apple ID 邮箱（如 `chat_id:*` 这类聊天目标不是有效的批准者条目）。通配符条目 `"*"` 会被接受，但会允许任何发送者批准；空的批准者列表会完全禁用投票和反应快捷方式。这些快捷方式会有意绕过 `reactionNotifications`、`dmPolicy` 和 `groupAllowFrom`，因为显式批准者白名单才是批准解析时真正重要的唯一门槛。
+
+    目前，原生投票控件仅限于来源 iMessage 会话中的通道原生投递，或 iMessage 批准者 DM。由 `approvals.exec.mode: "targets"` 选定的显式转发目标（以及 `"both"` 的目标部分）仍然会使用现有的转发批准消息，而不是 iMessage 投票。
 
     `/approve` 文本命令的授权遵循相同列表：当 `channels.imessage.allowFrom` 非空时，`/approve <id> <decision>` 会依据该批准者列表进行授权（而不是更宽泛的 DM 白名单），而只在 DM 白名单中获准、但不在 `allowFrom` 中的发送者会收到明确拒绝。当 `allowFrom` 为空时，仍保持同聊天回退机制，`/approve` 会授权 DM 白名单允许的任何人。请把所有应当批准的操作员——无论是通过 `/approve` 还是通过反应——都加入 `allowFrom`。
 
-    操作员说明：
-    - 反应绑定同时存储在内存和网关的持久化键值存储中（TTL 与审批过期时间一致），网关还会轮询待处理提示是否有 tapback，因此在网关重启后不久到达的 tapback 仍可解析为审批结果。
-    - 操作员自身的 `is_from_me=true` tapback（例如来自已配对的 Apple 设备）在该句柄是显式批准者时会解析该审批。
-    - 只有在配置了显式批准者时，审批提示才会路由到群聊；否则群组中的任何成员都可能批准。
-    - 旧式文本风格 tapback（来自非常旧的 Apple 客户端的纯文本 `Liked "…"`）无法解析审批，因为它们不携带消息 GUID；反应解析需要当前 macOS / iOS 客户端输出的结构化 tapback 元数据。
+    操作员注意：
+    - 投票和反应绑定同时存储在内存中和网关的持久键值存储中（TTL 与批准到期时间一致），网关还会轮询待处理提示以查找 tapback。网关重启后，对旧控件的点击会被识别并吞掉，而不会进入代理聊天，但重启会终止进行中的命令；应请求新的批准，而不要指望旧控件恢复它。
+    - 当该句柄是显式批准者时，操作员自己的 `is_from_me=true` tapback（例如来自配对的 Apple 设备）会解析批准。
+    - 只有在配置了显式批准者时，批准提示才会路由到群组对话；否则群组中的任何成员都可能批准。
+    - 旧式文本样式 tapback（来自非常旧 Apple 客户端的纯文本 `Liked "…"`）无法解析批准，因为它们不携带消息 GUID；反应解析需要当前 macOS / iOS 客户端发出的结构化 tapback 元数据。
+
+  </Accordion>
+
+  <Accordion title="问题反应（1️⃣ / 2️⃣ / 3️⃣ / 4️⃣）">
+    对于一个包含一个非秘密、单选问题以及一到四个选项的 `ask_user` 提示，OpenClaw 会添加带编号的 emoji 选项。对送达的提示使用匹配的数字作出反应即可回答。该反应必须携带机器人所发消息的稳定 GUID；随后 OpenClaw 会通过网关将该数字映射为规范选项。过期或重复的点击会被忽略。
+
+    多问题、多选和自由文本提示仍然只支持文本回复。问题反应遵循正常的 iMessage DM/群组准入规则。即使通用的 `reactionNotifications` 为 `"off"`，它们仍会被识别，但不会把无关反应变成代理事件。
 
   </Accordion>
 </AccordionGroup>
@@ -663,89 +672,23 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
 
 ## 合并拆分发送的 DM（命令 + URL 在同一条输入中）
 
-当用户把命令和 URL 一起输入时——例如 `Dump https://example.com/article`——Apple 的 Messages 应用会把发送拆分成**两条独立的 `chat.db` 记录**：
+Apple 可以将一个命令及其 URL 预览存储为两条独立的物理 `chat.db` 记录。`imsg` 0.13.1 及更新版本会在 watch、history 或 search 返回消息之前将这些记录合并，因此 OpenClaw 会收到一条逻辑上的入站消息，而不会增加特定于频道的 DM 延迟。
 
-1. 一条文本消息（`"Dump"`）。
-2. 一条 URL 预览气泡（`"https://..."`），并附带 OG 预览图片作为附件。
+不需要 iMessage 合并设置。已废弃的 `channels.imessage.coalesceSameSenderDms` 键会被 `openclaw doctor --fix` 删除。当你有意想跨频道批量处理快速文本消息时，仍可使用通用的 `messages.inbound` 去抖动（debounce）设置。
 
-在大多数配置中，这两行会在约 0.8-2.0 秒的间隔内到达 OpenClaw。如果不进行合并，代理在第 1 轮只会收到命令本身（而且通常会回复“请把 URL 发给我”），然后 URL 会在第 2 轮才到达。这是 Apple 的发送流程导致的，不是 OpenClaw 或 `imsg` 引入的。
+如果命令加 URL 的发送以分开的 agent turn 到达，请在 Messages Mac 上更新 `imsg`：
 
-`channels.imessage.coalesceSameSenderDms` 会将 DM 纳入对同一发送者连续行的缓冲。当 `imsg` 在某条源记录上暴露结构化的 URL 预览标记 `balloon_bundle_id: "com.apple.messages.URLBalloonProvider"` 时，OpenClaw 只合并那次真实的拆分发送，并保持其他缓冲记录作为独立轮次。在较旧、完全不输出 balloon 元数据的 `imsg` 版本上，OpenClaw 无法区分拆分发送和独立发送，因此会回退为合并整个缓冲桶。这样可以保留元数据引入前的行为，而不是把 `Dump <url>` 的拆分发送退化成两轮。群聊仍按每条消息分发，以保留多用户轮次结构。
-
-<Tabs>
-  <Tab title="何时启用">
-    在以下情况下启用：
-
-    - 你提供的技能期望在同一条消息里同时包含 `command + payload`（dump、paste、save、queue 等）。
-    - 你的用户会把 URL 和命令一起粘贴。
-    - 你可以接受额外的 DM 轮次延迟（见下文）。
-
-    在以下情况下保持关闭：
-
-    - 你需要单词 DM 触发器的最低命令延迟。
-    - 所有流程都是不带后续负载的单次命令。
-
-  </Tab>
-  <Tab title="启用方式">
-    ```json5
-    {
-      channels: {
-        imessage: {
-          coalesceSameSenderDms: true, // 启用（默认：false）
-        },
-      },
-    }
-    ```
-
-    打开该标志且未显式设置 `messages.inbound.byChannel.imessage` 或全局 `messages.inbound.debounceMs` 时，防抖窗口会扩大到 **7000 ms**（旧默认值为 0 ms —— 不防抖）。之所以需要更大的窗口，是因为 Apple 的 URL 预览拆分发送节奏在 Messages.app 输出预览行时可能会持续数秒。
-
-    如需自行调整窗口：
-
-    ```json5
-    {
-      messages: {
-        inbound: {
-          byChannel: {
-            // 7000 毫秒可覆盖已观察到的 Messages.app URL 预览延迟。
-            imessage: 7000,
-          },
-        },
-      },
-    }
-    ```
-
-  </Tab>
-  <Tab title="权衡">
-    - **精确合并需要当前 `imsg` 载荷元数据。** 当存在 `balloon_bundle_id` 时，只有真实的拆分发送才会被合并；上文所述的不含元数据的回退合并只是临时的向后兼容方案，待 `imsg` 在上游合并拆分发送后将被移除。
-    - **DM 消息会增加延迟。** 开启该标志后，每条 DM（包括独立的控制命令和单条文本后续消息）都会在分发前最多等待一个防抖窗口，以防后续会到达 URL 预览行。群聊消息仍保持即时分发。
-    - **合并输出有上限。** 合并后的文本最多 4000 个字符，并带有明确的 `…[truncated]` 标记；附件最多 20 个；源条目最多 10 条（超过后保留第一条和最新条）。每个源 GUID 都会在 `coalescedMessageGuids` 中跟踪，用于下游遥测。
-    - **仅限 DM。** 群聊会继续按单条消息分发，因此当多人同时发言时，机器人仍然保持响应。
-    - **按通道启用。** 其他通道（Discord、Slack、Telegram、WhatsApp，等等）不受影响。将旧的 BlueBubbles 配置中设置的 `channels.bluebubbles.coalesceSameSenderDms` 迁移到 `channels.imessage.coalesceSameSenderDms`。
-
-  </Tab>
-</Tabs>
-
-### 场景以及代理看到的内容
-
-“启用标志”列显示的是在会输出 `balloon_bundle_id` 的 `imsg` 构建版本上的行为。在更旧、完全不输出 balloon 元数据的 `imsg` 构建上，下方标记为“两轮”/“N 轮”的行会回退为旧式合并（1 轮）：OpenClaw 无法从结构上区分拆分发送和独立发送，因此会保留元数据引入前的合并行为。只有当构建版本开始输出 balloon 元数据后，精确分离才会启用。
-
-| 用户输入内容                                                     | `chat.db` 产生的结果               | 关闭标志（默认）                        | 打开标志 + 窗口（imsg 输出 balloon 元数据）                                                          |
-| ------------------------------------------------------------------ | ----------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `Dump https://example.com`（一次发送）                             | 约 1 秒间隔的 2 行                  | 两轮代理轮次：“Dump” 单独一轮，然后是 URL | 一轮：合并后的文本 `Dump https://example.com`                                                       |
-| `Save this 📎image.jpg caption`（附件 + 文本）                     | 没有 URL balloon 元数据的 2 行       | 两轮                                   | 在观察到元数据后为两轮；在旧的/预闩锁的、无元数据会话中为一轮合并                                     |
-| `/status`（独立命令）                                              | 1 行                                | 立即分发                                | **最多等待一个窗口，然后分发**                                                                      |
-| 单独粘贴的 URL                                                     | 1 行                                | 立即分发                                | 最多等待一个窗口，然后分发                                                                         |
-| 文本 + URL 作为两条刻意分开的消息发送，且间隔数分钟               | 窗口外的 2 行                         | 两轮                                   | 两轮（窗口在它们之间过期）                                                                          |
-| 短时间内快速洪泛（窗口内超过 10 条小 DM）                         | 没有 URL balloon 元数据的 N 行       | N 轮                                   | 在观察到元数据后为 N 轮；在旧的/预闩锁的、无元数据会话中为一个有上限的合并轮次                       |
-| 群聊中两个人同时发言                                              | 来自 M 个发送者的 N 行               | M+ 轮（每个发送者桶一轮）               | M+ 轮——群聊不会被合并                                                                               |
+```bash
+brew update && brew upgrade imsg
+```
 
 ## 桥接器或网关重启后的入站恢复
 
-iMessage 会恢复网关停机期间遗漏的消息，同时抑制 Apple 在 Push 恢复后可能一次性刷出的陈旧“积压爆发”。默认行为始终开启，建立在入站去重之上。
+iMessage 会恢复网关宕机期间遗漏的消息，同时抑制 Apple 在 Push 恢复后可能冲刷出来的过时“积压弹”。默认行为始终开启，基于持久化入站记录和年龄防线实现。
 
-- **重放去重。** 每条已分发的入站消息都会通过其 Apple GUID 记录到持久化插件状态（`imessage.inbound-dedupe`）中，在接收时被认领，并在处理完成后提交（若发生瞬时失败则释放，以便重试）。任何已经处理过的内容都会被丢弃，而不会被重复分发。正因为如此，恢复重放才能激进进行，而无需逐条消息记账。
-- **停机恢复。** 在启动时，监视器会记住最后一次分发的 `chat.db` 行号（每个账户持久化的游标），并将其作为 `since_rowid` 传递给 `imsg watch.subscribe`，因此 imsg 会重放网关停机期间落入的行，然后切换为实时尾随。重放范围限制为最近 500 行以及约 2 小时内的消息，而去重机制会丢弃任何已处理过的内容。
-- **陈旧积压年龄防线。** 启动边界之上的行是真正的实时消息；其中发送时间比到达时间早超过约 15 分钟的，则属于 Push 刷新后的积压，会被抑制。被重放的行（位于边界处或低于边界）则改用更宽松的恢复窗口，因此最近遗漏的消息会被投递，而古老历史不会。
+- **持久化重放保护。** 在推进恢复游标之前，OpenClaw 会将共享 SQLite 入站队列中的每一条原始行以其 Apple GUID 作为事件 ID 写入日志。完成的行会保留一份约 4 小时的墓碑记录，最多 10,000 条，因此即使重启后，具有相同 GUID 的重放也会被丢弃。待处理的行会一直可恢复，直到调度器接管它为止。
+- **宕机恢复。** 启动时，监视器会记住最后一个持久化接纳的 `chat.db` 行号（按账号持久化的游标），并将其作为 `since_rowid` 传递给 `imsg watch.subscribe`，因此 imsg 会重放那些尚未写入日志的行，然后继续跟踪实时新增内容。崩溃前已写入日志的行会从 SQLite 中恢复。重放范围限制为最近 500 行，并且仅限于约 2 小时以内的消息，GUID 墓碑会丢弃任何已经处理过的内容。
+- **过时积压年龄防线。** 启动边界之上的行是真正的实时消息；其中发送时间比到达时间早超过约 15 分钟的，属于 Push 冲刷形成的积压，会被抑制。被重放的行（位于边界处或边界之下）则使用更宽的恢复窗口，因此最近遗漏的消息会被投递，而更久远的历史不会。
 
 恢复机制同时适用于本地和远程 `cliPath`，因为 `since_rowid` 重放通过同一个 `imsg` RPC 连接运行。区别在于窗口：当网关能够读取 `chat.db`（本地）时，它会锚定启动时的行号边界，限制重放跨度，并投递最多几小时前遗漏的消息；通过远程 SSH `cliPath` 时则无法读取数据库，因此重放不设上限，所有行都使用实时年龄防线——它仍会恢复最近遗漏的消息，也仍会抑制旧积压，只是使用更窄的实时窗口。要获得更宽的恢复窗口，请在 Messages 所在的 Mac 上运行网关。
 
@@ -833,7 +776,7 @@ openclaw channels status --probe --channel imessage
     - `channels.imessage.groupPolicy`
     - `channels.imessage.groupAllowFrom`
     - `channels.imessage.groups` 白名单行为
-    - 提及模式配置（`agents.list[].groupChat.mentionPatterns`）
+    - mention 模式配置（`agents.entries.*.groupChat.mentionPatterns`）
 
   </Accordion>
 

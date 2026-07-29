@@ -60,15 +60,13 @@ title: "Mistral"
 
 | Model ref                        | Input       | Context | Max output | Notes                                                 |
 | -------------------------------- | ----------- | ------- | ---------- | ----------------------------------------------------- |
-| `mistral/mistral-large-latest`   | 文本, 图像   | 262,144 | 16,384     | 默认模型                                              |
-| `mistral/mistral-medium-2508`    | 文本, 图像   | 262,144 | 8,192      | Mistral Medium 3.1                                    |
-| `mistral/mistral-medium-3-5`     | 文本, 图像   | 262,144 | 8,192      | Mistral Medium 3.5；可调推理                            |
-| `mistral/mistral-small-latest`   | 文本, 图像   | 262,144 | 16,384     | Mistral Small 4 最新版；可调 `reasoning_effort`       |
-| `mistral/mistral-small-2603`     | 文本, 图像   | 262,144 | 16,384     | Mistral Small 4 固定版本；可调 `reasoning_effort`     |
-| `mistral/pixtral-large-latest`   | 文本, 图像   | 128,000 | 32,768     | Pixtral                                               |
-| `mistral/codestral-latest`       | 文本        | 256,000 | 4,096      | 编码                                                  |
-| `mistral/devstral-medium-latest` | 文本        | 262,144 | 32,768     | Devstral 2                                            |
-| `mistral/magistral-small`        | 文本        | 128,000 | 40,000     | 支持推理                                              |
+| `mistral/mistral-large-latest`   | text, image | 262,144 | 16,384     | Default model                                         |
+| `mistral/mistral-medium-3-5`     | text, image | 262,144 | 8,192      | Mistral Medium 3.5; adjustable reasoning              |
+| `mistral/mistral-small-latest`   | text, image | 262,144 | 16,384     | Mistral Small 4 latest; adjustable `reasoning_effort` |
+| `mistral/mistral-small-2603`     | text, image | 262,144 | 16,384     | Mistral Small 4 pinned; adjustable `reasoning_effort` |
+| `mistral/codestral-latest`       | text        | 128,000 | 4,096      | Coding                                                |
+| `mistral/mistral-medium-2508`    | text, image | 128,000 | 8,192      | Deprecated; hidden; use Mistral Medium 3.5            |
+| `mistral/devstral-medium-latest` | text        | 262,144 | 32,768     | Deprecated; hidden; use Mistral Medium 3.5            |
 
 在更改配置之前，请先浏览内置目录中的该行：
 
@@ -148,8 +146,8 @@ OpenClaw 默认将 Mistral 实时 STT 设置为 8 kHz 的 `pcm_mulaw`，因此 V
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="可调整推理">
-    `mistral/mistral-small-latest`, `mistral/mistral-small-2603`, and `mistral/mistral-medium-3-5` support [adjustable reasoning](https://docs.mistral.ai/studio-api/conversations/reasoning/adjustable) on the Chat Completions API via `reasoning_effort` (`none` minimizes extra thinking in the output; `high` surfaces full thinking traces before the final answer).
+  <Accordion title="Adjustable reasoning">
+    `mistral/mistral-small-latest`, `mistral/mistral-small-2603`, and `mistral/mistral-medium-3-5` support [adjustable reasoning](https://docs.mistral.ai/studio-api/conversations/reasoning) on the Chat Completions API via `reasoning_effort` (`none` minimizes extra thinking in the output; `high` surfaces full thinking traces before the final answer).
 
     OpenClaw 会将会话的 **thinking** 级别映射到 Mistral 的 API：
 
@@ -180,7 +178,7 @@ OpenClaw 默认将 Mistral 实时 STT 设置为 8 kHz 的 `pcm_mulaw`，因此 V
     ```
 
     <Note>
-    其他内置的 Mistral 目录模型不使用此参数。当你想要 Mistral 原生的“优先推理”行为时，请继续使用 `magistral-*` 模型。
+    Other bundled Mistral catalog models do not use this parameter. Mistral's native Magistral models are deprecated; use adjustable reasoning on Mistral Small 4 or Mistral Medium 3.5 for current API models.
     </Note>
 
   </Accordion>
@@ -190,10 +188,8 @@ OpenClaw 默认将 Mistral 实时 STT 设置为 8 kHz 的 `pcm_mulaw`，因此 V
 
     ```json5
     {
-      agents: {
-        defaults: {
-          memorySearch: { provider: "mistral" },
-        },
+      memory: {
+        search: { provider: "mistral" },
       },
     }
     ```

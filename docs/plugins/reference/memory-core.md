@@ -16,4 +16,4 @@ title: "Memory Core 插件"
 
 ## 表面
 
-contracts: tools
+contracts: `tools`

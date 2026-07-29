@@ -9,11 +9,11 @@ title: "ElevenLabs"
 
 OpenClaw 使用 ElevenLabs 提供文本转语音、使用 Scribe v2 进行批量语音转文本，并使用 Scribe v2 Realtime 进行流式 STT。该插件已打包并默认启用；无需执行 `plugins install` 步骤。
 
-| 功能                     | OpenClaw 接口                                                      | 默认值                   |
-| ------------------------ | ------------------------------------------------------------------ | ------------------------ |
-| 文本转语音               | `messages.tts` / `talk`                                            | `eleven_multilingual_v2` |
-| 批量语音转文本           | `tools.media.audio`                                                | `scribe_v2`              |
-| 流式语音转文本           | Voice Call 流式或 Google Meet `realtime.transcriptionProvider`    | `scribe_v2_realtime`     |
+| Capability               | OpenClaw surface                                                     | Default                  |
+| ------------------------ | -------------------------------------------------------------------- | ------------------------ |
+| Text-to-speech           | `tts` / `talk`                                                       | `eleven_multilingual_v2` |
+| Batch speech-to-text     | `tools.media.audio`                                                  | `scribe_v2`              |
+| Streaming speech-to-text | Voice Call streaming or Google Meet `realtime.transcriptionProvider` | `scribe_v2_realtime`     |
 
 ## 认证
 
@@ -27,14 +27,12 @@ export ELEVENLABS_API_KEY="..."
 
 ```json5
 {
-  messages: {
-    tts: {
-      providers: {
-        elevenlabs: {
-          apiKey: "${ELEVENLABS_API_KEY}",
-          voiceId: "pMsXgVXv3BLzUgSXRplE",
-          modelId: "eleven_multilingual_v2",
-        },
+  tts: {
+    providers: {
+      elevenlabs: {
+        apiKey: "${ELEVENLABS_API_KEY}",
+        voiceId: "pMsXgVXv3BLzUgSXRplE",
+        modelId: "eleven_multilingual_v2",
       },
     },
   },
@@ -44,11 +42,12 @@ export ELEVENLABS_API_KEY="..."
 将 `modelId` 设置为 `eleven_v3` 可使用 ElevenLabs v3 TTS。OpenClaw 会为现有安装保留
 `eleven_multilingual_v2` 作为默认值。
 
-当 ElevenLabs 是选定的 `voice.tts`/`messages.tts` 提供方时，Discord 语音频道会使用 ElevenLabs 的流式 TTS 端点：播放会从
-返回的音频流开始，而不是等待 OpenClaw 先下载完整的
-音频文件。`latencyTier` 会映射到 ElevenLabs 的 `optimize_streaming_latency`
-查询参数，适用于接受该参数的模型；OpenClaw 对
-`eleven_v3` 会省略该参数，因为它会拒绝该参数。
+Discord voice channels use ElevenLabs' streaming TTS endpoint when ElevenLabs
+is the selected `voice.tts`/`tts` provider: playback starts from the
+returned audio stream instead of waiting for OpenClaw to download the whole
+audio file first. `latencyTier` maps to ElevenLabs' `optimize_streaming_latency`
+query parameter for models that accept it; OpenClaw omits that parameter for
+`eleven_v3`, which rejects it.
 
 ## 语音转文本
 

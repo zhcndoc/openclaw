@@ -15,8 +15,8 @@ title: "调试"
 
 ```text
 /debug show
-/debug set messages.responsePrefix="[openclaw]"
-/debug unset messages.responsePrefix
+/debug set channels.whatsapp.responsePrefix="[openclaw]"
+/debug unset channels.whatsapp.responsePrefix
 /debug reset
 ```
 
@@ -34,7 +34,8 @@ title: "调试"
 
 ## 插件生命周期跟踪
 
-设置 `OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1` 可按阶段查看插件元数据、发现、注册表、运行时镜像、配置变更和刷新工作的分解情况。它会写入 stderr，因此 JSON 命令输出仍保持可解析。
+Set `OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1` for a phase-by-phase breakdown of plugin metadata, discovery, registry, runtime mirror, config mutation, and refresh work. Writes to stderr, so JSON command output stays parseable.
+Plugin load failures include their stack trace while this trace is enabled.
 
 ```bash
 OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1 openclaw plugins install tokenjuice --force
@@ -48,7 +49,13 @@ OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1 openclaw plugins install tokenjuice --force
 
 在使用 CPU 性能分析器之前，先用这个功能。对于源码检出版本，在 `pnpm build` 之后使用 `node dist/entry.js ...` 来测量构建后的运行时；`pnpm openclaw ...` 也会计入源运行器的开销。
 
-## CLI 启动和命令性能分析
+For synchronous module-load timings, use the shared diagnostics surface instead of a separate plugin-only environment switch:
+
+```bash
+OPENCLAW_DIAGNOSTICS=plugin.load-profile openclaw plugins list
+```
+
+## CLI startup and command profiling
 
 已提交的启动基准测试：
 
@@ -172,13 +179,15 @@ OPENCLAW_PROFILE=dev openclaw tui
    - `OPENCLAW_GATEWAY_PORT=19001`（browser/canvas 端口会相应变化）
 
 2. **Dev bootstrap** (`gateway --dev`)
-   - 如果缺少配置，则写入一个最小配置（`gateway.mode=local`，绑定 loopback）。
-   - 将 `agents.defaults.workspace` 设置为 dev 工作区，并将 `agents.defaults.skipBootstrap=true`。
-   - 如果缺少则为工作区种子文件：`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`。
-   - 默认身份：**C3-PO**（protocol droid）。
-   - `pnpm gateway:dev` 还会设置 `OPENCLAW_SKIP_CHANNELS=1` 以跳过 channel providers。
+   - Writes a minimal config if missing (`gateway.mode=local`, bind loopback).
+   - Sets `agents.defaults.workspace` to the dev workspace and `agents.defaults.skipBootstrap=true`.
+   - Seeds the workspace files if missing: `AGENTS.md`, `SOUL.md`, `IDENTITY.md`, `USER.md`.
+   - Default identity: **C3-PO** (protocol droid).
+   - `pnpm gateway:dev` also sets `OPENCLAW_SKIP_CHANNELS=1` to skip channel providers.
 
-重置流程（全新开始）：
+Dev Gateways ignore ambient channel environment triggers by default, so credentials inherited from your shell do not connect the development instance to real channel services. Explicit `channels.<id>` configuration still works. Pass `--dev-ambient-channels` with `--dev` to restore ambient channel auto-configuration for that run.
+
+Reset flow (fresh start):
 
 ```bash
 pnpm gateway:dev:reset

@@ -21,7 +21,7 @@ status: active
 认证配置文件是按 agent 分开的，读取自：
 
 ```text
-~/.openclaw/agents/<agentId>/agent/auth-profiles.json
+~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite
 ```
 
 <Note>
@@ -32,7 +32,7 @@ status: active
 切勿在不同 agent 之间复用 `agentDir` —— 这会导致认证/会话状态冲突。当某个次级 agent 的本地 OAuth 凭据过期或刷新失败时，OpenClaw 会回读同一 profile id 的默认/主 agent 凭据，并采用最新的那个 token，而不会把 refresh token 复制到次级 agent 的存储中。如果你想要一个完全独立的 OAuth 账号，请在那个 agent 里重新登录。如果你手动复制凭据，只复制可移植的静态 `api_key` 或 `token` 配置文件即可——OAuth 刷新材料默认不可移植（`copyToAgents` 可以显式将某个 profile 纳入）。
 </Warning>
 
-技能会从每个 agent 的工作区以及共享根目录（如 `~/.openclaw/skills`）加载，然后根据生效的 agent 技能允许列表进行过滤。使用 `agents.defaults.skills` 作为共享基线，并使用 `agents.list[].skills` 作为每个 agent 的替换项（显式条目会替换默认项，不会合并）。参见 [技能：按 agent 与共享](/tools/skills#per-agent-vs-shared-skills) 和 [技能：agent 允许列表](/tools/skills#agent-allowlists)。
+技能会从每个 agent 的工作区以及诸如 `~/.openclaw/skills` 之类的共享根目录加载，然后再根据实际生效的 agent 技能允许列表进行过滤。共享基线请使用 `agents.defaults.skills`，而按 agent 的替换请使用 `agents.entries.*.skills`（显式条目会替换默认值，不会进行合并）。另请参见 [Skills: per-agent vs shared](/tools/skills#per-agent-vs-shared-skills) 和 [Skills: agent allowlists](/tools/skills#agent-allowlists)。
 
 插件拥有的存储遵循该插件自身的配置；添加第二个 agent 不会自动把所有全局插件存储拆分开。例如，当不同角色不能共享已编译的 wiki 知识时，请配置 [按 agent 划分的 Memory Wiki 保管库](/concepts/multi-agent#per-agent-memory-wiki-vaults)。
 
@@ -42,15 +42,15 @@ status: active
 
 ## 路径
 
-| 什么                             | 默认                                                                                   | 覆盖                                                                                     |
-| -------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Config                           | `~/.openclaw/openclaw.json`                                                            | `OPENCLAW_CONFIG_PATH`                                                                   |
-| State dir                        | `~/.openclaw`                                                                          | `OPENCLAW_STATE_DIR`                                                                     |
-| Default agent's workspace        | `~/.openclaw/workspace` (or `workspace-<profile>` when `OPENCLAW_PROFILE` is set)      | `agents.list[].workspace`, then `agents.defaults.workspace`, or `OPENCLAW_WORKSPACE_DIR` |
-| Other agents' workspace          | `<stateDir>/workspace-<agentId>` (or `<agents.defaults.workspace>/<agentId>` when set) | `agents.list[].workspace`                                                                |
-| Agent dir                        | `~/.openclaw/agents/<agentId>/agent`                                                   | `agents.list[].agentDir`                                                                 |
-| Sessions and transcripts         | `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`                             | —                                                                                        |
-| Legacy/archive session artifacts | `~/.openclaw/agents/<agentId>/sessions`                                                | —                                                                                        |
+| 什么                             | 默认值                                                                                 | 覆盖项                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 配置                           | `~/.openclaw/openclaw.json`                                                            | `OPENCLAW_CONFIG_PATH`                                                                      |
+| 状态目录                        | `~/.openclaw`                                                                          | `OPENCLAW_STATE_DIR`                                                                        |
+| 默认 agent 的工作区        | `~/.openclaw/workspace`（或在设置了 `OPENCLAW_PROFILE` 时为 `workspace-<profile>`）      | `agents.entries.*.workspace`，然后是 `agents.defaults.workspace`，或 `OPENCLAW_WORKSPACE_DIR` |
+| 其他 agent 的工作区          | `<stateDir>/workspace-<agentId>`（或在设置时为 `<agents.defaults.workspace>/<agentId>`） | `agents.entries.*.workspace`                                                                |
+| agent 目录                        | `~/.openclaw/agents/<agentId>/agent`                                                   | `agents.entries.*.agentDir`                                                                 |
+| 会话和转录         | `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`                             | —                                                                                           |
+| 旧版/归档会话产物 | `~/.openclaw/agents/<agentId>/sessions`                                                | —                                                                                           |
 
 ### 单 agent 模式（默认）
 
@@ -103,8 +103,8 @@ openclaw agents list --bindings
     参见通道指南：[Discord](/channels/discord)、[Telegram](/channels/telegram)、[WhatsApp](/channels/whatsapp)。
 
   </Step>
-  <Step title="添加 agents、账户和 bindings">
-    在 `agents.list` 下添加 agents，在 `channels.<channel>.accounts` 下添加通道账户，并使用 `bindings` 将它们连接起来（示例见下文）。
+  <Step title="添加 agents、账户和绑定">
+    在 `agents.entries` 下添加 agents，在 `channels.<channel>.accounts` 下添加通道账户，并使用 `bindings` 将它们连接起来（示例见下文）。
   </Step>
   <Step title="重启并验证">
     ```bash
@@ -115,15 +115,15 @@ openclaw agents list --bindings
   </Step>
 </Steps>
 
-## 多个代理，多个角色
+## Multiple Agents, Multiple Roles
 
-每个已配置的 `agentId` 都是核心代理状态的独立人格边界：
+Each configured `agentId` is an independent persona boundary for the core agent state:
 
-- 每个渠道使用不同的账号（按 `accountId` 区分）。
-- 不同的个性（按代理的 `AGENTS.md`/`SOUL.md` 区分）。
-- 独立的认证和会话，仅在通过显式功能或插件配置启用时，才允许跨代理访问。
+- Each channel uses a different account (distinguished by `accountId`).
+- Different personalities (distinguished by the agent’s `AGENTS.md`/`SOUL.md`).
+- Independent authentication and sessions, with cross-agent access allowed only when enabled through explicit features or plugin configuration.
 
-这使得多人可以共享一个 Gateway，同时保持核心代理状态彼此分离。
+This allows multiple people to share one Gateway while keeping core agent states separate from one another.
 
 ## 每个代理的 Memory Wiki 保管库
 
@@ -158,34 +158,35 @@ Memory Wiki 默认使用一个全局保管库。为了将支持代理的
 
 ## 跨 agent 的 QMD 内存搜索
 
-要让一个 agent 搜索另一个 agent 的 QMD 会话转录，请在 `agents.list[].memorySearch.qmd.extraCollections` 下添加额外集合。若所有 agent 都应共享相同集合，请使用 `agents.defaults.memorySearch.qmd.extraCollections`。
+要让一个 agent 搜索另一个 agent 的 QMD 会话转录，请在 `agents.entries.*.memory.search.qmd.extraCollections` 下添加额外集合。如果所有 agent 都应共享相同的集合，请使用 `memory.search.qmd.extraCollections`。
 
 ```json5
 {
   agents: {
     defaults: {
       workspace: "~/workspaces/main",
-      memorySearch: {
-        qmd: {
-          extraCollections: [{ path: "~/agents/family/sessions", name: "family-sessions" }],
-        },
-      },
     },
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
         workspace: "~/workspaces/main",
-        memorySearch: {
-          qmd: {
-            extraCollections: [{ path: "notes" }], // 解析到 workspace 中 -> 集合名称 "notes-main"
+        memory: {
+          search: {
+            qmd: {
+              extraCollections: [{ path: "notes" }], // 在工作区内解析 -> 名为 "notes-main" 的集合
+            },
           },
         },
       },
-      { id: "family", workspace: "~/workspaces/family" },
-    ],
+      family: { workspace: "~/workspaces/family" },
+    },
   },
   memory: {
     backend: "qmd",
+    search: {
+      qmd: {
+        extraCollections: [{ path: "~/agents/family/sessions", name: "family-sessions" }],
+      },
+    },
     qmd: { includeDefaultMemory: false },
   },
 }
@@ -238,13 +239,15 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
 - 如果某个绑定设置了多个匹配字段（例如 `peer` + `guildId`），则所有指定字段都必须匹配（`AND` 语义）。
 - 省略 `accountId` 的绑定只匹配默认账户，而不是所有账户。使用 `accountId: "*"` 表示整个 channel 的回退规则，或使用 `accountId: "<name>"` 表示某一个账户。再次添加相同绑定并显式指定 account id，会将现有的仅 channel 绑定升级，而不是创建重复项。
 
-## Multiple Accounts / Phone Numbers
+对于现有的多 agent 配置，`openclaw doctor --fix` 会将旧的环境默认路由具体化为 channel 级绑定，并显式设置 heartbeat、Custodian 和 Talk 目标。单 agent 配置不受影响。
 
-Channels that support multiple accounts (for example WhatsApp) use `accountId` to identify each login. Each `accountId` is routed to its corresponding agent, so one server can host multiple phone numbers without mixing up sessions.
+## 多个账户 / 电话号码
 
-Set `channels.<channel>.defaultAccount` to choose which account to use when `accountId` is omitted. If not set, OpenClaw will first fall back to `default` (if it exists), otherwise it will use the first configured account id (in sorted order).
+支持多个账户的渠道（例如 WhatsApp）使用 `accountId` 来标识每个登录。每个 `accountId` 都会路由到其对应的 agent，因此一台服务器可以托管多个电话号码，而不会混淆会话。
 
-Channels that support multiple accounts: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `mattermost`, `matrix`, `nextcloud-talk`, `nostr`, `signal`, `slack`, `telegram`, `whatsapp`, `zalo`, `zalouser`.
+设置 `channels.<channel>.defaultAccount` 可在省略 `accountId` 时选择要使用的账户。如果未设置，OpenClaw 会先回退到 `default`（如果存在），否则会使用第一个已配置的账户 id（按排序顺序）。
+
+支持多个账户的渠道：`discord`、`feishu`、`googlechat`、`imessage`、`irc`、`line`、`mattermost`、`matrix`、`nextcloud-talk`、`nostr`、`signal`、`slack`、`telegram`、`whatsapp`、`zalo`、`zalouser`。
 
 ## 概念
 
@@ -533,8 +536,7 @@ Channels that support multiple accounts: `discord`, `feishu`, `googlechat`, `ime
     }
     ```
 
-    工具 allow/deny 列表是 **tools**，不是 skills。如果某个 skill 需要运行二进制文件，请确保允许 `exec`，并且该二进制文件存在于 sandbox 中。若要更严格地进行门控，请设置 `agents.list[].groupChat.mentionPatterns`，并为该频道保持启用群组 allowlist。
-
+    工具允许/拒绝列表是 **tools**，不是 skills。如果某个 skill 需要运行二进制文件，请确保允许 `exec`，并且该二进制文件存在于沙箱中。若要更严格地进行 gating，请设置 `agents.entries.*.groupChat.mentionPatterns`，并为该频道保持启用群组 allowlist。
   </Tab>
 </Tabs>
 
@@ -586,7 +588,7 @@ Channels that support multiple accounts: `discord`, `feishu`, `googlechat`, `ime
 - **灵活策略**：为不同 agent 提供不同权限。
 
 <Note>
-`tools.elevated` 同时具有全局门控（`tools.elevated.enabled`/`allowFrom`）和每个 agent 的门控（`agents.list[].tools.elevated.enabled`/`allowFrom`）。每个 agent 的门控只能进一步限制全局设置——发送者必须同时被两者允许，提升命令才会运行。对于群组定位，请使用 `agents.list[].groupChat.mentionPatterns`，以便 `@` 提及能够清晰映射到预期的 agent。
+`tools.elevated` 同时具有全局门控（`tools.elevated.enabled`/`allowFrom`）和每个 agent 的门控（`agents.entries.*.tools.elevated.enabled`/`allowFrom`）。每个 agent 的门控只能进一步收紧全局设置——两者都必须允许某个发送者，提权命令才能运行。对于组目标，请使用 `agents.entries.*.groupChat.mentionPatterns`，这样 @提及 就能正确映射到目标 agent。
 </Note>
 
 查看 [多 agent 的 sandbox 和 tools](/tools/multi-agent-sandbox-tools) 以获取详细示例。

@@ -96,26 +96,48 @@ openclaw gateway call sessions.dispatch \
 
 `sessions.dispatch` 会关闭本地回合接纳、清空活跃工作、配置租约、运行设置、引导 OpenClaw、同步工作区，并在放置状态达到 `active` 工作者所有权后返回。首次调度请预留几分钟；在提供商支持的情况下，租约和安装会被缓存。之后，像平常一样与会话交互即可——回合会自动路由到该工作者。
 
-放置状态通过一个持久化状态机流转（`local → requested → provisioning → syncing → starting → active`），因此 Gateway 在调度中途重启时会进行协调恢复，而不会泄漏机器。v1 中的调度是单向的：目前还没有 pull-back RPC。如果某个 worker 回合失败，只会导致该回合失败，并保持当前激活放置可供重试；而生命周期失败则会将放置状态转为 error 或 reclaimed，并保留其诊断尾部日志。
+Completed worker turns reconcile eligible, size-bounded workspace files back into the session's managed worktree before the turn claim is released. The terminal worker event creates a durable pending-result fence before it is acknowledged. The Gateway then stages the complete cloud result as a Git ref under `refs/openclaw/worker-results/` before applying it, so the cloud version remains recoverable even if the Gateway stops during the apply. Workspace results use Git file semantics: regular files, executable bits, symlinks, additions, changes, and deletions are retained, while empty directories and other directory modes are not. The resulting file changes remain in the managed worktree for normal review and commit.
+
+Apply uses the dispatch-time manifest as the merge base. Cloud-only changes are applied, local-only changes stay in place, and paths changed on both sides use a three-way keep-local policy. A conflicted turn still finishes: the transcript reports the bounded path summary and staged result ref, the placement exposes the same conflict for the Control UI, and non-conflicting cloud changes remain applied. The notice includes `git show <ref>:<path>` to inspect a present cloud file and a top-level literal-pathspec `git checkout <ref> -- <path>` command to take it from any workspace directory. Run the commands in Bash or zsh (Git Bash on Windows). If inspect says the path does not exist, the cloud result deleted it; verify and remove the retained local path manually. If checkout reports a file/directory obstruction, move or remove the blocking local path and retry. If the staged ref itself is gone, treat the notice as stale and do not change the local path. Conflicted staged refs remain available after the normal turn fence is released; a later clean result clears the notice and retires the old ref, while explicit fence removal is the final cleanup boundary.
+
+While a fenced result is still reconciling, a new turn waits up to 15 seconds for the prior claim to release. If it is still busy, the turn fails with an actionable “previous cloud turn's workspace result is still reconciling” message and can be retried shortly. On restart, recovery discovers pending and staged results before stale-claim cleanup, completes or retries their local apply, and reclaims dead environments only after preserving the result. The bounded SQLite rollback journal makes an interrupted filesystem apply recoverable without replaying already accepted mutations.
+
+When the work is complete and no turn is running, open the session menu and choose **Stop cloud worker…**. The Gateway performs one final workspace reconciliation before it destroys the environment. A placement already in `draining` or `reconciling` is finishing teardown; wait for its badge to become `reclaimed` before deleting the session.
+
+For a broken or runaway attached worker, an operator can call `environments.destroy` with `{ "force": true }` as a last resort. Forced teardown durably marks the placement failed and abandons any unreconciled remote result before destroying the environment.
+
+The equivalent administrative RPC is:
+
+```bash
+openclaw gateway call sessions.reclaim \
+  --timeout 600000 \
+  --params '{"key":"agent:main:big-refactor"}'
+```
+
+Placement moves through a durable state machine (`local → requested → provisioning → syncing → starting → active`), so a Gateway restart mid-dispatch reconciles instead of leaking machines. A failed model turn keeps the active placement available for a retry. Workspace path conflicts keep the local version, apply the rest of the cloud result, and preserve the staged cloud ref for inspection; other reconciliation or lifecycle failures retain their durable recovery fence and diagnostic tail until recovery can safely retry or reclaim the environment.
 
 ## 安全模型
 
-- **Closed worker ingress.** 工作者通过隧道套接字上的专用协议通信，并使用关闭式方法允许列表——worker 不能调用 operator RPC。
-- **Minted credentials, hashed at rest.** 每次派发都会签发一个 worker 凭证；Gateway 仅存储其哈希值。凭证轮换和 owner-epoch 防护保证每个会话至多只有一个存活的 owner——重新连接的过期 worker 会被防护拦截，绝不会合并。
-- **Host-key pinning.** 提供方必须在 provisioning 时公开该机器的 SSH host key；bootstrap 会使用严格的 pinning 进行连接，并在缺失时以 fail closed 方式失败。
-- **No standing model, forge, or cloud credentials on the box.** 模型认证保留在 Gateway 上（推理通过 `{provider, model}` 引用传递），workspace git 提交在不使用 forge 凭证的情况下生成，且 Crabbox AWS lease 元数据会在 setup 前权威性检查该实例是否具有 role。setup 命令也要保持无凭证。
-- **Provider-owned egress.** 反向隧道消除了 OpenClaw 对直接访问模型的需求，但 OpenClaw 不会重写提供方防火墙。若任务需要，请在 worker 提供方中限制出站流量。
-- **Durable, exactly-once transcripts.** worker 通过针对会话叶子节点的 compare-and-swap 协议提交 transcript 批次；过期的 base 会使运行 fail-stop，而不是重复或重新基于已付费输出进行 rebase。
+- **Closed worker ingress.** Workers speak a dedicated protocol on the tunneled socket with a closed method allowlist — a worker cannot call operator RPCs.
+- **Gateway-owned tool authority.** Before every turn, the Gateway projects current profile, provider, agent, group, sender, sandbox, delegation, inherited, and runtime-cap policy over the worker's fixed coding-tool catalog. The launch envelope carries only that final closed-vocabulary subset. Explicitly capped scheduled turns reuse their trusted owner-group context without sending that identity to the box or reapplying a fresh sender overlay. Tools outside the worker catalog remain unavailable; an empty result runs with no tools.
+- **Minted credentials, hashed at rest.** Each dispatch mints a worker credential; the Gateway stores only its hash. Credential rotation and owner-epoch fencing guarantee at most one live owner per session — a stale worker that reconnects is fenced, never merged.
+- **Host-key pinning.** The provider must surface the box's SSH host key at provision time; bootstrap connects with strict pinning and fails closed without it.
+- **No standing model, forge, or cloud credentials on the box.** Model auth stays on the Gateway (inference travels by `{provider, model}` reference), workspace git commits are authored without forge credentials, and Crabbox AWS lease metadata is checked authoritatively for an instance role before setup. Keep setup commands credential-free too.
+- **Provider-owned egress.** The reverse tunnel removes any OpenClaw need for direct model access, but OpenClaw does not rewrite provider firewalls. Restrict outbound traffic in the worker provider when the task requires it.
+- **Durable, exactly-once transcripts.** The worker commits transcript batches through a compare-and-swap protocol against the session's leaf; a stale base fail-stops the run instead of duplicating or rebasing paid output.
 
 ## 故障排查
 
-- **`sessions.dispatch` is an unknown method** — 未配置 `cloudWorkers.profiles`，或者调用者缺少 `operator.admin`。
-- **"Cloud worker turns require the OpenClaw runtime"** — 请选择配置运行时为 OpenClaw 的模型。像 `claude-cli` 这样的外部 CLI 运行时不支持 worker 推理。
-- **"Worker bootstrap requires Node.js on the leased host"** — 在 `settings.setup` 中添加 Node 安装（见上文）。
-- **AWS instance-role attestation fails** — 清空 `aws.instanceProfile`（如果设置了 `CRABBOX_AWS_INSTANCE_PROFILE`，也一并清空）。安装 Crabbox 0.38.1 或更新版本；旧版二进制文件不会暴露 AWS 准入所需的权威 `providerMetadata.instanceProfileAttached` 合同。
-- **Dispatch fails with a provider error** — placement 记录和 `environments.list` 会保留最后一次错误，包括 setup/bootstrap 的 stderr 尾部输出。失败时 box 会被销毁，因此该尾部输出是主要的取证依据。
-- **Client timeout while dispatching** — `openclaw gateway call` 默认超时时间为 10 秒；请酌情传入更大的 `--timeout`（无论如何，dispatch 都会继续在服务端运行，且在 provisioning 期间重试会被拒绝并提示 `session cannot dispatch from placement provisioning`）。
-- **Lease housekeeping** — `crabbox list --provider <backend>` 会显示当前活跃的租约；`crabbox stop --provider <backend> --id <lease>` 可手动释放一个租约。空闲租约会在 profile 的 `idleTimeout` 到期后失效。
+- **`sessions.dispatch` is an unknown method** — no `cloudWorkers.profiles` are configured, or the caller lacks `operator.admin`.
+- **"Cloud worker turns require the OpenClaw runtime"** — choose a model whose configured runtime is OpenClaw. External CLI runtimes such as `claude-cli` do not support worker inference.
+- **"Worker bootstrap requires Node.js on the leased host"** — add a Node install to `settings.setup` (see above).
+- **AWS instance-role attestation fails** — clear `aws.instanceProfile` (and `CRABBOX_AWS_INSTANCE_PROFILE`, if set). Install Crabbox 0.38.1 or newer; older binaries do not expose the authoritative `providerMetadata.instanceProfileAttached` contract required for AWS admission.
+- **Dispatch fails with a provider error** — the placement record and `environments.list` keep the last error, including the setup/bootstrap stderr tail. Boxes are destroyed on failure, so that tail is the primary forensic.
+- **Client timeout while dispatching** — `openclaw gateway call` defaults to a 10s timeout; pass `--timeout` generously (dispatch keeps running server-side either way, and a retry while provisioning is rejected with `session cannot dispatch from placement provisioning`).
+- **Worker reclaimed after upgrading from a 2026.7.2 beta** — those betas used the older worker launch contract. On restart, OpenClaw destroys an idle incompatible worker, keeps the session and workspace, marks the placement reclaimed, and provisions a current worker on the next dispatch or turn. A beta worker interrupted while still starting is marked failed after cleanup; retry the dispatch to provision it with the current contract.
+- **Cloud workspace conflict notice** — the turn completed and kept the local version of each listed path. Use the staged-ref commands in the notice to inspect or take the cloud version; no retry is required for the non-conflicting changes, which are already applied.
+- **“The previous cloud turn's workspace result is still reconciling”** — the Gateway waited briefly for the prior result's durable fence and could not acquire the session claim. Wait for reconciliation to finish, then retry the turn; restarting the Gateway is safe because recovery preserves staged results before reclaiming a dead worker.
+- **Lease housekeeping** — `crabbox list --provider <backend>` shows live leases; `crabbox stop --provider <backend> --id <lease>` releases one manually. Idle leases expire on the profile's `idleTimeout`.
 
 ## 相关
 

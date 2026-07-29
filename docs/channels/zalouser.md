@@ -67,12 +67,19 @@ openclaw directory groups list --channel zalouser --query "work"
 
 ## 限制
 
-- 外发文本按 2000 个字符分块（Zalo 客户端限制）。
+- 出站文本按 2000 个字符分块（Zalo 客户端限制）。
 - 不支持流式传输。
+- 已完成的入站消息 ID 保留 30 天，每个账户最多保留最近的 1000 条记录。
+
+## 入站持久性
+
+OpenClaw 会在处理每个原始 `zca-js` 消息回调之前先将其存储起来。待处理消息会在 Gateway 重启后从账户队列中恢复，并且对于每个私聊或群聊，处理过程都会保持串行化。
+
+`zca-js` 套接字监听器不会提供投递确认，也不会在重新连接后自动重放旧消息。因此，持久化队列保护的是回调到达 OpenClaw 之后的本地崩溃窗口；对于套接字从未投递到的消息，它无法进行恢复。重放墓碑记录主要用于防止同一条 Zalo 消息 ID 的重复回调。
 
 ## 访问控制（私信）
 
-`channels.zalouser.dmPolicy`: `pairing | allowlist | open | disabled` (默认：`pairing`)。
+`channels.zalouser.dmPolicy`: `pairing | allowlist | open | disabled`（默认：`pairing`）。
 
 `channels.zalouser.allowFrom` 应使用稳定的 Zalo 用户 ID。它也可以引用静态发送者访问组（`accessGroup:<name>`）。在交互式设置期间，输入的名称可以通过插件的进程内联系人查找解析为 ID。
 
@@ -143,9 +150,9 @@ openclaw directory groups list --channel zalouser --query "work"
 }
 ```
 
-## Multi-account
+## 多账户
 
-The account is mapped to the `zalouser` configuration file in the OpenClaw state. Example:
+该账户在 OpenClaw 状态中映射到 `zalouser` 配置文件。示例：
 
 ```json5
 {
@@ -165,7 +172,7 @@ The account is mapped to the `zalouser` configuration file in the OpenClaw state
 
 配置文件中的 profile 选择也可以来自环境变量：
 
-| Var                | Purpose                                                                    |
+| 变量               | 作用                                                                       |
 | ------------------ | -------------------------------------------------------------------------- |
 | `ZALOUSER_PROFILE` | 当 channel 或 account 配置中未设置 `profile` 时使用的 profile 名称。 |
 | `ZCA_PROFILE`      | 旧版回退选项，仅在未设置 `ZALOUSER_PROFILE` 时使用。             |

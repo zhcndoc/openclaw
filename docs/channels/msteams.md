@@ -7,25 +7,25 @@ title: "Microsoft Teams"
 
 状态：支持文本 + DM 附件；频道/群组文件发送需要 `sharePointSiteId` + Graph 权限（参见 [在群聊中发送文件](#sending-files-in-group-chats)）。投票通过 Adaptive Cards 发送。消息操作显式提供 `upload-file`，用于先文件后发送的场景。
 
-## Bundled Plugin
+## 捆绑插件
 
-Microsoft Teams is provided as a bundled plugin in the current OpenClaw version; in normal packaged releases there is no need to install it separately.
+Microsoft Teams 在当前 OpenClaw 版本中作为捆绑插件提供；在正常的打包发行版中，无需单独安装。
 
-If you are on an older version or a custom installation that does not include bundled Teams, install the npm package directly:
+如果你使用的是较旧的版本，或者是未包含捆绑 Teams 的自定义安装，请直接安装 npm 包：
 
 ```bash
 openclaw plugins install @openclaw/msteams
 ```
 
-Use the bare package to follow the current official release tag. Only pin to an exact version when a reproducible installation is required.
+使用裸包以跟随当前官方发布标签。仅当需要可复现的安装时，才固定到确切版本。
 
-Local checkout (run from a git repository):
+本地检出（从 git 仓库中运行）：
 
 ```bash
 openclaw plugins install ./path/to/local/msteams-plugin
 ```
 
-Details: [Plugins](/tools/plugin)
+详情：[插件](/tools/plugin)
 
 ## 快速设置
 
@@ -119,11 +119,11 @@ teams app doctor <teamsAppId>
 - 保持路由确定性：回复始终回到它们进入时所在的频道。
 - 默认采用安全的频道行为（除非另有配置，否则需要提及）。
 
-## 配置写入
+## Configuration Writes
 
-默认情况下，Microsoft Teams 可以写入由 `/config set|unset` 触发的配置更新（需要 `commands.config: true`）。
+By default, Microsoft Teams can write configuration updates triggered by `/config set|unset` (requires `commands.config: true`).
 
-可通过以下方式禁用：
+This can be disabled with:
 
 ```json5
 {
@@ -434,20 +434,20 @@ teams app doctor <teamsAppId>
 2. 在 Teams 中找到该机器人并发送一条私信。
 3. 检查网关日志中是否有传入活动。
 
-## Environment Variables
+## 环境变量
 
-These authentication-related configuration keys can be set via environment variables instead of through `openclaw.json` (other configuration keys, such as `groupPolicy` or `historyLimit`, can only be set through the configuration file):
+这些与身份验证相关的配置键可以通过环境变量设置，而不是通过 `openclaw.json`（其他配置键，例如 `groupPolicy` 或 `historyLimit`，只能通过配置文件设置）：
 
-| Env var                              | Config key                | Notes                               |
+| 环境变量                               | 配置键                    | 说明                               |
 | ------------------------------------ | ------------------------- | ----------------------------------- |
 | `MSTEAMS_APP_ID`                     | `appId`                   |                                     |
 | `MSTEAMS_APP_PASSWORD`               | `appPassword`             |                                     |
 | `MSTEAMS_TENANT_ID`                  | `tenantId`                |                                     |
-| `MSTEAMS_AUTH_TYPE`                  | `authType`                | `"secret"` or `"federated"`         |
-| `MSTEAMS_CERTIFICATE_PATH`           | `certificatePath`         | Federated authentication + certificate |
-| `MSTEAMS_CERTIFICATE_THUMBPRINT`     | `certificateThumbprint`   | Accepted, but not required for authentication |
-| `MSTEAMS_USE_MANAGED_IDENTITY`       | `useManagedIdentity`      | Federated authentication + managed identity |
-| `MSTEAMS_MANAGED_IDENTITY_CLIENT_ID` | `managedIdentityClientId` | User-assigned managed identity only |
+| `MSTEAMS_AUTH_TYPE`                  | `authType`                | `"secret"` 或 `"federated"`         |
+| `MSTEAMS_CERTIFICATE_PATH`           | `certificatePath`         | 联合身份验证 + 证书 |
+| `MSTEAMS_CERTIFICATE_THUMBPRINT`     | `certificateThumbprint`   | 可接受，但不是身份验证所必需 |
+| `MSTEAMS_USE_MANAGED_IDENTITY`       | `useManagedIdentity`      | 联合身份验证 + 托管身份 |
+| `MSTEAMS_MANAGED_IDENTITY_CLIENT_ID` | `managedIdentityClientId` | 仅限用户分配的托管身份 |
 
 ## 成员信息操作
 
@@ -470,25 +470,25 @@ OpenClaw 为 Microsoft Teams 提供了一个基于 Graph 的 `member-info` 操�
 - 引用的附件上下文（从回复自身附件中的 Skype Reply-schema HTML 解析得到）会不经筛选直接传递；目前只有线程历史种子应用了发送者允许列表过滤。
 - DM 历史可通过 `channels.msteams.dmHistoryLimit`（用户回合）进行限制。按用户覆盖：`channels.msteams.dms["<user_id>"].historyLimit`。
 
-## Current Teams RSC Permissions (Manifest)
+## 当前 Teams RSC 权限（清单）
 
-These are the **existing resourceSpecific permissions** in our Teams app manifest. They only apply within the team/chat where the app is installed.
+这些是我们 Teams 应用清单中**现有的 resourceSpecific 权限**。它们仅适用于安装应用的团队/聊天范围内。
 
-**Applies to channels (team scope):**
+**适用于频道（团队范围）：**
 
-- `ChannelMessage.Read.Group` (Application) - Receive all channel messages without needing an @mention
-- `ChannelMessage.Send.Group` (Application)
-- `Member.Read.Group` (Application)
-- `Owner.Read.Group` (Application)
-- `ChannelSettings.Read.Group` (Application)
-- `TeamMember.Read.Group` (Application)
-- `TeamSettings.Read.Group` (Application)
+- `ChannelMessage.Read.Group`（Application）- 无需 @提及即可接收所有频道消息
+- `ChannelMessage.Send.Group`（Application）
+- `Member.Read.Group`（Application）
+- `Owner.Read.Group`（Application）
+- `ChannelSettings.Read.Group`（Application）
+- `TeamMember.Read.Group`（Application）
+- `TeamSettings.Read.Group`（Application）
 
-**Applies to group chats:**
+**适用于群聊：**
 
-- `ChatMessage.Read.Chat` (Application) - Receive all group chat messages without needing an @mention
+- `ChatMessage.Read.Chat`（Application）- 无需 @提及即可接收所有群聊消息
 
-Add RSC permissions via Teams CLI:
+通过 Teams CLI 添加 RSC 权限：
 
 ```bash
 teams app rsc add <teamsAppId> ChannelMessage.Read.Group --type Application
@@ -647,12 +647,7 @@ Teams 可能会从发送给 bot 的 HTML 活动中移除文件标记。在这种
 
 ### Webhook 超时
 
-Teams 通过 HTTP webhook 传递消息。OpenClaw 对该 webhook 监听器应用固定的 HTTP 服务器超时：30 秒无活动、30 秒总请求、15 秒接收头部。可选的入站媒体和上下文增强共享 10 秒预算，但 Teams SDK 仍会等待 agent turn 完成后才返回 webhook 响应。如果完整 turn 超出 Teams 的重试窗口，你可能会看到：
-
-- Teams 重试消息（导致重复）。
-- 回复丢失。
-
-一旦 agent 响应，回复会以主动方式发送，但较慢的 agent 运行仍可能在 Teams 端触发重试或重复。
+Teams 通过 HTTP webhook 传递消息。OpenClaw 对该 webhook 监听器应用固定的 HTTP 服务器超时：30 秒无活动、30 秒总请求时间，以及 15 秒接收头部。可选的入站媒体和上下文增强共享 10 秒预算。SDK 在原始 activity 被持久追加后返回；agent turn 独立处理并主动回复。如果请求处理或持久接收未在传输窗口内完成，Teams 可能会重试该 activity，而 ingress tombstone 会拒绝重复的 event ID。
 
 ### Teams 云环境和 service URL 支持
 
@@ -817,21 +812,21 @@ Teams 在同一底层数据模型上有两种频道 UI 样式：
 
 当 `replyStyle: "thread"` 生效，并且机器人是在频道线程内被 @ 提及的情况下，OpenClaw 会将原始线程根重新附加到出站会话引用（`19:...@thread.tacv2;messageid=<root>`），从而让回复落在同一个线程中。这对实时（在同一次交互中）发送和在 Bot Framework 轮次上下文过期后发出的主动发送都适用（例如：长时间运行的代理、通过 `mcp__openclaw__message` 发送的排队工具调用回复）。
 
-线程根会从存储在会话引用中的 `threadId` 取出。旧版引用如果还不包含 `threadId`，则回退使用 `activityId`（即最近一次提供会话上下文的入站活动），因此现有部署无需重新播种也能继续工作。
+线程根会从存储在会话引用中的 `threadId` 取出。旧版引用如果还不包含 `threadId`，则回退使用 `activityId`（即最近一次提供会话上下文的入站活动），因此现有部署无需重新播种也能继续工作工作。
 
 当 `replyStyle: "top-level"` 生效时，来自频道线程的入站消息会被刻意作为新的顶层帖子回复；不会附加线程后缀。这对于 Threads 风格频道是正确的；如果你期望的是线程回复却看到顶层帖子，说明该频道的 `replyStyle` 设置不正确。
 
-## 附件和图片
+## Attachments and images
 
-**当前限制：**
+**Current limitations:**
 
-- **DM：** 图片和文件附件通过 Teams bot 文件 API 工作。
-- **频道/群组：** 附件存储在 M365 存储中（SharePoint/OneDrive）。webhook 负载只包含一个 HTML 占位片段，不包含实际的文件字节。**下载频道附件需要 Graph API 权限**。
-- 对于显式的先传文件发送，请使用 `action=upload-file`，并带上 `media` / `filePath` / `path`；可选的 `message` 会作为附带文本/评论，`filename`（或 `title`）会覆盖上传的名称。
+- **DM:** Images and file attachments work through the Teams bot file API.
+- **Channels/Groups:** Attachments are stored in M365 storage (SharePoint/OneDrive). The webhook payload only contains an HTML placeholder fragment and does not include the actual file bytes. **Downloading channel attachments requires Graph API permissions**.
+- For explicit pre-upload sending, use `action=upload-file` and include `media` / `filePath` / `path`; the optional `message` will be used as accompanying text/comment, and `filename` (or `title`) will override the uploaded name.
 
-如果没有 Graph 权限，带图片的频道消息会以纯文本形式到达（机器人无法访问图片内容）。
-默认情况下，OpenClaw 只会从 Microsoft/Teams 主机名下载媒体。可通过 `channels.msteams.mediaAllowHosts` 覆盖（使用 `["*"]` 可允许任意主机）。
-Authorization 头只会附加到 `channels.msteams.mediaAuthAllowHosts` 中的主机（默认是 Graph + Bot Framework 主机）。请保持此列表严格（避免使用多租户后缀）。
+If you do not have Graph permissions, channel messages with images will arrive as plain text (the bot cannot access the image content).
+By default, OpenClaw only downloads media from Microsoft/Teams hostnames. You can override this with `channels.msteams.mediaAllowHosts` (use `["*"]` to allow any host).
+The Authorization header is only appended to hosts in `channels.msteams.mediaAuthAllowHosts` (default is Graph + Bot Framework hosts). Please keep this list strict (avoid using multi-tenant suffixes).
 
 ## 在群聊中发送文件
 
@@ -851,8 +846,8 @@ Authorization 头只会附加到 `channels.msteams.mediaAuthAllowHosts` 中的�
 
 1. **在 Entra ID（Azure AD）→ 应用注册中添加 Graph API 权限**：
    - `Sites.ReadWrite.All`（应用程序）- 将文件上传到 SharePoint。
-   - `Chat.Read.All`（应用程序）- 可选，启用按用户共享链接。
-2. **为租户授予管理员同意**。
+   - `ChatMember.Read.All`（应用程序）- 用于群聊文件发送的租户范围最小权限。`Chat.Read.All` 也可用，并且在启用群聊历史记录时已包含此权限。作为按聊天的替代方案，可使用 `ChatMember.Read.Chat` [特定于资源的同意权限](https://learn.microsoft.com/en-us/microsoftteams/platform/graph-api/rsc/resource-specific-consent)。
+2. **为该租户授予管理员同意**。
 3. **获取你的 SharePoint 站点 ID：**
 
    ```bash
@@ -882,21 +877,23 @@ Authorization 头只会附加到 `channels.msteams.mediaAuthAllowHosts` 中的�
 
 ### 共享行为
 
-| 权限                             | 共享行为                                      |
-| -------------------------------------- | ----------------------------------------------------- |
-| 仅 `Sites.ReadWrite.All`              | 组织范围共享链接（组织内任何人都可访问） |
-| `Sites.ReadWrite.All` + `Chat.Read.All` | 按用户共享链接（只有聊天成员可访问） |
+| Context and permission                                                  | Sharing behavior                                          |
+| ----------------------------------------------------------------------- | --------------------------------------------------------- |
+| Channel + `Sites.ReadWrite.All`                                         | Organization-wide sharing link (anyone in org can access) |
+| Group chat + `Sites.ReadWrite.All` + a supported chat-member read grant | Per-user sharing link (only chat members can access)      |
+| Group chat without a supported chat-member read grant                   | Send fails closed                                         |
 
-按用户共享更安全，因为只有聊天参与者可以访问文件。如果缺少 `Chat.Read.All`，机器人会回退到组织范围共享。
+按用户共享更安全，因为只有聊天参与者才能访问该文件。OpenClaw 要求群聊成员查询成功；超时、传输失败、空结果以及 Graph API 拒绝都会导致发送失败，而不是将访问范围扩大到整个组织。
 
 ### 回退行为
 
-| Scenario                                          | Result                                           |
-| ------------------------------------------------- | ------------------------------------------------ |
-| Group chat + file + `sharePointSiteId` configured | 上传到 SharePoint，发送原生文件卡片              |
-| Group chat + file + no `sharePointSiteId`         | 失败，并返回可操作的配置错误                    |
-| Personal chat + file                              | FileConsentCard 流程（无需 SharePoint 即可工作） |
-| Any context + image                               | Base64 编码内联（无需 SharePoint 即可工作）      |
+| Scenario                                                         | Result                                           |
+| ---------------------------------------------------------------- | ------------------------------------------------ |
+| Group chat + file + SharePoint and member permissions configured | Upload to SharePoint, send a native file card    |
+| Group chat + file + missing SharePoint or member permissions     | Fail with an actionable configuration error      |
+| Channel + file + `sharePointSiteId` configured                   | Upload to SharePoint, send a native file card    |
+| Personal chat + file                                             | FileConsentCard flow (works without SharePoint)  |
+| Any context + image                                              | Base64-encoded inline (works without SharePoint) |
 
 ### 文件存储位置
 

@@ -7,9 +7,9 @@ status: active
 
 OpenClaw 有三个相关但不同的控制项：
 
-1. **Sandbox** (`agents.defaults.sandbox.*` / `agents.list[].sandbox.*`) 决定**工具运行的位置**（sandbox 后端 vs 主机）。
-2. **Tool policy** (`tools.*`, `tools.sandbox.tools.*`, `agents.list[].tools.*`) 决定**哪些工具可用/被允许**。
-3. **Elevated** (`tools.elevated.*`, `agents.list[].tools.elevated.*`) 是一个**仅用于 exec 的逃生口**，用于在你处于 sandbox 中时在 sandbox 外运行（默认是 `gateway`，或者当 exec 目标配置为 `node` 时使用 `node`）。
+1. **Sandbox** (`agents.defaults.sandbox.*` / `agents.entries.*.sandbox.*`) decides **where tools run** (sandbox backend vs host).
+2. **Tool policy** (`tools.*`, `tools.sandbox.tools.*`, `agents.entries.*.tools.*`) decides **which tools are available/allowed**.
+3. **Elevated** (`tools.elevated.*`, `agents.entries.*.tools.elevated.*`) is an **exec-only escape hatch** to run outside the sandbox when you are sandboxed (`gateway` by default, or `node` when the exec target is configured to `node`).
 
 ## 快速调试
 
@@ -51,15 +51,17 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 - 挂载 `/var/run/docker.sock` 本质上等于把主机控制权交给 sandbox；只有在明确有意这样做时才使用。
 - workspace access（`workspaceAccess`）与绑定挂载模式彼此独立。
 
-## 工具策略：有哪些工具存在/可调用
+For a per-agent configuration with several host folders, access modes, and the external-source safety opt-in, see [Multiple folders for one agent](/gateway/sandboxing#multiple-folders-for-one-agent).
+
+## Tool policy: which tools exist/are callable
 
 有两层很重要：
 
-- **工具配置文件**：`tools.profile` 和 `agents.list[].tools.profile`（基础允许列表）
-- **提供方工具配置文件**：`tools.byProvider[provider].profile` 和 `agents.list[].tools.byProvider[provider].profile`
-- **全局/按 agent 的工具策略**：`tools.allow`/`tools.deny` 和 `agents.list[].tools.allow`/`agents.list[].tools.deny`
-- **提供方工具策略**：`tools.byProvider[provider].allow/deny` 和 `agents.list[].tools.byProvider[provider].allow/deny`
-- **Sandbox 工具策略**（仅在 sandbox 中生效）：`tools.sandbox.tools.allow`/`tools.sandbox.tools.deny` 和 `agents.list[].tools.sandbox.tools.*`
+- **Tool profile**: `tools.profile` and `agents.entries.*.tools.profile` (base allowlist)
+- **Provider tool profile**: `tools.byProvider[provider].profile` and `agents.entries.*.tools.byProvider[provider].profile`
+- **Global/per-agent tool policy**: `tools.allow`/`tools.deny` and `agents.entries.*.tools.allow`/`agents.entries.*.tools.deny`
+- **Provider tool policy**: `tools.byProvider[provider].allow/deny` and `agents.entries.*.tools.byProvider[provider].allow/deny`
+- **Sandbox tool policy** (only applies when sandboxed): `tools.sandbox.tools.allow`/`tools.sandbox.tools.deny` and `agents.entries.*.tools.sandbox.tools.*`
 
 经验法则：
 
@@ -89,21 +91,21 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 可用的组：
 
-| Group              | 工具                                                                                                                                                      |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `group:runtime`    | `exec`, `process`, `code_execution`（`bash` 也可作为 `exec` 的别名）                                                                            |
-| `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                                                                                     |
-| `group:sessions`   | `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`                                    |
-| `group:memory`     | `memory_search`, `memory_get`                                                                                                                              |
-| `group:web`        | `web_search`, `x_search`, `web_fetch`                                                                                                                      |
-| `group:ui`         | `browser`, `canvas`                                                                                                                                        |
-| `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                                                     |
-| `group:messaging`  | `message`                                                                                                                                                  |
-| `group:nodes`      | `nodes`, `computer`                                                                                                                                        |
-| `group:agents`     | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `skill_workshop`                                                                   |
-| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                                                       |
-| `group:openclaw`   | 大多数内置 OpenClaw 工具（不包括 `read`/`write`/`edit`/`apply_patch`/`exec`/`process` 文件系统和运行时原语、`canvas`，以及提供方插件） |
-| `group:plugins`    | 所有已加载的插件所属工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                               |
+| Group              | Tools                                                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `group:runtime`    | `exec`, `process`, `code_execution` (`bash` is accepted as an alias for `exec`)                                                                                                                                                                        |
+| `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                                                                                                                                                                                 |
+| `group:sessions`   | `sessions`, `sessions_list`, `sessions_history`, `sessions_search`, `conversations_list`, `conversations_send`, `conversations_turn`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`, `spawn_task`, `dismiss_task` |
+| `group:memory`     | `memory_search`, `memory_get`                                                                                                                                                                                                                          |
+| `group:web`        | `web_search`, `x_search`, `web_fetch`                                                                                                                                                                                                                  |
+| `group:ui`         | `browser`, `screen`, `terminal`, `canvas`, `show_widget`                                                                                                                                                                                               |
+| `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                                                                                                                                                 |
+| `group:messaging`  | `message`                                                                                                                                                                                                                                              |
+| `group:nodes`      | `nodes`, `computer`                                                                                                                                                                                                                                    |
+| `group:agents`     | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `ask_user`, `skill_workshop`                                                                                                                                                   |
+| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                                                                                                                                                   |
+| `group:openclaw`   | most built-in OpenClaw tools (excludes the `read`/`write`/`edit`/`apply_patch`/`exec`/`process` fs and runtime primitives, `canvas`, and provider plugins)                                                                                             |
+| `group:plugins`    | all loaded plugin-owned tools, including configured MCP servers exposed through `bundle-mcp`                                                                                                                                                           |
 
 对于只读 agent，除非 sandbox 文件系统策略或单独的主机边界强制执行只读约束，否则也要拒绝 `group:runtime` 以及所有会修改文件系统的工具。
 
@@ -124,8 +126,8 @@ Elevated **不会**授予额外工具；它只影响 `exec`。
 
 门控：
 
-- 启用：`tools.elevated.enabled`（以及可选的 `agents.list[].tools.elevated.enabled`）
-- 发送者允许列表：`tools.elevated.allowFrom.<provider>`（以及可选的 `agents.list[].tools.elevated.allowFrom.<provider>`）
+- Enablement: `tools.elevated.enabled` (and optionally `agents.entries.*.tools.elevated.enabled`)
+- Sender allowlists: `tools.elevated.allowFrom.<provider>` (and optionally `agents.entries.*.tools.elevated.allowFrom.<provider>`)
 
 参见 [Elevated Mode](/tools/elevated)。
 
@@ -135,11 +137,11 @@ Elevated **不会**授予额外工具；它只影响 `exec`。
 
 Fix key (choose one):
 
-- Disable sandbox: `agents.defaults.sandbox.mode=off` (or set per agent `agents.list[].sandbox.mode=off`)
-- Allow the tool inside the sandbox:
-  - Remove it from `tools.sandbox.tools.deny` (or the corresponding `agents.list[].tools.sandbox.tools.deny`)
-  - Or add it to `tools.sandbox.tools.allow` (or the corresponding per-agent allow)
-- Check the `agents/tool-policy` entry in `openclaw logs`. It will record the sandbox mode, and whether an allow or deny rule blocked the tool.
+- Disable sandbox: `agents.defaults.sandbox.mode=off` (or per-agent `agents.entries.*.sandbox.mode=off`)
+- Allow the tool inside sandbox:
+  - remove it from `tools.sandbox.tools.deny` (or per-agent `agents.entries.*.tools.sandbox.tools.deny`)
+  - or add it to `tools.sandbox.tools.allow` (or per-agent allow)
+- Check `openclaw logs` for the `agents/tool-policy` entry. It records the sandbox mode and whether the allow or deny rule blocked the tool.
 
 ### “I thought this was main, why was it sandboxed?”
 

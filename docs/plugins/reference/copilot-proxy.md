@@ -16,4 +16,4 @@ title: "Copilot Proxy 插件"
 
 ## 接口
 
-providers: copilot-proxy
+providers: `copilot-proxy`

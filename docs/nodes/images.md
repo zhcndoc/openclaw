@@ -50,14 +50,18 @@ WhatsApp 渠道运行在 Baileys Web 上。本页面涵盖发送、网关和代�
 ## 入站媒体到命令
 
 - 当入站网页消息包含媒体时，OpenClaw 会将其下载到临时文件，并暴露以下模板变量：
-  - `{{MediaUrl}}` — 入站媒体的伪 URL。
-  - `{{MediaPath}}` — 在运行命令前写入的本地临时路径。
-- 当启用按会话划分的 Docker 沙箱时，入站媒体会被复制到沙箱工作区中，并且 `MediaPath`/`MediaUrl` 会被重写为类似 `media/inbound/<filename>` 的沙箱相对路径。
-- 媒体理解功能（通过 `tools.media.*` 或共享的 `tools.media.models` 配置）会在模板渲染之前运行，并且可以在 `Body` 中插入 `[Image]`、`[Audio]` 和 `[Video]` 块。
-  - 音频会设置 `{{Transcript}}`，并在命令解析时使用转写内容，因此斜杠命令仍然有效。
-  - 视频和图片描述会保留任何标题文本用于命令解析。
-  - 如果当前主模型已经原生支持视觉，OpenClaw 会跳过 `[Image]` 摘要块，并改为将原始图片传递给模型。
-- 默认情况下，只处理第一个匹配的图片/音频/视频附件；将 `tools.media.<capability>.attachments` 设为可处理多个附件。
+  - `{{AttachmentUrl}}` — 当前附件的原始 URL 或提供方引用。
+  - `{{AttachmentPath}}` — 在运行命令前写入的本地临时路径。
+  - `{{AttachmentContentType}}` — MIME 内容类型。
+  - `{{AttachmentDir}}` — 包含本地路径的目录。
+  - `{{AttachmentIndex}}` — 从 0 开始的源事实索引。
+- 当启用按会话隔离的 Docker 沙箱时，入站媒体会被复制到沙箱工作区，并且附件路径/引用会被重写为类似 `media/inbound/<filename>` 的沙箱相对路径。
+- 在插件 SDK 迁移窗口期间，`{{MediaPath}}`、`{{MediaUrl}}`、`{{MediaType}}` 和 `{{MediaDir}}` 仍然是已弃用的兼容别名。
+- 媒体理解（通过 `tools.media.*` 或共享的 `tools.media.models` 配置）会在模板渲染之前运行，并可向 `Body` 中插入 `[Image]`、`[Audio]` 和 `[Video]` 块。
+  - 音频会设置 `{{Transcript}}`，并使用转录文本进行命令解析，因此斜杠命令仍可正常工作。
+  - 视频和图像描述会保留任何字幕文本以用于命令解析。
+  - 如果当前主模型已原生支持视觉功能，OpenClaw 会跳过 `[Image]` 摘要块，并改为将原始图像传递给模型。
+- 默认情况下，仅处理第一个匹配的图像/音频/视频附件；使用 `tools.media.<capability>.attachments` 可选择多个附件。
 
 ## 限制和错误
 
@@ -70,10 +74,11 @@ WhatsApp 渠道运行在 Baileys Web 上。本页面涵盖发送、网关和代�
 
 **媒体理解上限（转写/描述）**
 
-- 图片默认：10MB（`tools.media.image.maxBytes`）。
-- 音频默认：20MB（`tools.media.audio.maxBytes`）。
-- 视频默认：50MB（`tools.media.video.maxBytes`）。
-- 过大的媒体会跳过理解，但回复仍会携带原始正文继续发送。
+- 图片默认：10MB（可通过 `tools.media.image.maxBytes` 覆盖，或在每个
+  `tools.media.models[]` 条目中通过 `maxBytes` 覆盖）。
+- 音频默认：20MB（可通过 `tools.media.audio.maxBytes` 覆盖，或在每个条目中覆盖）。
+- 视频默认：50MB（可通过 `tools.media.video.maxBytes` 覆盖，或在每个条目中覆盖）。
+- 超大媒体会跳过理解，但回复仍会使用原始正文继续发送。
 
 ## 测试说明
 

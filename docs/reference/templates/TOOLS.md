@@ -1,40 +1,14 @@
 ---
-summary: "TOOLS.md 的工作区模板"
-title: "TOOLS.md 模板"
+summary: "已退役的 TOOLS.md 工作区模板"
+title: "TOOLS.md 已退役"
 read_when:
   - 手动引导工作区初始化
 ---
 
-# TOOLS.md - 本地笔记
+# TOOLS.md 已退役
 
-技能定义了工具如何工作。此文件用于记录你的具体信息——那些对你的设置而言独一无二的内容：摄像头名称和位置、SSH 主机和别名、偏好的 TTS 声音、扬声器/房间名称、设备昵称，以及任何与环境相关的内容。
+本地工具和环境说明现在位于 `AGENTS.md` 的 `## Tools` 部分。Skills 继续定义工具的工作方式。
 
-## 示例
+运行 `openclaw doctor --fix` 可归档现有工作区的 `TOOLS.md`，将自定义内容合并到 `AGENTS.md`，并移除这个已退役文件。
 
-```markdown
-### 摄像头
-
-- living-room → 主区域，180° 广角
-- front-door → 入口，运动触发
-
-### SSH
-
-- home-server → 192.168.1.100，用户：admin
-
-### TTS
-
-- 首选语音："Nova"（温暖，略带英式口音）
-- 默认扬声器：Kitchen HomePod
-```
-
-## 为什么要分开？
-
-技能是共享的。你的设置是你自己的。将它们分开意味着你可以在不丢失笔记的情况下更新技能，并且可以共享技能而不会泄露你的基础设施信息。
-
----
-
-添加任何能帮助你完成工作的内容。这是你的速查表。
-
-## 相关内容
-
-- [Agent 工作区](/concepts/agent-workspace)
+请参阅 [AGENTS.md 模板](/reference/templates/AGENTS) 和 [代理工作区指南](/concepts/agent-workspace)。

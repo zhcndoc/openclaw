@@ -16,9 +16,13 @@ read_when:
 动态工具以及嵌套工具调用是稳定的 Codex harness 接口，
 不依赖 `tools.toolSearch`。
 
-启用 OpenClaw 运行后，模型默认会收到一个 `tool_search_code` 工具，
-外加任何其结构化结果无法通过紧凑桥接传递的仅直连工具。代码工具会在隔离的
-Node 子进程中运行一小段 JavaScript 代码体，并通过 `openclaw.tools` 桥接：
+对于提供 QuickJS-WASI `exec`/`wait`
+接口而不是工具搜索控制项的通用 OpenClaw 运行时，请参见 [Code Mode](/tools/code-mode)。
+
+当为 OpenClaw 运行启用时，模型会自动接收一个有边界的
+可用受信任工具名称和描述目录。默认情况下，它还会接收一个
+`tool_search_code` 工具，以及任何其结构化结果无法通过紧凑桥传递的仅直接工具。
+代码工具会在隔离的 Node 子进程中运行一小段 JavaScript 主体，并通过 `openclaw.tools` 桥接：
 
 ```js
 const hits = await openclaw.tools.search("创建一个 GitHub issue");
@@ -29,14 +33,16 @@ return await openclaw.tools.call(tool.id, {
 });
 ```
 
-目录可以包含符合目录条件的 OpenClaw 工具、插件工具、MCP
-工具以及客户端提供的工具。模型不会预先看到目录中每个 schema。
-相反，它会搜索紧凑描述，在需要精确 schema 时描述某个选中的
-工具，然后通过 OpenClaw 调用该工具。仅直连工具仍然对模型可见，
-且不会被加入目录。
+该目录可以包含符合目录条件的 OpenClaw 工具、插件工具、MCP
+工具以及客户端提供的工具。这个目录让模型了解它可以发现哪些
+受信任能力，而无需预先暴露目录中每个 schema。它还说明，
+经策略批准的 MCP 和客户端工具可能是可发现的。它们不受信任的名称和描述不会被复制到
+系统提示词中。相反，模型会搜索紧凑描述符，在需要精确 schema 时描述
+选中的某个工具，并通过 OpenClaw 调用该工具。仅直接工具仍然对模型可见，
+并不会被加入目录。
 
 Codex harness 运行不会接收这些实验性的 OpenClaw 工具搜索
-控制。OpenClaw 通过动态工具把产品能力传递给 Codex，而
+控制项。OpenClaw 通过动态工具把产品能力传递给 Codex，而
 Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 工具以及嵌套工具调用。
 
@@ -48,8 +54,9 @@ Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 2. 列出符合条件的 OpenClaw 和插件工具。
 3. 通过会话 MCP 运行时列出符合条件的 MCP 工具。
 4. 添加为当前运行提供的符合条件的客户端工具。
-5. 将仅可直接访问的工具保持对模型可见，并为其余目录中符合条件的工具索引紧凑描述。
-6. 公开 OpenClaw 代码桥接、结构化回退工具，或与这些仅可直接访问的工具并列的紧凑目录表面。
+5. 将核心编码原语和仅直接可用工具保持为模型可见，并为其余目录中符合条件的工具索引紧凑描述符。
+6. 将确定性、有界、经策略过滤的能力目录添加到缓存稳定的系统提示前缀中。
+7. 将 OpenClaw 代码桥、结构化回退工具或紧凑目录表面，与那些稳定的、可直接调用的工具一起暴露出来。
 
 在执行阶段，每一次真实工具调用都会返回到 OpenClaw。隔离的 Node
 运行时不持有插件实现、MCP 客户端对象或密钥。
@@ -60,14 +67,13 @@ Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 
 `tools.toolSearch` 有三种面向模型的模式：
 
-- `code`: 暴露 `tool_search_code`，这是默认的紧凑 JavaScript 桥接层，
-  以及直接可用工具。
+- `code`: 暴露 `tool_search_code`，这是默认的紧凑 JavaScript 桥接，
+  同时暴露能力目录和仅直接调用工具。
 - `tools`: 暴露 `tool_search`、`tool_describe` 和 `tool_call` 作为纯
-  结构化工具，适用于不应接收代码的提供方，以及直接可用工具。
-- `directory`: 暴露 `tool_search`、`tool_describe` 和 `tool_call`，并提供一个
-  有界的提示目录，其中包含可用工具名称和描述，适用于需要看到工具名称但
-  不需要每个完整 schema 的提供方。OpenClaw 还可以针对当前轮次直接暴露一小组
-  有界的、可能会用到或必需的工具 schema。直接可用工具在此模式下也仍然可见。
+  结构化工具，适用于不应接收代码的提供方，同时暴露能力目录和仅直接调用工具。
+- `directory`: 暴露 `tool_search`、`tool_describe` 和 `tool_call`，以及一个
+  有界、缓存稳定的提示目录。核心编码原语、仅直接调用工具，以及运行交付策略要求的工具仍然可见；其他
+  模式保持延后加载。
 
 所有模式都使用相同的经策略过滤的目录和标准 OpenClaw 执行路径。标记为
 `catalogMode: "direct-only"` 的工具会保持在该目录之外，并保持对模型可见。
@@ -89,25 +95,56 @@ Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 
 工具搜索改变了这种形态：
 
-- 直接工具：模型在第一个 token 之前就会看到每个已选中的 schema
-- Tool Search 代码模式：模型会看到一个紧凑的代码工具、一个简短的 API
-  合约，以及任何仅直接可见的工具
-- Tool Search 工具模式：模型会看到三个紧凑的结构化回退
-  工具，以及任何仅直接可见的工具
-- Tool Search 目录模式：模型会看到一个有界目录，以及
-  search/describe/call 控制项和一小组有界的可能或必需
-  schema，再加上任何仅直接可见的工具
-- 在对话轮次中：模型可以根据需要加载剩余的 schema
+- direct tools: 模型在第一个 token 之前就会看到每个已选 schema
+- Tool Search code mode: 模型会看到一个紧凑的代码工具、一个有边界的
+  能力目录、一个简短的 API 契约，以及任何仅直接暴露的工具
+- Tool Search tools mode: 模型会看到三个紧凑的结构化回退
+  工具、相同的能力目录，以及任何仅直接暴露的工具
+- Tool Search directory mode: 模型会看到一个有边界的目录，以及
+  search/describe/call 控制项、策略要求的直接工具，以及任何
+  仅直接暴露的工具
+- 在本轮过程中：模型可以根据需要加载其余 schema
 
 对于小型目录，直接暴露工具仍然是正确的默认方案。对于一次运行中
 可能看到很多工具的场景，尤其是来自 MCP 服务器或
 客户端提供的应用工具时，工具搜索最合适。
 
+能力目录按工具名称排序，限制为 18,000 个字符，
+并基于已通过策略过滤的目录构建。OpenClaw 会在目录快照不变时复用
+渲染后的目录，并将其放在系统提示缓存边界之上。用户消息、每轮工具猜测、
+会话标识符，以及不受信任的 MCP 或客户端元数据都不会进入目录。
+这使得重复轮次能够复用 prompt KV 缓存。当授权目录发生变化时，OpenClaw 会为新的
+快照构建新的目录。
+
 ## API
 
 `openclaw.tools.search(query, options?)`
 
-在当前运行的有效目录中搜索。结果是紧凑的，并且安全地放回提示上下文。
+搜索当前运行的有效目录。
+
+查询必须使用英文编写。排序采用词法方式（针对工具
+名称、描述以及第一方参数名称和描述使用 Okapi BM25），并带有
+轻量级英文词干化，因此 `scheduling` 可以匹配到描述为 `Schedule a
+recurring task` 的工具，还带有少量意图扩展，因此 `look up the price` 可以匹配到
+描述为 `Search the web` 的工具。工具名称和描述均使用英文编写，
+所以其他语言的查询通常不会匹配到任何内容。它不会被拒绝——目录
+完全可以合法地用其他文字系统描述一个工具——但它也不再会像以前的
+评分器那样：当查询没有产生可用词项时，随意截取目录的一部分并
+把它呈现得像是经过排序的结果。`tool_search` 和代码模式桥接都在其面向模型的描述中
+说明了这一要求。
+
+不受信任的参数模式永远不会被索引。MCP 和客户端工具只按名称和描述进行匹配，
+这与将其输入签名延迟为 `input: "unknown"` 的边界是一致的。
+
+结果是紧凑且安全的，
+可以放回提示上下文中。每个命中都包含一个受限的 TypeScript 风格
+`input` 签名，例如 `{ id: string; mode?: "drip" | "flood" }`，因此
+当该签名已经足够时，模型可以跳过 `describe`。受信任的
+OpenClaw 核心或插件工具还可能包含一个紧凑的 `output` 提示，例如
+`Array<{ id: string; paid: boolean }>`。MCP 和客户端的输出模式声明不会被提升为这种受信任的提示。
+它们不受信任的输入模式也会延迟为 `input: "unknown"`；在调用它们之前请先使用 `describe`。
+开放的、过大的或其他部分式输出模式会省略该提示，并仍然可通过
+`describe` 获取。
 
 ```js
 const hits = await openclaw.tools.search("日历事件", { limit: 5 });
@@ -115,7 +152,8 @@ const hits = await openclaw.tools.search("日历事件", { limit: 5 });
 
 `openclaw.tools.describe(id)`
 
-加载一个搜索结果的完整元数据，包括精确的输入 schema。
+加载一个搜索结果的完整元数据，包括精确的输入模式，以及当工具声明了
+受信任的完整 `outputSchema` 时也会包含该模式。
 
 ```js
 const calendarCreate = await openclaw.tools.describe("mcp:calendar:create_event");
@@ -123,7 +161,19 @@ const calendarCreate = await openclaw.tools.describe("mcp:calendar:create_event"
 
 `openclaw.tools.call(id, args)`
 
-通过 OpenClaw 调用选中的工具。
+通过 OpenClaw 调用所选工具，并返回原始的 `{ tool, result }`
+封装。返回 JSON 的工具通常会把其值放在
+`result.details` 中。OpenClaw 会在执行前验证受信任的核心或插件工具所声明的输入模式。
+缺失必填参数、类型不正确，
+以及被禁止的属性会返回可操作的工具错误，而不是执行该工具；拼写错误的属性在可用时会包含建议的参数。
+如果受信任的工具还声明了 `outputSchema`，OpenClaw 会在执行前编译该模式，
+并在所有正常工具钩子之后、返回目录调用结果之前验证最终的 `details`。
+MCP 和客户端自有的模式仍会延迟到它们各自的执行边界。
+
+在结构化模式下，`tool_call` 还会修复来自本地模型的扁平化目标参数。
+它会保留诸如 `id` 和 `name` 之类的目标字段，并且会拒绝
+含糊不清的工具选择器，而不是调用错误的工具。当目标字段与另一个已编目的工具匹配时，
+请将目标参数嵌套在 `args` 下。
 
 ```js
 await openclaw.tools.call(calendarCreate.id, {
@@ -132,7 +182,13 @@ await openclaw.tools.call(calendarCreate.id, {
 });
 ```
 
-结构化回退模式将相同操作作为工具暴露：
+工具作者在工具的 `outputSchema` 属性上声明输出契约。
+它描述的是 `AgentToolResult.details`，而不是渲染后的内容块。请包含
+所有不会抛错的变体，或者在结果不稳定时省略它。请参阅
+[代码模式输出契约](/tools/code-mode#declared-output-contracts) 和
+[工具插件](/plugins/tool-plugins#output-contracts)。
+
+结构化回退模式暴露与工具相同的操作：
 
 - `tool_search`
 - `tool_describe`
@@ -144,8 +200,14 @@ await openclaw.tools.call(calendarCreate.id, {
 - `tool_describe`
 - `tool_call`
 
-它还会直接显示客户端提供的工具和所有仅直接可见的工具，并且可能会为当前轮次直接公开一小组有界的、可能需要的目录工具 schema。如果有界目录省略了某些条目，请使用 `tool_search` 来找到它们。如果模型直接请求某个精确的隐藏目录工具名称，OpenClaw 会在正式执行前从授权目录中为其填充。
-目录模式下的客户端工具名称不得与 OpenClaw、插件或 MCP 工具名称冲突，因为精确的延迟分发会使用这些名称。
+它还会直接显示核心文件和 shell 原语、客户端提供的工具、仅直接可用的
+工具，以及策略要求的交付工具。其他已授权的
+工具模式会保持延迟状态，而不是随着每次用户提示而改变。MCP 工具
+不能冒充直接可见的核心或策略要求的交付工具。如果受限目录省略了条目，请使用 `tool_search` 查找它们，并使用 `tool_describe`
+检索它们的完整模式。如果模型直接请求一个精确的隐藏目录工具名称，
+OpenClaw 会在正常执行前从已授权目录中解析它。
+目录模式下的客户端工具名称不得与 OpenClaw、插件或 MCP
+工具名称冲突，因为精确的延迟分发会使用这些名称。
 
 ## 运行时边界
 
@@ -243,15 +305,15 @@ openclaw config set tools.toolSearch true
 
 ## 提示词和遥测
 
-工具搜索会记录足够的遥测数据，以便与直接工具暴露进行比较：
+代码模式会将一个 `telemetry` 对象附加到每个 `tool_search_code` 结果中：
 
-- 发送给 harness 的已序列化工具和提示词总字节数
-- 目录大小和来源分布
-- 搜索、描述和调用次数
-- 通过 OpenClaw 执行的最终工具调用
-- 选中的工具 id 和来源
+- `catalogSize`：运行时解析到的目录条目数量
+- `sources`：目录条目计数，按 `openclaw`、`mcp` 和 `client` 拆分
+- `searchCount`、`describeCount`、`callCount`：目录会话的运行总计，跨调用累积，而不是每次调用重置
 
-会话日志应当能够回答以下问题：
+`tools` 和 `directory` 模式不会发出 `telemetry` 对象；它们的 `tool_search`、`tool_describe` 和 `tool_call` 结果只携带该操作的目录数据。OpenClaw 不会记录序列化后的工具或提示词字节数。`[E2E scenario](#e2e-validation)` 会单独从 mock provider 通道而不是运行时测量 provider 负载字节数。
+
+无论哪种模式，目标工具调用都会像正常的工具调用和工具结果对一样被投影到会话转录中，而 search、describe 和 call 结果都会携带每个工具的 `id` 和 `source`。因此，会话日志仍然可以回答：
 
 - 模型一开始看到了多少个工具 schema
 - 它执行了多少次搜索和描述操作

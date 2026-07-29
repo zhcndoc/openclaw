@@ -174,24 +174,24 @@ status: active
 
 ## 配置优先级
 
-当全局（`agents.defaults.*`）和特定代理（`agents.list[].*`）配置同时存在时：
+当全局（`agents.defaults.*`）和特定代理（`agents.entries.*.*`）配置同时存在时：
 
 ### 沙箱配置
 
 特定代理设置会覆盖全局设置：
 
 ```text
-agents.list[].sandbox.mode > agents.defaults.sandbox.mode
-agents.list[].sandbox.scope > agents.defaults.sandbox.scope
-agents.list[].sandbox.workspaceRoot > agents.defaults.sandbox.workspaceRoot
-agents.list[].sandbox.workspaceAccess > agents.defaults.sandbox.workspaceAccess
-agents.list[].sandbox.docker.* > agents.defaults.sandbox.docker.*
-agents.list[].sandbox.browser.* > agents.defaults.sandbox.browser.*
-agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
+agents.entries.*.sandbox.mode > agents.defaults.sandbox.mode
+agents.entries.*.sandbox.scope > agents.defaults.sandbox.scope
+agents.entries.*.sandbox.workspaceRoot > agents.defaults.sandbox.workspaceRoot
+agents.entries.*.sandbox.workspaceAccess > agents.defaults.sandbox.workspaceAccess
+agents.entries.*.sandbox.docker.* > agents.defaults.sandbox.docker.*
+agents.entries.*.sandbox.browser.* > agents.defaults.sandbox.browser.*
+agents.entries.*.sandbox.prune.* > agents.defaults.sandbox.prune.*
 ```
 
 <Note>
-`agents.list[].sandbox.{docker,browser,prune}.*` 会覆盖该代理的 `agents.defaults.sandbox.{docker,browser,prune}.*`（当沙箱 scope 解析为 `"shared"` 时会被忽略）。
+`agents.entries.*.sandbox.{docker,browser,prune}.*` 会覆盖该代理的 `agents.defaults.sandbox.{docker,browser,prune}.*`（当 sandbox scope 解析为 `"shared"` 时会被忽略）。
 </Note>
 
 ### 工具限制
@@ -200,10 +200,10 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
 
 <Steps>
   <Step title="工具配置文件">
-    `tools.profile` 或 `agents.list[].tools.profile`。
+    `tools.profile` 或 `agents.entries.*.tools.profile`。
   </Step>
   <Step title="提供方工具配置文件">
-    `tools.byProvider[provider].profile` 或 `agents.list[].tools.byProvider[provider].profile`。
+    `tools.byProvider[provider].profile` 或 `agents.entries.*.tools.byProvider[provider].profile`。
   </Step>
   <Step title="全局工具策略">
     `tools.allow` / `tools.deny`。
@@ -212,13 +212,13 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     `tools.byProvider[provider].allow/deny`。
   </Step>
   <Step title="特定代理工具策略">
-    `agents.list[].tools.allow/deny`。
+    `agents.entries.*.tools.allow/deny`。
   </Step>
   <Step title="代理提供方策略">
-    `agents.list[].tools.byProvider[provider].allow/deny`。
+    `agents.entries.*.tools.byProvider[provider].allow/deny`。
   </Step>
   <Step title="沙箱工具策略">
-    `tools.sandbox.tools` 或 `agents.list[].tools.sandbox.tools`。
+    `tools.sandbox.tools` 或 `agents.entries.*.tools.sandbox.tools`。
   </Step>
   <Step title="子代理工具策略">
     `tools.subagents.tools`，如适用。
@@ -227,19 +227,19 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
 
 <AccordionGroup>
   <Accordion title="优先级规则">
-    - 每一级都可以进一步限制工具，但不能恢复早先级别已拒绝的工具。
-    - 如果设置了 `agents.list[].tools.sandbox.tools`，它会替换该代理的 `tools.sandbox.tools`。
-    - 如果设置了 `agents.list[].tools.profile`，它会覆盖该代理的 `tools.profile`。
+    - 每一层都可以进一步限制工具，但不能重新授予前面层级中已被拒绝的工具。
+    - 如果设置了 `agents.entries.*.tools.sandbox.tools`，它会替换该代理的 `tools.sandbox.tools`。
+    - 如果设置了 `agents.entries.*.tools.profile`，它会覆盖该代理的 `tools.profile`。
     - 提供方工具键接受 `provider`（例如 `google-antigravity`）或 `provider/model`（例如 `openai/gpt-5.4`）。
   </Accordion>
   <Accordion title="空允许列表行为">
-    如果该链中的任何显式允许列表使运行最终没有可调用工具，OpenClaw 会在将提示提交给模型之前停止。这是有意为之：如果某个代理配置了缺失的工具，例如 `agents.list[].tools.allow: ["query_db"]`，它应该在注册 `query_db` 的插件未启用时明确失败，而不是继续作为纯文本代理运行。
+    如果该链中的任何显式允许列表导致运行时没有可调用工具，OpenClaw 会在将提示提交给模型之前停止。这是有意为之：若某个代理配置了缺失的工具，例如 `agents.entries.*.tools.allow: ["query_db"]`，那么在注册 `query_db` 的插件启用之前，它应当明确失败，而不是继续作为仅文本代理运行。
   </Accordion>
 </AccordionGroup>
 
 工具策略支持会展开为多个工具的 `group:*` 简写。完整列表请参见 [工具组](/gateway/sandbox-vs-tool-policy-vs-elevated#tool-groups-shorthands)。
 
-按代理的提权覆盖（`agents.list[].tools.elevated`）可以进一步限制特定代理的提权执行。详情请参见 [提权模式](/tools/elevated)。
+每个代理的 elevated 覆盖（`agents.entries.*.tools.elevated`）可以进一步限制特定代理的 elevated exec。详情请参见 [Elevated mode](/tools/elevated)。
 
 ---
 
@@ -287,15 +287,15 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
 </Tabs>
 
 <Note>
-旧版 `agents.defaults.*`/`agents.list[].*` 配置键（例如 `sandbox.perSession`、`agentRuntime`、`embeddedPi`）会由 `openclaw doctor` 迁移；今后请优先使用 `agents.defaults` + `agents.list`。
+旧版 `agents.defaults.*`/`agents.entries.*.*` 配置键（例如 `sandbox.perSession`、`agentRuntime`、`embeddedPi`）会由 `openclaw doctor` 迁移；今后请优先使用 `agents.defaults` + `agents.entries`。
 </Note>
 
 ---
 
-## Tool Limitations Examples
+## 工具限制示例
 
 <Tabs>
-  <Tab title="Read-only Agent">
+  <Tab title="只读代理">
     ```json
     {
       "tools": {
@@ -305,7 +305,7 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     }
     ```
   </Tab>
-  <Tab title="Disable Shell Execution for File System Tools">
+  <Tab title="为文件系统工具禁用 Shell 执行">
     ```json
     {
       "tools": {
@@ -316,11 +316,11 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     ```
 
     <Warning>
-    This policy disables OpenClaw's file system tools, but `exec` is still a shell and can write files anywhere allowed by the selected host or sandbox file system. For a read-only agent, deny `exec` and `process`, or combine shell access with sandbox file system controls, such as `agents.defaults.sandbox.workspaceAccess: "ro"` or `"none"`.
+    此策略会禁用 OpenClaw 的文件系统工具，但 `exec` 仍然是一个 shell，并且可以在所选主机或沙箱文件系统允许的任何位置写入文件。对于只读代理，请禁止 `exec` 和 `process`，或者将 shell 访问与沙箱文件系统控制结合使用，例如 `agents.defaults.sandbox.workspaceAccess: "ro"` 或 `"none"`。
     </Warning>
 
   </Tab>
-  <Tab title="Communication Only">
+  <Tab title="仅通信">
     ```json
     {
       "tools": {
@@ -331,7 +331,7 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     }
     ```
 
-    `sessions_history` in this configuration file still returns a limited, sanitized memory view rather than the raw transcript output. Assistant memories remove thinking tags, `<relevant-memories>` scaffolding, plain-text tool call XML payloads (including `<tool_call>...</tool_call>`, `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and truncated tool call blocks), degraded tool call scaffolding, leaked ASCII/full-width model control tokens, and malformed MiniMax tool call XML before sanitization.
+    在此配置文件中，`sessions_history` 仍然返回受限的、经过清理的记忆视图，而不是原始转录输出。助手记忆会在清理前移除思考标签、`<relevant-memories>` 脚手架、纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块）、降级的工具调用脚手架、泄露的 ASCII/全角模型控制令牌，以及格式错误的 MiniMax 工具调用 XML。
   </Tab>
 </Tabs>
 
@@ -340,7 +340,7 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
 ## 常见陷阱：“non-main”
 
 <Warning>
-`agents.defaults.sandbox.mode: "non-main"` 会将会话密钥与主会话密钥进行检查（始终为 `"main"`；`session.mainKey` 不是用户可配置的，OpenClaw 会对任何其他值发出警告并忽略），而不是与 agent id 进行检查。群组/频道会话总是会获得自己的密钥，因此它们会被视为 non-main 并进入沙箱。如果你希望某个 agent 永远不进入沙箱，请将 `agents.list[].sandbox.mode: "off"`。
+`agents.defaults.sandbox.mode: "non-main"` 会将会话密钥与主会话密钥进行比较（始终为 `"main"`；`session.mainKey` 不能由用户配置，OpenClaw 会对任何其他值发出警告并忽略），而不是与代理 id 比较。群组/频道会话始终会获得自己的密钥，因此它们会被视为非主会话并进入沙箱。如果你希望某个代理永远不进入沙箱，请设置 `agents.entries.*.sandbox.mode: "off"`。
 </Warning>
 
 ---
@@ -377,9 +377,9 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="尽管设置了 `mode: 'all'`，智能体仍未被沙箱化">
+  <Accordion title="尽管设置了 `mode: 'all'`，Agent 仍未被沙箱化">
     - 检查是否存在全局的 `agents.defaults.sandbox.mode` 覆盖了它。
-    - 智能体特定配置具有更高优先级，因此请设置 `agents.list[].sandbox.mode: "all"`。
+    - 智能体特定配置具有优先级，因此请设置 `agents.entries.*.sandbox.mode: "all"`。
 
   </Accordion>
   <Accordion title="尽管在拒绝列表中，工具仍然可用">

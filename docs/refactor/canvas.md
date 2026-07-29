@@ -100,19 +100,19 @@ Core 应仅拥有通用接口：
 
 在确认重构完成之前：
 
-- `rg "src/canvas-host|../canvas-host"` 不返回任何活跃的源代码导入。
-- `rg "canvas-tool|createCanvasTool" src` 找不到 core 拥有的 Canvas 工具实现。
+- `rg "src/canvas-host|../canvas-host"` 返回空，不再有活动的源码导入。
+- `rg "canvas-tool|createCanvasTool" src` 找不到由核心拥有的 Canvas 工具实现。
 - `rg "canvas.present|canvas.snapshot|canvas.a2ui" src/gateway` 找不到 generic plugin policy tests 之外的硬编码 allowlist 默认值。
 - `rg "extensions/canvas/runtime-api" src --glob '!**/*.test.ts'` 为空。
 - `rg "canvas-documents" src` 为空。
-- `rg "registerNodesCanvasCommands|nodes-canvas" src` 为空；Canvas 插件通过嵌套插件 CLI 元数据注册 `openclaw nodes canvas`。
-- `rg "createCanvasHostHandler|handleA2uiHttpRequest" src/gateway` 不再返回 gateway 运行时所有权。
-- `rg "apps/shared/OpenClawKit/Tools/CanvasA2UI|canvas-a2ui-copy|extensions/canvas/src/host/a2ui" scripts .github package.json` 只找到兼容性封装或插件拥有路径。
+- `rg "registerNodesCanvasCommands|nodes-canvas" src` 为空；Canvas 插件通过嵌套的 plugin CLI 元数据注册 `openclaw nodes canvas`。
+- `rg "createCanvasHostHandler|handleA2uiHttpRequest" src/gateway` 返回空，表示 gateway 不再拥有运行时实现。
+- `rg "apps/shared/OpenClawKit/Tools/CanvasA2UI|canvas-a2ui-copy|extensions/canvas/src/host/a2ui" scripts .github package.json` 只找到兼容性封装或插件拥有的路径。
 - `pnpm plugins:inventory:check` 通过。
-- `pnpm plugin-sdk:api:check` 通过，或者已故意更新并审查生成的 API 基线。
+- `pnpm plugin-sdk:api:check` 通过，或者生成的 API 合同记录已被有意更新并审阅。
 - 目标 Canvas 测试通过。
-- Canvas 宿主/A2UI 路径的 changed-lanes 测试通过。
-- PR 正文明确说明 Canvas 是实验性的且由插件支持。
+- Canvas host/A2UI 路径的 changed-lanes 测试通过。
+- PR 正文明确说明 Canvas 是实验性的，并且由插件提供支持。
 
 ## 验证命令
 

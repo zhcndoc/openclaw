@@ -10,10 +10,10 @@ title: "CLI 参考"
 
 按用途设置命令：
 
-- `openclaw setup` 和 `openclaw onboard` 会先验证推理，然后为 Gateway、workspace、channels、skills 和健康检查设置启动 OpenClaw。
-- `openclaw setup --baseline` 会创建基础配置和 workspace，而不会进入引导式 onboarding 流程。
-- `openclaw configure` 会更改现有设置中的目标部分：模型认证、gateway、channels、plugins 或 skills。
-- `openclaw channels add` 在 baseline 存在后配置 channel accounts；不带标志运行时用于引导式设置，或在脚本中配合特定 channel 的标志使用。
+- `openclaw setup` 和 `openclaw onboard` 会先验证推理，然后为 Gateway、工作区、频道、技能和健康检查设置启动 OpenClaw。
+- `openclaw setup --baseline` 会创建基线配置和工作区，而不会进入引导式入门流程。
+- `openclaw configure` 会更改现有设置的指定部分：模型认证、gateway、频道、插件或技能。
+- `openclaw channels add` 会在基线存在后配置频道账户；仅选择频道会使用引导式设置，而账户、凭据或 channel-config 标志会为脚本使用直接路径。
 
 ## 命令页面
 
@@ -45,6 +45,8 @@ title: "CLI 参考"
 | `--no-color`            | 禁用 ANSI 颜色（也会尊重 `NO_COLOR=1`）                                                    |
 | `--update`              | [`openclaw update`](/cli/update) 的简写；适用于源码检出和包安装    |
 | `-V`, `--version`, `-v` | 输出版本并退出                                                                                  |
+
+命名的 `--profile` 会替换从另一个配置文件继承而来的规范状态和配置路径，包括正在运行的 Gateway 服务。显式自定义的状态目录和配置路径保持不变。
 
 ## 输出模式
 

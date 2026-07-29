@@ -17,7 +17,7 @@ title: "受管 worktree"
 <openclaw-state-dir>/worktrees/<repo-fingerprint>/<name>
 ```
 
-仓库指纹是对规范化的 git 公共目录和 origin URL 进行 SHA-256 哈希后得到的前 16 个十六进制字符。提供的名称必须匹配 `[a-z0-9][a-z0-9-]{0,63}`。如果不提供名称，OpenClaw 会生成 `wt-` 后跟 8 个随机十六进制字符的名称。
+仓库指纹是基于规范化的 git 公共目录和 origin URL 计算出的 SHA-256 哈希的前 16 个十六进制字符。提供的名称必须匹配 `[a-z0-9][a-z0-9-]{0,63}`。如果不提供名称，OpenClaw 会生成一个可读的、以甲壳类动物为主题的名称，例如 `brisk-lobster`。已被其他所有者、本地分支或未受管理路径占用的推断名称，会追加数字后缀，例如 `brisk-lobster-2`。
 
 OpenClaw 会在请求的基础引用处创建分支 `openclaw/<name>`。如果没有基础引用，它会 fetch `origin`，在可用时使用远程默认分支；如果仓库离线或没有可用的远程，则回退到本地 `HEAD`。
 
@@ -30,7 +30,7 @@ OpenClaw 会在请求的基础引用处创建分支 `openclaw/<name>`。如果�
 fixtures/generated/**
 ```
 
-只有同时被 git 报告为“已忽略”和“未跟踪”的文件才符合条件。已跟踪文件已经通过 git 存在，因此这一步不会复制它们。OpenClaw 不会覆盖目标文件，也不会跟随符号链接目录，并且会保留已复制文件的模式位。
+只有同时被 git 报告为已忽略且未跟踪的文件才符合条件。已跟踪文件已经通过 git 存在，因此永远不会通过此步骤复制。OpenClaw 不会覆盖或更改已存在的目标文件，不会跟随符号链接目录，并会保留已复制文件的模式。它只记录实际创建的路径，因此后续对清单的编辑不会使这些文件从清理保护中消失。
 
 ## 运行仓库设置
 
@@ -45,7 +45,7 @@ OPENCLAW_WORKTREE_PATH=<managed worktree>
 
 ## 会话工作树
 
-通过基于工作树的会话，从当前代理的 git 工作区启动一个隔离聊天：在 Control UI 的新会话页面启用 **Worktree**（这里还提供基础分支选择器和可选的工作树名称），或者在 iOS 上使用聊天操作菜单，或在 Android 上使用 New Chat 旁边的更多操作。该选项仅适用于具备此能力的 git-backed 代理；无法预检该选项的客户端会改为显示网关错误。
+从一个由 Git 支持的文件夹开始一个隔离的聊天，并使用工作树会话：在 Control UI 的 New session 页面中，使用 **Place** 选择器选择一个 Gateway 源文件夹，然后选择 **Worktree**（可选地指定基础分支和工作树名称）。当名称被省略时，OpenClaw 会根据显式会话标签或从第一条消息生成的简短标题来推导名称，然后再回退到一个以甲壳类动物为主题的名称。只有在 Gateway 确认所选文件夹是一个 Git 检出目录之后，该选项才会出现；普通文件夹会直接运行，并且不会显示 Git 隔离控制。iOS 会从 Chat actions 中暴露相同的选项，而 Android 会在 New Chat 旁边暴露它，当活动代理工作区由 Git 支持时。
 
 当编码代理发现当前任务之外已确认的后续工作时，也可以调用 `spawn_task`。Control UI 会显示一个建议 chip，但不会立即启动任何内容，而基于 Gateway 的 TUI 会显示一个带有相同操作的交互式提示。选择 **Start in worktree** 会从建议的项目创建一个新的、由会话拥有的工作树，并将自包含的提示作为其第一轮发送；忽略该建议则不会对仓库做任何更改。建议及其 ID 是临时的，在 Gateway 重启后不会保留。
 
@@ -53,21 +53,20 @@ OpenClaw 仅向具有可操作 Gateway UI 的 operator 会话暴露这些工具�
 
 生成的受管工作树归该会话所有，且该会话中的每次代理运行都会使用它的检出版本。当工作区是仓库的子目录时，工作树会锚定在仓库根目录，且会话会从其中对应的子目录运行。会话工作树的创建使用该方法的 `operator.write` 范围，但仓库检出钩子和 `.openclaw/worktree-setup.sh` 步骤仅对 `operator.admin` 调用者运行，因为它们会执行仓库代码；`.worktreeinclude` 的预配仍适用于所有调用者。删除会话时，只有在无损的情况下才会移除工作树。脏工作树或包含未推送提交的分支会继续保留；每小时清理会在 7 天无活动后对会话工作树创建快照，并将最近的会话活动视为工作树活动。已移除的工作树可按下文所述从其快照中恢复。
 
-当任务目标指向的项目不是已配置的代理工作区时，`sessions.create` 可在 `worktree: true` 的同时包含一个绝对 `cwd`。该显式宿主路径要求 `operator.admin`；普通的工作树聊天创建仍然是 `operator.write`，并保持锚定在已配置的工作区。
+`sessions.create` 可能包含一个绝对 `cwd`，用于直接在另一个 Gateway 文件夹中运行，或与 `worktree: true` 一起选择源检出目录，或用于设置配对节点的工作目录。任何显式主机路径都需要 `operator.admin`；普通的工作树聊天创建仍然是 `operator.write`，并保持锚定在已配置的工作区中。
 
-`sessions.create` 还接受与 `worktree: true` 一起提供的 `worktreeBaseRef` 和 `worktreeName`，用于选择基础 ref 和工作树名称（分支将变为 `openclaw/<name>`）；二者都保持在 `operator.write` 范围内。创建出的工作树会在创建结果中返回，并以 `worktree: { id, branch, repoRoot }` 的形式持久化到会话行中，因此会话列表可以显示检出状态和分支。删除会话时，如果保留了一个脏的检出，会报告为 `worktreePreserved`，而不是静默地将其遗留在那里。
+`sessions.create` 还接受与 `worktree: true` 一起使用的 `worktreeBaseRef` 和 `worktreeName`，以选择基础引用和工作树名称（分支将变为 `openclaw/<name>`）；两者仍保持在 `operator.write`。如果省略 `worktreeName`，会话标签或生成的首条消息标题会提供可读的分支名称，并带有一个以甲壳类动物为主题的回退名称。创建出的工作树会在创建结果中返回，并以 `worktree: { id, branch, repoRoot }` 的形式持久化到会话行中，因此会话列表可以显示检出信息和分支。删除会话时，如果保留了脏检出，会报告为 `worktreePreserved`，而不是默默地将其留在原处。
 
 ## 快照、清理和恢复
 
-删除首先会创建一个合成提交，其中包含已跟踪文件和未被忽略的未跟踪文件，并将其固定在 `refs/openclaw/snapshots/<id>`。Git 忽略的文件不会包含在仓库对象数据库中；在恢复期间，`.worktreeinclude` 选中的文件会再次被复制。如果快照创建失败，删除将停止。显式强制删除可以在没有快照的情况下继续执行。
+移除操作首先会创建一个合成提交，其中包含已跟踪文件和未被忽略的未跟踪文件，然后将其固定到 `refs/openclaw/snapshots/<id>`。被忽略的文件绝不会进入仓库对象数据库。OpenClaw 仅在分块共享状态数据库行中存储其实际提供过的被忽略文件；即使 `.worktreeinclude` 之后发生更改或消失，记录的路径集合仍然具有权威性。恢复时会从不可变快照中读取这些字节，并重新应用其完整模式。如果快照创建失败，移除操作将停止。显式强制删除可以在没有快照的情况下继续。
 
 OpenClaw 应用以下清理规则：
 
-- 在运行结束时，仅当 `git status --porcelain` 为空且 `git log HEAD --not --remotes --oneline` 未找到任何未推送提交时，才会删除工作树。否则只会释放活动锁。
-- 每小时清理会为已解锁、由 Workboard 和会话拥有且空闲超过 7 天的工作树创建快照并将其删除，即使它们处于脏状态。手动工作树绝不会被自动删除。
-- 当配置了 `worktrees.cleanup.maxCount` 或 `worktrees.cleanup.maxTotalSizeGb` 时，清理还会为最近活动时间最早的、由 Workboard 和会话拥有的工作树创建快照并将其删除，直到总数量和磁盘大小符合限制。所有受管理的工作树都会计入总数，但手动及其他受保护的工作树永远不会因限额而被驱逐，因此在存在符合条件的工作树之前，限制可能会一直超出。`0` 或未设置会禁用该限制。
-- 快照记录可在 30 天内恢复。之后清理会删除快照引用和注册表行。
-- 运行中的 OpenClaw 进程锁以及任何外部或无法识别的 git 工作树锁都会保护工作树免于垃圾回收。
+- 在运行结束时，只有当 `git status --porcelain` 为空且 `git log HEAD --not --remotes --oneline` 没有找到未推送提交时，才会移除 worktree。否则只会释放活动锁。
+- 每小时清理会为处于解锁状态、由 Workboard 和会话拥有、且空闲超过 7 天的 worktree 创建快照并将其移除，即使其内容有变更也是如此。手动 worktree 永远不会被自动移除。
+- 快照记录在 30 天内仍可恢复。之后清理会删除快照引用和注册表行。
+- 运行中的 OpenClaw 进程锁，以及任何外部或无法识别的 git worktree 锁，都会阻止 worktree 被垃圾回收。
 
 恢复会在原始的快照前提交上重新创建 `openclaw/<name>`，然后将快照差异重建为未暂存的修改和未跟踪文件。这样可以使合成的快照提交不进入分支历史。快照引用仍会被记录为来源证明。
 
@@ -81,7 +80,7 @@ openclaw worktrees restore <id> [--json]
 openclaw worktrees gc [--json]
 ```
 
-设置中的 Control UI **Worktrees** 页面提供相同的操作，并额外支持通过基准分支选择器进行创建，显示每个 worktree 的所有者（manual、Workboard，或带有指向其聊天链接的所属会话），并在删除操作报告快照失败时提供强制重试。其 **Cleanup** 部分可编辑在 [配置参考](/gateway/configuration-reference#worktrees) 中描述的 `worktrees.cleanup` 保留限制。
+设置中的 Control UI **Worktrees** 页面提供相同的操作，外加通过 base 分支选择器进行创建，显示每个 worktree 的所有者（手动、Workboard，或拥有该 worktree 的会话，并带有指向其聊天的链接），并在移除操作报告快照失败时提供强制重试。
 
 ## 网关方法
 
@@ -94,7 +93,7 @@ openclaw worktrees gc [--json]
 | `worktrees.restore`  | 从快照中恢复已移除的 worktree。                                       |
 | `worktrees.gc`       | 立即运行空闲、孤立和保留清理。                                        |
 
-`worktrees.list` 需要 `operator.read`，而会修改状态的方法需要 `operator.admin`。`worktrees.branches` 在已配置的代理工作区中需要 `operator.write`，而任何其他主机路径都需要 `operator.admin`（与 `sessions.create` 的 cwd 限制一致）。它只读取现有引用，且绝不会 fetch，远程专属分支会以远程限定形式返回（`origin/feature-a`），因此返回的每个名称都可解析为 base ref。
+`worktrees.list` 需要 `operator.read`，而修改状态的方法需要 `operator.admin`。对于已配置的 agent 工作区，`worktrees.branches` 需要 `operator.write`；而任何其他主机路径都需要 `operator.admin`（与 `sessions.create` 的 cwd 限制一致）。它只读取现有引用，绝不会 fetch，并且仅存在于远端的分支会以远端限定形式返回（`origin/feature-a`），因此每个返回的名称都可解析为 base ref。New Session 也可以通过此方法请求一个类型化的仓库状态；普通目录或不可用的 checkout 不会返回分支，而不是让 UI 通过错误字符串来推断 Git 能力。
 
 ## Workboard 工作区
 

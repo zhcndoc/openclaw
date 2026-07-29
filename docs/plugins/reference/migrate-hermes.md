@@ -16,4 +16,4 @@ title: "迁移 Hermes 插件"
 
 ## 接口
 
-contracts: migrationProviders
+contracts: `migrationProviders`

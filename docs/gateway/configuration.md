@@ -19,8 +19,12 @@ Common reasons to add a config:
 
 请参阅[完整参考](/gateway/configuration-reference)以查看所有可用字段。
 
-代理和自动化应在编辑配置前使用 `config.schema.lookup` 获取精确的字段级文档。
-本页用于任务导向的指导，[配置参考](/gateway/configuration-reference)用于更广泛的字段映射和默认值。
+Configuration follows a two-bucket rule: root siblings hold infrastructure and cross-agent defaults, while `agents.defaults` holds agent-loop behavior. Entries under `agents.entries` may override either bucket where the schema supports a per-agent override.
+
+Agents and automation should use `config.schema.lookup` for exact field-level
+docs before editing config. Use this page for task-oriented guidance and
+[Configuration reference](/gateway/configuration-reference) for the broader
+field map and defaults.
 
 <Tip>
 **刚接触配置？** 可以先运行 `openclaw onboard` 进行交互式设置，或者查看 [配置示例](/gateway/configuration-examples) 指南，获取可直接复制粘贴的完整配置。
@@ -52,12 +56,19 @@ Common reasons to add a config:
     openclaw config unset plugins.entries.brave.config.webSearch.apiKey
     ```
   </Tab>
-  <Tab title="控制 UI">
-    打开 [http://127.0.0.1:18789](http://127.0.0.1:18789) 并使用 **Config** 选项卡。
-    控制 UI 会根据实时配置架构渲染表单，包括字段
-    `title` / `description` 文档元数据，以及可用时的插件和通道架构，
-    并提供一个 **Raw JSON** 编辑器作为兜底。对于下钻式 UI 和其他工具，
-    网关还公开了 `config.schema.lookup`，用于获取一个路径作用域的架构节点以及直接子项摘要。
+  <Tab title="Control UI">
+    Open [http://127.0.0.1:18789](http://127.0.0.1:18789) and use the **Config** tab.
+    The Control UI renders a form from the live config schema, including field
+    `title` / `description` docs metadata plus plugin and channel schemas when
+    available, with a **Raw JSON** editor as an escape hatch. For drill-down
+    UIs and other tooling, the gateway also exposes `config.schema.lookup` to
+    fetch one path-scoped schema node plus immediate child summaries.
+    Settings show common fields first. Each section keeps its advanced fields
+    in a collapsed **Advanced (N)** group; use **Show advanced** to expand all
+    groups. Settings search always includes both tiers and opens the matching
+    advanced group when needed. Per-channel settings under **Settings ->
+    Channels** use the same split and share the **Show advanced** preference,
+    with **Hide advanced** on the divider to collapse them again.
   </Tab>
   <Tab title="直接编辑">
     直接编辑 `~/.openclaw/openclaw.json`。Gateway 会监视该文件并自动应用更改（见[热重载](#config-hot-reload)）。
@@ -75,7 +86,13 @@ OpenClaw 只接受完全符合架构的配置。未知键、格式错误的类�
 字段 `title`/`description` 文档元数据会贯穿嵌套对象、通配符（`*`）、数组项（`[]`）以及 `anyOf`/
 `oneOf`/`allOf` 分支。运行时插件和通道架构会在清单注册表加载后合并进来。
 
-当校验失败时：
+Every config leaf has a common or advanced presentation tier in `uiHints`.
+`advanced: false` marks common settings and `advanced: true` marks advanced
+settings. A leaf inherits the nearest ancestor tier when it has no direct hint;
+paths with no declared ancestor default to advanced. This affects presentation
+only, not validation, defaults, reload behavior, or whether the key can be set.
+
+When validation fails:
 
 - The Gateway does not boot
 - Only diagnostic commands work (`openclaw doctor`, `openclaw logs`, `openclaw health`, `openclaw status`)
@@ -146,12 +163,12 @@ candidate contains a redacted secret placeholder such as `***` or `[redacted]`.
     }
     ```
 
-    - `agents.defaults.models` 定义模型目录，并作为 `/model` 的允许列表；`provider/*` 条目会将 `/model`、`/models` 和模型选择器筛选为所选提供方，同时仍使用动态模型发现。
-    - 使用 `openclaw config set agents.defaults.models '<json>' --strict-json --merge` 可在不移除现有模型的情况下添加允许列表条目。若普通替换会移除条目，则会被拒绝，除非你传入 `--replace`。
-    - 模型引用使用 `provider/model` 格式（例如 `anthropic/claude-opus-4-6`）。
-    - `agents.defaults.imageMaxDimensionPx` 控制转录/工具图片缩放（默认 `1200`）；较低的值通常可减少以截图为主的运行中的视觉 token 用量。
-    - 在聊天中切换模型请参阅 [Models CLI](/concepts/models)，有关认证轮换和回退行为请参阅 [Model Failover](/concepts/model-failover)。
-    - 对于自定义/自托管提供方，请参阅参考中的 [Custom providers](/gateway/config-tools#custom-providers-and-base-urls)。
+    - `agents.defaults.models` stores aliases and per-model settings; adding an entry never restricts `/model` or `--model` overrides.
+    - `agents.defaults.modelPolicy.allow` is the explicit allowlist for overrides and model pickers. It accepts exact refs and `provider/*` wildcards; omit it or use `[]` to allow any model.
+    - Model refs use `provider/model` format (e.g. `anthropic/claude-opus-4-6`).
+    - `agents.defaults.imageMaxDimensionPx` controls transcript/tool image downscaling (default `1200`); lower values usually reduce vision-token usage on screenshot-heavy runs.
+    - See [Models CLI](/concepts/models) for switching models in chat and [Model Failover](/concepts/model-failover) for auth rotation and fallback behavior.
+    - For custom/self-hosted providers, see [Custom providers](/gateway/config-tools#custom-providers-and-base-urls) in the reference.
 
   </Accordion>
 
@@ -206,8 +223,9 @@ candidate contains a redacted secret placeholder such as `***` or `[redacted]`.
 
   </Accordion>
 
-  <Accordion title="限制每个代理的技能">
-    使用 `agents.defaults.skills` 作为共享基础，然后用 `agents.list[].skills` 覆盖特定代理：
+  <Accordion title="Restrict skills per agent">
+    Use `agents.defaults.skills` for a shared baseline, then override specific
+    agents with `agents.entries.*.skills`:
 
     ```json5
     {
@@ -224,24 +242,19 @@ candidate contains a redacted secret placeholder such as `***` or `[redacted]`.
     }
     ```
 
-    - 若默认情况下不想限制技能，请省略 `agents.defaults.skills`。
-    - 省略 `agents.list[].skills` 以继承默认值。
-    - 将 `agents.list[].skills` 设为 `[]` 表示没有技能。
-    - 参阅 [Skills](/tools/skills)、[Skills 配置](/tools/skills-config) 以及
-      [配置参考](/gateway/config-agents#agents-defaults-skills)。
+    - Omit `agents.defaults.skills` for unrestricted skills by default.
+    - Omit `agents.entries.*.skills` to inherit the defaults.
+    - Set `agents.entries.*.skills: []` for no skills.
+    - See [Skills](/tools/skills), [Skills config](/tools/skills-config), and
+      the [Configuration Reference](/gateway/config-agents#agents-defaults-skills).
 
   </Accordion>
 
-  <Accordion title="调整网关通道健康监控">
-    控制 gateway 对看起来陈旧的通道重启有多激进：
+  <Accordion title="Configure per-channel health monitoring">
+    Disable or enable automatic health restarts for a channel or account:
 
     ```json5
     {
-      gateway: {
-        channelHealthCheckMinutes: 5,
-        channelStaleEventThresholdMinutes: 30,
-        channelMaxRestartsPerHour: 10,
-      },
       channels: {
         telegram: {
           healthMonitor: { enabled: false },
@@ -255,32 +268,13 @@ candidate contains a redacted secret placeholder such as `***` or `[redacted]`.
     }
     ```
 
-    - Values shown are the defaults. Set `gateway.channelHealthCheckMinutes: 0` to disable health-monitor restarts globally.
-    - `channelStaleEventThresholdMinutes` should be greater than or equal to the check interval.
-    - Use `channels.<provider>.healthMonitor.enabled` or `channels.<provider>.accounts.<id>.healthMonitor.enabled` to disable auto-restarts for one channel or account without disabling the global monitor.
+    - Use `channels.<provider>.healthMonitor.enabled` or `channels.<provider>.accounts.<id>.healthMonitor.enabled` to control auto-restarts for one channel or account.
     - See [Health Checks](/gateway/health) for operational debugging and the [full reference](/gateway/configuration-reference#gateway) for all fields.
 
   </Accordion>
 
-  <Accordion title="调整网关 WebSocket 握手超时">
-    为本地客户端在负载较高或低性能主机上完成预认证 WebSocket 握手争取更多时间：
-
-    ```json5
-    {
-      gateway: {
-        handshakeTimeoutMs: 30000,
-      },
-    }
-    ```
-
-    - 默认值为 `15000` 毫秒。
-    - `OPENCLAW_HANDSHAKE_TIMEOUT_MS` 仍然会优先用于一次性的服务或 shell 覆盖。
-    - 优先先修复启动/事件循环卡顿；这个开关适用于健康但在预热期间较慢的主机。
-
-  </Accordion>
-
-  <Accordion title="配置会话和重置">
-    会话控制对话连续性和隔离：
+  <Accordion title="Configure sessions and resets">
+    Sessions control conversation continuity and isolation:
 
     ```json5
     {
@@ -413,7 +407,6 @@ candidate contains a redacted secret placeholder such as `***` or `[redacted]`.
     {
       cron: {
         enabled: true,
-        maxConcurrentRuns: 8, // 默认；cron 分发 + 隔离的 cron 代理轮次执行
         sessionRetention: "24h",
       },
     }
@@ -597,10 +590,12 @@ Agents 应将 `config.schema.lookup` 视为获取精确
 子系统参考的链接时，请使用 [配置参考](/gateway/configuration-reference)。
 
 <Note>
-控制平面写入（`config.apply`、`config.patch`、`update.run`）在每个 `deviceId+clientIp` 上每 60 秒限制 3 次请求。重启
-请求会合并，然后在每个重启周期之间强制执行 30 秒冷却时间。
-`update.status` 是只读的，但需要 admin 作用域，因为重启哨兵可能
-包含更新步骤摘要和命令输出尾部。
+Control-plane writes (`config.apply`, `config.patch`, `update.run`) are
+rate-limited to 30 requests per 60 seconds, per method, per
+`deviceId+clientIp`; see [Rate limiting](/gateway/security/rate-limiting). Restart
+requests coalesce and then enforce a 30-second cooldown between restart cycles.
+`update.status` is read-only but admin-scoped because the restart sentinel can
+include update step summaries and command output tails.
 </Note>
 
 部分补丁示例：
@@ -617,8 +612,13 @@ Both `config.apply` and `config.patch` accept `raw`, `baseHash`, `sessionKey`,
 `note`, and `restartDelayMs`. `baseHash` is required for both methods once a
 config file already exists (a first write with no existing config skips the check).
 
-`config.patch` 还接受 `replacePaths`，这是一个配置路径数组，用于表明数组替换是有意为之的。如果某个补丁会用更少的条目替换或删除现有数组，除非该精确路径出现在 `replacePaths` 中，否则 Gateway 会拒绝写入；数组条目下的嵌套数组使用 `[]` 表示，例如
-`agents.list[].skills`。这可以防止被截断的 `config.get` 快照在不知不觉中覆盖路由或 allowlist 数组。若你打算替换完整配置，请使用 `config.apply`。
+`config.patch` also accepts `replacePaths`, an array of config paths whose array
+replacement is intentional. If a patch would replace or delete an existing array
+with fewer entries, the Gateway rejects the write unless that exact path appears
+in `replacePaths`; nested arrays under array entries use `[]`, such as
+`agents.entries.*.skills`. This prevents truncated `config.get` snapshots from
+silently clobbering routing or allowlist arrays. Use `config.apply` when you
+intend to replace the full config.
 
 ## 环境变量
 
@@ -695,7 +695,7 @@ Env var equivalent: `OPENCLAW_LOAD_SHELL_ENV=1`. Default `timeoutMs`: `15000`.
   },
   channels: {
     googlechat: {
-      serviceAccountRef: {
+      serviceAccount: {
         source: "exec",
         provider: "vault",
         id: "channels/googlechat/serviceAccount",

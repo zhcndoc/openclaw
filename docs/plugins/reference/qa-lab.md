@@ -16,4 +16,4 @@ OpenClaw QA 实验室插件，带有私有调试器 UI 和场景运行器。
 
 ## Surface
 
-contracts: tools, webSearchProviders, workerProviders
+contracts: `tools`, `webSearchProviders`, `workerProviders`

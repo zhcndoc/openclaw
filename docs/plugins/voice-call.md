@@ -165,24 +165,24 @@ Media Streams）。
 
 `plugins.entries.voice-call.config` 下未在上面显示的顶层键：
 
-| Key                             | Default      | Notes                                                                                  |
-| ------------------------------- | ------------ | -------------------------------------------------------------------------------------- |
-| `enabled`                       | `false`      | 主开关。                                                                               |
-| `inboundPolicy`                 | `"disabled"` | `disabled` \| `allowlist` \| `pairing` \| `open`。参见 [来电](#inbound-calls)。         |
-| `allowFrom`                     | `[]`         | `inboundPolicy: "allowlist"` 的 E.164 白名单。                                         |
-| `maxDurationSeconds`            | `300`        | 单通话时长硬限制，无论是否接通都会强制执行。                                            |
-| `staleCallReaperSeconds`        | `120`        | 参见 [陈旧通话清理器](#stale-call-reaper)。`0` 可禁用。                                 |
-| `silenceTimeoutMs`              | `800`        | 经典（非 realtime）流程的发言结束静默检测。                                             |
-| `transcriptTimeoutMs`           | `180000`     | 在放弃一次轮次前等待来电者转写的最长时间。                                              |
-| `ringTimeoutMs`                 | `30000`      | 外呼的响铃超时时间。                                                                    |
-| `maxConcurrentCalls`            | `1`          | 超过此限制的外呼将被拒绝。                                                              |
-| `outbound.notifyHangupDelaySec` | `3`          | notify 模式下，在 TTS 结束后自动挂断前等待的秒数。                                      |
-| `skipSignatureVerification`     | `false`      | 仅用于本地测试；生产环境切勿启用。                                                      |
-| `store`                         | unset        | 覆盖默认的 `~/.openclaw/voice-calls` 通话日志路径。                                     |
-| `agentId`                       | `"main"`     | 用于响应生成和会话存储的代理。                                                          |
-| `responseModel`                 | unset        | 覆盖经典（非 realtime）响应的默认模型。                                                 |
-| `responseSystemPrompt`          | generated    | 经典响应的自定义系统提示词。                                                            |
-| `responseTimeoutMs`             | `30000`      | 经典响应生成超时时间（毫秒）。                                                          |
+| Key                             | Default      | Notes                                                                                              |
+| ------------------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| `enabled`                       | `false`      | Master on/off switch.                                                                              |
+| `inboundPolicy`                 | `"disabled"` | `disabled` \| `allowlist` \| `pairing` \| `open`. See [Inbound calls](#inbound-calls).             |
+| `allowFrom`                     | `[]`         | E.164 allowlist for `inboundPolicy: "allowlist"`.                                                  |
+| `maxDurationSeconds`            | `300`        | Hard per-call duration cap, enforced regardless of answered state.                                 |
+| `staleCallReaperSeconds`        | `120`        | See [Stale call reaper](#stale-call-reaper). `0` disables it.                                      |
+| `silenceTimeoutMs`              | `800`        | End-of-speech silence detection for the classic (non-realtime) flow.                               |
+| `transcriptTimeoutMs`           | `180000`     | Max wait for a caller transcript before giving up on a turn.                                       |
+| `ringTimeoutMs`                 | `30000`      | Ring timeout for outbound calls.                                                                   |
+| `maxConcurrentCalls`            | `1`          | Outbound calls beyond this limit are rejected.                                                     |
+| `outbound.notifyHangupDelaySec` | `3`          | Seconds to wait after TTS before auto-hangup in notify mode.                                       |
+| `skipSignatureVerification`     | `false`      | Local testing only; never enable in production.                                                    |
+| `store`                         | unset        | Overrides the default `$OPENCLAW_STATE_DIR/voice-calls` path (normally `~/.openclaw/voice-calls`). |
+| `agentId`                       | `"main"`     | Agent used for response generation and session storage.                                            |
+| `responseModel`                 | unset        | Overrides the default model for classic (non-realtime) responses.                                  |
+| `responseSystemPrompt`          | generated    | Custom system prompt for classic responses.                                                        |
+| `responseTimeoutMs`             | `30000`      | Timeout for classic response generation (ms).                                                      |
 
 Twilio 默认使用其 US1 REST 端点。要在受支持的非美国区域处理通话，请将 `twilio.region` 设置为 `ie1` 或 `au1`，并使用该区域的凭据。请参见 [Twilio 的非美国 REST API 指南](https://www.twilio.com/docs/global-infrastructure/using-the-twilio-rest-api-in-a-non-us-region)。
 
@@ -465,7 +465,9 @@ Voice Call 会将生成的会话密钥存储在已配置的 agent 命名空间�
 
 ## 通话 TTS
 
-Voice Call 使用核心 `messages.tts` 配置为通话流式输出语音。你可以在插件配置下用**相同结构**覆盖它——它会与 `messages.tts` 深度合并。
+Voice Call uses the core `tts` configuration for streaming speech on
+calls. You can override it under the plugin config with the **same shape** —
+it deep-merges with `tts`.
 
 ```json5
 {
@@ -499,12 +501,10 @@ Voice Call 使用核心 `messages.tts` 配置为通话流式输出语音。你�
   <Tab title="仅使用核心 TTS">
 ```json5
 {
-  messages: {
-    tts: {
-      provider: "openai",
-      providers: {
-        openai: { speakerVoice: "alloy" },
-      },
+  tts: {
+    provider: "openai",
+    providers: {
+      openai: { speakerVoice: "alloy" },
     },
   },
 }

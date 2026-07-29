@@ -64,14 +64,15 @@ openclaw status --usage
 
 ## 密钥
 
-- 只读状态界面（`status`、`status --json`、`status --all`）会在可能的情况下，为其目标配置路径解析受支持的 SecretRef。
-- 如果已配置受支持的渠道 SecretRef，但在当前命令路径中不可用，状态仍保持只读，并报告降级输出，而不是崩溃。人类可读输出会显示诸如“配置的令牌在此命令路径中不可用”的警告，JSON 输出则包含 `secretDiagnostics`。
-- 当命令本地的 SecretRef 解析成功时，status 会优先使用已解析的快照，并从最终输出中清除临时的“secret unavailable”渠道标记。
-- `status --all` 包含一个密钥概览行和一个诊断部分，用于总结密钥诊断信息（为便于阅读会截断），同时不会停止报告生成。
+- 当运行中的 Gateway 在启动、重载或配置写入期间存在任何隔离的 SecretRef 所有者时，状态会在 JSON 中包含 `degradedSecretOwners`，并在人工输出中包含一个 **降级密钥** 概览行。每个条目都会标明所有者、降级状态（`cold` 或 `stale`）、配置路径以及已脱敏的原因。cold 所有者不可用；stale 所有者会继续使用已知的最后可用值。
+- 只读状态界面（`status`、`status --json`、`status --all`）会在可能时，为其目标配置路径解析受支持的 SecretRef。
+- 如果配置了受支持的通道 SecretRef，但在当前命令路径中不可用，status 仍保持只读，并返回降级输出而不是崩溃。人工输出会显示类似 “configured token unavailable in this command path” 的警告，而 JSON 输出会包含 `secretDiagnostics`。
+- 当命令本地的 SecretRef 解析成功时，status 会优先使用已解析的快照，并清除最终输出中临时的 “secret unavailable” 通道标记。
+- `status --all` 包含一个密钥概览行和一个诊断部分，用于汇总密钥诊断信息（为便于阅读会截断），且不会停止报告生成。
 
 ## 内存
 
-`status --json --all` 会报告由 `plugins.slots.memory` 选择的活动内存插件运行时的内存详细信息。自定义内存插件可以保持内置的 `agents.defaults.memorySearch.enabled` 为禁用状态，同时仍然报告其自己的文件、块、向量和 FTS 状态。
+`status --json --all` 从由 `plugins.slots.memory` 选择的当前活动内存插件报告内存详情。自定义内存插件可以保持内置的 `memory.search.enabled` 处于禁用状态，同时仍然报告它们自己的文件、块、向量和 FTS 状态。
 
 ## 相关内容
 

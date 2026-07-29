@@ -580,12 +580,12 @@ openclaw gateway diagnostics export
 
 常见特征：
 
-- `critical memory pressure bundle written` 出现在重启前不久 → OpenClaw 捕获了一个 OOM 前的稳定性包。使用 `openclaw gateway stability --bundle latest` 检查它。
-- gateway 日志中出现 `memory pressure: level=critical ... memoryPressureSnapshot=disabled` → OpenClaw 检测到严重内存压力，但 OOM 前的稳定性快照未开启。
-- `Largest session files:` 指向一个非常大的脱敏转录路径 → 在重启前减少保留的会话历史、检查会话增长，或将旧转录移出活动存储。
-- `V8 heap:` 已用字节接近堆上限 → 降低提示/会话压力、减少并发工作，或仅在确认工作负载确实如此之后再提高 Node 堆限制。
-- `Memory pressure: critical/rss_growth` → 内存在一个采样窗口内快速增长。检查最新日志中是否有大导入、失控的工具输出、重复重试，或一批排队的 agent 工作。
-- 日志中出现严重内存压力，但没有 bundle → 这是默认行为。将 `diagnostics.memoryPressureSnapshot: true` 设为开启，以便在未来严重内存压力事件中捕获 OOM 前稳定性包。
+- `critical memory pressure bundle written` appears shortly before restart → OpenClaw captured a pre-OOM stability bundle. Inspect it with `openclaw gateway stability --bundle latest`.
+- `memory pressure: level=critical` appears in gateway logs → OpenClaw detected critical memory pressure and recorded the available in-process memory facts.
+- `Largest session files:` points at a very large redacted transcript path → reduce retained session history, inspect session growth, or move old transcripts out of the active store before restarting.
+- `V8 heap:` used bytes are close to the heap limit → lower prompt/session pressure or reduce concurrent work first. For a managed service, inspect `Gateway heap:` in `openclaw gateway status`; if it says `not set`, regenerate old service metadata with `openclaw gateway install --force`. Ambient shell `NODE_OPTIONS` is intentionally ignored. Use an explicit supervisor-level heap override only after confirming the sustained workload and leaving enough native-memory headroom.
+- `Memory pressure: critical/rss_growth` → memory grew quickly inside one sampling window. Check the latest logs for a large import, runaway tool output, repeated retries, or a batch of queued agent work.
+- Critical memory pressure appears in logs but no bundle exists → capture `openclaw gateway diagnostics export` after the event for the available operational evidence.
 
 稳定性包不包含有效载荷。它只包含运行中的内存证据和脱敏后的相对文件路径，不包含消息文本、webhook 正文、凭据、token、cookie 或原始 session id。请将诊断导出附加到 bug 报告中，而不是复制原始日志。
 
@@ -734,19 +734,18 @@ openclaw logs --follow
 
 查看以下内容：
 
-- 已启用 cron 且存在下一次唤醒。
-- 作业运行历史状态（`ok`、`skipped`、`error`）。
-- Heartbeat 跳过原因（`quiet-hours`、`requests-in-flight`、`cron-in-progress`、`lanes-busy`、`alerts-disabled`、`empty-heartbeat-file`、`no-tasks-due`）。
+- Cron enabled and next wake present.
+- Job run history status (`ok`, `skipped`, `error`).
+- Heartbeat skip reasons (`quiet-hours`, `requests-in-flight`, `cron-in-progress`, `lanes-busy`, `alerts-disabled`, `empty-heartbeat-file`).
 
 <AccordionGroup>
-  <Accordion title="常见签名">
-    - `cron: scheduler disabled; jobs will not run automatically` → cron 已禁用。
-    - `cron: timer tick failed` → 调度器 tick 失败；检查文件/日志/运行时错误。
-    - `heartbeat skipped` with `reason=quiet-hours` → 当前不在活跃时段窗口内。
-    - `heartbeat skipped` with `reason=empty-heartbeat-file` → `HEARTBEAT.md` 存在，但只包含空白、注释、标题、代码块，或空清单脚手架，因此 OpenClaw 会跳过模型调用。
-    - `heartbeat skipped` with `reason=no-tasks-due` → `HEARTBEAT.md` 包含 `tasks:` 区块，但在本次 tick 中没有任何任务到期。
-    - `heartbeat: unknown accountId` → heartbeat 投递目标的账户 ID 无效。
-    - `heartbeat skipped` with `reason=dm-blocked` → heartbeat 目标被解析为 DM 风格目的地，而 `agents.defaults.heartbeat.directPolicy`（或按 agent 覆盖）设置为 `block`。
+  <Accordion title="Common signatures">
+    - `cron: scheduler disabled; jobs will not run automatically` → cron disabled.
+    - `cron: timer tick failed` → scheduler tick failed; check file/log/runtime errors.
+    - `heartbeat skipped` with `reason=quiet-hours` → outside active hours window.
+    - `heartbeat skipped` with `reason=empty-heartbeat-file` → heartbeat monitor scratch only contains blank, comment, header, fence, or empty-checklist scaffolding, so OpenClaw skips the model call.
+    - `heartbeat: unknown accountId` → invalid account id for heartbeat delivery target.
+    - `heartbeat skipped` with `reason=dm-blocked` → heartbeat target resolved to a DM-style destination while `agents.defaults.heartbeat.directPolicy` (or per-agent override) is set to `block`.
 
   </Accordion>
 </AccordionGroup>

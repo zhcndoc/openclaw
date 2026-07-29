@@ -19,31 +19,31 @@ openclaw plugins install @openclaw/googlechat
 openclaw plugins install ./path/to/local/googlechat-plugin
 ```
 
-## 快速设置（新手）
+## Quick Setup (Beginner)
 
-1. 创建一个 Google Cloud 项目并启用 **Google Chat API**。
-   - 前往：[Google Chat API Credentials](https://console.cloud.google.com/apis/api/chat.googleapis.com/credentials)
-   - 如果尚未启用，请启用该 API。
-2. 创建一个 **服务账号**：
-   - 点击 **Create Credentials** > **Service Account**。
-   - 名称可随意填写（例如 `openclaw-chat`）。
-   - 保持权限和主体为空（点击 **Continue**，然后点击 **Done**）。
-3. 创建并下载 **JSON 密钥**：
-   - 点击新建的服务账号 > **Keys** 选项卡 > **Add Key** > **Create new key** > **JSON** > **Create**。
-4. 将下载的 JSON 文件存放到网关主机上（例如 `~/.openclaw/googlechat-service-account.json`）。
-5. 在 [Google Cloud Console Chat Configuration](https://console.cloud.google.com/apis/api/chat.googleapis.com/hangouts-chat) 中创建一个 Google Chat 应用：
-   - 填写 **Application info**（应用名称、头像 URL、描述）。
-   - 启用 **Interactive features**。
-   - 在 **Functionality** 下，勾选 **Join spaces and group conversations**。
-   - 在 **Connection settings** 下，选择 **HTTP endpoint URL**。
-   - 在 **Triggers** 下，选择 **Use a common HTTP endpoint URL for all triggers**，并将其设置为你的公网网关 URL，后接 `/googlechat`（参见 [Public URL](#public-url-webhook-only)）。
-   - 在 **Visibility** 下，勾选 **Make this Chat app available to specific people and groups in `<Your Domain>`**，并输入你的电子邮件地址。
-   - 点击 **Save**。
-6. 启用应用状态：刷新页面，找到 **App status**，将其设置为 **Live - available to users**，然后再次点击 **Save**。
-7. 使用服务账号和 webhook audience 配置 OpenClaw（必须与 Chat 应用配置匹配）：
-   - 环境变量：`GOOGLE_CHAT_SERVICE_ACCOUNT_FILE=/path/to/service-account.json`（仅默认账号），或
-   - 配置：参见 [Config highlights](#config-highlights)。`openclaw channels add --channel googlechat` 也接受 `--audience-type`、`--audience`、`--webhook-path` 和 `--webhook-url`。
-8. 启动网关。Google Chat 将向你的 webhook 路径发送 POST 请求（默认 `/googlechat`）。
+1. Create a Google Cloud project and enable **Google Chat API**.
+   - Go to: [Google Chat API Credentials](https://console.cloud.google.com/apis/api/chat.googleapis.com/credentials)
+   - If it is not enabled yet, enable this API.
+2. Create a **service account**:
+   - Click **Create Credentials** > **Service Account**.
+   - You can enter any name (for example, `openclaw-chat`).
+   - Leave permissions and principals empty (click **Continue**, then click **Done**).
+3. Create and download a **JSON key**:
+   - Click the newly created service account > **Keys** tab > **Add Key** > **Create new key** > **JSON** > **Create**.
+4. Place the downloaded JSON file on the gateway host (for example, `~/.openclaw/googlechat-service-account.json`).
+5. Create a Google Chat app in [Google Cloud Console Chat Configuration](https://console.cloud.google.com/apis/api/chat.googleapis.com/hangouts-chat):
+   - Fill in **Application info** (app name, avatar URL, description).
+   - Enable **Interactive features**.
+   - Under **Functionality**, check **Join spaces and group conversations**.
+   - Under **Connection settings**, select **HTTP endpoint URL**.
+   - Under **Triggers**, select **Use a common HTTP endpoint URL for all triggers**, and set it to your public gateway URL followed by `/googlechat` (see [Public URL](#public-url-webhook-only)).
+   - Under **Visibility**, check **Make this Chat app available to specific people and groups in `<Your Domain>`**, and enter your email address.
+   - Click **Save**.
+6. Enable app status: refresh the page, find **App status**, set it to **Live - available to users**, then click **Save** again.
+7. Configure OpenClaw with the service account and webhook audience (must match the Chat app configuration):
+   - Environment variable: `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE=/path/to/service-account.json` (default account only), or
+   - Configuration: see [Config highlights](#config-highlights). `openclaw channels add --channel googlechat` also accepts `--audience-type`, `--audience`, `--webhook-path`, and `--webhook-url`.
+8. Start the gateway. Google Chat will send POST requests to your webhook path (default `/googlechat`).
 
 ## 添加到 Google Chat
 
@@ -141,7 +141,13 @@ your-domain.com {
 6. 群组空间默认需要 @ 提及。提及会通过指向应用的 Google Chat `USER_MENTION` 注解来检测；如果检测需要应用的用户资源名称，请设置 `botUser`（例如 `users/1234567890`）。
 7. 当 exec 或插件审批从 Google Chat 发起，并且配置了稳定的 `users/<id>` 审批人时，OpenClaw 会在原始空间或线程中发布原生审批卡片（`cardsV2`）。卡片按钮携带不可见的回调令牌；只有在原生投递不可用时，才会显示手动 `/approve <id> <decision>` 提示。
 
-## 目标对象
+### 入站持久性
+
+在请求完成身份验证后，OpenClaw 会从存储中移除附加组件授权对象，并在返回 `200` 之前将 Google Chat `MESSAGE` 事件持久化入队。若持久化失败，则返回 `503`，以便 Google Chat 重试，而不是确认一个可能丢失的事件。
+
+待处理或可重试的消息在 Gateway 重启后仍会保留，按空间序列化，并使用 Google Chat 消息资源名称在活跃或保留的完成记录存在时抑制重复队列条目。非消息操作会保留其现有的分离式 webhook 路径，不会获得这种持久队列保证。队列到 agent 边界的投递仍然是至少一次，因此在交接过程中发生崩溃时可能会重放一次对话轮次。
+
+## 目标
 
 使用以下标识符进行投递和 allowlist：
 
@@ -166,10 +172,8 @@ your-domain.com {
       webhookPath: "/googlechat",
       botUser: "users/1234567890", // 可选；有助于提及检测
       allowBots: false,
-      dm: {
-        policy: "pairing",
-        allowFrom: ["users/1234567890"],
-      },
+      dmPolicy: "pairing",
+      allowFrom: ["users/1234567890"],
       groupPolicy: "allowlist",
       groups: {
         "spaces/AAAA": {
@@ -188,16 +192,16 @@ your-domain.com {
 
 说明：
 
-- 服务账号凭据：`serviceAccountFile`（路径）、`serviceAccount`（内联 JSON 字符串或对象），或 `serviceAccountRef`（env/file SecretRef）。默认账号仅适用于环境变量 `GOOGLE_CHAT_SERVICE_ACCOUNT`（内联 JSON）和 `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`（路径）。多账号配置使用 `channels.googlechat.accounts.<id>`，并采用相同的键，包括每个账号的 `serviceAccountRef`。
-- 当未设置 `webhookPath` 时，默认 webhook 路径为 `/googlechat`；也可以由 `webhookUrl` 提供该路径。
-- 群组键必须是稳定的空间 ID（`spaces/<spaceId>`）。显示名称键已废弃，并会被记录为已废弃。
-- `dangerouslyAllowNameMatching` 会为 allowlist 重新启用可变邮件主体匹配（紧急兼容模式）；doctor 会警告邮件条目。
-- Google Chat reaction 操作不会暴露。该插件使用服务账号认证，而 Google Chat reaction 端点需要用户认证。现有的 `actions.reactions` 配置会为兼容性而被接受，但不会生效。
-- 原生审批卡使用 Google Chat `cardsV2` 按钮点击，而不是 reaction 事件。审批人来自 `dm.allowFrom` 或 `defaultTo`，并且必须是稳定的数字 `users/<id>` 值。
-- 消息操作仅暴露文本 `send`。Google Chat 附件上传需要用户认证，而此插件使用服务账号认证，因此不会暴露出站文件上传。
-- `typingIndicator`：`message`（默认）会发送 `_<Bot> is typing..._` 占位符，并将其编辑为第一条回复；`none` 会禁用它；`reaction` 需要用户 OAuth，并且在当前服务账号认证下会记录错误并回退为 `message`。
-- 入站附件（每条消息的第一个附件）会通过 Chat API 下载到媒体管道中，并受 `mediaMaxMb` 限制（默认 20）。
-- 默认会忽略机器人作者发送的消息。启用 `allowBots: true` 后，接受到的机器人消息会使用共享的 [bot loop protection](/channels/bot-loop-protection)：先配置 `channels.defaults.botLoopProtection`，然后通过 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 进行覆盖。
+- 服务账号凭据：`serviceAccountFile`（路径）、`serviceAccount`（内联 JSON 字符串或对象），或 `serviceAccountRef`（env/file SecretRef）。环境变量 `GOOGLE_CHAT_SERVICE_ACCOUNT`（内联 JSON）和 `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`（路径）仅适用于默认账号。多账号设置使用 `channels.googlechat.accounts.<id>`，并使用相同的键，包括按账号配置的 `serviceAccountRef`。
+- 当未设置 `webhookPath` 时，默认 webhook 路径为 `/googlechat`；也可以通过 `webhookUrl` 提供路径。
+- 群组键必须是稳定的 space id（`spaces/<spaceId>`）。显示名称键已弃用，并会被记录为此状态。
+- `dangerouslyAllowNameMatching` 会为允许列表重新启用可变的电子邮件主体匹配（紧急兼容模式）；doctor 会提醒包含电子邮件条目。
+- Google Chat 反应操作不对外暴露。该插件使用服务账号认证，而 Google Chat 反应端点需要用户认证。现有的 `actions.reactions` 配置会被接受以保持兼容，但不会生效。
+- 原生审批卡使用 Google Chat `cardsV2` 按钮点击，而不是 reaction 事件。审批者来自 `allowFrom` 或 `defaultTo`，并且必须是稳定的数字 `users/<id>` 值。
+- 消息操作仅暴露文本 `send`。Google Chat 附件上传需要用户认证，而此插件使用服务账号认证，因此不对外暴露出站文件上传。
+- `typingIndicator`：`message`（默认）会发送一个 `_<Bot> is typing..._` 占位符，并将其编辑为第一条回复；`none` 会禁用它；`reaction` 需要用户 OAuth，在当前服务账号认证下会记录错误并回退为 `message`。
+- 入站附件（每条消息的第一个附件）会通过 Chat API 下载到媒体管线中，并受 `mediaMaxMb` 限制（默认 20）。
+- 默认忽略机器人作者发送的消息。启用 `allowBots: true` 后，接受到的机器人消息将使用共享的 [bot loop protection](/channels/bot-loop-protection)：先配置 `channels.defaults.botLoopProtection`，然后通过 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 进行覆盖。
 
 密钥引用详情：[Secrets Management](/gateway/secrets)。
 
@@ -251,9 +255,9 @@ openclaw channels status
 
 ## 相关内容
 
-- [Channels Overview](/channels) — 所有支持的渠道
-- [Channel Routing](/channels/channel-routing) — 消息的会话路由
-- [Gateway configuration](/gateway/configuration)
+- [Channels 概览](/channels) — 所有支持的渠道
+- [Channel 路由](/channels/channel-routing) — 消息的会话路由
+- [Gateway 配置](/gateway/configuration)
 - [Groups](/channels/groups) — 群聊行为和提及门控
 - [Pairing](/channels/pairing) — DM 身份验证和配对流程
 - [Security](/gateway/security) — 访问模型和加固

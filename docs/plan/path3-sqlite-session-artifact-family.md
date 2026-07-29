@@ -78,4 +78,4 @@ Doctor 导入仍然是遗留主 JSONL 文件及其相邻轨迹 sidecar 的迁移
 node scripts/run-vitest.mjs src/config/sessions/session-accessor.conformance.test.ts
 ```
 
-如果最终测试位于 `store.session-lifecycle-mutation.test.ts`，请使用同样的包装器显式运行该文件。对于这个 Codex worktree，较广泛的 `pnpm` 门禁应继续保留在 Crabbox/Testbox 上。
+Broad `pnpm` gates 应继续保留在 Crabbox/Testbox 上，适用于此 Codex 工作区。

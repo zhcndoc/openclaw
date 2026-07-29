@@ -38,12 +38,12 @@ curl -fsSL https://raw.githubusercontent.com/openclaw/openclaw-ansible/main/inst
 
 ## 将安装什么
 
-1. Tailscale（用于安全远程访问的 mesh VPN）
-2. UFW 防火墙（仅开放 SSH + Tailscale 端口）
-3. Docker CE + Compose V2（默认的 agent 沙箱后端）
-4. Node.js 和 pnpm（OpenClaw 需要 Node 22.22.3+、24.15+ 或 25.9+；推荐使用 Node 24）
-5. OpenClaw，直接安装在主机上，不以容器方式运行
-6. 一个带有安全加固的 systemd 服务
+1. Tailscale (mesh VPN for secure remote access)
+2. UFW firewall (SSH + Tailscale ports only)
+3. Docker CE + Compose V2 (default agent sandbox backend)
+4. Node.js and pnpm (OpenClaw requires Node 22.22.3+, 24.15+, or 25.9+; Node 26 is recommended)
+5. OpenClaw, installed host-based, not containerized
+6. A systemd service with security hardening
 
 <Note>
 网关直接运行在主机上，而不是在 Docker 中。Agent 沙箱化是

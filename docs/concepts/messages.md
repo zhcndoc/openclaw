@@ -49,10 +49,10 @@ title: "消息"
 }
 ```
 
-- 防抖仅适用于纯文本消息；媒体/附件会立即刷新发送。
-- 控制命令（stop/abort/status 等）会绕过防抖，因此会立即分发。
-- 默认关闭：`messages.inbound.debounceMs` 没有内置默认值，因此只有在你设置后（全局或按频道）防抖才会生效。
-- iMessage 的 `coalesceSameSenderDms` 可选项是唯一的例外：它会将同一发送者的所有 DM 文本（包括命令）保留足够长时间，以便 Apple 的 command+URL 拆分发送能够作为一次轮次到达。无论此设置如何，群聊始终会立即分发。
+- 防抖仅适用于纯文本消息；媒体/附件会立即刷新。
+- 控制命令（stop/abort/status 等）会绕过防抖，因此会立即发送。
+- 默认禁用：`messages.inbound.debounceMs` 没有内置默认值，因此只有在你设置后（全局或按频道）防抖才会生效。
+- iMessage 遵循相同的通用防抖策略。`imsg` 0.13.1 及更新版本会在 OpenClaw 接收之前合并 Apple URL 预览拆分发送，因此不需要单独设置 iMessage 的防抖。
 
 ## 会话和设备
 
@@ -89,13 +89,13 @@ title: "消息"
 
 可通过 `messages.groupChat.historyLimit`（全局默认值）或按通道覆盖来配置历史大小，例如 `channels.slack.historyLimit` 和 `channels.telegram.accounts.<id>.historyLimit`（设为 `0` 可禁用）。
 
-## Tool Result Metadata
+## 工具结果元数据
 
-The tool result `content` is model-visible output; `details` are runtime metadata used for UI rendering, diagnostics, media delivery, and plugin execution.
+工具结果 `content` 是模型可见的输出；`details` 是用于 UI 渲染、诊断、媒体传递和插件执行的运行时元数据。
 
-- `toolResult.details` will be removed before replay by the provider and before input compression.
-- Persistent session transcripts keep only bounded `details`; oversized metadata will be replaced with a compact summary marked with `persistedDetailsTruncated: true`.
-- Plugins and tools should place text that the model must read in `content`, not only in `details`.
+- `toolResult.details` 将在提供方重放之前以及在输入压缩之前被移除。
+- 持久化会话转录只保留有限的 `details`；超大的元数据将被替换为带有 `persistedDetailsTruncated: true` 标记的简要摘要。
+- 插件和工具应将模型必须读取的文本放在 `content` 中，而不仅仅放在 `details` 中。
 
 ## 排队和后续轮次
 
@@ -108,7 +108,7 @@ The tool result `content` is model-visible output; `details` are runtime metadat
 | `collect`          | 将兼容消息批量合并到后续的一个回合中。                |
 | `interrupt`        | 中止当前活动运行，然后启动最新的提示。                |
 
-默认值：`messages.queue.debounceMs` 为 500ms（同样适用于 steer、followup 和 collect 的批处理），`messages.queue.cap` 为 20 条排队消息，`messages.queue.drop` 为 `summarize`（也可使用 `old` 和 `new`）。可通过 `messages.queue.byChannel` 和 `messages.queue.debounceMsByChannel` 配置按频道覆盖。
+队列对 steer、followup 和 collect 批处理使用内置的 500ms 防抖。`messages.queue.cap` 默认为 20 条排队消息，`messages.queue.drop` 默认为 `summarize`（也可用 `old` 和 `new`）。可通过 `messages.queue.byChannel` 和 `messages.queue.debounceMsByChannel` 配置按通道覆盖。
 
 详情： [命令队列](/concepts/queue) 和 [引导队列](/concepts/queue-steering)。
 
@@ -116,18 +116,18 @@ The tool result `content` is model-visible output; `details` are runtime metadat
 
 频道插件可以在消息进入会话队列之前维护顺序、对输入进行防抖，并应用传输背压。它们不应在代理轮次本身外再施加单独的超时。一旦消息被路由到会话中，会话、工具和运行时生命周期将负责管理长时间运行的工作，这样所有频道都能一致地报告并从缓慢的轮次中恢复。
 
-## Streaming, Chunking, and Batching
+## 流式传输、分块与批处理
 
-Block streaming sends partial replies as the model generates text blocks; chunking respects channel text limits and avoids splitting fenced code blocks.
+块流式传输会在模型生成文本块时发送部分回复；分块会遵守频道文本长度限制，并避免拆分带围栏的代码块。
 
-- `agents.defaults.blockStreamingDefault` (`on|off`, default `off`)
+- `agents.defaults.blockStreamingDefault` (`on|off`，默认 `off`)
 - `agents.defaults.blockStreamingBreak` (`text_end|message_end`)
 - `agents.defaults.blockStreamingChunk` (`minChars|maxChars|breakPreference`)
-- `agents.defaults.blockStreamingCoalesce` (idle-based batching)
-- `agents.defaults.humanDelay` (human-like pause between block replies)
-- Channel overrides: `*.streaming.block.enabled` and `*.streaming.block.coalesce` on bundled channels; stale flat keys are migrated by `openclaw doctor --fix`. Block streaming is off unless explicitly enabled, on every channel including Telegram. QQ Bot is the exception: it has no `streaming.block` keys and streams block replies unless `channels.qqbot.streaming.mode` is `"off"`.
+- `agents.defaults.blockStreamingCoalesce`（基于空闲时间的批处理）
+- `agents.defaults.humanDelay`（块回复之间的人类式停顿）
+- 频道覆盖：打包频道上的 `*.streaming.block.enabled` 和 `*.streaming.block.coalesce`；过时的扁平键会通过 `openclaw doctor --fix` 迁移。除非显式启用，块流式传输在所有频道上都是关闭的，包括 Telegram。QQ Bot 是个例外：它没有 `streaming.block` 键，并且会流式发送块回复，除非 `channels.qqbot.streaming.mode` 为 `"off"`。
 
-Details: [Streaming + Chunking](/concepts/streaming).
+详情：[流式传输 + 分块](/concepts/streaming)。
 
 ## 推理可见性和 token
 
@@ -139,8 +139,8 @@ Details: [Streaming + Chunking](/concepts/streaming).
 
 ## 前缀、线程和回复
 
-- 出站前缀级联：`messages.responsePrefix`、`channels.<channel>.responsePrefix`、`channels.<channel>.accounts.<id>.responsePrefix`。WhatsApp 还提供 `channels.whatsapp.messagePrefix` 作为入站前缀。
-- 通过 `replyToMode` 进行回复线程管理，并支持按频道设置默认值。
+- Outbound prefixes live at `channels.<channel>.responsePrefix` and `channels.<channel>.accounts.<id>.responsePrefix`. Account values win. Doctor copies the global fallback into configured channel blocks when those canonical fields are unset; `messages.responsePrefix` remains as a fallback for implicit and custom channels.
+- 通过 `replyToMode` 和按频道默认值进行回复线程管理。
 
 详情： [配置](/gateway/config-agents#messages) 和频道文档。
 

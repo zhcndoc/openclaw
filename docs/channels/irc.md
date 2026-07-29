@@ -42,6 +42,12 @@ openclaw gateway run
 
 建议为机器人协调使用私有 IRC 服务器。如果你有意使用公共 IRC 网络，常见选择包括 Libera.Chat、OFTC 和 Snoonet。避免将机器人或 swarm 后端通信流量放在可预测的公共频道中。
 
+## 入站持久性
+
+OpenClaw 在进行正常的策略检查和代理分发之前，会将每个被接受的 IRC `PRIVMSG` 写入其持久化的入站队列。待处理或可重试的消息在 Gateway 重启后仍会保留，并且会按频道或直接消息对端进行序列化。
+
+IRC 不提供可回放的传递 ID，也不会重新发送断开连接的客户端错过的消息。因此，OpenClaw 会分配一个本地 ID，该 ID 只在当前 TCP 连接内保持稳定。该队列保护的是本地“接收至分发”窗口；它既无法恢复从未到达 OpenClaw 的消息，也无法对跨连接的服务器重发进行去重。
+
 ## 连接设置
 
 | Key                           | Default                       | Notes                                                       |
@@ -64,35 +70,35 @@ openclaw gateway run
 - 当 `groupPolicy="allowlist"` 时，请设置 `channels.irc.groups` 以定义允许的频道。
 - 除非您有意接受明文传输，否则请使用 TLS（`channels.irc.tls=true`）。
 
-## Access Control
+## 访问控制
 
-IRC channels have two separate “gates”:
+IRC 频道有两个独立的“门禁”：
 
-1. **Channel access** (`groupPolicy` + `groups`): whether the bot accepts messages from a channel at all.
-2. **Sender access** (`groupAllowFrom` / per-channel `groups["#channel"].allowFrom`): who can trigger the bot in that channel.
+1. **频道访问**（`groupPolicy` + `groups`）：决定机器人是否接受来自某个频道的消息。
+2. **发送者访问**（`groupAllowFrom` / 每频道 `groups["#channel"].allowFrom`）：决定谁可以在该频道中触发机器人。
 
-Configuration keys:
+配置键：
 
-- DM allowlist (DM sender access): `channels.irc.allowFrom`
-- Group sender allowlist (channel sender access): `channels.irc.groupAllowFrom`
-- Per-channel controls (channel + sender + mention rules): `channels.irc.groups["#channel"]` with `requireMention`, `allowFrom`, `enabled`, `tools`, `toolsBySender`, `skills`, and `systemPrompt`
-- `channels.irc.groupPolicy="open"` allows unconfigured channels (**still mention-gated by default**)
+- DM 白名单（DM 发送者访问）：`channels.irc.allowFrom`
+- 组发送者白名单（频道发送者访问）：`channels.irc.groupAllowFrom`
+- 每频道控制（频道 + 发送者 + 提及规则）：`channels.irc.groups["#channel"]`，包含 `requireMention`、`allowFrom`、`enabled`、`tools`、`toolsBySender`、`skills` 和 `systemPrompt`
+- `channels.irc.groupPolicy="open"` 允许未配置的频道（**默认情况下仍然需要提及触发**）
 
-Allowlist entries should use stable sender identities (`nick!user@host`).
-Matching by bare nick only is volatile and is enabled only when `channels.irc.dangerouslyAllowNameMatching: true`.
+白名单条目应使用稳定的发送者身份（`nick!user@host`）。
+仅按裸 `nick` 匹配是不稳定的，只有在 `channels.irc.dangerouslyAllowNameMatching: true` 时才启用。
 
-### Common pitfall: `allowFrom` is for DMs, not channels
+### 常见误区：`allowFrom` 适用于 DM，不适用于频道
 
-If you see a log like this:
+如果你看到类似这样的日志：
 
 - `irc: drop group sender alice!ident@host (policy=allowlist)`
 
-...that means the sender is not allowed for **group/channel** messages. You can fix it by either:
+……这意味着该发送者不被允许发送**群组/频道**消息。你可以通过以下任一方式修复：
 
-- setting `channels.irc.groupAllowFrom` (applies globally to all channels), or
-- setting a sender allowlist per channel: `channels.irc.groups["#channel"].allowFrom`
+- 设置 `channels.irc.groupAllowFrom`（全局应用于所有频道），或
+- 为每个频道单独设置发送者白名单：`channels.irc.groups["#channel"].allowFrom`
 
-Example (allow anyone in `#openclaw` to talk to the bot):
+示例（允许 `#openclaw` 中的任何人和机器人对话）：
 
 ```json5
 {

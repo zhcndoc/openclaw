@@ -24,7 +24,7 @@ read_when:
 有两类运行时：
 
 - **嵌入式 harness** 在 OpenClaw 的已准备代理循环中运行：内置的 `openclaw` 运行时，以及已注册的插件 harness，例如 `codex` 和 `copilot`。
-- **CLI 后端** 在保留模型引用规范化的同时运行本地 CLI 进程。例如，`anthropic/claude-opus-4-8` 配合按模型作用域的 `agentRuntime.id: "claude-cli"` 表示“选择 Anthropic 模型，通过 Claude CLI 执行”。`claude-cli` 不是嵌入式 harness id，且不得传递给 AgentHarness 选择。
+- **CLI 后端** 在本地 CLI 进程中运行，同时保持模型引用为规范形式。例如，`anthropic/claude-opus-5` 配合按模型作用域的 `agentRuntime.id: "claude-cli"`，意思是“选择 Anthropic 模型，通过 Claude CLI 执行”。`claude-cli` 不是嵌入式 harness id，且不得传递给 AgentHarness 选择。
 
 `copilot` harness 是一个独立的、可选的外部插件 harness，用于 GitHub Copilot CLI；有关 PI、Codex 和 GitHub Copilot 代理运行时之间面向用户的决策，请参见 [GitHub Copilot agent runtime](/plugins/copilot)。
 
@@ -107,13 +107,19 @@ Decision tree:
 
 OpenClaw 在提供者和模型解析之后按以下顺序解析嵌入式运行时：
 
-1. **模型作用域的运行时策略** 优先。它位于已配置的提供者模型条目中，或位于 `agents.defaults.models["provider/model"].agentRuntime`
-   / `agents.list[].models["provider/model"].agentRuntime` 中。像 `agents.defaults.models["vllm/*"].agentRuntime` 这样的提供者通配符会在精确模型策略之后应用，因此动态发现的提供者模型可以共享一个运行时，而不会覆盖精确的逐模型例外。
-2. **提供者作用域的运行时策略**：`models.providers.<provider>.agentRuntime`。
-3. **`auto` 模式**：已注册的插件运行时可以声明其支持的提供者/模型对。
-4. 如果在 `auto` 模式下没有任何项接手该轮次，OpenClaw 会回退到 `openclaw` 作为兼容运行时。若运行必须严格执行，请使用显式运行时 id。
+1. **模型范围的运行时策略** 优先。它位于已配置的提供者
+   模型条目中，或位于 `agents.defaults.models["provider/model"].agentRuntime`
+   / `agents.entries.*.models["provider/model"].agentRuntime`。像
+   `agents.defaults.models["vllm/*"].agentRuntime` 这样的提供者通配符会在精确模型策略之后生效，因此动态发现的提供者模型可以共享同一个运行时，而不会覆盖精确到单个模型的例外。
+2. **提供者范围的运行时策略**：`models.providers.<provider>.agentRuntime`。
+3. **`auto` 模式**：已注册的插件运行时可以声明自己支持的提供者/模型对。
+4. 如果在 `auto` 模式下没有任何项声明该轮次，OpenClaw 会回退到
+   `openclaw` 作为兼容运行时。若运行必须严格一致，请使用显式的运行时 id。
 
-整个会话和整个代理的运行时固定配置会被忽略：`OPENCLAW_AGENT_RUNTIME`、会话 `agentHarnessId`/`agentRuntimeOverride` 状态、`agents.defaults.agentRuntime`，以及 `agents.list[].agentRuntime`。运行 `openclaw doctor --fix` 以移除过时的整代理运行时配置，并在意图可以保留时转换旧版运行时模型引用。
+整个会话和整个代理的运行时固定值会被忽略：`OPENCLAW_AGENT_RUNTIME`、
+会话 `agentHarnessId`/`agentRuntimeOverride` 状态、`agents.defaults.agentRuntime`，
+以及 `agents.entries.*.agentRuntime`。运行 `openclaw doctor --fix` 以删除过时的
+整个代理运行时配置，并在意图可保留时转换旧版运行时模型引用。
 
 显式的提供者/模型插件运行时是“失败即关闭”的：在提供者或模型上设置 `agentRuntime.id: "codex"` 表示 Codex，或明确的选择/运行时错误——它绝不会静默路由回 OpenClaw。只有 `auto` 才可能将不匹配的轮次路由到 OpenClaw。
 
@@ -123,9 +129,9 @@ CLI 后端别名与嵌入式 harness ids 不同。首选的 Claude CLI 形式如
 {
   agents: {
     defaults: {
-      model: "anthropic/claude-opus-4-8",
+      model: "anthropic/claude-opus-5",
       models: {
-        "anthropic/claude-opus-4-8": {
+        "anthropic/claude-opus-5": {
           agentRuntime: { id: "claude-cli" },
         },
       },
@@ -190,11 +196,11 @@ Codex 运行时支持契约记录在
 
 状态输出可以同时显示 `Execution` 和 `Runtime` 标签。请将它们视为诊断信息，而不是提供方名称：
 
-- A model ref such as `openai/gpt-5.6-sol` is the selected provider/model.
-- A runtime id such as `codex` is the loop executing the turn.
-- A channel label such as Telegram or Discord is where the conversation is happening.
+- 类似 `openai/gpt-5.6-sol` 的模型引用是所选的提供方/模型。
+- 类似 `codex` 的运行时 ID 是执行本轮交互的循环。
+- 类似 Telegram 或 Discord 的频道标签表示对话发生的位置。
 
-如果一次运行显示了意外的运行时，请先检查所选提供方/模型的运行时策略。旧版会话运行时固定值不再决定路由。
+如果一次运行显示了意外的运行时，请先检查所选提供方/模型的运行时策略。旧版会话的运行时固定值不再决定路由。
 
 ## 相关链接
 

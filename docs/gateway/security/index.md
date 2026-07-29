@@ -6,11 +6,12 @@ title: "安全"
 ---
 
 <Warning>
-  **个人助手信任模型。** 本指南假定每个网关只有一个受信任的
-  操作员边界（单用户、个人助手模型）。OpenClaw **不是** 面向多个
-  对抗性用户共享同一个代理或网关的恶意多租户安全边界。对于混合信任或
-  对抗性用户运行场景，请拆分信任边界：分别使用网关 +
-  凭据，最好是分别使用不同的 OS 用户或主机。
+  **Personal assistant trust model.** This guidance assumes one trusted
+  operator boundary per gateway (single-user, personal-assistant model).
+  OpenClaw is not a hostile multi-tenant security boundary for multiple
+  adversarial users sharing one agent or gateway. For mixed-trust or
+  adversarial-user operation, split trust boundaries: separate gateway +
+  credentials, ideally separate OS users or hosts.
 </Warning>
 
 ## 范围：个人助手安全模型
@@ -38,21 +39,21 @@ openclaw security audit --fix     # 应用安全的修复措施
 openclaw security audit --json
 ```
 
-`--fix` 的范围刻意很窄：它会将开放的组策略切换为允许列表，恢复 `logging.redactSensitive: "tools"`，收紧 state/config/include-file 的权限（文件 `600`，目录 `700`），并在 Windows 上使用 ACL 重置而不是 POSIX `chmod`。
+`--fix` is intentionally narrow: it flips open group policies to allowlists, tightens state/config/include-file permissions (`600` files, `700` dirs), and on Windows uses ACL resets instead of POSIX `chmod`.
 
 ### 审计会检查什么（高层概览）
 
-- **入站访问** - DM/群组策略、允许列表：陌生人能否触发机器人？
-- **工具影响范围** - 提权工具 + 开放房间：提示注入是否可能演变为 shell/文件/网络操作？
-- **执行文件系统漂移** - 允许会修改文件系统的工具，而 `exec`/`process` 仍可在没有沙箱约束的情况下使用。
-- **执行审批漂移** - `security="full"`、`autoAllowSkills`、未启用 `strictInlineEval` 的解释器允许列表。仅有 `security="full"` 本身只是一个较宽松的姿态警告，并不证明存在漏洞——它是受信任的个人助理场景所选用的默认值；只有在你的威胁模型需要审批或允许列表护栏时才应收紧。
-- **网络暴露** - Gateway 绑定/认证、Tailscale Serve/Funnel、弱/短认证令牌。
-- **浏览器控制暴露** - 远程节点、relay 端口、远程 CDP 端点。
-- **本地磁盘卫生** - 权限、符号链接、配置 include、同步文件夹路径。
-- **插件** - 未使用显式允许列表就加载。
-- **策略漂移** - 已配置沙箱 Docker 设置但沙箱模式关闭；`gateway.nodes.denyCommands` 条目看似有效，但实际上只匹配精确的命令 ID（例如 `system.run`），而不是载荷中的 shell 文本；危险的 `gateway.nodes.allowCommands` 条目；全局 `tools.profile="minimal"` 被按 agent 覆盖；在宽松策略下可访问插件拥有的工具。
-- **运行时预期漂移** - 以为隐式 exec 仍然意味着 `sandbox`，但 `tools.exec.host` 现在默认是 `auto`；或在沙箱模式关闭时将 `tools.exec.host="sandbox"`。
-- **模型卫生** - 警告使用了旧版已配置模型（软警告，不是硬性阻断）。
+- **Inbound access** - DM/group policies, allowlists: can strangers trigger the bot?
+- **Tool blast radius** - elevated tools + open rooms: could prompt injection become shell/file/network actions?
+- **Exec filesystem drift** - mutating filesystem tools denied while `exec`/`process` stay available without sandbox constraints.
+- **Exec approval drift** - `security="full"`, `autoAllowSkills`, interpreter allowlists without `strictInlineEval`. `security="full"` alone is a broad posture warning, not proof of a bug - it is the chosen default for trusted personal-assistant setups; tighten it only when your threat model needs approval or allowlist guardrails.
+- **Network exposure** - Gateway bind/auth, Tailscale Serve/Funnel, weak/short auth tokens.
+- **Browser control exposure** - remote nodes, relay ports, remote CDP endpoints.
+- **Local disk hygiene** - permissions, symlinks, config includes, synced-folder paths.
+- **Plugins** - loading without an explicit allowlist.
+- **Policy drift** - sandbox Docker settings configured but sandbox mode off; `gateway.nodes.commands.deny` entries that look effective but only match exact command IDs (for example `system.run`), not shell text inside the payload; dangerous `gateway.nodes.commands.allow` entries; global `tools.profile="minimal"` overridden per agent; plugin-owned tools reachable under a permissive policy.
+- **Runtime expectation drift** - assuming implicit exec still means `sandbox` when `tools.exec.host` now defaults to `auto`, or setting `tools.exec.host="sandbox"` while sandbox mode is off.
+- **Model hygiene** - warns on legacy configured models (soft warning, not a hard block).
 
 每个发现都有结构化的 `checkId`（例如 `gateway.bind_no_auth`、`tools.exec.security_full_configured`）。前缀包括：`fs.*`（权限）、`gateway.*`（绑定/认证/Tailscale/控制 UI/可信代理）、`hooks.*`/`browser.*`/`sandbox.*`/`tools.exec.*`（各入口面的加固）、`plugins.*`/`skills.*`（供应链）、`security.exposure.*`（访问策略 × 工具影响范围）。完整目录（含严重性和自动修复支持）见：[Security audit checks](/gateway/security/audit-checks)。另见：[Formal Verification](/security/formal-verification)。
 
@@ -94,7 +95,13 @@ openclaw security audit --json
 
 适用于聊天驱动的 agent 回合的内置基线：无论配置如何，非所有者发送者都不能使用 `cron` 或 `gateway` 工具。
 
-## 信任边界矩阵
+### Requester-scoped controls and prompt context
+
+`tools.toolsBySender`, sender ownership, and owner-only tool inventories are evaluated against the current turn's originating requester. They do not authenticate or sanitize other content in that model prompt, including quoted text, prior shared-room history, forwarded content, fetched content, attachments, tool results, or other prompt inputs. Content from another person can therefore influence an owner-triggered turn when it is included in that turn's context.
+
+Treat these controls as defense in depth that reduces direct capability for a requester, not as hostile multi-user isolation. Use `contextVisibility` to filter supported channel-supplied context, restrict tools and sandbox the agent, and use separate gateways and ideally separate OS users or hosts when participants are mutually adversarial.
+
+## Trust boundary matrix
 
 用于对风险报告进行初步分流的简要模型：
 
@@ -170,12 +177,12 @@ openclaw pairing approve <channel> <code>
 
 ### 允许名单（两层）
 
-- **DM 允许名单** (`allowFrom` / `channels.discord.allowFrom` / `channels.slack.allowFrom`; 旧版：`channels.discord.dm.allowFrom`, `channels.slack.dm.allowFrom`): 谁可以给机器人发送 DM。 当 `dmPolicy="pairing"` 时，批准会写入 `~/.openclaw/credentials/<channel>-allowFrom.json`（默认账户）或 `<channel>-<accountId>-allowFrom.json`（非默认账户），并与配置中的允许名单合并。
-- **群组允许名单**（按通道分别设置）：机器人可接受的群组/频道/公会。
-  - `channels.whatsapp.groups`, `channels.telegram.groups`, `channels.imessage.groups`: 每个群组的默认设置，如 `requireMention`；设置后，也会作为群组允许名单使用（包含 `"*"` 可保持允许所有的行为）。可通过 `agents.list[].groupChat.mentionPatterns` 自定义提及触发词（例如 `["@openclaw", "@mybot"]`），这样 `requireMention` 就会基于你自己的机器人名称进行拦截。
-  - `groupPolicy="allowlist"` + `groupAllowFrom`: 限制在群组会话中谁可以触发机器人（WhatsApp/Telegram/Signal/iMessage/Microsoft Teams）。
-  - `channels.discord.guilds` / `channels.slack.channels`: 按界面/表面的允许名单 + 提及默认值。
-  - 检查顺序：先 `groupPolicy`/群组允许名单，然后才是提及/回复激活。回复机器人消息（隐式提及）**不会**绕过 `groupAllowFrom`。
+- **DM allowlist** (`allowFrom` / `channels.discord.allowFrom` / `channels.slack.allowFrom`; legacy: `channels.discord.dm.allowFrom`, `channels.slack.dm.allowFrom`): who can DM the bot. When `dmPolicy="pairing"`, approvals write to `~/.openclaw/credentials/<channel>-allowFrom.json` (default account) or `<channel>-<accountId>-allowFrom.json` (non-default accounts), merged with config allowlists.
+- **Group allowlist** (channel-specific): which groups/channels/guilds the bot accepts at all.
+  - `channels.whatsapp.groups`, `channels.telegram.groups`, `channels.imessage.groups`: per-group defaults like `requireMention`; when set, also acts as a group allowlist (include `"*"` to keep allow-all behavior). Customize mention triggers with `agents.entries.*.groupChat.mentionPatterns` (for example `["@openclaw", "@mybot"]`) so `requireMention` gates on your own bot names.
+  - `groupPolicy="allowlist"` + `groupAllowFrom`: restrict who can trigger the bot inside a group session (WhatsApp/Telegram/Signal/iMessage/Microsoft Teams).
+  - `channels.discord.guilds` / `channels.slack.channels`: per-surface allowlists + mention defaults.
+  - Check order: `groupPolicy`/group allowlists first, then mention/reply activation. Replying to a bot message (implicit mention) does **not** bypass `groupAllowFrom`.
 
 详情： [配置](/gateway/configuration) 和 [群组](/channels/groups)
 
@@ -196,7 +203,7 @@ openclaw pairing approve <channel> <code>
 | `per-account-channel-peer` | 类似上面，但进一步按账户拆分（多账户通道）。         |
 | `per-peer`                 | 每个发送者在同一类型的所有通道中共享一个会话。     |
 
-本地 CLI 引导在未设置时会写入 `session.dmScope: "per-channel-peer"`，并保留任何已显式设置的现有值。
+Local CLI onboarding preserves an explicit `session.dmScope` and otherwise leaves it unset, so the `"main"` default applies: all direct messages across channels share the agent's rolling main session (the personal-agent default). For shared or multi-user inboxes, set `session.dmScope: "per-channel-peer"`; `openclaw security audit` recommends isolation when it detects multi-user DM traffic.
 
 这是一种消息上下文边界，不是主机管理员边界。如果用户彼此不信任且共享同一个 Gateway 主机/配置，应根据信任边界分别运行独立的网关。
 
@@ -286,12 +293,12 @@ OpenClaw 还会在这些包装后的外部内容和元数据到达模型之前�
 
 ## 控制平面工具
 
-两个内置工具可以进行持久化更改：
+Two built-in tools remain control-plane sensitive:
 
-- `gateway` 使用 `config.schema.lookup` / `config.get` 检查配置，并通过 `config.apply`、`config.patch` 和 `update.run` 进行修改。
-- `cron` 创建计划任务，即使原始聊天/任务结束后也会继续运行。
+- `gateway` reads config with `config.schema.lookup` / `config.get`. It cannot write config, update OpenClaw, or restart the Gateway.
+- `cron` creates scheduled jobs that keep running after the original chat/task ends.
 
-`gateway config.apply`/`config.patch` 默认采用 fail-closed：只有一小部分低风险的 agent 运行时调优项（`agents.defaults.model`、`agents.defaults.thinkingDefault`、按 agent 的 model/thinking/reasoning/fast-mode 字段）、mention-gating（`channels.*.requireMention` 在多个嵌套层级上）以及可见回复设置（`messages.visibleReplies`、`messages.groupChat.visibleReplies`、`messages.groupChat.unmentionedInbound`）可由 agent 调整。任何其他已更改的配置路径都会被拒绝。Prompt overlays 仍由 operator 控制，并且新的敏感配置树在未被有意添加到该允许列表之前都会受到保护。该工具仍然会拒绝重写 `tools.exec.ask` 或 `tools.exec.security`；旧版 `tools.bash.*` 别名会在写入检查前规范化为等价的 `tools.exec.*` 路径。
+The `gateway` tool stays owner-only because config reads can expose secrets and host topology. Agents request persistent config or lifecycle changes through the `openclaw` delegation tool; OpenClaw maps them to typed operations and requires human approval before applying them. See [OpenClaw setup agent](/cli/openclaw#operations-and-approval).
 
 对于任何处理不受信任内容的 agent/surface，默认拒绝这些：
 
@@ -303,19 +310,19 @@ OpenClaw 还会在这些包装后的外部内容和元数据到达模型之前�
 }
 ```
 
-`commands.restart=false` 只会阻止重启操作——它不会禁用 `gateway` 的 config/update 操作。
+`commands.restart=false` disables `/restart` and external `SIGUSR1` restart requests. The `gateway` agent tool has no restart action.
 
 ## 节点执行（`system.run`）
 
 如果一个 macOS 节点已配对，Gateway 可以在其上调用 `system.run`——这就是在该 Mac 上的远程代码执行。
 
-- 需要节点配对（批准 + 令牌）。配对会建立节点身份/信任和令牌签发；它不是按命令逐次审批的范围。
-- Gateway 通过 `gateway.nodes.allowCommands` / `denyCommands` 应用一个粗粒度的全局节点命令策略。`denyCommands` 只精确匹配节点命令名称（例如 `system.run`），不匹配命令负载中的 shell 文本——如果一个重新连接的节点声明了不同的命令列表，只要 gateway 全局策略和节点自身的执行审批仍然强制执行边界，这本身并不是漏洞。
-- 每个节点的 `system.run` 策略是该节点自己的执行审批文件（`exec.approvals.node.*`），在 Mac 上通过 Settings -> Exec approvals（security + ask + allowlist）控制；它可以比 gateway 的全局命令 ID 策略更严格或更宽松。
-- 运行 `security="full"` 且 `ask="off"` 的节点遵循默认的可信操作员模型——这是预期行为，不是 bug，除非你的部署需要更严格的策略。
-- 审批模式会绑定精确的请求上下文，并在可能时绑定一个具体的本地脚本/文件操作数。如果 OpenClaw 无法为解释器/运行时命令精确识别出唯一一个直接的本地文件，则会拒绝基于审批的执行，而不是声称具有完整的语义覆盖。
-- 对于 `host=node`，基于审批的运行还会存储一个规范化的已准备 `systemRunPlan`；之后已批准的转发会重用该已存储的计划，并且 gateway 验证会在审批请求创建后拒绝调用方对命令/cwd/session 上下文的编辑。
-- 要完全禁用远程执行：将 security 设置为 `deny`，并移除该 Mac 的节点配对。
+- Requires node pairing (approval + token). Pairing establishes node identity/trust and token issuance; it is not a per-command approval surface.
+- The Gateway applies a coarse global node command policy via `gateway.nodes.commands.allow` / `gateway.nodes.commands.deny`. The deny list matches exact node command names only (for example `system.run`), not shell text inside a command payload - a reconnecting node advertising a different command list is not, by itself, a vulnerability if the gateway global policy and the node's own exec approvals still enforce the boundary.
+- The per-node `system.run` policy is the node's own exec approvals file (`exec.approvals.node.*`), controlled on the Mac via Settings -> Exec approvals (security + ask + allowlist); it can be stricter or looser than the gateway's global command-ID policy.
+- A node running `security="full"` and `ask="off"` follows the default trusted-operator model - expected behavior, not a bug, unless your deployment needs a tighter stance.
+- Approval mode binds exact request context and, when possible, one concrete local script/file operand. If OpenClaw cannot identify exactly one direct local file for an interpreter/runtime command, approval-backed execution is denied rather than promising full semantic coverage.
+- For `host=node`, approval-backed runs also store a canonical prepared `systemRunPlan`; later approved forwards reuse that stored plan, and gateway validation rejects caller edits to command/cwd/session context after the approval request was created.
+- To disable remote execution entirely: set security to `deny` and remove node pairing for that Mac.
 
 ## 动态技能（watcher / 远程节点）
 
@@ -359,16 +366,16 @@ OpenClaw 可以在会话进行过程中刷新技能列表：当 `SKILL.md` 发�
 额外的 `sandbox.docker.binds` 会根据规范化、标准化后的源路径进行校验。被阻止路径的拒绝名单涵盖 `/etc`、`/private/etc`、`/proc`、`/sys`、`/dev`、`/root`、`/boot`，以及通常包含 Docker socket 或指向其别名的目录（`/run`、`/var/run`，以及其下的 `docker.sock`），另外还包括 HOME 凭据子路径（`.aws`、`.cargo`、`.config`、`.docker`、`.gnupg`、`.netrc`、`.npm`、`.ssh`）。父级符号链接技巧和规范化的 home 别名会通过已有祖先解析并重新检查，因此如果它们最终解析到被阻止的根目录，仍会以封闭方式失败。
 
 <Warning>
-`tools.elevated` 是全局基线的逃逸开关，会在沙箱外运行 exec。默认的有效主机是 `gateway`，如果 exec 目标配置为 `node`，则为 `node`。请严格限制 `tools.elevated.allowFrom`，不要对陌生人启用。可通过 `agents.list[].tools.elevated` 按 agent 进一步限制。参见 [Elevated mode](/tools/elevated)。
+`tools.elevated` is the global baseline escape hatch that runs exec outside the sandbox. The effective host is `gateway` by default, or `node` when the exec target is configured to `node`. Keep `tools.elevated.allowFrom` tight and do not enable it for strangers. Further restrict per agent via `agents.entries.*.tools.elevated`. See [Elevated mode](/tools/elevated).
 </Warning>
 
 ### 子 agent 委派防护
 
 如果你允许会话工具，请将委派的子 agent 运行视为另一项边界决策：
 
-- 除非 agent 确实需要委派，否则拒绝 `sessions_spawn`。
-- 将 `agents.defaults.subagents.allowAgents` 以及任何按 agent 配置的 `agents.list[].subagents.allowAgents` 覆盖项，限制为已知安全的目标 agent。
-- 对于必须保持沙箱化的工作流，请在调用 `sessions_spawn` 时使用 `sandbox: "require"`（默认值为 `"inherit"`）；当目标子运行时未处于沙箱中时，`"require"` 会快速失败。
+- Deny `sessions_spawn` unless the agent truly needs delegation.
+- Keep `agents.defaults.subagents.allowAgents` and any per-agent `agents.entries.*.subagents.allowAgents` overrides restricted to known-safe target agents.
+- For workflows that must remain sandboxed, call `sessions_spawn` with `sandbox: "require"` (default is `"inherit"`); `"require"` fails fast when the target child runtime is not sandboxed.
 
 ### 只读模式
 
@@ -427,8 +434,9 @@ OpenClaw 可以在会话进行过程中刷新技能列表：当 `SKILL.md` 发�
         workspace: "~/.openclaw/workspace-public",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
         tools: {
-          // 会话工具可能会泄露对话数据。默认范围是当前会话 +
-          // 已生成的子代理会话；如有需要，可通过 tools.sessions.visibility 进一步限制。
+          // Session tools can reveal transcript data. Default scope is current + spawned;
+          // reads also include same-agent groups watched through ambient group awareness.
+          // Use visibility: "self" to exclude those watched sessions.
           sessions: { visibility: "tree" }, // self | tree | agent | all
           allow: [
             "sessions_list",
@@ -654,9 +662,9 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 控制 UI 需要安全上下文（HTTPS 或 localhost）来生成设备身份。
 
-- `gateway.controlUi.allowInsecureAuth`：本地兼容性开关。在 localhost 上，当页面通过非安全 HTTP 加载时，允许控制 UI 在没有设备身份的情况下进行身份验证。不会绕过配对检查，也不会放宽远程（非 localhost）设备身份要求。优先使用 HTTPS（Tailscale Serve）或在 `127.0.0.1` 上打开 UI。
-- `gateway.controlUi.dangerouslyDisableDeviceAuth`：仅用于紧急故障切换，彻底禁用设备身份检查。会严重降低安全性；除非正在积极调试且能够快速恢复，否则请保持关闭。
-- 独立于这些标志之外，成功的 `gateway.auth.mode: "trusted-proxy"` 可以在没有设备身份的情况下接受 **operator** 控制 UI 会话——这是有意的认证模式行为，不是 `allowInsecureAuth` 的快捷方式，并且不会扩展到 node-role 控制 UI 会话。
+- `gateway.controlUi.allowInsecureAuth`: local compatibility toggle. On localhost, allows Control UI auth without device identity when the page loads over non-secure HTTP. Does not bypass pairing checks and does not relax remote (non-localhost) device identity requirements. Prefer HTTPS (Tailscale Serve) or open the UI on `127.0.0.1`.
+- `gateway.controlUi.dangerouslyDisableDeviceAuth`: retired break-glass input. Older configs preserve authenticated, pairing-only Control UI access for remediation until a browser reopened over HTTPS or localhost completes the bounded, explicit self-pairing migration; do not add it to current config.
+- Separate from those flags, a successful `gateway.auth.mode: "trusted-proxy"` can admit **operator** Control UI sessions without device identity - an intentional auth-mode behavior, not an `allowInsecureAuth` shortcut, and it does not extend to node-role Control UI sessions.
 
 当启用 `allowInsecureAuth` 时，`openclaw security audit` 会发出警告。
 
@@ -668,7 +676,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   <Accordion title="当前审计跟踪的标志">
     - `gateway.controlUi.allowInsecureAuth=true`
     - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true`
-    - `gateway.controlUi.dangerouslyDisableDeviceAuth=true`
+    - pending Control UI device-auth migration imported from retired `gateway.controlUi.dangerouslyDisableDeviceAuth=true`
     - `security.audit.suppressions configured (<count>)`
     - `hooks.gmail.allowUnsafeExternalContent=true`
     - `hooks.mappings[<index>].allowUnsafeExternalContent=true`
@@ -680,7 +688,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   <Accordion title="配置 schema 中所有 dangerous*/dangerously* 键">
     控制 UI 和浏览器：
     - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback`
-    - `gateway.controlUi.dangerouslyDisableDeviceAuth`
+    - `gateway.controlUi.dangerouslyDisableDeviceAuth` (retired upgrade input)
     - `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork`
 
     通道名称匹配（捆绑和插件通道；如适用，也包括每个 `accounts.<accountId>`）：
@@ -707,11 +715,11 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 ## 部署和主机信任
 
-- 网关主机上的全盘加密；如果主机是共享的，优先为 Gateway 使用专用的 OS 用户账户。
-- 已发布包的依赖锁定：源码检出使用 `pnpm-lock.yaml`；已发布的 `openclaw` npm 包以及 OpenClaw 维护的 npm 插件包包含 `npm-shrinkwrap.json`，因此安装时使用的是发布版本中经过审查的传递依赖图，而不是在安装时重新解析一个新的依赖图。这是供应链加固和发布可复现性的边界，不是沙箱——参见 [npm shrinkwrap](/gateway/security/shrinkwrap)。
-- 安全文件操作：OpenClaw 使用 `@openclaw/fs-safe` 进行以根目录为边界的文件访问、原子写入、归档解压、临时工作区以及 secret 文件辅助处理。可选的 POSIX Python 辅助功能默认**关闭**；只有在你需要额外的基于 fd 相对路径的修改加固且能够支持 Python 运行时时，才将 `OPENCLAW_FS_SAFE_PYTHON_MODE=auto` 或 `require`。详情：[安全文件操作](/gateway/security/secure-file-operations)。
-- 共享 Slack 工作区风险：如果 Slack 中的所有人都能给 bot 发消息，核心风险就是委派的工具权限——任何被允许的发送者都可以在 agent 的策略范围内诱导工具调用（`exec`、浏览器、网络/文件工具），来自某一发送者的 prompt/content 注入可能影响共享状态/设备/输出；如果共享 agent 持有敏感凭据/文件，任何被允许的发送者都可能通过工具使用来推动外泄。团队工作流应使用具有最少工具集的独立 agent/gateway；个人数据 agent 应保持私密。
-- 公司共享 agent（可接受的模式）：当使用该 agent 的所有人都处于同一信任边界内（例如同一公司团队），且该 agent 严格限定在业务范围时，这是合适的。请在专用机器/虚拟机/容器上运行，使用专用 OS 用户 + 专用浏览器/配置文件/账户，并且不要把该运行时登录到个人 Apple/Google 账户或个人密码管理器/浏览器配置文件中。在同一运行时中混用个人和公司身份会打破隔离并增加个人数据暴露风险。
+- Full-disk encryption on the gateway host; prefer a dedicated OS user account for the Gateway if the host is shared.
+- Published package dependency lock: source checkouts use `pnpm-lock.yaml`; the published `openclaw` npm package and OpenClaw-owned npm plugin packages include `npm-shrinkwrap.json` so installs use the reviewed transitive dependency graph from the release instead of resolving a fresh graph at install time. This is a supply-chain hardening and release reproducibility boundary, not a sandbox - see [npm shrinkwrap](/gateway/security/shrinkwrap).
+- Secure file operations: OpenClaw uses `@openclaw/fs-safe` for root-bounded file access, atomic writes, archive extraction, temp workspaces, and secret-file helpers. Optional native acceleration defaults **off**; set `OPENCLAW_FS_SAFE_NATIVE_MODE=auto` to use an installed platform binding or `require` to fail closed when native support is unavailable. Details: [Secure file operations](/gateway/security/secure-file-operations).
+- Shared Slack workspace risk: if everyone in Slack can message the bot, the core risk is delegated tool authority - any allowed sender can induce tool calls (`exec`, browser, network/file tools) within the agent's policy, prompt/content injection from one sender can affect shared state/devices/outputs, and if the shared agent has sensitive credentials/files, any allowed sender can potentially drive exfiltration via tool usage. Use separate agents/gateways with minimal tools for team workflows; keep personal-data agents private.
+- Company-shared agent (acceptable pattern): fine when everyone using the agent is in the same trust boundary (for example one company team) and the agent is strictly business-scoped. Run it on a dedicated machine/VM/container, use a dedicated OS user + dedicated browser/profile/accounts, and do not sign that runtime into personal Apple/Google accounts or personal password-manager/browser profiles. Mixing personal and company identities on the same runtime collapses the separation and increases personal-data exposure risk.
 
 ## 磁盘上的密钥
 
@@ -719,29 +727,32 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 | Path                                           | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openclaw.json`                                | 配置可能包含令牌（gateway、remote gateway）、提供方设置以及允许列表。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `credentials/**`                               | 通道凭据（例如 WhatsApp 凭据）、配对允许列表、旧版 OAuth 导入。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `agents/<agentId>/agent/auth-profiles.json`    | API 密钥、令牌配置文件、OAuth 令牌、可选的 `keyRef`/`tokenRef`。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `agents/<agentId>/agent/codex-home/**`         | 每个代理的 Codex 应用服务器账户、配置、技能、插件、原生线程状态、诊断信息（默认）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `$CODEX_HOME/**` or `~/.codex/**`              | 原生 Codex 运行时状态。普通 harness 仅在显式设置 `plugins.entries.codex.config.appServer.homeScope: "user"` 时访问它。单独的监督连接会在其解析后的 home scope 为 `"user"` 时访问它，这是 stdio 或 Unix 在未设置时的默认值。包含原生 Codex 账户、配置、插件和线程存储。监督会列出源元数据，并保留一个持续 Chat 的规范原生分支，然后在该连接上继续；分支会将有边界的持久化用户和助手历史复制到经过认证、模型锁定的 OpenClaw Chat 中。仅在所有者可控的 Gateway 上启用。参见 [Codex harness](/plugins/codex-harness#share-threads-with-codex-desktop-and-cli) 和 [Codex supervision](/plugins/codex-supervision)。 |
-| `secrets.json` (optional)                      | 文件后端的密钥载荷，由 `file` SecretRef 提供方（`secrets.providers`）使用。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `agents/<agentId>/agent/auth.json`             | 旧版兼容文件；发现静态 `api_key` 条目时会将其清除。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `agents/<agentId>/agent/openclaw-agent.sqlite` | 每个代理的运行时状态，包括会话行和可能包含私人消息及工具输出的转录内容。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `agents/<agentId>/sessions/**`                 | 旧版会话迁移来源和归档，其中可能包含私人消息及工具输出。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| bundled plugin packages                        | 已安装的插件（以及其 `node_modules/`）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `sandboxes/**`                                 | 工具沙箱工作区；可能会累积在沙箱内读取/写入的文件副本。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `openclaw.json`                                | Config may include tokens (gateway, remote gateway), provider settings, and allowlists.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `credentials/**`                               | Channel credentials (for example WhatsApp creds), pairing allowlists, legacy OAuth imports.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `state/openclaw.sqlite`                        | Shared runtime state, including native MCP OAuth access/refresh tokens, dynamic client registration secrets, and discovery state.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `agents/<agentId>/agent/openclaw-agent.sqlite` | Per-agent runtime state, including model auth profiles.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `agents/<agentId>/agent/auth-profiles.json`    | Legacy model-auth migration source; doctor imports supported records into the per-agent SQLite database.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `agents/<agentId>/agent/codex-home/**`         | Per-agent Codex app-server account, config, skills, plugins, native thread state, diagnostics (default).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `$CODEX_HOME/**` or `~/.codex/**`              | Native Codex runtime state. The ordinary harness accesses it only with explicit `plugins.entries.codex.config.appServer.homeScope: "user"`. The separate supervision connection accesses it when its resolved home scope is `"user"`, which is the default for stdio or Unix when unset. Contains the native Codex account, config, plugins, and thread store. Supervision lists source metadata and keeps a continued Chat's canonical native branch and later turns on that connection; branching copies bounded persisted user and assistant history into an authenticated, model-locked OpenClaw Chat. Enable only for an owner-controlled Gateway. See [Codex harness](/plugins/codex-harness#share-threads-with-codex-desktop-and-cli) and [Codex supervision](/plugins/codex-supervision). |
+| `secrets.json` (optional)                      | File-backed secret payload used by `file` SecretRef providers (`secrets.providers`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `agents/<agentId>/agent/auth.json`             | Legacy compatibility file; static `api_key` entries are scrubbed when discovered.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `agents/<agentId>/agent/openclaw-agent.sqlite` | Per-agent runtime state, including session rows and transcripts that can contain private messages and tool output.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `agents/<agentId>/sessions/**`                 | Legacy session migration sources and archives that can contain private messages and tool output.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| bundled plugin packages                        | Installed plugins (plus their `node_modules/`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `sandboxes/**`                                 | Tool sandbox workspaces; can accumulate copies of files read/written inside the sandbox.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ### 凭据存储映射
 
 也可用于备份决策：
 
 - WhatsApp: `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-- Telegram bot token: config/env 或 `channels.telegram.tokenFile`（仅限普通文件；拒绝符号链接）
-- Discord bot token: config/env 或 SecretRef（env/file/exec providers）
-- Slack tokens: config/env（`channels.slack.*`）
-- 配对允许列表: `~/.openclaw/credentials/<channel>-allowFrom.json`（默认账户）/ `<channel>-<accountId>-allowFrom.json`（非默认账户）
-- 模型认证配置文件: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- 旧版 OAuth 导入: `~/.openclaw/credentials/oauth.json`
+- Telegram bot token: config/env or `channels.telegram.tokenFile` (regular file only; symlinks rejected)
+- Discord bot token: config/env or SecretRef (env/file/exec providers)
+- Slack tokens: config/env (`channels.slack.*`)
+- Pairing allowlists: `~/.openclaw/credentials/<channel>-allowFrom.json` (default account) / `<channel>-<accountId>-allowFrom.json` (non-default accounts)
+- Model auth profiles: `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` (`auth_profile_store`)
+- MCP OAuth sessions: `~/.openclaw/state/openclaw.sqlite` (`mcp_oauth_stores`)
+- Legacy OAuth import: `~/.openclaw/credentials/oauth.json`
 
 加固：保持严格权限（目录用 `700`，文件用 `600`）；在网关主机上使用全盘加密；如果主机是共享的，优先使用专用的 OS 用户账户。
 
@@ -769,10 +780,10 @@ OpenClaw 将会话转录存储在磁盘上的 `~/.openclaw/agents/<agentId>/sess
 
 网关日志可能包含工具摘要、错误和 URL；会话转录可能包含粘贴的密钥、文件内容、命令输出和链接。
 
-- 保持日志/转录脱敏开启（`logging.redactSensitive: "tools"`，默认）。
-- 为你的环境通过 `logging.redactPatterns` 添加自定义模式（令牌、主机名、内部 URL）。
-- 在共享诊断信息时，优先使用 `openclaw status --all`（可直接粘贴，密钥已脱敏），而不是原始日志。
-- 如果你不需要长期保留，请清理旧的会话转录和日志文件。
+- Log/transcript redaction is always on and cannot be disabled by config.
+- Add custom patterns for your environment via `logging.redactPatterns` (tokens, hostnames, internal URLs).
+- When sharing diagnostics, prefer `openclaw status --all` (pasteable, secrets redacted) over raw logs.
+- Prune old session transcripts and log files if you do not need long retention.
 
 详情： [日志](/gateway/logging)
 
@@ -817,10 +828,10 @@ OpenClaw 将会话转录存储在磁盘上的 `~/.openclaw/agents/<agentId>/sess
 
 ### 审计
 
-1. 检查 Gateway 日志：`/tmp/openclaw/openclaw-YYYY-MM-DD.log`（或 `logging.file`）。
-2. 查看相关转录：`~/.openclaw/agents/<agentId>/sessions/*.jsonl`。
-3. 查看可能扩大访问范围的最近配置更改：`gateway.bind`、`gateway.auth`、DM/群组策略、`tools.elevated`、插件更改。
-4. 重新运行 `openclaw security audit --deep`，并确认关键发现已解决。
+1. Check Gateway logs with `openclaw logs` (or `openclaw --profile <profile> logs` for a named profile). The default path is `/tmp/openclaw/openclaw-YYYY-MM-DD.log`; named profiles use `/tmp/openclaw/openclaw-<profile>-YYYY-MM-DD.log`, unless `logging.file` overrides it.
+2. Review the relevant transcript(s): `~/.openclaw/agents/<agentId>/sessions/*.jsonl`.
+3. Review recent config changes that could have widened access: `gateway.bind`, `gateway.auth`, DM/group policies, `tools.elevated`, plugin changes.
+4. Re-run `openclaw security audit --deep` and confirm critical findings are resolved.
 
 ### 收集用于报告
 

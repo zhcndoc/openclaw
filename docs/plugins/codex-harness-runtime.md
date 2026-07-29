@@ -39,7 +39,10 @@ Codex 监管是同一个 `codex` 插件的一项可选能力。它通过单独�
 
 对于 Gateway 计算机上的已存储或空闲会话，**Continue as branch** 会创建一个普通的、模型锁定的 Chat，并通过源的最后一个终端持久化轮次传递有界的用户和助手历史。第一个普通 Chat 轮次会安装真实的审批处理程序，并使用一个临时的原生分支来固定快照，而不使用模型或提供方覆盖。Codex App Server 使用其当前的原生配置并返回所选的配对；如果该模型与源的最后记录模型不同，它会发出正常的警告。在同一监管连接上，OpenClaw 会在其 cwd 和运行时策略下启动规范的 `appServer` 源 Codex harness 线程，并在该初始启动时精确使用返回的模型和提供方，注入有界的可见历史，并归档临时分支。源永远不会被恢复。规范线程拥有完整的 OpenClaw harness 工具面；源中的推理、工具调用和工具结果不会被克隆进去。私有连接作用域会在待定和已提交的绑定状态之间持续存在，因此之后的每一轮都仍然保持在该连接上，并使用原生认证和提供方配置。禁用监管或绑定/连接漂移会直接失败，而不是切换到普通的 agent-home harness。
 
-原始 CLI 或 VS Code 源仍可同时进入两个目录。规范分支是一个原生 Codex 线程，但其源类型是 `appServer`；原生客户端可能会过滤该源类型，因此它是否出现在 Codex Desktop 中并不保证。
+The original CLI, VS Code, Atlas, or ChatGPT source remains eligible for both
+catalogs. The canonical branch is a native Codex thread, but its source kind is
+`appServer`; native clients may filter that source kind, so its appearance in
+Codex Desktop is not guaranteed.
 
 活动源不能启动新分支或被归档；现有的受监管 Chat 仍然可以打开。`notLoaded` 表示活动状态未知，而不是空闲；OpenClaw 仅在经过明确的“无其他运行者”确认以及一次新的进程本地状态读取之后，才允许对本地 `idle` 或 `notLoaded` 行进行归档。Codex 在单个 App Server 进程内序列化线程变更，但不提供跨进程的独占运行者或审批所有者租约，因此该读取无法证明没有其他进程正在使用该线程。OpenClaw 会阻止对精确目标或 Codex 分页后代查询返回的任何未归档派生后代的已知活动绑定所有者。枚举错误、循环和安全限制耗尽都会直接失败。原生归档仍可能与另一个进程中的新轮次发生竞态，因此确认会覆盖未知客户端以及状态读取与归档之间的间隙。受监管的模型锁定 Chat 在保护原生绑定期间不能被删除。
 
@@ -51,7 +54,12 @@ Codex 监管是同一个 `codex` 插件的一项可选能力。它通过单独�
 
 通过 Codex harness 进行的直接/源聊天轮次，默认会自动将最终的助手回复交付给内部 WebChat 界面，这与 Pi harness 协议一致：代理正常回复，OpenClaw 会将最终文本发布到源对话中。将 `messages.visibleReplies: "message_tool"` 设置为仅在代理调用 `message(action="send")` 时才向外公开最终的助手文本。
 
-Codex 心跳轮次默认会在可搜索的 OpenClaw 工具目录中包含 `heartbeat_respond`，这样代理就可以记录唤醒应保持静默还是发出通知。心跳主动性指导会作为 Codex 协作模式的开发者指令发送，并且仅作用于该心跳轮次；普通聊天轮次则保持在 Codex 默认模式中。当 `HEARTBEAT.md` 非空时，心跳指令会将 Codex 指向该文件，而不是内联其内容。
+Codex heartbeat turns get `heartbeat_respond` in the searchable OpenClaw tool
+catalog by default so the agent can record whether the wake should stay quiet
+or notify. Heartbeat initiative guidance is sent as a Codex collaboration-mode
+developer instruction scoped to the heartbeat turn; ordinary chat turns stay
+in Codex Default mode. The heartbeat monitor's cron scratch is appended to the
+heartbeat prompt when present.
 
 ## 钩子边界
 
@@ -73,10 +81,14 @@ OpenClaw 不使用项目级或全局的 Codex `hooks.json` 文件来路由
 钩子，例如 `SessionStart` 和 `UserPromptSubmit`，仍然是 Codex 级别的控制；
 在 v1 合约中，它们不会作为 OpenClaw 插件钩子暴露出来。
 
-对于 OpenClaw 动态工具，OpenClaw 会在 Codex 请求调用之后执行
-该工具，因此插件和中间件行为会在 harness 适配器中运行。对于
-Codex 原生工具，Codex 拥有规范性的工具记录；OpenClaw 可以镜像
-选定事件，但除非 Codex 通过 app-server 或原生钩子回调暴露该能力，否则无法重写原生线程。
+For OpenClaw dynamic tools, OpenClaw executes the tool after Codex asks for
+the call, so plugin and middleware behavior runs in the harness adapter. Codex
+Code Mode receives generic dynamic results as text and serializes nested
+dynamic calls; callers must parse JSON-looking results and cannot rely on
+`Promise.all` for concurrent submission. For Codex-native tools, Codex owns the
+canonical tool record; OpenClaw can mirror selected events but cannot rewrite
+the native thread unless Codex exposes that through app-server or native hook
+callbacks.
 
 Codex app-server 的 report-mode `PreToolUse` 事件会将插件审批延后到
 对应的 app-server 审批。如果 OpenClaw 的 `before_tool_call` 钩子返回
@@ -145,7 +157,16 @@ Codex app-server 的批准模式默认省略此原生挂钩。除非
 指纹。被记住的决策有意只支持完全匹配：命令、参数、工具载荷或
 cwd 的任何变更都会产生新的批准。
 
-当 Codex 将 `_meta.codex_approval_kind` 标记为 `"mcp_tool_call"` 时，Codex MCP 工具批准询问会通过 OpenClaw 的插件批准流程进行路由。Codex 的 `request_user_input` 提示会被发送回发起的聊天，而下一个排队的后续消息会回答该原生服务器请求，而不是被当作额外上下文进行引导。其他 MCP 询问请求会直接失败。
+Codex MCP tool approval elicitations route through OpenClaw's plugin approval
+flow when Codex marks `_meta.codex_approval_kind` as `"mcp_tool_call"`. Codex
+`request_user_input` registers a provider-neutral gateway question for the
+originating session. The Control UI renders the gateway question card, and a
+single non-secret choice uses typed channel buttons when the channel supports
+them. Button taps, Control UI answers, and the next queued plain-text reply all
+resolve the same gateway record before OpenClaw returns the app-server answer.
+Codex auto-resolution and attempt aborts bound the wait and cancel the record.
+Secret questions stay entirely on the warned text-reply path. Other MCP
+elicitation requests fail closed.
 
 关于承载这些提示的一般插件批准流程，请参见
 [插件权限请求](/plugins/plugin-permission-requests)。
@@ -180,10 +201,10 @@ Codex review 和手动压缩 turn 可以拒绝同轮 steering。在这种情况�
 
 ## 媒体和交付
 
-OpenClaw 继续负责媒体交付和媒体提供方选择。图像、
-视频、音乐、PDF、TTS 和媒体理解使用匹配的提供方/模型
-设置，例如 `agents.defaults.imageGenerationModel`、
-`videoGenerationModel`、`pdfModel` 和 `messages.tts`。
+OpenClaw continues to own media delivery and media provider selection. Image,
+video, music, PDF, TTS, and media understanding use matching provider/model
+settings such as `agents.defaults.mediaModels.image`,
+`agents.defaults.mediaModels.video`, `pdfModel`, and `tts`.
 
 文本、图像、视频、音乐、TTS、审批以及消息工具输出继续
 通过正常的 OpenClaw 交付路径；媒体生成不需要

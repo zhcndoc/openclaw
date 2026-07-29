@@ -1,120 +1,33 @@
 ---
-summary: "用于非精确提醒的推断式后续记忆"
-title: "推断式承诺"
+summary: "已退役的推断后续承诺的状态与清理指南"
+title: "推断承诺"
 sidebarTitle: "承诺"
 read_when:
-  - 你希望 OpenClaw 记住自然的后续跟进
-  - 你想了解推断式检查点与提醒有何不同
-  - 你想查看或忽略后续承诺
+  - 当你正在升级一个使用了推断承诺的配置时
+  - 当你想检查或清除之前存储的后续记录时
 ---
 
-承诺是短暂的后续记忆。启用后，OpenClaw 可以注意到一次对话创建了一个未来的检查点机会，并记住稍后把它带回来。
+推断承诺实验已退役。OpenClaw 不再提取新的
+对话后续内容，也不再通过 heartbeat 传递它们，之前的
+`commitments` 配置块会被 `openclaw doctor --fix` 移除。
 
-示例：
+精确提醒和计划任务仍然使用
+[计划任务](/automation/cron-jobs)。持久的对话事实应存放在
+[memory](/concepts/memory) 中。
 
-- 你提到明天有面试。OpenClaw 可能会在之后跟进。
-- 你说你精疲力尽。OpenClaw 可能稍后问你是否睡过觉。
-- 代理说它会在某些事情改变后继续跟进。OpenClaw 可能会追踪这个未完成的闭环。
+## 现有记录
 
-承诺不是像 `MEMORY.md` 那样的持久事实，也不是精确提醒。它们介于记忆和自动化之间：OpenClaw 记住一个与对话绑定的义务，然后由 heartbeat 在到期时交付它。
-
-## 启用承诺
-
-承诺默认是关闭的（`commitments.enabled: false`）。在配置中启用它们：
+之前存储的承诺会保留在共享的 SQLite 状态数据库中，因此升级不会破坏运维人员可见的历史记录。使用旧版维护 CLI 来查看或忽略这些行：
 
 ```bash
-openclaw config set commitments.enabled true
-openclaw config set commitments.maxPerDay 3
-```
-
-等效的 `openclaw.json`：
-
-```json
-{
-  "commitments": {
-    "enabled": true,
-    "maxPerDay": 3
-  }
-}
-```
-
-`commitments.maxPerDay` 限制在滚动一天内，每个代理会话可交付的推断式后续数量。默认值为 `3`。
-
-## 工作原理
-
-在代理回复之后，OpenClaw 可能会在一个单独的上下文中运行一个隐藏的后台抽取过程，并禁用工具。该过程只查找可推断的后续承诺。它不会写入可见对话，也不会要求主代理去推理该抽取过程。
-
-当找到高置信度候选项时，OpenClaw 会存储一个承诺，其中包括：
-
-- 代理 id
-- 会话密钥
-- 原始频道和交付目标
-- 到期窗口
-- 简短的建议签到内容
-- 供 heartbeat 判断是否发送的非指令性元数据
-
-交付通过 heartbeat 完成。当某个承诺到期时，heartbeat 会将该承诺添加到同一代理和频道范围的 heartbeat 回合中。提示会明确警告承诺元数据是不可信的，并指示模型不要遵循其中的指令，也不要因为它而使用工具。模型可以发送一个自然的签到内容，或者回复 `HEARTBEAT_OK` 来忽略它。如果 heartbeat 配置为 `target: "none"`，到期承诺将保持在内部，不会发送外部签到。承诺交付提示不会重放原始对话文本，只会重放建议的签到内容和元数据，并且到期承诺的 heartbeat 回合在不使用 OpenClaw 工具的情况下运行。
-
-OpenClaw 绝不会在写入承诺后立刻交付它。到期时间至少会被钳制到创建承诺后的一个 heartbeat 间隔之后，因此该后续不会在被推断出来的同一时刻回声返回。
-
-## 范围
-
-承诺的作用范围限定在创建它们时所处的精确代理和频道上下文中。在 Discord 中与某个代理对话时推断出的后续，不会由另一个代理、另一个频道或无关会话交付。
-
-这个范围是该功能的一部分。自然的检查点应当像同一段对话继续进行，而不是像一个全局提醒系统。
-
-## 承诺与提醒
-
-| 需求                                            | 使用                                      |
-| ----------------------------------------------- | ---------------------------------------- |
-| "下午 3 点提醒我"                              | [计划任务](/automation/cron-jobs) |
-| "20 分钟后提醒我"                               | [计划任务](/automation/cron-jobs) |
-| "每个工作日运行这份报告"                        | [计划任务](/automation/cron-jobs) |
-| "我明天有面试"                                  | 承诺                                       |
-| "我昨晚没睡"                                    | 承诺                                       |
-| "如果我不回复这个开放线程，就跟进一下"           | 承诺                                       |
-
-精确的用户请求已经属于调度器路径。承诺只用于推断式后续：也就是用户并没有要求提醒，但对话显然创建了一个有用的未来检查点的那些时刻。
-
-## 管理承诺
-
-使用 CLI 查看和清除已存储的承诺：
-
-```bash
-openclaw commitments
 openclaw commitments --all
-openclaw commitments --agent main
-openclaw commitments --status snoozed
 openclaw commitments dismiss cm_abc123
 ```
 
-查看 [`openclaw commitments`](/cli/commitments) 获取完整的命令参考。
-
-## 隐私与成本
-
-承诺提取会使用一次 LLM 过程，因此启用后会在符合条件的轮次之后增加后台模型调用。该过程对用户可见对话是隐藏的，但它可以读取判断是否存在后续所需的最近交互内容。
-
-已存储的承诺是本地 OpenClaw 状态。它们属于操作性记忆，而不是长期记忆。可通过以下命令关闭该功能：
-
-```bash
-openclaw config set commitments.enabled false
-```
-
-## 故障排查
-
-如果预期中的后续没有出现：
-
-- 确认 `commitments.enabled` 为 `true`。
-- 使用 `openclaw commitments --all` 检查待处理、已忽略、已延后或已过期的记录。
-- 确保代理的 heartbeat 正在运行。
-- 检查该代理会话的 `commitments.maxPerDay` 是否已经达到上限。
-- 请记住，精确提醒会被承诺提取跳过，并且应当出现在 [计划任务](/automation/cron-jobs) 下。
+有关维护命令参考，请参见 [`openclaw commitments`](/cli/commitments)。
 
 ## 相关内容
 
-- [记忆概览](/concepts/memory)
-- [活动记忆](/concepts/active-memory)
-- [心跳](/gateway/heartbeat)
 - [计划任务](/automation/cron-jobs)
-- [`openclaw commitments`](/cli/commitments)
-- [配置参考](/gateway/configuration-reference#commitments)
+- [内存概览](/concepts/memory)
+- [心跳](/gateway/heartbeat)

@@ -16,7 +16,7 @@ title: "OpenCode Go 插件"
 
 ## 范围
 
-providers: opencode-go; contracts: mediaUnderstandingProviders
+providers: `opencode-go`; contracts: `mediaUnderstandingProviders`
 
 ## 相关文档
 

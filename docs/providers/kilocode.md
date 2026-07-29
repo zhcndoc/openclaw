@@ -49,12 +49,14 @@ openclaw gateway restart
 
 ## 默认模型和目录
 
-默认模型是 `kilocode/kilo/auto`，这是一个由提供方拥有的智能路由模型。OpenClaw 不会
-公开它的任务到上游模型的映射；`kilo/auto` 背后的路由由 Kilo Gateway 负责。
+The default model is `kilocode/kilo-auto/balanced`, Kilo Gateway's balanced smart-routing tier.
+OpenClaw does not publish a task-to-upstream-model mapping for it; routing behind
+`kilo-auto/balanced` is owned by Kilo Gateway.
 
-在启动时，OpenClaw 会查询 `GET https://api.kilo.ai/api/gateway/models`，并将发现的模型
-优先于静态回退目录进行合并。静态回退仅包含 `kilocode/kilo/auto`（`Kilo Auto`、
-`input: ["text", "image"]`、`reasoning: true`、`contextWindow: 1000000`、`maxTokens: 128000`）。
+At startup OpenClaw queries `GET https://api.kilo.ai/api/gateway/models` and merges discovered models
+ahead of a static fallback catalog. The static fallback contains only
+`kilocode/kilo-auto/balanced` (`Auto Balanced`, `input: ["text", "image"]`, `reasoning: true`,
+`contextWindow: 1000000`, `maxTokens: 65536`).
 
 网关上的任何模型都可以通过 `kilocode/<upstream-id>` 访问（例如
 `kilocode/anthropic/claude-sonnet-4`、`kilocode/openai/gpt-5.5`）。运行 `/models kilocode` 或
@@ -67,7 +69,7 @@ openclaw gateway restart
   env: { KILOCODE_API_KEY: "<your-kilocode-api-key>" }, // pragma: allowlist secret
   agents: {
     defaults: {
-      model: { primary: "kilocode/kilo/auto" },
+      model: { primary: "kilocode/kilo-auto/balanced" },
     },
   },
 }
@@ -91,16 +93,16 @@ openclaw gateway restart
     可通过 `KILOCODE_FEATURE` 环境变量覆盖），并为支持该功能的模型规范化 reasoning-effort 负载。
 
     <Warning>
-    `kilocode/kilo/auto` 和 `x-ai/*` 引用会跳过 reasoning-effort 注入。如果你需要推理支持，
-    请使用具体的模型引用，例如 `kilocode/anthropic/claude-sonnet-4`。
+    `kilocode/kilo-auto/balanced` and `x-ai/*` refs skip reasoning-effort injection. Use a concrete
+    model ref such as `kilocode/anthropic/claude-sonnet-4` if you need reasoning support.
     </Warning>
 
   </Accordion>
 
-  <Accordion title="故障排查">
-    - 如果在启动时模型发现失败，OpenClaw 会回退到包含 `kilocode/kilo/auto` 的静态目录。
-    - 确认你的 API key 有效，并且你的 Kilo 账户已启用所需的模型。
-    - 当 Gateway 作为守护进程运行时，请确保 `KILOCODE_API_KEY` 对该进程可用（例如在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 提供）。
+  <Accordion title="Troubleshooting">
+    - If model discovery fails at startup, OpenClaw falls back to the static catalog containing `kilocode/kilo-auto/balanced`.
+    - Confirm your API key is valid and that your Kilo account has the desired models enabled.
+    - When Gateway runs as a daemon, ensure `KILOCODE_API_KEY` is available to that process (for example in `~/.openclaw/.env` or via `env.shellEnv`).
 
   </Accordion>
 </AccordionGroup>

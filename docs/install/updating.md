@@ -13,7 +13,7 @@ title: "更新"
 
 ## 推荐：`openclaw update`
 
-检测你的安装类型（npm 或 git），获取最新版本，运行 `openclaw doctor`，并重启网关。
+Detects your install type (npm, pnpm, Bun, or git), fetches the latest version, runs `openclaw doctor`, and restarts the gateway.
 
 ```bash
 openclaw update
@@ -89,7 +89,30 @@ openclaw update --channel stable --dry-run
 服务的 Node 路径，并在替换包之前将该 Node 版本与目标发布的
 `engines.node` 要求进行检查。
 
-## 备选方案：重新运行安装器
+## Source-checkout servers (reference script)
+
+Teams running a gateway directly from a git checkout on a server can update it
+with `scripts/update-gateway.sh` from inside that checkout. It is the reference
+for an efficient source-server update: it restores tracked build outputs that
+`pnpm build` rewrites, fails closed on any other local changes, fast-forwards
+`main` (or rebases a local server branch onto `origin/main`), installs
+dependencies, builds clean, and restarts the gateway.
+
+```bash
+ssh you@server 'cd /path/to/openclaw && scripts/update-gateway.sh'
+```
+
+Override the restart for custom service units, or skip it entirely:
+
+```bash
+OPENCLAW_UPDATE_RESTART_CMD='systemctl --user restart openclaw-gateway.service' scripts/update-gateway.sh
+OPENCLAW_UPDATE_RESTART_CMD='' scripts/update-gateway.sh
+```
+
+For a plain single-user source install, prefer `openclaw update --channel dev`
+instead — it manages the checkout, build, and gateway restart for you.
+
+## Alternative: re-run the installer
 
 ```bash
 curl -fsSL https://openclaw.ai/install.sh | bash
@@ -138,13 +161,37 @@ openclaw gateway status --deep --json
 openclaw doctor --lint --json
 ```
 
-当 `openclaw update` 管理一个全局 npm 安装时，它会先将目标安装到一个临时 npm prefix 中，验证打包后的 `dist` 清单，然后将干净的包树交换到真实的全局 prefix 中——避免 npm 用新包覆盖旧包中的过期文件。如果安装命令失败，OpenClaw 会使用 `--omit=optional` 重试一次，这有助于那些本地可选依赖无法编译的主机。
+When `openclaw update` manages a global npm install, it installs the target
+into a temporary npm prefix first. The candidate package validates the host
+Node version during `preinstall`; only then does OpenClaw verify the packaged
+`dist` inventory and swap the clean package tree into the real global prefix. A
+packed completion guard is omitted from the expected inventory and removed only
+after `preinstall` succeeds, so skipped lifecycle scripts also fail before the
+swap. On npm 12 and newer, the updater approves only the candidate OpenClaw
+lifecycle; transitive dependency scripts remain blocked. This avoids npm
+overlaying a new package onto stale files from the old one. If the install
+command fails, OpenClaw retries once with `--omit=optional`, which helps hosts
+where native optional dependencies cannot compile.
 
 OpenClaw 托管的 npm 更新和插件更新命令还会为子 npm 进程清除 npm 的 `min-release-age` 供应链隔离（或较旧的 `before` 配置键）。该策略用于一般性保护，但显式的 OpenClaw 更新意味着“现在安装所选版本”。
 
 ```bash
 pnpm add -g openclaw@latest
 ```
+
+If pnpm 11 installed OpenClaw 2026.7.1, run that manual command once. That
+release predates pnpm 11's isolated global-package layout, so its updater can
+mistake another npm installation for the running CLI. Later releases retain
+pnpm ownership and follow the replacement package root during updates. They
+also use the owning manager's reported global bin directory and stop before
+mutation when the available pnpm command reports another global root or major,
+or when the invoking package is orphaned or not the only active OpenClaw
+install there.
+
+If OpenClaw shares a pnpm 11 global install group with another package, the
+automatic updater stops before changing the group. Update the original
+comma-separated group manually so its sibling packages and build policy stay
+intact.
 
 ```bash
 bun add -g openclaw@latest
@@ -182,20 +229,17 @@ bun add -g openclaw@latest
     channel: "stable",
     auto: {
       enabled: true,
-      stableDelayHours: 6,
-      stableJitterHours: 12,
-      betaCheckIntervalHours: 1,
     },
   },
 }
 ```
 
-| Channel           | 行为                                                                                                                                     |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stable`          | 等待 `stableDelayHours`（默认：6），然后在 `stableJitterHours`（默认：12）范围内使用确定性抖动分散发布。 |
-| `extended-stable` | 在启用 `checkOnStart` 时，启动时以及每 24 小时检查一次只读更新提示。绝不会自动应用。                |
-| `beta`            | 每 `betaCheckIntervalHours`（默认：1）检查一次，并立即应用。                                                                  |
-| `dev`             | 不自动应用。请手动使用 `openclaw update`。                                                                                          |
+| Channel           | Behavior                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `stable`          | Applies after a built-in delay with deterministic jitter for a spread rollout.                                                |
+| `extended-stable` | Checks for a read-only update hint on startup and every 24 hours when `checkOnStart` is enabled. Never applies automatically. |
+| `beta`            | Checks on a built-in interval and applies immediately.                                                                        |
+| `dev`             | No automatic apply. Use `openclaw update` manually.                                                                           |
 
 网关还会在启动时记录更新提示（可通过
 `update.checkOnStart: false` 禁用）。已存储的 extended-stable 选择会使用这种
@@ -207,7 +251,19 @@ bun add -g openclaw@latest
 
 通过实时 Gateway 控制平面（`update.run`）请求的包管理器更新，不会替换正在运行的 Gateway 进程内的包树。在受管服务安装中，Gateway 会启动一个分离的交接，退出，并让正常的 `openclaw update --yes --json` CLI 路径去停止服务、替换包、刷新服务元数据、重启、验证 Gateway 版本和可达性，并在可能时恢复已安装但未加载的 macOS LaunchAgent。如果 Gateway 无法安全地完成该交接，`update.run` 会返回一个安全的 shell 命令，而不是在进程内运行包管理器。
 
-控制界面侧边栏中的更新卡片会启动相同的 `update.run` 流程。在带签名的 macOS 应用中，卡片或菜单栏的更新操作会先通过 Sparkle 更新应用。重新启动后，会运行一个类似设置向导的进度窗口，为由应用管理的 Gateway 执行 `openclaw update --tag <app-version> --json`，重启它并验证健康状态。失败详情会继续显示，并提供重试、[更新指南](/install/updating) 和 [Discord](https://discord.gg/clawd) 操作。非交互式运行不接受降级。外部管理的安装保持不变。
+The Control UI sidebar update card shows **Update Gateway** when it will start
+this `update.run` flow directly. This covers browser-hosted Control UI, remote
+Gateways, and manually managed local Gateways.
+
+In the signed macOS app, a local app-owned Gateway changes that card to
+**Update Mac app + Gateway**. Sparkle updates the app first; after relaunch, the
+app runs `openclaw update --tag <app-version> --json`, restarts its Gateway,
+and verifies health in a setup-style progress window. The window appears only
+when that managed Gateway needs update, repair, or installation; app-only updates relaunch
+directly into the app. Failure details stay visible with Retry, [Update guide](/install/updating), and
+[Discord](https://discord.gg/clawd) actions. The app never uses this coordinated
+path for a remote or externally managed Gateway, never downgrades a newer
+Gateway, and never overrides an `extended-stable` channel pin.
 
 当更新成功时，应用会为最近一次具有真实用户/频道交互的顶层直接会话排队一个一次性的欢迎事件。Cron 运行、心跳以及仅后台的会话更新都不会改变该选择。在远程模式下，应用只会更新其本地 Mac 节点运行时，并且仅当已连接的远程 Gateway 至少与应用一样新时才发送该事件。
 
@@ -239,30 +295,131 @@ openclaw health
 
 ## 回滚
 
-### 锁定版本（npm）
+Rollback has two layers:
+
+1. Reinstall older OpenClaw code while keeping the current state.
+2. Restore pre-update state only when the older code cannot use a migrated
+   config or database.
+
+Start with a code-only rollback. Restoring state discards changes made after
+the backup.
+
+### Before updating: create a verified backup
+
+`openclaw update` preserves an automatic pre-update config copy, but it does not
+create a full state recovery point. Before a significant update, create one
+explicitly:
 
 ```bash
-npm i -g openclaw@<version>
-openclaw doctor
+mkdir -p ~/Backups/openclaw
+openclaw backup create --output ~/Backups/openclaw --verify
+```
+
+The archive manifest records the OpenClaw version and the source paths included
+in the backup. The archive can contain credentials, auth profiles, and channel
+state, so store it with owner-only permissions and the same protection as the
+live state directory. See [Backup](/cli/backup) for included and intentionally
+omitted files.
+
+For a byte-for-byte recovery point that includes volatile artifacts omitted by
+the portable archive, stop the Gateway and use a filesystem, volume, or VM
+snapshot provided by your platform.
+
+### Roll back a package install
+
+List published versions, then preview and install the known-good version:
+
+```bash
+npm view openclaw versions --json
+openclaw update --tag <known-good-version> --dry-run
+openclaw update --tag <known-good-version>
+```
+
+`openclaw update --tag` is preferred over a direct package-manager install. It
+detects the downgrade, asks for confirmation, runs managed plugin convergence
+and compatibility checks against the installed target, refreshes service
+metadata, restarts the Gateway, and verifies the running version. If the stored
+channel is `extended-stable`, use
+`--channel stable --tag <known-good-version>` because exact one-off tags cannot
+be combined with the `extended-stable` selector.
+
+Package updates stage and verify the candidate before activation. If the
+filesystem swap or command-shim replacement fails, OpenClaw restores the old
+package automatically. After a successful swap, a later Gateway health failure
+reports the previous version and manual rollback instructions instead of
+automatically replacing the package again.
+
+If the CLI update path is unavailable, use the same package manager and install
+scope that own the current Gateway:
+
+```bash
+openclaw gateway stop
+npm i -g openclaw@<known-good-version>
+openclaw gateway install --force
 openclaw gateway restart
 ```
 
-<Tip>
-`npm view openclaw version` 会显示当前已发布的版本。
-</Tip>
+Replace `npm` with `pnpm` or `bun` when that manager owns the install. During
+incident recovery, prevent an enabled auto-updater from immediately applying a
+newer release by setting `OPENCLAW_NO_AUTO_UPDATE=1` in the Gateway environment.
 
-### 锁定提交（源码）
+### Roll back a source checkout
+
+Use a clean checkout and select a known-good tag or commit:
 
 ```bash
-git fetch origin
-git checkout "$(git rev-list -n 1 --before=\"2026-01-01\" origin/main)"
+git fetch --all --tags
+git checkout --detach <known-good-tag-or-commit>
 pnpm install && pnpm build
 openclaw gateway restart
 ```
 
 要返回最新版本：`git checkout main && git pull`。
 
-## 如果你遇到卡住的情况
+The updater automatically returns a git checkout to its previous branch and
+SHA when dependency installation, build, UI build, or doctor fails after a git
+update starts. Manual checkout is still required when you intentionally choose
+an older commit.
+
+### Downgrading across the session SQLite migration
+
+Before starting an older file-backed OpenClaw release, use the current CLI to
+restore archived legacy transcript artifacts:
+
+```bash
+openclaw gateway stop
+openclaw doctor --session-sqlite restore --session-sqlite-all-agents
+```
+
+This does not delete SQLite data. Sessions created after the SQLite migration
+exist only in SQLite and will not appear to the older runtime. See
+[Downgrading after session SQLite migration](/cli/doctor#downgrading-after-session-sqlite-migration).
+
+### Restore state only when necessary
+
+If the older code cannot read a newer config or database schema, stop the
+Gateway and restore the verified pre-update filesystem, volume, or VM snapshot.
+Preserve the current state separately before restoring because this removes
+changes made after the snapshot.
+
+Broad `openclaw backup create` archives support creation and verification, but
+not in-place whole-archive activation. Extract a broad archive into a staging
+directory and use its `manifest.json` source-to-archive mapping for an offline
+restore. `openclaw backup sqlite restore` likewise writes a verified database
+to a fresh target; activating that target remains an explicit offline operator
+step.
+
+### Verify the rollback
+
+```bash
+openclaw --version
+openclaw health
+openclaw plugins list --json
+openclaw gateway status --deep --json
+openclaw doctor --lint --json
+```
+
+## If you are stuck
 
 - 再次运行 `openclaw doctor`，并仔细阅读输出内容。
 - 对于使用 `openclaw update --channel dev` 的源码检出版本，更新器会在需要时自动引导安装 `pnpm`。如果你看到 pnpm/corepack 引导错误，请手动安装 `pnpm`（或重新启用 `corepack`），然后再次运行更新。

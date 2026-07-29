@@ -16,4 +16,4 @@ title: "LLM Task 插件"
 
 ## 接口
 
-contracts: tools
+contracts: `tools`

@@ -10,11 +10,13 @@ read_when:
 
 ## 它提供什么
 
-- **关键词搜索**：通过 FTS5 全文索引（BM25 评分）。
-- **向量搜索**：通过任意受支持提供商的 embeddings。
-- **混合搜索**：将两者结合以获得最佳结果。
-- **CJK 支持**：通过三元组分词支持中文、日文和韩文。
-- **sqlite-vec 加速**：用于数据库内向量查询（可选）。
+- **关键词搜索**，通过 FTS5 全文索引（BM25 评分）。
+- **向量搜索**，通过来自任何受支持提供方的嵌入。
+- **混合搜索**，将两者结合以获得最佳结果。
+- **确定性排序**，按相关性、时效性和写入时重要性排序。
+- **可信触发器召回**，在没有召回模型的情况下提供有界的回复前上下文。
+- **CJK 支持**，通过三元组分词支持中文、日文和韩文。
+- **sqlite-vec 加速**，用于数据库内向量查询（可选）。
 
 ## 快速开始
 
@@ -25,11 +27,9 @@ read_when:
 
 ```json5
 {
-  agents: {
-    defaults: {
-      memorySearch: {
-        provider: "openai",
-      },
+  memory: {
+    search: {
+      provider: "openai",
     },
   },
 }
@@ -46,14 +46,12 @@ openclaw plugins install @openclaw/llama-cpp-provider
 
 ```json5
 {
-  agents: {
-    defaults: {
-      memorySearch: {
-        provider: "local",
-        fallback: "none",
-        local: {
-          modelPath: "~/.node-llama-cpp/models/embeddinggemma-300m-qat-Q8_0.gguf",
-        },
+  memory: {
+    search: {
+      provider: "local",
+      fallback: "none",
+      local: {
+        modelPath: "~/.node-llama-cpp/models/embeddinggemma-300m-qat-Q8_0.gguf",
       },
     },
   },
@@ -76,11 +74,17 @@ openclaw plugins install @openclaw/llama-cpp-provider
 | OpenAI-compatible | `openai-compatible` | 通用 `/v1/embeddings` 端点           |
 | Voyage            | `voyage`            |                                     |
 
-将 `memorySearch.provider` 设置为非 OpenAI 提供商。
+将 `memory.search.provider` 设置为切换离开 OpenAI。
 
 ## 索引如何工作
 
-OpenClaw 会将 `MEMORY.md` 和 `memory/*.md` 索引为若干块（默认每块 400 个 token，重叠 80 个 token），并存储在每个代理各自的 SQLite 数据库中。
+OpenClaw 会将 `MEMORY.md`、现有的根目录 `USER.md` 以及 `memory/*.md` 索引成
+若干块（默认每块 400 个 token，重叠 80 个 token），并将它们存储在
+按代理划分的 SQLite 数据库中。OpenClaw 不会自动创建 `USER.md`。
+
+每个块都可以携带可为空的重要性和触发元数据。空值是中性的，因此旧索引仍然可用。搜索会结合混合相关性、时间衰减和重要性；触发回忆只会注入经过整理或提升信任的条目。
+
+每个已索引的块还拥有由 SQLite 管理的来源信息：来源类别（`owner`、`agent`、`untrusted` 或 `system`）、会话类型、观察时间，以及可选的替代键。这些元数据与 Markdown 分开存储，因此被召回的文本不能改写其自身的信任分类。
 
 - **索引位置：** 拥有该索引的代理数据库位于
   `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
@@ -90,7 +94,7 @@ OpenClaw 会将 `MEMORY.md` 和 `memory/*.md` 索引为若干块（默认每块 
 - **按需重新索引：** `openclaw memory index --force`
 
 <Info>
-你也可以使用 `memorySearch.extraPaths` 索引工作区外的 Markdown 文件。请参阅
+你也可以通过 `memory.search.extraPaths` 索引工作区之外的 Markdown 文件。参见
 [配置参考](/reference/memory-config#additional-memory-paths)。
 </Info>
 
@@ -118,12 +122,12 @@ openclaw memory status --deep --agent main
 openclaw memory index --force --agent main
 ```
 
-本地 CLI 命令和 Gateway 使用相同的 `local` 提供商 ID。
-当你想使用本地 embeddings 时，将 `memorySearch.provider` 设置为 `"local"`。
+独立的 CLI 命令和 Gateway 使用相同的 `local` 提供商 id。  
+当你希望使用本地嵌入时，请设置 `memory.search.provider: "local"`。
 
 **结果过时？** 运行 `openclaw memory index --force` 进行重建。监视器在极少数边缘情况下可能会漏掉更改。
 
-**sqlite-vec 未加载？** OpenClaw 会自动回退到进程内余弦相似度。
+**sqlite-vec 未加载？** OpenClaw 会自动回退到进程内余弦相似度。  
 `openclaw memory status --deep` 会分别报告本地向量存储和嵌入提供商，因此 `Vector store:
 unavailable` 指向 sqlite-vec 加载问题，而 `Embeddings: unavailable`
 指向提供商/认证或模型就绪问题。请检查日志以获取具体的加载

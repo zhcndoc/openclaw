@@ -7,7 +7,8 @@ title: "频道路由"
 
 # 频道与路由
 
-OpenClaw 会将回复**路由回消息来源的频道**。模型不会选择频道；路由是确定性的，由宿主配置控制。
+OpenClaw 会将回复**路由回消息来源所在的频道**。  
+模型不会选择频道；路由是确定性的，由宿主配置控制。在默认的 DM 范围下，来自每个频道的直接消息都会汇聚到代理的 [主会话](/concepts/main-session)。
 
 ## 关键术语
 
@@ -77,15 +78,15 @@ OpenClaw 可以更新现有会话的元数据和 `lastRoute`，但不会因为�
 
 路由会为每条入站消息选择**一个代理**：
 
-1. **精确的 peer 匹配** (`bindings` with `peer.kind` + `peer.id`).
+1. **精确 peer 匹配**（`bindings` 中的 `peer.kind` + `peer.id`）。
 2. **父级 peer 匹配**（线程继承）。
-3. **peer 通配符匹配**（某个 peer kind 下的 `peer.id: "*"`）。
-4. **Guild + roles 匹配**（Discord）通过 `guildId` + `roles`。
-5. **Guild 匹配**（Discord）通过 `guildId`。
-6. **Team 匹配**（Slack）通过 `teamId`。
+3. **peer 通配符匹配**（某个 peer 类型下的 `peer.id: "*"`）。
+4. **Guild + 角色匹配**（Discord），通过 `guildId` + `roles`。
+5. **Guild 匹配**（Discord），通过 `guildId`。
+6. **Team 匹配**（Slack），通过 `teamId`。
 7. **Account 匹配**（通道上的 `accountId`）。
-8. **Channel 匹配**（该通道上的任意 account，`accountId: "*"`）。
-9. **默认代理**（`agents.list[].default`，否则取列表第一个，最后回退到 `main`）。
+8. **Channel 匹配**（该通道上的任意账户，`accountId: "*"`）。
+9. **默认代理**（`agents.entries.*.default`，否则取列表中的第一个条目，回退到 `main`）。
 
 当一个绑定包含多个匹配字段（`peer`、`guildId`、`teamId`、`roles`）时，**所有提供的字段都必须匹配**，该绑定才会生效。
 
@@ -112,15 +113,15 @@ OpenClaw 可以更新现有会话的元数据和 `lastRoute`，但不会因为�
 
 ## 配置概览
 
-- `agents.list`：命名的代理定义（工作区、模型等）。
-- `bindings`：将入站频道/账号/peer 映射到代理。
+- `agents.entries`：命名的代理定义（workspace、model 等）。
+- `bindings`：将入站渠道/账号/对等方映射到代理。
 
 示例：
 
 ```json5
 {
   agents: {
-    list: [{ id: "support", name: "Support", workspace: "~/.openclaw/workspace-support" }],
+    list: [{ id: "support", name: "支持", workspace: "~/.openclaw/workspace-support" }],
   },
   bindings: [
     { match: { channel: "slack", teamId: "T123" }, agentId: "support" },
@@ -162,7 +163,7 @@ WebChat 会附加到**所选代理**，并默认使用该代理的主
 入站回复会包含：
 
 - 在可用时包含 `ReplyToId`、`ReplyToBody` 和 `ReplyToSender`。
-- 引用上下文会以 `[Replying to ...]` 块的形式附加到 `Body`。
+- 引用上下文会以 `[回复给 ...]` 块的形式附加到 `Body`。
 
 这在各个频道中保持一致。
 

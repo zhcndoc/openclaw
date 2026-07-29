@@ -1,5 +1,5 @@
 ---
-summary: "openclaw nodes 的 CLI 参考（状态、配对、调用、摄像头/画布/屏幕/位置/通知）"
+summary: "openclaw 节点的 CLI 参考（状态、配对、调用、摄像头/画布/屏幕/位置/通知）"
 read_when:
   - 你正在管理已配对的节点（摄像头、屏幕、画布）
   - 你需要批准请求或调用节点命令
@@ -10,7 +10,7 @@ title: "节点"
 
 管理已配对的节点（设备）并调用节点能力。
 
-Related: [Nodes overview](/nodes) - [Active computer presence](/nodes/presence) - [Camera nodes](/nodes/camera) - [Image nodes](/nodes/images)
+Related: [节点概览](/nodes) - [活动计算机存在](/nodes/presence) - [摄像头节点](/nodes/camera) - [图像节点](/nodes/images)
 
 每个子命令的通用选项：`--url <url>`、`--token <token>`、`--timeout <ms>`（默认 `10000`）、`--json`。
 
@@ -24,7 +24,7 @@ openclaw nodes list
 openclaw nodes describe --node <idOrNameOrIp>
 ```
 
-`status` 和 `list` 都接受 `--connected`（仅显示已连接节点）和 `--last-connected <duration>`（例如 `24h`、`7d`；仅显示在该时间段内连接过的节点）。`list` 会将待处理和已配对的节点分别显示在不同的表格中，其中已配对行包含最近一次连接时长（Last Connect）；`status` 则显示一个合并后的表格，包含每个节点的能力、版本和最后输入详情。已连接的 macOS 节点仅在授予 Accessibility 权限时才会报告最后输入；最新的行会标记为 `active`；参见 [Active computer presence](/nodes/presence)。`describe` 会打印单个节点的能力、权限、活动情况，以及生效/待生效的 invoke 命令。
+`status` 和 `list` 都接受 `--connected`（仅显示已连接节点）和 `--last-connected <duration>`（例如 `24h`、`7d`；仅显示在该时长内连接过的节点）。`list` 会将待处理节点和已配对节点分开显示在不同表格中，其中已配对行包含最近一次连接时长（Last Connect）；`status` 会显示一个合并表格，包含每个节点的能力、版本和最后输入详情。已连接的 macOS 节点只有在用户启用 **Active computer detection** 并授予 Accessibility 后才会报告最后输入；最新鲜的行会标记为 `active`。参见 [Active computer presence](/nodes/presence)。`describe` 会打印某个节点的能力、权限、活动状态以及生效/待处理的 invoke 命令。
 
 ## 配对
 
@@ -36,12 +36,12 @@ openclaw nodes remove --node <id|name|ip>
 openclaw nodes rename --node <id|name|ip> --name <displayName>
 ```
 
-这些命令驱动网关拥有的 `node.pair.*` 存储，与设备配对（`openclaw devices approve`）分离；设备配对用于控制节点的 WS `connect` 握手。有关二者的关系，请参见 [Nodes](/nodes)。
+这些命令驱动网关拥有的 `node.pair.*` 存储，与设备配对（`openclaw devices approve`）分离；设备配对用于控制节点的 WS `connect` 握手。有关二者的关系，请参见 [节点](/nodes)。
 
 - `remove` 会撤销该节点的配对角色条目。对于由设备支持的节点，这会撤销设备配对存储中的 `node` 角色，并断开其 node-role 会话：混合角色设备会保留其记录，只失去 `node` 角色；仅节点设备的记录会被删除。它还会清除任何匹配的旧版网关拥有的节点配对记录。
 - `pending` 仅需要 `operator.pairing` 作用域。
 - `gateway.nodes.pairing.autoApproveCidrs` 可以为明确受信任的、首次 `role: node` 设备配对跳过待处理步骤。默认关闭；不会批准角色升级。
-- `gateway.nodes.pairing.sshVerify`（默认开启）在网关能够通过 SSH 向节点主机验证设备密钥时，会自动批准首次 `role: node` 设备配对；首个能力表面会在同一步中获批。另请参见 [Node pairing](/gateway/pairing#ssh-verified-device-auto-approval-default)。
+- `gateway.nodes.pairing.sshVerify`（默认开启）在网关能够通过 SSH 向节点主机验证设备密钥时，会自动批准首次 `role: node` 设备配对；首个能力表面会在同一步中获批。另请参见 [节点配对](/gateway/pairing#ssh-verified-device-auto-approval-default)。
 - `approve` 的作用域要求取决于待处理请求中声明的命令：
   - 无命令请求：`operator.pairing`
   - 普通节点命令：`operator.pairing` + `operator.write`

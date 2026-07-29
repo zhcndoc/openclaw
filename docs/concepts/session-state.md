@@ -48,7 +48,9 @@ sidebarTitle: "会话状态感知"
 
 观察会自动清理：游标行会随着信号日志保留期过期，在观察者会话重置时被移除，并会随着任一会话被删除而删除。v1 中没有 `unwatch` 动词。
 
-从会话目录中采纳的被观察会话会按固定频率检查其直接上游的人类活动。检测到的活动会进入与其他直接人类轮次相同的信号日志和观察者流程。
+Watched Claude, Codex, OpenCode, and Pi sessions adopted from a session catalog are checked for direct upstream human activity on a fixed cadence. Pi monitoring starts after the session is in its append-only v3 format. Detected activity enters the same signal log and watcher flow as other direct human turns.
+
+OpenCode detection is deliberately conservative. OpenCode's v1 tables do not preserve message provenance, so reporting ambiguous rows would create false alarms; per-message provenance exists only in its v2 schema. OpenCode therefore does not report image-only turns, `@file`-mention-only turns, slash commands routed to a subagent, or turns from ACP clients that annotate content with an audience (mapped by OpenCode to `synthetic` or `ignored`). It also suppresses text matching any of the preceding 50 user messages to catch compaction replay, which means a human deliberately repeating the same text within that window can be missed.
 
 如果某个已采纳会话的上游源被外部删除，连续三次缺失检查（约三个监控周期）会为其观察者生成一条 `upstream_missing` 信号，并移除上游链接。继续该目录会话会重新创建一条新的链接。
 
@@ -100,16 +102,19 @@ Session "agent:main:subagent:child" changed (other actor). Reconcile before acti
 
 当前限制：
 
-- 通知投递假定有一个网关进程拥有共享状态数据库。多个网关共享持久日志和 `changesSince`，但 v1 不会在进程之间推送通知。
-- 压缩事件覆盖嵌入式运行时的压缩所有者；仅限 native-harness 的压缩没有被完整记录。
-- 已取消结果的负载细节当前由 ACP 子运行生成；原生子代理的取消会表现为通用失败。
-- 上游自回显检测会比较规范化后的用户文本。匹配某个会话最近 10 条 OpenClaw 侧用户消息之一的外部提示会被视为自回显。
-- 单个本地 Claude JSONL 行若大于每个节奏扫描上限 1 MiB，会在 v1 中阻塞该会话的游标；未分类字节绝不会被跳过。
-- 成对节点的 Claude 检查会在每个节奏周期内分类最近 50 条转录项。更大的突发可能会落在 v1 扫描窗口之外。
-- 成对节点的 Claude 历史读取不会暴露“线程未找到”的明确结果，因此远程 Claude 删除在 v1 中不会被归类为 `upstream_missing`。
-- 尚未被接管的目录会话在 v1 中仍处于感知层之外。
-- 在此功能之前被接管的会话不包含上游链接；请先从目录中继续一次，以开始上游监控。
-- 上游链接假定每个已接管的会话键只映射到一个拥有代理（接管使用默认存储代理）。同一外部线程的多代理接管在 v1 中不会被监控。
+- 通知投递假定只有一个网关进程拥有共享状态数据库。多个网关共享持久日志和 `changesSince`，但 v1 不会在进程之间推送通知。
+- 压缩事件覆盖嵌入式运行时的压缩所有者；仅原生 harness 的压缩不会被完整记录。
+- 已取消结果的负载细节当前由 ACP 子运行产生；原生子代理取消会显示为通用失败。
+- 上游自回显检测比较的是归一化后的用户文本。与会话最近 10 条 OpenClaw 侧用户消息之一匹配的外部提示会被视为自回显。
+- 单个本地 Claude JSONL 行如果大于每个周期 1 MiB 的扫描上限，会阻塞该会话在 v1 中的游标；未分类字节绝不会被跳过。
+- 单个 Pi JSONL 行如果大于每个周期 1 MiB 的扫描上限，会阻塞该会话在 v1 中的游标；未分类字节绝不会被跳过。
+- 旧版 Pi 会话是在没有上游链接的情况下接管的。先恢复一次以将文件迁移到 v3，然后再从目录中继续它，以开始监控。
+- OpenCode 检查每个周期发出一次批量数据库查询。只有当该查询显示其持久事件序列已推进时，才会运行会话导出。
+- 配对节点 Claude 检查每个周期会分类最近的 50 个转录项。更大的突发可能会落在 v1 的扫描窗口之外。
+- 配对节点 Claude 历史读取不会暴露明确的 thread-not-found 结果，因此远程 Claude 删除在 v1 中不会被归类为 `upstream_missing`。
+- 尚未被接管的目录会话在 v1 中不在感知层范围内。
+- 在此功能之前接管的会话不包含上游链接；从目录中继续一次即可开始上游监控。
+- 上游链接假定每个已接管的会话键映射到一个拥有代理（接管使用默认存储代理）。在 v1 中，不会监控同一外部线程的多代理接管。
 
 ## 相关
 

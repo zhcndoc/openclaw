@@ -6,7 +6,7 @@ read_when:
 title: "从 Claude 迁移"
 ---
 
-OpenClaw 通过随附的 Claude 迁移提供程序导入本地 Claude 状态。该提供程序会在更改状态前预览每一项，在计划和报告中对密钥进行脱敏，并在应用前创建经过验证的备份。
+OpenClaw imports local Claude state through the bundled Claude migration provider. The provider previews every item before changing state and redacts secrets in plans and reports. Standalone `openclaw migrate` creates a verified backup; the fresh onboarding path stages the import and publishes it only after verification succeeds.
 
 <Note>
 入职导入需要全新的 OpenClaw 设置。如果你已经有本地 OpenClaw 状态，请先重置 config、credentials、sessions 和 workspace，或者在查看计划后直接使用带有 `--overwrite` 的 `openclaw migrate`。

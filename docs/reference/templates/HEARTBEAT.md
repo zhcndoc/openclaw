@@ -1,29 +1,28 @@
 ---
-summary: "HEARTBEAT.md 的工作区模板"
-title: "HEARTBEAT.md 模板"
+summary: "已弃用的 HEARTBEAT.md 工作区文件迁移指南"
+title: "已弃用的 HEARTBEAT.md 工作区文件"
 read_when:
-  - 手动引导工作区
+  - 迁移仍包含 HEARTBEAT.md 的较旧工作区
 ---
 
-# HEARTBEAT.md 模板
+# HEARTBEAT.md 已弃用
 
-`HEARTBEAT.md` 位于代理工作区中，并保存周期性的心跳检查清单。请保持其为空，或仅包含空白、Markdown 注释、ATX 标题、空列表占位符（`- `、`* [ ]`）或围栏标记，以便 OpenClaw 完全跳过心跳模型调用（`reason=empty-heartbeat-file`）。
+OpenClaw 不再在新的工作区中创建 `HEARTBEAT.md`，也不会在运行时读取它。现在的心跳说明存放在共享状态数据库中、由系统管理的监视器 cron scratch 里。
 
-默认随附内容：
+使用 `openclaw cron list --all` 中的监视器作业 ID 来管理当前 scratch：
 
-```markdown
-<!-- Heartbeat template; comments-only content prevents scheduled heartbeat API calls. -->
-
-# 保持此文件为空（或仅包含注释），以跳过心跳 API 调用。
-
-# 当你希望代理定期检查某些内容时，请在下方添加任务。
+```bash
+openclaw cron scratch <jobId>
+openclaw cron scratch <jobId> --set "..."
+openclaw cron scratch <jobId> --file notes.md
+openclaw cron scratch <jobId> --unset
 ```
 
-只有在你希望进行周期性检查时，才在注释行下方添加简短任务。请保持内容精简：心跳运行会在每个 tick（默认每 30 分钟）读取此文件，因此冗长的说明会在每次唤醒时消耗 token。
-
-如果你需要按到期时间进行检查，而不是普通清单，请使用带有每个任务的 `interval` 和 `prompt` 字段的结构化 `tasks:` 块；格式和行为请参见 [HEARTBEAT.md](/gateway/heartbeat#heartbeatmd-optional)。
+如果较旧的工作区仍然包含 `HEARTBEAT.md`，请运行 `openclaw doctor --fix`。doctor 会将其说明导入监视器 scratch，把有效的旧版 `tasks:` 条目转换为 cron 作业，将原文件归档到状态目录下，并移除工作区文件。
 
 ## 相关内容
 
-- [心跳](/gateway/heartbeat)
-- [心跳配置](/gateway/config-agents)
+- [Heartbeat](/gateway/heartbeat)
+- [Cron CLI](/cli/cron)
+- [Doctor](/cli/doctor)
+- [Heartbeat 配置](/gateway/config-agents)

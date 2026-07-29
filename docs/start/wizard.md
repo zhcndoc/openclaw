@@ -16,9 +16,14 @@ CLI 上手引导是 macOS、Linux 和 Windows（原生或 WSL2）上推荐的终
 
 引导式上手会先建立推理能力。它会检测可用的 AI 访问，要求进行一次真实补全，然后才启动 [OpenClaw](/cli/openclaw) 来配置 OpenClaw 的其余部分。选择 **暂时跳过** 会退出上手引导，而不会启动 OpenClaw。
 
-经典向导仍可用于自定义提供方、远程 Gateway 设置、通道配对、守护进程控制、skills 和导入。通过 `openclaw onboard --classic` 显式运行它；引导式推理选择器不会委派到它。推理通过后，OpenClaw 可以使用 `open channel wizard for
-<channel>` 将需要密钥的通道设置交给带遮罩的终端向导。要更改模型提供方或其身份验证，请退出 OpenClaw 并运行
-`openclaw onboard`; OpenClaw 不会打开引导式或经典的提供方流程。
+经典向导仍然可用于自定义提供商、远程 Gateway
+设置、通道配对、守护进程控制、技能和导入。通过 `openclaw onboard --classic`
+显式运行它；引导式推理选择器不会委托给它。推理通过后，OpenClaw 可以使用 `open channel wizard for
+<channel>` 将需要密钥的通道设置交给一个带遮罩的终端向导。
+工作区技能和网页搜索也以同样的对话方式配置：
+`configure skills` 和 `configure web search` 在聊天中承载这些设置流程，而 `open search wizard` 会将凭据输入交给带遮罩的终端向导。
+要更改模型提供商或其身份验证，请退出 OpenClaw 并运行
+`openclaw onboard`；OpenClaw 不会打开引导式或经典提供商流程。
 
 <Info>
 最快首次聊天：完成引导式设置，运行 `openclaw dashboard`，然后通过浏览器中的 Control UI 聊天。文档：[仪表盘](/web/dashboard)。
@@ -26,12 +31,11 @@ CLI 上手引导是 macOS、Linux 和 Windows（原生或 WSL2）上推荐的终
 
 ## 区域设置
 
-向导会本地化固定的引导文案。解析顺序：`OPENCLAW_LOCALE`、
-`LC_ALL`、`LC_MESSAGES`、`LANG`，然后是英语。支持的区域设置有：`en`、
-`zh-CN`、`zh-TW`。
+向导会本地化固定的入门文案。它会按顺序使用 `OPENCLAW_LOCALE`、`LC_ALL`、`LC_MESSAGES` 和 `LANG` 中第一个非空值，然后回退到英文。支持的区域设置：`en`、`zh-CN`、`zh-TW`。
 
 ```bash
 OPENCLAW_LOCALE=zh-CN openclaw onboard
+OPENCLAW_LOCALE=en openclaw onboard # 显式覆盖为英文
 ```
 
 产品名称、命令、配置键、URL、提供商 ID、模型 ID，以及
@@ -51,9 +55,10 @@ openclaw agents add <name>
 <Tip>
 经典向导包含一个网页搜索步骤，你可以在其中选择提供商：Brave、
 DuckDuckGo、Exa、Firecrawl、Gemini、Grok、Kimi、MiniMax Search、Ollama Web
-Search、Perplexity、SearXNG 或 Tavily。其中一些需要 API 密钥；另一些则
-无需密钥。可稍后使用 `openclaw configure --section web` 进行配置。文档：
-[网页工具](/tools/web)。
+Search、Perplexity、SearXNG 或 Tavily。其中一些需要 API 密钥；另一些
+则无需密钥。可稍后使用 `openclaw configure --section web` 进行配置，或者在 OpenClaw 聊天中说
+`configure web search`，以对话方式运行相同的提供商设置。
+文档：[Web tools](/tools/web)。
 </Tip>
 
 ## 引导式默认
@@ -61,42 +66,31 @@ Search、Perplexity、SearXNG 或 Tavily。其中一些需要 API 密钥；另�
 普通的 `openclaw onboard` 会按以下路径执行：
 
 1. 接受安全提示。
-2. 检测已配置的模型、API 密钥环境变量，以及受支持的本地
-   AI CLI。
-3. 使用一次真实补全测试第一个检测到的候选项。若失败，显示
-   原因并继续尝试下一个可用候选项。
-4. 如果检测已用尽，则选择 OpenAI、Anthropic、xAI（Grok）、Google 或
-   OpenRouter，或为其余提供商选择 **更多…**。每个提供商的
-   区域、套餐，以及受支持的浏览器、设备、API 密钥或 token 方法
-   都会出现在第二个菜单中，并使用相同的真实补全进行测试。
-   选择 **暂时跳过** 可在不启动 OpenClaw 的情况下退出。
-5. 仅持久化已验证的模型路由及其所需的任何凭据/插件状态。
-   Workspace 和 Gateway 设置保持不变。
-6. 使用已验证的模型启动 OpenClaw，以便它可以配置 workspace、
-   Gateway、channels、agents、plugins，以及其余可选设置。
+2. 检测已配置的模型、API 密钥环境变量、受支持的本地 AI CLI，以及来自 Gateway 主机上可访问的 Ollama 或 LM Studio 服务器中已安装的、支持工具的模型。此只读扫描绝不会下载模型。当 Gemini CLI、Antigravity、Pi 和 OpenCode 的安装无法作为引导式设置可复用的推理路径时，也会将其报告出来。Gemini 和 Antigravity 无法强制执行无工具探测；Pi 和 OpenCode 是完整的代理运行框架，而不是设置推理路径。
+3. 使用一次真实补全测试检测到的第一个候选项。若失败，则显示原因并继续下一个可用候选项。
+4. 如果检测用尽，请选择 OpenAI、Anthropic、xAI（Grok）、Google 或 OpenRouter，或选择 **More…** 查看其余提供商。每个提供商的地区、方案，以及受支持的浏览器、设备、API 密钥或令牌方式都会显示在第二个菜单中，并使用相同的真实补全进行测试。选择 **Skip for now** 可在不启动 OpenClaw 的情况下退出。
+5. 仅持久化已验证的模型路径及其所需的任何凭据/插件状态。工作区和 Gateway 设置保持不变。
+6. 使用已验证的模型启动 OpenClaw，以便它可以配置工作区、Gateway、通道、代理、插件以及其余可选设置。
 
-在已配置的安装上重新运行该命令时，会先测试当前默认
-模型，使引导式流程成为一次验证和修复过程。失败的
-检查绝不会自动替换已配置的模型；入门流程会停止并
-询问如何继续。后续非推理类添加请运行 `openclaw channels add` 或 `openclaw configure`；如需更改提供商或认证路径，请使用 `openclaw onboard`。
+在已配置的安装上重新运行该命令时，会先测试当前默认模型，使引导式流程成为一次验证和修复过程。失败的检查绝不会自动替换已配置的模型；入门流程会停止并询问如何继续。后续非推理类添加请运行 `openclaw channels add` 或 `openclaw configure`；如需更改提供商或认证路径，请使用 `openclaw onboard`。
 
-## 经典向导：QuickStart vs Advanced
+## 经典向导：QuickStart vs 高级
 
-运行 `openclaw onboard --classic` 以打开完整向导。它首先会让你在 **QuickStart**（默认值）和 **Advanced**（完全控制）之间进行选择。传入 `--flow quickstart` 或 `--flow advanced`（别名 `manual`）即可选择经典流程并跳过该提示。
+运行 `openclaw onboard --classic` 以打开完整向导。它首先会让你在 **QuickStart**（默认值）和 **高级**（完全控制）之间进行选择。传入 `--flow quickstart` 或 `--flow advanced`（别名 `manual`）即可选择经典流程并跳过该提示。
 
 <Tabs>
-  <Tab title="QuickStart (defaults)">
+  <Tab title="QuickStart (默认值)">
     - 本地网关，回环绑定
     - 工作区默认值（或现有工作区）
     - 网关端口 **18789**
-    - 网关认证 **Token**（自动生成，即使在回环模式下也是如此）
-    - 工具策略：新配置使用 `tools.profile: "coding"`（现有的显式配置文件将被保留）
-    - DM 隔离：新配置使用 `session.dmScope: "per-channel-peer"`。详情：[CLI 设置参考](/start/wizard-cli-reference#outputs-and-internals)
+    - 网关认证 **Token**（自动生成，即使在回环上也是如此）
+    - 工具策略：新设置使用 `tools.profile: "coding"`（若已有明确配置文件则保留不变）
+    - DM 会话：引导会保留显式的 `session.dmScope`，否则保持未设置，因此 `"main"` 默认值会让所有跨频道的直接消息都进入代理的滚动主会话——这是个人代理的默认行为。对于共享或多用户收件箱，请使用 `"per-channel-peer"`；`openclaw security audit` 在检测到多用户 DM 流量时会建议隔离。详情： [CLI 设置参考](/start/wizard-cli-reference#outputs-and-internals)
     - Tailscale 暴露 **关闭**
-    - Telegram 和 WhatsApp 私信默认使用 **allowlist**：Telegram 会要求输入数字形式的 Telegram 用户 ID，WhatsApp 会要求输入电话号码
+    - Telegram 和 WhatsApp 的 DM 默认使用 **allowlist**：Telegram 会要求输入数字形式的 Telegram 用户 ID，WhatsApp 会要求输入电话号码
 
   </Tab>
-  <Tab title="Advanced (full control)">
+  <Tab title="Advanced (完全控制)">
     - 暴露每一步：模式、工作区、网关、频道、守护进程、技能
 
   </Tab>
@@ -150,24 +144,24 @@ Search、Perplexity、SearXNG 或 Tavily。其中一些需要 API 密钥；另�
 
 `--flow import` 会在经典向导中运行一个检测到的迁移流程（例如 Hermes），而不是进行全新设置；请参见 [Migrate](/cli/migrate) 以及 [Install](/install/migrating-hermes) 下的迁移指南。`openclaw onboard --modern` 是 [OpenClaw](/cli/openclaw) 的一个兼容别名。它使用与 `openclaw setup` 相同的推理门禁：经过验证的推理会启动助手，而交互式失败会返回到引导式推理设置。
 
-## 添加另一个 agent
+## Add another agent
 
-使用 `openclaw agents add <name>` 创建一个独立的 agent，它拥有自己的
-工作区、会话和认证配置文件。不带 `--workspace` 运行时，会启动一个交互式流程，用于设置名称、工作区、认证、频道和绑定——这
-不是完整的 `openclaw onboard` 向导。
+Use `openclaw agents add <name>` to create a standalone agent with its own
+workspace, session, and authentication profile. Running without `--workspace` will start an interactive flow to set up the name, workspace, authentication, channel, and bindings—this
+is not the full `openclaw onboard` wizard.
 
-它会设置：
+It sets:
 
-- `agents.list[].name`
-- `agents.list[].workspace`
-- `agents.list[].agentDir`
+- `agents.entries.*.name`
+- `agents.entries.*.workspace`
+- `agents.entries.*.agentDir`
 
-说明：
+Notes:
 
-- 默认工作区：`~/.openclaw/workspace-<agentId>`（如果设置了
-  `agents.defaults.workspace`，则位于该路径下）。
-- 添加 `bindings` 以将传入消息路由到此 agent（onboarding 可以为你完成这项工作）。
-- 非交互式标志：`--model`、`--agent-dir`、`--bind`、`--non-interactive`。
+- Default workspace: `~/.openclaw/workspace-<agentId>` (if
+  `agents.defaults.workspace` is set, it will be under that path).
+- Add `bindings` to route incoming messages to this agent (onboarding can do this for you).
+- Non-interactive flags: `--model`, `--agent-dir`, `--bind`, `--non-interactive`.
 
 ## 完整参考
 

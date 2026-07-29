@@ -16,7 +16,7 @@ title: "Google 插件"
 
 ## Surface
 
-providers: google, google-gemini-cli, google-vertex; contracts: imageGenerationProviders, mediaUnderstandingProviders, memoryEmbeddingProviders, musicGenerationProviders, realtimeVoiceProviders, speechProviders, usageProviders, videoGenerationProviders, webSearchProviders
+providers: `google`, `google-gemini-cli`, `google-vertex`; contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `memoryEmbeddingProviders`, `musicGenerationProviders`, `realtimeVoiceProviders`, `speechProviders`, `usageProviders`, `videoGenerationProviders`, `webSearchProviders`
 
 ## 相关文档
 

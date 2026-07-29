@@ -37,12 +37,12 @@ openclaw configure --section gateway --section daemon
 ## 模型部分
 
 <Note>
-**模型** 包含一个用于 `agents.defaults.models` allowlist（即在 `/model` 和模型选择器中显示的内容）的多选项。按提供商范围的设置选项会将其选中的模型合并到现有的 allowlist 中，而不是替换配置中已存在的其他提供商。
+**Model** 包括一个多选项，用于显式的 `agents.defaults.modelPolicy.allow` 列表（即 `/model` 和模型选择器中显示的内容）。按提供商范围的配置选项会将其选中的模型合并到现有列表中，而不是替换配置中已存在的其他提供商。逐模型别名和参数仍保留在 `agents.defaults.models` 下；这些条目本身不会限制模型覆盖。
 
 从 configure 中重新运行提供商认证时，即使该提供商的认证步骤返回了带有其推荐默认模型的 config patch，也会保留现有的 `agents.defaults.model.primary`。添加或重新认证某个提供商会使其模型可用，但不会接管你当前的主模型。可使用 `openclaw models auth login --provider <id> --set-default` 或 `openclaw models set <model>` 来有意更改默认模型。
 </Note>
 
-当 configure 从某个提供商的认证选择开始时，默认模型和 allowlist 选择器会自动优先显示该提供商。对于成对提供商，如 Volcengine 和 BytePlus，同样的优先级也会匹配它们的 coding-plan 变体（`volcengine-plan/*`、`byteplus-plan/*`）。如果首选提供商过滤后的结果会产生空列表，configure 会回退到未过滤的目录，而不是显示一个空白选择器。
+当 configure 从某个提供商认证选项启动时，默认模型和模型策略选择器会自动优先显示该提供商。对于 Volcengine 和 BytePlus 这类配对提供商，同样的优先级也会匹配它们的编码计划变体（`volcengine-plan/*`、`byteplus-plan/*`）。如果首选提供商过滤后会得到空列表，configure 会回退到未过滤的目录，而不是显示空白选择器。
 
 ## Web 部分
 

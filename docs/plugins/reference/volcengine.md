@@ -16,7 +16,7 @@ title: "Volcengine 插件"
 
 ## 作用范围
 
-providers: volcengine, volcengine-plan; contracts: speechProviders
+providers: `volcengine`, `volcengine-plan`; contracts: `speechProviders`
 
 ## 相关文档
 

@@ -12,7 +12,23 @@ sidebarTitle: "实时测试"
 [Testing](/help/testing)。本页涵盖**实时**（会进行网络交互）的测试：
 模型矩阵、CLI 后端、ACP、媒体提供商以及凭据处理。
 
-## 实时：本地冒烟命令
+## Live tests vs your real gateway
+
+Live suites and ad hoc smokes must never disturb a gateway that is already
+serving real traffic (yours or another operator's):
+
+- Bring your own gateway: use the in-process gateway (Layer 2 below) or start a
+  dev instance with an isolated state dir (`OPENCLAW_STATE_DIR=<scratch>`) and a
+  free port. Do not bind the default gateway port (18789) while a real gateway
+  is running on it.
+- Do not `openclaw gateway stop`/`restart` (or `launchctl`/`systemctl`/tmux
+  equivalents) a service you did not start in this session — that is the
+  operator's live instance. Get explicit approval first.
+- Need realistic data? Copy the live state/DB into your dev state dir and test
+  against the copy. In-place migrations of a live gateway's state also require
+  explicit approval.
+
+## Live: local smoke commands
 
 在进行临时实时检查之前，请先在进程环境中导出所需的提供商密钥。
 
@@ -280,27 +296,71 @@ Docker 说明：
 
 ## Live: Codex app-server harness 冒烟测试
 
-- 目标：通过正常的 gateway `agent` 方法验证插件拥有的 Codex harness：
-  - 加载捆绑的 `codex` 插件
-  - 通过 `/model <ref> --runtime codex` 选择 OpenAI 模型
-  - 以所请求的思考级别发送第一次 gateway agent 回合
-  - 向同一个 OpenClaw 会话发送第二次回合，并验证 app-server 线程可以恢复
-  - 通过同一个 gateway 命令路径运行 `/codex status` 和 `/codex models`
-  - 可选地运行两个经 Guardian 审核的升级 shell 探测：一个应被批准的良性命令，以及一个应被拒绝的伪秘密上传，这样 agent 会反问
-- 测试：`src/gateway/gateway-codex-harness.live.test.ts`
-- 启用：`OPENCLAW_LIVE_CODEX_HARNESS=1`
-- Harness 基线模型：`openai/gpt-5.6-luna`
-- 新鲜 OpenAI API key 选择默认值：`openai/gpt-5.6`
-- 默认思考：`low`
-- 模型覆盖：`OPENCLAW_LIVE_CODEX_HARNESS_MODEL=openai/<model>`
-- 思考覆盖：`OPENCLAW_LIVE_CODEX_HARNESS_THINKING=<level>`
-- 矩阵覆盖：`OPENCLAW_LIVE_CODEX_HARNESS_TARGETS=<model>=<thinking>,...`
-- 认证模式：`OPENCLAW_LIVE_CODEX_HARNESS_AUTH=codex-auth`（默认）使用复制的 Codex 登录；`api-key` 通过 Codex app-server 使用 `OPENAI_API_KEY`。
-- 可选图片探测：`OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1`
-- 可选 MCP/工具探测：`OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1`
-- 可选 Guardian 探测：`OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1`
-- 该 smoke 强制 provider/model `agentRuntime.id: "codex"`，因此有问题的 Codex harness 不可能通过悄悄回退到 OpenClaw 而蒙混过关。
-- 认证：来自本地 Codex 订阅登录的 Codex app-server 认证，或者在 `OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key` 时使用 `OPENAI_API_KEY`。Docker 可以为订阅运行复制 `~/.codex/auth.json` 和 `~/.codex/config.toml`。
+- Goal: validate the plugin-owned Codex harness through the normal gateway
+  `agent` method:
+  - load the bundled `codex` plugin
+  - select an OpenAI model through `/model <ref> --runtime codex`
+  - send a first gateway agent turn with the requested thinking level
+  - send a second turn to the same OpenClaw session and verify the app-server
+    thread can resume
+  - run `/codex status` and `/codex models` through the same gateway command
+    path
+  - optionally run two Guardian-reviewed escalated shell probes: one benign
+    command that should be approved and one fake-secret upload that should be
+    denied so the agent asks back
+- Test: `src/gateway/gateway-codex-harness.live.test.ts`
+- Enable: `OPENCLAW_LIVE_CODEX_HARNESS=1`
+- Harness baseline model: `openai/gpt-5.6-luna`
+- Fresh OpenAI API-key selection default: `openai/gpt-5.6`
+- Default thinking: `low`
+- Model override: `OPENCLAW_LIVE_CODEX_HARNESS_MODEL=openai/<model>`
+- Thinking override: `OPENCLAW_LIVE_CODEX_HARNESS_THINKING=<level>`
+- Non-default model effort assertion:
+  `OPENCLAW_LIVE_CODEX_HARNESS_EXPECTED_EFFORT=<level>`
+- Matrix override: `OPENCLAW_LIVE_CODEX_HARNESS_TARGETS=<model>=<thinking>,...`
+- Auth mode: `OPENCLAW_LIVE_CODEX_HARNESS_AUTH=codex-auth` (default) uses the
+  copied Codex login; `api-key` uses `OPENAI_API_KEY` through Codex app-server.
+- Optional image probe: `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1`
+- Optional MCP/tool probe: `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1`
+- Optional Guardian probe: `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1`
+- Optional resume stress: `OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS=1` adds
+  four history turns, then closes and restarts the Gateway and Codex app-server
+  three times while requiring the same native thread id and conversation
+  history. Override the bounded counts with
+  `OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS_HISTORY_TURNS` (1-20) and
+  `OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS_RESTARTS` (1-10).
+- Optional fan-out stress: set `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=1`
+  and `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_COUNT` (1-12). The harness starts
+  every child concurrently, waits for every terminal run, and verifies each
+  unique child reply and native thread identity.
+- Optional compaction stress: `OPENCLAW_LIVE_CODEX_HARNESS_COMPACTION_STRESS=1`
+  generates bounded native tool output, requires automatic compaction events,
+  verifies the persisted compaction count and hidden-marker recall, restarts
+  the Gateway and physical Codex app-server, then repeats the output and
+  compaction wave. Tune the bounded work with
+  `OPENCLAW_LIVE_CODEX_HARNESS_COMPACTION_STRESS_TURNS` (1-8) and
+  `OPENCLAW_LIVE_CODEX_HARNESS_LARGE_OUTPUT_BYTES` (100000-800000).
+- Full direct-API context: `OPENCLAW_LIVE_CODEX_HARNESS_FULL_CONTEXT=1` applies
+  the `922000` context and `700000` total compaction limits, sends dense bounded
+  user turns, runs two explicit native compaction checkpoints per wave, and
+  continues with later turns after each checkpoint. It requires
+  `OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key` plus an absolute
+  `OPENCLAW_LIVE_CODEX_HARNESS_MODEL_CATALOG` path. The catalog must expose the
+  selected model with `max_context_window: 922000` so Codex does not clamp the
+  override back to its normal catalog window. The ordinary reduced-threshold
+  stress above keeps the stricter automatic-compaction and hidden-marker
+  retention assertions.
+- Optional loop-relay opt-out probe:
+  `OPENCLAW_LIVE_CODEX_HARNESS_DISABLE_LOOP_RELAY=1`
+- The requested thinking preference may map to the nearest effort advertised
+  by Codex for that model. For example, Luna maps `minimal` to `low`.
+- Known Codex catalog models derive that exact native effort automatically.
+  Unknown model overrides must state the expected mapped effort.
+- The smoke forces provider/model `agentRuntime.id: "codex"` so a broken Codex
+  harness cannot pass by silently falling back to OpenClaw.
+- Auth: Codex app-server auth from the local Codex subscription login, or
+  `OPENAI_API_KEY` when `OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key`. Docker can
+  copy `~/.codex/auth.json` and `~/.codex/config.toml` for subscription runs.
 
 本地配方：
 
@@ -319,7 +379,39 @@ Docker 配方：
 pnpm test:docker:live-codex-harness
 ```
 
-GPT-5.6 原生 Codex 矩阵：
+Restart and history stress:
+
+```bash
+OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS=1 \
+pnpm test:docker:live-codex-harness
+```
+
+Fan-out, large-output, compaction, and restart stress:
+
+```bash
+OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key \
+  OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=1 \
+  OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_COUNT=8 \
+  OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS=1 \
+  OPENCLAW_LIVE_CODEX_HARNESS_COMPACTION_STRESS=1 \
+  pnpm test:docker:live-codex-harness
+```
+
+Full native Codex `922000` input-budget compaction stress:
+
+```bash
+OPENCLAW_LIVE_CODEX_HARNESS=1 \
+  OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key \
+  OPENCLAW_LIVE_CODEX_HARNESS_FULL_CONTEXT=1 \
+  OPENCLAW_LIVE_CODEX_HARNESS_MODEL_CATALOG=/absolute/path/to/models-api-1m.json \
+  OPENCLAW_LIVE_CODEX_HARNESS_MODEL=openai/gpt-5.6-terra \
+  OPENCLAW_LIVE_CODEX_HARNESS_THINKING=medium \
+  OPENCLAW_LIVE_CODEX_HARNESS_COMPACTION_STRESS_TURNS=8 \
+  OPENCLAW_LIVE_CODEX_HARNESS_LARGE_OUTPUT_BYTES=800000 \
+  pnpm test:live -- src/gateway/gateway-codex-harness.live.test.ts
+```
+
+GPT-5.6 native Codex matrix:
 
 ```bash
 OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key \
@@ -327,7 +419,44 @@ OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key \
   pnpm test:docker:live-codex-harness
 ```
 
-新鲜 OpenAI API key 默认值：
+## Live: OpenAI repeated compaction
+
+- Goal: exercise the embedded OpenClaw `openai-responses` agent loop through at
+  least two real automatic compactions, then verify a durable marker survives.
+- Test: `src/agents/sessions/agent-session.openai-compaction.live.test.ts`
+- Enable: `OPENCLAW_LIVE_OPENAI_COMPACTION=1`
+- Default model: `gpt-5.6-luna`
+- Model override: `OPENCLAW_LIVE_OPENAI_COMPACTION_MODEL=<model>`
+- The normal stress mode uses a reduced client context budget to reach the same
+  real compaction path with bounded API spend.
+- Full-context mode sets the client budget to `922000` and compaction reserve to
+  `222000`, so automatic compaction starts at `700000`. It also requires an
+  observed provider input count above the `272000` long-context pricing boundary.
+
+Bounded live recipe:
+
+```bash
+OPENCLAW_LIVE_TEST=1 \
+  OPENCLAW_LIVE_OPENAI_COMPACTION=1 \
+  pnpm test:live -- src/agents/sessions/agent-session.openai-compaction.live.test.ts
+```
+
+Full `922000` input-budget recipe:
+
+```bash
+OPENCLAW_LIVE_TEST=1 \
+  OPENCLAW_LIVE_OPENAI_COMPACTION=1 \
+  OPENCLAW_LIVE_OPENAI_COMPACTION_FULL=1 \
+  OPENCLAW_LIVE_OPENAI_COMPACTION_MODEL=gpt-5.6-terra \
+  pnpm test:live -- src/agents/sessions/agent-session.openai-compaction.live.test.ts
+```
+
+<Warning>
+The full mode deliberately crosses OpenAI's long-context pricing boundary and
+can make several large API calls. Use it only with explicit spend approval.
+</Warning>
+
+Fresh OpenAI API-key default:
 
 ```bash
 OPENCLAW_LIVE_GATEWAY_OPENAI_API_DEFAULT=1 \
@@ -401,30 +530,31 @@ Docker 说明：
 
 Live 是可选启用的，所以没有固定的“CI 模型列表”。`OPENCLAW_LIVE_MODELS=modern` / `OPENCLAW_LIVE_GATEWAY_MODELS=modern`（以及它们的 `all` 别名）会运行来自 `src/agents/live-model-filter.ts` 中 `HIGH_SIGNAL_LIVE_MODEL_PRIORITY` 的精选优先列表，顺序如下：
 
-| 提供方/模型                                 | 备注       |
-| ------------------------------------------ | ---------- |
-| `anthropic/claude-opus-4-8`               |            |
-| `anthropic/claude-sonnet-5`               |            |
-| `anthropic/claude-sonnet-4-6`             |            |
-| `anthropic/claude-opus-4-7`               |            |
-| `google/gemini-3.1-pro-preview`           | Gemini API |
-| `google/gemini-3.5-flash`                 | Gemini API |
-| `cohere/command-a-plus-05-2026`           |            |
-| `moonshot/kimi-k2.7-code`                 |            |
-| `anthropic/claude-opus-4-6`               |            |
-| `deepseek/deepseek-v4-flash`              |            |
-| `deepseek/deepseek-v4-pro`                |            |
-| `minimax/MiniMax-M3`                      |            |
-| `openai/gpt-5.5`                          |            |
-| `openrouter/openai/gpt-5.2-chat`          |            |
-| `openrouter/minimax/minimax-m2.7`         |            |
-| `opencode-go/glm-5`                       |            |
-| `openrouter/ai21/jamba-large-1.7`         |            |
-| `xai/grok-4.5`                            |            |
-| `xai/grok-4.20-0309-reasoning`            |            |
-| `zai/glm-5.1`                             |            |
-| `fireworks/accounts/fireworks/models/glm-5p1` |        |
-| `minimax-portal/minimax-m3`               |            |
+| Provider/model                                | Notes      |
+| --------------------------------------------- | ---------- |
+| `anthropic/claude-opus-5`                     |            |
+| `anthropic/claude-opus-4-8`                   |            |
+| `anthropic/claude-sonnet-5`                   |            |
+| `anthropic/claude-sonnet-4-6`                 |            |
+| `anthropic/claude-opus-4-7`                   |            |
+| `google/gemini-3.1-pro-preview`               | Gemini API |
+| `google/gemini-3.5-flash`                     | Gemini API |
+| `cohere/command-a-plus-05-2026`               |            |
+| `moonshot/kimi-k3`                            |            |
+| `anthropic/claude-opus-4-6`                   |            |
+| `deepseek/deepseek-v4-flash`                  |            |
+| `deepseek/deepseek-v4-pro`                    |            |
+| `minimax/MiniMax-M3`                          |            |
+| `openai/gpt-5.5`                              |            |
+| `openrouter/openai/gpt-5.2-chat`              |            |
+| `openrouter/minimax/minimax-m2.7`             |            |
+| `opencode-go/glm-5`                           |            |
+| `openrouter/ai21/jamba-large-1.7`             |            |
+| `xai/grok-4.5`                                |            |
+| `xai/grok-4.20-0309-reasoning`                |            |
+| `zai/glm-5.1`                                 |            |
+| `fireworks/accounts/fireworks/models/glm-5p1` |            |
+| `minimax-portal/minimax-m3`                   |            |
 
 精选的 **小模型** 列表（`OPENCLAW_LIVE_MODELS=small` / `OPENCLAW_LIVE_GATEWAY_MODELS=small`）来自 `SMALL_LIVE_MODEL_PRIORITY`：
 
@@ -532,7 +662,7 @@ Live 测试发现凭据的方式与 CLI 相同。实际影响：
 - 可选缩小范围：
   - `OPENCLAW_LIVE_IMAGE_GENERATION_PROVIDERS="openai,google,openrouter,xai"`
   - `OPENCLAW_LIVE_IMAGE_GENERATION_PROVIDERS="deepinfra"`
-  - `OPENCLAW_LIVE_IMAGE_GENERATION_MODELS="openai/gpt-image-2,google/gemini-3.1-flash-image-preview,openrouter/google/gemini-3.1-flash-image-preview,xai/grok-imagine-image"`
+  - `OPENCLAW_LIVE_IMAGE_GENERATION_MODELS="openai/gpt-image-2,google/gemini-3.1-flash-image,openrouter/google/gemini-3.1-flash-image-preview,xai/grok-imagine-image"`
   - `OPENCLAW_LIVE_IMAGE_GENERATION_CASES="google:flash-generate,google:pro-edit,openrouter:generate,xai:default-generate,xai:default-edit"`
 - 可选认证行为：
   - `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以强制使用 profile 存储认证并忽略仅环境变量覆盖
@@ -543,8 +673,8 @@ Live 测试发现凭据的方式与 CLI 相同。实际影响：
 OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_INFER_CLI_TEST=1 pnpm test:live -- test/image-generation.infer-cli.live.test.ts
 openclaw infer image providers --json
 openclaw infer image generate \
-  --model google/gemini-3.1-flash-image-preview \
-  --prompt "最小化的平面测试图像：白色背景上的一个蓝色方块，不要文字。" \
+  --model google/gemini-3.1-flash-image \
+  --prompt "Minimal flat test image: one blue square on a white background, no text." \
   --output ./openclaw-infer-image-smoke.png \
   --json
 ```

@@ -26,11 +26,13 @@ OpenClaw 在选择压缩分割点时，会将助手的工具调用与其对应�
 
 默认开启自动压缩。当会话接近上下文限制时，或者模型返回上下文溢出错误时（在这种情况下 OpenClaw 会先压缩再重试），它就会运行。
 
+将 `agents.defaults.compaction.enabled: false` 设置为禁用嵌入式运行时的主动阈值压缩。OpenClaw 的预检和溢出恢复压缩路径仍然可用，同时也支持手动 `/compact`。
+
 你会看到：
 
-- `embedded run auto-compaction start` / `complete` 在普通 Gateway 日志中。
-- `🧹 Auto-compaction complete` 在详细模式中。
-- `/status` 显示 `🧹 Compactions: <count>`。
+- 普通 Gateway 日志中出现 `embedded run auto-compaction start` / `complete`。
+- 详细模式中出现 `🧹 自动压缩完成`。
+- `/status` 显示 `🧹 压缩次数: <count>`。
 
 <Info>
 在压缩之前，OpenClaw 会自动提醒代理将重要笔记保存到 [memory](/concepts/memory) 文件中。这可以防止上下文丢失。
@@ -58,7 +60,7 @@ OpenClaw 在选择压缩分割点时，会将助手的工具调用与其对应�
 /compact 重点关注 API 设计决策
 ```
 
-当设置了 `agents.defaults.compaction.keepRecentTokens`（默认值：20,000）时，手动压缩会遵守该截断点，并在重建的上下文中保留最近的尾部内容。如果没有显式的保留预算，手动压缩将作为一个硬性检查点，并仅从新的摘要继续。
+手动压缩使用 `agents.defaults.compaction.keepRecentTokens`（默认值：20,000）作为其截断点预算，并在重建的上下文中保留最近的那部分内容。
 
 ## 配置
 
@@ -100,11 +102,11 @@ OpenClaw 在选择压缩分割点时，会将助手的工具调用与其对应�
 
 ### 标识符保留
 
-压缩摘要默认保留不透明标识符（`identifierPolicy: "strict"`）。你可以通过 `identifierPolicy: "off"` 禁用此行为，或通过 `identifierPolicy: "custom"` 和 `identifierInstructions` 提供自定义指导。
+压缩总结默认会保留不透明标识符（`identifierPolicy: "strict"`）。如需禁用，请改用 `identifierPolicy: "off"`。自定义指导应在压缩提供方的 `summarize()` 实现中处理。
 
 ### 活跃转录字节守卫
 
-当设置了 `agents.defaults.compaction.maxActiveTranscriptBytes` 时，OpenClaw 会在运行前于转录历史达到该大小时触发正常的本地压缩。这对于长时间运行的会话很有用，因为提供方侧的上下文管理可以保持模型上下文健康，而持久化的转录历史却持续增长。它不会按原始字节切分；它会请求正常的压缩流水线创建语义摘要。
+当设置了 `agents.defaults.compaction.maxActiveTranscriptBytes` 时，如果转录历史达到该大小，OpenClaw 会在运行前触发常规的本地压缩。这对长时间运行的会话很有用，因为提供方侧的上下文管理可以保持模型上下文健康，而持久化的转录历史会持续增长。可设置一个正字节数或类似 `"20mb"` 的大小字符串以启用；`0` 或未设置的值会禁用此守卫。它不会按原始字节切分；而是请求正常的压缩管线生成语义摘要。对于 Codex app-server 会话，同一阈值会限制原生 rollout 转录，超大的原生线程会重新从新状态开始。
 
 <Warning>
 字节守卫适用于活跃的 SQLite 转录历史。旧版 JSONL 检查点工件不是当前活跃的压缩目标。
@@ -112,8 +114,7 @@ OpenClaw 在选择压缩分割点时，会将助手的工具调用与其对应�
 
 ### 后继转录
 
-当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，OpenClaw 不会就地重写现有转录。相反，它会基于压缩摘要、保留状态以及未摘要的尾部创建一个新的活跃后继转录，然后记录指向该压缩后继的分支/恢复检查点元数据。
-后继转录还会丢弃在短重试窗口内到达的完全重复的长用户轮次，因此通道重试风暴不会在压缩后被带入下一个活跃转录。
+上下文引擎可能会返回一个显式的压缩后继会话标识。OpenClaw 会采用该后继并将检查点元数据记录到其上。内置的 SQLite 压缩器会保留当前会话标识，不会创建第二份运行时转录。
 
 OpenClaw 不再为新的压缩写入单独的 `.checkpoint.*.jsonl` 副本。现有的旧版检查点文件在仍被引用时仍可使用，并会在正常的会话清理过程中被清除。
 

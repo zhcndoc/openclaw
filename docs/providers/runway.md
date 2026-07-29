@@ -29,7 +29,7 @@ OpenClaw 附带了一个用于托管视频生成的 `runway` 提供商，默认�
   </Step>
   <Step title="将 Runway 设置为默认视频提供商">
     ```bash
-    openclaw config set agents.defaults.videoGenerationModel.primary "runway/gen4.5"
+    openclaw config set agents.defaults.mediaModels.video.primary "runway/gen4.5"
     ```
   </Step>
   <Step title="生成视频">

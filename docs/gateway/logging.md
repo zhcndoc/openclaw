@@ -25,10 +25,10 @@ agent model: openai/gpt-5.6-sol (thinking=medium, fast=on)
 
 ## 基于文件的日志记录器
 
-- 默认滚动日志文件位于 `/tmp/openclaw/` 下（每天一个文件）：`openclaw-YYYY-MM-DD.log`，按网关主机的本地时区日期命名。如果该目录不安全或不可写（所有者不正确、对所有人可写、符号链接），OpenClaw 会回退到用户范围的 `os.tmpdir()/openclaw-<uid>` 路径；在 Windows 上则始终使用该 OS 临时目录回退路径。
-- 活动日志文件会在 `logging.maxFileBytes` 处轮转（默认：100 MB），最多保留五个编号归档（`.1` 到 `.5`），并继续写入新的活动文件。
-- 通过 `~/.openclaw/openclaw.json` 配置日志文件路径和级别：`logging.file`、`logging.level`。
-- 文件格式为每行一个 JSON 对象。
+- Default rolling log files are under `/tmp/openclaw/` (one file per day), dated by the gateway host's local timezone. The default profile uses `openclaw-YYYY-MM-DD.log`; named profiles use `openclaw-<profile>-YYYY-MM-DD.log` (for example, `openclaw-dev-YYYY-MM-DD.log`). If that directory is unsafe or unwritable (wrong owner, world-writable, a symlink), OpenClaw falls back to a user-scoped `os.tmpdir()/openclaw-<uid>` path instead; on Windows it always uses that OS-tmpdir fallback.
+- Active log files rotate at `logging.maxFileBytes` (default: 100 MB), keeping up to five numbered archives (`.1` through `.5`) and continuing to write a fresh active file.
+- Configure the log file path and level via `~/.openclaw/openclaw.json`: `logging.file`, `logging.level`.
+- The file format is one JSON object per line.
 
 通话、实时语音以及受管房间的代码路径会使用共享文件日志记录器，记录有限生命周期的内容，供运维调试和 OTLP 日志导出使用。转写文本、音频载荷、轮次 id、呼叫 id 和提供方 item id 都不会复制到日志记录中。
 
@@ -51,20 +51,20 @@ CLI 会捕获 `console.log/info/warn/error/debug/trace`，将它们写入文件�
 
 可独立调整控制台详细程度：
 
-- `logging.consoleLevel`（默认 `info`）
-- `logging.consoleStyle`（`pretty` | `compact` | `json`；在 TTY 上默认 `pretty`，否则默认 `compact`）
+- `logging.consoleLevel` (default `info`)
+- `logging.consoleStyle` (`pretty` | `json`). When unset, output is `pretty` on a TTY and the automatic `compact` style otherwise. `compact` is no longer a settable value; `openclaw doctor --fix` maps a stored one to `pretty`.
 
 ## 脱敏
 
 OpenClaw 会在日志或转录输出离开进程之前对敏感 token 进行脱敏。此脱敏策略适用于控制台、文件日志、OTLP 日志记录和会话转录文本 sink，因此在 JSONL 行或消息写入磁盘之前，匹配到的密钥值会被掩码处理。
 
-- `logging.redactSensitive`: `off` | `tools`（默认：`tools`）
-- `logging.redactPatterns`: 正则字符串数组（覆盖默认值）
-  - 使用原始正则字符串（自动加上 `gi`），或使用 `/pattern/flags` 以自定义标志。
-  - 匹配项会被掩码，并保留前 6 个 + 后 4 个字符（值长度 >= 18 时）；更短的值会变为 `***`。
-  - 默认规则覆盖常见的键赋值、CLI 标志、JSON 字段、bearer 头、PEM 块、流行供应商的 token 前缀，以及支付凭证字段名称（卡号、CVC/CVV、共享支付 token、支付凭证）。
+- Sensitive-value redaction is always enabled.
+- `logging.redactPatterns`: array of regex strings (overrides defaults)
+  - Use raw regex strings (auto `gi`), or `/pattern/flags` for custom flags.
+  - Matches are masked keeping the first 6 + last 4 chars (values >= 18 chars); shorter values become `***`.
+  - Defaults cover common key assignments, CLI flags, JSON fields, bearer headers, PEM blocks, popular vendor token prefixes, and payment credential field names (card number, CVC/CVV, shared payment token, payment credential).
 
-无论 `logging.redactSensitive` 设置为何，某些安全边界都会始终脱敏：控制 UI 的工具调用事件、`sessions_history` 工具输出、诊断支持导出、提供方错误观测、exec 审批命令显示，以及 Gateway WebSocket 协议日志。这些表面仍会将 `logging.redactPatterns` 作为附加模式生效，但 `redactSensitive: "off"` 并不会让它们输出原始密钥。
+Safety boundaries such as Control UI tool-call events, `sessions_history` output, diagnostics exports, provider errors, exec approval display, and Gateway WebSocket logs always redact. `logging.redactPatterns` adds deployment-specific patterns.
 
 ## Gateway WebSocket Logs
 

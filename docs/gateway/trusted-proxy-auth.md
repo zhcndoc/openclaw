@@ -72,6 +72,12 @@ read_when:
 
         // 可选：在明确启用后允许同主机 loopback 代理
         allowLoopback: false,
+
+        // Optional: let authenticated proxy users enroll new browser devices
+        deviceAutoApprove: {
+          enabled: false,
+          scopes: ["operator.read", "operator.write", "operator.approvals"],
+        },
       },
     },
   },
@@ -114,30 +120,76 @@ read_when:
 <ParamField path="gateway.auth.trustedProxy.allowLoopback" type="boolean" default="false">
   对同主机 loopback 反向代理的可选支持。
 </ParamField>
+<ParamField path="gateway.auth.trustedProxy.deviceAutoApprove.enabled" type="boolean" default="false">
+  Automatically approve new Control UI and WebChat device identities after trusted-proxy authentication.
+</ParamField>
+<ParamField path="gateway.auth.trustedProxy.deviceAutoApprove.scopes" type="string[]" default='["operator.read", "operator.write", "operator.approvals"]'>
+  Maximum scopes granted to an auto-approved browser device. Explicitly listing `operator.admin` lets every proxy-authenticated user request an automatic full-admin device grant, makes scope-less requests receive full admin automatically, and triggers the CRITICAL `gateway.trusted_proxy_device_auto_approve_admin` security audit finding plus a Gateway startup warning.
+</ParamField>
 
 <Warning>
 只有在本地反向代理就是预期信任边界时才启用 `allowLoopback`。任何能够连接到 Gateway 的本地进程都可能尝试发送代理身份请求头，因此请将对 Gateway 的直接访问限制为仅本机，并要求使用代理拥有的请求头，例如 `x-forwarded-proto`，或者在你的代理支持时使用签名断言请求头。
 </Warning>
 
-## 控制 UI 配对行为
+## Automatic device approval
+
+Trusted-proxy auth can optionally use the proxy identity as the approval boundary for new browser devices:
+
+```json5
+{
+  gateway: {
+    auth: {
+      mode: "trusted-proxy",
+      trustedProxy: {
+        userHeader: "x-forwarded-user",
+        allowUsers: ["operator@example.com"],
+        deviceAutoApprove: {
+          enabled: true,
+          scopes: ["operator.read", "operator.write", "operator.approvals"],
+        },
+      },
+    },
+  },
+}
+```
+
+The default is `enabled: false`. When enabled, all of these rules apply:
+
+1. The WebSocket must have authenticated through the `trusted-proxy` method with a non-empty user identity that passed `allowUsers` when an allowlist is configured. Token, password, Tailscale, and unauthenticated connections never use this policy.
+2. Only a new Control UI or WebChat browser device can be approved automatically. Any request for an existing device, including a scope upgrade, remains pending for manual approval with `openclaw devices approve <requestId>`.
+3. The device is approved with role `operator`. If the connect request includes scopes, the grant is the exact intersection of the requested scopes and `deviceAutoApprove.scopes`. If the request omits scopes, the configured list is granted; when that list is omitted, it defaults to `operator.read`, `operator.write`, and `operator.approvals`. The resulting grant is then additionally capped by the connection's [`x-openclaw-scopes`](#control-ui-pairing-behavior) proxy header when present, so a proxy that narrows a user's scopes also limits the **persistent** device grant, not just the session — a present-but-empty header yields no scopes. This cap applies even when the client omits its own scope list.
+4. `operator.admin` is allowed only through explicit listing in `deviceAutoApprove.scopes`. When listed, every proxy-authenticated user can request and automatically receive full admin on a new browser device; requests without scopes receive full admin automatically. `openclaw security audit` reports the CRITICAL `gateway.trusted_proxy_device_auto_approve_admin` finding, and the Gateway logs a warning once at startup. Prefer manual admin approval with `openclaw devices approve` or `openclaw devices rotate` until per-identity roles are available.
+
+<Warning>
+Enabling this option delegates new browser device enrollment entirely to the reverse-proxy identity. A compromised proxy account can enroll a persistent device with every configured scope. Listing `operator.admin` makes that device a full administrator without manual approval. Keep the Gateway reachable only through the proxy, require strong proxy authentication, overwrite identity headers, and use a narrow `allowUsers` list.
+</Warning>
+
+## Control UI pairing behavior
 
 当 `gateway.auth.mode = "trusted-proxy"` 处于启用状态且请求通过 trusted-proxy 检查时，Control UI WebSocket 会话可以在没有设备配对身份的情况下连接。
 
 范围影响：
 
-- 无设备的 Control UI WebSocket 会话可以连接，但默认不会接收任何操作员范围。OpenClaw 会将请求的范围列表清空为 `[]`，因此未绑定到已批准配对设备/令牌的会话无法自行声明权限。
-- 如果在成功建立 WebSocket 连接后方法仍因 `missing scope` 失败，请改用 HTTPS，以便浏览器生成设备身份并完成配对。参见 [Control UI 不安全 HTTP](/web/control-ui#insecure-http)。
-- 仅限紧急绕过：`gateway.controlUi.dangerouslyDisableDeviceAuth=true` 会在没有设备身份的情况下仍保留请求的范围。这会严重降低安全性；请尽快恢复。参见 [Control UI 不安全 HTTP](/web/control-ui#insecure-http)。
+- Device-less Control UI WebSocket sessions connect but receive no operator scopes by default. OpenClaw clears the requested scope list to `[]` so a session not bound to an approved paired device/token cannot self-declare permissions.
+- If methods fail with `missing scope` after a successful WebSocket connect, use HTTPS so the browser can generate device identity and complete pairing. See [Control UI insecure HTTP](/web/control-ui#insecure-http).
+- Older configs that still contain the retired
+  `gateway.controlUi.dangerouslyDisableDeviceAuth=true` key use the bounded
+  [Control UI upgrade migration](/web/control-ui#device-pairing-first-connection).
 
-反向代理范围封顶：如果你的代理在 Control UI WebSocket 升级请求中发送 `x-openclaw-scopes`，OpenClaw 会将会话范围限制为请求范围与声明范围的交集。此头部不会授予范围；它只会缩小会话可持有的范围。
+Reverse-proxy scope capping: if your proxy sends `x-openclaw-scopes` on the Control UI WebSocket upgrade request, OpenClaw caps the session scopes to the intersection of the requested scopes and the declared scopes. This header does not grant scopes; it only narrows what the session can hold. When `deviceAutoApprove.enabled` is true, the same cap also applies to the persistent device grant written by [automatic device approval](#automatic-device-approval), so an auto-approved device never holds more than the proxy declared.
 
 影响：
 
-- 在此模式下，配对不再是 Control UI 访问的主要门槛。
-- 你的反向代理认证策略和 `allowUsers` 会成为实际的访问控制。
-- 保持 gateway 入口仅对受信任的代理 IP 开放（`gateway.trustedProxies` + 防火墙）。
+- Pairing is no longer the primary gate for device-less Control UI access. When `deviceAutoApprove.enabled` is true, the proxy identity also becomes the approval gate for new browser device enrollment.
+- Your reverse proxy auth policy and `allowUsers` become the effective access control.
+- Keep gateway ingress locked to trusted proxy IPs only (`gateway.trustedProxies` + firewall).
 
-自定义 WebSocket 客户端不是 Control UI 会话。`gateway.controlUi.dangerouslyDisableDeviceAuth` 不会向任意 `client.mode: "backend"` 或 CLI 形态的客户端授予范围。自定义自动化应使用设备身份/配对、保留的直接本地 `client.id: "gateway-client"` 后端辅助路径，或者在 HTTP 请求/响应更合适时使用 [admin HTTP RPC 插件](/plugins/admin-http-rpc)。
+Custom WebSocket clients are not Control UI sessions. The retired Control UI
+upgrade input does not grant temporary access to arbitrary
+`client.mode: "backend"` or CLI-shaped clients. Custom automation should use
+device identity/pairing, the reserved direct-local `client.id: "gateway-client"`
+backend helper path, or the [admin HTTP RPC plugin](/plugins/admin-http-rpc)
+when an HTTP request/response surface is a better fit.
 
 ## 操作员作用域头
 
@@ -345,15 +397,16 @@ loopback 的 trusted-proxy 身份头仍然会安全失败：同主机调用者�
 
 在启用受信任代理认证之前，请确认：
 
-- [ ] **代理是唯一入口**：Gateway 端口已通过防火墙限制，除你的代理外其他来源均无法访问。
-- [ ] **trustedProxies 尽量最小化**：只填写实际代理的 IP，不要包含整个子网。
-- [ ] **回环代理来源是有意为之**：对于来自 loopback 源的请求，受信任代理认证默认会失败关闭，除非为同主机代理显式启用 `gateway.auth.trustedProxy.allowLoopback`。
-- [ ] **代理会剥离头部**：你的代理会覆盖（不是追加）来自客户端的 `x-forwarded-*` 头。
-- [ ] **TLS 终止**：你的代理负责处理 TLS；用户通过 HTTPS 连接。
-- [ ] **allowedOrigins 是显式配置的**：非 loopback 的 Control UI 使用显式的 `gateway.controlUi.allowedOrigins`。
-- [ ] **已设置 allowUsers**（推荐）：限制为已知用户，而不是允许任何已认证用户。
-- [ ] **没有混用 token 配置**：不要同时设置 `gateway.auth.token` 和 `gateway.auth.mode: "trusted-proxy"`。
-- [ ] **本地密码回退是私有的**：如果你为内部直接调用者配置了 `gateway.auth.password`，请保持 Gateway 端口受防火墙保护，以免非代理远程客户端直接访问。
+- [ ] **Proxy is the only path**: The Gateway port is firewalled from everything except your proxy.
+- [ ] **trustedProxies is minimal**: Only your actual proxy IPs, not entire subnets.
+- [ ] **Loopback proxy source is deliberate**: trusted-proxy auth fails closed for loopback-source requests unless `gateway.auth.trustedProxy.allowLoopback` is explicitly enabled for a same-host proxy.
+- [ ] **Proxy strips headers**: Your proxy overwrites (not appends) `x-forwarded-*` headers from clients.
+- [ ] **TLS termination**: Your proxy handles TLS; users connect via HTTPS.
+- [ ] **allowedOrigins is explicit**: Non-loopback Control UI uses explicit `gateway.controlUi.allowedOrigins`.
+- [ ] **allowUsers is set** (recommended): Restrict to known users rather than allowing anyone authenticated.
+- [ ] **No mixed token config**: Do not set both `gateway.auth.token` and `gateway.auth.mode: "trusted-proxy"`.
+- [ ] **Local password fallback is private**: If you configure `gateway.auth.password` for internal direct callers, keep the Gateway port firewalled so non-proxy remote clients cannot reach it directly.
+- [ ] **Device auto-approval is deliberate**: If `deviceAutoApprove.enabled` is true, treat reverse-proxy account security as the device-enrollment boundary and keep the granted scope list non-admin and minimal.
 
 ## 安全审计
 
@@ -361,11 +414,12 @@ loopback 的 trusted-proxy 身份头仍然会安全失败：同主机调用者�
 
 审计会检查：
 
-- 基础 `gateway.trusted_proxy_auth` 警告/严重提醒。
-- 缺少 `trustedProxies` 配置。
-- 缺少 `userHeader` 配置。
-- 空的 `allowUsers`（允许任何已认证用户）。
-- 为同主机代理来源启用了 `allowLoopback`。
+- Base `gateway.trusted_proxy_auth` warning/critical reminder.
+- Missing `trustedProxies` configuration.
+- Missing `userHeader` configuration.
+- Empty `allowUsers` (allows any authenticated user).
+- Enabled `allowLoopback` for same-host proxy sources.
+- Enabled browser device auto-approval (delegates new device pairing to the proxy identity).
 
 当 Control UI 暴露时，还会应用一些独立的、非受信任代理特定的发现：`gateway.controlUi.allowedOrigins` 的通配符或缺失，以及 Host-header origin 回退。
 
@@ -443,15 +497,15 @@ loopback 的 trusted-proxy 身份头仍然会安全失败：同主机调用者�
 
     常见原因：
 
-    - 无设备的 Control UI 会话：受信任代理认证可以在没有设备身份的情况下允许 WebSocket 连接，但 OpenClaw 出于设计会清除无设备会话的作用域。
-    - 自定义后端客户端：`gateway.controlUi.dangerouslyDisableDeviceAuth` 仅作用于 Control UI，不会向任意后端或 CLI 风格的 WebSocket 客户端授予作用域。
-    - `x-openclaw-scopes` 过于狭窄：如果你的代理在 Control UI 的 WebSocket 升级请求中注入了该头，会上限为该集合的作用域。空头值会导致没有作用域。
+    - Device-less Control UI session: trusted-proxy auth can admit the WebSocket connection without device identity, but OpenClaw clears scopes on device-less sessions by design.
+    - Custom backend client: the retired Control UI upgrade input never grants access to arbitrary backend or CLI-shaped WebSocket clients.
+    - Overly narrow `x-openclaw-scopes`: if your proxy injects this header on the Control UI WebSocket upgrade request, the session scopes are capped to that set. An empty header value yields no scopes.
 
     解决方法：
 
-    - 对于 Control UI，请使用 HTTPS，以便浏览器可以生成设备身份并完成配对。
-    - 对于自定义自动化，请使用设备身份/配对、保留的本地直接 `gateway-client` 后端辅助路径，或 [admin HTTP RPC](/plugins/admin-http-rpc)。
-    - 仅在临时为 Control UI 开启应急通道时使用 `gateway.controlUi.dangerouslyDisableDeviceAuth: true`。
+    - For Control UI, use HTTPS so the browser can generate device identity and complete pairing.
+    - For custom automation, use device identity/pairing, the reserved direct-local `gateway-client` backend helper path, or [admin HTTP RPC](/plugins/admin-http-rpc).
+    - Do not add the retired `gateway.controlUi.dangerouslyDisableDeviceAuth` key to current config. Older installs use the one-time self-pairing migration automatically.
 
   </Accordion>
   <Accordion title="WebSocket still failing">

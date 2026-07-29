@@ -12,10 +12,17 @@ title: "Memory wiki"
 
 它不会替代活动记忆插件。回忆、晋升、索引和做梦仍然由所配置的记忆后端负责（`memory-core`、QMD、Honcho 等）。`memory-wiki` 作为其旁路存在，并将知识编译成一个受维护的 wiki 层。
 
-| 层                    | 负责内容                                                                          |
-| --------------------- | --------------------------------------------------------------------------------- |
-| 活动记忆插件          | 回忆、语义搜索、晋升、做梦、记忆运行时                                            |
-| `memory-wiki`         | 编译后的 wiki 页面、带有丰富来源的综合内容、仪表盘、wiki 搜索/get/apply |
+Enable the plugin before using its CLI, tools, or runtime integration:
+
+```bash
+openclaw plugins enable memory-wiki
+openclaw gateway restart
+```
+
+| Layer                | Owns                                                                              |
+| -------------------- | --------------------------------------------------------------------------------- |
+| Active memory plugin | Recall, semantic search, promotion, dreaming, memory runtime                      |
+| `memory-wiki`        | Compiled wiki pages, provenance-rich syntheses, dashboards, wiki search/get/apply |
 
 实用规则：
 
@@ -173,14 +180,27 @@ claims:
 
 ## 编译管线
 
-Compile 会读取 wiki 页面，规范化摘要，并在以下位置生成稳定的、面向机器的工件：
+Compile reads wiki pages, normalizes summaries, and persists a machine-facing
+snapshot in OpenClaw's shared SQLite plugin state. Runtime code uses the
+lifecycle-owned owner snapshot to load SQLite during async prompt preparation;
+synchronous prompt assembly never scrapes Markdown or reads cache files.
+Compiled output also powers first-pass wiki indexing for search/get, claim-id
+lookup back to owning pages, compact prompt supplements, and report
+generation.
 
-- `.openclaw-wiki/cache/agent-digest.json`
-- `.openclaw-wiki/cache/claims.jsonl`
+Source edits and vault restores become machine-facing only after the next
+compile. Restarting or refreshing the plugin lifecycle compares the vault's
+causally chained compile publication with SQLite and rejects a snapshot from a
+newer, rolled-back state. A compiler that started before the rollback cannot
+publish against the restored predecessor. Prompt preparation does not poll the
+vault or install file watchers.
+After rollback quarantine, a compile in the running process clears the owner
+immediately; a separate compiler process requires plugin lifecycle refresh so
+the daemon can confirm the new durable publication.
+Compiled caches are rebuildable: cache rows from before publication epochs are
+treated as misses and replaced by the next compile; they are not migrated.
 
-Agent 和运行时代码会读取这些摘要，而不是抓取 Markdown。编译后的输出还支持用于 search/get 的首次 wiki 索引、claim-id 回溯到所属页面、紧凑的提示补充内容，以及报告生成。
-
-## 仪表盘和健康报告
+## Dashboards and health reports
 
 当启用 `render.createDashboards` 时，compile 会在
 `reports/` 下维护仪表盘：
@@ -241,10 +261,12 @@ Agent 和运行时代码会读取这些摘要，而不是抓取 Markdown。编�
 
 ## 提示词和上下文行为
 
-当启用 `context.includeCompiledDigestPrompt` 时，记忆提示词部分会
-附加来自 `agent-digest.json` 的紧凑编译快照：仅包含顶部页面、仅包含顶部声明、矛盾计数、问题计数、置信度/新鲜度
-限定词。之所以这是可选功能，是因为它会改变提示词的形状；它主要适用于明确消费记忆补充内容的
-上下文引擎或提示词组装。
+When `context.includeCompiledDigestPrompt` is enabled, memory prompt sections
+append a compact compiled snapshot from plugin state: top pages only,
+top claims only, contradiction count, question count, confidence/freshness
+qualifiers. This is opt-in because it changes prompt shape; it mainly matters
+for context engines or prompt assembly that explicitly consume memory
+supplements.
 
 ## 配置
 

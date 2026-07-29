@@ -16,7 +16,7 @@ title: "Meta 插件"
 
 ## 表面
 
-providers: meta
+providers: `meta`
 
 ## 相关文档
 

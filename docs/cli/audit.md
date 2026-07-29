@@ -12,9 +12,10 @@ title: "审计记录"
 查询 Gateway 的仅元数据审计账本，获取代理运行、工具操作以及可选的消息生命周期记录。
 
 该账本默认对运行和工具事件开启。设置
-[`audit.enabled: false`](/gateway/configuration-reference#audit) 并重启
-Gateway 可停止所有新的事件记录。消息记录默认单独禁用；将
-`audit.messages` 设置为 `direct` 或 `all` 并重启 Gateway 即可记录它们。现有记录在过期前（30 天）仍可查询。
+[`logging.audit.enabled: false`](/gateway/configuration-reference#audit) 并
+重启 Gateway，以停止所有新的事件记录。消息记录
+默认单独禁用；将 `logging.audit.messages` 设置为 `direct` 或
+`all` 并重启 Gateway 以记录它们。现有记录在过期前仍可查询（30 天）。
 
 该账本与会话记录不同：它记录身份、顺序、来源、操作、状态以及规范化的结果代码，但从不存储内容，而消息标识符仅以安装本地的带密钥伪名出现。[审计历史](/gateway/audit)负责完整的数据模型、隐私语义、存储/保留边界和覆盖范围限制；本页介绍命令界面。
 

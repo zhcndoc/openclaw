@@ -41,7 +41,8 @@ openclaw plugins install ./path/to/local/line-plugin
 https://gateway-host/line/webhook
 ```
 
-网关会立即响应 LINE 的 webhook 验证（GET）并确认已签名的入站事件（POST），前提是签名和负载验证通过；agent 处理会异步继续进行。
+网关会响应 LINE 的 webhook 验证（GET）。对于已签名的入站事件（POST），它会在返回 `200` 之前将每个事件写入持久化入口队列；agent 处理会异步继续。失败的投递会从队列中重试，包括在 Gateway 重启之后，而有问题的事件在有限次数重试后会变成失败的队列记录。如果持久化存储失败，请求会返回 `500`，而不是确认一个可能会丢失的事件。
+整个队列到 agent 的边界保证至少投递一次：在一次活动投递期间如果 Gateway 关闭或崩溃，可能会重新播放该轮处理。消息事件会根据 LINE message ID 去重；其他事件类型使用 `webhookEventId`。保留的完成记录会抑制普通的重复 webhook，但执行外部副作用的处理程序仍然应该保持幂等。
 如果你需要自定义路径，请设置 `channels.line.webhookPath` 或
 `channels.line.accounts.<id>.webhookPath`，并相应更新 URL。
 
@@ -150,11 +151,11 @@ LINE ID 区分大小写。有效 ID 形式如下：
 
 ## 消息行为
 
-- Text is chunked into 5000-character blocks.
-- Markdown formatting will be removed; code blocks and tables will be converted to Flex cards when possible.
-- Streaming responses will be buffered; LINE will receive complete chunks while the agent is working and display a loading animation.
-- Media downloads are limited by `channels.line.mediaMaxMb` (default 10).
-- Inbound media will first be saved to `~/.openclaw/media/inbound/` before being passed to the agent, keeping consistency with the shared media storage used by other channel plugins.
+- 文本会被分割成 5000 个字符的块。
+- Markdown 格式将被移除；代码块和表格在可能的情况下会转换为 Flex 卡片。
+- 流式响应将被缓冲；LINE 会在代理工作时接收完整的分块并显示加载动画。
+- 媒体下载受 `channels.line.mediaMaxMb` 限制（默认 10）。
+- 入站媒体在传递给代理之前，会先保存到 `~/.openclaw/media/inbound/`，以保持与其他频道插件使用的共享媒体存储一致。
 
 ## Channel data（富媒体消息）
 

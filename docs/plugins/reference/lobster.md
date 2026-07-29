@@ -16,4 +16,4 @@ title: "Lobster 插件"
 
 ## 作用范围
 
-contracts: tools
+contracts: `tools`

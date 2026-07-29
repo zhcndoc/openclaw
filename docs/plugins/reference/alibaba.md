@@ -16,7 +16,7 @@ title: "Alibaba 插件"
 
 ## 接口
 
-contracts: videoGenerationProviders
+contracts: `videoGenerationProviders`
 
 ## 相关文档
 

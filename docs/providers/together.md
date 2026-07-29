@@ -35,7 +35,7 @@ OpenClaw 将其打包为 `together` 提供方。
       agents: {
         defaults: {
           model: {
-            primary: "together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            primary: "together/moonshotai/Kimi-K2.6",
           },
         },
       },
@@ -54,33 +54,32 @@ openclaw onboard --non-interactive \
 ```
 
 <Note>
-引导会将 `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` 设置为
-默认模型。
+Onboarding sets Together's recommended chat model,
+`together/moonshotai/Kimi-K2.6`, as the default.
 </Note>
 
 ## 内置目录
 
 每百万 tokens 的费用以美元计。
 
-| Model ref                                          | Name                         | Input       | Context | Max output | Cost (in/out) | Notes               |
-| -------------------------------------------------- | ---------------------------- | ----------- | ------- | ---------- | ------------- | ------------------- |
-| `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` | Llama 3.3 70B Instruct Turbo | text        | 131,072 | 8,192      | 0.88 / 0.88   | 默认模型            |
-| `together/moonshotai/Kimi-K2.6`                    | Kimi K2.6 FP4                | text, image | 262,144 | 32,768     | 1.20 / 4.50   | 推理模型            |
-| `together/deepseek-ai/DeepSeek-V4-Pro`             | DeepSeek V4 Pro              | text        | 512,000 | 8,192      | 2.10 / 4.40   | 推理模型            |
-| `together/Qwen/Qwen2.5-7B-Instruct-Turbo`          | Qwen2.5 7B Instruct Turbo    | text        | 32,768  | 8,192      | 0.30 / 0.30   | 快速，非推理模型    |
-| `together/zai-org/GLM-5.1`                         | GLM 5.1 FP4                  | text        | 202,752 | 8,192      | 1.40 / 4.40   | 推理模型            |
+| Model ref                                          | Name                         | Input       | Context | Max output | Cost (in/out) | Notes           |
+| -------------------------------------------------- | ---------------------------- | ----------- | ------- | ---------- | ------------- | --------------- |
+| `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` | Llama 3.3 70B Instruct Turbo | text        | 131,072 | 8,192      | 1.04 / 1.04   | General model   |
+| `together/moonshotai/Kimi-K2.6`                    | Kimi K2.6 FP4                | text, image | 262,144 | 32,768     | 1.20 / 4.50   | Default model   |
+| `together/deepseek-ai/DeepSeek-V4-Pro`             | DeepSeek V4 Pro              | text        | 512,000 | 384,000    | 1.74 / 3.48   | Reasoning model |
+| `together/zai-org/GLM-5.2`                         | GLM 5.2 FP4                  | text        | 262,144 | 131,072    | 1.40 / 4.40   | Reasoning model |
 
 ## 视频生成
 
 捆绑的 `together` 插件还通过共享的 `video_generate` 工具注册了视频生成。
 
-| 属性                | 值                                                                                         |
-| ------------------- | ------------------------------------------------------------------------------------------ |
-| 默认视频模型        | `Wan-AI/Wan2.2-T2V-A14B`                                                                  |
-| 其他模型            | `Wan-AI/Wan2.2-I2V-A14B`, `minimax/Hailuo-02`, `Kwai/Kling-2.1-Master`                    |
-| 模式                | 文本转视频；仅 `Wan-AI/Wan2.2-I2V-A14B` 支持图像转视频（单张参考图像）                |
-| 时长                | 1-10 秒                                                                                   |
-| 支持的参数          | `size`（解析为 `<width>x<height>`）；不读取 `aspectRatio`/`resolution`                  |
+| Property             | Value                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------- |
+| Default video model  | `Wan-AI/Wan2.2-T2V-A14B`                                                                  |
+| Other models         | `Wan-AI/Wan2.2-I2V-A14B`, `minimax/hailuo-02`, `kwaivgI/kling-2.1-master`                 |
+| Modes                | text-to-video; image-to-video only with `Wan-AI/Wan2.2-I2V-A14B` (single reference image) |
+| Duration             | 1-10 seconds                                                                              |
+| Supported parameters | `size` (parsed as `<width>x<height>`); `aspectRatio`/`resolution` are not read            |
 
 要将 Together 用作默认视频提供方：
 

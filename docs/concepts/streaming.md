@@ -15,6 +15,12 @@ token-delta 流式传输**到频道消息：
 - **预览流式传输（Telegram/Discord/Slack/Matrix/Mattermost/MS Teams）：**
   在生成过程中更新一个临时的**预览消息**（发送 + 编辑/追加）。
 
+## 控制 UI 启动状态
+
+在 `chat.send` 确认一个活动运行后，在助理文本或工具活动可见之前，网关可以发送一个带类型的、粗粒度的启动状态。控制 UI 会在工作指示器旁显示此状态，包含工作区准备、环境配置、上下文准备和模型启动等阶段。
+
+第一次助理增量或工具启动会永久替换该运行的启动状态。在工具等待操作者操作时，审批状态优先。工作树创建和初始云端派发发生在聊天运行存在之前，因此它们在运行前的 RPC 进度不会作为运行启动状态呈现；环境配置仅在活动运行重新配置已回收的工作节点时才会出现在这里。
+
 ## 区块流式传输（频道消息）
 
 区块流式传输会在助手输出可用时，以较粗粒度的块发送。
@@ -40,20 +46,19 @@ token-delta 流式传输**到频道消息：
 | `blockStreamingDefault`                                      | `"on"` / `"off"`                                                        | `"off"`    |
 | `blockStreamingBreak`                                        | `"text_end"` / `"message_end"`                                          | -          |
 | `blockStreamingChunk`                                        | `{ minChars, maxChars, breakPreference? }`                              | -          |
-| `blockStreamingCoalesce`                                     | `{ minChars?, maxChars?, idleMs? }` (发送前合并流式区块)              | -          |
-| `*.streaming.block.enabled` (频道覆盖)                        | `true` / `false`，按频道（以及按账户）强制启用区块流式传输              | -          |
-| `*.textChunkLimit` (例如 `channels.whatsapp.textChunkLimit`) | number，硬上限                                                      | 4000       |
+| `blockStreamingCoalesce`                                     | `{ minChars?, maxChars?, idleMs? }`（发送前合并流式区块）              | -          |
+| `*.streaming.block.enabled`（频道覆盖）                     | `true` / `false`，按频道（以及按账户）强制启用区块流式传输              | -          |
+| `*.textChunkLimit`（例如 `channels.whatsapp.textChunkLimit`） | number，硬上限                                                      | 4000       |
 | `*.streaming.chunkMode`                                      | `"length"` / `"newline"`                                                | `"length"` |
 | `channels.discord.maxLinesPerMessage`                        | number，软行数上限，用于拆分过高的回复以避免 UI 裁剪                 | 17         |
 
 `streaming.chunkMode: "newline"` 会按空白行（段落边界）拆分，
 而不是每一行；当文本超过限制后，再回退到按长度分块。
 
-打包频道将这些覆盖项写作
-`channels.<id>.streaming.{chunkMode,block.enabled,block.coalesce}`。扁平的
-`*.chunkMode` / `*.blockStreaming` / `*.blockStreamingCoalesce` 写法在所有打包频道中都属于
-旧版：`openclaw doctor --fix` 会把它们迁移为嵌套结构，且频道 schema 会拒绝它们。外部 SDK 插件
-配置如果仍在使用这些扁平写法，仍可通过已弃用的回退路径继续工作（并会在运行时给出警告），直到下一个发布周期。
+捆绑频道将这些覆盖项写作
+`channels.<id>.streaming.{chunkMode,block.enabled,block.coalesce}`。扁平形式的
+`*.chunkMode` / `*.blockStreaming` / `*.blockStreamingCoalesce` 在任何地方都会被拒绝。
+`openclaw doctor --fix` 会将旧版配置迁移为嵌套形式。
 
 **`blockStreamingBreak` 的边界语义**：
 
@@ -96,7 +101,7 @@ token-delta 流式传输**到频道消息：
 - Discord、Signal 和 Slack 的默认合并配置为 `{ minChars: 1500, idleMs: 1000 }`
   ，除非被覆盖。
 
-## 区块之间的人类化节奏
+## 区块之间的人性化节奏
 
 当启用区块流式传输时，在第一个区块之后，在区块回复之间添加一个**随机暂停**，让多气泡回复感觉更自然。
 
@@ -106,7 +111,7 @@ token-delta 流式传输**到频道消息：
 | `natural`                         | 800-2500 毫秒随机暂停   |
 | `custom`                          | `minMs`/`maxMs`         |
 
-可通过 `agents.list[].humanDelay` 为每个 agent 单独覆盖。仅适用于**区块回复**，不适用于最终回复或工具摘要。
+可通过 `agents.entries.*.humanDelay` 为每个代理单独覆盖。仅适用于**区块回复**，不适用于最终回复或工具摘要。
 
 ## “流式分块还是一次全部输出”
 
@@ -121,10 +126,9 @@ token-delta 流式传输**到频道消息：
 
 ## 预览流式模式
 
-Canonical key: `channels.<channel>.streaming` (nested `{ mode, ... }`; legacy
-top-level boolean/string spellings are rewritten by `openclaw doctor --fix`).
+Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；旧版顶层布尔值/字符串写法会由 `openclaw doctor --fix` 重写）。
 
-| Mode       | 行为                                                                 |
+| 模式       | 行为                                                                 |
 | ---------- | -------------------------------------------------------------------- |
 | `off`      | 禁用预览流式传输                                                       |
 | `partial`  | 单个预览被最新文本替换                                                 |

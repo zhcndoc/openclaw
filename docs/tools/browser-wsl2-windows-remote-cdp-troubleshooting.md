@@ -11,7 +11,7 @@ title: "WSL2 + Windows + 远程 Chrome CDP 故障排查"
 在 Windows 上，而浏览器控制必须跨越 WSL2/Windows 边界。多个彼此独立的问题
 可能会同时出现（参见
 [issue #39369](https://github.com/openclaw/openclaw/issues/39369)）：CDP
-传输、Control UI 源安全性以及令牌/配对都可能各自失败，但会产生
+传输、控制 UI 源安全性以及令牌/配对都可能各自失败，但会产生
 看起来相似的错误。请按下面的层次依次排查，不要猜测到底是哪一层坏了。
 
 ## 先选择正确的浏览器模式
@@ -166,16 +166,16 @@ openclaw browser --browser-profile remote tabs
 
 | Message                                                                                 | Meaning                                                                                                                                                                           |
 | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `control-ui-insecure-auth`                                                              | UI 源/安全上下文问题，而不是 CDP 传输问题                                                                                                                     |
-| `token_missing`                                                                         | 认证配置问题                                                                                                                                                        |
-| `pairing required`                                                                      | 设备批准问题                                                                                                                                                           |
-| `Remote CDP for profile "remote" is not reachable`                                      | WSL2 无法连接到配置的 `cdpUrl`                                                                                                                                         |
-| empty CDP reply / `other side closed` through a portproxy                               | Windows 监听不匹配或自环；请检查两个 loopback 族以及 `netsh interface portproxy show all`                                                                 |
-| `Browser attachOnly is enabled and CDP websocket for profile "remote" is not reachable` | HTTP 端点有响应，但无法打开 DevTools WebSocket                                                                                                        |
-| stale viewport / dark-mode / locale / offline overrides after a remote session          | 运行 `openclaw browser --browser-profile remote stop` 以关闭会话，并释放缓存的 Playwright/CDP 连接，而无需重启 Gateway 或外部浏览器 |
-| timeout around `remoteCdpTimeoutMs` (default 1500ms)                                    | 通常仍然是 CDP 可达性问题，或远程端点缓慢/不可达                                                                                                             |
-| `Playwright page enumeration timed out after 3000ms`                                    | 远程 CDP 已连接，但其持久标签页读取卡住；截止时间是 `remoteCdpTimeoutMs` 和 `remoteCdpHandshakeTimeoutMs` 中较大的那个                               |
-| `No Chrome tabs found for profile="user"`                                               | 选择了本地 Chrome MCP 配置文件，但当前没有可用的主机本地标签页                                                                                                          |
+| `control-ui-insecure-auth`                                                              | UI 源/安全上下文问题，不是 CDP 传输问题                                                                                                                                            |
+| `token_missing`                                                                         | 认证配置问题                                                                                                                                                                      |
+| `pairing required`                                                                      | 设备批准问题                                                                                                                                                                      |
+| `Remote CDP for profile "remote" is not reachable`                                      | WSL2 无法访问已配置的 `cdpUrl`                                                                                                                                                     |
+| empty CDP reply / `other side closed` through a portproxy                               | Windows 监听不匹配或自环；请检查两个 loopback family 以及 `netsh interface portproxy show all`                                                                                   |
+| `Browser attachOnly is enabled and CDP websocket for profile "remote" is not reachable` | HTTP 端点已响应，但无法打开 DevTools WebSocket                                                                                                                                    |
+| stale viewport / dark-mode / locale / offline overrides after a remote session          | 运行 `openclaw browser --browser-profile remote stop` 以关闭会话，并释放缓存的 Playwright/CDP 连接，而无需重启 Gateway 或外部浏览器                                           |
+| timeout during CDP reachability                                                         | 通常仍然是 CDP 可达性问题，或者远程端点缓慢/不可达                                                                                                                               |
+| `Playwright page enumeration timed out after 3000ms`                                    | 远程 CDP 已连接，但其持久标签页读取卡住了                                                                                                                                         |
+| `No Chrome tabs found for profile="user"`                                               | 选择了本地 Chrome MCP 配置文件，但当前没有可用的主机本地标签页                                                                                                                   |
 
 ## 快速分诊清单
 

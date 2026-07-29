@@ -49,7 +49,7 @@ OpenClaw 可以通过其 **Bedrock Converse** 流式 provider 使用 **Amazon Be
                 auth: "aws-sdk",
                 models: [
                   {
-                    id: "us.anthropic.claude-opus-4-6-v1:0",
+                    id: "us.anthropic.claude-opus-4-6-v1",
                     name: "Claude Opus 4.6 (Bedrock)",
                     reasoning: true,
                     input: ["text", "image"],
@@ -63,7 +63,7 @@ OpenClaw 可以通过其 **Bedrock Converse** 流式 provider 使用 **Amazon Be
           },
           agents: {
             defaults: {
-              model: { primary: "amazon-bedrock/us.anthropic.claude-opus-4-6-v1:0" },
+              model: { primary: "amazon-bedrock/us.anthropic.claude-opus-4-6-v1" },
             },
           },
         }
@@ -248,7 +248,10 @@ openclaw models list
   <Accordion title="推理配置文件">
     OpenClaw 会在基础模型之外一并发现 **区域和全局推理配置文件**。当配置文件映射到已知的基础模型时，该配置文件会继承该模型的能力（上下文窗口、最大 token 数、推理、视觉），并且会自动注入正确的 Bedrock 请求区域。这意味着跨区域 Claude 配置文件无需手动覆盖 provider 即可工作。全局跨区域配置文件（`global.*`）会在 `openclaw models list` 中优先显示，因为它们通常提供更好的容量和自动故障转移。
 
-    推理配置文件 ID 形式如 `us.anthropic.claude-opus-4-6-v1:0`（区域）或 `anthropic.claude-opus-4-6-v1:0`（全局）。如果底层模型已经出现在发现结果中，配置文件会继承其完整能力集；否则将应用安全默认值。
+    Inference profile IDs look like `us.anthropic.claude-opus-4-6-v1` (regional)
+    or `anthropic.claude-opus-4-6-v1` (global). If the backing model is already
+    in the discovery results, the profile inherits its full capability set;
+    otherwise safe defaults apply.
 
     无需额外配置。只要启用了发现，并且 IAM 主体具有 `bedrock:ListInferenceProfiles`，配置文件就会与基础模型一起出现在 `openclaw models list` 中。
 
@@ -288,14 +291,40 @@ openclaw models list
     }
     ```
 
-    有效值为 `default`、`flex`、`priority` 和 `reserved`。Claude
-    Fable 5 和 Sonnet 5 只支持 `default` 层级；OpenClaw 会对为这些模型请求 `flex`、`priority` 或 `reserved` 的情况发出警告并忽略。对于其他模型，并非每个模型都支持每个层级——不支持的层级会返回 Bedrock 验证错误，而且错误信息可能具有误导性（例如显示“The provided model identifier is invalid”，而不是指出问题出在层级上）。如果你看到此错误，请检查该模型是否支持所请求的层级。
+    Valid values are `default`, `flex`, `priority`, and `reserved`. Claude
+    Fable 5, Opus 5, and Sonnet 5 only support the `default` tier; OpenClaw warns and
+    ignores `flex`, `priority`, or `reserved` requested for those models. For
+    other models, not every model supports every tier -- an unsupported tier
+    returns a Bedrock validation error, and the error message can be
+    misleading (for example "The provided model identifier is invalid"
+    rather than naming the tier as the problem). If you see this error, check
+    whether the model supports the requested tier.
 
   </Accordion>
 
-  <Accordion title="Claude Opus 4.7 和 4.8 的 temperature">
-    Bedrock 会拒绝 Claude Opus 4.7 和 Opus
-    4.8 的 `temperature` 参数。OpenClaw 会针对任何匹配的 Bedrock 引用自动省略 `temperature`，包括基础模型 ID、命名推理配置文件、其底层模型通过 `bedrock:GetInferenceProfile` 解析为 Opus 4.7/4.8 的应用推理配置文件，以及带点号的 `opus-4.7`/`opus-4.8` 变体（可选区域前缀：`us.`、`eu.`、`ap.`、`apac.`、`au.`、`jp.`、`global.`）。无需任何配置开关，该省略会同时应用于请求 options 对象和 `inferenceConfig` 负载字段。
+  <Accordion title="Claude Opus 5, 4.8, and 4.7 temperature">
+    Bedrock rejects the `temperature` parameter for Claude Opus 5, Opus 4.8,
+    and Opus 4.7. OpenClaw omits `temperature` automatically for any matching Bedrock
+    ref, including foundation model ids, named inference profiles, application
+    inference profiles whose underlying model resolves to Opus 5/4.8/4.7 via
+    `bedrock:GetInferenceProfile`, and dotted `opus-4.7`/`opus-4.8` variants
+    with optional region prefixes (`us.`, `eu.`, `ap.`, `apac.`, `au.`, `jp.`,
+    `global.`). No config knob is required, and the omission applies to both
+    the request options object and the `inferenceConfig` payload field.
+  </Accordion>
+
+  <Accordion title="Claude Opus 5">
+    Use `amazon-bedrock/anthropic.claude-opus-5` on the Messages-API Bedrock
+    endpoint, or a regional/global inference profile such as
+    `global.anthropic.claude-opus-5` when it appears in Bedrock discovery.
+    OpenClaw applies the 1,000,000-token context window, 128,000-token output
+    limit, image input, prompt caching, refusal-safe streaming, and native
+    `xhigh`/`max` effort levels.
+
+    Adaptive thinking defaults to `high`. `/think off` disables thinking, while
+    `/think xhigh|max` keeps adaptive thinking enabled. OpenClaw omits custom
+    sampling parameters and unsupported non-default service tiers.
+
   </Accordion>
 
   <Accordion title="Claude Fable 5">
@@ -379,17 +408,17 @@ openclaw models list
 
   </Accordion>
 
-  <Accordion title="用于 memory search 的 embeddings">
-    Bedrock 也可以作为 [memory search](/concepts/memory-search) 的 embedding provider。这与 inference provider 是分开配置的——将 `agents.defaults.memorySearch.provider` 设置为 `"bedrock"`：
+  <Accordion title="Embeddings for memory search">
+    Bedrock can also serve as the embedding provider for
+    [memory search](/concepts/memory-search). This is configured separately from the
+    inference provider -- set `memory.search.provider` to `"bedrock"`:
 
     ```json5
     {
-      agents: {
-        defaults: {
-          memorySearch: {
-            provider: "bedrock",
-            model: "amazon.titan-embed-text-v2:0", // 默认
-          },
+      memory: {
+        search: {
+          provider: "bedrock",
+          model: "amazon.titan-embed-text-v2:0", // default
         },
       },
     }

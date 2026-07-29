@@ -16,7 +16,7 @@ OpenClaw Zalo 频道插件，适用于 bot 和 webhook 聊天。
 
 ## 表面
 
-channels: zalo
+channels: `zalo`
 
 ## 相关文档
 

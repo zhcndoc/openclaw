@@ -1,5 +1,5 @@
 ---
-summary: "OpenClaw 如何安全地处理本地文件访问，以及为什么可选的 fs-safe Python 辅助程序默认关闭"
+summary: "How OpenClaw handles local file access safely, and why optional fs-safe native acceleration is off by default"
 read_when:
   - 更改文件访问、归档解压、工作区存储或插件文件系统辅助工具时
 title: "安全的文件操作"
@@ -9,35 +9,34 @@ OpenClaw 使用 [`@openclaw/fs-safe`](https://github.com/openclaw/fs-safe) 进�
 
 它是面向接收不受信任路径名的可信 OpenClaw 代码的**库级防护措施**，而不是沙箱。主机文件系统权限、OS 用户、容器以及代理/工具策略仍然决定真正的影响范围。
 
-## 默认：不使用 Python 辅助程序
+## Default: JavaScript fallback
 
-OpenClaw 默认将 fs-safe 的 POSIX Python 辅助程序设置为 **关闭**：
+OpenClaw sets fs-safe's optional native helper to **off** by default:
 
-- 网关不应在操作员未明确选择启用时启动持久的 Python sidecar；
-- 大多数安装不需要额外的父目录变更加固；
-- 禁用 Python 可使桌面、Docker、CI 和打包应用环境中的运行时行为保持可预测。
+- native platform packages are optional and may be absent from minimal installs;
+- the guarded JavaScript paths support OpenClaw's normal filesystem operations;
+- disabling native loading keeps runtime behavior deterministic across desktop, Docker, CI, and bundled-app environments.
 
 OpenClaw 只会更改 _默认值_。显式设置始终优先生效：
 
 ```bash
-# OpenClaw 的默认行为：仅使用 Node 的 fs-safe 回退实现。
-OPENCLAW_FS_SAFE_PYTHON_MODE=off
+# Default OpenClaw behavior: guarded JavaScript fs-safe paths.
+OPENCLAW_FS_SAFE_NATIVE_MODE=off
 
-# 在可用时启用辅助程序，不可用时回退。
-OPENCLAW_FS_SAFE_PYTHON_MODE=auto
+# Prefer native primitives when the platform package is installed.
+OPENCLAW_FS_SAFE_NATIVE_MODE=auto
 
-# 如果辅助程序无法启动，则以失败关闭。
-OPENCLAW_FS_SAFE_PYTHON_MODE=require
-
-# 可选：显式指定解释器路径。
-OPENCLAW_FS_SAFE_PYTHON=/usr/bin/python3
+# Fail closed when an operation needs native support and the binding is unavailable.
+OPENCLAW_FS_SAFE_NATIVE_MODE=require
 ```
 
-通用的 fs-safe 环境变量名也同样适用：`FS_SAFE_PYTHON_MODE` 和 `FS_SAFE_PYTHON`。
+The generic fs-safe environment name also works: `FS_SAFE_NATIVE_MODE`.
 
-当辅助程序是你安全策略的一部分时，请使用 `require`（而不是 `auto`）；如果辅助程序无法启动，`auto` 会静默回退到仅使用 Node 的行为。
+fs-safe 0.5 temporarily maps the retired `FS_SAFE_PYTHON_MODE` and `OPENCLAW_FS_SAFE_PYTHON_MODE` values to native modes and emits a deprecation warning. Migrate those names before fs-safe 0.6; Python interpreter path settings are no longer used.
 
-## 在没有 Python 的情况下仍受保护的内容
+Use `require` (not `auto`) when native primitives are part of your security posture. `auto` uses the guarded JavaScript implementation when the platform binding is unavailable.
+
+## What stays protected without native acceleration
 
 关闭 helper 后，OpenClaw 仍然保留了 fs-safe 的仅 Node 运行时防护：
 
@@ -51,16 +50,16 @@ OPENCLAW_FS_SAFE_PYTHON=/usr/bin/python3
 
 这覆盖了 OpenClaw 的正常威胁模型：受信任的网关代码在单一受信任的操作边界内处理不受信任的模型/插件/通道路径输入。
 
-## Python 带来的额外能力
+## What native acceleration adds
 
-在 POSIX 上，可选的辅助程序会保持一个持久的 Python 进程，并使用与 fd 相关的文件系统操作来执行父目录修改：重命名、删除、mkdir、stat/list，以及某些写入路径。
+The optional platform package provides policy-free filesystem primitives used by fs-safe for create-only writes, guarded hard-link publication, asynchronous sidecar creation, and explicit no-replace rename publication. Linux uses `openat2` and `renameat2`; macOS uses descriptor-relative component checks and `renameatx_np`; Windows uses handle-relative operations and replacement-disabled rename.
 
-这缩小了同一 UID 的竞态窗口，即当另一个进程在验证和修改之间替换父目录时——在主机上属于纵深防御，其中不受信任的本地进程可以修改 OpenClaw 所操作的同一目录。
+The TypeScript layer still owns policy, validation, retries, cleanup, and fallback decisions. Native support narrows filesystem race windows; it does not turn fs-safe into a sandbox.
 
-如果你的部署存在这种风险，并且可以确保 Python 一定存在，请设置：
+If your deployment requires those native primitives, install the matching optional platform package and set:
 
 ```bash
-OPENCLAW_FS_SAFE_PYTHON_MODE=require
+OPENCLAW_FS_SAFE_NATIVE_MODE=require
 ```
 
 ## 插件和核心指导

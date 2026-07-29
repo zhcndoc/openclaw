@@ -90,8 +90,9 @@ openclaw devices approve <requestId>
 openclaw nodes status
 ```
 
-Gateway 只会转发节点声明且服务器策略允许的命令。`screen.record`、`camera.snap`
-和 `camera.clip` 等隐私敏感命令需要显式启用 `gateway.nodes.allowCommands`。
+The Gateway only forwards commands the node declares and server policy
+allows. Privacy-sensitive commands such as `screen.record`, `camera.snap`,
+and `camera.clip` need explicit `gateway.nodes.commands.allow` opt-in.
 
 ## 本地 MCP 模式
 

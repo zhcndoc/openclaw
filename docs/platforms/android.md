@@ -1,5 +1,5 @@
 ---
-summary: "Android 应用（node）：连接运行手册 + Connect/Chat/Voice/Canvas 命令面"
+summary: "Android 应用（node）：连接运行手册 + Connect/Chat/OpenClaw/Voice/Canvas 命令面"
 read_when:
   - 配对或重新连接 Android 节点
   - 排查 Android 网关发现或认证问题
@@ -14,15 +14,24 @@ title: "Android 应用"
 
 ## 支持概览
 
-- Role: companion node app（Android 不托管 Gateway）。
-- Gateway required: yes（在 macOS、Linux 或通过 WSL2 的 Windows 上运行它）。
-- Install: [Google Play](https://play.google.com/store/apps/details?id=ai.openclaw.app&hl=en_IN) 或来自受支持的 [GitHub Release](https://github.com/openclaw/openclaw/releases) 的 `OpenClaw-Android.apk`，[Getting Started](/start/getting-started) 用于 Gateway，然后是 [Pairing](/channels/pairing)。
-- Gateway: [Runbook](/gateway) + [Configuration](/gateway/configuration)。
-  - Protocols: [Gateway protocol](/gateway/protocol)（节点 + 控制平面）。
+- 角色：伴随节点应用（Android 不托管 Gateway）。
+- 需要 Gateway：是（在 macOS、Linux 或通过 WSL2 的 Windows 上运行它）。
+- 安装：[Google Play](https://play.google.com/store/apps/details?id=ai.openclaw.app&hl=en_IN) 或从受支持的 [GitHub Release](https://github.com/openclaw/openclaw/releases) 获取 `OpenClaw-Android.apk`，[Gateway 的入门指南](/start/getting-started)，然后进行[配对](/channels/pairing)。
+- Gateway：[运行手册](/gateway) + [配置](/gateway/configuration)。
+  - 协议：[Gateway 协议](/gateway/protocol)（节点 + 控制平面）。
+- **设置 → OpenClaw** 会在操作员连接具备 `operator.admin` 且 Gateway 支持 `openclaw.chat` 时打开一个专用的 Gateway 设置助手。其设置对话与普通 Chat 保持分离，在本地会对机密回复进行脱敏，并且只有在你点击 **Open Chat** 后才会切换到 Chat。
 
 系统控制（launchd/systemd）位于 Gateway 主机上——请参见 [Gateway](/gateway)。
 
-## 在 Google Play 之外安装
+## 同时网关会话
+
+先将每个 Gateway 配对一次，然后打开 **Settings → Gateway**。勾选标记表示当前聚焦的 Gateway，每个开关控制未聚焦的 Gateway 的操作员会话是否保持连接。启用的 Gateways 在应用处于前台时会独立重新连接，因此切换焦点不会断开其他连接。只有聚焦的 Gateway 拥有 Android 节点会话和设备能力；这可防止多个 Gateway 向同一部手机发出相机、位置、屏幕或通知命令。当应用离开前台后，Android 可能会挂起次级连接。
+
+## Wear OS 伴侣应用
+
+Wear OS 伴侣应用使用已配对 Android 手机上的已认证 Gateway 连接；手表不会接收或存储 Gateway 凭据。它可以选择代理和会话，读取有限的对话记录，发送文本或口述回复，中止正在进行的运行，在所选会话中启动实时 Talk，并连接或断开已配对手机的 Gateway。它还提供本地回复通知、深色或浅色外观，以及可选的回复自动语音播放。代理和 Gateway 控制通过能力协商来支持手机/手表分阶段更新。实时 Talk 会通过临时的 Wear OS Data Layer 通道传输麦克风和播放音频，并在所选手机、Gateway 连接或音频通道丢失时停止。
+
+## 安装到 Google Play 之外
 
 正式版和修正版的 GitHub Releases 都包含一个通用的 `OpenClaw-Android.apk` 和 `OpenClaw-Android-SHA256SUMS.txt`。APK 由发布标签构建，使用 OpenClaw Android 发布密钥签名，并带有 GitHub Actions 溯源信息。
 
@@ -82,8 +91,8 @@ adb tcpip 5555
 {
   grants: [
     {
-      src: ["<remote-mac-tailnet-ip>"],
-      dst: ["<android-tailnet-ip>"],
+      src: ["<远程 Mac 的 tailnet IP>"],
+      dst: ["<Android 的 tailnet IP>"],
       ip: ["tcp:5555"],
     },
   ],
@@ -199,14 +208,15 @@ Android NSD/mDNS 发现不会跨网络。如果 Android 节点和 gateway 处于
 
 官方设置码会将 Android 作为节点连接，并默认通过 `wss://` 授予完整的 Gateway 操作员访问权限。明文的非回环 `ws://` 设置会自动使用受限权限，以保证 bearer token 安全。**Settings → Gateway** 会显示 **Full** 或 **Limited** 访问。若要使用受限连接，请配置 `wss://` 或 Tailscale Serve，在 Control UI 中或使用 `openclaw qr` 生成新的完整访问代码，然后在该页面扫描或粘贴并重新连接。希望使用降级配置的操作者可以在 Control UI 中选择 **Limited access**，或运行 `openclaw qr --limited`。
 
-### Multiple gateways
+### 管理已配对的 gateway
 
-该应用会为它配对过的每一个 gateway 维护一个注册表，因此你可以在它们之间切换，而无需重新配对：
+应用会为每一个已配对的 gateway 维护注册表，因此你可以保持操作者会话连接，并在不重新配对的情况下切换焦点：
 
-- **Settings -> Gateways** 会列出已配对的 gateway，并标记当前激活项。点击某一项即可切换；应用会拆除当前会话并重新连接到所选 gateway。
-- 当配对的 gateway 多于一个时，**Connect** 选项卡会显示一个快速切换器。
-- 凭据、设备令牌、TLS 信任、聊天历史和离线队列消息都会按 gateway 分开存储。切换时不会混用不同 gateway 的状态，而离线期间排队的消息只会发送到其写入时对应的 gateway。
-- **Forget** 会删除某个 gateway 的注册项，以及它的凭据、设备令牌、TLS pin 和缓存的聊天记录。
+- **Settings → Gateway** 会列出已配对的 gateway，并标记当前聚焦的那个。点击某项即可切换焦点；其他已启用的操作者会话仍保持连接。
+- 每个开关控制的是：当应用处于前台时，该非聚焦的 Gateway 是否保持连接。当前聚焦的 Gateway 始终保持启用，并拥有手机的节点连接和设备能力。
+- **Connect** 选项卡在配对了多个 gateway 时会显示一个快速切换器。
+- 凭据、设备 token、TLS 信任、聊天历史以及离线排队消息都按每个 Gateway 单独存储。切换焦点不会混合不同 Gateway 的状态，而离线期间排队的消息只会发送到其写入时对应的 Gateway。
+- **Forget** 会删除某个 gateway 的注册表项，以及其凭据、设备 token、TLS pin 和缓存的聊天内容。
 
 ### 存活信标
 
@@ -255,7 +265,8 @@ Android 的 Chat 选项卡支持会话选择（默认 `main`，以及其他已�
 
 - History: `chat.history`（显示规范化——内联指令标签、纯文本工具调用 XML 负载（`<tool_call>`、`<function_call>`、`<tool_calls>`、`<function_calls>` 及其截断变体），以及泄露的 ASCII/全角模型控制 token 会被清除；像精确 `NO_REPLY` / `no_reply` 这样的静默 token 助手行会被省略；超大的行可替换为占位符）
 - Send: `chat.send`
-- Durable sending: 每次发送（文本、选中的图片和语音笔记）都会在任何网络尝试之前，先写入到每个 gateway 对应的设备本地发件箱日志中，因此应用终止不会丢失已提交的输入。离线时排队的发送会在重新连接后按顺序送达，并使用稳定的幂等键；只有当该轮消息已在规范化的 `chat.history` 中可见后，该发送才算完成——仅有确认并不视为已送达的证明。结果不明确的情况（确认丢失、发送中应用被杀、gateway 在写入转录前重启）会以可见行的形式呈现，并提供明确的 **Retry**/**Delete**，而不是自动重发。斜杠命令在重新连接后绝不会自动重放；它们会被挂起，等待明确重试。队列有上限（每个 gateway 50 条消息和 48 MB 的附件字节），未发送行会在 48 小时后过期。尚未提交的编辑草稿不具备进程级持久性。
+- Durable sending: every send (text, picked images, and voice notes) is journaled to a per-gateway on-device outbox before any network attempt, so app termination cannot lose submitted input. Sends queued while offline deliver in order on reconnect with stable idempotency keys, and a send is retired only after the turn is visible in canonical `chat.history` — an acknowledgement alone is not treated as proof of delivery. Ambiguous outcomes (lost acknowledgement, app killed mid-send, gateway restart before the transcript write) surface as visible rows with explicit **Retry**/**Delete** instead of auto-resending. Slash commands never auto-replay across a reconnect; they park for explicit retry. The queue is bounded (50 messages and 48 MB of attachment bytes per gateway) and unsent rows expire after 48 hours. Composer drafts that were never submitted are not process-durable.
+- Image input works through the picker and Android Sharesheet. Assistant-generated images resolve through the paired Gateway connection, render inline with a full-screen preview, and retain only their small artifact references in the offline transcript cache. Downloads are capped at 12 MiB and decoded to bounded display bitmaps.
 - Push updates (best-effort): `chat.subscribe` -> `event:"chat"`
 - Listen: 长按某条助手消息并选择 **Listen** 即可收听；音频通过 gateway `tts.speak` 和已配置的 TTS provider chain 渲染，当 gateway 无法渲染音频时会使用设备上的系统 TTS。切换会话、开始新聊天、应用进入后台或关闭聊天时，播放都会停止。
 
@@ -287,13 +298,15 @@ Canvas 命令（仅前台）：
 
 Camera 命令（仅前台；受权限限制）：`camera.snap`（jpg）、`camera.clip`（mp4）。参数和 CLI 辅助工具请参见 [Camera node](/nodes/camera)。
 
-### 8. Voice + 扩展的 Android 命令面
+### 8. 语音 + 扩展的 Android 命令面
 
-- Voice tab: Android 有两种明确的采集模式。**Mic** 是一种手动的 Voice 选项卡会话，它会把每一次停顿作为一个聊天轮次发送，并在应用离开前台或用户离开 Voice 选项卡时停止。**Talk** 是持续的 Talk Mode，会一直监听，直到被关闭或节点断开连接。
-- Talk Mode 会在采集开始前，将现有的前台服务从 `connectedDevice` 提升为 `connectedDevice|microphone`，然后在 Talk Mode 停止时降级。节点服务声明 `FOREGROUND_SERVICE_CONNECTED_DEVICE` 与 `CHANGE_NETWORK_STATE`；Android 14+ 还要求声明 `FOREGROUND_SERVICE_MICROPHONE`、运行时 `RECORD_AUDIO` 授权，以及运行时使用 microphone 服务类型。
-- 默认情况下，Android Talk 会通过已配置的 gateway Talk provider 使用原生语音识别、Gateway chat 和 `talk.speak`。只有在 `talk.speak` 不可用时，才会使用本地系统 TTS。
+- Android 的 shell 导航包括 **Home**、**Chat** 和 **Settings**。语音输入属于 Chat 编辑器；没有单独的 Voice 选项卡。
+- 点按编辑器麦克风可使用设备上的语音识别，并将转写内容插入草稿。长按麦克风可录制语音笔记附件。UI 会报告无法识别、权限缺失、繁忙/网络失败以及无语音等结果，而不是静默丢弃尝试。
+- 从 Chat 波形开始持续 **Talk**。听写、语音笔记录制和 Talk 是互斥的麦克风路径。
+- Talk Mode 会在捕获开始前将现有前台服务从 `connectedDevice` 提升为 `connectedDevice|microphone`，在 Talk Mode 停止时再降级。节点服务声明 `FOREGROUND_SERVICE_CONNECTED_DEVICE` 以及 `CHANGE_NETWORK_STATE`；Android 14+ 还需要 `FOREGROUND_SERVICE_MICROPHONE` 声明、`RECORD_AUDIO` 运行时授权，以及运行时的 microphone service type。
+- 默认情况下，Android Talk 使用原生语音识别、Gateway chat，以及通过已配置的 gateway Talk provider 的 `talk.speak`。仅当 `talk.speak` 不可用时才使用本地系统 TTS。
 - 只有当 `talk.realtime.mode` 为 `realtime` 且 `talk.realtime.transport` 为 `gateway-relay` 时，Android Talk 才使用实时 Gateway relay。
-- Android 不会公开 `voiceWake` 能力。语音输入请使用 **Mic** 或 **Talk**。
+- Android 不会声明 `voiceWake` 能力。请使用 Chat 听写、语音笔记或 Talk 进行语音输入。
 - 其他 Android 命令族（可用性取决于设备、权限和用户设置）：
   - `device.status`, `device.info`, `device.permissions`, `device.health`
   - 仅当启用 **Settings > Phone Capabilities > Installed Apps** 时，`device.apps` 才可用；默认列出启动器可见的应用（传入 `includeNonLaunchable` 可获取完整列表）。
@@ -305,7 +318,7 @@ Camera 命令（仅前台；受权限限制）：`camera.snap`（jpg）、`camer
   - `sms.search`
   - `motion.activity`、`motion.pedometer`
 
-### 9. Workspace files (read-only)
+### 9. Workspace files（只读）
 
 Home 概览中包含一个 **Files** 卡片，它通过只读的 `agents.workspace.list` / `agents.workspace.get` gateway RPC 浏览当前代理的工作区：支持目录下钻、文本和图片预览，以及通过 Android 分享面板导出。不提供任何写入操作，且预览大小受 gateway 限制。
 
@@ -316,6 +329,10 @@ Home 概览中包含一个 **Files** 卡片，它通过只读的 `agents.workspa
 批准状态与 Control UI 和受支持的聊天界面共享。第一个提交的答案获胜；即使另一个界面先回答，Android 也会显示该规范结果。如果 resolve 响应丢失或 Gateway 断开连接，应用会保持该操作锁定，并在提供另一个决策之前再次读取批准。
 
 早于统一批准方法的 Gateway 会回退到随附的 exec 专用方法。待审查流程仍然可用，但保留的终端状态以及更丰富的跨界面结果需要更新的 Gateway。
+
+## 回答代理问题
+
+聊天会将待处理的 Gateway 问题显示为原生卡片，供带有 `operator.questions`（或 `operator.admin`）的操作员连接使用。卡片支持单选和多选选项、选项描述、自由文本的 **其他** 回答，以及过期倒计时。重新连接时会从 Gateway 重新加载待处理问题。当此设备回答某张卡片、其他界面先一步回答了它，或问题过期或被取消时，该卡片会被锁定。
 
 ## 助手入口
 
@@ -331,19 +348,19 @@ App Actions 的可用性取决于设备、Google Play 服务版本，以及用�
 
 Android 可以将设备通知作为 `node.event` 项转发到网关。这是在**设备端**配置的，位于应用的 Settings sheet 中——而不是在 gateway/`openclaw.json` 配置中。
 
-| Setting                     | Description                                                                                                                                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Forward Notification Events | 主开关。默认关闭；需要先授予 Notification Listener Access。                                                                                                              |
-| Package Filter              | **Allowlist**（仅转发列出的 package IDs）或 **Blocklist**（默认：除列出的 IDs 外，转发所有 packages）。OpenClaw 自身的 package 在 Blocklist 模式下始终被排除，以防止转发循环。 |
-| Quiet Hours                 | 本地 HH:mm 的开始/结束时间窗口，用于抑制转发。默认禁用；启用后默认为 `22:00`-`07:00`。                                                                                |
-| Max Events / Minute         | 每台设备的通知转发速率限制。默认 20。                                                                                                                                          |
-| Route Session Key           | 可选。将转发的通知事件固定路由到某个特定 session，而不是设备的默认 notification route。                                                                               |
+| 设置                     | 说明                                                                                                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 转发通知事件             | 主开关。默认关闭；需要先授予 Notification Listener Access。                                                                                                              |
+| 包过滤器                 | **允许列表**（仅转发列出的 package IDs）或 **阻止列表**（默认：除列出的 IDs 外，转发所有 packages）。OpenClaw 自身的 package 在 Blocklist 模式下始终被排除，以防止转发循环。 |
+| 安静时段                 | 本地 HH:mm 的开始/结束时间窗口，用于抑制转发。默认禁用；启用后默认为 `22:00`-`07:00`。                                                                                |
+| 每分钟最大事件数         | 每台设备的通知转发速率限制。默认 20。                                                                                                                                          |
+| 路由会话密钥             | 可选。将转发的通知事件固定路由到某个特定 session，而不是设备的默认 notification route。                                                                               |
 
 <Note>
 通知转发需要 Android Notification Listener 权限。应用会在设置过程中提示你授予此权限。
 </Note>
 
-WhatsApp, WhatsApp Business, Telegram, Telegram X, Discord, and Signal 通知始终被排除。它们的消息已经由原生 OpenClaw channel sessions 所拥有；将 Android 通知作为单独的 node event 转发，可能会把回复路由到错误的对话中。
+WhatsApp、WhatsApp Business、Telegram、Telegram X、Discord 和 Signal 通知始终被排除。它们的消息已经由原生 OpenClaw channel sessions 所拥有；将 Android 通知作为单独的 node event 转发，可能会把回复路由到错误的对话中。
 
 ## 相关
 

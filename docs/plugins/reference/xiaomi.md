@@ -16,7 +16,7 @@ title: "小米插件"
 
 ## 接口
 
-providers：小米、小米-代币计划；contracts：speechProviders、usageProviders
+providers: `xiaomi`, `xiaomi-token-plan`; contracts: `speechProviders`, `usageProviders`
 
 ## 相关文档
 

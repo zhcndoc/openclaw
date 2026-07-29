@@ -1,5 +1,5 @@
 ---
-summary: "通过 Token Plan 搜索 API 使用 MiniMax 搜索"
+summary: "通过 Token 计划搜索 API 使用 MiniMax 搜索"
 read_when:
   - 你想将 MiniMax 用于 web_search
   - 你需要 MiniMax Token Plan 密钥或 OAuth 令牌
@@ -7,7 +7,7 @@ read_when:
 title: "MiniMax 搜索"
 ---
 
-OpenClaw 通过 MiniMax Token Plan 搜索 API 支持将 MiniMax 作为 `web_search` 提供方。它会返回结构化的搜索结果，包括标题、URL、摘要以及相关查询。
+OpenClaw 通过 MiniMax Token 计划搜索 API 支持将 MiniMax 作为 `web_search` 提供方。它会返回结构化的搜索结果，包括标题、URL、摘要以及相关查询。
 
 ## 获取 Token Plan 凭据
 
@@ -71,7 +71,7 @@ MiniMax Search 使用以下端点：
 
 如果未设置 `plugins.entries.minimax.config.webSearch.region`，OpenClaw 会按以下顺序解析区域：
 
-1. `tools.web.search.minimax.region` / 归插件所有的 `webSearch.region`
+1. Plugin-owned `webSearch.region`
 2. `MINIMAX_API_HOST`
 3. `models.providers.minimax.baseUrl`
 4. `models.providers.minimax-portal.baseUrl`

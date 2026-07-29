@@ -16,7 +16,7 @@ title: "Senseaudio 插件"
 
 ## 接口
 
-contracts: mediaUnderstandingProviders
+contracts: `mediaUnderstandingProviders`
 
 ## 相关文档
 

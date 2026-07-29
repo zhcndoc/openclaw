@@ -16,7 +16,7 @@ OpenClaw PixVerse 视频生成提供方插件。
 
 ## Surface
 
-contracts: videoGenerationProviders
+contracts: `videoGenerationProviders`
 
 ## 相关文档
 

@@ -16,7 +16,7 @@ title: "NVIDIA 插件"
 
 ## 表面
 
-providers: nvidia
+providers: `nvidia`
 
 ## 相关文档
 

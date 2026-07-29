@@ -16,7 +16,7 @@ title: "Deepgram 插件"
 
 ## 接口
 
-contracts: mediaUnderstandingProviders, realtimeTranscriptionProviders
+contracts: `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`
 
 ## 相关文档
 

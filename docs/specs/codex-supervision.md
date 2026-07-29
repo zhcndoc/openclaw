@@ -91,7 +91,9 @@ Codex 有一个实验性的本地规范守护进程，带有单独的
 ## Catalog 流
 
 通用 Gateway 方法 `sessions.catalog.list` 会分发到 `codex`
-catalog provider，它始终请求 `archived: false` 以及交互式 `cli` 和 `vscode` 源类型。它会合并：
+catalog provider，它始终请求 `archived: false`，并让 App Server
+应用其交互源默认值：`cli`、`vscode`、Atlas 和 ChatGPT。它
+组合：
 
 1. 来自监督 App Server 的 Gateway 本地 `thread/list` 结果，
    其默认使用受管的 user-home stdio。
@@ -124,9 +126,16 @@ Git remotes、commit SHA、原始 endpoints，或原始 App Server 错误。tran
 主机属性，而不是 thread 状态：失败的主机结果不包含新的
 session 行，也不会将 `offline` 投射到原生 threads 上。
 
-catalog 发现是被动的。列出或读取元数据时，绝不能调用
-`thread/resume`，也不能让 OpenClaw 客户端订阅实时 thread 请求，或
-返回审批。
+Control UI 会请求渐进式 catalog 更新。每个本地或配对主机
+会在其自身的 App Server 列表稳定后出现；聚合响应仍然是
+兼容性和恢复快照。可见页面会在连接性变化后、聚焦时，
+以及最多每 30 秒重新协调一次，并在变化后更快地进行一次刷新。
+因此，在另一个客户端中创建的原生 Codex 会话会最终被发现，
+而不会将它们导入 OpenClaw 存储。
+
+Catalog 发现是被动的。列出或读取元数据时，不能调用
+`thread/resume`，不能将 OpenClaw 客户端订阅到实时 thread 请求，
+也不能返回审批。
 
 搜索仅按标题，且大小写不敏感。对于每个返回的 catalog 页面，Gateway 和配对的 Mac 会扫描
 有限数量的原生页面，而不会将查询传递给 App Server，因为原生搜索也可能匹配 transcript
@@ -185,7 +194,7 @@ bind`、`/codex resume`（包括节点 `--bind here`），以及 `/codex detach`
 `/codex unbind` 的操作，也都会失败并关闭，因为它们会替换或清除绑定。`/codex model` 查询以及 `/codex fast`、`/codex permissions` 和 `/codex
 threads` 仍然可用。`codex_threads` 代理工具不能附加新的 fork 或归档已绑定的原生线程。列表和仅元数据读取仍可用；转录字段需要 `supervision.allowRawTranscripts`，而重命名、取消归档、分离的 fork，以及对无关线程的归档则需要 `supervision.allowWriteControls`。这两个选项都不能替换锁定的绑定。否则，删除或重置 OpenClaw 条目会丢弃原生绑定，并在看起来像 Codex 的会话后面创建或允许一个通用线程。因此，保留维护会保留模型锁定条目，即使它们超过了普通的年龄、数量或磁盘预算限制。禁用或卸载拥有该条目的插件也会保留锁定和插件所有权标记。Chat 会保持不可用并失败关闭，直到同一个插件重新启用；清理绝不会把它转换为普通的模型会话。
 
-该操作绝不会恢复或修改源。临时 fork 会固定一个快照；它不是持久的续接线程。在第一次轮次中启动一个独立的规范 harness 线程，能防止 OpenClaw 因进程本地状态未能看到 Desktop 拥有的轮次，而仅仅因为这一点就变成一个竞争性的源写入者。可见历史镜像和已固定快照可能会遗漏尚未在活动源中完成的工作。原始 CLI 或 VS Code 源仍然可供原生和 OpenClaw 两种目录使用。规范分支仍然是监督存储中的一个原生 Codex 线程，但原生客户端可能会过滤其 `appServer` 源类型，因此 Codex Desktop 的可见性并不是一个契约。
+源绝不会因该操作而恢复或被修改。临时 fork 固定了一个快照；它不是持久的续接线程。在第一轮上启动一个独立的规范 harness 线程，可以防止 OpenClaw 仅仅因为进程本地状态未能看到一个由 Desktop 拥有的轮次，就变成一个竞争性的源写入者。可见历史镜像和已固定快照可能会省略在活动源中尚未完成的工作。原始 CLI、VS Code、Atlas 或 ChatGPT 源对原生和 OpenClaw 目录都仍然有效。规范分支仍然是监督存储中的原生 Codex 线程，但原生客户端可能会过滤其 `appServer` 源类型，因此 Codex Desktop 的可见性并不是一项契约。
 
 ## 归档行为
 

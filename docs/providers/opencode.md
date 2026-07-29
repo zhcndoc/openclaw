@@ -39,7 +39,7 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
       </Step>
       <Step title="将 Zen 模型设为默认值">
         ```bash
-        openclaw config set agents.defaults.model.primary "opencode/claude-opus-4-6"
+        openclaw config set agents.defaults.model.primary "opencode/gpt-5.6-sol"
         ```
       </Step>
       <Step title="验证模型是否可用">
@@ -86,7 +86,7 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 ```json5
 {
   env: { OPENCODE_API_KEY: "sk-..." },
-  agents: { defaults: { model: { primary: "opencode/claude-opus-4-6" } } },
+  agents: { defaults: { model: { primary: "opencode/gpt-5.6-sol" } } },
 }
 ```
 
@@ -94,14 +94,16 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 
 ### Zen
 
-| Property         | Value                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------- |
-| 运行时提供方 | `opencode`                                                                                    |
-| 示例模型   | `opencode/claude-opus-4-6`, `opencode/gpt-5.5`, `opencode/gemini-3.1-pro`, `opencode/glm-5.2` |
+| Property         | Value                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| Runtime provider | `opencode`                                                                                        |
+| Example models   | `opencode/gpt-5.6-sol`, `opencode/gemini-3.6-flash`, `opencode/minimax-m3`, `opencode/big-pickle` |
 
-运行 `openclaw models list --provider opencode` 查看完整的当前列表，其中
-还包括 `opencode/big-pickle` 和
-`opencode/deepseek-v4-flash-free` 等免费层级行。
+Run `openclaw models list --provider opencode` for the full current list, which
+also includes the currently promoted free-tier rows `opencode/big-pickle`,
+`opencode/deepseek-v4-flash-free`, `opencode/laguna-s-2.1-free`,
+`opencode/ling-3.0-flash-free`, `opencode/mimo-v2.5-free`,
+`opencode/nemotron-3-ultra-free`, and `opencode/north-mini-code-free`.
 
 ### Go
 

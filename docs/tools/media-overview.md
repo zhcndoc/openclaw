@@ -28,8 +28,8 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
   <Card title="音乐生成" href="/tools/music-generation" icon="music">
     通过 `music_generate` 生成音乐或音轨。聊天会话中异步运行，使用共享的媒体生成任务生命周期。
   </Card>
-  <Card title="文本转语音" href="/tools/tts" icon="microphone">
-    通过 `tts` 工具加上 `messages.tts` 配置将外发回复转换为语音音频。同步。
+  <Card title="Text-to-speech" href="/tools/tts" icon="microphone">
+    通过 `tts` 工具以及 `tts` 配置将对外回复转换为语音音频。同步。
   </Card>
   <Card title="媒体理解" href="/nodes/media-understanding" icon="eye">
     使用具备视觉能力的模型提供商和专用媒体理解插件，对传入的图像、音频和视频进行摘要。
@@ -42,11 +42,11 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 ## 提供商能力矩阵
 
 <Note>
-此表涵盖专用的媒体生成、TTS 和 STT 插件。许多聊天模型提供商（Anthropic、Google、OpenAI 等）也能通过其回复模型理解传入媒体；请参阅 [Media understanding](/nodes/media-understanding#provider-support-matrix) 中的完整提供商列表。
+此表涵盖专用的媒体生成、TTS 和 STT 插件。许多聊天模型提供商（Anthropic、Google、OpenAI 等）也能通过其回复模型理解传入媒体；请参阅 [媒体理解](/nodes/media-understanding#provider-support-matrix) 中的完整提供商列表。
 </Note>
 
-| Provider          | Image | Video | Music | TTS | STT | Realtime voice | Media understanding |
-| ----------------- | :---: | :---: | :---: | :-: | :-: | :------------: | :-----------------: |
+| 提供商            | 图像 | 视频 | 音乐 | TTS | STT | 实时语音 | 媒体理解 |
+| ----------------- | :---: | :---: | :---: | :-: | :---: | :------------: | :-----------------: |
 | Alibaba           |       |   ✓   |       |     |     |                |                     |
 | Azure Speech      |       |       |       |  ✓  |     |                |                     |
 | BytePlus          |       |   ✓   |       |     |     |                |                     |
@@ -77,7 +77,7 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 | Xiaomi MiMo       |       |       |       |  ✓  |     |                |                     |
 
 <Note>
-这里的 **Realtime voice** 指的是提供商原生的双向实时能力（Talk `realtime` 模式，例如 Gemini Live 或 OpenAI Realtime API）——目前只有 Google 和 OpenAI 注册了这一能力。Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 另外注册了 Voice Call 流式 STT（单向音频转文本）；请参阅下方 [Speech-to-text and Voice Call](#speech-to-text-and-voice-call)。
+这里的 **Realtime voice** 指的是提供商原生的双向实时能力（Talk `realtime` 模式，例如 Gemini Live 或 OpenAI Realtime API）——目前只有 Google 和 OpenAI 注册了这一能力。Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 另外注册了 Voice Call 流式 STT（单向音频转文本）；请参阅下方 [语音转文本和语音通话](#speech-to-text-and-voice-call)。
 xAI Realtime voice 是上游能力，但在共享的 realtime-voice 合同能够表示它之前，尚未在 OpenClaw 中注册。
 </Note>
 
@@ -92,20 +92,19 @@ xAI Realtime voice 是上游能力，但在共享的 realtime-voice 合同能够
 
 对于异步工具，OpenClaw 会将请求提交给提供商，立即返回一个任务 id，并在任务账本中跟踪该作业。代理在作业运行期间继续响应其他消息。当提供商完成后，OpenClaw 会用生成的媒体路径唤醒代理，以便它可以通过会话的正常可见回复模式告知用户：如果已配置，则自动发送最终回复；如果会话需要消息工具，则使用 `message(action="send")`。如果请求者会话处于非活动状态，或者其活动唤醒失败，并且完成回复中仍缺少某些生成的媒体，OpenClaw 会仅针对缺失的媒体发送幂等的直接回退。已由完成回复发送过的媒体不会再次发布。
 
-## 语音转文本与 Voice Call
+## Speech to Text and Voice Call
 
-Deepgram、DeepInfra、ElevenLabs、Google、Groq、Mistral、OpenAI、OpenRouter、
-SenseAudio 和 xAI 在配置后都可以通过批处理
-`tools.media.audio` 路径转录传入音频。对语音消息进行预检以进行提及门控或命令解析的频道插件，会在传入上下文中标记已转录的附件，因此共享的媒体理解流程会复用该转录内容，而不是对同一音频进行第二次 STT 调用。
+Deepgram, DeepInfra, ElevenLabs, Google, Groq, Mistral, OpenAI, OpenRouter,
+SenseAudio, and xAI can all transcribe incoming audio through the batch
+`tools.media.audio` path once configured. Channel plugins that precheck voice messages for mention gating or command parsing will mark transcribed attachments in the incoming context, allowing the shared media understanding flow to reuse that transcription instead of making a second STT call on the same audio.
 
-Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 也会注册 Voice Call
-流式 STT 提供商，因此实时电话音频可以在无需等待录音完成的情况下
-转发给所选
-供应商。
+Deepgram, ElevenLabs, Mistral, OpenAI, and xAI also register Voice Call
+streaming STT providers, so live phone audio can be forwarded to the selected
+provider without waiting for the recording to finish.
 
-对于实时用户对话，请优先使用 [Talk 模式](/nodes/talk)。批量音频附件仍保留在媒体路径上；浏览器实时、原生按住说话、电话和会议音频应使用 Talk 事件以及 Gateway 返回的会话作用域目录。
+For live user conversations, prefer the [Talk mode](/nodes/talk). Bulk audio attachments still stay on the media path; browser live, native push-to-talk, phone, and meeting audio should use Talk events and the session-scoped directory returned by Gateway.
 
-## Provider Mapping (How Each Vendor Is Distributed Across Surfaces)
+## 供应商映射（各供应商如何分布到不同表面）
 
 <AccordionGroup>
   <Accordion title="Google">

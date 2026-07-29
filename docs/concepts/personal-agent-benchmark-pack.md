@@ -26,19 +26,19 @@ title: "个人代理基准包"
 | `personal-no-fake-progress`           | 基于证据的完成声明，避免在本地证据不存在之前伪造进展                                           |
 | `personal-failure-recovery`           | 故障恢复，报告部分状态并保持重试边界清晰                                                       |
 
-机器可读的包元数据（id 列表、标题、描述）位于
-`extensions/qa-lab/src/scenario-packs.ts` 中的 `QA_PERSONAL_AGENT_SCENARIO_IDS`。
-使用 `--pack personal-agent` 运行该包：
+机器可读的 `personal-agent` 配置文件位于根目录 `taxonomy.yaml` 中，作为
+语义覆盖 ID。QA Lab 会从目录中解析每个主负责人；
+不存在第二个场景 ID 列表。运行方式如下：
 
 ```bash
-OPENCLAW_ENABLE_PRIVATE_QA_CLI=1 pnpm openclaw qa suite \
+OPENCLAW_ENABLE_PRIVATE_QA_CLI=1 pnpm openclaw qa run \
+  --qa-profile personal-agent \
   --provider-mode mock-openai \
-  --pack personal-agent \
   --concurrency 1
 ```
 
-`--pack` 可与重复的 `--scenario` 标志叠加使用。显式指定的场景会先运行，
-然后按 `QA_PERSONAL_AGENT_SCENARIO_IDS` 的顺序运行包内场景，并去重。
+使用重复的 `--scenario` 标志来缩小配置文件范围。场景文件和
+taxonomy 顺序不会影响成员关系或执行顺序。
 
 该包面向 `qa-channel`，使用 `mock-openai` 或其他本地 QA provider
 lane。不要将其指向在线聊天服务或真实个人账户。
@@ -51,8 +51,7 @@ lane。不要将其指向在线聊天服务或真实个人账户。
 
 ## 扩展包
 
-在 `qa/scenarios/personal/` 下添加新的 `.yaml` 案例，然后将场景 id
-加入 `QA_PERSONAL_AGENT_SCENARIO_IDS`。保持每个案例都足够小、在 `mock-openai` 中本地且确定性，并专注于一种个人助手行为。
+在 `qa/scenarios/personal/` 下添加新的 `.yaml` 案例，声明它们所证明的确切主覆盖 ID，并在该语义 ID 属于此基准时，将其添加到分类配置中。每个案例都应在 `mock-openai` 中保持小型、局部且确定性，并专注于一种个人助手行为。
 
 不错的后续候选项：脱敏轨迹导出检查、仅本地
 插件工作流检查。

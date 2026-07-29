@@ -16,7 +16,7 @@ title: "Novita 插件"
 
 ## 接口
 
-providers: novita, novita-ai, novitaai
+providers: `novita`, `novita-ai`, `novitaai`
 
 ## 相关文档
 

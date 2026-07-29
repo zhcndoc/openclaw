@@ -16,7 +16,7 @@ title: "Fireworks 插件"
 
 ## 表面
 
-providers: fireworks
+providers: `fireworks`
 
 ## 相关文档
 

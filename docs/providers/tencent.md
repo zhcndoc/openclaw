@@ -95,11 +95,11 @@ openclaw onboard --non-interactive \
 
 ## 内置目录
 
-| Model ref                      | 名称                   | 输入 | 上下文 | 最大输出 | 备注               |
-| ------------------------------ | ---------------------- | ----- | ------- | ---------- | ----------------- |
-| `tencent-tokenhub/hy3-preview` | hy3 预览版 (TokenHub)  | text  | 256,000 | 64,000     | 支持推理           |
-| `tencent-tokenhub/hy3`         | hy3 (TokenHub)         | text  | 256,000 | 64,000     | 支持推理           |
-| `tencent-tokenplan/hy3`        | hy3 (TokenPlan)        | text  | 256,000 | 64,000     | 支持推理           |
+| Model ref                      | Name                   | Input | Context | Max output | Notes                      |
+| ------------------------------ | ---------------------- | ----- | ------- | ---------- | -------------------------- |
+| `tencent-tokenhub/hy3-preview` | hy3 preview (TokenHub) | text  | 256,000 | 128,000    | deprecated; use `hy3`      |
+| `tencent-tokenhub/hy3`         | hy3 (TokenHub)         | text  | 256,000 | 128,000    | reasoning-enabled; current |
+| `tencent-tokenplan/hy3`        | hy3 (TokenPlan)        | text  | 256,000 | 128,000    | reasoning-enabled; current |
 
 hy3 是腾讯混元用于推理、长上下文指令遵循、代码和代理工作流的大型 MoE 语言模型。腾讯的 OpenAI 兼容示例使用 `hy3` 作为模型 id，并支持标准的 chat-completions 工具调用以及 `reasoning_effort`。
 

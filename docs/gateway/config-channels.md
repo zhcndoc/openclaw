@@ -78,7 +78,7 @@ title: "配置 — channels"
 
 ### Channel defaults and heartbeat
 
-Use `channels.defaults` to set shared group-policy and heartbeat behavior across providers:
+Use `channels.defaults` for shared group-policy, implicit-mention, and heartbeat behavior across providers:
 
 ```json5
 {
@@ -86,6 +86,11 @@ Use `channels.defaults` to set shared group-policy and heartbeat behavior across
     defaults: {
       groupPolicy: "allowlist", // open | allowlist | disabled
       contextVisibility: "all", // all | allowlist | allowlist_quote
+      implicitMentions: {
+        replyToBot: true,
+        quotedBot: true,
+        threadParticipation: true,
+      },
       heartbeat: {
         showOk: false,
         showAlerts: true,
@@ -96,11 +101,12 @@ Use `channels.defaults` to set shared group-policy and heartbeat behavior across
 }
 ```
 
-- `channels.defaults.groupPolicy`: fallback group policy used when a provider-level `groupPolicy` is not set.
-- `channels.defaults.contextVisibility`: default supplemental context visibility mode for all channels. Values: `all` (default, includes all quoted/thread/history context), `allowlist` (includes only context from allowlist senders), `allowlist_quote` (same as allowlist, but preserves explicit quote/reply context). Can be overridden per channel: `channels.<channel>.contextVisibility`.
-- `channels.defaults.heartbeat.showOk`: include healthy channel states in heartbeat output (default `false`).
-- `channels.defaults.heartbeat.showAlerts`: include degraded/error states in heartbeat output (default `true`).
-- `channels.defaults.heartbeat.useIndicator`: render heartbeat output in a compact indicator style (default `true`).
+- `channels.defaults.groupPolicy`: fallback group policy when a provider-level `groupPolicy` is unset.
+- `channels.defaults.contextVisibility`: default supplemental context visibility mode for all channels. Values: `all` (default, include all quoted/thread/history context), `allowlist` (only include context from allowlisted senders), `allowlist_quote` (same as allowlist but keep explicit quote/reply context). Per-channel override: `channels.<channel>.contextVisibility`.
+- `channels.defaults.implicitMentions`: controls which supported inbound facts count as mentions. `replyToBot`, `quotedBot`, and `threadParticipation` each default to `true`, preserving current behavior. Override per channel with `channels.<channel>.implicitMentions` or per account with `channels.<channel>.accounts.<id>.implicitMentions`; each flag resolves account -> channel -> defaults independently. The names are positive: set a flag to `false` to stop that fact from bypassing mention gating. Native explicit mentions are always allowed, and a flag has no effect when the channel does not produce that fact. See [Mention gating](/channels/groups#mention-gating-default) for the current producer matrix. These settings do not change outbound reply/thread modes or authorized command handling.
+- `channels.defaults.heartbeat.showOk`: include healthy channel statuses in heartbeat output (default `false`).
+- `channels.defaults.heartbeat.showAlerts`: include degraded/error statuses in heartbeat output (default `true`).
+- `channels.defaults.heartbeat.useIndicator`: render compact indicator-style heartbeat output (default `true`).
 
 ### WhatsApp
 
@@ -110,19 +116,6 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 {
   web: {
     enabled: true,
-    heartbeatSeconds: 60,
-    whatsapp: {
-      keepAliveIntervalMs: 25000,
-      connectTimeoutMs: 60000,
-      defaultQueryTimeoutMs: 60000,
-    },
-    reconnect: {
-      initialMs: 2000,
-      maxMs: 30000,
-      factor: 1.8,
-      jitter: 0.25,
-      maxAttempts: 12, // 0 = 永久重试
-    },
   },
   channels: {
     whatsapp: {
@@ -142,9 +135,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-- `web.whatsapp.keepAliveIntervalMs`（默认 `25000`）、`connectTimeoutMs`（默认 `60000`）以及 `defaultQueryTimeoutMs`（默认 `60000`）用于调优 Baileys socket。
-- `web.reconnect` 默认值：`initialMs: 2000`、`maxMs: 30000`、`factor: 1.8`、`jitter: 0.25`、`maxAttempts: 12`。`maxAttempts: 0` 表示永远重试，而不是放弃。
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目用于为 WhatsApp 私信和群组配置持久化 ACP 绑定。在 `match.peer.id` 中使用 E.164 直拨号码或 WhatsApp 群组 JID。字段语义见 [ACP Agents](/tools/acp-agents#persistent-channel-bindings)。
+- Top-level `bindings[]` entries with `type: "acp"` configure persistent ACP bindings for WhatsApp DMs and groups. Use an E.164 direct number or WhatsApp group JID in `match.peer.id`. Field semantics are shared in [ACP Agents](/tools/acp-agents#persistent-channel-bindings).
 
 <Accordion title="多账号 WhatsApp">
 
@@ -350,44 +341,44 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-- Token：`channels.discord.token`，默认账号可回退使用 `DISCORD_BOT_TOKEN`。
-- 提供显式 Discord `token` 的直接外发调用会使用该 token；账号重试/策略设置仍来自当前运行时快照中选定的账号。
-- 可选的 `channels.discord.defaultAccount` 在匹配已配置的账号 ID 时会覆盖默认账号选择。
-- 使用 `user:<id>`（DM）或 `channel:<id>`（公会频道）作为投递目标；纯数字 ID 会被拒绝。
-- 公会 slug 使用小写，空格替换为 `-`；频道键使用 slug 化后的名称（不带 `#`）。优先使用公会 ID。
-- 默认忽略机器人发出的消息。`allowBots: true` 可启用；使用 `allowBots: "mentions"` 仅接受提及机器人的机器人消息（自身消息仍会过滤）。
-- 支持机器人发起入站消息的频道可使用共享的 [bot 循环保护](/channels/bot-loop-protection)。设置 `channels.defaults.botLoopProtection` 作为基础配对预算，然后仅在某个表面需要不同限制时再覆盖频道或账号。
-- `channels.discord.guilds.<id>.ignoreOtherMentions`（以及频道覆盖项）会丢弃提及其他用户或角色但没有提及机器人的消息（不包括 @everyone/@here）。
-- `channels.discord.mentionAliases` 会在发送前把稳定的外发 `@handle` 文本映射到 Discord 用户 ID，因此即使临时目录缓存为空，也能确定性地提及已知队友。每账号覆盖项位于 `channels.discord.accounts.<accountId>.mentionAliases`。
-- `maxLinesPerMessage`（默认 `17`）会在消息长度未超过 2000 字符时，也将过高的消息拆分。
-- `channels.discord.suppressEmbeds` 默认是 `true`，因此外发 URL 不会展开为 Discord 链接预览，除非将其禁用。显式的 `embeds` 负载仍会正常发送；每条消息的工具调用可通过 `suppressEmbeds` 覆盖。
-- `channels.discord.threadBindings` 控制 Discord 线程绑定路由：
-  - `enabled`：线程绑定会话功能的 Discord 覆盖项（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age`，以及绑定投递/路由）
-  - `idleHours`：空闲后自动取消聚焦的小时数 Discord 覆盖项（`0` 为禁用）
-  - `maxAgeHours`：硬性最大时长（小时）的 Discord 覆盖项（`0` 为禁用）
-  - `spawnSessions`：`sessions_spawn({ thread: true })` 和 ACP 线程创建自动绑定的开关（默认：`true`）
-  - `defaultSpawnContext`：线程绑定 spawn 的原生子代理上下文（默认 `"fork"`）
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目会为频道和线程配置持久化的 ACP 绑定（在 `match.peer.id` 中使用频道/线程 id）。字段语义与 [ACP Agents](/tools/acp-agents#persistent-channel-bindings) 共用。
-- `channels.discord.ui.components.accentColor` 为 Discord components v2 容器设置强调色。
-- `channels.discord.agentComponents.ttlMs` 控制已发送的 Discord 组件回调保持注册的时长。默认 `1800000`（30 分钟），最大 `86400000`（24 小时）。每账号覆盖项位于 `channels.discord.accounts.<accountId>.agentComponents.ttlMs`。优先选择满足工作流的最短 TTL。
-- `channels.discord.voice` 启用 Discord 语音频道会话以及可选的自动加入 + LLM + TTS 覆盖项。仅文本 Discord 配置默认关闭语音；设置 `channels.discord.voice.enabled=true` 以启用。
-- `channels.discord.voice.model` 可选地覆盖用于 Discord 语音频道响应的 LLM 模型。
-- `channels.discord.voice.daveEncryption`（默认 `true`）和 `channels.discord.voice.decryptionFailureTolerance`（默认 `24`）会传递给 `@discordjs/voice` 的 DAVE 选项。
-- `channels.discord.voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时，`@discordjs/voice` 初始 Ready 等待时间（默认 `30000`）。
-- `channels.discord.voice.reconnectGraceMs` 控制断开的语音会话在 OpenClaw 销毁之前，进入重连信号阶段所允许的时间（默认 `15000`）。
-- Discord 语音播放不会因其他用户开始说话事件而中断。为避免反馈回路，OpenClaw 在 TTS 播放时会忽略新的语音捕获。
-- OpenClaw 还会在多次解密失败后，通过离开/重新加入语音会话来尝试恢复语音接收。
-- `channels.discord.streaming` 是标准的流模式键。Discord 默认 `streaming.mode: "progress"`，因此工具/工作进度会显示在一条已编辑的预览消息中；设置 `streaming.mode: "off"` 可禁用。旧的扁平键（`streamMode`、`chunkMode`、`blockStreaming`、`draftChunk`、`blockStreamingCoalesce`）在运行时不再读取；请运行 `openclaw doctor --fix` 迁移持久化配置。
-- `channels.discord.autoPresence` 将运行时可用性映射为机器人状态（healthy => online，degraded => idle，exhausted => dnd），并允许可选的状态文本覆盖。
-- `channels.discord.guilds.<id>.presenceEvents` 会将人类可用性到达路由到一个配置好的 Discord 频道，作为代理系统事件。它会从完整的 `GUILD_CREATE` 快照中为当前在线成员建立种子，路由观测到的离线到在线转换，并将首次后续出现的、此前未见成员的在线信号视为新可用，而不判断其是上线还是在快照后加入。超过 Discord 75,000 成员快照限制的公会需要先有一个显式的离线更新。它需要 `channels.discord.intents.presence=true`、Discord 开发者门户中的特权 Presence Intent，以及已启用的代理心跳。
-- `channels.discord.dangerouslyAllowNameMatching` 会重新启用可变名称/标签匹配（紧急兼容模式）。
-- `channels.discord.execApprovals`：Discord 原生的执行审批投递和审批者授权。
-  - `enabled`：`true`、`false` 或 `"auto"`（默认）。在自动模式下，当可从 `approvers` 或 `commands.ownerAllowFrom` 中解析出审批者时，执行审批会激活。
-  - `approvers`：允许批准执行请求的 Discord 用户 ID。若省略，则回退到 `commands.ownerAllowFrom`。
-  - `agentFilter`：可选的代理 ID 白名单。省略则转发所有代理的审批。
-  - `sessionFilter`：可选的会话键模式（子串或正则）。
-  - `target`：审批提示发送位置。`"dm"`（默认）发送到审批者的 DM，`"channel"` 发送到原始频道，`"both"` 同时发送到两者。当前者包含 `"channel"` 时，按钮仅允许已解析的审批者使用。
-  - `cleanupAfterResolve`：为 `true` 时，在批准、拒绝或超时后删除审批 DM。
+- Token: `channels.discord.token`, with `DISCORD_BOT_TOKEN` as fallback for the default account.
+- Direct outbound calls that provide an explicit Discord `token` use that token for the call; account retry/policy settings still come from the selected account in the active runtime snapshot.
+- Optional `channels.discord.defaultAccount` overrides default account selection when it matches a configured account id.
+- Use `user:<id>` (DM) or `channel:<id>` (guild channel) for delivery targets; bare numeric IDs are rejected.
+- Guild slugs are lowercase with spaces replaced by `-`; channel keys use the slugged name (no `#`). Prefer guild IDs.
+- Bot-authored messages are ignored by default. `allowBots: true` enables them; use `allowBots: "mentions"` to only accept bot messages that mention the bot (own messages still filtered).
+- Channels that support bot-authored inbound messages can use shared [bot loop protection](/channels/bot-loop-protection). Set `channels.defaults.botLoopProtection` for baseline pair budgets, then override the channel or account only when one surface needs different limits.
+- `channels.discord.guilds.<id>.ignoreOtherMentions` (and channel overrides) drops messages that mention another user or role but not the bot (excluding @everyone/@here).
+- `channels.discord.mentionAliases` maps stable outbound `@handle` text to Discord user IDs before sending, so known teammates can be mentioned deterministically even when the transient directory cache is empty. Per-account overrides live under `channels.discord.accounts.<accountId>.mentionAliases`.
+- `maxLinesPerMessage` (default `17`) splits tall messages even when under 2000 chars.
+- `channels.discord.suppressEmbeds` defaults to `true`, so outbound URLs do not expand into Discord link previews unless disabled. Explicit `embeds` payloads still send normally; per-message tool calls can override with `suppressEmbeds`.
+- `channels.discord.threadBindings` controls Discord thread-bound routing:
+  - `enabled`: Discord override for thread-bound session features (`/focus`, `/unfocus`, `/agents`, `/session idle`, `/session max-age`, and bound delivery/routing)
+  - `idleHours`: Discord override for inactivity auto-unfocus in hours (`0` disables)
+  - `maxAgeHours`: Discord override for hard max age in hours (`0` disables)
+  - `spawnSessions`: switch for `sessions_spawn({ thread: true })` and ACP thread-spawn auto thread creation/binding (default: `true`)
+  - `defaultSpawnContext`: native subagent context for thread-bound spawns (`"fork"` by default)
+- Top-level `bindings[]` entries with `type: "acp"` configure persistent ACP bindings for channels and threads (use channel/thread id in `match.peer.id`). Field semantics are shared in [ACP Agents](/tools/acp-agents#persistent-channel-bindings).
+- `channels.discord.ui.components.accentColor` sets the accent color for Discord components v2 containers.
+- `channels.discord.agentComponents.ttlMs` controls how long sent Discord component callbacks remain registered. Default `1800000` (30 minutes), maximum `86400000` (24 hours). Per-account overrides live under `channels.discord.accounts.<accountId>.agentComponents.ttlMs`. Prefer the shortest TTL that fits the workflow.
+- `channels.discord.voice` enables Discord voice channel conversations and optional auto-join + LLM + TTS overrides. Text-only Discord configs leave voice off by default; set `channels.discord.voice.enabled=true` to opt in.
+- `channels.discord.voice.model` optionally overrides the LLM model used for Discord voice channel responses.
+- `channels.discord.voice.daveEncryption` (default `true`) and `channels.discord.voice.decryptionFailureTolerance` (default `24`) pass through to `@discordjs/voice` DAVE options.
+- `channels.discord.voice.connectTimeoutMs` controls the initial `@discordjs/voice` Ready wait for `/vc join` and auto-join attempts (default `30000`).
+- `channels.discord.voice.reconnectGraceMs` controls how long a disconnected voice session may take to enter reconnect signalling before OpenClaw destroys it (default `15000`).
+- Discord voice playback is not interrupted by another user's speaking-start event. To avoid feedback loops, OpenClaw ignores new voice capture while TTS is playing.
+- OpenClaw additionally attempts voice receive recovery by leaving/rejoining a voice session after repeated decrypt failures.
+- `channels.discord.streaming` is the canonical stream mode key. Discord defaults to `streaming.mode: "progress"` so tool/work progress appears in one edited preview message; set `streaming.mode: "off"` to disable it. Legacy flat keys (`streamMode`, `chunkMode`, `blockStreaming`, `draftChunk`, `blockStreamingCoalesce`) are no longer read at runtime; run `openclaw doctor --fix` to migrate persisted config.
+- `channels.discord.autoPresence` maps runtime availability to bot presence (healthy => online, degraded => idle, exhausted => dnd) and allows optional status text overrides.
+- `channels.discord.guilds.<id>.presenceEvents` routes human availability arrivals into one configured Discord channel as agent system events. Eligible members must be able to view `channelId`; public threads inherit parent visibility, while private threads additionally require membership or Manage Threads. `users` can further narrow that audience. It seeds current online members from complete `GUILD_CREATE` snapshots, routes observed offline-to-online transitions, and treats a first later online signal for an unseen member as newly available without asserting whether they came online or joined after the snapshot. Guilds above Discord's 75,000-member snapshot limit require an explicit offline update first. Throttling knobs: `reconnectSuppressSeconds` (quiet window after a new Gateway session while guild presence state is rebuilt, default 300, `0` disables) and `burstLimit`/`burstWindowSeconds` (per-guild successfully queued event rate limit, default 8 events per 60s sliding window). Resumed sessions do not start the reconnect suppression window. The existing per-user re-greet cooldown remains eight hours. It requires `channels.discord.intents.presence=true`, the privileged Presence Intent in Discord's Developer Portal, and an enabled agent heartbeat.
+- `channels.discord.dangerouslyAllowNameMatching` re-enables mutable name/tag matching (break-glass compatibility mode).
+- `channels.discord.execApprovals`: Discord-native exec approval delivery and approver authorization.
+  - `enabled`: `true`, `false`, or `"auto"` (default). In auto mode, exec approvals activate when approvers can be resolved from `approvers` or `commands.ownerAllowFrom`.
+  - `approvers`: Discord user IDs allowed to approve exec requests. Falls back to `commands.ownerAllowFrom` when omitted.
+  - `agentFilter`: optional agent ID allowlist. Omit to forward approvals for all agents.
+  - `sessionFilter`: optional session key patterns (substring or regex).
+  - `target`: where to send approval prompts. `"dm"` (default) sends to approver DMs, `"channel"` sends to the originating channel, `"both"` sends to both. When target includes `"channel"`, buttons are only usable by resolved approvers.
+  - `cleanupAfterResolve`: when `true`, deletes approval DMs after approval, denial, or timeout.
 
 **Reaction 通知模式：** `off`（无）、`own`（机器人的消息，默认）、`all`（所有消息）、`allowlist`（来自 `guilds.<id>.users` 的所有消息）。
 
@@ -403,11 +394,8 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
       audience: "https://gateway.example.com/googlechat",
       webhookPath: "/googlechat",
       botUser: "users/1234567890",
-      dm: {
-        enabled: true,
-        policy: "pairing",
-        allowFrom: ["users/1234567890"],
-      },
+      dmPolicy: "pairing",
+      allowFrom: ["users/1234567890"],
       groupPolicy: "allowlist",
       groups: {
         "spaces/AAAA": { allow: true, requireMention: true },
@@ -420,11 +408,11 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-- 服务账号 JSON：内联（`serviceAccount`）或基于文件（`serviceAccountFile`）。
-- 也支持服务账号 SecretRef（`serviceAccountRef`）。
-- 环境变量回退：`GOOGLE_CHAT_SERVICE_ACCOUNT` 或 `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`（仅默认账号）。
-- 投递目标请使用 `spaces/<spaceId>` 或 `users/<userId>`。
-- `channels.googlechat.dangerouslyAllowNameMatching` 会重新启用可变邮箱主体匹配（破窗兼容模式）。
+- Service account JSON: inline (`serviceAccount`) or file-based (`serviceAccountFile`).
+- `serviceAccount` accepts a SecretRef directly.
+- Env fallbacks: `GOOGLE_CHAT_SERVICE_ACCOUNT` or `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE` (default account only).
+- Use `spaces/<spaceId>` or `users/<userId>` for delivery targets.
+- `channels.googlechat.dangerouslyAllowNameMatching` re-enables mutable email principal matching (break-glass compatibility mode).
 
 ### Slack
 
@@ -499,34 +487,38 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-- **Socket 模式** 需要同时提供 `botToken` 和 `appToken`（默认账号环境回退使用 `SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN`）。
-- **HTTP 模式** 需要 `botToken` 以及 `signingSecret`（位于根级或按账号配置）。
-- `enterpriseOrgInstall: true` 会将某个账号启用到 Slack Enterprise Grid
-  组织级事件路径。启动时会通过 `auth.test` 验证 bot token，并在
-  配置模式与 Slack 的安装身份不匹配时失败。
-  企业版私信必须禁用，或使用 `dmPolicy: "open"` 并配合有效的
-  `allowFrom: ["*"]`。频道和用户策略必须使用稳定的 Slack ID；
-  可变名称和不受支持的频道前缀会导致启动失败。V1 仅处理
-  直接的 Socket Mode 或 HTTP `message` 和 `app_mention` 事件，并立即
-  回复；中继、命令、交互、App Home、reaction 事件监听器、
-  置顶、action tools、原生审批、bindings、延迟投递，以及
-  主动发送均不可用。监听器拥有的确认、输入中状态以及
-  状态 reaction 仍可通过 `reactions:write` 使用；入站 reaction
-  通知和 reaction action tools 不可用。请参阅
-  [Enterprise Grid 组织级安装](/channels/slack#enterprise-grid-org-wide-installs)
-  了解最小权限 manifest、设置流程和完整限制。
-- `socketMode` 会将 Slack SDK Socket Mode 传输调优参数透传到公开的 Bolt receiver API。仅在排查 ping/pong 超时或 websocket 陈旧行为时使用。`clientPingTimeout` 默认值为 `15000`；仅在配置后才会传递 `serverPingTimeout` 和 `pingPongLoggingEnabled`。
-- `botToken`、`appToken`、`signingSecret` 和 `userToken` 可接受明文
-  字符串或 SecretRef 对象。
-- Slack 账号快照会暴露每个凭据的来源/状态字段，例如
-  `botTokenSource`、`botTokenStatus`、`appTokenStatus` 以及在 HTTP 模式下的
-  `signingSecretStatus`。`configured_unavailable` 表示账号已通过 SecretRef
-  配置，但当前命令/运行时路径无法解析该 secret 值。
-- `configWrites: false` 会阻止 Slack 发起的配置写入。
-- 可选的 `channels.slack.defaultAccount` 会在与已配置账号 id 匹配时覆盖默认账号选择。
-- `channels.slack.streaming.mode` 是 Slack 流式模式的规范键（默认 `"partial"`）。`channels.slack.streaming.nativeTransport` 控制 Slack 原生流式传输（默认 `true`）。旧的 `streamMode`、布尔值 `streaming`、`chunkMode`、`blockStreaming`、`blockStreamingCoalesce` 和 `nativeStreaming` 运行时不再读取；请运行 `openclaw doctor --fix` 将持久化配置迁移到 `streaming.{mode,chunkMode,block.enabled,block.coalesce,nativeTransport}`。
-- `unfurlLinks` 和 `unfurlMedia` 会将 Slack `chat.postMessage` 的链接和媒体 unfurl 布尔值传递给 bot 回复。`unfurlLinks` 默认是 `false`，因此除非启用，否则外发 bot 链接不会在消息内展开；`unfurlMedia` 在未配置时会被省略。将任一值设置在 `channels.slack.accounts.<accountId>` 上，可为单个账号覆盖顶层值。
-- 使用 `user:<id>`（私信）或 `channel:<id>` 作为投递目标。
+- **Socket mode** requires both `botToken` and `appToken` (`SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN` for default account env fallback).
+- **HTTP mode** requires `botToken` plus `signingSecret` (at root or per-account).
+- **User identity** (`identity: "user"`) posts and reads as the authorizing human. It requires `userToken` plus `appToken` in Socket Mode, or `userToken` plus `signingSecret` in HTTP mode. No bot token or bot user is required. See [User identity](/channels/slack#user-identity-post-as-a-real-person) for user scopes and event subscriptions.
+- `enterpriseOrgInstall: true` opts an account into the Slack Enterprise Grid
+  org-wide event path. Startup verifies the bot token with `auth.test` and
+  fails when the configured mode does not match Slack's installation identity.
+  Enterprise DMs must be disabled or use `dmPolicy: "open"` with an effective
+  `allowFrom: ["*"]`. Channel and user policies must use stable Slack IDs;
+  mutable names and unsupported channel prefixes fail startup. V1 handles only
+  direct Socket Mode or HTTP `message` and `app_mention` events with immediate
+  replies; relay, commands, interactions, App Home, reaction event listeners,
+  pins, action tools, native approvals, bindings, deferred delivery, and
+  proactive sends are unavailable. Listener-owned acknowledgment, typing, and
+  status reactions remain available with `reactions:write`; inbound reaction
+  notifications and reaction action tools are unavailable. See
+  [Enterprise Grid org-wide installs](/channels/slack#enterprise-grid-org-wide-installs)
+  for the least-privilege manifest, setup workflow, and complete restrictions.
+- `socketMode` passes Slack SDK Socket Mode transport tuning through to the public Bolt receiver API. Use it only when investigating ping/pong timeout or stale websocket behavior. `clientPingTimeout` defaults to `15000`; `serverPingTimeout` and `pingPongLoggingEnabled` are passed only when configured.
+- `botToken`, `appToken`, `signingSecret`, and `userToken` accept plaintext
+  strings or SecretRef objects.
+- Slack account snapshots expose per-credential source/status fields such as
+  `botTokenSource`, `botTokenStatus`, `userTokenSource`, `userTokenStatus`,
+  `appTokenStatus`, and, in HTTP mode, `signingSecretStatus`.
+  `configured_unavailable` means the account is
+  configured through SecretRef but the current command/runtime path could not
+  resolve the secret value.
+- `configWrites: false` blocks Slack-initiated config writes.
+- Optional `channels.slack.defaultAccount` overrides default account selection when it matches a configured account id.
+- `dm.groupEnabled` and `dm.groupChannels` only filter Slack group DMs (MPDMs) the app is already a member of. They cannot make the app see an existing group DM it never joined; convert the group DM to a private channel and invite the app, or have the app open a new MPDM with `conversations.open`. See [Group DMs (MPDMs) and bots](/channels/slack#group-dms-mpdms-and-bots).
+- `channels.slack.streaming.mode` is the canonical Slack stream mode key (default `"partial"`). `channels.slack.streaming.nativeTransport` controls Slack's native streaming transport (default `true`). Legacy `streamMode`, boolean `streaming`, `chunkMode`, `blockStreaming`, `blockStreamingCoalesce`, and `nativeStreaming` values are no longer read at runtime; run `openclaw doctor --fix` to migrate persisted config to `streaming.{mode,chunkMode,block.enabled,block.coalesce,nativeTransport}`.
+- `unfurlLinks` and `unfurlMedia` pass Slack's `chat.postMessage` link and media unfurl booleans through for bot replies. `unfurlLinks` defaults to `false` so outbound bot links do not expand inline unless enabled; `unfurlMedia` is omitted unless configured. Set either value at `channels.slack.accounts.<accountId>` to override the top-level value for one account.
+- Use `user:<id>` (DM) or `channel:<id>` for delivery targets.
 
 **Reaction 通知模式：** `off`、`own`（默认）、`all`、`allowlist`（来自 `reactionAllowlist`）。
 
@@ -823,7 +815,9 @@ Each channel can run multiple accounts (each with its own `accountId`):
 
 群组消息默认需要**提及**（元数据提及或安全正则模式）。适用于 WhatsApp、Telegram、Discord、Google Chat 和 iMessage 群聊。
 
-可见回复是单独控制的。普通群组、频道和内部 WebChat 直接请求默认采用自动最终交付：最终助手文本会通过旧的可见回复路径发布。若希望可见输出仅在代理调用 `message(action=send)` 之后才发布，请启用 `messages.visibleReplies: "message_tool"` 或 `messages.groupChat.visibleReplies: "message_tool"`。如果模型在启用了仅工具模式后返回了实质性的最终答案却没有调用 message 工具，那么该最终文本会保持私有，gateway 详细日志会记录被抑制的载荷元数据，OpenClaw 会排队一次恢复重试，要求模型通过 `message(action=send)` 交付相同回复。
+Visible replies are controlled separately. Normal group, channel, and internal WebChat direct requests default to automatic final delivery: final assistant text posts through the legacy visible reply path. Opt into `messages.visibleReplies: "message_tool"` or `messages.groupChat.visibleReplies: "message_tool"` when model-authored source replies should only post after the agent calls `message(action=send)`. If the model returns a substantive final answer without calling the message tool in an opted-in tool-only mode, that final text stays private, the gateway verbose log records suppressed payload metadata, and OpenClaw enqueues one recovery retry asking the model to deliver the same reply via `message(action=send)`.
+
+The tool-only policy governs assistant source replies and generic tool media. It does not suppress runtime-owned terminal output such as authorized command responses, durable completion notices, or provider-native artifacts that the owning harness explicitly classifies as host-owned. Host-owned artifacts are delivered through the normal channel dispatch path and still respect outbound `sendPolicy` denial. Ambient `room_event` turns remain quiet unless they are explicit commands, even when runtime output is marked host-owned.
 
 仅工具可见回复要求模型/运行时能够可靠调用工具，并建议用于最新一代模型上的共享环境房间，例如 GPT-5.6 Sol。某些较弱模型可以生成最终文本，但无法理解源可见输出必须通过 `message(action=send)` 发送。对于常见的“最终答案滞留”情况，OpenClaw 默认只会在以下条件下进行恢复：最终内容足够实质、源 turn 不是房间事件、发送策略没有拒绝交付、且没有已经发送的源回复。恢复最多只进行一次重试；它会抑制合成重试提示的持久化，并让该重试不进入 collect 批处理，因此不会与无关的排队提示合并。如果重试后仍然滞留或无法入队，OpenClaw 只会交付一条经过净化的诊断信息，例如 “我生成了一条回复，但无法将其发送到此聊天中。请重试。” 原始的私有最终文本绝不会被标记为自动源交付。对于持续出现回复滞留的模型，请使用 `"automatic"`，这样最终助手轮次就会走可见回复路径；或者切换到更强的工具调用模型；或者检查 gateway 详细日志中的被抑制载荷摘要；又或者设置 `messages.groupChat.visibleReplies: "automatic"`，让所有群组/频道请求都使用可见最终回复。
 
@@ -841,9 +835,9 @@ Each channel can run multiple accounts (each with its own `accountId`):
 
 **提及类型：**
 
-- **元数据提及**：原生平台 @-mentions。在 WhatsApp self-chat mode 中会被忽略。
-- **文本模式**：`agents.list[].groupChat.mentionPatterns` 中的安全正则模式。无效模式和不安全的嵌套重复会被忽略。
-- 只有在能够检测到时才会强制提及门控（原生 mentions 或至少一个模式）。
+- **Metadata mentions**: Native platform @-mentions. Ignored in WhatsApp self-chat mode.
+- **Text patterns**: Safe regex patterns in `agents.entries.*.groupChat.mentionPatterns`. Invalid patterns and unsafe nested repetition are ignored.
+- Mention gating is enforced only when detection is possible (native mentions or at least one pattern).
 
 ```json5
 {
@@ -919,11 +913,11 @@ Each channel can run multiple accounts (each with its own `accountId`):
     text: true, // 解析聊天消息中的 /commands
     bash: false, // 允许 !（别名：/bash）
     bashForegroundMs: 2000,
-    config: false, // 允许 /config
-    mcp: false, // 允许 /mcp
-    plugins: false, // 允许 /plugins
-    debug: false, // 允许 /debug
-    restart: true, // 允许 /restart + gateway restart tool
+    config: false, // allow /config
+    mcp: false, // allow /mcp
+    plugins: false, // allow /plugins
+    debug: false, // allow /debug
+    restart: true, // allow /restart + external SIGUSR1 restart requests
     ownerAllowFrom: ["discord:123456789012345678"],
     ownerDisplay: "raw", // raw | hash
     ownerDisplaySecret: "${OWNER_ID_HASH_SECRET}",
@@ -938,32 +932,32 @@ Each channel can run multiple accounts (each with its own `accountId`):
 
 <Accordion title="命令详情">
 
-- 该块用于配置命令表面。当前内置 + 捆绑的命令目录请参见 [Slash Commands](/tools/slash-commands)。
-- 本页是**配置键参考**，不是完整的命令目录。由频道/插件拥有的命令，如 QQ Bot 的 `/bot-ping` `/bot-help` `/bot-logs`、LINE 的 `/card`、设备配对 `/pair`、memory 的 `/dreaming`、手机控制 `/phone` 和 Talk 的 `/voice`，都记录在各自的频道/插件页面以及 [Slash Commands](/tools/slash-commands) 中。
-- 文本命令必须是**独立**消息，且以 `/` 开头。
-- `native: "auto"` 会为 Discord/Telegram 打开原生命令，Slack 仍关闭。
-- `nativeSkills: "auto"` 会为 Discord/Telegram 打开原生技能命令，Slack 仍关闭。
-- 每频道覆盖：`channels.discord.commands.native`（bool 或 `"auto"`）。对于 Discord，`false` 会在启动期间跳过原生命令注册和清理。
-- 通过 `channels.<provider>.commands.nativeSkills` 覆盖每个频道的原生技能注册。
-- `channels.telegram.customCommands` 会增加额外的 Telegram bot 菜单项。
-- `bash: true` 会为主机 shell 启用 `! <cmd>`。要求 `tools.elevated.enabled` 且发送者在 `tools.elevated.allowFrom.<channel>` 中。
-- `config: true` 会启用 `/config`（读/写 `openclaw.json`）。对于 gateway `chat.send` 客户端，持久化的 `/config set|unset` 写入还需要 `operator.admin`；只读 `/config show` 仍对普通写权限范围的 operator 客户端可用。
-- `mcp: true` 会启用 `/mcp`，用于操作 `mcp.servers` 下由 OpenClaw 管理的 MCP server 配置。
-- `plugins: true` 会启用 `/plugins`，用于插件发现、安装和启用/禁用控制。
-- `channels.<provider>.configWrites` 按频道限制配置变更（默认：true）。
-- 对于多账号频道，`channels.<provider>.accounts.<id>.configWrites` 也会限制目标为该账号的写入（例如 `/allowlist --config --account <id>` 或 `/config set channels.<provider>.accounts.<id>...`）。
-- `restart: false` 会禁用 `/restart` 和 gateway restart tool 操作。默认：`true`。
-- `ownerAllowFrom` 是 owner-only 命令和 owner-gated 频道操作的显式 owner allowlist。它与 `allowFrom` 分开。
-- `ownerDisplay: "hash"` 会在系统提示词中对 owner id 进行哈希。设置 `ownerDisplaySecret` 以控制哈希方式。
-- `allowFrom` 是按 provider 设置的。当其被设置时，它是**唯一**授权来源（会忽略频道 allowlists/pairing 和 `useAccessGroups`）。
-- `useAccessGroups: false` 允许命令在未设置 `allowFrom` 时绕过 access-group 策略。
-- 命令文档映射：
-  - 内置 + 捆绑目录：[Slash Commands](/tools/slash-commands)
-  - 频道特定命令表面：[Channels](/channels)
-  - QQ Bot 命令：[QQ Bot](/channels/qqbot)
-  - 配对命令：[Pairing](/channels/pairing)
-  - LINE card 命令：[LINE](/channels/line)
-  - memory dreaming：[Dreaming](/concepts/dreaming)
+- This block configures command surfaces. For the current built-in + bundled command catalog, see [Slash Commands](/tools/slash-commands).
+- This page is a **config-key reference**, not the full command catalog. Channel/plugin-owned commands such as QQ Bot `/bot-ping` `/bot-help` `/bot-logs`, LINE `/card`, device-pair `/pair`, memory `/dreaming`, and Talk `/voice` are documented in their channel/plugin pages plus [Slash Commands](/tools/slash-commands).
+- Text commands must be **standalone** messages with leading `/`.
+- `native: "auto"` turns on native commands for Discord/Telegram, leaves Slack off.
+- `nativeSkills: "auto"` turns on native skill commands for Discord/Telegram, leaves Slack off.
+- Override per channel: `channels.discord.commands.native` (bool or `"auto"`). For Discord, `false` skips native command registration and cleanup during startup.
+- Override native skill registration per channel with `channels.<provider>.commands.nativeSkills`.
+- `channels.telegram.customCommands` adds extra Telegram bot menu entries.
+- `bash: true` enables `! <cmd>` for host shell. Requires `tools.elevated.enabled` and sender in `tools.elevated.allowFrom.<channel>`.
+- `config: true` enables `/config` (reads/writes `openclaw.json`). For gateway `chat.send` clients, persistent `/config set|unset` writes also require `operator.admin`; read-only `/config show` stays available to normal write-scoped operator clients.
+- `mcp: true` enables `/mcp` for OpenClaw-managed MCP server config under `mcp.servers`.
+- `plugins: true` enables `/plugins` for plugin discovery, install, and enable/disable controls.
+- `channels.<provider>.configWrites` gates config mutations per channel (default: true).
+- For multi-account channels, `channels.<provider>.accounts.<id>.configWrites` also gates writes that target that account (for example `/allowlist --config --account <id>` or `/config set channels.<provider>.accounts.<id>...`).
+- `restart: false` disables `/restart` and external `SIGUSR1` restart requests. Default: `true`.
+- `ownerAllowFrom` is the explicit owner allowlist for owner-only commands and owner-gated channel actions. It is separate from `allowFrom`.
+- `ownerDisplay: "hash"` hashes owner ids in the system prompt. Set `ownerDisplaySecret` to control hashing.
+- `allowFrom` is per-provider. When set, it is the **only** authorization source (channel allowlists/pairing and `useAccessGroups` are ignored).
+- `useAccessGroups: false` allows commands to bypass access-group policies when `allowFrom` is not set.
+- Command docs map:
+  - built-in + bundled catalog: [Slash Commands](/tools/slash-commands)
+  - channel-specific command surfaces: [Channels](/channels)
+  - QQ Bot commands: [QQ Bot](/channels/qqbot)
+  - pairing commands: [Pairing](/channels/pairing)
+  - LINE card command: [LINE](/channels/line)
+  - memory dreaming: [Dreaming](/concepts/dreaming)
 
 </Accordion>
 

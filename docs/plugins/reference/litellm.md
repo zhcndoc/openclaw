@@ -16,7 +16,7 @@ title: "LiteLLM 插件"
 
 ## 接口
 
-providers: litellm; contracts: imageGenerationProviders
+providers: `litellm`; contracts: `imageGenerationProviders`
 
 ## 相关文档
 

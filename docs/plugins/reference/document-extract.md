@@ -16,7 +16,7 @@ title: "Document Extract 插件"
 
 ## 接口
 
-contracts: documentExtractors
+contracts: `documentExtractors`
 
 ## 相关文档
 

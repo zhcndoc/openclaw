@@ -46,10 +46,10 @@ Anthropic 已确认 Claude CLI 复用（包括 `claude -p`）是一种被认可�
 
 ## 密钥如何被发现
 
-- **Auth profiles**：按代理存储在 `auth-profiles.json` 中。
-- **Environment variables**：例如 `OPENAI_API_KEY`、`BRAVE_API_KEY`、`FIRECRAWL_API_KEY`。
-- **Config**：`models.providers.*.apiKey`、`plugins.entries.*.config.webSearch.apiKey`、`plugins.entries.firecrawl.config.webFetch.apiKey`、`agents.defaults.memorySearch.*`、`talk.providers.*.apiKey`。
-- **Skills**：`skills.entries.<name>.apiKey`，它可能会将密钥导出到技能进程的环境变量中。
+- **Auth profiles**: 每个代理单独配置，存储在 `auth-profiles.json` 中。
+- **Environment variables**: 例如 `OPENAI_API_KEY`、`BRAVE_API_KEY`、`FIRECRAWL_API_KEY`。
+- **Config**: `models.providers.*.apiKey`、`plugins.entries.*.config.webSearch.apiKey`、`plugins.entries.firecrawl.config.webFetch.apiKey`、`memory.search.*`、`talk.providers.*.apiKey`。
+- **Skills**: `skills.entries.<name>.apiKey`，它可能会将密钥导出到技能进程的 env 中。
 
 ## 会花费密钥的功能
 
@@ -65,13 +65,13 @@ Anthropic 已确认 Claude CLI 复用（包括 `claude -p`）是一种被认可�
 
 ### Image and video generation
 
-`image_generate` 和 `video_generate` 会路由到当前可用的任一已配置提供商。若未设置 `agents.defaults.imageGenerationModel`，图像生成可推断带认证的提供商默认值；视频生成则需要显式设置 `agents.defaults.videoGenerationModel`（例如 `qwen/wan2.6-t2v`）。
+`image_generate` 和 `video_generate` 会路由到当前可用的任一已认证提供商。两者都可以在其 `agents.defaults.mediaModels` 条目未设置时，推断出基于认证的提供商默认值。
 
 参见 [Image generation](/tools/image-generation) 和 [Video generation](/tools/video-generation) 获取当前提供商列表。
 
 ### Memory embeddings and semantic search
 
-当 `agents.defaults.memorySearch.provider` 指定远程适配器时，语义记忆搜索会使用 embedding API（例如 `openai`、`gemini`、`voyage`、`mistral`、`deepinfra`、`github-copilot`、`amazon-bedrock`）。`memorySearch.provider = "lmstudio"` 或 `"ollama"` 会在本地/自托管服务器上运行，通常不会产生托管计费。`memorySearch.provider = "local"` 则完全在设备上运行，不使用任何 API。可选的 `memorySearch.fallback` 提供商可用于覆盖本地 embedding 失败的情况。
+当 `memory.search.provider` 指定远程适配器时，语义记忆搜索会使用 embedding API（例如 `openai`、`gemini`、`voyage`、`mistral`、`deepinfra`、`github-copilot`、`amazon-bedrock`）。`memory.search.provider = "lmstudio"` 或 `"ollama"` 会在本地/自托管服务器上运行，通常没有托管计费。`memory.search.provider = "local"` 则完全在设备端运行，不会产生 API 使用量。可选的 `memory.search.fallback` 提供商可用于覆盖本地 embedding 失败的情况。
 
 参见 [Memory](/concepts/memory)。
 
@@ -117,7 +117,7 @@ Anthropic 已确认 Claude CLI 复用（包括 `claude -p`）是一种被认可�
 
 压缩保护机制可以使用当前模型对会话历史进行摘要，因此在运行时会调用提供商 API。
 
-See [Session management and compaction](/reference/session-management-compaction).
+参见 [Session management and compaction](/reference/session-management-compaction)。
 
 ### Model scan / probe
 

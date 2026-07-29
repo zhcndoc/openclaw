@@ -1,13 +1,13 @@
 ---
 summary: "修复 Linux 上 OpenClaw 浏览器控制的 Chrome/Brave/Edge/Chromium CDP 启动问题"
-read_when: "浏览器控制在 Linux 上失败时，尤其是使用 snap Chromium 时"
+read_when: "当 Linux 上的浏览器控制失败时，尤其是在使用 snap Chromium 时"
 title: "浏览器故障排查"
 ---
 
 ## 问题：无法在端口 18800 启动 Chrome CDP
 
 ```json
-{ "error": "Error: Failed to start Chrome CDP on port 18800 for profile \"openclaw\"." }
+{ "error": "错误：无法在端口 18800 为配置文件 \"openclaw\" 启动 Chrome CDP。" }
 ```
 
 ### 根本原因
@@ -16,8 +16,8 @@ title: "浏览器故障排查"
 包装器，而不是真正的浏览器：
 
 ```text
-Note, selecting 'chromium-browser' instead of 'chromium'
-chromium-browser is already the newest version (2:1snap1-0ubuntu2).
+注意，选择了 'chromium-browser' 而不是 'chromium'
+chromium-browser 已经是最新版本（2:1snap1-0ubuntu2）。
 ```
 
 Snap 的 AppArmor 隔离会干扰 OpenClaw 启动和监控浏览器进程的方式。
@@ -108,23 +108,17 @@ curl -s http://127.0.0.1:18791/tabs
 
 ### 配置参考
 
-| 选项                             | 描述                                                                 | 默认值                                                             |
-| -------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `browser.enabled`                | 启用浏览器控制                                                       | `true`                                                             |
-| `browser.executablePath`         | Chromium 系浏览器二进制文件路径（Chrome/Brave/Edge/Chromium）       | 自动检测（在基于 Chromium 的浏览器中优先使用系统默认浏览器）      |
-| `browser.headless`               | 无 GUI 运行                                                           | `false`                                                            |
-| `OPENCLAW_BROWSER_HEADLESS`      | 本地管理型浏览器无头模式的按进程覆盖                                   | 未设置                                                             |
-| `browser.noSandbox`              | 添加 `--no-sandbox` 标志（某些 Linux 环境需要）                      | `false`                                                            |
-| `browser.attachOnly`             | 不启动浏览器；仅附加到已有浏览器                                      | `false`                                                            |
-| `browser.cdpPortRangeStart`      | 自动分配配置文件的本地 CDP 起始端口                                   | `18800`（从网关端口推导）                                           |
-| `browser.localLaunchTimeoutMs`   | 本地管理型 Chrome 发现超时时间，最多 `120000`                         | `15000`                                                            |
-| `browser.localCdpReadyTimeoutMs` | 本地管理型启动后 CDP 就绪超时时间，最多 `120000`                      | `8000`                                                             |
+| Option                      | Description                                                          | Default                                                            |
+| --------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `browser.enabled`           | 启用浏览器控制                                                      | `true`                                                             |
+| `browser.executablePath`    | Chromium 系浏览器二进制文件路径（Chrome/Brave/Edge/Chromium）        | 自动检测（在 Chromium 系浏览器可用时优先使用系统默认浏览器）       |
+| `browser.headless`          | 无界面运行                                                          | `false`                                                            |
+| `OPENCLAW_BROWSER_HEADLESS` | 本地受管浏览器无头模式的按进程覆盖项                                  | 未设置                                                             |
+| `browser.noSandbox`         | 添加 `--no-sandbox` 标志（某些 Linux 环境需要）                      | `false`                                                            |
+| `browser.attachOnly`        | 不启动浏览器；仅附加到现有浏览器                                     | `false`                                                            |
 
-这两个超时值都必须是大于 0、且不超过 `120000` 毫秒的整数；其他值
-会在配置加载时被拒绝。在 Raspberry Pi、较旧的 VPS 主机或慢速
-存储上，当 Chrome 需要更多时间暴露其 CDP HTTP 端点时，请提高
-`browser.localLaunchTimeoutMs`。当启动成功但 `openclaw browser start` 仍然报告
-`not reachable after start` 时，请提高 `browser.localCdpReadyTimeoutMs`。
+在 Raspberry Pi、较旧的 VPS 主机或慢速存储上，当 Chrome 需要比受管浏览器截止时间更长的时间来暴露其 CDP HTTP
+端点或进入就绪状态时，请使用手动启动的浏览器并配合 `attachOnly`。
 
 ### 问题：未找到 profile="user" 的 Chrome 标签页
 

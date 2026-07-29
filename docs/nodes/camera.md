@@ -154,7 +154,7 @@ Linux 会从 `camera.list` 返回可捕获、可读取的 V4L2 设备路径；FF
 
 该插件使用 `libx264` 处理 MP4 视频，不会悄悄更改编解码器。若 FFmpeg 构建缺少所需输入或编码器，将返回 `CAMERA_UNAVAILABLE`。超过 25MB base64 载荷预算的照片和片段会失败，并返回 `PAYLOAD_TOO_LARGE`。
 
-`camera.snap` 和 `camera.clip` 仍然是危险命令。只有在你确实打算启用采集时，才将它们添加到 `gateway.nodes.allowCommands`；仅启用插件本身并不会绕过 Gateway 策略。
+`camera.snap` and `camera.clip` remain dangerous commands. Add them to `gateway.nodes.commands.allow` only when you intend to arm capture; enabling the plugin alone does not bypass Gateway policy.
 
 ## 安全性 + 实际限制
 

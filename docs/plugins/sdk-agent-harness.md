@@ -192,7 +192,12 @@ Codex 插件会强制执行 [Codex Harness](/plugins/codex-harness) 中记录的
 
 需要类似 PI 的紧凑工具路由的原生 harness 应使用 `openclaw/plugin-sdk/agent-harness-tool-runtime` 中的 `createAgentHarnessToolSurfaceRuntime(...)`。它负责工具搜索/代码模式控制选择、本地模型精简默认值、与运行时兼容的 schema 过滤、隐藏目录执行、目录 hydration 以及目录清理。harness 仍然负责其 SDK 特定的工具转换和原生执行回调。
 
-### 原生 Codex harness 模式
+Harnesses that forward embedded attempt params should pass
+`skillWorkshopProposalOnly` through. Proposal-only skill-workshop runs are
+deliberately narrow single-tool runs, and the runtime keeps them on the raw
+tool surface instead of engaging code mode or a tool-search catalog.
+
+### Native Codex harness mode
 
 捆绑的 `codex` harness 是用于嵌入式 OpenClaw agent turns 的原生 Codex 模式。请先启用捆绑的 `codex` 插件；如果你的配置使用了限制性的 allowlist，还需要在 `plugins.allow` 中包含 `codex`。原生 app-server 配置应使用 `openai/gpt-*`；OpenAI agent turns 只有在有效路由声明了 Codex 兼容性时才会选择 Codex harness。旧的 Codex 模型 refs 应通过 `openclaw doctor --fix` 修复，而旧的 `codex/*`
 模型 refs 仍然是原生 harness 的兼容性别名。
@@ -237,9 +242,9 @@ Codex 插件会强制执行 [Codex Harness](/plugins/codex-harness) 中记录的
 {
   "agents": {
     "defaults": {
-      "model": "anthropic/claude-opus-4-8",
+      "model": "anthropic/claude-opus-5",
       "models": {
-        "anthropic/claude-opus-4-8": {
+        "anthropic/claude-opus-5": {
           "agentRuntime": {
             "id": "claude-cli"
           }
@@ -310,7 +315,105 @@ attempt。当 harness 执行动态工具调用时，请通过 harness 结果结�
 这样可以让文本、图片、视频、音乐、TTS、审批和 messaging-tool
 输出，与由 OpenClaw 支持的运行保持在相同的传递路径上。
 
-## 当前限制
+Set `AgentHarnessAttemptResult.hostOwnedToolMediaUrls` only for native artifacts
+that the trusted harness runtime created and persisted itself. Every entry must
+also appear in `toolMediaUrls`. Never include model-selected dynamic-tool or
+OpenClaw-tool media. On `message_tool_only` routes, this narrow provenance lets
+native runtime artifacts survive source-reply suppression; normal send policy
+and ambient-room admission still apply.
+
+### Terminal tool outcomes
+
+`AgentHarnessAttemptParams.observeToolTerminal` is the host-owned terminal
+outcome accumulator. A harness that executes OpenClaw dynamic tools or native
+tools must call it when each tool reaches one terminal outcome, before the
+attempt result is finalized. Harnesses that do not execute tools do not need to
+call it.
+
+Report facts from the execution boundary:
+
+- Pass the protocol call id when one exists, the canonical tool name, and the
+  arguments that actually reached the tool after preparation or hook rewrites.
+- Set `executionStarted: false` when validation, approval, or another guard
+  stopped the call before the tool implementation began. Once dispatch may
+  have happened, report `true` conservatively.
+- Report `outcome: "success"` or `outcome: "failure"`. Include the structured
+  failure fields available from the runtime instead of inferring failure from
+  display text.
+- Use `nativeMutation` only for native tools that do not use an OpenClaw tool
+  definition. Supply protocol-owned mutation and replay facts there; do not
+  copy OpenClaw's mutation classifier into the harness.
+
+The callback returns the canonical resolution for that call. Carry its
+`lastToolError` into `AgentHarnessAttemptResult` and use its execution,
+arguments, and side-effect facts in the harness projection instead of deriving
+parallel state. The host keeps an unresolved mutating failure across unrelated
+successful tools and clears it only after the matching action succeeds.
+
+The callback remains optional for source compatibility with older experimental
+harnesses. Optional does not mean ignorable for a harness that executes tools:
+without terminal reports, OpenClaw cannot preserve mutating-tool failure truth
+across later tool calls, including quiet heartbeat completion.
+
+### Settled tool finalization
+
+OpenClaw may need one final visible answer after a harness has completed every
+tool call but its native turn ended without assistant text. A harness can opt
+into that recovery by implementing `finalizeSettledTurn({ attempt,
+settledAttempt })`.
+
+The callback is a separate capability, not another ordinary attempt. It must:
+
+- use either the exact restricted native transcript or a complete application
+  transcript frozen through the settled tool-result boundary;
+- expose no tools, permission-grant or user-input capabilities, native execution
+  hooks, agents, skills, memory, scheduling, extensions, or remote control;
+- send only the host-provided finalization prompt; and
+- fail closed if its selected transcript/isolation strategy cannot enforce
+  those restrictions.
+
+OpenClaw invokes the callback once as a terminal sub-operation, outside the
+ordinary attempt and retry loop. A failure ends the run with the
+side-effect-aware incomplete-turn warning; it cannot enter ordinary
+auth/profile rotation, model fallback, context recovery, compaction
+continuation, or hook-requested revision paths. Finalization also skips plugin
+prompt mutation, `before_agent_run`, LLM input/output, terminal revision, and
+`agent_end` hooks. Core diagnostics still record the operation and its failure.
+
+The callback returns `AgentHarnessSettledTurnFinalizationResult`, not an
+ordinary attempt result. Its public fields are limited to the completed
+assistant message, finalization-call usage, transcript-ownership metadata, and
+diagnostic trace. Tool, delivery, media, spawn, lifecycle, replay, session, and
+fallback state cannot cross this result boundary. Unknown fields and assistant
+tool calls fail closed.
+
+A harness that internally reuses its full attempt engine can call
+`projectSettledTurnFinalizationAttemptResult(...)` before returning. The helper
+rejects canonical failure, tool, delivery, replay, and lifecycle evidence, then
+projects only the narrow result. It is defense in depth after native isolation,
+not a substitute for removing the native capability surface.
+
+A projection-backed harness must put the complete context on
+`settledAttempt.settledTurnFinalizationContext` with
+`source: "openclaw-transcript"`. It must capture the active branch after the
+settled turn is mirrored, prove that the current prompt and every current tool
+call/result are present through that boundary, and freeze the resulting message
+array before returning the attempt. The finalizer must reject a missing,
+unsupported, ambiguous, or oversized context. It must not truncate messages,
+drop earlier history, or describe this application transcript as exact native
+history. Harnesses that resume one restricted native session do not need this
+projection field.
+
+Do not implement this callback by calling `runAttempt` with a best-effort
+`disableTools` hint. The harness owner must enforce the complete native
+capability boundary. OpenClaw does not provide a generic fallback because it
+cannot attest that an arbitrary native runtime honored those restrictions.
+
+The callback remains optional for experimental third-party harness
+compatibility. When the selected harness omits it, OpenClaw preserves the
+existing incomplete-turn error instead of risking repeated side effects.
+
+## Current limitations
 
 - 公共导入路径是通用的，但某些 attempt/result 类型别名
   仍保留旧名称以兼容。

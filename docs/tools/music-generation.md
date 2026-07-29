@@ -11,7 +11,7 @@ sidebarTitle: "音乐生成"
 `music_generate` 工具通过共享的音乐生成能力创建音乐或音频，底层由 ComfyUI、fal、Google、MiniMax 和 OpenRouter 提供支持。
 
 <Note>
-只有在至少有一个音乐生成提供方可用时，`music_generate` 才会出现：例如显式配置了 `agents.defaults.musicGenerationModel`，或者已完成认证配置的提供方（比如已设置 API key）。
+当至少有一个音乐生成提供方可用时，才会出现 `music_generate`：一个显式的 `agents.defaults.mediaModels.music` 配置，或一个已完成认证配置的提供方（例如已设置 API key）。
 </Note>
 
 对于基于会话的 agent 运行，`music_generate` 会先作为后台任务启动，在任务账本中跟踪进度，然后在音轨准备就绪时唤醒 agent，以便它告知用户并附加生成完成的音频。完成代理遵循会话的可见回复约定：在已配置时自动发送最终回复，或者在会话需要 message 工具时使用 `message(action="send")`。如果请求者会话处于非活动状态，或其唤醒失败且生成的音频仍未出现在回复中，OpenClaw 会发送一个幂等的直接回退，只包含缺失的音频。
@@ -152,10 +152,10 @@ fal 还在其默认的基于 MiniMax 的模型之外，提供 `fal-ai/ace-step/p
 并非所有提供方都支持所有参数。OpenClaw 仍会在提交前验证诸如输入数量之类的硬性限制。当某个提供方支持时长但其最大值小于请求值时，OpenClaw 会将其夹取到最接近的受支持时长。真正不受支持的可选提示会在所选提供方或模型无法满足时被忽略，并给出警告。工具结果会报告已应用的设置；`details.normalization` 会记录任何从请求值到应用值的映射。
 </Note>
 
-提供方请求超时仅属于运算符配置。OpenClaw 使用
-`agents.defaults.musicGenerationModel.timeoutMs`（如果已配置），会将
-低于 120000ms 的值提升到 120000ms，并且在其他情况下将提供方请求
-默认设为 300000ms。
+提供方请求超时仅由运维配置控制。OpenClaw 使用
+`agents.defaults.mediaModels.music.timeoutMs`（如已配置），会将
+低于 120000ms 的值提升到 120000ms，否则默认将提供方请求
+设为 300000ms。
 
 ## 异步行为
 
@@ -170,7 +170,7 @@ fal 还在其默认的基于 MiniMax 的模型之外，提供 `fal-ai/ace-step/p
 
 ### 任务生命周期
 
-音乐任务呈现与通用任务注册表相同的状态（完整状态机包括 `timed_out`、`cancelled` 和 `lost`，请参见 [Background tasks](/automation/tasks#task-lifecycle)）。大多数音乐运行会经过：
+音乐任务呈现与通用任务注册表相同的状态（完整状态机包括 `timed_out`、`cancelled` 和 `lost`，请参见 [后台任务](/automation/tasks#task-lifecycle)）。大多数音乐运行会经过：
 
 | 状态       | 含义                                                                                           |
 | -------- | -------------------------------------------------------------------------------------------- |
@@ -217,7 +217,8 @@ OpenClaw 按以下顺序尝试提供方：
 
 如果某个提供方失败，会自动尝试下一个候选项。如果全部失败，错误信息会包含每次尝试的详细信息。
 
-将 `agents.defaults.mediaGenerationAutoProviderFallback: false` 设为仅使用显式的 `model`、`primary` 和 `fallbacks` 条目。
+跨已认证提供方的自动回退始终启用。每次调用的
+`model` 仍然具有最高优先级。
 
 ## 提供方说明
 
@@ -249,14 +250,14 @@ OpenClaw 按以下顺序尝试提供方：
 行为，请从 [fal](/providers/fal)、[Google (Gemini)](/providers/google)、
 [MiniMax](/providers/minimax) 或 [OpenRouter](/providers/openrouter) 开始。
 
-## Provider Capability Modes
+## 提供商能力模式
 
-The shared music generation contract supports explicit mode declarations:
+共享的音乐生成契约支持显式模式声明：
 
-- `generate`: used for prompt-only generation.
-- `edit`: used when the request includes one or more reference images.
+- `generate`：用于仅基于提示词的生成。
+- `edit`：用于请求中包含一个或多个参考图片时。
 
-New provider implementations should prefer explicit mode blocks:
+新的提供商实现应优先使用显式的模式块：
 
 ```typescript
 capabilities: {
@@ -274,10 +275,10 @@ capabilities: {
 }
 ```
 
-Legacy flat fields such as `maxInputImages`, `supportsLyrics`, and
-`supportsFormat` are **not sufficient** to declare edit support. Providers
-should explicitly declare `generate` and `edit` so that live tests, contract
-tests, and the shared `music_generate` tool can deterministically verify mode support.
+诸如 `maxInputImages`、`supportsLyrics` 和
+`supportsFormat` 之类的旧式扁平字段，**不足以** 声明对编辑的支持。提供商
+应显式声明 `generate` 和 `edit`，以便实时测试、契约
+测试以及共享的 `music_generate` 工具能够确定性地验证模式支持。
 
 ## 实时测试
 

@@ -167,8 +167,9 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 说明：
 
 - `onchar` 仍会响应显式的 @ 提及。
-- `channels.mattermost.requireMention` 仍然会被遵守，但优先建议使用 `chatmode`。按频道设置的 `groups.<channelId>.requireMention` 会优先于两者。
-- 在机器人于某个频道线程中发送可见回复后，该线程后续消息将无需新的 @ 提及或 `onchar` 前缀即可获得回复，因此多轮线程对话可以持续进行。机器人上次在该线程中回复后的 7 天内都会记住其参与状态，并且会在网关重启后继续保留。机器人仅观察过的线程不受影响；要再次要求显式提及，请发起一条新的顶层消息。
+- `channels.mattermost.requireMention` 仍会生效，但优先推荐使用 `chatmode`。按频道配置的 `groups.<channelId>.requireMention` 会优先于这两者。
+- 当机器人在频道线程中发送可见回复后，同一线程里的后续消息会在不需要新的 @ 提及或 `onchar` 前缀的情况下得到回复，因此多轮线程对话可以持续进行。参与状态会在机器人最后一次回复该线程后的 7 天内被记住，并且会在网关重启后继续保留。机器人仅观察过的线程不受影响；要再次要求显式提及，请发起一个新的顶层消息。
+- 设置 `channels.mattermost.implicitMentions.threadParticipation: false` 可阻止已参与线程的后续消息绕过提及门控。账户覆盖使用 `channels.mattermost.accounts.<id>.implicitMentions`。Mattermost 目前不会产生 `replyToBot` 或 `quotedBot` facts，因此这些标志在这里没有作用。
 
 ## 线程和会话
 
@@ -176,7 +177,7 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 
 - `off` (默认)：仅当传入的帖子已经位于线程中时，才在线程中回复。
 - `first`：对于顶级频道/群组帖子，在该帖子下方发起一个线程，并将对话路由到线程作用域的会话中。
-- `all` 和 `batched`：在当前 Mattermost 中与 `first` 的行为相同，因为一旦 Mattermost 有了线程根消息，后续的分块和媒体会继续留在同一个线程中。
+- `all` 和 `batched`：在当前 Mattermost 中与 `first` 的行为相同，因为一旦 Mattermost 有了线程根消息，后续的分块和媒体就会继续留在同一个线程中。
 - 即使设置了 `replyToMode`，直接消息默认仍为 `off`。
 
 使用 `channels.mattermost.replyToModeByChatType` 来覆盖 `direct`、`group` 或 `channel` 聊天的模式。将 `direct` 设置为可让直接消息使用线程：
@@ -200,7 +201,7 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 注意：
 
 - 线程作用域的会话使用触发该消息的帖子 id 作为线程根。
-- `first` 和 `all` 目前等价，因为一旦 Mattermost 有了线程根，后续的分块和媒体会继续留在同一个线程中。
+- `first` 和 `all` 目前等价，因为一旦 Mattermost 有了线程根，后续的分块和媒体就会继续留在同一个线程中。
 - 按聊天类型的覆盖设置优先于 `replyToMode`。如果没有 `direct` 覆盖，现有部署将继续保持扁平、非线程式的 DM。
 
 ## 访问控制（私信）
@@ -239,28 +240,28 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 }
 ```
 
-## Outbound Delivery Targets
+## 外发投递目标
 
-Use the following target formats in `openclaw message send` or cron/webhook:
+在 `openclaw message send` 或 cron/webhook 中使用以下目标格式：
 
 | Target                              | Delivers to                                                   |
 | ----------------------------------- | ------------------------------------------------------------- |
-| `channel:<id>`                      | Send to a channel by id                                           |
-| `channel:<name>` or `#channel-name` | Send to a channel by name, searching within the team the bot belongs to |
-| `user:<id>` or `mattermost:<id>`    | DM with that user                                                  |
-| `@username`                         | DM (resolves username through the Mattermost API)                 |
+| `channel:<id>`                      | 按 id 发送到频道                                           |
+| `channel:<name>` or `#channel-name` | 按名称发送到频道，在机器人所属团队内搜索 |
+| `user:<id>` or `mattermost:<id>`    | 与该用户私信                                                  |
+| `@username`                         | 私信（通过 Mattermost API 解析用户名）                 |
 
-Outbound sending supports at most one attachment per message; please split multiple files into multiple sends.
+外发发送每条消息最多支持一个附件；请将多个文件拆分为多次发送。
 
 <Warning>
-Bare ambiguous IDs (such as `64ifufp...`) are **ambiguous** in Mattermost (user ID or channel ID).
+裸露的歧义 ID（例如 `64ifufp...`）在 Mattermost 中是**歧义的**（用户 ID 或频道 ID）。
 
-OpenClaw resolves them in **user-first, then channel** order:
+OpenClaw 会按**先用户后频道**的顺序解析它们：
 
-- If the ID exists as a user (`GET /api/v4/users/<id>` succeeds), OpenClaw will resolve the direct channel via `/api/v4/channels/direct` and send a **DM**.
-- Otherwise, the ID will be treated as a **channel ID**.
+- 如果该 ID 作为用户存在（`GET /api/v4/users/<id>` 成功），OpenClaw 将通过 `/api/v4/channels/direct` 解析直接频道并发送**私信**。
+- 否则，该 ID 将被视为**频道 ID**。
 
-If you need deterministic behavior, always use explicit prefixes (`user:<id>` / `channel:<id>`).
+如果你需要确定性的行为，请始终使用显式前缀（`user:<id>` / `channel:<id>`）。
 </Warning>
 
 ## 私信频道重试
@@ -415,7 +416,7 @@ Presentation button fields:
 
 ### 直接 API 集成（外部脚本）
 
-外部脚本和 webhook 可以直接通过 Mattermost REST API 发布按钮，而不是通过 agent 的 `message` 工具。尽可能使用插件中的 `buildButtonAttachments()`；如果直接发布原始 JSON，请遵循以下规则：
+外部脚本和 webhook 可以直接通过 Mattermost REST API 发布按钮，而无需经过 agent 的 `message` 工具。优先使用 OpenClaw 的 `message` 工具。对于直接集成，请从 `@openclaw/mattermost/api.js` 导入 `buildButtonAttachments`；如果直接发送原始 JSON，请遵循以下规则：
 
 **负载结构：**
 

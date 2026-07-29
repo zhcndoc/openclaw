@@ -23,8 +23,9 @@ title: "模型提供商快速入门"
 
 - [Alibaba Model Studio](/providers/alibaba)
 - [Amazon Bedrock](/providers/bedrock)
-- [Anthropic（API + Claude CLI）](/providers/anthropic)
-- [BytePlus（国际版）](/concepts/model-providers#byteplus-international)
+- [Anthropic (API + Claude CLI)](/providers/anthropic)
+- [Baseten (Inkling + Model APIs)](/providers/baseten)
+- [BytePlus (International)](/concepts/model-providers#byteplus-international)
 - [Chutes](/providers/chutes)
 - [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
 - [Cohere](/providers/cohere)

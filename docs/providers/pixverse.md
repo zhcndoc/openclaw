@@ -37,13 +37,13 @@ OpenClaw 将 `pixverse` 作为官方外部插件提供，用于托管的 PixVers
     向导会在将 `region` 和 `baseUrl` 写入提供商配置之前，提示选择国际或 CN 端点（见下方 API 区域）。
     非交互式运行（通过 `--pixverse-api-key` 或 `PIXVERSE_API_KEY` 获取密钥）默认使用 International。
 
-    如果尚未配置默认视频模型，初始化还会将 `agents.defaults.videoGenerationModel.primary` 设置为
-    `pixverse/v6`。
+    Onboarding also sets `agents.defaults.mediaModels.video.primary` to
+    `pixverse/v6` when no default video model is configured yet.
 
   </Step>
   <Step title="切换现有的默认视频提供商（可选）">
     ```bash
-    openclaw config set agents.defaults.videoGenerationModel.primary "pixverse/v6"
+    openclaw config set agents.defaults.mediaModels.video.primary "pixverse/v6"
     ```
   </Step>
   <Step title="生成视频">
@@ -146,10 +146,11 @@ PixVerse 图片模板生成功能尚未通过 `image_generate` 暴露。该 API 
 
   </Accordion>
 
-  <Accordion title="任务轮询">
-    PixVerse 会在生成请求中返回一个 `video_id`。OpenClaw 每 5 秒轮询一次
-    `/openapi/v2/video/result/{video_id}`，直到任务成功、失败或超时（默认 5 分钟；可通过
-    `agents.defaults.videoGenerationModel.timeoutMs` 覆盖）。
+  <Accordion title="Task polling">
+    PixVerse returns a `video_id` from the generation request. OpenClaw polls
+    `/openapi/v2/video/result/{video_id}` every 5 seconds until the task
+    succeeds, fails, or hits the timeout (default 5 minutes; override with
+    `agents.defaults.mediaModels.video.timeoutMs`).
   </Accordion>
 </AccordionGroup>
 

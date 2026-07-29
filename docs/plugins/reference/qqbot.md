@@ -16,7 +16,7 @@ OpenClaw QQ Bot 用于群聊和私信工作流的频道插件。
 
 ## 表面
 
-channels: qqbot; contracts: tools; skills
+channels: `qqbot`; contracts: `tools`; skills
 
 ## 相关文档
 

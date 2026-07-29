@@ -7,24 +7,20 @@ title: "Bun"
 ---
 
 <Warning>
-Bun 不能运行 OpenClaw CLI 或 Gateway，因为它不提供所需的 `node:sqlite` API。请安装受支持的 Node 版本以运行所有 OpenClaw 运行时命令。
+Bun releases up to 1.3.x cannot run the OpenClaw CLI or Gateway because they do not provide the required `node:sqlite` API. OpenClaw feature-probes the runtime: Bun builds that ship `node:sqlite` (1.4.0 canary and later) can run the CLI and Gateway experimentally, while older Bun versions are rejected at startup. Node remains the supported and recommended runtime for all OpenClaw runtime commands.
 </Warning>
 
-Bun 仍可作为可选的依赖安装器和包脚本运行器使用。默认包管理器仍然是 `pnpm`，它得到完全支持，并用于文档工具链。Bun 不能使用 `pnpm-lock.yaml`，并且会忽略它。
+Bun remains usable as an optional package-script runner. The default package manager remains `pnpm`, which is fully supported and used by docs tooling. Bun cannot use `pnpm-lock.yaml` and ignores it, and current Bun versions fail to resolve this repo's `pnpm-workspace.yaml` layout during `bun install`, so dependency installs should use `pnpm install`.
 
 ## 安装
 
 <Steps>
   <Step title="安装依赖">
     ```sh
-    bun install
+    pnpm install
     ```
 
-    `bun.lock` / `bun.lockb` 已被 git 忽略，因此不会造成仓库变更。如果想完全跳过锁文件写入：
-
-    ```sh
-    bun install --no-save
-    ```
+    Current Bun versions (including 1.4 canary) cannot resolve this repo's pnpm workspace layout, so `bun install` fails during workspace resolution. Use `pnpm install`.
 
   </Step>
   <Step title="构建和测试">
@@ -33,7 +29,7 @@ Bun 仍可作为可选的依赖安装器和包脚本运行器使用。默认包�
     bun run vitest run
     ```
 
-    启动 OpenClaw 本身的命令仍然必须通过 Node 运行。
+    Commands that launch OpenClaw itself should still run through Node; Bun runtimes that provide `node:sqlite` (1.4.0 canary and later) can run them experimentally.
 
   </Step>
 </Steps>
@@ -42,8 +38,8 @@ Bun 仍可作为可选的依赖安装器和包脚本运行器使用。默认包�
 
 Bun 会阻止依赖的生命周期脚本，除非显式信任它们。对于这个仓库，常见会被阻止的脚本并不需要：
 
-- `baileys` `preinstall`：检查 Node 主版本是否 >= 20（OpenClaw 需要 Node 22.22.3+、24.15+ 或 25.9+，其中推荐使用 Node 24）
-- `protobufjs` `postinstall`：发出关于不兼容版本方案的警告（没有构建产物）
+- `baileys` `preinstall`: checks Node major >= 20 (OpenClaw requires Node 22.22.3+, 24.15+, or 25.9+, with Node 26 recommended)
+- `protobufjs` `postinstall`: emits warnings about incompatible version schemes (no build artifacts)
 
 如果你遇到需要这些脚本的运行时问题，请显式信任它们：
 

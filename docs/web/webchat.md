@@ -23,17 +23,19 @@ title: "WebChat"
 ## 工作原理
 
 - UI 连接到 Gateway WebSocket，并使用 `chat.history`、`chat.send`、`chat.inject` 和 `chat.message.get` RPC 方法。
-- `chat.history` 为了稳定性会设置上限：Gateway 可能会截断较长的文本字段、省略较重的元数据，并将超大的条目替换为 `[chat.history omitted: message too large]`。API 客户端可以为单次请求发送 `maxChars`，以覆盖该次调用的默认限制。
-- 当在 `chat.history` 中可见的助手消息被截断时，Control UI 可以打开侧边阅读器，并通过 `chat.message.get` 按需获取完整的、按显示规范归一化后的条目，而不会增加默认的历史负载。`chat.message.get` 使用与 `chat.history` 相同的转写分支和显示规则，但通过 `messageId` 定位单个条目，并在完整内容已无法返回时返回明确的不可用原因。
-- `chat.history` 会跟随仅追加的会话文件所对应的当前转写分支，因此在 WebChat 中不会渲染被放弃的重写分支和已被替代的提示词副本。
-- 压缩条目会渲染为一个“已压缩历史”分隔线，说明压缩后的转写作为检查点被保留，并提供一个动作以打开会话检查点（在权限允许时可分支或恢复）。
-- Control UI 会记住 `chat.history` 返回的底层 Gateway `sessionId`，并在后续 `chat.send` 调用中携带它，因此重新连接和页面刷新后会继续同一个已存储的对话，除非用户开始新会话或重置会话。
-- `chat.send` 接受一个幂等键（Control UI 使用运行 id）；Gateway 会对重复请求进行去重，只要它们复用了同一个键，因此对同一会话/消息/附件的重试或重复进行中的提交不会创建第二次运行。
-- 工作区启动文件和待处理的 `BOOTSTRAP.md` 指令通过代理系统提示词的 `# Project Context` 部分提供，而不会复制到 WebChat 用户消息中。如果引导内容被截断，系统提示词会改为提供一段简短的“Bootstrap Context Notice”；详细计数和配置开关则保留在诊断界面上。
-- `chat.history` 上的显示归一化会去除：仅运行时存在的 OpenClaw 上下文、入站信封包装、内联投递指令标签（如 `[[reply_to_current]]`、`[[reply_to:<id>]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 载荷（`<tool_call>`、`<function_call>`、`<tool_calls>`、`<function_calls>`，包括被截断的块），以及泄漏的 ASCII/全角模型控制 token。其全部可见文本仅为静默 token `NO_REPLY`（不区分大小写）的助手条目会被省略。
-- 带有推理标记的回复载荷（`isReasoning: true`）会被排除在 WebChat 的助手内容、转写回放文本和音频内容块之外，因此仅用于思考的载荷不会作为可见助手消息或可播放音频出现。
-- `chat.inject` 会直接向转写中追加一条助手注释并广播到 UI（不触发代理运行）。
-- 被中止的运行可能会让部分助手输出在 UI 中保持可见。只要存在缓冲输出，Gateway 就会将这段部分文本持久化到转写历史中，并用中止元数据标记该条目。
+- `chat.history` 为稳定性做了限制：Gateway 可能会截断较长的文本字段、省略较重的元数据，并将超大条目替换为 `[chat.history omitted: message too large]`。API 客户端可按请求传入 `maxChars`，在单次调用中覆盖默认限制。
+- 当 `chat.history` 中某条可见的助手消息被截断时，Control UI 可以打开侧边阅读器，并通过 `chat.message.get` 按需获取完整的、按显示规范归一化后的条目，而不会增加默认历史负载。`chat.message.get` 使用与 `chat.history` 相同的转写分支和显示规则，但按 `messageId` 定位单条记录，并在完整内容已无法返回时给出真实的不可用原因。
+- `chat.history` 会遵循仅追加会话文件的当前活动转写分支，因此被放弃的重写分支和已被取代的提示副本不会在 WebChat 中渲染。
+- 压缩条目会渲染为一个“Compacted history”分隔条，说明压缩后的转写已作为检查点保留，并提供打开会话检查点的操作（在权限允许时可进行分支或恢复）。
+- Control UI 会记住 `chat.history` 返回的底层 Gateway `sessionId`，并在后续 `chat.send` 调用中带上它，因此重新连接和刷新页面会继续同一个已保存的对话，除非用户开始新会话或重置会话。
+- 前台发送还会把渲染后的历史记录中显示分支的叶节点作为 `expectedLeafEntryId` 一并发送；如果另一个客户端先切换了分支，Control UI 会将消息暂存待审查，并刷新转写，而不是将其发布到新分支。重新连接和恢复出的 outbox 回放在与当前历史协调后，会有意省略这个前置条件。
+- `chat.send` 接受一个幂等键（Control UI 使用 run id）；Gateway 会对复用相同键的重复请求去重，因此同一会话/消息/附件的重试或重复进行中的提交不会创建第二次运行。
+- 回复特定消息（右键 → 回复）时，会将目标消息的转写 id 作为 `replyToId` 发送到 `chat.send`。Gateway 会从会话历史中解析该消息，并填充 Discord 回复所使用的同样的、与通道无关的回复上下文元数据：agent 会看到 `has_reply_context`，以及带有发送者标签和正文的、不受信任的“Reply target of current user message”区块。（webchat 提示会保留既有的字节稳定提示策略，将诸如 `reply_to_id` 之类的易变会话 id 抑制不显示，适用于直接 webchat 会话。）没有持久化转写 id 的回复目标（例如待发送项）会回退为消息正文中的内联引用。
+- 工作区启动文件和待处理的 `BOOTSTRAP.md` 指令通过 agent 系统提示的 `# Project Context` 部分提供，不会复制到 WebChat 用户消息中。如果 bootstrap 内容被截断，系统提示会改为提供一条简短的“Bootstrap Context Notice”；详细计数和配置开关则保留在诊断界面上。
+- `chat.history` 上的显示归一化会剥离：仅运行时的 OpenClaw 上下文、入站信封包装、内联投递指令标签（如 `[[reply_to_current]]`、`[[reply_to:<id>]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 载荷（`<tool_call>`、`<function_call>`、`<tool_calls>`、`<function_calls>`，包括被截断的块），以及泄漏的 ASCII/全角模型控制 token。整条可见文本仅为静默 token `NO_REPLY`（不区分大小写）的助手条目会被省略。
+- 带有推理标记的回复载荷（`isReasoning: true`）会从 WebChat 助手内容、转写回放文本和音频内容块中排除，因此仅用于思考的载荷不会以可见助手消息或可播放音频的形式出现。
+- `chat.inject` 会直接向转写追加一条助手注释，并广播到 UI（不触发 agent 运行）。
+- 被中止的运行可能会让部分助手输出在 UI 中保持可见。若存在已缓冲的输出，Gateway 会将这段部分文本持久化到转写历史中，并用中止元数据标记该条目。
 
 ### 转写与投递模型
 

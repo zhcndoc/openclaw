@@ -1,5 +1,5 @@
 ---
-summary: "openclaw models 模型的 CLI 参考（status/list/set/scan、别名、回退、认证）"
+summary: "openclaw 模型 CLI 参考（status/list/set/scan、别名、回退、认证）"
 read_when:
   - 你想更改默认模型或查看提供方认证状态
   - 你想扫描可用的模型/提供方并调试认证配置文件
@@ -21,6 +21,7 @@ title: "模型"
 ```bash
 openclaw models status
 openclaw models list
+openclaw models refresh
 openclaw models set <model-or-alias>
 openclaw models set-image <model-or-alias>
 openclaw models scan
@@ -28,26 +29,26 @@ openclaw models scan
 
 `status` 和 `auth` 子命令接受 `--agent <id>` 来指定一个已配置的 agent；`list`、`scan`、`aliases` 以及 `fallbacks`/`image-fallbacks` 始终使用已配置的默认 agent，而 `set`/`set-image` 会直接拒绝 `--agent`。在未指定时，支持 `--agent` 的命令会使用 `OPENCLAW_AGENT_DIR`（如果已设置），否则使用已配置的默认 agent。
 
-### Status
+### 状态
 
-`openclaw models status` 会显示解析后的默认值/回退项以及认证概览。 当可用提供方使用情况快照时，OAuth/API key 状态部分会包含提供方使用窗口和配额快照。当前使用窗口提供方：Anthropic、GitHub Copilot、Gemini CLI、OpenAI、MiniMax、小米和 z.ai。使用情况认证优先来自提供方特定的 hook；否则 OpenClaw 会回退到从 auth profile、环境变量或配置中匹配 OAuth/API key 凭据。
+`openclaw models status` 会显示解析后的默认值/回退值以及认证概览。对于像 Codex 这样的插件所有 agent 运行时，它还会检查拥有该运行时的插件是否已启用，以及是否通过了启动负载验证。对于凭据有效但运行时不可用的路由，会报告 `status: unavailable` 而不是 `usable`；JSON 输出会分别包含 `authStatus`、`runtimeStatus` 和受限的运行时诊断信息。当可用提供方使用情况快照时，OAuth/API 密钥状态部分会包含提供方使用窗口和配额快照。当前的使用窗口提供方：Anthropic、GitHub Copilot、Gemini CLI、OpenAI、MiniMax、小米和 z.ai。使用认证会优先来自提供方特定的挂钩；否则 OpenClaw 会回退到 auth profile、环境变量或配置中匹配的 OAuth/API 密钥凭据。
 
 在 `--json` 输出中，`auth.providers` 是面向环境/配置/存储且感知的提供方概览，而 `auth.oauth` 仅表示 auth-store 中 profile 的健康状态。
 
 选项：
 
-| Flag                      | 作用                                                                                                       |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `--json`                  | JSON 输出；auth profile、provider 和启动诊断信息会输出到 stderr，因此 stdout 仍可直接通过管道传给 `jq`。 |
-| `--plain`                 | 纯文本输出。                                                                                               |
-| `--check`                 | 如果认证即将过期/已过期，则以非零状态退出：`1` = 已过期/缺失，`2` = 即将过期。                             |
-| `--probe`                 | 对已配置的认证 profile 进行实时探测。实际请求；可能消耗 token 并触发速率限制。                            |
-| `--probe-provider <name>` | 仅探测一个提供方。                                                                                         |
-| `--probe-profile <id>`    | 探测指定的认证 profile id（可重复或用逗号分隔）。                                                           |
-| `--probe-timeout <ms>`    | 单次探测超时。                                                                                             |
-| `--probe-concurrency <n>` | 并发探测数。                                                                                               |
-| `--probe-max-tokens <n>`  | 探测时的最大 token 数（尽力而为）。                                                                        |
-| `--agent <id>`            | 已配置的 agent id；会覆盖 `OPENCLAW_AGENT_DIR`。                                                           |
+| Flag                      | 作用                                                                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `--json`                  | JSON 输出；auth-profile、provider 和启动诊断会输出到 stderr，这样 stdout 仍可直接通过管道传给 `jq`。                            |
+| `--plain`                 | 纯文本输出。                                                                                                                       |
+| `--check`                 | 如果认证即将过期/已过期，或所选 agent 运行时不可用，则以非零状态退出：`1` = 不可用/已过期/缺失，`2` = 即将过期。 |
+| `--probe`                 | 对已配置的 auth profile 进行实时探测。会发起真实请求；可能消耗 token 并触发速率限制。                                       |
+| `--probe-provider <name>` | 仅探测一个提供方。                                                                                                                 |
+| `--probe-profile <id>`    | 探测特定的 auth profile id（可重复或用逗号分隔）。                                                                             |
+| `--probe-timeout <ms>`    | 每次探测的超时时间。                                                                                                                       |
+| `--probe-concurrency <n>` | 并发探测数。                                                                                                                       |
+| `--probe-max-tokens <n>`  | 探测时的最大 token 数（尽力而为）。                                                                                                          |
+| `--agent <id>`            | 已配置的 agent id；会覆盖 `OPENCLAW_AGENT_DIR`。                                                                                     |
 
 探测结果行可能来自 auth profile、环境凭据或 `models.json`。探测状态桶：`ok`、`auth`、`rate_limit`、`billing`、`timeout`、`format`、`unknown`、`no_model`。
 
@@ -60,11 +61,16 @@ openclaw models scan
 
 对于 OpenAI ChatGPT/Codex OAuth 排障，`openclaw models status`、`openclaw models auth list --provider openai` 和 `openclaw config get agents.defaults.model --json` 是最快确认某个 agent 是否拥有可用于通过原生 Codex 运行时访问 `openai/*` 的有效 `openai` OAuth profile 的方法。参见 [OpenAI provider setup](/providers/openai#check-and-recover-codex-oauth-routing)。
 
-### List
+### 列表
 
 `openclaw models list` 是只读的：它读取配置、auth profile、现有 catalog 状态以及由 provider 提供的 catalog 行，但绝不会重写 `models.json`。
 
-选项：`--all`（完整 catalog）、`--local`（仅筛选本地模型）、`--provider <id>`、`--json`、`--plain`。
+`openclaw models refresh [--json]` 会强制立即检查托管 catalog。
+更新后的行会在下一次重启后应用到正在运行的 Gateway。若 `models.catalogRefresh.enabled` 为 `false`，该命令会明确输出已禁用的结果。
+catalog 的公开变更历史位于
+[`openclaw/catalog`](https://github.com/openclaw/catalog)，其中每次内容更新都会由计划发布器提交。
+
+选项：`--all`（完整 catalog）、`--local`（筛选本地模型）、`--provider <id>`、`--json`、`--plain`。
 
 注意：
 
@@ -79,7 +85,7 @@ openclaw models scan
 - 如果你省略提供方，OpenClaw 会先将输入解析为别名，然后解析为与该确切模型 id 对应的唯一已配置提供方匹配，最后才带着弃用警告回退到已配置的默认提供方。如果该提供方不再暴露已配置的默认模型，OpenClaw 会回退到第一个已配置的提供方/模型，而不是显示一个已失效、已移除提供方的默认值。
 - `models status` 在认证输出中可能会显示 `marker(<value>)`，用于非密钥占位符（例如 `OPENAI_API_KEY`、`secretref-managed`、`minimax-oauth`、`oauth:chutes`、`ollama-local`），而不是将它们掩码为密钥。
 
-### Set default / image model
+### 设置默认/图像模型
 
 ```bash
 openclaw models set <model-or-alias>
@@ -88,7 +94,7 @@ openclaw models set-image <model-or-alias>
 
 `set` 会写入 `agents.defaults.model.primary`；`set-image` 会写入 `agents.defaults.imageModel.primary`。两者都接受 `provider/model` 或已配置的别名。`set` 还会在新选择的模型需要时修复 Codex/Copilot 运行时插件安装；`set-image` 不会。两个命令都不接受 `--agent`；它们始终写入 agent 默认值。
 
-### Scan
+### 扫描
 
 `models scan` 会读取 OpenRouter 的公开 `:free` catalog，并对候选项进行排序以供回退使用。catalog 本身是公开的，因此仅元数据扫描不需要 OpenRouter key。
 
@@ -119,7 +125,8 @@ openclaw models aliases add <alias> <model-or-alias>
 openclaw models aliases remove <alias>
 ```
 
-别名按每个模型条目存储为 `agents.defaults.models.<key>.alias`。`add` 会先将 `<model-or-alias>` 解析为规范的 provider/model 键，因此为别名再设置别名时，会将其重新指向而不是形成链式别名。
+别名按模型条目存储为 `agents.defaults.models.<key>.alias`。`add` 会先将 `<model-or-alias>` 解析为规范的提供方/模型键，因此对别名再添加别名时会重新指向它，而不是形成链式引用。  
+添加别名不会更改 `agents.defaults.modelPolicy.allow`，也不会限制模型覆盖。
 
 ## 回退
 
@@ -140,6 +147,7 @@ openclaw models auth list [--provider <id>] [--json]
 openclaw models auth login --provider <id>
 openclaw models auth login --provider openai --profile-id openai:work
 openclaw models auth login-github-copilot
+openclaw models auth logout <profileId> [--yes]
 openclaw models auth paste-api-key --provider <id>
 openclaw models auth setup-token --provider <id>
 openclaw models auth paste-token --provider <id>
@@ -154,9 +162,11 @@ openclaw models auth order clear --provider <id>
 
 `models auth login` 会运行 provider 插件的认证流程（OAuth/API key）。使用 `openclaw plugins list` 查看已安装哪些 provider。`login` 支持 `--profile-id <id>`，适用于在登录期间支持命名配置文件的 provider（可用来将同一 provider 的多个登录分开保存），`--method <id>` 用于选择特定认证方法，`--device-code` 作为 `--method device-code` 的快捷方式，`--set-default` 用于应用 provider 推荐的默认模型，`--force` 用于先移除该 provider 现有的配置文件（当缓存的 OAuth 配置文件卡住，或你想切换账号时使用）。
 
-`models auth login-github-copilot` 是 `models auth login --provider github-copilot --method device` 的快捷方式（GitHub device flow）；它接受 `--yes`，可在不提示的情况下覆盖现有配置文件。
+`models auth logout <profileId>` 会从所选 agent 的认证存储中移除一个已保存的认证配置文件。请使用 `models auth list` 显示的配置文件 id。它还会从你的配置中的 `auth.profiles` 以及所有 `auth.order` 列表中删除该配置文件，因此不会留下过期引用，并且会删除一个原本会被清空的 `auth.order.<provider>` 条目（已定义的空顺序表示“选择不使用任何配置文件”，这会禁用该 provider）。在 TTY 环境下会提示确认；脚本和 agent 请传入 `--yes`。如果该配置文件不在存储中，或者有 `models.providers.<id>.apiKey` 条目指向它，logout 会拒绝执行——请先更改该配置值。
 
-使用 `openclaw models auth --agent <id> <subcommand>` 可将认证结果写入特定的已配置 agent 存储。父级 `--agent` 标志会被 `add`、`list`、`login`、`paste-api-key`、`setup-token`、`paste-token`、`login-github-copilot` 以及 `order get`/`set`/`clear` 继承。
+`models auth login-github-copilot` 是 `models auth login --provider github-copilot --method device`（GitHub device flow）的快捷方式；它接受 `--yes`，可在不提示的情况下覆盖现有配置文件。
+
+使用 `openclaw models auth --agent <id> <subcommand>` 可将认证结果写入某个特定的已配置 agent 存储。父级 `--agent` 标志适用于 `add`、`list`、`login`、`logout`、`paste-api-key`、`setup-token`、`paste-token`、`login-github-copilot` 以及 `order get`/`set`/`clear`。
 
 对于 OpenAI 模型，`--provider openai` 默认使用 ChatGPT/Codex 账号登录。只有当你想添加 OpenAI API key 配置文件时才使用 `--method api-key`，通常这是 Codex 订阅额度的备用方案。运行 `openclaw doctor --fix` 可将旧版遗留的 OpenAI Codex 前缀认证/配置文件状态迁移到 `openai`。
 
@@ -167,6 +177,7 @@ openclaw models auth login --provider openai --set-default
 openclaw models auth login --provider openai --method api-key
 openclaw models auth paste-api-key --provider openai
 openclaw models auth list --provider openai
+openclaw models auth logout openai:manual --yes
 ```
 
 注意：

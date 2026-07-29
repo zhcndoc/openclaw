@@ -16,7 +16,7 @@ title: "Microsoft Foundry 插件"
 
 ## 接口
 
-providers: microsoft-foundry; contracts: imageGenerationProviders
+providers: `microsoft-foundry`; contracts: `imageGenerationProviders`
 
 - 图像生成提供程序: `microsoft-foundry`
 

@@ -16,7 +16,7 @@ OpenClaw 管理 HTTP RPC 端点。
 
 ## 接口面
 
-contracts: gatewayMethodDispatch
+contracts: `gatewayMethodDispatch`
 
 ## 相关文档
 

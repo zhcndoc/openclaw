@@ -16,7 +16,7 @@ title: "工作板插件"
 
 ## 表面
 
-contracts: tools
+contracts: `tools`; dashboard data bindings: `workboard.cards.list`, `workboard.stats`, `workboard.boards.list`; dashboard action verbs: `workboard.dispatch`
 
 ## 相关文档
 

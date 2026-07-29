@@ -95,8 +95,8 @@ Image generation follows the standard pattern:
 
 Configuration keys are intentionally separated from the vision analysis routing:
 
-- `agents.defaults.imageModel` is used to analyze images.
-- `agents.defaults.imageGenerationModel` is used to generate images.
+- `agents.defaults.imageModel` analyzes images.
+- `agents.defaults.mediaModels.image` generates images.
 
 Keep them separate so that fallback and policy remain explicit.
 

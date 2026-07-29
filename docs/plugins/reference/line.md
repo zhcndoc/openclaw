@@ -16,7 +16,7 @@ title: "LINE 插件"
 
 ## 接口
 
-channels: line
+channels: `line`
 
 ## 相关文档
 

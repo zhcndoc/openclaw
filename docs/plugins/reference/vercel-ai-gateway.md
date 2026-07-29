@@ -16,7 +16,7 @@ title: "Vercel AI Gateway 插件"
 
 ## 接口
 
-providers: vercel-ai-gateway
+providers: `vercel-ai-gateway`
 
 ## 相关文档
 

@@ -1,37 +1,52 @@
 ---
-summary: "将可选的 1Password 插件用作经过审计的代理密钥代理"
+summary: "Resolve SecretRefs and give agents curated, audited access to 1Password"
 read_when:
-  - 当你希望代理请求经过筛选的 1Password 密钥时
-  - 你需要按密钥的审批策略和审计历史时
-  - 你正在为 OpenClaw 配置 1Password 服务账户时
-title: "1Password 密钥代理"
+  - You want agents to request curated 1Password secrets
+  - You want OpenClaw config credentials to resolve from 1Password
+  - You need per-secret approval policy and audit history
+  - You are configuring a 1Password service account for OpenClaw
+title: "1Password"
 ---
 
-# 1Password 密钥代理
+# 1Password
 
-内置的 `onepassword` 插件为代理提供了一个受策略控制的工具，用于读取经过筛选的一组 1Password 字段。它默认处于禁用状态，并且在 `plugins.entries.onepassword.config` 存在之前不会执行任何操作。
+The bundled `onepassword` plugin has two independent, opt-in surfaces:
 
-这是一个代理工具，而不是 SecretRef 提供程序。它不会注入环境变量，也不会解析 OpenClaw 配置密钥。
+- a managed exec provider that resolves configured [SecretRefs](/gateway/secrets)
+  during Gateway startup, reload, audit, and apply preflight
+- a policy-controlled agent tool that reads a curated set of 1Password fields
+
+Both use the official `op` CLI and the same service-account token file. Enabling
+the plugin alone does not expose the agent tool: that surface also requires a
+configured item registry.
 
 ## 安全模型
 
-- 仅使用服务帐户认证。令牌保留在本地凭据
-  文件中，并且绝不会在 `openclaw.json` 中被接受。
-- 仅限精选注册表。代理可以列出已配置的 slug，但插件绝不会
-  枚举 1Password 保管库。
-- 每个 slug 具有 `auto`、`approve` 或 `deny` 策略。
-- 批准授权会过期。缓存值绝不会绕过当前策略。
-- 每次访问尝试都会记录在 OpenClaw 共享的 SQLite 状态中。审计
-  行包含所提供的原因；请保持原因不包含敏感信息。代理程序
-  绝不会将获取的值或服务令牌复制到审计行中。
-- 在当前工具执行结束后，OpenClaw 所拥有的转录持久化机制会
-  将成功的 `get` 值替换为已脱敏的元数据。
-- 该值在该次执行中对模型可见。如果模型将其复制到后续的工具调用或回复中，
-  那条单独记录将不在此插件的持久化钩子范围内。请将策略保持得足够严格，并且不要要求模型重复输出某个值。
-- 对于每次缓存未命中，插件只会调用一次 `op`。它不会重试速率限制或
-  其他失败。
+- Service-account authentication only. The token stays in a local credentials
+  file and is never accepted in `openclaw.json`.
+- Curated agent registry only. Agents can list configured slugs, but the plugin
+  never enumerates a 1Password vault. SecretRef reads are limited to references
+  explicitly stored on registered OpenClaw credential targets.
+- Per-slug `auto`, `approve`, or `deny` policy.
+- Approval grants expire. A cached value never bypasses current policy.
+- Every access attempt is recorded in OpenClaw's shared SQLite state. Audit
+  rows include the supplied reason; keep reasons non-sensitive. The broker
+  never copies a fetched value or the service token into an audit row.
+- After the current tool execution, OpenClaw-owned transcript persistence
+  replaces a successful `get` value with redacted metadata.
+- The value is model-visible for that execution. If the model copies it into a
+  later tool call or reply, that separate record is outside this plugin's
+  persistence hook. Keep policies narrow and do not ask the model to echo a
+  value.
+- The plugin invokes `op` once per cache miss. It does not retry rate limits or
+  other failures.
+- Each `op` call runs with a minimal environment that disables 1Password
+  desktop-app integration (`OP_LOAD_DESKTOP_APP_SETTINGS=false`,
+  `OP_BIOMETRIC_UNLOCK_ENABLED=false`), so a 1Password app installed on the
+  Gateway host never triggers biometric or macOS permission dialogs.
 
-仅授予该服务帐户对插件配置中注册的保管库和项目的只读访问权限。
+Give the service account read access only to the vaults and items used by
+registered SecretRefs and agent-tool slugs.
 
 ## 开始之前
 
@@ -61,7 +76,91 @@ unset OP_SERVICE_ACCOUNT_TOKEN
 当设置了 `OPENCLAW_STATE_DIR` 时，请将 `~/.openclaw` 替换为该目录。
 如果令牌文件对组用户或其他用户可读或可写，插件会发出一次警告。
 
-## 配置已注册的密钥
+## Configure SecretRefs
+
+Create a secrets apply plan for common model provider keys:
+
+```bash
+openclaw onepassword secretref setup \
+  --anthropic-id op://Automation/Anthropic/credential \
+  --openrouter-id op://Automation/OpenRouter/credential \
+  --plan-out ./openclaw-1password-secrets-plan.json
+```
+
+Use `--provider-key <provider=id>` for another model provider, or
+`--target <path=id>` for any registered
+[SecretRef credential target](/reference/secretref-credential-surface).
+The command requires at least one target and writes a plan. Inspect it, check
+the local `op` and token-file prerequisites, then apply and reload:
+
+```bash
+openclaw onepassword secretref status
+openclaw secrets apply --from ./openclaw-1password-secrets-plan.json --dry-run --allow-exec
+openclaw secrets apply --from ./openclaw-1password-secrets-plan.json --allow-exec
+openclaw secrets audit --check --allow-exec
+openclaw secrets reload
+```
+
+Before apply, status can report that the provider itself is not configured yet;
+`prerequisites ready: yes` confirms that the trusted `op` executable and an
+accepted non-empty token file are ready. After apply, `ready: yes` confirms both the
+provider wiring and prerequisites. Missing or unsafe prerequisites produce
+actionable next steps without printing the token or raw resolver errors.
+
+Manual provider configuration uses the existing plugin id:
+
+```json5
+{
+  plugins: {
+    entries: {
+      onepassword: { enabled: true },
+    },
+  },
+  secrets: {
+    providers: {
+      onepassword: {
+        source: "exec",
+        pluginIntegration: {
+          pluginId: "onepassword",
+          integrationId: "onepassword",
+        },
+      },
+    },
+  },
+  models: {
+    providers: {
+      openai: {
+        apiKey: {
+          source: "exec",
+          provider: "onepassword",
+          id: "op://Automation/OpenAI/credential",
+        },
+      },
+    },
+  },
+}
+```
+
+References use `op://<vault>/<item>/<field>` or
+`op://<vault>/<item>/<section>/<field>`. Vault, item, section, and field names
+may contain spaces. The setup command stores references that do not fit
+OpenClaw's shared exec-id grammar in a plugin-local opaque form and decodes them
+only inside the resolver. Very long references should use stable 1Password IDs;
+they are shorter and reduce the number of 1Password API requests.
+
+The SecretRef resolver runs at most four `op read` processes concurrently,
+disables the 1Password CLI cache so reloads observe rotated values, never uses
+desktop-app integration, and does not expose an agent tool for arbitrary reads.
+Before passing the service-account token, both plugin surfaces
+resolve the executable and reject paths that another local account can replace;
+Windows ACL verification must also succeed. Check provider wiring and local
+readiness with:
+
+```bash
+openclaw onepassword secretref status --json
+```
+
+## Configure registered secrets
 
 将插件配置添加到 `openclaw.json`：
 
@@ -123,7 +222,12 @@ Slug 使用小写字母、数字和连字符，以字母或数字开头，并且
 
 `reason` 是必需的，必须非空，并且限制为 300 个字符。成功的 `get` 会返回该值以及配置的 slug、项目标题和字段标签。
 
-## 策略层级和审批
+The tool schema also declares an internal `authorizationNonce` parameter. The
+policy layer injects it after evaluating the request to hand the authorization
+to the executing tool call. Never set it manually: the policy hook overwrites
+any supplied value, and an unknown value fails the request.
+
+## Policy tiers and approvals
 
 - `auto`：立即获取并审计请求。
 - `deny`：阻止并审计请求。
@@ -139,10 +243,17 @@ Slug 使用小写字母、数字和连字符，以字母或数字开头，并且
 等待时间为 600 秒。插件最多保留 1,024 个常设授权；达到该
 上限时，最旧的授权会被移除，其代理必须批准下一次访问。
 
-内存缓存默认持续 300 秒，并受已配置的
-slug 注册表限制。将 `cacheTtlSeconds` 设为 `0` 可禁用它。策略会在每次缓存查询之前进行评估，且缓存命中会被审计。运行时配置重载会在每个策略和执行边界生效；禁用插件或
-移除、拒绝或重定向某个 slug 会使待处理授权和
-缓存值失效。
+Each evaluated authorization is single-use and is handed to the executing tool
+call through shared SQLite state, so the handoff also works when more than one
+plugin instance is active in the gateway process. Unused authorizations expire
+after the 600-second approval window.
+
+The in-memory cache defaults to 300 seconds and is bounded by the configured
+slug registry. Set `cacheTtlSeconds` to `0` to disable it. Policy is evaluated
+before every cache lookup, and cache hits are audited. Runtime config reloads
+take effect at each policy and execution boundary; disabling the plugin or
+removing, denying, or retargeting a slug invalidates pending authorization and
+cached values.
 
 ## 检查状态和审计历史
 
@@ -163,12 +274,44 @@ openclaw onepassword audit
 openclaw onepassword audit --limit 100
 ```
 
-记录按最新优先显示，并展示时间戳、agent、slug、结果，以及截断的
-原因。原因会按提供时原样存储；broker 绝不会将获取到的
-值添加到审计日志中。
+Rows are newest first and show timestamp, agent, slug, outcome, an `errorCode`
+when the attempt failed, and a truncated reason. The reason is stored as
+supplied; the broker never adds the fetched value to the audit log.
 
 ## 1Password CLI 行为
 
 每次缓存未命中都会使用已配置的项目、保险库和精确的字段选择器运行 `op item get`，输出 JSON，设置有界超时，并带上 `--cache=false`。子进程只接收该字段，而不是整个项目。子进程环境中仅包含 `OP_SERVICE_ACCOUNT_TOKEN` 和 `HOME`。
 
-插件只会尝试一次。`RATE_LIMITED` 错误应通过在后续代理请求之前等待来处理；插件不会创建自动重试循环。其他稳定错误代码用于区分缺失的令牌或二进制文件、缺失的项目或字段、身份验证失败、超时，以及其他 `op` 失败。
+The plugin makes one attempt. `RATE_LIMITED` errors should be handled by waiting
+before a later agent request; the plugin does not create an automatic retry
+loop.
+
+## Error codes
+
+Failed attempts carry one closed error code in the tool result and the audit
+row.
+
+1Password access errors:
+
+| Code              | Meaning                                                          |
+| ----------------- | ---------------------------------------------------------------- |
+| `TOKEN_MISSING`   | Token file is missing or empty                                   |
+| `OP_NOT_FOUND`    | `op` binary could not be resolved                                |
+| `ITEM_NOT_FOUND`  | Configured item is not in the vault                              |
+| `FIELD_NOT_FOUND` | Configured field is not on the item; available labels are listed |
+| `RATE_LIMITED`    | 1Password service-account rate limit reached                     |
+| `AUTH_FAILED`     | Service-account authentication failed                            |
+| `TIMEOUT`         | `op` exceeded `opTimeoutMs`                                      |
+| `OP_ERROR`        | Any other `op` failure or invalid output                         |
+
+Policy and validation errors:
+
+| Code                                               | Meaning                                                                      |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `INVALID_ACTION`, `INVALID_REASON`, `INVALID_SLUG` | Request failed input validation                                              |
+| `UNKNOWN_SLUG`                                     | Slug is not in the configured registry                                       |
+| `TOOL_CALL_ID_MISSING`                             | Call arrived without a tool call id                                          |
+| `POLICY_NOT_EVALUATED`                             | No matching authorization for this call; the request was not policy-approved |
+| `POLICY_CHANGED`                                   | Config changed between approval and execution                                |
+| `GRANT_EXPIRED`                                    | Standing grant lapsed before execution                                       |
+| `APPROVAL_CANCELLED`                               | The run was aborted while the approval was pending                           |

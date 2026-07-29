@@ -8,52 +8,52 @@ read_when:
   - 你正在更改 ClawSweeper 派发或 GitHub 活动转发
 ---
 
-OpenClaw CI 会在推送到 `main` 时运行（Markdown 和 `docs/**` 路径在触发时会被忽略），在每个非草稿 pull request 上运行，以及在手动派发时运行。规范的 `main` 推送会先经过 90 秒的托管运行器准入窗口；当有更新的提交到达时，`CI` 并发组会取消那个等待中的运行，因此连续合并不会让每次都登记一整套 Blacksmith 矩阵。pull request 和手动派发会跳过等待。随后 `preflight` 作业会对 diff 进行分类，并在只有无关区域发生变化时关闭昂贵的流水线。手动的 `workflow_dispatch` 运行会有意绕过智能范围控制，并展开完整图谱，用于发布候选和广泛验证。Android 流水线仍通过 `include_android`（或 `release_gate` 输入）保持为可选启用。仅发布相关的插件覆盖位于单独的 [`Plugin Prerelease`](#plugin-prerelease) 工作流中，并且只会从 [`Full Release Validation`](#full-release-validation) 或显式的手动派发中运行。
+OpenClaw CI 在推送到 `main` 时运行（`Markdown` 和 `docs/**` 路径在触发时会被忽略），在每个非草稿拉取请求上运行，以及在手动分发时运行。规范的 `main` 推送是单飞的：`CI` 并发组允许一次完整的集成周期运行，而 GitHub 只保留最新的待处理推送。新的合并会替换那个待处理运行，而不会取消已经注册了 Blacksmith 矩阵的工作。拉取请求仍然会取消被取代的 head，而手动分发使用隔离的组。`preflight` 会对差异进行分类，并在只更改了无关区域时关闭昂贵的流水线。手动 `workflow_dispatch` 运行会有意绕过智能范围控制，并展开完整图谱，用于发布候选和广泛验证。Android 流水线仍通过 `include_android`（或 `release_gate` 输入）保持可选。仅发布时的插件覆盖位于单独的 [`Plugin Prerelease`](#plugin-prerelease) 工作流中，并且只会从 [`Full Release Validation`](#full-release-validation) 或显式的手动分发中运行。
 
 ## 流水线概览
 
-| Job                                | 目的                                                                                                                                                                                                               | 运行时机                                        |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `preflight`                        | 检测仅文档变更、变更的作用域、变更的扩展，并构建 CI 清单                                                                                                                               | 在非草稿推送和 PR 上始终运行                  |
-| `runner-admission`                 | 在 Blacksmith 工作注册之前，为规范的 `main` 推送提供托管的 90 秒去抖                                                                                                                            | 每次 CI 运行；仅在规范的 `main` 推送上睡眠 |
-| `security-fast`                    | 私钥检测、通过 `zizmor` 进行变更工作流审计，以及生产锁文件审计                                                                                                                             | 在非草稿推送和 PR 上始终运行                  |
-| `pnpm-store-warmup`                | 在不阻塞 Linux Node 分片的情况下，预热锁文件固定的 pnpm 存储缓存                                                                                                                                          | 选择了 Node 或 docs-check 车道                   |
-| `build-artifacts`                  | 构建 `dist/`、Control UI、已构建 CLI 烟雾检查、启动内存，以及嵌入式构建产物检查                                                                                                                 | 与 Node 相关的变更                               |
-| `control-ui-i18n`                  | 验证生成的 Control UI 区域设置包、元数据和翻译记忆；自动运行时仅作建议，手动发布 CI 时阻塞                                                                               | 与 Control UI i18n 相关的变更以及手动 CI      |
-| `checks-fast-core`                 | 快速 Linux 正确性车道：抑制基线最大行数递进、bundled + protocol、Bun 启动器，以及 CI 路由快速任务                                                                                  | 与 Node 相关的变更                               |
-| `qa-smoke-ci-profile`              | 有界自动 QA Smoke 代表集中的两个自包含平衡部分；完整分类覆盖仍可通过显式 QA 配置文件获得                                                         | 与 Node 相关的变更                               |
-| `checks-fast-contracts-plugins-*`  | 两个加权插件契约分片                                                                                                                                                                                   | 与 Node 相关的变更                               |
-| `checks-fast-contracts-channels-*` | 两个加权通道契约分片                                                                                                                                                                                  | 与 Node 相关的变更                               |
-| `checks-node-*`                    | PR 上的已变更目标 Node 测试；在 `main`、手动、发布和广泛回退运行中则为完整核心分片                                                                                                      | 与 Node 相关的变更                               |
-| `check-*`                          | 分片的本地主门禁等效项：guards、shrinkwrap、bundled-channel 配置元数据、生产类型、lint、依赖、测试类型                                                                                   | 与 Node 相关的变更                               |
-| `check-additional-*`               | 边界检查条带（包括 prompt 快照漂移）、会话访问器/转录读取器/SQLite 事务边界、扩展 lint 组、包边界编译/canary，以及运行时拓扑架构 | 与 Node 相关的变更                               |
-| `checks-node-compat-node22`        | Node 22 兼容性构建和烟雾车道                                                                                                                                                                            | 发布的手动 CI 分发                     |
-| `check-docs`                       | 文档格式、lint 和坏链检查                                                                                                                                                                         | 文档变更（PR 和手动分发）              |
-| `native-i18n`                      | 原生应用、Android 和 Apple i18n 清单检查                                                                                                                                                                  | 与原生 i18n 相关的变更                        |
-| `skills-python`                    | 基于 Python 的技能的 Ruff + pytest                                                                                                                                                                                | 与 Python 技能相关的变更                       |
-| `checks-windows`                   | Windows 特定的进程/路径测试，以及共享运行时导入说明符回归                                                                                                                                  | 与 Windows 相关的变更                            |
-| `macos-node`                       | 聚焦的 macOS TypeScript 测试：launchd、Homebrew、运行时路径、打包脚本、进程组包装器                                                                                                            | 与 macOS 相关的变更                              |
-| `macos-swift`                      | macOS 应用的 Swift lint、构建和测试                                                                                                                                                                        | 与 macOS 相关的变更                              |
-| `ios-build`                        | Xcode 项目生成以及 iOS 应用模拟器构建                                                                                                                                                             | iOS 应用、共享应用套件或 Swabble 变更         |
-| `android`                          | 两种 flavor 的 Android 单元测试以及一个 debug APK 构建                                                                                                                                                          | 与 Android 相关的变更                            |
-| `openclaw/ci-gate`                 | 最终汇总：要求 admission、preflight 和 security；仅接受对清单禁用的下游车道的跳过                                                                                               | 每次非草稿 CI 运行                              |
-| `test-performance-agent`           | 独立工作流：在受信任活动之后，每日进行 Codex 慢测试优化                                                                                                                                          | 主 CI 成功或手动分发                  |
-| `openclaw-performance`             | 独立工作流：带有 mock-provider、deep-profile 和 GPT 5.6 live 车道的每日/按需 Kova 运行时性能报告                                                                                          | 定时和手动分发                       |
+| Job                                | 目的                                                                                                                                                                                                                | 运行时间                                      |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `preflight`                        | 检测变更范围并构建 CI 清单；在规范化、与 Node 相关的 `main` 分支上，在 fanout 之前刷新并维护依赖快照                                                                                                                 | 非草稿 push 和 PR 时始终运行                   |
+| `security-fast`                    | 私钥检测、通过 `zizmor` 进行变更工作流审计，以及生产锁文件审计                                                                                                                                                | 非草稿 push 和 PR 时始终运行                   |
+| `pnpm-store-warmup`                | 为 pull request 和手动运行预热由 lockfile 固定的 Actions 缓存，同时不阻塞 Linux Node 分片                                                                                                                         | 在 main 之外选择 Node 或 docs-check 线路时运行 |
+| `build-artifacts`                  | 构建 `dist/`、Control UI、已构建 CLI 冒烟检查、启动内存，以及嵌入式已构建制品检查                                                                                                                               | 与 Node 相关的变更                            |
+| `control-ui-i18n`                  | 验证生成的 Control UI 语言包、元数据和翻译记忆；自动运行时为建议性，手动发布 CI 时为阻塞性                                                                                                                     | 与 Control UI i18n 相关的变更和手动 CI        |
+| `checks-fast-core`                 | 快速 Linux 正确性线路：抑制基线 max-lines 递增、bundled + protocol、Bun 启动器，以及 CI 路由 fast 任务                                                                                                         | 与 Node 相关的变更                            |
+| `qa-smoke-ci-profile`              | 自包含、平衡的自动 QA Smoke 覆盖集的一部分；完整的分类覆盖仍可通过显式 QA 配置文件获得                                                                                                                         | 与 Node 相关的变更                            |
+| `checks-fast-contracts-plugins-*`  | 两个加权插件契约分片                                                                                                                                                                                                  | 与 Node 相关的变更                            |
+| `checks-fast-contracts-channels-*` | 两个加权通道契约分片                                                                                                                                                                                                  | 与 Node 相关的变更                            |
+| `checks-node-*`                    | Pull request 上对变更目标 Node 测试；在 `main`、手动、发布和广泛回退运行中执行完整核心分片                                                                                                                       | 与 Node 相关的变更                            |
+| `check-*`                          | 分片化的 main 本地门禁等价项：guards、临时 npm-lock 验证、bundled-channel 配置元数据、生产类型、lint、依赖、测试类型                                                                                             | 与 Node 相关的变更                            |
+| `check-additional-*`               | 边界检查条带（包括 prompt 快照漂移）、会话访问器/转录读取器/SQLite 事务边界、扩展 lint 组、包边界编译/canary，以及运行时拓扑架构                                                     | 与 Node 相关的变更                            |
+| `checks-node-compat-node22`        | Node 22 兼容性构建和冒烟线路                                                                                                                                                                                          | 发布的手动 CI 调度                            |
+| `check-docs`                       | 文档格式化、lint 和断链检查                                                                                                                                                                                           | 文档变更（PR 和手动调度）                     |
+| `native-i18n`                      | 在源代码 PR 上验证原生源码提取和本地化安全性；在生成的 PR 和手动 CI 上强制完整的翻译/平台生成一致性                                                                                                            | 与原生 i18n 相关的变更                         |
+| `skills-python`                    | 供 Python 支持的技能使用的 Ruff + pytest                                                                                                                                                                              | 与 Python 技能相关的变更                      |
+| `checks-windows`                   | Windows 特有的进程/路径测试，以及共享运行时导入说明符回归测试                                                                                                                                                       | 与 Windows 相关的变更                         |
+| `macos-node`                       | 聚焦的 macOS TypeScript 测试：launchd、Homebrew、运行时路径、打包脚本、进程组包装器                                                                                                                               | 与 macOS 相关的变更                           |
+| `macos-swift`                      | macOS 应用的 Swift lint 和构建，以及应用和共享 OpenClawKit 包的测试                                                                                                                                                 | 与 macOS 相关的变更                           |
+| `ios-build`                        | Xcode 项目生成以及 iOS 应用模拟器构建                                                                                                                                                                                | iOS 应用、共享 app kit，或 Swabble 变更        |
+| `android`                          | 两种 flavor 的 Android 单元测试，以及一个 debug APK 构建                                                                                                                                                            | 与 Android 相关的变更                        |
+| `openclaw/ci-gate`                 | 最终汇总：要求 preflight 和 security；仅接受那些由清单禁用的下游线路的跳过                                                                                                                                        | 每次非草稿 CI 运行                             |
+| `test-performance-agent`           | 独立工作流：在可信活动之后，每日进行 Codex 慢测试优化                                                                                                                                                               | 主 CI 成功或手动调度                           |
+| `openclaw-performance`             | 独立工作流：通过 mock-provider、deep-profile 和 GPT 5.6 live 线路，按日/按需生成 Kova 运行时性能报告                                                                                                           | 定时和手动调度                                 |
 
 独立的 Periphery 工作流会强制 iOS 和 macOS 应用保持零死代码发现。共享的 OpenClawKit 工作流会并行扫描两个消费者，并且只有当 Periphery 在两个构建中都发出相同的 Swift USR 时，才会报告一个声明。其生成的 `OpenClawProtocol/GatewayModels.swift` schema 合同被保留为生成器拥有的代码，而不是被视为应用本地死代码。
 
 ## 先失败顺序
 
-1. `runner-admission` 仅等待规范的 `main` 推送；更晚的推送会在 Blacksmith 注册之前取消此次运行。
-2. `preflight` 决定哪些 lane  वास्तव 存在。`docs-scope` 和 `changed-scope` 逻辑是这个作业内部的步骤，而不是独立作业。
-3. `security-fast`、`check-*`、`check-additional-*`、`check-docs` 和 `skills-python` 会快速失败，不会等待更重的 artifact 和平台矩阵作业。
-4. `build-artifacts` 和建议性的 `control-ui-i18n` 检查会与快速 Linux lanes 重叠。生成的 locale 漂移会保持可见，同时独立的刷新工作流会在后台修复它。
-5. 更重的平台和运行时 lanes 随后展开：`checks-fast-core`、`checks-fast-contracts-plugins-*`、`checks-fast-contracts-channels-*`、`checks-node-*`、`checks-windows`、`macos-node`、`macos-swift`、`ios-build` 和 `android`。
-6. `openclaw/ci-gate` 会等待每个被选中的 lane。Admission、preflight 和 security 必须成功；下游作业只有在清单未选择它们时才可以跳过。任何一个失败或被取消的已选 lane 都会使聚合失败。
+1. `preflight` 决定了哪些 lane 实际存在。`docs-scope` 和 `changed-scope` 逻辑是这个作业中的步骤，而不是独立作业。规范化的 `main` 会立即开始，但其并发组一次只允许一个完整运行，并会将后续推送合并为一个最新的待处理运行。与 Node 相关的 `main` 推送还会在下游作业挂载 key 之前，在这里串行化唯一的依赖磁盘写入者及其大小维护；Blacksmith 可能只会让稍后的工作流运行暴露一个新提交，因此同一运行中的消费者会保留带标记检查的本地回退方案。
+2. `security-fast`、`check-*`、`check-additional-*`、`check-docs` 和 `skills-python` 会快速失败，不必等待更重的 artifact 和平台矩阵作业。
+3. `build-artifacts` 和区域设置检查会与快速的 Linux lane 并行。Control UI 和原生应用源代码 PR 会排除生成的区域设置快照/资源；它们串行化的刷新工作流会在后台修复并自动合并隔离的生成 PR。源代码 CI 仍会阻止过期的源清单和不安全的本地化调用。生成的 PR、手动 CI 和发布准备会强制要求完整的翻译/平台生成一致性。规范化的 `release/YYYY.M.PATCH` 分支可以将发布准备中的区域设置修复与其他生成的发布输出一并包含。
+4. 更重的平台和运行时 lane 随后展开：`checks-fast-core`、`checks-fast-contracts-plugins-*`、`checks-fast-contracts-channels-*`、`checks-node-*`、`checks-windows`、`macos-node`、`macos-swift`、`ios-build` 和 `android`。
+5. `openclaw/ci-gate` 会等待所有被选中的 lane。Preflight 和 security 必须成功；下游作业只有在清单未选中它们时才可跳过。任何失败或被取消的已选 lane 都会使聚合失败。
 
 合并协调器可以对同一个 pull request head 复用一个已认证且成功的 `openclaw/ci-gate`，最长可达 24 小时。这样可以避免在与无关的 `main` 变更之后重写贡献者分支。这个可复用结果并不能替代针对当前 `main` 的、由 App 拥有的独立严格 test-merge 检查。对于该未变化的 head，在 freshness 窗口内，后续的 pending 或 failed rerun 不会抹去先前的成功结果。
 
-当更新的推送落在同一个 PR 或 `main` ref 上时，GitHub 可能会将被取代的作业标记为 `cancelled`。除非同一 ref 的最新运行也失败了，否则应将其视为 CI 噪音。矩阵作业使用 `fail-fast: false`，而 `build-artifacts` 会直接报告嵌入式 channel、core-support-boundary 和 gateway-watch 的失败，而不是排队运行微小的验证作业。自动 CI 并发键是版本化的（`CI-v7-*`），因此 GitHub 侧旧队列组中的僵尸任务不会无限期阻塞更新的 main 运行。手动全套运行使用 `CI-manual-v1-*`，并且不会取消正在进行的运行。插件列表启动内存守卫在自托管 Blacksmith Linux 上将上限保持在 350 MiB，并允许 GitHub 托管 Linux 使用 425 MiB，因为同样构建的 CLI 在那里的 RSS 基线更高。
+默认分支规则集要求使用由 GitHub Actions 拥有的 `openclaw/ci-gate` 检查。仓库维护者和管理员拥有经过审计的 break-glass 绕过权限，仅用于签名的直接 fast-forward 落地；组织规则集仍会阻止删除和非 fast-forward 更新。常规的 pull request 合并应继续使用 gate，而不是绕过失败的 CI。单独的、由 App 拥有的严格 test-merge 检查仍然会将 head 绑定到当前的 `main`。
+
+当更新的 head 落地时，GitHub 可能会将被替代的 pull request 作业标记为 `cancelled`。除非同一 PR 的最新运行也失败，否则应将其视为 CI 噪声。规范化的 `main` 运行在被接纳后不会被取消；当合并流量到来时，GitHub 只会用最新的 tip 替换较早的待处理运行。矩阵作业使用 `fail-fast: false`，而 `build-artifacts` 会直接报告嵌入的 channel、core-support-boundary 和 gateway-watch 失败，而不是排队运行很小的 verifier 作业。自动 CI 并发 key 采用版本号（`CI-v7-*`），因此旧队列组中的 GitHub 侧僵尸任务不会无限期阻塞更新的 main 运行。手动全套运行使用 `CI-manual-v1-*`，并且不会取消正在进行的运行。plugin-list 的启动内存保护会将自托管 Blacksmith Linux 的上限保持在 350 MiB，并允许 GitHub 托管 Linux 使用 425 MiB，因为在相同已构建 CLI 下，其 RSS 基线更高。
 
 使用 `pnpm ci:timings`、`pnpm ci:timings:recent`，或 `node scripts/ci-run-timings.mjs <run-id>` 来汇总来自 GitHub Actions 的总耗时、排队时间、最慢作业、失败情况，以及 `pnpm-store-warmup` 的 fanout barrier。工作流内的 `ci-timings-summary` 作业存在于 `ci.yml` 中，但目前已禁用（`if: false`）；请改为在本地运行 timing helper。对于构建耗时，请检查 `build-artifacts` 作业中的 `Build dist` 步骤：`pnpm build:ci-artifacts` 会打印 `[build-all] phase timings:`，并包含 `ui:build`；该作业还会上传 `startup-memory` artifact。
 
@@ -80,22 +80,29 @@ OpenClaw CI 会在推送到 `main` 时运行（Markdown 和 `docs/**` 路径在�
 
 最慢的 Node 测试家族被拆分或均衡分配，以便每个作业保持较小规模，而不会过度占用 runner：
 
-- Plugin contracts 和 channel contracts 都作为两个加权的 Blacksmith 支持分片运行，并带有标准 GitHub runner 回退。
-- Core unit fast/support 车道分开运行；core runtime infra 则拆分为 process、shared、hooks、secrets，以及三个 cron 域分片。
-- Auto-reply 以均衡 worker 的方式运行，其中 reply 子树拆分为 agent-runner、commands、dispatch、session 和 state-routing 分片。
-- Agentic gateway/server（control-plane）配置拆分为 chat、auth、model、HTTP/plugin、runtime 和 startup 车道，而不是等待构建产物。
-- 常规 CI 只会将孤立的 infra include-pattern 分片打包进最多 64 个测试文件的确定性 bundle 中，从而减少 Node 矩阵，但不会合并非孤立的 command/cron、stateful agents-core 或 gateway/server 套件。重型固定套件仍保持在 8 vCPU，而 bundle 和较低权重的车道使用 4 vCPU。
-- canonical 仓库上的拉取请求会复用针对 synthetic merged-tree diff 的变更测试解析器。精确变更只运行一个定向 Node 作业；每个被选中的测试文件都会拥有自己的进程，因此 stateful 套件隔离性得以保持。规划器会将兄弟测试与导入图依赖项合并，并在 workspace package、package/lockfile、shared harness、split-config、重命名或删除的变更、公共 extension-contract 变更、具有特殊分片设置的测试、部分解析或空目标、超大路径或目标规划，以及规划器错误时，回退到现有的 14 作业紧凑完整套件计划。定向计划始终保留完整的构建产物边界闸门，因为其仓库扫描器无法从导入中推导出来。`main` 推送、手动派发和发布闸门保留完整矩阵，因为被取消的已替代 `main` 运行使得单次推送 diff 不足以作为集成证明。
-- 完整的 Node 矩阵会优先接纳始终较慢的串行工具和 auto-reply 命令分片。这保持了 28 作业上限，同时避免较短的字母顺序分组把关键路径工作推到后续波次。
-- 大范围的浏览器、QA、媒体和杂项插件测试使用各自专用的 Vitest 配置，而不是共享的插件兜底配置。include-pattern 分片会使用 CI 分片名称记录 timing 条目，因此 `.artifacts/vitest-shard-timings.json` 能区分整个配置与被过滤的分片。
-- `check-additional-*` 会将补充边界守卫列表（`scripts/run-additional-boundary-checks.mjs`）拆分为一个提示密集分片（`check-additional-boundaries-a`，其中包括 Codex prompt 快照漂移检查）和一个用于其余 stripe 的组合分片（`check-additional-boundaries-bcd`），每个分片都会并发运行独立守卫并打印每项检查的耗时。Package-boundary compile/canary 工作仍保持在一起，而 runtime topology architecture 则独立于嵌入在 `build-artifacts` 中的 gateway watch 覆盖运行。
-- Gateway watch、channel 测试和 core support-boundary 分片会在 `dist/` 和 `dist-runtime/` 已经构建完成后，于 `build-artifacts` 内并发运行。
+- Plugin contracts and channel contracts each run as two weighted Blacksmith-backed shards with the standard GitHub runner fallback.
+- Core unit fast/support lanes run separately; core runtime infra splits into process, shared, hooks, secrets, and three cron domain shards.
+- Auto-reply runs as balanced workers, with the reply subtree split into agent-runner, commands, dispatch, session, and state-routing shards.
+- Agentic gateway/server (control-plane) configs split across chat, auth, model, HTTP/plugin, runtime, and startup lanes instead of waiting on built artifacts.
+- Normal CI packs only isolated infra include-pattern shards into deterministic bundles of at most 64 test files, reducing the Node matrix without merging non-isolated command/cron, stateful agents-core, or gateway/server suites. Heavy fixed suites stay on 8 vCPU while the bundled and lower-weight lanes use 4 vCPU.
+- Pull requests on the canonical repository reuse the changed-test resolver against the synthetic merged-tree diff. Precise changes run one targeted Node job; each selected test file gets its own process so stateful suite isolation remains intact. The planner combines sibling tests with import-graph dependents and falls back to the existing 14-job compact full-suite plan for workspace package, package/lockfile, shared harness, split-config, renamed, or deleted changes, public extension-contract changes, tests with special shard setup, partially resolved or empty targets, oversized path or target plans, and planner errors. Targeted plans always retain the full built-artifact boundary gate because its repository scanners cannot be derived from imports. `main` pushes run the same full compact suite: pending intermediate push events can be coalesced, so the newest surviving run must validate the complete integration tree rather than only its final single-push diff. Manual dispatches and release gates retain the full named per-shard matrix.
+- The full Node matrix admits the consistently slow serial tooling, auto-reply command shards, and broad core-fast cache writer first. This keeps the 28-job cap while preventing critical-path work and the next run's transform seed from slipping into a later wave.
+- Broad browser, QA, media, and miscellaneous plugin tests use their dedicated Vitest configs instead of the shared plugin catch-all. Include-pattern shards record timing entries using the CI shard name, so `.artifacts/vitest-shard-timings.json` can distinguish a whole config from a filtered shard.
+- Linux Node shard jobs persist Vitest's experimental filesystem module cache through the upstream Actions cache API, which Blacksmith transparently accelerates on its runners. Every CI shard is restore-only and unpacks the protected seed into its own runner-local root; the shard wrapper then gives concurrent Vitest processes separate live subdirectories. Only the non-cancelling daily or explicitly dispatched warmer saves a new immutable archive, so pull requests cannot publish transforms or mint per-PR cache families. A transform-input fingerprint clears incompatible lockfile, package, tsconfig, and Vitest-config generations. The protected writer scans and prunes its restored cache to 75% after it exceeds 2 GiB. Vitest hashes module id, source content, environment, and resolved transform config, so ordinary partial source changes keep unchanged entries warm while changed modules miss safely. Coarse restore prefixes bridge workflow runs; normal Actions cache LRU and inactivity eviction bound old immutable archives.
+- Trusted Linux Node jobs also bind the pnpm store and `node_modules` from one protected dependency disk per supported Node line. Package manifests, install settings, runner platform, and the exact Node patch stay out of the disk key; an exact runtime and install-input fingerprint decides whether a job reuses the tree or reinstalls and refreshes the same disk. Manifests are canonicalized before hashing. The audited direct root hooks retain only pnpm's install lifecycle scripts, so formatting and ordinary test/build script edits keep the warm dependency tree; unaudited lifecycle-hook drift fails closed until its source inputs join the fingerprint contract. Dependency, package-manager, hook-source, and lockfile changes always invalidate the snapshot. A matching fingerprint is necessary but not sufficient: setup also checks the importer archive and manifest checksums, then verifies registry-backed lockfile dependencies retained by postinstall against the package manifests Node resolves from their importers. Missing or stale importer content falls back to a fresh install instead of serving the root hoist. A pull request whose read-only snapshot is unusable detaches the workspace bind and installs into runner-local storage, avoiding slow writes to a clone it cannot publish. Sticky cold installs disable pnpm's inner fetch retries and make up to three bounded full-install attempts from the progressively warmed store; a timeout remains a failure. After a content-validated restore or frozen-lockfile install, setup disables pnpm's redundant pre-run dependency check: the repository intentionally prunes plugin-local `node_modules`, which pnpm otherwise treats as stale and repairs through unsafe concurrent implicit installs during shard fanout. Canonical main preflight is the sole writer and measures the store on every refresh, running `pnpm store prune` only after retired package versions push it above 8 GiB. Blacksmith snapshot publication is asynchronous even after a writer job completes, so the first run after a fresh key or fingerprint can remain cold; later content-validated exact-marker restores are the rollout proof. Required CI jobs and pull requests get disposable clones, so dependency changes do not create new disks, competing snapshots, or a cache lock that can cancel builds.
+- Node shard and build-artifact jobs also restore Node's portable on-disk compile cache through immutable Actions caches. Independent `test` and `build` namespaces prevent their writers from replacing each other's archives: the scheduled test warmer owns the protected test seed, while `build-artifacts` may publish at most one protected build archive per UTC day from trusted `main` pushes. PR and ordinary test jobs only read protected snapshots, so feature-branch bytecode never enters the shared seed and PR traffic creates no cache archives. This reuses V8 bytecode for Node-loaded orchestration, build tooling, and external dependencies across different checkout paths, including when only part of the source graph changes. Vitest child processes disable an inherited compile cache because coverage can be enabled inside dynamic configs and V8 coverage can lose source-position precision when scripts are deserialized from bytecode.
+- The build-artifact job also persists content-fingerprinted `build-all` step outputs. CI's self-built plugin SDK declarations hash the complete repository-owned TypeScript/JSON source graph, exclude installed and generated directories, and restore both flat declarations and package bridges after `tsdown` clears `dist`. Documentation, workflow, plugin, and other changes outside that graph can reuse the declaration snapshot; source changes rebuild it before the export gate runs.
+- Full declaration builds split `tsdown` into AI, workspace-package, and unified groups. Each group caches declarations only, then still rebuilds runtime JavaScript before restoring those declarations. Core or plugin changes therefore invalidate only the large unified graph, while workspace-package changes conservatively invalidate every dependent declaration group. Public full builds generally use an immutable Actions cache; coarse restore keys seed partial changes, per-group content fingerprints reject stale data, and GitHub's cache quota evicts old generations. The weekly Node 22 lane instead publishes a 14-day artifact after successful `main` runs and restores only artifacts whose immutable producer identity resolves to that workflow on `main`, avoiding quota churn without allowing PR code to write a shared cache. Private-QA declarations are never persisted in Actions caches because cache namespaces are not confidentiality boundaries.
+- `check-additional-*` stripes the supplemental boundary guard list (`scripts/run-additional-boundary-checks.mjs`) into one prompt-heavy shard (`check-additional-boundaries-a`, which includes the Codex prompt snapshot drift check) and one combined shard for the remaining stripes (`check-additional-boundaries-bcd`), each running independent guards concurrently and printing per-check timings. Package-boundary compile/canary work stays together, and runtime topology architecture runs separately from the gateway watch coverage embedded in `build-artifacts`.
+- On the 32-vCPU self-hosted build runner, Gateway watch, channel tests, and the core support-boundary shard start together inside `build-artifacts` after `dist/` and `dist-runtime/` are already built. GitHub-hosted fallback runs keep Gateway watch serial so low-core contention cannot consume its readiness deadline.
 
 一旦被接纳，canonical Linux CI 允许最多 28 个并发 Node 测试作业，而较小的 fast/check 车道则允许 12 个；Windows 和 Android 保持在两个，因为这些 runner 池更窄。紧凑的整配置批次使用 120 分钟的批次超时，而 include-pattern 组共享同一个受限作业预算。
 
-Android CI 会同时运行 `testPlayDebugUnitTest` 和 `testThirdPartyDebugUnitTest`，然后构建 Play debug APK。第三方 flavor 没有单独的 source set 或 manifest；其单元测试流水线仍会使用 SMS/call-log BuildConfig 标志编译该 flavor，同时避免在每次与 Android 相关的 push 上都重复进行 debug APK 打包作业。
+Android CI runs both `testPlayDebugUnitTest` and `testThirdPartyDebugUnitTest` and then builds the Play debug APK. The third-party flavor has no separate source set or manifest; its unit-test lane still compiles the flavor with the SMS/call-log BuildConfig flags, while avoiding a duplicate debug APK packaging job on every Android-relevant push. Each current Gradle task has one protected sticky disk; PR jobs use disposable clones, while protected runs refresh content-addressed Gradle entries in place.
 
-`check-dependencies` 分片会运行生产 Knip 依赖、未使用文件和未使用导出检查。未使用文件守卫在 PR 添加新的未经审查的未使用文件或留下过时的 allowlist 条目时会失败，同时保留 Knip 无法静态解析的有意动态插件、生成、构建、live-test 和 package bridge 表面。未使用导出守卫会排除测试支持文件，然后在出现新发现或过时的必需基线条目时失败；删除死导出后，请使用 `pnpm deadcode:exports:update` 重新生成仅缩减的基线。历史目标在提供导出守卫时会运行该守卫，否则保留其旧的死代码回退。
+Blacksmith sticky-disk keys are deliberately bounded by supported runtime or task dimensions, never PR number, commit, run, branch, or dependency hash. Runtime transform and compile caches use Actions cache instead of sticky disks because immutable archives expose verifiable restore/save results and avoid mutable snapshot-promotion failures. After a sticky key-version migration, add only the exact obsolete key, architecture, and region identities to `.github/retired-sticky-disks.json`, dispatch `Sticky Disk Cleanup` from `main` with the same dimensions and confirmation, verify deletion, then remove those entries. The workflow routes ARM identities to an ARM runner, rejects runner-region mismatches, uses Blacksmith's exact-key deletion action, and never deletes Docker builder caches or wildcard prefixes. Actions cache archives use normal LRU and inactivity eviction.
+
+The `check-dependencies` shard runs production Knip dependency, unused-file, and unused-export checks. The unused-file guard fails when a PR adds a new unreviewed unused file or leaves a stale allowlist entry, while preserving intentional dynamic plugin, generated, build, live-test, and package bridge surfaces that Knip cannot resolve statically. The unused-export guard excludes test-support files and fails on every unused production export; intentional dynamic consumers must be modeled in `config/knip.config.ts`. Historical targets run the export guard when they provide it and retain their older dead-code fallback otherwise.
 
 ## ClawSweeper 活动转发
 
@@ -114,9 +121,11 @@ Android CI 会同时运行 `testPlayDebugUnitTest` 和 `testThirdPartyDebugUnitT
 
 将 GitHub 标题、评论、正文、审查文本、分支名和提交消息在整个路径中都视为不受信任的数据。它们是用于摘要和分诊的输入，而不是用于工作流或代理运行时的指令。
 
+Barnacle 将带有 bug 标签的 issue 视为待验证候选项，而不是因不活跃而关闭的候选项。它可以添加 `stale` 标签，从而派发一次精确的 ClawSweeper 审查，但不能关闭该 issue。随后，ClawSweeper 可能会应用有证据支持的解决方案；当前 `main` 上已证实的修复会将其关闭为已完成，而当前仍存在问题或结论不明确的 bug 则保持打开状态。stale 工作流还会审计最近的关闭事件，并在 Barnacle 身份将 bug 关闭为 `not_planned` 时失败。
+
 ## 手动派发
 
-手动 CI 派发运行与正常 CI 相同的作业图，但会强制开启所有非 Android 范围的泳道：Linux Node 分片、bundled-plugin 分片、plugin 和 channel contract 分片、Node 22 兼容性、`check-*`、`check-additional-*`、构建产物冒烟检查、文档检查、Python skills、Windows、macOS、iOS build，以及 Control UI i18n。由于独立的刷新工作流会在后台修复生成内容漂移，因此在自动 PR 和 `main` 运行中，Control UI locale parity 仅作为建议项；但在手动 CI 中它是阻塞项，因此在 Full Release Validation 中也是阻塞项。独立的手动 CI 派发仅在 `include_android=true` 时运行 Android（`release_gate` 输入也会强制启用 Android）；完整的发布总入口通过传递 `include_android=true` 来启用 Android。Plugin prerelease 静态检查、仅发布时才运行的 `agentic-plugins` 分片、完整扩展批量扫描，以及 plugin prerelease Docker 泳道都被排除在 CI 之外。Docker prerelease 套件仅在 `Full Release Validation` 派发启用 release-validation gate 的情况下，才会单独触发 `Plugin Prerelease` 工作流时运行。
+手动 CI 派发运行与常规 CI 相同的作业图，但会强制启用每个非 Android 范围的任务通道：Linux Node 分片、bundled-plugin 分片、插件和 channel contract 分片、Node 22 兼容性、`check-*`、`check-additional-*`、构建产物冒烟检查、文档检查、Python skills、Windows、macOS、iOS 构建，以及 Control UI/原生应用国际化。自动源代码 PR 会验证原生提取清单和 Android/Apple 本地化安全性，但不要求在同一个 PR 中包含已翻译或平台生成的输出。串行化的 Native App Locale Refresh 工作流会在一个隔离的 PR 中重新构建这些产物，并在必需检查通过后启用精确头提交自动合并。对于生成产物 PR、手动 CI、Full Release Validation 和发布准备，完整原生对等性仍然是阻塞性要求。Control UI 本地化对等性在自动 PR 和 `main` 运行中仍仅供参考，而在手动/发布 CI 中是阻塞性要求。独立的手动 CI 派发仅在使用 `include_android=true` 时运行 Android（`release_gate` 输入也会强制启用 Android）；完整发布总流程通过传入 `include_android=true` 来启用 Android。插件预发布静态检查、仅限发布的 `agentic-plugins` 分片、完整扩展批量扫描，以及插件预发布 Docker 通道均不包含在 CI 中。Docker 预发布套件仅在 `Full Release Validation` 启用发布验证门控并派发独立的 `Plugin Prerelease` 工作流时运行。
 
 PR max-lines 检查会从已检出的合成合并树中推导基线，并验证其头父提交与事件头提交一致。手动运行使用唯一的并发组，因此同一引用上的另一个 push 或 PR 运行不会取消某个 release-candidate 完整套件。可选的 `target_ref` 输入允许受信任的调用者使用所选派发 ref 上的工作流文件，将该作业图运行在分支、标签或完整 commit SHA 上；max-lines 基线会与该运行所解析出的默认分支 head 的目标合并基点进行比较。`release_gate` 输入是容量受阻 PR CI 的精确 SHA 维护者回退方案：它要求 `target_ref` 为完整 commit SHA，且与已派发分支 head 匹配，并要求 `pull_request_number` 用于标识其合并树将被验证的打开状态 PR。
 
@@ -126,21 +135,16 @@ gh workflow run ci.yml --ref main -f target_ref=<branch-or-sha> -f include_andro
 gh workflow run full-release-validation.yml --ref main -f ref=<branch-or-sha>
 ```
 
-每月仅 npm 的 extended-stable 路径是个例外：必须从精确的 `extended-stable/YYYY.M.33` 分支同时派发 `OpenClaw NPM
-Release` 预检和 `Full Release Validation`，保留它们的运行 ID，并将这两个 ID 传递给
-直接 npm 发布运行。有关命令、精确身份要求、注册表回读，以及选择器
-修复流程，请参见 [每月仅 npm 的 extended-stable
-发布](/reference/RELEASING#monthly-npm-only-extended-stable-publication)。此路径不会派发插件、macOS、Windows、GitHub
-Release、private dist-tag 或其他平台发布。
+Gateway extended-stable 从 `extended-stable/YYYY.M.33` 运行 npm 预检、Full Release Validation 和插件 npm 发布；核心发布会使用这三个运行 ID 以及验证尝试。`release-ci/*` 证据无效，因为发布流程会将每次运行绑定到规范分支和发布 SHA。该标签会发布 Gateway 镜像以及仅有的 `extended-stable*` 别名；此路径会跳过常规编排器及其 ClawHub、原生应用、GitHub Release、网站和私有 dist-tag 发布面。有关命令和恢复方法，请参阅[每月 Gateway extended-stable 发布](/reference/RELEASING#monthly-gateway-extended-stable-publication)。
 
 ## 运行器
 
 | Runner                          | 作业                                                                                                                                                                                                                                                                              |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ubuntu-24.04`                  | `runner-admission`、`security-fast`、手动 CI 触发以及非 canonical 仓库回退、QA Smoke 汇总、CodeQL 安全和质量扫描、workflow-sanity、labeler、auto-response、独立的 Docs 工作流，以及整个 Install Smoke 工作流            |
-| `blacksmith-4vcpu-ubuntu-2404`  | `preflight`、`pnpm-store-warmup`、`native-i18n`、除 QA Smoke CI 之外的 `checks-fast-core`、plugin/channel contract shards、大多数打包的/低负载 Linux Node shards、除 `check-lint` 之外的 `check-*` 线、选定的 `check-additional-*` shards、`check-docs`、以及 `skills-python` |
-| `blacksmith-8vcpu-ubuntu-2404`  | 保留的重型 Linux Node 套件、边界/扩展密集型 `check-additional-*` shards，以及 `android`                                                                                                                                                                             |
-| `blacksmith-16vcpu-ubuntu-2404` | 自动 QA Smoke CI shards、CI 和 Testbox 中的 `build-artifacts`，以及 `check-lint`（对 CPU 敏感，8 vCPU 的成本高于其节省的部分）                                                                                                                                  |
+| `ubuntu-24.04`                  | `security-fast`、手动 CI 触发以及非 canonical 仓库回退、QA Smoke 聚合、CodeQL 安全与质量扫描、workflow-sanity、labeler、auto-response、独立的 Docs 工作流，以及整个 Install Smoke 工作流                                |
+| `blacksmith-4vcpu-ubuntu-2404`  | `preflight`、`pnpm-store-warmup`、`native-i18n`、除 QA Smoke CI 外的 `checks-fast-core`、plugin/channel contract 分片、大多数打包的/低负载 Linux Node 分片、除 `check-lint` 外的 `check-*` 轨道、选定的 `check-additional-*` 分片、`check-docs`，以及 `skills-python` |
+| `blacksmith-8vcpu-ubuntu-2404`  | 保留的重型 Linux Node 套件、串行 Chromium/Vite `checks-ui-e2e` 轨道、边界/扩展密集型 `check-additional-*` 分片，以及 `android`                                                                                                                              |
+| `blacksmith-16vcpu-ubuntu-2404` | CI 和 Testbox 中自动 QA Smoke CI 分片、`build-artifacts`，以及 `check-lint`（对 CPU 敏感到 8 vCPU 的成本高于其节省）                                                                                                                                  |
 | `blacksmith-8vcpu-windows-2025` | `checks-windows`                                                                                                                                                                                                                                                                  |
 | `blacksmith-6vcpu-macos-15`     | `openclaw/openclaw` 上的 `macos-node`；fork 会回退到 `macos-15`                                                                                                                                                                                                                |
 | `blacksmith-12vcpu-macos-26`    | `openclaw/openclaw` 上的 `macos-swift` 和 `ios-build`；fork 会回退到 `macos-26`                                                                                                                                                                                               |
@@ -155,7 +159,18 @@ OpenClaw 当前的 GitHub runner-registration bucket 在 `ghx api rate_limit` �
 
 Canonical 仓库的 CI 将 Blacksmith 保持为正常 push 和 pull-request 运行的默认运行器路径。`workflow_dispatch` 和非 canonical 仓库运行使用 GitHub 托管运行器，但正常的 canonical 运行目前不会探测 Blacksmith 队列健康状况，也不会在 Blacksmith 不可用时自动回退到 GitHub 托管标签。
 
-## 本地对应项
+## 表面棘轮
+
+两个仅缩减预算保护配置表面。两者在增长时都会使 CI 失败，直到在同一个 PR 中有意识地更新预算文件；并且当清理工作降低实际数量时，两者都要求向下收紧棘轮。
+
+- `config/env-var-count-budget.txt` 限制生产源码中 `src/`、`packages/` 和 `extensions/` 下不同 `OPENCLAW_*`
+  名称的数量（排除测试和 QA Lab）。通过 `node scripts/check-env-var-count.mjs` 检查。
+  移除环境变量：在同一个 PR 中降低该数字。新增一个则是一次配置表面决策——请在 PR 正文中说明理由。
+- `docs/.generated/config-baseline.counts.json` 限制按类型（core/channel/plugin）
+  的 `openclaw.json` schema 条目数量。通过
+  `pnpm config:docs:check` 检查；在任何 schema 变更后，使用 `pnpm config:docs:gen` 重新生成。
+
+## 本地等价命令
 
 ```bash
 pnpm changed:lanes                            # 检查 origin/main...HEAD 的本地变更分支分类器
@@ -168,9 +183,12 @@ pnpm check:architecture
 pnpm test:gateway:watch-regression
 OPENCLAW_TUI_PTY_INCLUDE_LOCAL=1 node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts
 pnpm test                                     # vitest 测试
-pnpm test:changed                             # 低成本的智能变更 Vitest 目标
+pnpm test:changed                             # 便宜的智能变更 Vitest 目标
 pnpm test:ui                                  # Control UI 单元/浏览器测试套件
-pnpm ui:i18n:check                            # 生成的 Control UI 语言环境一致性检查（发布门禁）
+pnpm ui:i18n:check                            # 生成的 Control UI 本地化完整性检查（发布门禁）
+pnpm native:i18n:baseline                     # 更新源代码维护的原生提取清单
+pnpm native:i18n:verify                       # 源清单 + Android/Apple 本地化安全检查
+pnpm native:i18n:check                        # 严格的已翻译/平台生成完整性检查（发布门禁）
 pnpm test:channels
 pnpm test:contracts:channels
 pnpm check:docs                               # 文档格式 + lint + 损坏链接检查
@@ -212,7 +230,7 @@ gh workflow run openclaw-performance.yml --ref main -f target_ref=v2026.5.2 -f p
 
 ## 完整发布验证
 
-`Full Release Validation` 是用于“在发布前运行所有内容”的手动总控工作流。它接受分支、标签或完整的 commit SHA，并会针对该目标分发手动 `CI` 工作流（包括 Android），分发 `Plugin Prerelease` 以进行仅发布用的插件/包/静态/Docker 证明，针对目标 SHA 分发 `OpenClaw Performance`，以及分发 `OpenClaw Release Checks` 以进行安装 smoke、包接受度、跨 OS 包检查、QA Lab 对等、Matrix 和 Telegram 任务线（可通过 `run_maturity_scorecard` 选择启用告警成熟度评分卡渲染）。稳定版和完整配置文件始终包含详尽的 live/E2E 和 Docker 发布路径 soak 覆盖；beta 配置文件可通过 `run_release_soak=true` 选择启用。规范化的包 Telegram E2E 运行在 Package Acceptance 内部，因此完整候选不会启动重复的 live poller。发布后，传入 `release_package_spec` 以在 release checks、Package Acceptance、Docker、跨 OS 和 Telegram 中复用已发布的 npm 包，而无需重新构建。仅在需要专门重跑已发布包的 Telegram 时使用 `npm_telegram_package_spec`。Codex 插件 live package 任务线默认使用同样的已选状态：已发布的 `release_package_spec=openclaw@<tag>` 会派生出 `codex_plugin_spec=npm:@openclaw/codex@<tag>`，而 SHA/产物运行则会从所选 ref 打包 `extensions/codex`。对于诸如 `npm:`、`npm-pack:` 或 `git:` 之类的自定义插件来源，请显式设置 `codex_plugin_spec`。
+`Full Release Validation` 是用于“在发布前运行一切”的手动总控工作流。它接受分支、标签或完整 commit SHA，并用该目标触发手动的 `CI` 工作流（包括 Android），触发 `Plugin Prerelease` 以进行仅发布用的插件/包/静态/Docker 证明，针对目标 SHA 触发 `OpenClaw Performance`，并触发 `OpenClaw Release Checks` 以执行安装冒烟测试、包验收、跨 OS 包检查、QA Lab 一致性、Matrix、Telegram，以及受门控的 Discord、WhatsApp 和 Slack 线路（可选通过 `run_maturity_scorecard` 渲染建议性成熟度评分卡）。稳定版和完整配置文件始终包含详尽的 live/E2E 和 Docker 发布路径 soak 覆盖；beta 配置文件可以通过 `run_release_soak=true` 选择启用。规范的包 Telegram E2E 运行在 Package Acceptance 内，因此完整候选不会启动重复的 live poller。发布后，传入 `release_package_spec` 即可在 release checks、Package Acceptance、Docker、跨 OS 和 Telegram 中复用已发布的 npm 包，而无需重新构建。仅将 `npm_telegram_package_spec` 用于有针对性的已发布包 Telegram 重新运行。Codex 插件 live 包线路默认使用相同的已选状态：已发布的 `release_package_spec=openclaw@<tag>` 会派生出 `codex_plugin_spec=npm:@openclaw/codex@<tag>`，而 SHA/artifact 运行则会从所选 ref 打包 `extensions/codex`。对于自定义插件来源，例如 `npm:`、`npm-pack:` 或 `git:` 规格，请显式设置 `codex_plugin_spec`。其 live agent 证明会发送可见进度，继续执行随机化的工作区读取和一次精确的 artifact 写入，然后发送完成信号。
 
 参见 [完整发布验证](/reference/full-release-validation) 以了解
 阶段矩阵、确切的工作流任务名称、配置差异、产物以及
@@ -240,24 +258,22 @@ gh workflow run openclaw-release-publish.yml \
 pnpm ci:full-release --sha <full-sha>
 ```
 
-GitHub workflow dispatch refs must be branches or tags, not raw commit SHAs. The
-helper pushes a temporary `release-ci/<sha>-...` branch at a trusted `main`
-workflow SHA, passes the requested target SHA through the workflow `ref` input,
-reuses strict exact-target evidence when available, verifies every child
-workflow `headSha` matches the trusted workflow SHA, and deletes the temporary
-branch when the run completes. Pass `-f reuse_evidence=false` to force fresh
-validation. The umbrella verifier also fails if any child workflow ran at a
-different workflow SHA.
+GitHub workflow dispatch refs 必须是分支或标签，而不是原始 commit SHA。该
+辅助工具会在受信任的 `main`
+workflow SHA 上推送一个临时的 `release-ci/<sha>-...` 分支，通过 workflow 的 `ref` 输入传递所请求的目标 SHA，
+在可用时复用严格的精确目标证据，验证每个子工作流的 `headSha` 都与受信任的 workflow SHA 匹配，并在运行完成后删除临时
+分支。传入 `-f reuse_evidence=false` 可强制进行新的
+验证。如果任何子工作流在不同的 workflow SHA 上运行，总控验证器也会失败。
 
 `release_profile` 控制传入发布检查的 live/provider 广度。手动发布工作流默认使用 `stable`；只有在你有意想要更广泛的 advisory provider/media 矩阵时才使用 `full`。稳定版和完整发布检查始终运行详尽的 live/E2E 和 Docker 发布路径 soak；beta profile 可通过 `run_release_soak=true` 选择启用。
 
-- `minimum` 保留最快的 OpenAI/核心发布关键 lane。
-- `stable` 会增加稳定的 provider/backend 集合。
+- `beta` 保留最快的 OpenAI/core 发布关键线路。
+- `stable` 增加 stable provider/backend 集合。
 - `full` 运行更广泛的 advisory provider/media 矩阵。
 
 这个总控会记录已触发的子运行 id，而最终的 `Verify full validation` 任务会重新检查当前子运行的结论，并为每个子运行附加最慢任务表。如果某个子工作流被重新运行并变为绿色，只需重新运行父级验证器任务即可刷新总控结果和耗时摘要。
 
-对于恢复场景，`Full Release Validation` 和 `OpenClaw Release Checks` 都接受 `rerun_group`。对于发布候选，使用 `all`；仅对正常的完整 CI 子流程使用 `ci`；仅对插件预发布子流程使用 `plugin-prerelease`；仅对 OpenClaw Performance 子流程使用 `performance`；对于所有发布子流程使用 `release-checks`；或者在总控中使用更窄的组：`install-smoke`、`cross-os`、`live-e2e`、`package`、`qa`、`qa-parity`、`qa-live` 或 `npm-telegram`。这使得在有针对性的修复后，失败的发布箱重跑保持在可控范围内。对于单个失败的跨 OS 任务线，将 `rerun_group=cross-os` 与 `cross_os_suite_filter` 结合使用，例如 `windows/packaged-upgrade`；较长的跨 OS 命令会输出心跳行，packaged-upgrade 摘要会包含各阶段耗时。QA 发布检查任务线除标准运行时工具覆盖门控外均为告警性质；当所需的 OpenClaw 动态工具在标准层摘要中漂移或消失时，该门控会阻止通过。
+对于恢复，`Full Release Validation` 和 `OpenClaw Release Checks` 都接受 `rerun_group`。候选发布使用 `all`，仅正常的完整 CI 子项使用 `ci`，仅插件预发布子项使用 `plugin-prerelease`，仅 OpenClaw Performance 子项使用 `performance`，所有发布子项使用 `release-checks`，或者使用更细的组：总控上的 `install-smoke`、`cross-os`、`live-e2e`、`package`、`qa`、`qa-parity`、`qa-live` 或 `npm-telegram`。这使得在针对性修复后，失败的发布盒重跑范围保持受限。对于单个失败的跨 OS 线路，将 `rerun_group=cross-os` 与 `cross_os_suite_filter` 结合使用，例如 `windows/packaged-upgrade`；较长的跨 OS 命令会输出 heartbeat 行，而 packaged-upgrade 摘要会包含各阶段耗时。被选中的 Matrix 和 Telegram QA 线路会阻塞正常的发布验证，核心 runtime-pair 工具覆盖门禁也是如此。QA 一致性、runtime 一致性以及受门控的 Discord、WhatsApp 和 Slack live 线路仅为建议性。
 
 `OpenClaw Release Checks` 使用受信任的工作流 ref 将所选 ref 一次性解析为 `release-package-under-test` tarball，然后将该 artifact 传递给跨 OS 检查和 Package Acceptance；当运行 soak 覆盖时，还会传递给 live/E2E 发布路径 Docker 工作流。这样可确保不同发布盒子之间的包字节一致，并避免在多个子作业中重复重新打包同一个候选版本。对于 Codex npm 插件 live 任务线，release checks 要么传递一个由 `release_package_spec` 派生的、匹配的已发布插件规格，要么传递操作员提供的 `codex_plugin_spec`，要么保持输入为空，以便 Docker 脚本对所选检出的 Codex 插件进行打包。
 
@@ -313,7 +329,7 @@ Docker 支持的 live 模型/后端分片使用一个按所选提交分别共享
 
 - `smoke` — `npm-onboard-channel-agent`, `gateway-network`, `config-reload`
 - `package` — `npm-onboard-channel-agent`, `doctor-switch`, `update-channel-switch`, `skill-install`, `update-corrupt-plugin`, `upgrade-survivor`, `published-upgrade-survivor`, `root-managed-vps-upgrade`, `update-restart-auth`, `plugins-offline`, `plugin-update`
-- `product` — `package` 集合加上 live `plugins` 覆盖，替代 `plugins-offline`，另外还包括 `mcp-channels`, `cron-mcp-cleanup`, `openai-web-search-minimal`, `openwebui`
+- `product` — `package` 集合加上 live `plugins` 覆盖，替代 `plugins-offline`, 另外还包括 `mcp-channels`, `cron-mcp-cleanup`, `openai-web-search-minimal`, `openwebui`
 - `full` — 带有 OpenWebUI 的完整 Docker release-path chunks
 - `custom` — 精确的 `docker_lanes`；当 `suite_profile=custom` 时必需
 
@@ -323,7 +339,7 @@ Docker 支持的 live 模型/后端分片使用一个按所选提交分别共享
 
 Release checks 调用 Package Acceptance 时使用 `source=artifact`、准备好的 release package artifact、`suite_profile=custom`、`docker_lanes='doctor-switch update-channel-switch skill-install update-corrupt-plugin upgrade-survivor published-upgrade-survivor root-managed-vps-upgrade update-restart-auth plugins-offline plugin-update plugin-binding-command-escape'`，以及 `telegram_mode=mock-openai`。这样可以让 package migration、update、live ClawHub skill install、stale-plugin-dependency cleanup、configured-plugin install repair、offline plugin、plugin-update 和 Telegram proof 都基于同一个已解析的 package tarball。对 Full Release Validation 或 OpenClaw Release Checks，在发布 beta 后设置 `release_package_spec`，即可在不重新构建的情况下，对已发布的 npm package 运行同一矩阵；只有当 Package Acceptance 需要与其余 release validation 不同的 package 时，才设置 `package_acceptance_package_spec`。跨 OS 的 release checks 仍然覆盖 OS 特定的 onboarding、installer 和平台行为；package/update 产品验证应从 Package Acceptance 开始。
 
-The `published-upgrade-survivor` Docker lane validates one published package baseline per run in the blocking release path. In Package Acceptance, the resolved `package-under-test` tarball is always the candidate and `published_upgrade_survivor_baseline` selects the fallback published baseline, defaulting to `openclaw@latest`; failed-lane rerun commands preserve that baseline. Full Release Validation with `run_release_soak=true` or `release_profile=full` sets `published_upgrade_survivor_baselines='last-stable-4 2026.4.23 2026.5.2 2026.4.15'` and `published_upgrade_survivor_scenarios=reported-issues` to expand across the four latest stable npm releases plus pinned plugin-compatibility boundary releases and issue-shaped fixtures for Feishu config, preserved bootstrap/persona files, configured OpenClaw plugin installs, tilde log paths, and stale legacy plugin dependency roots. Multi-baseline published-upgrade survivor selections are sharded by baseline into separate targeted Docker runner jobs. The separate `Update Migration` workflow uses the `update-migration` Docker lane with `all-since-2026.4.23` baselines and `plugin-deps-cleanup` scenarios when the question is exhaustive published update cleanup, not normal Full Release CI breadth. Local aggregate runs can pass exact package specs with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS`, keep a single lane with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC` such as `openclaw@2026.4.15`, or set `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS` for the scenario matrix. The published lane configures the baseline with a baked `openclaw config set` command recipe, records recipe steps in `summary.json`, and probes `/healthz`, `/readyz`, plus RPC status after Gateway start. The Windows packaged and installer fresh lanes also verify that an installed package can import a browser-control override from a raw absolute Windows path. The OpenAI cross-OS agent-turn smoke defaults to `OPENCLAW_CROSS_OS_OPENAI_MODEL` when set, otherwise `openai/gpt-5.6-luna`, so the install and gateway proof uses the lower-cost GPT-5.6 test tier.
+The `published-upgrade-survivor` Docker lane validates one published package baseline per run in the blocking release path. In Package Acceptance, the resolved `package-under-test` tarball is always the candidate and `published_upgrade_survivor_baseline` selects the fallback published baseline, defaulting to `openclaw@latest`; failed-lane rerun commands preserve that baseline. Full Release Validation with `run_release_soak=true` or `release_profile=full` sets `published_upgrade_survivor_baselines='last-stable-4 2026.4.23 2026.5.2 2026.4.15'` and `published_upgrade_survivor_scenarios=reported-issues` to expand across the four latest stable npm releases plus pinned plugin-compatibility boundary releases and issue-shaped fixtures for Feishu config, preserved bootstrap/persona files, configured Openclaw plugin installs, tilde log paths, and stale legacy plugin dependency roots. Multi-baseline published-upgrade survivor selections are sharded by baseline into separate targeted Docker runner jobs. The separate `Update Migration` workflow uses the `update-migration` Docker lane with `all-since-2026.4.23` baselines and `plugin-deps-cleanup` scenarios when the question is exhaustive published update cleanup, not normal Full Release CI breadth. Local aggregate runs can pass exact package specs with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS`, keep a single lane with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC` such as `openclaw@2026.4.15`, or set `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS` for the scenario matrix. The published lane configures the baseline with a baked `openclaw config set` command recipe, records recipe steps in `summary.json`, and probes `/healthz`, `/readyz`, plus RPC status after Gateway start. The Windows packaged and installer fresh lanes also verify that an installed package can import a browser-control override from a raw absolute Windows path. The OpenAI cross-OS agent-turn smoke defaults to `OPENCLAW_CROSS_OS_OPENAI_MODEL` when set, otherwise `openai/gpt-5.6-luna`, so the install and gateway proof uses the lower-cost GPT-5.6 test tier.
 
 ### 旧版兼容窗口
 
@@ -335,7 +351,7 @@ Package Acceptance 对已发布包提供有边界的旧版兼容窗口。对于 
 - plugin smokes 可以读取旧版 install-record 位置，或接受缺失的 marketplace install-record 持久化；
 - `plugin-update` 可以允许配置元数据迁移，同时仍要求 install record 和 no-reinstall 行为保持不变。
 
-已发布的 `2026.4.26` package 也可能对已随包发布过的本地 build metadata stamp files 发出警告，而 `2026.5.20` 及之前的包在缺失 `npm-shrinkwrap.json` 时可能会警告而不是失败。更晚的包必须满足现代合约；相同条件会导致失败，而不是警告或跳过。
+The published `2026.4.26` package may also warn for local build metadata stamp files that were already shipped. Current package validators require both npm lockfile formats to be absent from new tarballs.
 
 ### 示例
 
@@ -444,7 +460,7 @@ Release Docker 覆盖使用更小的分块作业，并设置 `OPENCLAW_SKIP_DOCK
 - `OPENCLAW_DOCKER_ALL_PROFILE=release-path`
 - `OPENCLAW_DOCKER_ALL_CHUNK=core | package-update-openai | package-update-anthropic | package-update-core | plugins-runtime-plugins | plugins-runtime-services | plugins-runtime-install-a..h | openwebui`
 
-当前的 release Docker 分块包括 `core`、`package-update-openai`、`package-update-anthropic`、`package-update-core`、`plugins-runtime-plugins`、`plugins-runtime-services`、`plugins-runtime-install-a` 到 `plugins-runtime-install-h`，以及 `openwebui`。`package-update-openai` 包含 live Codex plugin package lane：它会安装候选的 OpenClaw package，从 `codex_plugin_spec` 或同引用 tarball 安装 Codex plugin，并显式获得 Codex CLI 安装批准，运行 Codex CLI 预检，然后针对 OpenAI 运行多轮同会话的 OpenClaw agent turns。`plugins-runtime-core`、`plugins-runtime` 和 `plugins-integrations` 仍然是聚合的 plugin/runtime 别名。`install-e2e` lane 别名仍然是两个 provider installer lanes 的聚合手动重跑别名。
+当前的 release Docker 分块是 `core`、`package-update-openai`、`package-update-anthropic`、`package-update-core`、`plugins-runtime-plugins`、`plugins-runtime-services`、`plugins-runtime-install-a` 到 `plugins-runtime-install-h`，以及 `openwebui`。`package-update-openai` 包含 live Codex plugin 包 lane，它会安装候选 OpenClaw 包，从 `codex_plugin_spec` 安装 Codex plugin 或使用带有显式 Codex CLI 安装批准的同 ref tarball，运行 Codex CLI 预检和同会话 agent 回合，然后运行一次零重试的 medium-thinking 回合，发送进度、读取随机化的工作区输入、写入其精确的 artifact，并发送完成信号。`plugins-runtime-core`、`plugins-runtime` 和 `plugins-integrations` 仍然是聚合的 plugin/runtime 别名。`install-e2e` lane 别名仍然是两个 provider installer lanes 的聚合手动重跑别名。
 
 OpenWebUI 会作为独立的 `openwebui` 分块在专用的大磁盘 Blacksmith runner 上运行，只要稳定版或完整 release-path 覆盖请求它，就会这样运行，即使可复用 workflow 将受支持的作业路由到 GitHub 托管的 runners。将外部镜像拉取分开处理，可以防止大镜像与 `plugins-runtime-services` 中共享的 package 和 plugin 镜像竞争；传统的聚合 plugin/runtime 分块在兼容的手动重跑中仍然包含 OpenWebUI。捆绑通道的更新 lanes 会在遇到 transient npm network failures 时重试一次。
 
@@ -465,11 +481,11 @@ pnpm test:docker:timings <summary>   # 慢 lane 和阶段关键路径摘要
 
 QA 实验室在主智能作用域工作流之外拥有专用的 CI lanes。Agentic parity 被嵌套在更广泛的 QA 和发布 harness 中，而不是独立的 PR 工作流。若需要 parity 随更广泛的验证运行一起执行，请使用 `Full Release Validation` 并设置 `rerun_group=qa-parity`。
 
-- `QA-Lab - All Lanes` 工作流在 `main` 上每晚运行一次，也支持手动派发；它会将 mock parity lane、live Matrix lane 以及 live Telegram 和 Discord lanes 作为并行作业展开。live 作业使用 `qa-live-shared` 环境，Telegram/Discord 使用 Convex leases。
+- `QA-Lab - All Lanes` 工作流在 `main` 上按夜间计划运行，并支持手动触发；它会扇出 mock parity 以及 live Matrix、Telegram、Discord、WhatsApp 和 Slack 作业。live 作业使用 `qa-live-shared` 环境；Telegram、Discord、WhatsApp 和 Slack 使用 Convex leases，而 Matrix 会配置可丢弃的本地凭据。
 
-发布检查会使用确定性的 mock provider 和 mock-qualifed models（`mock-openai/gpt-5.6-luna` 和 `mock-openai/gpt-5.6-luna-alt`）运行 Matrix 和 Telegram live transport lanes，因此 channel contract 会与 live model 延迟和正常的 provider-plugin 启动隔离开来。live transport gateway 会禁用 memory search，因为 QA parity 已经单独覆盖了 memory 行为；provider 连通性则由单独的 live model、native provider 和 Docker provider 测试套件覆盖。
+计划、手动和 release 的 Matrix 检查使用确定性的 mock provider，因此 live transport contract 与模型延迟和常规 provider-plugin 启动相互隔离。Telegram release 检查使用相同的确定性模型边界。live transport gateway 会禁用 memory search，因为 QA parity 会单独覆盖 memory 行为；provider 连通性则由单独的 live model、native provider 和 Docker provider 套件覆盖。
 
-Matrix 在定时和 release gate 中使用 `--profile fast`，仅当检出的 CLI 支持时才添加 `--fail-fast`。CLI 默认值和手动工作流输入都保持为 `all`；手动 `matrix_profile=all` 派发始终将完整的 Matrix 覆盖拆分为 `transport`、`media`、`e2ee-smoke`、`e2ee-deep` 和 `e2ee-cli` 作业。
+计划、手动和 release 的 Matrix gates 使用共享的 QA Lab suite host 和 live adapter。默认成员资格来自明确声明 Matrix channel 资格的 flow scenarios；runner 和 workflow 不维护任何精选 profile 或 scenario-id 列表。CI 会将该 catalog 派生的选择分布到五个确定性的均衡 shard 中，因此成员资格与顺序无关，并且每个作业都能保持在其超时时间内。聚焦的本地运行会重复 `--scenario <id>`。
 
 `OpenClaw Release Checks` 还会在 release 批准前运行 release-critical 的 QA Lab lanes；其 QA parity gate 会将 candidate 和 baseline packs 作为并行 lane 作业运行，然后将两个 artifact 下载到一个小型报告作业中，以进行最终 parity 比较。
 
@@ -552,15 +568,27 @@ gh workflow run duplicate-after-merge.yml \
 
 ## 本地检查门和变更路由
 
-本地变更通道路由逻辑位于 `scripts/changed-lanes.mjs`，并由 `scripts/check-changed.mjs` 执行。这个本地检查门在架构边界方面比宽泛的 CI 平台范围更严格：
+### Config baseline count ratchet
 
-- core 生产变更运行 core prod 和 core test typecheck，以及 core lint/guards；
-- core 仅测试变更只运行 core test typecheck 和 core lint；
-- extension 生产变更运行 extension prod 和 extension test typecheck，以及 extension lint；
-- extension 仅测试变更只运行 extension test typecheck 和 extension lint；
-- public Plugin SDK 或 plugin-contract 变更会扩展到 extension typecheck，因为 extensions 依赖这些 core 合约（Vitest extension 全量扫描仍然属于明确的测试工作）；
-- 仅发布元数据版本提升会运行定向的 version/config/root-dependency 检查；
-- 未知的 root/config 变更会安全失败为所有检查通道。
+`pnpm config:docs:check` 会拒绝未记录在案的配置面增长，以及损坏或过时的计数快照。当经过审查的产品变更有意添加了 schema 路径时，请运行 `pnpm config:docs:gen`，检查 core/channel/plugin 的计数差异和生成的 SHA-256 文件，并将包含 schema、help、labels、migration 和 tests 的有意基线提升一并提交。不要通过手工编辑 counts 文件来绕过 ratchet。
+
+Config 作者还必须为 Settings 中的新叶子节点分配层级。在叶子节点上添加 `advanced: false` 或
+`advanced: true`，或者将该 key 放在其某个祖先节点之下，并让所有后代继承该祖先的层级。
+未分类的根节点会因复制粘贴占位符而导致 schema quality
+测试失败；没有祖先路径默认视为 advanced。
+经过整理的 common-leaf 快照会让有意的层级变更在
+review 中清晰可见。
+
+本地变更 lane 逻辑位于 `scripts/changed-lanes.mjs`，并由 `scripts/check-changed.mjs` 执行。该本地检查门对架构边界的限制比宽泛的 CI 平台范围更严格：
+
+- core production changes run core prod and core test typecheck plus core lint/guards;
+- core test-only changes run only core test typecheck plus core lint;
+- extension production changes run extension prod and extension test typecheck plus extension lint;
+- extension test-only changes run extension test typecheck plus extension lint;
+- bundled channel manifests, package metadata, config schemas, UI hints, and generator owners also run the bundled channel config metadata drift check;
+- public Plugin SDK or plugin-contract changes expand to extension typecheck because extensions depend on those core contracts (Vitest extension sweeps stay explicit test work);
+- release metadata-only version bumps run targeted version/config/root-dependency checks;
+- unknown root/config changes fail safe to all check lanes.
 
 本地变更测试路由位于 `scripts/test-projects.test-support.mjs`，其设计上比 `check:changed` 更便宜：直接的测试编辑运行自身，源代码编辑优先使用显式映射，然后是同级测试和 import-graph 依赖项。共享的 group-room 交付配置就是显式映射之一：对 group visible-reply 配置、source reply delivery mode 或 message-tool system prompt 的更改，会通过 core reply tests，以及 Discord 和 Slack delivery 回归测试，从而确保共享默认值的变更在第一次 PR push 之前就失败。仅当变更在整个 harness 范围内足够大，以至于这种廉价的映射集合不能作为可靠代理时，才使用 `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed`。
 

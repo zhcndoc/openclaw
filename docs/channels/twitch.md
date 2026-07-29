@@ -13,12 +13,12 @@ sidebarTitle: "Twitch"
 Twitch 作为官方插件提供；它不属于核心安装的一部分。
 
 <Tabs>
-  <Tab title="npm registry">
+  <Tab title="npm 注册表">
     ```bash
     openclaw plugins install @openclaw/twitch
     ```
   </Tab>
-  <Tab title="Local checkout">
+  <Tab title="本地检出">
     ```bash
     openclaw plugins install ./path/to/local/twitch-plugin
     ```
@@ -91,6 +91,12 @@ Twitch 作为官方插件提供；它不属于核心安装的一部分。
 - 每个已加入的频道都会映射到一个隔离的组会话密钥 `agent:<agentId>:twitch:group:<channel>`。
 - `username` 是机器人的账号（进行身份验证），`channel` 是要加入的聊天房间。一个账号条目只加入一个频道。
 - Token 带或不带 `oauth:` 前缀都可以；OpenClaw 会按两种方式进行规范化（设置向导期望的是 `oauth:` 格式）。
+
+## 入站持久性
+
+OpenClaw 会在正常分发之前，将每条已接受的 Twitch 聊天消息持久化入队。待处理或可重试的消息在 Gateway 重启后仍会保留，保持为已配置频道的序列化状态，并使用 Twitch 的消息 ID 来抑制重复的队列条目，只要活动的或保留的完成记录存在即可。
+
+Twitch 聊天在客户端接受 `PRIVMSG` 后不会重放该消息。这可以保护本地“接受到分发”之间的崩溃窗口，但无法恢复在持久化接纳之前遗漏的消息。如果队列追加本身失败，OpenClaw 会记录该失败；重新连接不会要求 Twitch 重新发送该消息。
 
 ## 令牌刷新（可选）
 
@@ -328,7 +334,6 @@ openclaw channels status --probe
     },
   },
 }
-```
 
 ## 工具操作
 

@@ -27,7 +27,16 @@ openclaw plugins install @openclaw/memory-lancedb
 `memory-wiki` 等配套插件可以与 `memory-lancedb` 一起运行，但同一时间只有一个插件拥有活动的 memory 插槽。
 </Note>
 
-## 快速开始
+<Note>
+LanceDB's `memory_recall` does not receive the protected private transcript
+authorization used by `memory.search.rememberAcrossConversations`. Use LanceDB's
+`autoRecall` or its `memory_recall` tool through
+[advanced Active Memory](/concepts/active-memory#lancedb-memory).
+`openclaw doctor` reports when Remember across conversations is unavailable
+with the current memory provider.
+</Note>
+
+## Quick start
 
 ```json5
 {
@@ -190,30 +199,38 @@ search`。自动召回会嵌入当前轮次中最新的用户消息；只有在�
 
 自动捕获还会拒绝看起来像信封/传输元数据、提示注入载荷，或已经注入的 `<relevant-memories>` 上下文的文本，并且每个 agent 回合最多捕获 3 条记忆。
 
-## 命令
+Every memory is owned by one agent. Recall, duplicate detection, capture,
+listing, raw queries, and deletion all enforce that owner before returning or
+mutating rows. An agent with `memory.search.enabled: false` in its `agents.entries.*`
+entry, or one inheriting a disabled top-level search, also gets none of the `memory_recall`, `memory_store`,
+or `memory_forget` tools and does not participate in automatic recall or
+capture, even when the plugin-level `autoRecall`/`autoCapture` flags are on.
+
+## Commands
 
 `memory-lancedb` 在安装后会注册 `ltm` CLI 命名空间
 （不仅仅是在它拥有当前活动内存槽时）：
 
 ```bash
-openclaw ltm list [--limit <n>] [--order-by-created-at]
-openclaw ltm search <query> [--limit <n>]
-openclaw ltm stats
+openclaw ltm list [--agent <id>] [--limit <n>] [--order-by-created-at]
+openclaw ltm search <query> [--agent <id>] [--limit <n>]
+openclaw ltm stats [--agent <id>]
 ```
 
 `ltm query` 直接对 LanceDB 表执行非向量查询：
 
 ```bash
-openclaw ltm query --cols id,text,createdAt --limit 20
+openclaw ltm query --agent research --cols id,text,createdAt --limit 20
 openclaw ltm query --filter "category = 'preference'" --order-by createdAt:desc
 ```
 
 | 标志                              | 默认值                                  | 说明                                                                                                                                     |
 | --------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `--cols <columns>`                | `id,text,importance,category,createdAt` | 以逗号分隔的列白名单。                                                                                                                     |
-| `--filter <condition>`            | 无                                       | SQL 风格的 WHERE 子句。最多 200 个字符；仅允许字母数字、`_-`、空白字符，以及 `='"<>!.,()%*`。                                              |
-| `--limit <n>`                     | `10`                                    | 正整数。                                                                                                                                 |
-| `--order-by <column>:<asc\|desc>` | 无                                       | 在过滤器运行后于内存中排序；排序列会自动添加到投影中，并在未被请求时从输出中剥离。                                                         |
+| `--agent <id>`                    | configured default agent                | Selects the private agent namespace. Available on `list`, `search`, `query`, and `stats`.                                                 |
+| `--cols <columns>`                | `id,text,importance,category,createdAt` | Comma-separated column allowlist.                                                                                                         |
+| `--filter <condition>`            | none                                    | One comparison over an output column, such as `category = 'preference'` or `importance >= 0.8`. String values must be quoted.             |
+| `--limit <n>`                     | `10`                                    | Positive integer.                                                                                                                         |
+| `--order-by <column>:<asc\|desc>` | none                                    | Sorted in memory after the filter runs; the sort column is auto-added to the projection and stripped from output if it was not requested. |
 
 代理可从活动内存插件获得三个工具：
 
@@ -246,8 +263,21 @@ LanceDB 数据默认存储在 `~/.openclaw/memory/lancedb`。可通过 `dbPath` 
 }
 ```
 
-`storageOptions` 接受用于 LanceDB 存储后端的字符串键/值对
-（例如与 S3 兼容的对象存储），并支持 `${ENV_VAR}` 展开：
+The plugin keeps one LanceDB table and stores a normalized agent owner on each
+row. This is a storage boundary, not a post-search filter: agent ownership is
+applied before vector ranking and is included in list, query, count, and delete
+predicates. `ltm query --filter` accepts one validated comparison over the
+public output columns. The store builds that comparison separately from the
+mandatory owner predicate, so a filter cannot widen the query to another
+agent.
+
+Databases created before per-agent ownership have no reliable row provenance.
+On upgrade, `openclaw doctor --fix` assigns those legacy rows once to the
+configured default agent. Runtime access fails closed until that migration has
+completed; other agents never inherit the old shared rows.
+
+`storageOptions` accepts string key/value pairs for LanceDB storage backends
+(e.g. S3-compatible object storage) and supports `${ENV_VAR}` expansion:
 
 ```json5
 {

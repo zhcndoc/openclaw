@@ -64,7 +64,7 @@ openclaw gateway --port 18789
 
 OpenClaw 会从其工作区目录中读取操作说明和“记忆”。
 
-默认情况下，OpenClaw 使用 `~/.openclaw/workspace` 作为代理工作区，并会在入门流程或首次代理运行时自动创建它（以及初始的 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`）。`BOOTSTRAP.md` 只会在全新的工作区中创建一次，删除后不会再自动回来。`MEMORY.md` 是可选的，且不会自动创建；当它存在时，会在普通会话中加载。子代理会话只会注入 `AGENTS.md` 和 `TOOLS.md`。
+默认情况下，OpenClaw 使用 `~/.openclaw/workspace` 作为代理工作区，并在入门或首次运行代理时自动创建它（以及初始的 `AGENTS.md`、`SOUL.md`、`IDENTITY.md`、`USER.md`）。在 `AGENTS.md` 的 `## Tools` 部分放置特定于环境的工具说明。`BOOTSTRAP.md` 仅会为全新的工作区创建，在你删除后不会再次出现。`MEMORY.md` 是可选的，且永远不会自动创建；当它存在时，会在普通会话中加载。子代理会话只注入 `AGENTS.md`。
 
 <Tip>
 把这个文件夹当作 OpenClaw 的记忆，并将其作为一个 git 仓库（最好是私有仓库），这样你的 `AGENTS.md` 和记忆文件就能得到备份。如果已安装 git，全新的工作区会自动执行 `git init`。
@@ -120,9 +120,9 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
   logging: { level: "info" },
   agents: {
     defaults: {
-      model: { primary: "anthropic/claude-opus-4-8" },
+      model: { primary: "anthropic/claude-opus-5" },
       workspace: "~/.openclaw/workspace",
-      thinkingDefault: "high",
+      thinkingDefault: "高",
       timeoutSeconds: 1800,
       // 从 0 开始；稍后再启用。
       heartbeat: { every: "0m" },
@@ -168,14 +168,14 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 ## 心跳（主动模式）
 
 默认情况下，OpenClaw 每 30 分钟运行一次心跳，提示词为：
-`如果存在 HEARTBEAT.md，请读取它（工作区上下文）。严格遵守其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，请回复 HEARTBEAT_OK。`
-将 `agents.defaults.heartbeat.every: "0m"` 可将其禁用。
+`当提供监视器草稿上下文时，请遵循该上下文。重复任务是 cron 作业；请使用 cron 工具或 openclaw cron CLI 创建或更改其计划，不要使用 heartbeat 草稿。不要从先前聊天中推断或重复旧任务。如果没有需要处理的内容，请回复 HEARTBEAT_OK。`
+将 `agents.defaults.heartbeat.every: "0m"` 设置为禁用。心跳清单保存在监视器的 cron 草稿中（参见 [Heartbeat](/gateway/heartbeat)）；`openclaw doctor --fix` 会将旧工作区中的 `HEARTBEAT.md` 迁移到这里。
 
-- 如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行、Markdown/HTML 注释、Markdown 标题如 `# 标题`、fence 标记，或空的 checklist 模板），OpenClaw 会跳过心跳运行以节省 API 调用。
-- 如果该文件缺失，心跳仍会运行，由模型自行决定如何处理。
-- 如果代理回复 `HEARTBEAT_OK`（可附带少量填充；参见 `agents.defaults.heartbeat.ackMaxChars`），OpenClaw 会抑制该次心跳的外发投递。
-- 默认情况下，允许向 DM 风格的 `user:<id>` 目标投递心跳。将 `agents.defaults.heartbeat.directPolicy: "block"` 可在保持心跳运行的同时禁止直接目标投递。
-- 心跳会运行完整的代理轮次——间隔越短，消耗的 token 越多。
+- 如果监视器草稿存在但实际上是空的（只有空白行、Markdown/HTML 注释、像 `# Heading` 这样的 Markdown 标题、代码块分隔符，或空的待办清单占位项），OpenClaw 会跳过心跳运行以节省 API 调用。
+- 如果不存在草稿，心跳仍会运行，由模型自行决定要做什么。
+- 如果代理回复 `HEARTBEAT_OK`，并且最多附带 300 个字符的剩余文本，OpenClaw 会抑制该次心跳的外发投递。300 字符的预算是固定的。
+- 默认情况下，允许将心跳投递到 DM 风格的 `user:<id>` 目标。将 `agents.defaults.heartbeat.directPolicy: "block"` 设置为在保持心跳运行的同时抑制直达目标投递。
+- 心跳以完整的代理轮次运行——间隔越短，消耗的 token 越多。
 
 ```json5
 {
@@ -191,11 +191,17 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 
 传入附件（图片/音频/文档）可以通过模板暴露到你的命令中：
 
-- `{{MediaPath}}`（本地临时文件路径）
-- `{{MediaUrl}}`（伪 URL）
+- `{{AttachmentPath}}`（本地临时文件路径）
+- `{{AttachmentUrl}}`（原始 URL 或提供方引用）
+- `{{AttachmentContentType}}`（MIME 内容类型）
+- `{{AttachmentDir}}`（包含本地路径的目录）
+- `{{AttachmentIndex}}`（从 0 开始的源事实索引）
 - `{{Transcript}}`（如果启用了音频转录）
 
-代理发出的外发附件会在消息工具或回复负载中使用结构化媒体字段，例如 `media`、`mediaUrl`、`mediaUrls`、`path` 或 `filePath`。消息工具参数示例：
+较旧的 `{{MediaPath}}`、`{{MediaUrl}}`、`{{MediaType}}` 和 `{{MediaDir}}`
+名称仍然可用，但已作为弃用的兼容别名保留。
+
+来自代理的外发附件会在消息工具或回复载荷中使用结构化媒体字段，例如 `media`、`mediaUrl`、`mediaUrls`、`path` 或 `filePath`。消息工具参数示例：
 
 ```json
 {
@@ -224,18 +230,18 @@ openclaw status --deep   # 探测通道（WhatsApp Web + Telegram + Discord + Sl
 openclaw health --json   # 通过 WS 连接获取网关健康快照
 ```
 
-日志位于 `/tmp/openclaw/` 下（默认：`openclaw-YYYY-MM-DD.log`）。
+日志位于 `/tmp/openclaw/` 下：默认配置文件使用 `openclaw-YYYY-MM-DD.log`，命名配置文件使用 `openclaw-<profile>-YYYY-MM-DD.log`。
 
 ## 下一步
 
 - WebChat: [WebChat](/web/webchat)
-- Gateway 运维: [Gateway runbook](/gateway)
-- Cron + 唤醒: [Cron jobs](/automation/cron-jobs)
-- macOS 菜单栏伴侣： [OpenClaw macOS app](/platforms/macos)
-- iOS 节点应用: [iOS app](/platforms/ios)
-- Android 节点应用: [Android app](/platforms/android)
+- Gateway 运维: [Gateway 运行手册](/gateway)
+- Cron + 唤醒: [Cron 作业](/automation/cron-jobs)
+- macOS 菜单栏伴侣： [OpenClaw macOS 应用](/platforms/macos)
+- iOS 节点应用: [iOS 应用](/platforms/ios)
+- Android 节点应用: [Android 应用](/platforms/android)
 - Windows Hub: [Windows](/platforms/windows)
-- Linux 状态: [Linux app](/platforms/linux)
+- Linux 状态: [Linux 应用](/platforms/linux)
 - 安全: [Security](/gateway/security)
 
 ## 相关

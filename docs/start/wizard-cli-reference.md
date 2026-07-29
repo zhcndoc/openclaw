@@ -30,7 +30,7 @@ sidebarTitle: "CLI 参考"
 ## 本地流程详情
 
 <Steps>
-  <Step title="Existing config detection">
+  <Step title="现有配置检测">
     - 如果 `~/.openclaw/openclaw.json` 已存在，可选择 **保留当前值**、**审查并更新** 或 **重置后再设置**。
     - 重新运行向导不会清除任何内容，除非你明确选择 Reset（或传入 `--reset`）。
     - CLI `--reset` 默认作用范围为 `config+creds+sessions`；使用 `--reset-scope full` 还会移除 workspace。
@@ -47,7 +47,10 @@ sidebarTitle: "CLI 参考"
   </Step>
   <Step title="Workspace">
     - 默认 `~/.openclaw/workspace`（可配置）。
-    - 为首次启动引导所需的 workspace 文件播种。
+    - 为首次启动引导填充所需的 workspace 文件。
+    - 重新运行时，现有 agent roster 会保留其整个 fleet 的 workspace，除非
+      你明确确认移动。非交互式重运行会发出警告并保留
+      当前值。
     - Workspace 布局：[Agent workspace](/concepts/agent-workspace)。
 
   </Step>
@@ -66,13 +69,13 @@ sidebarTitle: "CLI 参考"
 
   </Step>
   <Step title="Channels">
-    - [WhatsApp](/channels/whatsapp): 可选 QR 登录
-    - [Telegram](/channels/telegram): bot token
-    - [Discord](/channels/discord): bot token
-    - [Google Chat](/channels/googlechat): service account JSON + webhook audience
-    - [Mattermost](/channels/mattermost): bot token + base URL
-    - [Signal](/channels/signal): 可选安装 `signal-cli` + 账户配置
-    - [iMessage](/channels/imessage): `imsg` CLI 路径 + Messages 数据库访问；当网关运行在非 Mac 机器上时请使用 SSH 包装器
+    - [WhatsApp](/channels/whatsapp)：可选 QR 登录
+    - [Telegram](/channels/telegram)：bot token
+    - [Discord](/channels/discord)：bot token
+    - [Google Chat](/channels/googlechat)：service account JSON + webhook audience
+    - [Mattermost](/channels/mattermost)：bot token + base URL
+    - [Signal](/channels/signal)：可选安装 `signal-cli` + 账户配置
+    - [iMessage](/channels/imessage)：`imsg` CLI 路径 + Messages 数据库访问；当网关运行在非 Mac 机器上时请使用 SSH 包装器
     - DM 安全：默认是配对。第一条私信会发送验证码；通过
       `openclaw pairing approve <channel> <code>` 批准，或使用允许列表。
   </Step>
@@ -82,7 +85,7 @@ sidebarTitle: "CLI 参考"
 
   </Step>
   <Step title="Daemon install">
-    - macOS: LaunchAgent
+    - macOS：LaunchAgent
       - 需要已登录的用户会话；对于无头环境，请使用自定义 LaunchDaemon（未随附）。
     - Linux 和通过 WSL2 的 Windows：systemd 用户单元
       - 向导会尝试执行 `loginctl enable-linger <user>`，以便网关在注销后继续运行。
@@ -308,11 +311,11 @@ sidebarTitle: "CLI 参考"
 - `agents.defaults.workspace`
 - `agents.defaults.skipBootstrap` 当传入 `--skip-bootstrap` 时
 - `agents.defaults.model` / `models.providers`（如果选择了 Minimax）
-- `tools.profile`（本地引导在未设置时默认使用 `"coding"`；现有显式值会被保留）
+- `tools.profile`（本地引导在未设置时默认为 `"coding"`；现有显式值会被保留）
 - `gateway.*`（模式、绑定、认证、tailscale）
-- `session.dmScope`（本地引导在未设置时默认设为 `per-channel-peer`；现有显式值会被保留）
+- `session.dmScope`（引导会保留显式值，否则保持未设置，因此 `main` 默认会在代理的滚动主会话中保留跨渠道的所有直接消息——这是个人代理的默认行为。对于共享或多用户收件箱，请使用 `per-channel-peer`；`openclaw security audit` 在检测到多用户 DM 流量时会建议隔离）
 - `channels.telegram.botToken`、`channels.discord.token`、`channels.matrix.*`、`channels.signal.*`、`channels.imessage.*`
-- 渠道允许列表（Discord、iMessage、Signal、Slack、Telegram、WhatsApp）会在你于提示过程中选择启用时写入；Discord 和 Slack 还会将输入的名称解析为 ID
+- 渠道允许列表（Discord、iMessage、Signal、Slack、Telegram、WhatsApp），当你在提示中选择启用时；Discord 和 Slack 也会将输入的名称解析为 ID
 - `skills.install.nodeManager`
   - `setup --node-manager` 标志接受 `npm`、`pnpm` 或 `bun`。
   - 手动配置之后仍然可以将 `skills.install.nodeManager` 设为 `"yarn"`。
@@ -323,7 +326,7 @@ sidebarTitle: "CLI 参考"
 - `wizard.lastRunMode`
 - `wizard.securityAcknowledgedAt`
 
-`openclaw agents add` 会写入 `agents.list[]` 和可选的 `bindings`。
+`openclaw agents add` 会写入 `agents.entries.*` 和可选的 `bindings`。
 
 WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
 活动会话和转录内容存储在
@@ -334,6 +337,12 @@ WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
 <Note>
 某些渠道作为插件提供。选择后，在渠道配置之前，引导程序会提示安装插件（npm 或本地路径）。
 </Note>
+
+### 已安装应用推荐
+
+在模型访问检查成功后，macOS 上的经典交互式引导会扫描应用名称和 bundle ID，而不请求 macOS 隐私权限。它会搜索官方插件目录和 ClawHub，然后让已配置的模型拒绝错误的名称匹配，并推荐相关插件或技能。推荐的匹配项默认会被选中；可选匹配项需要显式选择。
+
+结果页面会列出检测到的应用，并显示：“App names were matched using your configured model and ClawHub search.” 将 `wizard.appRecommendations` 设为 `false` 可同时禁用此引导步骤以及 Gateway 对 node 应用清单的访问。此扫描不会用于 quickstart 或非 macOS 引导。
 
 ## 非交互式设置
 
@@ -358,11 +367,11 @@ openclaw onboard --non-interactive --accept-risk \
 
 ## Signal 设置行为
 
-- 从官方 `signal-cli` GitHub releases 下载合适的发布资源（原生构建，仅限 Linux x86-64）
-- 在其他平台（macOS、非 x64 Linux）上，则改为通过 Homebrew 安装
-- 将发布资源安装内容存储在 `~/.openclaw/tools/signal-cli/<version>/`
-- 在配置中写入 `channels.signal.cliPath`
-- 目前尚不支持原生 Windows；请在 WSL2 中运行引导流程以获取 Linux 安装路径
+- 从官方 `signal-cli` GitHub releases 下载合适的 release 资源包（原生构建，仅限 Linux x86-64）
+- 在其他平台（macOS、非 x64 Linux）上，改为通过 Homebrew 安装
+- 将 release 资源包安装到 `~/.openclaw/tools/signal-cli/<version>/`
+- 在配置中写入 `channels.signal.transport.cliPath`，并设置 `kind: "managed-native"`
+- 暂不支持原生 Windows；请在 WSL2 中运行 onboarding 以获取 Linux 安装路径
 
 ## 相关文档
 

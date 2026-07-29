@@ -86,9 +86,9 @@ read_when:
 
 ## 图像生成
 
-LiteLLM 可以通过 OpenAI 兼容的 `/images/generations` 和
-`/images/edits` 路由为 `image_generate` 工具提供支持。默认图像模型是 `gpt-image-2`；可在
-`agents.defaults.imageGenerationModel` 下配置其他模型：
+LiteLLM can back the `image_generate` tool through OpenAI-compatible `/images/generations` and
+`/images/edits` routes. Default image model is `gpt-image-2`; configure a different one under
+`agents.defaults.mediaModels.image`:
 
 ```json5
 {

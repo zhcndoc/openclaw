@@ -16,7 +16,7 @@ title: "Cloudflare AI Gateway 插件"
 
 ## 接口
 
-providers: cloudflare-ai-gateway
+providers: `cloudflare-ai-gateway`
 
 ## 相关文档
 

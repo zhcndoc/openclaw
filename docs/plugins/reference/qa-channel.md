@@ -16,7 +16,7 @@ title: "QA Channel 插件"
 
 ## 界面
 
-channels: qa-channel
+channels: `qa-channel`
 
 ## 相关文档
 

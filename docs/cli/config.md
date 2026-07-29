@@ -15,10 +15,10 @@ sidebarTitle: "配置"
 ## 根选项
 
 <ParamField path="--section <section>" type="string">
-  可重复使用的引导式设置分区过滤器，当你不带子命令运行 `openclaw config` 时使用。
+  Reusable guided setup section filter, used when you run `openclaw config` without a subcommand.
 </ParamField>
 
-引导式分区：`workspace`、`model`、`web`、`gateway`、`daemon`、`channels`、`plugins`、`skills`、`health`。
+Guided sections: `workspace`, `model`, `web`, `gateway`, `daemon`, `channels`, `plugins`, `skills`, `health`.
 
 ## 示例
 
@@ -31,7 +31,7 @@ openclaw config get browser.executablePath
 openclaw config set browser.executablePath "/usr/bin/google-chrome"
 openclaw config set browser.profiles.work.executablePath "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 openclaw config set agents.defaults.heartbeat.every "2h"
-openclaw config set 'agents.list[0].tools.exec.node' "node-id-or-name"
+openclaw config set 'agents.entries.main.tools.exec.node' "node-id-or-name"
 openclaw config set agents.defaults.models '{"openai/gpt-5.4":{}}' --strict-json --merge
 openclaw config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN
 openclaw config set secrets.providers.vaultfile --provider-source file --provider-path /etc/openclaw/secrets.json --provider-mode json
@@ -48,14 +48,16 @@ openclaw config validate --json
 
 ```bash
 openclaw config get agents.defaults.workspace
-openclaw config get 'agents.list[0].id'
-openclaw config get agents.list
-openclaw config set 'agents.list[1].tools.exec.node' "node-id-or-name"
+openclaw config get agents.entries.main
+openclaw config get agents.entries
+openclaw config set 'agents.entries.work.tools.exec.node' "node-id-or-name"
 ```
 
 ### `config get`
 
 从已脱敏的配置快照中读取一个值（机密信息不会输出）。`--json` 会将原始值以 JSON 形式输出；否则，字符串/数字/布尔值会直接输出，而对象/数组会以格式化 JSON 输出。
+
+当路径缺失时，`--json` 会将 `{ "error": "Config path not found: <path>" }` 写入 stdout，并以状态码 1 退出。不使用 `--json` 时，诊断信息仍会输出到 stderr。
 
 ```bash
 openclaw config get browser.executablePath
@@ -115,8 +117,10 @@ openclaw config set channels.whatsapp.groups '["*"]' --strict-json
 
 `config get <path> --json` 会将原始值以 JSON 形式打印，而不是终端格式化输出。
 
+当写入更改 `agents.defaults.model` 或每个代理的 `agents.entries.*.model` 时，OpenClaw 会在写入前通过已配置的提供方目录解析每个已更改的主模型或回退模型。未知的模型引用会被拒绝，且不会更改当前配置；运行 `openclaw models list` 以查看可用模型。
+
 <Note>
-默认情况下，对象赋值会用目标路径替换原有内容。对于通常包含用户新增条目的受保护路径，如果替换操作会移除现有条目，则会被拒绝，除非你传入 `--replace`：`agents.defaults.models`、`agents.list`、`models.providers`、`models.providers.<id>`、`models.providers.<id>.models`、`plugins.entries` 和 `auth.profiles`。
+对象赋值默认会用目标路径替换。通常包含用户添加条目的受保护路径会拒绝会删除现有条目的替换，除非你传入 `--replace`：`agents.defaults.models`、`agents.entries`、`models.providers`、`models.providers.<id>`、`models.providers.<id>.models`、`plugins.entries` 和 `auth.profiles`。
 </Note>
 
 在向这些 map 添加条目时使用 `--merge`：
@@ -174,6 +178,8 @@ openclaw config set models.providers.ollama.models '[{"id":"llama3.2","name":"Ll
     ```bash
     openclaw config set --batch-file ./config-set.batch.json --dry-run
     ```
+
+    批量文件大小限制为 8 MiB。
 
   </Tab>
 </Tabs>
@@ -248,21 +254,23 @@ openclaw config set secrets.providers.vault \
 
 ## `config patch`
 
-Paste or pipe in a JSON5 patch that resembles config, instead of running many path-based `config set` commands. Objects merge recursively; arrays and scalar values replace the target; `null` deletes the target path.
+粘贴或通过管道输入一个类似配置的 JSON5 补丁，而不是运行许多基于路径的 `config set` 命令。对象会递归合并；数组和标量值会替换目标；`null` 会删除目标路径。
 
 ```bash
 openclaw config patch --file ./openclaw.patch.json5 --dry-run
 openclaw config patch --file ./openclaw.patch.json5
 ```
 
-Pass the patch through stdin for remote install scripts:
+补丁文件大小限制为 8 MiB。通过管道 `--stdin` 输入的补丁限制为 1 MiB。
+
+将补丁通过 stdin 传递用于远程设置脚本：
 
 ```bash
 ssh user@gateway-host 'openclaw config patch --stdin --dry-run' < ./openclaw.patch.json5
 ssh user@gateway-host 'openclaw config patch --stdin' < ./openclaw.patch.json5
 ```
 
-Patch example:
+补丁示例：
 
 ```json5
 {
@@ -294,13 +302,13 @@ Patch example:
 }
 ```
 
-When an object or array must be set exactly to the provided value rather than patched recursively, use `--replace-path <path>`:
+当对象或数组必须精确设置为所提供的值，而不是递归补丁时，请使用 `--replace-path <path>`：
 
 ```bash
 openclaw config patch --file ./discord.patch.json5 --replace-path 'channels.discord.guilds["123"].channels'
 ```
 
-`--dry-run` runs schema and SecretRef resolvability checks without writing. By default, dry-run skips Exec-backed SecretRef; add `--allow-exec` when you intentionally want dry-run to execute provider commands.
+`--dry-run` 会运行 schema 和 SecretRef 可解析性检查，但不会写入。默认情况下，dry-run 会跳过基于 Exec 的 SecretRef；当你有意希望 dry-run 执行 provider 命令时，请添加 `--allow-exec`。
 
 ## 试运行
 
@@ -359,7 +367,7 @@ openclaw config set channels.discord.token \
   skippedExecRefs: number,
   errors?: [
     {
-      kind: "missing-path" | "schema" | "resolvability",
+      kind: "missing-path" | "schema" | "resolvability" | "model",
       message: string,
       ref?: string, // 可解析性错误时存在
     },
@@ -413,11 +421,12 @@ openclaw config set channels.discord.token \
 
 <AccordionGroup>
   <Accordion title="如果试运行失败">
-    - `config schema validation failed`：变更后的配置结构无效；请修正路径/值或 provider/ref 对象结构。
-    - `Config policy validation failed: unsupported SecretRef usage`：将该凭据改回明文/字符串输入；仅在受支持的作用域中保留 SecretRefs。
+    - `config schema validation failed`：更改后的配置结构无效；请修复路径/值或 provider/ref 对象结构。
+    - `Config policy validation failed: unsupported SecretRef usage`：请将该凭据改回明文/字符串输入；仅在受支持的字段上使用 SecretRef。
     - `SecretRef assignment(s) could not be resolved`：所引用的 provider/ref 当前无法解析（缺少环境变量、文件指针无效、exec provider 失败，或 provider/source 不匹配）。
+    - `model reference validation failed`：更改后的文本模型主模型或备用模型未知；运行 `openclaw models list` 并选择一个可用模型。
     - `Dry run note: skipped <n> exec SecretRef resolvability check(s)`：如果你需要 exec 可解析性验证，请使用 `--allow-exec` 重新运行。
-    - 对于批处理模式，请修复失败的条目，并在写入前重新运行 `--dry-run`。
+    - 对于批处理模式，请修复失败项后再次运行 `--dry-run`，然后再写入。
 
   </Accordion>
 </AccordionGroup>
@@ -437,6 +446,8 @@ openclaw config set channels.discord.token \
 ## 写入安全
 
 `openclaw config set` 和其他 OpenClaw 自有的配置写入器会在提交到磁盘之前验证整个变更后的配置。如果新负载未通过 schema 验证，或者看起来像破坏性的覆盖，活动配置会保持不变，而被拒绝的负载会以 `openclaw.json.rejected.*` 的形式保存在其旁边。
+
+OpenClaw 自有的写入会将 JSON5 重新序列化为标准 JSON。当源内容包含注释时，写入器会在移除它们之前立即发出警告；如果保留注释很重要，请使用直接编辑器。
 
 <Warning>
 活动配置路径必须是普通文件。通过符号链接的 `openclaw.json` 布局不支持写入；请改用 `OPENCLAW_CONFIG_PATH` 直接指向真实文件。
@@ -462,15 +473,15 @@ openclaw config validate
 
 整文件恢复仅保留给 doctor 修复使用。插件 schema 变更或 `minHostVersion` 不匹配会继续报错，而不会回滚无关的用户设置，例如模型、提供方、认证配置文件、渠道、gateway 暴露、工具、内存、浏览器或 cron 配置。
 
-## 修复循环
+## Fix loop
 
-在 `openclaw config validate` 通过后，使用本地 TUI 让一个嵌入式代理将当前配置与文档进行对比，同时在同一个终端中验证每次更改：
+After `openclaw config validate` passes, use the local TUI to let an embedded agent compare the current configuration with the documentation, while validating each change in the same terminal:
 
 ```bash
 openclaw chat
 ```
 
-在 TUI 中，前导 `!` 会运行一条原样的本地 shell 命令（在每个会话首次使用时会先出现一次确认提示）：
+In the TUI, a leading `!` runs a local shell command as-is (the first time you use it in each session, you will first see a confirmation prompt):
 
 ```text
 !openclaw config file
@@ -480,17 +491,17 @@ openclaw chat
 ```
 
 <Steps>
-  <Step title="与文档对比">
-    请代理将你当前的配置与相关文档页面进行对比，并建议最小的修复。
+  <Step title="Compare with the documentation">
+    Ask the agent to compare your current configuration with the relevant documentation pages and suggest the smallest possible fix.
   </Step>
-  <Step title="应用定向编辑">
-    使用 `openclaw config set` 或 `openclaw configure` 应用定向修改。
+  <Step title="Apply targeted edits">
+    Use `openclaw config set` or `openclaw configure` to apply targeted changes.
   </Step>
-  <Step title="重新验证">
-    每次更改后重新运行 `openclaw config validate`。
+  <Step title="Re-validate">
+    Re-run `openclaw config validate` after each change.
   </Step>
-  <Step title="针对运行时问题使用 doctor">
-    如果验证通过但运行时仍然不健康，请运行 `openclaw doctor` 或 `openclaw doctor --fix` 以获取迁移和修复帮助。
+  <Step title="Use doctor for runtime issues">
+    If validation passes but the runtime is still unhealthy, run `openclaw doctor` or `openclaw doctor --fix` to get migration and repair help.
   </Step>
 </Steps>
 

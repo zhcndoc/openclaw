@@ -16,7 +16,7 @@ title: "Anthropic Vertex 插件"
 
 ## 接口
 
-providers: anthropic-vertex
+providers: `anthropic-vertex`
 
 ## Claude Fable 5
 

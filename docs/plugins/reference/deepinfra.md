@@ -16,7 +16,7 @@ title: "DeepInfra 插件"
 
 ## 接口
 
-providers: deepinfra; contracts: imageGenerationProviders, mediaUnderstandingProviders, memoryEmbeddingProviders, speechProviders, videoGenerationProviders
+providers: `deepinfra`; contracts: `embeddingProviders`, `imageGenerationProviders`, `mediaUnderstandingProviders`, `speechProviders`, `videoGenerationProviders`
 
 ## 相关文档
 

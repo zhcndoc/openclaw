@@ -71,9 +71,9 @@ openclaw browser --browser-profile openclaw reset-profile
 - `start --headless` 仅对该次启动请求生效，并且只在 OpenClaw 启动本地托管浏览器时适用。它不会改写 `browser.headless` 或配置文件配置，并且对于已经在运行的浏览器不会产生任何作用。
 - 在没有 `DISPLAY` 或 `WAYLAND_DISPLAY` 的 Linux 主机上，本地托管配置文件会自动以无头模式运行，除非 `OPENCLAW_BROWSER_HEADLESS=0`、`browser.headless=false` 或 `browser.profiles.<name>.headless=false` 明确请求一个可见浏览器。
 
-## If the command is missing
+## 如果命令缺失
 
-If `openclaw browser` is an unknown command, please check `plugins.allow` in `~/.openclaw/openclaw.json`. When `plugins.allow` exists, unless the configuration already has a root-level `browser` block, explicitly list the built-in browser plugin:
+如果 `openclaw browser` 是一个未知命令，请检查 `~/.openclaw/openclaw.json` 中的 `plugins.allow`。当 `plugins.allow` 存在时，除非配置中已经有一个根级别的 `browser` 块，否则请显式列出内置的 browser 插件：
 
 ```json5
 {
@@ -83,9 +83,9 @@ If `openclaw browser` is an unknown command, please check `plugins.allow` in `~/
 }
 ```
 
-A root-level explicit `browser` block (for example, `browser.enabled=true` or `browser.profiles.<name>`) will also activate the built-in browser plugin under a restrictive plugin allowlist.
+根级别显式的 `browser` 块（例如 `browser.enabled=true` 或 `browser.profiles.<name>`）也会在受限的插件允许列表下激活内置的 browser 插件。
 
-Related: [Browser tool](/tools/browser#missing-browser-command-or-tool)
+相关：[Browser 工具](/tools/browser#missing-browser-command-or-tool)
 
 ## 配置文件
 
@@ -132,7 +132,24 @@ openclaw browser close t1
 
 原始 target id 是易变的诊断句柄，不是持久的代理记忆：当 Chromium 在导航或表单提交期间替换底层原始 target 时，如果 OpenClaw 能够证明匹配关系，它会将稳定的 `tabId`/标签保留并附加到替换后的标签页上。优先使用 `suggestedTargetId`。
 
-## 快照 / 截图 / 操作
+## 提取 / 快照 / 截图 / 操作
+
+在不打印页面内容的情况下回答当前页面上的问题：
+
+```bash
+openclaw browser extract "主要结论是什么？"
+openclaw browser extract "列出了哪个截止日期？" --target-id docs --timeout-ms 90000
+openclaw browser extract "列出发布项" --selector "main" --ignore-selector "nav" --schema '{"type":"array","items":{"type":"object"}}'
+```
+
+`extract` 会使用所选的代理模型，只返回包装后的答案，并且
+在答案不存在时报告 `NOT_FOUND`。其总体超时时间默认为
+60 秒，并限制在 5–120 秒之间。它要求使用基于 Playwright 的
+配置文件；当你需要 refs，或者无法进行提取时，请使用 `snapshot`。
+使用 `--selector <css>` 可将大型页面限制为匹配的子树，并可重复使用
+`--ignore-selector <css>` 在转换前移除导航栏、页脚、广告或横幅。`--schema <json>` 会在
+`details.json` 中请求经过验证的结构化输出；无效的结构化输出会重试一次，然后失败并
+提示在不使用 schema 的情况下重试。
 
 快照：
 
@@ -169,7 +186,7 @@ openclaw browser scrollintoview <ref>
 openclaw browser drag <startRef> <endRef>
 openclaw browser select <ref> OptionA OptionB
 openclaw browser fill --fields '[{"ref":"1","value":"Ada"}]'
-openclaw browser wait --text "Done"
+openclaw browser wait --text "完成"
 openclaw browser evaluate --fn '(el) => el.textContent' --ref <ref>
 openclaw browser evaluate --fn 'const title = document.title; return title;'
 openclaw browser evaluate --timeout-ms 30000 --fn 'async () => { await window.ready; return true; }'
@@ -193,6 +210,16 @@ openclaw browser dialog --dismiss --dialog-id d1
 托管的 Chrome 配置文件会将普通点击触发的下载保存到 OpenClaw 下载目录（默认是 `/tmp/openclaw/downloads`，或已配置的临时根目录）。当代理需要等待特定文件并返回其路径时，请使用 `waitfordownload` 或 `download`；这些显式等待器会拥有下一次下载。上传接受来自 OpenClaw 临时上传根目录以及 OpenClaw 托管的入站媒体中的文件，包括 `media://inbound/<id>` 和沙箱相对的 `media/inbound/<id>` 引用。不允许嵌套媒体引用、路径遍历和任意本地路径。
 
 当某个动作打开模态对话框时，动作响应会返回 `blockedByDialog`，并带有 `browserState.dialogs.pending`；请传入 `--dialog-id` 直接应答。由 OpenClaw 之外处理的对话框会出现在 `browserState.dialogs.recent` 下。
+
+批量操作：
+
+```bash
+openclaw browser batch --actions '[{"kind":"wait","timeMs":500},{"kind":"click","ref":"12"},{"kind":"type","ref":"23","text":"hello"}]'
+openclaw browser batch --actions-file plan.json
+openclaw browser batch --actions-file - --continue
+```
+
+`openclaw browser batch` 会发送一个 `kind="batch"` 的 `/act` 请求，包含嵌套的 `BrowserActRequest` 操作（`wait`、`click`、`type`、`evaluate`、...）——而不是 `open`/`navigate`/`snapshot`/`screenshot`，这些是 CLI 子命令，不是 `/act` 的 kind。`--continue` 会设置 `stopOnError=false`（默认在第一个错误处停止）；`--target-id` 将整个批处理限定到一个标签页。任一嵌套操作失败都会使命令以非零状态退出；使用 `--json` 可保留有序的 `results` 响应。请参阅 [Browser batch CLI](/tools/browser-control#browser-batch-cli) 了解完整约定（ref 生命周期、target id 冲突、错误摘要）。`batch` 不支持 `profile="user"` / existing-session 配置文件。
 
 ## 状态和存储
 
@@ -251,26 +278,26 @@ openclaw browser --browser-profile chrome-live tabs
 
 当前 existing-session 限制：
 
-- 快照驱动的操作使用 ref，而不是 CSS 选择器。
-- 当调用方省略 `timeoutMs` 时，`browser.actionTimeoutMs` 会将受支持的 `act` 请求默认设为 60000 ms；单次调用的 `timeoutMs` 仍然优先生效。
-- `click` 仅支持左键点击。
+- 基于快照的操作使用 refs，而不是 CSS 选择器。
+- 当调用方省略 `timeoutMs` 时，支持的 `act` 请求会使用内置的 60000 ms 默认值；每次调用传入的 `timeoutMs` 仍然优先。
+- `click` 仅支持左键单击。
 - `type` 不支持 `slowly=true`。
 - `press` 不支持 `delayMs`。
-- `hover`、`scrollintoview`、`drag`、`select` 和 `fill` 会拒绝单次调用的超时覆盖；`evaluate` 接受 `--timeout-ms`。
+- `hover`、`scrollintoview`、`drag`、`select` 和 `fill` 会拒绝按调用传入的超时覆盖；`evaluate` 接受 `--timeout-ms`。
 - `select` 仅支持一个值。
-- `wait --load networkidle` 不受支持（在受管理和原始/远程 CDP 配置文件中可用）。
-- 文件上传需要 `--ref` / `--input-ref`，不支持 CSS `--element`，并且一次仅支持一个文件。
+- 不支持 `wait --load networkidle`（在托管和原始/远程 CDP 配置文件中可用）。
+- 文件上传需要 `--ref` / `--input-ref`，不支持 CSS `--element`，且一次只支持一个文件。
 - 对话框钩子不支持 `--timeout`。
 - 截图支持页面捕获和 `--ref`，但不支持 CSS `--element`。
-- `responsebody`、下载拦截、PDF 导出和批量操作仍然需要受管理的浏览器或原始 CDP 配置文件。
+- `extract`、`responsebody`、下载拦截、PDF 导出以及批量操作仍然需要托管浏览器或原始 CDP 配置文件。
 
-## 远程浏览器控制（node host 代理）
+## Remote Browser Control (node host proxy)
 
-如果 Gateway 运行在与浏览器不同的机器上，请在安装了 Chrome/Brave/Edge/Chromium 的那台机器上运行一个 **node host**。Gateway 会将浏览器操作代理到该 node；无需单独的浏览器控制服务器。
+If Gateway is running on a machine different from the browser, run a **node host** on the machine where Chrome/Brave/Edge/Chromium is installed. Gateway will proxy browser operations to that node; no separate browser control server is required.
 
-使用 `gateway.nodes.browser.mode` 控制自动路由；如果连接了多个 node，则使用 `gateway.nodes.browser.node` 固定到特定 node。
+Use `gateway.nodes.browser.mode` to control automatic routing; if multiple nodes are connected, use `gateway.nodes.browser.node` to pin to a specific node.
 
-安全与远程设置：[Browser tool](/tools/browser)、[Remote access](/gateway/remote)、[Tailscale](/gateway/tailscale)、[Security](/gateway/security)
+Security and remote setup: [Browser tool](/tools/browser), [Remote access](/gateway/remote), [Tailscale](/gateway/tailscale), [Security](/gateway/security)
 
 ## 相关
 

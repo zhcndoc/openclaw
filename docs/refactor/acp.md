@@ -90,19 +90,18 @@ type AcpxProcessLease = {
 };
 ```
 
-包装器进程应在其环境中接收租约 id 和网关实例 id：
+包装器进程会将租约 id 和网关实例 id 作为可移植参数接收：
 
 ```sh
-OPENCLAW_ACPX_LEASE_ID=...
-OPENCLAW_GATEWAY_INSTANCE_ID=...
+--openclaw-acpx-lease-id ... --openclaw-gateway-instance-id ...
 ```
 
 在平台允许时，验证应优先使用不会因命令引号而混淆的实时进程元数据：
 
-- 根 PID 仍然存在
-- 实时包装器路径位于 `wrapperRoot` 下
+- root PID 仍然存在
+- 运行中的 wrapper 路径位于 `wrapperRoot` 下
 - 在可用时，进程组与租约匹配
-- 如果可读取，环境中包含预期的租约 id
+- 参数中包含预期的租约 id
 - 命令哈希或可执行文件路径与租约匹配
 
 如果无法验证实时进程，清理应失败并关闭。

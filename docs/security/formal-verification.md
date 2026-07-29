@@ -22,7 +22,7 @@ OpenClaw 的形式化安全模型（目前为 TLA+/TLC）提供了一个机器�
 
 ## 模型存放位置
 
-这些模型维护在一个单独的仓库中：[vignesh07/openclaw-formal-models](https://github.com/vignesh07/openclaw-formal-models)。
+模型保存在一个单独的仓库中：`vignesh07/openclaw-formal-models`。
 
 <Note>
 该仓库目前无法访问（截至撰写本文时，GitHub 返回“Repository not found”）。如果对你来说它仍然有问题，请先在 OpenClaw 维护者频道中询问当前的位置，再假定这些模型已经被移除。
@@ -36,17 +36,7 @@ OpenClaw 的形式化安全模型（目前为 TLA+/TLC）提供了一个机器�
 
 ## 复现结果
 
-克隆 models 仓库并运行 TLC：
-
-```bash
-git clone https://github.com/vignesh07/openclaw-formal-models
-cd openclaw-formal-models
-
-# 需要 Java 11+（TLC 运行在 JVM 上）。
-# 该仓库内置了一个固定版本的 tla2tools.jar，并提供 bin/tlc 以及 Make 目标。
-
-make <target>
-```
+在先前记录的模型仓库无法公开访问时，复现说明不可用。在尝试下面的目标之前，请在 OpenClaw 维护者频道中询问经过验证的当前位置。
 
 目前这个仓库还没有集成 CI；未来的迭代可以添加在 CI 中运行的模型，并提供公开产物（反例轨迹、运行日志），或者为小规模有界检查提供一个托管的“运行此模型”工作流。
 
@@ -123,7 +113,7 @@ make <target>
 
 ### 路由 dmScope 优先级与 identityLinks
 
-**声明：** 路由默认保持 DM 会话隔离，并且只有在显式配置时，才会通过通道优先级和身份链接折叠会话。通道特定的 `dmScope` 覆盖优先于全局默认值；`identityLinks` 只会在显式链接的分组内折叠会话，不会跨越不相关的对端。
+**声明：** `dmScope` 优先级和 identityLinks 的行为是确定性的：默认的 `main` 作用域会让单个拥有者的多个 DM 共享一个滚动会话（个人代理默认行为），而任何配置为隔离的作用域（`per-peer`、`per-channel-peer`、`per-account-channel-peer`）都会严格分离 DM 会话。特定频道的 `dmScope` 覆盖优先于全局默认值；`identityLinks` 只会在显式关联的分组内合并会话，不会跨无关的对端合并。多用户收件箱应当选择隔离作用域（运行时安全审计在检测到多用户 DM 流量时会建议这样做）。
 
 | 结果           | 目标                                                                   |
 | -------------- | ------------------------------------------------------------------------- |

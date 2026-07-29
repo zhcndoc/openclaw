@@ -16,7 +16,7 @@ title: "Gradium 插件"
 
 ## 接口
 
-contracts: speechProviders
+contracts: `speechProviders`
 
 ## 相关文档
 

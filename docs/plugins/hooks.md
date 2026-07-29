@@ -96,15 +96,14 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 | Hook                            | Purpose                                                                                  |
 | ------------------------------- | ---------------------------------------------------------------------------------------- |
-| `before_model_resolve`          | 在会话消息加载前覆盖提供方或模型                                  |
-| `agent_turn_prepare`            | 消耗排队的插件回合注入，并在提示词钩子之前添加同回合上下文      |
-| `before_prompt_build`           | 在模型调用前添加动态上下文或系统提示文本                          |
-| `before_agent_start`            | 仅兼容的组合阶段；优先使用上面的两个钩子                            |
-| **`before_agent_run`**          | 在提交给模型之前检查最终提示词和会话消息；可阻止运行 |
-| **`before_agent_reply`**        | 用合成回复或静默短路该模型回合                           |
-| **`before_agent_finalize`**     | 检查自然生成的最终答案并请求再进行一次模型推理                         |
-| `agent_end`                     | 观察最终消息、成功状态和运行时长                                  |
-| `heartbeat_prompt_contribution` | 为后台监视器和生命周期插件添加仅用于心跳的上下文                  |
+| `before_model_resolve`          | Override provider or model before session messages load                                  |
+| `agent_turn_prepare`            | Consume queued plugin turn injections and add same-turn context before prompt hooks      |
+| `before_prompt_build`           | Add dynamic context or system-prompt text before the model call                          |
+| **`before_agent_run`**          | Inspect the final prompt and session messages before model submission; can block the run |
+| **`before_agent_reply`**        | Short-circuit the model turn with a synthetic reply or silence                           |
+| **`before_agent_finalize`**     | Inspect the natural final answer and request one more model pass                         |
+| `agent_end`                     | Observe final messages, success state, and run duration                                  |
+| `heartbeat_prompt_contribution` | Add heartbeat-only context for background monitor and lifecycle plugins                  |
 
 **对话观察**
 
@@ -145,7 +144,9 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 | `before_compaction` / `after_compaction` | 观察或注释压缩周期                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `before_reset`                           | 观察会话重置事件（`/reset`、程序化重置）                                                                                                                                                                                                                                                                                                                                                                                                     |
 
-**Subagent**
+For `sessions.create` calls with `parentSessionKey` and `emitCommandHooks: true`, a distinct child always receives `session_start`. Callers declare whether the parent also receives terminal `session_end` with `succeedsParent`: `true` means successor, `false` means parallel child. Omission preserves the legacy parent-rollover behavior. The `command:new` and `before_reset` hooks still describe the requested `/new` action in both cases.
+
+**Subagents**
 
 - `subagent_spawned` / `subagent_ended` - 观察子代理的启动和完成。
 - `subagent_delivery_target` - 当没有核心会话绑定可投射路由时，用于完成投递的兼容性钩子。
@@ -189,17 +190,23 @@ api.on("channel_pairing_requested", async (event) => {
 
 - `event.toolName`
 - `event.params`
-- 可选的 `event.toolKind` 和 `event.toolInputKind`，宿主权威的
-  区分器，用于有意共享名称的工具；例如，外层
-  code-mode `exec` 调用使用 `toolKind: "code_mode_exec"`，并在输入语言已知时包含
-  `toolInputKind: "javascript" | "typescript"`
-- 可选的 `event.derivedPaths`，对宿主派生的目标路径提示的最佳努力结果，
-  适用于诸如 `apply_patch` 之类的已知工具封装；这些路径可能
-  不完整，或对工具实际会触及的内容过于宽泛（例如在输入有误或部分缺失时）
-- 可选的 `event.runId`
-- 可选的 `event.toolCallId`
-- 上下文字段，例如 `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId`、
-  `ctx.runId`、`ctx.toolKind`、`ctx.toolInputKind`，以及诊断信息 `ctx.trace`
+- optional `event.toolKind` and `event.toolInputKind`, host-authoritative
+  discriminators for tools that intentionally share names; for example, outer
+  code-mode `exec` calls use `toolKind: "code_mode_exec"` and include
+  `toolInputKind: "javascript" | "typescript"` when the input language is
+  known
+- optional `event.derivedPaths`, best-effort host-derived target path hints
+  for well-known tool envelopes such as `apply_patch`; these paths may be
+  incomplete or over-approximate what the tool will actually touch (for
+  example, with malformed or partial inputs)
+- optional `event.runId`
+- optional `event.toolCallId`
+- context fields such as `ctx.agentId`, `ctx.sessionKey`, `ctx.sessionId`,
+  `ctx.runId`, `ctx.toolKind`, `ctx.toolInputKind`, and diagnostic `ctx.trace`
+- optional `ctx.requester`, the host-derived requester that initiated the current
+  message run. It can include `channel`, `accountId`, `senderId`,
+  `senderIsOwner`, and provider-native `roleIds`. Missing fields are unproven,
+  not false assurances; fail closed when policy requires them.
 
 它可以返回：
 
@@ -237,7 +244,134 @@ type BeforeToolCallResult = {
 - `onResolution` 接收已解析的决策：`allow-once`、`allow-always`、
   `deny`、`timeout` 或 `cancelled`。
 
-有关批准路由、决策行为，以及何时使用 `requireApproval` 而不是可选工具或 exec 批准，请参见[插件权限请求](/plugins/plugin-permission-requests)。
+### Sender-aware policy in one file
+
+A standalone plugin file can keep deployment-specific policy in code instead
+of adding another configuration schema. This example gives owners every tool,
+lets configured maintainers use a conservative tool and message-action set,
+and exposes `/fix` to senders already authorized by the channel configuration:
+
+```typescript
+import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
+
+const AGENT_ID = "maintenance-agent";
+const MAINTAINER_SCOPES = [
+  {
+    channel: "discord",
+    accountId: "operations",
+    senderIds: new Set(["maintainer-user-id"]),
+    roleIds: new Set(["maintainer-role-id"]),
+  },
+];
+const MAINTAINER_TOOLS = new Set(["read", "web_fetch", "web_search", "session_status", "message"]);
+const MAINTAINER_MESSAGE_ACTIONS = new Set(["react", "reply", "thread-create", "thread-reply"]);
+
+export default definePluginEntry({
+  id: "maintenance-access",
+  name: "Maintenance access",
+  description: "Apply sender-aware tool policy to the maintenance agent.",
+  register(api) {
+    api.on("before_tool_call", (event, ctx) => {
+      if (ctx.agentId !== AGENT_ID) {
+        return;
+      }
+
+      const requester = ctx.requester;
+      if (requester?.senderIsOwner === true) {
+        return;
+      }
+
+      const maintainerScope = requester
+        ? MAINTAINER_SCOPES.find(
+            (scope) =>
+              scope.channel === requester.channel && scope.accountId === requester.accountId,
+          )
+        : undefined;
+      const isMaintainer =
+        maintainerScope !== undefined &&
+        ((requester?.senderId !== undefined && maintainerScope.senderIds.has(requester.senderId)) ||
+          requester?.roleIds?.some((roleId) => maintainerScope.roleIds.has(roleId)) === true);
+      if (!isMaintainer) {
+        return { block: true, blockReason: "Maintainer access required." };
+      }
+
+      if (event.toolName === "message") {
+        const action = typeof event.params.action === "string" ? event.params.action : "";
+        if (MAINTAINER_MESSAGE_ACTIONS.has(action)) {
+          return;
+        }
+        return { block: true, blockReason: `Owner required for message.${action || "unknown"}.` };
+      }
+
+      if (MAINTAINER_TOOLS.has(event.toolName)) {
+        return;
+      }
+      return { block: true, blockReason: `Owner required for ${event.toolName}.` };
+    });
+
+    api.registerCommand({
+      name: "fix",
+      description: "Ask the maintenance agent to investigate and fix an issue.",
+      acceptsArgs: true,
+      requireAuth: true,
+      handler: async (ctx) =>
+        ctx.agentId === AGENT_ID
+          ? { continueAgent: true }
+          : { text: "This command is only available in the maintenance conversation." },
+    });
+  },
+});
+```
+
+Load the file directly and restart the Gateway:
+
+```json5
+{
+  agents: {
+    list: [
+      {
+        id: "maintenance-agent",
+        workspace: "~/.openclaw/workspace-maintenance",
+      },
+    ],
+  },
+  bindings: [
+    {
+      agentId: "maintenance-agent",
+      match: {
+        channel: "discord",
+        accountId: "operations",
+        peer: { kind: "channel", id: "maintenance-channel-id" },
+      },
+    },
+  ],
+  plugins: {
+    load: { paths: ["~/.openclaw/policies/maintenance-access.ts"] },
+  },
+}
+```
+
+`AGENT_ID` must name the agent bound to the maintenance conversation. The
+binding selects that agent for normal messages and `/fix`; the standalone file
+remains the single owner of owner-versus-maintainer tool policy.
+
+`requireAuth: true` reuses each channel's existing sender admission. For
+Discord, a guild or channel `users`/`roles` allowlist can authorize the
+maintenance audience. Other channels can use stable sender ids. The hook then
+applies the finer per-tool decision on every tool call in the run, including
+Codex native `PreToolUse` calls. It can veto a tool the model sees, but cannot
+add a tool omitted by the host. Existing sandbox, exec approval, owner-only
+core-tool, and channel policies still apply; the hook cannot grant past them.
+
+Scope sender and role ids to an exact channel/account pair as shown; both are
+provider-local namespaces. Keep the allowlists conservative. Add write or
+execution tools only when the deployment's sandbox and approval policy make
+that safe. For automated or system runs, decide explicitly whether an absent
+`ctx.requester` should pass; the example denies it for the scoped agent.
+
+See [Plugin permission requests](/plugins/plugin-permission-requests) for
+approval routing, decision behavior, and when to use `requireApproval` instead
+of optional tools or exec approvals.
 
 需要宿主级策略的插件可以通过 `api.registerTrustedToolPolicy(...)` 注册受信任的工具策略。这些策略会在普通的 `before_tool_call` 钩子之前以及正常钩子决策之前运行。捆绑的受信任策略最先运行；已安装插件的受信任策略随后按插件加载顺序运行；普通的 `before_tool_call` 钩子在它们之后运行。捆绑插件保留现有的受信任策略路径。已安装插件必须显式启用，并在 `contracts.trustedToolPolicies` 中声明每个策略 id；未声明的 id 会在注册前被拒绝。策略 id 仅在注册该策略的插件范围内有效，因此不同插件可以重用相同的本地 id。仅在工作区策略、预算执行或保留工作流安全等宿主信任的门控场景中使用这一层。
 
@@ -287,15 +421,13 @@ type BeforeToolCallResult = {
   `prependContext` 或 `appendContext`。适用于需要总结当前状态
   但不改变用户发起回合的后台监控。
 
-`before_agent_start` 仍保留以兼容旧版。优先使用上面的显式钩子，
-这样插件就不会依赖遗留的组合阶段。
-
-`before_agent_run` 在提示词构建之后、任何模型输入之前运行，
-包括提示词本地图片加载和 `llm_input` 观测。它接收当前用户输入
-作为 `prompt`，以及已加载的会话历史 `messages` 和当前系统提示词。
-返回 `{ outcome: "block", reason, message? }` 可在模型读取提示词前
-停止运行。`reason` 仅供内部使用；`message` 是面向用户的替代内容。
-仅支持 `pass` 和 `block` 两种结果；不支持的决策形状将默认失败关闭。
+`before_agent_run` runs after prompt construction and before any model input,
+including prompt-local image loading and `llm_input` observation. It receives
+the current user input as `prompt`, plus loaded session history in `messages`
+and the active system prompt. Return `{ outcome: "block", reason, message? }`
+to stop the run before the model reads the prompt. `reason` is internal;
+`message` is the user-facing replacement. Only `pass` and `block` outcomes are
+supported; unsupported decision shapes fail closed.
 
 当运行被阻止时，OpenClaw 只会在 `message.content` 中存储替换文本，
 以及非敏感的阻止元数据，例如阻止插件 id 和时间戳。原始用户文本
@@ -303,11 +435,11 @@ type BeforeToolCallResult = {
 不会出现在转录、历史、广播、日志和诊断载荷中。可观测性应使用
 已清洗字段，例如阻止者 id、结果、时间戳或安全分类。
 
-`before_agent_start` 和 `agent_end` 在 OpenClaw 能识别当前运行时会
-包含 `event.runId`；相同值也会出现在 `ctx.runId` 中。由 cron 驱动的
-运行还会在 agent-turn 上下文中暴露 `ctx.jobId`（来源 cron 作业 id），
-以便钩子将指标、副作用或状态限定到特定的计划任务。`ctx.jobId`
-不属于 `before_tool_call` 工具上下文的一部分。
+Agent-turn hooks including `agent_end` include `event.runId` when OpenClaw can
+identify the active run; the same value is also on `ctx.runId`. Cron-driven
+runs also expose `ctx.jobId` (the originating cron job id) on the agent-turn
+context so hooks can scope metrics, side effects, or state to a specific
+scheduled job. `ctx.jobId` is not part of the `before_tool_call` tool context.
 
 对于通道发起的运行，`ctx.channel` 和 `ctx.messageProvider` 用于标识
 提供方表面，例如 `discord` 或 `telegram`，而 `ctx.channelId` 是会话
@@ -438,13 +570,14 @@ OpenClaw 会在提示词钩子之前清空已排队的注入，丢弃过期注�
 
 将消息钩子用于通道级路由和投递策略：
 
-- `message_received`：观察入站内容、sender、`threadId`、
-  `messageId`、`senderId`、可选的 run/session 关联以及元数据。
-- `message_sending`：重写 `content` 或返回 `{ cancel: true }`。
-- `reply_payload_sending`：重写规范化后的 `ReplyPayload` 对象
-  （包括 `presentation`、`delivery`、媒体引用和文本）或返回
-  `{ cancel: true }`。
-- `message_sent`：观察最终成功或失败。
+- `message_received`: observe inbound content, sender, `threadId`,
+  `messageId`, `senderId`, optional run/session correlation, ordered `media`,
+  and metadata.
+- `message_sending`: rewrite `content` or return `{ cancel: true }`.
+- `reply_payload_sending`: rewrite normalized `ReplyPayload` objects
+  (including `presentation`, `delivery`, media refs, and text) or return
+  `{ cancel: true }`.
+- `message_sent`: observe final success or failure.
 
 对于仅音频的 TTS 回复，即使通道负载中没有可见文本/标题，`content` 也可能包含隐藏的口语转写。
 重写该 `content` 只会更新钩子可见的转写内容；它不会
@@ -460,7 +593,21 @@ OpenClaw 会在提示词钩子之前清空已排队的注入，丢弃过期注�
 
 优先使用类型化的 `threadId` 和 `replyToId` 字段，然后再使用特定于通道的元数据。
 
-决策规则：
+Inbound claim and message-received events expose `media?:
+PluginHookMediaFact[]` as the canonical attachment API. Each fact can carry
+`path`, `url`, `contentType`, `kind`, `transcribed`, `messageId`, and
+`workspaceDir`; array position is attachment identity. When a remote attachment
+has not been staged locally yet, `media` is omitted,
+`mediaStagingPending: true`, and `originalMedia` contains the provider-side
+facts. Do not treat `originalMedia.path` as locally readable until a later
+staged event supplies `media`.
+
+The singular/plural `mediaPath`, `mediaUrl`, `mediaType`, `mediaPaths`,
+`mediaUrls`, `mediaTypes`, and matching `originalMedia*` metadata properties are
+deprecated compatibility aliases. New hooks should use the typed top-level
+arrays.
+
+Decision rules:
 
 - `message_sending` 中的 `cancel: true` 是终态。
 - `message_sending` 中的 `cancel: false` 视为未作出决定。
@@ -639,22 +786,23 @@ export function registerCronProjection(api: OpenClawPluginApi, host: ExternalWak
 
 有少数与钩子相邻的接口已弃用，但仍受支持。请在下一次重大版本发布前迁移：
 
-- **`inbound_claim` 和 `message_received`** 处理器中的**纯文本通道信封**。请读取 `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。参见
-  [纯文本通道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
-- **`before_agent_start`** 为兼容性而保留。新插件应使用
-  `before_model_resolve` 和 `before_prompt_build`，而不是合并后的
-  阶段。
-- **`subagent_spawning`** 为兼容旧插件而保留，但
-  新插件不应从中返回线程路由。核心在 `subagent_spawned` 触发之前，
-  会通过通道会话绑定适配器准备 `thread: true` 的子代理绑定。
-- **`deactivate`** 作为已弃用的清理兼容别名保留，直到
-  2026-08-16 之后。新插件应使用 `gateway_stop`。
-- **`before_tool_call` 中的 `onResolution`** 现在使用带类型的
-  `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` /
-  `timeout` / `cancelled`），而不是自由形式的 `string`。
-- **`api.registerSessionExtension` / `api.enqueueNextTurnInjection`** 仍作为顶层兼容别名保留。新插件应使用
-  `api.session.state.registerSessionExtension(...)` 和
-  `api.session.workflow.enqueueNextTurnInjection(...)`。
+- **Plaintext channel envelopes** in `inbound_claim` and `message_received`
+  handlers. Read `BodyForAgent` and the structured user-context blocks
+  instead of parsing flat envelope text. See
+  [Plaintext channel envelopes → BodyForAgent](/plugins/sdk-migration#active-deprecations).
+- **`subagent_spawning`** remains for compatibility with older plugins, but
+  new plugins should not return thread routing from it. Core prepares
+  `thread: true` subagent bindings through channel session-binding adapters
+  before `subagent_spawned` fires.
+- **`deactivate`** remains as a deprecated cleanup compatibility alias until
+  after 2026-08-16. New plugins should use `gateway_stop`.
+- **`onResolution` in `before_tool_call`** now uses the typed
+  `PluginApprovalResolution` union (`allow-once` / `allow-always` / `deny` /
+  `timeout` / `cancelled`) instead of a free-form `string`.
+- **`api.registerSessionExtension` / `api.enqueueNextTurnInjection`** remain
+  as top-level compatibility aliases. New plugins should use
+  `api.session.state.registerSessionExtension(...)` and
+  `api.session.workflow.enqueueNextTurnInjection(...)`.
 
 有关完整列表——内存能力注册、提供方思维
 配置文件、外部认证提供方、提供方发现类型、任务运行时

@@ -16,7 +16,7 @@ Inworld 流式文本转语音（MP3、OGG_OPUS、PCM 电话）。
 
 ## 接口
 
-contracts: speechProviders
+contracts: `speechProviders`
 
 ## 相关文档
 

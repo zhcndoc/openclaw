@@ -17,10 +17,9 @@ WebSocket `listen` 端点转发实时 G.711 u-law 帧，并在 Deepgram 返回�
 
 | 详情          | 值                                                         |
 | ------------- | ---------------------------------------------------------- |
-| 网站          | [deepgram.com](https://deepgram.com)                       |
-| 文档          | [developers.deepgram.com](https://developers.deepgram.com) |
-| 认证          | `DEEPGRAM_API_KEY`                                         |
-| 默认模型      | `nova-3`                                                   |
+| Docs          | [developers.deepgram.com](https://developers.deepgram.com) |
+| Auth          | `DEEPGRAM_API_KEY`                                         |
+| Default model | `nova-3`                                                   |
 
 ## 入门
 
@@ -52,10 +51,10 @@ WebSocket `listen` 端点转发实时 G.711 u-law 帧，并在 Deepgram 返回�
 
 ## Configuration Options
 
-| Option       | Path                                  | Description                               |
-| ---------- | ------------------------------------- | ------------------------------------- |
-| `model`    | `tools.media.audio.models[].model`    | Deepgram model ID (default: `nova-3`)   |
-| `language` | `tools.media.audio.models[].language` | Language hint (optional)                   |
+| Option     | Path                            | Description                           |
+| ---------- | ------------------------------- | ------------------------------------- |
+| `model`    | `tools.media.models[].model`    | Deepgram model id (default: `nova-3`) |
+| `language` | `tools.media.models[].language` | Language hint (optional)              |
 
 `providerOptions.deepgram` will merge extra query parameters directly into
 the Deepgram `/listen` request, so any parameter name supported by Deepgram can be used
@@ -158,9 +157,8 @@ Twilio 媒体帧可以直接转发。
     认证遵循标准的提供方认证顺序。`DEEPGRAM_API_KEY` 是
     最简单的方式。
   </Accordion>
-  <Accordion title="代理和自定义端点">
-    在使用代理时，可使用 `tools.media.audio.baseUrl` 和 `tools.media.audio.headers`
-    覆盖端点或请求头。
+  <Accordion title="Proxy and custom endpoints">
+    Override endpoints or headers on the Deepgram `tools.media.models[]` entry when using a proxy.
   </Accordion>
   <Accordion title="输出行为">
     输出遵循与其他提供方相同的音频规则（大小限制、超时、

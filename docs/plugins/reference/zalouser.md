@@ -16,7 +16,7 @@ title: "Zalo 个人插件"
 
 ## 界面
 
-channels: zalouser; contracts: tools
+channels: `zalouser`; contracts: `tools`
 
 ## 相关文档
 

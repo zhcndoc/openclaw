@@ -32,7 +32,29 @@ sidebarTitle: "环境房间事件"
 
 然后通过为该房间禁用提及门控，使该房间始终保持开启状态。该房间仍必须通过其正常的 `groupPolicy`、房间允许名单和发送者允许名单。
 
-保存配置后，Gateway 会热加载 `messages` 设置。仅当文件监视或配置重载被禁用时（`gateway.reload.mode: "off"`）才需要重启。
+## 先决条件
+
+即使设置了 `unmentionedInbound: "room_event"`，两个设置也会静默禁用 ambient room events。
+
+**房间的提及门控必须关闭。** `requireMention: true` 会在路由之前丢弃未被提及的消息，因此它们永远不会成为 room events。这样一来，agent 完全没有 room backlog——它只能看到提及了它的消息。如果 agent 报告它看不到最近的房间历史，先检查提及门控，而不是别的。
+
+**agent 需要 `message` 工具。** Room events 使用严格的可见投递，因此发送需要 `message(action=send)`。`message` 工具随 `messaging` 工具配置文件一起提供；`minimal` 和 `coding` 配置文件不包含它。配置文件为 `tools.profile: "coding"` 的 agent 会监听 room events，但永远不能发言。如果配置文件省略了它，就显式授予：
+
+```json5
+{
+  agents: {
+    entries: {
+      "<agent-id>": {
+        tools: { alsoAllow: ["message"] },
+      },
+    },
+  },
+}
+```
+
+使用 `openclaw agents list` 和一次 probe turn 检查实际生效的 surface，不要假定配置文件一定包含它。
+
+保存配置后，Gateway 会热加载 `messages` 设置。只有在文件监听或配置重载被禁用时（`gateway.reload.mode: "off"`）才需要重启。
 
 ## 变化内容
 
@@ -173,7 +195,7 @@ Telegram 群组 ID 通常是负数，例如 `-1001234567890`。可通过 `opencl
 }
 ```
 
-代理特定的 `agents.list[].groupChat.unmentionedInbound` 值会覆盖该代理的 `messages.groupChat.unmentionedInbound`。
+代理特定的 `agents.entries.*.groupChat.unmentionedInbound` 值会覆盖该代理的 `messages.groupChat.unmentionedInbound`。
 
 ## 可见回复模式
 

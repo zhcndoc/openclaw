@@ -41,14 +41,12 @@ Bootstrap 最大/文件：12,000 字符
 Sandbox：模式=non-main sandboxed=false
 系统提示词（运行时）：38,412 字符（约 9,603 token）（项目上下文 23,901 字符（约 5,976 token））
 
-注入的工作区文件：
-- AGENTS.md：OK | 原始 1,742 字符（约 436 token）| 注入 1,742 字符（约 436 token）
-- SOUL.md：OK | 原始 912 字符（约 228 token）| 注入 912 字符（约 228 token）
-- TOOLS.md：截断 | 原始 54,210 字符（约 13,553 token）| 注入 20,962 字符（约 5,241 token）
-- IDENTITY.md：OK | 原始 211 字符（约 53 token）| 注入 211 字符（约 53 token）
-- USER.md：OK | 原始 388 字符（约 97 token）| 注入 388 字符（约 97 token）
-- HEARTBEAT.md：缺失 | 原始 0 | 注入 0
-- BOOTSTRAP.md：OK | 原始 0 字符（约 0 token）| 注入 0 字符（约 0 token）
+Injected workspace files:
+- AGENTS.md: OK | raw 1,742 chars (~436 tok) | injected 1,742 chars (~436 tok)
+- SOUL.md: OK | raw 912 chars (~228 tok) | injected 912 chars (~228 tok)
+- IDENTITY.md: OK | raw 211 chars (~53 tok) | injected 211 chars (~53 tok)
+- USER.md: OK | raw 388 chars (~97 tok) | injected 388 chars (~97 tok)
+- BOOTSTRAP.md: OK | raw 0 chars (~0 tok) | injected 0 chars (~0 tok)
 
 技能列表（系统提示词文本）：2,184 字符（约 546 token）（12 项技能）
 工具：read、edit、write、exec、process、browser、message、sessions_send、…
@@ -89,16 +87,16 @@ Sandbox：模式=non-main sandboxed=false
 
 即使没有缓存的运行报告，`/context list`、`/context detail` 和 `/context json` 仍可检查按需估算。
 
-## What counts toward the context window
+## 什么计入上下文窗口
 
-All content received by the model counts, including:
+模型接收到的所有内容都计入，包括：
 
-- System prompts (all parts).
-- Conversation history.
-- Tool calls + tool results.
-- Attachments/transcript content (images/audio/files).
-- Compression summaries and truncation artifacts.
-- The provider’s “wrapper layer” or hidden headers (not visible, but still counted).
+- 系统提示（所有部分）。
+- 对话历史。
+- 工具调用 + 工具结果。
+- 附件/转录内容（图像/音频/文件）。
+- 压缩摘要和截断产物。
+- 提供方的“包装层”或隐藏头信息（不可见，但仍会计入）。
 
 ## OpenClaw 如何构建系统提示词
 
@@ -119,21 +117,19 @@ All content received by the model counts, including:
 
 - `AGENTS.md`
 - `SOUL.md`
-- `TOOLS.md`
 - `IDENTITY.md`
 - `USER.md`
-- `HEARTBEAT.md`
 - `BOOTSTRAP.md`（仅首次运行）
 
 大文件会基于每个文件使用 `agents.defaults.bootstrapMaxChars` 进行截断（默认 `20000` 个字符）。OpenClaw 还会对所有文件的总注入量使用 `agents.defaults.bootstrapTotalMaxChars` 设置上限（默认 `60000` 个字符）。`/context` 会显示**原始 vs 注入**大小以及是否发生了截断。
 
 当发生截断时，运行时可以在项目上下文下方注入一个上下文内警告块。可通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `always`）进行配置。
 
-## Skill: On-Demand Injection vs On-Demand Loading
+## 技能：按需注入 vs 按需加载
 
-The system prompt contains a condensed **skill list** (name + description + location). This list has a real overhead.
+系统提示包含一个浓缩的**技能列表**（名称 + 描述 + 位置）。这个列表确实存在一定开销。
 
-Skill instructions are not included by default. The model should only `read` that skill's `SKILL.md` when needed.
+默认情况下不会包含技能说明。模型应仅在需要时才`read`该技能的`SKILL.md`。
 
 ## 工具：有两种成本
 

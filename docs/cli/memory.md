@@ -1,5 +1,5 @@
 ---
-summary: "openclaw memory 的 CLI 参考（status/index/search/promote/promote-explain/rem-harness/rem-backfill）"
+summary: "CLI reference for `openclaw memory` (status/index/search/promote/promote-explain/rem-harness/rem-backfill/session-backfill)"
 read_when:
   - 你想索引或搜索语义记忆
   - 你在排查记忆可用性或索引问题
@@ -24,7 +24,7 @@ title: "记忆"
 openclaw memory status [--agent <id>] [--deep] [--index] [--fix] [--json] [--verbose]
 ```
 
-如果不使用 `--agent`，则会对 `agents.list` 中的每个 agent 运行；如果没有配置 agent 列表，则回退到默认 agent。
+不带 `--agent` 时，将对 `agents.entries` 中的每个 agent 运行；如果没有配置 agent 列表，则回退到默认 agent。
 
 | 标志        | 作用                                                                                                                                                                                                                                                                                                    |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -39,7 +39,7 @@ openclaw memory status [--agent <id>] [--deep] [--index] [--fix] [--json] [--ver
 默认 agent 的 heartbeat 触发来启动协调。有关调度细节，请参见
 [Dreaming](/concepts/dreaming)。
 
-状态还会列出来自 `agents.defaults.memorySearch.extraPaths` 的任何额外搜索路径。
+状态还会列出 `memory.search.extraPaths` 中的任何额外搜索路径。
 
 ## `memory index`
 
@@ -51,17 +51,17 @@ openclaw memory index [--agent <id>] [--force] [--verbose]
 增量索引。`--verbose` 会在显示索引进度之前打印每个 agent 的提供商、模型、来源以及
 额外路径详情。
 
-## `记忆搜索`
+## `Memory Search`
 
 ```bash
 openclaw memory search [query] [--query <text>] [--agent <id>] [--max-results <n>] [--min-score <n>] [--json]
 ```
 
-- 查询：位置参数 `[query]` 或 `--query <text>`。如果两者都设置了，则以 `--query`
-  为准。如果都未设置，命令将报错。
-- `--agent <id>`：默认为默认 agent（不是完整的 agent 列表）。
-- `--max-results <n>`：限制结果数量（正整数）。
-- `--min-score <n>`：过滤掉低于此分数的匹配项。
+- Query: positional argument `[query]` or `--query <text>`. If both are set, `--query`
+  takes precedence. If neither is set, the command will error.
+- `--agent <id>`: defaults to the default agent (not the full agent list).
+- `--max-results <n>`: limits the number of results (positive integer).
+- `--min-score <n>`: filters out matches below this score.
 
 ## `memory promote`
 
@@ -76,7 +76,7 @@ openclaw memory promote [--agent <id>] [--limit <n>] [--min-score <n>] \
 | 标志                       | 默认值       | 作用                                                              |
 | -------------------------- | ------------ | ----------------------------------------------------------------- |
 | `--limit <n>`              |              | 返回/应用的候选项上限。                                             |
-| `--min-score <n>`          | `0.75`       | 最低加权晋升分数。                                                 |
+| `--min-score <n>`         | `0.75`       | 最低加权晋升分数。                                                 |
 | `--min-recall-count <n>`   | `3`          | 所需的最小召回次数。                                               |
 | `--min-unique-queries <n>` | `2`          | 所需的最小不同查询数量。                                           |
 | `--apply`                  | 仅预览       | 将选定候选项附加到 `MEMORY.md` 并将其标记为已晋升。                  |
@@ -132,27 +132,42 @@ openclaw memory rem-backfill --rollback [--rollback-short-term] [--json]
 - `--rollback`：从 `DREAMS.md` 中移除先前写入的有依据的日记条目。
 - `--rollback-short-term`：移除先前暂存的有依据的短期候选项。
 
-## 做梦
+## `memory session-backfill`
 
-做梦是后台记忆巩固系统，包含三个协作
-阶段，按顺序在一个计划上运行：**light**（整理/分层短期
-材料）、**REM**（反思并浮现主题）、**deep**（将持久
-事实提升到 `MEMORY.md`）。只有 deep 会写入 `MEMORY.md`。
+通过与 dreaming 使用的相同来源追溯和短期暂存流水线，提炼已保留的会话历史。默认情况下为只读预览，按从最早的未处理日期到最新日期排序。
 
-- 通过 `plugins.entries.memory-core.config.dreaming.enabled: true`
-  启用（默认 `false`）；`memory-core` 会自动管理清扫 cron 任务，无需手动
-  `openclaw cron add`。
-- 可在聊天中使用 `/dreaming on|off` 切换；使用 `/dreaming status`
-  查看状态（或 `/dreaming`/`/dreaming help`）。`on`/`off` 需要频道拥有者状态
-  或网关 `operator.admin` 权限；`status` 和帮助对任何
-  能调用该命令的人都可用。
-- 人类可读的阶段输出写入 `DREAMS.md`（或已存在的 `dreams.md`）。
-  默认情况下（`dreaming.storage.mode: "separate"`）每个阶段还会写入一份
-  独立报告到 `memory/dreaming/<phase>/YYYY-MM-DD.md`；将 `mode:
-"inline"`` 设为将报告合并到每日记忆文件中，或者设为 `"both"`
-  则两者都写。
-- 计划运行和手动 `memory promote` 运行共享相同的 deep 阶段
-  排名信号；只有默认阈值不同（见上表与下方计划默认值）。
+```bash
+openclaw memory session-backfill --agent <id> [--from YYYY-MM-DD] [--to YYYY-MM-DD] \
+  [--limit-days <n>] [--archive-files <path...>] [--rem | --apply] [--json]
+openclaw memory session-backfill --agent <id> --rollback [--json]
+```
+
+| 标志                        | 默认值       | 作用                                                                                                        |
+| --------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
+| `--from YYYY-MM-DD`         |              | 包含在 dreaming 时区中该日期当日及之后的消息。                                                               |
+| `--to YYYY-MM-DD`           |              | 包含在 dreaming 时区中该日期当日及之前的消息。                                                               |
+| `--limit-days <n>`          | `92`         | 最多处理这么多未跟踪哈希的日期，优先最早的日期。                                                              |
+| `--archive-files <path...>` |              | 额外检查外部转录文件作为不受信任的输入；其中嵌入的所有者元数据不被接受。                                      |
+| `--rem`                     |              | 仅将确定性的、落地的按日预览写入 `DREAMS.md`。                                                                 |
+| `--apply`                   | 仅预览       | 暂存受信任的候选项，并写入可回滚的 `DREAMS.md` 日记块。                                                      |
+| `--rollback`                |              | 移除所有落地的回填候选项和共享的回填日记块，包括 `rem-backfill` 产物。                                       |
+| `--json`                    |              | 输出可供机器读取的按日计数和顶部候选项。                                                                     |
+
+该命令会读取所选 agent 的规范会话存储，包括来自会话轮换中保留的 SQLite 转录身份。它使用与实时会话摄取相同的已跟踪消息哈希和每次运行上限，因此重复执行 `--apply` 时会跳过已经摄取过的消息。来自规范存储的所有者行和 agent 行都符合条件；工具输出、web 或非所有者输入，以及缺少可信所有者来源证明的轮次都会被排除。外部归档文件没有经过认证的所有者来源证明契约，因此其中嵌入的所有权字段仍然不可信，且不能被暂存。
+
+`--apply` 只会写入 `memory/.dreams/` 下的会话语料、短期暂存状态，以及 `DREAMS.md` 中可回滚的日记条目。它绝不会写入 `MEMORY.md` 或 `USER.md`；持久化提升仍然是单独的 `memory promote` 或 dreaming 决策。`--rem` 和 `--apply` 互斥。
+
+回填回滚与 `memory rem-backfill` 故意共享：两个命令都使用相同的仅落地暂存类别和日记标记。只有在你打算清除该工作区中这两个命令的所有落地回填产物时，才运行 `session-backfill --rollback`。回滚会保留转录摄取游标和已跟踪消息哈希，因此被移除的消息不会自动重新摄取。
+
+## Dreaming
+
+做梦是后台记忆巩固系统，包含三个协作阶段，按顺序在一个计划上运行：**light**（整理/分层短期材料）、**REM**（反思并浮现主题）、**deep**（将持久事实提升到 `MEMORY.md`）。只有 deep 会写入 `MEMORY.md`。
+
+- 通过 `plugins.entries.memory-core.config.dreaming.enabled: true` 启用（默认 `false`）；`memory-core` 会自动管理清扫 cron 任务，无需手动 `openclaw cron add`。
+- 可在聊天中使用 `/dreaming on|off` 切换；使用 `/dreaming status` 查看状态（或 `/dreaming`/`/dreaming help`）。`on`/`off` 需要频道拥有者状态或网关 `operator.admin` 权限；`status` 和帮助对任何能调用该命令的人都可用。
+- 人类可读的阶段输出写入 `DREAMS.md`（或已存在的 `dreams.md`）。默认情况下（`dreaming.storage.mode: "separate"`）每个阶段还会写入一份独立报告到 `memory/dreaming/<phase>/YYYY-MM-DD.md`；将 `mode:
+"inline"`` 设为将报告合并到每日记忆文件中，或者设为 `"both"` 则两者都写。
+- 计划运行和手动 `memory promote` 运行共享相同的 deep 阶段排名信号；只有默认阈值不同（见上表与下方计划默认值）。
 - 计划运行会分发到每个已配置代理的记忆工作区。
 
 计划默认值（`plugins.entries.memory-core.config.dreaming`）：
@@ -161,7 +176,7 @@ openclaw memory rem-backfill --rollback [--rollback-short-term] [--json]
 | -------------------------------------- | ----------- |
 | `frequency`                            | `0 3 * * *` |
 | `phases.deep.minScore`                 | `0.8`       |
-| `phases.deep.minRecallCount`           | `3`         |
+| `phases.deep.minRecallCount`         | `3`         |
 | `phases.deep.minUniqueQueries`         | `3`         |
 | `phases.deep.recencyHalfLifeDays`      | `14`        |
 | `phases.deep.maxAgeDays`               | `30`        |

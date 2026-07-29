@@ -35,7 +35,7 @@ openclaw gateway restart
     openclaw onboard --auth-choice deepseek-api-key
     ```
 
-    会提示你输入 API 密钥，并将 `deepseek/deepseek-v4-flash` 设为默认模型。
+    Prompts for your API key and sets `deepseek/deepseek-v4-pro` as the default model.
 
   </Step>
   <Step title="验证模型是否可用">
@@ -74,17 +74,15 @@ openclaw gateway restart
 
 ## 内置目录
 
-| Model ref                    | Name              | Input | Context   | Max output | Notes                                               |
-| ---------------------------- | ----------------- | ----- | --------- | ---------- | --------------------------------------------------- |
-| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | text  | 1,000,000 | 384,000    | 默认模型；支持思考的 V4 接口                       |
-| `deepseek/deepseek-v4-pro`   | DeepSeek V4 Pro   | text  | 1,000,000 | 384,000    | 支持思考的 V4 接口                                  |
-| `deepseek/deepseek-chat`     | DeepSeek Chat     | text  | 1,000,000 | 384,000    | 已弃用的 V4 Flash 非思考兼容名称                    |
-| `deepseek/deepseek-reasoner` | DeepSeek Reasoner | text  | 1,000,000 | 384,000    | 已弃用的 V4 Flash 思考兼容名称                      |
+| Model ref                    | Name              | Input | Context   | Max output | Notes                            |
+| ---------------------------- | ----------------- | ----- | --------- | ---------- | -------------------------------- |
+| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | text  | 1,000,000 | 384,000    | Fast V4 thinking-capable surface |
+| `deepseek/deepseek-v4-pro`   | DeepSeek V4 Pro   | text  | 1,000,000 | 384,000    | Default; strongest V4 model      |
 
 <Warning>
-DeepSeek 将在 2026 年 7 月 24 日 15:59 UTC 停止提供 `deepseek-chat` 和 `deepseek-reasoner`。
-它们当前分别路由到 DeepSeek V4 Flash 的非思考模式和思考模式。在截止日期前，请将已配置的模型引用迁移到
-`deepseek/deepseek-v4-flash` 或 `deepseek/deepseek-v4-pro`。
+DeepSeek retired `deepseek-chat` and `deepseek-reasoner` on July 24, 2026 at
+15:59 UTC. Those model IDs are no longer accessible. Move configured model refs
+to `deepseek/deepseek-v4-flash` or `deepseek/deepseek-v4-pro`.
 </Warning>
 
 OpenClaw 的本地成本估算遵循 DeepSeek 公布的 cache-hit、cache-miss 和输出费率。DeepSeek 可能会更改这些费率；
@@ -110,8 +108,9 @@ OpenAI 兼容提供商（没有原生 `reasoning_content`）或普通的 assista
 `thinking: { type: "disabled" }`，并从外发历史记录中移除重放的 `reasoning_content`，
 使会话保持在非 thinking 的 DeepSeek 路径上。
 
-默认的快速路径请使用 `deepseek/deepseek-v4-flash`。当你能接受更高
-成本或延迟时，可使用更强的模型 `deepseek/deepseek-v4-pro`。
+Fresh onboarding selects the stronger `deepseek/deepseek-v4-pro` model. Use
+`deepseek/deepseek-v4-flash` when lower cost or latency matters more than
+maximum capability.
 
 ## 在线测试
 
@@ -132,7 +131,7 @@ pnpm test:live src/agents/models.profiles.live.test.ts
   env: { DEEPSEEK_API_KEY: "sk-..." },
   agents: {
     defaults: {
-      model: { primary: "deepseek/deepseek-v4-flash" },
+      model: { primary: "deepseek/deepseek-v4-pro" },
     },
   },
 }

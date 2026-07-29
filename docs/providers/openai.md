@@ -13,14 +13,15 @@ ChatGPT/Codex 订阅认证。`openai/*` 是规范的模型路由。
 事实决定 OpenClaw 是否可以隐式选择捆绑的 Codex app-server 运行时。
 仅有 `openai/*` 前缀并不会选择运行时。
 
-- **Agent models** - `openai/*` 通过显式
-  `agentRuntime` 配置选择的运行时，或通过 OpenAI 的隐式路由策略。使用 Codex
-  认证登录以启用 ChatGPT/Codex 订阅，或者在你想要基于密钥计费时配置一个 API 密钥认证
-  profile。
-- **Non-agent OpenAI APIs** - 通过 `OPENAI_API_KEY` 或一个 `openai` API 密钥认证 profile
-  直接访问 OpenAI Platform，按使用量计费。
-- **Legacy config** - 旧的 Codex model refs 和 profile ids 会通过
-  `openclaw doctor --fix` 修复为 `openai/*`。
+- **Agent models** - `openai/*` through the runtime selected by explicit
+  `agentRuntime` config or OpenAI's implicit route policy. Sign in with Codex
+  auth for ChatGPT/Codex subscription use, or configure an API-key auth
+  profile when you want key-based billing.
+- **Non-agent OpenAI APIs** - direct OpenAI Platform access, billed per use,
+  through `OPENAI_API_KEY` or an `openai` API-key auth profile.
+- **Legacy config** - `codex/*` and `openai-codex/*` refs are repaired to
+  `openai/*` plus model-scoped `agentRuntime.id: "codex"` by
+  `openclaw doctor --fix`.
 
 OpenAI 明确支持在 OpenClaw 这样的外部工具和工作流中使用订阅 OAuth。
 
@@ -83,9 +84,10 @@ provider-owned 路由策略会根据有效端点和适配器选择隐式运行�
 运行时选择不会改变凭证类型或计费：Platform API 密钥
 认证和 ChatGPT/Codex 订阅认证仍然是分开的。
 
-`openclaw doctor --fix` 会将旧版 Codex 模型引用、旧版 Codex 认证
-配置文件 id，以及旧版 Codex 认证顺序条目迁移到规范的 `openai`
-路由。新的认证顺序配置请使用 `auth.order.openai`。
+`openclaw doctor --fix` migrates legacy `codex/*` and `openai-codex/*` model
+refs, legacy Codex auth profile ids, and legacy Codex auth-order entries to the
+canonical `openai` route. Migrated model refs receive model-scoped
+`agentRuntime.id: "codex"`; use `auth.order.openai` for new auth-order config.
 
 <Note>
 全新的 OpenAI 设置仅在未配置主模型时才会应用 GPT-5.6 作为主模型。
@@ -128,30 +130,43 @@ OpenClaw 会暴露上游访问错误，不会静默地将一个 GPT-5.6 选择�
 
 | OpenAI 功能                  | OpenClaw 表面                                                                               | 状态                                                          |
 | ------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 聊天 / Responses          | `openai/<model>` model provider                                                               | 是                                                             |
-| Codex 订阅模型            | 使用 OpenAI OAuth 的 `openai/<model>`                                                         | 是                                                             |
-| 旧版 Codex 模型引用       | 旧的 Codex 模型引用，`codex-cli/<model>`                                                      | 由 doctor 修复为 `openai/<model>`                          |
-| Codex 应用服务器 harness  | 支持 Codex 的 HTTPS 路由，runtime 未设置/`auto`，或显式 `agentRuntime.id: codex`             | 是                                                             |
-| 服务端网页搜索            | 原生 OpenAI Responses 工具                                                                  | 是，启用网页搜索且未固定其他提供方时 |
-| 图像                      | `image_generate`                                                                              | 是                                                             |
-| 视频                      | `video_generate`                                                                              | 是                                                             |
-| 文本转语音                | `messages.tts.provider: "openai"` / `tts`                                                     | 是                                                             |
-| 批量语音转文本            | `tools.media.audio` / media understanding                                                     | 是                                                             |
-| 流式语音转文本            | Voice Call `streaming.provider: "openai"`                                                     | 是                                                             |
-| 实时语音                  | Voice Call `realtime.provider: "openai"` / Control UI Talk `talk.realtime.provider: "openai"` | 是（OpenAI Platform API key）                                   |
-| 向量嵌入                  | memory embedding provider                                                                     | 是                                                             |
+| Chat / Responses          | `openai/<model>` model provider                                                               | Yes                                                             |
+| Codex subscription models | `openai/<model>` with OpenAI OAuth                                                            | Yes                                                             |
+| Legacy Codex model refs   | old Codex model refs, `codex-cli/<model>`                                                     | Repaired by doctor to `openai/<model>`                          |
+| Codex app-server harness  | Codex-compatible HTTPS route with runtime unset/`auto`, or explicit `agentRuntime.id: codex`  | Yes                                                             |
+| Server-side web search    | Native OpenAI Responses tool                                                                  | Yes, when web search is enabled and no other provider is pinned |
+| Images                    | `image_generate`                                                                              | Yes                                                             |
+| Videos                    | `video_generate`                                                                              | Yes                                                             |
+| Text-to-speech            | `tts.provider: "openai"` / `tts`                                                              | Yes                                                             |
+| Batch speech-to-text      | `tools.media.audio` / media understanding                                                     | Yes                                                             |
+| Streaming speech-to-text  | Voice Call `streaming.provider: "openai"`                                                     | Yes                                                             |
+| Realtime voice            | Voice Call `realtime.provider: "openai"` / Control UI Talk `talk.realtime.provider: "openai"` | Yes (Platform API key, or ChatGPT OAuth for browser GPT-Live)   |
+| Embeddings                | memory embedding provider                                                                     | Yes                                                             |
 
 <Note>
-OpenAI 实时语音通过公共的 **OpenAI Platform Realtime
-API** 路由，并且需要 Platform API key。Codex OAuth tokens 认证的是
-ChatGPT Codex 后端；它们不能与用于公共 Realtime 端点的 Platform API
-keys 互换。
+GA OpenAI Realtime voice goes through the public **OpenAI Platform Realtime
+API** and requires a Platform API key. Browser GPT-Live is the exception: its
+native `api.openai.com/v1/live` route prefers a ChatGPT OAuth profile and falls
+back to Platform API-key auth when that account has waitlist-gated access.
+
+Platform auth is resolved in this order: configured realtime API key, `openai`
+API-key profile, then `OPENAI_API_KEY`. ChatGPT OAuth does not configure GA
+Talk, Voice Call, Discord realtime voice, or realtime transcription.
 
 如果 API key 认证报告缺少 billing，在使用 API-key
 认证时，请为支撑你的 realtime 凭证的组织在
 [platform.openai.com/account/billing](https://platform.openai.com/account/billing)
-充值 Platform credits。Realtime 语音接受通过 `openclaw onboard --auth-choice openai-api-key` 创建的 `openai` API-key 认证配置文件、为 Control UI Talk 通过 `talk.realtime.providers.openai.apiKey` 设置的 Platform API key，或为 Voice
-Call 通过 `plugins.entries.voice-call.config.realtime.providers.openai.apiKey` 设置的 Platform API key，或者 `OPENAI_API_KEY` 环境变量。
+for the organization backing your realtime credentials when using API-key
+auth. Realtime voice accepts the `openai` API-key auth profile created by
+`openclaw onboard --auth-choice openai-api-key`, a Platform API key set via
+`talk.realtime.providers.openai.apiKey` for Control UI Talk, or
+`plugins.entries.voice-call.config.realtime.providers.openai.apiKey` for Voice
+Call, or the `OPENAI_API_KEY` environment variable.
+
+In Control UI Video Talk with Platform auth, OpenAI WebRTC receives camera context on demand:
+when the model calls `describe_view`, the browser sends one bounded JPEG over
+the realtime data channel. OpenClaw does not attach a continuous camera track
+to the OpenAI session.
 </Note>
 
 ## 内存嵌入
@@ -161,22 +176,22 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
 ```json5
 {
-  agents: {
-    defaults: {
-      memorySearch: {
-        provider: "openai",
-        model: "text-embedding-3-small",
-      },
+  memory: {
+    search: {
+      provider: "openai",
+      model: "text-embedding-3-small",
     },
   },
 }
 ```
 
-对于需要非对称嵌入标签的 OpenAI 兼容端点，请在 `memorySearch` 下设置
-`queryInputType` 和 `documentInputType`。OpenClaw
-会将它们作为特定提供方的 `input_type` 请求字段转发：查询嵌入使用 `queryInputType`；索引后的内存块和批量索引使用 `documentInputType`。请参阅
-[内存配置参考](/reference/memory-config#provider-specific-config)
-以查看完整示例。
+For OpenAI-compatible endpoints that require asymmetric embedding labels, set
+`queryInputType` and `documentInputType` under `memory.search`. OpenClaw
+forwards these as provider-specific `input_type` request fields: query
+embeddings use `queryInputType`; indexed memory chunks and batch indexing use
+`documentInputType`. See the
+[Memory configuration reference](/reference/memory-config#provider-specific-config)
+for the full example.
 
 ## 快速开始
 
@@ -426,35 +441,81 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
     `openclaw doctor --fix` 会将它们重写为带有
     Codex 运行时的 `openai/*`，除非显式配置了 OpenClaw。
 
-    ### 上下文窗口上限
+    ### Context window defaults and long-context opt-in
 
-    OpenClaw 将模型元数据和运行时上下文上限视为两个独立的值。对于
-    通过 Codex OAuth 目录的 `openai/gpt-5.5`：
+    OpenClaw treats native model capacity and the active runtime budget as
+    separate values:
 
-    - 原生 `contextWindow`：`400000`
-    - 默认运行时 `contextTokens` 上限：`272000`
+    - `contextWindow` declares the provider's total model window.
+    - `contextTokens` caps how much of that window OpenClaw uses for active input.
 
-    较小的默认上限在实践中具有更好的延迟和质量表现。可使用 `contextTokens`
-    覆盖它：
+    ChatGPT/Codex OAuth follows the live Codex account catalog. The current
+    catalog commonly advertises a `272000` token active window for GPT-5.6.
+    Direct API-key GPT-5.5 and GPT-5.6 models also default to `272000`
+    `contextTokens`, even though the Platform API exposes a larger native
+    window. This keeps the normal latency, quality, and cost profile consistent
+    across auth modes. A configured `agents.defaults.contextTokens` value can
+    lower that budget further, but it cannot raise a model above its configured
+    `contextTokens` cap.
+
+    For direct API-key GPT-5.5 and GPT-5.6, OpenAI documents a `1050000`
+    token provider window and `128000` maximum output tokens. Reserving the
+    full output allowance leaves `922000` tokens for input. This is a derived
+    operating budget, not a separate provider-published input limit. See the
+    official [model comparison](https://developers.openai.com/api/docs/models/compare)
+    and [GPT-5.5 model page](https://developers.openai.com/api/docs/models/gpt-5.5).
+    The following example opts one Terra model into that allowance and asks
+    OpenAI to compact at `700000` active tokens:
 
     ```json5
     {
       models: {
         providers: {
           openai: {
-            models: [{ id: "gpt-5.5", contextTokens: 160000 }],
+            models: [
+              {
+                id: "gpt-5.6-terra",
+                name: "GPT-5.6 Terra",
+                contextWindow: 1050000,
+                contextTokens: 922000,
+                maxTokens: 128000,
+              },
+            ],
+          },
+        },
+      },
+      agents: {
+        defaults: {
+          model: { primary: "openai/gpt-5.6-terra" },
+          models: {
+            "openai/gpt-5.6-terra": {
+              agentRuntime: { id: "openclaw" },
+              params: {
+                responsesServerCompaction: true,
+                responsesCompactThreshold: 700000,
+              },
+            },
           },
         },
       },
     }
     ```
 
-    <Note>
-    使用 `contextWindow` 声明原生模型元数据。使用 `contextTokens`
-    限制运行时上下文预算。直接 OpenAI API 密钥路由为 `gpt-5.5`
-    报告更大的原生 `contextWindow`（`1000000`）；由于上游目录不同，这两种
-    路由会被分别跟踪。
-    </Note>
+    `agentRuntime.id: "openclaw"` is intentional in this example. It proves the
+    embedded OpenClaw Responses path is using the model metadata and server-side
+    compaction settings above. A native Codex harness thread owns its context
+    budget in Codex config instead; see
+    [Codex harness long context](/plugins/codex-harness#direct-api-long-context).
+
+    <Warning>
+    OpenAI applies higher long-context pricing once a GPT-5.5 or GPT-5.6
+    request exceeds `272000` input tokens: the whole qualifying request is
+    billed at 2× input and 1.5× output rates. Large prompts are resent or
+    compacted across turns, so an opt-in session can cost substantially more
+    than the default even when the visible reply is short. See
+    [OpenAI API pricing](https://developers.openai.com/api/docs/pricing). The API
+    remains authoritative for account access, actual limits, and billing.
+    </Warning>
 
     ### 目录恢复
 
@@ -633,19 +694,19 @@ GPT-5 贡献会为匹配的 OpenClaw 组装提示添加一个带标签的行为�
 
 <AccordionGroup>
   <Accordion title="Speech synthesis (TTS)">
-    捆绑的 `openai` 插件为
-    `messages.tts` 表面注册语音合成。
+    The bundled `openai` plugin registers speech synthesis for the
+    `tts` surface.
 
-    | 设置         | 配置路径                                            | 默认值                          |
-    | ------------ | --------------------------------------------------------- | ----------------------------------- |
-    | 模型         | `messages.tts.providers.openai.model`                  | `gpt-4o-mini-tts`                |
-    | 声音         | `messages.tts.providers.openai.speakerVoice`           | `coral`                          |
-    | 速度         | `messages.tts.providers.openai.speed`                  | （未设置）                          |
-    | 指令         | `messages.tts.providers.openai.instructions`           | （未设置，仅 `gpt-4o-mini-tts`）  |
-    | 格式         | `messages.tts.providers.openai.responseFormat`         | 语音便笺为 `opus`，文件为 `mp3` |
-    | API 密钥     | `messages.tts.providers.openai.apiKey`                 | 回退到 `OPENAI_API_KEY`   |
-    | 基础 URL     | `messages.tts.providers.openai.baseUrl`                | `https://api.openai.com/v1`      |
-    | 额外正文     | `messages.tts.providers.openai.extraBody` / `extra_body` | （未设置）                        |
+    | Setting      | Config path                                            | Default                          |
+    | ------------- | --------------------------------------------------------- | ----------------------------------- |
+    | Model        | `tts.providers.openai.model`                  | `gpt-4o-mini-tts`                |
+    | Voice        | `tts.providers.openai.speakerVoice`           | `coral`                          |
+    | Speed        | `tts.providers.openai.speed`                  | (unset)                          |
+    | Instructions | `tts.providers.openai.instructions`           | (unset, `gpt-4o-mini-tts` only)  |
+    | Format       | `tts.providers.openai.responseFormat`         | `opus` for voice notes, `mp3` for files |
+    | API key      | `tts.providers.openai.apiKey`                 | Falls back to `OPENAI_API_KEY`   |
+    | Base URL     | `tts.providers.openai.baseUrl`                | `https://api.openai.com/v1`      |
+    | Extra body   | `tts.providers.openai.extraBody` / `extra_body` | (unset)                        |
 
     可用模型：`gpt-4o-mini-tts`、`tts-1`、`tts-1-hd`。可用声音：
     `alloy`、`ash`、`ballad`、`cedar`、`coral`、`echo`、`fable`、`juniper`、
@@ -655,18 +716,21 @@ GPT-5 贡献会为匹配的 OpenClaw 组装提示添加一个带标签的行为�
 
     ```json5
     {
-      messages: {
-        tts: {
-          providers: {
-            openai: { model: "gpt-4o-mini-tts", speakerVoice: "coral" },
-          },
+      tts: {
+        providers: {
+          openai: { model: "gpt-4o-mini-tts", speakerVoice: "coral" },
         },
       },
     }
     ```
 
     <Note>
-    将 `OPENAI_TTS_BASE_URL` 设置为可在不影响聊天 API 端点的情况下覆盖 TTS 基础 URL。OpenAI TTS 和 Realtime 语音都通过 OpenAI Platform API 密钥进行配置；仅 OAuth 安装仍可使用基于 Codex 的聊天模型，但不能使用 OpenAI 实时对话。
+    Set `OPENAI_TTS_BASE_URL` to override the TTS base URL without affecting
+    the chat API endpoint. OpenAI TTS and GA Realtime voice are configured
+    through an OpenAI Platform API key. OAuth-only installs can use
+    Codex-backed chat models and GPT-Live browser Talk (which works over the
+    ChatGPT subscription — see the Realtime accordion), but not TTS or GA
+    realtime talk-back.
     </Note>
 
   </Accordion>
@@ -750,16 +814,80 @@ GPT-5 贡献会为匹配的 OpenClaw 组装提示添加一个带标签的行为�
     如果你更偏好更小、成本更低的 Realtime 2.1 变体，请显式将模型设为
     `gpt-realtime-2.1-mini`。
 
-    <Note>
-    **GPT-Live（即将推出）。** OpenAI 的全双工 `gpt-live-1` 和
-    `gpt-live-1-mini` 模型已于 2026 年 7 月取代 ChatGPT 语音模式；
-    开发者 API 正向早期访问组织逐步开放。OpenClaw 识别该模型家族，但尚未运行：
-    GPT-Live 会话仅支持 WebRTC，自行处理轮次切换（无 VAD），并通过交接事件协议
-    委派代理工作，而 OpenClaw 的 realtime 传输尚未实现该协议。配置 `gpt-live-*`
-    模型会直接失败，并分别给出 WebSocket 桥接和 Talk 浏览器会话的指导，而不会在没有
-    代理访问的情况下静默连接音频。API 访问在早期访问期间也按 OpenAI 组织维度进行限制。
-    在 GPT-Live 支持落地之前，请继续使用 `gpt-realtime-2.1`（默认值）。
-    </Note>
+    #### GPT-Live browser Talk
+
+    GPT-Live is supported for browser Talk WebRTC sessions using a ChatGPT
+    OAuth subscription profile. The complete path was verified on 2026-07-28
+    with a ChatGPT Pro account: call creation returned `201 Created`, and the
+    authenticated sideband emitted `session.started` for the same `rtc_*` call.
+
+    Use `gpt-live-1-codex` (recommended) or
+    `gpt-live-1-boulder-alpha`. The values `gpt-live-1` and
+    `gpt-live-1-mini` are not valid on this route. Opt in explicitly with
+    `talk.realtime.model`; `gpt-realtime-2.1` remains the GA default.
+
+    GPT-Live accepts these voices: `alloy`, `ash`, `ballad`, `cedar`, `coral`,
+    `echo`, `marin`, `sage`, `shimmer`, and `verse`. OpenClaw defaults to
+    `marin` and maps unknown or unsupported configured voices back to it.
+
+    Prerequisites, in order:
+
+    1. A ChatGPT OAuth auth profile: `openclaw models auth login --provider openai`.
+       An existing Codex CLI (`~/.codex`) sign-in is **not** read; the profile
+       must exist in OpenClaw. A Platform API key with `/v1/live` access works
+       instead, but that access is waitlist-gated.
+    2. `talk.realtime.model` set to a `gpt-live-*` value — via **Settings →
+       Talk** in the Control UI or the config below.
+    3. The bundled `openai` plugin registered in full mode. A restrictive
+       `plugins.allow` list fails with "OpenAI GPT-Live browser session broker
+       is unavailable".
+
+    Note one asymmetric failure mode: a configured Platform API key that
+    cannot be resolved (for example a broken secret reference) suppresses the
+    OAuth fallback with "fix or remove it" — repair or delete the key rather
+    than expecting OAuth to take over silently.
+
+    ```json5
+    {
+      talk: {
+        realtime: {
+          provider: "openai",
+          model: "gpt-live-1-codex",
+          transport: "webrtc",
+        },
+      },
+    }
+    ```
+
+    <Warning>
+    Platform API-key access to `/v1/live` is waitlist-gated and commonly returns
+    `400 model_not_found` without enrollment. Use a ChatGPT OAuth profile, or request Platform access with the
+    [GPT-Live API access form](https://openai.com/form/gpt-live-1-in-the-api/).
+    </Warning>
+
+    A `403 Voice session access denied` response is overloaded and does not by
+    itself prove an account entitlement problem: an invalid voice produces the
+    same response. First verify the model and voice against the accepted lists
+    above, then verify that the selected ChatGPT OAuth profile and
+    `chatgpt-account-id` belong to the same account.
+
+    GPT-Live remains limited to browser Talk WebRTC sessions. Voice
+    Call/telephony, Gateway relay, provider WebSocket transports, and Android
+    are unsupported. The Gateway owns the authenticated sideband and routes
+    delegated work through the configured OpenClaw agent; the browser never
+    receives the OAuth token.
+
+    The canonical OpenClaw path creates the call on `api.openai.com/v1/live`
+    and joins its sideband there. The legacy `chatgpt.com` backend route returns
+    `403` and is not used.
+
+    Maintainers can exercise OpenClaw's complete OAuth path with the opt-in
+    live test. It skips when no ChatGPT OAuth credential is available and
+    never prints token material:
+
+    ```bash
+    OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_GPT_LIVE=1 node scripts/run-vitest.mjs run --config test/vitest/vitest.live.config.ts extensions/openai/realtime-quicksilver.live.test.ts
+    ```
 
     <Note>
     后端 OpenAI realtime 桥接使用 GA Realtime WebSocket 会话
@@ -776,12 +904,18 @@ GPT-5 贡献会为匹配的 OpenClaw 组装提示添加一个带标签的行为�
     </Note>
 
     <Note>
-    Control UI Talk 使用 OpenAI 浏览器 realtime 会话，通过 Gateway
-    生成的临时 client secret，并与 OpenAI Realtime API 直接进行浏览器 WebRTC SDP
-    交换。Gateway 使用所选的 `openai` 凭证来生成该 client secret。已配置的密钥、
-    API-key profiles 和 `OPENAI_API_KEY` 优先；`openai` OAuth profile 或外部 Codex
-    登录作为回退。Gateway 中继和 Voice Call 后端 realtime WebSocket 桥接对原生 OpenAI
-    端点使用相同的凭证顺序。维护者可使用以下命令进行实时验证：
+    Control UI Talk uses OpenAI browser WebRTC sessions. GA
+    `gpt-realtime-*` models use a Gateway-minted ephemeral client secret and a
+    direct browser SDP exchange when Platform credentials are available.
+    Configured realtime keys, API-key profiles, and `OPENAI_API_KEY` use that
+    path in that order. ChatGPT OAuth is not a Platform Realtime credential and
+    is not used for GA models. GPT-Live instead uses the native Gateway offer
+    broker described above, prefers ChatGPT OAuth when both auth modes are
+    configured, and falls back to Platform API-key access when the account has
+    waitlist-gated `/v1/live` access.
+    Gateway relay and Voice Call backend realtime WebSocket bridges continue to
+    require Platform credentials and a GA model.
+    Maintainer live verification is available with
     `OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`;
     OpenAI 路径会同时验证后端 WebSocket 桥接和浏览器 WebRTC SDP 交换，且不会记录密钥。
     传入 `--openai-only` 可在不使用 Google 凭证的情况下运行这两个路径。

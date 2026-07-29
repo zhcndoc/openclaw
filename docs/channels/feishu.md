@@ -36,6 +36,12 @@ OpenClaw 通过官方 `@openclaw/feishu` 插件连接飞书/Lark（一个一体�
   </Step>
 </Steps>
 
+## 入站持久性
+
+OpenClaw 会在代理分发之前，将已认证的 `im.message.receive_v1` 和 `drive.notice.comment_add_v1` 信封持久化排队。待处理或可重试的事件在 Gateway 重启后仍会保留，按每个聊天或文档分别串行化，并使用飞书的事件 ID 来抑制重复的队列条目，前提是活动或保留的完成记录仍然存在。
+
+如果某个 WebSocket 事件在有限次数的重试后仍无法持久化，OpenClaw 会关闭该 socket，并强制建立新的已认证连接，而不是在未提交的轮次之后继续处理。其他飞书事件类型，包括 reaction 和 VC 会议邀请，会使用其正常的事件路径，不会获得这种持久队列保证。
+
 ## 访问控制
 
 ### 私信
@@ -150,25 +156,41 @@ openclaw pairing approve feishu <CODE>
 
 `channels.feishu.groupSenderAllowFrom` 为所有群组设置相同的发送者允许列表；按群组设置的 `allowFrom` 具有更高优先级。
 
+### 机器人发送的消息
+
+飞书默认会忽略由其他机器人发送的消息。若要允许机器人之间的群聊，请为应用授予 `im:message.group_at_msg.include_bot:readonly` 和 `im:message:readonly` 作用域，然后设置 `allowBots`：
+
+```json5
+{
+  channels: {
+    feishu: {
+      allowBots: true,
+    },
+  },
+}
+```
+
+飞书仅在其他机器人 @ 该机器人时，才会投递由机器人发送的群组事件。现有的群组策略、发送者允许列表以及 @ 提及要求仍然生效。OpenClaw 会丢弃自己发送的消息，在每次文本或卡片回复中 @ 对方机器人，并应用共享的 [`channels.defaults.botLoopProtection`](/channels/bot-loop-protection) 保护。  
+
 <a id="get-groupuser-ids"></a>
 
-## 获取群组/用户 ID
+## Get Group/User ID
 
-### 群组 ID（`chat_id`，格式：`oc_xxx`）
+### Group ID (`chat_id`, format: `oc_xxx`)
 
-在飞书/Lark 中打开群组，点击右上角的菜单图标，然后进入 **设置**。群组 ID（`chat_id`）列在设置页面上。
+Open the group in Feishu/Lark, click the menu icon in the upper right corner, then go to **Settings**. The group ID (`chat_id`) is listed on the settings page.
 
-![获取群组 ID](/images/feishu-get-group-id.png)
+![Get Group ID](/images/feishu-get-group-id.png)
 
-### 用户 ID（`open_id`，格式：`ou_xxx`）
+### User ID (`open_id`, format: `ou_xxx`)
 
-启动网关，向机器人发送一条私信，然后检查日志：
+Start the gateway, send a direct message to the bot, then check the logs:
 
 ```bash
 openclaw logs --follow
 ```
 
-在日志输出中查找 `open_id`。你也可以查看待处理的配对请求：
+Look for `open_id` in the log output. You can also view pending pairing requests:
 
 ```bash
 openclaw pairing list feishu
@@ -197,18 +219,56 @@ openclaw pairing list feishu
 
 ### 机器人收不到消息
 
-1. 确保机器人已在飞书开放平台 / Lark 开发者平台发布并通过审批
+1. 确保机器人已在飞书开放平台 / Lark 开发者平台发布并通过审核
 2. 确保事件订阅包含 `im.message.receive_v1`
-3. 确保选择了**长连接**（WebSocket）
-4. 确保已授予所有必需的权限范围
-5. 确保网关正在运行：`openclaw gateway status`
-6. 检查日志：`openclaw logs --follow`
+3. 对于会议邀请自动加入，也要订阅 `vc.bot.meeting_invited_v1`
+4. 确保选择的是**持久连接**（WebSocket）
+5. 确保已授予所有必需的权限范围
+6. 确保网关正在运行：`openclaw gateway status`
+7. 检查日志：`openclaw logs --follow`
+
+订阅 `vc.bot.meeting_invited_v1` 只会投递该事件。自动加入默认是关闭的。
+如需全局启用：
+
+```json5
+{
+  channels: {
+    feishu: {
+      vcAutoJoin: true,
+    },
+  },
+}
+```
+
+如需仅为一个账号启用，省略顶层开关，并设置账号覆盖：
+
+```json5
+{
+  channels: {
+    feishu: {
+      accounts: {
+        meetings: { vcAutoJoin: true },
+      },
+    },
+  },
+}
+```
+
+在代理收到加入轮次之前，邀请者仍会经过正常的飞书私信策略、白名单/配对、会话和回复路由。
+加入还需要为应用身份配置一个可用的飞书 VC 加入工具，并带有
+`vc:meeting.bot.join:write` 权限范围。例如，官方
+[`lark-cli` VC agent skill](https://github.com/larksuite/cli/tree/main/skills/lark-vc-agent)
+提供了 `vc +meeting-join`。
+
+<Warning>
+官方 `lark-cli` VC agent skill 当前将会议机器人操作标记为受限 beta 版。如果工具返回 `ErrNotInGray` 或错误码 `20017`，说明该应用或租户尚未启用该 beta；在排查普通权限授予之前，请先使用链接技能中的早期访问指南。
+</Warning>
 
 ### 二维码设置在飞书移动应用中没有反应
 
 1. 重新运行设置：`openclaw channels login --channel feishu`
 2. 选择手动设置
-3. 在 Feishu Open Platform 中创建自建应用并复制其 App ID 和 App Secret
+3. 在飞书开放平台中创建自建应用并复制其 App ID 和 App Secret
 4. 将这些凭据粘贴到设置向导中
 
 ### App Secret 泄露
@@ -249,8 +309,8 @@ openclaw pairing list feishu
 }
 ```
 
-`defaultAccount` 控制在出站 API 未指定 `accountId` 时使用哪个账户。账户条目会继承顶层设置；大多数顶层键都可以在单个账户下覆盖。
-`accounts.<id>.tts` 使用与 `messages.tts` 相同的结构，并会在全局 TTS 配置之上进行深度合并，因此多机器人飞书配置可以在全局共享提供商凭据，同时仅按账户覆盖语音、模型、persona 或自动模式。
+`defaultAccount` 控制在出站 API 未指定 `accountId` 时使用哪个账户。账户条目会继承顶层设置；大多数顶层键都可以按账户覆盖。
+`accounts.<id>.tts` 使用与 `tts` 相同的结构，并在全局 TTS 配置之上进行深度合并，因此多机器人飞书配置可以全局共享提供方凭据，同时只按账户覆盖 voice、model、persona 或 auto 模式。
 
 ### 消息限制
 
@@ -324,7 +384,7 @@ Feishu/Lark 支持通过交互式卡片进行流式回复（Card Kit streaming A
 | `tools.scopes`  | `feishu_app_scopes` 应用权限范围诊断          | `true`              |
 | `tools.bitable` | `feishu_bitable_*` Bitable/Base 操作          | `true`              |
 
-`tools.base` 是 `tools.bitable` 的别名；当两者都设置时，显式的 `bitable` 值优先生效。按账户的开关位于 `accounts.<id>.tools` 下。
+Per-account gates live under `accounts.<id>.tools`.
 
 若要在根目录之外直接通过 `feishu_drive info` 查询，请授予 `drive:drive.metadata:readonly`，除非应用已经拥有完整的 `drive:drive` 范围。若没有这两个范围中的任意一个，`info` 仍可通过 `drive:drive:readonly` 使用旧版根目录查询。
 
@@ -578,43 +638,43 @@ ls -la ~/.openclaw/workspace-*
 | `channels.feishu.webhookPort`                            | webhook 绑定端口                                                                     | `3000`                               |
 | `channels.feishu.accounts.<id>.appId`                    | App ID                                                                               | -                                    |
 | `channels.feishu.accounts.<id>.appSecret`                | App Secret                                                                           | -                                    |
-| `channels.feishu.accounts.<id>.domain`                   | 每个账号的域名覆盖                                                                   | `feishu`                             |
-| `channels.feishu.accounts.<id>.tts`                      | 每个账号的 TTS 覆盖                                                                  | `messages.tts`                       |
-| `channels.feishu.dmPolicy`                               | 私信策略（`pairing`、`allowlist`、`open`）                                           | `pairing`                            |
-| `channels.feishu.allowFrom`                              | 私信允许名单（open_id 列表）                                                         | -                                    |
-| `channels.feishu.groupPolicy`                            | 群组策略（`open`、`allowlist`、`disabled`）                                          | `allowlist`                          |
-| `channels.feishu.groupAllowFrom`                         | 群组允许名单                                                                      | -                                    |
-| `channels.feishu.groupSenderAllowFrom`                   | 应用于所有群组的发送者允许名单                                                       | -                                    |
-| `channels.feishu.requireMention`                         | 群组中是否需要 @ 提及                                                               | `true`（策略为 `open` 时为 `false`）  |
-| `channels.feishu.groups.<chat_id>.requireMention`        | 每个群组的 @ 提及覆盖；显式 ID 也会在 allowlist 模式下将该群组纳入允许名单          | 继承                                 |
-| `channels.feishu.groups.<chat_id>.enabled`               | 启用/禁用特定群组                                                                    | `true`                               |
-| `channels.feishu.groups.<chat_id>.allowFrom`             | 每个群组的发送者允许名单（覆盖 `groupSenderAllowFrom`）                              | -                                    |
-| `channels.feishu.groupSessionScope`                      | 群组会话映射（`group`、`group_sender`、`group_topic`、`group_topic_sender`）       | `group`                              |
-| `channels.feishu.replyInThread`                          | 机器人回复是否创建/继续话题线程（`disabled`、`enabled`）                           | `disabled`                           |
-| `channels.feishu.reactionNotifications`                  | 入站反应事件（`off`、`own`、`all`）                                                 | `own`                                |
-| `channels.feishu.dynamicAgentCreation.enabled`           | 启用按用户自动创建代理                                                                | `false`                              |
-| `channels.feishu.dynamicAgentCreation.workspaceTemplate` | 动态代理工作区的路径模板                                                              | `~/.openclaw/workspace-{agentId}`    |
-| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | 代理目录名称模板                                                                     | `~/.openclaw/agents/{agentId}/agent` |
-| `channels.feishu.dynamicAgentCreation.maxAgents`         | 可创建的动态代理最大数量                                                              | 不限                                 |
-| `channels.feishu.textChunkLimit`                         | 消息分块大小                                                                         | `4000`                               |
-| `channels.feishu.streaming.chunkMode`                    | 分块拆分方式（`length` 或 `newline`）                                                 | `length`                             |
-| `channels.feishu.mediaMaxMb`                             | 媒体大小限制                                                                         | `30`                                 |
-| `channels.feishu.renderMode`                             | 回复渲染方式（`auto`、`raw`、`card`）                                                | `auto`                               |
-| `channels.feishu.streaming.mode`                         | 流式卡片输出（`partial` 或 `off`）                                                    | `partial`                            |
-| `channels.feishu.streaming.block.enabled`                | 已完成块回复流式输出                                                                   | `false`                              |
-| `channels.feishu.typingIndicator`                        | 发送输入中反应                                                                       | `true`                               |
-| `channels.feishu.resolveSenderNames`                     | 解析发送者显示名称                                                                   | `true`                               |
-| `channels.feishu.configWrites`                           | 允许通道发起配置写入（动态代理需要）                                                  | `true`                               |
-| `channels.feishu.tools.doc`                              | 启用文档工具                                                                         | `true`                               |
-| `channels.feishu.tools.chat`                             | 启用聊天信息工具                                                                     | `true`                               |
-| `channels.feishu.tools.wiki`                             | 启用知识库工具（需要 `doc`）                                                         | `true`                               |
-| `channels.feishu.tools.drive`                            | 启用云存储工具                                                                       | `true`                               |
-| `channels.feishu.tools.perm`                             | 启用权限管理工具                                                                     | `false`                              |
-| `channels.feishu.tools.scopes`                           | 启用应用作用域诊断工具                                                                | `true`                               |
-| `channels.feishu.tools.bitable`                          | 启用 Bitable/Base 工具                                                               | `true`                               |
-| `channels.feishu.tools.base`                             | `channels.feishu.tools.bitable` 的别名；两者都设置时以显式 `bitable` 为准          | `true`                               |
-| `channels.feishu.accounts.<id>.tools.bitable`            | 每个账号的 Bitable/Base 工具开关                                                     | 继承                                 |
-| `channels.feishu.accounts.<id>.tools.base`               | `tools.bitable` 的每个账号别名                                                       | 继承                                 |
+| `channels.feishu.accounts.<id>.domain`                   | 每个账号的域名覆盖                                                                  | `feishu`                             |
+| `channels.feishu.accounts.<id>.tts`                      | 每个账号的 TTS 覆盖                                                                 | `tts`                                |
+| `channels.feishu.dmPolicy`                               | 私聊策略（`pairing`、`allowlist`、`open`）                                           | `pairing`                            |
+| `channels.feishu.allowFrom`                              | 私聊允许列表（open_id 列表）                                                          | -                                    |
+| `channels.feishu.groupPolicy`                            | 群组策略（`open`、`allowlist`、`disabled`）                                       | `allowlist`                          |
+| `channels.feishu.groupAllowFrom`                         | 群组允许列表                                                                      | -                                    |
+| `channels.feishu.groupSenderAllowFrom`                   | 应用于所有群组的发送者允许列表                                               | -                                    |
+| `channels.feishu.requireMention`                         | 群组中需要 @ 提及                                                           | `true` (`false` when policy `open`)  |
+| `channels.feishu.allowBots`                              | 接受其他提及此机器人的机器人，并提供机器人循环保护                    | `false`                              |
+| `channels.feishu.groups.<chat_id>.requireMention`        | 单个群组的 @ 提及覆盖；显式 ID 也会在允许列表模式下将该群组纳入允许范围     | inherited                            |
+| `channels.feishu.groups.<chat_id>.enabled`               | 启用/禁用特定群组                                                      | `true`                               |
+| `channels.feishu.groups.<chat_id>.allowFrom`             | 每个群组的发送者允许列表（覆盖 `groupSenderAllowFrom`）                        | -                                    |
+| `channels.feishu.groupSessionScope`                      | 群组会话映射（`group`、`group_sender`、`group_topic`、`group_topic_sender`） | `group`                              |
+| `channels.feishu.replyInThread`                          | 机器人回复会创建/继续话题线程（`disabled`、`enabled`）                    | `disabled`                           |
+| `channels.feishu.reactionNotifications`                  | 入站反应事件（`off`、`own`、`all`）                                        | `own`                                |
+| `channels.feishu.vcAutoJoin`                             | 在正常私聊授权后加入被邀请的 VC 会议                               | `false`                              |
+| `channels.feishu.dynamicAgentCreation.enabled`           | 启用按用户自动创建代理                                             | `false`                              |
+| `channels.feishu.dynamicAgentCreation.workspaceTemplate` | 动态代理工作空间的路径模板                                           | `~/.openclaw/workspace-{agentId}`    |
+| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | 代理目录名模板                                                        | `~/.openclaw/agents/{agentId}/agent` |
+| `channels.feishu.dynamicAgentCreation.maxAgents`         | 可创建的动态代理最大数量                                           | unlimited                            |
+| `channels.feishu.textChunkLimit`                         | 消息分块大小                                                                   | `4000`                               |
+| `channels.feishu.streaming.chunkMode`                    | 分块拆分方式（`length` 或 `newline`）                                              | `length`                             |
+| `channels.feishu.mediaMaxMb`                             | 媒体大小限制                                                                     | `30`                                 |
+| `channels.feishu.renderMode`                             | 回复渲染方式（`auto`、`raw`、`card`）                                              | `auto`                               |
+| `channels.feishu.streaming.mode`                         | 流式卡片输出（`partial` 或 `off`）                                           | `partial`                            |
+| `channels.feishu.streaming.block.enabled`                | 完整块回复流式输出                                                      | `false`                              |
+| `channels.feishu.typingIndicator`                        | 发送正在输入反应                                                                | `true`                               |
+| `channels.feishu.resolveSenderNames`                     | 解析发送者显示名称                                                         | `true`                               |
+| `channels.feishu.configWrites`                           | 允许由通道发起的配置写入（动态代理需要）                     | `true`                               |
+| `channels.feishu.tools.doc`                              | 启用文档工具                                                                | `true`                               |
+| `channels.feishu.tools.chat`                             | 启用聊天信息工具                                                               | `true`                               |
+| `channels.feishu.tools.wiki`                             | 启用知识库工具（需要 `doc`）                                         | `true`                               |
+| `channels.feishu.tools.drive`                            | 启用云存储工具                                                           | `true`                               |
+| `channels.feishu.tools.perm`                             | 启用权限管理工具                                                   | `false`                              |
+| `channels.feishu.tools.scopes`                           | 启用应用作用域诊断工具                                                    | `true`                               |
+| `channels.feishu.tools.bitable`                          | 启用 Bitable/Base 工具                                                            | `true`                               |
+| `channels.feishu.accounts.<id>.tools.bitable`            | 每个账号的 Bitable/Base 工具开关                                                   | inherited                            |
 
 ## 支持的消息类型
 

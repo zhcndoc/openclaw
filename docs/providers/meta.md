@@ -68,16 +68,16 @@ openclaw onboard --non-interactive --accept-risk \
 
 ## 内置目录
 
-| 模型引用              | 名称          | 推理 | 上下文窗口      | 最大输出   |
-| --------------------- | -------------- | ---- | -------------- | ---------- |
-| `meta/muse-spark-1.1` | Muse Spark 1.1 | 是   | 1,048,576      | 131,072    |
+| Model ref             | Name           | Input       | Reasoning | Context window | Max output | Input / cached input / output per 1M tokens |
+| --------------------- | -------------- | ----------- | --------- | -------------- | ---------- | ------------------------------------------- |
+| `meta/muse-spark-1.1` | Muse Spark 1.1 | text, image | yes       | 1,048,576      | 131,072    | $1.25 / $0.15 / $4.25                       |
 
 功能：
 
-- 文本 + 图像输入
-- 工具调用和流式传输
-- 推理强度：`minimal`、`low`、`medium`、`high`、`xhigh`（默认：`high`）
-- 无状态加密推理回放（`store: false`，`include: ["reasoning.encrypted_content"]`）
+- Text and image input
+- Tool calling and streaming
+- Reasoning effort: `minimal`, `low`, `medium`, `high`, `xhigh` (default: `high`)
+- Stateless encrypted reasoning replay (`store: false`, `include: ["reasoning.encrypted_content"]`)
 
 <Warning>
 `muse-spark-1.1` 不接受 `reasoning.effort: "none"`。OpenClaw 会将

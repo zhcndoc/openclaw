@@ -1,10 +1,10 @@
 ---
 summary: "Linux 支持 + 配套应用状态"
 read_when:
-  - Looking for Linux companion app status
-  - Enabling camera, location, or notifications on a Linux node host
-  - Planning platform coverage or contributions
-  - Debugging Linux OOM kills or exit 137 on a VPS or container
+  - 寻找 Linux 配套应用状态
+  - 在 Linux 节点主机上启用摄像头、位置或通知
+  - 规划平台覆盖范围或贡献
+  - 调试 Linux 上 VPS 或容器中的 OOM 杀死或退出 137
 title: "Linux 应用"
 ---
 
@@ -14,19 +14,31 @@ Gateway 在 Linux 上受到完全支持，并且需要 Node。Bun 仍然可以�
 
 OpenClaw Linux 伴侣是一个用于本地 Gateway 的 Tauri 桌面应用。它：
 
-- 在缺失时安装 OpenClaw CLI 和受管理的 Node 运行时
-- 在尝试服务更改之前先连接到健康的 Gateway
-- 将安装、启动、停止和重启操作委托给 CLI 管理的 systemd 用户服务
-- 使用其解析后的身份验证 URL 打开 Gateway 提供的控制 UI
-- 为同机部署的 CLI 节点主机渲染由 agent 驱动的 Canvas 和捆绑的 A2UI 内容
-- 关闭窗口后仍可从系统托盘访问
+- 当缺失时会安装 OpenClaw CLI 和受管理的 Node 运行时；发布构建会自动安装稳定通道，而开发构建会先询问通道
+- 在尝试服务变更之前会附加到健康的 Gateway
+- 将 install、start、stop 和 restart 操作委托给 CLI 管理的 systemd 用户服务
+- 发现附近的 Bonjour Gateways，并在按路由作用域的窗口中打开每个 Control UI，因此可以让多个
+  Gateway 仪表板保持连接并同时使用
+- 使用其已解析的认证 URL 打开 Gateway 提供的 Control UI
+- 在首次安装后的引导模式下打开 Control UI，其中
+  会提供将检测到的 Claude Code、Codex 或 Hermes memories 导入到
+  agent 工作区的选项（之后也可在
+  Settings → Import Memory 中进行相同导入）
+- 为并置的 CLI 节点主机渲染由 agent 驱动的 Canvas 和捆绑的 A2UI 内容
+- 当窗口关闭时，仍可从系统托盘访问
 
-从 `main` 构建的稳定发布版会在该 tag 的
-[GitHub release](https://github.com/openclaw/openclaw/releases) 中作为资产提供 `.deb` 和 AppImage 安装包，
+伴侣内嵌 WebView 中的实时语音 Talk 尚未经过验证：
+shell 不会向 WebKitGTK WebView 授予麦克风捕获权限，因此
+`getUserMedia` 预期会在那里失败。在此功能落地之前，请在普通浏览器中打开 Gateway 的
+Control UI 以使用 [Talk 模式](/nodes/talk)。
+
+从 `main` 构建的稳定版会在
+[GitHub release](https://github.com/openclaw/openclaw/releases) 中将 `.deb` 和 AppImage 捆绑包作为该标签的资产发布，
 文件名分别为 `OpenClaw-<version>-amd64.deb` 和 `OpenClaw-<version>-amd64.AppImage`，
-旁边还有一个 `SHA256SUMS.linux-app.txt` 校验和文件。下载 `.deb` 后使用
-`sudo apt install ./OpenClaw-<version>-amd64.deb` 安装，或者将 AppImage 标记为可执行并直接运行它。
-AppImage 运行时需要 FUSE 2（`sudo apt install libfuse2`，或者在 Ubuntu 24.04+ 上使用 `libfuse2t64`）；
+旁边还会有一个 `SHA256SUMS.linux-app.txt` 校验文件。下载
+`.deb` 后使用 `sudo apt install ./OpenClaw-<version>-amd64.deb` 安装，
+或者将 AppImage 标记为可执行后直接运行。AppImage 运行时
+需要 FUSE 2（`sudo apt install libfuse2`，在 Ubuntu 24.04+ 上则为 `libfuse2t64`）；
 如果没有它，请使用 `APPIMAGE_EXTRACT_AND_RUN=1` 运行 AppImage。
 
 你也可以从源代码检出中构建相同的安装包：
@@ -40,6 +52,34 @@ pnpm dlx @tauri-apps/cli@2.11.4 build --bundles deb,appimage
 适用于修改应用的拉取请求以及手动运行。有关 Linux 构建依赖和开发命令，请参阅仓库中的
 `apps/linux/README.md`。
 
+### Quick Chat
+
+使用 `Ctrl+Shift+Space` 或托盘项 **Quick Chat** 打开 Quick Chat。agent
+徽章会显示已配置的头像、表情符号或字母组合；选择它可切换 agent。
+消息使用所选 agent 的主会话，并遵循全局会话作用域。
+原生 Rust 客户端拥有持久的 Ed25519 设备身份。它仅使用
+CLI 交接中的共享令牌或密码来启动配对，然后在后续连接中存储并
+优先使用 Gateway 签发的设备令牌。身份和
+设备令牌位于应用配置目录中的一个模式为 `0600` 的文件内；Quick
+Chat 的 WebView 不会接收任何凭据或 WebSocket。
+
+当原生连接不可用时，Quick Chat 会显示 **Gateway
+unreachable — retrying**，并在重新连接前禁用发送。已进入配对阶段的远程设备会显示 **Approve this device in the dashboard
+(Nodes)**，如果 Gateway 提供了短设备 ID，则会一并显示。需要缺失共享凭据的 Gateway 会显示 **Gateway requires a
+credential — open the dashboard on the gateway host**；在这种状态下不会有等待批准的配对请求。只有当服务器提供的修复指导更具体时，才会用其替换这些回退提示。
+对于 TLS Gateway，CLI 会将 Gateway 证书的 SHA-256
+指纹传递给应用；原生客户端会固定该证书，并单独报告 **Gateway TLS
+trust failed — check the certificate fingerprint**，与宕机状态区分开来。
+通过 SecretRef 配置共享密钥的 Gateways 会在 CLI 交接中省略它。已存在的配对安装会通过其存储的设备令牌继续工作，但新安装无法在共享密钥
+认证下、没有该启动凭据的情况下创建待处理的配对请求。
+Setup-code 和 `bootstrapToken` 的兑换需要专门的产品 UI，仍然是后续事项；Quick Chat 不会尝试这两种流程。
+
+在 X11 上，使用 Quick Chat 中的齿轮来记录或重置自定义快捷键。
+**Quick Chat shortcut** 托盘切换项可启用或禁用它，而不会禁用普通的 **Quick Chat** 托盘项。全局快捷键在 Wayland 上不可用，因此
+快捷键设置会被隐藏，托盘项仍然是入口。
+在一次被接受的发送之后，Quick Chat 会保持打开，并在编辑器下方流式显示所选 agent 的纯文本回复。按 `Esc` 可关闭该栏及其回复；
+`Ctrl+Enter` 仍会打开仪表板。
+
 ### Canvas
 
 Linux Canvas 使用两个协同工作的进程。`openclaw node run` 仍然是唯一的 Gateway 节点连接；捆绑的 `linux-canvas` 插件通过仅用户可访问的 Unix socket 将 `canvas.*` 调用转发到正在运行的桌面应用。该应用拥有一个按需创建的 WebView 窗口，包括捆绑的 A2UI 渲染器以及返回给 agent 的动作桥接。
@@ -52,7 +92,7 @@ Linux v1 使用一个 Canvas 窗口。HTTP 和 HTTPS 页面都可渲染，但 A2
 
 对于无头服务器、VPS 或远程网关，CLI 仍然是最简单的选择：
 
-1. 安装 Node 24.15+（推荐）、Node 22.22.3+（LTS）或 Node 25.9+。
+1. 安装 Node 26（推荐），或其他受支持的版本：Node 22.22.3+、Node 24.15+ 或 Node 25.9+。
 2. `npm i -g openclaw@latest`
 3. `openclaw onboard --install-daemon`
 4. 在你的笔记本电脑上：`ssh -N -L 18789:127.0.0.1:18789 <user>@<host>`
@@ -101,7 +141,7 @@ openclaw nodes approve <requestId>
 
 摄像头设备必须允许服务用户读取，通常通过 `video` 组实现。当 `includeAudio` 为 true 时，摄像头短片会使用默认的 PulseAudio 或 PipeWire 音源；麦克风音频只会作为该短片轨道存在，而不是作为独立命令。位置功能要求主机的 GeoClue 策略允许 node-service 用户访问。
 
-`camera.snap` 和 `camera.clip` 还需要通过 `gateway.nodes.allowCommands` 显式启用 Gateway 许可。有关负载、限制和错误，请参见 [Camera capture](/nodes/camera) 和 [Location command](/nodes/location-command)。
+`camera.snap` 和 `camera.clip` 也需要通过 `gateway.nodes.commands.allow` 显式启用。有关负载、限制和错误，请参见 [Camera capture](/nodes/camera) 和 [Location command](/nodes/location-command)。
 
 ## 安装
 
@@ -116,7 +156,7 @@ openclaw nodes approve <requestId>
 ```bash
 openclaw onboard --install-daemon
 openclaw gateway install
-openclaw configure   # 提示时选择 "Gateway service"
+openclaw configure   # 提示时选择 "Gateway 服务"
 ```
 
 修复或迁移现有安装：
@@ -154,6 +194,8 @@ KillMode=control-group
 [Install]
 WantedBy=default.target
 ```
+
+手写单元不会继承 `openclaw gateway install` 为受管 Gateway 服务写入的自适应堆大小设置。请优先使用受管安装程序，或者在自定义 supervisor 中在考虑本地内存余量后设置显式堆限制。
 
 启用它：
 

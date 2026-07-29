@@ -184,7 +184,9 @@ MLX (`mlx_lm.server`)、vLLM、SGLang、LiteLLM、OAI-proxy，或任何自定义
 - 仅适用于原生 OpenAI 的请求塑形不适用：没有 `service_tier`，没有 Responses 的 `store`，没有 OpenAI reasoning 兼容有效载荷塑形，没有提示缓存提示。
 - 不会在自定义代理 URL 上注入隐藏的 OpenClaw 归因头（`originator`、`version`、`User-Agent`）。
 
-更严格的 OpenAI 兼容后端的兼容性覆盖：
+Compat declarations are only for the custom endpoint described by this provider row. Catalog-known routes use provider-owned capabilities instead; see the [custom-provider capability guide](/gateway/config-tools#custom-provider-capability-declarations).
+
+Compat overrides for stricter OpenAI-compatible backends:
 
 - **仅字符串内容**：某些服务器只接受字符串形式的 `messages[].content`，不接受结构化的 content-part 数组。请设置 `models.providers.<provider>.models[].compat.requiresStringContent: true`。
 - **严格消息键**：如果服务器拒绝除 `role`/`content` 之外包含更多字段的消息条目，请设置 `compat.strictMessageKeys: true`。

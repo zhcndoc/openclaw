@@ -16,7 +16,7 @@ title: "Memory Lancedb 插件"
 
 ## 表面
 
-contracts: tools
+contracts: `tools`
 
 ## 相关文档
 

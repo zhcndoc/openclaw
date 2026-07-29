@@ -22,8 +22,9 @@ sidebarTitle: "代理工作区"
 
 - 默认值：`~/.openclaw/workspace`
 - 如果设置了 `OPENCLAW_PROFILE` 且不为 `"default"`，默认值会变为 `~/.openclaw/workspace-<profile>`。
-- 设置 `OPENCLAW_WORKSPACE_DIR` 时，会覆盖以上两者。
-- 未显式指定工作区的非默认代理（`agents.list[]`）会解析为 `<state-dir>/workspace-<agentId>`，而不是共享的默认工作区。
+- 设置 `OPENCLAW_WORKSPACE_DIR` 时会覆盖以上两者。
+- 当 `OPENCLAW_STATE_DIR` 为非默认值时，`openclaw onboard --non-interactive` 会使用 `<state-dir>/workspace`，包括初始的 `main` agent 条目。
+- 未显式指定工作区的非默认 agents（`agents.entries.*`）会解析为 `<state-dir>/workspace-<agentId>`，而不是共享的默认工作区。
 
 在 `~/.openclaw/openclaw.json` 中覆盖：
 
@@ -37,7 +38,7 @@ sidebarTitle: "代理工作区"
 }
 ```
 
-按代理覆盖：`agents.list[].workspace`。
+按 agent 覆盖：`agents.entries.*.workspace`。
 
 `openclaw onboard`、`openclaw configure` 或 `openclaw setup` 会创建工作区，并在启动文件缺失时为其填充引导文件。
 
@@ -70,17 +71,14 @@ OpenClaw 预期工作区内包含的标准文件：
   <Accordion title="SOUL.md - 人设与语气">
     人设、语气和边界。每次会话都会加载。指南：[SOUL.md 人设指南](/concepts/soul)。
   </Accordion>
-  <Accordion title="USER.md - 用户是谁">
-    用户是谁，以及应该如何称呼他们。每次会话都会加载。
+  <Accordion title="USER.md - 基于指令的用户模型（可选）">
+    稳定的偏好、沟通风格、关系以及当前项目上下文。将条目写为带日期的生效或已被取代的指令。每次会话都会加载，拥有单独的 4,000 字符预算。参见 [User model](/concepts/user-model)。
   </Accordion>
   <Accordion title="IDENTITY.md - 名字、风格、表情符号">
     代理的名字、风格和表情符号。在引导仪式期间创建/更新。
   </Accordion>
-  <Accordion title="TOOLS.md - 本地工具约定">
-    关于你的本地工具和约定的说明。不控制工具可用性；它只是指导。
-  </Accordion>
-  <Accordion title="HEARTBEAT.md - 心跳检查清单">
-    供心跳运行使用的可选小型清单。请保持简短，以免消耗过多 token。
+  <Accordion title="AGENTS.md Tools section - 本地工具约定">
+    `## Tools` 部分包含本地环境说明和约定。它不控制工具可用性；仅作为指导。
   </Accordion>
   <Accordion title="BOOT.md - 启动检查清单">
     在网关重启时自动运行的可选启动检查清单（当启用[内部钩子](/automation/hooks)时）。请保持简短；出站发送请使用消息工具。
@@ -91,10 +89,10 @@ OpenClaw 预期工作区内包含的标准文件：
   <Accordion title="memory/YYYY-MM-DD.md - 每日记忆日志">
     每日记忆日志（每天一个文件）。建议在会话开始时读取今天和昨天的内容。
   </Accordion>
-  <Accordion title="MEMORY.md - 精选长期记忆（可选）">
-    精选长期记忆：持久的事实、偏好、决定以及简短摘要。将详细日志保留在 `memory/YYYY-MM-DD.md` 中，这样记忆工具就能按需检索它们，而无需将其注入到每个提示中。仅在主的私密会话中加载 `MEMORY.md`（不要在共享/群组上下文中加载）。有关工作流程和自动记忆刷新，请参阅 [Memory](/concepts/memory)。
+  <Accordion title="MEMORY.md - 筛选后的长期记忆（可选）">
+    筛选后的长期记忆：持久的非个人资料事实、决策和简短摘要。将详细日志保存在 `memory/YYYY-MM-DD.md` 中，以便记忆工具可以按需检索，而无需将它们注入每个提示。仅在主私人会话中加载 `MEMORY.md`（不在共享/群组上下文中）。参见 [Memory](/concepts/memory) 了解工作流和自动记忆刷新。
   </Accordion>
-  <Accordion title="skills/ - workspace skills (optional)">
+  <Accordion title="skills/ - 工作区技能（可选）">
     工作区特定技能。该工作区中优先级最高的技能位置，优先于项目代理技能、个人代理技能、托管技能、捆绑技能，以及名称冲突时的 `skills.load.extraDirs`。
   </Accordion>
   <Accordion title="canvas/ - Canvas UI 文件（可选）">
@@ -103,22 +101,29 @@ OpenClaw 预期工作区内包含的标准文件：
 </AccordionGroup>
 
 <Note>
-如果缺少引导文件，OpenClaw 会向会话注入“缺失文件”标记并继续。较大的引导文件在注入时会被截断；可通过 `agents.defaults.bootstrapMaxChars`（默认：`20000`）和 `agents.defaults.bootstrapTotalMaxChars`（默认：`60000`）调整限制。`openclaw setup` 可以在不覆盖现有文件的情况下重新创建缺失的默认文件。
+如果缺少必需的引导文件，OpenClaw 会向会话中注入一个“缺少文件”标记并继续。可选的 `USER.md` 和 `MEMORY.md` 文件在不存在时会被省略。注入的大型引导文件会被截断；可通过 `agents.defaults.bootstrapMaxChars`（默认：`20000`）和 `agents.defaults.bootstrapTotalMaxChars`（默认：`60000`）调整通用限制。`USER.md` 仍保留其单独的 4,000 字符上限。`openclaw setup` 可以在不覆盖现有文件的情况下重新创建缺失的默认文件。
 </Note>
 
 ## 不属于工作区的内容
 
 以下内容位于 `~/.openclaw/` 下，不应提交到工作区仓库中：
 
-- `~/.openclaw/openclaw.json` (配置)
-- `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (模型认证配置文件：OAuth + API 密钥)
-- `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` (会话记录、转录内容，以及每个代理的运行时状态)
-- `~/.openclaw/agents/<agentId>/agent/codex-home/` (每个代理的 Codex 运行时账户、配置、技能、插件和本地线程状态)
-- `~/.openclaw/credentials/` (通道/提供方状态以及旧版 OAuth 导入数据)
-- `~/.openclaw/agents/<agentId>/sessions/` (旧版迁移源和归档/支持工件)
-- `~/.openclaw/skills/` (托管技能)
+- `~/.openclaw/openclaw.json`（配置）
+- `~/.openclaw/state/openclaw.sqlite`（共享工作区设置状态和证明）
+- `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`（模型认证配置文件、路由状态、常驻意图以及其他 agent 级持久化）
+- `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`（会话行、转录以及每个 agent 的运行时状态）
+- `~/.openclaw/agents/<agentId>/agent/codex-home/`（每个 agent 的 Codex 运行时账户、配置、技能、插件和原生线程状态）
+- `~/.openclaw/credentials/`（通道/提供方状态以及旧版 OAuth 导入数据）
+- `~/.openclaw/agents/<agentId>/sessions/`（旧版迁移源和归档/支持工件）
+- `~/.openclaw/skills/`（受管理的技能）
 
 如果你需要迁移会话或配置，请单独复制它们，并使它们脱离版本控制。
+
+较旧的 OpenClaw 版本会写入 `openclaw-workspace-state.json`、
+`.openclaw/workspace-state.json` 和 `.attested` 工作区旁侧文件。当前
+运行时仅使用共享 SQLite 数据库来保存这些状态。如果 Doctor 报告
+其中一个文件，请运行 `openclaw doctor --fix`；Doctor 会导入有效的旧版
+状态，并且只会在验证数据库行之后删除源文件。
 
 ## Git 备份（推荐，私有）
 
@@ -133,8 +138,8 @@ OpenClaw 预期工作区内包含的标准文件：
     ```bash
     cd ~/.openclaw/workspace
     git init
-    git add AGENTS.md SOUL.md TOOLS.md IDENTITY.md USER.md HEARTBEAT.md memory/
-    git commit -m "添加代理工作区"
+    git add AGENTS.md SOUL.md IDENTITY.md USER.md memory/
+    git commit -m "Add agent workspace"
     ```
 
   </Step>
@@ -225,12 +230,12 @@ OpenClaw 预期工作区内包含的标准文件：
 
 ## 高级说明
 
-- 多智能体路由可以通过 `agents.list[].workspace` 为每个智能体使用不同的工作区。有关路由配置，请参见 [Channel routing](/channels/channel-routing)。
-- 如果启用了 `agents.defaults.sandbox`，非主会话可以在 `agents.defaults.sandbox.workspaceRoot` 下使用按会话划分的沙箱工作区。
+- Multi-agent routing can use different workspaces per agent via `agents.entries.*.workspace`. See [Channel routing](/channels/channel-routing) for routing configuration.
+- If `agents.defaults.sandbox` is enabled, non-main sessions can use per-session sandbox workspaces under `agents.defaults.sandbox.workspaceRoot`.
 
 ## 相关内容
 
-- [Heartbeat](/gateway/heartbeat) - HEARTBEAT.md 工作区文件
-- [Sandboxing](/gateway/sandboxing) - 沙箱环境中的工作区访问
-- [Session](/concepts/session) - 会话存储路径
-- [Standing orders](/automation/standing-orders) - 工作区文件中的持久指令
+- [心跳](/gateway/heartbeat) - 心跳监视器和 cron 临时存储
+- [沙盒化](/gateway/sandboxing) - 沙盒环境中的工作区访问
+- [会话](/concepts/session) - 会话存储路径
+- [长期指令](/automation/standing-orders) - 工作区文件中的持久化指令

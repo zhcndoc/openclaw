@@ -16,7 +16,7 @@ title: "iMessage 插件"
 
 ## 接入层
 
-channels: iMessage; skills
+channels: `imessage`; skills
 
 ## 相关文档
 

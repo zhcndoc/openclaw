@@ -282,7 +282,7 @@ sudo systemctl enable --now openclaw-gateway[-<profile>].service
   </Tab>
 </Tabs>
 
-无效配置错误的退出码为 `78`。Linux systemd 单元使用 `RestartPreventExitStatus=78` 来在配置修复前停止重新拉起。launchd 和 Windows Task Scheduler 没有按退出码停止的等效规则，因此 Gateway 还会持久化快速的非正常启动历史，并在多次启动失败后抑制 channel/provider 账户的自动启动。在该安全模式下，控制平面仍会启动以便检查和修复，配置热重载和 `secrets.reload` 会拒绝自动 channel 重启，而显式的操作员 `channels.start` 请求可以覆盖该抑制。
+Invalid configuration errors exit with code `78`. Linux systemd units use `RestartPreventExitStatus=78` to stop relaunching until the config is fixed. launchd and Windows Task Scheduler do not have an equivalent per-exit-code stop rule, so the Gateway also persists rapid unclean boot history and suppresses channel/provider account auto-start after repeated startup failures. In that safe mode the control plane still starts for inspection and repair, config hot reloads and `secrets.reload` refuse automatic channel restarts, and an explicit operator `channels.start` request can override the suppression. Step-by-step recovery lives in [Restart recovery](/gateway/restart-recovery#safety-valves-and-observability).
 
 ## 开发者配置快速路径
 

@@ -16,7 +16,7 @@ title: "Matrix 插件"
 
 ## 表面
 
-channels: matrix
+channels: `matrix`
 
 ## 相关文档
 

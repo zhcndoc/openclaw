@@ -16,7 +16,7 @@ title: "Arcee 插件"
 
 ## 接口
 
-providers: arcee
+providers: `arcee`
 
 ## 相关文档
 

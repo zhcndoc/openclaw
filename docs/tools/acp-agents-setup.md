@@ -29,26 +29,26 @@ Codex 有两条 OpenClaw 路径：
 
 内置的 acpx harness 别名（来自固定版本的 `acpx` 依赖）：
 
-| 别名         | 封装                                                                                                            |
-| ------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `claude`     | [Claude Code](https://claude.ai/code)                                                                           |
-| `codex`      | [Codex CLI](https://codex.openai.com)                                                                           |
-| `copilot`    | [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-chat/use-copilot-chat-in-the-command-line) |
-| `cursor`     | [Cursor CLI](https://cursor.com/docs/cli/acp) (`cursor-agent acp`)                                              |
-| `droid`      | [Factory Droid](https://www.factory.ai)                                                                         |
-| `fast-agent` | [fast-agent](https://fast-agent.ai)                                                                             |
-| `gemini`     | [Gemini CLI](https://github.com/google/gemini-cli)                                                              |
-| `iflow`       | [iFlow CLI](https://github.com/iflow-ai/iflow-cli)                                                              |
-| `kilocode`    | [Kilocode](https://kilocode.ai)                                                                                 |
-| `kimi`        | [Kimi CLI](https://github.com/MoonshotAI/kimi-cli)                                                              |
-| `kiro`        | [Kiro CLI](https://kiro.dev)                                                                                    |
-| `mux`         | [Mux](https://mux.coder.com)                                                                                    |
-| `opencode`    | [OpenCode](https://opencode.ai)                                                                                 |
-| `openclaw`    | OpenClaw ACP 桥接（原生 `openclaw acp`）                                                                        |
-| `pi`          | [Pi Coding Agent](https://github.com/mariozechner/pi)                                                           |
-| `qoder`       | [Qoder CLI](https://docs.qoder.com/cli/acp)                                                                     |
-| `qwen`        | [Qwen Code](https://github.com/QwenLM/qwen-code)                                                                |
-| `trae`        | [Trae CLI](https://docs.trae.cn/cli)                                                                            |
+| Alias        | Wraps                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| `claude`     | [Claude Code](https://claude.ai/code)                                                                  |
+| `codex`      | [Codex CLI](https://developers.openai.com/codex/cli)                                                   |
+| `copilot`    | [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/copilot-cli/about-copilot-cli) |
+| `cursor`     | [Cursor CLI](https://cursor.com/docs/cli/acp) (`cursor-agent acp`)                                     |
+| `droid`      | [Factory Droid](https://www.factory.ai)                                                                |
+| `fast-agent` | [fast-agent](https://fast-agent.ai)                                                                    |
+| `gemini`     | [Gemini CLI](https://github.com/google-gemini/gemini-cli)                                              |
+| `iflow`      | [iFlow CLI](https://github.com/iflow-ai/iflow-cli)                                                     |
+| `kilocode`   | [Kilocode](https://kilocode.ai)                                                                        |
+| `kimi`       | [Kimi CLI](https://github.com/MoonshotAI/kimi-cli)                                                     |
+| `kiro`       | [Kiro CLI](https://kiro.dev)                                                                           |
+| `mux`        | [Mux](https://mux.coder.com)                                                                           |
+| `opencode`   | [OpenCode](https://opencode.ai)                                                                        |
+| `openclaw`   | OpenClaw ACP 桥接（原生 `openclaw acp`）                                                               |
+| `pi`         | [Pi Coding Agent](https://github.com/earendil-works/pi)                                                |
+| `qoder`      | [Qoder CLI](https://docs.qoder.com/cli/acp)                                                            |
+| `qwen`       | [Qwen Code](https://github.com/QwenLM/qwen-code)                                                       |
+| `trae`       | [Trae CLI](https://docs.trae.cn/cli)                                                                   |
 
 `factory-droid` 和 `factorydroid` 也会解析为内置的 `droid` 适配器。
 
@@ -89,20 +89,14 @@ ACP 核心基线：
       "opencode",
       "qwen",
     ],
-    maxConcurrentSessions: 8,
     stream: {
-      // 默认值为 coalesceIdleMs: 350、maxChunkChars: 1800；此处显式列出。
-      coalesceIdleMs: 350,
-      maxChunkChars: 1800,
-    },
-    runtime: {
-      ttlMinutes: 120,
+      deliveryMode: "live",
     },
   },
 }
 ```
 
-线程绑定配置取决于通道适配器。Discord 示例：
+线程绑定配置在所有受支持的通道适配器之间共享：
 
 ```json5
 {
@@ -111,15 +105,7 @@ ACP 核心基线：
       enabled: true,
       idleHours: 24,
       maxAgeHours: 0,
-    },
-  },
-  channels: {
-    discord: {
-      threadBindings: {
-        enabled: true,
-        // 默认值已经是 true；此处显式列出。
-        spawnSessions: true,
-      },
+      spawnSessions: true,
     },
   },
 }
@@ -127,7 +113,7 @@ ACP 核心基线：
 
 如果线程绑定的 ACP spawn 不起作用，请先验证适配器功能开关：
 
-- Discord: `channels.discord.threadBindings.spawnSessions=true`
+- Discord: `session.threadBindings.spawnSessions=true`
 
 当前对话绑定不需要创建子线程。它们需要一个活动的对话上下文，以及一个暴露 ACP 对话绑定的通道适配器。
 
@@ -226,10 +212,12 @@ openclaw config set plugins.entries.acpx.config.pluginToolsMcpBridge true
 
 这会做什么：
 
-- 将一个名为 `openclaw-plugin-tools` 的内置 MCP 服务器注入 ACPX 会话
-  启动流程。
-- 暴露已安装且已启用的 OpenClaw 插件所注册的插件工具。
-- 保持该功能显式启用且默认关闭。
+- 将一个内置的、名为 `openclaw-plugin-tools` 的 MCP 服务器注入到 ACPX 会话
+  启动流程中。
+- 暴露由已安装且已启用的 OpenClaw 插件注册的插件工具。
+- 将当前激活的 ACP 会话身份传递给插件工具工厂，从而让
+  代理作用域的工具保留在该代理的命名空间中。
+- 保持该功能显式开启且默认关闭。
 
 安全与信任说明：
 

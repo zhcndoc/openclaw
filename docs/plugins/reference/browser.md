@@ -16,7 +16,7 @@ title: "浏览器插件"
 
 ## 接口
 
-contracts: tools; skills
+contracts: `tools`; skills
 
 ## 相关文档
 

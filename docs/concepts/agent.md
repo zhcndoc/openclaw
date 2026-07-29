@@ -14,8 +14,9 @@ harness 进程不同。每个已配置的代理（有关运行多个代理，请
 
 ## 工作区（必需）
 
-每个代理都使用单个工作区目录（`agents.defaults.workspace`，或
-每个代理的 `agents.list[].workspace`）作为其工具和上下文的**唯一**工作目录（`cwd`）。
+Each agent uses a single workspace directory (`agents.defaults.workspace`, or
+`agents.entries.*.workspace` per agent) as its **only** working directory (`cwd`)
+for tools and context.
 
 建议：如果缺失，请使用 `openclaw setup` 创建 `~/.openclaw/openclaw.json` 并初始化工作区文件。
 
@@ -31,14 +32,12 @@ harness 进程不同。每个已配置的代理（有关运行多个代理，请
 
 | 文件           | 作用                                                 |
 | -------------- | ---------------------------------------------------- |
-| `AGENTS.md`    | 操作说明 + “记忆”                                      |
-| `SOUL.md`      | 角色设定、边界、语气                                  |
-| `TOOLS.md`     | 用户维护的工具笔记和约定                              |
-| `IDENTITY.md`  | 代理名称/风格/表情符号                                 |
-| `USER.md`      | 用户资料 + 偏好称呼                                   |
-| `HEARTBEAT.md` | 心跳相关说明                                           |
-| `BOOTSTRAP.md` | 一次性首次运行仪式（完成后删除）                       |
-| `MEMORY.md`    | 根长期记忆文件（如果存在）                             |
+| `AGENTS.md`    | 操作说明 + “记忆”                                    |
+| `SOUL.md`      | 人设、边界、语气                                     |
+| `IDENTITY.md`  | 代理名称/风格/表情符号                               |
+| `USER.md`      | 用户资料 + 偏好称呼                                  |
+| `BOOTSTRAP.md` | 一次性的首次运行仪式（完成后删除）                    |
+| `MEMORY.md`    | 根长期记忆文件（如果存在）                            |
 
 在新会话的第一轮中，OpenClaw 会将这些文件的内容注入到系统提示词的项目上下文中。只有当 `MEMORY.md` 存在于工作区根目录时，才会注入它。
 
@@ -46,7 +45,13 @@ harness 进程不同。每个已配置的代理（有关运行多个代理，请
 
 `BOOTSTRAP.md` 仅会为**全新的工作区**创建（即不存在其他 bootstrap 文件）。在它处于待处理状态时，OpenClaw 会将其保留在项目上下文中，并为初始仪式添加系统提示引导，而不是把它复制到用户消息中。如果你在完成仪式后删除它，那么后续重启时它不会再次被创建。
 
-在工作区被观测过之后，OpenClaw 还会为该工作区路径保留一个状态目录的证明标记。如果最近被证明的工作区消失或被清空，启动时将拒绝悄悄重新种子化 `BOOTSTRAP.md`；请恢复工作区，或使用完整的 onboarding 重置，以便同时清除工作区和标记。
+在工作区被观测之后，OpenClaw 会将其设置状态和证明信息存储到共享的 SQLite 数据库中，路径为
+`~/.openclaw/state/openclaw.sqlite`。如果最近已证明过的工作区
+消失或被清空，启动时将拒绝静默重新播种 `BOOTSTRAP.md`；
+请恢复工作区，或使用完整的 onboard 重置，以便将工作区和其
+数据库状态一并清除。
+
+较早版本使用工作区 JSON 文件和 `.attested` 伴随文件。运行时不会读取这些文件。请运行 `openclaw doctor --fix` 来验证它们，将其状态导入 SQLite，并在导入的行得到验证后删除每个源文件。
 
 若要完全禁用 bootstrap 文件创建（适用于预置工作区），请设置：
 
@@ -57,9 +62,8 @@ harness 进程不同。每个已配置的代理（有关运行多个代理，请
 ## 内置工具
 
 核心工具（read/exec/edit/write 以及相关系统工具）始终可用，
-受工具策略约束。`apply_patch` 对 OpenAI 模型默认开启，并受
-`tools.exec.applyPatch`（`enabled`、`workspaceOnly`、`allowModels`）控制。`TOOLS.md` 并**不**控制哪些工具存在；它只是
-关于你希望如何使用这些工具的指导。
+但受工具策略约束。`apply_patch` 对 OpenAI 模型默认开启，并受
+`tools.exec.applyPatch`（`enabled`、`workspaceOnly`、`allowModels`）控制。`AGENTS.md` 中的 `## Tools` 部分并不控制哪些工具存在；它只是指导你希望如何使用这些工具。
 
 ## 技能
 
@@ -76,7 +80,7 @@ OpenClaw 会从以下位置加载技能（优先级从高到低）：
 `<workspace>/skills/personal/foo/SKILL.md`；该技能仍会通过其
 扁平化 frontmatter 名称对外暴露，例如 `foo`。
 
-技能可通过配置/环境变量进行限制（参见 [Gateway configuration](/gateway/configuration) 中的 `skills`）。
+技能可通过配置/环境变量进行限制（参见 [网关配置](/gateway/configuration) 中的 `skills`）。
 
 ## 运行时边界
 

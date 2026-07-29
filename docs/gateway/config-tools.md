@@ -20,32 +20,32 @@ sidebarTitle: "工具与自定义提供方"
 本地入门在新建本地配置且未设置时，默认使用 `tools.profile: "coding"`（已存在的显式配置档案会保留）。
 </Note>
 
-| Profile     | Includes                                                                                                                                                                                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `minimal`   | 仅 `session_status`                                                                                                                                                                                                        |
-| `coding`    | `group:fs`, `group:runtime`, `group:web`, `group:sessions`, `group:memory`, `cron`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `skill_workshop`, `image`, `image_generate`, `music_generate`, `video_generate` |
-| `messaging` | `group:messaging`, `sessions_list`, `sessions_history`, `sessions_send`, `session_status`                                                                                                                                    |
-| `full`      | 无限制（与未设置相同）                                                                                                                                                                                               |
+| Profile     | Includes                                                                                                                                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `minimal`   | `session_status` only                                                                                                                                                                                                                                   |
+| `coding`    | `group:fs`, `group:runtime`, `group:web`, `group:sessions`, `group:memory`, `cron`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `ask_user`, `skill_workshop`, `image`, `image_generate`, `music_generate`, `video_generate`                |
+| `messaging` | `group:messaging`, `sessions`, `sessions_list`, `sessions_history`, `sessions_search`, `conversations_list`, `conversations_send`, `conversations_turn`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`, `ask_user` |
+| `full`      | No restriction (same as unset)                                                                                                                                                                                                                          |
 
 `coding` 和 `messaging` 还会隐式允许 `bundle-mcp`（已配置的 MCP 服务器）。
 
 ### 工具组
 
-| 组                 | 工具                                                                                                                                                  |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `group:runtime`    | `exec`, `process`, `code_execution`（`bash` 可作为 `exec` 的别名使用）                                                                                 |
-| `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                                                                                |
-| `group:sessions`   | `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`, `spawn_task`, `dismiss_task` |
-| `group:memory`     | `memory_search`, `memory_get`                                                                                                                         |
-| `group:web`         | `web_search`, `x_search`, `web_fetch`                                                                                                                 |
-| `group:ui`          | `browser`, `canvas`                                                                                                                                   |
-| `group:automation`  | `heartbeat_respond`, `cron`, `gateway`                                                                                                                |
-| `group:messaging`   | `message`                                                                                                                                             |
-| `group:nodes`       | `nodes`, `computer`                                                                                                                                   |
-| `group:agents`      | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `skill_workshop`                                                              |
-| `group:media`       | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                                                  |
-| `group:openclaw`    | 除 `read`/`write`/`edit`/`apply_patch`/`exec`/`process`/`canvas` 外的所有内置工具（不包括插件工具）                                                     |
-| `group:plugins`     | 已加载插件拥有的工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                            |
+| Group              | Tools                                                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `group:runtime`    | `exec`, `process`, `code_execution` (`bash` is accepted as an alias for `exec`)                                                                                                                                                                        |
+| `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                                                                                                                                                                                 |
+| `group:sessions`   | `sessions`, `sessions_list`, `sessions_history`, `sessions_search`, `conversations_list`, `conversations_send`, `conversations_turn`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`, `spawn_task`, `dismiss_task` |
+| `group:memory`     | `memory_search`, `memory_get`                                                                                                                                                                                                                          |
+| `group:web`        | `web_search`, `x_search`, `web_fetch`                                                                                                                                                                                                                  |
+| `group:ui`         | `browser`, `screen`, `terminal`, `canvas`, `show_widget`                                                                                                                                                                                               |
+| `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                                                                                                                                                 |
+| `group:messaging`  | `message`                                                                                                                                                                                                                                              |
+| `group:nodes`      | `nodes`, `computer`                                                                                                                                                                                                                                    |
+| `group:agents`     | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `ask_user`, `skill_workshop`                                                                                                                                                   |
+| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                                                                                                                                                   |
+| `group:openclaw`   | All built-in tools above except `read`/`write`/`edit`/`apply_patch`/`exec`/`process`/`canvas` (excludes plugin tools)                                                                                                                                  |
+| `group:plugins`    | Tools owned by loaded plugins, including configured MCP servers exposed through `bundle-mcp`                                                                                                                                                           |
 
 `spawn_task` 允许编码代理在不启动它的情况下，提出已确认的后续工作。Control UI 会将标题和摘要显示为可操作的芯片；基于 Gateway 的 TUI 会显示等效的交互式提示。接受任一项都会创建一个新的受管工作树会话，并将完整提示发送到那里，同时当前轮次继续。`dismiss_task` 会通过 `spawn_task` 返回的临时 `task_id` 撤回仍处于待处理状态的建议。
 
@@ -84,16 +84,23 @@ sidebarTitle: "工具与自定义提供方"
 
 ### `tools.codeMode`
 
-`tools.codeMode` 启用通用的 OpenClaw 代码模式界面。启用后，对于启用了工具的运行，普通的 OpenClaw 工具会移到沙箱内的 `tools.*`
-目录桥接之后，而 MCP 工具则可通过生成的 `MCP`
-命名空间使用。模型通常会看到 `exec` 和 `wait`；像 `computer`
-这类其结构化结果无法通过仅支持 JSON 的桥接传递的工具则保持直接可用。
+`tools.codeMode` gates the generic OpenClaw code-mode surface. When engaged
+for a run with tools, normal OpenClaw tools move behind the in-sandbox `tools.*`
+catalog bridge, and MCP tools are available through the generated `MCP`
+namespace. The model normally sees `exec` and `wait`; tools such as `computer`
+whose structured results cannot cross the JSON-only bridge stay direct.
+
+`enabled` defaults to `"auto"`, which engages code mode only for models whose
+catalog entry flags `compat.codeMode: "preferred"`. See
+[Code Mode - automatic per-model activation](/tools/code-mode#automatic-per-model-activation).
+
+To opt out for every run:
 
 ```json5
 {
   tools: {
     codeMode: {
-      enabled: true,
+      enabled: false,
     },
   },
 }
@@ -103,11 +110,18 @@ sidebarTitle: "工具与自定义提供方"
 
 ```json5
 {
-  tools: { codeMode: true },
+  tools: { codeMode: false },
 }
 ```
 
-在代码模式下，MCP 声明会通过只读虚拟 API 文件表面暴露。访客代码可以调用 `API.list("mcp")` 和 `API.read("mcp/<server>.d.ts")` 在调用 `MCP.<server>.<tool>()` 之前检查 TypeScript 风格的签名。有关运行时契约、限制和调试步骤，请参见 [代码模式](/reference/code-mode)。
+`enabled: true` forces code mode on for every tool-capable run, regardless of
+model.
+
+MCP declarations are exposed through the read-only virtual API file surface in
+code mode. Guest code can call `API.list("mcp")` and
+`API.read("mcp/<server>.d.ts")` to inspect TypeScript-style signatures before
+calling `MCP.<server>.<tool>()`. See [Code Mode](/tools/code-mode) for the
+runtime contract, limits, and debugging steps.
 
 ### `tools.allow` / `tools.deny`
 
@@ -128,7 +142,7 @@ sidebarTitle: "工具与自定义提供方"
 ```
 
 <Note>
-`allow` 和 `alsoAllow` 不能在同一作用域（`tools`、`tools.byProvider.<id>`、`agents.list[].tools`）中同时设置——配置校验会拒绝它。请将 `alsoAllow` 条目合并到 `allow` 中，或者删除 `allow`，改用 `profile` + `alsoAllow`。
+`allow` and `alsoAllow` cannot both be set in the same scope (`tools`, `tools.byProvider.<id>`, `agents.entries.*.tools`) — config validation rejects it. Merge `alsoAllow` entries into `allow`, or drop `allow` and use `profile` + `alsoAllow` instead.
 </Note>
 
 ### `tools.byProvider`
@@ -149,7 +163,7 @@ sidebarTitle: "工具与自定义提供方"
 
 ### `tools.toolsBySender`
 
-按特定请求者身份限制工具。这是在通道访问控制之上的纵深防御；sender 值必须来自通道适配器，而不是消息文本。
+Restricts tools for the current turn's originating requester. This is defense-in-depth on top of channel access control; sender values must come from the channel adapter, not message text. It does not authenticate other content in the model prompt; see [Requester-scoped controls and prompt context](/gateway/security#requester-scoped-controls-and-prompt-context).
 
 ```json5
 {
@@ -165,7 +179,7 @@ sidebarTitle: "工具与自定义提供方"
 
 键使用显式前缀：`channel:<channelId>:<senderId>`、`id:<senderId>`、`e164:<phone>`、`username:<handle>`、`name:<displayName>`，或 `"*"`。通道 id 是规范化的 OpenClaw id；像 `teams` 这样的别名会规范化为 `msteams`。旧式无前缀键会按 `id:` 处理。匹配顺序为 channel+id、id、e164、username、name，然后是通配符。
 
-每个代理的 `agents.list[].tools.toolsBySender` 在匹配时会覆盖全局 sender 匹配，即使是空的 `{}` 策略也是如此。
+Per-agent `agents.entries.*.tools.toolsBySender` overrides the global sender match when it matches, even with an empty `{}` policy.
 
 ### `tools.elevated`
 
@@ -185,9 +199,9 @@ sidebarTitle: "工具与自定义提供方"
 }
 ```
 
-- 每个代理的覆盖项（`agents.list[].tools.elevated`）只能进一步收紧。
-- `/elevated on|off|ask|full` 会按会话存储状态；行内指令仅作用于单条消息。
-- 提升级 `exec` 会绕过沙箱，并使用配置的逃逸路径（默认 `gateway`，如果 exec 目标是 `node` 则使用 `node`）。
+- Per-agent override (`agents.entries.*.tools.elevated`) can only further restrict.
+- `/elevated on|off|ask|full` stores state per session; inline directives apply to single message.
+- Elevated `exec` bypasses sandboxing and uses the configured escape path (`gateway` by default, or `node` when the exec target is `node`).
 
 ### `tools.exec`
 
@@ -215,62 +229,17 @@ sidebarTitle: "工具与自定义提供方"
 
 ### `tools.loopDetection`
 
-工具循环安全检查默认**禁用**。设置 `enabled: true` 以启用检测。配置可以在全局 `tools.loopDetection` 中定义，并在 `agents.list[].tools.loopDetection` 中按代理覆盖。
+Tool-loop safety checks are **disabled by default**. Set `enabled: true` to activate detection. Settings can be defined globally in `tools.loopDetection` and overridden per-agent at `agents.entries.*.tools.loopDetection`.
 
 ```json5
 {
   tools: {
     loopDetection: {
       enabled: true,
-      historySize: 30,
-      warningThreshold: 10,
-      unknownToolThreshold: 10,
-      criticalThreshold: 20,
-      globalCircuitBreakerThreshold: 30,
-      detectors: {
-        genericRepeat: true,
-        knownPollNoProgress: true,
-        pingPong: true,
-      },
-      postCompactionGuard: {
-        windowSize: 3,
-      },
     },
   },
 }
 ```
-
-<ParamField path="historySize" type="number">
-  循环分析保留的工具调用历史最大长度。
-</ParamField>
-<ParamField path="warningThreshold" type="number">
-  用于警告的无进展重复模式阈值。
-</ParamField>
-<ParamField path="unknownToolThreshold" type="number">
-  在经过这么多次未命中后，阻止对同一个不可用/未知工具名称的重复调用。
-</ParamField>
-<ParamField path="criticalThreshold" type="number">
-  用于阻止严重循环的更高重复阈值。
-</ParamField>
-<ParamField path="globalCircuitBreakerThreshold" type="number">
-  任何无进展运行的硬停止阈值。
-</ParamField>
-<ParamField path="detectors.genericRepeat" type="boolean">
-  对重复的同工具/同参数调用发出警告。
-</ParamField>
-<ParamField path="detectors.knownPollNoProgress" type="boolean">
-  对已知轮询工具（`process.poll`、`command_status` 等）发出警告/阻止。
-</ParamField>
-<ParamField path="detectors.pingPong" type="boolean">
-  对交替出现的无进展成对模式发出警告/阻止。
-</ParamField>
-<ParamField path="postCompactionGuard.windowSize" type="number">
-  自动压缩后守卫保持激活的尝试次数；如果代理在该窗口内重复相同的（工具、参数、结果），则中止。
-</ParamField>
-
-<Warning>
-如果 `warningThreshold >= criticalThreshold` 或 `criticalThreshold >= globalCircuitBreakerThreshold`，验证将失败。
-</Warning>
 
 ### `tools.web`
 
@@ -313,37 +282,26 @@ sidebarTitle: "工具与自定义提供方"
   tools: {
     media: {
       concurrency: 2,
-      asyncCompletion: {
-        directSend: false, // 已弃用：完成仍由代理中介
-      },
-      audio: {
-        enabled: true,
-        maxBytes: 20971520,
-        scope: {
-          default: "deny",
-          rules: [{ action: "allow", match: { chatType: "direct" } }],
+      models: [
+        { provider: "openai", model: "gpt-4o-mini-transcribe", capabilities: ["audio"] },
+        {
+          type: "cli",
+          command: "whisper",
+          args: ["--model", "base", "{{AttachmentPath}}"],
+          capabilities: ["audio"],
         },
-        models: [
-          { provider: "openai", model: "gpt-4o-mini-transcribe" },
-          { type: "cli", command: "whisper", args: ["--model", "base", "{{MediaPath}}"] },
-        ],
-      },
-      image: {
-        enabled: true,
-        timeoutSeconds: 180,
-        models: [{ provider: "ollama", model: "gemma4:26b", timeoutSeconds: 300 }],
-      },
-      video: {
-        enabled: true,
-        maxBytes: 52428800,
-        models: [{ provider: "google", model: "gemini-3-flash-preview" }],
-      },
+        { provider: "ollama", model: "gemma4:26b", capabilities: ["image"] },
+        { provider: "google", model: "gemini-3-flash-preview", capabilities: ["video"] },
+      ],
+      audio: { enabled: true, preferredModel: "openai/gpt-4o-mini-transcribe" },
+      image: { enabled: true, preferredModel: "ollama/gemma4:26b" },
+      video: { enabled: true },
     },
   },
 }
 ```
 
-`concurrency`（默认 `2`）、`audio.maxBytes`（默认 20 MB）和 `video.maxBytes`（默认 50 MB）展示的是其默认值；`image.maxBytes` 默认是 10 MB。各能力请求超时默认值：image/audio 为 `60`s，video 为 `120`s。
+`tools.media.models` is the only configured model list. Every entry declares the capabilities it handles. The optional `preferredModel` selector accepts `provider/model`, a model id, `provider:<id>` for provider-default entries, or `cli:command`; matching entries move to the front of that capability's fallback order. Per-capability prompts, limits, request settings, scope, attachment policy, and audio transcript echo remain defaults for configured and auto-detected models; a model entry can override model-specific fields.
 
 <AccordionGroup>
   <Accordion title="媒体模型条目字段">
@@ -355,21 +313,17 @@ sidebarTitle: "工具与自定义提供方"
 
     **CLI 条目**（`type: "cli"`）：
 
-    - `command`：要运行的可执行文件
-    - `args`：模板参数（支持 `{{MediaPath}}`、`{{Prompt}}`、`{{MaxChars}}` 等；`openclaw doctor --fix` 会把已弃用的 `{input}` 占位符迁移为 `{{MediaPath}}`）
+    - `command`: executable to run
+    - `args`: templated args (supports `{{AttachmentPath}}`, `{{AttachmentUrl}}`, `{{AttachmentContentType}}`, `{{AttachmentDir}}`, `{{AttachmentIndex}}`, `{{Prompt}}`, `{{MaxChars}}`, etc.; `openclaw doctor --fix` migrates deprecated `{input}` placeholders to `{{AttachmentPath}}`). The older `{{MediaPath}}`, `{{MediaUrl}}`, `{{MediaType}}`, and `{{MediaDir}}` aliases remain available during their compatibility window but are deprecated.
 
     **通用字段：**
 
-    - `capabilities`：可选列表（`image`、`audio`、`video`）。每个提供方插件都会声明自己的默认能力集；例如内置的 `openai` 提供方默认是 image+audio，`anthropic`/`minimax` 默认是 image，`google` 默认是 image+audio+video，`groq` 默认是 audio。
-    - `prompt`、`maxChars`、`maxBytes`、`timeoutSeconds`、`language`：按条目覆盖。
-    - `tools.media.image.timeoutSeconds` 以及匹配的 image 模型 `timeoutSeconds` 条目，在代理调用显式的 `image` 工具时也同样适用。对于图像理解，此超时应用于请求本身，不会因前置准备工作而缩短。
-    - 失败时会回退到下一条目。
+    - `capabilities`: list containing one or more of `image`, `audio`, and `video`.
+    - `prompt`, `maxChars`, `maxBytes`, `timeoutSeconds`, `language`: per-entry overrides.
+    - Matching image model `timeoutSeconds` entries also apply when the agent calls the explicit `image` tool. For image understanding, this timeout applies to the request itself and is not reduced by earlier preparation work.
+    - Failures fall back to the next entry.
 
     提供方认证遵循标准顺序：`auth-profiles.json` → 环境变量 → `models.providers.*.apiKey`。
-
-    **异步完成字段：**
-
-    - `asyncCompletion.directSend`：已弃用的兼容标志。完成的异步媒体任务仍然由请求者会话中介，因此代理会收到结果、决定如何告知用户，并在源交付需要时使用 message 工具。
 
   </Accordion>
 </AccordionGroup>
@@ -391,7 +345,8 @@ sidebarTitle: "工具与自定义提供方"
 
 控制哪些会话可以被会话工具（`sessions_list`、`sessions_history`、`sessions_send`）作为目标。
 
-默认值：`tree`（当前会话 + 由其派生的会话，例如子代理）。
+Default: `tree` (current session + sessions spawned by it, such as subagents, plus ambient
+watched group sessions for the same agent).
 
 ```json5
 {
@@ -405,17 +360,24 @@ sidebarTitle: "工具与自定义提供方"
 ```
 
 <AccordionGroup>
-  <Accordion title="可见性范围">
-    - `self`: 仅当前会话键。
-    - `tree`: 当前会话 + 由当前会话派生的会话（子代理）。
-    - `agent`: 属于当前代理 id 的任何会话（如果你在同一个代理 id 下按发送者运行会话，也可能包含其他用户）。
-    - `all`: 任意会话。跨代理定向仍然需要 `tools.agentToAgent`。
-    - 沙箱限制：当当前会话处于沙箱中且 `agents.defaults.sandbox.sessionToolsVisibility="spawned"`（默认值）时，即使 `tools.sessions.visibility="all"`，可见性也会被强制为 `tree`。
-    - 当不是 `all` 时，`sessions_list` 会包含一个简洁的 `visibility` 字段，
-      说明有效模式，并提示某些会话可能会在当前范围之外被省略。
+  <Accordion title="Visibility scopes">
+    - `self`: only the current session key.
+    - `tree`: current session + sessions spawned by the current session (subagents). For read operations, it also includes same-agent group sessions that the current session watches through ambient group awareness.
+    - `agent`: any session belonging to the current agent id (can include other users if you run per-sender sessions under the same agent id).
+    - `all`: any session. Cross-agent targeting still requires `tools.agentToAgent`.
+    - Sandbox clamp: when the current session is sandboxed and `agents.defaults.sandbox.sessionToolsVisibility="spawned"` (the default), visibility is forced to `tree` even if `tools.sessions.visibility="all"`.
+    - When not `all`, `sessions_list` includes a compact `visibility` field
+      describing the effective mode and a warning that some sessions may be
+      omitted outside the current scope.
 
   </Accordion>
 </AccordionGroup>
+
+With the default `session.dmScope: "main"`, human activity in a group makes that same-agent group
+session ambiently visible to the agent's main session. In a multi-user setup, `"main"` also shares
+one DM session across users, so each user routed there can read from ambiently watched groups,
+including through session-memory `memory_search`. Use a per-peer `dmScope` for DM isolation, or set
+`tools.sessions.visibility: "self"` to opt out of ambient watched-session reads.
 
 ### `tools.sessions_spawn`
 
@@ -450,25 +412,25 @@ sidebarTitle: "工具与自定义提供方"
   </Accordion>
 </AccordionGroup>
 
-<a id="toolsexperimental"></a>
+<a id="toolsupdateplan"></a>
 
-### `tools.experimental`
+### `tools.updatePlan`
 
-实验性内置工具标志。除非严格代理式 GPT-5 自动启用规则适用，否则默认关闭。
+Kill switch for the structured `update_plan` checklist tool used for non-trivial multi-step work tracking.
 
 ```json5
 {
   tools: {
-    experimental: {
-      planTool: true, // 启用实验性的 update_plan
-    },
+    updatePlan: false, // hide update_plan from every run
   },
 }
 ```
 
-- `planTool`：为非平凡的多步骤工作跟踪启用结构化的 `update_plan` 工具。
-- 默认值：`false`，除非 `agents.defaults.embeddedAgent.executionContract`（或按代理覆盖）在针对 GPT-5 系列模型 id 的 `openai` 提供商运行中设置为 `"strict-agentic"`（这也涵盖 OpenAI Codex CLI 运行，因为 Codex 认证/模型路由位于 `openai` 提供商之下）。将其设为 `true` 可在该范围之外强制启用该工具，或设为 `false` 即使在严格代理式 GPT-5 运行中也保持关闭。
-- 启用后，系统提示还会添加使用指导，因此模型只会在处理重要工作时使用它，并且最多只保留一个 `in_progress` 步骤。
+- Default: `true` for every provider and model. Set `false` to keep the tool off; there is no model-specific auto-enable rule.
+- The tool description adds usage guidance so the model only uses it for substantial work and keeps at most one step `in_progress`.
+- `tools.deny: ["update_plan"]` also removes the tool, so use whichever surface already carries your tool policy.
+
+Older configs used `tools.experimental.planTool`. Run `openclaw doctor --fix` to move the value to `tools.updatePlan`.
 
 ### `agents.defaults.subagents`
 
@@ -584,16 +546,43 @@ sidebarTitle: "工具与自定义提供方"
     - `request.allowPrivateNetwork`：当为 `true` 时，允许模型 provider HTTP 请求通过 provider HTTP fetch 保护器访问私有、CGNAT 或类似网段。自定义/本地 provider 的 base URL 已经信任精确配置的来源，但元数据/链路本地来源仍会在没有显式允许的情况下被阻止。将其设为 `false` 可退出精确来源信任。WebSocket 会使用同一个 `request` 处理头/TLS，但不会使用该 fetch SSRF 门禁。默认值：`false`。
 
   </Accordion>
-  <Accordion title="模型目录条目">
-    - `models.providers.*.models`：显式的 provider 模型目录条目。
-    - `models.providers.*.models.*.input`：模型输入模态。纯文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。只有当所选模型被标记为支持图像时，图像附件才会注入到 agent 回合中。
-    - `models.providers.*.models.*.contextWindow`：原生模型上下文窗口元数据。它会覆盖该模型的 provider 级 `contextWindow`。
-    - `models.providers.*.models.*.contextTokens`：可选的运行时上下文上限。它会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时可使用它；`openclaw models list` 会在两者不同时时显示两个值。
-    - `models.providers.*.models.*.compat.supportsDeveloperRole`：可选兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（host 不是 `api.openai.com`）的情况，OpenClaw 会在运行时强制将其设为 `false`。空的/省略的 `baseUrl` 会保留默认 OpenAI 行为。
-    - `models.providers.*.models.*.compat.requiresStringContent`：面向仅支持字符串的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将纯文本 `messages[].content` 数组压平成普通字符串。
-    - `models.providers.*.models.*.compat.strictMessageKeys`：面向严格 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将输出的 Chat Completions 消息对象裁剪为仅保留 `role` 和 `content`。
-    - `models.providers.*.models.*.compat.thinkingFormat`：可选的 thinking 负载提示。Together 风格的 `reasoning.enabled` 使用 `"together"`，顶层 `enable_thinking` 使用 `"qwen"`，而 `chat_template_kwargs.enable_thinking` 使用 `"qwen-chat-template"`，适用于支持请求级 chat-template kwargs 的 Qwen 系列 OpenAI 兼容服务器，例如 vLLM。已配置的 vLLM Qwen 模型会为这些格式暴露二值 `/think` 选项（`off`、`on`）。
-    - `models.providers.*.models.*.compat.requiresReasoningContentOnAssistantMessages`：面向 DeepSeek 风格 Chat Completions 后端的可选兼容性提示，这类后端要求先前的 assistant 消息在重放时保留 `reasoning_content`。当为 `true` 时，OpenClaw 会在输出的 assistant 消息中保留该字段。把它用于连接会在移除推理内容后拒绝请求的自定义 DeepSeek 兼容代理。默认值：`false`。
+  <Accordion title="Model catalog entries">
+    - `models.providers.*.models`: explicit provider model catalog entries.
+    - `models.providers.*.models.*.input`: model input modalities. Use `["text"]` for text-only models and `["text", "image"]` for native image/vision models. Image attachments are only injected into agent turns when the selected model is marked image-capable.
+    - `models.providers.*.models.*.contextWindow`: native model context window metadata. This overrides provider-level `contextWindow` for that model.
+    - `models.providers.*.models.*.contextTokens`: optional runtime context cap. This overrides provider-level `contextTokens`; use it when you want a smaller effective context budget than the model's native `contextWindow`; `openclaw models list` shows both values when they differ.
+
+    #### Custom provider capability declarations
+
+    Provider catalogs own `compat` for bundled and catalog-known model routes. Do not copy those flags into config: OpenClaw uses the catalog row when the configured `api` and `baseUrl` still identify that route. `openclaw doctor --fix` removes matching legacy overrides and reports divergent values for review.
+
+    A `compat` block remains supported for a genuinely custom provider, custom model, or catalog model routed to a different endpoint. Set only capabilities verified against that endpoint:
+
+    | Custom-route key | Runtime contract |
+    | --- | --- |
+    | `supportsStore` | Accepts the OpenAI `store` request field. |
+    | `supportsPromptCacheKey` | Accepts OpenAI prompt-cache/session-affinity keys. |
+    | `supportsDeveloperRole` | Accepts `developer` messages instead of requiring `system`. |
+    | `supportsReasoningEffort` | Accepts a reasoning-effort control. |
+    | `supportsTemperature` | Accepts `temperature` for this model and adapter. |
+    | `supportsUsageInStreaming` | Emits usage metadata in streaming responses. |
+    | `supportsTools` | Supports structured tool/function calling. Set `false` to disable tools. |
+    | `supportsStrictMode` | Accepts strict tool schemas. |
+    | `requiresStringContent` | Requires plain-string Chat Completions message content. |
+    | `strictMessageKeys` | Requires outgoing messages to contain only accepted keys. |
+    | `visibleReasoningDetailTypes` | Names reasoning detail block types safe to show in transcripts. |
+    | `supportedReasoningEfforts` | Lists the endpoint's accepted reasoning labels. |
+    | `reasoningEffortMap` | Maps OpenClaw thinking labels to endpoint-specific labels. |
+    | `maxTokensField` | Selects `max_tokens` or `max_completion_tokens`. |
+    | `thinkingFormat` | Selects the endpoint's reasoning payload dialect. |
+    | `requiresToolResultName` | Requires a tool name on tool-result messages. |
+    | `requiresAssistantAfterToolResult` | Requires an assistant message after tool results. |
+    | `requiresThinkingAsText` | Replays reasoning as text rather than structured content. |
+    | `requiresReasoningContentOnAssistantMessages` | Preserves DeepSeek-style `reasoning_content` during replay. |
+    | `toolSchemaProfile` | Selects a provider-defined tool-schema normalization profile. |
+    | `unsupportedToolSchemaKeywords` | Removes named JSON Schema keywords rejected by the endpoint. |
+    | `toolCallArgumentsEncoding` | Selects the endpoint's tool-call argument encoding. |
+    | `requiresOpenAiAnthropicToolPayload` | Converts OpenAI-shaped tool calls to Anthropic-family payloads. |
 
   </Accordion>
   <Accordion title="Amazon Bedrock 发现">
@@ -768,8 +757,8 @@ sidebarTitle: "工具与自定义提供方"
       env: { SYNTHETIC_API_KEY: "sk-..." },
       agents: {
         defaults: {
-          model: { primary: "synthetic/hf:MiniMaxAI/MiniMax-M2.5" },
-          models: { "synthetic/hf:MiniMaxAI/MiniMax-M2.5": { alias: "MiniMax M2.5" } },
+          model: { primary: "synthetic/hf:MiniMaxAI/MiniMax-M3" },
+          models: { "synthetic/hf:MiniMaxAI/MiniMax-M3": { alias: "MiniMax M3" } },
         },
       },
       models: {
@@ -781,12 +770,12 @@ sidebarTitle: "工具与自定义提供方"
             api: "anthropic-messages",
             models: [
               {
-                id: "hf:MiniMaxAI/MiniMax-M2.5",
-                name: "MiniMax M2.5",
+                id: "hf:MiniMaxAI/MiniMax-M3",
+                name: "MiniMax M3",
                 reasoning: true,
-                input: ["text"],
+                input: ["text", "image"],
                 cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-                contextWindow: 192000,
+                contextWindow: 262144,
                 maxTokens: 65536,
               },
             ],

@@ -16,7 +16,7 @@ title: "SGLang 插件"
 
 ## 接口
 
-providers: sglang
+providers: `sglang`
 
 ## 相关文档
 

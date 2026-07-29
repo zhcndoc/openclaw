@@ -9,7 +9,7 @@ title: "Presence"
 
 OpenClaw 的 "presence" 是一种轻量级、尽力而为的视图，展示：
 
-- the **Gateway** itself, and
+- **Gateway** 本身，以及
 - **连接到 Gateway 的用户可见客户端**（mac app、WebChat、nodes 等）
 
 Presence 会在 Control UI 的 **Devices** 页面
@@ -51,7 +51,12 @@ CLI 命令、后端 RPC 客户端和探测通常只会短暂连接。为了避�
 
 ### 3) `system-event` beacon
 
-客户端可以通过 `system-event` 方法发送更丰富的周期性 beacon。mac 应用使用它来报告主机名、IP 和 `lastInputSeconds`。
+客户端可以通过 `system-event` 方法发送更丰富的周期性 beacon。mac
+应用使用它来报告主机名、IP、版本和存活元数据。物理
+输入活动不属于这个通用 beacon；在 [Active computer presence](/nodes/presence) 中描述的、
+面向特定用途的原生
+node 事件负责它。Mac 会用 `system-presence-clear-last-input` 标记这些 beacon；当前的 Gateway
+会使用这个向后兼容的标记来移除从较旧应用中保留的任何输入最近时间。该 beacon 还携带一个固定的 30 天值，以便忽略该标记的旧版 Gateway 会覆盖精确的最近时间，而不是保留它。为了兼容性，这个值不会采样任何新的活动。
 
 ### 4) Node 连接（role: node）
 
@@ -81,11 +86,11 @@ Presence 被刻意设计为短暂存在：
 
 ## 消费者
 
-### Control UI Devices page
+### Control UI Devices 页面
 
 **设备**页面将 `system-presence` 与持久配对和节点记录结合起来。它会优先固定 Gateway 自身的 beacon，并对 live platform、version、model 和 input-recency 元数据使用匹配的设备或实例 ID。
 
-### macOS Instances tab
+### macOS Instances 选项卡
 
 macOS 应用会渲染 `system-presence` 的输出，并根据最后更新时间的年龄应用一个小型状态指示器（Active/Idle/Stale）。
 
@@ -110,7 +115,7 @@ macOS 应用会渲染 `system-presence` 的输出，并根据最后更新时间�
     出站流式传输、分块以及按通道格式化。
   </Card>
   <Card title="网关架构" href="/concepts/architecture" icon="diagram-project">
-    Gateway 组件以及驱动 presence 更新的 WebSocket 协议。
+    网关组件以及驱动 presence 更新的 WebSocket 协议。
   </Card>
   <Card title="网关协议" href="/gateway/protocol" icon="plug">
     `connect`、`system-event` 和 `system-presence` 的线协议。

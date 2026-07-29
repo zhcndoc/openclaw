@@ -1,17 +1,19 @@
 ---
-summary: "安装用于本地 GGUF 内存嵌入的官方 llama.cpp provider"
+summary: "Run local GGUF text inference and memory embeddings in OpenClaw with llama.cpp"
 read_when:
-  - 你需要来自本地 GGUF 模型的内存搜索嵌入
-  - 你正在配置 memorySearch.provider = "local"
-  - 你需要拥有 node-llama-cpp 运行时的 OpenClaw 插件
+  - You want local text inference without an API key or model server
+  - You want memory search embeddings from a local GGUF model
+  - You are configuring memory.search.provider = "local"
+  - You need the OpenClaw plugin that owns the node-llama-cpp runtime
 title: "llama.cpp Provider"
 sidebarTitle: "llama.cpp Provider"
 ---
 
-`llama-cpp` 是用于本地 GGUF
-嵌入的官方外部 provider 插件。它注册嵌入 provider id `local`，并提供由 `memorySearch.provider: "local"` 使用的 `node-llama-cpp` 运行时依赖。
+`llama-cpp` is the official external provider plugin for in-process local GGUF
+text inference and embeddings. It registers text provider `llama-cpp`,
+embedding provider `local`, and owns the `node-llama-cpp` native runtime.
 
-在使用本地内存嵌入之前先安装它：
+Install it before using either local inference or local memory embeddings:
 
 ```bash
 openclaw plugins install @openclaw/llama-cpp-provider
@@ -19,19 +21,87 @@ openclaw plugins install @openclaw/llama-cpp-provider
 
 主 `openclaw` npm 包不包含 `node-llama-cpp`。将这个原生依赖保留在此插件中，可以防止正常的 OpenClaw npm 更新删除 OpenClaw 包目录中手动安装的运行时。
 
-## 配置
+## Local text inference
 
-将 `memorySearch.provider` 设置为 `local`：
+Choose **Local model (llama.cpp)** during interactive onboarding. OpenClaw asks
+before downloading the default model:
+
+`hf:bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf`
+
+The Qwen3 4B Instruct 2507 Q4_K_M file is about 2.5 GB. Budget roughly 3 GB of
+RAM for model weights, plus context and OpenClaw runtime overhead. The default
+context is automatically sized with an 8,192-token cap so it remains practical
+on 8 GB machines. Configure a larger context only when the machine has enough
+memory.
+
+The onboarding discovery check is read-only. It offers llama.cpp automatically
+only when the default or configured GGUF file is already in the model cache; it
+never downloads during discovery. Ollama and LM Studio remain separate local
+service choices and keep their own discovery flows. Manually choosing llama.cpp
+is the path that prompts for the default model download.
+
+The provider uses the GGUF model's embedded chat template and native
+node-llama-cpp function calling. Text streams token by token. Tool calls return
+to OpenClaw for execution rather than running inside node-llama-cpp.
+
+### Use another GGUF model
+
+Add a model to `models.providers.llama-cpp`. Put a local path or full `hf:` file
+URI in `params.modelPath`:
 
 ```json5
 {
+  models: {
+    mode: "merge",
+    providers: {
+      "llama-cpp": {
+        baseUrl: "local://llama-cpp",
+        api: "openai-completions",
+        params: {
+          modelCacheDir: "~/.node-llama-cpp/models",
+        },
+        models: [
+          {
+            id: "my-local-model",
+            name: "My local GGUF",
+            reasoning: false,
+            input: ["text"],
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            contextWindow: 8192,
+            maxTokens: 2048,
+            params: {
+              modelPath: "~/Models/my-model.Q4_K_M.gguf",
+              contextSize: 8192,
+            },
+            compat: { supportsTools: true },
+          },
+        ],
+      },
+    },
+  },
   agents: {
     defaults: {
-      memorySearch: {
-        provider: "local",
-        local: {
-          modelPath: "hf:ggml-org/embeddinggemma-300m-qat-q8_0-GGUF/embeddinggemma-300m-qat-Q8_0.gguf",
-        },
+      model: { primary: "llama-cpp/my-local-model" },
+    },
+  },
+}
+```
+
+Inference never downloads a missing model implicitly. For a custom `hf:` URI,
+download the GGUF into `modelCacheDir` first. Discovery uses node-llama-cpp's
+own read-only cache resolver, including repository, branch, and split-file naming.
+
+## Memory embedding configuration
+
+Set `memory.search.provider` to `local`:
+
+```json5
+{
+  memory: {
+    search: {
+      provider: "local",
+      local: {
+        modelPath: "hf:ggml-org/embeddinggemma-300m-qat-q8_0-GGUF/embeddinggemma-300m-qat-Q8_0.gguf",
       },
     },
   },
@@ -49,7 +119,7 @@ node-llama-cpp 的自动 GPU 层放置。这样 node-llama-cpp 就可以在
 保留其内存安全检查的同时，将模型和嵌入上下文一起装入内存。
 而使用 `"auto"` 时，node-llama-cpp 会保持其正常的自动放置行为。
 
-## 原生运行时
+## Native runtime
 
 使用 Node 24 可获得最顺畅的原生安装路径。使用
 pnpm 的源码检出可能需要批准并重新构建原生依赖：
@@ -59,7 +129,7 @@ pnpm approve-builds
 pnpm rebuild node-llama-cpp
 ```
 
-## 运行时诊断
+## Memory runtime diagnostics
 
 在提供程序加载完成后，运行 `openclaw memory status --deep`，以检查
 所选后端和构建、设备名称、GPU 卸载层数、请求的
@@ -78,4 +148,7 @@ pnpm rebuild node-llama-cpp
 2. 在本地安装/更新时使用 Node 24。
 3. 如果是从 pnpm 源码检出：先运行 `pnpm approve-builds`，然后运行 `pnpm rebuild node-llama-cpp`。
 
-如果想在不进行本地构建步骤的情况下获得更低门槛的本地嵌入，请将 `memorySearch.provider` 设置为远程嵌入提供方，例如 `lmstudio`、`ollama`、`openai` 或 `voyage`。
+For local inference without an in-process native dependency, use the Ollama or
+LM Studio provider instead. For lower-friction local embeddings, set
+`memory.search.provider` to a remote embedding provider such as `lmstudio`,
+`ollama`, `openai`, or `voyage` instead.

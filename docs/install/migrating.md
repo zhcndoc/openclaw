@@ -11,7 +11,7 @@ OpenClaw 支持三种迁移路径：从另一个代理系统导入、将现有�
 
 ## 从另一个代理系统导入
 
-捆绑的迁移提供器会将说明、MCP 服务器、技能、模型配置以及（可选）API 密钥导入到 OpenClaw 中。任何更改之前都会预览计划，报告中的机密信息会被隐藏，并且应用操作会由经过验证的备份提供支持。
+Bundled migration providers bring instructions, MCP servers, skills, model config, and (opt-in) API keys into OpenClaw. Plans are previewed before any change and secrets are redacted in reports. Standalone `openclaw migrate` is backed by a verified backup; fresh onboarding imports instead stage and verify local artifacts before publishing them with configuration committed before any irreversible external activation.
 
 <CardGroup cols={2}>
   <Card title="从 Claude 迁移" href="/install/migrating-claude" icon="brain">

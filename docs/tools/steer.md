@@ -30,7 +30,9 @@ sidebarTitle: "引导"
 
 `/queue steer` 会让普通的传入消息在活动运行仍在进行时尝试引导它们。`/steer <message>` 是一个显式命令，它会尝试在下一个受支持的运行时边界将该命令的消息注入活动运行，而不受已保存的 `/queue` 设置影响。当无法进行该注入时，会移除命令前缀，并将 `<message>` 作为普通提示继续处理。
 
-使用：
+显式的 `/steer`（以及 `/tell`）命令由 Gateway 支持。在 `openclaw chat` 或 `openclaw tui --local` 中，选择 `/queue steer` 并将引导内容作为普通消息发送；嵌入式运行时会应用相同的引导策略，而不会转发 Gateway 命令。
+
+使用方式：
 
 - 当你现在就想引导活动运行时，使用 `/steer <message>`。
 - 当你希望未来的普通消息默认引导活动运行时，使用 `/queue steer`。
@@ -55,7 +57,7 @@ sidebarTitle: "引导"
 
 ## 相关内容
 
-- [Slash commands](/tools/slash-commands)
-- [Command queue](/concepts/queue)
-- [Steering queue](/concepts/queue-steering)
-- [Sub-agents](/tools/subagents)
+- [斜杠命令](/tools/slash-commands)
+- [命令队列](/concepts/queue)
+- [控制队列](/concepts/queue-steering)
+- [子代理](/tools/subagents)
