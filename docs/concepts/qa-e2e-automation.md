@@ -213,12 +213,19 @@ explicit subset, including portable scenarios with no channel restriction.
 Matrix live implementations live under
 `extensions/qa-lab/src/live-transports/matrix/scenarios/`.
 
-The adapter provisions a disposable Tuwunel homeserver in Docker (default
-image `ghcr.io/matrix-construct/tuwunel:v1.5.1`, server name `matrix-qa.test`,
-port `28008`), registers temporary driver, SUT, and observer users, seeds the
-required rooms, and records the redacted request/response boundary. It then
-runs the real Matrix plugin inside a child QA gateway scoped to that transport
-(no `qa-channel`) and tears the environment down.
+The adapter provisions a disposable Tuwunel homeserver in Docker (default image
+`ghcr.io/matrix-construct/tuwunel:v1.8.2`, pinned to its multi-architecture OCI
+index digest; server name `matrix-qa.test`, port `28008`), registers temporary
+driver, SUT, and observer users, seeds the required rooms, and records the
+redacted request/response boundary. It then runs the real Matrix plugin inside
+a child QA gateway scoped to that transport (no `qa-channel`) and tears the
+environment down.
+
+The v1.8.2 GHCR index resolves to
+`sha256:6f950bb139411a7964781e986321e395e045e4a6a52240a4dda9d23d04075f78`.
+`docker buildx imagetools inspect ghcr.io/matrix-construct/tuwunel:v1.8.2`
+reports manifests for `linux/arm64`, `linux/amd64`, `linux/amd64/v2`, and
+`linux/amd64/v3`.
 
 Common options:
 
@@ -493,37 +500,17 @@ Required env when `--credential-source env`:
 - `OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN`
 - `OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN`
 
-The `release` profile selects the maintained Telegram YAML scenarios; `all`
-adds opt-in session, usage, reply-chain, and streaming stress checks. Explicit
-`--scenario` values override the profile.
+The `release` profile selects taxonomy-owned Telegram scenarios that declare
+the channel, use the flow execution kind, and match the requested provider and
+model lane. Explicit `--scenario` values narrow that same selection instead of
+bypassing its constraints. Use `pnpm openclaw qa telegram --list-scenarios
+--provider-mode mock-openai` to print the current selection with regression
+refs. Supplying `--model` applies the same model constraint to listing and
+execution.
 
-- `channel-canary`
-- `channel-mention-gating`
-- `telegram-help-command`
-- `telegram-commands-command`
-- `telegram-tools-compact-command`
-- `telegram-whoami-command`
-- `telegram-status-command`
-- `telegram-repeated-command-authorization`
-- `telegram-other-bot-command-gating`
-- `telegram-context-command`
-- `telegram-current-session-status-tool`
-- `telegram-tool-only-usage-footer`
-- `telegram-reply-chain-exact-marker`
-- `telegram-stream-final-single-message`
-- `telegram-long-final-reuses-preview`
-- `telegram-long-final-three-chunks`
-
-The `release` profile always covers canary, mention gating, native command
-replies, command addressing, and bot-to-bot group replies. `mock-openai`
-also includes the deterministic long-final preview check.
-`telegram-current-session-status-tool` and
-`telegram-tool-only-usage-footer` remain opt-in: the former is only stable
-when threaded directly after canary, and the latter is a real-Telegram proof
-of the `/usage` footer on tool-only replies. Use `pnpm openclaw qa telegram
---list-scenarios --provider-mode mock-openai` to print the current
-default/optional split with regression refs. Use `--profile all` for every
-Telegram live-adapter scenario.
+`telegram-startup-getme-live` is a catalog script producer, not a live-adapter
+flow. Run it through `qa suite --scenario telegram-startup-getme-live`; the
+dedicated `qa telegram` command and `--list-scenarios` intentionally omit it.
 
 Output artifacts:
 
@@ -1007,11 +994,10 @@ WhatsApp YAML scenarios (`qa/scenarios/channels/whatsapp-*.yaml`):
 - Status reactions: `whatsapp-status-reactions`,
   `whatsapp-status-reaction-lifecycle`.
 
-The catalog currently contains 52 scenarios. The `live-frontier` default lane
-is kept small at 8 scenarios for fast smoke coverage. The `mock-openai`
-default lane runs 39 scenarios deterministically through the real WhatsApp
-transport while mocking only model output; approval scenarios and a few
-heavier/blocking checks remain explicit by scenario id.
+WhatsApp defaults are derived from the selected taxonomy profile and lane
+constraints. `mock-openai` runs eligible scenarios deterministically through
+the real WhatsApp transport while mocking only model output; `live-frontier`
+excludes scenarios whose provider or model contract requires the mock lane.
 
 The WhatsApp QA driver observes structured live events (`text`, `media`,
 `location`, `reaction`, and `poll`) and can actively send media, polls,
