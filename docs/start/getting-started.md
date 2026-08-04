@@ -10,7 +10,7 @@ title: "入门"
 
 ## 你需要什么
 
-- **Node.js 22.22.3+, 24.15+, or 25.9+**（推荐使用 Node 26 运行时）
+- **Node.js 22.22.3+、24.15+ 或 25.9+**（推荐使用 Node 26 运行时）
 - **模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）——入门流程会提示你
 
 <Tip>
@@ -52,7 +52,7 @@ title: "入门"
     ```
 
     向导会引导你选择模型提供商、设置 API 密钥，
-    并配置 Gateway。QuickStart 通常只需几分钟，但
+    并配置 Gateway。快速开始通常只需几分钟，但
     提供商登录、通道配对、daemon 安装、网络下载、技能，
     或可选插件都可能让完整的引导过程花费更长时间。你可以跳过可选
     步骤，稍后再使用 `openclaw configure` 返回继续。
@@ -73,11 +73,11 @@ title: "入门"
     openclaw dashboard
     ```
 
-    这会在你的浏览器中打开 Control UI。如果成功加载，一切就正常了。
+    这会在你的浏览器中打开控制界面。如果成功加载，一切就正常了。
 
   </Step>
   <Step title="发送你的第一条消息">
-    在 Control UI 聊天中输入一条消息，你应该会收到 AI 回复。
+    在控制界面聊天中输入一条消息，你应该会收到 AI 回复。
 
     想改用手机聊天？最容易设置的渠道是
     [Telegram](/channels/telegram)（只需要一个机器人令牌）。查看 [渠道](/channels)
@@ -86,7 +86,7 @@ title: "入门"
   </Step>
 </Steps>
 
-<Accordion title="高级：挂载自定义 Control UI 构建">
+<Accordion title="高级：挂载自定义控制界面构建">
   如果你维护本地化或自定义的仪表板构建，请将
   `gateway.controlUi.root` 指向一个包含你构建好的静态
   资源和 `index.html` 的目录。
@@ -103,7 +103,7 @@ mkdir -p "$HOME/.openclaw/control-ui-custom"
   "gateway": {
     "controlUi": {
       "enabled": true,
-      "root": "~/.openclaw/control-ui-custom"
+      "root": "${HOME}/.openclaw/control-ui-custom"
     }
   }
 }

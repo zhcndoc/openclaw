@@ -20,7 +20,7 @@ title: "策略"
 只需要没有证明或漂移检测的本地行为，普通配置就足够了。
 
 另外，[`openclaw agent exec`](/cli/agent#agent-exec) 会为每次运行应用一个隔离的
-隐式策略配置：代理沙箱关闭，Gateway 主机执行完全允许，并且文件系统工具仅限于 `--cwd`。
+隐式策略配置：代理沙箱关闭，Gateway 主机执行完全允许，并且文件系统工具仅限于 `--cwd`】【。
 
 ## 快速开始
 
@@ -173,13 +173,13 @@ openclaw plugins enable policy
 
 以下是规则表中不太明显的跨领域说明：
 
-- 如果在禁止非 loopback 绑定时省略 `gateway.bind`，则表示你接受运行时默认值；若要严格符合要求，请将 `gateway.bind` 设为 `"loopback"`。
-- 对于只读 agent，请在适用的 defaults/agent 上将 sandbox `mode` 设为 `all` 或 `non-main`，并将 `workspaceAccess` 设为 `none` 或 `ro`。缺失或 `off` 的 sandbox 模式不满足只读策略。
-- `agents.workspace.denyTools` 接受 `exec`、`process`、`write`、`edit`、`apply_patch`。配置中的工具拒绝组 `group:fs`（文件修改）和 `group:runtime`（shell/process）可满足等效的安全姿态。
+- 如果在禁止非回环绑定时省略 `gateway.bind`，则表示你接受运行时默认值；若要严格符合要求，请将 `gateway.bind` 设为 `"loopback"`。
+- 对于只读代理，请在适用的默认设置/代理上将沙箱 `mode` 设为 `all` 或 `non-main`，并将 `workspaceAccess` 设为 `none` 或 `ro`。缺失或为 `off` 的沙箱模式不满足只读策略。
+- `agents.workspace.denyTools` 接受 `exec`、`process`、`write`、`edit`、`apply_patch`。配置中的工具拒绝组 `group:fs`（文件修改）和 `group:runtime`（shell/进程）可满足等效的安全姿态。
 - 当存在 `execApprovals` 规则时，exec-approvals 检查只读取实时 SQLite approvals 文档；缺失或无效的工件属于不可观测证据，而不是人为构造的通过结果。
-- secrets 和 auth-profile 证据仅记录 provider/source 姿态以及 SecretRef 元数据，绝不记录原始值。Policy 不会读取或证明按 agent 分开的凭据存储，例如 `auth-profiles.json`。
+- secrets 和 auth-profile 证据仅记录 provider/source 姿态以及 SecretRef 元数据，绝不记录原始值。Policy 不会读取或证明按代理分开的凭据存储，例如 `auth-profiles.json`。
 - data-handling 证据是配置级别的姿态（telemetry 捕获开关、session maintenance 模式、transcript-indexing 设置）以及始终开启的日志脱敏不变量。它不会检查日志、telemetry 导出、转录内容或 memory 文件，而干净的结果也不能证明其中不存在个人数据或密钥。
-- routing probes 会复用 OpenClaw 的运行时 binding resolver。Routing 证据仅记录 probe id、解析出的 agent、匹配类型以及经过脱敏的 binding 元数据。它绝不会记录 peer、account、guild、team 或 role 标识符。添加 routing section 会有意改变 policy 和 attestation 哈希；不包含 routing 的 policies 会保留其现有的证据形态。
+- routing probes 会复用 OpenClaw 的运行时 binding resolver。Routing 证据仅记录 probe id、解析出的代理、匹配类型以及经过脱敏的 binding 元数据。它绝不会记录 peer、account、guild、team 或 role 标识符。添加 routing section 会有意改变 policy 和 attestation 哈希；不包含 routing 的 policies 会保留其现有的证据形态。
 
 ### Policy 规则参考
 
@@ -260,9 +260,11 @@ openclaw plugins enable policy
 
 如果每个作用域管辖的是不同字段，那么同一个代理可以出现在多个作用域中，如上所示。对于同一个代理重复出现的作用域字段必须同样或更严格；更宽松的重复声明会被拒绝（允许列表必须是子集，拒绝列表必须是超集，必需布尔值必须固定）。
 
-容器姿态规则（`sandbox.containers.*`）只会根据匹配代理的 sandbox 后端能够暴露的证据进行检查。如果某个后端无法观察到你为其启用的规则，policy 会报告 `policy/sandbox-container-posture-unobservable` 而不是通过；请将容器规则限定到使用能够暴露这些规则的后端的代理组。
+容器姿态规则（`sandbox.containers.*`）仅根据匹配代理的 sandbox 后端能够暴露的证据进行检查。Docker 和 Podman 后端会暴露相同的 `sandbox.docker.*` 容器姿态设置。如果某个后端无法观察到为其启用的规则，策略会报告 `policy/sandbox-container-posture-unobservable`，而不是判定通过；应将容器规则限定在使用能够暴露这些规则的后端的代理组中。
 
-顶层 `ingress.session.requireDmScope` 保持全局；`session.dmScope` 不是可归属于通道的证据，因此不能按 `channelIds` 进行作用域划分。
+后端授权使用已配置的身份。`backend: "docker"` 要求 `allowBackends: ["docker"]`，而 `backend: "podman"` 要求 `allowBackends: ["podman"]`。
+
+顶层的 `ingress.session.requireDmScope` 保持全局生效；`session.dmScope` 不是可归属于通道的证据，因此不能通过 `channelIds` 设置作用域。
 
 `policy.jsonc` 中出现的每个 scope 都必须有效且可执行。
 
@@ -273,7 +275,7 @@ openclaw plugins enable policy
 | `channels.denyRules[].when.provider` | `channels.*` provider 和启用状态     | 拒绝来自例如 `telegram` 之类 provider 的已配置 channels。 |
 | `channels.denyRules[].reason`        | 发现消息和修复提示上下文             | 解释为什么该 provider 被拒绝。                            |
 
-#### MCP servers
+#### MCP 服务器
 
 | Policy 字段        | 观察到的状态      | 适用场景                                                   |
 | ------------------- | ------------------- | ---------------------------------------------------------- |
@@ -293,42 +295,42 @@ openclaw plugins enable policy
 | ------------------------------ | ----------------------------------- | ------------------------------------------------------------------ |
 | `network.privateNetwork.allow` | 私有网络 SSRF 逃逸通道              | 设置为 `false` 以要求私有网络访问保持禁用。                       |
 
-#### Message routing
+#### 消息路由
 
-| Policy field                        | Observed state                                      | Use when                                                               |
+| Policy 字段                        | 观察到的状态                                      | 适用场景                                                               |
 | ----------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
-| `routing.requireBindings`           | Channel route bindings, excluding ACP bindings      | Require at least one message-routing binding.                          |
-| `routing.requireConfiguredChannels` | Binding channel ids and configured `channels.*` ids | Detect stale or misspelled binding channel ids.                        |
-| `routing.probes[].route`            | The public OpenClaw route resolver                  | Describe a representative inbound route without sending a message.     |
-| `routing.probes[].expect.agentId`   | Resolved agent id                                   | Require the route to reach the reviewed agent.                         |
-| `routing.probes[].expect.matchedBy` | Resolver match kind                                 | Require peer, account, channel, or other reviewed binding specificity. |
+| `routing.requireBindings`           | 通道路由绑定，不包括 ACP 绑定                      | 要求至少存在一个消息路由绑定。                                         |
+| `routing.requireConfiguredChannels` | 绑定通道 id 和已配置的 `channels.*` id             | 检测已失效或拼写错误的绑定通道 id。                                    |
+| `routing.probes[].route`            | OpenClaw 的公共路由解析器                          | 描述一个代表性的入站路由，而不发送消息。                               |
+| `routing.probes[].expect.agentId`   | 已解析的代理 id                                    | 要求路由到达经过审查的代理。                                           |
+| `routing.probes[].expect.matchedBy` | 解析器匹配类型                                    | 要求使用经过审查的绑定特异性，例如 peer、account、channel 或其他类型。 |
 
 探测 id 必须唯一。路由支持 `channel`、可选的 `accountId`、`peer`、`parentPeer`、`guildId`、`teamId` 和 `memberRoleIds`。Peer 类型为 `direct`、`group` 和 `channel`。`matchedBy` 可以包含一个或多个运行时匹配类型，包括 `binding.peer`、`binding.account`、`binding.channel` 或 `default`。
 
 路由检查仅用于一致性验证。它们不会改变启动、消息投递、绑定优先级或回退行为。发现项需要操作员审查，因为自动更改绑定可能会重定向私信。
 
-#### Ingress 和通道访问
+#### 入口和通道访问
 
-| Policy 字段                              | 观察到的状态                                                 | Use when                                                           |
+| Policy 字段                              | 观察到的状态                                                 | 适用场景                                                           |
 | ----------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `ingress.session.requireDmScope`          | `session.dmScope`                                              | 要求经过审查的 direct-message 隔离范围。                           |
-| `ingress.channels.allowDmPolicies`        | `channels.*.dmPolicy` and legacy channel DM policy fields      | 仅允许经过审查的 direct-message channel policy。                  |
-| `ingress.channels.denyOpenGroups`         | Channel, account, and group ingress policy                     | 拒绝已配置 channels 和 accounts 的开放 group ingress。             |
-| `ingress.channels.requireMentionInGroups` | Channel, account, group, guild, and nested mention gate config | 当 group ingress 处于开放或需要 mention gate 时，要求 mention gate。 |
+| `ingress.channels.allowDmPolicies`        | `channels.*.dmPolicy` 和旧版通道 DM policy 字段                | 仅允许经过审查的 direct-message 通道策略。                         |
+| `ingress.channels.denyOpenGroups`         | 通道、账户和群组入口策略                                        | 拒绝已配置 channels 和 accounts 的开放群组入口。                    |
+| `ingress.channels.requireMentionInGroups` | 通道、账户、群组、guild 和嵌套的提及门控配置                    | 当群组入口处于开放状态或需要提及门控时，要求启用提及门控。          |
 
 #### 网关
 
-| Policy field                            | Observed state                                | Use when                                                                             |
+| Policy 字段                            | 观察到的状态                                | 适用场景                                                                             |
 | --------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `gateway.exposure.allowNonLoopbackBind` | `gateway.bind`                                | Set to `false` to require loopback Gateway binding.                                  |
-| `gateway.exposure.allowTailscaleFunnel` | Tailscale serve/funnel Gateway posture        | Set to `false` to deny Tailscale Funnel exposure.                                    |
-| `gateway.auth.requireAuth`              | `gateway.auth.mode`                           | Set to `true` to reject disabled Gateway auth.                                       |
-| `gateway.auth.requireExplicitRateLimit` | `gateway.auth.rateLimit`                      | Set to `true` to require explicit auth rate-limit config.                            |
-| `gateway.controlUi.allowInsecure`       | Device-identity invariant and origin fallback | Set to `false` to require device identity and deny Host-header origin fallback.      |
-| `gateway.remote.allow`                  | Remote Gateway mode/config                    | Set to `false` to deny remote Gateway mode.                                          |
-| `gateway.http.denyEndpoints`            | Gateway HTTP API endpoints                    | Deny endpoint ids such as `chatCompletions` or `responses`.                          |
-| `gateway.http.requireUrlAllowlists`     | Gateway HTTP URL-fetch inputs                 | Set to `true` to require URL allowlists on URL-fetch inputs.                         |
-| `gateway.nodes.denyCommands`            | `gateway.nodes.commands.deny`                 | Require exact node command ids such as `system.run` to be denied in OpenClaw config. |
+| `gateway.exposure.allowNonLoopbackBind` | `gateway.bind`                                | 设置为 `false` 以要求网关绑定到回环地址。                                            |
+| `gateway.exposure.allowTailscaleFunnel` | Tailscale serve/funnel 网关姿态               | 设置为 `false` 以拒绝 Tailscale Funnel 暴露。                                        |
+| `gateway.auth.requireAuth`              | `gateway.auth.mode`                           | 设置为 `true` 以拒绝禁用网关身份验证的配置。                                         |
+| `gateway.auth.requireExplicitRateLimit` | `gateway.auth.rateLimit`                      | 设置为 `true` 以要求显式配置身份验证速率限制。                                      |
+| `gateway.controlUi.allowInsecure`       | 设备身份不变量和来源回退                      | 设置为 `false` 以要求设备身份，并拒绝 Host 标头来源回退。                            |
+| `gateway.remote.allow`                  | 远程网关模式/配置                             | 设置为 `false` 以拒绝远程网关模式。                                                  |
+| `gateway.http.denyEndpoints`            | 网关 HTTP API 端点                             | 拒绝 `chatCompletions` 或 `responses` 等端点 id。                                    |
+| `gateway.http.requireUrlAllowlists`     | 网关 HTTP URL 获取输入                        | 设置为 `true` 以要求在 URL 获取输入上配置 URL 允许列表。                             |
+| `gateway.nodes.denyCommands`            | `gateway.nodes.commands.deny`                 | 要求在 OpenClaw 配置中明确拒绝 `system.run` 等精确的节点命令 id。                    |
 
 `gateway.nodes.denyCommands` 是一个精确、区分大小写的策略拒绝超集规则。
 当 policy 必须证明特权节点命令已被 OpenClaw 配置明确拒绝时，请使用它。
@@ -336,40 +338,40 @@ openclaw plugins enable policy
 
 #### 代理工作区
 
-| Policy field                     | Observed state                                                                           | Use when                                                                                 |
+| Policy 字段                     | 观察到的状态                                                                           | 适用场景                                                                                 |
 | -------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `agents.workspace.allowedAccess` | `agents.defaults.sandbox.workspaceAccess` and `agents.entries.*.sandbox.workspaceAccess` | Allow only sandbox workspace access values such as `none` or `ro`.                       |
-| `agents.workspace.denyTools`     | Global and per-agent tool deny config                                                    | Require mutation tools (`exec`, `process`, `write`, `edit`, `apply_patch`) to be denied. |
+| `agents.workspace.allowedAccess` | `agents.defaults.sandbox.workspaceAccess` 和 `agents.entries.*.sandbox.workspaceAccess` | 仅允许 `none` 或 `ro` 等 sandbox 工作区访问值。                                         |
+| `agents.workspace.denyTools`     | 全局及按代理设置的工具拒绝配置                                                            | 要求拒绝变更工具（`exec`、`process`、`write`、`edit`、`apply_patch`）。                  |
 
 #### Sandbox 姿态
 
-| Policy 字段                                          | 观察到的状态                                          | 适用场景                                                       |
-| ----------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------- |
-| `sandbox.requireMode`                                 | `agents.defaults.sandbox.mode` and per-agent mode       | 仅允许经过审查的 sandbox mode，例如 `all` 或 `non-main`。      |
-| `sandbox.allowBackends`                               | `agents.defaults.sandbox.backend` and per-agent backend | 仅允许经过审查的 sandbox backend，例如 `docker`。              |
-| `sandbox.containers.denyHostNetwork`                  | Container-backed sandbox/browser network mode           | 拒绝 host network mode。                                        |
-| `sandbox.containers.denyContainerNamespaceJoin`       | Container-backed sandbox/browser network mode           | 拒绝加入另一个 container network namespace。                    |
-| `sandbox.containers.requireReadOnlyMounts`            | Container-backed sandbox/browser mount mode             | 要求挂载为只读。                                                |
-| `sandbox.containers.denyContainerRuntimeSocketMounts` | Container-backed sandbox/browser mount targets          | 拒绝 container runtime socket 挂载。                            |
-| `sandbox.containers.denyUnconfinedProfiles`           | Container security profile posture                      | 拒绝 unconfined container security profile。                    |
-| `sandbox.browser.requireCdpSourceRange`               | Sandbox browser CDP source range                        | 要求 browser CDP 暴露声明 source range。                        |
+| Policy 字段                                          | 观察到的状态                                          | 适用场景                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------ |
+| `sandbox.requireMode`                                 | `agents.defaults.sandbox.mode` 和按代理设置的 mode       | 仅允许 `all` 或 `non-main` 等经过审查的 sandbox 模式。              |
+| `sandbox.allowBackends`                               | `agents.defaults.sandbox.backend` 和按代理设置的 backend | 仅允许 `docker` 或 `podman` 等经过审查的 sandbox 后端。             |
+| `sandbox.containers.denyHostNetwork`                  | 基于容器的 sandbox/浏览器网络模式                       | 拒绝主机网络模式。                                                  |
+| `sandbox.containers.denyContainerNamespaceJoin`       | 基于容器的 sandbox/浏览器网络模式                       | 拒绝加入其他容器的网络命名空间。                                    |
+| `sandbox.containers.requireReadOnlyMounts`            | 基于容器的 sandbox/浏览器挂载模式                       | 要求挂载为只读。                                                    |
+| `sandbox.containers.denyContainerRuntimeSocketMounts` | 基于容器的 sandbox/浏览器挂载目标                       | 拒绝挂载容器运行时套接字。                                          |
+| `sandbox.containers.denyUnconfinedProfiles`           | 容器安全配置文件姿态                                   | 拒绝不受限的容器安全配置文件。                                      |
+| `sandbox.browser.requireCdpSourceRange`               | Sandbox 浏览器 CDP 源范围                              | 要求浏览器 CDP 暴露声明源范围。                                     |
 
 策略将缺失的 `sandbox.mode` 视为其隐含默认值 `off`，因此 `sandbox.requireMode` 会将新建或未配置的 sandbox 视为不在诸如 `["all"]` 之类的允许列表中。
 
 #### 数据处理
 
-| Policy field                                        | Observed state                                                                                     | Use when                                                               |
+| Policy 字段                                        | 观察到的状态                                                                                     | 适用场景                                                               |
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `dataHandling.sensitiveLogging.requireRedaction`    | Runtime invariant `oc://openclaw.invariant/logging/redaction`                                      | Set to `true` to record the requirement; OpenClaw always satisfies it. |
-| `dataHandling.telemetry.denyContentCapture`         | `diagnostics.otel.captureContent`                                                                  | Set to `true` to reject telemetry content capture.                     |
-| `dataHandling.retention.requireSessionMaintenance`  | `session.maintenance.mode`                                                                         | Set to `true` to require effective session maintenance mode `enforce`. |
-| `dataHandling.memory.denySessionTranscriptIndexing` | `memory.qmd.sessions.enabled`, `memory.search.experimental.sessionMemory`, and per-agent overrides | Set to `true` to reject session transcript indexing into memory.       |
+| `dataHandling.sensitiveLogging.requireRedaction`    | 运行时不变量 `oc://openclaw.invariant/logging/redaction`                                             | 设置为 `true` 以记录该要求；OpenClaw 始终满足它。                       |
+| `dataHandling.telemetry.denyContentCapture`         | `diagnostics.otel.captureContent`                                                                  | 设置为 `true` 以拒绝遥测内容捕获。                                     |
+| `dataHandling.retention.requireSessionMaintenance`  | `session.maintenance.mode`                                                                         | 设置为 `true` 以要求有效的会话维护模式为 `enforce`。                   |
+| `dataHandling.memory.denySessionTranscriptIndexing` | `memory.qmd.sessions.enabled`、`memory.search.experimental.sessionMemory` 和按代理设置的覆盖项 | 设置为 `true` 以拒绝将会话记录索引到内存中。                           |
 
 #### Secrets
 
 | Policy 字段                      | 观察到的状态                                           | 适用场景                                                                |
 | --------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `secrets.requireManagedProviders` | 配置的 SecretRefs 和 `secrets.providers.*` 声明         | 设置为 `true` 以要求 SecretRefs 指向已声明的 provider。                 |
+| `secrets.requireManagedProviders` | 已配置的 SecretRefs 和 `secrets.providers.*` 声明         | 设置为 `true` 以要求 SecretRefs 指向已声明的 provider。                 |
 | `secrets.denySources`             | secret provider 来源和 SecretRef 来源                    | 拒绝诸如 `exec`、`file` 或其他已配置来源名称。                           |
 | `secrets.allowInsecureProviders`  | 不安全 secret-provider 姿态标志                         | 设置为 `false` 以拒绝选择进入不安全姿态的 provider。                    |
 
@@ -378,13 +380,13 @@ openclaw plugins enable policy
 Exec-approvals 检查默认读取运行时 `exec_approvals_config` 单例行，位置在 `~/.openclaw/state/openclaw.sqlite`；当设置了 `OPENCLAW_STATE_DIR` 时，则读取 `$OPENCLAW_STATE_DIR/state` 下的同一数据库。发现项会保留稳定的 `oc://exec-approvals.json/...` URI 方案；现在它表示该行中存储的权威 JSON 文档内的路径。
 `execApprovals.defaults.*` 或 `execApprovals.agents.*` 下的姿态规则需要可读的工件证据；缺失或无效的工件会被报告为不可观察证据，而不是尽力通过。一旦可读，省略字段会继承运行时默认值：缺失的 `defaults.security` 为 `full`，缺失的代理 security 也会继承该默认值。证据包括 `defaults`、`agents.*`、`agents.*.allowlist[].pattern`、可选的 `argPattern`、有效的 `autoAllowSkills` 姿态以及条目来源——绝不包括 socket 路径/token、`commandText`、`lastUsedCommand`、解析后的路径或时间戳。
 
-| Policy field                                | Observed state                                                                         | Use when                                                                                |
+| Policy 字段                                | 观察到的状态                                                                         | 适用场景                                                                                |
 | ------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `execApprovals.requireFile`                 | Active runtime `exec_approvals_config` row                                             | Set to `true` to require the approvals document to exist and parse.                     |
-| `execApprovals.defaults.allowSecurity`      | `defaults.security`, defaulting to `full`                                              | Allow only approved default approval security modes.                                    |
-| `execApprovals.agents.allowSecurity`        | `agents.*.security`, inheriting defaults                                               | Allow only approved per-agent effective approval security modes.                        |
-| `execApprovals.agents.allowAutoAllowSkills` | `defaults.autoAllowSkills` and `agents.*.autoAllowSkills`, inheriting runtime defaults | Set to `false` to require strict manual allowlists without implicit skill CLI approval. |
-| `execApprovals.agents.allowlist.expected`   | Aggregate `agents.*.allowlist[]` pattern and optional argPattern entries               | Require the approvals allowlist to match the reviewed pattern set.                      |
+| `execApprovals.requireFile`                 | 活跃运行时的 `exec_approvals_config` 行                                                | 设置为 `true` 以要求 approvals 文档存在且可解析。                                        |
+| `execApprovals.defaults.allowSecurity`      | `defaults.security`，默认为 `full`                                                     | 仅允许经过批准的默认审批安全模式。                                                      |
+| `execApprovals.agents.allowSecurity`        | `agents.*.security`，继承 defaults                                                     | 仅允许经过批准的按代理设置的有效审批安全模式。                                           |
+| `execApprovals.agents.allowAutoAllowSkills` | `defaults.autoAllowSkills` 和 `agents.*.autoAllowSkills`，继承运行时默认值                | 设置为 `false` 以要求严格的手动允许列表，不隐式批准 skill CLI。                          |
+| `execApprovals.agents.allowlist.expected`   | 汇总的 `agents.*.allowlist[]` pattern 和可选的 argPattern 条目                          | 要求 approvals 允许列表与经过审查的模式集合匹配。                                       |
 
 示例：要求 approvals 工件、拒绝宽松默认值，并仅允许为选定代理审查过的 exec approval 姿态。
 
@@ -433,22 +435,22 @@ Exec-approvals 检查默认读取运行时 `exec_approvals_config` 单例行，�
 
 #### 工具元数据
 
-| Policy field            | Observed state                         | Use when                                                                                   |
+| Policy 字段            | 观察到的状态                         | 适用场景                                                                                   |
 | ----------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `tools.requireMetadata` | Governed `AGENTS.md` tool declarations | Require governed tools to declare metadata keys such as `risk`, `sensitivity`, or `owner`. |
+| `tools.requireMetadata` | 受管控的 `AGENTS.md` 工具声明          | 要求受管控工具声明 `risk`、`sensitivity` 或 `owner` 等元数据键。                         |
 
 #### 工具姿态
 
 | Policy 字段                    | 观察到的状态                                              | 适用场景                                                                                                 |
 | ------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `tools.profiles.allow`          | `tools.profile` and `agents.entries.*.tools.profile`        | Allow only tool profile ids such as `minimal`, `messaging`, or `coding`.                                 |
-| `tools.fs.requireWorkspaceOnly` | `tools.fs.workspaceOnly` and per-agent `tools.fs` overrides | Set to `true` to require workspace-only filesystem tool posture.                                         |
-| `tools.exec.allowSecurity`      | `tools.exec.security` and per-agent exec security           | Allow only exec security modes such as `deny` or `allowlist`.                                            |
-| `tools.exec.requireAsk`         | `tools.exec.ask` and per-agent exec ask mode                | Require approval posture such as `always`.                                                               |
-| `tools.exec.allowHosts`         | `tools.exec.host` and per-agent exec host routing           | Allow only exec host routing modes such as `sandbox`.                                                    |
-| `tools.elevated.allow`          | `tools.elevated.enabled` and per-agent elevated posture     | Set to `false` to require elevated tool mode to stay disabled.                                           |
-| `tools.alsoAllow.expected`      | `tools.alsoAllow` and per-agent `tools.alsoAllow`           | Require exact `alsoAllow` entries and report missing or unexpected additive tool grants.                 |
-| `tools.denyTools`               | `tools.deny` and `agents.entries.*.tools.deny`              | Require configured tool deny lists to include tool ids or groups such as `group:runtime` and `group:fs`. |
+| `tools.profiles.allow`          | `tools.profile` 和 `agents.entries.*.tools.profile`        | 仅允许 `minimal`、`messaging` 或 `coding` 等工具配置文件 id。                                             |
+| `tools.fs.requireWorkspaceOnly` | `tools.fs.workspaceOnly` 和按代理设置的 `tools.fs` 覆盖项 | 设置为 `true` 以要求仅限工作区的文件系统工具姿态。                                                       |
+| `tools.exec.allowSecurity`      | `tools.exec.security` 和按代理设置的 exec security         | 仅允许 `deny` 或 `allowlist` 等 exec 安全模式。                                                          |
+| `tools.exec.requireAsk`         | `tools.exec.ask` 和按代理设置的 exec ask 模式              | 要求 `always` 等审批姿态。                                                                              |
+| `tools.exec.allowHosts`         | `tools.exec.host` 和按代理设置的 exec 主机路由             | 仅允许 `sandbox` 等 exec 主机路由模式。                                                                 |
+| `tools.elevated.allow`          | `tools.elevated.enabled` 和按代理设置的 elevated 姿态     | 设置为 `false` 以要求保持禁用提升的工具模式。                                                           |
+| `tools.alsoAllow.expected`      | `tools.alsoAllow` 和按代理设置的 `tools.alsoAllow`         | 要求精确的 `alsoAllow` 条目，并报告缺失或意外的附加工具授权。                                            |
+| `tools.denyTools`               | `tools.deny` 和 `agents.entries.*.tools.deny`              | 要求配置的工具拒绝列表包含 `group:runtime` 和 `group:fs` 等工具 id 或工具组。                           |
 
 ## 运行检查
 
@@ -708,7 +710,7 @@ openclaw policy watch --json
 
 ## 发现项
 
-| Check id                                                 | 发现内容                                                                          |
+| 检查 ID                                                   | 发现内容                                                                          |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `policy/policy-jsonc-missing`                            | 策略已启用，但缺少 `policy.jsonc`。                                                |
 | `policy/policy-jsonc-invalid`                            | 策略无法解析，或包含格式错误的规则条目。                                           |
@@ -737,7 +739,7 @@ openclaw policy watch --json
 | `policy/gateway-control-ui-insecure`                     | 网关控制 UI 的不安全暴露开关已启用。                                                |
 | `policy/gateway-tailscale-funnel`                        | 当策略拒绝时，网关 Tailscale Funnel 暴露已启用。                                     |
 | `policy/gateway-remote-enabled`                          | 当策略拒绝时，网关远程模式处于活动状态。                                            |
-| `policy/gateway-http-endpoint-enabled`                   | 在策略拒绝时，网关 HTTP API 端点已启用。                                            |
+| `policy/gateway-http-endpoint-enabled`                   | 在策略拒绝时，网关 HTTP API 端点已启用。                                             |
 | `policy/gateway-http-url-fetch-unrestricted`             | 网关 HTTP URL 抓取输入缺少必需的 URL 允许列表。                                      |
 | `policy/gateway-node-command-denied`                     | 被策略拒绝的网关节点命令未被 OpenClaw 配置拒绝。                                    |
 | `policy/agents-workspace-access-denied`                  | agent 沙箱模式或工作区访问超出了策略允许列表。                                      |
@@ -938,7 +940,7 @@ Gateway 绑定和节点命令的发现仍需人工审查。当 `policy/gateway-n
 
 ## 退出代码
 
-| Command          | `0`                                                    | `1`                                                                 | `2`                          |
+| 命令             | `0`                                                    | `1`                                                                 | `2`                          |
 | ---------------- | ------------------------------------------------------ | ------------------------------------------------------------------- | ---------------------------- |
 | `policy check`   | 阈值下无发现项。                                       | 一项或多项发现达到了阈值。                                           | 参数或运行时失败。           |
 | `policy compare` | 策略文件至少与基线一样严格。                           | 策略文件无效、缺失，或比基线规则更宽松。                             | 参数或运行时失败。           |
@@ -947,4 +949,4 @@ Gateway 绑定和节点命令的发现仍需人工审查。当 `policy/gateway-n
 ## 相关
 
 - [Doctor lint 模式](/cli/doctor#lint-mode)
-- [Path CLI](/cli/path)
+- [Path 命令行工具](/cli/path)

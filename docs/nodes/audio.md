@@ -5,7 +5,11 @@ read_when:
 title: "音频和语音笔记"
 ---
 
-## 它的作用
+本页面介绍入站转写和语音笔记处理。有关 OpenClaw
+聊天客户端中的内联音频和视频播放器，请参阅
+[媒体播放](/nodes/media-playback)。
+
+## 功能说明
 
 当启用（或自动检测到）音频理解时，OpenClaw 会：
 
@@ -33,9 +37,9 @@ title: "音频和语音笔记"
 安装/链接来源只是能力证据，不是执行证据。它本身绝不会把某个候选项排到 CPU sherpa 之前。OpenClaw 在设置或状态检查期间不会为了探测后端而加载模型。
 自动检测到的 whisper.cpp 会保持其正常的模型运行日志启用，这样 OpenClaw 就可以记录上游的 `using … backend` 行。显式的 CLI 条目会保留其配置的输出标志。
 
-用于媒体理解的 Gemini CLI 自动检测已被带沙箱的 Antigravity CLI（`agy`）回退方案取代，用于图像/视频；音频除上述本地二进制外不使用 CLI 回退。
+Gemini CLI 和 Antigravity 不会针对媒体理解进行自动检测。音频不会使用上述本地二进制文件之外的 CLI 回退选项。
 
-To disable auto-detection, set `tools.media.audio.enabled: false`. To customize, add capability-tagged entries to `tools.media.models`.
+要禁用自动检测，请设置 `tools.media.audio.enabled: false`。要进行自定义，请向 `tools.media.models` 添加带有能力标签的条目。
 
 <Note>
 二进制检测在 macOS/Linux/Windows 上尽力而为。请确保该 CLI 位于 `PATH` 中（会展开 `~`），或使用完整命令路径显式设置一个 CLI 模型。
@@ -48,7 +52,7 @@ openclaw capability audio providers
 openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-min info
 ```
 
-The provider inventory reports the local fallback winner separately from global provider selection, plus capable, requested, and observed backend fields. After transcription runs, `/status` reports the requested or observed backend in the media line. Explicit audio-capable `tools.media.models` CLI entries still bypass auto-selection; use their backend-specific flags such as sherpa `--provider=cuda` or whisper.cpp `--no-gpu`/`--device`.
+提供商清单会将本地回退项的胜出者与全局提供商选择分开报告，并额外报告具备能力的、请求的以及观察到的后端字段。转写运行后，`/status` 会在媒体行中报告请求的或观察到的后端。显式的、具备音频能力的 `tools.media.models` CLI 条目仍会绕过自动选择；请使用其特定于后端的标志，例如 sherpa 的 `--provider=cuda`，或 whisper.cpp 的 `--no-gpu`/`--device`。
 
 ## 配置示例
 
@@ -137,21 +141,21 @@ The provider inventory reports the local fallback winner separately from global 
 
 ## 注意和限制
 
-- Provider auth follows the standard model auth order (auth profiles, env vars, `models.providers.*.apiKey`).
-- Groq setup details: [Groq](/providers/groq).
-- Deepgram picks up `DEEPGRAM_API_KEY` when `provider: "deepgram"` is used. Setup details: [Deepgram](/providers/deepgram).
-- Mistral setup details: [Mistral](/providers/mistral).
-- SenseAudio picks up `SENSEAUDIO_API_KEY` when `provider: "senseaudio"` is used. Setup details: [SenseAudio](/providers/senseaudio).
-- Audio providers can use defaults under `tools.media.audio` or override `baseUrl`, `headers`, `providerOptions`, and limits on their `tools.media.models[]` entry.
-- The built-in audio size cap is 20MB. An entry-level `maxBytes` override can change it; oversize audio is skipped for that model and the next entry is tried.
-- Audio files below 1024 bytes are skipped before provider/CLI transcription.
-- Default `maxChars` for audio is **unset** (full transcript). Set `tools.media.audio.maxChars` or per-entry `maxChars` to trim output.
-- OpenAI auto-detect default is `gpt-4o-transcribe`; set `model: "gpt-4o-mini-transcribe"` for a cheaper/faster option.
-- Transcript is available to templates as `{{Transcript}}`.
-- `tools.media.audio.echoTranscript` is off by default; `echoFormat` accepts a `{transcript}` placeholder.
-- CLI stdout is capped at 5MB; keep CLI output concise.
-- CLI `args` should use `{{AttachmentPath}}` for the local audio file path. Run `openclaw doctor --fix` to migrate deprecated `{input}` placeholders from older `audio.transcription.command` configs (retired key: `audio.transcription`, replaced by `tools.media.models`). `{{MediaPath}}` remains a deprecated compatibility alias.
-- `tools.media.concurrency` bounds media tasks; it is not a GPU scheduler.
+- Provider 身份验证遵循标准模型身份验证顺序（身份验证配置、环境变量、`models.providers.*.apiKey`）。
+- Groq 配置详情：[Groq](/providers/groq)。
+- 使用 `provider: "deepgram"` 时，Deepgram 会读取 `DEEPGRAM_API_KEY`。配置详情：[Deepgram](/providers/deepgram)。
+- Mistral 配置详情：[Mistral](/providers/mistral)。
+- 使用 `provider: "senseaudio"` 时，SenseAudio 会读取 `SENSEAUDIO_API_KEY`。配置详情：[SenseAudio](/providers/senseaudio)。
+- 音频 Provider 可以使用 `tools.media.audio` 下的默认值，也可以在其 `tools.media.models[]` 条目中覆盖 `baseUrl`、`headers`、`providerOptions` 和限制。
+- 内置音频大小上限为 20MB。条目级别的 `maxBytes` 覆盖值可以修改该上限；超大音频会被该模型跳过，并尝试下一个条目。
+- 小于 1024 字节的音频文件会在 Provider/CLI 转录之前被跳过。
+- 音频的默认 `maxChars` **未设置**（完整转录）。设置 `tools.media.audio.maxChars` 或每个条目的 `maxChars` 可截短输出。
+- OpenAI 自动检测的默认模型为 `gpt-4o-transcribe`；设置 `model: "gpt-4o-mini-transcribe"` 可使用更经济/更快速的选项。
+- 转录内容可通过 `{{Transcript}}` 提供给模板。
+- `tools.media.audio.echoTranscript` 默认关闭；`echoFormat` 接受 `{transcript}` 占位符。
+- CLI 标准输出上限为 5MB；请保持 CLI 输出简洁。
+- CLI `args` 应使用 `{{AttachmentPath}}` 作为本地音频文件路径。运行 `openclaw doctor --fix`，可迁移旧版 `audio.transcription.command` 配置中的弃用 `{input}` 占位符（已弃用的键：`audio.transcription`，替代项：`tools.media.models`）。`{{MediaPath}}` 仍是已弃用的兼容性别名。
+- `tools.media.concurrency` 限制媒体任务数量；它不是 GPU 调度器。
 
 ### 常驻本地 STT
 
@@ -198,6 +202,7 @@ The provider inventory reports the local fallback winner separately from global 
 
 ## 相关内容
 
+- [媒体播放](/nodes/media-playback)
 - [媒体理解](/nodes/media-understanding)
-- [聊天模式](/nodes/talk)
+- [对话模式](/nodes/talk)
 - [语音唤醒](/nodes/voicewake)

@@ -30,23 +30,23 @@ OpenClaw 会为每次 agent 运行构建自己的系统提示词；运行时没�
 
 提示词很紧凑，包含固定部分：
 
-- **工具链**: structured-tool 作为单一事实来源的提醒，以及运行时工具使用指导。当 `update_plan` 工具启用时（`tools.updatePlan`，默认开启），它自己的工具说明还会增加：仅用于非平凡的多步骤工作，最多保持一个步骤处于 `in_progress`，而且简单的一步工作要跳过它。
-- **执行偏向**: 对可执行的请求在轮次内直接行动，持续推进直到完成或受阻，从较弱的工具结果中恢复，实时检查可变状态，并在最终确定前进行验证。
-- **承诺的工作**: 对未来、后台、委派或持续进行的工作作出承诺会产生跟进责任：在结束本轮前安排推送式完成路径或监视路径，主动带着结果或明确阻碍返回，并且绝不把进展（如 `running`）当作完成。
-- **安全性**: 针对权力寻求行为或绕过监督的简短护栏提醒。
-- **技能**（如可用）: 告诉模型如何按需加载技能指令。
-- **OpenClaw 控制**: 配置/重启工作优先使用 `gateway` 工具；不要捏造 CLI 命令。
-- **OpenClaw 自更新**: 使用 `config.schema.lookup` 安全地检查配置，使用 `config.patch` 打补丁，使用 `config.apply` 替换完整配置，并且只有在用户明确请求时才运行 `update.run`。面向代理的 `gateway` 工具会拒绝重写 `tools.exec.mode`。
-- **工作区**: 工作目录（`agents.defaults.workspace`）。
-- **文档**: 本地文档/源路径以及何时阅读它们。
-- **工作区文件（注入）**: 说明引导文件已包含在下方。
-- **沙箱**（如启用）: 受沙箱限制的运行时、沙箱路径、提升执行可用性。
-- **当前日期与时间**: 仅时区信息（可缓存稳定；实时钟来自 `session_status`）。
-- **助手输出指令**: 紧凑附件、语音备注和回复标签语法。
-- **可折叠详情**（如支持）: 教导模型将可选深度内容放在 `<details>` 披露中，同时保持主要答案和所需操作可见。
-- **心跳**: 当默认代理启用心跳时，心跳提示与确认行为。
-- **运行时**: 主机、操作系统、node、模型、仓库根目录（如检测到）、思考级别（一行）。
-- **推理**: 当前可见级别以及 `/reasoning` 切换提示。
+- **工具链**：结构化工具的事实来源提醒，以及运行时工具使用指导。当启用 `update_plan` 工具（默认启用 `tools.updatePlan`）时，其自身的工具描述还会添加：仅将其用于非平凡的多步骤工作，最多保留一个步骤处于 `in_progress` 状态，并对简单的单步骤工作跳过使用。
+- **执行倾向**：针对可执行请求在当前轮次采取行动，持续执行直到完成或受阻，从较弱的工具结果中恢复，实时检查可变状态，并在最终确定前进行验证。
+- **承诺的工作**：承诺未来、后台、委派或持续进行的工作会产生后续跟进责任：在结束当前轮次前安排基于推送的完成或监控路径，主动返回结果或明确的阻碍，并且绝不将进展（例如 `running`）视为完成。
+- **安全**：简短提醒防止追求权力或绕过监督。
+- **技能**（可用时）：告诉模型如何按需加载技能说明。
+- **OpenClaw 控制**：配置/重启工作优先使用 `gateway` 工具；不要臆造 CLI 命令。
+- **OpenClaw 自更新**：使用 `config.schema.lookup` 安全检查配置，使用 `config.patch` 修改配置，使用 `config.apply` 替换完整配置，并且仅在用户明确请求时运行 `update.run`。面向代理的 `gateway` 工具拒绝重写 `tools.exec.mode`。
+- **工作区**：工作目录（`agents.defaults.workspace`）。
+- **文档**：本地文档/源码路径以及何时读取它们。
+- **工作区文件（注入）**：说明引导文件已包含在下方。
+- **沙箱**（启用时）：沙箱化运行时、沙箱路径、是否可用提升权限的执行。
+- **时间上下文**：缓存边界下方的本地日期和时区；可用时，准确时间来自 `session_status`。
+- **助手输出指令**：紧凑附件、语音消息和回复标签语法。
+- **可折叠详情**（支持时）：教导模型在 `<details>` 披露内容中保留可选的深度，同时让主要回答和必需操作保持可见。
+- **心跳**：启用默认代理的心跳提示和确认行为。
+- **运行时**：主机、操作系统、Node、模型、仓库根目录（检测到时）、思考级别（单行）。
+- **推理**：当前可见性级别以及 `/reasoning` 切换提示。
 
 大型稳定内容（包括 **项目上下文**）保留在内部提示缓存边界之上。易变的逐轮部分（控制 UI 嵌入指导、**消息传递**、**可折叠详情**、**语音**、**群聊上下文**、**反应**、**心跳**、**运行时**）附加在该边界之下，以便支持前缀缓存的本地后端能够在频道轮次之间复用稳定的工作区前缀。工具说明应避免嵌入当前频道名称，因为已接受的 schema 本身已经携带了该运行时细节。
 
@@ -71,21 +71,21 @@ OpenClaw 会为每次 agent 运行构建自己的系统提示词；运行时没�
 
 OpenClaw 会为子代理渲染更小的系统提示词。运行时会为每次运行设置一个 `promptMode`（不是面向用户的配置）：
 
-- `full` (default): 所有上述部分。
-- `minimal`: 用于子代理；省略 memory prompt 部分（打包为 **Memory Recall**）、**OpenClaw Self-Update**、**Model Aliases**、**User Identity**、**Assistant Output Directives**、**Messaging**、**Collapsible Details**、**Silent Replies** 和 **Heartbeats**。工具、**Safety**、**Skills**（如提供）、Workspace、Sandbox、Current Date & Time（如已知）、Runtime，以及注入的上下文仍然可用。
-- `none`: 仅返回基础身份行。
+- `full`（默认）：所有上述部分。
+- `minimal`：用于子代理；省略 memory prompt 部分（打包为 **记忆召回**）、**OpenClaw 自我更新**、**模型别名**、**用户身份**、**助手输出指令**、**消息传递**、**可折叠详情**、**静默回复** 和 **心跳**。工具、**安全**、**技能**（如提供）、工作区、沙箱、当前日期与时间（如已知）、运行时，以及注入的上下文仍然可用。
+- `none`：仅返回基础身份行。
 
-在 `promptMode=minimal` 下，额外注入的提示词会标记为 **Subagent Context**，而不是 **Group Chat Context**。
+在 `promptMode=minimal` 下，额外注入的提示词会标记为 **子代理上下文**，而不是 **群聊上下文**。
 
-对于 channel 自动回复运行，当直接、群组或仅消息工具上下文已经拥有可见回复契约时，OpenClaw 会省略通用的 **Silent Replies** 部分。只有传统的自动群组/channel 模式会显示 `NO_REPLY`；直接聊天和仅消息工具回复会跳过静默标记指引。
+对于频道自动回复运行，当直接、群组或仅消息工具上下文已经拥有可见回复契约时，OpenClaw 会省略通用的 **静默回复** 部分。只有传统的自动群组/频道模式会显示 `NO_REPLY`；直接聊天和仅消息工具回复会跳过静默标记指引。
 
 ## 提示词快照
 
-OpenClaw 会为 Codex 运行时的 happy path 保留已提交的提示词快照，路径位于 `test/fixtures/agents/prompt-snapshots/codex-runtime-happy-path/`。它们会渲染选定的 app-server 线程/轮次参数，以及为 Telegram 直聊、Discord 群聊和 heartbeat 轮次重建出的模型绑定提示层栈：一个固定的 Codex `gpt-5.5` 模型提示词夹具、Codex happy-path 权限开发者文本、OpenClaw 开发者指令、当 OpenClaw 提供时的轮次作用域协作模式指令、用户轮次输入，以及对动态工具规范的引用。
+OpenClaw 会为 Codex 运行时的顺利路径保留已提交的提示词快照，路径位于 `test/fixtures/agents/prompt-snapshots/codex-runtime-happy-path/`。它们会渲染选定的 app-server 线程/轮次参数，以及为 Telegram 直聊、Discord 群聊和 heartbeat 轮次重建出的模型绑定提示层栈：一个固定的 Codex `gpt-5.5` 模型提示词夹具、Codex 顺利路径权限开发者文本、OpenClaw 开发者指令、当 OpenClaw 提供时的轮次作用域协作模式指令、用户轮次输入，以及对动态工具规范的引用。
 
 使用 `pnpm prompt:snapshots:sync-codex-model` 刷新固定的 Codex 模型提示词夹具。默认情况下，它会依次查找 `$CODEX_HOME/models_cache.json`、`~/.codex/models_cache.json`，然后是维护者检出约定 `~/code/codex/codex-rs/models-manager/models.json`；如果这些都不存在，它会直接退出而不修改已提交的夹具。传入 `--catalog <path>` 可从特定的 `models_cache.json` 或 `models.json` 文件刷新。
 
-这些快照并不是逐字节的原始 OpenAI 请求捕获。在 OpenClaw 发送线程和轮次参数之后，Codex 还可以添加运行时拥有的工作区上下文（`AGENTS.md`、环境上下文、记忆、app/plugin 指令、内置的 Default 协作模式指令）。
+这些快照并不是逐字节的原始 OpenAI 请求捕获。在 OpenClaw 发送线程和轮次参数之后，Codex 还可以添加运行时拥有的工作区上下文（`AGENTS.md`、环境上下文、记忆、app/plugin 指令、内置的默认协作模式指令）。
 
 使用 `pnpm prompt:snapshots:gen` 重新生成；使用 `pnpm prompt:snapshots:check` 验证漂移。CI 会将漂移检查与额外边界分片一并运行，因此提示词变更和快照更新会在同一个 PR 中落地。
 
@@ -132,14 +132,13 @@ Sub-agent 会话只注入 `AGENTS.md`（其他启动文件会被过滤，以保�
 
 ## 时间处理
 
-仅当已知用户时区时，**当前日期和时间**部分才会显示，并且仅包含 **时区**（不包含动态时钟或时间格式），以保持提示缓存稳定。
+**时间上下文**部分包含用户本地的日历日期和时区。它位于缓存边界下方，因此日期更替或时区变化不会使稳定前缀失效。
 
-当代理需要当前时间时，请使用 `session_status`；其状态卡片包含一行时间戳。同一个工具还可以选择性地设置每个会话的模型覆盖（`model=default` 会清除它）。
+当代理需要确切的当前时间且该工具可用时，请使用 `session_status`；其状态卡片包含时间戳行。同一工具还可以选择设置每个会话的模型覆盖（`model=default` 可清除该设置）。
 
 通过以下项进行配置：
 
 - `agents.defaults.userTimezone`
-- `agents.defaults.timeFormat`（`auto` | `12` | `24`）
 
 有关完整行为详情，请参阅 [时区](/concepts/timezone) 和 [日期与时间](/date-time)。
 
@@ -185,4 +184,4 @@ Native Codex 回合会将此列表作为按回合作用域的协作开发者指�
 
 - [代理运行时](/concepts/agent)
 - [代理工作区](/concepts/agent-workspace)
-- [上下文引擎](/concepts/context-engine)
+- [上下文引擎](/concepts/context-engine)。

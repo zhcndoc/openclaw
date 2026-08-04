@@ -11,12 +11,12 @@ title: "iMessage 插件"
 
 ## 分发
 
-- 包：`@openclaw/imessage`
-- 安装方式：包含在 OpenClaw 中
+- 软件包：`@openclaw/imessage`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/imessage`
 
 ## 接入层
 
-channels: `imessage`; skills
+渠道: `imessage`; 技能
 
 ## 相关文档
 

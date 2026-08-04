@@ -14,11 +14,12 @@ title: "模型"
 
 - 提供方 + 模型：[模型](/providers/models)
 - 模型选择概念 + `/models` 斜杠命令：[模型](/concepts/models)
-- 提供方认证设置：[快速开始](/start/getting-started)
+- 提供方认证设置：[快速开始](/start/getting-started)。
 
 ## 常用命令
 
 ```bash
+openclaw models --json
 openclaw models status
 openclaw models list
 openclaw models refresh
@@ -31,7 +32,10 @@ openclaw models scan
 
 ### 状态
 
-`openclaw models status` 会显示解析后的默认值/回退值以及认证概览。对于像 Codex 这样的插件所有 agent 运行时，它还会检查拥有该运行时的插件是否已启用，以及是否通过了启动负载验证。对于凭据有效但运行时不可用的路由，会报告 `status: unavailable` 而不是 `usable`；JSON 输出会分别包含 `authStatus`、`runtimeStatus` 和受限的运行时诊断信息。当可用提供方使用情况快照时，OAuth/API 密钥状态部分会包含提供方使用窗口和配额快照。当前的使用窗口提供方：Anthropic、GitHub Copilot、Gemini CLI、OpenAI、MiniMax、小米和 z.ai。使用认证会优先来自提供方特定的挂钩；否则 OpenClaw 会回退到 auth profile、环境变量或配置中匹配的 OAuth/API 密钥凭据。
+直接运行 `openclaw models` 等同于运行 `openclaw models status`。  
+`openclaw models --json` 返回与 `openclaw models status --json` 相同的对象。
+
+`openclaw models status` 会显示解析后的默认模型/回退模型以及认证概览。对于 Codex 等由插件拥有的 agent 运行时，它还会检查所属插件是否已启用，以及是否通过了启动负载验证。拥有有效凭据但运行时不可用的路由会报告 `status: unavailable`，而不是 `usable`；JSON 输出会分别包含 `authStatus`、`runtimeStatus` 以及受限的运行时诊断信息。当提供方使用情况快照可用时，OAuth/API 密钥状态部分会包含提供方使用窗口和配额快照。目前支持使用窗口的提供方：Anthropic、GitHub Copilot、OpenAI、MiniMax、Xiaomi 和 z.ai。使用情况认证在可用时来自提供方专用钩子；否则 OpenClaw 会从认证配置文件、环境变量或配置中匹配 OAuth/API 密钥凭据。
 
 在 `--json` 输出中，`auth.providers` 是面向环境/配置/存储且感知的提供方概览，而 `auth.oauth` 仅表示 auth-store 中 profile 的健康状态。
 
@@ -59,14 +63,14 @@ openclaw models scan
 - `ineligible_profile`：该 profile 因其他原因与提供方配置不兼容。
 - `no_model`：存在提供方认证，但 OpenClaw 无法为该提供方解析出可探测的模型候选。
 
-对于 OpenAI ChatGPT/Codex OAuth 排障，`openclaw models status`、`openclaw models auth list --provider openai` 和 `openclaw config get agents.defaults.model --json` 是最快确认某个 agent 是否拥有可用于通过原生 Codex 运行时访问 `openai/*` 的有效 `openai` OAuth profile 的方法。参见 [OpenAI provider setup](/providers/openai#check-and-recover-codex-oauth-routing)。
+对于 OpenAI ChatGPT/Codex OAuth 排障，`openclaw models status`、`openclaw models auth list --provider openai` 和 `openclaw config get agents.defaults.model --json` 是最快确认某个 agent 是否拥有可用于通过原生 Codex 运行时访问 `openai/*` 的有效 `openai` OAuth profile 的方法。参见 [OpenAI 提供方设置](/providers/openai#check-and-recover-codex-oauth-routing)。
 
 ### 列表
 
 `openclaw models list` 是只读的：它读取配置、auth profile、现有 catalog 状态以及由 provider 提供的 catalog 行，但绝不会重写 `models.json`。
 
-`openclaw models refresh [--json]` 会强制立即检查托管 catalog。
-更新后的行会在下一次重启后应用到正在运行的 Gateway。若 `models.catalogRefresh.enabled` 为 `false`，该命令会明确输出已禁用的结果。
+`openclaw models refresh [--json]` 会强制立即检查托管 catalog。  
+更新后的行会在下一次重启后应用到正在运行的 Gateway。若 `models.catalogRefresh.enabled` 为 `false`，该命令会明确输出已禁用的结果。  
 catalog 的公开变更历史位于
 [`openclaw/catalog`](https://github.com/openclaw/catalog)，其中每次内容更新都会由计划发布器提交。
 
@@ -78,7 +82,7 @@ catalog 的公开变更历史位于
 - `models list --all --provider <id>` 即使你尚未在该提供方完成认证，也可以包含来自插件清单或内置提供方 catalog 元数据的提供方拥有的静态 catalog 行。这些行在未配置匹配认证之前仍会显示为不可用。
 - 当提供方 catalog 发现过程较慢时，`models list` 会保持控制平面响应迅速。默认视图和已配置视图会在短暂等待后回退到已配置或合成的模型行，并让发现过程在后台继续完成。若你需要精确的完整发现 catalog 且愿意等待提供方发现完成，请使用 `--all`。
 - 宽泛的 `models list --all` 会在不加载提供方运行时补充 hook 的情况下，将 manifest catalog 行合并到 registry 行之上。按提供方筛选的 manifest 快速路径只使用标记为 `static` 的提供方；标记为 `refreshable` 的提供方仍保持 registry/cache-backed，并将 manifest 行作为补充追加；而标记为 `runtime` 的提供方则仍依赖 registry/runtime 发现。
-- `models list` 会将原生模型元数据与运行时上限区分开来。在表格输出中，当有效运行时上限与原生上下文窗口不同，`Ctx` 会显示 `contextTokens/contextWindow`；JSON 行在提供方暴露该上限时会包含 `contextTokens`。
+- `models list` 会将原生模型元数据与运行时上限区分开来。在表格输出中，当有效运行时上限与原生上下文窗口不同时，`Ctx` 会显示 `contextTokens/contextWindow`；JSON 行在提供方暴露该上限时会包含 `contextTokens`。
 - 对于由提供方拥有的路由，`models list` 会将一个逻辑 provider/model 行投影到所选路由上。`Input` 和 `Ctx` 只来自完全匹配的物理路由 catalog 行，并在最后应用显式配置的逻辑覆盖；未解析的路由选择会显示未知能力字段，而不会借用同级路由的元数据。
 - `models list --provider <id>` 通过提供方 id 进行筛选，例如 `moonshot` 或 `openai`。它不接受交互式提供方选择器中的显示标签，例如 `Moonshot AI`。
 - 模型引用通过拆分第一个 `/` 来解析。如果模型 ID 本身包含 `/`（OpenRouter 风格），请包含提供方前缀（例如 `openrouter/moonshotai/kimi-k2`）。
@@ -188,7 +192,7 @@ openclaw models auth logout openai:manual --yes
 - `paste-token` 需要 `--provider`，默认会提示输入 token 值，并将其写入默认配置文件 id `<provider>:manual`，除非你传入 `--profile-id`。在自动化场景中，请通过 stdin 管道传入 token，而不要将其作为参数传递，这样 provider 凭据就不会出现在 shell 历史或进程列表中。
 - `paste-token --expires-in <duration>` 会将相对时长（例如 `365d` 或 `12h`）保存为绝对 token 过期时间。
 - 对于 `openai`，OpenAI API key 和 ChatGPT/OAuth token 材料属于不同的认证形态。`sk-...` OpenAI API key 请使用 `paste-api-key`，而 `paste-token` 仅用于 token 认证材料。
-- Anthropic：`setup-token`/`paste-token` 是 `anthropic` 支持的 OpenClaw 认证路径，但在主机上如果可用，OpenClaw 更倾向于复用 Claude CLI（`claude -p`）。
+- Anthropic：`setup-token`/`paste-token` 是适用于 `anthropic` 的 OpenClaw 认证路径，但在主机上如果可用，OpenClaw 更倾向于复用 Claude CLI（`claude -p`）。
 - `auth order get/set/clear` 管理某个 provider 的按 agent 认证配置文件顺序覆盖，该信息存储在 `auth-state.json` 中（与 `auth.order.<provider>` 配置键分开）。`set` 按优先级顺序接收一个或多个 profile id；`clear` 则回退到配置/轮询排序。
 
 ## 相关

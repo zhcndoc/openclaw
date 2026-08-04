@@ -33,17 +33,15 @@ status: active
     ```json
     {
       "agents": {
-        "list": [
-          {
-            "id": "main",
+        "entries": {
+          "main": {
             "default": true,
             "name": "个人助手",
             "workspace": "~/.openclaw/workspace",
             "sandbox": { "mode": "off" }
           },
-          {
-            "id": "family",
-            "name": "家庭机器人",
+          "family": {
+            "name": "Family Bot",
             "workspace": "~/.openclaw/workspace-family",
             "sandbox": {
               "mode": "all",
@@ -60,13 +58,13 @@ status: active
               }
             }
           }
-        ]
+        }
       },
       "bindings": [
         {
           "agentId": "family",
           "match": {
-            "provider": "whatsapp",
+            "channel": "whatsapp",
             "accountId": "*",
             "peer": {
               "kind": "group",
@@ -80,22 +78,21 @@ status: active
 
     **结果：**
 
-    - `main` 代理：运行在宿主机上，拥有完整工具访问权限。
-    - `family` 代理：运行在 Docker 中（每个代理一个容器），仅可使用 `read` 和当前会话消息发送。
+    - `main` 代理：在主机上运行，拥有完整的工具访问权限。
+    - `family` 代理：在配置的容器沙箱后端中运行（每个代理使用一个容器），仅可使用 `read` 和发送当前对话消息。
 
   </Accordion>
   <Accordion title="示例 2：具有共享沙箱的工作代理">
     ```json
     {
       "agents": {
-        "list": [
-          {
-            "id": "personal",
+        "entries": {
+          "personal": {
+            "default": true,
             "workspace": "~/.openclaw/workspace-personal",
             "sandbox": { "mode": "off" }
           },
-          {
-            "id": "work",
+          "work": {
             "workspace": "~/.openclaw/workspace-work",
             "sandbox": {
               "mode": "all",
@@ -107,7 +104,7 @@ status: active
               "deny": ["browser", "gateway", "discord"]
             }
           }
-        ]
+        }
       }
     }
     ```
@@ -117,12 +114,14 @@ status: active
     {
       "tools": { "profile": "coding" },
       "agents": {
-        "list": [
-          {
-            "id": "support",
+        "entries": {
+          "main": {
+            "default": true
+          },
+          "support": {
             "tools": { "profile": "messaging", "allow": ["slack"] }
           }
-        ]
+        }
       }
     }
     ```
@@ -143,16 +142,15 @@ status: active
             "scope": "session"
           }
         },
-        "list": [
-          {
-            "id": "main",
+        "entries": {
+          "main": {
+            "default": true,
             "workspace": "~/.openclaw/workspace",
             "sandbox": {
               "mode": "off"
             }
           },
-          {
-            "id": "public",
+          "public": {
             "workspace": "~/.openclaw/workspace-public",
             "sandbox": {
               "mode": "all",
@@ -163,7 +161,7 @@ status: active
               "deny": ["exec", "write", "edit", "apply_patch"]
             }
           }
-        ]
+        }
       }
     }
     ```
@@ -191,7 +189,7 @@ agents.entries.*.sandbox.prune.* > agents.defaults.sandbox.prune.*
 ```
 
 <Note>
-`agents.entries.*.sandbox.{docker,browser,prune}.*` 会覆盖该代理的 `agents.defaults.sandbox.{docker,browser,prune}.*`（当 sandbox scope 解析为 `"shared"` 时会被忽略）。
+对于该代理，`agents.entries.*.sandbox.{docker,browser,prune}.*` 会覆盖 `agents.defaults.sandbox.{docker,browser,prune}.*`（当沙箱范围解析为 `"shared"` 时会被忽略）。`docker` 配置块会配置两个内置容器后端。
 </Note>
 
 ### 工具限制
@@ -227,10 +225,10 @@ agents.entries.*.sandbox.prune.* > agents.defaults.sandbox.prune.*
 
 <AccordionGroup>
   <Accordion title="优先级规则">
-    - 每一层都可以进一步限制工具，但不能重新授予前面层级中已被拒绝的工具。
-    - 如果设置了 `agents.entries.*.tools.sandbox.tools`，它会替换该代理的 `tools.sandbox.tools`。
+    - 每个层级都可以进一步限制工具，但不能恢复先前层级已拒绝的工具。
+    - 如果设置了 `agents.entries.*.tools.sandbox.tools`，它会替代该代理的 `tools.sandbox.tools`。
     - 如果设置了 `agents.entries.*.tools.profile`，它会覆盖该代理的 `tools.profile`。
-    - 提供方工具键接受 `provider`（例如 `google-antigravity`）或 `provider/model`（例如 `openai/gpt-5.4`）。
+    - 提供方工具键可以使用 `provider`（例如 `anthropic`）或 `provider/model`（例如 `openai/gpt-5.4`）。
   </Accordion>
   <Accordion title="空允许列表行为">
     如果该链中的任何显式允许列表导致运行时没有可调用工具，OpenClaw 会在将提示提交给模型之前停止。这是有意为之：若某个代理配置了缺失的工具，例如 `agents.entries.*.tools.allow: ["query_db"]`，那么在注册 `query_db` 的插件启用之前，它应当明确失败，而不是继续作为仅文本代理运行。
@@ -239,7 +237,7 @@ agents.entries.*.sandbox.prune.* > agents.defaults.sandbox.prune.*
 
 工具策略支持会展开为多个工具的 `group:*` 简写。完整列表请参见 [工具组](/gateway/sandbox-vs-tool-policy-vs-elevated#tool-groups-shorthands)。
 
-每个代理的 elevated 覆盖（`agents.entries.*.tools.elevated`）可以进一步限制特定代理的 elevated exec。详情请参见 [Elevated mode](/tools/elevated)。
+每个代理的 elevated 覆盖（`agents.entries.*.tools.elevated`）可以进一步限制特定代理的 elevated exec。详情请参见 [Elevated 模式](/tools/elevated)。
 
 ---
 
@@ -272,14 +270,13 @@ agents.entries.*.sandbox.prune.* > agents.defaults.sandbox.prune.*
     ```json
     {
       "agents": {
-        "list": [
-          {
-            "id": "main",
+        "entries": {
+          "main": {
             "default": true,
             "workspace": "~/.openclaw/workspace",
             "sandbox": { "mode": "off" }
           }
-        ]
+        }
       }
     }
     ```
@@ -287,7 +284,7 @@ agents.entries.*.sandbox.prune.* > agents.defaults.sandbox.prune.*
 </Tabs>
 
 <Note>
-旧版 `agents.defaults.*`/`agents.entries.*.*` 配置键（例如 `sandbox.perSession`、`agentRuntime`、`embeddedPi`）会由 `openclaw doctor` 迁移；今后请优先使用 `agents.defaults` + `agents.entries`。
+旧版的 `agents.list` 代理列表以及已弃用的代理级配置项（例如 `sandbox.perSession`、`agentRuntime` 和 `embeddedPi`）会由 `openclaw doctor` 迁移；今后请优先使用 `agents.defaults` + `agents.entries`。
 </Note>
 
 ---
@@ -377,19 +374,19 @@ agents.entries.*.sandbox.prune.* > agents.defaults.sandbox.prune.*
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="尽管设置了 `mode: 'all'`，Agent 仍未被沙箱化">
+  <Accordion title="尽管设置了 `mode: 'all'`，智能体仍未被沙箱化">
     - 检查是否存在全局的 `agents.defaults.sandbox.mode` 覆盖了它。
     - 智能体特定配置具有优先级，因此请设置 `agents.entries.*.sandbox.mode: "all"`。
 
   </Accordion>
   <Accordion title="尽管在拒绝列表中，工具仍然可用">
-    - 检查 [完整的过滤顺序](#tool-restrictions)：profile → provider profile → global policy → provider policy → agent policy → agent provider policy → sandbox → subagent。
+    - 检查 [完整的过滤顺序](#tool-restrictions)：配置档案 → 提供商配置档案 → 全局策略 → 提供商策略 → 智能体策略 → 智能体提供商策略 → 沙箱 → 子智能体。
     - 每一层只能进一步限制，不能重新授予权限。
-    - 参见 [Sandbox vs tool policy vs elevated](/gateway/sandbox-vs-tool-policy-vs-elevated) 进行逐步调试。
+    - 参见 [沙箱 vs 工具策略 vs 提权](/gateway/sandbox-vs-tool-policy-vs-elevated) 进行逐步调试。
 
   </Accordion>
   <Accordion title="容器未按智能体隔离">
-    - 默认 `scope` 为 `"agent"`（每个 agent id 对应一个容器）。
+    - 默认 `scope` 为 `"agent"`（每个智能体 ID 对应一个容器）。
     - 将 `scope: "session"` 设置为每个会话一个容器，或将 `scope: "shared"` 设置为在多个智能体之间复用一个容器。
 
   </Accordion>
@@ -404,4 +401,4 @@ agents.entries.*.sandbox.prune.* > agents.defaults.sandbox.prune.*
 - [沙箱配置](/gateway/config-agents#agentsdefaultssandbox)
 - [沙箱 vs 工具策略 vs 提升模式](/gateway/sandbox-vs-tool-policy-vs-elevated) — 调试“为什么这被阻止？”
 - [沙箱化](/gateway/sandboxing) — 完整的沙箱参考（模式、作用域、后端、镜像）
-- [会话管理](/concepts/session)
+- [会话管理](/concepts/session)。

@@ -1,5 +1,5 @@
 ---
-summary: "openclaw hooks 的 CLI 参考（代理钩子）"
+summary: "openclaw 钩子的 CLI 参考（代理钩子）"
 read_when:
   - 你想管理代理钩子
   - 你想检查钩子可用性或启用工作区钩子
@@ -10,26 +10,28 @@ title: "钩子"
 
 管理代理钩子（用于 `/new`、`/reset` 和网关启动等命令的事件驱动自动化）。直接使用 `openclaw hooks` 等同于 `openclaw hooks list`。
 
-相关：[Hooks](/automation/hooks) - [插件钩子](/plugins/hooks)
+相关：[钩子](/automation/hooks) - [插件钩子](/plugins/hooks)
 
 ## 列出 hooks
 
 ```bash
+openclaw hooks --json
 openclaw hooks list [--eligible] [--json] [-v|--verbose]
 ```
 
-列出从 workspace、managed、extra 和 bundled 目录中发现的 hooks。
+直接运行 `openclaw hooks` 和运行 `openclaw hooks --json` 时，使用的列表操作与
+`openclaw hooks list` 相同。该命令会从工作区、托管目录、额外目录和内置目录中发现 hooks。
 
 - `--eligible`：仅显示满足要求的 hooks。
 - `--json`：结构化输出。
-- `-v, --verbose`：包含一个 Missing 列，显示未满足的要求。
+- `-v, --verbose`：包含一个“缺失”列，显示未满足的要求。
 
 ```
-Hooks (4/5 ready)
+Hooks（4/5 个已就绪）
 
-Ready:
+已就绪：
   🚀 boot-md ✓ - 在 gateway 启动时运行 BOOT.md
-  📎 bootstrap-extra-files ✓ - 在 agent bootstrap 期间注入额外的 workspace bootstrap 文件
+  📎 bootstrap-extra-files ✓ - 在 agent 引导期间注入额外的工作区引导文件
   📝 command-logger ✓ - 将所有命令事件记录到集中式审计文件中
   💾 session-memory ✓ - 在发出 /new 或 /reset 命令时将会话上下文保存到 memory
 ```
@@ -40,7 +42,7 @@ Ready:
 openclaw hooks info <name> [--json]
 ```
 
-`<name>` is the hook name or hook key (for example, `session-memory`). Displays the source, file/handler path, homepage, events, and the status of each requirement (binary, environment, config, operating system).
+`<name>` 是 hook 名称或 hook key（例如 `session-memory`）。显示源、文件/处理程序路径、主页、事件，以及每项要求（可执行文件、环境、配置、操作系统）的状态。
 
 ## 检查资格
 
@@ -96,15 +98,15 @@ openclaw plugins update --dry-run
 
 ## 内置钩子
 
-| Hook                  | 事件                                              | 功能                                                                                     |
+| 钩子                  | 事件                                              | 功能                                                                                     |
 | --------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | boot-md               | `gateway:startup`                                 | 在网关启动时为每个已配置的代理作用域运行 `BOOT.md`                                                |
-| bootstrap-extra-files | `agent:bootstrap`                                 | 在代理引导期间注入额外的引导文件（例如 monorepo 的 `AGENTS.md`）                              |
+| bootstrap-extra-files | `agent:bootstrap`                                 | 在代理引导期间注入额外的引导文件（例如单仓库的 `AGENTS.md`）                              |
 | command-logger        | `command`                                         | 将命令事件记录到 `~/.openclaw/logs/commands.log`                                          |
 | compaction-notifier   | `session:compact:before`, `session:compact:after` | 在会话压缩开始和结束时发送可见的聊天通知                                                    |
 | session-memory        | `command:new`, `command:reset`                    | 在执行 `/new` 或 `/reset` 时将会话上下文保存到内存中                                     |
 
-使用 `openclaw hooks enable <hook-name>` 启用任意内置钩子。完整详情、配置键和默认值： [Bundled hooks](/automation/hooks#bundled-hooks)。
+使用 `openclaw hooks enable <hook-name>` 启用任意内置钩子。完整详情、配置键和默认值： [内置钩子](/automation/hooks#bundled-hooks)。
 
 ### command-logger 日志文件
 

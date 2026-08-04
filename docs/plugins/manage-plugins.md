@@ -95,12 +95,9 @@ openclaw plugins install --link ./my-plugin
 
 `--force` 会在无需提示的情况下确认非 ClawHub 来源，并在需要时覆盖现有安装目标。对于已跟踪的 npm、ClawHub 或 hook-pack 安装的常规升级，请改用 `openclaw plugins update`。使用 `--link` 时，`--force` 只确认来源；链接目录不会被复制或覆盖。
 
-If a newly installed plugin requires configuration that is not present yet,
-OpenClaw records the install but leaves the plugin disabled. Configure
-`plugins.entries.<id>.config`, then run `openclaw plugins enable <id>`. If an
-existing config entry is present but invalid, install fails without rewriting it.
+如果新安装的插件需要尚未存在的配置，OpenClaw 会记录安装信息，但会保持插件禁用状态。配置 `plugins.entries.<id>.config`，然后运行 `openclaw plugins enable <id>`。如果已有配置条目但无效，安装将失败，且不会重写该配置。
 
-## Restart and inspect
+## 重启并检查
 
 启用了配置重载的正在运行的托管 Gateway 在安装、更新或卸载插件代码后会自动重启。  
 如果 Gateway 是非托管的，或者已禁用重载，请在检查在线运行时表面之前手动重启它：
@@ -125,12 +122,7 @@ openclaw plugins update <plugin-id> --dry-run
 （`@beta`）和精确锁定的版本都会沿用到后续的 `update <plugin-id>`
 运行中。
 
-`openclaw plugins update --all` 是批量维护路径。它仍然
-遵循普通的已跟踪安装规格，但受信任的官方 OpenClaw
-插件记录会同步到当前官方目录目标，而不是
-继续停留在一个过时的精确官方包上；当 `update.channel` 为
-`beta` 时，这种同步会优先选择 beta 发布线。使用有针对性的
-`update <plugin-id>` 可以让精确或带标签的官方规格保持不变。
+`openclaw plugins update --all` 是批量维护路径。它仍然遵循普通的已跟踪安装规格，但受信任的官方 OpenClaw 插件记录会同步到当前官方目录目标，而不是继续固定在过时的官方精确软件包上。规范的渠道解析器会同时使用 `update.channel` 和已安装的核心版本，因此在未配置渠道的情况下，已安装 beta 核心的官方插件会继续使用 beta 发布线。使用定向的 `update <plugin-id>` 可保持精确或带标签的官方规格不变。
 
 对于 npm 安装，请传入明确的包规格以切换已跟踪记录：
 
@@ -166,9 +158,9 @@ openclaw plugins uninstall <plugin-id> --keep-files
 | ----------- | --------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | ClawHub     | 你希望使用 OpenClaw 原生发现、扫描摘要、版本和提示                            | `openclaw plugins install clawhub:<package>`                   |
 | git         | 你希望从仓库中获取分支、标签或提交                                           | `openclaw plugins install git:github.com/<owner>/<repo>@<ref>` |
-| local path  | 你正在同一台机器上开发或测试插件                                              | `openclaw plugins install --link ./my-plugin`                  |
-| marketplace | 你正在安装一个与 Claude 兼容的市场插件                                        | `openclaw plugins install <plugin> --marketplace <source>`     |
-| npm pack    | 你正在通过 npm install 语义验证本地包制品                                     | `openclaw plugins install npm-pack:<path.tgz>`                 |
+| 本地路径    | 你正在同一台机器上开发或测试插件                                              | `openclaw plugins install --link ./my-plugin`                  |
+| 市场        | 你正在安装一个与 Claude 兼容的市场插件                                        | `openclaw plugins install <plugin> --marketplace <source>`     |
+| npm 打包    | 你正在通过 npm install 语义验证本地包制品                                     | `openclaw plugins install npm-pack:<path.tgz>`                 |
 | npmjs.com   | 你已经在发布 JavaScript 包，或需要 npm dist-tags/私有仓库                      | `openclaw plugins install npm:@acme/openclaw-plugin`           |
 
 受管理的本地路径安装必须是插件目录或归档文件。请将独立的插件文件放在
@@ -229,4 +221,4 @@ openclaw plugins install npm:@acme/openclaw-plugin@1.0.0
 - [社区插件](/plugins/community) - 公开发现和 ClawHub 发布
 - [ClawHub](/clawhub/cli) - 注册表 CLI 操作
 - [构建插件](/plugins/building-plugins) - 创建插件包
-- [插件清单](/plugins/manifest) - 清单和包元数据
+- [插件清单](/plugins/manifest) - 清单和包元数据。

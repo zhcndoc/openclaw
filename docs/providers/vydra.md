@@ -6,7 +6,7 @@ read_when:
 title: "Vydra"
 ---
 
-捆绑的 Vydra 插件新增了：
+官方 Vydra 插件提供：
 
 - 使用 `vydra/grok-imagine` 进行图像生成
 - 使用 `vydra/veo3`（文生视频）和 `vydra/kling`（图生视频）进行视频生成
@@ -14,15 +14,15 @@ title: "Vydra"
 
 OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 
-| Property        | Value                                                                     |
+| 属性            | 值                                                                       |
 | --------------- | ------------------------------------------------------------------------- |
-| Provider id     | `vydra`                                                                   |
-| Plugin          | bundled, `enabledByDefault: true`                                         |
-| Auth env var    | `VYDRA_API_KEY`                                                           |
-| Onboarding flag | `--auth-choice vydra-api-key`                                             |
-| Direct CLI flag | `--vydra-api-key <key>`                                                   |
-| Contracts       | `imageGenerationProviders`, `videoGenerationProviders`, `speechProviders` |
-| Base URL        | `https://www.vydra.ai/api/v1` (使用 `www` 主机)                           |
+| 提供商 ID       | `vydra`                                                                   |
+| 插件            | `@openclaw/vydra-provider`                                                |
+| 身份验证环境变量 | `VYDRA_API_KEY`                                                           |
+| 引导标志        | `--auth-choice vydra-api-key`                                             |
+| 直接 CLI 标志   | `--vydra-api-key <key>`                                                   |
+| 合约            | `imageGenerationProviders`, `videoGenerationProviders`, `speechProviders` |
+| 基础 URL        | `https://www.vydra.ai/api/v1`（使用 `www` 主机）                         |
 
 <Warning>
 请使用 `https://www.vydra.ai/api/v1` 作为基础 URL。Vydra 的主域名主机（`https://vydra.ai/api/v1`）当前会重定向到 `www`。某些 HTTP 客户端会在这种跨主机重定向时丢弃 `Authorization`，这会把有效的 API 密钥变成误导性的身份验证失败。捆绑插件会将任何配置的 `vydra.ai` 基础 URL 规范化为 `www.vydra.ai`，以避免这种情况。
@@ -31,6 +31,13 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 ## 设置
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/vydra-provider
+    openclaw gateway restart
+    ```
+
+  </Step>
   <Step title="运行交互式引导">
     ```bash
     openclaw onboard --auth-choice vydra-api-key
@@ -52,7 +59,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 
 <AccordionGroup>
   <Accordion title="图像生成">
-    默认且唯一捆绑的图像模型：
+    默认且唯一的 Vydra 图像模型：
 
     - `vydra/grok-imagine`
 
@@ -70,7 +77,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     }
     ```
 
-    捆绑支持仅限文生图，每次请求最多一张图像。Vydra 托管的编辑路由期望接收远程图像 URL，而捆绑插件不会添加 Vydra 专用的上传桥接。
+    Vydra 仅支持文生图，每次请求最多生成一张图像。Vydra 托管的编辑路由要求使用远程图像 URL，该插件不会添加 Vydra 专用的上传桥接。
 
     <Note>
     有关共享工具参数、提供方选择和故障转移行为，请参见[图像生成](/tools/image-generation)。
@@ -100,9 +107,9 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 
     注：
 
-    - `vydra/kling` 会在前端拒绝本地文件上传；只有远程图像 URL 引用可用。
-    - Vydra 的 `kling` HTTP 路由在是否需要 `image_url` 或 `video_url` 方面表现不一致；捆绑提供方会在这两个字段中发送同一个远程图像 URL。
-    - 捆绑插件保持保守，不会转发未文档化的样式参数，例如宽高比、分辨率、水印或生成音频。
+    - `vydra/kling` 会预先拒绝本地文件上传；只有远程图像 URL 引用可用。
+    - Vydra 的 `kling` HTTP 路由对于要求使用 `image_url` 还是 `video_url` 一直不一致；该插件会在两个字段中发送相同的远程图像 URL。
+    - 该插件采取保守策略，不会转发宽高比、分辨率、水印或生成音频等未记录的样式参数。
 
     <Note>
     有关共享工具参数、提供方选择和故障转移行为，请参见[视频生成](/tools/video-generation)。
@@ -119,7 +126,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     pnpm test:live -- extensions/vydra/vydra.live.test.ts
     ```
 
-    捆绑的 Vydra 实时文件涵盖：
+    Vydra 实时测试文件涵盖：
 
     - `vydra/veo3` 文本生成视频
     - 使用远程图像 URL 的 `vydra/kling` 图像生成视频
@@ -152,9 +159,9 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     默认值：
 
     - 模型：`elevenlabs/tts`
-    - 声音 id：`21m00Tcm4TlvDq8ikWAM`（"Rachel"）
+    - 声音 id：`21m00Tcm4TlvDq8ikWAM`（“Rachel”）
 
-    捆绑插件提供了这一已知可用的默认声音，并返回 MP3 音频文件。
+    该插件提供这一已知可用的默认声音，并返回 MP3 音频文件。
 
   </Accordion>
 </AccordionGroup>
@@ -172,6 +179,6 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     共享的视频工具参数和提供方选择。
   </Card>
   <Card title="配置参考" href="/gateway/config-agents#agent-defaults" icon="gear">
-    Agent 默认值和模型配置。
+    智能体默认值和模型配置。
   </Card>
 </CardGroup>

@@ -9,9 +9,9 @@ title: "安装"
 
 ## 系统要求
 
-- **Node 22.22.3+, 24.15+, or 25.9+** - Node 26 is the recommended default; the installer script provisions it automatically when Node is missing.
-- **macOS, Linux, or Windows** - Windows users can start with the native Windows Hub app, the PowerShell CLI installer, or a WSL2 Gateway. See [Windows](/platforms/windows).
-- `pnpm` is only needed if you build from source.
+- **Node 22.22.3+、24.15+ 或 25.9+** - Node 26 是推荐的默认版本；如果未安装 Node，安装脚本会自动配置该版本。
+- **macOS、Linux 或 Windows** - Windows 用户可以从原生 Windows Hub 应用、PowerShell CLI 安装程序或 WSL2 Gateway 开始。请参阅 [Windows](/platforms/windows)。
+- 只有在从源代码构建时才需要 `pnpm`。
 
 ## 推荐：安装脚本
 
@@ -81,20 +81,36 @@ curl -fsSL https://openclaw.ai/install-cli.sh | bash
     ```
 
     <Note>
-    托管安装程序会清除 OpenClaw 包安装所使用的 npm 新鲜度过滤条件，例如 `min-release-age`。
-    如果你手动使用 npm 安装，你自己的 npm 策略仍然会生效。
+    npm 12 默认会阻止包生命周期脚本，因此上面的命令会跳过 OpenClaw 的
+    `preinstall` 和 `postinstall` 步骤——npm 会将它们报告为
+    `blocked because they are not covered by allowScripts`。请显式允许它们：
+
+    ```bash
+    npm install -g openclaw@latest --allow-scripts openclaw
+    ```
+
+    npm 11.16.x 只会警告这些脚本 `not yet covered by
+    allowScripts`，但仍会运行它们。如果你想消除该警告，请注意，它建议使用的
+    `npm approve-scripts openclaw` 命令无法用于全局安装——它会失败并显示
+    `ENOMATCH  No installed packages
+    match: openclaw`。npm 11.12 及更早版本没有此策略。
+    </Note>
+
+    <Note>
+    托管安装器会清除 OpenClaw 包安装的 `min-release-age` 等 npm 新鲜度筛选条件。如果你使用 npm 手动安装，则仍会应用你自己的 npm 策略。
     </Note>
 
   </Tab>
   <Tab title="pnpm">
     ```bash
-    pnpm add -g openclaw@latest
-    pnpm approve-builds -g
+    pnpm add -g --allow-build=openclaw openclaw@latest
     openclaw onboard --install-daemon
     ```
 
     <Note>
-    pnpm 对带有构建脚本的包需要显式批准。首次安装后运行 `pnpm approve-builds -g`。
+    pnpm 要求明确批准带有构建脚本的包。全局安装不支持
+    `approve-builds -g`，因此请改为在 `pnpm add -g` 命令中传入
+    `--allow-build=openclaw`。
     </Note>
 
   </Tab>

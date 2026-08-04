@@ -7,14 +7,14 @@ title: "认证"
 ---
 
 <Note>
-本页涵盖**模型提供方**认证（API 密钥、OAuth、Claude CLI 复用、Anthropic setup-token）。关于**网关连接**认证（token、密码、trusted-proxy），请参见 [Configuration](/gateway/configuration) 和 [Trusted Proxy Auth](/gateway/trusted-proxy-auth)。
+本页涵盖**模型提供方**认证（API 密钥、OAuth、Claude CLI 复用、Anthropic setup-token）。关于**网关连接**认证（令牌、密码、受信任代理），请参见 [配置](/gateway/configuration) 和 [受信任代理认证](/gateway/trusted-proxy-auth)。
 </Note>
 
 OpenClaw 支持模型提供方的 OAuth 和 API 密钥。对于始终在线的网关主机，API 密钥是最可预测的选项；当订阅/OAuth 流程与您的提供方账号模型匹配时，它们也同样适用。
 
 - 完整的 OAuth 流程和存储布局：[/concepts/oauth](/concepts/oauth)
-- 基于 SecretRef 的认证（`env`/`file`/`exec` 提供方）：[Secrets Management](/gateway/secrets)
-- `models status --probe` 使用的凭据可用性/原因代码：[Auth Credential Semantics](/auth-credential-semantics)
+- 基于 SecretRef 的认证（`env`/`file`/`exec` 提供方）：[密钥管理](/gateway/secrets)
+- `models status --probe` 使用的凭据可用性/原因代码：[认证凭据语义](/auth-credential-semantics)。
 
 ## 推荐设置：API 密钥（任意提供商）
 
@@ -58,9 +58,10 @@ openclaw models auth login --provider anthropic --method cli --set-default
 
 这分两步完成：先在主机上将 Claude Code 登录到 Anthropic，然后告诉 OpenClaw 通过本地 `claude-cli` 后端路由 Anthropic 模型选择，并保存匹配的 OpenClaw 认证配置文件。
 
-The gateway service must resolve `claude` on `PATH`. If a deployment needs a
-nonstandard executable path, register a wrapper through a
-[CLI backend plugin](/plugins/cli-backend-plugins).
+在运行时，OpenClaw 将复用的 Claude CLI 登录视为 Claude 自己的凭据：它会验证主机当前的 `claude` 登录是否与所选配置文件的账户匹配，然后让 `claude` 子进程以原生方式进行身份验证，因此 Claude 会在运行期间持续刷新自己的登录状态。对于此路径，OpenClaw 从不会转发复制的令牌。如果主机登录缺失或属于其他账户，运行会在启动进程前失败，并显示确切的重新认证命令。由 OpenClaw 管理的凭据（Anthropic OAuth 登录配置文件、setup token、API key）仍会直接传递给子进程，并在适用时由 OpenClaw 刷新。
+
+网关服务必须能够在 `PATH` 中解析 `claude`。如果部署需要使用非标准的可执行文件路径，请通过
+[CLI 后端插件](/plugins/cli-backend-plugins)注册一个包装器。
 
 ## 手动输入令牌
 

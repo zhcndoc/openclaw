@@ -1,23 +1,23 @@
 ---
-summary: "Join Zoom meetings as a Chrome browser guest."
+summary: "以 Chrome 浏览器访客身份加入 Zoom 会议。"
 read_when:
-  - You are installing, configuring, or auditing the zoom-meetings plugin
-title: "Zoom meetings plugin"
+  - 你正在安装、配置或审查 Zoom 会议插件
+title: "Zoom 会议插件"
 ---
 
-# Zoom meetings plugin
+# Zoom 会议插件
 
-Join Zoom meetings as a Chrome browser guest.
+以 Chrome 浏览器访客身份加入 Zoom 会议。
 
-## Distribution
+## 分发
 
-- Package: `@openclaw/zoom-meetings`
-- Install route: included in OpenClaw
+- 包：`@openclaw/zoom-meetings`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/zoom-meetings`
 
-## Surface
+## 表面
 
 contracts: `tools`, `transcriptSourceProviders`
 
-## Related docs
+## 相关文档
 
 - [zoom-meetings](/plugins/zoom-meetings)

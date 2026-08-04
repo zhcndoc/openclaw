@@ -32,11 +32,13 @@ title: "功能"
 
 **渠道：**
 
-- iMessage、Telegram 和 WebChat 随核心安装包一同提供；其他所有渠道都是通过 `openclaw plugins install @openclaw/<id>` 安装的官方插件（或者在 `openclaw onboard` / `openclaw channels add` 期间按需安装）
-- 官方插件渠道：Discord、Feishu、Google Chat、IRC、LINE、Matrix、Mattermost、Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Raft、Signal、Slack、SMS、Synology Chat、Tlon、Twitch、Voice Call、WhatsApp、Zalo 和 Zalo Personal
+- Telegram 和 WebChat 随核心安装包一同提供；其他所有渠道都是通过 `openclaw plugins install @openclaw/<id>` 安装的官方插件（或在 `openclaw onboard` / `openclaw channels add` 期间按需安装）
+- 官方插件渠道：Discord、Feishu、Google Chat、iMessage、IRC、LINE、Matrix、Mattermost、
+  Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Raft、Signal、Slack、SMS、Synology Chat、
+  Tlon、Twitch、Voice Call、WhatsApp、Zalo 和 Zalo Personal
 - 在 OpenClaw 仓库外维护的外部插件渠道：WeChat、Yuanbao 和 Zalo ClawBot
-- 支持基于提及触发的群聊激活
-- 通过允许名单和配对机制保障私信安全
+- 支持基于提及激活的群聊
+- 通过允许列表和配对机制保障私聊安全
 
 **代理：**
 
@@ -54,9 +56,10 @@ title: "功能"
 
 **媒体：**
 
-- 图片、音频、视频和文档的收发
-- 共享的图像生成和视频生成功能
-- 语音笔记转录
+- 支持收发图像、音频、视频和文档
+- [跨 Control UI、iOS/macOS、Android 和 Linux 配套应用的内联音频和视频播放](/nodes/media-playback)
+- 共享的图像生成和视频生成功能界面
+- 语音消息转录
 - 支持多个提供商的文本转语音
 
 **应用和界面：**

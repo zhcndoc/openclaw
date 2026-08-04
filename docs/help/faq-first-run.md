@@ -605,18 +605,16 @@ sidebarTitle: "首次运行 FAQ"
 
   </Accordion>
 
-  <Accordion title="我如何设置 Gemini CLI OAuth？">
-    Gemini CLI 使用的是**插件认证流程**，而不是在 `openclaw.json` 中填 client id 或 secret。
+  <Accordion title="Can I use Gemini CLI or Antigravity OAuth?">
+    OpenClaw does not offer new Gemini CLI OAuth or Antigravity OAuth setup.
+    Connect Google with an AI Studio API key or Vertex AI instead.
 
-    1. Install Gemini CLI locally so `gemini` is on `PATH`:
-       - Homebrew: `brew install gemini-cli`
-       - npm: `npm install -g @google/gemini-cli`
-    2. Enable the plugin: `openclaw plugins enable google`
-    3. Login: `openclaw models auth login --provider google-gemini-cli --set-default`
-    4. Default model after login: `google/gemini-3.1-pro-preview` (runtime `google-gemini-cli`)
-    5. Requests failing after login? Set `GOOGLE_CLOUD_PROJECT` or `GOOGLE_CLOUD_PROJECT_ID` on the gateway host and retry.
+    The optional `google-gemini-cli` runtime remains available for advanced
+    setups using a supported Google API-key profile. Existing valid legacy
+    Gemini CLI OAuth profiles remain executable for compatibility, but OpenClaw
+    cannot create or repair them.
 
-    OAuth tokens are stored in auth profiles on the gateway host. Details: [Google](/providers/google), [Model providers](/concepts/model-providers).
+    Details: [Google](/providers/google), [Model providers](/concepts/model-providers).
 
   </Accordion>
 

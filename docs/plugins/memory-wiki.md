@@ -5,24 +5,24 @@ read_when:
   - 你正在配置捆绑的 memory-wiki 插件
   - 你需要为同一个 Gateway 中的不同代理使用独立的 wiki vault
   - 你想了解 wiki_search、wiki_get 或 bridge 模式
-title: "Memory wiki"
+title: "记忆 wiki"
 ---
 
 `memory-wiki` 是一个捆绑插件，它将持久知识编译成一个可导航的 wiki：确定性的页面、带有证据的结构化声明、来源、仪表盘以及机器可读的摘要。
 
 它不会替代活动记忆插件。回忆、晋升、索引和做梦仍然由所配置的记忆后端负责（`memory-core`、QMD、Honcho 等）。`memory-wiki` 作为其旁路存在，并将知识编译成一个受维护的 wiki 层。
 
-Enable the plugin before using its CLI, tools, or runtime integration:
+在使用其 CLI、工具或运行时集成之前，启用该插件：
 
 ```bash
 openclaw plugins enable memory-wiki
 openclaw gateway restart
 ```
 
-| Layer                | Owns                                                                              |
-| -------------------- | --------------------------------------------------------------------------------- |
-| Active memory plugin | Recall, semantic search, promotion, dreaming, memory runtime                      |
-| `memory-wiki`        | Compiled wiki pages, provenance-rich syntheses, dashboards, wiki search/get/apply |
+| 层                   | 负责内容                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| 活动记忆插件         | 回忆、语义搜索、晋升、做梦、记忆运行时                                              |
+| `memory-wiki`        | 编译后的 wiki 页面、富含来源信息的综合内容、仪表盘、wiki 搜索/获取/应用              |
 
 实用规则：
 
@@ -30,7 +30,7 @@ openclaw gateway restart
 - `wiki_search` / `wiki_get` 用于你需要 wiki 特定排序、来源，或页面级信念结构时
 - 当活动记忆插件支持语料库选择时，使用 `memory_search corpus=all` 可在一次调用中跨越两层
 
-一种常见的本地优先设置：使用 QMD 作为活动记忆后端负责回忆，而 `memory-wiki` 以 `bridge` 模式生成持久的综合页面。参见 [Configuration](#configuration) 下的 QMD + bridge 模式示例。
+一种常见的本地优先设置：使用 QMD 作为活动记忆后端负责回忆，而 `memory-wiki` 以 `bridge` 模式生成持久的综合页面。参见 [配置](#configuration) 下的 QMD + bridge 模式示例。
 
 如果 bridge 模式报告导出的工件数量为零，则说明活动记忆插件当前没有暴露公共 bridge 输入。先运行 `openclaw wiki doctor`，然后确认活动记忆插件支持公共工件。
 
@@ -84,7 +84,7 @@ import` 会通过正在运行的 Gateway 路由，因此它们看到的 active m
 - `entities/`：持久的事物、人物、系统、项目、对象
 - `concepts/`：想法、抽象、模式、政策（也是 OKF 导入的落脚点）
 - `syntheses/`：汇总摘要和维护中的汇总表
-- `reports/`：生成的仪表板
+- `reports/`：生成的仪表板。
 
 ## Open Knowledge Format 导入
 
@@ -92,7 +92,7 @@ import` 会通过正在运行的 Gateway 路由，因此它们看到的 active m
 openclaw wiki okf import ./bundles/ga4
 ```
 
-将一个未打包的 Open Knowledge Format 捆绑包导入到 wiki 概念页面中。适合数据目录、文档爬虫或增强代理已经生成 OKF 的场景：保留 OKF 作为可移植的交换工件，让 `memory-wiki` 将其转换为 OpenClaw 原生概念页面和编译后的摘要。
+将一个未打包的 Open Knowledge Format 捆绑包导入到 wiki 概念页面中。适用于数据目录、文档爬虫或增强代理已经生成 OKF 的场景：保留 OKF 作为可移植的交换工件，让 `memory-wiki` 将其转换为 OpenClaw 原生概念页面和编译后的摘要。
 
 - 未保留的 `.md` 文件是概念文档
 - 每个导入的概念都要求有一个非空的 `type` frontmatter 字段；缺失 `type` 会产生 `missing-type` 警告并跳过该文件
@@ -180,29 +180,17 @@ claims:
 
 ## 编译管线
 
-Compile reads wiki pages, normalizes summaries, and persists a machine-facing
-snapshot in OpenClaw's shared SQLite plugin state. Runtime code uses the
-lifecycle-owned owner snapshot to load SQLite during async prompt preparation;
-synchronous prompt assembly never scrapes Markdown or reads cache files.
-Compiled output also powers first-pass wiki indexing for search/get, claim-id
-lookup back to owning pages, compact prompt supplements, and report
-generation.
+Compile 读取 wiki 页面，规范化摘要，并将面向机器的快照持久化到 OpenClaw 的共享 SQLite 插件状态中。运行时代码使用由生命周期负责的所有者快照，在异步提示准备期间加载 SQLite；同步提示组装不会抓取 Markdown 或读取缓存文件。
+编译后的输出还用于搜索/获取的首轮 wiki 索引、将 claim-id 查回所属页面、紧凑提示补充内容以及报告生成。
 
-Source edits and vault restores become machine-facing only after the next
-compile. Restarting or refreshing the plugin lifecycle compares the vault's
-causally chained compile publication with SQLite and rejects a snapshot from a
-newer, rolled-back state. A compiler that started before the rollback cannot
-publish against the restored predecessor. Prompt preparation does not poll the
-vault or install file watchers.
-After rollback quarantine, a compile in the running process clears the owner
-immediately; a separate compiler process requires plugin lifecycle refresh so
-the daemon can confirm the new durable publication.
-Compiled caches are rebuildable: cache rows from before publication epochs are
-treated as misses and replaced by the next compile; they are not migrated.
+源文件编辑和 vault 恢复只有在下一次编译后才会对机器可见。重启或刷新插件生命周期时，会将 vault 中因果链式关联的编译发布与 SQLite 进行比较，并拒绝来自更新但已回滚状态的快照。在回滚之前启动的编译器无法基于已恢复的前置状态发布。提示准备不会轮询 vault，也不会安装文件监视器。
+回滚隔离后，运行中的进程执行编译会立即清除所有者；独立的编译器进程则需要刷新插件生命周期，以便守护进程确认新的持久化发布。
+ChatGPT 导入回滚会在编译前记录导入后的编辑，并将其恢复路径保存在插件状态中，因此中断的回滚可以协调恢复目录，并在重试时报告相同的已保留页面。目标恢复会在持久化进程重启栅栏之前完成。此后，重试会重建派生索引、仪表板和编译缓存，而不会重写源页面，也不会移动或删除恢复工件。之后的正常编译可能会刷新由机器管理的 Related 块。这涵盖了进程内故障，以及普通文件系统调用返回后发生的进程重启。它不保证在内核或主机断电时的写入顺序。与栅栏持久化同时发生竞争的路径名写入，要么在栅栏成功后仍然存在，要么由栅栏前的重试保存在 `recovered/` 下。通过在导入所拥有的 inode 被分类并解除链接之前打开的文件描述符进行的写入不在保证范围内，可能会丢失。
+编译缓存可以重建：发布时期之前的缓存行会被视为未命中，并由下一次编译替换；它们不会被迁移。
 
-## Dashboards and health reports
+## 仪表盘和健康报告
 
-当启用 `render.createDashboards` 时，compile 会在
+当启用 `render.createDashboards` 时，编译过程会在
 `reports/` 下维护仪表盘：
 
 | 报告                                | 跟踪内容                                           |
@@ -211,7 +199,7 @@ treated as misses and replaced by the next compile; they are not migrated.
 | `reports/contradictions.md`         | 矛盾笔记簇                                           |
 | `reports/low-confidence.md`         | 置信度较低的页面和断言                               |
 | `reports/claim-health.md`           | 缺少结构化证据的断言                                 |
-| `reports/stale-pages.md`            | 陈旧或未知新鲜度                                     |
+| `reports/stale-pages.md`            | 陈旧或新鲜度未知的页面                               |
 | `reports/person-agent-directory.md` | 人物/实体路由卡                                      |
 | `reports/relationship-graph.md`     | 结构化关系边                                         |
 | `reports/provenance-coverage.md`    | 证据类别覆盖                                         |
@@ -259,14 +247,16 @@ treated as misses and replaced by the next compile; they are not migrated.
 插件还注册了一个非独占的记忆语料补充，因此当活动记忆插件支持语料选择时，共享的
 `memory_search` 和 `memory_get` 也可以访问 wiki。
 
+## 在控制界面中浏览 Wiki
+
+[控制界面](/web/control-ui)可以直接浏览已编译的 Wiki：打开
+记忆页面，然后选择 **梦境 → 日记 → 记忆 Wiki**。该标签页会将综合、实体和概念页面聚合在一起，还包括包含声明、开放问题或矛盾的来源页面和报告页面，并显示每页的计数以及完整知识库的页面明细，同时可在行内打开完整的页面内容。没有这些元数据的原始来源和报告会计入明细，但不会作为卡片列出；请从 **已导入的洞见** 子标签页中打开它们，该子标签页会审阅外部历史导入在提升之前发现的内容。
+
+插件启用后，两个子标签页都会显示；在按代理划分知识库的设置中，它们会显示所选代理自己的知识库。界面通过插件的网关方法（`wiki.overview`、`wiki.get`、`wiki.importInsights`）读取；行内页面预览使用 `wiki.get`，代理也可以通过 `wiki_get` 工具访问同一查找功能。
+
 ## 提示词和上下文行为
 
-When `context.includeCompiledDigestPrompt` is enabled, memory prompt sections
-append a compact compiled snapshot from plugin state: top pages only,
-top claims only, contradiction count, question count, confidence/freshness
-qualifiers. This is opt-in because it changes prompt shape; it mainly matters
-for context engines or prompt assembly that explicitly consume memory
-supplements.
+启用 `context.includeCompiledDigestPrompt` 后，记忆提示词部分会从插件状态中附加一份紧凑的编译快照：仅包含顶级页面、顶级声明、矛盾数量、问题数量，以及置信度/新鲜度限定信息。此功能默认不启用，因为它会改变提示词结构；它主要影响那些明确使用记忆补充信息的上下文引擎或提示词组装流程。
 
 ## 配置
 
@@ -381,11 +371,10 @@ supplements.
 父目录默认是 `~/.openclaw/wiki`。因此，默认的 `main` agent 仍然保持
 现有的 `~/.openclaw/wiki/main` 路径。
 
-Agent 工具、编译后的提示摘要，以及通过 `memory_search` / `memory_get`
-暴露的 wiki 补充内容，都会根据当前 agent 上下文来解析 vault。
-对于包含多个已配置 agent 的 CLI 和 Gateway 调用，请使用
-`openclaw wiki --agent <agentId> ...` 或 Gateway 请求的 `agentId`
-显式提供 agent。若只配置了一个 agent，则在未提供 id 时它仍会作为默认值。
+Agent 工具、编译后的提示词摘要，以及通过
+`memory_search` / `memory_get` 暴露的 wiki 补充内容，都会根据当前 agent 上下文解析 vault。
+CLI 调用使用配置的默认 agent，除非命令传入 `--agent <agentId>`。
+在多 agent 设置中，Gateway 调用仍然要求请求包含 `agentId`。
 
 在桥接模式下，agent 范围的导入仅在公开 memory 制品的 `agentIds`
 包含所选 agent 时才会接受。属于其他 agent、没有所有权元数据或所有者未知的制品都会被跳过。

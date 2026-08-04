@@ -9,17 +9,17 @@ title: "计算机使用"
 
 计算机使用允许网关代理查看并控制一个具备能力的已配对桌面。资格基于能力：已连接的节点必须同时声明 `computer.act` 和 `screen.snapshot`，其结果必须包含 `displayFrameId`。该工具会捕获一张截图作为参考帧，然后通过 `computer.act` 驱动指针和键盘。动作集遵循核心 Anthropic computer-use 动作；可选的 `computer_20251124` 缩放不对外暴露。一个具备视觉能力的模型通过内置的 `computer` 代理工具来驱动它。
 
-代理只发出一个统一命令 `computer.act`；它无法知道节点如何实现该命令。随附的 macOS 应用会在进程内处理该命令，结合嵌入式 Peekaboo 服务和较小范围的 CoreGraphics 原语（正确的 TCC 权限，无额外进程）。Windows 和 Linux 可以使用可选的、实验性的 `cua-computer` 插件，并配合单独安装的 `cua-driver` 二进制文件。两种实现器都使用相同的持久本地启用和配对策略。
+代理会发出一个统一的命令 `computer.act`；它无法得知节点是如何实现该命令的。随附的 macOS 应用会通过嵌入式 Peekaboo 服务和精简的 CoreGraphics 原语在进程内处理该命令（使用正确的 TCC 权限，无需额外进程）。Windows 和 Linux 可以使用可选的实验性 `cua-computer` 插件，该插件会直接调用打包的 CUA Driver SDK。两种实现器都使用相同的持久化本地启用和配对策略。
 
 ## 要求
 
-- 一个成对、连通的节点，同时提供 `computer.act` 和 `screen.snapshot`，其中 `screen.snapshot` 返回 `displayFrameId`。
-- **macOS 执行器：** 已启用应用设置 **允许计算机控制**。它默认开启；如果明确选择关闭，则保持关闭。
-- **macOS 执行器：** 已向 OpenClaw 授予 **辅助功能** 和事件注入访问权限（用于指针/键盘注入），以及 **屏幕录制** 权限（用于 `screen.snapshot`）。
-- **Windows/Linux 执行器：** 已启用捆绑的 `cua-computer` 插件，并安装了兼容的 `cua-driver` 0.10.x 可执行文件。
+- 一个已配对且已连接的节点，同时提供 `computer.act` 和 `screen.snapshot`，其中 `screen.snapshot` 返回 `displayFrameId`。
+- **macOS 执行端：**已启用应用设置 **允许电脑控制**。该设置默认为开启；明确选择关闭后将保持关闭。
+- **macOS 执行端：**已向 OpenClaw 授予 **辅助功能**和事件发布访问权限（用于指针/键盘注入），以及 **屏幕录制**权限（用于 `screen.snapshot`）。
+- **Windows/Linux 执行端：**已启用捆绑的 `cua-computer` 插件。其软件包包含固定版本的 CUA Driver SDK 0.14.1 运行时；未配置 `cua-driver` 可执行文件、守护进程或 MCP 服务器。
 - 已在网关上批准包含 `computer.act` 的配对更新。
-- 一个具备视觉能力的代理模型。
-- 暴露 `computer` 的工具策略。默认的 `coding` 配置文件不会暴露它。将 `computer` 添加到 `tools.alsoAllow`；沙箱化代理还需要将其添加到 `tools.sandbox.tools.alsoAllow`。
+- 具备视觉能力的智能体模型。
+- 可公开使用 `computer` 的工具策略。默认的 `coding` 配置文件不包含该工具。将 `computer` 添加到 `tools.alsoAllow`；沙箱智能体还需要将其添加到 `tools.sandbox.tools.alsoAllow`。
 
 ## `computer` 代理工具
 
@@ -35,48 +35,46 @@ title: "计算机使用"
 
 截图仅供**模型内部使用**：它们绝不会自动传送到聊天频道。请将所有屏幕内容视为不受信任的输入；工具会警告模型不要遵循与用户请求相冲突的屏幕上的指令。
 
-## Windows 和 Linux（实验性，通过 cua-driver）
+## Windows 和 Linux（实验性，通过 CUA Driver SDK）
 
-捆绑的 `cua-computer` 插件为 Windows 和 Linux 节点主机提供了一个实验性的执行器。它默认禁用，并且需要预发布版 0.10.x 驱动契约：
+捆绑的 `cua-computer` 插件为 Windows 和 Linux 节点主机提供了一个实验性的执行器。它默认处于禁用状态，并直接使用固定版本的 CUA Driver SDK 0.14.1 契约：
 
-1. 从 [上游发布](https://github.com/trycua/cua/releases) 中安装 `cua-driver` 0.10.x 二进制文件，并使其可在 `PATH` 中使用。若要使用其他可执行文件位置，请设置 `plugins.entries.cua-computer.config.driverPath`。
-2. 启用插件：
+1. 启用插件：
 
    ```bash
    openclaw plugins enable cua-computer
    ```
 
-3. 在交互式桌面会话中启动 `openclaw node run`。当第一个截图或操作到来时，插件会按需启动本地驱动守护进程。
+2. 在交互式桌面会话中启动 `openclaw node run`。该插件会按需创建其配置的 SDK 运行时，然后为节点主机命令执行创建一个由 OpenClaw 所有的可信会话。当命令主机停止或重启时，它会关闭该会话并关闭运行时。
 
-此执行器目前仅控制主显示器。X11/XWayland 是 Linux 的首选路径。原生 Wayland 仍然是上游的可选启用项：请在启动节点之前自行设置 `CUA_DRIVER_RS_ENABLE_WAYLAND`；OpenClaw 从不自动设置它。上游原生 Wayland 输入路径不支持 KDE/KWin。由于 cua-driver 0.10.x 没有跨平台的桌面范围按住契约，`hold_key`、`left_mouse_down` 和 `left_mouse_up` 不可用。带修饰键的滚动和拖拽在两个平台上都不可用，而在 Linux 上带修饰键的点击也不可用。`key` 操作接受命名按键、字母和修饰键组合（例如 `cmd+c` 或 `Return`）；数字和标点按键会被拒绝，因为驱动会丢弃其与布局相关的 Shift 状态，因此请改用 `type` 操作发送这些文本。文本输入在 `type_text` 驱动调用过程中无法中途取消。
+该执行器目前只能控制主显示器。由于 CUA Driver SDK 没有桌面范围的按键保持输入契约，因此 `hold_key`、`left_mouse_down` 和 `left_mouse_up` 不可用。由于类型化桌面方法不接受修饰键，因此带修饰键的点击、滚动和拖动会被拒绝。`key` 操作接受命名键、字母和修饰键组合（例如 `cmd+c` 或 `Return`）；数字和标点键会被拒绝，因为驱动会丢弃它们依赖布局的 Shift 状态，因此请改用 `type` 操作发送这类文本。每次节点调用都会将取消操作传递给 SDK。
 
-由于 cua-driver 不报告稳定的显示身份，帧授权会绑定到驱动连接以及当前主显示器几何信息。守护进程或会话重连会使未完成的帧失效，但若保持连接打开，且主显示器在几何信息相同的情况下被替换，则无法检测到；对于此执行器，建议使用稳定的单显示器会话。
+该插件调用的是 `CuaDriver.createConfigured`，从不调用裸 `create()`。其授权上限、可信会话标识符、TTL 以及桌面范围均由 OpenClaw 固定；面向模型的 `screen.snapshot` 和 `computer.act` 输入无法选择会话或扩大该授权范围。由于驱动不会报告稳定的显示器标识，帧授权会绑定到可信会话代次以及实时主显示器几何信息。新会话会使未完成的帧失效，但在同一会话中发生具有相同几何信息的主显示器替换时无法检测到；对于此执行器，建议使用稳定的单显示器会话。
 
-OpenClaw 会为其管理的 `mcp` 和 `serve` 进程禁用 cua-driver 遥测和更新检查。它不会下载或更新驱动二进制文件。
+这是对原有 0.10 守护进程/MCP 集成的彻底替换。OpenClaw 不会启动 CUA 进程，不会代理 MCP 客户端，也不会回退到其他 CUA 运行时。
 
 ### 故障排除
 
 `cua-computer` 执行器会在工具结果和节点日志中显示类型化错误代码。常见的有：
 
-| Code                                                 | Cause                                                                                                                                                           | Fix                                                                                                                                                                                                                                  |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `COMPUTER_DRIVER_UNAVAILABLE`                        | `cua-driver` 二进制文件不在 `PATH` 中（或 `driverPath` 配置错误）、守护进程未能及时就绪，或者该节点不是 Windows/Linux。                 | 将 `cua-driver` 0.10.x 安装到 `PATH` 中，或设置 `driverPath`。请在交互式桌面会话中运行 `openclaw node run`；在 Linux 上，请确保存在 X11 `DISPLAY`（或带有 `CUA_DRIVER_RS_ENABLE_WAYLAND` 的 `WAYLAND_DISPLAY`）。 |
-| `COMPUTER_DRIVER_UNSUPPORTED`                        | 已连接的驱动不是 `cua-driver` 0.10.x，或者其能力/模式版本不同。                                                                      | 安装受支持的 0.10.x 构建版本。插件在你修正后大约 30 秒会重新探测，因此无需重启节点。                                                                                                          |
-| `COMPUTER_REFUSED_<code>`                            | 驱动以结构化代码拒绝了该操作，例如 `background_unavailable`、`background_occluded` 或 `foreground_unavailable`（KDE/KWin Wayland）。   | 将目标窗口置于前台，切换到 X11，或使用受支持的合成器。请参见上面的兼容性说明。                                                                                                                    |
-| `COMPUTER_STALE_FRAME`                               | 这些坐标引用的是一个已不再是当前状态的截图（上下文压缩、显示几何变化，或参考宽度变化）。                 | 在执行坐标操作前，先拍摄一张新的 `screenshot`。                                                                                                                                                                              |
-| `COMPUTER_UNSUPPORTED_ACTION`                        | 此执行器无法忠实完成的操作：`hold_key`、`left_mouse_down`、`left_mouse_up`、带修饰键的拖拽/滚动，或在 Linux 上带修饰键的点击。 | 使用受支持的操作。cua-driver 0.10.x 没有桌面范围的按住输入契约。                                                                                                                                                  |
-| `COMPUTER_UNSUPPORTED_DISPLAY`                       | 非主 `screenIndex`、捕获/屏幕几何不匹配，或光标位于主显示器之外。                                                       | 仅驱动主显示器。                                                                                                                                                                                                      |
-| `COMPUTER_UNSUPPORTED_KEY`                           | 驱动无法可靠复现的 `key` 值：数字键或其 Shift 状态依赖布局的标点键，或者未知按键。                        | 改用 `type` 操作发送这些文本。                                                                                                                                                                                    |
-| `COMPUTER_DRIVER_ERROR` / `COMPUTER_INVALID_REQUEST` | 驱动失败但没有结构化代码，或者操作参数格式错误。                                                                            | 检查驱动状态并重新截图；更正操作参数。                                                                                                                                                        |
+| Code                                                 | Cause                                                                                                                                                         | Fix                                                                                                                                                                             |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `COMPUTER_DRIVER_UNAVAILABLE`                        | CUA Driver SDK 运行时无法初始化，节点不是 Windows/Linux，或者其桌面权限/会话不可用。                              | 在交互式桌面会话中运行 `openclaw node run`，并检查平台桌面权限。如果捆绑的 CUA Driver SDK 软件包缺失，请重新安装 OpenClaw。 |
+| `COMPUTER_REFUSED_<code>`                            | 驱动使用结构化代码拒绝了操作，例如 `background_unavailable`、`background_occluded` 或 `foreground_unavailable`（KDE/KWin Wayland）。 | 将目标窗口置于前台，切换到 X11，或使用受支持的合成器。请参阅上面的兼容性说明。                                                               |
+| `COMPUTER_STALE_FRAME`                               | 坐标引用的截图已不再是当前截图（上下文压缩、显示器几何信息发生变化或引用宽度发生变化）。               | 在执行坐标操作前获取一张新的 `screenshot`。                                                                                                                         |
+| `COMPUTER_UNSUPPORTED_ACTION`                        | 该执行器无法准确执行的操作：`hold_key`、`left_mouse_down`、`left_mouse_up`，或带修饰键的点击/拖动/滚动。                       | 使用受支持的操作。类型化的 CUA Driver 桌面契约没有为这些调用提供保持输入或修饰键参数。                                                           |
+| `COMPUTER_UNSUPPORTED_DISPLAY`                       | 非主显示器的 `screenIndex`、捕获区域/屏幕几何信息不匹配，或光标位于主显示器之外。                                                     | 仅操作主显示器。                                                                                                                                                 |
+| `COMPUTER_UNSUPPORTED_KEY`                           | 驱动无法可靠复现的 `key` 值：Shift 状态依赖键盘布局的数字或标点键，或未知键。                      | 改用 `type` 操作发送这类文本。                                                                                                                               |
+| `COMPUTER_DRIVER_ERROR` / `COMPUTER_INVALID_REQUEST` | 驱动未提供结构化代码便执行失败，或操作参数格式错误。                                                                          | 检查驱动状态并重新获取截图；修正操作参数。                                                                                                   |
 
 ## `computer.act` 节点命令
 
 `computer.act` 是工具路由输入所使用的唯一节点命令（通过 `node.invoke`，命令为 `"computer.act"`）。它具有以下特点：
 
-- **本地启用**：只有在启用 Computer Control 时，节点才会宣告该能力。网关可以在配对时一次性批准该已宣告的能力面。
+- **本地启用**：只有在启用计算机控制时，节点才会宣告该能力。网关可以在配对时一次性批准该已宣告的能力面。
 - **基于能力**：该工具要求已连接节点同时宣告 `computer.act` 和 `screen.snapshot`。内置的 macOS 应用和可选择启用的实验性 `cua-computer` 插件提供相同的命令对。
 
-读取会复用 `screen.snapshot`；没有第二种捕获路径。有关共享捕获命令，请参见 [Camera and screen nodes](/nodes/camera)。
+读取会复用 `screen.snapshot`；没有第二种捕获路径。有关共享捕获命令，请参见 [摄像头和屏幕节点](/nodes/camera)。
 
 ## 授权
 
@@ -94,7 +92,7 @@ OpenClaw 会为其管理的 `mcp` 和 `serve` 进程禁用 cua-driver 遥测和�
    }
    ```
 
-一旦启用节点本地控制并批准配对更新，只要节点继续声明该能力，`computer.act` 就会持续可用。这里没有租约、过期或 arm/disarm 命令。本地禁用 Computer Control 会移除已声明的命令，且节点会在调用时重新检查该开关。
+一旦启用节点本地控制并批准配对更新，只要节点继续声明该能力，`computer.act` 就会持续可用。这里没有租约、过期或启用/禁用命令。本地禁用 Computer Control 会移除已声明的命令，且节点会在调用时重新检查该开关。
 
 在 macOS 上，默认开启意味着，一旦所需的 macOS 授权存在，已配对的网关就可以立即驱动指针和键盘输入。没有逐次操作确认。请在配对之前，或之后的任何时候，关闭 **Allow Computer Control**，以停止声明并接受 `computer.act`。
 
@@ -102,10 +100,10 @@ OpenClaw 会为其管理的 `mcp` 和 `serve` 进程禁用 cua-driver 遥测和�
 
 ## 安全
 
-- 每一层（工具策略、网关命令策略、配对、node-app 设置，以及平台权限）都必须一致。对于当前的 macOS 执行器，这包括 **允许控制计算机**、辅助功能和屏幕录制。只要这些持久性控制保持启用，操作就会执行；没有每次操作的确认。
-- macOS 执行器一次发送一个字素的文本，因此取消、断开连接、暂停、禁用或端点替换都会在下一个字素之前将其停止。实验性的 cua-driver 执行器无法在 `type_text` 调用进行到一半时取消。
-- 截图仅供模型使用，不会自动发送到聊天（问题 [#44759](https://github.com/openclaw/openclaw/issues/44759)）。
-- 将屏幕内容视为不可信；它可能包含提示注入。
+- 每一层（工具策略、网关命令策略、配对、节点应用设置和平台权限）都必须保持一致。对于当前的 macOS 执行器，这包括 **允许计算机控制**、辅助功能和屏幕录制。只要这些持久控制措施保持启用，操作就会执行；不会针对每个操作进行确认。
+- macOS 执行器一次发送一个字素，因此取消、断开连接、暂停、禁用或端点替换都会在发送下一个字素之前停止执行。实验性的 CUA Driver 执行器会在每次调用时将节点取消操作传递给 SDK。
+- 截图仅供模型使用，不会自动发送到聊天中（问题 [#44759](https://github.com/openclaw/openclaw/issues/44759)）。
+- 将屏幕内容视为不受信任内容；其中可能包含提示注入。
 
 ## macOS 权限故障排除
 

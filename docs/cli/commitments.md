@@ -3,7 +3,7 @@ summary: "用于 `openclaw commitments` 的 CLI 参考（检查并忽略推断�
 read_when:
   - 你想检查推断的后续承诺
   - 你想忽略待处理的检查项
-  - 你正在审核 heartbeat 可能交付的内容
+  - 你正在审核心跳可能交付的内容
 title: "`openclaw commitments`"
 ---
 
@@ -86,7 +86,32 @@ openclaw commitments --all --json
 JSON 输出包括数量、活动状态和代理过滤器、
 共享 SQLite 数据库路径，以及完整的存储记录。
 
-## 相关内容
+### 消除输出
+
+`dismiss` 只会更改处于活动状态的 `pending` 或 `snoozed` 承诺。缺失的、
+已消除的、已发送的和已过期的承诺保持不变。重复的 ID 在首次出现后会被忽略，结果会保留请求顺序。
+
+当请求中的每条承诺都被消除时，`--json` 返回：
+
+```json
+{ "dismissed": ["cm_abc123", "cm_def456"] }
+```
+
+当请求包含过时或非活动的 ID 时，命令会同时报告两类结果，
+并以状态 `1` 退出：
+
+```json
+{ "dismissed": ["cm_abc123"], "notDismissed": ["cm_missing", "cm_expired"] }
+```
+
+如果请求中的承诺均无法被消除，命令仍会以状态
+`1` 退出：
+
+```json
+{ "dismissed": [], "notDismissed": ["cm_missing"] }
+```
+
+## 相关
 
 - [推断的承诺](/concepts/commitments)
 - [记忆概览](/concepts/memory)

@@ -7,6 +7,9 @@ title: "图片和媒体支持"
 
 WhatsApp 渠道运行在 Baileys Web 上。本页面涵盖发送、网关和代理回复的媒体处理规则。
 
+有关控制界面和原生应用中的内联音频和视频，包括便携式格式、字节限制以及延迟转码，请参阅
+[媒体播放](/nodes/media-playback)。
+
 ## 目标
 
 - 通过 `openclaw message send --media` 发送带可选标题的媒体。
@@ -90,4 +93,5 @@ WhatsApp 渠道运行在 Baileys Web 上。本页面涵盖发送、网关和代�
 
 - [相机拍摄](/nodes/camera)
 - [媒体理解](/nodes/media-understanding)
-- [音频和语音消息](/nodes/audio)
+- [媒体播放](/nodes/media-playback)
+- [音频和语音笔记](/nodes/audio)

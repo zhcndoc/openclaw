@@ -18,7 +18,7 @@ OpenClaw 是一个自托管网关，可将 Discord、Google Chat、iMessage、Ma
 
 ## 前提条件
 
-- 已安装并完成 OpenClaw 配置 - 如果你还没做过，请参见 [Getting Started](/start/getting-started)
+- 已安装并完成 OpenClaw 配置 - 如果你还没做过，请参见 [入门指南](/start/getting-started)
 - 一个用于助手的第二个电话号码（SIM/eSIM/预付费）
 
 ## 双手机设置（推荐）
@@ -167,9 +167,9 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 
 ## 心跳（主动模式）
 
-默认情况下，OpenClaw 每 30 分钟运行一次心跳，提示词为：
-`当提供监视器草稿上下文时，请遵循该上下文。重复任务是 cron 作业；请使用 cron 工具或 openclaw cron CLI 创建或更改其计划，不要使用 heartbeat 草稿。不要从先前聊天中推断或重复旧任务。如果没有需要处理的内容，请回复 HEARTBEAT_OK。`
-将 `agents.defaults.heartbeat.every: "0m"` 设置为禁用。心跳清单保存在监视器的 cron 草稿中（参见 [Heartbeat](/gateway/heartbeat)）；`openclaw doctor --fix` 会将旧工作区中的 `HEARTBEAT.md` 迁移到这里。
+默认情况下，OpenClaw 每 30 分钟运行一次心跳，并使用以下提示词：
+`在提供监视器草稿上下文时，遵循其中的心跳监视器草稿。重复性任务属于自动化；请使用自动化工具创建或更改其计划，而不是使用心跳草稿。不要从之前的聊天中推断或重复旧任务。如果没有任何需要处理的事项，请回复 HEARTBEAT_OK。`
+将 `agents.defaults.heartbeat.every: "0m"` 设置为禁用心跳。心跳清单位于监视器的 cron 草稿中（参见[心跳](/gateway/heartbeat)）；`openclaw doctor --fix` 会将旧版工作区中的 `HEARTBEAT.md` 迁移到该位置。
 
 - 如果监视器草稿存在但实际上是空的（只有空白行、Markdown/HTML 注释、像 `# Heading` 这样的 Markdown 标题、代码块分隔符，或空的待办清单占位项），OpenClaw 会跳过心跳运行以节省 API 调用。
 - 如果不存在草稿，心跳仍会运行，由模型自行决定要做什么。
@@ -212,6 +212,9 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 
 OpenClaw 会把结构化媒体与文本一起发送。为了兼容性，旧式的最终助手回复仍可能被规范化，但工具输出、浏览器输出、流式块和消息操作不会将文本解析为附件命令。
 
+如果必须使用旧式最终回复中的 `MEDIA:` 行，请将其保留为独立的纯文本行。Markdown 包装、代码围栏和诸如 `**MEDIA:/path.png**`、`` `MEDIA:/path.png` `` 或
+`Here is the image: MEDIA:/path.png` 这样的行内文本都会被保留为文本，不会附加媒体。请参阅[富输出协议](/reference/rich-output-protocol#legacy-media-lines)。
+
 本地路径行为遵循与代理相同的文件读取信任模型：
 
 - 如果 `tools.fs.workspaceOnly` 为 `true`，外发的本地媒体路径将限制在 OpenClaw 临时根目录、媒体缓存、代理工作区路径以及沙盒生成的文件内。
@@ -240,9 +243,9 @@ openclaw health --json   # 通过 WS 连接获取网关健康快照
 - macOS 菜单栏伴侣： [OpenClaw macOS 应用](/platforms/macos)
 - iOS 节点应用: [iOS 应用](/platforms/ios)
 - Android 节点应用: [Android 应用](/platforms/android)
-- Windows Hub: [Windows](/platforms/windows)
+- Windows 中心: [Windows](/platforms/windows)
 - Linux 状态: [Linux 应用](/platforms/linux)
-- 安全: [Security](/gateway/security)
+- 安全: [安全](/gateway/security)
 
 ## 相关
 

@@ -21,7 +21,7 @@ title: "使用情况跟踪"
 - CLI：`openclaw models status` 列出 OAuth/token 认证配置文件，并在每个有使用窗口的提供商旁显示其摘要。
 - Control UI：**Usage** 在 OpenClaw 基于会话的 token 和预估成本分析上方显示提供商套餐和账单卡片。Anthropic 和 OpenAI Admin API 凭据会额外添加提供商报告的今日、7 天和 30 天支出、每日趋势、token 总数、热门模型和成本分类。
 - Control UI：聊天撰写器的 context ring 弹出层会为订阅型提供商显示**套餐使用情况**——按窗口的进度条（5 小时、每周、按模型范围）及其重置时间、已知时的提供商套餐（例如 `Max (20x)`），以及额外使用积分。通过套餐计费的会话会隐藏按 token 计算的美元预估；按 API 计费的会话会保留 `Est. cost` 和按费用类型划分的明细。Claude Code CLI（`claude-cli`）设置会复用相同的 Anthropic 订阅使用情况。
-- macOS 菜单栏：当可用提供商使用快照时，Context 下方会显示一个根级 "Usage" 区域。参见 [Menu bar](/platforms/mac/menu-bar)。
+- macOS 菜单栏：当可用提供商使用快照时，Context 下方会显示一个根级 "Usage" 区域。参见 [菜单栏](/platforms/mac/menu-bar)。
 
 `openclaw channels list` 不再打印提供商使用情况；它会改为引导用户使用 `openclaw status` 或 `openclaw models list`。
 
@@ -29,8 +29,8 @@ title: "使用情况跟踪"
 
 订阅配额和 API 计费是不同的提供方界面：
 
-- Anthropic 订阅/设置凭据会继续显示 Claude 配额窗口和可选的额外使用预算。设置 `ANTHROPIC_ADMIN_KEY` 或 `ANTHROPIC_ADMIN_API_KEY` 可改为显示组织的 Usage 和 Cost API 历史。以 `sk-ant-admin` 开头的 Anthropic 提供方凭据会被自动检测到。
-- OpenAI ChatGPT/Codex OAuth 会继续显示套餐、配额窗口和信用余额。设置 `OPENAI_ADMIN_KEY` 可改为显示组织的成本和 completions 使用历史；也可以选择设置 `OPENAI_PROJECT_ID` 将其限定到某个项目。OpenClaw 绝不会将来自 `OPENAI_API_KEY`、提供方配置或认证配置文件的推理凭据发送到组织 API，因为这些密钥可能属于自定义端点。
+- Anthropic 订阅/设置凭据会继续显示 Claude 配额窗口和可选的额外使用预算。设置 `ANTHROPIC_ADMIN_KEY` 或 `ANTHROPIC_ADMIN_API_KEY` 可改为显示组织的使用量和成本 API 历史。以 `sk-ant-admin` 开头的 Anthropic 提供方凭据会被自动检测到。
+- OpenAI ChatGPT/Codex OAuth 会继续显示套餐、配额窗口和信用余额。设置 `OPENAI_ADMIN_KEY` 可改为显示组织的成本和补全使用历史；也可以选择设置 `OPENAI_PROJECT_ID` 将其限定到某个项目。OpenClaw 绝不会将来自 `OPENAI_API_KEY`、提供方配置或认证配置文件的推理凭据发送到组织 API，因为这些密钥可能属于自定义端点。
 
 管理员凭据优先，因为它们提供了真实的组织计费数据。OpenClaw 不会将这些由提供方报告的总计与其本地会话估算合并；这两个部分是有意回答不同问题的。
 
@@ -200,28 +200,28 @@ JSON 文件路径（支持 `~`）或一个内联对象；当其有效时，会�
 
 | Path                                                                                | 含义                                                                                               |
 | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `surface`                                                                           | channel id (`discord`/`telegram`/etc.)                                                              |
-| `agentId` / `chat_type`                                                             | owning agent id / chat surface kind                                                                 |
-| `model.id` / `model.display_name` / `model.provider`                                | model id / display name / provider id                                                               |
+| `surface`                                                                           | channel ID（`discord`/`telegram`/etc.）                                                           |
+| `agentId` / `chat_type`                                                             | 所属 agent ID / 聊天界面类型                                                                        |
+| `model.id` / `model.display_name` / `model.provider`                                | 模型 ID / 显示名称 / provider ID                                                                    |
 | `model.actual`, `model.resolved_ref`                                                | 此轮实际使用的 provider/model ref                                                                  |
 | `model.requested`                                                                   | 请求的 provider/model ref（回退前）                                                                |
-| `model.reasoning`                                                                   | effort (`off` through `xhigh`)                                                                      |
-| `model.is_fallback` / `model.is_override`                                           | bool: 是否使用了回退 / 是否锁定了模型                                                               |
-| `model.override_source` / `model.auth_mode`                                         | override source label / credential mode (`oauth`, `api-key`, `token`, `mixed`, `aws-sdk`, `unknown`) |
-| `state.fast_mode`                                                                   | bool: fast vs slow                                                                                  |
+| `model.reasoning`                                                                   | 推理强度（从 `off` 到 `xhigh`）                                                                    |
+| `model.is_fallback` / `model.is_override`                                           | 布尔值：是否使用了回退 / 是否锁定了模型                                                             |
+| `model.override_source` / `model.auth_mode`                                         | override 来源标签 / 凭据模式（`oauth`、`api-key`、`token`、`mixed`、`aws-sdk`、`unknown`）         |
+| `state.fast_mode`                                                                   | 布尔值：快速模式或慢速模式                                                                           |
 | `state.compactions`                                                                 | 本次会话的压缩次数                                                                                  |
-| `context.max_tokens` / `context.used_tokens` / `context.pct_used`                   | 窗口预算 / 已占用 token / 已用 0-100                                                                |
+| `context.max_tokens` / `context.used_tokens` / `context.pct_used`                   | 窗口预算 / 已占用 token / 已使用 0-100                                                               |
 | `usage.input_tokens` / `usage.output_tokens` / `usage.total_tokens`                 | 本轮汇总                                                                                            |
 | `usage.cache_read_tokens` / `usage.cache_write_tokens`                              | 本轮的 cache-read 和 cache-write tokens                                                            |
 | `usage.has_tokens` / `usage.has_split_tokens` / `usage.has_total_only_tokens`       | token 显示守卫                                                                                      |
 | `usage.cache_hit_pct`                                                               | cache-read 占总 prompt tokens 的比例                                                                |
-| `usage.last.input_tokens` / `usage.last.output_tokens` / `usage.last.cache_hit_pct` | 仅最终模型调用（也包含 `cache_read_tokens`, `cache_write_tokens`, `total_tokens`）                  |
+| `usage.last.input_tokens` / `usage.last.output_tokens` / `usage.last.cache_hit_pct` | 仅最终模型调用（也包含 `cache_read_tokens`、`cache_write_tokens`、`total_tokens`）                  |
 | `cost.turn_usd` / `cost.available`                                                  | 估算的本轮成本 / 是否解析到了成本表                                                                 |
 | `timing.duration_ms`                                                                | 墙钟时间轮次持续时长                                                                                |
 | `identity.name` / `identity.emoji` / `identity.avatar`                              | agent 身份名称 / emoji / 头像                                                                       |
-| `session.id`                                                                        | 会话 id                                                                                             |
+| `session.id`                                                                        | 会话 ID                                                                                             |
 
-(Provider rate-limit windows are **not** in this contract; there is no array-valued path today, so an `each` piece has nothing to iterate.)
+（Provider 的速率限制窗口**不在**此合约中；目前没有数组类型的路径，因此 `each` 片段没有可迭代的内容。）
 
 ### 动词
 
@@ -230,7 +230,7 @@ JSON 文件路径（支持 `~`）或一个内联对象；当其有效时，会�
 | 动词            | 效果                                | 示例                           |
 | --------------- | ------------------------------------- | --------------------------------- |
 | `num`           | 紧凑计数                         | `272000 -> 272k`                  |
-| `fixed:N`       | N 位小数 (`0..100`，默认 2)      | `0.0377`                          |
+| `fixed:N`       | N 位小数（`0..100`，默认 2）      | `0.0377`                          |
 | `dur`           | 秒数转持续时间                   | `14820 -> 4h07m`                  |
 | `pct`           | 追加 `%`                            | `96 -> 96%`                       |
 | `inv`           | `100 - x`                             | 用于从已使用量得到剩余量             |
@@ -279,20 +279,46 @@ JSON 文件路径（支持 `~`）或一个内联对象；当其有效时，会�
 
 当没有可用的提供方使用情况认证可解析时，Usage 会被隐藏。OpenClaw 会自动发现声明了 `contracts.usageProviders` 并实现了 `resolveUsageAuth` 和 `fetchUsageSnapshot` 的已启用提供方插件；不存在单独的核心提供方允许列表。静态契约通过作用域化发现来避免导入每个提供方插件。每个插件都负责自己的上游端点和响应映射。共享快照将计划名称、配额窗口、余额、支出和预算保持为与提供方无关的形式，供 CLI、应用和 Control UI 消费者使用。
 
-- **Anthropic（Claude）**：认证配置文件中的 OAuth token。如果 OAuth token 缺少 `user:profile` scope，则在已设置时回退到 `claude.ai` 网页会话（`CLAUDE_AI_SESSION_KEY`、`CLAUDE_WEB_SESSION_KEY`，或 `CLAUDE_WEB_COOKIE` 中的 `sessionKey=` cookie）。当 Anthropic 报告模型范围限制以及已启用的额外使用月度支出/预算时，也会包含这些信息。显式的 Anthropic Admin API key，或自动检测到的 `sk-ant-admin...` 提供方配置文件，则会改为显示 30 天组织成本和 Messages API 历史。
-- **ClawRouter**：API key（`CLAWROUTER_API_KEY`）。配置后显示月度预算窗口和类型化的 USD 预算；否则显示汇总支出以及请求/令牌/成本摘要。
-- **DeepSeek**：通过 env/config/auth store 的 API key（`DEEPSEEK_API_KEY`）。显示每个提供方报告的货币余额。
-- **GitHub Copilot**：认证配置文件中的 OAuth token。
-- **Gemini CLI**：认证配置文件中的 OAuth token。
-- **MiniMax**：API key 或 MiniMax OAuth 认证配置文件。OpenClaw 将 `minimax`、`minimax-cn` 和 `minimax-portal` 视为同一个 MiniMax 配额表面，优先使用已存储的 MiniMax OAuth（如果存在），否则回退到 `MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY` 或 `MINIMAX_API_KEY`。使用情况轮询会在已配置时从 `models.providers.minimax-portal.baseUrl` 或 `models.providers.minimax.baseUrl` 推导 Coding Plan 主机，否则使用 MiniMax CN 主机。  
-  MiniMax 的原始 `usage_percent` / `usagePercent` 字段表示**剩余**配额，因此 OpenClaw 会在显示前将其取反；如果存在按数量计的字段，则以这些字段为准。  
-  - 窗口标签优先来自提供方的小时/分钟字段，其次回退到 `start_time` / `end_time` 区间。  
-  - 如果 coding-plan 端点返回 `model_remains`，OpenClaw 会优先使用聊天模型条目，在缺少显式 `window_hours` / `window_minutes` 字段时从时间戳推导窗口标签，并在计划标签中包含模型名称。
-- **OpenAI（Codex/ChatGPT 计划）**：认证配置文件中的 OAuth token（当存在 account id 时会发送 `ChatGPT-Account-Id` 标头）。显示 ChatGPT 计划、可重置的 Codex 窗口，以及在有报告时的信用余额。信用仍然是提供方信用；OpenClaw 不会将其标为美元。`OPENAI_ADMIN_KEY` 在该密钥具有 Usage Dashboard 访问权限时，会增加 30 天组织成本和 completions 使用历史。推理凭据绝不会转发到组织 API。
-- **OpenRouter**：API key 或基于 OAuth 的 API key（`OPENROUTER_API_KEY` 或认证配置文件）。结合账户 credits 端点与 key 配额端点，因此当凭据可访问时，会显示账户余额/支出、key 预算以及每日/每周/月度使用情况。任一端点都可以独立丰富快照。
-- **Venice**：通过 env/config/auth store 的 API key（`VENICE_API_KEY`）。显示 USD 和 DIEM 余额，以及在有报告时的 DIEM epoch 分配使用情况。
-- **Xiaomi MiMo**：两个独立的使用情况表面。按量付费使用 API key（`XIAOMI_API_KEY`）；Token Plan 使用单独的 key（`XIAOMI_TOKEN_PLAN_API_KEY`）。目前两者都不报告配额窗口。
-- **z.ai**：通过 env/config/auth store 的 API key（`ZAI_API_KEY` 或 `Z_AI_API_KEY`）。
+- **Anthropic (Claude)**：认证配置文件中的 OAuth 令牌。如果 OAuth 令牌缺少
+  `user:profile` 作用域，则在已设置时回退到 `claude.ai` Web 会话（
+  `CLAUDE_AI_SESSION_KEY`、`CLAUDE_WEB_SESSION_KEY` 或
+  `CLAUDE_WEB_COOKIE` 中的 `sessionKey=` Cookie）。
+  当 Anthropic 报告了模型作用域限制以及已启用的额外使用量月度支出/预算时，会将其包含在内。
+  显式的 Anthropic Admin API 密钥，或自动检测到的 `sk-ant-admin...` 提供方配置文件，
+  则会显示组织过去 30 天的成本和 Messages API 历史记录。
+- **ClawRouter**：API 密钥（`CLAWROUTER_API_KEY`）。配置后显示月度预算窗口和类型化的 USD 预算；
+  否则显示汇总支出以及请求/令牌/成本摘要。
+- **DeepSeek**：通过环境变量/配置/认证存储提供 API 密钥（`DEEPSEEK_API_KEY`）。
+  显示提供方报告的每种货币余额。
+- **GitHub Copilot**：认证配置文件中的 OAuth 令牌。
+- **MiniMax**：API 密钥或 MiniMax OAuth 认证配置文件。OpenClaw 将
+  `minimax`、`minimax-cn` 和 `minimax-portal` 视为同一个 MiniMax 配额界面；
+  如果存在已存储的 MiniMax OAuth，则优先使用，否则回退到
+  `MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY` 或 `MINIMAX_API_KEY`。
+  使用情况轮询会在已配置时从 `models.providers.minimax-portal.baseUrl`
+  或 `models.providers.minimax.baseUrl` 推导 Coding Plan 主机，否则使用
+  MiniMax CN 主机。
+  MiniMax 原始的 `usage_percent` / `usagePercent` 字段表示**剩余**
+  配额，因此 OpenClaw 会在显示前将其反转；如果存在基于计数的字段，则优先使用。
+  - 窗口标签在提供方小时/分钟字段存在时取自这些字段，否则
+    回退到 `start_time` / `end_time` 的时间跨度。
+  - 如果 coding-plan 端点返回 `model_remains`，OpenClaw 会优先选择聊天模型条目；
+    当不存在明确的 `window_hours` / `window_minutes` 字段时，根据时间戳推导窗口标签，
+    并将模型名称包含在计划标签中。
+- **OpenAI (Codex/ChatGPT plan)**：认证配置文件中的 OAuth 令牌（当存在账户 ID 时发送
+  `ChatGPT-Account-Id` 请求头）。显示 ChatGPT 计划、可重置的 Codex 窗口以及（如果报告了）信用余额。
+  信用额度仍是提供方信用额度；OpenClaw 不会将其标记为美元。
+  当 `OPENAI_ADMIN_KEY` 具有 Usage Dashboard 访问权限时，会额外显示组织过去 30 天的成本和 completions 使用情况历史记录。
+  推理凭据绝不会转发给组织 API。
+- **OpenRouter**：API 密钥或基于 OAuth 的 API 密钥（`OPENROUTER_API_KEY` 或认证配置文件）。
+  将账户信用额度端点与密钥配额端点结合，因此当凭据能够访问这些数据时，会显示账户余额/支出、
+  密钥预算以及每日/每周/月度使用情况。任一端点都可以独立丰富快照。
+- **Venice**：通过环境变量/配置/认证存储提供 API 密钥（`VENICE_API_KEY`）。显示 USD 和
+  DIEM 余额，以及（如果报告了）DIEM 周期分配使用情况。
+- **Xiaomi MiMo**：两个独立的使用情况界面。按量付费使用 API 密钥
+  （`XIAOMI_API_KEY`）；Token Plan 使用单独的密钥（`XIAOMI_TOKEN_PLAN_API_KEY`）。
+  两者目前都不会报告配额窗口。
+- **z.ai**：通过环境变量/配置/认证存储提供 API 密钥（`ZAI_API_KEY` 或 `Z_AI_API_KEY`）。
 
 ## 相关内容
 

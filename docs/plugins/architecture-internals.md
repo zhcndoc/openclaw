@@ -24,8 +24,7 @@ title: "插件架构内部"
 7. 调用原生 `register(api)` 钩子，并将注册内容收集到插件注册表中
 8. 将注册表暴露给命令/运行时界面
 
-Safety gates run **before** runtime execution. Discovery blocks a candidate
-when:
+安全门会在**运行时执行之前**运行。发现阶段会在以下情况下阻止候选项：
 
 - 其解析后的入口逃逸出了插件根目录
 - 其路径（或其根目录）是全局可写的
@@ -33,7 +32,7 @@ when:
 
 全局可写的捆绑目录会先尝试就地 `chmod` 修复（npm/全局安装可能会以 `0777` 提供包目录），然后安全门才会重新检查；所有权检查对捆绑来源会完全跳过。
 
-当已知插件 id 时，被阻止的候选项在发出的诊断信息中仍会携带该 id（包括从一个在其他方面被拒绝的目录中的清单解析出的 id），因此引用该 id 的配置会看到一个与路径安全警告绑定的已阻止插件，而不是无关的“未知插件”错误。
+当已知插件 id 时，被阻止的候选项在发出的诊断信息中仍会携带该 id（包括从一个在其他方面被拒绝的目录中的清单解析出的 id），因此引用该 id 的配置会看到一个与路径安全警告绑定的被阻止插件，而不是无关的“未知插件”错误。
 
 ### 清单优先行为
 
@@ -148,7 +147,7 @@ export default {
 - `status`：`"approved"` 或 `"denied"`
 - `decision`：`"allow-once"`、`"allow-always"` 或 `"`deny"`
 - `binding`：批准请求的已解析绑定
-- `request`：原始请求摘要、detach 提示、发送者 id 和会话元数据
+- `request`：原始请求摘要、解除绑定提示、发送者 ID 和会话元数据
 
 此回调仅用于通知。它不会改变谁可以绑定会话，并且会在核心审批处理完成后运行。
 
@@ -156,30 +155,20 @@ export default {
 
 提供方插件有三层：
 
-- **Manifest metadata** for cheap pre-runtime lookup:
-  `setup.providers[].envVars`, `providerAuthAliases`, `providerAuthChoices`,
-  and `channelConfigs`.
-- **Config-time hooks**: `catalog` plus `applyConfigDefaults`.
-- **Runtime hooks**: 40+ optional hooks covering auth, model resolution,
-  stream wrapping, thinking levels, replay policy, and usage endpoints. See
-  [Hook order and usage](#hook-order-and-usage).
+- **Manifest 元数据**，用于运行时前的低成本查找：
+  `setup.providers[].envVars`、`providerAuthAliases`、`providerAuthChoices`
+  和 `channelConfigs`。
+- **配置时钩子**：`catalog` 以及 `applyConfigDefaults`。
+- **运行时钩子**：40 多个可选钩子，涵盖身份验证、模型解析、
+  流包装、思考级别、重放策略和用量端点。请参阅
+  [钩子顺序和用法](#hook-order-and-usage)。
 
 OpenClaw 仍然负责通用的代理循环、故障切换、转录处理和工具策略。
 这些钩子是面向提供方特定行为的扩展接口，而不需要完全自定义的推理传输。
 
-Use manifest `setup.providers[].envVars` when the provider has env-based
-credentials that generic auth/status/model-picker paths should see without
-loading plugin runtime. Use manifest `providerAuthAliases`
-when one provider id should reuse another provider id's env vars, auth profiles,
-config-backed auth, and API-key onboarding choice. Use manifest
-`providerAuthChoices` when onboarding/auth-choice CLI surfaces should know the
-provider's choice id, group labels, and simple one-flag auth wiring without
-loading provider runtime. Keep provider runtime
-`envVars` for operator-facing hints such as onboarding labels or OAuth
-client-id/client-secret setup vars.
+当提供方具有基于环境变量的凭据，且通用的身份验证/状态/模型选择器路径需要在不加载插件运行时的情况下访问这些凭据时，请使用 Manifest 中的 `setup.providers[].envVars`。当一个提供方 ID 应复用另一个提供方 ID 的环境变量、身份验证配置文件、基于配置的身份验证以及 API 密钥引导选项时，请使用 Manifest 中的 `providerAuthAliases`。当引导/身份验证选项 CLI 界面需要在不加载提供方运行时的情况下了解提供方的选项 ID、分组标签和简单的单标志身份验证连接方式时，请使用 Manifest 中的 `providerAuthChoices`。将提供方运行时的 `envVars` 保留用于面向操作员的提示，例如引导标签或 OAuth 客户端 ID/客户端密钥设置变量。
 
-Describe env-driven channel setup and auth through the owning
-`channelConfigs.<id>.schema` and setup descriptors.
+通过所属的 `channelConfigs.<id>.schema` 和设置描述符，描述由环境变量驱动的频道设置和身份验证。
 
 ### 钩子顺序与使用
 
@@ -246,7 +235,7 @@ OpenClaw 不再调用的仅兼容性提供者字段，例如
 
 在清单 `providerUsageAuthEnvVars` 中声明组织或计费凭据。这样通用发现和秘密清理界面就能识别它们，而不会把它们当作推理认证候选项。
 
-### Provider 示例
+### 提供商示例
 
 ```ts
 api.registerProvider({
@@ -356,13 +345,13 @@ const voices = await api.runtime.tts.listVoices({
 
 注释：
 
-- `textToSpeech` returns the normal core TTS output payload for file/voice-note surfaces.
-- Uses core `tts` configuration and provider selection.
-- Returns PCM audio buffer + sample rate. Plugins must resample/encode for providers.
-- `listVoices` is optional per provider. Use it for vendor-owned voice pickers or setup flows.
-- Core passes a resolved request deadline to provider `listVoices` hooks; provider-specific timeout settings may override it.
-- Voice listings can include richer metadata such as locale, gender, and personality tags for provider-aware pickers.
-- OpenAI and ElevenLabs support telephony today. Microsoft does not.
+- `textToSpeech` 为文件/语音消息表面返回正常的核心 TTS 输出载荷。
+- 使用核心 `tts` 配置和提供方选择。
+- 返回 PCM 音频缓冲区及采样率。插件必须针对提供方进行重采样/编码。
+- `listVoices` 对每个提供方来说都是可选的。将其用于供应商自有的语音选择器或设置流程。
+- 核心会向提供方的 `listVoices` 钩子传递解析后的请求截止时间；提供方特定的超时设置可能会覆盖该时间。
+- 语音列表可以包含更丰富的元数据，例如区域设置、性别和个性标签，以便支持提供方感知的选择器。
+- 目前 OpenAI 和 ElevenLabs 支持电话场景。Microsoft 不支持。
 
 插件也可以通过 `api.registerSpeechProvider(...)` 注册语音提供方。
 
@@ -463,14 +452,10 @@ const { text } = await api.runtime.mediaUnderstanding.transcribeAudioFile({
 
 注释：
 
-- `api.runtime.mediaUnderstanding.*` is the preferred shared surface for
-  image/audio/video understanding.
-- `extractStructuredWithModel(...)` is the plugin-facing seam for bounded
-  provider-owned image-first extraction. Include at least one image input;
-  text inputs are supplemental context. Product plugins own their routes and
-  schemas while OpenClaw owns the provider/runtime boundary.
-- Uses core media-understanding audio configuration (`tools.media.audio`) and provider fallback order.
-- Returns `{ text: undefined }` when no transcription output is produced (for example skipped/unsupported input).
+- `api.runtime.mediaUnderstanding.*` 是图像/音频/视频理解的首选共享接口。
+- `extractStructuredWithModel(...)` 是面向插件的、用于有界供应商自有图像优先提取的衔接点。至少应包含一个图像输入；文本输入作为补充上下文。产品插件负责其路由和架构，而 OpenClaw 负责提供方/运行时边界。
+- 使用核心媒体理解音频配置（`tools.media.audio`）和提供方回退顺序。
+- 当未生成转写输出时（例如输入被跳过或不受支持），返回 `{ text: undefined }`。
 
 插件还可以通过 `api.runtime.subagent` 启动后台子代理运行：
 
@@ -555,39 +540,43 @@ api.registerHttpRoute({
 
 路由字段：
 
-- `path`: 网关 HTTP 服务器下的路由路径。
-- `auth`: 必填，`"gateway"` 或 `"plugin"`。使用 `"gateway"` 表示需要正常的网关认证，使用 `"plugin"` 表示由插件管理认证/ webhook 校验。
+- `path`: Gateway HTTP 服务器下的路由路径。
+- `auth`: 必填，`"gateway"` 或 `"plugin"`。使用 `"gateway"` 要求常规 Gateway 身份验证，使用 `"plugin"` 则由插件管理身份验证或 Webhook 验证。
 - `match`: 可选。`"exact"`（默认）或 `"prefix"`。
-- `handleUpgrade`: 可选，用于同一路由上的 WebSocket 升级请求的处理器。
-- `replaceExisting`: 可选。允许同一个插件替换其自身已存在的路由注册。
-- `handler`: 当该路由已处理请求时返回 `true`。
+- `handleUpgrade`: 可选，用于处理同一路由上的 WebSocket 升级请求。
+- `replaceExisting`: 可选。仅动态生命周期注册要替换自身现有路由时必需。
+- `handler`: 路由处理请求时返回 `true`。
 
 注释：
 
-- `api.registerHttpHandler(...)` was removed and will cause a plugin-load error. Use `api.registerHttpRoute(...)` instead.
-- Plugin routes must declare `auth` explicitly.
-- Exact `path + match` conflicts are rejected unless `replaceExisting: true`, and one plugin cannot replace another plugin's route.
-- Overlapping routes with different `auth` levels are rejected. Keep `exact`/`prefix` fallthrough chains on the same auth level only.
-- `auth: "plugin"` routes do **not** receive operator runtime scopes automatically. They are for plugin-managed webhooks/signature verification, not privileged Gateway helper calls.
-- `auth: "gateway"` routes run inside a Gateway request runtime scope. The default surface (`gatewayRuntimeScopeSurface: "write-default"`) is intentionally conservative:
-  - shared-secret bearer auth (`gateway.auth.mode = "token"` / `"password"`) and any non-trusted-proxy auth method get a single `operator.write` scope, even if the caller sends `x-openclaw-scopes`
-  - `trusted-proxy` callers without an explicit `x-openclaw-scopes` header also keep the legacy `operator.write`-only surface
-  - `trusted-proxy` callers that do send `x-openclaw-scopes` get the declared scopes instead
-  - a route can opt into `gatewayRuntimeScopeSurface: "trusted-operator"` to always honor `x-openclaw-scopes` for identity-bearing auth modes (falling back to the full CLI default scope set when the header is absent)
-- Sandboxed external Control UI tabs backed by `auth: "gateway"` routes use a short-lived signed cookie grant minted only by authenticated bootstrap; plugin-auth tabs keep their direct iframe path. Before mounting, the parent runs a route-owned probe inside the same opaque sandbox and fails closed when browser privacy policy blocks the cookie. The grant is bound to the owning plugin, matched route root, and current auth generation; its process-random cookie name prevents trusted same-host Gateways from overwriting one another, but cookies never isolate TCP ports. The Gateway hostname is therefore one credential boundary: do not cohost mutually untrusted services on that hostname, including other ports. Route dispatch rejects reuse against a nested route owned by another plugin. Because sandbox descendants are cross-site for cookie purposes, the grant accepts only `GET` and `HEAD` with `operator.read`; mutations and WebSocket upgrades stay on explicit Gateway-authenticated surfaces. The cookie intentionally cannot use CHIPS: current browsers include a cross-site-ancestor bit in the partition key, so nested opaque sandbox frames would lose access to same-route assets. The cookie requires a secure context and browser permission for cross-site cookies, so gateway-auth external tabs are unavailable on plain-HTTP LAN origins or under full third-party-cookie blocking; use HTTPS/Tailscale Serve or browser-trusted loopback with a compatible cookie policy.
-- The grant prevents Gateway bearer-token disclosure and accidental route/scope reuse; it does not create a security boundary between native plugins. Native plugin code and the UI content it serves remain part of the same trusted in-process plugin boundary.
-- Practical rule: do not assume a gateway-auth plugin route is an implicit admin surface. If your route needs admin-only behavior, opt into `trusted-operator` scope surface, require an identity-bearing auth mode, and document the explicit `x-openclaw-scopes` header contract.
-- After route matching and authentication, ordinary handlers participate in Gateway root-work admission. A prepared or restarting Gateway returns `503` before invoking the handler. The narrow exception is a manifest-entitled `auth: "gateway"` route that also opts into the route-specific `trusted-operator` surface; it remains reachable so suspension control dispatch cannot be stranded, while ordinary sibling routes from the same plugin remain behind the admission boundary. WebSocket `handleUpgrade` ownership uses the same atomic admission boundary; once the handler accepts a socket, the socket's later lifetime is plugin-owned and is not tracked by this boundary.
+- `api.registerHttpHandler(...)` 已被移除，使用它会导致插件加载错误。请改用 `api.registerHttpRoute(...)`。
+- 插件路由必须显式声明 `auth`。
+- 具有相同 `match` 模式的规范等价路径共用一个路由。同一插件中的静态 `api.registerHttpRoute(...)` 调用会替换该路由；其他插件无法替换它。
+- 不同 `auth` 级别的重叠路由会被拒绝。仅在相同的身份验证级别上保留 `exact`/`prefix` 回退链。
+- 使用 `openclaw/plugin-sdk/webhook-ingress` 中的 `registerPluginHttpRoute(...)` 的动态生命周期代码必须设置 `replaceExisting: true`，以刷新自身的规范路由。命名注册只能替换具有相同非空 `pluginId` 的注册；当任一方设置了路由 `source` 时，双方都必须设置相同的非空 source。对于已发布 SDK 调用方，同一插件的无 source 到无 source 刷新以及匿名到匿名刷新仍受支持，但命名路由和匿名路由不能相互替换。
+- 将路由 `source` 视为稳定的同插件子所有者标识，而不是诊断标签。现有的无 source 调用方可以继续省略它；使用 source 的调用方必须在刷新期间保持其不变。
+- 动态生命周期注册在被拒绝时默认记录日志并返回一个空操作注销回调。当就绪状态依赖该路由时，请设置 `throwOnFailure: true`；必需的内置 Webhook 传输使用严格注册，因此不会在没有有效入口的情况下报告就绪。
+- `auth: "plugin"` 路由不会自动获得操作员运行时作用域。它们用于插件管理的 Webhook 或签名验证，而不是特权 Gateway 辅助调用。
+- `auth: "gateway"` 路由在 Gateway 请求运行时作用域中运行。默认界面（`gatewayRuntimeScopeSurface: "write-default"`）有意保持保守：
+  - 共享密钥 bearer 身份验证（`gateway.auth.mode = "token"` / `"password"`）以及任何非可信代理身份验证方法，即使调用方发送了 `x-openclaw-scopes`，也只获得单个 `operator.write` 作用域
+  - 未显式提供 `x-openclaw-scopes` 标头的 `trusted-proxy` 调用方同样仅保留传统的 `operator.write` 作用域界面
+  - 提供了 `x-openclaw-scopes` 的 `trusted-proxy` 调用方则获得所声明的作用域
+  - 路由可以选择 `gatewayRuntimeScopeSurface: "trusted-operator"`，以便对携带身份的身份验证模式始终遵循 `x-openclaw-scopes`（如果未提供该标头，则回退到完整的 CLI 默认作用域集合）
+- 由 `auth: "gateway"` 路由支持的沙盒化外部 Control UI 标签页使用仅由经过身份验证的引导流程签发的短期签名 Cookie 授权；插件身份验证标签页保留其直接 iframe 路径。在挂载之前，父页面会在同一个不透明沙盒内运行路由专属探测；当浏览器隐私策略阻止 Cookie 时，探测会安全失败。该授权绑定到所属插件、匹配的路由根路径以及当前身份验证代次；其进程随机生成的 Cookie 名称可防止受信任的同主机 Gateway 相互覆盖，但 Cookie 无法隔离 TCP 端口。因此，Gateway 主机名构成一个凭据边界：不要在该主机名下托管相互不信任的服务，包括其他端口。路由分发会拒绝针对另一个插件所拥有嵌套路由的重用。由于沙盒后代在 Cookie 语义上属于跨站点内容，该授权仅接受带有 `operator.read` 的 `GET` 和 `HEAD` 请求；变更操作和 WebSocket 升级仍必须使用显式的 Gateway 身份验证界面。该 Cookie 有意不能使用 CHIPS：当前浏览器会在分区密钥中加入跨站祖先标记，因此嵌套的不透明沙盒框架将无法访问同一路由的资源。该 Cookie 要求安全上下文以及浏览器对跨站 Cookie 的许可，因此在普通 HTTP 局域网来源或完全阻止第三方 Cookie 的环境下，Gateway 身份验证的外部标签页不可用；请使用 HTTPS/Tailscale Serve，或使用兼容 Cookie 策略且受浏览器信任的回环地址。
+- 该授权可防止 Gateway bearer 令牌泄露以及路由/作用域被意外复用；但它不会在原生插件之间建立安全边界。原生插件代码及其提供的 UI 内容仍属于同一受信任的进程内插件边界。
+- 实际规则：不要假设 Gateway 身份验证的插件路由隐含具备管理员界面。如果你的路由需要仅限管理员的行为，请选择 `trusted-operator` 作用域界面，要求使用携带身份的身份验证模式，并记录明确的 `x-openclaw-scopes` 标头约定。
+- 启动插件会在 Gateway 开始监听后，使用其完整运行时注册 HTTP 路由。在启动侧车就绪之前，未被其他路由声明的 HTTP 请求会返回 `503` 以及 `Retry-After: 1`；核心路由仍会正常分发。此通用回退机制覆盖了运行时注册表尚无法识别其所有者之前的插件路由。
+- 路由匹配和身份验证后，普通处理程序会参与 Gateway 根级工作准入。Gateway 已准备就绪或正在重启时，会在调用处理程序之前返回 `503`。唯一的狭义例外是：一个拥有清单授权的 `auth: "gateway"` 路由，同时选择了路由专属的 `trusted-operator` 界面；该路由仍可访问，从而避免暂停控制分发被阻塞，而同一插件的普通兄弟路由仍处于准入边界之后。WebSocket `handleUpgrade` 的所有权使用相同的原子准入边界；一旦处理程序接受套接字，该套接字后续的生命周期便由插件所有，并不受此边界跟踪。
 
 ## 插件 SDK 导入路径
 
-在编写新插件时，请使用更窄的 SDK 子路径，而不是单体的 `openclaw/plugin-sdk` 根 barrel。核心子路径：
+在编写新插件时，请使用更窄的 SDK 子路径，而不是单体的 `openclaw/plugin-sdk` 根聚合入口。核心子路径：
 
-| Subpath                            | Purpose                                      |
+| 子路径                             | 用途                                         |
 | ---------------------------------- | -------------------------------------------- |
-| `openclaw/plugin-sdk/plugin-entry` | Plugin registration primitives               |
-| `openclaw/plugin-sdk/channel-core` | Channel entry/build helpers                  |
-| `openclaw/plugin-sdk/core`         | Generic shared helpers and umbrella contract |
+| `openclaw/plugin-sdk/plugin-entry` | 插件注册原语                                 |
+| `openclaw/plugin-sdk/channel-core` | 通道入口/构建辅助工具                        |
+| `openclaw/plugin-sdk/core`         | 通用共享辅助工具和总括契约                   |
 
 通道插件会从一组更窄的接入点中选择——`channel-setup`、
 `setup-runtime`、`setup-tools`、`channel-pairing`、
@@ -595,30 +584,29 @@ api.registerHttpRoute({
 `command-auth`、`secret-input`、`webhook-ingress`、
 `channel-targets` 和 `channel-actions`。审批行为应当收敛到单一的
 `approvalCapability` 契约上，而不是分散在互不相关的插件字段中。请参见
-[Channel plugins](/plugins/sdk-channel-plugins)。
+[通道插件](/plugins/sdk-channel-plugins)。
 
 运行时和配置辅助工具位于对应的聚焦 `*-runtime` 子路径下
 （`approval-runtime`、`agent-runtime`、`lazy-runtime`、`directory-runtime`、
 `text-runtime`、`runtime-store`、`system-event-runtime`、`heartbeat-runtime`、
 `channel-activity-runtime` 等）。优先使用 `config-contracts`、
 `plugin-config-runtime`、`runtime-config-snapshot` 和 `config-mutation`，
-而不是宽泛的 `config-runtime` 兼容 barrel。
+而不是宽泛的 `config-runtime` 兼容聚合入口。
 
 <Info>
-`openclaw/plugin-sdk/channel-lifecycle`, small channel helper facades,
-`openclaw/plugin-sdk/config-runtime`, and `openclaw/plugin-sdk/infra-runtime`
-are deprecated compatibility shims for older plugins. New code should import
-narrower generic primitives instead.
+`openclaw/plugin-sdk/channel-lifecycle`、小型通道辅助工具门面、
+`openclaw/plugin-sdk/config-runtime` 和 `openclaw/plugin-sdk/infra-runtime`
+是面向旧版插件的已弃用兼容性垫片。新代码应改为导入更窄的通用原语。
 </Info>
 
 仓库内部入口点（按打包插件包根目录）：
 
 - `index.js` — 打包后的插件入口
-- `api.js` — 辅助工具/类型 barrel
-- `runtime-api.js` — 仅运行时 barrel
+- `api.js` — 辅助工具/类型聚合入口
+- `runtime-api.js` — 仅运行时聚合入口
 - `setup-entry.js` — 设置插件入口
 
-外部插件应仅导入 `openclaw/plugin-sdk/*` 子路径。切勿从核心或其他插件中导入另一个插件包的 `src/*`。facade 加载的入口点优先使用活动运行时配置快照（如果存在），然后回退到磁盘上的已解析配置文件。
+外部插件应仅导入 `openclaw/plugin-sdk/*` 子路径。切勿从核心或其他插件中导入另一个插件包的 `src/*`。门面加载的入口点优先使用活动运行时配置快照（如果存在），然后回退到磁盘上的已解析配置文件。
 
 像 `image-generation`、`media-understanding` 和 `speech` 这样的能力特定子路径之所以存在，是因为打包插件今天就在使用它们。它们并不是自动长期冻结的外部契约——在依赖它们时，请查看相关的 SDK 参考页面。
 
@@ -636,20 +624,20 @@ Core 决定是原生渲染该展示，还是将其降级为文本。不要通过
 
 ## 渠道目标解析
 
-渠道插件应拥有渠道特定的目标语义。保持共享的 outbound host 通用化，并使用 messaging adapter 接口来处理 provider 规则：
+渠道插件应拥有渠道特定的目标语义。保持共享的出站主机通用化，并使用消息适配器接口来处理提供商规则：
 
 - `messaging.inferTargetChatType({ to })` 决定一个规范化目标在目录查找之前应被视为 `direct`、`group` 还是 `channel`。
-- `messaging.targetResolver.looksLikeId(raw, normalized)` 告诉核心层输入是否应直接跳过目录搜索，进入类似 id 的解析。
-- `messaging.targetResolver.reservedLiterals` 列出该 provider 中作为渠道/会话引用的裸词。解析会优先保留已配置的目录条目，再拒绝保留字面量，然后在目录未命中时关闭式失败。
-- `messaging.targetResolver.resolveTarget(...)` 是插件回退逻辑：当核心在规范化之后或目录未命中之后需要进行最终的、由 provider 拥有的解析时使用。
-- `messaging.resolveOutboundSessionRoute(...)` 在目标解析完成后，负责构建 provider 特定的会话路由。
+- `messaging.targetResolver.looksLikeId(raw, normalized)` 告诉核心层输入是否应直接跳过目录搜索，进入类似 ID 的解析。
+- `messaging.targetResolver.reservedLiterals` 列出该提供商中作为渠道/会话引用的裸词。解析会优先保留已配置的目录条目，再拒绝保留字面量，然后在目录未命中时执行封闭集合式失败。
+- `messaging.targetResolver.resolveTarget(...)` 是插件回退逻辑：当核心在规范化之后或目录未命中之后需要进行最终的、由提供商负责的解析时使用。
+- `messaging.resolveOutboundSessionRoute(...)` 在目标解析完成后，负责构建提供商特定的会话路由。
 
 推荐拆分方式：
 
-- 将 `inferTargetChatType` 用于应在搜索 peers/groups 之前发生的分类决策。
-- 将 `looksLikeId` 用于“将其视为显式/原生目标 id”的检查。
-- 将 `resolveTarget` 用于 provider 特定的归一化回退，而不是用于广泛目录搜索。
-- 将 chat id、thread id、JID、handle 和 room id 等 provider 原生 id 保留在 `target` 值或 provider 特定参数中，而不是放在通用 SDK 字段里。
+- 将 `inferTargetChatType` 用于应在搜索对等方/群组之前发生的分类决策。
+- 将 `looksLikeId` 用于“将其视为显式/原生目标 ID”的检查。
+- 将 `resolveTarget` 用于提供商特定的归一化回退，而不是用于广泛目录搜索。
+- 将聊天 ID、线程 ID、JID、句柄和房间 ID 等提供商原生 ID 保留在 `target` 值或提供商特定参数中，而不是放在通用 SDK 字段里。
 
 ## 基于配置的目录
 
@@ -712,8 +700,8 @@ provider 插件可以通过 `registerProvider({ catalog: { run(...) { ... } } })
 
 原因：
 
-- `resolveAccount(...)` 是运行时路径。它可以假设凭据已经完全 materialize，并且在所需密钥缺失时快速失败。
-- 诸如 `openclaw status`、`openclaw status --all`、`openclaw channels status`、`openclaw channels resolve` 以及 doctor/config 修复流程等只读命令路径，不应仅为了描述配置而去 materialize 运行时凭据。
+- `resolveAccount(...)` 是运行时路径。它可以假设凭据已经完全实例化，并且在所需密钥缺失时快速失败。
+- 诸如 `openclaw status`、`openclaw status --all`、`openclaw channels status`、`openclaw channels resolve` 以及 doctor/config 修复流程等只读命令路径，不应仅为了描述配置而去实例化运行时凭据。
 
 推荐的 `inspectAccount(...)` 行为：
 
@@ -754,17 +742,7 @@ id 会变为 `<manifestOrPackageName>/<fileBase>`（如果存在，则优先使�
 
 可选项：`openclaw.setupEntry` 可以指向一个轻量级的仅用于设置的模块。当 OpenClaw 需要为被禁用的频道插件显示设置界面，或者当频道插件已启用但尚未配置时，它会加载 `setupEntry`，而不是完整的插件入口。这使启动和设置更轻量，同时仍允许主插件入口连接工具、钩子或其他仅运行时需要的代码。
 
-可选项：`openclaw.startup.deferConfiguredChannelFullLoadUntilAfterListen` 允许频道插件在网关预监听启动阶段使用相同的 `setupEntry` 路径，即使该频道已经完成配置。
-
-仅在设置入口完整覆盖了网关开始监听之前必须存在的一切内容时才使用此选项。实际上，这意味着设置入口必须注册启动所依赖的每个频道拥有的能力，例如：
-
-- 频道注册本身
-- 在网关开始监听之前必须可用的任何 HTTP 路由
-- 必须在同一窗口内存在的任何网关方法、工具或服务
-
-如果你的完整入口仍然拥有任何必需的启动能力，请不要启用此标志。保持插件使用默认行为，并让 OpenClaw 在启动期间加载完整入口。
-
-内置频道也可以发布仅用于设置的契约表面辅助函数，供核心在完整频道运行时加载之前查询。目前的设置提升表面是：
+捆绑的频道还可以发布仅用于设置的契约表面辅助函数，核心可以在加载完整频道运行时之前查询这些辅助函数。当前的设置提升表面包括：
 
 - `singleAccountKeysToMove`
 - `namedAccountPromotionKeys`
@@ -774,22 +752,7 @@ id 会变为 `<manifestOrPackageName>/<fileBase>`（如果存在，则优先使�
 
 这些设置补丁适配器保留了对内置契约表面功能的惰性发现。请保持导入轻量；提升表面只会在首次使用时加载，而不会在模块导入期间重新进入内置频道启动流程。
 
-当这些启动表面包含网关 RPC 方法时，请将它们放在插件专用前缀下。核心管理的命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）仍然保留，并且始终解析为 `operator.admin`，即使插件请求更窄的作用域也是如此。
-
-示例：
-
-```json
-{
-  "name": "@scope/my-channel",
-  "openclaw": {
-    "extensions": ["./index.ts"],
-    "setupEntry": "./setup-entry.ts",
-    "startup": {
-      "deferConfiguredChannelFullLoadUntilAfterListen": true
-    }
-  }
-}
-```
+当设置表面包含网关 RPC 方法时，请将其置于插件专用的前缀下。核心管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）仍然保留，并始终解析为 `operator.admin`，即使插件请求了更窄的作用域。
 
 ### 频道目录元数据
 
@@ -823,17 +786,17 @@ id 会变为 `<manifestOrPackageName>/<fileBase>`（如果存在，则优先使�
 
 除了最小示例之外，`openclaw.channel` 还有几个有用的字段：
 
-- `detailLabel`: secondary label for richer catalog/status surfaces
-- `docsLabel`: override link text for the docs link
-- `preferOver`: lower-priority plugin/channel ids this catalog entry should outrank
-- `selectionDocsPrefix`, `selectionDocsOmitLabel`, `selectionExtras`: selection-surface copy controls
-- `markdownCapable`: marks the channel as markdown-capable for outbound formatting decisions
-- `exposure.configured`: hide the channel from configured-channel listing surfaces when set to `false`
-- `exposure.setup`: hide the channel from interactive setup/configure pickers when set to `false`
-- `exposure.docs`: mark the channel as internal/private for docs navigation surfaces
-- `quickstartAllowFrom`: opt the channel into the standard quickstart `allowFrom` flow
-- `forceAccountBinding`: require explicit account binding even when only one account exists
-- `preferSessionLookupForAnnounceTarget`: prefer session lookup when resolving announce targets
+- `detailLabel`：用于更丰富的目录/状态界面的次要标签
+- `docsLabel`：覆盖文档链接的文本
+- `preferOver`：此目录条目应优先于的低优先级插件/频道 id
+- `selectionDocsPrefix`、`selectionDocsOmitLabel`、`selectionExtras`：选择界面的文案控制项
+- `markdownCapable`：将频道标记为支持 Markdown，以便进行出站格式化决策
+- `exposure.configured`：设为 `false` 时，将频道从已配置频道列表界面中隐藏
+- `exposure.setup`：设为 `false` 时，将频道从交互式设置/配置选择器中隐藏
+- `exposure.docs`：将频道标记为内部/私有频道，用于文档导航界面
+- `quickstartAllowFrom`：将频道加入标准快速入门 `allowFrom` 流程
+- `forceAccountBinding`：即使只有一个账户，也要求显式账户绑定
+- `preferSessionLookupForAnnounceTarget`：解析公告目标时优先使用会话查找
 
 OpenClaw 还可以合并**外部频道目录**（例如 MPM 注册表导出）。把 JSON 文件放在以下任一位置：
 
@@ -869,7 +832,12 @@ import { buildMemorySystemPromptAddition } from "openclaw/plugin-sdk/core";
 
 export default function (api) {
   api.registerContextEngine("lossless-claw", (ctx) => ({
-    info: { id: "lossless-claw", name: "无损爪", ownsCompaction: true },
+    info: {
+      id: "lossless-claw",
+      name: "Lossless Claw",
+      ownsCompaction: true,
+      acceptedHostParams: ["sessionKey"],
+    },
     async ingest() {
       return { ingested: true };
     },
@@ -893,21 +861,9 @@ export default function (api) {
 
 工厂函数 `ctx` 提供可选的 `config`、`agentDir` 和 `workspaceDir` 值，用于构造时初始化。
 
-The host completes registered async memory prompt preparation before calling a
-non-legacy engine's `assemble()`. `buildMemorySystemPromptAddition(...)` stays
-synchronous and reads that immutable run snapshot while `assemble()` is active.
-Pass the supplied tool and citation context through unchanged so the snapshot
-cannot cross run boundaries.
+主机会在调用非旧版引擎的 `assemble()` 之前，完成已注册的异步记忆提示准备。`buildMemorySystemPromptAddition(...)` 保持同步，并在 `assemble()` 执行期间读取该不可变的运行快照。请原样传递所提供的工具和引用上下文，以确保快照不会跨越运行边界。
 
-`assemble()` may return `contextProjection` when the active harness has a
-persistent backend thread. Omit it for legacy per-turn projection. Return
-`{ mode: "thread_bootstrap", epoch }` when the assembled context should be
-injected once into a backend thread and reused until the epoch changes. Change
-the epoch after the engine's semantic context changes, such as after an
-engine-owned compaction pass. Hosts may preserve tool-call metadata, input
-shape, and redacted tool results in a thread-bootstrap projection so fresh
-backend threads retain tool continuity without copying raw secret-bearing
-payloads.
+当活动的处理框架具有持久化后端线程时，`assemble()` 可以返回 `contextProjection`。对于旧版的逐轮投影，请省略它。当组装后的上下文应注入后端线程一次，并在 epoch 发生变化之前重复使用时，请返回 `{ mode: "thread_bootstrap", epoch }`。在引擎自有的压缩过程之后等引擎语义上下文发生变化时，请更改 epoch。主机可以在引导线程投影中保留工具调用元数据、输入形状和经过脱敏的工具结果，从而使新的后端线程在不复制包含原始机密的载荷的情况下，保留工具连续性。
 
 如果你的引擎**不**负责压缩算法，请保留 `compact()` 的实现，并显式委托它：
 
@@ -1020,11 +976,11 @@ expect(pluginManifest.contracts?.videoGenerationProviders).toEqual(["openai"]);
 - core 负责能力契约 + 编排
 - 厂商插件负责厂商实现
 - 功能/通道插件消费运行时辅助函数
-- 契约测试让所有权保持明确
+- 契约测试让所有权保持明确。
 
 ## 相关内容
 
 - [插件架构](/plugins/architecture) — 公共能力模型和形状
 - [插件 SDK 子路径](/plugins/sdk-subpaths)
 - [插件 SDK 设置](/plugins/sdk-setup)
-- [构建插件](/plugins/building-plugins)
+- [构建插件](/plugins/building-plugins)。

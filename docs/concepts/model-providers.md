@@ -63,14 +63,14 @@ sidebarTitle: "模型提供商"
 
 **Default models** 卡片用于管理主模型、按顺序的回退模型，以及来自已配置模型目录的实用模型。选择模型后，将它们一起保存到现有的 `agents.defaults.model` 和 `agents.defaults.utilityModel` 设置中。对于实用模型，**Automatic** 会保持该设置未定义，而 **Disabled** 会存储一个空字符串以关闭实用路由。
 
-## Provider-owned behaviors
+## Provider 所有的行为
 
-Most provider-specific logic lives in provider plugins (`registerProvider(...)`), while OpenClaw keeps the generic reasoning loop. Plugins are responsible for onboarding, model catalogs, auth environment variable mappings, transport/config normalization, tool schema cleanup, failover classification, OAuth refresh, usage reporting, thinking/reasoning profile files, and more.
+大多数特定于提供商的逻辑都位于提供商插件（`registerProvider(...)`）中，而 OpenClaw 则保留通用的推理循环。插件负责引导流程、模型目录、身份验证环境变量映射、传输/配置规范化、工具模式清理、故障转移分类、OAuth 刷新、使用情况报告、思考/推理配置文件等。
 
-See [Provider plugins](/plugins/sdk-provider-plugins) for a full list of provider SDK hooks and bundled plugin examples. Providers that require a fully custom request executor fall into a deeper extension area.
+有关提供商 SDK 钩子和捆绑插件示例的完整列表，请参阅[提供商插件](/plugins/sdk-provider-plugins)。需要完全自定义请求执行器的提供商属于更深层的扩展领域。
 
 <Note>
-Provider-owned runner behavior lives on explicit provider hooks, such as replay strategies, tool schema normalization, stream wrappers, and transport/request helpers. The legacy `ProviderPlugin.capabilities` static set is for compatibility only and is no longer read by the shared runner logic.
+提供商所有的运行器行为位于显式的提供商钩子上，例如重放策略、工具模式规范化、流包装器以及传输/请求辅助函数。传统的 `ProviderPlugin.capabilities` 静态集合仅用于兼容性，共享运行器逻辑已不再读取它。
 </Note>
 
 ## API 密钥轮换
@@ -97,7 +97,7 @@ Provider-owned runner behavior lives on explicit provider hooks, such as replay 
 
 ## 官方提供商插件
 
-Official provider plugins publish their own model catalog rows. These providers **do not need** `models.providers` model entries; just enable the provider plugin, complete authentication, and select a model. Only use `models.providers` when you need to explicitly customize a provider or set narrower request parameters (for example, timeouts).
+官方提供商插件会发布自己的模型目录条目。这些提供商**不需要**`models.providers`模型条目；只需启用提供商插件、完成身份验证并选择模型。仅当你需要明确自定义提供商或设置更严格的请求参数（例如超时时间）时，才使用`models.providers`。
 
 ### OpenAI
 
@@ -194,10 +194,10 @@ Claude CLI 复用（`claude -p`）是 OpenClaw 认可的集成路径。仍然支
 
 <CardGroup cols={3}>
   <Card title="MiniMax" href="/providers/minimax">
-    MiniMax 编程计划 OAuth 或 API key 访问。
+    MiniMax 编程计划 OAuth 或 API 密钥访问。
   </Card>
   <Card title="Qwen Cloud" href="/providers/qwen">
-    Qwen Cloud 提供商表面，以及阿里巴巴 DashScope 和编程计划端点映射。
+    Qwen Cloud 提供商界面，以及阿里巴巴 DashScope 和编程计划端点映射。
   </Card>
   <Card title="Z.AI (GLM)" href="/providers/zai">
     Z.AI 编程计划或通用 API 端点。
@@ -230,49 +230,12 @@ Claude CLI 复用（`claude -p`）是 OpenClaw 认可的集成路径。仍然支
 - 思考：`/think adaptive` 使用 Google 动态思考。Gemini 3/3.1 不使用固定的 `thinkingLevel`；Gemini 2.5 会发送 `thinkingBudget: -1`
 - 直接运行 Gemini 还支持 `agents.defaults.models["google/<model>"].params.cachedContent`（或旧版 `cached_content`），以传递提供方原生的 `cachedContents/...` 句柄；Gemini 的缓存命中会作为 OpenClaw 的 `cacheRead` 显示
 
-### Google Vertex 和 Gemini CLI
+### Google Vertex 和 Gemini CLI 运行时
 
-- 提供商：`google-vertex`、`google-gemini-cli`
-- 认证：Vertex 使用 gcloud ADC；Gemini CLI 使用其 OAuth 流程
+- `google-vertex`：通过 gcloud 应用程序默认凭据管理 Google Cloud 访问。
+- `google-gemini-cli`：用于显式配置的规范 `google/*` 模型的可选本地运行时。
 
-<Warning>
-OpenClaw 中的 Gemini CLI OAuth 是一个非官方集成。有些用户在使用第三方客户端后报告过 Google 账号限制。若你选择继续，请先查看 Google 条款，并使用非关键账号。
-</Warning>
-
-Gemini CLI OAuth 作为捆绑的 `google` 插件的一部分一起发布。
-
-<Steps>
-  <Step title="安装 Gemini CLI">
-    <Tabs>
-      <Tab title="brew">
-        ```bash
-        brew install gemini-cli
-        ```
-      </Tab>
-      <Tab title="npm">
-        ```bash
-        npm install -g @google/gemini-cli
-        ```
-      </Tab>
-    </Tabs>
-  </Step>
-  <Step title="启用插件">
-    ```bash
-    openclaw plugins enable google
-    ```
-  </Step>
-  <Step title="登录">
-    ```bash
-    openclaw models auth login --provider google-gemini-cli --set-default
-    ```
-
-    默认模型：`google-gemini-cli/gemini-3-flash-preview`。你**不需要**把 client id 或 secret 粘贴到 `openclaw.json` 中。CLI 登录流程会将 token 存储在 gateway 主机上的 auth 配置文件里。
-
-  </Step>
-  <Step title="设置项目（如有需要）">
-    如果登录后请求失败，请在 gateway 主机上设置 `GOOGLE_CLOUD_PROJECT` 或 `GOOGLE_CLOUD_PROJECT_ID`。
-  </Step>
-</Steps>
+OpenClaw 不会创建 Gemini CLI OAuth 或 Antigravity OAuth 配置文件。通过 AI Studio API 密钥或 Vertex AI 连接 Google。如果你明确选择 Gemini CLI 运行时，它可以使用选定的 Google API 密钥配置。现有的有效 Gemini CLI OAuth 配置文件仍与该运行时兼容，但它们不是设置或恢复路径。
 
 Gemini CLI 默认使用 `stream-json`。OpenClaw 会读取 assistant 流消息，并将 `stats.cached` 规范化为 `cacheRead`；旧的
 `--output-format json` 覆盖仍会从 `response` 读取回复文本。
@@ -284,7 +247,7 @@ Gemini CLI 默认使用 `stream-json`。OpenClaw 会读取 assistant 流消息�
 - 示例模型：`zai/glm-5.2`
 - CLI：`openclaw onboard --auth-choice zai-api-key`
   - 模型引用使用规范的 `zai/*` 提供商 ID。
-  - `zai-api-key` 会自动检测匹配的 Z.AI 端点；`zai-coding-global`、`zai-coding-cn`、`zai-global` 和 `zai-cn` 会强制使用特定表面
+  - `zai-api-key` 会自动检测匹配的 Z.AI 端点；`zai-coding-global`、`zai-coding-cn`、`zai-global` 和 `zai-cn` 会强制使用特定表面。
 
 ### Vercel AI 网关
 
@@ -295,12 +258,12 @@ Gemini CLI 默认使用 `stream-json`。OpenClaw 会读取 assistant 流消息�
 
 ### 其他捆绑提供商插件
 
-| Provider                                | Id                               | Auth env                                             | Example model                                          |
+| 提供商                                  | Id                               | 认证环境变量                                             | 示例模型                                          |
 | --------------------------------------- | -------------------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
-| Arcee                                   | `arcee`                          | `ARCEEAI_API_KEY` or `OPENROUTER_API_KEY`            | `arcee/trinity-large-thinking`                         |
+| Arcee                                   | `arcee`                          | `ARCEEAI_API_KEY` 或 `OPENROUTER_API_KEY`            | `arcee/trinity-large-thinking`                         |
 | BytePlus                                | `byteplus` / `byteplus-plan`     | `BYTEPLUS_API_KEY`                                   | `byteplus-plan/ark-code-latest`                        |
 | Cerebras                                | `cerebras`                       | `CEREBRAS_API_KEY`                                   | `cerebras/zai-glm-4.7`                                 |
-| Chutes                                  | `chutes`                         | `CHUTES_API_KEY` or `CHUTES_OAUTH_TOKEN`             | `chutes/zai-org/GLM-5-TEE`                             |
+| Chutes                                  | `chutes`                         | `CHUTES_API_KEY` 或 `CHUTES_OAUTH_TOKEN`             | `chutes/zai-org/GLM-5-TEE`                             |
 | ClawRouter                              | `clawrouter`                     | `CLAWROUTER_API_KEY`                                 | `clawrouter/anthropic/claude-sonnet-4-6`               |
 | Cohere                                  | `cohere`                         | `COHERE_API_KEY`                                     | `cohere/command-a-plus-05-2026`                        |
 | DeepInfra                               | `deepinfra`                      | `DEEPINFRA_API_KEY`                                  | `deepinfra/deepseek-ai/DeepSeek-V4-Flash`              |
@@ -309,21 +272,21 @@ Gemini CLI 默认使用 `stream-json`。OpenClaw 会读取 assistant 流消息�
 | GitHub Copilot                          | `github-copilot`                 | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` | -                                                      |
 | GMI Cloud                               | `gmi`                            | `GMI_API_KEY`                                        | `gmi/google/gemini-3.1-flash-lite`                     |
 | Groq                                    | `groq`                           | `GROQ_API_KEY`                                       | `groq/llama-3.3-70b-versatile`                         |
-| Hugging Face Inference                  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` or `HF_TOKEN`                | `huggingface/deepseek-ai/DeepSeek-R1`                  |
+| Hugging Face Inference                  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`                | `huggingface/deepseek-ai/DeepSeek-R1`                  |
 | MiniMax                                 | `minimax` / `minimax-portal`     | `MINIMAX_API_KEY` / `MINIMAX_OAUTH_TOKEN`            | `minimax/MiniMax-M3`                                   |
 | Mistral                                 | `mistral`                        | `MISTRAL_API_KEY`                                    | `mistral/mistral-large-latest`                         |
 | Moonshot                                | `moonshot`                       | `MOONSHOT_API_KEY`                                   | `moonshot/kimi-k2.6`                                   |
 | NVIDIA                                  | `nvidia`                         | `NVIDIA_API_KEY`                                     | `nvidia/nvidia/nemotron-3-ultra-550b-a55b`             |
 | NovitaAI                                | `novita`                         | `NOVITA_API_KEY`                                     | `novita/deepseek/deepseek-v3-0324`                     |
 | [Ollama Cloud](/providers/ollama-cloud) | `ollama-cloud`                   | `OLLAMA_API_KEY`                                     | `ollama-cloud/kimi-k2.6`                               |
-| OpenRouter                              | `openrouter`                     | OpenRouter OAuth or `OPENROUTER_API_KEY`             | `openrouter/auto`                                      |
+| OpenRouter                              | `openrouter`                     | OpenRouter OAuth 或 `OPENROUTER_API_KEY`             | `openrouter/auto`                                      |
 | Qianfan                                 | `qianfan`                        | `QIANFAN_API_KEY`                                    | `qianfan/deepseek-v3.2`                                |
 | Tencent TokenHub                        | `tencent-tokenhub`               | `TOKENHUB_API_KEY`                                   | `tencent-tokenhub/hy3-preview`                         |
 | Together                                | `together`                       | `TOGETHER_API_KEY`                                   | `together/meta-llama/Llama-3.3-70B-Instruct-Turbo`     |
 | Venice                                  | `venice`                         | `VENICE_API_KEY`                                     | -                                                      |
 | Vercel AI Gateway                       | `vercel-ai-gateway`              | `AI_GATEWAY_API_KEY`                                 | `vercel-ai-gateway/anthropic/claude-opus-4.6`          |
 | Volcano Engine (Doubao)                 | `volcengine` / `volcengine-plan` | `VOLCANO_ENGINE_API_KEY`                             | `volcengine-plan/ark-code-latest`                      |
-| xAI                                     | `xai`                            | SuperGrok/X Premium OAuth or `XAI_API_KEY`           | `xai/grok-4.3`                                         |
+| xAI                                     | `xai`                            | SuperGrok/X Premium OAuth 或 `XAI_API_KEY`           | OAuth：`xai/auto`；API 密钥：`xai/grok-4.3`             |
 | Xiaomi                                  | `xiaomi` / `xiaomi-token-plan`   | `XIAOMI_API_KEY` / `XIAOMI_TOKEN_PLAN_API_KEY`       | `xiaomi/mimo-v2.5` / `xiaomi-token-plan/mimo-v2.5-pro` |
 
 #### 值得注意的特殊行为
@@ -342,7 +305,7 @@ Gemini CLI 默认使用 `stream-json`。OpenClaw 会读取 assistant 流消息�
     模型 id 使用 `nvidia/<vendor>/<model>` 命名空间（例如 `nvidia/nvidia/nemotron-...`）；选择器保留字面上的 `<provider>/<model-id>` 组合，而发送到 API 的规范键保持单前缀。
   </Accordion>
   <Accordion title="xAI">
-    使用 xAI Responses 路径。推荐路径是 SuperGrok/X Premium OAuth；API 密钥仍可通过 `XAI_API_KEY` 或插件配置使用，而 Grok `web_search` 会在 API 密钥回退前复用相同的认证配置文件。Grok 4.5 在可用时可用于聊天、编码和 agentic 工作；`grok-4.3` 仍是区域安全的捆绑默认值。较旧的 `/fast` 和 `params.fastMode: true` 配置仍会通过 xAI 的 Grok 4.3 兼容重定向解析，但新配置应直接选择当前模型。`tool_stream` 默认开启；可通过 `agents.defaults.models["xai/<model>"].params.tool_stream=false` 禁用。
+    使用 xAI Responses 路径。推荐路径是 SuperGrok/X Premium OAuth；全新设置会选择 `xai/auto`，该模型会遵循 xAI 的经认证默认模型，无需更新 OpenClaw。现有的具体模型 id 会保持固定。API 密钥仍可通过 `XAI_API_KEY` 或插件配置使用，并将 `grok-4.3` 作为区域安全的设置默认值。Grok `web_search` 会在回退到 API 密钥之前重用相同的认证配置文件。较旧的 `/fast` 和 `params.fastMode: true` 配置仍会通过 xAI 的 Grok 4.3 兼容性重定向进行解析，但新配置应直接选择当前模型。`tool_stream` 默认启用；可通过 `agents.defaults.models["xai/<model>"].params.tool_stream=false` 禁用。
   </Accordion>
 </AccordionGroup>
 
@@ -467,10 +430,18 @@ Kimi K3 使用自适应思考。`--thinking minimal|low` 选择低强度，
 
 BytePlus ARK 为国际用户提供与火山引擎相同的模型访问能力。
 
-- 提供商：`byteplus`（编码：`byteplus-plan`）
+- 插件：`@openclaw/byteplus-provider`
+- 提供商：`byteplus`（编程：`byteplus-plan`）
 - 认证：`BYTEPLUS_API_KEY`
 - 示例模型：`byteplus-plan/ark-code-latest`
-- CLI：`openclaw onboard --auth-choice byteplus-api-key`
+- 命令行：`openclaw onboard --auth-choice byteplus-api-key`
+
+安装官方插件并重启网关：
+
+```bash
+openclaw plugins install @openclaw/byteplus-provider
+openclaw gateway restart
+```
 
 ```json5
 {
@@ -480,9 +451,9 @@ BytePlus ARK 为国际用户提供与火山引擎相同的模型访问能力。
 }
 ```
 
-注册时默认使用 coding 界面，但通用的 `byteplus/*` 目录会同时注册。
+注册时默认使用编程界面，但通用的 `byteplus/*` 目录会同时注册。
 
-在 onboarding/configure 模型选择器中，BytePlus 认证选项会优先显示 `byteplus/*` 和 `byteplus-plan/*` 两类条目。如果这些模型尚未加载，OpenClaw 会回退到未过滤的目录，而不是显示一个空的按提供商分组选择器。
+在引导配置模型选择器中，BytePlus 认证选项会优先显示 `byteplus/*` 和 `byteplus-plan/*` 两类条目。如果这些模型尚未加载，OpenClaw 会回退到未过滤的目录，而不是显示一个空的按提供商分组选择器。
 
 <Tabs>
   <Tab title="标准模型">
@@ -501,12 +472,12 @@ BytePlus ARK 为国际用户提供与火山引擎相同的模型访问能力。
 
 ### Synthetic
 
-Synthetic 通过 `synthetic` 提供商提供 Anthropic 兼容模型：
+Synthetic 通过 `synthetic` 提供 Anthropic 兼容模型：
 
-- Provider: `synthetic`
-- Auth: `SYNTHETIC_API_KEY`
-- Example model: `synthetic/hf:MiniMaxAI/MiniMax-M3`
-- CLI: `openclaw onboard --auth-choice synthetic-api-key`
+- 提供商：`synthetic`
+- 认证：`SYNTHETIC_API_KEY`
+- 示例模型：`synthetic/hf:MiniMaxAI/MiniMax-M3`
+- CLI：`openclaw onboard --auth-choice synthetic-api-key`
 
 ```json5
 {
@@ -533,14 +504,14 @@ MiniMax 通过 `models.providers` 配置，因为它使用自定义端点：
 
 - MiniMax OAuth（全球）：`--auth-choice minimax-global-oauth`
 - MiniMax OAuth（中国）：`--auth-choice minimax-cn-oauth`
-- MiniMax API key（全球）：`--auth-choice minimax-global-api`
-- MiniMax API key（中国）：`--auth-choice minimax-cn-api`
+- MiniMax API 密钥（全球）：`--auth-choice minimax-global-api`
+- MiniMax API 密钥（中国）：`--auth-choice minimax-cn-api`
 - 认证：`minimax` 使用 `MINIMAX_API_KEY`；`minimax-portal` 使用 `MINIMAX_OAUTH_TOKEN` 或 `MINIMAX_API_KEY`
 
 请参见 [/providers/minimax](/providers/minimax) 获取设置详情、模型选项和配置片段。
 
 <Note>
-在 MiniMax 的 Anthropic 兼容流式路径上，OpenClaw 默认会为 M2.x 系列关闭 thinking，除非你显式设置；MiniMax-M3（以及 M3.x）默认保持提供商省略/自适应 thinking 路径。`/fast on` 会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
+在 MiniMax 的 Anthropic 兼容流式路径上，OpenClaw 默认会为 M2.x 系列关闭思考，除非你显式设置；MiniMax-M3（以及 M3.x）默认保持提供商省略/自适应思考路径。`/fast on` 会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
 </Note>
 
 插件拥有的能力划分：
@@ -548,7 +519,7 @@ MiniMax 通过 `models.providers` 配置，因为它使用自定义端点：
 - 文本/聊天默认使用 `minimax/MiniMax-M3`
 - 图像生成使用 `minimax/image-01` 或 `minimax-portal/image-01`
 - 图像理解在两种 MiniMax 认证路径上都由插件拥有的 `MiniMax-VL-01` 提供
-- Web 搜索保持在提供商 id `minimax`
+- 网页搜索保持在提供商 ID `minimax`
 
 ### LM Studio
 
@@ -724,4 +695,4 @@ openclaw models list
 - [配置参考](/gateway/config-agents#agent-defaults) - 模型配置键
 - [模型故障转移](/concepts/model-failover) - 回退链和重试行为
 - [模型](/concepts/models) - 模型配置和别名
-- [提供商](/providers) - 每个提供商的设置指南
+- [提供商](/providers) - 每个提供商的设置指南。

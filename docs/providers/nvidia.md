@@ -66,11 +66,12 @@ openclaw onboard --auth-choice nvidia-api-key --nvidia-api-key "nvapi-..."
 
 ## 精选目录
 
-当配置了 NVIDIA API 密钥时，设置和模型选择路径会从
+配置 NVIDIA API 密钥后，设置和模型选择路径会从
 `https://assets.ngc.nvidia.com/products/api-catalog/featured-models.json` 获取
-NVIDIA 的公共精选模型目录，并将结果缓存 24 小时（前 32 条条目，作为自由文本输入行导入）。
-因此，来自 build.nvidia.com 的新精选模型会在设置和模型选择界面中显示，而无需等待 OpenClaw 发布新版本。
-当实时源可用时，在 NVIDIA 设置期间，返回的第一个模型将作为预选项。
+NVIDIA 的公开精选模型目录，并将结果缓存 24 小时（前 32 条，以免费文本输入
+条目的形式导入）。因此，来自 build.nvidia.com 的新精选模型或重新发布的精选模型会在
+缓存刷新后出现在设置和模型选择界面中，无需等待 OpenClaw 发布新版本。新的 NVIDIA
+目录会覆盖随附的停用元数据。当实时数据源可用时，NVIDIA 设置过程中会预选其中的第一个模型。
 
 该获取过程对 `assets.ngc.nvidia.com` 使用固定的 HTTPS 主机策略。如果未配置
 NVIDIA API 密钥，或者该源不可用或格式错误，OpenClaw 将回退到内置目录和下面的内置默认值。
@@ -89,9 +90,7 @@ Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 的构建页�
 
 ## 内置回退目录
 
-可选的捆绑行会快照 NVIDIA 的特色模型目录。已弃用的
-兼容性行仍可通过精确引用解析，但不会出现在模型
-选择器中。
+可选的内置条目快照了 NVIDIA 的精选模型目录。已弃用的兼容性条目保留现有的完整模型引用以便识别，但不会显示在模型选择器中。
 
 | 模型引用                                   | 名称                  | 上下文   | 最大输出 |
 | ------------------------------------------ | --------------------- | --------- | ---------- |
@@ -101,12 +100,8 @@ Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 的构建页�
 | `nvidia/moonshotai/kimi-k2.6`              | Kimi K2.6             | 262,144   | 65,536     |
 | `nvidia/minimaxai/minimax-m3`              | Minimax M3            | 196,608   | 8,192      |
 | `nvidia/deepseek-ai/deepseek-v4-pro`       | DeepSeek V4 Pro       | 262,144   | 16,384     |
-| `nvidia/qwen/qwen3.5-397b-a17b`            | Qwen3.5 397B A17B     | 262,144   | 32,768     |
 
-The full compatibility catalog also retains these shipped refs for existing
-configurations: `nvidia/moonshotai/kimi-k2.5`, `nvidia/z-ai/glm-5.1`,
-`nvidia/z-ai/glm5`, and `nvidia/minimaxai/minimax-m2.7`. They remain available
-by exact reference but never appear in onboarding or model pickers.
+完整的兼容性目录还保留了这些已发布的引用，以支持现有配置和迁移：`nvidia/qwen/qwen3.5-397b-a17b`、`nvidia/moonshotai/kimi-k2.5`、`nvidia/z-ai/glm-5.1`、`nvidia/z-ai/glm5` 以及 `nvidia/minimaxai/minimax-m2.7`。除非 NVIDIA 在其精选目录中重新发布这些模型，否则这些引用不会显示在内置和离线模型选择器中。NVIDIA 已停用 Qwen 端点，因此使用其模型引用的请求将不再有效。请将现有的 Qwen 配置迁移到活跃模型。
 
 ## 高级配置
 
@@ -116,11 +111,11 @@ by exact reference but never appear in onboarding or model pickers.
   </Accordion>
 
   <Accordion title="目录与定价">
-    当已配置 NVIDIA 身份验证时，OpenClaw 会优先使用 NVIDIA 的公开精选模型目录，并将其缓存 24 小时。随附的可选后备方案是 NVIDIA 精选模型目录的静态快照；已弃用的精确引用兼容行会在模型选择器中隐藏。由于 NVIDIA 目前为所列模型提供免费 API 访问，源中的成本默认为 `0`。
+    配置 NVIDIA 身份验证后，OpenClaw 会优先使用 NVIDIA 的公开精选模型目录，并将其缓存 24 小时。内置的可选回退目录是 NVIDIA 精选模型目录的静态快照；已弃用的精确引用兼容性条目会从该回退目录中隐藏。最新的精选条目可以重新启用 NVIDIA 已重新发布的模型。由于 NVIDIA 目前为所列模型提供免费 API 访问，源代码中的费用默认为 `0`。
   </Accordion>
 
   <Accordion title="OpenAI 兼容端点">
-    OpenClaw 使用 `openai-completions` 适配器通过标准的 `/v1` 聊天补全路由与 NVIDIA 通信。任何兼容 OpenAI 的工具都应可在 NVIDIA base URL 下直接使用。
+    OpenClaw 使用 `openai-completions` 适配器通过标准的 `/v1` 聊天补全路由与 NVIDIA 通信。任何兼容 OpenAI 的工具都应可在 NVIDIA 基础 URL 下直接使用。
   </Accordion>
 
   <Accordion title="Nemotron 3 Ultra 推理参数">

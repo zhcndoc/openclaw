@@ -88,28 +88,28 @@ read_when:
 | 字段         | 描述                                                     |
 | ------------- | --------------------------------------------------------------- |
 | `name`        | 使用小写字母、数字和连字符的唯一 slug        |
-| `description` | 显示给 agent 和发现输出的一行描述 |
+| `description` | 显示给智能体和发现输出的一行描述 |
 
-### 可选 frontmatter 键
+### 可选前置元数据键
 
 | 字段                      | 默认值 | 描述                                                                      |
 | -------------------------- | ------- | -------------------------------------------------------------------------------- |
 | `user-invocable`           | `true`  | 将该技能暴露为用户斜杠命令                                         |
-| `disable-model-invocation` | `false` | 将该技能排除在 agent 的系统提示之外（仍可通过 `/skill` 运行）        |
+| `disable-model-invocation` | `false` | 将该技能排除在智能体的系统提示之外（仍可通过 `/skill` 运行）        |
 | `command-dispatch`         | —       | 设置为 `tool` 可将斜杠命令直接路由到工具，绕过模型 |
 | `command-tool`             | —       | 当设置了 `command-dispatch: tool` 时要调用的工具名称                         |
 | `command-arg-mode`         | `raw`   | 对于工具分发，将原始参数字符串转发给工具                      |
-| `homepage`                 | —       | 在 macOS Skills UI 中显示为“网站”的 URL                                    |
+| `homepage`                 | —       | 在 macOS 技能 UI 中显示为“网站”的 URL                                    |
 
 关于门控字段（`requires.bins`、`requires.env` 等），请参见
-[Skills — 门控](/tools/skills#gating)。
+[技能 — 门控](/tools/skills#gating)。
 
 ### 使用 `{baseDir}`
 
-在技能目录内引用文件时，无需硬编码路径——agent 会将 `{baseDir}` 解析为技能自身目录：
+在技能目录内引用文件时，无需硬编码路径——智能体会将 `{baseDir}` 解析为技能自身目录：
 
 ```markdown
-在 `{baseDir}/scripts/run.sh` 运行 helper 脚本。
+在 `{baseDir}/scripts/run.sh` 运行辅助脚本。
 ```
 
 ## 添加条件激活
@@ -194,6 +194,7 @@ openclaw skills workshop propose-create \
 
 ```bash
 openclaw skills workshop inspect <proposal-id>
+openclaw skills workshop evaluate <proposal-id>
 openclaw skills workshop apply <proposal-id>
 ```
 
@@ -241,10 +242,10 @@ openclaw skills workshop apply <proposal-id>
     加载顺序、门控、允许列表和 SKILL.md 格式。
   </Card>
   <Card title="技能工作坊" href="/tools/skill-workshop" icon="flask">
-    供 agent 起草技能使用的提案队列。
+    供智能体起草技能使用的提案队列。
   </Card>
   <Card title="技能配置" href="/tools/skills-config" icon="gear">
-    完整的 `skills.*` 配置 schema。
+    完整的 `skills.*` 配置模式。
   </Card>
   <Card title="ClawHub" href="/clawhub" icon="cloud">
     浏览并在公共注册表中发布技能。

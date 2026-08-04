@@ -13,7 +13,7 @@ title: "审批"
 
 别名：`openclaw exec-approvals`
 
-相关内容：[Exec approvals](/tools/exec-approvals), [Nodes](/nodes)
+相关内容：[Exec 审批](/tools/exec-approvals)、[节点](/nodes)。
 
 ## `openclaw exec-policy`
 
@@ -26,10 +26,12 @@ openclaw exec-policy show --json
 openclaw exec-policy preset yolo
 openclaw exec-policy preset cautious --json
 
-openclaw exec-policy set --host gateway --security full --ask off --ask-fallback full
+openclaw exec-policy set --host gateway --security full --ask off --ask-fallback full --json
 ```
 
 预设（`yolo`、`cautious`、`deny-all`）会同时应用 `host`、`security`、`ask` 和 `askFallback`。`set` 只应用你传入的标志；每个被接受的值都会经过校验（`--host auto|sandbox|gateway|node`、`--security deny|allowlist|full`、`--ask off|on-miss|always`、`--ask-fallback deny|allowlist|full`）。
+
+`show`、`preset` 和 `set` 接受 `--json`，并将请求的策略、主机策略和有效策略信息作为一个 JSON 对象返回。
 
 范围：
 
@@ -117,7 +119,7 @@ EOF
 
 CLI 会先读取节点当前的哈希值，并在更新时一并发送，因此并发的本地编辑会被拒绝，而不会被覆盖。`rules` 是必需的，因为此操作会替换节点的完整规则列表；`defaultAction` 是可选的。报告其原生策略为已禁用的节点不能通过远程方式配置；请先在该主机上启用或配置该策略。主机原生策略不支持 `allowlist add|remove` 辅助命令。
 
-## "Never prompt" / YOLO 示例
+## “绝不提示” / YOLO 示例
 
 将某个绝不应在执行审批时停止的主机的主机审批默认值设置为 `full` + `off`：
 
@@ -145,7 +147,7 @@ openclaw config set tools.exec.mode full
 
 这里明确指定 `tools.exec.host=gateway`，因为 `host=auto` 仍然表示“可用时使用沙箱，否则使用网关”：YOLO 关注的是审批，而不是路由。当你希望即使配置了沙箱也使用主机执行时，请使用 `gateway`（或 `/exec host=gateway`）。
 
-如果省略 `askFallback`，默认值是 `deny`。当升级一个无 UI 的主机并且希望保持永不提示行为时，请显式设置 `askFallback: "full"`。
+如果省略 `askFallback`，默认值是 `deny`。当升级一个无 UI 的主机并且希望保持绝不提示行为时，请显式设置 `askFallback: "full"`。
 
 同样意图的本地快捷方式，仅在本机上使用：
 

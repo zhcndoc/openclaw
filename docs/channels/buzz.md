@@ -11,16 +11,18 @@ Buzz 是一个官方频道插件，可将 OpenClaw 代理连接到托管或自�
 
 ## 它的作用
 
-- 接收来自已批准 Buzz 房间的文本消息
+- 接收来自已批准 Buzz 房间的普通消息、富内容消息和结构化差异消息
 - 在同一房间和线程中回复
-- 通过 OpenClaw 内置的 `message` 工具发送文本消息
+- 在已接受的代理回合运行期间显示正在输入
+- 保留回复中的 Markdown，并通过 OpenClaw 内置的
+  `message` 工具发送文本
+- 从回复和主动消息中向当前房间成员发送原生 Buzz 提及
 - 支持提及要求和发送者允许列表
 - 在机器人获得批准后发现房间
-- 重新连接并避免对同一条消息处理两次
+- 通过 OpenClaw 的目录命令解析当前 Buzz 个人资料名称、头像、房间名称和房间成员资格
+- 重新连接，并避免重复处理同一条消息
 
-当前插件支持群组房间和文本消息。直接消息、
-媒体和文件、原生反应、房间创建以及自动管理员批准
-目前尚不支持。
+当前插件支持群组房间、Markdown 文本和入站结构化差异。暂不支持私信、媒体和文件、原生回应、创建房间以及自动管理员批准。
 
 ## Buzz 身份和房间模型
 
@@ -90,8 +92,7 @@ buzz channels add-member \
   --role bot
 ```
 
-请以现有的人类所有者或管理员身份运行该命令。绝不要把那个
-人类私钥交给 OpenClaw。
+请以现有的人类所有者或管理员身份运行该命令。绝不要把那个人类私钥交给 OpenClaw。
 
 Gateway 连接后，OpenClaw 会保留现有的非空 Buzz 个人资料显示名称。对于新个人资料，它会先使用已配置的 Buzz channel 账户名，然后使用路由到已配置 Buzz 房间的单个 agent 的身份名称，最后使用 `OpenClaw`。这会在 Buzz 的个人资料缓存刷新后替换缩短的公钥。
 
@@ -115,12 +116,19 @@ Buzz 插件不会添加一个单独的仅限 Buzz 的 agent 工具。它会将 B
 
 agents 可以：
 
-- 回复进入其房间或线程中的 Buzz 消息
-- 向已获批准的 Buzz 房间发送文本
-- 当工作流未指定目标时，使用已配置的默认房间
-- 使用所路由 agent 的正常技能、记忆和允许的工具
+- 在其房间或线程中回复收到的 Buzz 消息
+- 在生成回复时显示房间级或线程级输入状态
+- 接收 Buzz kind `9` 普通消息、kind `40002` 富内容消息以及 kind `40008` 结构化差异
+- 将 Markdown 文本作为普通 kind `9` 消息发送到已批准的 Buzz 房间
+- 在普通回复和主动消息中发送原生的房间成员提及
+- 在工作流未指定目标时使用配置的默认房间
+- 使用所路由 agent 的常规技能、记忆和允许使用的工具
 
-人类和自动化也可以通过 CLI 测试相同的出站路径：
+当以下字段存在时，结构化差异会将其仓库、提交、文件、分支、拉取请求、语言、描述、截断状态和统一差异内容包含在 agent 上下文中。差异内容不会被解释为 OpenClaw 命令或文本提及。
+
+输入状态使用活动的已认证 Gateway 连接上的 Buzz 临时 kind `20002`。普通回复每三秒刷新一次；由心跳驱动的回复使用 OpenClaw 的共享输入状态间隔，默认为六秒。当本轮处理完成、被取消、失败或 Gateway 关闭时，OpenClaw 会停止刷新。输入状态失败不会阻塞回复，也不会仅为发送临时事件而重新连接 Gateway。
+
+人类和自动化流程可以通过 CLI 测试相同的出站路径：
 
 ```bash
 openclaw message send \
@@ -129,7 +137,47 @@ openclaw message send \
   --message "Hello from OpenClaw"
 ```
 
-### 将房间路由到不同的 agents
+### 原生提及
+
+将当前房间中唯一成员的个人资料名称写成 `@Display Name`。OpenClaw 会保持可见文本不变，并添加原生 Buzz `p` 标签，线程回复也同样如此。名称只会根据目标房间当前由中继签名的成员列表和有界个人资料快照进行解析。
+
+如需指定明确的身份，请在消息中包含其 NIP-27 引用：
+
+```bash
+openclaw message send \
+  --channel buzz \
+  --target engineering \
+  --message "Please review this, nostr:npub1..."
+```
+
+被引用的公钥必须是目标房间的当前成员。如果未指定明确身份，未知名称和重复的个人资料名称会明确失败，而不会发送看似提及但实际上不会通知任何人的文本。当消息包含明确身份时，未解析或有歧义的标签会保留为展示文本；请明确包含每个预期身份。有歧义的错误会列出候选公钥，以便发送者使用预期的 `nostr:npub...` 身份重试。不属于房间的公钥始终会失败。行内或围栏 Markdown 代码中的类似提及文本会被忽略，并且一条消息最多可包含 50 个原生提及。
+
+已连接的 Gateway 会从现有的内存目录快照中解析名称，不会针对每条消息查询中继。超出有界快照范围的个人资料需要明确的 `nostr:npub...` 身份。独立的提及发送会通过一次有界的已认证中继会话加载成员信息和个人资料、发布消息，然后关闭会话；不包含提及语法的独立消息会继续使用现有的直接发布路径。
+
+### 目录和发送者标签
+
+OpenClaw 会保留已配置房间、其当前由中继签名的成员列表、房间元数据以及 kind `0` 成员个人资料的有界快照。当可用时，传入的 agent 上下文会使用当前的个人资料名称和房间名称，而发送者公钥仍然是稳定的授权、路由和会话身份。
+
+通过 CLI 检查相同的数据：
+
+```bash
+openclaw directory self --channel buzz
+openclaw directory peers list --channel buzz --query "alice"
+openclaw directory groups list --channel buzz --query "engineering"
+openclaw directory groups members \
+  --channel buzz \
+  --group-id buzz:<ROOM_UUID>
+```
+
+当 Gateway 已连接时，目录读取会复用其已认证的 Buzz 连接和内存快照。独立的目录命令会打开一个有界的已认证连接，加载当前快照，然后将其关闭。普通目录错误会被记录，但不会触发重新连接。如果目录或个人资料订阅未能在 10 秒内达到 EOSE，OpenClaw 会将 Buzz 中继会话视为停滞，并仅回收该 Buzz 账户的连接；Gateway 会继续运行。
+
+已归档的房间会从目录结果和实时房间订阅中排除。如果 OpenClaw 连接期间某个已配置房间被归档或恢复，插件只会回收其 Buzz 连接，使订阅集合与中继的当前元数据保持一致。Gateway 会继续运行。
+
+每个已配置房间使用一个房间范围的中继订阅。OpenClaw 为成员通知以及并发的个人资料、成员信息和元数据查询保留 Buzz 1,024 个连接订阅中的四个，因此一个账户最多可以配置 1,020 个房间。接近该上限时，会优先减少可选的成员个人资料订阅；目录条目仍可通过稳定的公钥和确定性的备用标签正常工作。
+
+当前房间中唯一的名称可以通过 OpenClaw 的共享目录查找解析为出站目标。规范的 `buzz:<ROOM_UUID>` 目标仍然是自动化场景以及名称重复房间的最安全选择。
+
+### 将房间路由到不同的 agent
 
 标准 OpenClaw 绑定可以将每个 Buzz 房间发送给不同的 agent、workspace 或 model，而一个 Gateway 和 Buzz bot 为它们全部提供服务：
 
@@ -166,8 +214,8 @@ openclaw message send \
 
 Buzz 采用两种独立的控制：
 
-- **Require mentions**：仅当机器人被提及（@）时，代理才会响应。
-- **Sender access**：允许经过批准房间中的所有当前成员，禁用
+- **要求提及**：仅当机器人被提及（@）时，代理才会响应。
+- **发送者访问权限**：允许经过批准房间中的所有当前成员，禁用
   房间进入，或者进一步将房间成员限制为选定的 Buzz 公钥。
 
 全新的引导式设置允许选定房间中的当前成员发送普通消息。OpenClaw 在接受消息之前会加载 Buzz 的中继签名房间名册，在持久化去重或代理工作之前先在内存中检查成员资格，并在 Buzz 成员变更事件后刷新名册。没有逐条消息的中继查询或 Gateway 轮询。
@@ -175,7 +223,7 @@ Buzz 采用两种独立的控制：
 在手动配置中，当只有特定房间成员应能够激活代理时，请使用带有 `groupAllowFrom` 的 `groupPolicy: "allowlist"`。
 仅当这些成员所使用的 Buzz 客户端可以指向机器人身份时，才设置 `requireMention: true`。
 
-这些控制决定了谁可以启动一次代理运行；它们不会限制路由后的代理在消息被接受后可以做什么。请将房间消息视为不受信任的输入，并根据房间的信任级别为该代理配置 [sandbox and tool policy](/gateway/sandbox-vs-tool-policy-vs-elevated)。
+这些控制决定了谁可以启动一次代理运行；它们不会限制路由后的代理在消息被接受后可以做什么。请将房间消息视为不受信任的输入，并根据房间的信任级别为该代理配置[沙箱和工具策略](/gateway/sandbox-vs-tool-policy-vs-elevated)。
 
 ## 手动配置
 
@@ -213,7 +261,7 @@ Buzz 采用两种独立的控制：
 }
 ```
 
-房间目标是 UUID。在发现过程中使用显示的房间 UUID，或者向房间管理员询问；像 `general` 这样的显示名称不是有效目标。
+房间 UUID 是规范目标。请使用发现过程中显示的 UUID，或向房间管理员索要该 UUID。唯一的当前房间名称可以通过实时目录解析，但自动化应使用 `buzz:<ROOM_UUID>` 以避免歧义。
 
 对于手动配置，`groupAllowFrom` 条目必须使用 64 个字符的十六进制格式。
 
@@ -221,7 +269,7 @@ Buzz 采用两种独立的控制：
 
 默认的引导式路径会复用当前 bot 身份，或生成一个私钥并将其存储在 `channels.buzz.privateKey` 中，遵循 OpenClaw 当前的明文配置约定。
 
-对于现有密钥，设置可以使用明文或现有的 `env`、`file` 或 `exec` SecretRef。有关提供方设置，请参见 [Secrets management](/gateway/secrets)。默认账户也可以读取：
+对于现有密钥，设置可以使用明文或现有的 `env`、`file` 或 `exec` SecretRef。有关提供方设置，请参见 [密钥管理](/gateway/secrets)。默认账户也可以读取：
 
 ```bash
 export BUZZ_RELAY_URL="wss://buzz.example.com"
@@ -257,6 +305,22 @@ openclaw message send \
 
 要完成一次完整的往返测试，请让一个被允许的 Buzz 用户提及机器人，并确认 OpenClaw 会在房间中回复。
 
+### QA 实验室往返测试
+
+源代码检出可以使用两个专用测试身份来测试生产环境的 Buzz 通道路径：
+
+```bash
+pnpm openclaw qa buzz \
+  --credential-file /secure/path/buzz-qa-credentials.json \
+  --provider-mode mock-openai
+```
+
+该命令使用确定性的模拟模型，运行真实的中继金丝雀测试和提及门控检查。私有 JSON 凭据文件包含 `relayUrl`、`roomId`、`driverPrivateKey` 和 `sutPrivateKey`，以及用于封闭中继的可选 `driverAuthTag` 和 `sutAuthTag` 值。两个测试公钥都必须是房间成员，并且 SUT 公钥必须具有 **Bot** 角色。封闭中继可能要求分别注册这两个公钥。使用 `--credential-source convex` 获取池化的 QA 凭据。
+
+托管中继使用 `wss://`。明文 `ws://` 凭据 URL 仅接受用于回环开发中继。
+
+切勿使用人类所有者或管理员的私钥。私钥和可选的授权值属于父级测试框架的机密信息，不得出现在日志、构建产物、屏幕截图、Shell 历史记录或源代码管理中。
+
 ## 轮换机器人身份
 
 机器人身份轮换需要管理员批准新的公钥：
@@ -278,7 +342,7 @@ openclaw message send \
 - 原生表情回应
 - 从 OpenClaw 创建或管理房间
 - 自动中继成员资格和房间角色审批
-- 引导式机器人身份轮换
+- 引导式机器人身份轮换。
 
 ## 故障排查
 

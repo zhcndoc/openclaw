@@ -17,7 +17,7 @@ title: "推理 CLI"
 
 ## 将 infer 变成一项技能
 
-把这段复制并粘贴给一个 agent：
+把这段复制并粘贴给一个代理：
 
 ```text
 阅读 https://docs.openclaw.ai/cli/infer，然后创建一项技能，将我的常见工作流路由到 `openclaw infer`。
@@ -99,17 +99,18 @@ title: "推理 CLI"
 
 ## 行为
 
-- 当输出会被另一个命令或脚本接收时，使用 `--json`；否则使用文本输出。
-- 使用 `--provider` 或 `--model provider/model` 来固定特定后端。
-- 使用 `model run --thinking <level>` 进行一次性思考/推理覆盖：`off`、`minimal`、`low`、`medium`、`high`、`adaptive`、`xhigh` 或 `max`。
-- 对于 `image describe`、`audio transcribe` 和 `video describe`，`--model` 必须使用 `<provider/model>` 形式。
+- 当输出将作为其他命令或脚本的输入时，使用 `--json`；否则使用文本输出。
+- 使用 `--provider` 或 `--model provider/model` 固定指定的后端。
+- 使用 `model run --thinking <level>` 进行单次思考/推理覆盖：`off`、`minimal`、`low`、`medium`、`high`、`adaptive`、`xhigh` 或 `max`。
+- 对于 `image describe`、`audio transcribe` 和 `video describe`，`--model` 必须使用 `<provider/model>` 格式。
 - 对于 `image describe`，`--file` 接受本地路径和 HTTP(S) URL；远程 URL 会经过正常的媒体获取 SSRF 策略。
-- 无状态执行命令（`model run`、`image *`、`audio *`、`video *`、`web *`、`embedding *`）默认使用本地。由 Gateway 管理状态的命令（`tts status`）默认使用 Gateway。
-- 本地路径从不需要 Gateway 正在运行。
-- 本地 `model run` 是一种轻量的一次性提供方完成：它会解析已配置的 agent 模型和认证，但不会启动 chat-agent 回合、加载工具或打开捆绑的 MCP 服务器。
-- `model run --file` 会将图像文件（自动检测 MIME 类型）附加到提示中；如需多个图像，请重复使用 `--file`。非图像文件会被拒绝——请改用 `infer audio transcribe` 或 `infer video describe`。
-- `model run --gateway` 会使用 Gateway 路由、已保存的认证、提供方选择以及嵌入式运行时，但仍然是原始模型探测：没有先前的会话转录、bootstrap/AGENTS 上下文、工具或捆绑的 MCP 服务器。
-- `model run --gateway --model <provider/model>` 需要受信任操作员的 Gateway 凭证，因为它要求 Gateway 运行一次性的 provider/model 覆盖。
+- 无状态执行命令（`model run`、`image *`、`audio *`、`video *`、`web *`、`embedding *`）默认使用本地。由网关管理的状态命令（`tts status`）默认使用网关。
+- 本地路径不要求网关正在运行。
+- 生成的图像和视频 `--output` 文件会暂存于目标位置旁边，只有在完整缓冲区写入后才会替换目标文件；写入失败会保留现有目标文件不变。
+- 本地 `model run` 是一次精简的提供商补全操作：它解析已配置的代理模型和身份验证，但不会启动聊天代理回合、加载工具或打开捆绑的 MCP 服务器。
+- `model run --file` 会将图像文件（自动检测 MIME 类型）附加到提示中；重复使用 `--file` 可添加多个图像。不接受非图像文件——请改用 `infer audio transcribe` 或 `infer video describe`。
+- `model run --gateway` 会使用网关路由、已保存的身份验证、提供商选择和嵌入式运行时，但仍是原始模型探测：不会加载先前的会话记录、bootstrap/AGENTS 上下文、工具或捆绑的 MCP 服务器。
+- `model run --gateway --model <provider/model>` 要求受信任操作员的网关凭据，因为它会要求网关运行一次性的提供商/模型覆盖。
 
 ## 模型
 
@@ -222,8 +223,9 @@ openclaw infer tts status --json
 
 注意：
 
-- `tts status` 仅支持 `--gateway`（它反映的是网关管理的 TTS 状态）。
-- 在选择提供方且不覆盖其模型时，请使用 `tts convert --provider <id>`。
+- `tts status` 仅支持 `--gateway`（它反映由网关管理的 TTS 状态）。
+- 本地和回环网关的 `tts convert --output` 会在目标文件旁执行复制阶段，并且仅在成功后替换目标文件；复制失败会保留现有文件不变。
+- 在选择提供方但不覆盖其模型时，请使用 `tts convert --provider <id>`。
 - 使用 `tts providers`、`tts voices`、`tts personas`、`tts set-provider` 和 `tts set-persona` 来检查和配置 TTS 行为。
 
 ## 视频
@@ -239,10 +241,12 @@ openclaw infer video describe --file ./clip.mp4 --model openai/gpt-5.4-mini --js
 
 注意：
 
-- `video generate` 接受 `--size`、`--aspect-ratio`、`--resolution`、`--duration`、`--audio`、`--watermark` 和 `--timeout-ms`，这些参数会转发给视频生成运行时。
-- `video describe` 的 `--model` 必须是 `<provider/model>` 格式。
+- `video generate` 接受 `--size`、`--aspect-ratio`、`--resolution`、`--duration`、`--audio`、`--watermark` 和 `--timeout-ms`，并将其转发给视频生成运行时。
+- Provider 托管的视频下载会拒绝空响应、文本响应和 JSON 响应，而不是将不可用的文件报告为成功输出。
+- 使用 `--output` 时，基于 URL 的视频会流式传输到同级临时文件，只有在完整且非空的下载成功后才会替换目标文件；流传输失败会保留现有目标文件不变。
+- 对于 `video describe`，`--model` 必须为 `<provider/model>`。
 
-## Web
+## 网页
 
 搜索并获取。
 

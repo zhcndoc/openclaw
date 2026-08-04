@@ -1,7 +1,8 @@
 ---
-summary: "`openclaw sessions` 的 CLI 参考（列出存储的会话 + 用法）"
+summary: "用于列出、归档、删除和维护已存储会话的 CLI 参考"
 read_when:
-  - 你想列出存储的会话并查看最近活动
+  - 你想列出已存储的会话并查看近期活动
+  - 你想从无头 Gateway 归档或删除会话
 title: "会话"
 ---
 
@@ -9,7 +10,7 @@ title: "会话"
 
 列出存储的对话会话。
 
-Session 列表不是通道/提供方在线状态检查。它们显示的是会话存储中持久化的
+会话列表不是通道/提供方在线状态检查。它们显示的是会话存储中持久化的
 对话记录行。一个安静的 Discord、Slack、Telegram 或其他通道可以在不创建
 新的会话记录的情况下成功重新连接，直到某条消息被处理为止。当你需要实时
 通道连接状态时，请使用 `openclaw channels status --probe`、
@@ -27,8 +28,8 @@ openclaw sessions --json
 
 标志：
 
-| Flag                 | Description                                                            |
-| -------------------- | ---------------------------------------------------------------------- |
+| 标志                 | 描述                                                                 |
+| -------------------- | -------------------------------------------------------------------- |
 | `--agent <id>`       | 一个已配置的 agent 存储（默认：已配置的默认 agent）。                     |
 | `--all-agents`       | 聚合所有已配置的 agent 存储。                                           |
 | `--store <path>`     | 显式指定存储路径（不能与 `--agent` 或 `--all-agents` 组合使用）。       |
@@ -45,9 +46,9 @@ JSON 响应会包含 `totalCount`、`limitApplied` 和 `hasMore`。
 
 RPC 客户端可以传入 `configuredAgentsOnly: true`，以保留广泛的组合发现来源，
 但只返回当前配置中存在的 agent 的行。控制 UI 默认使用该模式，因此已删除
-或仅磁盘存在的 agent 存储不会重新出现在 Sessions 视图中。
+或仅磁盘存在的 agent 存储不会重新出现在会话视图中。
 
-`--all-agents` 读取已配置的 agent 存储。Gateway 和 ACP session
+`--all-agents` 读取已配置的 agent 存储。Gateway 和 ACP 会话
 发现范围更广：它们还包括从已配置的 agent 根目录或模板化的 `session.store`
 根目录解析出的 SQLite 存储。旧版选择器路径必须解析到 agent 根目录内；
 符号链接和根目录外路径会被跳过。
@@ -70,6 +71,70 @@ RPC 客户端可以传入 `configuredAgentsOnly: true`，以保留广泛的组�
   "sessions": [
     { "agentId": "main", "key": "agent:main:main", "model": "openai/gpt-5.6-sol" },
     { "agentId": "work", "key": "agent:work:main", "model": "anthropic/claude-sonnet-4-6" }
+  ]
+}
+```
+
+## 归档会话
+
+通过正在运行的 Gateway 归档一个或多个会话：
+
+```bash
+openclaw sessions archive "agent:main:scratch-1"
+openclaw sessions archive "agent:main:scratch-1" "agent:main:scratch-2"
+openclaw sessions archive "agent:work:scratch-1" --agent work
+openclaw sessions archive "agent:main:scratch-1" --dry-run
+openclaw sessions archive "agent:main:scratch-1" --json
+```
+
+归档使用与控制界面相同的 `sessions.patch` 生命周期操作。
+它会保留对话记录，将会话标记为已归档，并从默认活动列表中移除该会话。
+已归档的会话执行时不会产生任何变化，但仍会成功。
+使用 `--dry-run` 可验证每个键并预览结果，而不会更改会话状态。
+
+## 删除会话
+
+通过正在运行的网关删除一个或多个会话：
+
+```bash
+openclaw sessions delete "agent:main:scratch-1"
+openclaw sessions delete "agent:main:scratch-1" "agent:main:scratch-2" --yes
+openclaw sessions delete "agent:work:scratch-1" --agent work --yes
+openclaw sessions delete "agent:main:scratch-1" --dry-run
+openclaw sessions delete "agent:main:scratch-1" --yes --json
+```
+
+<Warning>
+  删除操作具有破坏性。在交互式终端中，删除有效键之前会询问一次。
+  非交互式删除和使用 `--json` 的删除都需要 `--yes`。编写批量清理脚本时，请先使用
+  `--dry-run`。
+</Warning>
+
+删除使用与控制 UI 相同的 `sessions.delete` 生命周期操作，并启用记录清理。网关会移除实时会话记录、记录生成内容、会话所属的运行时状态、绑定、看板以及其他生命周期产物。对于普通会话，它会将记录保留为经过验证的 `.jsonl.deleted.<timestamp>` 归档；隐身会话的记录则会直接删除而不进行归档。如果无法安全移除受管理的工作树，该命令会报告保留的分支和路径，以便手动清理。
+
+两个生命周期命令都：
+
+- 接受多个键，并针对每个键按顺序返回一个结果；
+- 使用 `--agent <id>` 选择所属代理；对于默认代理之外的 `global` 键，这是必需的；
+- 支持 `--url`、`--token`、`--password` 和 `--timeout <ms>` 网关连接覆盖选项；
+- 当任何键未知或任何操作失败时返回非零退出状态，同时继续处理其他有效键；
+- 设置 `--json` 时，输出一个包含 `ok`、`operation`、`dryRun` 和 `results` 的稳定 JSON 信封。
+
+混合结果 JSON 示例：
+
+```json
+{
+  "ok": false,
+  "operation": "archive",
+  "dryRun": false,
+  "results": [
+    { "key": "agent:main:scratch-1", "ok": true, "status": "archived" },
+    {
+      "key": "agent:main:missing",
+      "ok": false,
+      "status": "not_found",
+      "error": "Session not found. Run openclaw sessions list --json to choose a valid key."
+    }
   ]
 }
 ```

@@ -1,19 +1,19 @@
 ---
-summary: "openclaw agents 的 CLI 参考（list/add/delete/bindings/bind/unbind/set identity）"
+summary: "`openclaw agents` 的 CLI 参考（list/add/delete/bindings/bind/unbind/set identity）"
 read_when:
-  - 你需要多个隔离的 agent（工作区 + 路由 + 认证）
-title: "Agent"
+  - 你需要多个隔离的代理（工作区 + 路由 + 认证）
+title: "代理"
 ---
 
 # `openclaw agents`
 
-管理隔离的 agent（工作区 + 认证 + 路由）。不带子命令运行 `openclaw agents` 等同于 `openclaw agents list`。
+管理隔离的代理（工作区 + 认证 + 路由）。不带子命令运行 `openclaw agents` 等同于 `openclaw agents list`。
 
 相关：
 
-- [多 agent 路由](/concepts/multi-agent)
-- [Agent 工作区](/concepts/agent-workspace)
-- [Skills 配置](/tools/skills-config)：技能可见性配置。
+- [多代理路由](/concepts/multi-agent)
+- [代理工作区](/concepts/agent-workspace)
+- [技能配置](/tools/skills-config)：技能可见性配置。
 
 ## 示例
 
@@ -60,7 +60,7 @@ openclaw agents delete work
 
 ### `agents set-identity`
 
-选项：`--agent <id>`、`--workspace <dir>`、`--identity-file <path>`、`--from-identity`、`--name <name>`、`--theme <theme>`、`--emoji <emoji>`、`--avatar <value>`、`--json`。另见下方的 [Set identity](#set-identity)。
+选项：`--agent <id>`、`--workspace <dir>`、`--identity-file <path>`、`--from-identity`、`--name <name>`、`--theme <theme>`、`--emoji <emoji>`、`--avatar <value>`、`--json`。另见下方的[设置身份](#set-identity)。
 
 ### `agents delete <id>`
 
@@ -76,7 +76,7 @@ openclaw agents delete work
 
 使用路由绑定将入站频道流量固定到特定的 agent。
 
-如果你还想为不同的 agent 显示不同的可见技能，请在 `openclaw.json` 中配置 `agents.defaults.skills` 和 `agents.entries.*.skills`。参见 [Skills config](/tools/skills-config) 和 [Configuration reference](/gateway/config-agents#agentsdefaultsskills)。
+如果你还想为不同的 agent 显示不同的可见技能，请在 `openclaw.json` 中配置 `agents.defaults.skills` 和 `agents.entries.*.skills`。参见 [技能配置](/tools/skills-config) 和 [配置参考](/gateway/config-agents#agentsdefaultsskills)。
 
 列出绑定：
 
@@ -104,11 +104,11 @@ openclaw agents add work --workspace ~/.openclaw/workspace-work --bind telegram:
 
 ### `--bind` 格式
 
-| Format                       | Meaning                                                                                            |
-| ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| `--bind <channel>:*`         | 匹配该频道上的所有账户。                                                                                 |
-| `--bind <channel>:<account>` | 匹配一个账户。                                                                                     |
-| `--bind <channel>`           | 仅匹配默认账户，除非 CLI 能安全解析出特定于插件的账户作用域。 |
+| 格式                         | 含义                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| `--bind <channel>:*`         | 匹配该频道上的所有账户。                                                                        |
+| `--bind <channel>:<account>` | 匹配一个账户。                                                                                   |
+| `--bind <channel>`           | 仅匹配默认账户，除非 CLI 能安全解析出特定于插件的账户作用域。                                    |
 
 ### 绑定作用域行为
 
@@ -175,9 +175,9 @@ openclaw agents set-identity --agent main --name "OpenClaw" --emoji "🦞" --ava
 ```json5
 {
   agents: {
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
+        default: true,
         identity: {
           name: "OpenClaw",
           theme: "太空龙虾",
@@ -185,7 +185,7 @@ openclaw agents set-identity --agent main --name "OpenClaw" --emoji "🦞" --ava
           avatar: "avatars/openclaw.png",
         },
       },
-    ],
+    },
   },
 }
 ```

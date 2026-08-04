@@ -1,22 +1,22 @@
 ---
-summary: "位于后台任务之上的 Task Flow 编排层"
+summary: "位于后台任务之上的任务流编排层"
 read_when:
-  - 你想了解 Task Flow 与后台任务之间的关系
+  - 你想了解任务流与后台任务之间的关系
   - 你在发布说明或文档中遇到 Task Flow 或 openclaw tasks flow
-  - 你想检查或管理持久化的 flow 状态
-title: "Task flow"
+  - 你想检查或管理持久化的任务流状态
+title: "任务流"
 ---
 
-Task Flow 是位于 [后台任务](/automation/tasks) 之上的编排层。flow 是多步骤工作的持久化记录，包含自身的状态、JSON 状态、修订计数器以及关联的任务记录。flow 会在网关重启后继续存在；单个任务仍然是分离工作的基本单位。
+任务流是位于 [后台任务](/automation/tasks) 之上的编排层。任务流是多步骤工作的持久化记录，包含自身的状态、JSON 状态、修订计数器以及关联的任务记录。任务流会在网关重启后继续存在；单个任务仍然是分离工作的基本单位。
 
 ## 何时使用 Task Flow
 
-| 场景                                      | 使用方式                                      |
-| ----------------------------------------- | ------------------------------------------- |
-| 单个后台作业                             | 普通任务                                     |
-| 由插件代码驱动的多步骤流水线             | Task Flow（受管理）                         |
-| 分离的 ACP 或子代理启动                  | Task Flow（镜像，自动创建）                 |
-| 一次性提醒                               | Cron 作业                                   |
+| 场景                           | 使用方式                       |
+| ------------------------------ | ------------------------------ |
+| 单个后台任务                   | 普通任务                       |
+| 由插件代码驱动的多步骤流水线   | Task Flow（托管）              |
+| 分离的 ACP 或子代理生成        | Task Flow（镜像，自动创建）    |
+| 一次性提醒                     | 自动化任务                     |
 
 ## 同步模式
 
@@ -48,7 +48,7 @@ Flow: weekly-report
 | ----------- | -------------------------------------------------------------------------- |
 | `queued`    | 已创建，尚未开始推进                                                       |
 | `running`   | Flow 正在积极推进                                                           |
-| `waiting`    | 托管的 flow 因等待元数据而暂停（计时器、外部事件）                         |
+| `waiting`   | 托管的 flow 因等待元数据而暂停（计时器、外部事件）                         |
 | `blocked`   | 某个步骤已完成但未得到可用结果；`blockedTaskId`/摘要会说明是哪一个         |
 | `succeeded` | 已成功完成                                                                 |
 | `failed`    | 已带错误完成                                                               |
@@ -88,16 +88,16 @@ openclaw tasks flow cancel <lookup>
 
 对于市场情报简报之类的重复工作流，请将计划、编排和可靠性检查视为独立层：
 
-1. 使用 [Scheduled Tasks](/automation/cron-jobs) 进行定时。
-2. 当工作流需要基于之前的上下文继续时，使用持久化的 cron session。
-3. 使用 [Lobster](/tools/lobster) 处理确定性步骤、审批门和恢复令牌。
-4. 使用 Task Flow 跟踪跨子任务、等待、重试和 gateway 重启的多步骤运行。
+1. 使用 [自动化](/automation/cron-jobs) 进行定时。
+2. 当工作流需要基于先前上下文继续运行时，使用持久化自动化会话。
+3. 使用 [Lobster](/tools/lobster) 执行确定性步骤、审批关卡和恢复令牌。
+4. 使用 Task Flow 跟踪跨子任务、等待、重试和网关重启的多步骤运行。
 
-示例 cron 形态：
+自动化任务示例（`openclaw automations`；`openclaw cron` 仍是别名）：
 
 ```bash
-openclaw cron add \
-  --name "市场情报简报" \
+openclaw automations add \
+  --name "Market intelligence brief" \
   --cron "0 7 * * 1-5" \
   --tz "America/New_York" \
   --session session:market-intel \
@@ -134,11 +134,11 @@ steps:
 
 推荐的 preflight 检查：
 
-- 浏览器可用性和配置文件选择，例如使用 `openclaw` 进行托管状态，或在需要已登录 Chrome 会话时使用 `user`。参见 [Browser](/tools/browser)。
-- 每个数据源的 API 凭证和配额。
+- 浏览器可用性和配置文件选择，例如，对于托管状态使用 `openclaw`，或者在需要已登录 Chrome 会话时使用 `user`。请参阅 [浏览器](/tools/browser)。
+- 每个来源的 API 凭据和配额。
 - 所需端点的网络可达性。
 - 为代理启用的必需工具，例如 `lobster`、`browser` 和 `llm-task`。
-- 为 cron 配置失败目标，以便 preflight 失败可见。参见 [Scheduled Tasks](/automation/cron-jobs#delivery-and-output)。
+- 为自动化配置故障目标，以便能够发现 preflight 失败。请参阅 [自动化](/automation/cron-jobs#delivery-and-output)。
 
 每个收集项建议的数据来源字段：
 
@@ -162,7 +162,7 @@ flow 负责协调 task，而不是替代它们。单个 flow 在其生命周期�
 
 ## 相关内容
 
-- [后台任务](/automation/tasks) - 与流程协调的分离工作清单
+- [后台任务](/automation/tasks) - 流程协调的分离式工作账本
 - [CLI：任务](/cli/tasks) - `openclaw tasks flow` 的 CLI 命令参考
-- [自动化概览](/automation) - 一目了然的所有自动化机制
-- [Cron 作业](/automation/cron-jobs) - 可能输入到流程中的计划作业
+- [自动化概览](/automation) - 所有自动化机制一览
+- [自动化任务](/automation/cron-jobs) - 可能向流程提供数据的计划任务

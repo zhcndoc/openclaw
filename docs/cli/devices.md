@@ -10,16 +10,16 @@ title: "设备"
 
 管理设备配对请求和设备范围的令牌。
 
-## Common Options
+## 通用选项
 
-- `--url <url>`: Gateway WebSocket URL (defaults to `gateway.remote.url` after configuration)
-- `--token <token>`: Gateway token (if required)
-- `--password <password>`: Gateway password (password authentication)
-- `--timeout <ms>`: RPC timeout
-- `--json`: JSON output (recommended for scripts)
+- `--url <url>`：网关 WebSocket URL（配置后默认为 `gateway.remote.url`）
+- `--token <token>`：网关令牌（如有要求）
+- `--password <password>`：网关密码（密码认证）
+- `--timeout <ms>`：RPC 超时时间
+- `--json`：JSON 输出（推荐用于脚本）
 
 <Warning>
-When you set `--url`, the CLI will not fall back to configuration or environment credentials. Please explicitly pass `--token` or `--password`, otherwise the command will fail.
+设置 `--url` 后，CLI 将不会回退使用配置或环境凭据。请显式传入 `--token` 或 `--password`，否则命令将执行失败。
 </Warning>
 
 ## 命令
@@ -141,10 +141,12 @@ openclaw devices revoke --device <deviceId> --role node
 1. 确认当前网关令牌来源：
 
    ```bash
-   openclaw config get gateway.auth.token
+   openclaw gateway auth-token --show
    ```
 
-2. 列出已配对设备并确定受影响的设备 id：
+   在网关主机上的交互式终端中运行该命令，并将其输出视为机密信息。
+
+2. 列出已配对的设备并确定受影响的设备 ID：
 
    ```bash
    openclaw devices list
@@ -175,7 +177,7 @@ openclaw devices revoke --device <deviceId> --role node
 相关：
 
 - [仪表盘认证故障排查](/web/dashboard#if-you-see-unauthorized-1008)
-- [网关故障排查](/gateway/troubleshooting#dashboard-control-ui-connectivity)
+- [网关故障排查](/gateway/troubleshooting#dashboard-control-ui-connectivity)。
 
 ## Paperclip / `openclaw_gateway` 首次运行批准
 

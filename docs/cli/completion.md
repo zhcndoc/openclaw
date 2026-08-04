@@ -40,7 +40,9 @@ openclaw completion --shell bash --write-state
 | powershell | `~/.config/powershell/Microsoft.PowerShell_profile.ps1`（在 Windows 上：`Documents/PowerShell/Microsoft.PowerShell_profile.ps1`，或 `Documents/WindowsPowerShell/...` 用于 Windows PowerShell） |
 | zsh        | `~/.zshrc`                                                                                                                                                                                 |
 
-## 说明
+配置文件的更改会暂存于目标文件旁边，并且仅在完整、持久化写入完成后以原子方式替换目标文件。安装失败时，现有配置文件将保持不变。
+
+## 注意事项
 
 - 如果没有 `--install` 或 `--write-state`，该命令会将脚本打印到 stdout。
 - 补全生成会预先加载完整的命令树，包括插件 CLI 命令，因此会包含嵌套子命令。

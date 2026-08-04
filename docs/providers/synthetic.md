@@ -6,9 +6,9 @@ read_when:
 title: "Synthetic"
 ---
 
-[Synthetic](https://synthetic.new) 提供 Anthropic 兼容的端点。
-OpenClaw 将其捆绑为 `synthetic` 提供方，并使用 Anthropic
-Messages API。
+[Synthetic](https://synthetic.new) 提供兼容 Anthropic 的端点。
+OpenClaw 通过官方的 `@openclaw/synthetic-provider`
+插件提供支持，并使用 Anthropic Messages API。
 
 | 属性     | 值                                    |
 | -------- | ------------------------------------- |
@@ -20,9 +20,15 @@ Messages API。
 ## 入门
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/synthetic-provider
+    openclaw gateway restart
+    ```
+  </Step>
   <Step title="获取 API 密钥">
-    从你的 Synthetic 账户中获取一个 `SYNTHETIC_API_KEY`，或者让引导流程
-    提示你输入一个。
+    从您的 Synthetic 账户获取 `SYNTHETIC_API_KEY`，或者让引导流程
+    提示您输入一个。
   </Step>
   <Step title="运行引导">
     ```bash
@@ -80,18 +86,18 @@ OpenClaw 的 Anthropic 客户端会自动在基础 URL 后追加 `/v1`，因此�
 
 ## 内置目录
 
-All Synthetic models use cost `0` (input/output/cache). See Synthetic's
-[current model list](https://dev.synthetic.new/docs/api/models) for service availability.
+所有 Synthetic 模型的费用均为 `0`（输入/输出/缓存）。有关服务可用性，请参阅 Synthetic 的
+[当前模型列表](https://dev.synthetic.new/docs/api/models)。
 
-| Model ID                                            | Context window | Max tokens | Reasoning | Input        |
+| 模型 ID                                             | 上下文窗口     | 最大令牌数 | 推理      | 输入         |
 | --------------------------------------------------- | -------------- | ---------- | --------- | ------------ |
-| `hf:MiniMaxAI/MiniMax-M3`                           | 262,144        | 65,536     | yes       | text + image |
-| `hf:moonshotai/Kimi-K2.7-Code`                      | 262,144        | 8,192      | yes       | text + image |
-| `hf:nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4` | 262,144        | 8,192      | yes       | text         |
-| `hf:openai/gpt-oss-120b`                            | 131,072        | 8,192      | yes       | text         |
-| `hf:Qwen/Qwen3.6-27B`                               | 262,144        | 81,920     | yes       | text + image |
-| `hf:zai-org/GLM-4.7-Flash`                          | 196,608        | 131,072    | yes       | text         |
-| `hf:zai-org/GLM-5.2`                                | 524,288        | 131,072    | yes       | text         |
+| `hf:MiniMaxAI/MiniMax-M3`                           | 262,144        | 65,536     | 是        | 文本 + 图像  |
+| `hf:moonshotai/Kimi-K2.7-Code`                      | 262,144        | 8,192      | 是        | 文本 + 图像  |
+| `hf:nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4` | 262,144        | 8,192      | 是        | 文本         |
+| `hf:openai/gpt-oss-120b`                            | 131,072        | 8,192      | 是        | 文本         |
+| `hf:Qwen/Qwen3.6-27B`                               | 262,144        | 81,920     | 是        | 文本 + 图像  |
+| `hf:zai-org/GLM-4.7-Flash`                          | 196,608        | 131,072    | 是        | 文本         |
+| `hf:zai-org/GLM-5.2`                                | 524,288        | 131,072    | 是        | 文本         |
 
 <Tip>
 模型引用使用 `synthetic/<modelId>` 这种格式。使用
@@ -99,14 +105,13 @@ All Synthetic models use cost `0` (input/output/cache). See Synthetic's
 </Tip>
 
 <AccordionGroup>
-  <Accordion title="Model allowlist">
-    If you enable a model allowlist (`agents.defaults.modelPolicy.allow`), add every
-    Synthetic model you plan to use. Models not in the allowlist are hidden
-    from the agent.
+  <Accordion title="模型允许列表">
+    如果启用了模型允许列表（`agents.defaults.modelPolicy.allow`），请添加所有
+    计划使用的 Synthetic 模型。不在允许列表中的模型将对代理隐藏。
   </Accordion>
 
-  <Accordion title="Base URL 覆盖">
-    如果 Synthetic 更改了其 API 端点，请覆盖 base URL：
+  <Accordion title="基础 URL 覆盖">
+    如果 Synthetic 更改了其 API 端点，请覆盖基础 URL：
 
     ```json5
     {
@@ -128,8 +133,8 @@ All Synthetic models use cost `0` (input/output/cache). See Synthetic's
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model providers" href="/concepts/model-providers" icon="layers">
-    Provider rules, model refs, and failover behavior.
+  <Card title="模型提供方" href="/concepts/model-providers" icon="layers">
+    提供方规则、模型引用和故障转移行为。
   </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
     包括提供方设置在内的完整配置模式。

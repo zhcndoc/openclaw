@@ -18,17 +18,17 @@ title: "exe.dev"
 ## 新手快速路径
 
 1. 打开 [https://exe.new/openclaw](https://exe.new/openclaw)
-2. 根据需要填写你的 auth key/token
-3. 点击你的 VM 旁边的 “Agent”，等待 Shelley 完成 provisioning
-4. 打开 `https://<vm-name>.exe.xyz/`，并使用已配置的 shared secret 进行身份验证（默认使用 token auth；如果你切换 `gateway.auth.mode`，password auth 也可以使用）
-5. 使用 `openclaw devices approve <requestId>` 批准待处理的设备配对请求
+2. 根据需要填写你的认证密钥/令牌
+3. 点击你的 VM 旁边的 “Agent”，等待 Shelley 完成配置
+4. 打开 `https://<vm-name>.exe.xyz/`，并使用已配置的共享密钥进行身份验证（默认使用令牌身份验证；如果你切换 `gateway.auth.mode`，也可以使用密码身份验证）
+5. 使用 `openclaw devices approve <requestId>` 批准待处理的设备配对请求。
 
 ## 使用 Shelley 自动安装
 
 Shelley，exe.dev 的代理，可以通过提示安装 OpenClaw：
 
 ```text
-在这台 VM 上设置 OpenClaw (https://docs.openclaw.ai/install)。对 openclaw onboarding 使用 non-interactive 和 accept-risk 标志。根据需要添加提供的 auth 或 token。将 nginx 配置为在默认启用的站点配置上，将默认端口 18789 转发到根路径，并确保启用 Websocket 支持。配对通过 "openclaw devices list" 和 "openclaw devices approve <request id>" 完成。确保仪表板显示 OpenClaw 的健康状态为 OK。exe.dev 会为我们处理从端口 8000 到 80/443 的转发以及 HTTPS，因此最终的 "reachable" 应该是 <vm-name>.exe.xyz，不需要指定端口。
+在这台 VM 上设置 OpenClaw (https://docs.openclaw.ai/install)。对 openclaw onboarding 使用 non-interactive 和 accept-risk 标志。根据需要添加提供的认证信息或令牌。将 nginx 配置为在默认启用的站点配置上，将默认端口 18789 转发到根路径，并确保启用 WebSocket 支持。配对通过 "openclaw devices list" 和 "openclaw devices approve <request id>" 完成。确保仪表板显示 OpenClaw 的健康状态为 OK。exe.dev 会为我们处理从端口 8000 到 80/443 的转发以及 HTTPS，因此最终的 "reachable" 应该是 <vm-name>.exe.xyz，不需要指定端口。
 ```
 
 ## 手动安装
@@ -106,7 +106,7 @@ Shelley，exe.dev 的代理，可以通过提示安装 OpenClaw：
   <Step title="访问 OpenClaw 并批准设备">
     打开 `https://<vm-name>.exe.xyz/`（请参见引导中的 Control UI 输出）。如果提示认证，请粘贴 VM 中配置的共享密钥。
 
-    本指南默认使用令牌认证，因此请使用 `openclaw config get gateway.auth.token` 获取 `gateway.auth.token`，或者使用 `openclaw doctor --n` 生成一个新的。如果你已将网关切换为密码认证，请改用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`。
+    本指南默认使用令牌认证，因此请在交互式终端中运行 `openclaw gateway auth-token --show` 以获取已配置的令牌。如果未配置令牌，请使用 `openclaw doctor --generate-gateway-token` 生成一个，然后重启 Gateway。如果你已将网关切换为密码认证，请改用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`。
 
     使用 `openclaw devices list` 和 `openclaw devices approve <requestId>` 批准设备。不确定时，请在浏览器中使用 Shelley。
 

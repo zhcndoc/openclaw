@@ -23,9 +23,9 @@ title: "模型提供商快速入门"
 
 - [Alibaba Model Studio](/providers/alibaba)
 - [Amazon Bedrock](/providers/bedrock)
-- [Anthropic (API + Claude CLI)](/providers/anthropic)
-- [Baseten (Inkling + Model APIs)](/providers/baseten)
-- [BytePlus (International)](/concepts/model-providers#byteplus-international)
+- [Anthropic（API + Claude CLI）](/providers/anthropic)
+- [Baseten（Inkling + 模型 API）](/providers/baseten)
+- [BytePlus（国际版）](/concepts/model-providers#byteplus-international)
 - [Chutes](/providers/chutes)
 - [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
 - [Cohere](/providers/cohere)
@@ -35,29 +35,29 @@ title: "模型提供商快速入门"
 - [Fireworks](/providers/fireworks)
 - [MiniMax](/providers/minimax)
 - [Mistral](/providers/mistral)
-- [Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
+- [Moonshot AI（Kimi + Kimi Coding）](/providers/moonshot)
 - [NovitaAI](/providers/novita)
-- [OpenAI (API + Codex)](/providers/openai)
-- [OpenCode (Zen + Go)](/providers/opencode)
+- [OpenAI（API + Codex）](/providers/openai)
+- [OpenCode（Zen + Go）](/providers/opencode)
 - [OpenRouter](/providers/openrouter)
 - [Qianfan](/providers/qianfan)
 - [Qwen](/providers/qwen)
 - [Runway](/providers/runway)
 - [StepFun](/providers/stepfun)
 - [Synthetic](/providers/synthetic)
-- [Venice (Venice AI)](/providers/venice)
+- [Venice（Venice AI）](/providers/venice)
 - [Vercel AI Gateway](/providers/vercel-ai-gateway)
 - [xAI](/providers/xai)
-- [Z.AI (GLM)](/providers/zai)
+- [Z.AI（GLM）](/providers/zai)
 
 有关完整的提供商目录和高级配置，请参阅
 [提供商目录](/providers/index) 和 [模型提供商](/concepts/model-providers)。
 
 ## 其他提供商变体
 
-- `anthropic-vertex` - 当 Vertex 凭据可用时，安装 `@openclaw/anthropic-vertex-provider` 以支持在 Google Vertex 上隐式使用 Anthropic；无需单独的 onboarding 认证选项
+- `anthropic-vertex` - 安装 `@openclaw/anthropic-vertex-provider`，以便在 Vertex 凭据可用时支持通过 Google Vertex 使用隐式 Anthropic；无需单独选择身份验证方式
 - `copilot-proxy` - 本地 VS Code Copilot Proxy 桥接；使用 `openclaw onboard --auth-choice copilot-proxy`
-- `google-gemini-cli` - 非官方 Gemini CLI OAuth 流程；需要本地安装 `gemini`（`brew install gemini-cli` 或 `npm install -g @google/gemini-cli`）；默认模型 `google-gemini-cli/gemini-3-flash-preview`；使用 `openclaw onboard --auth-choice google-gemini-cli` 或 `openclaw models auth login --provider google-gemini-cli --set-default`
+- `google-gemini-cli` - 可选的显式运行时，用于规范的 `google/*` 模型；需要本地安装 `gemini`，以及受支持的 Google AI Studio API 密钥配置；不提供新的 Gemini CLI 或 Antigravity OAuth 设置
 
 ## 相关内容
 

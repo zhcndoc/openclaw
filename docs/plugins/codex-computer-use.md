@@ -20,7 +20,7 @@ Codex 权限。捆绑的 `codex` 插件只负责准备 Codex app-server：
 
 这与 OpenClaw 内置的 [基于 node 的 computer tool](/nodes/computer-use) 不同。当同一个代理契约应控制一台配对的 Mac，而代理运行在 Gateway 或其他节点上时，请使用内置工具。当 Codex app-server 应当负责本地 MCP 安装、权限以及原生工具调用时，请使用 Codex Computer Use。
 
-## OpenClaw.app and Peekaboo
+## OpenClaw.app 与 Peekaboo
 
 OpenClaw.app 的 Peekaboo 集成与 Codex Computer Use 是分开的。该
 macOS 应用可以托管一个 PeekabooBridge 套接字，这样 `peekaboo` CLI 就可以重用
@@ -68,11 +68,9 @@ schema 和结构化的 MCP 响应。当你希望将 CUA 驱动作为普通的 Op
 Codex 模式轮次中负责插件安装、MCP 重新加载以及原生工具调用时，请使用本页的
 Codex Computer Use 设置。
 
-CUA's driver ships prerelease builds for macOS, Windows (x64 and ARM64), and
-Linux (x64 and ARM64, preview tier). It still requires the local OS
-permissions its app prompts for, such as Accessibility and Screen Recording on
-macOS. OpenClaw does not install `cua-driver`, grant those permissions, or
-bypass the upstream driver's safety model.
+CUA 的驱动程序为 macOS、Windows（x64 和 ARM64）以及 Linux（x64 和 ARM64，预览级别）提供预发布版本。
+它仍然需要其应用提示你授予的本地操作系统权限，例如 macOS 上的辅助功能和屏幕录制权限。
+OpenClaw 不会安装 `cua-driver`、授予这些权限，也不会绕过上游驱动程序的安全模型。
 
 ## 快速设置
 
@@ -101,22 +99,16 @@ Computer Use，并允许 OpenClaw 在回合开始前安装或重新启用它：
 }
 ```
 
-With this config, OpenClaw checks Codex app-server before each Codex-mode
-turn. If Computer Use is missing but Codex app-server has already discovered
-an installable marketplace, OpenClaw asks Codex app-server to install or
-re-enable the plugin and reload MCP servers. Before starting an isolated
-Codex app-server on macOS, auto-install also copies the official signed
-Computer Use service app from the selected desktop app bundle into that
-Codex home's `computer-use` directory when the native client is missing.
-On macOS, when no matching
-marketplace is registered and a standard desktop app bundle exists, OpenClaw
-also tries to register the bundled Codex marketplace from
-`/Applications/ChatGPT.app/Contents/Resources/plugins/openai-bundled`, with
-`/Applications/Codex.app/Contents/Resources/plugins/openai-bundled` retained
-as a fallback for legacy standalone installs. If setup still cannot make the
-MCP server available, the turn fails before the thread starts.
-Strict readiness failures are harness preflight failures, so model fallback
-does not repeat the same local readiness sequence for every model candidate.
+使用此配置时，OpenClaw 会在每次 Codex 模式轮次前检查 Codex 应用服务器。如果缺少 Computer Use，但 Codex 应用服务器已经发现了
+可安装的市场，OpenClaw 会请求 Codex 应用服务器安装或
+重新启用该插件，并重新加载 MCP 服务器。在 macOS 上启动隔离的 Codex 应用服务器之前，如果缺少原生客户端，自动安装还会将所选桌面应用程序包中的官方签名
+Computer Use 服务应用复制到该 Codex 主目录的 `computer-use` 目录中。
+在 macOS 上，如果没有注册匹配的
+市场且存在标准桌面应用程序包，OpenClaw 还会尝试从
+`/Applications/ChatGPT.app/Contents/Resources/plugins/openai-bundled` 注册捆绑的 Codex 市场，同时保留
+`/Applications/Codex.app/Contents/Resources/plugins/openai-bundled` 作为旧版独立安装的回退路径。如果设置仍无法使 MCP 服务器可用，则该轮次会在会话开始前失败。
+严格的就绪检查失败属于 harness 预检失败，因此模型回退不会为每个 Codex 候选项重复相同的本地就绪流程。
+解析到其他 harness 的候选项仍然符合条件，并会通过其正常的策略检查进入该运行时。
 
 在更改 Computer Use 配置后，如果现有 Codex 线程已经开始，请在受影响的聊天中使用 `/new` 或 `/reset`，然后再进行测试。
 
@@ -147,15 +139,15 @@ OpenClaw 会在一个正在运行的 Gateway 中串行化原生 Codex 配置读�
 
 ## Marketplace 选择
 
-OpenClaw 使用与 Codex 本身暴露的相同 app-server API。marketplace 字段
+OpenClaw 使用与 Codex 本身公开的相同 app-server API。marketplace 字段
 用于选择 Codex 应该在哪里查找 `computer-use`。
 
-| 字段                  | 适用场景                                                      | 安装支持                                               |
-| --------------------- | ------------------------------------------------------------- | ------------------------------------------------------ |
-| 无 marketplace 字段    | 你希望 Codex app-server 使用它已经知道的 marketplaces。      | 是的，当 app-server 返回本地 marketplace 时。          |
-| `marketplaceSource`   | 你有一个 Codex marketplace 源，app-server 可以添加。         | 是的，适用于显式 `/codex computer-use install`。       |
-| `marketplacePath`     | 你已经知道主机上的本地 marketplace 文件路径。                | 是的，适用于显式安装和回合开始自动安装。                |
-| `marketplaceName`     | 你想按名称选择一个已注册的 marketplace。                     | 仅当所选 marketplace 具有本地路径时。                   |
+| 字段                 | 使用场景                                                       | 安装支持                                               |
+| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------ |
+| 未设置 marketplace 字段 | 希望 Codex app-server 使用其已知的 marketplace。                | 支持从发现的本地或远程 marketplace 安装。              |
+| `marketplaceSource`   | 已有一个 Codex marketplace 源，app-server 可以添加该源。       | 支持显式执行 `/codex computer-use install`。           |
+| `marketplacePath`     | 已知主机上本地 marketplace 文件的路径。                        | 支持显式安装和回合开始时自动安装。                     |
+| `marketplaceName`     | 希望按名称选择一个已注册的 marketplace。                        | 支持从选定的本地或远程 marketplace 安装。             |
 
 新的 Codex home 可能需要片刻时间来填充其官方 marketplaces。在安装期间，OpenClaw 会轮询 `plugin/list`，最长可达
 `marketplaceDiscoveryTimeoutMs` 毫秒（默认 60 秒）。
@@ -202,48 +194,39 @@ codex plugin marketplace add /Applications/ChatGPT.app/Contents/Resources/plugin
 `marketplaceName` 或 `marketplacePath` 配置会禁用此  
 协调过程，因此 OpenClaw 不会覆盖该选择。
 
-## 远程目录限制
+## 远程市场
 
-Codex app-server 可以列出并读取仅远程的目录条目，但它
-目前不支持远程 `plugin/install`。这意味着 `marketplaceName`
-可以为状态检查选择仅远程的市场，但安装和
-重新启用仍然需要通过 `marketplaceSource` 或
-`marketplacePath` 使用本地市场。
+Codex 0.146.0 可以从发现的远程市场读取并安装 Computer Use 插件。OpenClaw 会将 Codex 返回的不透明远程插件 ID 传递给
+`plugin/read` 和 `plugin/install`；人类可读的插件名称不能替代该 ID。
 
-如果状态显示该插件在远程 Codex 市场中可用，但
-不支持远程安装，请使用本地源或路径运行安装：
-
-```text
-/codex computer-use install --source <marketplace-source>
-/codex computer-use install --marketplace-path <path>
-```
+`/codex computer-use install` 可以显式安装或重新启用已发现的远程插件。回合开始时的 `autoInstall` 也可以使用已发现的本地或远程市场。不带 `autoInstall` 的状态检查和回合不会安装插件或修改 Codex 配置。
 
 ## 配置参考
 
-| Field                           | Default        | Meaning                                                                        |
+| 字段                            | 默认值         | 含义                                                                           |
 | ------------------------------- | -------------- | ------------------------------------------------------------------------------ |
-| `enabled`                       | inferred       | Require Computer Use. Defaults to true when another Computer Use field is set. |
-| `autoInstall`                   | false          | Provision the native client and install or re-enable the plugin at turn start. |
-| `marketplaceDiscoveryTimeoutMs` | 60000          | How long install waits for Codex app-server marketplace discovery.             |
-| `liveTestTimeoutMs`             | 60000          | Timeout for the temporary readiness thread and its cleanup requests.           |
-| `toolCallTimeoutMs`             | 60000          | Timeout for the Computer Use `list_apps` readiness tool call.                  |
-| `healthCheckEnabled`            | false          | Run periodic readiness probes while the owning app-server client is active.    |
-| `healthCheckIntervalMinutes`    | 60             | Probe cadence; accepted values are 30, 60, 120, or 240 minutes.                |
-| `pluginCacheMode`               | `independent`  | Use `shared` to refresh the Codex-home cache from the bundled desktop plugin.  |
-| `strictReadiness`               | false          | Stop startup on a failed live probe instead of continuing with a warning.      |
-| `autoRepair`                    | false          | Kill stale scoped Computer Use MCP children and retry a failed probe once.     |
-| `marketplaceSource`             | unset          | Source string passed to Codex app-server `marketplace/add`.                    |
-| `marketplacePath`               | unset          | Local Codex marketplace file path containing the plugin.                       |
-| `marketplaceName`               | unset          | Registered Codex marketplace name to select.                                   |
-| `pluginName`                    | `computer-use` | Codex marketplace plugin name.                                                 |
-| `mcpServerName`                 | `computer-use` | MCP server name exposed by the installed plugin.                               |
+| `enabled`                       | 推断           | 要求使用 Computer Use。当设置了其他 Computer Use 字段时，默认为 true。       |
+| `autoInstall`                   | false          | 在回合开始时配置原生客户端，并安装或重新启用插件。                             |
+| `marketplaceDiscoveryTimeoutMs` | 60000          | 安装等待 Codex app-server 发现市场所需的最长时间。                             |
+| `liveTestTimeoutMs`             | 60000          | 临时就绪线程及其清理请求的超时时间。                                           |
+| `toolCallTimeoutMs`             | 60000          | Computer Use `list_apps` 就绪工具调用的超时时间。                              |
+| `healthCheckEnabled`            | false          | 在所属 app-server 客户端处于活动状态时，定期运行就绪探测。                     |
+| `healthCheckIntervalMinutes`    | 60             | 探测频率；可接受的值为 30、60、120 或 240 分钟。                               |
+| `pluginCacheMode`               | `independent`  | 使用 `shared` 从捆绑的桌面插件刷新 Codex 主目录缓存。                          |
+| `strictReadiness`               | false          | 实时探测失败时停止启动，而不是发出警告后继续。                                 |
+| `autoRepair`                    | false          | 终止过时的、作用域内的 Computer Use MCP 子进程，并在探测失败后重试一次。       |
+| `marketplaceSource`              | 未设置         | 传递给 Codex app-server `marketplace/add` 的源字符串。                         |
+| `marketplacePath`               | 未设置         | 包含该插件的本地 Codex 市场文件路径。                                         |
+| `marketplaceName`               | 未设置         | 要选择的已注册 Codex 市场名称。                                               |
+| `pluginName`                    | `computer-use` | Codex 市场插件名称。                                                           |
+| `mcpServerName`                 | `computer-use` | 已安装插件公开的 MCP 服务器名称。                                              |
 
-回合开始时的自动安装会刻意拒绝已配置的 `marketplaceSource`
-值。新增源是一个显式的设置操作，因此请先运行一次
-`/codex computer-use install --source <marketplace-source>`，然后再让
-`autoInstall` 负责将来从已发现的本地 marketplaces 中重新启用。
-回合开始时的自动安装可以使用已配置的 `marketplacePath`，因为它
-本身就是主机上的本地路径。
+回合开始时的自动安装会有意拒绝已配置的 `marketplaceSource`
+值。添加新源是一项显式设置操作，因此请使用
+`/codex computer-use install --source <marketplace-source>` 执行一次，然后让
+`autoInstall` 处理后续从已发现的本地或远程市场中重新启用插件的操作。
+回合开始时的自动安装可以使用已配置的 `marketplacePath`，因为那已经是
+主机上的本地路径。
 
 每个字段也都支持环境变量覆盖，在对应配置键未设置时会进行检查：
 
@@ -270,29 +253,27 @@ Codex app-server 可以列出并读取仅远程的目录条目，但它
 OpenClaw 会在内部报告一个稳定的设置原因，并为聊天格式化
 面向用户的状态：
 
-| 原因                         | 含义                                                   | 下一步                                       |
-| ---------------------------- | ------------------------------------------------------ | -------------------------------------------- |
-| `disabled`                   | `computerUse.enabled` 解析为 false。                  | 设置 `enabled` 或其他 Computer Use 字段。     |
-| `marketplace_missing`        | 没有可用的匹配 marketplace。                            | 配置 source、path 或 marketplace 名称。      |
-| `plugin_not_installed`       | marketplace 存在，但插件未安装。                       | 运行 install 或启用 `autoInstall`。          |
-| `plugin_disabled`           | 插件已安装，但在 Codex 配置中被禁用。                  | 运行 install 以重新启用它。                  |
-| `remote_install_unsupported` | 所选 marketplace 仅支持远程。                           | 使用 `marketplaceSource` 或 `marketplacePath`。 |
-| `mcp_missing`                | 插件已启用，但 MCP 服务器不可用。                       | 检查 Codex Computer Use 和 OS 权限。         |
-| `ready`                      | 插件和 MCP 工具均可用。                                 | 开始 Codex 模式轮次。                        |
-| `check_failed`               | 状态检查期间 Codex app-server 请求失败。               | 检查 app-server 连通性和日志。               |
-| `auto_install_blocked`       | 轮次开始时的设置需要添加一个新 source。                | 先运行显式安装。                              |
+| 原因                   | 含义                                                   | 下一步                                      |
+| ---------------------- | ------------------------------------------------------ | ------------------------------------------- |
+| `disabled`             | `computerUse.enabled` 解析为 false。                  | 设置 `enabled` 或其他 Computer Use 字段。   |
+| `marketplace_missing`  | 没有可用的匹配市场。                                   | 配置来源、路径或市场名称。                  |
+| `plugin_not_installed` | 市场存在，但插件未安装。                               | 执行安装或启用 `autoInstall`。              |
+| `plugin_disabled`      | 插件已安装，但在 Codex 配置中被禁用。                  | 执行安装以重新启用插件。                    |
+| `mcp_missing`          | 插件已启用，但 MCP 服务器不可用。                      | 检查 Codex Computer Use 和操作系统权限。    |
+| `ready`                | 插件和 MCP 工具均可用。                                | 开始 Codex 模式的回合。                     |
+| `check_failed`         | 状态检查期间，Codex 应用服务器请求失败。               | 检查应用服务器连接和日志。                  |
+| `auto_install_blocked` | 回合开始设置需要添加新的来源。                         | 先执行显式安装。                            |
 
-聊天输出包含插件状态、MCP 服务器状态、marketplace、
+聊天输出包含插件状态、MCP 服务器状态、市场、
 可用时的工具，以及失败设置步骤的具体消息。
 
 ## macOS 权限
 
-This Codex-owned Computer Use path runs on macOS, where the MCP server may need
-local OS permissions before it can inspect or control apps. (For cross-platform
-desktop control on Windows and Linux node hosts, see the
-[cua-computer fulfiller](/nodes/computer-use#windows-and-linux-experimental-via-cua-driver).)
-If OpenClaw says Computer Use is installed but the MCP server is unavailable,
-verify the Codex-side Computer Use setup first:
+这条由 Codex 管理的 Computer Use 路径运行在 macOS 上，MCP 服务器可能需要
+本地操作系统权限，才能检查或控制应用。（如需在 Windows 和 Linux 节点主机上进行跨平台
+桌面控制，请参阅
+[cua-computer fulfiller](/nodes/computer-use#windows-and-linux-experimental-via-cua-driver)。）
+如果 OpenClaw 显示 Computer Use 已安装，但 MCP 服务器不可用，请先确认 Codex 端的 Computer Use 设置：
 
 - Codex app-server 正在应当进行桌面控制的同一主机上运行。
 - Computer Use 插件已在 Codex 配置中启用。
@@ -311,8 +292,9 @@ Codex 模式轮次不应在缺少配置所要求的原生桌面工具时静默�
 **状态显示已安装但已禁用。** 再次运行 `/codex computer-use install`
 。Codex app-server 安装会将插件配置重新写回为已启用。
 
-**状态显示不支持远程安装。** 使用本地 marketplace
-源或路径。仅远程目录中的条目可以被检查，但不能通过当前 app-server API 进行安装。
+**发现的远程插件无法安装。** 确认 Codex 报告了 marketplace 和插件的不透明远程 ID，然后运行 `/codex computer-use
+install`。只能通过显式安装添加新的 `marketplaceSource`；回合开始时的
+`autoInstall` 会使用 Codex 已经发现的远程 marketplace。
 
 **状态显示 MCP 服务器不可用。** 重新运行一次安装以便重新加载 MCP 服务器。
 如果仍然不可用，请修复 Codex Computer Use 应用、Codex app-server 的 MCP 状态，
@@ -322,7 +304,8 @@ Codex 模式轮次不应在缺少配置所要求的原生桌面工具时静默�
 MCP 服务器都已存在，但本地 Computer Use bridge 没有响应。
 退出或重启 Codex Computer Use，必要时重新启动 Codex Desktop，然后
 在一个新的 OpenClaw 会话中重试。如果主机之前通过较旧的受管理 Codex app-server 运行过 Computer Use，
-请从桌面捆绑的 marketplace 刷新已安装的插件（对于独立的 Codex desktop 安装，请使用 `Codex.app` 路径）：
+请从桌面捆绑的 marketplace 刷新已安装的插件（对于独立的 Codex desktop 安装，请使用
+`Codex.app` 路径）：
 
 ```text
 /codex computer-use install --source /Applications/ChatGPT.app/Contents/Resources/plugins/openai-bundled
@@ -335,10 +318,9 @@ Codex 原生工具钩子无法通过本地桥或 Gateway 回退连接到活动�
 OpenClaw Gateway，以便清除旧线程和钩子注册，然后
 在新的会话中重试。
 
-**轮次开始时的自动安装拒绝某个 source。**这是预期行为。先使用明确的
-`/codex computer-use install --source
-<marketplace-source>` 添加该 source，然后未来轮次开始时的自动安装就可以使用
-已发现的本地 marketplace。
+**回合开始时的自动安装拒绝某个源。** 这是有意为之。首先使用显式的 `/codex computer-use install --source
+<marketplace-source>` 添加该源，之后回合开始时的自动安装就可以使用
+已发现的本地或远程 marketplace。
 
 ## 相关内容
 

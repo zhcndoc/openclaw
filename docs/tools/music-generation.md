@@ -37,14 +37,14 @@ sidebarTitle: "音乐生成"
         }
         ```
       </Step>
-      <Step title="向 agent 提问">
+      <Step title="向智能体提问">
         _“生成一首充满活力的合成流行乐，主题是夜间穿行于霓虹城市。”_
 
-        agent 会自动调用 `music_generate`。无需设置工具白名单。
+        智能体会自动调用 `music_generate`。无需设置工具白名单。
       </Step>
     </Steps>
 
-    在没有基于会话的 agent 运行（直接/本地上下文）时，该工具会内联运行，并在同一个工具结果中返回最终媒体路径。
+    在没有基于会话的智能体运行（直接/本地上下文）时，该工具会内联运行，并在同一个工具结果中返回最终媒体路径。
 
   </Tab>
   <Tab title="ComfyUI 工作流">
@@ -224,7 +224,9 @@ OpenClaw 按以下顺序尝试提供方：
 
 <AccordionGroup>
   <Accordion title="ComfyUI">
-    由工作流驱动，并依赖已配置的图结构以及 prompt/output 字段的节点映射。随附的 `comfy` 插件通过音乐生成提供方注册表接入共享的 `music_generate` 工具。
+    由工作流驱动，并依赖已配置的图以及用于提示词/输出字段的节点映射。
+    `comfy` 插件通过音乐生成提供方注册表接入共享的
+    `music_generate` 工具。
   </Accordion>
   <Accordion title="fal">
     通过共享的提供方授权路径使用 fal 模型端点。捆绑的提供方默认使用 `fal-ai/minimax-music/v2.6`，并且还为 prompt-to-audio 请求提供 `fal-ai/ace-step/prompt-to-audio` 和 `fal-ai/stable-audio-25/text-to-audio`。歌词和纯器乐模式仅适用于 MiniMax 模型；另外两个模型仅支持 prompt。
@@ -236,7 +238,7 @@ OpenClaw 按以下顺序尝试提供方：
     使用批量 `music_generation` 端点。通过 `minimax` API key 认证或 `minimax-portal` OAuth，支持 prompt、可选歌词、器乐模式以及 mp3 输出。还提供 `music-2.6-free`、`music-cover` 和 `music-cover-free` 模型。
   </Accordion>
   <Accordion title="OpenRouter">
-    使用启用流式传输的 OpenRouter chat completions 音频输出。捆绑的提供方默认使用 `google/lyria-3-pro-preview`，并且还提供 `openrouter/google/lyria-3-clip-preview`。
+    使用启用流式传输的 OpenRouter 聊天补全音频输出。捆绑的提供方默认使用 `google/lyria-3-pro-preview`，并且还提供 `openrouter/google/lyria-3-clip-preview`。
   </Accordion>
 </AccordionGroup>
 
@@ -319,4 +321,4 @@ OPENCLAW_LIVE_TEST=1 COMFY_LIVE_TEST=1 pnpm test:live -- extensions/comfy/comfy.
 - [Google (Gemini)](/providers/google)
 - [MiniMax](/providers/minimax)
 - [模型](/concepts/models) — 模型配置和故障切换
-- [工具概览](/tools)
+- [工具概览](/tools)。

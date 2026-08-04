@@ -22,7 +22,7 @@ openclaw plugins install @openclaw/synology-chat
 openclaw plugins install ./path/to/local/synology-chat-plugin
 ```
 
-详情：[插件](/tools/plugin)
+详情：[插件](/tools/plugin)。
 
 ## 快速设置
 
@@ -52,7 +52,7 @@ Webhook 认证详情：
 
 ## 入站持久性
 
-在令牌、sender-policy 和速率限制检查通过后，OpenClaw 会从已存储的 envelope 中移除 webhook 令牌，并在确认之前将事件持久化入队。只有在该追加操作成功后，路由才会返回 `204`；如果持久化失败，则返回 `503`，以便 Synology Chat 可以重试，而不是悄悄丢失消息。
+在令牌、发送者策略和速率限制检查通过后，OpenClaw 会从存储的信封中移除 webhook 令牌，并在确认接收之前持久化地将事件加入队列。只有在追加操作成功后，该路由才会返回 `204`；持久化失败时返回 `503`，以便 Synology Chat 可以重试，而不是静默丢失消息。持久化的 `204` 响应会携带 `x-openclaw-delivery-accepted: durable`；身份验证、验证和存储错误响应会省略该标记，因此反向代理可以要求此标记，以区分持久化接受和一般响应。
 
 待处理或可重试的事件在 Gateway 重启后仍会保留。Synology 稳定的 `post_id` 会在对应的活动或保留完成记录存在时，抑制重复的队列条目。跨越队列到 agent 交接的投递仍然是至少一次，因此该边界处的崩溃仍可能重放一次 turn。
 
@@ -88,7 +88,7 @@ Webhook 认证详情：
 
 配置值会覆盖环境变量。
 
-`SYNOLOGY_CHAT_INCOMING_URL` 和 `SYNOLOGY_NAS_HOST` 不能从工作区的 `.env` 中设置；请参见 [Workspace `.env` files](/gateway/security#workspace-env-files)。
+`SYNOLOGY_CHAT_INCOMING_URL` 和 `SYNOLOGY_NAS_HOST` 不能从工作区的 `.env` 中设置；请参见 [工作区 `.env` 文件](/gateway/security#workspace-env-files)。
 
 ## DM 策略与访问控制
 

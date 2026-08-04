@@ -1,14 +1,14 @@
 ---
 summary: "用于替代底层嵌入式 agent 执行器的插件实验性 SDK 接口"
-title: "Agent harness 插件"
-sidebarTitle: "Agent Harness"
+title: "Agent 执行器插件"
+sidebarTitle: "Agent 执行器"
 read_when:
-  - 你正在更改嵌入式 agent 运行时或 harness 注册表
-  - 你正在从捆绑或可信插件中注册 agent harness
+  - 你正在更改嵌入式 agent 运行时或执行器注册表
+  - 你正在从捆绑或可信插件中注册 agent 执行器
   - 你需要了解 Codex 插件与模型提供方之间的关系
 ---
 
-**agent harness** 是一个已准备好的 OpenClaw agent 回合的底层执行器。它不是模型提供方，不是通道，也不是工具注册表。关于面向用户的心智模型，请参见 [Agent runtimes](/concepts/agent-runtimes)。
+**agent 执行器** 是一个已准备好的 OpenClaw agent 回合的底层执行器。它不是模型提供方，不是通道，也不是工具注册表。关于面向用户的心智模型，请参见 [Agent 运行时](/concepts/agent-runtimes)。
 
 仅将此接口用于捆绑或可信的原生插件。该契约仍处于实验阶段，因为参数类型有意与当前的嵌入式运行器保持一致。
 
@@ -36,7 +36,7 @@ read_when:
 
 一个 harness 会执行一个准备好的尝试；它不会选择 provider、替换通道传递，或静默切换模型。
 
-### Harness-owned auth bootstrap
+### Harness 拥有的认证引导
 
 默认情况下，core 会在调用 harness 之前解析 provider 凭据。一个受信任的、可以通过其自身原生运行时进行认证的 harness，可能会在其静态 `AgentHarness` 注册中将 `authBootstrap` 设为 `"harness"`。此时，core 会跳过其通用的 provider 凭据引导，以及对该 harness 所声明的每次尝试中缺失凭据的失败处理。
 
@@ -110,6 +110,25 @@ export default definePluginEntry({
 `authBootstrap` 在这个通用示例中是刻意省略的。只有当 harness 满足上述契约时，才添加
 `authBootstrap: "harness"`。
 
+### 隔离式完成
+
+可选的 `runIsolatedCompletion(params)` 能力用于需要一次全新的、仅提示词推理调用的产品路径，
+并且模型可调用的工具表面必须是字面意义上的空。核心会传入准确准备好的 `model`、`auth`、
+provider、模型 id、系统提示词、用户提示词、超时时间、中止信号和流式参数。harness 不得
+重新解析凭据、切换路由、复用原生线程、附加工具、调用 agent 生命周期钩子或交付输出。
+
+返回 `{ assistant: AssistantMessage }`。核心只接受带有 `stop` 或 `length` 停止原因的终止文本/
+思考内容；工具调用、失败的停止原因和空输出都会被拒绝。如果 harness 无法证明符合这些语义，
+请省略此能力。随后，需要隔离式完成的调用方会在调用该 harness 前直接失败；OpenClaw 不会
+通过其他运行时重放请求。
+
+插件调用方通过
+`api.runtime.llm.complete({ execution: { mode: "isolated-agent-runtime" } })`
+选择此行为；harness 回调是 provider 侧的强制执行 SPI，而不是第二个调用方 API。
+
+即使 OpenClaw 发送空工具列表，原生 agent 服务器通常也会自带环境工具。在这种情况下，请使用
+能够序列化真正零工具请求的独立 provider 传输，或者不要支持此能力。
+
 ### 委托执行
 
 harness 所有者可以将 `delegatedExecutionPluginIds` 设置为受信任
@@ -133,9 +152,13 @@ OpenClaw 会在 provider/model 解析之后选择 harness：
 
 插件 harness 的失败会表现为运行失败。在 `auto` 模式下，只有当没有已注册的插件 harness 支持已解析的 provider/model 时，才会使用内嵌回退。一旦某个插件 harness 接管了某次运行，OpenClaw 就不会通过另一个运行时重放同一轮，因为这可能改变认证/运行时语义，或导致副作用重复。
 
-已配置的运行时策略仍然对期望的运行时具有权威性。持久化的会话 `agentHarnessId` 会在路由/认证准备仍在进行时，保持其原生 transcript 的所有权。二者都不会让不兼容的路由变得兼容：一旦存在已准备好的事实，所选或已固定的 harness 必须支持它们，否则运行会闭合失败。`/status` 会显示从策略、持久化所有权和路由支持中选出的有效运行时。
-已准备状态是显式的：缺失的 `runtimePolicy` 会保持未声明，而不会根据当前碰巧存在的传输字段推断出来。
-当由 harness 拥有的认证让多个物理路由仍未解析时，已准备的支持事实是它们兼容运行时 id 的交集，并在存在任一候选项具有请求覆盖时报告这些覆盖。因此，某个未声明的候选项会使原生兼容性变为空；`preparedAuth.source: "harness"` 是认证所有者，而不是推断路由支持的许可。
+在 harness 启动任何模型工作之前发生的失败，可以使用
+`openclaw/plugin-sdk/agent-harness-runtime` 中的
+`AgentHarnessPreflightError`。默认错误对于整个模型回退链仍然是终止性的。仅当失败局限于所选 harness，且在同一 harness 上重试另一个模型会再次触发该失败时，才传入 `{ scope: "harness" }`。OpenClaw 会在尝试边界记录实际选中的 harness，仅跳过已证明使用该 harness 的后续候选项，并通过其正常的运行时和策略检查运行归属不同的候选项。插件可以选择使用该作用域，但绝不会在错误中指定 harness 所有者。在请求或工具操作可能已经产生副作用后，不要使用 harness 作用域。
+
+已配置的运行时策略仍然是期望运行时的权威来源。持久化会话中的 `agentHarnessId` 会在路由/认证准备仍在进行时保留其原生记录的所有权。这两者都不会使不兼容的路由变得兼容：一旦准备好的事实存在，所选或固定的 harness 就必须支持这些事实，否则运行会安全失败。`/status` 会显示根据策略、持久化所有权和路由支持情况选出的有效运行时。
+准备状态是明确的：缺少 `runtimePolicy` 时会保持未声明状态，而不会根据碰巧存在的传输字段进行推断。
+当由 harness 所有的认证使多个物理路由仍未解析时，准备好的支持事实是这些路由兼容运行时 id 的交集；如果任何候选项包含请求覆盖项，也会报告这些覆盖项。因此，一个未声明的候选项会使原生兼容性为空；`preparedAuth.source: "harness"` 表示认证所有者，而不是允许推断路由支持。
 
 如果选中的 harness 出乎意料，请启用 `agents/harness` 调试日志，并检查 gateway 的结构化 `agent harness selected` 记录：其中包含所选的 harness id、选择原因、运行时/回退策略，以及在 `auto` 模式下每个插件候选项的支持结果。
 
@@ -174,9 +197,13 @@ Codex 插件会强制执行 [Codex Harness](/plugins/codex-harness) 中记录的
 
 ### 工具结果中间件
 
-捆绑插件以及显式启用、且其 manifest contract 匹配的已安装插件，可以通过 `api.registerAgentToolResultMiddleware(...)` 挂载与运行时无关的 tool-result 中间件，前提是其 manifest 在 `contracts.agentToolResultMiddleware` 中声明了目标 runtime id。这个受信任的接缝用于异步 tool-result 转换，这些转换必须在 OpenClaw 或 Codex 将工具输出回传给模型之前运行。
+捆绑插件以及显式启用、且其 manifest contract 匹配的已安装插件，可以通过 `api.registerAgentToolResultMiddleware(...)` 挂载与运行时无关的工具结果中间件，前提是其 manifest 在 `contracts.agentToolResultMiddleware` 中声明了目标 runtime id。这个受信任的接缝用于异步工具结果转换，这些转换必须在 OpenClaw 或 Codex 将工具输出回传给模型之前运行。
 
-旧的捆绑插件仍然可以为仅 Codex app-server 的中间件使用 `api.registerCodexAppServerExtensionFactory(...)`，但新的结果转换应使用与运行时无关的 API。仅嵌入式 runner 可用的 `api.registerEmbeddedExtensionFactory(...)` 钩子已被移除；嵌入式 tool-result 转换必须使用与运行时无关的中间件。
+中间件选项可以将 `runtimes` 与 `matcher` 工具名称列表结合使用。
+每次注册都会保持这对配置不变，因此为不同 runtime 注册同一处理程序不会扩大任一 matcher 的范围。Matcher 使用非空的规范化 OpenClaw 工具 id；省略 `matcher` 可匹配所有工具。
+
+旧版捆绑插件仍然可以使用
+`api.registerCodexAppServerExtensionFactory(...)` 来注册仅限 Codex app-server 的中间件，但新的结果转换应使用与 runtime 无关的 API。仅供嵌入式 runner 使用的 `api.registerEmbeddedExtensionFactory(...)` 钩子已被移除；嵌入式工具结果转换必须使用与 runtime 无关的中间件。
 
 ### 终态分类
 
@@ -192,12 +219,26 @@ Codex 插件会强制执行 [Codex Harness](/plugins/codex-harness) 中记录的
 
 需要类似 PI 的紧凑工具路由的原生 harness 应使用 `openclaw/plugin-sdk/agent-harness-tool-runtime` 中的 `createAgentHarnessToolSurfaceRuntime(...)`。它负责工具搜索/代码模式控制选择、本地模型精简默认值、与运行时兼容的 schema 过滤、隐藏目录执行、目录 hydration 以及目录清理。harness 仍然负责其 SDK 特定的工具转换和原生执行回调。
 
-Harnesses that forward embedded attempt params should pass
-`skillWorkshopProposalOnly` through. Proposal-only skill-workshop runs are
-deliberately narrow single-tool runs, and the runtime keeps them on the raw
-tool surface instead of engaging code mode or a tool-search catalog.
+### 原生 MCP 清单
 
-### Native Codex harness mode
+在 OpenClaw 的进程内 MCP runtime 之外拥有 MCP 连接的 harness
+可以实现 `loadMcpToolCatalog(params)`。该回调供编排器工具访问视图等只读
+控制界面使用。它会接收权威的会话身份、runtime 配置、工作区以及稀疏的会话
+MCP 覆盖项。`mcpServerNames` 是 OpenClaw 配置的服务器集合中的有界子集，
+harness 可以表示这些服务器的会话策略。只为该集合返回 OpenClaw 的
+`McpToolCatalog` 形状。
+
+只能使用已经绑定的原生进程和线程。返回 `undefined` 表示没有可用的实时清单；不要仅为
+回答清单请求而启动新的 harness 进程。保留原始服务器/工具名称，使用
+`assignMcpCatalogSafeServerNames(...)` 分配可安全处理冲突的服务器名称，并将仅因会话拒绝
+而隐藏的工具保留在 `sessionDeniedTools` 中。Core 仍会在公开这些行之前，应用最终的
+OpenClaw 工具策略和 schema 兼容性检查。
+
+转发嵌入式尝试参数的 harness 应传递
+`skillWorkshopProposalOnly`。仅提案的 skill-workshop 运行会被刻意限制为单工具运行，
+runtime 会将其保留在原始工具界面上，而不会启用代码模式或工具搜索目录。
+
+### 原生 Codex harness 模式
 
 捆绑的 `codex` harness 是用于嵌入式 OpenClaw agent turns 的原生 Codex 模式。请先启用捆绑的 `codex` 插件；如果你的配置使用了限制性的 allowlist，还需要在 `plugins.allow` 中包含 `codex`。原生 app-server 配置应使用 `openai/gpt-*`；OpenAI agent turns 只有在有效路由声明了 Codex 兼容性时才会选择 Codex harness。旧的 Codex 模型 refs 应通过 `openclaw doctor --fix` 修复，而旧的 `codex/*`
 模型 refs 仍然是原生 harness 的兼容性别名。
@@ -295,16 +336,16 @@ tool surface instead of engaging code mode or a tool-search catalog.
 
 ## 原生会话和转录镜像
 
-harness 可能会保留原生会话 id、线程 id 或守护进程端的恢复令牌。将该绑定显式地与 OpenClaw 会话关联起来，并持续将用户可见的 assistant/tool 输出镜像到 OpenClaw 转录中。
+执行框架可能会保留原生会话 ID、线程 ID 或守护进程端的恢复令牌。将该绑定显式地与 OpenClaw 会话关联起来，并持续将用户可见的助手/工具输出镜像到 OpenClaw 转录中。
 
 OpenClaw 转录仍然是以下功能的兼容层：
 
-- channel-visible 会话历史
+- 频道可见的会话历史
 - 转录搜索和索引
-- 在后续轮次中切换回内置的 OpenClaw harness
+- 在后续轮次中切换回内置的 OpenClaw 执行框架
 - 通用的 `/new`、`/reset` 以及会话删除行为
 
-如果你的 harness 存储了 sidecar 绑定，请实现 `reset(...)`，以便当所属的 OpenClaw 会话被重置时，OpenClaw 可以清除它。
+如果你的执行框架存储了 sidecar 绑定，请实现 `reset(...)`，以便当所属的 OpenClaw 会话被重置时，OpenClaw 可以清除它。
 
 ## 工具和媒体结果
 
@@ -315,105 +356,55 @@ attempt。当 harness 执行动态工具调用时，请通过 harness 结果结�
 这样可以让文本、图片、视频、音乐、TTS、审批和 messaging-tool
 输出，与由 OpenClaw 支持的运行保持在相同的传递路径上。
 
-Set `AgentHarnessAttemptResult.hostOwnedToolMediaUrls` only for native artifacts
-that the trusted harness runtime created and persisted itself. Every entry must
-also appear in `toolMediaUrls`. Never include model-selected dynamic-tool or
-OpenClaw-tool media. On `message_tool_only` routes, this narrow provenance lets
-native runtime artifacts survive source-reply suppression; normal send policy
-and ambient-room admission still apply.
+仅对受信任的 harness 运行时自行创建并持久化的原生产物设置
+`AgentHarnessAttemptResult.hostOwnedToolMediaUrls`。每个条目也必须出现在
+`toolMediaUrls` 中。绝不要包含模型选择的动态工具或 OpenClaw 工具媒体。在
+`message_tool_only` 路由上，这种严格的来源标记可以让原生运行时产物在抑制源回复时仍然保留；正常的发送策略和环境房间准入规则仍然适用。
 
-### Terminal tool outcomes
+### 终端工具结果
 
-`AgentHarnessAttemptParams.observeToolTerminal` is the host-owned terminal
-outcome accumulator. A harness that executes OpenClaw dynamic tools or native
-tools must call it when each tool reaches one terminal outcome, before the
-attempt result is finalized. Harnesses that do not execute tools do not need to
-call it.
+`AgentHarnessAttemptParams.observeToolTerminal` 是由主机拥有的终端结果累加器。执行 OpenClaw 动态工具或原生工具的 harness，必须在每个工具达到一个终端结果时调用它，并且要在 attempt 结果最终确定之前调用。不执行工具的 harness 无需调用它。
 
-Report facts from the execution boundary:
+从执行边界报告事实：
 
-- Pass the protocol call id when one exists, the canonical tool name, and the
-  arguments that actually reached the tool after preparation or hook rewrites.
-- Set `executionStarted: false` when validation, approval, or another guard
-  stopped the call before the tool implementation began. Once dispatch may
-  have happened, report `true` conservatively.
-- Report `outcome: "success"` or `outcome: "failure"`. Include the structured
-  failure fields available from the runtime instead of inferring failure from
-  display text.
-- Use `nativeMutation` only for native tools that do not use an OpenClaw tool
-  definition. Supply protocol-owned mutation and replay facts there; do not
-  copy OpenClaw's mutation classifier into the harness.
+- 如果存在协议调用 id，则传入该 id、规范工具名称，以及准备或钩子重写后实际到达工具的参数。
+- 当验证、审批或其他守卫在工具实现开始前阻止调用时，将 `executionStarted: false`。一旦可能已经进行分发，则应保守地报告为 `true`。
+- 报告 `outcome: "success"` 或 `outcome: "failure"`。使用运行时提供的结构化失败字段，而不是从显示文本中推断失败。
+- 仅对不使用 OpenClaw 工具定义的原生工具使用 `nativeMutation`。在其中提供由协议拥有的变更和重放事实；不要将 OpenClaw 的变更分类器复制到 harness 中。
 
-The callback returns the canonical resolution for that call. Carry its
-`lastToolError` into `AgentHarnessAttemptResult` and use its execution,
-arguments, and side-effect facts in the harness projection instead of deriving
-parallel state. The host keeps an unresolved mutating failure across unrelated
-successful tools and clears it only after the matching action succeeds.
+回调会返回该调用的规范解析结果。将其
+`lastToolError` 传入 `AgentHarnessAttemptResult`，并在 harness 投影中使用其中的执行、参数和副作用事实，而不是推导出并行状态。主机会在无关工具成功时保留未解决的变更失败，并且只会在匹配的操作成功后清除它。
 
-The callback remains optional for source compatibility with older experimental
-harnesses. Optional does not mean ignorable for a harness that executes tools:
-without terminal reports, OpenClaw cannot preserve mutating-tool failure truth
-across later tool calls, including quiet heartbeat completion.
+出于源代码兼容性考虑，该回调对于较旧的实验性 harness 仍然是可选的。但对于执行工具的 harness，可选并不意味着可以忽略：如果没有终端报告，OpenClaw 就无法在后续工具调用之间保留变更工具失败事实，包括安静的心跳完成。
 
-### Settled tool finalization
+### 已结算工具的最终处理
 
-OpenClaw may need one final visible answer after a harness has completed every
-tool call but its native turn ended without assistant text. A harness can opt
-into that recovery by implementing `finalizeSettledTurn({ attempt,
-settledAttempt })`.
+当 harness 已完成所有工具调用，但其原生轮次结束时没有助手文本，OpenClaw 可能需要再生成一次最终可见回答。harness 可以通过实现
+`finalizeSettledTurn({ attempt, settledAttempt })` 来选择启用此恢复机制。
 
-The callback is a separate capability, not another ordinary attempt. It must:
+该回调是一项独立能力，而不是另一个普通 attempt。它必须：
 
-- use either the exact restricted native transcript or a complete application
-  transcript frozen through the settled tool-result boundary;
-- expose no tools, permission-grant or user-input capabilities, native execution
-  hooks, agents, skills, memory, scheduling, extensions, or remote control;
-- send only the host-provided finalization prompt; and
-- fail closed if its selected transcript/isolation strategy cannot enforce
-  those restrictions.
+- 使用精确的受限原生 transcript，或使用在已结算工具结果边界处冻结的完整应用 transcript；
+- 不暴露工具、权限授予或用户输入能力、原生执行钩子、agents、skills、memory、调度、扩展或远程控制；
+- 仅发送主机提供的最终处理提示；并且
+- 如果其选择的 transcript/隔离策略无法强制执行这些限制，则安全失败。
 
-OpenClaw invokes the callback once as a terminal sub-operation, outside the
-ordinary attempt and retry loop. A failure ends the run with the
-side-effect-aware incomplete-turn warning; it cannot enter ordinary
-auth/profile rotation, model fallback, context recovery, compaction
-continuation, or hook-requested revision paths. Finalization also skips plugin
-prompt mutation, `before_agent_run`, LLM input/output, terminal revision, and
-`agent_end` hooks. Core diagnostics still record the operation and its failure.
+OpenClaw 会在普通 attempt 和重试循环之外，将该回调作为终端子操作调用一次。失败会以考虑副作用的不完整轮次警告结束运行；它不能进入普通的身份验证/配置文件轮换、模型回退、上下文恢复、压缩继续、或由钩子请求的修订路径。最终处理还会跳过插件提示词修改、`before_agent_run`、LLM 输入/输出、终端修订和 `agent_end` 钩子。Core 诊断仍会记录该操作及其失败。
 
-The callback returns `AgentHarnessSettledTurnFinalizationResult`, not an
-ordinary attempt result. Its public fields are limited to the completed
-assistant message, finalization-call usage, transcript-ownership metadata, and
-diagnostic trace. Tool, delivery, media, spawn, lifecycle, replay, session, and
-fallback state cannot cross this result boundary. Unknown fields and assistant
-tool calls fail closed.
+该回调返回 `AgentHarnessSettledTurnFinalizationResult`，而不是普通的 attempt 结果。其公共字段仅限于已完成的助手消息、最终处理调用的使用情况、transcript 所有权元数据和诊断跟踪。工具、传递、媒体、生成、生命周期、重放、会话和回退状态不能跨越此结果边界。未知字段和助手工具调用会触发安全失败。
 
-A harness that internally reuses its full attempt engine can call
-`projectSettledTurnFinalizationAttemptResult(...)` before returning. The helper
-rejects canonical failure, tool, delivery, replay, and lifecycle evidence, then
-projects only the narrow result. It is defense in depth after native isolation,
-not a substitute for removing the native capability surface.
+内部复用完整 attempt 引擎的 harness，可以在返回前调用
+`projectSettledTurnFinalizationAttemptResult(...)`。该辅助函数会拒绝规范失败、工具、传递、重放和生命周期证据，然后仅投影出范围受限的结果。它是在原生隔离之后提供的纵深防御措施，不能替代移除原生能力表面。
 
-A projection-backed harness must put the complete context on
-`settledAttempt.settledTurnFinalizationContext` with
-`source: "openclaw-transcript"`. It must capture the active branch after the
-settled turn is mirrored, prove that the current prompt and every current tool
-call/result are present through that boundary, and freeze the resulting message
-array before returning the attempt. The finalizer must reject a missing,
-unsupported, ambiguous, or oversized context. It must not truncate messages,
-drop earlier history, or describe this application transcript as exact native
-history. Harnesses that resume one restricted native session do not need this
-projection field.
+基于投影的 harness 必须将完整上下文放入
+`settledAttempt.settledTurnFinalizationContext`，并设置
+`source: "openclaw-transcript"`。它必须在已结算轮次完成镜像后捕获活动分支，证明当前提示以及截至该边界的每个当前工具调用/结果都已存在，并在返回 attempt 前冻结生成的消息数组。最终处理器必须拒绝缺失、不受支持、有歧义或超大的上下文。它不得截断消息、丢弃较早的历史记录，也不得将此应用 transcript 描述为精确的原生历史记录。恢复单个受限原生会话的 harness 不需要此投影字段。
 
-Do not implement this callback by calling `runAttempt` with a best-effort
-`disableTools` hint. The harness owner must enforce the complete native
-capability boundary. OpenClaw does not provide a generic fallback because it
-cannot attest that an arbitrary native runtime honored those restrictions.
+不要通过调用带有尽力而为的 `disableTools` 提示的 `runAttempt` 来实现此回调。harness 所有者必须强制执行完整的原生能力边界。OpenClaw 不提供通用回退机制，因为它无法证明任意原生运行时遵守了这些限制。
 
-The callback remains optional for experimental third-party harness
-compatibility. When the selected harness omits it, OpenClaw preserves the
-existing incomplete-turn error instead of risking repeated side effects.
+出于实验性第三方 harness 兼容性的考虑，该回调仍然是可选的。当所选 harness 未实现它时，OpenClaw 会保留现有的不完整轮次错误，而不是冒险产生重复副作用。
 
-## Current limitations
+## 当前限制
 
 - 公共导入路径是通用的，但某些 attempt/result 类型别名
   仍保留旧名称以兼容。

@@ -11,7 +11,7 @@ read_when:
 
 ## 快速开始
 
-OpenClaw 默认使用 OpenAI embeddings。要使用其他提供商，请显式设置它：
+OpenClaw 默认使用 OpenAI 嵌入模型。要使用其他提供商，请显式设置它：
 
 ```json5
 {
@@ -24,19 +24,19 @@ OpenClaw 默认使用 OpenAI embeddings。要使用其他提供商，请显式�
 ```
 
 `provider` 也可以引用自定义的 `models.providers.<id>` 条目（例如
-`ollama-5080`），前提是该条目将 `api` 设置为 `"ollama"`，或设置为另一个带有内存嵌入适配器的 provider id。
+`ollama-5080`），前提是该条目将 `api` 设置为 `"ollama"`，或设置为另一个带有内存嵌入适配器的提供商 ID。
 
-对于没有 API key 的本地 embeddings，请安装官方的 llama.cpp provider
+对于没有 API 密钥的本地嵌入模型，请安装官方的 llama.cpp 提供商
 插件并设置 `provider: "local"`：
 
 ```bash
 openclaw plugins install @openclaw/llama-cpp-provider
 ```
 
-源码检出仍然需要本地构建审批：`pnpm approve-builds`，然后执行
+从源码检出时仍然需要本地构建审批：`pnpm approve-builds`，然后执行
 `pnpm rebuild node-llama-cpp`。
 
-某些与 OpenAI 兼容的 embedding 端点需要不对称的 `input_type`
+某些与 OpenAI 兼容的嵌入端点需要不对称的 `input_type`
 标签，例如搜索使用 `"query"`，而索引块使用 `"document"`/`"passage"`。
 请使用 `queryInputType` 和 `documentInputType` 来设置它们；请参阅
 [内存配置参考](/reference/memory-config#provider-specific-config)。
@@ -47,11 +47,11 @@ openclaw plugins install @openclaw/llama-cpp-provider
 | ------------------- | ------------------- | ------------ | --------------------------------- |
 | Bedrock             | `bedrock`           | 否           | 使用 AWS 凭证链                   |
 | DeepInfra           | `deepinfra`         | 是           | 默认模型 `BAAI/bge-m3`            |
-| Gemini              | `gemini`             | 是           | 支持图片/音频索引                  |
+| Gemini              | `gemini`            | 是           | 支持图片/音频索引                  |
 | GitHub Copilot      | `github-copilot`     | 否           | 使用你的 Copilot 订阅              |
 | 本地                | `local`             | 否           | GGUF 模型，约 0.6 GB 自动下载      |
 | LM Studio           | `lmstudio`          | 否           | 本地/自托管服务器                  |
-| Mistral             | `mistral`           | 是           |                                   |
+| Mistral             | `mistral`            | 是           |                                   |
 | Ollama              | `ollama`            | 否           | 本地/自托管服务器                  |
 | OpenAI              | `openai`            | 是           | 默认                               |
 | OpenAI 兼容         | `openai-compatible`  | 通常需要      | 通用 `/v1/embeddings` 端点         |
@@ -86,7 +86,7 @@ flowchart LR
 hybrid relevance × recency decay × importance multiplier
 ```
 
-重要性只在条目被写入时评估一次，而写入该条目的记忆工作流中已经有模型参与。如果缺少重要性，则视为中性，因此现有索引会保留其之前的相关性信号。带日期的日记笔记会按照 30 天半衰期衰减；像 `MEMORY.md` 和 `USER.md` 这样的整理文件则始终有效。这沿用了 [Generative Agents (arXiv:2304.03442)](https://arxiv.org/abs/2304.03442) 中相关性、时效性和重要性的结果，但没有增加一次查询时的模型调用。
+重要性只在条目被写入时评估一次，而写入该条目的记忆工作流中已经有模型参与。如果缺少重要性，则视为中性，因此现有索引会保留其之前的相关性信号。带日期的日记笔记会按照 30 天半衰期衰减；像 `MEMORY.md` 和 `USER.md` 这样的整理文件则始终有效。这沿用了 [生成式智能体（arXiv:2304.03442）](https://arxiv.org/abs/2304.03442) 中相关性、时效性和重要性的结果，但没有增加一次查询时的模型调用。
 
 ## 确定性触发词召回
 
@@ -94,7 +94,7 @@ hybrid relevance × recency decay × importance multiplier
 
 自动注入的范围刻意比 `memory_search` 更窄：只有已提升、受信任的条目才符合条件。在可用索引来源信息之前，这意味着仅来自根目录 `MEMORY.md` 和 `USER.md` 的条目。日记、导入的转录文本以及会话转录文本仍可通过显式记忆工具或 Active Memory 升级来访问，但绝不会自动注入。
 
-**仅 FTS 模式。** 将 `provider: "none"` 设为值即可有意禁用嵌入，并仅使用关键词搜索。将 `provider` 留空或设为 `"auto"` 时，如果未配置嵌入认证，也会在不报错的情况下回退到仅关键词排序；当 `provider: "local"`（GGUF/llama.cpp 提供方）失败时也是如此。
+**仅 FTS 模式。** 设置 `provider: "none"` 可有意禁用嵌入，仅使用关键词进行搜索。未设置 `provider` 或将其设置为 `"auto"` 时，如果嵌入设置失败或请求失败，则会回退到仅基于关键词的排序；`provider: "local"`（GGUF/llama.cpp 提供方）也是如此。创建时的回退仍会为关键词搜索建立文本索引，即使没有匹配项，`memory_search` 也会在 `debug.embeddingBootstrap` 中包含经过编辑的嵌入初始化原因。
 
 **显式提供方不可用。** 如果你显式指定了其他任何提供方（例如 `openai`、`ollama`、`gemini`），并且它在请求时变得不可用（认证错误、网络故障），`memory_search` 会报告记忆不可用，而不是静默降级为仅 FTS 结果。这样可以让已损坏的已配置提供方保持可见。若要有意进行仅 FTS 的召回，请设置 `provider: "none"`；或者修复提供方/认证配置以恢复语义排名。
 
@@ -104,8 +104,8 @@ hybrid relevance × recency decay × importance multiplier
 
 ### 新近度衰减
 
-旧笔记会逐渐失去排名权重，因此较新的信息会优先显示。
-在默认的 30 天半衰期下，来自上个月的笔记得分为其原始权重的 50%。
+旧笔记会逐渐失去排名权重，因此较新的信息会优先显示。  
+在默认的 30 天半衰期下，来自上个月的笔记得分为其原始权重的 50%。  
 `MEMORY.md` 和 `memory/` 下其他未标注日期的文件会长期保留，不会衰减；只有带日期的 `memory/YYYY-MM-DD.md` 文件会衰减。
 
 ### MMR（多样性）

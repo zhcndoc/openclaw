@@ -8,20 +8,20 @@ title: "OpenCode"
 
 OpenCode 在 OpenClaw 中提供两个托管目录：
 
-| Catalog | Prefix            | Runtime provider |
+| 目录 | 前缀 | 运行时提供商 |
 | ------- | ----------------- | ---------------- |
 | **Zen** | `opencode/...`    | `opencode`       |
 | **Go** | `opencode-go/...` | `opencode-go`    |
 
 这两个目录共用一个 OpenCode API 密钥（`OPENCODE_API_KEY`，别名
-`OPENCODE_ZEN_API_KEY`）。OpenClaw 会将运行时 provider id 分开，
+`OPENCODE_ZEN_API_KEY`）。OpenClaw 会将运行时提供商 ID 分开，
 以便上游按模型路由保持正确，但入门和文档会将它们视为
 同一个 OpenCode 配置。
 
 ## 开始使用
 
 <Tabs>
-  <Tab title="Zen catalog">
+  <Tab title="Zen 目录">
     **最佳适用场景：** 精选的 OpenCode 多模型代理（Claude、GPT、Gemini、GLM、
     DeepSeek、Kimi、MiniMax、Qwen）。
 
@@ -51,10 +51,16 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 
   </Tab>
 
-  <Tab title="Go catalog">
+  <Tab title="Go 目录">
     **最佳适用场景：** OpenCode 托管的 Kimi、GLM、MiniMax、Qwen 和 DeepSeek 系列。
 
     <Steps>
+      <Step title="安装 Go 目录插件">
+        ```bash
+        openclaw plugins install @openclaw/opencode-go-provider
+        openclaw gateway restart
+        ```
+      </Step>
       <Step title="运行入门配置">
         ```bash
         openclaw onboard --auth-choice opencode-go
@@ -90,27 +96,26 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 }
 ```
 
-## 内置目录
+## 提供方目录
 
 ### Zen
 
-| Property         | Value                                                                                             |
-| ---------------- | ------------------------------------------------------------------------------------------------- |
-| Runtime provider | `opencode`                                                                                        |
-| Example models   | `opencode/gpt-5.6-sol`, `opencode/gemini-3.6-flash`, `opencode/minimax-m3`, `opencode/big-pickle` |
+| 属性             | 值                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------- |
+| 运行时提供方     | `opencode`                                                                                         |
+| 示例模型         | `opencode/gpt-5.6-sol`、`opencode/gemini-3.6-flash`、`opencode/minimax-m3`、`opencode/big-pickle` |
 
-Run `openclaw models list --provider opencode` for the full current list, which
-also includes the currently promoted free-tier rows `opencode/big-pickle`,
-`opencode/deepseek-v4-flash-free`, `opencode/laguna-s-2.1-free`,
-`opencode/ling-3.0-flash-free`, `opencode/mimo-v2.5-free`,
-`opencode/nemotron-3-ultra-free`, and `opencode/north-mini-code-free`.
+运行 `openclaw models list --provider opencode` 获取当前完整列表，其中还包括当前推荐的免费层模型条目：`opencode/big-pickle`、
+`opencode/deepseek-v4-flash-free`、`opencode/laguna-s-2.1-free`、
+`opencode/ling-3.0-flash-free`、`opencode/mimo-v2.5-free`、
+`opencode/nemotron-3-ultra-free` 和 `opencode/north-mini-code-free`。
 
 ### Go
 
-| Property         | Value                                                                    |
-| ---------------- | ------------------------------------------------------------------------ |
-| 运行时提供方 | `opencode-go`                                                            |
-| 示例模型   | `opencode-go/kimi-k2.6`, `opencode-go/glm-5`, `opencode-go/minimax-m2.5` |
+| 属性             | 值                                                                    |
+| ---------------- | --------------------------------------------------------------------- |
+| 运行时提供方     | `opencode-go`                                                         |
+| 示例模型         | `opencode-go/kimi-k2.6`、`opencode-go/glm-5`、`opencode-go/minimax-m2.5` |
 
 参见 [OpenCode Go](/providers/opencode-go) 获取完整的 Go 模型表。
 

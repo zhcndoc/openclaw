@@ -16,7 +16,7 @@ OpenClaw 是一个包含一些配置文件的单容器。真正有意思的定�
 
 - 一个正在运行的 Kubernetes 集群（AKS、EKS、GKE、k3s、kind、OpenShift 等）
 - 已连接到你的集群的 `kubectl`
-- 至少一个模型提供商的 API key
+- 至少一个模型提供商的 API key。
 
 ## 快速开始
 
@@ -163,7 +163,23 @@ image: ghcr.io/openclaw/openclaw:slim # 主镜像；官方 Docker Hub 镜像：o
 ./scripts/k8s/deploy.sh --delete
 ```
 
-这会删除命名空间及其中的所有资源，包括 PVC。
+对于默认的 `openclaw` 命名空间，此操作会删除该命名空间及其中的所有内容，包括 PVC。
+
+对于自定义命名空间，`--delete` 仅删除 OpenClaw 资源，并保留该命名空间及其中无关的工作负载：
+
+```bash
+OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh --delete
+```
+
+在任何命名空间中，使用 `--delete-resources` 可显式请求执行此范围限定的清理操作。这两种范围限定模式都会删除 OpenClaw Deployment、Service、PVC、ConfigMap 以及生成的 Secret。删除 PVC 会移除 OpenClaw 的存储声明以及对其持久化数据的访问；底层卷和数据是否被删除，取决于 PersistentVolume 或 StorageClass 的回收策略（`Delete` 或 `Retain`）。
+
+要删除自定义命名空间及其中的所有工作负载，请显式选择加入：
+
+```bash
+OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh --delete-namespace
+```
+
+此操作也会删除无关的工作负载和 PVC。
 
 ## 架构说明
 

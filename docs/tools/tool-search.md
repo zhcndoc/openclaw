@@ -17,7 +17,7 @@ read_when:
 不依赖 `tools.toolSearch`。
 
 对于提供 QuickJS-WASI `exec`/`wait`
-接口而不是工具搜索控制项的通用 OpenClaw 运行时，请参见 [Code Mode](/tools/code-mode)。
+接口而不是工具搜索控制项的通用 OpenClaw 运行时，请参见 [代码模式](/tools/code-mode)。
 
 当为 OpenClaw 运行启用时，模型会自动接收一个有边界的
 可用受信任工具名称和描述目录。默认情况下，它还会接收一个
@@ -212,8 +212,8 @@ OpenClaw 会在正常执行前从已授权目录中解析它。
 ## 运行时边界
 
 代码桥接运行在一个短生命周期的 Node 子进程中。该子进程以
-启用 Node permission mode 启动，环境为空，没有文件系统或
-网络权限，也没有子进程或 worker 权限。OpenClaw 强制执行
+启用 Node 权限模式启动，环境为空，没有文件系统或
+网络权限，也没有子进程或工作线程权限。OpenClaw 强制执行
 父进程的墙钟超时，并在超时时终止子进程，包括
 异步续行之后。
 
@@ -307,11 +307,12 @@ openclaw config set tools.toolSearch true
 
 代码模式会将一个 `telemetry` 对象附加到每个 `tool_search_code` 结果中：
 
-- `catalogSize`：运行时解析到的目录条目数量
-- `sources`：目录条目计数，按 `openclaw`、`mcp` 和 `client` 拆分
-- `searchCount`、`describeCount`、`callCount`：目录会话的运行总计，跨调用累积，而不是每次调用重置
+- `catalogSize`: 运行时解析的目录条目数量
+- `sources`: 按 `openclaw`、`mcp` 和 `client` 划分的目录条目数量
+- `counterScope`: 计数器生命周期的不透明标识符；当追加工具或提示词策略缩小目录时保持稳定，而当目录被替换或恢复时发生变化
+- `searchCount`、`describeCount`、`callCount`: 目录会话的累计总数，会在多次调用之间延续，而不是每次调用时重置
 
-`tools` 和 `directory` 模式不会发出 `telemetry` 对象；它们的 `tool_search`、`tool_describe` 和 `tool_call` 结果只携带该操作的目录数据。OpenClaw 不会记录序列化后的工具或提示词字节数。`[E2E scenario](#e2e-validation)` 会单独从 mock provider 通道而不是运行时测量 provider 负载字节数。
+`tools` 和 `directory` 模式不会发出 `telemetry` 对象；它们的 `tool_search`、`tool_describe` 和 `tool_call` 结果只携带该操作的目录数据。OpenClaw 不会记录序列化后的工具或提示词字节数。[端到端场景](#e2e-validation) 会单独通过 mock provider 通道，而不是运行时测量 provider 负载的字节数。
 
 无论哪种模式，目标工具调用都会像正常的工具调用和工具结果对一样被投影到会话转录中，而 search、describe 和 call 结果都会携带每个工具的 `id` 和 `source`。因此，会话日志仍然可以回答：
 
@@ -350,7 +351,7 @@ OpenAI provider，在直接模式下启动一次 Gateway，再在启用工具搜
 - 如果策略或审批阻止执行，调用结果应报告该
   阻止，而不是绕过它
 - 如果代码桥接无法创建隔离运行时，请使用 `mode: "tools"` 或
-  为该部署禁用工具搜索
+  为该部署禁用工具搜索。
 
 ## 相关内容
 

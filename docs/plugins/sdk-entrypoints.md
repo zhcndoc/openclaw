@@ -91,21 +91,18 @@ export default defineToolPlugin({
 });
 ```
 
-- `configSchema` is optional; omitting it uses a strict empty object schema
-  (the generated manifest still includes `configSchema`).
-- `execute` returns a plain string or JSON-serializable value; the helper
-  wraps it as a text tool result with `details` set to the original
-  (unstringified) return value.
-- `outputSchema` optionally describes that original `details` value for Code
-  Mode and Tool Search. Catalog calls reject an invalid schema before execution
-  and validate the final value before returning it.
-- For custom tool results, `openclaw/plugin-sdk/tool-results` exports
-  `textResult` and `jsonResult`.
-- Tool names are static, so `openclaw plugins build` derives
-  `contracts.tools` from the declared tools without hand-duplicated names.
-- Runtime loading stays strict: installed plugins still need
-  `openclaw.plugin.json` and `package.json` `openclaw.extensions`. OpenClaw
-  never executes plugin code to infer missing manifest data.
+- `configSchema` 是可选的；省略它时会使用严格的空对象 schema
+  （生成的清单仍会包含 `configSchema`）。
+- `execute` 返回普通字符串或可序列化为 JSON 的值；该辅助函数会将其包装为文本工具结果，并将
+  `details` 设置为原始的（未转换为字符串的）返回值。
+- `outputSchema` 可选地描述原始的 `details` 值，供代码模式和工具搜索使用。目录调用会在执行前拒绝无效 schema，并在返回前验证最终值。
+- 对于自定义工具结果，`openclaw/plugin-sdk/tool-results` 导出
+  `textResult` 和 `jsonResult`。
+- 工具名称是静态的，因此 `openclaw plugins build` 会从声明的工具中推导出
+  `contracts.tools`，无需手动重复名称。
+- 运行时加载仍保持严格：已安装的插件仍需要
+  `openclaw.plugin.json` 和 `package.json` 中的 `openclaw.extensions`。OpenClaw
+  绝不会执行插件代码来推断缺失的清单数据。
 
 ## `definePluginEntry`
 
@@ -140,35 +137,25 @@ export default definePluginEntry({
 | `securityAuditCollectors` | `OpenClawPluginSecurityAuditCollector[]`                          | 否   | -                   |
 | `register`                | `(api: OpenClawPluginApi) => void`                               | 是   | -                   |
 
-- `id` must match your `openclaw.plugin.json` manifest.
-- External session catalogs use
-  `openclaw/plugin-sdk/session-catalog` and
-  `api.registerSessionCatalog({ id, label, list, read, continueSession?, archive? })`.
-  Core owns the `sessions.catalog.*` Gateway methods; providers return host,
-  session, and normalized transcript projections without registering RPCs. A
-  list provider should call the optional `onHost(host)` callback as each host
-  settles; the returned host array remains required as the final compatibility
-  snapshot.
-- `kind` is deprecated: declare an exclusive slot (`"memory"` or
-  `"context-engine"`) in the `openclaw.plugin.json` manifest `kind` field
-  instead. Runtime-entry `kind` remains only as a compatibility fallback for
-  older plugins.
-- `configSchema` can be a function for lazy evaluation. OpenClaw resolves and
-  memoizes the schema on first access, so expensive schema builders only run
-  once.
-- A `nodeHostCommands` descriptor can define `isAvailable({ config, env })`.
-  Returning `false` omits that command and its capability from the headless
-  node's Gateway declaration. OpenClaw evaluates it against the node-local
-  startup config; command handlers should still validate availability when
-  invoked.
+- `id` 必须与 `openclaw.plugin.json` 清单中的内容匹配。
+- 外部会话目录使用
+  `openclaw/plugin-sdk/session-catalog`，并使用
+  `api.registerSessionCatalog({ id, label, list, read, continueSession?, archive? })` 进行注册。
+  核心负责 `sessions.catalog.*` Gateway 方法；提供程序返回主机、会话和规范化的会话记录投影，而无需注册 RPC。
+  列表提供程序应在每个主机完成处理时调用可选的 `onHost(host)` 回调；返回的主机数组仍必须作为最终的兼容性快照提供。
+- `kind` 已弃用：请在 `openclaw.plugin.json` 清单的 `kind` 字段中声明一个专属插槽（`"memory"` 或 `"context-engine"`）。
+  运行时入口中的 `kind` 仅作为旧版插件的兼容性回退。
+- `configSchema` 可以是一个用于延迟求值的函数。OpenClaw 会在首次访问时解析并缓存 schema，因此开销较大的 schema 构建器只会运行一次。
+- `nodeHostCommands` 描述符可以定义 `isAvailable({ config, env })`。
+  返回 `false` 会从无头节点的 Gateway 声明中省略该命令及其功能。OpenClaw 会根据节点本地的启动配置对其进行求值；命令处理程序在调用时仍应验证可用性。
 
 ## `defineChannelPluginEntry`
 
 **导入：** `openclaw/plugin-sdk/channel-core`
 
-使用通道特定的接线封装 `definePluginEntry`：它会自动
-调用 `api.registerChannel({ plugin })`，提供一个可选的根帮助 CLI
-元数据挂钩，并在注册模式上对 `registerFull` 进行门控。
+使用通道专用连接封装 `definePluginEntry`：它会自动调用
+`api.registerChannel({ plugin })`，提供可选的根帮助 CLI
+元数据扩展点，并根据注册模式控制能力回调和完整运行时回调。
 
 ```typescript
 import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
@@ -185,69 +172,56 @@ export default defineChannelPluginEntry({
   registerFull(api) {
     api.registerGatewayMethod(/* ... */);
   },
+  registerCapabilities(api) {
+    api.registerTranscriptSourceProvider(/* ... */);
+  },
 });
 ```
 
-| 字段                | 类型                                                             | 必需 | 默认值              |
-| ------------------- | ---------------------------------------------------------------- | ---- | ------------------- |
-| `id`                | `string`                                                         | 是   | -                   |
-| `name`              | `string`                                                         | 是   | -                   |
-| `description`       | `string`                                                         | 是   | -                   |
-| `plugin`            | `ChannelPlugin`                                                  | 是   | -                   |
-| `configSchema`      | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | 否   | 空对象 schema       |
-| `setRuntime`        | `(runtime: PluginRuntime) => void`                               | 否   | -                   |
-| `registerCliMetadata` | `(api: OpenClawPluginApi) => void`                             | 否   | -                   |
-| `registerFull`      | `(api: OpenClawPluginApi) => void`                               | 否   | -                   |
+| 字段                   | 类型                                                               | 必填 | 默认值             |
+| ---------------------- | ------------------------------------------------------------------ | ---- | ------------------- |
+| `id`                   | `string`                                                           | 是   | -                   |
+| `name`                 | `string`                                                           | 是   | -                   |
+| `description`          | `string`                                                           | 是   | -                   |
+| `plugin`               | `ChannelPlugin`                                                    | 是   | -                   |
+| `configSchema`         | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema`   | 否   | 空对象 schema       |
+| `setRuntime`           | `(runtime: PluginRuntime) => void`                                 | 否   | -                   |
+| `registerCliMetadata`  | `(api: OpenClawPluginApi) => void`                                 | 否   | -                   |
+| `registerFull`         | `(api: OpenClawPluginApi) => void`                                 | 否   | -                   |
+| `registerCapabilities` | `(api: OpenClawPluginApi) => void`                                 | 否   | -                   |
 
 回调会根据注册模式运行（完整表格见
 [注册模式](#registration-mode)）：
 
-- `setRuntime` 会在除 `"cli-metadata"` 和
-  `"tool-discovery"` 之外的所有模式下运行。请在这里保存 runtime 引用，通常可通过
-  `createPluginRuntimeStore` 实现。
-- `registerCliMetadata` 会在 `"cli-metadata"`、`"discovery"` 和
-  `"full"` 下运行。请将其作为通道拥有的 CLI 描述符的规范位置，
-  这样根帮助就能保持非激活，发现快照能包含静态命令元数据，
-  而常规 CLI 注册仍然能与完整插件加载兼容。
-- `registerFull` 只会在 `"full"` 和 `"tool-discovery"` 下运行。对于
-  `"tool-discovery"`，它会 _替代_ 通道注册运行：OpenClaw 会完全跳过 `registerChannel`/`setRuntime`，
-  只调用 `registerFull`，因此你的通道在独立工具发现或执行时所需的任何 provider/tool 注册
-  都必须放在这里，而不能依赖常规通道初始化。
-- 发现注册不会激活，但也不是完全免导入：OpenClaw 可能会
-  求值受信任的插件入口和通道插件模块来构建快照。
-  请让顶层导入保持无副作用，并将 socket、客户端、worker 和服务
-  放到仅 `"full"` 的路径之后。
-- 与 `definePluginEntry` 类似，`configSchema` 可以是一个惰性工厂；OpenClaw
-  会在首次访问时缓存解析后的 schema。
+- `setRuntime` 在除 `"cli-metadata"` 和 `"tool-discovery"` 之外的所有模式下运行。在此处保存运行时引用，通常通过 `createPluginRuntimeStore` 完成。
+- `registerCliMetadata` 在 `"cli-metadata"`、`"discovery"` 和
+  `"full"` 模式下运行。将其作为通道自有 CLI 描述符的规范注册位置，以便根帮助保持非激活状态、发现快照包含静态命令元数据，并使常规 CLI 注册与完整插件加载保持兼容。
+- `registerFull` 仅在 `"full"` 和 `"tool-discovery"` 模式下运行。对于
+  `"tool-discovery"`，它会替代通道注册：OpenClaw 会完全跳过
+  `registerChannel`/`setRuntime`，而是调用完整运行时回调，随后调用能力回调。将工具注册放在 `registerFull` 中，将能力提供者放在 `registerCapabilities` 中。
+- `registerCapabilities` 在 `"discovery"`、`"full"` 和
+  `"tool-discovery"` 模式下运行。在此处注册不产生副作用的已声明提供者，以便只读能力发现可以找到它们，而不会启动套接字、客户端、工作线程或服务。
+- 发现注册不会激活，但并非不导入：OpenClaw 可能会计算受信任的插件入口和通道插件模块，以构建快照。确保顶层导入没有副作用，并将套接字、客户端、工作线程和服务置于仅 `"full"` 模式的路径之后。
+- 与 `definePluginEntry` 一样，`configSchema` 可以是延迟工厂；OpenClaw 会在首次访问时缓存解析后的 schema。
 
 CLI 注册：
 
-- Use `api.registerCli(..., { descriptors: [...] })` for plugin-owned root
-  CLI commands you want lazy-loaded without disappearing from the root CLI
-  parse tree. Descriptor names must match letters, numbers, hyphen, and
-  underscore, starting with a letter or number; OpenClaw rejects other
-  shapes and strips terminal control sequences from descriptions before
-  rendering help. Cover every top-level command root the registrar exposes.
-  `commands` alone stays on the eager compatibility path.
-- Root descriptors may define a synchronous, pure
-  `machineOutput({ argv, stdoutIsTTY })` resolver for JSON, JSONL, or other
-  machine-readable stdout modes that are not selected solely by `--json`.
-  Parse command tokens with `getRootOptionAwareCommandPath` from
-  `openclaw/plugin-sdk/cli-argv`. Keep the resolver in lightweight CLI metadata
-  and share it with full registration. Nested descriptors do not expose this
-  field.
-- Use `api.registerNodeCliFeature(...)` for paired-node feature commands so
-  they land under `openclaw nodes` (equivalent to
-  `registerCli(registrar, { parentPath: ["nodes"], ... })`).
-- For other nested plugin commands, add `parentPath` and register commands
-  on the `program` object passed to the registrar; OpenClaw resolves it to
-  the parent command before calling the plugin.
-- For channel plugins, register CLI descriptors from `registerCliMetadata`
-  and keep `registerFull` focused on runtime-only work.
-- If `registerFull` also registers gateway RPC methods, keep them on a
-  plugin-specific prefix. Reserved core admin namespaces (`config.*`,
-  `exec.approvals.*`, `wizard.*`, `update.*`) always coerce to
-  `operator.admin`.
+- 对于希望延迟加载、但又不想从根 CLI 解析树中消失的插件自有根 CLI 命令，使用
+  `api.registerCli(..., { descriptors: [...] })`。描述符名称必须匹配字母、数字、连字符和下划线，并且以字母或数字开头；OpenClaw 会拒绝其他形式，并在渲染帮助信息前移除描述中的终端控制序列。应覆盖注册器暴露的每个顶层命令根。单独使用
+  `commands` 仍会走即时加载兼容路径。
+- 根描述符可以为 JSON、JSONL 或其他不会仅因 `--json` 而选中的机器可读 stdout 模式定义同步、纯函数式的
+  `machineOutput({ argv, stdoutIsTTY })` 解析器。使用
+  `openclaw/plugin-sdk/cli-argv` 中的 `getRootOptionAwareCommandPath` 解析命令令牌。将解析器放在轻量级 CLI 元数据中，并与完整注册共享。嵌套描述符不提供此字段。
+- 对于成对节点的功能命令，使用 `api.registerNodeCliFeature(...)`，使其归入
+  `openclaw nodes` 下（等价于
+  `registerCli(registrar, { parentPath: ["nodes"], ... })`）。
+- 对于其他嵌套插件命令，添加 `parentPath`，并在传递给注册器的
+  `program` 对象上注册命令；OpenClaw 会在调用插件前将其解析为父命令。
+- 对于通道插件，从 `registerCliMetadata` 注册 CLI 描述符，并让
+  `registerFull` 专注于仅运行时相关的工作。
+- 如果 `registerFull` 还注册网关 RPC 方法，请将其置于插件专用前缀下。保留的核心管理命名空间（`config.*`、
+  `exec.approvals.*`、`wizard.*`、`update.*`）始终会强制使用
+  `operator.admin`。
 
 ## `defineSetupPluginEntry`
 
@@ -261,19 +235,20 @@ import { defineSetupPluginEntry } from "openclaw/plugin-sdk/channel-core";
 export default defineSetupPluginEntry(myChannelPlugin);
 ```
 
-当通道被禁用、未配置，或者启用了延迟加载时，OpenClaw 会加载这个入口而不是完整入口。有关这在何时重要，请参见 [Setup and Config](/plugins/sdk-setup#setup-entry)。
+当通道被禁用或尚未配置时，OpenClaw 会加载此入口，而不是完整入口。有关这点何时重要，请参阅
+[设置和配置](/plugins/sdk-setup#setup-entry)。
 
 将 `defineSetupPluginEntry(...)` 与以下更窄的 setup 辅助家族搭配使用：
 
-| Import                                  | Use for                                                                                                                                                                            |
+| Import                                  | 用途                                                                                                                                                                               |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openclaw/plugin-sdk/setup-runtime`     | Runtime-safe setup helpers: `createSetupTranslator`, import-safe setup patch adapters, lookup-note output, `promptResolvedAllowFrom`, `splitSetupEntries`, delegated setup proxies |
-| `openclaw/plugin-sdk/channel-setup`     | Optional-install setup surfaces                                                                                                                                                    |
-| `openclaw/plugin-sdk/channel-dm-policy` | Account-aware DM policy descriptors for setup flows                                                                                                                                |
-| `openclaw/plugin-sdk/setup-tools`       | Setup/install CLI, archive, and docs helpers                                                                                                                                       |
-| `openclaw/plugin-sdk/archive`           | Bounded archive extraction and single-entry reads                                                                                                                                  |
-| `openclaw/plugin-sdk/root-walk`         | Budgeted, root-bounded directory walking                                                                                                                                           |
-| `openclaw/plugin-sdk/secret-file`       | Pinned secret reads and first-writer-wins creation                                                                                                                                 |
+| `openclaw/plugin-sdk/setup-runtime`     | 运行时安全的 setup 辅助工具：`createSetupTranslator`、导入安全的 setup 补丁适配器、查找备注输出、`promptResolvedAllowFrom`、`splitSetupEntries`、委托式 setup 代理 |
+| `openclaw/plugin-sdk/channel-setup`     | 可选安装的 setup 表面                                                                                                                                                              |
+| `openclaw/plugin-sdk/channel-dm-policy` | 面向账户的 DM 策略描述符，用于 setup 流程                                                                                                                                            |
+| `openclaw/plugin-sdk/setup-tools`       | Setup/安装 CLI、归档和文档辅助工具                                                                                                                                                  |
+| `openclaw/plugin-sdk/archive`           | 有界归档提取和单条目读取                                                                                                                                                            |
+| `openclaw/plugin-sdk/root-walk`         | 预算受限、根目录有界的目录遍历                                                                                                                                                      |
+| `openclaw/plugin-sdk/secret-file`       | 固定目标的机密读取和先写入者优先创建                                                                                                                                                 |
 
 将重量级 SDK、CLI 注册和长期运行的运行时服务保留在完整入口中。
 
@@ -304,20 +279,21 @@ export default defineBundledChannelSetupEntry({
 });
 ```
 
-仅在 setup 流程在完整通道入口加载之前，确实需要一个轻量级 runtime setter 或 setup 安全网关表面时才使用它。`registerSetupRuntime` 仅在 `"setup-runtime"` 加载时运行；请将其限制为仅配置路由或在延迟的完整激活之前必须存在的方法。
+仅当 setup 流程确实需要轻量级 runtime setter，或需要为未配置的通道提供 setup 安全的网关表面时，才使用此方式。
+`registerSetupRuntime` 仅在 `"setup-runtime"` 加载时运行；请将其限制为配置专用路由，或该 setup 流程所需的方法。
 
 ## 注册模式
 
 `api.registrationMode` 会告诉你的插件它是如何被加载的：
 
-| 模式               | 何时                                               | 需要注册什么                                                                                                        |
-| ------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `"full"`           | 正常网关启动                             | 全部内容                                                                                                              |
-| `"discovery"`      | 只读的能力发现                     | 频道注册加静态 CLI 描述符；入口代码可以加载，但应跳过 sockets、workers、clients 和 services |
-| `"tool-discovery"` | 仅限定范围加载，用于列出或运行特定插件的工具 | 仅能力/工具注册；不激活频道                                                                |
-| `"setup-only"`     | 已禁用/未配置的频道                      | 仅频道注册                                                                                               |
-| `"setup-runtime"`  | 可用运行时的设置流程                  | 频道注册，加上在完整入口加载之前所需的轻量级运行时                               |
-| `"cli-metadata"`   | 根帮助 / CLI 元数据捕获                   | 仅 CLI 描述符                                                                                                    |
+| 模式               | 何时                                               | 要注册的内容                                                                                                    |
+| ------------------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `"full"`           | 正常网关启动                                       | 全部内容                                                                                                        |
+| `"discovery"`      | 只读能力发现                                       | 频道注册、静态 CLI 描述符和非激活 provider；跳过套接字、worker、客户端和服务 |
+| `"tool-discovery"` | 以限定范围加载，用于列出或运行特定插件的工具       | 仅能力/工具注册；不激活频道                                                                                     |
+| `"setup-only"`     | 已禁用/未配置的频道                                | 仅频道注册                                                                                                      |
+| `"setup-runtime"`  | 设置流程中且运行时可用                             | 频道注册，以及设置期间所需的轻量级运行时                                                                         |
+| `"cli-metadata"`   | 捕获根帮助/CLI 元数据                              | 仅 CLI 描述符                                                                                                   |
 
 `defineChannelPluginEntry` 会自动处理这种拆分。如果你直接为频道使用
 `definePluginEntry`，请自行检查模式，并记住
@@ -391,10 +367,10 @@ OpenClaw 根据已加载插件的注册行为对其进行分类：
 
 使用 `openclaw plugins inspect <id>` 查看插件的形态。
 
-## 相关
+## 相关内容
 
 - [SDK 概览](/plugins/sdk-overview) - 注册 API 和子路径参考
 - [运行时辅助工具](/plugins/sdk-runtime) - `api.runtime` 和 `createPluginRuntimeStore`
-- [设置与配置](/plugins/sdk-setup) - 清单、设置入口、延迟加载
-- [通道插件](/plugins/sdk-channel-plugins) - 构建 `ChannelPlugin` 对象
-- [提供者插件](/plugins/sdk-provider-plugins) - 提供者注册和 hooks
+- [设置与配置](/plugins/sdk-setup) - 清单和设置入口加载
+- [频道插件](/plugins/sdk-channel-plugins) - 构建 `ChannelPlugin` 对象
+- [提供商插件](/plugins/sdk-provider-plugins) - 提供商注册和钩子函数

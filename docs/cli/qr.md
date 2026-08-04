@@ -16,6 +16,7 @@ openclaw qr --setup-code-only
 openclaw qr --json
 openclaw qr --remote
 openclaw qr --limited
+openclaw qr --voice-node
 openclaw qr --url wss://gateway.example/ws
 ```
 
@@ -29,16 +30,17 @@ openclaw devices approve <requestId>
 ## 选项
 
 - `--remote`：优先使用 `gateway.remote.url`；如果该 URL 未设置，则回退到 `gateway.tailscale.mode=serve|funnel`。忽略 `device-pair` 插件的 `publicUrl`。
-- `--url <url>`：覆盖 payload 中使用的网关 URL
-- `--public-url <url>`：覆盖 payload 中使用的公网 URL
+- `--url <url>`：覆盖负载中使用的网关 URL
+- `--public-url <url>`：覆盖负载中使用的公共 URL
 - `--token <token>`：覆盖引导流程进行身份验证时使用的网关令牌
 - `--password <password>`：覆盖引导流程进行身份验证时使用的网关密码
-- `--limited`：从移交给操作员的令牌中省略管理员 Gateway 访问权限
+- `--limited`：从交接给操作员的令牌中省略网关管理访问权限
+- `--voice-node`：签发节点凭据，以及仅包含 `operator.read` 和 `operator.talk` 的权限
 - `--setup-code-only`：仅打印设置代码
-- `--no-ascii`：跳过 ASCII QR 渲染
+- `--no-ascii`：跳过 ASCII 二维码渲染
 - `--json`：输出 JSON（`setupCode`、`gatewayUrl`、可选的 `gatewayUrls`、`auth`、`access`、可选的 `accessDowngraded`、`urlSource`）
 
-`--token` 和 `--password` 互斥。
+`--token` 和 `--password` 不能同时使用。`--limited` 和 `--voice-node` 不能同时使用。
 
 ## 设置代码内容
 
@@ -49,10 +51,9 @@ openclaw devices approve <requestId>
 
 使用 `--limited` 可以保持相同的 node 令牌，同时在 operator 转交中省略 `operator.admin`。配对修改范围从不会通过设置代码转交。
 
-明文 LAN `ws://` 设置仍然可用，但 OpenClaw 会自动使用
-受限配置，因为网络观察者可能会捕获并抢先使用持有者
-bootstrap 令牌。请配置 `wss://` 或 Tailscale Serve，然后生成一个新代码
-以获得完整访问权限。
+对于嵌入式或房间语音客户端，请使用 `--voice-node`。它会保留 node 令牌，并转交一个仅限于 `operator.read` 和 `operator.talk` 的独立 operator 令牌；该令牌无法发送消息、修改配置或调用具有通用写入权限范围的 Gateway 方法。
+
+明文局域网 `ws://` 设置仍然可用，但 OpenClaw 会自动使用受限配置，因为网络观察者可能会捕获并抢先使用 bearer 引导令牌。配置 `wss://` 或 Tailscale Serve，然后生成新的代码即可获得完整访问权限。
 
 ## 网关 URL 解析
 
@@ -72,12 +73,12 @@ bootstrap 令牌。请配置 `wss://` 或 Tailscale Serve，然后生成一个�
 | `gateway.auth.mode="password"`，或在 auth/env 中未找到获胜 token 时推断出的模式                                         | `gateway.auth.password`                   |
 | `gateway.auth.token` 和 `gateway.auth.password` 都已配置（包括 SecretRefs），且 `gateway.auth.mode` 未设置 | 失败；请显式设置 `gateway.auth.mode` |
 
-## Auth resolution (`--remote`)
+## 身份验证解析（`--remote`）
 
-If active remote credentials are configured as SecretRefs, and `--token` or `--password` is not provided, the command will resolve them from the active gateway snapshot. If the gateway is unavailable, the command will fail fast.
+如果已将活动远程凭据配置为 SecretRef，且未提供 `--token` 或 `--password`，该命令将从活动网关快照中解析这些凭据。如果网关不可用，该命令将快速失败。
 
 <Note>
-This command path requires a gateway that supports the `secrets.resolve` RPC method. Older gateways will return an unknown method error.
+此命令路径要求网关支持 `secrets.resolve` RPC 方法。较旧的网关将返回未知方法错误。
 </Note>
 
 ## 相关

@@ -12,7 +12,7 @@ sidebarTitle: "语音通话"
 对话、全双工实时语音、流式转录，以及
 带有允许列表策略的来电。
 
-**Providers:** `mock`（开发环境，无网络）、`plivo`（语音 API + XML 转接 +
+**提供商：** `mock`（开发环境，无网络）、`plivo`（语音 API + XML 转接 +
 GetInput 语音）、`telnyx`（Call Control v2）、`twilio`（可编程语音 +
 Media Streams）。
 
@@ -42,12 +42,12 @@ Media Streams）。
     </Tabs>
 
     使用裸包以跟随当前发布标签。只有在需要可复现安装时才固定
-    精确版本。之后重启 Gateway，以便插件加载。
+    精确版本。之后重启网关，以便插件加载。
 
   </Step>
-  <Step title="配置 provider 和 webhook">
+  <Step title="配置提供商和 webhook">
     在 `plugins.entries.voice-call.config` 下设置配置（见下面的
-    [配置](#configuration)）。至少需要：`provider`、provider
+    [配置](#configuration)）。至少需要：`provider`、提供商
     凭据、`fromNumber`，以及一个可公开访问的 webhook URL。
   </Step>
   <Step title="验证设置">
@@ -56,7 +56,7 @@ Media Streams）。
     openclaw voicecall setup --json
     ```
 
-    检查插件是否启用、provider 凭据、webhook 暴露情况，以及
+    检查插件是否启用、提供商凭据、webhook 暴露情况，以及
     是否只启用了一个音频模式（`streaming` 或 `realtime`）。
 
   </Step>
@@ -66,7 +66,7 @@ Media Streams）。
     openclaw voicecall smoke --to "+15555550123"
     ```
 
-    默认情况下两者都是 dry run。添加 `--yes` 可发起一通简短的
+    默认情况下两者都是试运行。添加 `--yes` 可发起一通简短的
     外呼通知电话：
 
     ```bash
@@ -78,7 +78,7 @@ Media Streams）。
 
 <Warning>
 对于 Twilio、Telnyx 和 Plivo，设置必须解析为一个 **可公开访问的 webhook URL**。
-如果 `publicUrl`、tunnel URL、Tailscale URL 或 serve 回退
+如果 `publicUrl`、隧道 URL、Tailscale URL 或 serve 回退
 解析到回环地址或私有网络空间，设置将失败，而不会
 启动一个无法接收运营商 webhook 的提供商。
 </Warning>
@@ -165,24 +165,24 @@ Media Streams）。
 
 `plugins.entries.voice-call.config` 下未在上面显示的顶层键：
 
-| Key                             | Default      | Notes                                                                                              |
+| 键                              | 默认值       | 说明                                                                                               |
 | ------------------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
-| `enabled`                       | `false`      | Master on/off switch.                                                                              |
-| `inboundPolicy`                 | `"disabled"` | `disabled` \| `allowlist` \| `pairing` \| `open`. See [Inbound calls](#inbound-calls).             |
-| `allowFrom`                     | `[]`         | E.164 allowlist for `inboundPolicy: "allowlist"`.                                                  |
-| `maxDurationSeconds`            | `300`        | Hard per-call duration cap, enforced regardless of answered state.                                 |
-| `staleCallReaperSeconds`        | `120`        | See [Stale call reaper](#stale-call-reaper). `0` disables it.                                      |
-| `silenceTimeoutMs`              | `800`        | End-of-speech silence detection for the classic (non-realtime) flow.                               |
-| `transcriptTimeoutMs`           | `180000`     | Max wait for a caller transcript before giving up on a turn.                                       |
-| `ringTimeoutMs`                 | `30000`      | Ring timeout for outbound calls.                                                                   |
-| `maxConcurrentCalls`            | `1`          | Outbound calls beyond this limit are rejected.                                                     |
-| `outbound.notifyHangupDelaySec` | `3`          | Seconds to wait after TTS before auto-hangup in notify mode.                                       |
-| `skipSignatureVerification`     | `false`      | Local testing only; never enable in production.                                                    |
-| `store`                         | unset        | Overrides the default `$OPENCLAW_STATE_DIR/voice-calls` path (normally `~/.openclaw/voice-calls`). |
-| `agentId`                       | `"main"`     | Agent used for response generation and session storage.                                            |
-| `responseModel`                 | unset        | Overrides the default model for classic (non-realtime) responses.                                  |
-| `responseSystemPrompt`          | generated    | Custom system prompt for classic responses.                                                        |
-| `responseTimeoutMs`             | `30000`      | Timeout for classic response generation (ms).                                                      |
+| `enabled`                       | `false`      | 主开关。                                                                                           |
+| `inboundPolicy`                 | `"disabled"` | `disabled` \| `allowlist` \| `pairing` \| `open`。请参见[入站通话](#inbound-calls)。               |
+| `allowFrom`                     | `[]`         | 用于 `inboundPolicy: "allowlist"` 的 E.164 格式允许列表。                                           |
+| `maxDurationSeconds`            | `300`        | 单次通话的硬性时长上限，无论是否已接听都会强制执行。                                                 |
+| `staleCallReaperSeconds`        | `120`        | 请参见[过期通话清理器](#stale-call-reaper)。设置为 `0` 可禁用。                                     |
+| `silenceTimeoutMs`              | `800`        | 经典流程（非实时）中的语音结束静音检测时长。                                                        |
+| `transcriptTimeoutMs`           | `180000`     | 等待呼叫者转写结果的最长时间，超时后放弃当前轮次。                                                  |
+| `ringTimeoutMs`                 | `30000`      | 出站通话的响铃超时时间。                                                                             |
+| `maxConcurrentCalls`            | `1`          | 超出此限制的出站通话会被拒绝。                                                                       |
+| `outbound.notifyHangupDelaySec` | `3`          | 通知模式下，TTS 播放完毕后等待自动挂断的秒数。                                                       |
+| `skipSignatureVerification`     | `false`      | 仅用于本地测试；切勿在生产环境中启用。                                                               |
+| `store`                         | 未设置       | 覆盖默认的 `$OPENCLAW_STATE_DIR/voice-calls` 路径（通常为 `~/.openclaw/voice-calls`）。             |
+| `agentId`                       | `"main"`     | 用于生成响应和存储会话的代理。                                                                       |
+| `responseModel`                 | 未设置       | 覆盖经典响应（非实时）使用的默认模型。                                                               |
+| `responseSystemPrompt`          | 生成         | 经典响应使用的自定义系统提示词。                                                                     |
+| `responseTimeoutMs`             | `30000`      | 经典响应生成超时时间（毫秒）。                                                                       |
 
 Twilio 默认使用其 US1 REST 端点。要在受支持的非美国区域处理通话，请将 `twilio.region` 设置为 `ie1` 或 `au1`，并使用该区域的凭据。请参见 [Twilio 的非美国 REST API 指南](https://www.twilio.com/docs/global-infrastructure/using-the-twilio-rest-api-in-a-non-us-region)。
 
@@ -201,7 +201,7 @@ Twilio 默认使用其 US1 REST 端点。要在受支持的非美国区域处理
     - `streaming.preStartTimeoutMs`（默认 `5000`）会关闭从未发送有效 `start` 帧的 socket。
     - `streaming.maxPendingConnections`（默认 `32`）限制未认证、未开始的 socket 总数。
     - `streaming.maxPendingConnectionsPerIp`（默认 `4`）限制每个源 IP 的未认证、未开始 socket 数。
-    - `streaming.maxConnections`（默认 `128`）限制所有打开的媒体流 socket（pending + active）。
+    - `streaming.maxConnections`（默认 `128`）限制所有打开的媒体流 socket（待处理 + 活跃）。
 
   </Accordion>
   <Accordion title="旧配置迁移">
@@ -247,16 +247,16 @@ Voice Call 会将生成的会话密钥存储在已配置的 agent 命名空间�
 当前运行时行为：
 
 - `realtime.enabled` 支持 Twilio 和 Telnyx。
-- `realtime.provider` 是可选项。如果未设置，Voice Call 会使用第一个已注册的实时语音提供商。
-- 内置实时语音提供商：Google Gemini Live（`google`）和 OpenAI（`openai`），由其提供商插件注册。
-- 提供商专属原始配置位于 `realtime.providers.<providerId>` 下。
-- Voice Call 默认暴露共享的 `openclaw_agent_consult` 实时工具。实时模型在调用者请求更深入推理、当前信息或常规 OpenClaw 工具时可以调用它。
-- `realtime.consultPolicy` 可选地添加指引，说明实时模型何时应调用 `openclaw_agent_consult`。
-- `realtime.agentContext.enabled` 默认关闭。启用后，Voice Call 会在会话设置时将受限的代理身份以及选定的 workspace 文件胶囊注入到实时提供商指令中。
-- `realtime.fastContext.enabled` 默认关闭。启用后，Voice Call 会先在索引的记忆/会话上下文中搜索 consult 问题，并在 `realtime.fastContext.timeoutMs` 内将这些片段返回给实时模型；只有当 `realtime.fastContext.fallbackToConsult` 为 true 时，才会回退到完整的 consult 代理。
-- 如果 `realtime.provider` 指向未注册的提供商，或者完全没有注册任何实时语音提供商，Voice Call 会记录警告并跳过实时媒体，而不会使整个插件失败。
-- 当 `realtime.enabled` 为 true 时，`inboundPolicy` 不能是 `"disabled"`；`validateProviderConfig` 会拒绝这种组合。
-- 当可用时，Consult 会话 key 会复用已存储的通话会话，然后再回退到配置的 `sessionScope`（默认 `per-phone`，隔离通话时为 `per-call`）。
+- `realtime.provider` 为可选项。如果未设置，Voice Call 将使用第一个已注册的实时语音提供商。
+- 内置实时语音提供商：Google Gemini Live（`google`）和 OpenAI（`openai`），由各自的提供商插件注册。
+- 提供商自有的原始配置位于 `realtime.providers.<providerId>` 下。
+- Voice Call 默认公开共享的 `openclaw_agent_consult` 实时工具。当呼叫者要求更深入的推理、最新信息或普通 OpenClaw 工具时，实时模型可以调用该工具。
+- `realtime.consultPolicy` 可选地为实时模型何时应调用 `openclaw_agent_consult` 添加指导。
+- `realtime.agentContext.enabled` 默认关闭。启用后，Voice Call 会在会话设置时，将受限的代理身份信息和选定的工作区文件摘要注入实时提供商的指令中。
+- `realtime.fastContext.enabled` 默认关闭。启用后，Voice Call 会先搜索已建立索引的记忆/会话上下文，并在 `realtime.fastContext.timeoutMs` 时间内将授权片段返回给实时模型；仅当 `realtime.fastContext.fallbackToConsult` 为 `true` 时，才会回退到完整的 consult 代理。当前的记忆插件会授权会话转录命中；不具备该能力的插件会对会话命中安全失败，但普通记忆命中仍然可用。
+- 如果 `realtime.provider` 指向未注册的提供商，或根本没有注册实时语音提供商，Voice Call 会记录警告并跳过实时媒体，而不是导致整个插件失败。
+- 当 `realtime.enabled` 为 `true` 时，`inboundPolicy` 不能为 `"disabled"`；`validateProviderConfig` 会拒绝这种组合。
+- 当存储的通话会话可用时，Consult 会话键会复用该会话；否则回退到配置的 `sessionScope`（默认为 `per-phone`，隔离通话时则为 `per-call`）。
 
 ### 工具策略
 
@@ -270,7 +270,7 @@ Voice Call 会将生成的会话密钥存储在已配置的 agent 命名空间�
 
 `realtime.consultPolicy` 仅控制实时模型指令：
 
-| Policy        | Guidance                                                                                        |
+| 策略          | 指导                                                                                        |
 | ------------- | ----------------------------------------------------------------------------------------------- |
 | `auto`        | 保持默认提示，并让提供商自行决定何时调用 consult 工具。              |
 | `substantive` | 直接回答简单的对话衔接内容，并在事实、记忆、工具或上下文之前先进行 consult。 |
@@ -465,9 +465,9 @@ Voice Call 会将生成的会话密钥存储在已配置的 agent 命名空间�
 
 ## 通话 TTS
 
-Voice Call uses the core `tts` configuration for streaming speech on
-calls. You can override it under the plugin config with the **same shape** —
-it deep-merges with `tts`.
+Voice Call 使用核心 `tts` 配置在通话中流式传输语音。
+你可以在插件配置下使用**相同的结构**进行覆盖 —
+它会与 `tts` 深度合并。
 
 ```json5
 {
@@ -682,7 +682,7 @@ Webhook 验证会认证服务提供商的投递和载荷完整性，
 
 ## Webhook 安全
 
-当代理或隧道位于 Gateway 前方时，插件会重建用于签名验证的公共 URL。以下选项用于控制哪些转发头被信任：
+当代理或隧道位于网关前方时，插件会重建用于签名验证的公共 URL。以下选项用于控制哪些转发头被信任：
 
 <ParamField path="webhookSecurity.allowedHosts" type="string[]">
   允许来自转发头的主机白名单。
@@ -696,10 +696,10 @@ Webhook 验证会认证服务提供商的投递和载荷完整性，
 
 其他保护措施：
 
-- 对于 Twilio、Telnyx 和 Plivo，Webhook **重放防护**已启用。重放的有效 webhook 请求会被确认，但会跳过副作用处理。
-- Twilio 对话轮次会在 `<Gather>` 回调中包含每轮的 token，因此过期/重放的语音回调无法满足更新的待处理转写轮次。
-- 当提供方所需的签名头缺失时，未认证的 webhook 请求会在读取正文之前被拒绝。
-- 语音通话 webhook 在签名验证之前使用共享的预认证正文读取配置文件（最大 64 KB 正文、5 秒读取超时），并为每个 key 设置进行中的请求上限（默认每个 key 8 个并发请求）。
+- 对于 Twilio、Telnyx 和 Plivo，Webhook **重放防护**已启用。重放的有效 Webhook 请求会被确认，但会跳过副作用处理。
+- Twilio 对话轮次会在 `<Gather>` 回调中包含每轮的令牌，因此过期或重放的语音回调无法满足更新的待处理转写轮次。
+- 当提供方所需的签名头缺失时，未认证的 Webhook 请求会在读取正文之前被拒绝。
+- 语音通话 Webhook 在签名验证之前使用共享的预认证正文读取配置文件（最大 64 KB 正文、5 秒读取超时），并为每个密钥设置进行中的请求上限（默认每个密钥 8 个并发请求）。
 
 具有稳定公共主机的示例：
 
@@ -739,20 +739,20 @@ openclaw voicecall expose --mode funnel
 
 `latency` 会从默认的 voice-call 存储路径读取 `calls.jsonl`。使用 `--file <path>` 可以指定其他日志文件，使用 `--last <n>` 可以将分析限制为最后 N 条记录（默认 200）。输出包含轮次延迟和听取等待时间的最小值/最大值/平均值、p50 和 p95。
 
-## Agent 工具
+## 智能体工具
 
 工具名称：`voice_call`。
 
-| Action          | Args                                       |
+| 动作            | 参数                                       |
 | --------------- | ------------------------------------------ |
 | `initiate_call` | `message`, `to?`, `mode?`, `dtmfSequence?` |
 | `continue_call` | `callId`, `message`                        |
 | `speak_to_user` | `callId`, `message`                        |
-| `send_dtmf`     | `callId`, `digits`                         |
+| `send_dtmf`    | `callId`, `digits`                         |
 | `end_call`     | `callId`                                   |
-| `get_status`     | `callId`                                   |
+| `get_status`   | `callId`                                   |
 
-voice-call 插件附带一个匹配的 agent 技能。
+voice-call 插件附带一个匹配的智能体技能。
 
 ## 网关 RPC
 
@@ -773,7 +773,7 @@ voice-call 插件附带一个匹配的 agent 技能。
 
 ## 故障排查
 
-### Setup fails webhook exposure
+### Setup webhook 暴露失败
 
 从运行 Gateway 的相同环境中运行 setup：
 
@@ -815,7 +815,7 @@ openclaw voicecall smoke
 
 除非你传入 `--yes`，否则 `voicecall smoke` 只是一次 dry run。
 
-### Provider credentials fail
+### 提供商凭据失败
 
 检查所选提供商以及所需的凭据字段：
 
@@ -829,7 +829,7 @@ openclaw voicecall smoke
 
 凭据必须存在于 Gateway 主机上。编辑本地 shell 配置文件不会影响已经运行的 Gateway，直到它重启或重新加载其环境。
 
-### Calls start but provider webhooks do not arrive
+### 呼叫开始但提供商 webhook 未到达
 
 确认提供商控制台指向的是精确的公共 webhook URL：
 
@@ -847,24 +847,27 @@ openclaw logs --follow
 
 常见原因：
 
-- `publicUrl` 指向的路径与 `serve.path` 不同。
+- `publicUrl` 与提供商配置的公共 webhook URL 不匹配。反向代理可以将该公共路径映射到不同的 `serve.path`，但 `publicUrl` 必须保持为面向提供商的 URL。
 - Gateway 启动后隧道 URL 发生了变化。
-- 代理转发了请求，但移除了或重写了 host/proto 头。
-- 防火墙或 DNS 将公共主机名路由到了 Gateway 之外的地方。
-- Gateway 在未启用 Voice Call 插件的情况下重启了。
+- 代理转发了请求，但移除或重写了 host/proto 头。
+- 防火墙或 DNS 将公共主机名路由到了 Gateway 以外的位置。
+- Gateway 重启时未启用 Voice Call 插件。
 
 当反向代理或隧道位于 Gateway 前方时，将 `webhookSecurity.allowedHosts` 设置为公共主机名，或者对已知代理地址使用 `webhookSecurity.trustedProxyIPs`。仅当代理边界由你控制时，才使用 `webhookSecurity.trustForwardingHeaders`。
 
-### Signature verification fails
+### 签名验证失败
 
-提供商签名是针对 OpenClaw 根据传入请求重建的公共 URL 进行检查的。如果签名失败：
+Twilio and Plivo URL signatures use `publicUrl` when it is configured: its
+scheme, host, and path are preserved, while the request query is applied.
+Without `publicUrl`, OpenClaw reconstructs the URL from the request. Telnyx
+signatures do not include the request URL. If signatures fail:
 
 - 确认提供商 webhook URL 与 `publicUrl` 完全一致，包括 scheme、host 和 path。
 - 对于 ngrok 免费层级的 URL，当隧道主机名变化时更新 `publicUrl`。
 - 确保代理保留原始的 host 和 proto 头，或者配置 `webhookSecurity.allowedHosts`。
 - 不要在本地测试之外启用 `skipSignatureVerification`。
 
-### Google Meet Twilio joins fail
+### Google Meet Twilio 加入失败
 
 Google Meet 使用此插件来完成 Twilio 拨入加入。首先验证 Voice Call：
 
@@ -893,7 +896,7 @@ Google Meet 通过带有预连接 DTMF 序列的 `voicecall.start` 启动 Twilio
 
 `openclaw voicecall tail` 仍然会显示已持久化的通话记录；它对通话状态和转录很有用，但并不是每个 webhook/实时转换都会出现在那里。
 
-### Realtime call has no speech
+### 实时呼叫没有语音
 
 确认只启用了一个音频模式：`realtime.enabled` 和
 `streaming.enabled` 不能同时为 true。

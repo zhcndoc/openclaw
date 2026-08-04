@@ -12,7 +12,7 @@ title: "Novita 插件"
 ## 分发
 
 - 包：`@openclaw/novita-provider`
-- 安装方式：已包含在 OpenClaw 中
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/novita-provider`
 
 ## 接口
 

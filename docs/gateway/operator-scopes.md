@@ -31,32 +31,28 @@ Operator RPC 方法需要 `operator` 角色；来自 node 的方法
 
 | 作用域                   | 含义                                                                                                                                                       |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `operator.read`         | Read-only status, lists, catalog, logs, session reads, and other non-mutating calls.                                                                          |
-| `operator.write`        | Mutating operator actions: sending messages, invoking tools, updating talk/voice settings, node command relay. Also satisfies `operator.read`.                |
-| `operator.admin`        | Administrative access. Satisfies every `operator.*` scope. Required for config mutation, updates, native hooks, reserved namespaces, and high-risk approvals. |
-| `operator.pairing`      | Device and node pairing management: list, approve, reject, remove, rotate, revoke.                                                                            |
-| `operator.approvals`    | Exec and plugin approval APIs.                                                                                                                                |
-| `operator.questions`    | Listing, reading, answering, and resolving interactive questions.                                                                                             |
-| `operator.talk.secrets` | Reading Talk configuration with secrets included.                                                                                                             |
+| `operator.read`         | 只读状态、列表、目录、日志、会话读取及其他非变更调用。                                                                          |
+| `operator.write`        | 会修改状态的 operator 操作：发送消息、调用工具、更新对话/语音设置、节点命令中继。也满足 `operator.read`。                |
+| `operator.admin`        | 管理权限。满足所有 `operator.*` 作用域。配置变更、更新、原生钩子、保留命名空间和高风险审批都需要此权限。 |
+| `operator.pairing`      | 设备和节点配对管理：列出、批准、拒绝、移除、轮换、撤销。                                                                            |
+| `operator.approvals`    | Exec 和插件审批 API。                                                                                                                                |
+| `operator.questions`    | 交互式问题的列出、读取、回答和解决。                                                                                             |
+| `operator.talk`         | 在不具备常规网关写入权限的情况下创建、控制和关闭 Talk 会话。`operator.write` 也满足此作用域。                               |
+| `operator.talk.secrets` | 读取包含机密信息的 Talk 配置。                                                                                                             |
 
 未知的未来 `operator.*` 作用域除非调用方
 已经持有 `operator.admin`，否则需要精确匹配。
 
 ## 方法作用域只是第一道关卡
 
-Each Gateway RPC has a least-privilege method scope that decides whether a
-request reaches its handler. Params-aware methods derive that scope before
-dispatch so authorization failures have one canonical structured response:
+每个网关 RPC 都有一个最小权限方法作用域，用于决定请求是否会到达其处理程序。参数感知的方法会在分发前派生该作用域，因此授权失败会返回一个统一的结构化响应：
 
-- `agent` needs `operator.write` for ordinary turns and `operator.admin` for
-  `/new` or `/reset` session lifecycle commands.
-- `node.invoke` needs `operator.write` for ordinary relay commands and
-  `operator.admin` for `browser.proxy`, `fs.listDir`, and `terminal.upload`.
-- `talk.config` needs `operator.read`; `includeSecrets: true` also needs
-  `operator.talk.secrets`.
+- `agent` 在普通轮次中需要 `operator.write`，而对于 `/new` 或 `/reset` 会话生命周期命令，则需要 `operator.admin`。
+- `node.invoke` 在普通中继命令中需要 `operator.write`，而对于 `browser.proxy`、`browser.proxy.upload.v1`、`fs.listDir` 和 `terminal.upload`，则需要 `operator.admin`。
+- `talk.config` 需要 `operator.read`；`includeSecrets: true` 还需要 `operator.talk.secrets`。
+- `talk.client.*`、`talk.session.*`、`talk.speak` 和 `talk.mode` 需要 `operator.talk`（或兼容的更宽泛作用域 `operator.write`）。
 
-Some handlers then apply stricter checks based on the concrete thing being
-approved or mutated:
+一些处理程序随后会根据正在批准或修改的具体对象应用更严格的检查：
 
 - `device.pair.approve` 在具备 `operator.pairing` 时可达，但批准一个 operator 设备时，只能铸造或保留调用方已经持有的作用域。
 - `node.pair.approve` 在具备 `operator.pairing` 时可达，然后会根据待批准节点声明的命令列表派生额外的批准作用域。
@@ -64,29 +60,25 @@ approved or mutated:
 
 这样就允许低作用域的操作员执行低风险的配对操作，而不必把所有配对批准都变成仅管理员可用。
 
-Session mutation RPCs are authorized by their negotiated operator scopes,
-independent of the connecting client's `client.id` or `client.mode`. Client
-identity can still affect connection and device-auth policy, but it neither
-grants nor removes session mutation authority.
+会话修改 RPC 根据其协商得到的操作员作用域进行授权，与连接客户端的 `client.id` 或 `client.mode` 无关。客户端身份仍可能影响连接和设备身份验证策略，但既不会授予也不会移除会话修改权限。
 
-## Device pairing approvals
+## 设备配对审批
 
 设备配对记录是已批准角色和作用域的持久来源。
 已经配对的设备不会在未被告知的情况下获得更广泛的访问权限：如果某次重新连接请求了更广泛的角色或更广泛的作用域，就会创建一个新的待升级请求。
 
 批准设备请求：
 
-- A request with no operator role does not need operator scope approval.
-- A request for a non-operator device role (for example `node`) requires
-  `operator.admin`, even though `device.pair.approve` itself only needs
-  `operator.pairing`.
-- A request for `operator.read`, `operator.write`, `operator.approvals`,
-  `operator.questions`, `operator.pairing`, or `operator.talk.secrets` requires
-  the caller to already hold that scope, or `operator.admin`.
-- A request for `operator.admin` requires `operator.admin`.
-- A repair request with no explicit scopes can inherit the existing operator
-  token's scopes; if that token is admin-scoped, approval still requires
-  `operator.admin`.
+- 不包含 operator 角色的请求不需要批准 operator 作用域。
+- 非 operator 设备角色（例如 `node`）的请求需要
+  `operator.admin`，即使 `device.pair.approve` 本身只需要
+  `operator.pairing`。
+- 对 `operator.read`、`operator.write`、`operator.approvals`、
+  `operator.questions`、`operator.pairing`、`operator.talk` 或
+  `operator.talk.secrets` 的请求要求调用者已经拥有相应作用域，或拥有
+  `operator.admin`。
+- 对 `operator.admin` 的请求需要 `operator.admin`。
+- 没有显式作用域的修复请求可以继承现有 operator 令牌的作用域；如果该令牌具有管理员作用域，批准仍然需要 `operator.admin`。
 
 非管理员的共享密钥和可信代理会话只能在其自身声明的 operator 作用域内批准 operator-device 请求；即使这些会话在其他情况下可以使用 `operator.pairing`，批准非 operator 角色仍然仅限管理员。
 
@@ -99,18 +91,15 @@ WS 节点则改用设备配对（`role: node`），但适用相同的批准术�
 
 `node.pair.approve` 会根据待处理请求的命令列表推导出额外所需的作用域：
 
-| 声明的命令                                                                                                          | 所需作用域                            |
-| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| 无                                                                                                                   | `operator.pairing`                    |
-| 普通节点命令                                                                                                         | `operator.pairing` + `operator.write` |
-| `system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`fs.listDir` 或 `system.execApprovals.get/set` | `operator.pairing` + `operator.admin` |
+| 声明的命令                                                                                                                                     | 所需作用域                           |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| 无                                                                                                                                              | `operator.pairing`                    |
+| 普通节点命令                                                                                                                                    | `operator.pairing` + `operator.write` |
+| `system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`browser.proxy.upload.v1`、`fs.listDir` 或 `system.execApprovals.get/set` | `operator.pairing` + `operator.admin` |
 
-Approving a node declaration records its command surface. For `computer.act`,
-the node advertises that surface only after Computer Control is enabled locally;
-once the pairing update is approved, invoking it through `node.invoke` requires
-write scope but not admin scope for each action. Commands classified as
-dangerous or privacy-heavy still require a persistent
-`gateway.nodes.commands.allow` entry in addition to pairing.
+批准节点声明会记录其命令接口。对于 `computer.act`，
+节点只有在本地启用计算机控制后才会公布该接口；配对更新获批准后，通过 `node.invoke` 调用它时，每个操作都需要写入作用域，但不需要管理员作用域。被归类为危险或高度涉及隐私的命令，除了配对之外，仍需要持久的
+`gateway.nodes.commands.allow` 条目。
 
 节点配对用于建立身份和信任；它不会替代节点自身的 `system.run` exec 批准策略。
 

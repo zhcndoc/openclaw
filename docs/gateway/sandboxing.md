@@ -6,7 +6,7 @@ read_when: "你想要了解沙箱化的专门说明，或者需要调整 agents.
 status: active
 ---
 
-OpenClaw can run tool execution inside a sandbox backend to reduce blast radius. Sandboxing is off by default and controlled by `agents.defaults.sandbox` (global) or `agents.entries.*.sandbox` (per-agent). The Gateway process always stays on the host; only tool execution moves into the sandbox when enabled.
+OpenClaw 可以在沙箱后端中运行工具执行，以减小影响范围。沙箱化默认处于关闭状态，由 `agents.defaults.sandbox`（全局）或 `agents.entries.*.sandbox`（按代理）控制。网关进程始终运行在主机上；只有在启用沙箱化时，工具执行才会移入沙箱。
 
 <Note>
 这并不是完美的安全边界，但当模型做出一些愚蠢操作时，它确实能显著限制文件系统和进程访问。
@@ -26,11 +26,11 @@ OpenClaw can run tool execution inside a sandbox backend to reduce blast radius.
 
 三个独立设置控制沙箱行为：
 
-| 设置   | 键                                 | 值                          | 默认值  |
-| ------ | ---------------------------------- | --------------------------- | ------- |
-| 模式   | `agents.defaults.sandbox.mode`      | `off`, `non-main`, `all`    | `off`   |
-| 作用范围 | `agents.defaults.sandbox.scope`   | `agent`, `session`, `shared` | `agent` |
-| 后端   | `agents.defaults.sandbox.backend`   | `docker`, `ssh`, `openshell` | `docker` |
+| 设置    | 键                                | 值                                     | 默认值   |
+| ------- | --------------------------------- | -------------------------------------- | -------- |
+| 模式    | `agents.defaults.sandbox.mode`    | `off`、`non-main`、`all`               | `off`    |
+| 作用范围 | `agents.defaults.sandbox.scope`   | `agent`、`session`、`shared`           | `agent`  |
+| 后端    | `agents.defaults.sandbox.backend` | `docker`、`podman`、`ssh`、`openshell` | `docker` |
 
 **模式** 控制何时应用沙箱：
 
@@ -44,49 +44,50 @@ OpenClaw can run tool execution inside a sandbox backend to reduce blast radius.
 - `session`：每个会话一个容器。
 - `shared`：所有被沙箱化的会话共享一个容器（在此作用范围下，按代理的 `docker`/`ssh`/`browser` 覆盖项会被忽略）。
 
-**后端** 控制由哪个运行时执行沙箱工具。SSH 专属配置位于 `agents.defaults.sandbox.ssh`；OpenShell 专属配置位于 `plugins.entries.openshell.config`。
+非共享运行时身份还包括解析后的代理工作区路径。这可以防止共用主机且重复使用相同代理或会话键的工作区共享 Docker、浏览器、SSH、OpenShell 或插件提供的沙箱状态。`shared` 作用范围则有意与工作区无关。
 
-|                     | Docker                           | SSH                            | OpenShell                                           |
-| ------------------- | -------------------------------- | ------------------------------ | --------------------------------------------------- |
-| **运行位置**        | 本地容器                         | 任意可 SSH 访问的主机          | OpenShell 管理的沙箱                                  |
-| **设置**            | `scripts/sandbox-setup.sh`       | SSH 密钥 + 目标主机            | 启用 OpenShell 插件                                   |
-| **工作区模型**      | 绑定挂载或复制                   | 远程为准（首次种子化）         | `mirror` 或 `remote`                                 |
-| **网络控制**        | `docker.network`（默认：none）   | 取决于远程主机                  | 取决于 OpenShell                                      |
-| **浏览器沙箱**      | 支持                             | 不支持                         | 目前不支持                                            |
-| **绑定挂载**        | `docker.binds`                   | 不适用                         | 不适用                                                |
-| **最适合**          | 本地开发、完全隔离               | 卸载到远程机器                  | 带可选双向同步的托管远程沙箱                            |
+从旧版本升级后的首次使用，会在包含工作区信息的身份下创建非共享运行时和沙箱工作区。现有的非共享运行时不会被接管；这是一次有意的重置。它们可以通过配置的清理设置自然过期，也可以使用 `openclaw sandbox recreate` 移除；下次使用时会为当前身份配置运行时。
 
-## Supported capability matrix
+**后端** 控制哪个运行时执行沙箱化工具。Docker 和 Podman 共享 `agents.defaults.sandbox.docker`；SSH 特定配置位于 `agents.defaults.sandbox.ssh` 下；OpenShell 特定配置位于 `plugins.entries.openshell.config` 下。
 
-Sandbox backends isolate tool execution. They do not move the Gateway, native
-plugins, or control-plane RPC into the sandbox.
+|                     | Docker 或 Podman 后端                    | SSH                            | OpenShell                                           |
+| ------------------- | ----------------------------------------- | ------------------------------ | --------------------------------------------------- |
+| **运行位置**        | 本地 Docker 或 Podman 容器                | 任何可通过 SSH 访问的主机       | 由 OpenShell 管理的沙箱                              |
+| **设置**            | Docker 和/或 Podman                       | SSH 密钥 + 目标主机             | 已启用 OpenShell 插件                                |
+| **工作区模型**      | 绑定挂载或复制                            | 远程规范化（初始化一次）         | `mirror` 或 `remote`                                |
+| **网络控制**        | `docker.network`（默认：无）              | 取决于远程主机                  | 取决于 OpenShell                                     |
+| **浏览器沙箱**      | 仅 Docker 引擎                            | 不支持                          | 尚不支持                                             |
+| **绑定挂载**        | `docker.binds`                            | 不适用                          | 不适用                                               |
+| **适用场景**        | 本地开发和容器隔离                        | 将任务转移到远程机器            | 具有可选双向同步功能的托管远程沙箱                     |
 
-| Capability                 | Docker                                                                  | SSH                                                  | OpenShell                                                         |
+## 支持的能力矩阵
+
+沙箱后端会隔离工具执行。它们不会将 Gateway、原生插件或控制平面 RPC 移入沙箱。
+
+| 能力                       | Docker                                                                  | SSH                                                  | OpenShell                                                         |
 | -------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
-| Shell and child processes  | Supported inside the container                                          | Supported on the remote host                         | Supported inside the managed sandbox                              |
-| File tools                 | Supported through the container filesystem bridge                       | Supported through the SSH filesystem bridge          | Supported through the SSH bridge in `mirror` or `remote` mode     |
-| Workspace access           | `none`, `ro`, and `rw`                                                  | `none`, `ro`, and `rw`                               | `none`, `ro`, and `rw`                                            |
-| Network restriction        | `docker.network`; defaults to `"none"`                                  | Controlled by the remote host                        | Controlled by the selected OpenShell policy                       |
-| Sandboxed browser          | Supported in a separate browser container                               | Not supported                                        | Not supported                                                     |
-| Additional host folders    | `docker.binds` with explicit `:ro` or `:rw`                             | Not supported as mounts; seed or copy files instead  | Not supported as mounts; use workspace sync or remote files       |
-| Packages and runtimes      | Bake a custom image, or use `setupCommand` with the required privileges | Provision them on the remote host                    | Include them in the source image or install when policy permits   |
-| Private certificate roots  | Bake or mount them into the image and configure the consuming runtime   | Configure the remote host trust store                | Include them in the source image or configure them inside sandbox |
-| Plugin and MCP tool access | Gateway-side execution, additionally gated by sandbox tool policy       | Gateway-side execution, additionally gated by policy | Gateway-side execution, additionally gated by sandbox tool policy |
+| Shell 和子进程             | 在容器内受支持                                                          | 在远程主机上受支持                                   | 在受管理的沙箱内受支持                                            |
+| 文件工具                   | 通过容器文件系统桥接受支持                                              | 通过 SSH 文件系统桥接受支持                          | 在 `mirror` 或 `remote` 模式下通过 SSH 桥接受支持                 |
+| 工作区访问                 | `none`、`ro` 和 `rw`                                                     | `none`、`ro` 和 `rw`                                  | `none`、`ro` 和 `rw`                                              |
+| 网络限制                   | `docker.network`；默认为 `"none"`                                       | 由远程主机控制                                       | 由所选 OpenShell 策略控制                                         |
+| 沙箱浏览器                 | 在独立的浏览器容器中受支持                                              | 不受支持                                             | 不受支持                                                         |
+| 其他主机文件夹             | 使用明确的 `:ro` 或 `:rw` 的 `docker.binds`                              | 不支持作为挂载；请改为预置或复制文件                 | 不支持作为挂载；请使用工作区同步或远程文件                         |
+| 软件包和运行时             | 构建自定义镜像，或使用具有所需权限的 `setupCommand`                      | 在远程主机上配置                                     | 将其包含在源镜像中，或在策略允许时安装                             |
+| 私有证书根                 | 将其构建或挂载到镜像中，并配置使用它的运行时                            | 配置远程主机信任存储                                 | 将其包含在源镜像中，或在沙箱内进行配置                             |
+| 插件和 MCP 工具访问        | 网关侧执行，并另外受沙箱工具策略限制                                     | 网关侧执行，并另外受策略限制                         | 网关侧执行，并另外受沙箱工具策略限制                              |
 
-Native plugins remain in-process with the Gateway and share its trust boundary.
-Sandboxed sessions can use plugin-owned and MCP tools only when normal tool
-policy and `tools.sandbox.tools` both allow them. See
-[MCP and plugin tools inside sandbox tool policy](/gateway/config-tools#mcp-and-plugin-tools-inside-sandbox-tool-policy)
-and [Plugin execution model](/plugins/architecture#execution-model).
+原生插件与 Gateway 保持进程内运行，并共享其信任边界。
+沙箱会话只有在常规工具策略和 `tools.sandbox.tools` 都允许时，才能使用插件拥有的工具和 MCP 工具。请参阅
+[MCP 和插件工具在沙箱工具策略中的使用](/gateway/config-tools#mcp-and-plugin-tools-inside-sandbox-tool-policy)
+和[插件执行模型](/plugins/architecture#execution-model)。
 
-## Docker backend
+## Docker 后端
 
-一旦启用沙箱，Docker 就是默认后端。它通过 Docker 守护进程 socket（`/var/run/docker.sock`）在本地运行工具和沙箱浏览器；隔离来自 Docker 命名空间。
+Docker 后端通过 `docker` CLI 在本地运行工具。其选择和错误行为保持不变；它不会探测或回退到 Podman。
 
 默认值：`network: "none"`（无外部网络访问）、`readOnlyRoot: true`、`capDrop: ["ALL"]`、镜像 `openclaw-sandbox:bookworm-slim`。
 
-This explicit configuration keeps the agent workspace read-only and preserves
-the default restricted runtime posture:
+此显式配置使代理工作区保持只读，并保留默认的受限运行时状态：
 
 ```json5
 {
@@ -110,12 +111,11 @@ the default restricted runtime posture:
 }
 ```
 
-OpenClaw also creates Docker sandbox containers with an init process and
-`no-new-privileges`. With `workspaceAccess: "ro"`, the agent workspace is
-mounted read-only at `/agent`; write operations to the agent workspace are
-rejected, while the configured tmpfs paths remain writable.
+OpenClaw 还会为 Docker 沙箱容器创建 init 进程，并启用
+`no-new-privileges`。使用 `workspaceAccess: "ro"` 时，代理工作区会以只读方式挂载到
+`/agent`；对代理工作区的写入操作会被拒绝，而配置的 tmpfs 路径仍保持可写。
 
-To expose host GPUs, set `agents.defaults.sandbox.docker.gpus` (or the per-agent override) to a value like `"all"` or `"device=GPU-uuid"`. This is passed to Docker's `--gpus` flag and requires a compatible host runtime such as NVIDIA Container Toolkit.
+要公开主机 GPU，请将 `agents.defaults.sandbox.docker.gpus`（或每个代理的覆盖项）设置为类似 `"all"` 或 `"device=GPU-uuid"` 的值。该值会传递给所选容器引擎兼容 Docker 的 `--gpus` 标志，并且需要兼容的主机 GPU 配置。Podman 使用此选项需要 5.0 或更高版本。
 
 <Warning>
 **Docker-out-of-Docker（DooD）限制**
@@ -131,13 +131,65 @@ To expose host GPUs, set `agents.defaults.sandbox.docker.gpus` (or the per-agent
 
 ### 沙箱浏览器
 
-- The sandbox browser auto-starts (ensures CDP is reachable) when the browser tool needs it. Configure via `agents.defaults.sandbox.browser.autoStart` (default `true`) and `autoStartTimeoutMs` (default 12s).
-- Sandbox browser containers use a dedicated Docker network (`openclaw-sandbox-browser`) instead of the global `bridge` network. Configure with `agents.defaults.sandbox.browser.network`.
-- Sandbox browser network mode `"none"` is unsupported because browser control requires host-published CDP ports. Use the dedicated default, `bridge`, or another custom bridge network. `openclaw doctor --fix` disables affected persisted sidecars and restores the dedicated network without silently enabling egress.
-- `agents.defaults.sandbox.browser.cdpSourceRange` restricts container-edge CDP ingress with a CIDR allowlist (for example `172.21.0.1/32`).
-- noVNC observer access is password-protected by default; OpenClaw emits a short-lived token URL that serves a local bootstrap page and opens noVNC with the password in the URL fragment (not query string or header logs).
-- `agents.defaults.sandbox.browser.allowHostControl` (default `false`) lets sandboxed sessions target the host browser explicitly.
-- Optional allowlists gate `target: "custom"`: `allowedControlUrls`, `allowedControlHosts`, `allowedControlPorts`.
+- 沙箱浏览器会在浏览器工具需要时自动启动（确保 CDP 可访问）。通过 `agents.defaults.sandbox.browser.autoStart`（默认值为 `true`）和 `autoStartTimeoutMs`（默认值为 12 秒）进行配置。
+- 沙箱浏览器容器使用专用 Docker 网络（`openclaw-sandbox-browser`），而不是全局的 `bridge` 网络。通过 `agents.defaults.sandbox.browser.network` 进行配置。
+- 不支持沙箱浏览器网络模式 `"none"`，因为浏览器控制需要主机发布 CDP 端口。请使用专用默认网络、`bridge` 或其他自定义 bridge 网络。`openclaw doctor --fix` 会禁用受影响的持久化 sidecar，并恢复专用网络，不会在不提示的情况下启用出站访问。
+- `agents.defaults.sandbox.browser.cdpSourceRange` 使用 CIDR 允许列表限制容器边缘的 CDP 入站流量（例如 `172.21.0.1/32`）。
+- noVNC 观察者访问默认受密码保护；OpenClaw 会生成一个短时有效的令牌 URL，该 URL 提供本地引导页面，并将密码放入 URL 片段中（不会出现在查询字符串或请求头日志中），然后打开 noVNC。
+- `agents.defaults.sandbox.browser.allowHostControl`（默认值为 `false`）允许沙箱会话显式指定主机浏览器作为目标。
+- 可选的允许列表会限制 `target: "custom"`：`allowedControlUrls`、`allowedControlHosts`、`allowedControlPorts`。
+
+## Podman 后端
+
+使用 `sandbox.backend: "podman"` 可直接选择原生 `podman` CLI。这是内置后端，而不是插件。即使已安装 `docker` 可执行文件，它也不会探测或选择 Docker。
+
+Podman 会复用现有的 `sandbox.docker.*` 设置和当前原生 `podman` CLI 上下文；它不会添加单独的连接配置界面。
+
+Rootless Podman 对可写工作区挂载默认使用 `--userns=keep-id`。长时间运行的沙箱可能会预留从属 ID，并阻塞无关的 `--userns=auto` 工作负载；在启动这些工作负载之前请将其移除。将 `sandbox.docker.user` 设置为非零数字 UID 或 UID:GID，以控制容器用户。Rootless Podman 会拒绝 UID 或 GID 0，因为 Podman 4.x 无法在保留工作区绑定所有权的同时重新映射命名空间 root；请将需要 root 权限的设置构建到镜像中，或使用 rootful Podman。除此之外，Rootful Podman 会在可用时使用工作区所有者。
+
+```json5
+{
+  agents: {
+    defaults: {
+      sandbox: {
+        mode: "all",
+        backend: "podman",
+        scope: "session",
+        workspaceAccess: "rw",
+        docker: {
+          image: "openclaw-sandbox:bookworm-slim",
+          network: "none",
+          readOnlyRoot: true,
+          capDrop: ["ALL"],
+        },
+      },
+    },
+  },
+}
+```
+
+启用后端之前，请先将沙箱镜像构建或拉取到所选的 Podman 存储中。在源代码检出目录中，可以使用 Podman 构建相同的沙箱 Dockerfile：
+
+```bash
+podman build -t openclaw-sandbox:bookworm-slim -f scripts/docker/sandbox/Dockerfile .
+```
+
+Podman 注意事项：
+
+- Podman 不支持浏览器沙箱；请保持 `sandbox.browser.enabled` 关闭，或安装 Docker 并选择 `backend: "docker"`。
+- 支持本地 Podman 引擎和 Podman Machine。Podman Machine 的绑定源必须位于主机主目录下，因为该目录是其默认共享卷。拒绝任意远程 Podman 连接；远程执行请使用 SSH 后端。
+- 自定义 `tmpfs` 或绑定挂载不得覆盖 `/run/podman-init`；OpenClaw 会拒绝这些配置，以确保沙箱清理继续正常工作。
+
+<Warning>
+**Podman 外部运行 Podman 的限制**
+
+容器化的 Gateway 会通过主机的本地 Podman 引擎或 Podman Machine 创建同级沙箱。
+
+- **始终一致地使用主机路径**：使用主机绝对路径配置 `workspace`，然后将完整的状态根目录和工作区以相同路径挂载到 Gateway 中。否则，沙箱可能能够挂载工作区，而 Gateway 无法写入心跳文件或技能工作区文件。
+- **Podman Machine 设置**：绑定源必须位于主机主目录下。将 Gateway 的 `HOME` 设置为该路径，并将 `OPENCLAW_HOME`、`OPENCLAW_STATE_DIR` 和 `OPENCLAW_CONFIG_DIR` 指向规范的已挂载状态根目录。镜像需要兼容的 Podman 客户端、其命名连接和 SSH 身份，以及专用的可写 SSH 目录来保存已知主机元数据。
+- **仅允许 Gateway 访问 Podman**：绝不要将引擎套接字、连接材料或 SSH 身份挂载到代理沙箱中。不支持任意远程连接；请改用 SSH 后端。
+
+</Warning>
 
 ## SSH 后端
 
@@ -231,20 +283,20 @@ To expose host GPUs, set `agents.defaults.sandbox.docker.gpus` (or the per-agent
 **技能**：`read` 工具以沙箱为根。对于 `workspaceAccess: "none"`，OpenClaw 会将符合条件的技能镜像到沙箱工作区（`.../skills`），以便读取。对于 `"rw"`，工作区技能可从 `/workspace/skills` 读取，而符合条件的受管理、捆绑或插件技能会被实体化到生成的只读路径 `/workspace/.openclaw/sandbox-skills/skills`。
 </Note>
 
-## Multiple folders for one agent
+## 一个代理使用多个文件夹
 
-Use Docker bind mounts when one sandboxed agent needs more than its primary workspace. Each entry maps a host folder to a container path with an explicit access mode:
+当一个沙箱代理需要使用主工作区之外的其他目录时，请使用 Docker 绑定挂载。每个条目都会将主机文件夹映射到容器路径，并明确指定访问模式：
 
 ```text
-host-directory:container-directory:ro
-host-directory:container-directory:rw
+主机目录:容器目录:ro
+主机目录:容器目录:rw
 ```
 
-- `ro` makes the mounted folder read-only inside the sandbox.
-- `rw` lets sandboxed tools and processes change the host folder.
-- The container path is the path the agent uses. Host paths are not exposed automatically.
+- `ro` 使挂载的文件夹在沙箱内只读。
+- `rw` 允许沙箱中的工具和进程修改主机文件夹。
+- 容器路径是代理使用的路径。主机路径不会自动暴露。
 
-This example gives the `research` agent a writable primary workspace, read-only reference material at `/reference`, and a separate writable output folder at `/drafts`:
+此示例为 `research` 代理提供一个可写的主工作区、挂载到 `/reference` 的只读参考资料，以及挂载到 `/drafts` 的单独可写输出文件夹：
 
 ```json5
 {
@@ -263,7 +315,7 @@ This example gives the `research` agent a writable primary workspace, read-only 
           workspaceAccess: "rw",
           docker: {
             binds: ["/srv/shared/reference:/reference:ro", "/srv/shared/drafts:/drafts:rw"],
-            // Required because these sources are outside the agent workspace.
+            // 由于这些源位于代理工作区之外，因此是必需的。
             dangerouslyAllowExternalBindSources: true,
           },
         },
@@ -273,28 +325,28 @@ This example gives the `research` agent a writable primary workspace, read-only 
 }
 ```
 
-`workspaceAccess` and bind modes are independent:
+`workspaceAccess` 和绑定模式彼此独立：
 
-| Setting                          | Controls                                                                    |
-| -------------------------------- | --------------------------------------------------------------------------- |
-| `workspaceAccess: "none"`        | Uses an isolated sandbox workspace; does not expose the agent workspace.    |
-| `workspaceAccess: "ro"`          | Mounts the agent workspace read-only at `/agent`.                           |
-| `workspaceAccess: "rw"`          | Mounts the agent workspace read/write at `/workspace`.                      |
-| `docker.binds` entry `:ro`/`:rw` | Controls only that additional host folder at its configured container path. |
+| 设置                           | 控制范围                                                                   |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `workspaceAccess: "none"`      | 使用隔离的沙箱工作区；不暴露代理工作区。                                   |
+| `workspaceAccess: "ro"`        | 将代理工作区以只读方式挂载到 `/agent`。                                    |
+| `workspaceAccess: "rw"`        | 将代理工作区以读写方式挂载到 `/workspace`。                                |
+| `docker.binds` 条目 `:ro`/`:rw` | 仅控制配置的容器路径上的额外主机文件夹。                                   |
 
-Changing `workspaceAccess` does not change an additional bind from `ro` to `rw`, or vice versa. Global and per-agent `docker.binds` are merged. Keep `scope: "agent"` or `"session"` for per-agent binds; `scope: "shared"` ignores all per-agent Docker overrides and uses only global binds.
+更改 `workspaceAccess` 不会将额外绑定从 `ro` 改为 `rw`，反之亦然。全局和每个代理的 `docker.binds` 会进行合并。对于每个代理的绑定，请保留 `scope: "agent"` 或 `"session"`；`scope: "shared"` 会忽略所有每个代理的 Docker 覆盖设置，仅使用全局绑定。
 
-Bind mounts are the supported multi-folder boundary because Docker constructs the container's filesystem view with mount isolation, and the `ro`/`rw` mode applies to every process in the sandbox. That boundary covers `exec`, filesystem tools, child processes, and libraries without duplicating path-authorization checks across each OpenClaw code path. A host-side path allowlist cannot provide the same complete boundary when an allowed shell or dependency can access files directly.
+绑定挂载是支持多文件夹边界的方式，因为 Docker 会通过挂载隔离来构建容器的文件系统视图，并且 `ro`/`rw` 模式会应用于沙箱中的每个进程。该边界涵盖 `exec`、文件系统工具、子进程和库，无需在每个 OpenClaw 代码路径中重复路径授权检查。当允许的 shell 或依赖项可以直接访问文件时，主机侧路径允许列表无法提供同样完整的边界。
 
-The opt-in `dangerouslyAllowExternalBindSources` only permits sources outside the workspace roots. It does not disable OpenClaw's blocked system, credential, Docker socket, symlink-parent, or reserved-target checks. Prefer the smallest folder, use `ro` unless writes are required, and recreate the sandbox after changing mounts:
+选择启用的 `dangerouslyAllowExternalBindSources` 仅允许使用工作区根目录之外的源。它不会禁用 OpenClaw 对系统路径、凭据、Docker socket、符号链接父级或保留目标的阻止检查。请优先选择最小范围的文件夹；除非确实需要写入，否则使用 `ro`，并在更改挂载后重新创建沙箱：
 
 ```bash
 openclaw sandbox recreate --agent research
 ```
 
-### Other bind behavior
+### 其他绑定行为
 
-`agents.defaults.sandbox.docker.binds` configures global mounts. The format is the same `host:container:mode` form (for example, `"/home/user/source:/source:rw"`).
+`agents.defaults.sandbox.docker.binds` 用于配置全局挂载。格式同样是 `主机:容器:模式`（例如 `"/home/user/source:/source:rw"`）。
 
 `agents.defaults.sandbox.browser.binds` 仅将额外的主机目录挂载到 **sandbox browser** 容器中。设置该项时（包括 `[]`），它会替换 browser 容器的 `docker.binds`；如果未设置，browser 容器会回退到 `docker.binds`。
 
@@ -398,21 +450,15 @@ openclaw sandbox recreate --agent research
     scripts/sandbox-browser-setup.sh
     ```
 
-    The npm package does not include the browser Dockerfile or entrypoint. Use a source checkout to build this image.
+    npm 包不包含浏览器 Dockerfile 或入口点。请使用源码检出构建此镜像。
 
   </Step>
 </Steps>
 
-默认情况下，Docker 沙箱容器以**无网络**方式运行。可通过 `agents.defaults.sandbox.docker.network` 覆盖。
+默认情况下，本地容器沙箱运行时**不使用网络**。通过 `agents.defaults.sandbox.docker.network` 覆盖此设置。
 
 <Note>
-Package installation and certificate-store changes are image provisioning, not
-normal sandbox-turn behavior. The defaults deliberately combine no network,
-a read-only root filesystem, and a non-root image user, so an in-turn package
-install should fail. Prefer a custom image that already contains packages and
-private certificate roots. If a Node process needs a private CA, also configure
-the CA path for Node, for example with `NODE_EXTRA_CA_CERTS`, through the custom
-image or `sandbox.docker.env`.
+软件包安装和证书存储变更属于镜像配置，而不是正常的沙箱轮次行为。默认设置会有意结合无网络、只读根文件系统和非 root 镜像用户，因此在轮次中进行软件包安装应该会失败。建议使用已经包含所需软件包和私有证书根的自定义镜像。如果 Node 进程需要私有 CA，还应配置 Node 的 CA 路径，例如通过自定义镜像或 `sandbox.docker.env` 设置 `NODE_EXTRA_CA_CERTS`。
 </Note>
 
 <AccordionGroup>
@@ -432,11 +478,11 @@ image or `sandbox.docker.env`.
     - `--metrics-recording-only`
     - `--password-store=basic`
     - `--use-mock-keychain`
-    - `--headless=new` when `browser.headless` is enabled.
-    - `--no-sandbox --disable-setuid-sandbox` (always enabled in the sandbox browser container).
-    - `--disable-3d-apis`, `--disable-gpu`, `--disable-software-rasterizer` by default; these graphics-hardening flags help containers without GPU support. Set `OPENCLAW_BROWSER_DISABLE_GRAPHICS_FLAGS=0` if your workload needs WebGL or other 3D features.
-    - `--disable-extensions` by default; set `OPENCLAW_BROWSER_DISABLE_EXTENSIONS=0` for extension-reliant flows.
-    - `--renderer-process-limit=2` by default; controlled by `OPENCLAW_BROWSER_RENDERER_PROCESS_LIMIT=<N>`, where `0` keeps Chromium's default.
+    - 启用 `browser.headless` 时使用 `--headless=new`。
+    - `--no-sandbox --disable-setuid-sandbox`（在沙箱浏览器容器中始终启用）。
+    - 默认使用 `--disable-3d-apis`、`--disable-gpu`、`--disable-software-rasterizer`；这些图形强化标志有助于在不支持 GPU 的容器中运行。若工作负载需要 WebGL 或其他 3D 功能，请设置 `OPENCLAW_BROWSER_DISABLE_GRAPHICS_FLAGS=0`。
+    - 默认使用 `--disable-extensions`；对于依赖扩展的流程，请设置 `OPENCLAW_BROWSER_DISABLE_EXTENSIONS=0`。
+    - 默认使用 `--renderer-process-limit=2`；由 `OPENCLAW_BROWSER_RENDERER_PROCESS_LIMIT=<N>` 控制，其中 `0` 保留 Chromium 的默认值。
 
     如果你需要不同的运行时配置，请使用自定义浏览器镜像并提供自己的入口点。对于本地（非容器）Chromium 配置文件，请使用 `browser.extraArgs` 追加额外的启动标志。
 
@@ -459,17 +505,19 @@ Docker 安装和容器化网关位于此处：[Docker](/install/docker)
 
 路径：
 
-- Global: `agents.defaults.sandbox.docker.setupCommand`
-- Per-agent: `agents.entries.*.sandbox.docker.setupCommand`
+- 全局：`agents.defaults.sandbox.docker.setupCommand`
+- 单个代理：`agents.entries.*.sandbox.docker.setupCommand`
 
 <AccordionGroup>
   <Accordion title="常见问题">
-    - 默认 `docker.network` 为 `"none"`（无外网出口），因此包安装会失败。
-    - `docker.network: "container:<id>"` 需要 `dangerouslyAllowContainerNamespaceJoin: true`，并且仅限紧急放行使用。
-    - `readOnlyRoot: true` 会阻止写入；请设置 `readOnlyRoot: false`，或预先构建自定义镜像。
-    - 进行包安装时，`user` 必须是 root（省略 `user`，或设置 `user: "0:0"`）。
-    - 沙箱执行**不会**继承宿主机的 `process.env`。请使用 `agents.defaults.sandbox.docker.env`（或自定义镜像）来提供技能所需的 API 密钥。
-    - `agents.defaults.sandbox.docker.env` 中的值会作为显式的 Docker 容器环境变量传入。任何能访问 Docker 守护进程的人都可以通过 Docker 元数据命令（例如 `docker inspect`）查看这些值。如果这种元数据暴露不可接受，请使用自定义镜像、挂载的密钥文件或其他密钥传递方式。
+    - 默认的 `docker.network` 是 `"none"`（无外网访问），因此安装软件包会失败。
+    - `docker.network: "container:<id>"` 要求设置 `dangerouslyAllowContainerNamespaceJoin: true`，且仅限在紧急情况下使用。
+    - `readOnlyRoot: true` 会阻止写入；请设置 `readOnlyRoot: false`，或构建自定义镜像。
+    - 安装软件包时，`user` 必须为 root。Docker 可以省略 `user`，或设置为
+      `user: "0:0"`；rootful Podman 必须设置 `user: "0:0"`，因为其默认设置会保留工作区所有权。Rootless Podman
+      会拒绝值为零的用户；请将软件包预先构建到镜像中，或使用 rootful Podman。
+    - 沙箱执行不会继承主机的 `process.env`。请使用 `agents.defaults.sandbox.docker.env`（或自定义镜像）来配置技能 API 密钥。
+    - `agents.defaults.sandbox.docker.env` 中的值会作为显式容器环境变量传入。任何有权访问所选容器引擎的人员，都可以通过 `docker inspect` 或 `podman inspect` 等元数据命令查看这些值。如果无法接受此类元数据暴露，请使用自定义镜像、挂载的密钥文件或其他密钥传递方式。
 
   </Accordion>
 </AccordionGroup>
@@ -489,7 +537,7 @@ Docker 安装和容器化网关位于此处：[Docker](/install/docker)
 
 ## 多代理覆盖
 
-Each agent can override sandbox + tools: `agents.entries.*.sandbox` and `agents.entries.*.tools` (plus `agents.entries.*.tools.sandbox.tools` for sandbox tool policy). See [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) for precedence.
+每个代理都可以覆盖沙箱和工具：`agents.entries.*.sandbox` 以及 `agents.entries.*.tools`（此外还有用于沙箱工具策略的 `agents.entries.*.tools.sandbox.tools`）。有关优先级，请参阅[多代理沙箱和工具](/tools/multi-agent-sandbox-tools)。
 
 ## 最小启用示例
 

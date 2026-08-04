@@ -74,7 +74,7 @@ Gateway 可以提供一个小型的 OpenAI 兼容 Chat Completions 接口。它�
 - 对于直接连接到远程网关的原生移动客户端，优先使用 [WebChat](/web/webchat) 或带有配对设备引导/设备令牌流程的 [网关协议](/gateway/protocol)，这样设备就不需要共享的 HTTP 令牌/密码。
 - 如果要集成一个具有自己用户、房间、Webhook 投递或出站传输的外部消息网络，则应改为构建一个频道插件。参见 [构建插件](/plugins/building-plugins)。
 
-## Agent-first model contract
+## 代理优先模型契约
 
 OpenClaw 将 OpenAI 的 `model` 字段视为**代理目标**，而不是原始提供方模型 ID。
 
@@ -82,12 +82,12 @@ OpenClaw 将 OpenAI 的 `model` 字段视为**代理目标**，而不是原始�
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `openclaw`                                   | 已配置的默认代理                                                                                                 |
 | `openclaw/default`                           | 已配置的默认代理（稳定别名；即使真实默认代理 ID 在不同环境之间发生变化，也可安全硬编码） |
-| `openclaw/<agentId>` or `openclaw:<agentId>` | 特定代理                                                                                                           |
+| `openclaw/<agentId>` 或 `openclaw:<agentId>` | 特定代理                                                                                                           |
 | `agent:<agentId>`                            | 特定代理（兼容别名）                                                                                     |
 
 可选请求头：
 
-| Header                                          | 作用                                                                                                                                                                                                                                                                      |
+| 请求头                                          | 作用                                                                                                                                                                                                                                                                      |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `x-openclaw-model: <provider/model-or-bare-id>` | 覆盖所选代理的后端模型。使用共享密钥 bearer 的调用方可以直接使用；具有身份的调用方（trusted-proxy，或带有 `x-openclaw-scopes` 的私有无认证入口）需要 `operator.admin`，否则返回 `403 missing scope: operator.admin`。 |
 | `x-openclaw-agent-id: <agentId>`                | 用于代理选择的兼容性覆盖。                                                                                                                                                                                                                                 |
@@ -104,12 +104,11 @@ OpenClaw 将 OpenAI 的 `model` 字段视为**代理目标**，而不是原始�
 
 如果请求包含 OpenAI 的 `user` 字符串，网关会据此派生一个稳定的会话密钥，因此重复调用可以共享同一个代理会话。对于自定义应用，请在每个对话线程中复用相同的 `user` 值；除非你希望多个对话/设备共享一个 OpenClaw 会话，否则应避免使用账户级标识符。仅当你需要在多个客户端/线程之间进行显式路由控制时，才使用 `x-openclaw-session-key`，并使用由应用自行管理的密钥，以避开上述保留命名空间。
 
-## Request limits
+## 请求限制
 
-The endpoint uses built-in limits of 20 MB per request body, 8 `image_url`
-parts from the latest user message, and 20 MB of cumulative decoded image
-data. Image source policy remains configurable under
-`gateway.http.endpoints.chatCompletions.images`:
+该端点对每个请求正文设置了 20 MB 的内置限制、对最新用户消息中的 `image_url`
+部分设置了 8 个的限制，以及对累计解码图像数据设置了 20 MB 的限制。图像来源策略仍可通过
+`gateway.http.endpoints.chatCompletions.images` 进行配置：
 
 ```json5
 {
@@ -140,14 +139,14 @@ data. Image source policy remains configurable under
 }
 ```
 
-Image settings default to:
+图像设置默认为：
 
-| Key                   | Default                                                             |
-| --------------------- | ------------------------------------------------------------------- |
-| `images.allowUrl`     | `false` (URL-sourced `image_url` parts are rejected unless enabled) |
-| `images.maxBytes`     | 10MB per image                                                      |
-| `images.maxRedirects` | 3                                                                   |
-| `images.timeoutMs`    | 10s                                                                 |
+| 键                    | 默认值                                                               |
+| --------------------- | -------------------------------------------------------------------- |
+| `images.allowUrl`     | `false`（除非启用，否则拒绝来自 URL 的 `image_url` 部分）             |
+| `images.maxBytes`     | 每张图像 10MB                                                        |
+| `images.maxRedirects` | 3                                                                    |
+| `images.timeoutMs`    | 10 秒                                                                |
 
 HEIC/HEIF `image_url` 来源会被接受，并在通过共享的 OpenClaw 图像处理器（Rastermill）交付给提供方之前规范化为 JPEG；对于需要外部编解码器支持的格式，它会回退到系统转换器（`sips`、ImageMagick、GraphicsMagick 或 ffmpeg）。
 
@@ -159,20 +158,20 @@ HEIC/HEIF `image_url` 来源会被接受，并在通过共享的 OpenClaw 图像
 
 ### 支持的请求字段
 
-| 字段                       | 说明                                                                                                                                         |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tools`                    | `{ "type": "function", "function": { ... } }` 数组                                                                                        |
-| `tool_choice`              | `"auto"`、`"none"`、`"required"`，或 `{ "type": "function", "function": { "name": "..." } }`                                                  |
-| `messages[*].role: "tool"` | 后续轮次                                                                                                                               |
-| `messages[*].tool_call_id` | 将工具结果绑定回先前的工具调用                                                                                                 |
-| `max_completion_tokens`    | 数值；每次调用的总 completion tokens 上限（包括 reasoning tokens）。当前字段名；当同时发送它和 `max_tokens` 时使用。 |
-| `max_tokens`               | 数值；旧版别名，当 `max_completion_tokens` 也存在时会被忽略。                                                                   |
-| `temperature`              | 数值 0-2；尽力而为，转发给上游提供方。超出范围时返回 `400 invalid_request_error`。                                     |
-| `top_p`                    | 数值 0-1；尽力而为。超出范围时返回 `400 invalid_request_error`。                                                                         |
-| `frequency_penalty`         | 数值 -2.0 到 2.0；尽力而为。超出范围时返回 `400 invalid_request_error`。                                                                 |
-| `presence_penalty`         | 数值 -2.0 到 2.0；尽力而为。超出范围时返回 `400 invalid_request_error`。                                                                 |
-| `seed`                     | 整数；尽力而为。非整数值会返回 `400 invalid_request_error`。                                                                     |
-| `stop`                     | 字符串或最多 4 个字符串的数组；尽力而为。超过 4 个序列或包含非字符串/空条目时返回 `400 invalid_request_error`。           |
+| 字段                       | 说明                                                                                                                                                                                   |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tools`                    | `{ "type": "function", "function": { ... } }` 对象数组                                                                                                                                |
+| `tool_choice`              | `"auto"`、`"none"`、`"required"`，或 `{ "type": "function", "function": { "name": "..." } }`                                                                                         |
+| `messages[*].role: "tool"` | 后续轮次                                                                                                                                                                               |
+| `messages[*].tool_call_id` | 将工具结果绑定回之前的工具调用                                                                                                                                                         |
+| `max_completion_tokens`    | 正安全整数；单次调用对完成 token 总数的上限（包括推理 token）。当前字段名；当两个字段都非 null 时使用。为 null 或省略时保持未设置。                                                      |
+| `max_tokens`               | 正安全整数；旧版别名。当 `max_completion_tokens` 非 null 时仍会进行验证，但在优先级处理时会被忽略。为 null 或省略时保持未设置。                                                         |
+| `temperature`              | 0-2 的数值；尽力转发给上游提供方。超出范围时返回 `400 invalid_request_error`。                                                                                                         |
+| `top_p`                    | 0-1 的数值；尽力转发。超出范围时返回 `400 invalid_request_error`。                                                                                                                      |
+| `frequency_penalty`        | -2.0 至 2.0 的数值；尽力转发。超出范围时返回 `400 invalid_request_error`。                                                                                                             |
+| `presence_penalty`         | -2.0 至 2.0 的数值；尽力转发。超出范围时返回 `400 invalid_request_error`。                                                                                                             |
+| `seed`                     | 整数；尽力转发。对于非整数值返回 `400 invalid_request_error`。                                                                                                                         |
+| `stop`                     | 字符串或最多包含 4 个字符串的数组；尽力转发。超过 4 个序列，或包含非字符串/空条目时返回 `400 invalid_request_error`。                                                                   |
 
 所有采样和 token 上限字段都走同一个 agent stream-param 通道，并会尽力转发：
 
@@ -214,7 +213,7 @@ HEIC/HEIF `image_url` 来源会被接受，并在通过共享的 OpenClaw 图像
 
 - `Content-Type: text/event-stream`
 - 每一行事件都是 `data: <json>`
-- 流在 `data: [DONE]` 时结束
+- 流在 `data: [DONE]` 时结束。
 
 ## Open WebUI 快速设置
 

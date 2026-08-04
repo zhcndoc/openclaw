@@ -11,8 +11,8 @@ title: "ComfyUI 插件"
 
 ## 分发
 
-- 包：`@openclaw/comfy-provider`
-- 安装方式：已包含在 OpenClaw 中
+- 软件包：`@openclaw/comfy-provider`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/comfy-provider`
 
 ## 接口
 

@@ -2,7 +2,7 @@
 summary: "OpenClaw 上机引导的 CLI 参考（交互式引导）"
 read_when:
   - 你想先建立推理，再使用 OpenClaw 完成设置
-title: "Onboard"
+title: "引导"
 ---
 
 # `openclaw onboard`
@@ -73,8 +73,8 @@ openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 ## 引导流程
 
 直接运行 `openclaw onboard` 会启动引导式流程。它会显示安全提示，
-然后先询问一个问题：**full access**（推荐 — 安装程序会自动查找
-AI 应用、密钥和本地运行时）或 **ask first**（安装程序会先询问，
+然后先询问一个问题：**完全访问权限**（推荐 — 安装程序会自动查找
+AI 应用、密钥和本地运行时）或 **先询问**（安装程序会先询问，
 然后再查看，或者让你手动配置）。该选择会以 `wizard.accessMode` 持久保存。
 在允许发现的情况下，引导会检测已通过已配置模型、API 密钥环境变量
 和受支持的本地 CLI 可用的 AI 访问，然后使用真实补全测试推荐的候选项。
@@ -83,12 +83,12 @@ AI 应用、密钥和本地运行时）或 **ask first**（安装程序会先询
 其他所有项。
 
 如果自动检测已用尽，提供商选择器会首先显示 OpenAI、
-Anthropic、xAI（Grok）、Google 和 OpenRouter。为所有其他受支持的提供商选择 **More…**，
+Anthropic、xAI（Grok）、Google 和 OpenRouter。为所有其他受支持的提供商选择 **更多…**，
 它们会按提供商分组；然后区域、计划和认证方式会
 出现在第二个菜单中。受支持的浏览器或设备登录以及掩码
 API 密钥或令牌方式使用相同的实时补全路径。OpenClaw 只会在测试成功后持久化
 已验证的模型路由及其凭据；失败的候选项不会替换已配置的模型，也不会保存
-尝试过的凭据。选择 **Skip for now** 可在不启动 OpenClaw 的情况下退出，
+尝试过的凭据。选择 **暂时跳过** 可在不启动 OpenClaw 的情况下退出，
 并在准备好后重新运行 `openclaw onboard`。在 OpenClaw 启动之前，Workspace 和 Gateway 的设置保持
 不变。
 
@@ -100,10 +100,10 @@ API 密钥或令牌方式使用相同的实时补全路径。OpenClaw 只会在�
 而非交互式安装会发出警告并保留当前值。
 
 在推理通过后，onboarding 会检查受支持本地 AI 工具中的记忆：
-Claude Code auto-memory、Codex consolidated memories 和 Hermes memory
-files。找到任何内容时，会提供一个页面，将它们复制到 agent 工作区中的
+Claude Code 自动记忆、Codex 合并记忆和 Hermes 记忆
+文件。找到任何内容时，会提供一个页面，将它们复制到 agent 工作区中的
 `memory/imports/` 以便索引回忆。未经确认不会导入任何内容，先前已导入的文件会被跳过，
-并且你始终可以稍后从 Control UI 的 [Memory import page](/web/control-ui) 导入，
+并且你始终可以稍后从 Control UI 的[记忆导入页面](/web/control-ui)导入，
 它提供相同的仅记忆范围。（完整的 [`openclaw migrate`](/cli/migrate) 运行范围更广：
 它还可以导入配置、技能和凭据。）经典向导在准备好工作区后也会显示相同的页面。
 
@@ -118,9 +118,9 @@ Control UI 仪表盘，并等待最多 60 秒让浏览器客户端连接。
 并等待最多五分钟。连接成功后会在浏览器中继续；如果 Gateway 无法访问或超时，
 则会回退到与之前相同的终端出口。传入 `--tui` 可跳过浏览器交接并强制使用该终端出口。
 如果应用设置失败，引导会回退到对话式 OpenClaw
-聊天以交互完成。Channels、agents、
-plugins 和其他可选功能仍属于 OpenClaw 聊天的范围：运行 `openclaw`
-并使用 `open channel wizard for <channel>` 将 channel 凭据收集交给一个带掩码的终端向导。
+聊天以交互完成。频道、代理、
+插件和其他可选功能仍属于 OpenClaw 聊天的范围：运行 `openclaw`
+并使用 `open channel wizard for <channel>` 将频道凭据收集交给一个带掩码的终端向导。
 要更改模型提供商或其认证方式，请退出 OpenClaw 并运行 `openclaw onboard`；
 OpenClaw 不会打开引导式或经典的提供商流程。
 
@@ -181,7 +181,7 @@ OPENCLAW_LOCALE=en openclaw onboard # 明确覆盖为英文
 `--non-interactive` 需要 `--accept-risk`（表示理解代理功能非常强大，且拥有完整系统访问权限存在风险）。`--mode` 默认为 `local`。
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk \
   --auth-choice custom-api-key \
   --custom-base-url "https://llm.example.com/v1" \
   --custom-model-id "foo-large" \
@@ -225,7 +225,7 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
-使用 `--secret-input-mode ref` 时，引导会写入基于环境变量的引用，而不是明文密钥值：对于基于认证配置文件的提供方，这会写入 `keyRef: { source: "env", provider: "default", id: <envVar> }`；对于自定义提供方，这会以相同方式写入 `models.providers.<id>.apiKey`（例如 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`）。约定：在引导进程环境中设置提供方环境变量（例如 `OPENAI_API_KEY`），并且不要再传入内联密钥标志，除非该环境变量已设置——如果标志值与匹配的环境变量不一致，会快速失败并给出指导。
+使用 `--secret-input-mode ref` 时，引导会将新凭据存储为由环境变量支持的引用，而不是明文：认证配置文件使用 `keyRef: { source: "env", provider: "default", id: <envVar> }`，自定义提供方使用 `models.providers.<id>.apiKey`（例如 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`）。添加新凭据时设置提供方环境变量；如果没有与内联密钥标志匹配的环境变量，操作会立即失败。现有的、可解析的命名认证配置文件及其 `env`、`file` 或 `exec` 引用会原样复用，不会写入新的 `apiKey` 或 `keyRef`，也不会添加额外的提供方环境变量。现有的明文配置文件凭据不会被迁移；请运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。请参阅[密钥管理](/gateway/secrets)。
 
 ### 网关认证（非交互式）
 
@@ -269,8 +269,8 @@ openclaw onboard --non-interactive \
 </Note>
 
 ```bash
-# 无提示的端点选择
-openclaw onboard --non-interactive \
+# 无提示端点选择
+openclaw onboard --non-interactive --accept-risk \
   --auth-choice zai-coding-global \
   --zai-api-key "$ZAI_API_KEY"
 
@@ -280,7 +280,7 @@ openclaw onboard --non-interactive \
 Mistral：
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk \
   --auth-choice mistral-api-key \
   --mistral-api-key "$MISTRAL_API_KEY"
 ```
@@ -291,9 +291,9 @@ openclaw onboard --non-interactive \
 
 | Flag                            | Description                                                                                                                 |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `--token-provider <id>`         | 颁发该 token 的 token 提供方 id                                                                                         |
+| `--token-provider <id>`         | 颁发该 token 的 token 提供方 ID                                                                                         |
 | `--token <token>`               | 用于模型认证的 token 值                                                                                        |
-| `--token-profile-id <id>`       | 认证配置文件 id（默认 `<provider>:manual`；某些提供方自有流程使用其自己的默认值，例如 `anthropic:default`） |
+| `--token-profile-id <id>`       | 认证配置文件 ID（默认 `<provider>:manual`；某些提供方自有流程使用其自己的默认值，例如 `anthropic:default`） |
 | `--token-expires-in <duration>` | 可选的 token 过期时长（例如 `365d`、`12h`）                                                                         |
 
 Cloudflare AI Gateway：`--cloudflare-ai-gateway-account-id <id>`、`--cloudflare-ai-gateway-gateway-id <id>`。

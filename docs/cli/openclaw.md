@@ -68,6 +68,8 @@ setup workspace ~/Projects/work
 config set gateway.port 19001
 config set-ref gateway.auth.token env OPENCLAW_GATEWAY_TOKEN
 gateway status
+configure gateway
+open gateway wizard
 restart gateway
 agents
 create agent work workspace ~/Projects/work
@@ -81,6 +83,7 @@ open channel wizard for slack
 configure skills
 configure web search
 open search wizard
+import memory
 plugins list
 plugins search slack
 plugin install clawhub:openclaw-codex-app-server
@@ -96,7 +99,11 @@ OpenClaw 使用类型化操作，而不是临时编辑配置。
 
 只读操作会立即运行：显示概览、列出代理、列出已安装插件、搜索 ClawHub 插件、显示模型/后端状态、运行状态/健康检查、检查 Gateway 可达性、在不进行交互式修复的情况下运行 doctor、验证配置、显示审计日志路径。
 
-启动引导式设置流程也会立即运行：通道设置（`connect telegram`）、工作区技能设置（`configure skills`）以及网页搜索提供方设置（`configure web search`）。每个托管向导都会收集明确答案并负责相应写入；完成后会追加审计条目并重新验证配置。需要安装插件的网页搜索提供方只有在安装成功后才会写入配置——如果安装失败或超时，设置会停止并报告失败，而不会声称该提供方已配置完成。
+启动引导式设置流程也会立即运行：通道设置（`connect telegram`）、工作区技能设置（`configure skills`）、网页搜索 provider 设置（`configure web search`）以及本地 Gateway 设置（`configure gateway`）。每个由配置支持的托管向导都会收集明确的回答并负责后续写入；完成后会追加审计条目并重新验证配置。需要安装插件的网页搜索 provider 只有在安装成功后才会写入配置——安装失败或超时会停止设置并报告错误，而不是声称 provider 已配置。
+
+`configure gateway` 会引导你设置本地 Gateway 的端口、绑定地址、令牌或密码认证，以及 Tailscale 暴露。它会保存配置，但不会将其应用到正在运行的 Gateway，因为更改活动地址或凭据可能会断开设置聊天。聊天设置完成后说 `restart gateway`，或者在终端向导交接后运行 `openclaw gateway restart`。远程模式仅提供指导：若要进行全新设置，请使用 `openclaw onboard`；若要更改模式，请使用 `openclaw configure`。
+
+`import memory` 仅执行复制，而不是写入配置。它会检测受支持的本地代理主目录，让你选择可用的来源，并将新的记忆文件复制到现有的默认代理工作区中，不会导入配置、凭据或技能。它要求 onboarding 已完成，并会报告已确认的导入、无可导入内容、provider 失败，以及部分文件可能已经复制的失败情况。无需重启 Gateway。当你需要指定其他代理或替换现有导入时，请使用 Control UI 的[导入记忆页面](/web/control-ui#import-assistant-memory)。
 
 持久化操作需要对话式审批（或对直接命令使用 `--yes`）：写入配置、`config set`、`config set-ref`、setup/onboarding 启动引导、更改默认模型、启动/停止/重启 Gateway、创建代理，以及安装插件。
 
@@ -114,13 +121,13 @@ doctor 修复在 OpenClaw 内不可用，因为它们可能会重写为当前会
 
 审批通过要用你自己的话来表示：明确无歧义的回复（"yes"、"sure"、"go ahead"、"not now"）会从一个封闭的确定性列表中解析。若已配置的路由支持单独的 completion 调用，则其他回复可以仅根据你的消息和待定提案进行分类——绝不会由对话模型本身分类，因为它无法自我审批。未分类或有歧义的回复会使提案保持待定，系统会再次询问。
 
-### Change history
+### 更改历史
 
 Ask OpenClaw 页面可以显示最近已应用的系统代理操作、Doctor 迁移、Settings 和 CLI 配置写入，以及对 `openclaw.json` 的手动编辑。配置日志会在 Gateway 监视期间、OpenClaw 执行写入期间，或在离线编辑后的下一次启动时检测到外部编辑。
 
 历史记录存储在共享的 `~/.openclaw/state/openclaw.sqlite` 数据库的 `diagnostic_events` 表中，位于 `system-agent-audit` 和 `config-audit` 作用域下。每个作用域保留最近 50,000 条记录。不包含发现和只读操作。更改历史中永远不会出现密钥；配置日志记录包含变更路径而不是配置值，值比较使用受保护的指纹。
 
-通道和网页搜索设置可以作为托管对话运行，直到触及密钥。由于终端聊天输入是可见的，本地 OpenClaw TUI 不接受敏感的向导答案。它会立即提供 `open channel wizard`（携带所选通道）或 `open search wizard`，并交接给受遮罩的终端向导；你也可以稍后运行 `openclaw channels add --channel <channel>` 或 `openclaw configure --section web`。
+通道、网页搜索和本地 Gateway 设置可以作为托管对话运行，直到需要输入密钥为止。本地 OpenClaw TUI 不接受敏感的向导回答，因为终端聊天输入是可见的。它会立即提供 `open channel wizard`（携带所选通道）、`open search wizard` 或 `open gateway wizard`，将操作交接给受遮罩的终端向导；你也可以稍后运行 `openclaw channels add --channel <channel>` 或 `openclaw configure --section web` 或 `openclaw configure --section gateway`。
 
 ### 切换到受遮罩的终端向导
 
@@ -130,9 +137,10 @@ Ask OpenClaw 页面可以显示最近已应用的系统代理操作、Doctor 迁
 open channel wizard for slack
 channel info slack
 open search wizard
+open gateway wizard
 ```
 
-`open channel wizard for <channel>` 会在聊天 TUI 关闭后打开受遮罩的通道设置。先使用 `channel info <channel>` 获取通道标签、设置状态、先决条件摘要和文档链接。`open search wizard` 对网页搜索提供方设置的工作方式相同，会在聊天 TUI 关闭后打开受遮罩的搜索向导。
+`open channel wizard for <channel>` 会在聊天 TUI 关闭后打开受遮罩的通道设置。先使用 `channel info <channel>` 查看通道标签、设置状态、先决条件摘要和文档链接。`open search wizard` 的工作方式相同，用于网页搜索 provider 设置，会在聊天 TUI 关闭后打开受遮罩的搜索向导。`open gateway wizard` 会打开受遮罩的本地 Gateway 设置；完成后，运行 `openclaw gateway restart` 以应用已保存的设置。
 
 OpenClaw 从不在自身会话内更改 provider/auth 访问：该会话本身就依赖于那条推断路由。对于模型 provider 的设置或修复，`configure model provider` 会返回退出/引导说明，而不会启动向导或写入配置。请退出 OpenClaw 并运行 `openclaw onboard`；onboarding 会暂存凭据，并且只保存一条能够完成真实实时回合的路由。在 onboarding 成功后，请重新启动 OpenClaw。
 
@@ -181,7 +189,7 @@ OpenClaw 的自由形式对话与常规 OpenClaw 代理运行在同一个代理�
 永远看不到这个工具。因此，可选择/无本机工具的 CLI 后端和 API 密钥模型
 都强制执行字面意义上的单工具循环。Codex app-server 模型强制执行单个 OpenClaw 权威工具加上无作用的本机规划实用工具。在这三种情况下，设置写入仍然被限制在 OpenClaw 的审计批准契约之内。
 
-Gemini CLI 对普通代理仍然可用，但它无法强制执行推理门所要求的无工具探测，因此不能承载 OpenClaw。
+Gemini CLI 仍可作为为普通代理显式配置的运行时使用，但 Gemini CLI 和 Antigravity 并不是推理门设置路径。请使用 AI Studio API 密钥或 Vertex AI 作为推理门。可选的 Gemini CLI 运行时明确要求使用 AI Studio API 密钥配置文件。
 
 ## 切换到代理
 

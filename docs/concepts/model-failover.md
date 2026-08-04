@@ -88,27 +88,25 @@ OPENCLAW_FALLBACK_SKIP_TTL_MS=60000
 
 OpenClaw 对 API 密钥和 OAuth 令牌都使用**认证配置文件**。
 
-- Secrets and runtime auth-routing state live in `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`.
-- Config `auth.profiles` / `auth.order` are **metadata + routing only** (no secrets).
-- Legacy `credentials/oauth.json`, `auth-profiles.json`, `auth-state.json`, and
-  per-agent `auth.json` files are imported only by `openclaw doctor --fix`.
-  Runtime fails closed for the affected agent until credential-bearing legacy
-  files are migrated; it never silently imports or falls back to them.
+- 密钥和运行时认证路由状态存储在 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` 中。
+- 配置中的 `auth.profiles` / `auth.order` 仅用于**元数据和路由**（不包含密钥）。
+- 旧版的 `credentials/oauth.json`、`auth-profiles.json`、`auth-state.json` 以及每个代理的 `auth.json` 文件，仅会由 `openclaw doctor --fix` 导入。
+  在包含凭据的旧版文件完成迁移之前，受影响的代理将无法通过运行时认证；系统绝不会静默导入或回退到这些文件。
 
 更多详情：[OAuth](/concepts/oauth)
 
 凭据类型：
 
 - `type: "api_key"` → `{ provider, key }`
-- `type: "oauth"` → `{ provider, access, refresh, expires, email? }` (+ `projectId`/`enterpriseUrl` 适用于某些提供商)
-- `type: "token"` → 静态 bearer 风格令牌，可选择设置过期时间；OpenClaw 不会刷新它（用于 `aws-sdk` 和其他 credential-chain 认证模式）
+- `type: "oauth"` → `{ provider, access, refresh, expires, email? }`（某些提供商还适用 `projectId`/`enterpriseUrl`）
+- `type: "token"` → 静态 bearer 风格令牌，可选择设置过期时间；OpenClaw 不会刷新它（用于 `aws-sdk` 和其他凭据链认证模式）
 
 ## 配置文件 ID
 
 OAuth 登录会创建不同的配置文件，以便多个账户可以共存。
 
-- 默认：当没有可用邮箱时为 `provider:default`。
-- 带邮箱的 OAuth：`provider:<email>`（例如 `google-antigravity:user@gmail.com`）。
+- 默认：`provider:default`（无可用电子邮件地址时）。
+- 带电子邮件地址的 OAuth：`provider:<email>`（例如 `openai:user@example.com`）。
 
 配置文件保存在每个 agent 的 `openclaw-agent.sqlite` 身份验证配置文件存储中。
 
@@ -223,9 +221,9 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
 }
 ```
 
-## Billing 禁用
+## 计费禁用
 
-计费/信用失败（例如“credits 不足”/“信用余额过低”）会被视为值得故障转移的情况，但它们通常不是瞬时性的。OpenClaw 不会使用短暂冷却，而是将该配置文件标记为 **disabled**（采用更长的退避时间），然后轮换到下一个配置文件/提供商。
+计费/信用失败（例如“积分不足”/“信用余额过低”）会被视为值得故障转移的情况，但它们通常不是瞬时性的。OpenClaw 不会使用短暂冷却，而是将该配置文件标记为 **disabled**（采用更长的退避时间），然后轮换到下一个配置文件/提供商。
 
 <Note>
 并非所有看起来像计费问题的响应都是 `402`，也并非所有 HTTP `402` 都会进入这里。即使提供商返回的是 `401` 或 `403`，OpenClaw 也会将明确的计费文本保留在计费通道中，但提供商特定的匹配器仍然只作用于其所属的提供商（例如 OpenRouter `403 Key limit exceeded`）。
@@ -256,7 +254,7 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
 
 提供商繁忙信号，例如 `ModelNotReadyException`，会落入过载桶，并遵循与速率限制相同的“轮换一次后再回退”策略（参见上面的默认表）。
 
-如果整个候选链只因过载失败而耗尽，回复运行器会在同一轮次中最多重试该链 10 次。只有在工具执行或助手输出开始之前才允许整轮重试，以避免在过载出现在可观察工作之后时产生重复的修改或消息。退避从 2.5 秒开始，并指数翻倍，最高封顶 30 秒。一旦该轮次已经等待了 30 秒，OpenClaw 会发送一条一次性的临时状态通知：`The AI service is temporarily overloaded. I’m still retrying; this may take a few minutes.` 重试以及任何回退胜出项都只对当前轮次生效；普通的瞬时服务器错误仍保留其单次重试策略。
+如果整个候选链只因过载失败而耗尽，回复运行器会在同一轮次中最多重试该链 10 次。只有在工具执行或助手输出开始之前才允许整轮重试，以避免在过载出现在可观察工作之后时产生重复的修改或消息。退避从 2.5 秒开始，并指数翻倍，最高封顶 30 秒。一旦该轮次已经等待了 30 秒，OpenClaw 会发送一条一次性的临时状态通知：`AI 服务暂时过载。我仍在重试；这可能需要几分钟。` 重试以及任何回退胜出项都只对当前轮次生效；普通的瞬时服务器错误仍保留其单次重试策略。
 
 当一次运行从已配置的默认主项、cron 作业主项、带有显式回退的代理主项，或自动选择的回退覆盖开始时，OpenClaw 可以沿着匹配的已配置回退链向下遍历。没有显式回退的代理主项以及显式的用户选择（例如 `/model ollama/qwen3.5:27b`、模型选择器、`sessions.patch`，或一次性的 CLI 提供方/模型覆盖）是严格的：如果该提供方/模型不可达，或者在生成回复之前失败，OpenClaw 会报告失败，而不是从无关的回退中回答。
 
@@ -331,23 +329,23 @@ OpenClaw 会根据当前请求的 `provider/model` 以及已配置的回退构�
 
 活动运行会直接携带其选定的候选。实时协调仅在存在显式待处理的用户切换时才改变该候选，因此不需要临时回退覆盖或回滚。
 
-## Observability and Failure Summary
+## 可观测性与失败摘要
 
-`runWithModelFallback(...)` logs detailed information for each attempt, and this information is surfaced in logs and user-facing cooldown messages:
+`runWithModelFallback(...)` 会记录每次尝试的详细信息，这些信息会显示在日志和面向用户的冷却提示中：
 
-- The provider/model being attempted
-- The reason (`rate_limit`, `overloaded`, `billing`, `auth`, `model_not_found`, and similar fallback reasons)
-- Optional status/code
-- A human-readable error summary
+- 正在尝试的提供商/模型
+- 原因（`rate_limit`、`overloaded`、`billing`、`auth`、`model_not_found` 以及类似的回退原因）
+- 可选的状态码/代码
+- 人类可读的错误摘要
 
-The structured `model_fallback_decision` log also includes flattened `fallbackStep*` fields when candidates fail, are skipped, or when a later fallback succeeds. These fields explicitly record the transition that was attempted (`fallbackStepFromModel`, `fallbackStepToModel`, `fallbackStepFromFailureReason`, `fallbackStepFromFailureDetail`, `fallbackStepFinalOutcome`), so even if the final fallback also fails, the logs and diagnostic exporter can still reconstruct the primary failure information.
+结构化的 `model_fallback_decision` 日志还会在候选项失败、被跳过或后续回退成功时包含扁平化的 `fallbackStep*` 字段。这些字段会明确记录尝试过的转换（`fallbackStepFromModel`、`fallbackStepToModel`、`fallbackStepFromFailureReason`、`fallbackStepFromFailureDetail`、`fallbackStepFinalOutcome`），因此即使最终回退也失败，日志和诊断导出器仍然可以重建主要失败信息。
 
-When all candidates fail, OpenClaw throws `FallbackSummaryError`. The outer reply runner can use it to build a more specific message, such as “all models are currently rate-limited”, and include the earliest cooldown expiration time when known.
+当所有候选项都失败时，OpenClaw 会抛出 `FallbackSummaryError`。外层回复运行器可以利用它构建更具体的消息，例如“所有模型当前都受到速率限制”，并在已知的情况下包含最早的冷却到期时间。
 
-This cooldown summary is model-aware:
+此冷却摘要会感知模型：
 
-- Model-scoped rate limits that are unrelated to the attempted provider/model chain are ignored
-- If the remaining block is a matching model-scoped rate limit, OpenClaw reports the last matching expiration time that is still blocking that model
+- 与尝试中的提供商/模型链无关的模型范围速率限制会被忽略
+- 如果剩余阻止因素是匹配的模型范围速率限制，OpenClaw 会报告仍在阻止该模型的最后一个匹配到期时间
 
 ## 相关配置
 

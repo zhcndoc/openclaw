@@ -41,7 +41,23 @@ Control UI 以使用 [Talk 模式](/nodes/talk)。
 需要 FUSE 2（`sudo apt install libfuse2`，在 Ubuntu 24.04+ 上则为 `libfuse2t64`）；
 如果没有它，请使用 `APPIMAGE_EXTRACT_AND_RUN=1` 运行 AppImage。
 
-你也可以从源代码检出中构建相同的安装包：
+### 媒体编解码器
+
+伴侣使用 GStreamer 插件进行音频和视频播放。
+WebM/VP9、Opus、Vorbis 和 WAV 通常通过 `plugins-good` 正常工作。
+H.264/MP4、AAC 和 MP3 需要 `libav` 和/或 `plugins-bad` 软件包。
+`.deb` 使用主机上的插件，并将这三个软件包全部声明为
+依赖项。AppImage 会捆绑 GStreamer 媒体框架以及其 Ubuntu 构建主机上
+可用的插件。对于源码构建，或重新构建任一 Linux 软件包时，请显式安装这些软件包：
+
+```bash
+sudo apt update && sudo apt install gstreamer1.0-libav gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+```
+
+因此，发布的 AppImage 携带的是发布
+工作流所安装的编解码器，而不是依赖用户系统中的 GStreamer 软件包。
+
+你也可以从源码检出目录构建相同的软件包：
 
 ```bash
 cd apps/linux/src-tauri
@@ -52,7 +68,7 @@ pnpm dlx @tauri-apps/cli@2.11.4 build --bundles deb,appimage
 适用于修改应用的拉取请求以及手动运行。有关 Linux 构建依赖和开发命令，请参阅仓库中的
 `apps/linux/README.md`。
 
-### Quick Chat
+### 快速聊天
 
 使用 `Ctrl+Shift+Space` 或托盘项 **Quick Chat** 打开 Quick Chat。agent
 徽章会显示已配置的头像、表情符号或字母组合；选择它可切换 agent。
@@ -236,4 +252,4 @@ systemd 单元的 `OOMPolicy=continue` 可在临时子进程被 OOM killer 选�
 - [Linux 服务器](/vps)
 - [Raspberry Pi](/platforms/raspberry-pi)
 - [网关运行手册](/gateway)
-- [网关配置](/gateway/configuration)
+- [网关配置](/gateway/configuration)。

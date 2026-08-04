@@ -1,14 +1,14 @@
 ---
-summary: "Twilio SMS 渠道设置、访问控制和 webhook 配置"
+summary: "Twilio SMS/MMS 设置、访问控制、webhook 和投递状态"
 read_when:
-  - 你想通过 Twilio 将 OpenClaw 连接到 SMS
-  - 你需要设置 SMS webhook 或 allowlist
+  - 想要通过 Twilio 将 OpenClaw 连接到 SMS 或 MMS
+  - 需要设置 SMS/MMS webhook 或允许列表
 title: "SMS"
 ---
 
-OpenClaw 通过 Twilio 电话号码或 Messaging Service 接收和发送 SMS。Gateway 默认会注册一个入站 webhook 路由（默认 `/webhooks/sms`），验证 Twilio 请求签名，并通过 Twilio 的 Messages API 发送回复。
+OpenClaw 通过 Twilio 电话号码或消息服务接收和发送 SMS/MMS。Gateway 注册一个 webhook 路由（默认为 `/webhooks/sms`），默认情况下验证 Twilio 请求签名，通过 Twilio 的 Messages API 发送回复，并记录出站消息的投递回调。
 
-状态：官方插件，需单独安装。仅支持文本：不支持 MMS/媒体，仅支持直接消息。
+状态：官方插件，需单独安装。仅支持 SMS 文本和 MMS 附件，以及直接消息。
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
@@ -26,13 +26,13 @@ OpenClaw 通过 Twilio 电话号码或 Messaging Service 接收和发送 SMS。G
 
 你需要：
 
-- 已通过 `openclaw plugins install @openclaw/sms` 安装官方 SMS 插件。
-- 一个 Twilio 账号，以及一个支持 SMS 的电话号码，或者一个 Twilio Messaging Service。
+- 安装官方 SMS 插件：`openclaw plugins install @openclaw/sms`。
+- 一个拥有支持 SMS 的电话号码或 Twilio Messaging Service 的 Twilio 账户。MMS 需要支持 MMS 的发送方；原生 MMS 的送达还取决于目标国家/地区和运营商。
 - Twilio Account SID 和 Auth Token。
-- 一个可访问你的 OpenClaw Gateway 的公开 HTTPS URL。
-- 一个发送方策略选择：`pairing`（默认）用于私人使用，`allowlist` 用于预先批准的电话号码，或 `open` 仅用于有意公开的 SMS 访问。
+- 一个能够访问 OpenClaw Gateway 的公共 HTTPS URL。
+- 选择发送方策略：私用时使用 `pairing`（默认），为预先批准的电话号码使用 `allowlist`，或仅在有意公开提供 SMS 访问时使用 `open`。
 
-如果一个 Twilio 号码同时具备这两种能力，它既可以用于 SMS，也可以用于 [Voice Call](/plugins/voice-call)。SMS webhook 和 Voice webhook 在 Twilio 中分别配置，并使用不同的 Gateway 路径；本页仅涵盖 SMS webhook。
+如果一个 Twilio 号码同时具备这两种能力，它既可以用于 SMS，也可以用于 [语音通话](/plugins/voice-call)。SMS webhook 和语音 webhook 在 Twilio 中分别配置，并使用不同的 Gateway 路径；本页仅涵盖 SMS webhook。
 
 ## 快速设置
 
@@ -42,8 +42,8 @@ OpenClaw 通过 Twilio 电话号码或 Messaging Service 接收和发送 SMS。G
     openclaw plugins install @openclaw/sms
     ```
   </Step>
-  <Step title="创建或选择一个 Twilio 发送方">
-    在 Twilio 中，打开 **Phone Numbers > Manage > Active numbers**，并选择一个支持 SMS 的号码。保存以下信息：
+  <Step title="创建或选择 Twilio 发送方">
+    在 Twilio 中，打开 **Phone Numbers > Manage > Active numbers**，然后选择一个支持 SMS 的号码。要发送附件，请选择一个同时支持 MMS 的号码。保存：
 
     - Account SID，例如 `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
     - Auth Token
@@ -92,8 +92,8 @@ https://gateway.example.com/webhooks/sms
 
   </Step>
 
-  <Step title="暴露准确的 SMS webhook 路径">
-    你的公网 URL 必须将 SMS 路径路由到 Gateway 进程（默认端口 `18789`）。如果你使用 Tailscale Funnel 进行本地测试，请显式暴露 `/webhooks/sms`：
+  <Step title="公开完整的 SMS webhook 路径">
+    你的公共 URL 必须将 SMS 路径路由到 Gateway 进程（默认端口为 `18789`）。同一路径用于处理传入的 Twilio webhook，以及 OpenClaw 发送 MMS 时使用的短期令牌化附件。如果你使用 Tailscale Funnel 进行本地测试，请显式公开 `/webhooks/sms`：
 
 ```bash
 tailscale funnel --bg --set-path /webhooks/sms http://127.0.0.1:<gateway-port>/webhooks/sms
@@ -126,21 +126,21 @@ openclaw pairing approve sms <CODE>
 
 所有键都位于 `channels.sms` 下（每个账号则位于 `channels.sms.accounts.<id>` 下）：
 
-| 键                                      | 默认值          | 目的                                                                |
-| --------------------------------------- | --------------- | ------------------------------------------------------------------- |
-| `enabled`                               | `true`          | 启用或禁用该渠道/账号。                                               |
-| `accountSid`                            | —               | Twilio 账号 SID（`AC...`）。                                         |
-| `authToken`                             | —               | Twilio Auth Token；明文字符串或 SecretRef。                          |
-| `fromNumber`                            | —               | E.164 发件人号码。                                                   |
-| `messagingServiceSid`                   | —               | 当未解析到 `fromNumber` 时使用的 Messaging Service SID（`MG...`）。 |
-| `defaultTo`                             | —               | 发送流程未指定显式目标时的默认目的地。                                 |
-| `webhookPath`                           | `/webhooks/sms` | 网关用于接收 Twilio 入站 webhook 的 HTTP 路径。                       |
-| `publicWebhookUrl`                      | —               | 在 Twilio 中配置的公网 URL；签名验证所必需。                          |
-| `dangerouslyDisableSignatureValidation` | `false`         | 跳过 `X-Twilio-Signature` 校验；仅用于本地隧道测试。                   |
-| `dmPolicy`                              | `"pairing"`     | `pairing`、`allowlist`、`open` 或 `disabled`。                        |
-| `allowFrom`                             | `[]`            | 允许的 E.164 发送方号码；若 `dmPolicy: "open"`，也可使用 `"*"`。     |
-| `textChunkLimit`                        | `1500`          | 每个外发 SMS 分片允许的最大字符数。                                    |
-| `accounts`, `defaultAccount`            | —               | 多账号映射和默认账号 id。                                              |
+| Key                                     | Default         | Purpose                                                                                |
+| --------------------------------------- | --------------- | -------------------------------------------------------------------------------------- |
+| `enabled`                               | `true`          | 启用或禁用渠道/账号。                                                                     |
+| `accountSid`                            | —               | Twilio 账号 SID（`AC...`）。                                                            |
+| `authToken`                             | —               | Twilio Auth Token；纯文本字符串或 SecretRef。                                           |
+| `fromNumber`                            | —               | E.164 格式的发送方号码。                                                                |
+| `messagingServiceSid`                   | —               | Messaging Service SID（`MG...`），在未解析出 `fromNumber` 时使用。                      |
+| `defaultTo`                             | —               | 发送流程未指定明确目标时使用的默认目的地。                                                |
+| `webhookPath`                           | `/webhooks/sms` | 用于接收 Twilio webhook 的 Gateway HTTP 路径。                                           |
+| `publicWebhookUrl`                      | —               | 公共 Twilio webhook URL；签名验证和外发 MMS 托管所必需。                                 |
+| `dangerouslyDisableSignatureValidation` | `false`         | 跳过 `X-Twilio-Signature` 检查；仅限本地隧道测试使用。                                   |
+| `dmPolicy`                              | `"pairing"`     | `pairing`、`allowlist`、`open` 或 `disabled`。                                          |
+| `allowFrom`                             | `[]`            | E.164 格式的允许发送方号码，或在 `dmPolicy: "open"` 时使用 `"*"`。                     |
+| `textChunkLimit`                        | `1500`          | 每个外发 SMS 分块的最大字符数。                                                         |
+| `accounts`, `defaultAccount`            | —               | 多账号映射和默认账号 ID。                                                               |
 
 ### 配置文件
 
@@ -197,7 +197,7 @@ export SMS_PUBLIC_WEBHOOK_URL="https://gateway.example.com/webhooks/sms"
 }
 ```
 
-### SecretRef auth token
+### SecretRef 身份验证令牌
 
 `authToken` 可以是 SecretRef（`source: "env" | "file" | "exec"`）。当 Gateway 应该从 OpenClaw secrets runtime 解析 Twilio Auth Token，而不是存储明文配置时，请使用此方式：
 
@@ -218,7 +218,7 @@ export SMS_PUBLIC_WEBHOOK_URL="https://gateway.example.com/webhooks/sms"
 
 引用的环境变量或 secret provider 必须对 Gateway 运行时可见。修改主机环境变量后，请重启受管理的 Gateway 进程。
 
-### Messaging Service sender
+### Messaging Service 发送方
 
 当 Twilio 应通过 Messaging Service 选择发送方时，请使用 `messagingServiceSid` 代替 `fromNumber`：
 
@@ -305,12 +305,38 @@ CLI 需要显式的 `--target`。`defaultTo` 适用于自动化和代理发起�
 
 SMS 输出为纯文本。OpenClaw 会去除 markdown、展开围栏代码块、将链接重写为 `label (url)`，并在通过 Twilio 发送前将长回复拆分为最多 `textChunkLimit` 个字符的片段（默认 1500）。
 
+### 发送 MMS
+
+使用常规的结构化媒体字段或 CLI 的 `--media` 选项：
+
+```bash
+openclaw message send \
+  --channel sms \
+  --target sms:+15551234567 \
+  --message "photo" \
+  --media ./photo.jpg
+```
+
+OpenClaw 会通过共享的出站媒体策略加载附件，将其临时存储在插件专用的 SQLite 状态中，并在配置的 `publicWebhookUrl` 路径上为 Twilio 提供带令牌的 HTTPS URL。支持仅发送媒体。
+
+生成的媒体 URL 是一种承载者能力，有效期为 10 分钟。请将其完整查询字符串视为机密：配置反向代理和访问日志以省略查询字符串，或编辑每个查询值。OpenClaw Gateway 路由诊断仅记录路径名，但无法控制上游代理日志。
+
+OpenClaw 的出站投递会附加一个媒体项。OpenClaw 将 JPEG、JPG、PNG 和 GIF 附件限制为 5,000,000 字节；其他受支持的媒体类型限制为 500,000 字节。`application/vcard` 附件必须仅包含媒体；Twilio 不接受带有标题的此类附件。目标运营商可能会实施更小的限制，或拒绝不受支持的格式。Twilio 必须能够在没有 HTTP 身份验证的情况下获取生成的 URL，因此 `publicWebhookUrl` 不能包含嵌入式用户信息；基于查询的反向代理令牌会被保留。
+
+对于传入的 MMS，OpenClaw 最多处理 10 个附件，总下载量最多为 5 MiB。任何额外或不可用的附件都会生成一条可见的媒体不可用通知，而不是丢弃已签名的消息或静默地发送空回合。仅在发送者授权后才会进行下载，同时使用 Twilio 身份验证和对 `api.twilio.com` 主机的限制。
+
+### 投递状态
+
+每次成功的出站发送后，如果响应中包含 Twilio API 状态，OpenClaw 都会存储初始的 Twilio API 状态。当 `publicWebhookUrl` 有效时，每条出站消息还会向 Twilio 提供一个派生的 `StatusCallback` URL，该 URL 会保留其基础 URL 和连接覆盖设置，同时添加所需的投递回调重试设置。无效或过长的派生 URL 将被省略。
+
+后续的投递回调会更新同一条插件专用的 SQLite 记录。语义重试会被去重，较旧的状态转换无法使终态回退，冲突的终态观察结果会报告为 `conflicted`，而不是选择一个错误的胜者。记录包含消息 SID、状态/错误元数据和时间戳，但不包含消息正文或电话号码地址。每条记录会在最近一次观察结果后的最多 30 天内保留，同时受插件范围内 5,000 条消息的上限和最早记录淘汰机制约束。
+
 ## 验证设置
 
 Gateway 启动后：
 
 1. 确认 Gateway 日志显示 SMS webhook 路由。
-2. 运行一个 Twilio 侧探测（检查已配置的 Twilio webhook URL/方法以及最近的入站错误）：
+2. 运行 Twilio 端探测（检查已配置的 Twilio webhook URL/方法、最近的入站错误以及最近存储的出站传送状态）：
 
 ```bash
 openclaw channels capabilities --channel sms
@@ -347,16 +373,21 @@ imsg send --to "+15551234567" --service sms --text "reply exactly SMS pong" --js
 
 Webhook 路由还会独立于签名验证强制执行以下规则：
 
-- 仅允许 `POST`。
-- 每个 SMS account、webhook route 和解析后的客户端地址，每分钟 300 个请求的失败请求预算。所有请求都会计入此预算，但只有在请求体解析失败、Twilio 验证失败或 AccountSid 匹配失败之后，才会应用 HTTP 429。
-- 在上述检查通过后，每个 SMS account、webhook route 和解析后的客户端地址，每分钟允许 30 个可分发的已接受回调（超过则返回 HTTP 429）。如果签名验证被禁用，那么这个 30/min 限制就是未认证的分发上限。
-- 客户端地址通过共享的 Gateway 可信代理规则解析。如果 `gateway.trustedProxies` 包含转发 Twilio 回调的反向代理，OpenClaw 会以转发后的客户端地址作为这些限制的键；否则会回退为直接的套接字地址。
-- 负载中的 `AccountSid` 必须与配置的 `accountSid` 匹配（否则返回 HTTP 403）。
-- 重放的 `MessageSid` 值会被去重 10 分钟。
-- 每个 SMS account 的重放缓存最多保留 10,000 个活跃消息 SID。当前端口槽位全部处于活跃状态时，该 account 的新 webhook 会以 HTTP 429 失败并附带 `Retry-After` 头，直到最早的槽位过期。
-- 超过 32 KB 的请求体将被拒绝。
+- 仅限 `POST`。
+- 每个 SMS 账户、Webhook 路由和解析出的客户端地址每分钟允许失败请求 300 个。所有请求都会计入此预算，但仅当正文解析或 Twilio 签名验证失败后才会返回 HTTP 429。
+- 已签名的投递回调会在入站发送者配额检查之前完成分类，并在 HTTP 200 之前提交到有界、插件作用域的 SQLite 状态中。它们不会消耗入站分发配额：这些配额用于保护原始入站消息接收和下游代理分发。投递持久化另有一个针对每个 SMS 账户路由、每分钟 3,000 个回调的安全熔断器；超过该限制时会返回 HTTP 503，且不会写入上述持久化接受标记。这是故障关闭式过载保护，而非无损背压。禁用签名验证时，投递回调在持久化前首先受更严格的、按解析出的客户端地址计算的每分钟 30 个请求上限约束。
+- 在正文解析和签名验证通过后，每个 SMS 账户、Webhook 路由和已验证发送者每分钟最多接受 30 个可分发回调（超过后返回 HTTP 429）。发送者键是签名所覆盖的 `From` 值的规范化形式，因此等价的 SMS/RCS 地址形式共享一个预算；某个发送者的洪泛流量只会耗尽其自身预算；位于 Twilio 共享出口地址之后的其他发送者的回调仍可进行分发。无效或缺失的发送者值共享一个独立的空发送者预算。
+- 每个 SMS 账户和 Webhook 路由每分钟最多接受 300 个经过验证的回调。此限制约束了来自大量不同已签名发送者的持久化入口压力，同时不会重新造成共享出口地址之间的交叉限流。禁用签名验证时，`From` 不具备任何真实性保证；此时适用更严格的、按解析出的客户端地址计算的每分钟 30 个请求的分发上限，而不是已验证发送者和聚合策略。
+- 客户端地址通过共享 Gateway 的受信任代理规则解析。如果 `gateway.trustedProxies` 包含转发 Twilio 回调的反向代理，OpenClaw 会使用转发的客户端地址作为基于地址的限流键；否则会回退到直接套接字地址。
+- 入站负载必须携带非空的 `AccountSid`，且必须与配置的 `accountSid` 完全匹配。直接号码回调必须指向配置的 `fromNumber`；消息服务回调必须携带配置的 `MessagingServiceSid`。原始回调会先提交到持久化入口队列并得到确认；随后，身份不匹配会在排空过程中被标记为永久性无效负载失败，且永远不会被分发或允许下载媒体。
+- 缺少 `AccountSid` 或 `AccountSid` 不同的投递回调会得到确认、被记录日志，并被有意不予存储。
+- 持久化入口队列会对重放的 `MessageSid` 值进行去重。已完成消息的墓碑记录保留 24 小时（每个账户最多 20,000 条）；永久失败的墓碑记录保留 30 天（最多 1,000 条）。
+- 投递观测使用不含个人身份信息的语义指纹，该指纹由来源、消息 SID、规范化状态、错误代码和运营商完成日期组成。同一出站消息的多个状态仍会彼此区分。记录会在最近一次观测后的 30 天过期，但 5,000 条消息的上限可能会使较早的记录提前被逐出。
+- 超过 32 KB 的请求正文会被拒绝。
 
-Twilio 默认不会重试 HTTP 429，也没有说明对 `Retry-After` 的支持。`#rp=4xx` 和 `#rp=all` connection override 会启用 4xx 重试，但 Twilio 将完整的重试事务上限限制为 15 秒，因此重试仍可能在重放缓存槽位过期之前结束。当需要另一个处理程序接收失败投递时，请配置 fallback URL；应将 429 视为 fail-closed 拒绝，而不是可靠的背压。
+OpenClaw 会在生成的投递 `StatusCallback` URL 中添加 `5xx` 重试策略和重试次数，以便 Twilio 重试失败的 SQLite 提交或过载的投递状态路由。Twilio 默认不会重试 HTTP 429。`#rp=4xx` 和 `#rp=all` 连接覆盖选项可启用对 4xx 的重试，但 Twilio 会将完整的重试事务限制在 15 秒内。429 或投递状态 503 都不能保证之后能够恢复；当最终状态的完整性很重要时，请使用对账。遗漏的中间状态无法重建。
+
+对于对完整性敏感的工作流，请持久化 Message SID，并通过轮询 Twilio 的 Message 资源来对账过期的非终态记录。Twilio 的[投递日志记录指南](https://www.twilio.com/docs/messaging/guides/outbound-message-logging)建议：如果消息在 12 小时内尚未达到 `delivered` 或 `undelivered` 状态，则进行轮询，因为状态回调可能尚未到达。SMS 备用 URL 不能替代此机制：它仅用于处理获取或执行[入站 SMS TwiML webhook](https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource)时发生的失败。
 
 仅用于本地隧道测试时，你可以设置：
 
@@ -405,7 +436,7 @@ Twilio 默认不会重试 HTTP 429，也没有说明对 `Retry-After` 的支持�
 
 检查 `publicWebhookUrl` 是否与 Twilio 中配置的 URL 完全一致，包括协议、主机、路径和查询字符串。Twilio 会对公开 URL 字符串进行签名，因此代理重写和备用主机名都可能破坏签名验证。
 
-A 403 with `Invalid account` means the inbound payload's `AccountSid` does not match the configured `accountSid`; check that the webhook points at the account that owns the number.
+如果 Twilio 收到持久确认，但没有出现配对请求，请检查 Gateway 日志中是否存在永久性无效负载故障。确认回调中的 `AccountSid` 和 `To` 与配置的账户和 `fromNumber` 匹配，或者确认其 `MessagingServiceSid` 与配置的 Messaging Service 匹配。
 
 ### 未出现配对请求
 
@@ -426,4 +457,4 @@ A 403 with `Invalid account` means the inbound payload's `AccountSid` does not m
 
 ### 消息已到达，但代理没有回复
 
-检查 `dmPolicy` 和 `allowFrom`。在默认的 `pairing` 策略下，发送者必须先获得批准，随后才会处理正常的 agent 回合。
+检查 `dmPolicy` 和 `allowFrom`。在默认的 `pairing` 策略下，发送者必须先获得批准，随后才会处理正常的代理回合。

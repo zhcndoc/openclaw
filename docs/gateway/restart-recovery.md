@@ -7,12 +7,7 @@ read_when:
 title: "重启恢复"
 ---
 
-Restarting the gateway does not lose agent state. Conversations, transcripts,
-scheduled jobs, background task records, and queued outbound messages all live
-on disk, and work that was interrupted mid-turn is detected and resumed
-automatically after the gateway comes back up. Recovery is always on and
-normally needs no manual intervention. Repeatedly failing recovery is bounded
-and may quarantine one session until you inspect or replace it.
+重启网关不会丢失代理状态。对话、记录、计划任务、后台任务记录以及排队的出站消息都会保存在磁盘上，而在某一轮处理中被中断的工作会在网关重新启动后被检测到并自动恢复。恢复功能始终开启，通常无需手动干预。反复失败的恢复操作会受到限制，并且可能会将某个会话隔离，直到你检查或替换它。
 
 本页介绍了重启后哪些内容会保留、如何检测中断的工作，以及自动恢复看起来是什么样子。
 
@@ -20,13 +15,13 @@ and may quarantine one session until you inspect or replace it.
 
 | 状态                         | 存储                                        | 重启后的行为                                                      |
 | ----------------------------- | ------------------------------------------- | ----------------------------------------------------------------------- |
-| Conversation history          | Per-agent SQLite database                   | Untouched; sessions continue from the stored transcript                 |
-| Interrupted main-session turn | Per-agent SQLite session row and transcript | Automatically resumed or reconciled a few seconds after startup         |
-| Subagent runs                 | SQLite (shared state database)              | Registry restored on boot; interrupted runs resumed                     |
-| Background tasks              | SQLite (shared state database)              | Reconciled on boot; orphaned runs recovered or marked lost              |
-| Queued outbound deliveries    | SQLite delivery queue                       | Drained after restart; undelivered replies are retried                  |
-| Scheduled (cron) jobs         | SQLite cron store                           | Schedules persist; the scheduler re-arms on boot                        |
-| Restart continuation          | SQLite restart sentinel                     | One-shot follow-up dispatched to the session that asked for the restart |
+| 会话历史                     | 每个代理的 SQLite 数据库                   | 未受影响；会话从已存储的记录继续                                     |
+| 中断的主会话轮次             | 每个代理的 SQLite 会话记录和会话记录       | 启动后几秒内自动恢复或协调                                           |
+| 子代理运行                   | SQLite（共享状态数据库）                   | 启动时恢复注册信息；恢复中断的运行                                   |
+| 后台任务                     | SQLite（共享状态数据库）                   | 启动时进行协调；恢复孤立的运行或将其标记为丢失                       |
+| 排队的出站投递               | SQLite 投递队列                            | 重启后清空队列；未投递的回复会重试                                   |
+| 计划任务（cron）             | SQLite cron 存储                           | 计划持久化；调度器在启动时重新启用                                   |
+| 重启后续操作                 | SQLite 重启哨兵                            | 向请求重启的会话发送一次性后续操作                                   |
 
 ## 优雅重启会先进行排空
 
@@ -38,98 +33,32 @@ and may quarantine one session until you inspect or replace it.
 
 三个相互补充的机制会标记那些回合未能完成的会话：
 
-- **At turn admission:** for an ordinary text turn on an existing main session,
-  the gateway appends the user message, marks the session running, and records
-  its recovery delivery claim in one SQLite transaction before model or
-  `before_agent_reply` hook execution. Control UI does this before returning the
-  `started` acknowledgement; channel dispatch does it when the prepared turn
-  adopts the agent run.
-  Commands, attachments, per-turn overrides, pending deliveries, prior abort
-  hints, plugin-owned sessions, and turns with execution hooks keep their
-  specialized admission paths.
-  If a `before_agent_reply` hook is installed, admission also records its phase.
-  Recovery never replays a hook interrupted mid-call. Once an unhandled hook
-  finishes, its checkpoint records that result, but recovery still fails closed
-  while that hook remains active: a checkpoint cannot prove that the same
-  plugin code and configuration loaded after the restart. Handled text and
-  silent results are checkpointed separately for deterministic settlement.
-  Durable recovery claims written by older versions have no source-ownership
-  marker, so they receive the same fail-closed hook check during an upgrade.
-- **At shutdown:** during the restart drain, every session with an active run
-  is stamped with a recovery marker in the session store before the run is
-  aborted.
-- **At startup:** the gateway scans session stores for sessions that still
-  claim to be running but have no live owner in the new process. This catches
-  hard crashes and kills where no shutdown code ran. Stale transcript lock
-  files are cleaned up at the same time.
+- **在回合接纳时：**对于现有主会话上的普通文本回合，网关会在模型或 `before_agent_reply` 钩子执行前，在同一个 SQLite 事务中追加用户消息、将会话标记为运行中，并记录其恢复交付声明。控制界面会在返回 `started` 确认之前完成此操作；通道分发则会在准备好的回合采用代理运行时完成此操作。
+  命令、附件、每回合覆盖设置、待处理交付、先前的中止提示、插件拥有的会话，以及带有执行钩子的回合，都沿用其专用的接纳路径。
+  如果安装了 `before_agent_reply` 钩子，接纳过程还会记录其阶段。
+  恢复机制绝不会重新执行在调用过程中被中断的钩子。未处理的钩子完成后，其检查点会记录该结果，但只要该钩子仍处于活动状态，恢复过程仍会安全失败：检查点无法证明重启后加载的是相同的插件代码和配置。`before_agent_reply` 钩子可以声明由主机强制执行的 `eligibleTriggers` 范围；仅限于计划任务 `heartbeat` 或 `cron` 回合的钩子，不会对恢复的用户回合生效，因此不会阻止该回合。未限定范围或无效的注册在此安全检查中仍保持活动状态。
+  已处理的文本结果和静默结果会分别创建检查点，以便进行确定性结算。
+  旧版本写入的持久化恢复声明没有来源所有权标记，因此在升级期间也会接受相同的钩子安全失败检查。
+- **在关闭时：**在重启排空期间，每个具有活动运行的会话都会在运行被中止前，于会话存储中写入恢复标记。
+- **在启动时：**网关会扫描会话存储，查找那些仍声称处于运行中、但在新进程中没有活动所有者的会话。这可以捕获没有执行关闭代码的硬崩溃和强制终止。过时的对话记录锁文件也会同时被清理。
 
 ## 自动恢复
 
-A few seconds after startup, the gateway re-dispatches each marked session
-with a synthetic system message telling the agent its previous turn was
-interrupted by a restart and to continue from the existing transcript. If a
-final reply had already been produced but not delivered, its text is included
-so the agent can deliver it instead of redoing the work.
+启动几秒后，网关会为每个已标记的会话重新派发一条合成的系统消息，告知代理其上一轮因重启而中断，并要求其从现有记录中继续。如果最终回复已经生成但尚未送达，则会包含其文本，以便代理直接发送，而不是重新执行工作。
 
-Startup reconciliation retries transient failures up to three times with
-exponential backoff. Separately, each interrupted main-session cycle has a
-durable budget of three charged automatic dispatch attempts, retained across
-gateway restarts. OpenClaw charges an attempt before dispatch, refunds it when
-the gateway explicitly rejects the request before acceptance, and retains the
-charge when a post-dispatch result is uncertain to avoid replaying work.
-Foreground work that already owns the session keeps automatic recovery out
-until that work settles.
+启动协调会使用指数退避，最多重试三次临时性失败。除此之外，每个中断的主会话周期都有三个已计费自动派发尝试的持久化预算，并会跨越网关重启保留。OpenClaw 会在派发前扣除一次尝试；如果网关在接受请求前明确拒绝，则退还该次尝试；如果派发后的结果不确定，则保留该次扣费，以避免重复执行工作。已经占有会话的前台工作会让自动恢复暂停，直到该工作结束。
 
-After the durable budget is exhausted, the session is tombstoned instead of
-looping forever. Inspect the failed session and use `/new` or `/reset` to start a
-replacement. `openclaw doctor --fix` can repair a stale aborted flag that
-conflicts with a tombstone, but it does not re-enable that recovery cycle.
+持久化预算耗尽后，会话会被标记为墓碑，而不是无限循环。检查失败的会话，并使用 `/new` 或 `/reset` 启动替代会话。`openclaw doctor --fix` 可以修复与墓碑冲突的过时中止标志，但不会重新启用该恢复周期。
 
-Every retry reuses one durable dispatch identifier, so an ambiguous connection
-failure cannot start the same recovery twice. Completed and unresumable Control
-UI turns also retain bounded durable idempotency tombstones, allowing a
-reconnecting outbox to retire them without re-executing the request.
+每次重试都会复用同一个持久化派发标识符，因此连接失败不明确时不会启动两次相同的恢复。已完成且无法恢复的 Control UI 回合也会保留有界的持久化幂等墓碑，使重新连接的待发送队列可以将其回收，而无需重新执行请求。
 
-Message-tool-only replies use a second durable correlation. Before a terminal
-same-conversation send reaches the channel, the gateway records an unresolved
-delivery intent on the exact session and source turn. A confirmed provider
-success resolves it to a durable delivered receipt; a confirmed failure clears
-it. Recovery completes a delivered receipt without rerunning tools. If a crash
-leaves the provider outcome unknown, recovery fails closed instead of replaying
-an external effect.
+仅使用消息工具的回复会使用第二个持久化关联。在终端的同一会话发送到达频道之前，网关会在确切的会话和源回合上记录一个未解决的送达意图。提供商确认成功后，会将其解析为持久化的已送达回执；确认失败后则会清除它。恢复过程会完成已送达回执，而不会重新运行工具。如果崩溃导致提供商结果未知，恢复会采取失败关闭策略，而不是重放外部影响。
 
-The delivered reply is also mirrored into the transcript with its source
-message ID. Terminal mirrors use a distinct receipt key, so a progress send with
-the same provider idempotency key cannot mask the terminal marker. Progress
-sends and receipts from older turns cannot complete the current turn. Only
-durable channel-ingress claims can restore message-action authority. A resumed
-run keeps the original source-delivery mode and source correlation, including
-requester identity and any same-channel/thread restriction, so the same receipt
-remains authoritative even if another restart happens during recovery. A
-message-tool-only turn without reconstructable channel authority is failed
-closed and receives the one-time resend notice.
+已送达的回复也会连同其源消息 ID 一起镜像到记录中。终端镜像使用独立的回执键，因此具有相同提供商幂等键的进度发送无法掩盖终端标记。较早回合的进度发送和回执无法完成当前回合。只有持久化的频道入口声明才能恢复消息操作权限。恢复运行会保留原始的源送达模式和源关联，包括请求者身份以及任何同频道/线程限制，因此即使恢复期间再次发生重启，相同的回执仍然具有权威性。无法重建频道权限的仅消息工具回合会采取失败关闭策略，并收到一次性的重新发送通知。
 
-Before resuming, the gateway checks that the transcript tail is safe to
-continue from. An aborted turn is the interruption itself, so it resumes on a
-best-effort basis whatever abort detail the provider or worker recorded with it:
-partial streamed text stays in the transcript and the continuation picks up from
-the message beneath it, while a tool call left dangling is dropped from the next
-provider payload and restricted to restart-safe tools unless it is audited
-replay-safe. If the tail is genuinely unsafe (for example a provider failure, or
-a turn that ended on a stale pending approval), the session is not blindly
-re-run; the agent instead posts a short notice asking the user to resend the
-last request. For WebChat, that notice is written directly to the session
-history so it remains visible after reconnect.
+恢复之前，网关会检查记录尾部是否可以安全继续。中止回合本身就是中断，因此它会尽力使用提供商或工作进程为其记录的中止详情继续：部分流式文本会保留在记录中，续接会从其下方的消息开始；而遗留的悬空工具调用会从下一次提供商载荷中丢弃，并限制为可安全重启的工具，除非该调用经过审计可安全重放。如果尾部确实不安全（例如提供商失败，或回合结束时存在过时的待处理审批），则不会盲目重新运行会话；代理会发布一条简短通知，请求用户重新发送上一条请求。对于 WebChat，该通知会直接写入会话历史，因此重新连接后仍然可见。
 
-OpenClaw can also reconstruct interrupted read-only [Code Mode](/tools/code-mode)
-work. Code Mode marks these runs as restart-safe and rejects side-effecting
-catalog or namespace tool calls before they execute. If a restart lands on
-the `wait` control, the new gateway reconstructs the turn from its transcript
-and forces the reconstructed execution to remain restart-safe even if the
-model omits or clears that flag. The host filters the entire reconstructed
-turn to audited read-only core tools and explicitly replay-safe plugin tools,
-including when Code Mode is disabled after the restart. Side-effecting work
-remains guarded by the resend notice rather than risking a duplicate write.
+OpenClaw 还可以重建中断的只读 [代码模式](/tools/code-mode) 工作。代码模式会将这些运行标记为可安全重启，并在执行前拒绝会产生副作用的目录或命名空间工具调用。如果重启发生在 `wait` 控制上，新网关会根据其记录重建该回合，并强制重建后的执行保持可安全重启，即使模型遗漏或清除了该标志。主机会将整个重建回合过滤为经过审计的只读核心工具和明确可安全重放的插件工具，即使重启后代码模式已被禁用也是如此。产生副作用的工作仍会通过重新发送通知加以保护，而不会冒重复写入的风险。
 
 ### 子代理
 
@@ -146,77 +75,48 @@ remains guarded by the resend notice rather than risking a duplicate write.
 
 当代理自身触发重启时（应用配置更改、更新网关，或显式重启请求），在进程退出前会先将一个重启哨兵写入 SQLite。启动后，网关会将结果回传到发起该操作的聊天，并派发一个一次性的续接回合，让代理在相同的频道和线程中，精确地从离开的地方继续。
 
-The sentinel's typed SQLite columns are authoritative for restart handling;
-its `payload_json` value is a replay/debug shadow only. Runtime reads, writes,
-and clears SQLite state without a file fallback. During the storage cutover, a
-bounded state migration runs at startup and through Doctor to preserve a
-validated `restart-sentinel.json` left by the older process after an update.
-The migration verifies the typed row and removes the source file before normal
-restart handling continues.
+哨兵的类型化 SQLite 列是重启处理的权威来源；其 `payload_json` 值仅作为重放/调试影子。运行时会直接读取、写入并清除 SQLite 状态，不使用文件回退。在存储切换期间，启动时以及通过 Doctor 会执行有界状态迁移，以保留旧进程在更新后留下的、经过验证的 `restart-sentinel.json`。迁移会验证类型化行，并在正常的重启处理继续之前移除源文件。
 
-## Safety valves and observability
+## 安全阀与可观测性
 
-- **Crash-loop breaker:** 3 unclean boots within 5 minutes trip a breaker that
-  suppresses auto-start side services on the next boot, so a crashing gateway
-  does not amplify itself. A later boot recovers once the unclean-boot window
-  drains.
+- **崩溃循环断路器：** 在 5 分钟内发生 3 次非正常启动后，断路器会跳闸，在下一次启动时禁止自动启动旁路服务，从而避免崩溃的网关进一步放大自身问题。持续稳定运行的安全模式网关会在完整的非正常启动窗口结束后重新检查断路器，然后恢复延迟的频道自动启动，无需再次重启网关。
 
-  When the breaker is tripped, the **control plane still starts**, but channel
-  plugins (and other auto-started side services) stay down for the current boot
-  unless an operator manually overrides the suppression. Automatic startup
-  resumes on a later boot after the unclean-boot window drains. Gateway logs
-  look like:
+  断路器跳闸时，**控制平面仍会启动**，但频道插件（以及其他自动启动的旁路服务）会保持停止状态，直到操作员手动解除抑制，或完整时间窗口结束且期间没有发生非正常启动。恢复过程会保留操作员手动停止的频道，以及任何独立的开发模式抑制状态。网关日志如下：
   `channel autostart suppressed by crash-loop breaker; refusing automatic
 start for <channel>… Start a channel manually with: openclaw gateway call
 channels.start --params '{"channel":"<id>"}'`
 
-  Operator recovery SOP:
+  操作员恢复 SOP：
 
-  1. Confirm the gateway process is up (`openclaw gateway status` / LaunchAgent
-     or systemd unit still running). A “channel disconnected” symptom often
-     means suppressed autostart, not a dead gateway.
-  2. Inspect channel state: `openclaw channels status` (add `--probe` when
-     useful). Look for stopped / not connected accounts while the gateway
-     itself is healthy.
-  3. Fix the root cause of the unclean boots (bad config, plugin crash on
-     start, missing secrets) before forcing channels back up.
-  4. Manually start a channel while suppression is active:
+  1. 确认网关进程正在运行（`openclaw gateway status` / LaunchAgent
+     或 systemd 单元仍在运行）。出现“频道断开连接”通常意味着自动启动被抑制，而不是网关已停止。
+  2. 检查频道状态：`openclaw channels status`（必要时添加 `--probe`）。如果网关本身正常运行，请查找已停止/未连接的账户。
+  3. 在强制恢复频道之前，先修复导致非正常启动的根本原因（错误配置、插件启动时崩溃、缺少密钥）。
+  4. 在抑制仍然生效时手动启动频道：
 
      ```bash
      openclaw gateway call channels.start --params '{"channel":"<id>"}'
-     # optional: {"channel":"<id>","accountId":"<account>"}
+     # 可选：{"channel":"<id>","accountId":"<account>"}
      ```
 
-     `channels.start` is a **manual** override; it does not disable the
-     breaker for other channels.
+     `channels.start` 是一个**手动**覆盖操作；它不会为其他频道禁用断路器。
 
-  5. Or wait for the unclean-boot window to drain, then restart the gateway.
-     The next boot logs whether channel auto-start is restored.
+  5. 或者让健康的网关持续运行，直到完整的非正常启动窗口结束。同一进程会记录重启循环断路器已恢复，并启动延迟的已配置频道。
+     如果在该窗口结束并经过一次健康监控间隔后仍未出现该消息，请检查网关日志，并在重启前运行 `openclaw doctor`。
 
-  See also [Gateway](/gateway) (safe mode paragraph) for the same control-plane
-  vs channel-autostart split.
+  另请参阅[网关](/gateway)（安全模式段落），了解相同的控制平面与频道自动启动分离机制。
 
-- **Main-session attempt budget:** three charged automatic dispatch attempts
-  per interrupted cycle; exhaustion tombstones that session until it is
-  inspected and replaced.
-- **Metrics:** recovery activity is exported via
-  [Prometheus](/gateway/prometheus) as `openclaw_session_recovery_total` and
-  `openclaw_session_recovery_age_seconds`.
-- **Logs:** recovery decisions are logged under the
-  `main-session-restart-recovery` and `subagent-interrupted-resume`
-  subsystems.
+- **主会话尝试预算：** 每个被中断的周期最多进行三次计费的自动调度尝试；耗尽后，该会话会被标记为已失效，直到经过检查并替换。
+- **指标：** 恢复活动通过
+  [Prometheus](/gateway/prometheus) 导出，指标名称为 `openclaw_session_recovery_total` 和 `openclaw_session_recovery_age_seconds`。
+- **日志：** 恢复决策会记录在
+  `main-session-restart-recovery` 和 `subagent-interrupted-resume`
+  子系统下。
+- **回复钩子：** 从已恢复的主会话轮次中自动发送的回复，会在传递到频道之前运行常规的 `reply_payload_sending` 钩子，并携带已恢复的会话、运行、账户和会话上下文。
 
 ## 未恢复的内容
 
-- Sessions excluded from main-session recovery because another owner already
-  handles them: subagent sessions (subagent recovery), cron sessions (the
-  scheduler re-runs on schedule), and ACP-managed sessions (the connected IDE
-  or client owns the resume).
-- Sessions whose transcript tail cannot be safely continued; these get the
-  resend notice described above instead of a silent re-run.
-- Work that was never admitted: messages arriving during the drain window are
-  rejected with an explicit restart error rather than silently queued into a
-  dying process.
-- Standalone embedded turns cannot take over a main session with pending
-  restart recovery because they do not share the gateway's lifecycle owner.
-  Run the turn through the gateway or reset it there with `/new` or `/reset`.
+- 因已有其他所有者负责处理而被排除在主会话恢复之外的会话：子代理会话（由子代理恢复）、cron 会话（调度器会按计划重新运行）以及由 ACP 管理的会话（已连接的 IDE 或客户端负责恢复）。
+- 其记录末尾无法安全继续的会话；这些会话会收到上文所述的重新发送通知，而不是被静默重新运行。
+- 从未被接纳的工作：排空窗口期间到达的消息会被明确的重启错误拒绝，而不是被静默排队到一个即将退出的进程中。
+- 独立的嵌入式回合无法接管存在待处理重启恢复的主会话，因为它们不共享网关的生命周期所有者。请通过网关运行该回合，或在那里使用 `/new` 或 `/reset` 重置会话。

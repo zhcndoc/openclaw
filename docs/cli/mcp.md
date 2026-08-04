@@ -388,11 +388,11 @@ Codex app-server 也支持每个服务器上的可选 `codex` 块。这是仅针
 
 命令：
 
-- `openclaw mcp list`
-- `openclaw mcp show [name]`
-- `openclaw mcp status [--verbose]`
-- `openclaw mcp doctor [name] [--probe]`
-- `openclaw mcp probe [name]`
+- `openclaw mcp list [--json]`
+- `openclaw mcp show [name] [--json]`
+- `openclaw mcp status [--verbose] [--json]`
+- `openclaw mcp doctor [name] [--probe] [--json]`
+- `openclaw mcp probe [name] [--json]`
 - `openclaw mcp add <name> [flags]`
 - `openclaw mcp set <name> <json>`
 - `openclaw mcp configure <name> [flags]`
@@ -592,7 +592,7 @@ openclaw mcp unset context7
     }
     ```
 
-    `probe --json` 会打开一个实时 MCP 客户端会话，并直接打印其结果；与 `status`/`doctor` 不同，输出没有顶层的 `path` 字段。只有当服务器实际声明了该能力时，才会包含 `resources` 和 `prompts` 键（不支持 prompts 的服务器会省略 `prompts` 键，而不是报告为 `false`）。`probe` 适用于连通性和能力验证，不适用于静态配置审计。
+    `probe --json` 会打开一个实时 MCP 客户端会话，并直接打印其结果；与 `status`/`doctor` 不同，其输出顶层没有 `path` 字段。只有当服务器实际声明了相应功能时，才会出现 `resources` 和 `prompts` 键（没有提示的服务器会省略 `prompts` 键，而不是报告 `false`）。当存在诊断信息，或选定的已启用服务器未能连接时，该命令会在以非零状态码退出前打印完整结果，因此自动化程序可以检查部分成功结果。请使用 `probe` 验证可达性和功能支持情况，而不要将其用于静态配置审计。
 
   </Accordion>
 </AccordionGroup>
@@ -689,15 +689,15 @@ OpenClaw 在启动 stdio MCP 服务器之前，会拒绝解释器启动、加载
 
 OAuth 适用于声明了 MCP OAuth 流程的 HTTP MCP 服务器。当启用 `auth: "oauth"` 时，静态 `Authorization` 标头会被该服务器忽略。由 `openclaw mcp login` 保存的凭据可用于嵌入式 MCP、CLI 运行器以及本地 Codex 应用服务器。
 
-Native MCP OAuth sessions live in the owner-only shared SQLite database at `<state-dir>/state/openclaw.sqlite` (`mcp_oauth_stores`). The row can contain access and refresh tokens, dynamic client registration secrets, discovery metadata, and the temporary PKCE verifier. Refresh, login, and logout use the same SQLite lease, so parallel OpenClaw processes cannot consume one refresh token or resurrect a logged-out session.
+原生 MCP OAuth 会话存储在所有者专用的共享 SQLite 数据库 `<state-dir>/state/openclaw.sqlite`（`mcp_oauth_stores`）中。该行可以包含访问令牌和刷新令牌、动态客户端注册密钥、发现元数据以及临时 PKCE verifier。刷新、登录和注销使用同一个 SQLite 租约，因此并行运行的 OpenClaw 进程无法重复使用同一个刷新令牌，也无法让已注销的会话重新恢复。
 
-Upgrades from the retired `<state-dir>/mcp-oauth/*.json` store are handled only by `openclaw doctor --fix`. Runtime code never reads, writes, or falls back to those files.
+从已弃用的 `<state-dir>/mcp-oauth/*.json` 存储迁移，仅由 `openclaw doctor --fix` 处理。运行时代码不会读取、写入这些文件，也不会回退到这些文件。
 
-Until credentials are available, OpenClaw omits only that MCP server from the agent runtime instead of failing the agent turn. The operator, or an agent with shell access, can then run `openclaw mcp login <name>` and use the server on a later turn.
+在凭据可用之前，OpenClaw 只会从代理运行时中省略该 MCP 服务器，而不会导致代理回合失败。随后，操作员或具有 shell 访问权限的代理可以运行 `openclaw mcp login <name>`，并在之后的回合中使用该服务器。
 
-If a server rejects a token with `insufficient_scope`, OpenClaw preserves the requested scope and asks for `openclaw mcp login <name>` instead of repeating a refresh that cannot grant new scope. That login starts a new authorization request while keeping the previous token until replacement credentials are saved.
+如果服务器使用 `insufficient_scope` 拒绝令牌，OpenClaw 会保留所请求的作用域，并要求运行 `openclaw mcp login <name>`，而不是重复执行无法授予新作用域的刷新操作。该登录会启动新的授权请求，同时保留之前的令牌，直到保存替换凭据。
 
-When a remote MCP service is already backed by a separate OpenClaw refresh-capable auth profile, you can optionally set `oauth.authProfileId`. OpenClaw refreshes either credential source before runtime projection and passes only the current access token to the downstream MCP client.
+如果远程 MCP 服务已经由单独的、支持 OpenClaw 刷新的身份验证配置文件提供支持，你可以选择设置 `oauth.authProfileId`。OpenClaw 会在运行时投影之前刷新任一凭据来源，并且只将当前访问令牌传递给下游 MCP 客户端。
 
 <Steps>
   <Step title="保存服务器">
@@ -742,7 +742,7 @@ When a remote MCP service is already backed by a separate OpenClaw refresh-capab
 
   </Step>
   <Step title="清除凭据">
-    Logout 会移除已存储的 OAuth 凭据，但会保留已保存的服务器定义。
+    注销会移除已存储的 OAuth 凭据，但会保留已保存的服务器定义。
 
     ```bash
     openclaw mcp logout docs
@@ -795,20 +795,22 @@ OpenClaw 配置使用 `transport: "streamable-http"` 作为规范写法。通过
 注册表命令不会启动通道桥接。只有 `probe` 和 `doctor --probe` 会打开实时 MCP 客户端会话，以证明目标服务器可达。
 </Note>
 
-## Control UI
+## 控制界面
 
-浏览器 Control UI 包含一个专用的 MCP 设置页面，位于 `/settings/mcp`；之前的 `/mcp` 路径仍然是一个别名。该页面显示已配置的服务器数量、已启用/OAuth/过滤器摘要、每个服务器的传输行、启用/禁用控制、常用 CLI 命令，以及 `mcp` 配置部分的作用域编辑器。
+浏览器控制界面包含一个专用的 MCP 设置页面，位于 `/settings/mcp`；之前的 `/mcp` 路径仍然是一个别名。该页面显示已配置的服务器数量、已启用/OAuth/过滤器摘要、每个服务器的传输行、启用/禁用控制、常用 CLI 命令，以及 `mcp` 配置部分的作用域编辑器。
 
-将此页面用于运维修改和快速盘点。需要实时服务器证明时，请使用 `openclaw mcp doctor --probe` 或 `openclaw mcp probe`。
+如需查看涵盖设置、编排器路径（**+** → **连接器** → **添加 MCP 服务器…**）及其**本次会话**/**所有位置**作用域、CLI 和直接配置的简短设置指南，请参阅[连接 MCP 服务器](/tools/mcp)。
+
+使用该页面进行运维人员编辑和快速清点。需要实时服务器证明时，请使用 `openclaw mcp doctor --probe` 或 `openclaw mcp probe`。
 
 运维工作流：
 
-1. 打开 Control UI 并选择 **MCP**。
+1. 打开控制界面并选择 **MCP**。
 2. 查看摘要卡片中的总数、已启用、OAuth 和已过滤服务器。
 3. 使用每个服务器行查看传输、认证、过滤、超时和命令提示。
 4. 当你想保留定义但将其排除在运行时发现之外时，切换启用状态。
 5. 编辑作用域内的 `mcp` 配置段，以进行结构性更改，例如新增服务器、头部、TLS、OAuth 元数据或工具过滤器。
-6. 选择 **Save** 仅持久化配置，或选择 **Save & Publish** 通过 Gateway 配置路径应用。
+6. 选择 **保存** 仅持久化配置，或选择 **保存并发布** 通过 Gateway 配置路径应用。
 7. 当你需要该已编辑服务器已启动并列出工具的实时证明时，运行 `openclaw mcp doctor --probe`。
 
 说明：
@@ -886,9 +888,10 @@ openclaw config set mcp.apps.enabled true --strict-json
 - 除了 Claude 特定适配器之外，没有通用的推送协议
 - 目前还没有消息编辑或反应工具
 - HTTP/SSE/streamable-http 传输连接到单个远程服务器；尚未支持多路复用上游
-- `permissions_list_open` 只包含桥接连接期间观察到的审批
+- `permissions_list_open` 只包含桥接连接期间观察到的审批。
 
 ## 相关
 
+- [连接 MCP 服务器](/tools/mcp)
 - [CLI 参考](/cli)
 - [插件](/cli/plugins)

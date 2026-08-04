@@ -146,7 +146,7 @@ openclaw config get skills.load
 相关：
 
 - [技能配置](/tools/skills-config#symlinked-skill-roots)
-- [配置示例](/gateway/configuration-examples#symlinked-sibling-skill-repo)
+- [配置示例](/gateway/configuration-examples#symlinked-sibling-skill-repo)。
 
 ## Anthropic 429 长上下文需要额外用量
 
@@ -171,7 +171,7 @@ openclaw config get agents.defaults.models
     切换到标准窗口模型，或从不具备 100 万上下文 GA 能力的旧模型配置中移除旧版 `context1m`。
   </Step>
   <Step title="使用有资格的凭据">
-    使用符合长上下文请求资格的 Anthropic 凭据，或切换为 Anthropic API key。
+    使用符合长上下文请求资格的 Anthropic 凭据，或切换为 Anthropic API 密钥。
   </Step>
   <Step title="配置回退模型">
     配置回退模型，以便在 Anthropic 长上下文请求被拒绝时运行仍可继续。
@@ -181,7 +181,7 @@ openclaw config get agents.defaults.models
 相关：
 
 - [Anthropic](/providers/anthropic)
-- [Token 使用与费用](/reference/token-use)
+- [令牌使用与费用](/reference/token-use)
 - [为什么我从 Anthropic 看到了 HTTP 429？](/help/faq-first-run#why-am-i-seeing-http-429-ratelimiterror-from-anthropic)
 
 ## 上游 403 阻止响应
@@ -238,7 +238,7 @@ openclaw logs --follow
 - 即使直接 `/v1/chat/completions` 使用相同的裸模型 id 可以工作，仍然出现 `model_not_found` 或 404 错误。
 - 后端报错 `messages[].content` 期望字符串。
 - 使用 OpenAI 兼容的本地后端时，间歇性出现 `incomplete turn detected ... stopReason=stop payloads=0` 警告。
-- 仅在更大的提示 token 数或完整代理运行时提示词下才出现的后端崩溃。
+- 仅在更大的提示 token 数或完整代理运行提示词下才出现的后端崩溃。
 
 <AccordionGroup>
   <Accordion title="常见特征">
@@ -263,7 +263,7 @@ openclaw logs --follow
 
 - [配置](/gateway/configuration)
 - [本地模型](/gateway/local-models)
-- [OpenAI 兼容端点](/gateway/configuration-reference#openai-compatible-endpoints)
+- [OpenAI 兼容端点](/gateway/configuration-reference#openai-compatible-endpoints)。
 
 ## 没有回复
 
@@ -347,11 +347,11 @@ curl http://127.0.0.1:18789
 
 | 详情代码                     | 含义                                                                                                                                                                                        | 建议操作                                                                                                                                                                                                                                                                               |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_TOKEN_MISSING`         | 客户端未发送所需的共享 token。                                                                                                                                                               | 在客户端粘贴/设置 token，然后重试。对于仪表板路径：先运行 `openclaw config get gateway.auth.token`，然后粘贴到 Control UI 设置中。                                                                                                                                                        |
-| `AUTH_TOKEN_MISMATCH`        | 共享 token 与网关认证 token 不匹配。                                                                                                                                                         | 如果 `canRetryWithDeviceToken=true`，允许一次受信任重试。缓存 token 重试会复用已存储的已批准作用域；显式 `deviceToken` / `scopes` 调用方保留请求的作用域。如果仍然失败，请运行 [令牌漂移恢复检查清单](/cli/devices#token-drift-recovery-checklist)。                                            |
-| `AUTH_DEVICE_TOKEN_MISMATCH` | 按设备缓存的 token 已过期或被撤销。                                                                                                                                                           | 使用 [设备 CLI](/cli/devices) 轮换/重新批准设备 token，然后重新连接。                                                                                                                                                                                                                  |
-| `AUTH_SCOPE_MISMATCH`        | 设备 token 有效，但其已批准的角色/作用域不覆盖此次连接请求。                                                                                                                                  | 重新配对设备，或批准所请求的作用域契约；不要将其视为共享 token 漂移。                                                                                                                                                                                                                   |
-| `PAIRING_REQUIRED`           | 设备身份需要批准。检查 `error.details.reason` 是否为 `not-paired`、`scope-upgrade`、`role-upgrade` 或 `metadata-upgrade`，并在可用时使用 `requestId` / `remediationHint`。 | 批准待处理请求：`openclaw devices list` 然后 `openclaw devices approve <requestId>`。在审阅所请求的访问后，作用域/角色升级使用相同流程。                                                                                                                                                |
+| `AUTH_TOKEN_MISSING`         | 客户端未发送所需的共享 token。                                                                                                                                                                | 在 Gateway 主机上，在交互式终端中运行 `openclaw gateway auth-token --show`，将输出粘贴到客户端中，然后重试。                                                                                                                                                |
+| `AUTH_TOKEN_MISMATCH`        | 共享 token 与 gateway auth token 不匹配。                                                                                                                                                     | 如果 `canRetryWithDeviceToken=true`，允许进行一次受信任的重试。缓存 token 重试会复用已存储的已批准作用域；显式 `deviceToken` / `scopes` 调用方保留请求的作用域。如果仍然失败，请执行[令牌漂移恢复检查清单](/cli/devices#token-drift-recovery-checklist)。 |
+| `AUTH_DEVICE_TOKEN_MISMATCH` | 每个设备的缓存 token 已过期或被撤销。                                                                                                                                                         | 使用[设备 CLI](/cli/devices)轮换/重新批准设备 token，然后重新连接。                                                                                                                                                                                                        |
+| `AUTH_SCOPE_MISMATCH`        | 设备 token 有效，但其已批准的角色/作用域不涵盖此次连接请求。                                                                                                                                    | 重新配对设备或批准所请求的作用域契约；不要将其视为共享 token 漂移。                                                                                                                                                                                     |
+| `PAIRING_REQUIRED`           | 设备身份需要批准。检查 `error.details.reason`，确认是 `not-paired`、`scope-upgrade`、`role-upgrade` 还是 `metadata-upgrade`，并在存在时使用 `requestId` / `remediationHint`。 | 批准待处理请求：`openclaw devices list`，然后执行 `openclaw devices approve <requestId>`。作用域/角色升级在审核所请求的访问权限后使用相同流程。                                                                                                               |
 
 <Note>
 使用共享网关 token/password 进行认证的直接 loopback 后端 RPC 不应依赖 CLI 的已配对设备作用域基线。如果子代理或其他内部调用仍然以 `scope-upgrade` 失败，请确认调用方使用的是 `client.id: "gateway-client"` 和 `client.mode: "backend"`，并且没有强制显式 `deviceIdentity` 或设备 token。
@@ -390,7 +390,7 @@ openclaw gateway status
 - [Control UI](/web/control-ui)
 - [设备](/cli/devices)
 - [远程访问](/gateway/remote)
-- [受信任代理认证](/gateway/trusted-proxy-auth)
+- [受信任代理认证](/gateway/trusted-proxy-auth)。
 
 ## Gateway 服务未运行
 
@@ -428,11 +428,11 @@ openclaw gateway status --deep   # 也会扫描系统级服务
 
 - [后台执行和进程工具](/gateway/background-process)
 - [配置](/gateway/configuration)
-- [Doctor](/gateway/doctor)
+- [Doctor](/gateway/doctor)。
 
-## macOS gateway 静默停止响应，然后在你触碰 dashboard 时恢复
+## macOS 网关静默停止响应，然后在你触碰控制面板时恢复
 
-当 macOS 主机上的各个通道（Telegram、WhatsApp 等）会在数分钟到数小时内突然沉寂，而你一打开 Control UI、SSH 登录，或以其他方式与主机交互，gateway 又立刻恢复时，使用此项。通常在 `openclaw status` 中不会有明显症状，因为等你查看时 gateway 已经再次存活。
+当 macOS 主机上的各个通道（Telegram、WhatsApp 等）会在数分钟到数小时内突然沉寂，而你一打开 Control UI、SSH 登录，或以其他方式与主机交互，网关又立刻恢复时，使用此项。通常在 `openclaw status` 中不会有明显症状，因为等你查看时网关已经再次存活。
 
 ```bash
 ls ~/.openclaw/logs/stability/ | tail -5
@@ -445,17 +445,17 @@ launchctl print gui/$UID/ai.openclaw.gateway | grep -E "state|last exit|runs"
 
 - `~/.openclaw/logs/stability/` 下存在一个或多个 `*-uncaught_exception.json` bundle，且 `error.code` 被设置为诸如 `ENETDOWN`、`ENETUNREACH`、`EHOSTUNREACH` 或 `ECONNREFUSED` 之类的瞬态网络错误码。
 - `pmset -g log` 中有类似 `Entering Sleep state due to 'Maintenance Sleep'` 或 `en0 driver is slow (msg: WillChangeState to 0)` 的行，并且与崩溃时间戳对齐。Power Nap / Maintenance Sleep 会短暂将 Wi-Fi 驱动置于 state 0；在该窗口内发生的任何出站 `connect()` 都可能返回 `ENETDOWN`，即使主机其他方面具有完整的网络连接。
-- `launchctl print` 输出显示 `state = not running`，并且有多次最近的 `runs` 和一个退出码，尤其是在崩溃与下一次启动之间的间隔大约是一小时而不是几秒钟时。macOS launchd 在一轮崩溃风暴后会应用一个未公开的 respawn-protection 门控，在外部触发（例如交互式登录、dashboard 连接或 `launchctl kickstart`）重新激活之前，可能不再响应 `KeepAlive=true`。
+- `launchctl print` 输出显示 `state = not running`，并且有多次最近的 `runs` 和一个退出码，尤其是在崩溃与下一次启动之间的间隔大约是一小时而不是几秒钟时。macOS launchd 在一轮崩溃风暴后会应用一个未公开的 respawn-protection 门控，在外部触发（例如交互式登录、控制面板连接或 `launchctl kickstart`）重新激活之前，可能不再响应 `KeepAlive=true`。
 
 常见特征：
 
 - 一个 `error.code` 为 `ENETDOWN` 或同类代码的稳定性包，调用栈指向 Node `net` 的 `lookupAndConnect` / `Socket.connect`。OpenClaw `2026.5.26` 及更新版本会将这些视为良性的瞬态网络错误，因此不再将其传播到顶层未捕获处理器；如果你使用的是更早版本，请先升级。
-- 漫长的静默期在你连接 Control UI 或通过 SSH 登录主机的瞬间结束：用户可见的活动是在重新为 launchd 的 respawn 门控上弦，而不是 dashboard 对 gateway 做了什么。
+- 漫长的静默期在你连接 Control UI 或通过 SSH 登录主机的瞬间结束：用户可见的活动是在重新为 launchd 的 respawn 门控上弦，而不是控制面板对网关做了什么。
 - `runs` 计数在一天内不断增加，但 `~/Library/Logs/openclaw/gateway.log` 中没有对应的 `received SIG*; shutting down` 行：正常关闭会记录 signal；瞬态崩溃不会。
 
 处理方法：
 
-1. **如果你运行的是 `2026.5.26` 之前的版本，请升级 gateway**。升级后，未来的 `ENETDOWN` 错误会以 warning 的形式记录，而不会终止进程。
+1. **如果你运行的是 `2026.5.26` 之前的版本，请升级网关**。升级后，未来的 `ENETDOWN` 错误会以 warning 的形式记录，而不会终止进程。
 2. **降低面向始终在线服务器的 Mac mini / 桌面主机上的维护性睡眠活动**：
 
    ```bash
@@ -580,12 +580,12 @@ openclaw gateway diagnostics export
 
 常见特征：
 
-- `critical memory pressure bundle written` appears shortly before restart → OpenClaw captured a pre-OOM stability bundle. Inspect it with `openclaw gateway stability --bundle latest`.
-- `memory pressure: level=critical` appears in gateway logs → OpenClaw detected critical memory pressure and recorded the available in-process memory facts.
-- `Largest session files:` points at a very large redacted transcript path → reduce retained session history, inspect session growth, or move old transcripts out of the active store before restarting.
-- `V8 heap:` used bytes are close to the heap limit → lower prompt/session pressure or reduce concurrent work first. For a managed service, inspect `Gateway heap:` in `openclaw gateway status`; if it says `not set`, regenerate old service metadata with `openclaw gateway install --force`. Ambient shell `NODE_OPTIONS` is intentionally ignored. Use an explicit supervisor-level heap override only after confirming the sustained workload and leaving enough native-memory headroom.
-- `Memory pressure: critical/rss_growth` → memory grew quickly inside one sampling window. Check the latest logs for a large import, runaway tool output, repeated retries, or a batch of queued agent work.
-- Critical memory pressure appears in logs but no bundle exists → capture `openclaw gateway diagnostics export` after the event for the available operational evidence.
+- `critical memory pressure bundle written` 在重启前不久出现 → OpenClaw 捕获了 OOM 发生前的稳定性包。使用 `openclaw gateway stability --bundle latest` 检查它。
+- `memory pressure: level=critical` 出现在 gateway 日志中 → OpenClaw 检测到严重内存压力，并记录了进程内可用的内存信息。
+- `Largest session files:` 指向一个非常大的脱敏转录路径 → 减少保留的会话历史记录，检查会话增长情况，或在重启前将旧转录移出活动存储。
+- `V8 heap:` 的已使用字节数接近堆限制 → 首先降低提示词/会话压力，或减少并发工作。对于托管服务，检查 `openclaw gateway status` 中的 `Gateway heap:`；如果显示 `not set`，请使用 `openclaw gateway install --force` 重新生成旧的服务元数据。环境 shell 中的 `NODE_OPTIONS` 会被有意忽略。只有在确认持续工作负载后，才使用明确的 supervisor 级堆覆盖设置，并为原生内存留出足够余量。
+- `Memory pressure: critical/rss_growth` → 内存在一个采样窗口内快速增长。检查最新日志中是否存在大规模导入、失控的工具输出、重复重试或一批排队的 agent 工作。
+- 日志中出现严重内存压力，但没有生成稳定性包 → 在事件发生后执行 `openclaw gateway diagnostics export`，以获取可用的运行证据。
 
 稳定性包不包含有效载荷。它只包含运行中的内存证据和脱敏后的相对文件路径，不包含消息文本、webhook 正文、凭据、token、cookie 或原始 session id。请将诊断导出附加到 bug 报告中，而不是复制原始日志。
 
@@ -657,9 +657,9 @@ openclaw doctor
 - [配置](/cli/config)
 - [配置：热重载](/gateway/configuration#config-hot-reload)
 - [配置：严格验证](/gateway/configuration#strict-validation)
-- [Doctor](/gateway/doctor)
+- [Doctor](/gateway/doctor)。
 
-## Gateway 探测警告
+## 网关探测警告
 
 当 `openclaw gateway probe` 已经探测到某些内容，但仍然打印警告块时使用。
 
@@ -672,21 +672,21 @@ openclaw gateway probe --ssh user@gateway-host
 查看以下内容：
 
 - JSON 输出中的 `warnings[].code` 和 `primaryTargetId`。
-- 警告是否与 SSH 回退、多 gateway、缺失 scopes，或未解析的 auth 引用有关。
+- 警告是否与 SSH 回退、多网关、缺失的 scope，或未解析的身份验证引用有关。
 
 常见特征：
 
 - `SSH tunnel failed to start; falling back to direct probes.` → SSH 设置失败，但命令仍尝试了直接配置的/回环的目标。
-- `multiple reachable gateway identities detected` → 不同的 gateways 有响应，或者 OpenClaw 无法证明可达目标是同一个 gateway。SSH 隧道、代理 URL，或配置为指向同一个 gateway 的远程 URL，会被视为一个具有多种传输方式的 gateway，即使传输端口不同也是如此。
+- `multiple reachable gateway identities detected` → 不同的网关有响应，或者 OpenClaw 无法证明可达目标是同一个网关。SSH 隧道、代理 URL，或配置为指向同一个网关的远程 URL，会被视为一个具有多种传输方式的网关，即使传输端口不同也是如此。
 - `Read-probe diagnostics are limited by gateway scopes (missing operator.read)` → 连接成功，但详细 RPC 受 scope 限制；请配对设备身份，或使用包含 `operator.read` 的凭据。
-- `Gateway accepted the WebSocket connection, but follow-up read diagnostics failed` → 连接成功，但完整的诊断 RPC 集超时或失败。将其视为一个可达但诊断受限的 Gateway；在 `--json` 输出中对比 `connect.ok` 和 `connect.rpcOk`。
-- `Capability: pairing-pending` 或 `gateway closed (1008): pairing required` → gateway 已响应，但此客户端在获得正常 operator 访问权限前仍需要配对/批准。
-- 未解析的 `gateway.auth.*` / `gateway.remote.*` SecretRef 警告文本 → 在此次命令路径中，失败目标的认证材料不可用。
+- `Gateway accepted the WebSocket connection, but follow-up read diagnostics failed` → 连接成功，但完整的诊断 RPC 集超时或失败。将其视为一个可达但诊断受限的网关；在 `--json` 输出中对比 `connect.ok` 和 `connect.rpcOk`。
+- `Capability: pairing-pending` 或 `gateway closed (1008): pairing required` → 网关已响应，但此客户端在获得正常 operator 访问权限前仍需要配对/批准。
+- 未解析的 `gateway.auth.*` / `gateway.remote.*` SecretRef 警告文本 → 在此次命令路径中，失败目标的身份验证材料不可用。
 
 相关：
 
-- [Gateway](/cli/gateway)
-- [同一主机上的多个 gateway](/gateway#multiple-gateways-same-host)
+- [网关](/cli/gateway)
+- [同一主机上的多个网关](/gateway#multiple-gateways-same-host)
 - [远程访问](/gateway/remote)
 
 ## 通道已连接，但消息未流动
@@ -734,18 +734,18 @@ openclaw logs --follow
 
 查看以下内容：
 
-- Cron enabled and next wake present.
-- Job run history status (`ok`, `skipped`, `error`).
-- Heartbeat skip reasons (`quiet-hours`, `requests-in-flight`, `cron-in-progress`, `lanes-busy`, `alerts-disabled`, `empty-heartbeat-file`).
+- Cron 是否已启用，以及是否存在下一次唤醒时间。
+- 任务运行历史状态（`ok`、`skipped`、`error`）。
+- Heartbeat 跳过原因（`quiet-hours`、`requests-in-flight`、`cron-in-progress`、`lanes-busy`、`alerts-disabled`、`empty-heartbeat-file`）。
 
 <AccordionGroup>
-  <Accordion title="Common signatures">
-    - `cron: scheduler disabled; jobs will not run automatically` → cron disabled.
-    - `cron: timer tick failed` → scheduler tick failed; check file/log/runtime errors.
-    - `heartbeat skipped` with `reason=quiet-hours` → outside active hours window.
-    - `heartbeat skipped` with `reason=empty-heartbeat-file` → heartbeat monitor scratch only contains blank, comment, header, fence, or empty-checklist scaffolding, so OpenClaw skips the model call.
-    - `heartbeat: unknown accountId` → invalid account id for heartbeat delivery target.
-    - `heartbeat skipped` with `reason=dm-blocked` → heartbeat target resolved to a DM-style destination while `agents.defaults.heartbeat.directPolicy` (or per-agent override) is set to `block`.
+  <Accordion title="常见特征">
+    - `cron: scheduler disabled; jobs will not run automatically` → cron 已禁用。
+    - `cron: timer tick failed` → 调度器计时器触发失败；检查文件、日志和运行时错误。
+    - `heartbeat skipped`，且 `reason=quiet-hours` → 当前处于活动时间窗口之外。
+    - `heartbeat skipped`，且 `reason=empty-heartbeat-file` → heartbeat 监控暂存文件仅包含空白、注释、标题、代码围栏或空检查清单脚手架，因此 OpenClaw 跳过模型调用。
+    - `heartbeat: unknown accountId` → heartbeat 投递目标的账户 ID 无效。
+    - `heartbeat skipped`，且 `reason=dm-blocked` → heartbeat 目标解析为 DM 类型的目标，而 `agents.defaults.heartbeat.directPolicy`（或单个代理的覆盖设置）被设为 `block`。
 
   </Accordion>
 </AccordionGroup>
@@ -840,7 +840,7 @@ openclaw doctor
 相关：
 
 - [浏览器（OpenClaw 托管）](/tools/browser)
-- [浏览器故障排查](/tools/browser-linux-troubleshooting)
+- [浏览器故障排查](/tools/browser-linux-troubleshooting)。
 
 ## 如果你在升级后突然遇到故障
 

@@ -109,16 +109,40 @@ token 的解析与账号相关：`tokenFile` 优先于 `botToken`，再优先于
 
 ## 仪表盘迷你应用
 
-在与机器人私聊中运行 `/dashboard`，即可在 Telegram 内打开 OpenClaw 仪表盘。
+仪表盘迷你应用会以 Telegram WebApp 的形式打开完整的 [OpenClaw 控制界面](/web/control-ui)。在与机器人进行私聊时运行 `/dashboard`，然后点击 **打开仪表盘**。Telegram 插件激活后，该命令会自动注册；无需单独启用迷你应用标志。
 
 要求：
 
-- 用于发布 HTTPS 迷你应用 URL 的 `gateway.tailscale.mode` 必须为 `"serve"` 或 `"funnel"`。
-- 你的 Telegram 数字用户 ID 必须位于所选账号的有效 `allowFrom` 中，或位于 `commands.ownerAllowFrom` 中。
-- 必须使用私聊。在群组中，`/dashboard` 会回复 `open this in a DM with the bot`，并且不会发送按钮。
-- Docker 安装：Serve/Funnel 模式要求网关在 `tailscaled` 旁边绑定回环地址，而带有已发布端口的桥接网络无法满足这一点。请将网关容器以 `network_mode: host` 运行，并将宿主机的 `tailscaled` 套接字（`/var/run/tailscale`）以及 `tailscale` CLI 挂载到容器中。
+- `gateway.tailscale.mode: "serve"` 或 `"funnel"`，用于发布 HTTPS 迷你应用 URL。
+- 您的数字 Telegram 用户 ID 必须位于所选账户的有效 `allowFrom` 中，或位于 `commands.ownerAllowFrom` 中。通配符和用户名不会授予迷你应用所有者访问权限。
+- 请使用私聊。在群组中，`/dashboard` 会回复 `open this in a DM with the bot`，且不会发送按钮。
+- Docker 安装：Serve/Funnel 模式要求网关与 `tailscaled` 旁路绑定到回环地址，而使用已发布端口的桥接网络无法满足这一要求。请使用 `network_mode: host` 运行网关容器，并将主机的 `tailscaled` 套接字（`/var/run/tailscale`）以及 `tailscale` CLI 挂载到容器中。
 
-该迷你应用是仅限 Tailscale 的 v1 路径，不支持 Telegram Web iframe。
+配置以下受支持的 Tailscale 发布模式之一：
+
+```json5
+{
+  gateway: {
+    tailscale: {
+      mode: "serve", // 或 "funnel"
+    },
+  },
+}
+```
+
+OpenClaw 会在选择已发布主机时自动使用 `gateway.tailscale.serviceName`，并在构建控制界面和 WebSocket URL 时使用 `gateway.controlUi.basePath`。
+
+迷你应用打开时，Telegram 会提供经过签名的 WebApp `initData`。OpenClaw 会使用所选机器人账户的令牌验证其签名，拒绝缺失、无效、过期或重放的数据，提取数字 Telegram 用户 ID，并在交由控制界面处理前再次检查所有者访问权限。
+
+如果 `/dashboard` 无法解析已发布的 HTTPS URL，它会回复：
+
+```text
+迷你应用需要 HTTPS 网关 URL。请设置 `gateway.tailscale.mode: serve` 或 `funnel`，然后重试。
+```
+
+设置上述模式之一，确保 Tailscale 正在网关主机上运行，然后重试该命令。
+
+迷你应用是仅支持 Tailscale 的 v1 路径，不支持 Telegram Web iframe。
 
 ## 访问控制和激活
 
@@ -286,7 +310,16 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 - Telegram Bot API 不支持已读回执（`sendReadReceipts` 不适用）。
 
 <Note>
-  `channels.telegram.dm.threadReplies` 和 `channels.telegram.direct.<chatId>.threadReplies` 已被移除。如果升级后你的配置中仍有这些键，请运行 `openclaw doctor --fix`。DM 主题路由现在遵循 Telegram `getMe.has_topics_enabled`（由 BotFather threaded mode 控制）：启用主题的机器人在 Telegram 发送 `message_thread_id` 时会使用按线程作用域划分的 DM 会话；其他 DM 仍会停留在扁平会话中。
+  **升级说明：Telegram 的默认预览已更改。** 当未设置 `channels.telegram.streaming` 时，Telegram 现在会在本轮处理期间保留一个可编辑的状态草稿（代理的当前状态及其工具行），并将最终答案作为普通消息发送。此前，Telegram 会将答案文本本身流式传输到预览中。不会有任何配置失效，也不需要运行 `doctor --fix`；如需保留之前的行为，请设置：
+
+```json5
+{ channels: { telegram: { streaming: { mode: "partial" } } } }
+```
+
+</Note>
+
+<Note>
+  `channels.telegram.dm.threadReplies` 和 `channels.telegram.direct.<chatId>.threadReplies` 已被移除。如果升级后配置中仍包含这些键，请运行 `openclaw doctor --fix`。DM 主题路由现在遵循 Telegram `getMe.has_topics_enabled`（由 BotFather 的主题模式控制）：启用主题的机器人在 Telegram 发送 `message_thread_id` 时使用按主题线程划分的 DM 会话；其他 DM 则保持在扁平会话中。
 </Note>
 
 ## 功能参考
@@ -295,15 +328,15 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
   <Accordion title="直播预览（消息编辑）">
     OpenClaw 会在私聊、群组和话题中实时流式发送部分回复：先发送一条预览消息，然后反复执行 `editMessageText`，在原处完成最终回复。
 
-    - `channels.telegram.streaming` 为 `off | partial | block | progress`（默认：`partial`）
-    - 简短的初始答案预览会先进行防抖处理，然后在限定延迟后于运行仍处于活动状态时再落地为实际消息
-    - `progress` 会保留一条可编辑的状态草稿用于工具进度；如果答案活动在工具进度之前到达，则显示稳定的状态标签；在完成时清除它，并将最终答案作为普通消息发送
-    - `streaming.preview.toolProgress` 控制工具/进度更新是否复用同一条已编辑的预览消息（默认：当预览流式传输启用时为 `true`）
-    - `streaming.preview.commandText` 控制这些行中的命令/执行细节：`raw`（默认）或 `status`（仅工具标签）
-    - `streaming.progress.commentary`（默认：`false`）允许在临时进度草稿中包含助手 commentary/前言文本
-    - 系统会检测旧版的 `channels.telegram.streamMode`、布尔型 `streaming` 值，以及已弃用的原生草稿预览键；运行 `openclaw doctor --fix` 可迁移它们
+    - `channels.telegram.streaming` 是 `off | partial | block | progress`（默认：`progress`）；设置 `mode: "partial"` 可将答案文本流式传输到预览中，而不是状态草稿
+    - 较短的初始答案预览会进行防抖处理；如果运行仍处于活动状态，则会在有界延迟后生成
+    - `progress` 会为工具进度保留一条可编辑的状态草稿；如果答案活动先于工具进度到达，则显示稳定的状态标签；完成时清除该草稿，并将最终答案作为普通消息发送
+    - `streaming.preview.toolProgress` 控制工具/进度更新是否复用同一条已编辑的预览消息（默认：预览流式传输处于活动状态时为 `true`）
+    - `streaming.preview.commandText` 控制这些行中的命令/执行详情：`raw`（默认）或 `status`（仅工具标签）
+    - `streaming.progress.commentary`（默认：`false`）用于选择是否将助手评论/前言文本加入临时进度草稿
+    - 系统会检测旧版 `channels.telegram.streamMode`、布尔值 `streaming` 以及已弃用的原生草稿预览键；运行 `openclaw doctor --fix` 可进行迁移
 
-    工具进度行是在工具运行时显示的简短状态更新（命令执行、文件读取、规划更新、补丁摘要、app-server 模式下的 Codex 前言/commentary）。Telegram 默认保留这些内容显示（与 `v2026.4.22` 及以后版本的已发布行为一致）。
+    工具进度行是在工具运行时显示的简短状态更新（命令执行、文件读取、规划更新、补丁摘要、app-server 模式下的 Codex 前言/评论）。Telegram 默认保留这些内容显示（与 `v2026.4.22` 及以后版本的已发布行为一致）。
 
     保留答案预览编辑，但隐藏工具进度行：
 
@@ -365,7 +398,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     预览流式传输与块流式传输互斥——当显式启用块流式传输时，OpenClaw 会跳过预览流，以避免双重流式传输。
 
-    原因说明：`/reasoning stream` 会在生成时把 reasoning 流式发送到实时预览中，然后在最终发送后删除 reasoning 预览（使用 `/reasoning on` 可使其保持可见）。最终答案发送时不包含 reasoning 文本。
+    原因说明：`/reasoning stream` 会在生成时把推理过程流式发送到实时预览中，然后在最终发送后删除推理预览（使用 `/reasoning on` 可使其保持可见）。最终答案发送时不包含推理文本。
 
   </Accordion>
 
@@ -564,9 +597,9 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
           groups: {
             "-1001234567890": {
               topics: {
-                "1": { agentId: "main" },      // 通用话题 -> main agent
-                "3": { agentId: "zu" },        // 开发话题 -> zu agent
-                "5": { agentId: "coder" }      // 代码审查 -> coder agent
+                "1": { agentId: "main" },      // 通用话题 -> 主代理
+                "3": { agentId: "zu" },        // 开发话题 -> zu 代理
+                "5": { agentId: "coder" }      // 代码审查 -> coder 代理
               }
             }
           }
@@ -681,8 +714,8 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
   <Accordion title="反应通知">
     Telegram 的反应会作为 `message_reaction` 更新到达，独立于消息载荷。当启用时，OpenClaw 会将其排入系统事件，例如 `Telegram reaction added: 👍 by Alice (@alice) on msg 42`。
 
-    - `channels.telegram.reactionNotifications`: `off | own | all`（默认：`own`）
-    - `channels.telegram.reactionLevel`: `off | ack | minimal | extensive`（默认：`minimal`）
+    - `channels.telegram.reactionNotifications`：`off | own | all`（默认：`own`）
+    - `channels.telegram.reactionLevel`：`off | ack | minimal | extensive`（默认：`minimal`）
 
     `own` 表示仅用户对 bot 发送消息的反应（通过已发送消息缓存尽力实现）。反应事件仍会遵守 Telegram 访问控制（`dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`）；未授权发送者会被丢弃。
 
@@ -783,7 +816,7 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
 
     - `channels.telegram.execApprovals.enabled`（`"auto"` 在至少有一个审批者可解析时启用）
     - `channels.telegram.execApprovals.approvers`（回退到来自 `commands.ownerAllowFrom` 的数字 owner ID）
-    - `channels.telegram.execApprovals.target`: `dm`（默认）| `channel` | `both`
+    - `channels.telegram.execApprovals.target`：`dm`（默认）| `channel` | `both`
     - `agentFilter`、`sessionFilter`
 
     `channels.telegram.allowFrom`、`groupAllowFrom` 和 `defaultTo` 控制谁可以与 bot 对话，以及它向哪里发送普通回复——它们不会让某人成为执行审批者。当不存在命令 owner 时，首次批准的 DM 配对会引导生成 `commands.ownerAllowFrom`，因此单 owner 配置无需在 `execApprovals.approvers` 下重复 ID 也能工作。
@@ -921,21 +954,21 @@ dig +short api.telegram.org AAAA
 
 <Accordion title="高信号 Telegram 字段">
 
-- startup/auth: `enabled`, `botToken`, `tokenFile`（必须是普通文件；不接受符号链接）, `accounts.*`
-- access control: `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`, `groups.*.topics.*`, 顶层 `bindings[]`（`type: "acp"`）
-- topic defaults: `groups.<chatId>.topics."*"` 适用于未匹配的论坛主题；精确的主题 ID 会覆盖它
-- exec approvals: `execApprovals`, `accounts.*.execApprovals`
-- command/menu: `commands.native`, `commands.nativeSkills`, `customCommands`
-- threading/replies: `replyToMode`, `threadBindings`
-- streaming: `streaming`（模式 `off | partial | block | progress`）, `streaming.preview.toolProgress`
-- formatting/delivery: `textChunkLimit`, `streaming.chunkMode`, `richMessages`, `markdown.tables`（`off | bullets | code | block`）, `linkPreview`, `responsePrefix`
-- media/network: `mediaMaxMb`, `network.autoSelectFamily`, `network.dangerouslyAllowPrivateNetwork`, `proxy`
-- custom API root: `apiRoot`（仅 Bot API root；不要包含 `/bot<TOKEN>`）, `trustedLocalFileRoots`（自托管 Bot API 的绝对 `file_path` 根路径）
-- webhook: `webhookUrl`, `webhookSecret`, `webhookPath`, `webhookHost`, `webhookPort`, `webhookCertPath`
-- actions/capabilities: `capabilities.inlineButtons`, `actions.sendMessage|editMessage|deleteMessage|reactions|sticker|createForumTopic|editForumTopic`
-- reactions: `reactionNotifications`, `reactionLevel`
-- errors: `errorPolicy`, `silentErrorReplies`
-- writes/history: `configWrites`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
+- 启动/身份验证：`enabled`、`botToken`、`tokenFile`（必须是普通文件；不接受符号链接）、`accounts.*`
+- 访问控制：`dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`、`groups`、`groups.*.topics.*`、顶层 `bindings[]`（`type: "acp"`）
+- 主题默认值：`groups.<chatId>.topics."*"` 适用于未匹配的论坛主题；精确的主题 ID 会覆盖它
+- 执行审批：`execApprovals`、`accounts.*.execApprovals`
+- 命令/菜单：`commands.native`、`commands.nativeSkills`、`customCommands`
+- 线程/回复：`replyToMode`、`threadBindings`
+- 流式传输：`streaming`（模式 `off | partial | block | progress`）、`streaming.preview.toolProgress`
+- 格式化/传递：`textChunkLimit`、`streaming.chunkMode`、`richMessages`、`markdown.tables`（`off | bullets | code | block`）、`linkPreview`、`responsePrefix`
+- 媒体/网络：`mediaMaxMb`、`network.autoSelectFamily`、`network.dangerouslyAllowPrivateNetwork`、`proxy`
+- 自定义 API 根路径：`apiRoot`（仅 Bot API 根路径；不要包含 `/bot<TOKEN>`）、`trustedLocalFileRoots`（自托管 Bot API 的绝对 `file_path` 根路径）
+- Webhook：`webhookUrl`、`webhookSecret`、`webhookPath`、`webhookHost`、`webhookPort`、`webhookCertPath`
+- 操作/功能：`capabilities.inlineButtons`、`actions.sendMessage|editMessage|deleteMessage|reactions|sticker|createForumTopic|editForumTopic`
+- 反应：`reactionNotifications`、`reactionLevel`
+- 错误：`errorPolicy`、`silentErrorReplies`
+- 写入/历史记录：`configWrites`、`historyLimit`、`dmHistoryLimit`、`dms.*.historyLimit`
 
 </Accordion>
 

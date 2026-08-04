@@ -8,10 +8,10 @@ read_when:
   - 你需要理解 ChannelPlugin 适配器表面
 ---
 
-本指南将构建一个通道插件，用于将 OpenClaw 连接到一个消息平台：DM 安全性、配对、回复线程以及出站消息。
+本指南将构建一个通道插件，用于将 OpenClaw 连接到一个消息平台：私信安全性、配对、回复线程以及出站消息。
 
 <Info>
-  对 OpenClaw 插件还不熟悉？请先阅读 [Getting Started](/plugins/building-plugins)
+  对 OpenClaw 插件还不熟悉？请先阅读 [入门指南](/plugins/building-plugins)
   以了解包结构和清单设置。
 </Info>
 
@@ -30,170 +30,132 @@ read_when:
 - **心跳输入中** - 可选的输入中/忙碌信号，用于心跳投递
   目标
 
-核心负责共享消息工具、提示词接线、外层会话键形状、
-通用的 `:thread:` 记账以及分发。
+核心还负责模型选择器的产品操作。渲染
+`ModelPickerAction` 的频道会声明其
+`ModelPickerCapabilityProfile`，然后将类型化操作编码到传输私有的、经过身份验证的回调信封中。在到达该编码边界之前，应始终区分批准、命令、URL、Web 应用、问题、回调和模型选择器操作；绝不要从原始回调字符串推断选择器意图。参与者和源消息检查仍由频道负责。
 
-Core also owns model-picker product actions. A channel that renders a
-`ModelPickerAction` declares its `ModelPickerCapabilityProfile`, then encodes
-the typed action in a transport-private authenticated callback envelope. Keep
-approval, command, URL, web-app, question, callback, and model-picker actions
-distinguishable until that encoding boundary; never infer picker intent from a
-raw callback string. Actor and source-message checks remain channel-owned.
-
-## Message adapter
+## 消息适配器
 
 使用 `openclaw/plugin-sdk/channel-outbound` 中的 `defineChannelMessageAdapter` 暴露一个 `message` 适配器。只声明你的原生传输实际支持的、可持久化的最终发送能力，并通过一个契约测试来证明原生副作用和返回的收据。文本/媒体发送应指向与旧版 `outbound` 适配器相同的传输函数。完整的 API 契约、能力矩阵、收据规则、实时预览定稿、接收确认策略、测试和迁移表，请参见
-[Channel outbound API](/plugins/sdk-channel-outbound)。
+[渠道出站 API](/plugins/sdk-channel-outbound)。
 
 如果你现有的 `outbound` 适配器已经具备正确的发送方法和能力元数据，则应使用 `createChannelMessageAdapterFromOutbound(...)` 派生 `message` 适配器，而不是手写另一层桥接。适配器发送会返回 `MessageReceipt` 值。对于旧版 id，请使用 `listMessageReceiptPlatformIds(...)` 或 `resolveMessageReceiptPrimaryId(...)` 派生它们，而不是继续维护并行的 `messageIds` 字段。
 
-精确声明 live 和 finalizer 能力——core 会据此判断一个 channel 能做什么，而声明与实际行为之间的偏差会被视为契约测试失败：
+精确声明实时和定稿器能力——core 会据此判断一个渠道能做什么，而声明与实际行为之间的偏差会被视为契约测试失败：
 
-| Surface                               | Values                                                                                           |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 表面                                 | 值                                                                                             |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | `message.live.capabilities`           | `draftPreview`, `previewFinalization`, `progressUpdates`, `nativeStreaming`, `quietFinalization` |
 | `message.live.finalizer.capabilities` | `finalEdit`, `normalFallback`, `discardPending`, `previewReceipt`, `retainOnAmbiguousFailure`    |
 
-会就地完成草稿预览定稿的 channels 应通过 `defineFinalizableLivePreviewAdapter(...)` 和 `deliverWithFinalizableLivePreviewAdapter(...)` 来承载运行时逻辑，并使用 `verifyChannelMessageLiveCapabilityAdapterProofs(...)` 与 `verifyChannelMessageLiveFinalizerProofs(...)` 测试来保持声明的能力有据可依，这样原生预览、进度、编辑、回退/保留、清理和收据行为就不会悄然偏离。
+会就地完成草稿预览定稿的渠道应通过 `defineFinalizableLivePreviewAdapter(...)` 和 `deliverWithFinalizableLivePreviewAdapter(...)` 来承载运行时逻辑，并使用 `verifyChannelMessageLiveCapabilityAdapterProofs(...)` 与 `verifyChannelMessageLiveFinalizerProofs(...)` 测试来保持声明的能力有据可依，这样原生预览、进度、编辑、回退/保留、清理和收据行为就不会悄然偏离。
 
-延迟平台确认的 inbound receivers 应声明 `message.receive.defaultAckPolicy` 和 `supportedAckPolicies`，而不是把确认时机隐藏在 monitor 本地状态中。用 `verifyChannelMessageReceiveAckPolicyAdapterProofs(...)` 覆盖每一种已声明的策略。
+延迟平台确认的入站接收器应声明 `message.receive.defaultAckPolicy` 和 `supportedAckPolicies`，而不是把确认时机隐藏在监控器本地状态中。用 `verifyChannelMessageReceiveAckPolicyAdapterProofs(...)` 覆盖每一种已声明的策略。
 
-Legacy reply helpers such as `dispatchInboundReplyWithBase` and
-`recordInboundSessionAndDispatchReply` remain available for compatibility
-dispatchers. Do not use them for new channel code; start with the `message`
-adapter, receipts, and receive/send lifecycle helpers on
-`openclaw/plugin-sdk/channel-outbound` instead.
+像 `dispatchInboundReplyWithBase` 和
+`recordInboundSessionAndDispatchReply` 这样的旧版回复辅助函数仍可供兼容性
+分发器使用。不要在新的渠道代码中使用它们；请改为从
+`openclaw/plugin-sdk/channel-outbound` 中的 `message`
+适配器、收据以及接收/发送生命周期辅助函数开始。
 
-### Inbound ingress（实验性）
+### 入站入口（实验性）
 
-Channels migrating inbound authorization can use the experimental
-`openclaw/plugin-sdk/channel-ingress-runtime` subpath from runtime receive
-paths. It accepts platform facts, raw allowlists, route descriptors, command
-facts, and access group config, then returns sender/route/command/activation
-projections plus the ordered ingress graph, while platform lookup and side
-effects stay in the plugin. Keep plugin identity normalization in the
-descriptor you pass to the resolver; do not serialize raw match values from
-the resolved state or decision. See
-[Channel ingress API](/plugins/sdk-channel-ingress) for the API design,
-ownership boundary, and test expectations.
+正在迁移入站授权的渠道可以从运行时接收路径使用实验性的
+`openclaw/plugin-sdk/channel-ingress-runtime` 子路径。它接受平台事实、
+原始允许列表、路由描述符、命令事实和访问组配置，然后返回发送者/路由/命令/激活
+投影以及有序的入口图，同时将平台查找和副作用保留在插件中。请在传递给解析器的
+描述符中保留插件身份规范化；不要从已解析的状态或决策中序列化原始匹配值。请参阅
+[渠道入口 API](/plugins/sdk-channel-ingress)，了解 API 设计、
+职责边界和测试预期。
 
-### Durable ingress and replay dedupe
+### 持久化入口与重放去重
 
-Channels adopting durable ingress should use `createChannelIngressMonitor`
-from `openclaw/plugin-sdk/channel-outbound` unless they need a materially
-different admission or pump contract. Enqueue the raw transport envelope at a
-single receive chokepoint (no normalization at receive time), gate the
-transport ack on the durable append for webhook transports, derive one
-serialized lane per conversation, and mark the event complete at dispatch
-adoption. The queue's primary key is `(queue_name, event_id)` and completion
-tombstones the row instead of deleting it, so a late platform redelivery of
-the same `event_id` is rejected durably for the tombstone retention window.
-See [Channel outbound API](/plugins/sdk-channel-outbound#durable-ingress-monitors)
-for the monitor API and shutdown contract.
+采用持久化入口的通道应使用
+`openclaw/plugin-sdk/channel-outbound` 中的 `createChannelIngressMonitor`，
+除非它们需要实质不同的接纳或泵送契约。在单一接收汇合点将原始传输信封入队
+（接收时不进行规范化），对于 webhook 传输，将传输确认置于持久化追加之后，
+为每个会话派生一个串行通道，并在分发接纳时将事件标记为完成。队列的主键为
+`(queue_name, event_id)`，完成操作会将该行标记为墓碑，而不是删除它，因此在
+墓碑保留窗口内，平台稍后再次投递相同 `event_id` 时会被持久拒绝。
+有关监控器 API 和关闭契约，请参阅[通道出站 API](/plugins/sdk-channel-outbound#durable-ingress-monitors)。
 
-That tombstone is the layering rule for replay guards
-(`openclaw/plugin-sdk/persistent-dedupe`): a drained channel keeps a separate
-replay guard only when the guard's identity or retention exceeds the queue's
-— a logical message key that differs from the transport delivery id (Telegram
-dedupes `chat_id:message_id` because debounce merges can re-surface a message
-under a fresh `update_id`), or a longer window than the channel's tombstone
-retention. If your guard key would equal the drain `event_id`, delete the
-guard when adopting the drain and size `completedTtlMs`/`completedMaxEntries`
-to cover the old guard window instead. Non-dedupe protections such as age
-fences are unrelated to this rule. Stable outbound message IDs use the shared
-outbound-echo registry from `openclaw/plugin-sdk/channel-outbound` instead of a
-channel-local TTL cache.
+该墓碑是重放保护层
+（`openclaw/plugin-sdk/persistent-dedupe`）的分层规则：只有当保护器的身份或保留时间超过队列时，
+已排空的通道才需要保留独立的重放保护器——例如，与传输投递 ID 不同的逻辑消息键
+（Telegram 使用 `chat_id:message_id` 去重，因为防抖合并可能会让消息以新的
+`update_id` 再次出现），或者比通道墓碑保留时间更长的窗口。如果你的保护器键会等于
+排空的 `event_id`，则应在接纳排空事件时删除该保护器，并相应设置
+`completedTtlMs`/`completedMaxEntries`，使其覆盖旧保护器窗口。诸如年龄栅栏之类的非去重保护与此规则无关。
+稳定的出站消息 ID 应使用 `openclaw/plugin-sdk/channel-outbound` 中共享的出站回显注册表，
+而不是通道本地的 TTL 缓存。
 
-#### Transport classes and retention
+#### 传输类别与保留
 
-Classify a transport by the recovery guarantee at its receive boundary:
+根据接收边界处的恢复保证对传输进行分类：
 
-- **Ack-gated webhook or event delivery:** acknowledge or return success only
-  after the durable append. An append failure must leave the delivery eligible
-  for retry or fail the receive boundary. This class includes Slack, SMS, Zalo,
-  Microsoft Teams, Google Chat, LINE, and Synology Chat.
-- **Awaited polling or stream delivery:** advance the remote cursor or send the
-  transport ack only after the append. When no explicit cursor exists, keep the
-  receive callback serialized and awaited so an append failure cannot let the
-  receive loop run ahead. Telegram polling, Signal, and Tlon use this class;
-  Telegram webhook delivery follows the ack-gated rule above.
-- **Non-replay sockets:** IRC, Mattermost, Twitch, and Zalo Personal cannot ask
-  the platform to redeliver an accepted event. Their durable queue protects the
-  process crash window and supports local restart recovery; completion
-  tombstones are near-inert against platform replay.
+- **确认门控的 webhook 或事件投递：** 仅在持久化追加之后确认或返回成功。
+  追加失败必须使该投递仍具备重试资格，或使接收边界失败。此类别包括 Slack、SMS、Zalo、
+  Microsoft Teams、Google Chat、LINE 和 Synology Chat。
+- **等待式轮询或流式投递：** 仅在追加之后推进远程游标或发送传输确认。当不存在显式游标时，
+  保持接收回调串行并等待完成，以确保追加失败不会让接收循环超前运行。Telegram 轮询、Signal
+  和 Tlon 使用此类别；Telegram webhook 投递遵循上述确认门控规则。
+- **不可重放的套接字：** IRC、Mattermost、Twitch 和 Zalo Personal 无法请求平台重新投递
+  已接受的事件。它们的持久化队列用于保护进程崩溃窗口，并支持本地重启恢复；完成墓碑对于防止平台重放几乎不起作用。
 
-Use 30 days as the fleet tombstone-TTL convention, not as an SDK default. A
-high-volume redelivery window normally uses a 20,000-entry completed cap;
-lower-volume awaited and non-replay transports normally use 1,000-2,000.
-Current exceptions include LINE's 4,096-entry caps, SMS's 24-hour completed
-TTL, and Tlon's cap-only completed retention. Failed-row caps may also be lower
-than completed caps. TTL and cap both prune rows, so effective retention ends
-when the first bound is reached. Deviate only for a documented platform retry
-horizon, preserved shipped replay-guard window, expected volume or disk budget,
-or non-replay transport, and cover the retention contract with tests.
+将 30 天作为整个系统的墓碑 TTL 约定，而不是 SDK 默认值。高流量重投递窗口通常使用
+20,000 条已完成条目的上限；低流量的等待式传输和不可重放传输通常使用 1,000-2,000 条。
+当前例外包括 LINE 的 4,096 条上限、SMS 的 24 小时已完成 TTL，以及 Tlon 仅按上限保留已完成条目。
+失败行上限也可以低于已完成条目上限。TTL 和上限都会清理行，因此有效保留时间在第一个边界达到时结束。
+只有在有已记录的平台重试时限、需要保留的已发布重放保护器窗口、预期流量或磁盘预算，
+或不可重放传输等情况下才可偏离，并应通过测试覆盖保留契约。
 
-#### At-least-once side effects
+#### 至少一次副作用
 
-Drain dispatch runs command side effects before the ingress row reaches its
-completion tombstone. A process crash between those steps replays the row and
-can execute the side effect again. This at-least-once crash window is the
-default contract. For non-idempotent work such as config writes, storage
-clears, or visible acknowledgements outside the reply lane, use
-`createIngressEffectOnce(...)` from
-`openclaw/plugin-sdk/ingress-effect-once`. Give each call the stable ingress
-`eventId` plus an effect name. Create one helper per ingress queue/account and
-use a stable, unique `namespacePrefix` for that scope because transport event
-IDs may be queue-local. The helper commits its durable claim only after the
-effect succeeds; a thrown effect releases the claim so a drain retry can
-execute it again, while concurrent callers wait for the active claim. Durable
-state errors call `onDiskError` when provided and reject instead of falling
-back to process memory.
+排空分发会先执行命令副作用，然后入口行才到达其完成墓碑。在这两个步骤之间发生进程崩溃会导致该行被重放，
+从而可能再次执行副作用。这种至少一次的崩溃窗口是默认契约。对于配置写入、存储清理或回复通道之外的可见确认等
+非幂等工作，请使用 `openclaw/plugin-sdk/ingress-effect-once` 中的
+`createIngressEffectOnce(...)`。为每次调用提供稳定的入口 `eventId` 以及副作用名称。
+每个入口队列/账户创建一个辅助器，并为该作用域使用稳定且唯一的 `namespacePrefix`，因为传输事件 ID 可能只在队列内唯一。
+辅助器仅在副作用成功后提交其持久化声明；抛出的副作用会释放声明，使排空重试能够再次执行该副作用，
+而并发调用方会等待当前活动声明。持久化状态错误会在提供 `onDiskError` 时调用它，并拒绝操作，而不是回退到进程内存。
 
-Set the helper's `ttlMs` to at least the channel's ingress tombstone retention
-plus the maximum delay between effect commit and row completion, including
-bounded downtime and drain retries. The effect record's TTL starts at commit,
-while tombstone retention starts later at completion; if pending-row lifetime
-is unbounded, no finite TTL covers arbitrary downtime. After the tombstone can
-no longer replay the row, older effect records are dead weight. Size
-`stateMaxEntries` for every distinct event/effect key that can exist in that
-retention window, accounting for the queue's completed-entry bound and the
-maximum effects per event. A lower cap evicts the oldest record before its TTL
-and allows that effect to execute again. Residual at-least-once windows remain
-if the process dies or persistence fails after the effect succeeds but before
-the claim commits, or if the record expires while its ingress row is still
-pending.
+将辅助器的 `ttlMs` 设置为至少通道入口墓碑保留时间，加上副作用提交与行完成之间的最大延迟，
+其中包括有界停机时间和排空重试。副作用记录的 TTL 从提交时开始，而墓碑保留时间从完成时才开始；
+如果待处理行的生命周期无界，则没有有限 TTL 能覆盖任意时长的停机。在墓碑不再能够重放该行之后，
+较旧的副作用记录就成了无用负担。为 `stateMaxEntries` 设置足够容量，以容纳该保留窗口内可能存在的每个不同事件/副作用键，
+同时考虑队列的已完成条目上限和每个事件的最大副作用数。较低的上限会在 TTL 到期前驱逐最旧记录，并允许该副作用再次执行。
+如果进程在副作用成功但声明提交之前退出，或记录在其入口行仍处于待处理状态时过期，仍会存在残余的至少一次窗口。
 
-#### Account-scoped restart contract
+#### 账户范围的重启契约
 
-Channel config changes restart the whole channel by default. A multi-account
-channel may set `reload.accountScopedRestart: true` only when configuration
-resolution reads channel-wide shared fields plus the selected account, never a
-sibling account, and the Gateway can stop and start one `(channel, accountId)`
-runtime without replacing sibling runtimes.
+默认情况下，通道配置变更会重启整个通道。多账户通道只有在以下条件成立时，才可设置
+`reload.accountScopedRestart: true`：配置解析只读取通道范围的共享字段和选定账户，而绝不读取兄弟账户；
+并且 Gateway 能够在不替换兄弟运行时的情况下，停止并启动单个 `(channel, accountId)` 运行时。
 
-The scoped path applies only to changes under
-`channels.<channel>.accounts.<non-default-id>.*`. Changes to shared channel
-fields, `accounts.default`, removed or unresolvable accounts, and mixed changes
-that can affect inheritance are promoted to a whole-channel restart. Plugins
-that do not opt in always use the whole-channel path.
+范围化路径仅适用于
+`channels.<channel>.accounts.<non-default-id>.*` 下的变更。对共享通道字段、`accounts.default`、
+已删除或无法解析的账户的变更，以及可能影响继承关系的混合变更，都会升级为整个通道重启。
+未选择加入的插件始终使用整个通道路径。
 
-For channels using the durable ingress drain, the account monitor's stop path
-must first settle all accepted transport admissions, then dispose and await its
-drain. Starting the account opens the same account-keyed queue, whose initial
-drain recovers undispatched durable rows. Do not add a second reload-specific
-replay pass; queue recovery is the canonical restart path.
+对于使用持久化入口排空的通道，账户监控器的停止路径必须先完成所有已接纳传输的处理，
+然后释放并等待其排空完成。启动账户时会打开同一个按账户键控的队列，其初始排空会恢复尚未分发的持久化行。
+不要添加第二次仅针对重新加载的重放流程；队列恢复是规范的重启路径。
 
-Treat this flag as a capability claim, not a performance preference. Contract
-tests should prove that adding and editing one named account leaves a sibling's
-resolved config unchanged, stopping one account settles only that account's
-monitor and drain, and a fresh monitor recovers that account's rows exactly
-once. If any guarantee cannot be proved, omit the flag.
+将此标志视为能力声明，而不是性能偏好。契约测试应证明：添加或编辑一个指定账户不会改变兄弟账户的解析配置；
+停止一个账户只会完成该账户监控器和排空的处理；新监控器会恰好一次地恢复该账户的行。如果任何保证无法证明，
+就不要设置该标志。
 
-### Typing indicators
+### 运行时生命周期状态
 
-如果你的 channel 在 inbound 回复之外支持 typing 指示器，请在 channel 插件上暴露 `heartbeat.sendTyping(...)`。core 会在 heartbeat 模型运行开始前，使用已解析的 heartbeat 投递目标调用它，并使用共享的 typing keepalive/cleanup 生命周期。当平台需要显式停止信号时，再添加 `heartbeat.clearTyping(...)`。
+对于由渠道编写的运行时状态，`ChannelAccountSnapshot.lifecycle` 是
+`healthState` 的后继者。在采用过程中，现有插件可以继续发布
+`healthState`，并且仍支持核心派生的策略写入。暂无移除日期；移除时间取决于外部渠道插件的采用情况。
 
-### Media source params
+### 正在输入指示器
+
+如果你的 channel 除了入站回复之外还支持正在输入指示器，请在 channel 插件上暴露 `heartbeat.sendTyping(...)`。core 会在 heartbeat 模型运行开始前，使用已解析的 heartbeat 投递目标调用它，并使用共享的正在输入保活/清理生命周期。当平台需要显式停止信号时，再添加 `heartbeat.clearTyping(...)`。
+
+### 媒体来源参数
 
 如果你的 channel 为消息工具参数添加了媒体来源，请通过 `plugin.actions.describeMessageTool(...).mediaSourceParams` 暴露这些参数名。core 会使用这个显式列表进行 sandbox 路径规范化和 outbound 媒体访问策略，因此插件不需要为特定 provider 的头像、附件或封面图参数添加 shared-core 特例。
 
@@ -201,30 +163,25 @@ once. If any guarantee cannot be proved, omit the flag.
 
 必须为平台侧媒体拉取暴露临时公开 URL 的 channels，可以使用 `openclaw/plugin-sdk/outbound-media` 中的 `createHostedOutboundMediaStore(...)` 和 plugin state stores。把平台路由解析和 token 强制校验留在 channel 插件里；共享 helper 只负责媒体加载、过期元数据、分块行以及清理。
 
-Inbound attachments use ordered facts, not parallel `Media*` fields. Normalize
-channel records with `toInboundMediaFacts(...)` from
-`openclaw/plugin-sdk/channel-inbound` and pass them as `media` when building the
-inbound context. When a plugin must authorize local media reads, import
-`getAgentScopedMediaLocalRoots(...)` or
-`getAgentScopedMediaLocalRootsForSources(...)` from the focused
-`openclaw/plugin-sdk/media-local-roots` subpath. The old
-`agent-media-payload` builder/root facade is deprecated compatibility.
+`prepareUrl({ mediaAccess })` 会将主机授权的本地媒体访问权限转发给共享的 outbound loader。为保持兼容性，托管媒体容量的默认值为 `overflowPolicy: "evict-oldest"`。当生成的 URL 必须在过期前保持有效时，请使用 `"reject-new"`，并将两个后端 keyed stores 都配置为 `"reject-new"`，以确保独立写入方无法驱逐仍有效的行。请先使用 `readMetadata(...)` 对 bearer 请求进行身份验证，再调用 `read(...)`，这样无效 token 和 `HEAD` 请求就不会加载已存储的媒体分块。
 
-### Native payload shaping
+入站附件使用有序 facts，而不是并行的 `Media*` 字段。使用 `openclaw/plugin-sdk/channel-inbound` 中的 `toInboundMediaFacts(...)` 规范化 channel 记录，并在构建入站上下文时将其作为 `media` 传入。当插件必须授权本地媒体读取时，请从专用的 `openclaw/plugin-sdk/media-local-roots` 子路径导入 `getAgentScopedMediaLocalRoots(...)` 或 `getAgentScopedMediaLocalRootsForSources(...)`。旧的 `agent-media-payload` builder/root facade 属于已弃用的兼容性接口。
 
-如果你的 channel 需要对 `message(action="send")` 做 provider 特定的 shaping，优先使用 `actions.prepareSendPayload(...)`。把 native cards、blocks、embeds 或其他持久化数据放在 `payload.channelData.<channel>` 下，并让 core 通过 outbound/message 适配器发送。仅将 `actions.handleAction(...)` 用作无法序列化和重试的 payload 的兼容性回退方案。
+### 原生负载整形
 
-### Session conversation grammar
+如果你的通道需要对 `message(action="send")` 进行提供商特定的整形，优先使用 `actions.prepareSendPayload(...)`。将原生卡片、区块、嵌入内容或其他持久化数据放在 `payload.channelData.<channel>` 下，并让核心通过 outbound/message 适配器发送。仅将 `actions.handleAction(...)` 用作无法序列化和重试的负载的兼容性回退方案。
 
-如果你的平台把额外作用域存储在 conversation id 中，请使用 `messaging.resolveSessionConversation(...)` 将解析逻辑保留在插件内。这是将 `rawId` 映射到基础 conversation id、可选 thread id、显式 `baseConversationId` 以及任何 `parentConversationCandidates` 的规范 hook。当你返回 `parentConversationCandidates` 时，请按从最窄的 parent 到最宽/base conversation 的顺序排列。
+### 会话对话语法
 
-`messaging.resolveParentConversationCandidates(...)` 是一个已弃用的兼容性回退方案，适用于只需要在通用/raw id 之上提供 parent 回退的插件。如果两个 hook 都存在，core 会先使用 `resolveSessionConversation(...).parentConversationCandidates`，只有在规范 hook 未提供它们时才回退到 `resolveParentConversationCandidates(...)`。
+如果你的平台把额外作用域存储在 conversation id 中，请使用 `messaging.resolveSessionConversation(...)` 将解析逻辑保留在插件内。这是将 `rawId` 映射到基础 conversation id、可选 thread id、显式 `baseConversationId` 以及任何 `parentConversationCandidates` 的规范钩子。当你返回 `parentConversationCandidates` 时，请按从最窄的 parent 到最宽/base conversation 的顺序排列。
 
-需要在 channel registry 启动之前完成同样解析的捆绑插件，可以提供一个顶层 `session-key-api.ts` 文件，并导出匹配的 `resolveSessionConversation(...)`（参见 Feishu 和 Telegram 插件）。只有在运行时插件 registry 还不可用时，core 才会使用这个启动安全的 surface。
+`messaging.resolveParentConversationCandidates(...)` 是一个已弃用的兼容性回退方案，适用于只需要在通用/raw id 之上提供 parent 回退的插件。如果两个钩子都存在，core 会先使用 `resolveSessionConversation(...).parentConversationCandidates`，只有在规范钩子未提供它们时才回退到 `resolveParentConversationCandidates(...)`。
+
+需要在 channel registry 启动之前完成同样解析的捆绑插件，可以提供一个顶层 `session-key-api.ts` 文件，并导出匹配的 `resolveSessionConversation(...)`（参见 Feishu 和 Telegram 插件）。只有在运行时插件 registry 还不可用时，core 才会使用这个启动安全的接口。
 
 当插件代码需要规范化类似 route 的字段、比较子 thread 与其父 route，或从 `{ channel, to, accountId, threadId }` 构建稳定的去重 key 时，请使用 `openclaw/plugin-sdk/channel-route`。这个 helper 会像 core 一样规范化数字类型的 thread id，因此应优先于临时的 `String(threadId)` 比较。具有 provider 特定目标语法的插件应暴露 `messaging.resolveOutboundSessionRoute(...)`，以便 core 无需 parser shim 就能获取 provider 原生的 session 和 thread 身份。
 
-### Account-scoped conversation binding support
+### 按账号作用域的会话绑定支持
 
 当 channel 支持通用的当前会话绑定时，将 `conversationBindings.supportsCurrentConversationBinding` 设为 true。`createChatChannelPlugin(...)` 默认会将这个静态能力设为 `true`。
 
@@ -268,7 +225,7 @@ core 不再从该对象读取审批认证钩子。
   否则 core 会将结果视为显式的审批人授权。
 - 如果由通道拥有的原生回调直接解析审批，在解析前使用
   `isImplicitSameChatApprovalAuthorization(...)`，这样隐式回退仍会经过通道的
- 常规 actor 认证。
+  常规 actor 认证。
 
 ### 载荷生命周期与设置指引
 
@@ -307,63 +264,24 @@ core 不再从该对象读取审批认证钩子。
 
 其他审批帮助器：
 
-- Use `createNativeApprovalChannelRouteGates` from
-  `openclaw/plugin-sdk/approval-native-runtime` when a channel supports both
-  session-origin native delivery and explicit approval forwarding targets. The
-  helper centralizes approval config selection, `mode` handling, agent/session
-  filters, account binding, session-target matching, and target-list matching
-  while callers still own the channel id, default forwarding mode, account
-  lookup, transport-enabled check, target normalization, and turn-source
-  target resolution. Do not use it to create core-owned channel policy
-  defaults; pass the channel's documented default mode explicitly.
-- `createNativeApprovalMessagingTargetResolvers` centralizes channel matching
-  and `{ to, accountId, threadId }` normalization for messaging transports
-  whose native approval target is a channel-owned normalized destination.
-  Keep group authorization, approver mapping, and other transport policy in
-  the channel plugin.
-- `createChannelNativeOriginTargetResolver` uses the shared channel-route
-  matcher by default for `{ to, accountId, threadId }` targets. Pass
-  `targetsMatch` only when a channel has provider-specific equivalence rules,
-  such as Slack timestamp prefix matching. Pass `normalizeTargetForMatch` when
-  the channel needs to canonicalize provider ids before the default route
-  matcher or a custom `targetsMatch` callback runs, while preserving the
-  original target for delivery. Use `normalizeTarget` only when the resolved
-  delivery target itself should be canonicalized.
-- If the channel needs runtime-owned objects such as a client, token, Bolt
-  app, or webhook receiver, register them through
-  `openclaw/plugin-sdk/channel-runtime-context`. The generic runtime-context
-  registry lets core bootstrap capability-driven handlers from channel
-  startup state without adding approval-specific wrapper glue.
-- Reach for the lower-level `createChannelApprovalHandler` or
-  `createChannelNativeApprovalRuntime` only when the capability-driven seam is
-  not expressive enough yet.
-- Native approval channels must route both `accountId` and `approvalKind`
-  through those helpers. `accountId` keeps multi-account approval policy
-  scoped to the right bot account, and `approvalKind` keeps exec vs plugin
-  approval behavior available to the channel without hardcoded branches in
-  core.
-- Core owns approval reroute notices too. Channel plugins should not send
-  their own "approval went to DMs / another channel" follow-up messages from
-  `createChannelNativeApprovalRuntime`; instead, expose accurate origin +
-  approver-DM routing through the shared approval capability helpers and let
-  core aggregate actual deliveries before posting any notice back to the
-  initiating chat.
-- Preserve the delivered approval id kind end-to-end. Native clients should
-  not guess or rewrite exec vs plugin approval routing from channel-local
-  state.
-- Pass that explicit `approvalKind` to `resolveApprovalOverGateway`. This uses
-  the canonical `approval.resolve` service and returns the recorded winner when
-  another surface answers first. The older explicit `resolveMethod` input
-  remains for command-backed controls; new native actions must not use it or
-  infer kind from an ID.
-- Different approval kinds can intentionally expose different native
-  surfaces. Current bundled examples: Matrix keeps the same native DM/channel
-  routing and reaction UX for exec and plugin approvals, while still letting
-  auth differ by approval kind; Slack keeps native approval routing available
-  for both exec and plugin ids.
-- `createApproverRestrictedNativeApprovalAdapter` still exists as a
-  compatibility wrapper, but new code should prefer the capability builder
-  and expose `approvalCapability` on the plugin.
+- 当一个通道同时支持会话来源的原生投递和显式审批转发目标时，请使用
+  `openclaw/plugin-sdk/approval-native-runtime` 中的
+  `createNativeApprovalChannelRouteGates`。该帮助器集中处理审批配置选择、`mode`
+  处理、代理/会话过滤、账户绑定、会话目标匹配和目标列表匹配，同时调用方仍负责通道 ID、默认转发模式、账户查找、传输启用检查、目标规范化和轮次来源目标解析。不要使用它来创建由 core 所有的通道策略默认值；请显式传入通道文档规定的默认模式。
+- `createNativeApprovalMessagingTargetResolvers` 集中处理消息传输中的通道匹配以及 `{ to, accountId, threadId }` 规范化，这些传输的原生审批目标是通道自有的规范化目的地。
+  请将群组授权、审批人映射和其他传输策略保留在通道插件中。
+- `createChannelNativeOriginTargetResolver` 默认使用共享的通道路由匹配器来处理 `{ to, accountId, threadId }` 目标。只有当通道具有提供商特定的等价规则（例如 Slack 时间戳前缀匹配）时，才传入 `targetsMatch`。当通道需要在默认路由匹配器或自定义 `targetsMatch` 回调运行之前规范化提供商 ID 时，请传入 `normalizeTargetForMatch`，同时保留原始目标用于投递。只有当解析出的投递目标本身应被规范化时，才使用 `normalizeTarget`。
+- 如果通道需要客户端、令牌、Bolt 应用或 webhook 接收器等由运行时拥有的对象，请通过
+  `openclaw/plugin-sdk/channel-runtime-context` 注册它们。通用的运行时上下文注册表可以让 core 从通道启动状态引导基于能力的处理器，而无需添加审批专用的包装代码。
+- 只有当基于能力的衔接点暂时无法满足需求时，才使用较低层级的
+  `createChannelApprovalHandler` 或
+  `createChannelNativeApprovalRuntime`。
+- 原生审批通道必须通过这些帮助器传递 `accountId` 和 `approvalKind`。`accountId` 确保多账户审批策略限定在正确的机器人账户范围内，而 `approvalKind` 则使通道能够处理 exec 与插件审批行为，无需在 core 中使用硬编码分支。
+- Core 也负责审批重新路由通知。通道插件不应从 `createChannelNativeApprovalRuntime` 发送自己的“审批已转到私信/另一个通道”后续消息；相反，应通过共享审批能力帮助器准确暴露来源 + 审批人私信路由，并让 core 在向发起审批的聊天发布任何通知之前，汇总实际投递结果。
+- 端到端保留已投递审批 ID 的类型。原生客户端不应根据通道本地状态猜测或重写 exec 与插件审批的路由。
+- 将显式的 `approvalKind` 传递给 `resolveApprovalOverGateway`。这会使用规范的 `approval.resolve` 服务，并在另一个界面先作出响应时返回已记录的获胜者。较旧的显式 `resolveMethod` 输入仍用于基于命令的控制；新的原生操作不得使用它，也不得从 ID 推断类型。
+- 不同的审批类型可以有意暴露不同的原生界面。目前打包的示例包括：Matrix 对 exec 和插件审批保持相同的原生私信/频道路由和 reaction 用户体验，同时仍允许按审批类型区分授权；Slack 则同时为 exec ID 和插件 ID 提供原生审批路由。
+- `createApproverRestrictedNativeApprovalAdapter` 仍作为兼容性包装器存在，但新代码应优先使用能力构建器，并在插件上暴露 `approvalCapability`。
 
 ### 更窄的审批运行时子路径
 
@@ -405,9 +323,7 @@ core 不再从该对象读取审批认证钩子。
 `createOptionalChannelSetupSurface(...)`。生成的 adapter/wizard 会在配置写入和最终化时
 闭合失败，并且它们会在校验、finalize 和 docs-link 文案中复用同一条“需要安装”的消息。
 
-If your channel supports env-driven setup or auth, expose it through the
-channel config schema and setup descriptors. Keep channel runtime `envVars` or
-local constants for operator-facing copy only.
+如果你的通道支持由环境变量驱动的设置或身份验证，请通过通道配置 schema 和设置描述符公开这些能力。将通道运行时的 `envVars` 或本地常量仅用于面向操作员的文案。
 
 如果你的通道可以在插件运行时启动之前就出现在 `status`、`channels list`、`channels status` 或 SecretRef 扫描中，请在 `package.json` 里添加 `openclaw.setupEntry`。该入口点应能在只读命令路径中安全导入，并应返回这些汇总所需的通道元数据、设置安全的 config adapter、状态 adapter，以及通道 secret target 元数据。不要从 setup entry 启动客户端、监听器或传输运行时。
 
@@ -417,24 +333,26 @@ local constants for operator-facing copy only.
 
 对于其他高频通道路径，在不需要更宽泛的遗留接入面时，优先使用更窄的帮助器：
 
-- `openclaw/plugin-sdk/account-core`, `openclaw/plugin-sdk/account-id`,
-  `openclaw/plugin-sdk/account-resolution`, and
-  `openclaw/plugin-sdk/account-helpers` for multi-account config and
-  default-account fallback
-- `openclaw/plugin-sdk/inbound-envelope` and
-  `openclaw/plugin-sdk/channel-inbound` for inbound route/envelope and
-  record-and-dispatch wiring
-- `openclaw/plugin-sdk/channel-targets` for target parsing helpers
-- `openclaw/plugin-sdk/channel-outbound` for outbound identity/send delegates
-  and typed payload planning
-- `buildThreadAwareOutboundSessionRoute(...)` from
-  `openclaw/plugin-sdk/channel-core` when an outbound route should preserve
-  an explicit `replyToId`/`threadId` or recover the current `:thread:`
-  session after the base session key still matches. Provider plugins can
-  override precedence, suffix behavior, and thread id normalization when
-  their platform has native thread delivery semantics.
-- `openclaw/plugin-sdk/thread-bindings-runtime` for thread-binding lifecycle
-  and adapter registration
+- `openclaw/plugin-sdk/account-core`、`openclaw/plugin-sdk/account-id`、
+  `openclaw/plugin-sdk/account-resolution` 和
+  `openclaw/plugin-sdk/account-helpers`，用于多账户配置和
+  默认账户回退
+- `openclaw/plugin-sdk/inbound-envelope` 和
+  `openclaw/plugin-sdk/channel-inbound`，用于入站路由/信封以及
+  记录并分发的接线
+- 当成功的出站发送必须停用一个活动的入站事件标记时，使用
+  `createInboundEventDeliveryCorrelation(...)`（来自
+  `openclaw/plugin-sdk/inbound-event-delivery`）；每个通道创建一个跟踪器，
+  并将目标匹配保留在通道插件中
+- `openclaw/plugin-sdk/channel-targets`，用于目标解析帮助器
+- `openclaw/plugin-sdk/channel-outbound`，用于出站身份/发送委托
+  以及类型化载荷规划
+- 当出站路由应保留显式的 `replyToId`/`threadId`，或在基础会话键仍然匹配时恢复当前的 `:thread:`
+  会话，请使用来自 `openclaw/plugin-sdk/channel-core` 的
+  `buildThreadAwareOutboundSessionRoute(...)`。当平台具有原生线程投递语义时，提供商插件可以
+  覆盖优先级、后缀行为和线程 ID 规范化。
+- `openclaw/plugin-sdk/thread-bindings-runtime`，用于线程绑定生命周期
+  和适配器注册
 
 仅认证的通道通常可以停留在默认路径：core 处理审批，而插件只暴露 outbound/auth 能力。像 Matrix、Slack、Telegram 以及自定义聊天传输这样的原生审批通道，应使用共享的原生 helper，而不是自己重新实现审批生命周期。
 
@@ -729,20 +647,15 @@ if (decision.shouldSkip) return;
       当解析出了原生回复目标时，发送上下文还包括 `replyToIdSource`（`implicit` 或 `explicit`），这样负载辅助函数可以保留显式回复标签，而不会消耗隐式的一次性回复槽位。
     </Accordion>
 
-    ### Group tool-policy adapters
+    ### 群组工具策略适配器
 
-    A channel that implements `group.resolveToolPolicy` and supports
-    `toolsBySender` must forward the complete `ChannelGroupContext` to its
-    shared policy resolver. In particular, honor `senderPolicyMode: "never"`
-    by skipping sender-specific overlays at both the matched-group and wildcard
-    scopes while still applying the base `tools` policy.
+    实现了 `group.resolveToolPolicy` 并支持
+    `toolsBySender` 的频道必须将完整的 `ChannelGroupContext` 转发给其
+    共享策略解析器。尤其要注意：通过在匹配的群组和通配符作用域跳过发送者特定的覆盖项，遵守
+    `senderPolicyMode: "never"`，同时仍应用基础的 `tools` 策略。
 
-    OpenClaw sets this mode only for trusted non-ingress execution whose sender
-    authority was already captured in a server-owned envelope, such as an
-    explicitly capped scheduled run. Plugins must not derive the mode from
-    inbound metadata, persist it as channel state, or expose it as config. Add
-    an adapter test that proves the mode skips a wildcard `toolsBySender` entry
-    without dropping the matching base `tools` restriction.
+    OpenClaw 仅会为受信任的非入口执行设置此模式，此类执行的发送者权限已记录在服务器拥有的信封中，例如
+    明确设置了上限的计划运行。插件不得从传入元数据推导此模式，不得将其持久化为频道状态，也不得将其暴露为配置项。添加一个适配器测试，证明该模式会跳过通配符 `toolsBySender` 条目，同时不会丢弃匹配的基础 `tools` 限制。
 
   </Step>
 
@@ -925,10 +838,10 @@ if (decision.shouldSkip) return;
 
 ## 下一步
 
-- [Provider plugins](/plugins/sdk-provider-plugins) - If your plugin also provides models
-- [SDK overview](/plugins/sdk-overview) - Complete subpath import reference
-- [SDK testing](/plugins/sdk-testing) - Testing tools and contract testing
-- [Plugin manifest](/plugins/manifest) - Complete manifest schema
+- [Provider 插件](/plugins/sdk-provider-plugins) - 如果你的插件还提供模型
+- [SDK 概览](/plugins/sdk-overview) - 完整的子路径导入参考
+- [SDK 测试](/plugins/sdk-testing) - 测试工具和契约测试
+- [插件清单](/plugins/manifest) - 完整的清单架构.schemas
 
 ## 相关内容
 

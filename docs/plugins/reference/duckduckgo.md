@@ -12,7 +12,7 @@ title: "DuckDuckGo 插件"
 ## 分发
 
 - 包：`@openclaw/duckduckgo-plugin`
-- 安装方式：包含在 OpenClaw 中
+- 安装渠道：npm；ClawHub：`clawhub:@openclaw/duckduckgo-plugin`
 
 ## 接口
 
@@ -20,4 +20,4 @@ contracts: `webSearchProviders`
 
 ## 相关文档
 
-- [duckduckgo](/tools/duckduckgo-search)
+- [DuckDuckGo](/tools/duckduckgo-search)

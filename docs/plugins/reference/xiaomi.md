@@ -11,12 +11,12 @@ title: "小米插件"
 
 ## 分发
 
-- 包：`@openclaw/xiaomi-provider`
-- 安装方式：已包含在 OpenClaw 中
+- 软件包：`@openclaw/xiaomi-provider`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/xiaomi-provider`
 
 ## 接口
 
-providers: `xiaomi`, `xiaomi-token-plan`; contracts: `speechProviders`, `usageProviders`
+提供商：`xiaomi`、`xiaomi-token-plan`；合约：`speechProviders`、`usageProviders`
 
 ## 相关文档
 

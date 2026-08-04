@@ -12,7 +12,7 @@ title: "Voyage 插件"
 ## 分发
 
 - 包：`@openclaw/voyage-provider`
-- 安装方式：包含在 OpenClaw 中
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/voyage-provider`
 
 ## 接口
 

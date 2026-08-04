@@ -15,5 +15,5 @@ title: "插件参考"
 pnpm plugins:inventory:gen
 ```
 
-Use [Plugin inventory](/plugins/plugin-inventory) to browse all 145
-generated plugin reference pages by distribution, package, and description.
+使用[插件清单](/plugins/plugin-inventory)按分发方式、包和描述浏览全部 146 个
+生成的插件参考页面。

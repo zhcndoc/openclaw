@@ -7,24 +7,30 @@ read_when:
 ---
 
 **Meta API** 使用与 OpenAI 兼容的 **Responses API**（`POST /v1/responses`）
-来提供 `muse-spark-1.1` 推理模型。该提供方作为内置的 OpenClaw
-插件提供。
+来调用 `muse-spark-1.1` 推理模型。OpenClaw 将 Meta 作为官方
+外部插件提供。
 
-| Property          | Value                              |
-| ----------------- | ---------------------------------- |
-| Provider id       | `meta`                             |
-| Plugin            | bundled provider                   |
-| Auth env var      | `MODEL_API_KEY`                    |
-| Onboarding flag   | `--auth-choice meta-api-key`       |
-| Direct CLI flag   | `--meta-api-key <key>`             |
-| API               | Responses API (`openai-responses`) |
-| Base URL          | `https://api.meta.ai/v1`           |
-| Default model     | `meta/muse-spark-1.1`              |
-| Default reasoning | `high` (`reasoning.effort`)        |
+| 属性               | 值                                |
+| ------------------ | ---------------------------------- |
+| 提供商 ID          | `meta`                             |
+| 插件               | `@openclaw/meta-provider`          |
+| 认证环境变量       | `MODEL_API_KEY`                    |
+| 初始化标志         | `--auth-choice meta-api-key`       |
+| 直接 CLI 标志      | `--meta-api-key <key>`             |
+| API                | Responses API（`openai-responses`） |
+| 基础 URL           | `https://api.meta.ai/v1`           |
+| 默认模型           | `meta/muse-spark-1.1`              |
+| 默认推理级别       | `high`（`reasoning.effort`）        |
 
 ## 开始使用
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/meta-provider
+    openclaw gateway restart
+    ```
+  </Step>
   <Step title="设置 API 密钥">
     <CodeGroup>
 
@@ -68,16 +74,16 @@ openclaw onboard --non-interactive --accept-risk \
 
 ## 内置目录
 
-| Model ref             | Name           | Input       | Reasoning | Context window | Max output | Input / cached input / output per 1M tokens |
-| --------------------- | -------------- | ----------- | --------- | -------------- | ---------- | ------------------------------------------- |
-| `meta/muse-spark-1.1` | Muse Spark 1.1 | text, image | yes       | 1,048,576      | 131,072    | $1.25 / $0.15 / $4.25                       |
+| 模型引用                 | 名称           | 输入       | 推理 | 上下文窗口     | 最大输出   | 每 1M token 的输入 / 缓存输入 / 输出 |
+| ------------------------ | -------------- | ---------- | ---- | -------------- | ---------- | ----------------------------------- |
+| `meta/muse-spark-1.1`    | Muse Spark 1.1 | 文本、图像 | 是   | 1,048,576      | 131,072    | $1.25 / $0.15 / $4.25               |
 
 功能：
 
-- Text and image input
-- Tool calling and streaming
-- Reasoning effort: `minimal`, `low`, `medium`, `high`, `xhigh` (default: `high`)
-- Stateless encrypted reasoning replay (`store: false`, `include: ["reasoning.encrypted_content"]`)
+- 文本和图像输入
+- 工具调用和流式传输
+- 推理强度：`minimal`、`low`、`medium`、`high`、`xhigh`（默认：`high`）
+- 无状态加密推理重放（`store: false`、`include: ["reasoning.encrypted_content"]`）
 
 <Warning>
 `muse-spark-1.1` 不接受 `reasoning.effort: "none"`。OpenClaw 会将

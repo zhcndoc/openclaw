@@ -18,6 +18,12 @@ OpenClaw 支持将 DuckDuckGo 作为一个**无密钥**的 `web_search` 提供�
 DuckDuckGo 从不被自动选择，因为自动检测只会考虑具有可用凭据的提供程序。请显式设置它：
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/duckduckgo-plugin
+    openclaw gateway restart
+    ```
+  </Step>
   <Step title="配置">
     ```bash
     openclaw configure --section web
@@ -95,6 +101,6 @@ SafeSearch 级别。
 
 ## 相关内容
 
-- [Web Search 概览](/tools/web) -- 所有提供程序和自动检测
+- [Web 搜索概览](/tools/web) -- 所有提供程序和自动检测
 - [Brave Search](/tools/brave-search) -- 带免费层级的结构化结果
-- [Exa Search](/tools/exa-search) -- 带内容提取的神经搜索
+- [Exa Search](/tools/exa-search) -- 带内容提取的神经搜索。

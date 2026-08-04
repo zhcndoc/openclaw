@@ -7,16 +7,25 @@ title: "OpenCode Go"
 ---
 
 OpenCode Go 是 [OpenCode](/providers/opencode) 中的 Go 目录。它与 Zen 目录共享
-`OPENCODE_API_KEY` 凭证，但保留自己的
-运行时提供方 id（`opencode-go`），因此上游按模型路由仍然保持正确。
+`OPENCODE_API_KEY` 凭据，但保留自身的运行时提供商 ID（`opencode-go`），以便上游的
+按模型路由保持正确。OpenClaw 将其作为官方外部
+`@openclaw/opencode-go-provider` 插件提供。
 
-| Property         | Value                                              |
+| 属性             | 值                                                 |
 | ---------------- | -------------------------------------------------- |
-| Runtime provider | `opencode-go`                                      |
-| Auth             | `OPENCODE_API_KEY` (别名: `OPENCODE_ZEN_API_KEY`) |
-| Parent setup     | [OpenCode](/providers/opencode)                    |
+| 运行时提供商     | `opencode-go`                                      |
+| 插件             | `@openclaw/opencode-go-provider`                   |
+| 身份验证         | `OPENCODE_API_KEY`（别名：`OPENCODE_ZEN_API_KEY`） |
+| 父级设置         | [OpenCode](/providers/opencode)                    |
 
 ## 入门
+
+安装官方插件并重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/opencode-go-provider
+openclaw gateway restart
+```
 
 <Tabs>
   <Tab title="交互式">
@@ -64,10 +73,10 @@ OpenCode Go 是 [OpenCode](/providers/opencode) 中的 Go 目录。它与 Zen �
 }
 ```
 
-## 内置目录
+## 目录
 
-运行 `openclaw models list --provider opencode-go` 以获取当前模型列表。
-捆绑行：
+运行 `openclaw models list --provider opencode-go` 获取当前模型列表。  
+当前条目：
 
 | 模型引用                         | 名称              | 上下文   | 最大输出 | 图像输入 |
 | ------------------------------- | ----------------- | --------- | ---------- | ----------- |

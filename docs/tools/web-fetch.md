@@ -96,9 +96,15 @@ await web_fetch({ url: "https://example.com/article" });
         useTrustedEnvProxy: false, // 让受信任的 HTTP(S) 环境代理解析 DNS
         readability: true, // 使用 Readability 提取
         userAgent: "Mozilla/5.0 ...", // 覆盖 User-Agent
+        headers: {
+          // 可选；每个值都将被视为敏感信息
+          "X-Routing-Target": "staging",
+        },
         ssrfPolicy: {
-          allowRfc2544BenchmarkRange: true, // 针对使用 198.18.0.0/15 的受信任假 IP 代理进行可选启用
-          allowIpv6UniqueLocalRange: true, // 针对使用 fc00::/7 的受信任假 IP 代理进行可选启用
+          dangerouslyAllowPrivateNetwork: false, // 广泛允许私有网络访问；默认保持 false
+          allowedHostnames: ["internal.example"], // 窄范围的精确主机例外
+          allowRfc2544BenchmarkRange: true, // 为使用 198.18.0.0/15 的受信任伪 IP 代理选择性启用
+          allowIpv6UniqueLocalRange: true, // 为使用 fc00::/7 的受信任伪 IP 代理选择性启用
         },
       },
     },
@@ -158,12 +164,51 @@ await web_fetch({ url: "https://example.com/article" });
 
 - `tools.web.fetch.provider` 会显式选择抓取回退提供方。
 - 如果省略 `provider`，OpenClaw 会从已配置凭据中自动检测第一个可用的 web-fetch
-  提供方。非沙盒的 `web_fetch` 可以使用已安装的插件，这些插件声明了 `contracts.webFetchProviders` 并在运行时注册匹配的提供方。
+  提供方。非沙盒的 `web_fetch` 可以使用已安装的插件，这些插件声明了
+  `contracts.webFetchProviders` 并在运行时注册匹配的提供方。
   目前官方 Firecrawl 插件提供了这一回退。
 - 沙盒化的 `web_fetch` 调用允许使用内置提供方以及其官方 npm 或 ClawHub 来源已验证的已安装提供方。
   目前这允许使用官方 Firecrawl 插件；第三方外部抓取插件仍被排除在外。
 - 如果 Readability 被禁用，`web_fetch` 会直接跳到所选的提供方回退。
   如果没有可用提供方，则会以关闭方式失败。
+
+## 自定义请求标头
+
+当您的部署需要在出站获取请求中附加请求元数据时，设置 `tools.web.fetch.headers`，例如使用路由或服务注入标头，将流量引导至您控制的网关。
+
+```json5
+{
+  tools: {
+    web: {
+      fetch: {
+        headers: {
+          "X-Routing-Target": "${WEB_FETCH_ROUTING_TARGET}",
+        },
+      },
+    },
+  },
+}
+```
+
+<Warning>
+  每个已配置的值都会被视为敏感信息，并从公开的配置和调试捕获内容中删去。标头仍会发送到
+  `web_fetch` 请求的每个初始 URL，而该 URL 由模型选择。仅当这符合预期的信任边界时，
+  才配置凭据标头。
+</Warning>
+
+需要了解的行为：
+
+- 值为普通字符串，并支持像其他配置字符串一样使用 `${VAR}` 进行环境变量替换。不接受结构化的 SecretRef 值。
+- 标头仅应用于直接的 `web_fetch` 请求。诸如 [Firecrawl](/tools/firecrawl) 之类的提供商回退方案会调用自己的 API，永远不会接收这些标头。
+- 条目会在构建请求时进行验证，而不是在加载配置时验证，因此某个错误条目会被丢弃，其余条目仍会应用。配置加载会有意保持宽松：针对单个标头名称拼写错误而导致的故障关闭验证错误，会禁用整个功能面。每个被丢弃的条目都会按名称记录日志。
+- 被丢弃的名称：
+  - `Accept`、`Accept-Language` 和 `User-Agent` 属于获取和可读性协议。请使用 `tools.web.fetch.userAgent` 设置用户代理。
+  - `Content-Length`、`Transfer-Encoding`、`Connection` 和 `Upgrade` 等成帧及逐跳名称，请求要么直接拒绝，要么忽略这些名称。
+  - 不是有效 HTTP 令牌的名称，例如 `"X Routing Target"`。
+- 被丢弃的值：请求无法承载的字节（CR、LF、NUL 或任何高于 `U+00FF` 的字符）。缺失的环境变量会由配置加载报告；当字面量 `${VAR}` 文本确实是预期内容时，全局的 `$${VAR}` 转义仍然可用。
+- 名称仅大小写不同的两个条目会合并为后一个条目，因此请求永远不会携带接收网关无法解析的逗号连接值。被丢弃的名称会被记录日志，但不会记录任一值。如果后一个条目不可用，则不会发送任何一个值。
+- 拒绝会发生在计算缓存键之前，因此缓存键始终与实际发送的字节相匹配：更改一个确实会发送的标头会对获取缓存进行分区，而添加一个会被丢弃的标头则不会。
+- 当重定向跨越源时，会应用受保护获取的安全允许列表。该列表之外的路由标头会被丢弃；`Cache-Control`、`Content-Type` 和 `Range` 等标准安全标头会被保留。
 
 ## 受信任的环境代理
 
@@ -182,17 +227,19 @@ HTTP(S) 代理，请设置 `tools.web.fetch.useTrustedEnvProxy: true`。
 
 ## 限制与安全
 
-- `maxChars` 被限制为 `tools.web.fetch.maxCharsCap`（默认 `20000`）
-- 在解析之前，响应正文会被限制为 `maxResponseBytes`（默认 `750000`，限制在
-  `32000-10000000` 之间）；超出大小的响应会被截断并给出警告
-- 私有/内部主机名会被阻止
+- `maxChars` 会被限制在 `tools.web.fetch.maxCharsCap`（默认值为 `20000`）以内
+- 解析前，响应正文会被限制为 `maxResponseBytes`（默认值为 `750000`，限制范围为
+  32000-10000000）；超出大小的响应会被截断并发出警告
+- 会阻止私有/内部主机名
+- `tools.web.fetch.ssrfPolicy.allowedHostnames` 允许精确匹配的受信任主机，同时继续阻止其他私有/内部目标
+- `tools.web.fetch.ssrfPolicy.dangerouslyAllowPrivateNetwork` 会广泛允许访问私有网络目标；仅当本部署中模型选择的 URL 可信时才启用
 - `tools.web.fetch.ssrfPolicy.allowRfc2544BenchmarkRange` 和
-  `tools.web.fetch.ssrfPolicy.allowIpv6UniqueLocalRange` 是面向受信任的 fake-IP 代理栈的
-  窄范围显式启用项；除非你的代理拥有这些合成地址段并执行自己的目标策略，否则请不要设置它们
-- 重定向会通过 `maxRedirects`（默认 `3`）进行检查和限制
-- `useTrustedEnvProxy` 是显式启用项，只应为由操作员控制、且在 DNS
-  解析后仍会强制执行出站策略的代理启用
-- `web_fetch` 采用尽力而为的方式——某些站点需要 [Web Browser](/tools/browser)
+  `tools.web.fetch.ssrfPolicy.allowIpv6UniqueLocalRange` 是针对受信任的虚假 IP 代理栈的有限选择加入项；除非您的代理拥有这些
+  合成范围并执行自身的目标策略，否则请勿设置
+- 重定向会经过检查，并受 `maxRedirects`（默认值为 `3`）限制
+- `tools.web.fetch.headers` 的值会从公开的配置和调试捕获内容中脱敏；这些值会发送到最初获取的主机，并且仅当现有的受保护获取策略允许时才会在重定向过程中保留
+- `useTrustedEnvProxy` 是一个显式选择加入项，仅应为由操作员控制、且在 DNS 解析后仍执行出站策略的代理启用
+- `web_fetch` 尽力而为——某些网站需要[网页浏览器](/tools/browser)
 
 ## 工具配置文件
 

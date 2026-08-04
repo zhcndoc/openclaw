@@ -48,10 +48,10 @@ TTS 是 Talk 的 `stt-tts` 模式中语音输出的一半（`talk.speak` 调用�
 </Steps>
 
 <Note>
-默认情况下，Auto-TTS 是**关闭**的。当 `tts.provider` 未设置时，
+默认情况下，自动 TTS 是**关闭**的。当 `tts.provider` 未设置时，
 OpenClaw 会按注册表自动选择顺序选取第一个已配置的提供商。
 内置的 `tts` 代理工具仅支持显式意图：普通聊天仍然是
-文本，除非用户请求音频、使用 `/tts`，或启用 Auto-TTS/指令式
+文本，除非用户请求音频、使用 `/tts`，或启用自动 TTS/指令式
 语音。
 </Note>
 
@@ -59,21 +59,22 @@ OpenClaw 会按注册表自动选择顺序选取第一个已配置的提供商�
 
 | 提供商            | 认证                                                                                                             | 说明                                                                                        |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| **Azure Speech**  | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION` (也可使用 `AZURE_SPEECH_API_KEY`、`SPEECH_KEY`、`SPEECH_REGION`)      | 原生 Ogg/Opus 语音消息输出和电话功能。                                                      |
-| **DeepInfra**     | `DEEPINFRA_API_KEY`                                                                                              | 兼容 OpenAI 的 TTS。默认为 `hexgrad/Kokoro-82M`。                                           |
-| **ElevenLabs**    | `ELEVENLABS_API_KEY` 或 `XI_API_KEY`                                                                             | 声音克隆、多语言、可通过 `seed` 确定性复现；用于 Discord 语音播放时流式传输。              |
-| **Google Gemini** | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`                                                                             | Gemini API 批量 TTS；通过 `promptTemplate: "audio-profile-v1"` 感知角色。                 |
-| **Gradium**       | `GRADIUM_API_KEY`                                                                                                | 语音消息和电话输出。                                                                        |
-| **Inworld**       | `INWORLD_API_KEY`                                                                                                | 流式 TTS API。原生 Opus 语音消息和 PCM 电话功能。                                           |
-| **Local CLI**     | none                                                                                                             | 运行一个已配置的本地 TTS 命令。                                                              |
-| **Microsoft**     | none                                                                                                             | 通过 `node-edge-tts` 使用 Microsoft Edge 的公开神经 TTS。尽力而为，无 SLA。               |
-| **MiniMax**       | `MINIMAX_API_KEY`（或 Token Plan：`MINIMAX_OAUTH_TOKEN`、`MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`）      | T2A v2 API。默认为 `speech-2.8-hd`。                                                        |
-| **OpenAI**        | `OPENAI_API_KEY`                                                                                                 | 也用于自动摘要；支持角色 `instructions`。                                                   |
-| **OpenRouter**    | `OPENROUTER_API_KEY`（可复用 `models.providers.openrouter.apiKey`）                                             | 默认模型 `hexgrad/kokoro-82m`。                                                             |
-| **Volcengine**    | `VOLCENGINE_TTS_API_KEY` 或 `BYTEPLUS_SEED_SPEECH_API_KEY`（旧版 AppID/token：`VOLCENGINE_TTS_APPID`/`_TOKEN`） | BytePlus Seed Speech HTTP API。                                                             |
-| **Vydra**         | `VYDRA_API_KEY`                                                                                                  | 共享的图像、视频和语音提供商。                                                              |
-| **xAI**           | `XAI_API_KEY`                                                                                                    | xAI 批量 TTS。不支持原生 Opus 语音消息。                                                     |
-| **Xiaomi MiMo**   | `XIAOMI_API_KEY`                                                                                                 | 通过小米聊天补全实现 MiMo TTS。                                                            |
+| **Azure Speech**  | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION`（也支持 `AZURE_SPEECH_API_KEY`、`SPEECH_KEY`、`SPEECH_REGION`）          | 原生 Ogg/Opus 语音消息输出和电话功能。                                            |
+| **DeepInfra**     | `DEEPINFRA_API_KEY`                                                                                              | 兼容 OpenAI 的 TTS。默认为 `hexgrad/Kokoro-82M`。                                    |
+| **ElevenLabs**    | `ELEVENLABS_API_KEY` 或 `XI_API_KEY`                                                                             | 语音克隆、多语言支持，通过 `seed` 实现确定性；为 Discord 语音播放提供流式传输。 |
+| **Fish Audio**    | `FISH_API_KEY` 或 `FISH_AUDIO_API_KEY`                                                                           | 托管式 S2.1 TTS、表现力标签、语音发现、流式传输和电话功能。                |
+| **Google Gemini** | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`                                                                             | Gemini API 批量 TTS；通过 `promptTemplate: "audio-profile-v1"` 支持角色设定。               |
+| **Gradium**       | `GRADIUM_API_KEY`                                                                                                | 语音消息和电话输出。                                                            |
+| **Inworld**       | `INWORLD_API_KEY`                                                                                                | 流式 TTS API。原生 Opus 语音消息和 PCM 电话功能。                                |
+| **Local CLI**     | 无                                                                                                             | 运行配置的本地 TTS 命令。                                                        |
+| **Microsoft**     | 无                                                                                                             | 通过 `node-edge-tts` 提供公开的 Edge 神经网络 TTS。尽力而为，不提供 SLA。                            |
+| **MiniMax**       | `MINIMAX_API_KEY`（或 Token 方案：`MINIMAX_OAUTH_TOKEN`、`MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`）      | T2A v2 API。默认为 `speech-2.8-hd`。                                                    |
+| **OpenAI**        | `OPENAI_API_KEY`                                                                                                 | 也用于自动摘要；支持 persona `instructions`。                                |
+| **OpenRouter**    | `OPENROUTER_API_KEY`（可复用 `models.providers.openrouter.apiKey`）                                            | 默认模型为 `hexgrad/kokoro-82m`。                                                         |
+| **Volcengine**    | `VOLCENGINE_TTS_API_KEY` 或 `BYTEPLUS_SEED_SPEECH_API_KEY`（旧版 AppID/token：`VOLCENGINE_TTS_APPID`/`_TOKEN`） | BytePlus Seed Speech HTTP API。                                                              |
+| **Vydra**         | `VYDRA_API_KEY`                                                                                                  | 共享的图像、视频和语音提供商。                                                   |
+| **xAI**           | `XAI_API_KEY`                                                                                                    | xAI 批量 TTS。不支持原生 Opus 语音消息。                                 |
+| **Xiaomi MiMo**   | `XIAOMI_API_KEY`                                                                                                 | 通过小米聊天补全使用 MiMo TTS。                                                   |
 
 如果配置了多个提供商，将首先使用当前选中的那个，其余作为回退选项。自动摘要使用 `summaryModel`（或
 `agents.defaults.model.primary`），因此如果你保持摘要功能开启，该提供商也必须已完成认证。
@@ -124,6 +125,24 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 中的 `tts` 下。请选择一个
         apiKey: "${ELEVENLABS_API_KEY}",
         model: "eleven_multilingual_v2",
         speakerVoiceId: "EXAVITQu4vr4xnSDxMaL",
+      },
+    },
+  },
+}
+```
+  </Tab>
+  <Tab title="Fish Audio">
+```json5
+{
+  tts: {
+    auto: "tagged",
+    provider: "fish-audio",
+    providers: {
+      "fish-audio": {
+        apiKey: "${FISH_API_KEY}",
+        model: "s2.1-pro",
+        speakerVoiceId: "802e3bc2b27e49c2995d23ef70e6ac89",
+        latency: "balanced",
       },
     },
   },
@@ -184,7 +203,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 中的 `tts` 下。请选择一个
 }
 ```
   </Tab>
-  <Tab title="Local CLI">
+  <Tab title="本地 CLI">
 ```json5
 {
   tts: {
@@ -351,7 +370,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 中的 `tts` 下。请选择一个
 [Speech Swift](https://github.com/soniqo/speech-swift) 和
 [speech-core](https://github.com/soniqo/speech-core) 提供跨 macOS、Linux 和 Windows 的本地语音
 推理。当 Speech Swift 和 OpenClaw 运行在同一台 Mac 上时，请使用兼容 OpenAI 的 HTTP
-提供程序。在任何受支持的主机上，如需直接集成可执行文件，请使用 Local CLI。
+提供程序。在任何受支持的主机上，如需直接集成可执行文件，请使用本地 CLI。
 
 当某个通道需要 OpenClaw 将 WAV 输出转换为 Opus 或
 原始 PCM 时，请安装 `ffmpeg`。
@@ -396,8 +415,8 @@ speech-server --port 8080
 OpenClaw 提供程序配置所必需的，但不会被回环服务器验证。
 </Tab>
 <Tab title="macOS CLI">
-Homebrew 的 `speech` 可执行文件可以直接写入 OpenClaw 的临时
-输出路径：
+Homebrew 的 `speech` 可执行文件可以直接写入 OpenClaw
+每次调用的输出路径：
 
 ```json5
 {
@@ -462,7 +481,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\speech_download_models.ps1
 ```
 
-然后将 Local CLI 指向打包的 Kokoro 可执行文件：
+然后将本地 CLI 指向打包的 Kokoro 可执行文件：
 
 ```json5
 {
@@ -702,7 +721,7 @@ Talk 会话提供商选择是会话范围内的。Talk 客户端应从 `talk.cat
 { messages: { tts: { modelOverrides: { enabled: true, allowProvider: true, allowSeed: false } } } }
 ```
 
-## Slash 命令
+## 斜杠命令
 
 单个命令 `/tts`。在 Discord 上，OpenClaw 还会注册 `/voice`，因为 `/tts` 是内置的 Discord 命令——文本 `/tts ...` 仍然可用。
 
@@ -757,7 +776,11 @@ TTS 语音投递由通道能力驱动。通道插件会声明
 语音风格的 TTS 是否应向提供方请求原生 `voice-note` 目标，还是
 保持普通 `audio-file` 合成，以及通道在发送前是否会对非原生输出进行转码。
 
-| 目标                                  | 格式                                                                                                                                 |
+合成完成后，OpenClaw 会将批量 TTS 输出持久化到媒体存储中的
+`tool-speech-synthesis` 下。回复会使用该稳定的媒体路径，而不是提供方的临时文件，并且常规媒体维护会清理过期输出。
+本地 CLI 提供方在 OpenClaw 导入已完成的字节前，仍可能使用 `{{OutputPath}}` 作为临时空间。有关内联播放器格式和限制，请参阅[媒体播放](/nodes/media-playback)。
+
+| 目标                                | 格式                                                                                                                                |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | 飞书 / Matrix / Telegram / WhatsApp   | 语音笔记回复优先使用 **Opus**（ElevenLabs 使用 `opus_48000_64`，OpenAI 使用 `opus`）。48 kHz / 64 kbps 在清晰度和体积之间取得平衡。 |
 | 其他通道                              | **MP3**（ElevenLabs 使用 `mp3_44100_128`，OpenAI 使用 `mp3`）。44.1 kHz / 128 kbps 是语音的默认平衡。                               |
@@ -1005,8 +1028,8 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且 `pt
 
 ## 网关 RPC
 
-| Method            | Purpose                                      |
-| ----------------- | -------------------------------------------- |
+| 方法              | 用途                                      |
+| ----------------- | ----------------------------------------- |
 | `tts.status`      | 读取当前 TTS 状态和上次尝试。     |
 | `tts.enable`      | 将本地自动偏好设置为 `always`。       |
 | `tts.disable`     | 将本地自动偏好设置为 `off`。          |
@@ -1031,13 +1054,14 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且 `pt
 - [OpenAI 文本转语音指南](https://platform.openai.com/docs/guides/text-to-speech)
 - [speech-core](https://github.com/soniqo/speech-core)
 - [Speech Swift](https://github.com/soniqo/speech-swift)
-- [Volcengine TTS HTTP API](/providers/volcengine#text-to-speech)
+- [火山引擎 TTS HTTP API](/providers/volcengine#text-to-speech)
 - [xAI 文本转语音](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
-- [Xiaomi MiMo 语音合成](/providers/xiaomi#text-to-speech)
+- [小米 MiMo 语音合成](/providers/xiaomi#text-to-speech)
 
 ## 相关内容
 
 - [媒体概览](/tools/media-overview)
+- [媒体播放](/nodes/media-playback)
 - [音乐生成](/tools/music-generation)
 - [视频生成](/tools/video-generation)
 - [斜杠命令](/tools/slash-commands)

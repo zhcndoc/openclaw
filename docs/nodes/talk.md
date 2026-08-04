@@ -8,23 +8,23 @@ title: "Talk 模式"
 
 Talk 模式涵盖五种运行形态：
 
-- **原生 macOS/iOS/Android Talk**: 原生语音识别、Gateway 聊天，以及 `talk.speak` TTS。macOS/iOS 上的 Apple Speech 识别可能会使用网络服务；Android 行为取决于已安装的语音服务。节点会声明 `talk` 能力，并注明它们支持哪些 `talk.*` 命令。
-- **iOS Talk（实时）**: 对于选择 `webrtc` 传输或省略传输的 OpenAI realtime 配置，由客户端持有 WebRTC；显式的 `gateway-relay`、`provider-websocket` 以及非 OpenAI realtime 配置则保持在 Gateway 持有的 relay 上；非实时配置使用原生语音循环。
-- **浏览器 Talk**: 对于客户端持有的 `webrtc`/`provider-websocket` 会话，使用 `talk.client.create`；对于 Gateway 持有的 `gateway-relay` 会话，使用 `talk.session.create`。`managed-room` 仅保留用于 Gateway 接管和对讲机房间。
-- **Android Talk（实时）**: 当 `talk.catalog` 报告实时分组已就绪时，Android 始终使用 Gateway 持有的 relay realtime；它从不打开客户端持有的 WebRTC 会话。若实时未就绪，Android 会继续使用原生语音识别、Gateway 聊天和 `talk.speak`。注意：就绪状态是按所配置传输的表面计算的，因此像 `gpt-live-*` 这样的仅浏览器模型可能会显示就绪，但 Android 打开的 relay 会话会被明确错误拒绝；Android 侧的门控是一个跟进事项。
-- **仅转录客户端**: 使用 `talk.session.create({ mode: "transcription", transport: "gateway-relay", brain: "none" })`，然后通过 `talk.session.appendAudio`、`talk.session.cancelTurn` 和 `talk.session.close` 来实现字幕/听写，而不产生助手语音回复。一次性上传的语音便笺仍然使用 [media understanding](/nodes/media-understanding) 音频路径。
+- **原生 macOS/iOS/Android Talk**：原生语音识别、Gateway 聊天和 `talk.speak` TTS。macOS/iOS 上的 Apple 语音识别可能使用网络服务；Android 的行为取决于已安装的语音服务。节点会播报 `talk` 能力，并声明其支持哪些 `talk.*` 命令。
+- **iOS Talk（实时）**：对于选择 `webrtc` 传输方式或省略传输方式的 OpenAI realtime 配置，使用由客户端持有的 WebRTC，包括有帧和无帧的转录/音频事件。显式指定 `gateway-relay`、`provider-websocket` 以及非 OpenAI realtime 配置的会话仍使用由 Gateway 持有的中继；非 realtime 配置使用原生语音循环。
+- **浏览器 Talk**：客户端持有的 `webrtc`/`provider-websocket` 会话使用 `talk.client.create`，由 Gateway 持有的 `gateway-relay` 会话使用 `talk.session.create`。`managed-room` 仅用于 Gateway 移交和对讲机房间。
+- **Android Talk（实时）**：当 `talk.catalog` 报告 realtime 组已就绪且配置的模型通过 Android 客户端门槛时，Android 使用由 Gateway 持有的中继 realtime；它绝不会打开由客户端持有的 WebRTC 会话。Gateway 现在支持 `gpt-live-*` 中继会话，但 Android 会有意让这些模型继续使用原生语音识别、Gateway 聊天和 `talk.speak`，直到在 Android 设备上验证中继路径确实可用。
+- **仅转录客户端**：`talk.session.create({ mode: "transcription", transport: "gateway-relay", brain: "none" })`，然后使用 `talk.session.appendAudio`、`talk.session.cancelTurn` 和 `talk.session.close`，即可在没有助手语音回复的情况下生成字幕/听写。一次性上传的语音备注仍使用[媒体理解](/nodes/media-understanding)音频路径。
 
 原生 Talk 是一个连续循环：监听语音，将转录结果通过活动会话发送到模型，等待回复，然后通过已配置的 Talk 提供方（`talk.speak`）进行朗读。
 
-客户端持有的 realtime Talk 会通过 `talk.client.toolCall` 转发提供方工具调用，而不是直接调用 `chat.send`。在实时咨询处于活动状态时，客户端可以调用 `talk.client.steer` 或 `talk.session.steer`，将口语输入分类为 `status`、`steer`、`cancel` 或 `followup`。接受的 steering 会排队进入当前嵌入式运行；被拒绝的 steering 会返回诸如 `no_active_run`、`not_streaming` 或 `compacting` 之类的原因。GPT-Live 是例外：它的委派运行在 Gateway 持有的 sideband 上，而不是通过 `talk.client.toolCall`，因此 `talk.client.steer` 目前还无法到达它们——一个更新的口语任务会直接取代正在运行的委派。
+客户端持有的 realtime Talk 通常通过 `talk.client.toolCall` 转发提供方工具调用，而不是直接调用 `chat.send`。GPT-Live WebRTC 会话在 Gateway 持有的 sideband 上进行委托，Gateway 会将每个委托绑定到持有该委托的浏览器或 Gateway 中继 Talk 会话。后端 WebSocket 桥接使用正常的中继咨询路径。在 realtime 咨询处于活动状态时，客户端可以调用 `talk.client.steer` 或 `talk.session.steer`，将语音输入分类为 `status`、`steer`、`cancel` 或 `followup`；这也包括 GPT-Live 委托。接受的引导会排入当前活动的嵌入式运行；被拒绝的引导会返回诸如 `no_active_run`、`not_streaming` 或 `compacting` 之类的原因。较新的 GPT-Live 语音任务也会取代正在运行的委托。
 
 已完成的实时用户和助手发言始终会实时追加到当前代理会话中，因此后续的聊天和语音轮次共享同一历史记录。客户端持有的传输会以稳定的条目 id 报告其已完成的转录；Gateway relay 会话则在服务端追加相同事件。提供方会话还会接收 Discord 语音所使用的受限 realtime profile 上下文。
 
-由语音发起的咨询运行在执行发送消息、控制节点、浏览器/计算机操作、服务变更、破坏性 shell 命令或发布等高影响动作之前，需要一个新的、精确的口头确认。此门控绑定到通过 `talk.client.toolCall` 或 Gateway relay 启动的运行；GPT-Live sideband 委派目前还没有注册该绑定，因此它们会改用代理的常规（非语音）批准策略。该确认仅适用于规范化后的最终执行参数，并且只会被消耗一次；如果策略或 hook 重写了已批准的动作，OpenClaw 会阻止它，直到重写后的动作也被确认。无关的并发运行不受影响。当调用关闭时，OpenClaw 可以为可变更工具向会话的最后一个非 WebChat 交付目标发送一份压缩的 **Voice call changes** 摘要。
+由语音发起的咨询运行，在执行发送消息、控制节点、浏览器/计算机操作、服务变更、破坏性 shell 命令或发布等高影响操作前，需要新的、完全匹配的语音确认。该门禁适用于通过 `talk.client.toolCall`、Gateway 中继和 GPT-Live sideband 委托启动的运行。确认仅适用于规范的最终执行参数，并且只会被消费一次；如果策略或钩子重写了已批准的操作，OpenClaw 会阻止该操作，直到重写后的操作得到确认。不相关的并发运行不受影响。通话结束时，OpenClaw 可以将针对变更型工具的精简 **语音通话变更**摘要发送到会话最近使用的非 WebChat 投递目标。
 
 仅转录 Talk 产生的事件封装与实时和 STT/TTS 会话相同，但使用 `mode: "transcription"` 和 `brain: "none"`。所有 Talk 会话都会在 `talk.event` 通道上广播事件；客户端订阅该通道以接收部分/最终转录更新（`transcript.delta`/`transcript.done`）以及其他会话遥测信息。
 
-浏览器视频 Talk 可用于 OpenAI Realtime WebRTC 和 Google Live provider-WebSocket 会话。OpenAI 在 `describe_view` 请求视觉上下文时只接收单张受限的 JPEG；它不会接收连续的摄像头轨道。Google Live 会以每秒最多一帧的速率直接从浏览器接收受限的 JPEG 帧，而 `describe_view` 会报告 camera-stream 状态。在这两种情况下，摄像头帧都会绕过 Gateway，停止 Talk 会释放摄像头和麦克风轨道。
+浏览器视频 Talk 可用于 OpenAI Realtime WebRTC 和 Google Live 提供方 WebSocket 会话。OpenAI 在 `describe_view` 请求视觉上下文时只接收单张受限的 JPEG；它不会接收连续的摄像头轨道。Google Live 会以每秒最多一帧的速率直接从浏览器接收受限的 JPEG 帧，而 `describe_view` 会报告摄像头流状态。在这两种情况下，摄像头帧都会绕过 Gateway，停止 Talk 会释放摄像头和麦克风轨道。
 
 ## 行为（macOS）
 
@@ -65,6 +65,9 @@ Talk 模式涵盖五种运行形态：
       },
       mlx: {
         modelId: "mlx-community/Soprano-80M-bf16",
+        // Fish S2 Pro 也可以使用本地参考声音：
+        // referenceAudioPath: "/Users/example/Voices/reference.wav",
+        // referenceText: "参考音频片段的准确转录文本。",
       },
       system: {},
     },
@@ -89,21 +92,22 @@ Talk 模式涵盖五种运行形态：
 }
 ```
 
-OpenAI 浏览器 WebRTC Talk 通过
+OpenAI 浏览器 WebRTC 和 Gateway-relay Talk 通过
 `https://api.openai.com/v1/live` 支持原生 GPT-Live。将 `talk.realtime.model` 设置为
 `gpt-live-1-codex`（推荐）或 `gpt-live-1-boulder-alpha`；`gpt-live-1`
-和 `gpt-live-1-mini` 在此路由上无效。GPT-Live 优先使用 ChatGPT
-OAuth 订阅配置文件，并在此基础上回退到 Platform API-key 认证，其
-`/v1/live` 访问当前处于
-[等待名单限制](https://openai.com/form/gpt-live-1-in-the-api/)。
+和 `gpt-live-1-mini` 在此路由上无效。浏览器和 Gateway-relay
+WebRTC 优先使用 ChatGPT OAuth 订阅配置，并回退到 Platform
+API key 身份验证。其他后端桥接通过 Frameless Bidi
+WebSocket 直接连接，并要求使用 Platform API key 身份验证；其 `/v1/live` 访问权限目前受
+[候补名单限制](https://openai.com/form/gpt-live-1-in-the-api/)。
 
-最快的设置方式是 Control UI：**Settings → Talk**，选择 **OpenAI** 和
-一个 `gpt-live-*` 模型。OAuth 的前置条件是通过
-`openclaw models auth login --provider openai` 创建的 OpenClaw 认证配置文件——
-现有的 Codex CLI 登录不会被读取。GPT-Live 还要求内置的 `openai`
-插件以完整模式注册；受限的 `plugins.allow` 列表会导致会话创建失败，报错
-“OpenAI GPT-Live browser session broker is unavailable”。运行时限制：每个 Gateway
-最多 8 个并发会话，30 分钟会话 TTL，60 秒一次性 offer token。
+最快的设置方式是使用 Control UI：**Settings → Talk**，选择 **OpenAI** 和
+一个 `gpt-live-*` 模型。OAuth 前置条件是使用
+`openclaw models auth login --provider openai` 创建的 OpenClaw 身份验证配置文件——不会读取现有的
+Codex CLI 登录状态。GPT-Live 还要求以完整模式注册内置的 `openai`
+插件；限制性的 `plugins.allow` 列表会导致会话创建失败，并显示
+"OpenAI GPT-Live browser session broker is unavailable"。运行时限制：每个 Gateway
+最多 8 个并发会话，会话 TTL 为 30 分钟。浏览器会话还使用有效期 60 秒且只能使用一次的 offer token。
 
 GPT-Live 接受 `alloy`、`ash`、`ballad`、`cedar`、`coral`、`echo`、`marin`、
 `sage`、`shimmer` 和 `verse`。`403 Voice session access denied` 响应是
@@ -111,15 +115,29 @@ GPT-Live 接受 `alloy`、`ash`、`ballad`、`cedar`、`coral`、`echo`、`marin
 `chatgpt.com` 后端路由也会返回 `403`；OpenClaw 改为使用原生
 `api.openai.com/v1/live` 路由。
 
-GPT-Live 仅限于浏览器 Talk WebRTC 会话。电话、语音通话、Gateway relay、provider WebSocket 传输、iOS 和 Android 均不支持。
-Gateway 负责已认证的 sideband，并通过
-已配置的 OpenClaw agent 路由委派的工作；浏览器既不会收到 OAuth token，也不会收到
-Platform API key。
+| Consumer                    | GPT-Live status                                                         |
+| --------------------------- | ----------------------------------------------------------------------- |
+| Browser Talk                | 在客户端 WebRTC 和 Gateway 所有的 sideband 下受支持                 |
+| Gateway-relay Talk          | 在 Gateway 所有的 WebRTC 和 sideband 下受支持                        |
+| Discord bidirectional voice | 通过 Platform key 后端 WebSocket 受支持                       |
+| Voice Call and telephony    | 通过 Platform key 后端 WebSocket 受支持                       |
+| iOS client-owned Talk       | 待定                                                                 |
+| Android realtime Talk       | 等待 Android 设备实时验证开关；Android 继续使用原生 Talk |
 
-对于 GA `gpt-realtime-*` 浏览器和 iOS WebRTC 会话，仍然需要按以下顺序提供 Platform 凭据：
-已配置的 realtime API key、`openai`
-API-key profile，然后是 `OPENAI_API_KEY`。ChatGPT OAuth 不会为这些
-GA 会话、Voice Call、Gateway relay 或 Discord realtime voice 进行配置。
+Gateway 所有的 WebRTC 路由不会将 OAuth 和 Platform 凭据暴露给
+relay 客户端。后端 WebSocket 路径会将 Platform key 保留在 Gateway 上；
+OpenClaw 会将电话系统的 G.711 u-law 音频转换为 GPT-Live 的 24 kHz PCM
+格式，也会执行反向转换。
+
+对于 GA `gpt-realtime-2.1`、`gpt-realtime-2.1-mini` 和 `gpt-realtime-2`
+浏览器会话，Platform 凭据仍按以下顺序优先使用：已配置的 realtime API key、`openai`
+API key 配置文件，然后是 `OPENAI_API_KEY`。如果均未配置，浏览器 Talk 会回退到 OpenClaw
+ChatGPT OAuth 配置文件，并通过 Gateway 的一次性 offer broker 交换 SDP，因此 OAuth token 永远不会到达浏览器。若已配置的 Platform 凭据无法解析，则会安全失败，而不会静默回退到 OAuth。
+
+iOS 客户端所有的 WebRTC、Voice Call、GA Gateway relay、provider WebSocket
+传输、Discord realtime voice 以及 Android realtime 仍然
+仅支持 Platform key。GA 浏览器 Talk 保留现有的客户端所有数据通道和
+`talk.client.toolCall` 循环；在 OAuth 模式下，只有凭据所有者和 SDP 交换路径会发生变化。GPT-Live Gateway relay 优先使用 ChatGPT OAuth，并回退到已获得候补名单权限的 Platform 访问。
 
 | 键                                      | 默认值                                    | 说明                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -129,8 +147,10 @@ GA 会话、Voice Call、Gateway relay 或 Discord realtime voice 进行配置�
 | `speechLocale`                           | 设备默认值                                  | 用于 Android、iOS 和 macOS 原生语音识别的 BCP 47 区域设置，同时也用于 iOS 系统 voice 回退。Apple Speech 可能使用网络服务；Android 还会将语言部分传递给 realtime 输入转写。                                                                                                         |
 | `providers.elevenlabs.modelId`           | `eleven_multilingual_v2`                   |                                                                                                                                                                                                                                                                                         |
 | `providers.mlx.modelId`                  | `mlx-community/Soprano-80M-bf16`           |                                                                                                                                                                                                                                                                                         |
-| `providers.elevenlabs.apiKey`            | -                                          | 回退到 `ELEVENLABS_API_KEY`（如果可用，也会回退到 gateway shell profile）。                                                                                                                                                                                                              |
-| `silenceTimeoutMs`                       | macOS/Android 为 `700` ms，iOS 为 `900`   | Talk 发送转写前的暂停等待窗口。                                                                                                                                                                                                                                                          |
+| `providers.mlx.referenceAudioPath`       | -                                          | 支持 voice cloning 的 MLX 模型可选的客户端本地参考录音。该路径会在原生 macOS 应用主机上解析。                                                                                                                                                 |
+| `providers.mlx.referenceText`            | -                                          | `referenceAudioPath` 的准确转录文本；Fish S2 Pro 会使用这两个值进行本地 voice cloning。                                                                                                                                                                                         |
+| `providers.elevenlabs.apiKey`            | -                                          | 回退到 `ELEVENLABS_API_KEY`（如果可用，也会回退到 gateway shell 配置文件）。                                                                                                                                                                                                             |
+| `silenceTimeoutMs`                       | `700` ms macOS/Android, `900` ms iOS       | Talk 发送转录文本前的暂停时间窗口。                                                                                                                                                                                                                                          |
 | `interruptOnSpeech`                      | `true`                                     |                                                                                                                                                                                                                                                                                         |
 | `providers.<id>.outputFormat`            | macOS/iOS 为 `pcm_44100`，Android 为 `pcm_24000` | 设置为 `mp3_*` 可强制使用 MP3 流式传输。                                                                                                                                                                                                                                               |
 | `consultThinkingLevel`                   | 未设置                                      | 为 realtime `openclaw_agent_consult` 调用背后的 agent 运行覆盖 thinking level。                                                                                                                                                                                                         |
@@ -170,11 +190,11 @@ GA 会话、Voice Call、Gateway relay 或 Discord realtime voice 进行配置�
 
 ## 备注
 
-- 需要 Speech + Microphone 权限。
-- Native Talk 使用当前活动的 Gateway 会话，并且仅在响应事件不可用时回退到历史轮询。
-- gateway 通过使用当前活动的 Talk provider 的 `talk.speak` 来解析 Talk 播放。只有当该 RPC 不可用时，Android 才会回退到本地系统 TTS。
-- macOS 本地 MLX 播放在存在时使用内置的 `openclaw-mlx-tts` helper，或者使用 `PATH` 上的可执行文件。在开发期间，设置 `OPENCLAW_MLX_TTS_BIN` 以指向自定义的 helper 二进制文件。
-- Voice directive 值范围（ElevenLabs）：`stability`、`similarity` 和 `style` 接受 `0..1`；`speed` 接受 `0.5..2`；`latency_tier` 接受 `0..4`。
+- 需要语音和麦克风权限。
+- 原生 Talk 使用当前活动的 Gateway 会话，仅当响应事件不可用时才回退到历史记录轮询。
+- Gateway 通过 `talk.speak` 使用当前活动的 Talk 提供商处理 Talk 播放。仅当该 RPC 不可用时，Android 才会回退到本地系统 TTS。
+- macOS 本地 MLX 播放会在可用时使用捆绑的 `openclaw-mlx-tts` 助手，或使用 `PATH` 上的可执行文件。在开发期间，可设置 `OPENCLAW_MLX_TTS_BIN` 指向自定义助手二进制文件。该助手以流式方式传输 PCM，使一个选定的模型常驻内存，并通过 `providers.mlx.referenceAudioPath` 和 `referenceText` 支持 Fish S2 Pro 参考音频。
+- 语音指令值范围（ElevenLabs）：`stability`、`similarity` 和 `style` 接受 `0..1`；`speed` 接受 `0.5..2`；`latency_tier` 接受 `0..4`。
 
 ## 相关内容
 

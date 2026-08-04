@@ -1,19 +1,19 @@
 ---
-summary: "Run local GGUF text inference and memory embeddings in OpenClaw with llama.cpp"
+summary: "在 OpenClaw 中使用 llama.cpp 运行本地 GGUF 文本推理和内存嵌入"
 read_when:
-  - You want local text inference without an API key or model server
-  - You want memory search embeddings from a local GGUF model
-  - You are configuring memory.search.provider = "local"
-  - You need the OpenClaw plugin that owns the node-llama-cpp runtime
-title: "llama.cpp Provider"
-sidebarTitle: "llama.cpp Provider"
+  - 你希望无需 API 密钥或模型服务器即可进行本地文本推理
+  - 你希望使用本地 GGUF 模型生成内存搜索嵌入
+  - 你正在配置 memory.search.provider = "local"
+  - 你需要负责管理 node-llama-cpp 运行时的 OpenClaw 插件
+title: "llama.cpp 提供商"
+sidebarTitle: "llama.cpp 提供商"
 ---
 
-`llama-cpp` is the official external provider plugin for in-process local GGUF
-text inference and embeddings. It registers text provider `llama-cpp`,
-embedding provider `local`, and owns the `node-llama-cpp` native runtime.
+`llama-cpp` 是官方的外部提供商插件，用于进程内本地 GGUF
+文本推理和嵌入。它注册文本提供商 `llama-cpp`、
+嵌入提供商 `local`，并负责管理 `node-llama-cpp` 原生运行时。
 
-Install it before using either local inference or local memory embeddings:
+在使用本地推理或本地内存嵌入之前，请先安装它：
 
 ```bash
 openclaw plugins install @openclaw/llama-cpp-provider
@@ -21,33 +21,21 @@ openclaw plugins install @openclaw/llama-cpp-provider
 
 主 `openclaw` npm 包不包含 `node-llama-cpp`。将这个原生依赖保留在此插件中，可以防止正常的 OpenClaw npm 更新删除 OpenClaw 包目录中手动安装的运行时。
 
-## Local text inference
+## 本地文本推理
 
-Choose **Local model (llama.cpp)** during interactive onboarding. OpenClaw asks
-before downloading the default model:
+在交互式引导过程中选择 **llama.cpp**。OpenClaw 会安装官方提供商插件，然后在下载默认模型前征得确认：
 
-`hf:bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf`
+`hf:unsloth/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf`
 
-The Qwen3 4B Instruct 2507 Q4_K_M file is about 2.5 GB. Budget roughly 3 GB of
-RAM for model weights, plus context and OpenClaw runtime overhead. The default
-context is automatically sized with an 8,192-token cap so it remains practical
-on 8 GB machines. Configure a larger context only when the machine has enough
-memory.
+Gemma 4 E4B IT Q4_K_M 文件约为 5.0 GB。OpenClaw 仅会在内存至少为 16 GiB 的计算机上提供此默认模型，为模型权重、上下文和 Gateway 开销预留空间。默认上下文会自动设置，最大为 8,192 个 token。只有在计算机内存充足时，才配置更大的上下文。
 
-The onboarding discovery check is read-only. It offers llama.cpp automatically
-only when the default or configured GGUF file is already in the model cache; it
-never downloads during discovery. Ollama and LM Studio remain separate local
-service choices and keep their own discovery flows. Manually choosing llama.cpp
-is the path that prompts for the default model download.
+引导发现检查为只读操作。仅当默认或已配置的 GGUF 文件已经位于模型缓存中时，它才会自动提供 llama.cpp；发现过程中绝不会下载模型。Ollama 和 LM Studio 仍是独立的本地服务选项，并保留各自的发现流程。手动选择 llama.cpp 会安装运行时、提示下载默认模型，并在将设置标记为完成前验证真实的模型回复。
 
-The provider uses the GGUF model's embedded chat template and native
-node-llama-cpp function calling. Text streams token by token. Tool calls return
-to OpenClaw for execution rather than running inside node-llama-cpp.
+该提供商使用 GGUF 模型内嵌的聊天模板和原生的 node-llama-cpp 函数调用功能。文本会逐个 token 流式传输。工具调用会返回给 OpenClaw 执行，而不是在 node-llama-cpp 内部运行。
 
-### Use another GGUF model
+### 使用其他 GGUF 模型
 
-Add a model to `models.providers.llama-cpp`. Put a local path or full `hf:` file
-URI in `params.modelPath`:
+将模型添加到 `models.providers.llama-cpp`。在 `params.modelPath` 中填入本地路径或完整的 `hf:` 文件 URI：
 
 ```json5
 {
@@ -87,13 +75,11 @@ URI in `params.modelPath`:
 }
 ```
 
-Inference never downloads a missing model implicitly. For a custom `hf:` URI,
-download the GGUF into `modelCacheDir` first. Discovery uses node-llama-cpp's
-own read-only cache resolver, including repository, branch, and split-file naming.
+推理绝不会隐式下载缺失的模型。对于自定义的 `hf:` URI，请先将 GGUF 下载到 `modelCacheDir` 中。发现功能使用 node-llama-cpp 自身的只读缓存解析器，包括仓库、分支和分片文件命名。
 
-## Memory embedding configuration
+## 内存嵌入配置
 
-Set `memory.search.provider` to `local`:
+将 `memory.search.provider` 设置为 `local`：
 
 ```json5
 {
@@ -119,7 +105,7 @@ node-llama-cpp 的自动 GPU 层放置。这样 node-llama-cpp 就可以在
 保留其内存安全检查的同时，将模型和嵌入上下文一起装入内存。
 而使用 `"auto"` 时，node-llama-cpp 会保持其正常的自动放置行为。
 
-## Native runtime
+## 原生运行时
 
 使用 Node 24 可获得最顺畅的原生安装路径。使用
 pnpm 的源码检出可能需要批准并重新构建原生依赖：
@@ -129,7 +115,7 @@ pnpm approve-builds
 pnpm rebuild node-llama-cpp
 ```
 
-## Memory runtime diagnostics
+## 内存运行时诊断
 
 在提供程序加载完成后，运行 `openclaw memory status --deep`，以检查
 所选后端和构建、设备名称、GPU 卸载层数、请求的
@@ -148,7 +134,7 @@ pnpm rebuild node-llama-cpp
 2. 在本地安装/更新时使用 Node 24。
 3. 如果是从 pnpm 源码检出：先运行 `pnpm approve-builds`，然后运行 `pnpm rebuild node-llama-cpp`。
 
-For local inference without an in-process native dependency, use the Ollama or
-LM Studio provider instead. For lower-friction local embeddings, set
-`memory.search.provider` to a remote embedding provider such as `lmstudio`,
-`ollama`, `openai`, or `voyage` instead.
+如需在没有进程内原生依赖的情况下进行本地推理，请改用 Ollama 或
+LM Studio 提供商。如需更便捷地使用本地嵌入，请将
+`memory.search.provider` 设置为远程嵌入提供商，例如 `lmstudio`、
+`ollama`、`openai` 或 `voyage`。

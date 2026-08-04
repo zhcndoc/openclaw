@@ -1,15 +1,15 @@
 ---
 summary: "管理沙箱运行时并检查生效的沙箱策略"
-title: Sandbox CLI
+title: 沙箱 CLI
 read_when: "当你正在管理沙箱运行时，或调试 sandbox/tool-policy 行为时。"
 status: active
 ---
 
-管理用于隔离代理执行的沙箱运行时：Docker 容器、SSH 目标或 OpenShell 后端。
+管理用于隔离代理执行的沙箱运行时：Docker/Podman 容器、SSH 目标或 OpenShell 后端。
 
 [`openclaw agent exec`](/cli/agent#agent-exec) 不使用这些已配置的运行时。其隔离的隐式策略配置会关闭代理沙箱，允许对 Gateway 主机的完整执行，并将文件系统工具限制为 `--cwd`。
 
-## Commands
+## 命令
 
 ### `openclaw sandbox list`
 
@@ -72,14 +72,14 @@ openclaw sandbox explain --json
 
 | 变更                                                                                                                                                         | 命令                                                              |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Docker 镜像更新（`agents.defaults.sandbox.docker.image`）                                                                                                   | `openclaw sandbox recreate --all`                                   |
-| Sandbox 配置（`agents.defaults.sandbox.*`）                                                                                                                   | `openclaw sandbox recreate --all`                                   |
-| SSH 目标/认证（`agents.defaults.sandbox.ssh.{target,workspaceRoot,identityFile,certificateFile,knownHostsFile,identityData,certificateData,knownHostsData}`） | `openclaw sandbox recreate --all`                                   |
-| OpenShell 源/策略/模式（`plugins.entries.openshell.config.{from,mode,policy}`）                                                                           | `openclaw sandbox recreate --all`                                   |
-| `setupCommand`                                                                                                                                                 | `openclaw sandbox recreate --all`（或对单个 agent 使用 `--agent <id>`） |
+| 容器沙箱镜像更新（`agents.defaults.sandbox.docker.image`）                                                                                                      | `openclaw sandbox recreate --all`                                   |
+| 沙箱配置（`agents.defaults.sandbox.*`）                                                                                                                        | `openclaw sandbox recreate --all`                                   |
+| SSH 目标/身份验证（`agents.defaults.sandbox.ssh.{target,workspaceRoot,identityFile,certificateFile,knownHostsFile,identityData,certificateData,knownHostsData}`） | `openclaw sandbox recreate --all`                                   |
+| OpenShell 来源/策略/模式（`plugins.entries.openshell.config.{from,mode,policy}`）                                                                                | `openclaw sandbox recreate --all`                                   |
+| `setupCommand`                                                                                                                                                 | `openclaw sandbox recreate --all`（或对单个代理使用 `--agent <id>`） |
 
 <Note>
-当 agent 下次被使用时，运行时会自动重新创建。
+当代理下次被使用时，运行时会自动重新创建。
 </Note>
 
 ## 注册表迁移

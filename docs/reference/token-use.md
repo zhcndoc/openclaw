@@ -33,33 +33,33 @@ OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 - 回复标签 + 心跳行为
 - 运行时元数据（主机/操作系统/模型/思考）
 
-完整拆解请参见 [System Prompt](/concepts/system-prompt)。
+完整拆解请参见 [系统提示](/concepts/system-prompt)。
 
 在记录凭证或认证片段时，请使用
-[Secret Placeholder Conventions](/reference/secret-placeholder-conventions) 以
+[秘密占位符约定](/reference/secret-placeholder-conventions) 以
 避免仅文档更改时触发 secret-scanner 的误报。
 
 ## 什么计入上下文窗口
 
 模型接收到的所有内容都会计入上下文限制：
 
-- System prompt (all sections above)
-- Conversation history (user + assistant messages)
-- Tool calls and tool results
-- Attachments/transcripts (images, audio, files)
-- Compaction summaries and pruning artifacts
-- Provider wrappers or safety headers (not visible, but still counted)
+- 系统提示词（上面的所有部分）
+- 对话历史（用户消息 + 助手消息）
+- 工具调用和工具结果
+- 附件/转录内容（图像、音频、文件）
+- 压缩摘要和裁剪产物
+- 提供方包装器或安全标头（不可见，但仍会计入）
 
-Runtime-heavy surfaces have their own explicit caps under
-`agents.defaults.contextLimits` (per-agent overrides under
-`agents.entries.*.contextLimits`):
+运行时开销较大的部分有其独立的明确上限，配置位于
+`agents.defaults.contextLimits`（每个代理的覆盖配置位于
+`agents.entries.*.contextLimits`）：
 
-| Key                      | Purpose                                                                  |
+| 键                       | 用途                                                                     |
 | ------------------------ | ------------------------------------------------------------------------ |
-| `memoryGetMaxChars`      | `memory_get` 返回结果在截断前的最大字符数。                   |
-| `postCompactionMaxChars` | 在压缩后刷新期间，从 `AGENTS.md` 保留的最大字符数。 |
+| `memoryGetMaxChars`      | `memory_get` 返回结果在截断前的最大字符数。                               |
+| `postCompactionMaxChars` | 压缩后刷新期间，从 `AGENTS.md` 中保留的最大字符数。                       |
 
-这些都是有界的运行时摘录和注入的运行时所有块，
+这些都是有界的运行时摘录和注入的运行时内容，
 它们与启动引导限制、启动上下文限制以及技能提示词
 限制是分开的。
 
@@ -93,14 +93,13 @@ OpenClaw 会根据有效模型上下文窗口推导实时工具结果上限：
   - `/usage full` 显示精简的模型/上下文/成本详情；仅当 OpenClaw 具有使用元数据且为活动模型配置了本地定价时才会显示估算成本。自定义 `messages.usageTemplate` 布局可以包含 token/cache 字段。
 - `/usage cost` -> 来自 OpenClaw 会话日志的本地成本摘要。
 
-其他表面：
+其他界面：
 
-- **TUI/Web TUI:** 支持 `/status` 和 `/usage`。
-- **CLI:** `openclaw status --usage` 和 `openclaw channels list` 会显示
-  规范化后的提供方配额窗口（`X% left`，而不是按响应计费）。
-  当前支持 usage-window 的提供方：Claude（Anthropic）、ClawRouter、Copilot
- （GitHub）、DeepSeek、Gemini（Google Gemini CLI）、MiniMax、OpenAI、小米、
-  小米 Token Plan，以及 z.ai。
+- **TUI/Web TUI：**支持 `/status` 和 `/usage`。
+- **CLI：**`openclaw status --usage` 和 `openclaw channels list` 显示
+  规范化的提供方配额窗口（`X% left`，而不是每次响应的成本）。
+  当前支持的使用量窗口提供方：Claude（Anthropic）、ClawRouter、Copilot
+  （GitHub）、DeepSeek、MiniMax、OpenAI、小米、小米 Token Plan 和 z.ai。
 
 使用界面在显示前会先规范化常见的提供方原生字段别名。对于 OpenAI 系列 Responses 流量，这包括 `input_tokens`/`output_tokens` 和 `prompt_tokens`/`completion_tokens`，因此传输层特定的字段名不会改变 `/status`、`/usage` 或会话摘要。Gemini CLI 的使用量也会被规范化：默认的 `stream-json`
 解析器会读取助手的 `message` 事件，而 `stats.cached` 会映射为
@@ -135,27 +134,26 @@ models.providers.<provider>.models[].cost
 
 ## Cache TTL 和剪枝影响
 
-Provider prompt caching only applies within the cache TTL window. OpenClaw
+提供方提示词缓存仅在缓存 TTL 窗口内生效。OpenClaw
 可以选择性地运行 **cache-ttl 剪枝**：当会话的 cache TTL 过期后，它会剪枝该会话，然后重置缓存窗口，从而使后续请求复用新缓存的上下文，而不是重新缓存完整历史记录。
 这样可以在会话在 TTL 过期后进入空闲状态时，降低缓存写入成本。
 
 在 [Gateway configuration](/gateway/configuration) 中进行配置，并在 [Session pruning](/concepts/session-pruning) 中查看
 行为细节。
 
-Heartbeat 可以在空闲间隔期间保持缓存 **温热**。如果你的模型缓存 TTL 是 `1h`，将 heartbeat 间隔设置得略低于该值（例如 `55m`）可以
+心跳可以在空闲间隔期间保持缓存 **温热**。如果你的模型缓存 TTL 是 `1h`，将心跳间隔设置得略低于该值（例如 `55m`）可以
 避免重新缓存完整提示词，从而降低缓存写入成本。
 
-In multi-agent setups, you can keep one shared model config and tune cache
-behavior per agent with `agents.entries.*.params.cacheRetention`.
+在多代理配置中，你可以使用一份共享的模型配置，并通过
+`agents.entries.*.params.cacheRetention` 为每个代理单独调整缓存行为。
 
 关于逐项旋钮指南，请参见 [Prompt Caching](/reference/prompt-caching)。
 
-For Anthropic API pricing, cache reads are significantly cheaper than input
-tokens, while cache writes are billed at a higher multiplier. See Anthropic's
-prompt caching pricing for the latest rates and TTL multipliers:
+对于 Anthropic API 定价，缓存读取的费用显著低于输入 token，而缓存写入则按更高的倍数计费。有关最新费率和 TTL 倍数，请参阅 Anthropic 的
+提示词缓存定价：
 [https://platform.claude.com/docs/en/build-with-claude/prompt-caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 
-### 示例：使用 heartbeat 保持 1h 缓存温热
+### 示例：使用心跳保持 1h 缓存温热
 
 ```yaml
 agents:
@@ -191,13 +189,12 @@ agents:
         cacheRetention: "none" # 避免为突发通知写入缓存
 ```
 
-`agents.entries.*.params` merges on top of the selected model's `params`, so you
-can override only `cacheRetention` and inherit other model defaults
-unchanged.
+`agents.entries.*.params` 会合并到所选模型的 `params` 之上，因此你可以只覆盖
+`cacheRetention`，并保持其他模型默认值不变。
 
-### Anthropic 1M context
+### Anthropic 1M 上下文
 
-OpenClaw 为 Anthropic 的 1M 上下文窗口配置了可 GA 的 Claude 4.x 模型，例如 Opus 4.8、Opus 4.7、Opus
+OpenClaw 为 Anthropic 的 1M 上下文窗口配置了可正式使用的 Claude 4.x 模型，例如 Opus 4.8、Opus 4.7、Opus
 4.6 和 Sonnet 4.6。对于这些模型，你不需要
 `params.context1m: true`。
 
@@ -216,10 +213,9 @@ Anthropic 已弃用的 `context-1m-2025-08-07` beta 头部，并且
 要求：凭证必须具备长上下文使用资格。否则，
 Anthropic 会针对该请求返回提供方侧的速率限制错误。
 
-If you authenticate Anthropic with OAuth/subscription tokens
-(`sk-ant-oat-*`), OpenClaw preserves the OAuth-required Anthropic beta
-headers while stripping the retired `context-1m-*` beta if it remains in
-older config.
+如果你使用 OAuth/订阅令牌（
+`sk-ant-oat-*`）向 Anthropic 进行身份验证，OpenClaw 会保留 Anthropic OAuth 所需的 beta
+头部，同时在旧配置中仍存在已停用的 `context-1m-*` beta 时将其移除。
 
 ## 降低 token 压力的建议
 

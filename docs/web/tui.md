@@ -8,9 +8,9 @@ title: "TUI"
 
 ## 快速开始
 
-### Gateway 模式
+### 网关模式
 
-1. 启动 Gateway。
+1. 启动网关。
 
 ```bash
 openclaw gateway
@@ -24,17 +24,17 @@ openclaw tui
 
 3. 输入消息并按 Enter。
 
-远程 Gateway：
+远程网关：
 
 ```bash
 openclaw tui --url ws://<host>:<port> --token <gateway-token>
 ```
 
-如果你的 Gateway 使用密码认证，请使用 `--password`。
+如果你的网关使用密码认证，请使用 `--password`。
 
 ### 本地模式
 
-无需 Gateway 运行 TUI：
+无需运行网关即可使用 TUI：
 
 ```bash
 openclaw chat
@@ -44,37 +44,37 @@ openclaw tui --local
 
 - `openclaw chat` 和 `openclaw terminal` 是 `openclaw tui --local` 的别名。
 - `--local` 不能与 `--url`、`--token` 或 `--password` 组合使用。
-- 本地模式直接使用内置的 agent 运行时。大多数本地工具可用，但 Gateway 专属功能不可用。
-- 直接运行 `openclaw`（不带子命令）会自动选择目标：未配置的安装会运行推理引导；无效配置会打开经典的 doctor 指引；可访问且已配置的 Gateway 会以 gateway 模式打开此 TUI shell；否则，已配置的本地模型会以本地模式打开。
+- 本地模式直接使用内置的代理运行时。大多数本地工具可用，但网关专属功能不可用。
+- 直接运行 `openclaw`（不带子命令）会自动选择目标：未配置的安装会运行推理引导；无效配置会打开经典的诊断指引；可访问且已配置的网关会以网关模式打开此 TUI shell；否则，已配置的本地模型会以本地模式打开。
 
 ## 你将看到什么
 
 - 页眉：连接 URL、当前代理、当前会话。
 - 聊天记录：用户消息、助手回复、系统通知、工具卡片。
-- 状态行：连接/运行状态（connecting、running、streaming、idle、error）。
-- 页脚：代理 + 会话 + 模型 + 目标状态 + think/fast/verbose/trace/reasoning + 令牌计数 + deliver。
+- 状态行：连接/运行状态（连接中、运行中、流式传输、空闲、错误）。
+- 页脚：代理 + 会话 + 模型 + 目标状态 + 思考/快速/详细/追踪/推理 + 令牌计数 + 交付。
 - 输入：带自动补全的文本编辑器。
 
-## 心智模型：agents + sessions
+## 心智模型：代理 + 会话
 
-- Agents 是唯一的 slug（例如 `main`、`research`）。Gateway 会暴露这个列表。
-- Sessions 属于当前 agent。
-- Session key 会存储为 `agent:<agentId>:<sessionKey>`。
+- 代理是唯一的 slug（例如 `main`、`research`）。网关会暴露这个列表。
+- 会话属于当前代理。
+- 会话键会存储为 `agent:<agentId>:<sessionKey>`。
   - 如果你输入 `/session main`，TUI 会将其展开为 `agent:<currentAgent>:main`。
-  - 如果你输入 `/session agent:other:main`，你会显式切换到那个 agent session。
-- Session 作用域：
-  - `per-sender`（默认）：每个 agent 都有多个 sessions。
-  - `global`：TUI 总是使用 `global` session（选择器可能为空）。
-- 当前 agent + session 会始终显示在 footer 中。
-- 如果 session 有一个 [goal](/tools/goal)，footer 会显示其紧凑状态：
-  `Pursuing goal`、`Goal paused (/goal resume)`、`Goal blocked (/goal resume)` 或 `Goal achieved`。
-- 在不带 `--session` 启动时，gateway-mode TUI 会恢复同一 gateway、agent 和 session scope 下上一次选中的 session，前提是该 session 仍然存在。传入 `--session`、`/session`、`/new` 或 `/reset` 仍然是显式指定。
+  - 如果你输入 `/session agent:other:main`，你会显式切换到那个代理会话。
+- 会话作用域：
+  - `per-sender`（默认）：每个代理都有多个会话。
+  - `global`：TUI 总是使用 `global` 会话（选择器可能为空）。
+- 当前代理 + 会话会始终显示在页脚中。
+- 如果会话有一个[目标](/tools/goal)，页脚会显示其紧凑状态：
+  `正在追求目标`、`目标已暂停（/goal resume）`、`目标受阻（/goal resume）` 或 `目标已达成`。
+- 在不带 `--session` 启动时，网关模式 TUI 会恢复同一网关、代理和会话作用域下上一次选中的会话，前提是该会话仍然存在。传入 `--session`、`/session`、`/new` 或 `/reset` 仍然是显式指定。
 
-## Send + Delivery
+## 发送 + 投递
 
-- Messages are always sent to the Gateway (or to the embedded runtime in local mode); sending the assistant’s reply back to the chat provider is a separate, default-off step.
-- The TUI is an internal source interface, similar to WebChat, rather than a general outbound channel. For harnesses that need `tools.message` in order to display replies, you can satisfy the current TUI turn by using `message.send` without specifying a target; explicit provider delivery still uses the normally configured channel and will never fall back to `lastChannel`.
-- Delivery is fixed for the entire TUI session at startup: launch with `openclaw tui --deliver` to enable it. There is no `/deliver` slash command or Settings toggle you can switch mid-session; to change it, restart the TUI.
+- 消息始终发送到网关（或本地模式下的嵌入式运行时）；将助手的回复发送回聊天服务提供商是一个独立的、默认关闭的步骤。
+- TUI 是一种内部源接口，类似于 WebChat，而不是通用的出站渠道。对于需要使用 `tools.message` 才能显示回复的测试框架，可以通过使用不指定目标的 `message.send` 来满足当前的 TUI 轮次；显式的提供商投递仍会使用通常配置的渠道，并且绝不会回退到 `lastChannel`。
+- 投递设置在整个 TUI 会话启动时即确定：使用 `openclaw tui --deliver` 启动以启用投递。没有可以在会话中途切换的 `/deliver` 斜杠命令或设置开关；如需更改，必须重启 TUI。
 
 ## 选择器 + 覆盖层
 
@@ -86,7 +86,7 @@ openclaw tui --local
 ## 键盘快捷键
 
 - Enter: 发送消息
-- Shift+Enter or Ctrl+J: 插入换行而不发送
+- Shift+Enter 或 Ctrl+J: 插入换行而不发送
 - Esc: 中止当前运行
 - Ctrl+C: 清空输入（按两次退出）
 - Ctrl+D: 退出
@@ -94,7 +94,7 @@ openclaw tui --local
 - Ctrl+G: 智能体选择器
 - Ctrl+P: 会话选择器
 - Ctrl+O: 切换工具输出展开
-- Ctrl+T: 切换思考可见性（重新加载历史记录）
+- Ctrl+T: 切换思考可见性（重新加载历史记录）。
 
 ## 斜杠命令
 
@@ -114,18 +114,20 @@ openclaw tui --local
 - `/verbose <on|full|off>`
 - `/trace <on|off>`
 - `/reasoning <on|off|stream>`
-- `/usage <off|tokens|full|reset>` (`reset`/`inherit`/`clear`/`default` 清除会话覆盖设置)
-- `/goal [status] | /goal start <objective> | /goal edit <objective> | /goal pause|resume|complete|block|clear`
+- `/usage <off|tokens|full|reset>`（`reset`/`inherit`/`clear`/`default` 清除会话覆盖设置）
+- `/goal <objective> | /goal [status] | /goal start <objective> | /goal edit <objective> | /goal pause|resume|complete|block|clear`
+- `/btw <side question>`（别名：`/side`；提问时不会改变未来的会话上下文）
 - `/elevated <on|off|ask|full>`（别名：`/elev`）
 - `/activation <mention|always>`
 - `/queue <steer|followup|collect|interrupt> [debounce:<duration>] [cap:<n>] [drop:<summarize|old|new>]`
-- `/queue default` (或 `/queue reset`) 清除会话覆盖设置
+- `/queue default`（或 `/queue reset`）清除会话覆盖设置
 
 会话生命周期：
 
-- `/new`（在一个新的 key 下创建一个全新的、隔离的会话；不会影响旧会话上的其他 TUI 客户端）
-- `/reset`（就地重置当前会话 key）
+- `/new`（在新键下生成一个全新、隔离的会话；不会影响旧会话上的其他 TUI 客户端）
+- `/reset`（就地重置当前会话键）
 - `/abort`（中止当前运行）
+- `/stop`（停止当前运行或排队中的运行）
 - `/settings`
 - `/exit`（或 `/quit`）
 
@@ -133,12 +135,7 @@ openclaw tui --local
 
 - `/auth [provider]` 会在 TUI 内打开 provider 的认证/登录流程。
 
-Local mode implements the same queue modes inside the embedded runtime. A
-mid-run prompt follows the session's `/queue` policy: `steer` injects when the
-runtime can accept it, `followup` waits for a separate turn, `collect` combines
-pending prompts, and `interrupt` stops the current run before starting the new
-one. Explicit `/steer <message>` is Gateway-only; use `/queue steer` plus a
-normal message in local mode.
+本地模式会在嵌入式运行时中实现相同的队列模式。运行中途发送的提示会遵循会话的 `/queue` 策略：当运行时可以接受时，`steer` 会注入提示；`followup` 会等待单独的一轮；`collect` 会合并待处理的提示；`interrupt` 会在启动新运行前停止当前运行。显式的 `/steer <message>` 仅限 Gateway 使用；在本地模式下，请使用 `/queue steer` 加上一条普通消息。
 
 OpenClaw：
 

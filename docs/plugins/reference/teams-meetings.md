@@ -1,23 +1,23 @@
 ---
-summary: "Join Microsoft Teams meetings as a Chrome browser guest."
+summary: "以 Chrome 浏览器访客身份加入 Microsoft Teams 会议。"
 read_when:
-  - You are installing, configuring, or auditing the teams-meetings plugin
-title: "Microsoft Teams meetings plugin"
+  - 你正在安装、配置或审核 Teams 会议插件
+title: "Microsoft Teams 会议插件"
 ---
 
-# Microsoft Teams meetings plugin
+# Microsoft Teams 会议插件
 
-Join Microsoft Teams meetings as a Chrome browser guest.
+以 Chrome 浏览器访客身份加入 Microsoft Teams 会议。
 
-## Distribution
+## 分发
 
-- Package: `@openclaw/teams-meetings`
-- Install route: included in OpenClaw
+- 软件包：`@openclaw/teams-meetings`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/teams-meetings`
 
-## Surface
+## 接口
 
 contracts: `tools`, `transcriptSourceProviders`
 
-## Related docs
+## 相关文档
 
-- [teams-meetings](/plugins/teams-meetings)
+- [Teams 会议](/plugins/teams-meetings)

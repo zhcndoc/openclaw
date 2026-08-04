@@ -20,6 +20,14 @@ BlueBubbles 支持已被移除。请将 `channels.bluebubbles` 配置迁移到 `
 
 对于常见的本地设置，OpenClaw 配置可以在已登录 Messages 的 Mac 上为 `imsg` 提供经用户确认的 Homebrew 安装或更新。手动设置和 SSH 包装器拓扑仍由操作者管理：请在将要运行 Gateway 或包装器的相同用户上下文中安装或更新 `imsg`。
 
+## 安装插件
+
+在网关主机上安装官方 iMessage 插件，然后重启网关：
+
+```bash
+openclaw plugins install @openclaw/imessage
+```
+
 <CardGroup cols={3}>
   <Card title="私有 API 操作" icon="wand-sparkles" href="#private-api-actions">
     回复、tapback、效果、投票、附件和群组管理。
@@ -28,7 +36,7 @@ BlueBubbles 支持已被移除。请将 `channels.bluebubbles` 配置迁移到 `
     iMessage 私信默认使用配对模式。
   </Card>
   <Card title="远程 Mac" icon="terminal" href="#over-ssh-连接远程-mac">
-    当 Gateway 不在 Messages 所在的 Mac 上运行时，请使用 SSH 包装器。
+    当网关不在 Messages 所在的 Mac 上运行时，请使用 SSH 包装器。
   </Card>
   <Card title="配置参考" icon="settings" href="/gateway/config-channels#imessage">
     iMessage 字段完整参考。
@@ -148,9 +156,9 @@ exec ssh -T messages-mac imsg "$@"
 - Messages 必须在运行 `imsg` 的 Mac 上登录。
 - 运行 OpenClaw/`imsg` 的进程上下文需要“完全磁盘访问权限”（用于访问 Messages 数据库）。
 - 通过 Messages.app 发送消息需要“自动化”权限。
-- 对于高级操作（react / edit / unsend / threaded reply / effects / polls / group ops），必须禁用系统完整性保护（System Integrity Protection）——请参见 [启用 imsg 私有 API](#enabling-the-imsg-private-api)。基础文本和媒体的收发不需要它。
+- 对于高级操作（回应 / 编辑 / 撤回 / 线程回复 / 特效 / 投票 / 群组操作），必须禁用系统完整性保护（System Integrity Protection）——请参见 [启用 imsg 私有 API](#enabling-the-imsg-private-api)。基础文本和媒体的收发不需要它。
 
-<Tip>
+<提示>
 权限是按进程上下文授予的。如果网关以无头方式运行（LaunchAgent/SSH），请在同一上下文中运行一次交互式命令以触发权限提示：
 
 ```bash
@@ -159,9 +167,9 @@ imsg chats --limit 1
 imsg send <handle> "test"
 ```
 
-</Tip>
+</提示>
 
-<Accordion title="SSH 包装器发送失败并出现 AppleEvents -1743">
+<折叠面板 title="SSH 包装器发送失败并出现 AppleEvents -1743">
   远程 SSH 设置可以读取聊天、通过 `channels status --probe`，并处理入站消息，但外发发送仍会因 AppleEvents 授权错误而失败：
 
 ```text
@@ -174,15 +182,15 @@ Not authorized to send Apple events to Messages. (-1743)
 kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.apple.MobileSMS
 ```
 
-在这种状态下，重复执行 `tccutil reset AppleEvents` 或通过同一个 SSH 包装器重新运行 `imsg send` 可能仍然会失败，因为需要 Messages Automation 的进程上下文是 SSH 包装器，而不是 UI 可以授予权限的某个应用。
+在这种状态下，重复执行 `tccutil reset AppleEvents` 或通过同一个 SSH 包装器重新运行 `imsg send` 可能仍然会失败，因为需要 Messages 自动化权限的进程上下文是 SSH 包装器，而不是 UI 可以授予权限的某个应用。
 
 请改用受支持的 `imsg` 进程上下文之一：
 
 - 在已登录的 Messages 用户本地会话中运行 Gateway，或至少运行 `imsg` bridge。
 - 在授予同一会话中的完全磁盘访问权限和自动化权限后，使用该用户的 LaunchAgent 启动 Gateway。
-- 如果你保留双用户 SSH 拓扑，请在启用通道之前，验证一次真实的外发 `imsg send` 是否能通过确切的包装器成功。如果无法授予 Automation，请改为单用户 `imsg` 设置，而不要依赖 SSH 包装器来发送消息。
+- 如果你保留双用户 SSH 拓扑，请在启用通道之前，验证一次真实的外发 `imsg send` 是否能通过确切的包装器成功。如果无法授予自动化权限，请改为单用户 `imsg` 设置，而不要依赖 SSH 包装器来发送消息。
 
-</Accordion>
+</折叠面板>
 
 ## 启用 imsg 私有 API
 
@@ -200,7 +208,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 <Warning>
 **禁用 SIP 是真实的安全权衡。** SIP 是 macOS 防止运行被修改系统代码的核心保护之一；在系统范围内关闭它会带来额外的攻击面和副作用。尤其是，**在 Apple Silicon Mac 上禁用 SIP 也会禁用在你的 Mac 上安装和运行 iOS App 的能力**。
 
-请将此视为一个经过深思熟虑的运维选择，尤其是在作为主力个人 Mac 时。对于生产级 OpenClaw iMessage，最好使用一台专用 Mac 或 bot macOS 用户，只要你愿意启用这个桥接即可。如果你的威胁模型无法接受任何地方关闭 SIP，那么捆绑式 iMessage 只能使用基本模式——仅支持文本和媒体收发，不支持 reactions / edit / unsend / effects / group ops。
+将其视为一项经过深思熟虑的运维选择，尤其是在主要个人 Mac 上。对于生产级的 OpenClaw iMessage，建议使用专用 Mac，或使用一个专用的 bot macOS 用户，以便在你认为合适的情况下启用桥接。如果你的威胁模型无法容忍任何设备关闭 SIP，那么 iMessage 插件将仅限于基本模式——只能收发文本和媒体，不支持反应、编辑、撤回、效果或群组操作。
 </Warning>
 
 ### 设置
@@ -217,9 +225,9 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
    `imsg status --json` 的输出会报告 `bridge_version`、`rpc_methods` 以及每个方法的 `selectors`，这样你就能在开始之前看到当前构建支持哪些能力。
 
 2. **禁用系统完整性保护，并且（在现代 macOS 上）禁用 Library Validation。** 将非 Apple 的 helper dylib 注入到 Apple 签名的 `Messages.app` 需要关闭 SIP **并且**放宽 library validation。Recovery 模式下的 SIP 步骤取决于 macOS 版本：
-   - **macOS 10.13-10.15（Sierra-Catalina）：** 通过 Terminal 禁用 Library Validation，重启进入 Recovery Mode，运行 `csrutil disable`，然后重启。
-   - **macOS 11+（Big Sur 及更高版本），Intel：** 进入 Recovery Mode（或 Internet Recovery），运行 `csrutil disable`，然后重启。
-   - **macOS 11+，Apple Silicon：** 使用电源键启动流程进入 Recovery；在较新的 macOS 版本上，点击 Continue 时按住 **Left Shift** 键，然后运行 `csrutil disable`。虚拟机环境遵循单独流程，因此请先拍摄 VM 快照。
+   - **macOS 10.13-10.15（Sierra-Catalina）：** 通过 Terminal 禁用 Library Validation，重启进入恢复模式，运行 `csrutil disable`，然后重启。
+   - **macOS 11+（Big Sur 及更高版本），Intel：** 进入恢复模式（或 Internet Recovery），运行 `csrutil disable`，然后重启。
+   - **macOS 11+，Apple Silicon：** 使用电源键启动流程进入恢复模式；在较新的 macOS 版本上，点击 Continue 时按住 **Left Shift** 键，然后运行 `csrutil disable`。虚拟机环境遵循单独流程，因此请先拍摄 VM 快照。
 
    **在 macOS 11 及更高版本上，单独执行 `csrutil disable` 通常还不够。** Apple 仍然会将 `Messages.app` 作为平台二进制文件执行 library validation，因此即使关闭 SIP，adhoc 签名的 helper 也会被拒绝（`Library Validation failed: ... platform binary, but mapped file is not`）。在禁用 SIP 之后，还要禁用 library validation 并重启：
 
@@ -227,7 +235,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
    sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist DisableLibraryValidation -bool true
    ```
 
-   **macOS 26 (Tahoe), verified on 26.5.1:** 关闭 SIP **再加上**上面的 `DisableLibraryValidation` 命令，就足以在 26.0 到 26.5.x 之间注入 helper。**不需要 boot-args。** 该 plist 是决定性因素，也是 Tahoe 上注入失败时最常遗漏的一步：
+   **macOS 26 (Tahoe)，已在 26.5.1 上验证：** 关闭 SIP **再加上**上面的 `DisableLibraryValidation` 命令，就足以在 26.0 到 26.5.x 之间注入 helper。**不需要 boot-args。** 该 plist 是决定性因素，也是 Tahoe 上注入失败时最常遗漏的一步：
    - **有 plist：** `imsg launch` 会完成注入，并且 `imsg status` 会报告 `advanced_features: true`。
    - **没有 plist（即使 SIP 已关闭）：** `imsg launch` 会失败，并报出 `Failed to launch: Timeout waiting for Messages.app to initialize`。AMFI 在加载时拒绝了 adhoc helper，因此 bridge 永远无法就绪，启动最终超时。这个超时是大多数人在 Tahoe 上遇到的症状；修复方法就是上面的 plist，而不是采取更激进的手段。
 
@@ -272,7 +280,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
     允许列表字段：`channels.imessage.allowFrom`。
 
-    Allowlist 条目必须标识发送者：handle 或静态发送者访问组（`accessGroup:<name>`）。针对诸如 `chat_id:*`、`chat_guid:*` 或 `chat_identifier:*` 之类的聊天目标，请使用 `channels.imessage.groupAllowFrom`；针对数字 `chat_id` 注册表键，请使用 `channels.imessage.groups`。
+    允许列表条目必须标识发送者：handle 或静态发送者访问组（`accessGroup:<name>`）。针对诸如 `chat_id:*`、`chat_guid:*` 或 `chat_identifier:*` 之类的聊天目标，请使用 `channels.imessage.groupAllowFrom`；针对数字 `chat_id` 注册表键，请使用 `channels.imessage.groups`。
 
   </Tab>
 
@@ -389,7 +397,7 @@ iMessage 聊天可以绑定到 ACP 会话。
 
 `match.peer.id` 可以使用：
 
-- 规范化的 DM handle，例如 `+15555550123` 或 `user@example.com`
+- 规范化的私信 handle，例如 `+15555550123` 或 `user@example.com`
 - `chat_id:<id>`（推荐用于稳定的群组绑定）
 - `chat_guid:<guid>`
 - `chat_identifier:<identifier>`
@@ -424,7 +432,7 @@ iMessage 聊天可以绑定到 ACP 会话。
 }
 ```
 
-有关共享 ACP 绑定行为，请参见 [ACP Agents](/tools/acp-agents)。
+有关共享 ACP 绑定行为，请参见 [ACP 代理](/tools/acp-agents)。
 
 ## 部署模式
 
@@ -569,21 +577,21 @@ iMessage 聊天可以绑定到 ACP 会话。
 
 <AccordionGroup>
   <Accordion title="可用动作">
-    - **react**: 添加/移除 iMessage tapback（`messageId`、`emoji`、`remove`）。支持的 tapback 映射到 love、like、dislike、laugh、emphasize 和 question。不带 emoji 进行移除会清除已设置的任意 tapback。
-    - **reply**: 向现有消息发送线程回复（`messageId`、`text` 或 `message`，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。带附件的回复还需要一个 `imsg` 构建版本，其 `send-rich` 支持 `--file`。
-    - **sendWithEffect**: 发送带 iMessage 效果的文本（`text` 或 `message`，`effect` 或 `effectId`）。短名称：slam、loud、gentle、invisibleink、confetti、lasers、fireworks、balloon、heart、echo、happybirthday、shootingstar、sparkles、spotlight。
-    - **edit**: 在受支持的 macOS/private API 版本上编辑已发送消息（`messageId`、`text` 或 `newText`）。只能编辑网关自身发送的消息。
-    - **unsend**: 在受支持的 macOS/private API 版本上撤回已发送消息（`messageId`）。只能撤回网关自身发送的消息。
-    - **upload-file**: 发送媒体/文件（`buffer` 以 base64 形式，或已 hydrated 的 `media`/`path`/`filePath`，`filename`，可选 `asVoice`）。旧别名：`sendAttachment`。
+    - **react**：添加/移除 iMessage tapback（`messageId`、`emoji`、`remove`）。支持的 tapback 映射到 love、like、dislike、laugh、emphasize 和 question。不带 emoji 进行移除会清除已设置的任意 tapback。
+    - **reply**：向现有消息发送线程回复（`messageId`、`text` 或 `message`，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。带附件的回复还需要一个 `imsg` 构建版本，其 `send-rich` 支持 `--file`。
+    - **sendWithEffect**：发送带 iMessage 效果的文本（`text` 或 `message`，`effect` 或 `effectId`）。短名称：slam、loud、gentle、invisibleink、confetti、lasers、fireworks、balloon、heart、echo、happybirthday、shootingstar、sparkles、spotlight。
+    - **edit**：在受支持的 macOS/private API 版本上编辑已发送消息（`messageId`、`text` 或 `newText`）。只能编辑网关自身发送的消息。
+    - **unsend**：在受支持的 macOS/private API 版本上撤回已发送消息（`messageId`）。只能撤回网关自身发送的消息。
+    - **upload-file**：发送媒体/文件（`buffer` 以 base64 形式，或已 hydrated 的 `media`/`path`/`filePath`，`filename`，可选 `asVoice`）。旧别名：`sendAttachment`。
     - **renameGroup**、`setGroupIcon`、`addParticipant`、`removeParticipant`、`leaveGroup`：当当前目标是群聊时管理群聊。这些操作会修改主机的 Messages 身份，因此需要 owner sender 或 `operator.admin` Gateway 客户端。
-    - **poll**: 创建原生 Apple Messages 投票（`pollQuestion`、`pollOption` 重复 2 到 12 次，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。iOS/iPadOS/macOS 26+ 上的接收者会原生查看并投票；较旧的 OS 版本会收到“Sent a poll”文本回退。需要 `selectors.pollPayloadMessage`。
-    - **poll-vote**: 对现有投票进行投票（`pollId` 或 `messageId`，以及 `pollOptionIndex`、`pollOptionId` 或 `pollOptionText` 中恰好一个）。需要 `selectors.pollVoteMessage` 和 `poll.vote` RPC 方法。
+    - **poll**：创建原生 Apple Messages 投票（`pollQuestion`、`pollOption` 重复 2 到 12 次，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。iOS/iPadOS/macOS 26+ 上的接收者会原生查看并投票；较旧的 OS 版本会收到“Sent a poll”文本回退。需要 `selectors.pollPayloadMessage`。
+    - **poll-vote**：对现有投票进行投票（`pollId` 或 `messageId`，以及 `pollOptionIndex`、`pollOptionId` 或 `pollOptionText` 中恰好一个）。需要 `selectors.pollVoteMessage` 和 `poll.vote` RPC 方法。
 
     被接受的入站投票会向代理呈现问题、带编号的选项标签、票数，以及 `poll-vote` 所需的投票消息 ID。
 
   </Accordion>
 
-  <Accordion title="Message IDs">
+  <Accordion title="消息 ID">
     入站 iMessage 上下文在可用时同时包含简短的 `MessageSid` 值和完整消息 GUID（`MessageSidFull`）。简短 ID 仅适用于最近的基于 SQLite 的回复缓存，并会在使用前与当前聊天进行检查。如果简短 ID 过期，请在定位到提供该 ID 的对话后改用其 `MessageSidFull` 重试。完整 ID 不能绕过对话或账号绑定，因此如果 ID 来自其他聊天，请用当前目标聊天中的 ID 替换它。当当前对话证据不可用时，远程委派调用可能会拒绝过期的完整 ID。
 
   </Accordion>
@@ -776,7 +784,7 @@ openclaw channels status --probe --channel imessage
     - `channels.imessage.groupPolicy`
     - `channels.imessage.groupAllowFrom`
     - `channels.imessage.groups` 白名单行为
-    - mention 模式配置（`agents.entries.*.groupChat.mentionPatterns`）
+    - 提及模式配置（`agents.entries.*.groupChat.mentionPatterns`）
 
   </Accordion>
 

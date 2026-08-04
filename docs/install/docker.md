@@ -8,16 +8,16 @@ title: "Docker"
 
 Docker 是**可选的**。当你需要一个隔离的、一次性使用的网关环境，或者主机上没有本地安装时，可以使用它。如果你已经在自己的机器上进行开发，请改用常规安装流程。
 
-默认的沙箱后端在启用 `agents.defaults.sandbox` 时会使用 Docker，但沙箱功能默认是关闭的，并且网关本身并不需要运行在 Docker 中。SSH 和 OpenShell 沙箱后端也可用；请参阅 [沙箱](/gateway/sandboxing)。
+默认的 Docker 沙箱后端仅使用 `docker` CLI。将后端设置为 `"podman"` 可直接选择原生 Podman。沙箱默认处于关闭状态，网关本身无需运行在容器中。SSH 和 OpenShell 沙箱后端也可用；请参阅 [沙箱](/gateway/sandboxing)。
 
-要托管多个用户？请参阅 [多租户托管](/gateway/multi-tenant-hosting)，了解 one-cell-per-tenant 模式。
+要托管多个用户？请参阅 [多租户托管](/gateway/multi-tenant-hosting)，了解每个租户一个单元格的模式。
 
 ## 先决条件
 
 - Docker Desktop（或 Docker Engine）+ Docker Compose v2
 - 用于镜像构建的内存至少 2 GB（在 1 GB 的主机上，`pnpm install` 可能会因 OOM 被杀死并返回 exit 137）
 - 为镜像和日志预留足够的磁盘空间
-- 在 VPS/公网主机上，请查看[网络暴露的安全加固](/gateway/security)，尤其是 Docker 的 `DOCKER-USER` 防火墙链
+- 在 VPS/公网主机上，请查看[网络暴露的安全加固](/gateway/security)，尤其是 Docker 的 `DOCKER-USER` 防火墙链。
 
 ## 容器化网关
 
@@ -43,7 +43,7 @@ Docker 是**可选的**。当你需要一个隔离的、一次性使用的网关
     ./scripts/docker/setup.sh
     ```
 
-    Use `ghcr.io/openclaw/openclaw` or `openclaw/openclaw` and avoid unofficial mirrors, which don't share OpenClaw's release timing or retention policy. Version-specific tags include releases such as `2026.2.26` and prereleases such as `2026.2.26-beta.1`. Stable releases move `latest` and `main`; trailing-month Gateway releases move only `extended-stable`. Variants include `slim`, `main-slim`, `extended-stable-slim`, `latest-browser`, `main-browser`, and `extended-stable-browser`. The default images bundle the `codex` and `diagnostics-otel` plugins. A `-browser` variant also ships with Chromium baked in, useful for the [sandboxed browser](/gateway/sandboxing#sandboxed-browser) tool without a first-run Playwright install.
+    使用 `ghcr.io/openclaw/openclaw` 或 `openclaw/openclaw`，避免使用非官方镜像，因为它们不遵循 OpenClaw 的发布时间或保留策略。特定版本的标签包括 `2026.2.26` 等正式版本，以及 `2026.2.26-beta.1` 等预发布版本。稳定版本会更新 `latest` 和 `main`；月度末尾的网关版本只会更新 `extended-stable`。变体包括 `slim`、`main-slim`、`extended-stable-slim`、`latest-browser`、`main-browser` 和 `extended-stable-browser`。默认镜像包含 `codex` 和 `diagnostics-otel` 插件。`-browser` 变体还预装了 Chromium，可用于[沙箱浏览器](/gateway/sandboxing#sandboxed-browser)工具，无需首次运行时安装 Playwright。
 
   </Step>
 
@@ -75,7 +75,7 @@ Docker 是**可选的**。当你需要一个隔离的、一次性使用的网关
   </Step>
 
   <Step title="打开控制界面">
-    打开 `http://127.0.0.1:18789/`，并将写入 `.env` 的令牌粘贴到 Settings 中。如果你把容器切换为密码认证，则改用该密码。
+    打开 `http://127.0.0.1:18789/`，并将写入 `.env` 的令牌粘贴到“设置”中。如果你把容器切换为密码认证，则改用该密码。
 
     需要再次获取 URL？
 
@@ -139,31 +139,32 @@ doctor 完成后，使用默认命令重新启动网关容器。在 Kubernetes �
 
 ### 环境变量
 
-`scripts/docker/setup.sh` 接受的可选变量（对于 gateway 容器，也可直接由 `docker-compose.yml` 接受）：
+`scripts/docker/setup.sh` 接受的可选变量（对于网关容器，也可直接由 `docker-compose.yml` 接受）：
 
 | 变量                                            | 用途                                                                                                              |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_IMAGE`                                | 使用远程镜像而不是在本地构建                                                                                      |
-| `OPENCLAW_IMAGE_APT_PACKAGES`                   | 在构建期间安装额外的 apt 包（以空格分隔）。旧别名：`OPENCLAW_DOCKER_APT_PACKAGES`                                   |
-| `OPENCLAW_IMAGE_PIP_PACKAGES`                   | 在构建期间安装额外的 Python 包（以空格分隔）                                                                       |
-| `OPENCLAW_EXTENSIONS`                           | 编译/打包受支持的所选插件，并安装其运行时依赖项（以逗号或空格分隔的 id）                                           |
-| `OPENCLAW_DOCKER_BUILD_NODE_OPTIONS`            | 覆盖本地源码构建的 Node 选项（默认 `--max-old-space-size=8192`）                                                    |
-| `OPENCLAW_DOCKER_BUILD_TSDOWN_MAX_OLD_SPACE_MB` | 覆盖本地源码构建中 tsdown 的堆内存（单位 MB）                                                                     |
-| `OPENCLAW_DOCKER_BUILD_SKIP_DTS`                | 在仅运行时的本地镜像构建期间跳过声明输出（默认 `1`）                                                                |
-| `OPENCLAW_INSTALL_BROWSER`                      | 在构建时将 Chromium + Xvfb 烘焙进镜像                                                                            |
-| `OPENCLAW_EXTRA_MOUNTS`                         | 额外的宿主机绑定挂载（以逗号分隔的 `source:target[:opts]`）                                                        |
-| `OPENCLAW_HOME_VOLUME`                          | 将 `/home/node` 持久化到一个命名的 Docker 卷中                                                                     |
-| `OPENCLAW_SANDBOX`                              | 选择启用沙箱引导（`1`、`true`、`yes`、`on`）                                                                       |
+| `OPENCLAW_IMAGE`                                | 使用远程镜像而不是在本地构建                                                                                       |
+| `OPENCLAW_IMAGE_APT_PACKAGES`                   | 在构建期间安装额外的 apt 软件包（以空格分隔）。旧版别名：`OPENCLAW_DOCKER_APT_PACKAGES`                         |
+| `OPENCLAW_IMAGE_PIP_PACKAGES`                   | 在构建期间安装额外的 Python 软件包（以空格分隔）                                                                  |
+| `OPENCLAW_EXTENSIONS`                           | 编译/打包选定的受支持插件，并安装其运行时依赖（以逗号或空格分隔的 ID）                                             |
+| `OPENCLAW_DOCKER_BUILD_NODE_OPTIONS`            | 覆盖本地源码构建的 Node 选项（默认为 `--max-old-space-size=8192`）                                                 |
+| `OPENCLAW_DOCKER_BUILD_TSDOWN_MAX_OLD_SPACE_MB` | 以 MB 为单位覆盖本地源码构建的 tsdown 堆大小                                                                       |
+| `OPENCLAW_DOCKER_BUILD_SKIP_DTS`                | 在仅运行时的本地镜像构建期间跳过声明文件输出（默认为 `1`）                                                        |
+| `OPENCLAW_INSTALL_BROWSER`                      | 在构建时将 Chromium + Xvfb 内置到镜像中                                                                           |
+| `OPENCLAW_EXTRA_MOUNTS`                         | 额外的主机绑定挂载（以逗号分隔的 `source:target[:opts]`）                                                         |
+| `OPENCLAW_HOME_VOLUME`                          | 将 `/home/node` 持久化到命名 Docker 卷中                                                                          |
+| `OPENCLAW_TZ`                                   | 将网关和 CLI 容器的时区设置为 IANA 名称（默认为 `UTC`）                                                            |
+| `OPENCLAW_SANDBOX`                              | 选择启用沙箱引导（`1`、`true`、`yes`、`on`）                                                                      |
 | `OPENCLAW_SKIP_ONBOARDING`                      | 跳过交互式入门步骤（`1`、`true`、`yes`、`on`）                                                                     |
 | `OPENCLAW_DOCKER_SOCKET`                        | 覆盖 Docker 套接字路径                                                                                             |
 | `OPENCLAW_DISABLE_BONJOUR`                      | 强制开启（`0`）或关闭（`1`）Bonjour/mDNS 广播；参见 [Bonjour / mDNS](#bonjour--mdns)                              |
-| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS`      | 禁用捆绑的插件源码绑定挂载覆盖层                                                                                   |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`                   | 用于 OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点                                                                 |
-| `OTEL_EXPORTER_OTLP_*_ENDPOINT`                 | 用于 traces、metrics 或 logs 的按信号划分的 OTLP 端点                                                              |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`                   | OTLP 协议覆盖。当前仅支持 `http/protobuf`                                                                         |
+| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS`      | 禁用捆绑插件源绑定挂载覆盖                                                                                         |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                   | 用于 OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点                                                                |
+| `OTEL_EXPORTER_OTLP_*_ENDPOINT`                 | 针对跟踪、指标或日志的特定信号 OTLP 端点                                                                           |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`                   | OTLP 协议覆盖。目前仅支持 `http/protobuf`                                                                          |
 | `OTEL_SERVICE_NAME`                             | 用于 OpenTelemetry 资源的服务名称                                                                                  |
-| `OTEL_SEMCONV_STABILITY_OPT_IN`                 | 选择启用最新的实验性 GenAI 语义属性                                                                               |
-| `OPENCLAW_OTEL_PRELOADED`                       | 如果已预加载，则跳过启动第二个 OpenTelemetry SDK                                                                   |
+| `OTEL_SEMCONV_STABILITY_OPT_IN`                 | 选择启用最新的实验性 GenAI 语义属性                                                                                |
+| `OPENCLAW_OTEL_PRELOADED`                       | 在已预加载一个 OpenTelemetry SDK 时跳过启动第二个 SDK                                                              |
 
 官方镜像不包含 Homebrew。在入门过程中，OpenClaw 会在一个没有 `brew` 的 Linux 容器中隐藏仅适用于 brew 的技能依赖安装器；请通过自定义镜像提供这些依赖，或手动安装。对于 Debian 打包的依赖，请使用 `OPENCLAW_IMAGE_APT_PACKAGES`；对于 Python 依赖，请使用 `OPENCLAW_IMAGE_PIP_PACKAGES`（构建时会运行 `python3 -m pip install --break-system-packages`，因此请锁定版本，并且只使用你信任的索引）。
 
@@ -263,10 +264,10 @@ curl -fsS http://127.0.0.1:18789/readyz     # 就绪
 已认证的深度健康快照：
 
 ```bash
-docker compose exec openclaw-gateway node dist/index.js health --token "$OPENCLAW_GATEWAY_TOKEN"
+docker compose exec openclaw-gateway sh -lc 'node dist/index.js gateway health --token "$OPENCLAW_GATEWAY_TOKEN"'
 ```
 
-### LAN 与 loopback
+### LAN 与回环
 
 `scripts/docker/setup.sh` 默认将 `OPENCLAW_GATEWAY_BIND=lan`，因此主机上的 `http://127.0.0.1:18789` 可以通过 Docker 端口发布正常访问。
 
@@ -325,9 +326,7 @@ docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
   'curl -fsSL https://claude.ai/install.sh | bash'
 ```
 
-The native installer writes `claude` to `/home/node/.local/bin/claude`. The
-OpenClaw image includes `/home/node/.local/bin` on `PATH`, so the bundled
-Anthropic plugin resolves it without an adapter config override.
+原生安装程序会将 `claude` 写入 `/home/node/.local/bin/claude`。OpenClaw 镜像已将 `/home/node/.local/bin` 加入 `PATH`，因此内置的 Anthropic 插件无需适配器配置覆盖即可找到它。
 
 使用同一个已持久化的 home 目录登录并验证：
 
@@ -423,11 +422,11 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 
   </Accordion>
 
-  <Accordion title="Shared-network security note">
+  <Accordion title="共享网络安全说明">
     `openclaw-cli` 使用 `network_mode: "service:openclaw-gateway"`，因此 CLI 命令可以通过 `127.0.0.1` 访问网关。请将其视为共享信任边界。compose 配置会移除 `NET_RAW`/`NET_ADMIN`，并在 `openclaw-gateway` 和 `openclaw-cli` 上启用 `no-new-privileges`。
   </Accordion>
 
-  <Accordion title="Docker Desktop DNS failures in openclaw-cli">
+  <Accordion title="openclaw-cli 中的 Docker Desktop DNS 故障">
     某些 Docker Desktop 配置在共享网络的 `openclaw-cli` sidecar 上移除 `NET_RAW` 后，会导致 DNS 查询失败，在基于 npm 的命令（如 `openclaw plugins install`）期间表现为 `EAI_AGAIN`。正常运行时请保留默认的加固 compose 文件。下面的覆盖配置仅为 `openclaw-cli` 容器恢复默认 capabilities——请将其用于需要 registry 访问的一次性命令，而不要作为默认调用方式：
 
     ```bash
@@ -444,7 +443,7 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 
   </Accordion>
 
-  <Accordion title="Permissions and EACCES">
+  <Accordion title="权限和 EACCES">
     该镜像以 `node`（uid 1000）运行。如果你在 `/home/node/.openclaw` 上看到权限错误，请确保宿主机的 bind mount 归属 uid 1000：
 
     ```bash
@@ -455,7 +454,7 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 
   </Accordion>
 
-  <Accordion title="Faster rebuilds">
+  <Accordion title="更快的重建">
     安排你的 Dockerfile，使依赖层能够被缓存，从而避免除非 lockfile 变化否则重复运行 `pnpm install`：
 
     ```dockerfile
@@ -478,29 +477,29 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 
   </Accordion>
 
-  <Accordion title="Power-user container options">
+  <Accordion title="高级用户容器选项">
     默认镜像以安全优先方式运行，并以非 root 的 `node` 用户运行。若要使用功能更完整的容器：
 
-    1. **Persist `/home/node`**: `export OPENCLAW_HOME_VOLUME="openclaw_home"`
-    2. **Bake system deps**: `export OPENCLAW_IMAGE_APT_PACKAGES="git curl jq"`
-    3. **Bake Python deps**: `export OPENCLAW_IMAGE_PIP_PACKAGES="requests==2.32.5 humanize==4.14.0"`
-    4. **Bake Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`, or use the official `-browser` image tag
-    5. **Persist browser downloads and caches**: use `OPENCLAW_HOME_VOLUME` or `OPENCLAW_EXTRA_MOUNTS`. OpenClaw auto-detects the image's Playwright-managed Chromium on Linux.
+    1. **持久化 `/home/node`**: `export OPENCLAW_HOME_VOLUME="openclaw_home"`
+    2. **预装系统依赖**: `export OPENCLAW_IMAGE_APT_PACKAGES="git curl jq"`
+    3. **预装 Python 依赖**: `export OPENCLAW_IMAGE_PIP_PACKAGES="requests==2.32.5 humanize==4.14.0"`
+    4. **预装 Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`，或使用官方的 `-browser` 镜像标签
+    5. **持久化浏览器下载内容和缓存**: 使用 `OPENCLAW_HOME_VOLUME` 或 `OPENCLAW_EXTRA_MOUNTS`。在 Linux 上，OpenClaw 会自动检测镜像中由 Playwright 管理的 Chromium。
 
   </Accordion>
 
-  <Accordion title="OpenAI Codex OAuth (headless Docker)">
+  <Accordion title="OpenAI Codex OAuth（无头 Docker）">
     如果你在向导中选择 OpenAI Codex OAuth，它会打开一个浏览器 URL。在 Docker 或无头环境中，请复制你最终落地到的完整重定向 URL，并将其粘贴回向导中以完成认证。
   </Accordion>
 
-  <Accordion title="Base image metadata">
-    运行时镜像使用 `node:24-bookworm-slim`，并以 `tini` 作为 PID 1 运行，因此在长期运行的容器中，僵尸进程会被回收，信号也能被正确处理。它会发布 OCI base-image 注解，包括 `org.opencontainers.image.base.name` 和 `org.opencontainers.image.source`。Dependabot 会刷新固定的 Node 基础镜像摘要；发布构建不会运行单独的发行版升级层。参见 [OCI image annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)。
+  <Accordion title="基础镜像元数据">
+    运行时镜像使用 `node:24-bookworm-slim`，并以 `tini` 作为 PID 1 运行，因此在长期运行的容器中，僵尸进程会被回收，信号也能被正确处理。它会发布 OCI 基础镜像注解，包括 `org.opencontainers.image.base.name` 和 `org.opencontainers.image.source`。Dependabot 会刷新固定的 Node 基础镜像摘要；发布构建不会运行单独的发行版升级层。参见 [OCI 镜像注解](https://github.com/opencontainers/image-spec/blob/main/annotations.md)。
   </Accordion>
 </AccordionGroup>
 
 ### 在 VPS 上运行？
 
-请参见 [Hetzner (Docker VPS)](/install/hetzner) 和 [Docker VM Runtime](/install/docker-vm-runtime)，了解共享虚拟机部署步骤，包括二进制文件烘焙、持久化和更新。
+请参见 [Hetzner（Docker VPS）](/install/hetzner) 和 [Docker VM Runtime](/install/docker-vm-runtime)，了解共享虚拟机部署步骤，包括二进制文件烘焙、持久化和更新。
 
 ## Agent 沙箱
 
@@ -540,15 +539,15 @@ scripts/sandbox-setup.sh
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="Image missing or sandbox container not starting">
-    使用 [`scripts/sandbox-setup.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/sandbox-setup.sh)（源码检出）或 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令（npm install）构建 sandbox 镜像，或者将 `agents.defaults.sandbox.docker.image` 设置为你的自定义镜像。容器会按需为每个会话自动创建。
+  <Accordion title="镜像缺失或沙箱容器未启动">
+    使用 [`scripts/sandbox-setup.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/sandbox-setup.sh)（源码检出）或 [沙箱 § 镜像和设置](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令（npm install）构建沙箱镜像，或者将 `agents.defaults.sandbox.docker.image` 设置为你的自定义镜像。容器会按需为每个会话自动创建。
   </Accordion>
 
-  <Accordion title="Permission errors in sandbox">
+  <Accordion title="沙箱中的权限错误">
     将 `docker.user` 设置为与你挂载的工作区所有权匹配的 UID:GID，或者将工作区文件夹的所有者改为当前用户。
   </Accordion>
 
-  <Accordion title="Custom tools not found in sandbox">
+  <Accordion title="在沙箱中找不到自定义工具">
     OpenClaw 使用 `sh -lc`（登录 shell）运行命令，这会加载 `/etc/profile` 并可能重置 PATH。将 `docker.env.PATH` 设置为在前面追加你的自定义工具路径，或者在你的 Dockerfile 中于 `/etc/profile.d/` 下添加一个脚本。
   </Accordion>
 
@@ -570,7 +569,7 @@ scripts/sandbox-setup.sh
   </Accordion>
 
   <Accordion title="网关目标显示 ws://172.x.x.x 或 Docker CLI 出现配对错误">
-    重置 gateway 模式和绑定：
+    重置网关模式和绑定：
 
     ```bash
     docker compose run --rm openclaw-cli config set --batch-json '[{"path":"gateway.mode","value":"local"},{"path":"gateway.bind","value":"lan"}]'
@@ -586,4 +585,4 @@ scripts/sandbox-setup.sh
 - [Podman](/install/podman) — Docker 的 Podman 替代方案
 - [ClawDock](/install/clawdock) — Docker Compose 社区设置
 - [更新](/install/updating) — 保持 OpenClaw 为最新版本
-- [配置](/gateway/configuration) — 安装后的 gateway 配置
+- [配置](/gateway/configuration) — 安装后的 gateway 配置。

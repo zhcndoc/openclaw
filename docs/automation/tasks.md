@@ -1,9 +1,9 @@
 ---
-summary: "ACP 运行、子代理、cron 执行和 CLI 操作的后台任务跟踪"
+summary: "ACP 运行、子代理、自动化运行和 CLI 操作的后台任务跟踪"
 read_when:
   - 检查正在进行或最近完成的后台工作
-  - 调试分离代理运行的投递失败
-  - 了解后台运行如何与会话、cron 和 heartbeat 相关联
+  - 调试分离式代理运行的交付失败
+  - 了解后台运行与会话、自动化和心跳之间的关系
 title: "后台任务"
 sidebarTitle: "后台任务"
 ---
@@ -12,28 +12,28 @@ sidebarTitle: "后台任务"
 在找调度功能？请参阅 [自动化](/automation) 以选择合适的机制。本页是后台工作的活动台账，而不是调度器。
 </Note>
 
-后台任务跟踪在**主对话会话之外**运行的工作：ACP 运行、子代理启动、cron 作业执行以及由 CLI 触发的操作。
+后台任务跟踪在**主会话之外**运行的工作：ACP 运行、子代理启动、自动化作业运行以及由 CLI 发起的操作。
 
-任务并不**替代**会话、cron 作业或 heartbeat——它们是**活动台账**，用于记录发生了什么分离运行、何时发生，以及是否成功。
+任务不会取代会话、自动化或心跳——它们是记录分离式工作发生了什么、何时发生以及是否成功的**活动台账**。
 
 对于在 CI 或脚本中进行的严格、短暂的一次性代理运行，请使用 [`openclaw agent exec`](/cli/agent#agent-exec)，而不是受管理的后台工作。
 
 <Note>
-并非每次代理运行都会创建任务。Heartbeat 回合和普通交互式聊天不会。所有 cron 执行、ACP 启动、子代理启动、网关分发的 CLI 代理命令，以及代理启动的后台 `exec` 命令都会创建任务。
+并非每次代理运行都会创建任务。心跳轮次和正常的交互式聊天不会创建任务。所有自动化运行、ACP 启动、子代理启动、网关分发的 CLI 代理命令以及由代理启动的后台 `exec` 命令都会创建任务。
 </Note>
 
 ## TL;DR
 
-- 任务是**记录**，不是调度器——cron 和 heartbeat 决定 _何时_ 执行工作，任务则记录 _发生了什么_。
-- ACP、subagents、所有 cron 作业以及 CLI 操作都会创建任务。Heartbeat turn 不会。
+- 任务是**记录**，而不是调度器——自动化和心跳决定工作_何时_运行，任务记录_发生了什么_。
+- ACP、子代理、所有自动化作业和 CLI 操作都会创建任务。心跳轮次不会。
 - 每个任务都会经历 `queued → running → terminal`（succeeded、failed、timed_out、cancelled 或 lost）。
-- 只要 cron 运行时仍持有该作业，cron 任务就会保持活跃；如果内存中的运行时状态已消失，任务维护会先检查持久化的 cron 运行历史，再将任务标记为 lost。
-- 完成是推送驱动的：分离的工作完成后可以直接通知，或唤醒请求者会话/heartbeat，因此状态轮询循环通常不是合适的模式。
-- 隔离的 cron 运行和 subagent 完成会尽力在最终清理记录之前，清理其子会话所跟踪的浏览器标签页/进程。
-- 隔离的 cron 投递会在后代 subagent 工作仍在收尾时，抑制过时的中间父级回复；如果最终后代输出在投递前到达，它会优先使用该最终输出。
-- 完成通知会直接投递到通道，或排队到下一次 heartbeat。
-- `openclaw tasks list` 显示所有任务；`openclaw tasks audit` 会暴露问题。
-- 终态记录会保留 7 天（`lost` 记录保留 24 小时），然后自动清理。
+- 当自动化运行时仍拥有该作业时，自动化任务会保持活动状态；如果内存中的运行时状态消失，任务维护会先检查持久化的自动化运行历史，然后再将任务标记为 lost。
+- 完成通知由推送驱动：分离运行的工作完成时可以直接发送通知，或唤醒请求方会话/心跳，因此状态轮询循环通常不是正确的实现方式。
+- 隔离的自动化运行和子代理完成时，会尽力在最终清理记录前，为其子会话清理已跟踪的浏览器标签页/进程。
+- 隔离的自动化交付会在后代子代理工作仍在处理时，抑制过时的中间父级回复；如果后代输出在交付前到达，则优先使用最终的后代输出。
+- 完成通知会直接发送到某个频道，或排队等待下一次心跳。
+- `openclaw tasks list` 显示所有任务；`openclaw tasks audit` 显示相关问题。
+- 终止状态的记录会保留 7 天（`lost` 记录保留 24 小时），之后会自动清理。
 
 ## 快速开始
 
@@ -65,6 +65,14 @@ sidebarTitle: "后台任务"
     ```
 
   </Tab>
+  <Tab title="恢复交付">
+    ```bash
+    # 重试或忽略最多 10 个被阻塞的完成交付
+    openclaw tasks retry <lookup> [lookup...]
+    openclaw tasks dismiss <lookup> [lookup...]
+    ```
+
+  </Tab>
   <Tab title="审计和维护">
     ```bash
     # 运行健康审计
@@ -78,7 +86,7 @@ sidebarTitle: "后台任务"
   </Tab>
   <Tab title="任务流">
     ```bash
-    # 检查 TaskFlow 状态
+    # 检查任务流状态
     openclaw tasks flow list
     openclaw tasks flow show <lookup>
     openclaw tasks flow cancel <lookup>
@@ -88,17 +96,17 @@ sidebarTitle: "后台任务"
 
 ## 什么会创建任务
 
-| 来源                   | 运行时类型 | 创建任务记录的时机                                         | 默认通知策略 |
-| ---------------------- | ---------- | ---------------------------------------------------------- | ------------ |
-| ACP 后台运行            | `acp`      | 启动一个子 ACP 会话                                        | `done_only`  |
-| 子代理编排              | `subagent` | 通过 `sessions_spawn` 启动子代理                          | `done_only`  |
-| Cron 作业（所有类型）   | `cron`     | 每次 cron 执行（主会话和隔离会话）                        | `silent`     |
-| CLI 操作                | `cli`      | 通过网关运行的 `openclaw agent` 命令                      | `silent`     |
-| 代理媒体任务            | `cli`      | 由会话支持的 `image_generate`/`music_generate`/`video_generate` 运行 | `silent`     |
+| 来源                       | 运行时类型   | 创建任务记录的时机                                                   | 默认通知策略 |
+| -------------------------- | ------------ | -------------------------------------------------------------------- | ------------ |
+| ACP 后台运行               | `acp`        | 启动子 ACP 会话                                                     | `done_only`  |
+| 子代理编排                 | `subagent`   | 通过 `sessions_spawn` 启动子代理                                   | `done_only`  |
+| 自动化任务（所有类型）     | `cron`       | 每次自动化运行（主会话和隔离会话）                                 | `silent`     |
+| CLI 操作                   | `cli`        | 通过网关运行的 `openclaw agent` 命令                               | `silent`     |
+| 代理媒体任务               | `cli`        | 基于会话的 `image_generate`/`music_generate`/`video_generate` 运行 | `silent`     |
 
 <AccordionGroup>
-  <Accordion title="Cron 和媒体的默认通知">
-    Cron 任务（主会话和隔离会话）使用 `silent` 通知策略——它们会创建记录用于跟踪，但不会自行生成任务通知；cron 自身负责其交付路径。
+  <Accordion title="自动化和媒体的通知默认设置">
+    自动化任务（主会话和隔离会话）使用 `silent` 通知策略——它们会创建记录用于跟踪，但不会自行生成任务通知；调度器负责其投递路径。
 
     基于会话的 `image_generate`、`music_generate` 和 `video_generate` 运行也使用 `silent` 通知策略。它们仍然会创建任务记录，但完成会作为一次内部唤醒交回原始代理会话，以便代理可以写出后续消息并自行附加已完成的媒体内容。请求者代理遵循其正常的可见回复约定：在配置时自动发送最终回复，或者在会话要求使用消息工具回复时使用 `message(action="send")` 加 `NO_REPLY`。如果请求者会话不再活跃，或者其活动唤醒失败，并且完成代理遗漏了部分或全部生成的媒体，OpenClaw 会向原始通道目标发送一次幂等的直接回退，仅包含缺失的媒体。
 
@@ -141,14 +149,22 @@ stateDiagram-v2
 
 状态迁移会自动发生——agent 运行生命周期事件（开始、结束、出错）会更新任务状态；你无需手动管理。
 
-对于活跃的任务记录，agent 运行完成结果具有权威性。成功的分离运行会最终归类为 `succeeded`，普通运行错误会最终归类为 `failed`，超时会最终归类为 `timed_out`，取消/中止结果会最终归类为 `cancelled`。一旦任务进入终态，后续的生命周期信号不会将其降级——即使之后收到成功信号，已被操作员取消或已经处于 `failed`/`timed_out`/`lost` 的任务也会保持原状态。
+执行和结果交付是分开的。子 agent 任务可以保持为
+`succeeded`，而其 `deliveryStatus` 为 `session_queued` 或 `failed`。交付完成后，最终结果为
+`succeeded`；如果工作已完成但结果无法传回，则为 `blocked`。这样可以保留已完成的
+结果，而不会将子任务执行错误地报告为失败。
+
+agent 运行完成状态是活动任务记录的权威依据。成功的分离运行最终状态为
+`succeeded`，普通运行错误最终状态为 `failed`，超时最终状态为 `timed_out`，取消/中止结果最终状态为
+`cancelled`。任务进入终态后，后续的生命周期信号不会将其降级——由操作员取消或已经处于
+`failed`/`timed_out`/`lost` 状态的任务会保持不变，即使之后收到成功信号也是如此。
 
 `lost` 具有运行时感知：
 
-- ACP 任务：只有 Gateway 中一个存活的、进程内的 ACP 回合才能证明运行仍然存活；仅有持久化的会话元数据并不足以证明。离线 CLI 审计会保持保守，不会回收 ACP 任务。
-- 子 agent 任务：目标 agent 存储中的备份子会话已消失（或带有 restart-recovery 墓碑标记）。
-- Cron 任务：cron 运行时不再将该作业视为活跃，并且持久化的 cron 运行历史没有显示该运行的终态结果。离线 CLI 审计不会把自身空的进程内 cron 运行时状态视为权威。
-- CLI 任务：带有 run id/source id 的任务使用实时运行上下文，因此当 Gateway 拥有的运行消失后，残留的子会话或聊天会话行不会让它们继续存活。没有运行身份的旧版 CLI 任务仍会回退到子会话。由 Gateway 支持的 `openclaw agent` 运行也会依据其运行结果最终归类，因此已完成的运行不会一直保持活跃，直到 sweeper 将其标记为 `lost`。
+- ACP 任务：只有 Gateway 中正在运行的进程内 ACP 回合才能证明运行仍然存活；仅持久化的会话元数据不能证明这一点。离线 CLI 审计保持保守，不会回收 ACP 任务。
+- 子 agent 任务：目标 agent 存储中的后备子会话已消失（或带有重启恢复墓碑）。
+- 自动化任务：自动化运行时不再将该作业跟踪为活动状态，并且持久化运行历史没有显示该运行的终态结果。离线 CLI 审计不会将其自身进程内自动化运行时的空状态视为权威依据。
+- CLI 任务：具有运行 ID/来源 ID 的任务使用实时运行上下文，因此当 Gateway 所有的运行消失后，残留的子会话或聊天会话记录不会使其继续保持活动状态。没有运行标识的旧版 CLI 任务仍会回退到子会话。由 Gateway 支持的 `openclaw agent` 运行也会根据其运行结果完成，因此已完成的运行不会一直处于活动状态，直到清理器将其标记为 `lost`。
 
 ## 投递和通知
 
@@ -157,6 +173,8 @@ stateDiagram-v2
 **直接投递** - 如果任务具有一个频道目标（`requesterOrigin`），完成消息会直接发送到该频道（Discord、Slack、Telegram 等）。对于组和频道任务的完成结果，则会改为通过请求者会话路由，这样父代理就可以写入可见回复。对于子代理完成，OpenClaw 还会在可用时保留绑定的线程/主题路由，并且在放弃直接投递之前，可以从请求者会话存储的路由（`lastChannel` / `lastTo` / `lastAccountId`）中补全缺失的 `to` / account。
 
 **会话排队投递**——如果直接投递失败或未设置来源，该更新会作为系统事件排入请求者会话，并在下一次 heartbeat 时显示。
+
+持久化的子代理完成交接会在最长 30 分钟内重试，并采用封顶的指数退避策略。排队中的交接只有在队列处理完成后才会被报告为已投递。如果投递达到截止期限或永久失败，任务会显示为阻塞的终态结果，并将其规范结果保留 7 天。使用 `openclaw tasks retry` 创建一个受隔离的新投递代次，或使用 `openclaw tasks dismiss` 记录有意不投递。重试可能会在较早的提供商确认结果不明确时，导致可见结果重复。
 
 <Tip>
 会话排队的任务完成会触发一次即时 heartbeat 唤醒，因此你会很快看到结果——不必等待下一次计划中的 heartbeat tick。
@@ -168,11 +186,11 @@ stateDiagram-v2
 
 控制你从每个任务中接收到多少信息：
 
-| Policy                | What is delivered                                       |
-| -------------------- | ------------------------------------------------------- |
-| `done_only` (default) | 仅终态（成功、失败等）                                    |
-| `state_changes`       | 每一次状态转换和进度更新                                 |
-| `silent`              | 完全不发送任何内容（cron、CLI 和媒体任务的默认值）         |
+| Policy                | What is delivered                                             |
+| --------------------- | ------------------------------------------------------------- |
+| `done_only` (default) | Only terminal state (succeeded, failed, etc.)                 |
+| `state_changes`       | Every state transition and progress update                    |
+| `silent`              | Nothing at all (default for automation, CLI, and media tasks) |
 
 在任务运行期间更改通知策略：
 
@@ -204,7 +222,16 @@ openclaw tasks notify <lookup> state_changes
     openclaw tasks cancel <lookup>
     ```
 
-    对于 ACP 和 subagent 任务，这会终止子会话；ACP 和 cron 的取消会通过正在运行的 Gateway（`tasks.cancel`）路由。对于 CLI 跟踪的任务，取消会记录到任务注册表中（没有单独的子运行时句柄）。状态会转换为 `cancelled`，并在适用时发送传递通知。
+    对于 ACP 和 subagent 任务，此操作会终止子会话；ACP 和自动化任务的取消操作通过运行中的 Gateway（`tasks.cancel`）执行。对于 CLI 跟踪的任务，取消操作会记录在任务注册表中（不存在单独的子运行时句柄）。状态会转换为 `cancelled`，并在适用时发送传递通知。
+
+  </Accordion>
+  <Accordion title="tasks retry | dismiss">
+    ```bash
+    openclaw tasks retry <lookup> [lookup...]
+    openclaw tasks dismiss <lookup> [lookup...]
+    ```
+
+    这些命令用于恢复被阻塞的 subagent 完成传递。每个请求接受 1-10 个任务查找令牌。重试会保留规范结果，并启动新的隔离队列生成；dismiss 会保持任务阻塞状态，并记录操作员已主动停止传递。
 
   </Accordion>
   <Accordion title="任务通知">
@@ -224,7 +251,7 @@ openclaw tasks notify <lookup> state_changes
     | 发现项                    | 严重性     | 触发条件                                                                                                      |
     | ------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
     | `stale_queued`            | warn       | 排队超过 10 分钟                                                                                             |
-    | `stale_running`          | error      | 运行超过 30 分钟                                                                                             |
+    | `stale_running`           | error      | 运行超过 30 分钟                                                                                             |
     | `lost`                    | warn/error | 由运行时支持的任务所有权消失；保留的 lost 任务在 `cleanupAfter` 之前显示为警告，之后变为错误                  |
     | `delivery_failed`         | warn       | 传递失败且通知策略不是 `silent`                                                                              |
     | `missing_cleanup`         | warn       | 终态任务缺少 cleanup 时间戳                                                                                  |
@@ -249,24 +276,24 @@ openclaw tasks notify <lookup> state_changes
     openclaw tasks maintenance --apply [--json]
     ```
 
-    用于预览或应用任务、TaskFlow 状态以及过期 cron 运行会话注册表行的协调修复、清理打标和剪枝。
+    使用此命令可以预览或应用任务、TaskFlow 状态以及过期自动化运行会话注册表行的协调、清理标记和修剪操作。
 
     协调修复感知运行时：
 
-    - ACP 任务要求 Gateway 中存在一个活跃的进程内回合；subagent 任务会检查其对应的子会话。
-    - 其子会话带有 restart-recovery tombstone 的 subagent 任务会被标记为 lost，而不会被视为可恢复的后备会话。
-    - Cron 任务会检查 cron 运行时是否仍拥有该作业，然后先从持久化的 cron 运行日志/作业状态中恢复终态，之后才回退到 `lost`。只有 Gateway 进程对内存中的 cron 活动作业集合具有权威性；离线 CLI 审计会使用持久化历史记录，但不会仅因为本地集合为空就将 cron 任务标记为 lost。
-    - 带有运行标识的 CLI 任务会检查其所属的活动运行上下文，而不仅仅是子会话或聊天会话行。
+    - ACP tasks require a live in-process turn in the Gateway; subagent tasks check their backing child session.
+    - Subagent tasks whose child session has a restart-recovery tombstone are marked lost instead of being treated as recoverable backing sessions.
+    - Automation tasks check whether the automations runtime still owns the job, then recover terminal status from persisted run logs/job state before falling back to `lost`. Only the Gateway process is authoritative for the in-memory active-job set; offline CLI audit uses durable history but does not mark an automation task lost solely because that local set is empty.
+    - CLI tasks with run identity check the owning live run context, not just child-session or chat-session rows.
 
     完成清理同样感知运行时：
 
-    - 子代理完成会尽力在清理公告继续之前，为子会话关闭已跟踪的浏览器标签页/进程。
-    - 隔离 cron 完成会尽力在运行完全拆解之前，为 cron 会话关闭已跟踪的浏览器标签页/进程。
-    - 隔离 cron 投递在需要时会等待后代子代理的后续工作，并抑制过时的父级确认文本，而不是直接公告它。
-    - 子代理完成投递仅使用子级最近可见的助手文本。工具/工具结果输出不会被提升为子级结果文本。终态失败运行会公告失败状态，而不会回放捕获到的回复文本。
-    - 清理失败不会掩盖真实的任务结果。
+    - Subagent completion best-effort closes tracked browser tabs/processes for the child session before announce cleanup continues.
+    - Isolated automation completion best-effort closes tracked browser tabs/processes for the run's session before the run fully tears down.
+    - Isolated automation delivery waits out descendant subagent follow-up when needed and suppresses stale parent acknowledgement text instead of announcing it.
+    - Subagent completion delivery uses the child's latest visible assistant text only. Tool/toolResult output is not promoted into child result text. Terminal failed runs announce failure status without replaying captured reply text.
+    - Cleanup failures do not mask the real task outcome.
 
-    应用维护时，OpenClaw 还会移除超过 7 天的过期 `cron:<jobId>:run:<runId>` 会话注册表行，同时保留当前正在运行的 cron 作业对应的行，并且不影响非 cron 的会话行。
+    When applying maintenance, OpenClaw also removes stale `cron:<jobId>:run:<runId>` session registry rows older than 7 days, while preserving rows for currently running automation jobs and leaving other session rows untouched.
 
   </Accordion>
   <Accordion title="任务流 列表 | 详情 | 取消">
@@ -291,11 +318,11 @@ openclaw tasks notify <lookup> state_changes
 
 ### 控制台 UI
 
-Web 版控制台 UI 在侧边栏中提供了一个 **任务** 页面，显示实时的活跃和最近的后台任务。可用它来查看进度、打开关联会话、刷新账本，或取消排队中和正在运行的任务。
+Web 控制台 UI 在侧边栏中提供一个**任务**页面，其中包含实时的活动任务和最近的后台任务。你可以使用它检查进度、打开关联会话、刷新账本、取消排队中和正在运行的任务，或重试/忽略被阻塞的完成交付。任务详情会将执行状态与交付状态分开显示，并提供保留的结果供复制。
 
-聊天面板还提供一个可折叠的 **后台任务** 侧栏，范围限定为该面板的 agent，包含正在运行的工作、停止控制和已完成部分。可从面板标题栏中的活动切换按钮（在单栏聊天中也可通过浮动活动按钮）打开它。
+聊天面板还提供一个可折叠的**后台任务**侧栏，范围限定为该面板的 agent，包含正在运行的工作、停止控制和已完成部分。可从面板标题栏中的活动切换按钮（在单栏聊天中也可通过浮动活动按钮）打开它。
 
-选择某个任务后，列表会被替换为侧栏内的紧凑详情视图；使用返回按钮可回到列表。详情视图显示受限的输入提示、最新输出或错误摘要、时间信息以及当前工具活动。子 agent 的详情会保留在侧栏中，而不会在主聊天面板中打开其子对话；对于需要直接检查的任务运行，关联会话操作仍然可用。在 iOS 上，打开 **聊天操作 → 后台任务**；在 Android 上，打开聊天溢出菜单并选择 **后台任务**。这两种移动端视图都使用相同的“运行中”和“已完成”分组，并在选择任务时打开其详情。
+选择某个任务后，列表会被替换为侧栏内的紧凑详情视图；使用返回按钮可回到列表。详情视图显示受限的输入提示、最新输出或错误摘要、时间信息以及当前工具活动。子 agent 的详情会保留在侧栏中，而不会在主聊天面板中打开其子对话；对于需要直接检查的任务运行，关联会话操作仍然可用。在 iOS 上，打开**聊天操作 → 后台任务**；在 Android 上，打开聊天溢出菜单并选择**后台任务**。这两种移动端视图都使用相同的“运行中”和“已完成”分组，并在选择任务时打开其详情。
 
 ## 状态集成（任务压力）
 
@@ -316,7 +343,7 @@ Tasks    2 active · 1 queued · 1 running · 1 issue · audit clean · 6 tracke
 任务记录和交付状态保存在共享的 OpenClaw SQLite 状态数据库中：
 
 ```
-~/.openclaw/state/openclaw.sqlite   (tables: task_runs, task_delivery_state, flow_runs)
+~/.openclaw/state/openclaw.sqlite   (表：task_runs、task_delivery_state、flow_runs)
 ```
 
 将 `OPENCLAW_STATE_DIR` 设置为其他位置，可以移动整个状态根目录（默认是 `~/.openclaw`）；共享数据库路径也会随之移动。
@@ -331,12 +358,12 @@ Tasks    2 active · 1 queued · 1 running · 1 issue · audit clean · 6 tracke
 
 <Steps>
   <Step title="协调">
-    检查活跃任务是否仍有权威运行支撑。ACP 任务需要一个存活的进程内轮次，子代理任务使用子会话状态，cron 任务使用活跃作业所有权加持久化运行历史，而带有运行标识的 CLI 任务则使用所属运行上下文。如果支撑状态消失超过 5 分钟（无子任务的原生子代理任务为 30 分钟），该任务会被标记为 `lost`。
+    检查活动任务是否仍有权威的运行时支撑。ACP 任务要求进程内轮次仍处于活动状态，子代理任务使用子会话状态，自动化任务使用活动作业所有权以及持久化的运行历史，而具有运行标识的 CLI 任务使用所属的运行上下文。如果支撑状态消失超过 5 分钟（无子任务的原生子代理任务为 30 分钟），则将任务标记为 `lost`。
   </Step>
   <Step title="ACP 会话修复">
     关闭终态或孤立的、由父级拥有的一次性 ACP 会话，并且只有在不再存在活跃会话绑定时，才关闭过期终态或孤立的持久 ACP 会话。
   </Step>
-  <Step title="Cleanup stamping">
+  <Step title="清理时间戳标记">
     为终态任务设置一个 `cleanupAfter` 时间戳（终态时间 + 保留窗口）。在保留期内，丢失的任务仍会在审计中显示为警告；在 `cleanupAfter` 过期后，或者缺少清理元数据时，它们会变成错误。
   </Step>
   <Step title="裁剪">
@@ -355,10 +382,10 @@ Tasks    2 active · 1 queued · 1 running · 1 issue · audit clean · 6 tracke
     [任务流](/automation/taskflow) 是后台任务之上的编排层。单个流程可以在其生命周期内，以托管或镜像的同步模式协调多个任务。使用 `openclaw tasks` 查看单个任务记录，使用 `openclaw tasks flow` 查看编排流程。
 
   </Accordion>
-  <Accordion title="任务和 cron">
-    Cron 作业定义、运行时执行状态和运行历史保存在 OpenClaw 共享的 SQLite 状态数据库中。**每次** cron 执行都会创建一条任务记录——包括主会话和隔离会话——并使用 `silent` 通知策略，因此 cron 运行会被跟踪，但不会生成其自己的任务通知。
+  <Accordion title="任务和自动化">
+    自动化任务定义、运行时执行状态和运行历史记录都存储在 OpenClaw 的共享 SQLite 状态数据库中。**每一次**自动化运行都会创建一条任务记录——无论是主会话还是隔离会话——并采用 `silent` 通知策略，因此自动化运行会被跟踪，但不会自行生成任务通知。
 
-    有关详细信息，请参见 [Cron 作业](/automation/cron-jobs)。
+    请参阅[自动化](/automation/cron-jobs)。
 
   </Accordion>
   <Accordion title="任务和心跳">
@@ -377,8 +404,8 @@ Tasks    2 active · 1 queued · 1 running · 1 issue · audit clean · 6 tracke
 
 ## 相关内容
 
-- [自动化](/automation) - 所有自动化机制一览
+- [自动化](/automation) - 一览所有自动化机制
 - [CLI：任务](/cli/tasks) - CLI 命令参考
-- [Heartbeat](/gateway/heartbeat) - 周期性的主会话轮次
-- [计划任务](/automation/cron-jobs) - 调度后台工作
+- [心跳](/gateway/heartbeat) - 主会话的周期性轮次
+- [自动化任务](/automation/cron-jobs) - 安排后台工作
 - [任务流](/automation/taskflow) - 位于任务之上的流程编排

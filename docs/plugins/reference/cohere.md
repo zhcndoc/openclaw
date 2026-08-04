@@ -11,8 +11,8 @@ OpenClaw Cohere 提供程序插件。
 
 ## 分发
 
-- 包：`@openclaw/cohere-provider`
-- 安装方式：包含在 OpenClaw 中；npm；ClawHub：`clawhub:@openclaw/cohere-provider`
+- 软件包：`@openclaw/cohere-provider`
+- 安装途径：npm；ClawHub：`clawhub:@openclaw/cohere-provider`
 
 ## 接口
 

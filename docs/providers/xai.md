@@ -38,18 +38,21 @@ OAuth 不需要 xAI API 密钥或 Grok Build 应用。由于 OpenClaw 使用的�
     openclaw models auth login --provider xai --method oauth
     ```
 
-    另外单独将 Grok 设为默认模型：
+    如果没有现有的主模型，OAuth 设置会选择 `xai/auto`。该插件会根据 xAI
+    已认证的模型目录和远程默认值解析这一稳定引用，因此未来 xAI 的默认值发生
+    更改时无需更新 OpenClaw。它会保留现有的主模型；需要时可显式选择：
 
     ```bash
-    openclaw models set xai/grok-4.3
+    openclaw models set xai/auto
     ```
 
     只有在你有意更改 Gateway、daemon、channel、workspace 或其他设置选项时，才重新运行完整 onboarding。
 
   </Step>
   <Step title="API 密钥路径">
-    对于 xAI Console 密钥，以及需要基于密钥的 provider 配置的媒体表面，
-    API-key 设置仍然可用：
+    API 密钥设置仍适用于 xAI Console 密钥，以及需要基于密钥的 provider
+    配置的媒体功能。它会继续将 Grok 4.3 作为
+    区域安全的设置默认值：
 
     ```bash
     openclaw models auth login --provider xai --method api-key
@@ -60,7 +63,7 @@ OAuth 不需要 xAI API 密钥或 Grok Build 应用。由于 OpenClaw 使用的�
   <Step title="选择一个模型">
     ```json5
     {
-      agents: { defaults: { model: { primary: "xai/grok-4.3" } } },
+      agents: { defaults: { model: { primary: "xai/auto" } } },
     }
     ```
   </Step>
@@ -77,25 +80,24 @@ OpenClaw 使用 xAI Responses API 作为捆绑的 xAI 传输层。来自
 
 ## OAuth 故障排查
 
-- 对于 SSH、Docker、VPS 或其他远程环境，请使用
-  `openclaw models auth login --provider xai --method oauth`；它使用
-  设备码验证，而不是 localhost 回调。
+- 对于 SSH、Docker、VPS 或其他远程设置，请使用
+  `openclaw models auth login --provider xai --method oauth`；它使用设备代码验证，而不是本地主机回调。
 - 如果登录成功但 Grok 不是默认模型，请运行
-  `openclaw models set xai/grok-4.3`。
-- 检查已保存的 xAI auth 配置文件：
+  `openclaw models set xai/auto`。OAuth 登录会保留现有的主模型，除非你明确更改它。
+- 检查已保存的 xAI 身份验证配置：
 
   ```bash
   openclaw models auth list --provider xai
   openclaw models status
   ```
 
-- xAI 决定哪些账户可以接收 OAuth API tokens。如果某个账户
-  不符合条件，请使用 API-key 路径，或检查 xAI 侧的订阅状态。
+- xAI 决定哪些账户可以接收 OAuth API 令牌。如果某个账户
+  不符合条件，请使用 API 密钥路径，或检查 xAI 侧的订阅状态。
 
 <Tip>
 在 SSH、Docker 或 VPS 上登录时，请使用 `xai-oauth`。OpenClaw 会打印一个
 URL 和短代码；在任意本地浏览器中完成登录，同时远程
-进程会轮询 xAI 以获取已完成的 token 交换。
+进程会轮询 xAI 以获取已完成的令牌交换。
 </Tip>
 
 ## 内置目录
@@ -112,9 +114,9 @@ Grok 4、Grok 4 Fast、Grok 4.1 Fast 和 Grok Code 的 id；
 | Grok 4.20      | `grok-4.20-0309-reasoning`、`grok-4.20-0309-non-reasoning`   |
 
 <Tip>
-在可用时，通用聊天、编码和代理式工作请使用 `grok-4.5`。
-Grok 4.3 仍然是区域安全设置的默认值；`grok-build-0.1` 和两个
-带日期的 Grok 4.20 变体仍可选择。
+使用 `xai/auto` 以遵循 xAI 经过身份验证的 OAuth 默认设置，或选择具体的
+id（例如 `xai/grok-4.5`）以保持固定版本。API 密钥设置会将 Grok 4.3 保持为
+区域安全默认选项；`grok-build-0.1` 和两个带日期的 Grok 4.20 变体仍可供选择。
 </Tip>
 
 目录上下文和 token 成本元数据遵循 xAI 的实时
@@ -207,8 +209,8 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
 
 <AccordionGroup>
   <Accordion title="Web 搜索">
-    捆绑的 `grok` web-search 提供方优先使用 xAI OAuth，然后回退
-    到 `XAI_API_KEY` 或插件 web-search 密钥：
+    捆绑的 `grok` Web 搜索提供方优先使用 xAI OAuth，然后回退
+    到 `XAI_API_KEY` 或插件 Web 搜索密钥：
 
     ```bash
     openclaw models auth login --provider xai --method oauth
@@ -240,8 +242,8 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
       或 `agents.defaults.mediaModels.video.timeoutMs`
 
     <Warning>
-    本地视频缓冲区不被接受。视频编辑/扩展输入请使用远程 `http(s)` URL。
-    Image-to-video 接受本地图像缓冲区，因为 OpenClaw 会将其编码为数据 URL 供 xAI 使用。
+    不接受本地视频缓冲区。视频编辑/扩展输入请使用远程 `http(s)` URL。
+    图像转视频接受本地图像缓冲区，因为 OpenClaw 会将其编码为数据 URL 供 xAI 使用。
     </Warning>
 
     Video 1.5 还识别 xAI 的 `grok-imagine-video-1.5-preview` 和
@@ -348,7 +350,7 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
     流会先发送 `text.delta` 然后发送 `text.done`，接收 `audio.delta`、
     `audio.done` 或 `error`，并应用一个在每个音频块到达时刷新的空闲
     `timeoutMs`。它与实时语音会话是分开的。请参见 xAI 的
-    [Streaming TTS API](https://docs.x.ai/developers/rest-api-reference/inference/voice) 协议。
+    [流式 TTS API](https://docs.x.ai/developers/rest-api-reference/inference/voice) 协议。
     </Note>
 
   </Accordion>
@@ -505,15 +507,15 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
 
     配置路径：`plugins.entries.xai.config.xSearch`
 
-    | Key               | Type    | Default                   | Description                                      |
-    | ----------------- | ------- | ------------------------- | ------------------------------------------------ |
-    | `enabled`         | boolean | 对 xAI 模型自动启用        | 禁用，或为已知的非 xAI 提供方显式启用 |
-    | `model`           | string  | `grok-4.3`                | 用于 x_search 请求的模型                        |
-    | `baseUrl`         | string  | -                         | xAI Responses 基础 URL 覆盖                     |
-    | `inlineCitations` | boolean | -                         | 在结果中包含内联引用                          |
-    | `maxTurns`        | number  | -                         | 最大对话轮数                                   |
-    | `timeoutSeconds`  | number  | `30`                      | 请求超时（秒）                                 |
-    | `cacheTtlMinutes` | number  | `15`                      | 缓存存活时间（分钟）                           |
+    | 键                 | 类型    | 默认值                    | 描述                                         |
+    | ------------------ | ------- | ------------------------- | -------------------------------------------- |
+    | `enabled`          | boolean | 对 xAI 模型自动启用        | 禁用，或为已知的非 xAI 提供方显式启用        |
+    | `model`            | string  | `grok-4.3`                | 用于 x_search 请求的模型                     |
+    | `baseUrl`           | string  | -                         | xAI Responses 基础 URL 覆盖                  |
+    | `inlineCitations`  | boolean | -                         | 在结果中包含内联引用                         |
+    | `maxTurns`         | number  | -                         | 最大对话轮数                                 |
+    | `timeoutSeconds`   | number  | `30`                      | 请求超时（秒）                               |
+    | `cacheTtlMinutes`  | number  | `15`                      | 缓存存活时间（分钟）                         |
 
     ```json5
     {
@@ -542,12 +544,12 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
 
     配置路径：`plugins.entries.xai.config.codeExecution`
 
-    | Key              | Type    | Default                  | Description                                      |
-    | ---------------- | ------- | ------------------------ | ------------------------------------------------ |
-    | `enabled`        | boolean | 对 xAI 模型自动启用      | 禁用，或为已知的非 xAI 提供方显式启用 |
-    | `model`          | string  | `grok-4.3`               | 用于代码执行请求的模型                          |
-    | `maxTurns`       | number  | -                        | 最大对话轮数                                   |
-    | `timeoutSeconds` | number  | `30`                     | 请求超时（秒）                                 |
+    | 键                | 类型    | 默认值                   | 描述                                         |
+    | ----------------- | ------- | ------------------------ | -------------------------------------------- |
+    | `enabled`         | boolean | 对 xAI 模型自动启用       | 禁用，或为已知的非 xAI 提供方显式启用        |
+    | `model`           | string  | `grok-4.3`               | 用于代码执行请求的模型                       |
+    | `maxTurns`        | number  | -                        | 最大对话轮数                                 |
+    | `timeoutSeconds`  | number  | `30`                     | 请求超时（秒）                               |
 
     <Note>
     这是远程 xAI 沙箱执行，不是本地 [`exec`](/tools/exec)。
@@ -582,8 +584,8 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
       Responses API 提供这些模型，但它们不接受 OpenClaw 共享代理循环
       所使用的客户端或自定义工具。
       参见
-      [xAI multi-agent limitations](https://docs.x.ai/developers/model-capabilities/text/multi-agent#limitations)。
-    - xAI Realtime voice 目前仅暴露 gateway-relay Talk 传输。
+      [xAI 多代理限制](https://docs.x.ai/developers/model-capabilities/text/multi-agent#limitations)。
+    - xAI 实时语音目前仅暴露 gateway-relay Talk 传输。
       浏览器拥有的提供方 WebSocket 会话尚未在 Control UI 中接入。
     - xAI 图像 `quality`、图像 `mask` 以及额外的仅原生支持的宽高比，
       在共享的 `image_generate` 工具具备相应的跨提供方控制之前不会暴露。
@@ -606,7 +608,7 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
       请求中，而不是把每个原生工具都附加到每一轮聊天里。
     - Grok `web_search` 读取 `plugins.entries.xai.config.webSearch.baseUrl`。
       `x_search` 读取 `plugins.entries.xai.config.xSearch.baseUrl`，然后
-      回退到 Grok web-search 基础 URL。
+      回退到 Grok Web 搜索基础 URL。
     - `x_search` 和 `code_execution` 由捆绑的 xAI 插件拥有，而不是硬编码进核心模型运行时。
     - `code_execution` 是远程 xAI 沙箱执行，不是本地
       [`exec`](/tools/exec)。

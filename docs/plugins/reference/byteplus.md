@@ -11,8 +11,8 @@ title: "BytePlus 插件"
 
 ## 分发
 
-- 包：`@openclaw/byteplus-provider`
-- 安装方式：已包含在 OpenClaw 中
+- Package: `@openclaw/byteplus-provider`
+- Install route: npm；ClawHub: `clawhub:@openclaw/byteplus-provider`
 
 ## 接口
 

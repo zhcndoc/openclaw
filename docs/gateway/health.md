@@ -8,47 +8,47 @@ title: "健康检查"
 
 快速指南：无需猜测即可验证通道连接性。
 
-## Quick Check
+## 快速检查
 
-- `openclaw status` - local summary: gateway reachability/mode, update hint, linked channel auth age, sessions + recent activity.
-- `openclaw status --all` - full local diagnosis (read-only, color, safe to paste for debugging).
-- `openclaw status --deep` - asks the running gateway for a live probe (`health` with `probe:true`), including per-account channel probes when supported.
-- `openclaw status --usage` - show model provider usage/quota snapshots.
-- `openclaw health` - asks the running gateway for its health snapshot (WS-only; no direct channel sockets from the CLI).
-- `openclaw health --verbose` (alias `--debug`) - forces a live health probe and prints gateway connection details.
-- `openclaw health --json` - machine-readable health snapshot output.
-- Send `/status` as a standalone chat command in any channel to get a status reply without invoking the agent.
-- Logs: run `openclaw logs --follow` (or `openclaw --profile <profile> logs --follow`) and filter for `web-heartbeat`, `web-reconnect`, `web-auto-reply`, `web-inbound`.
+- `openclaw status` - 本地摘要：网关可达性/模式、更新提示、已关联频道的认证时长、会话及最近活动。
+- `openclaw status --all` - 完整的本地诊断（只读、带颜色，可安全粘贴用于调试）。
+- `openclaw status --deep` - 请求正在运行的网关执行实时探测（带有 `probe:true` 的 `health`），在支持时包括各账户的频道探测。
+- `openclaw status --usage` - 显示模型提供商的使用量/配额快照。
+- `openclaw health` - 请求正在运行的网关提供其健康状态快照（仅 WS；CLI 不直接连接频道套接字）。
+- `openclaw health --verbose`（别名 `--debug`）- 强制执行实时健康探测，并打印网关连接详细信息。
+- `openclaw health --json` - 输出机器可读的健康状态快照。
+- 在任何频道中发送独立的 `/status` 聊天命令，即可获取状态回复，而无需调用代理。
+- 日志：运行 `openclaw logs --follow`（或 `openclaw --profile <profile> logs --follow`），并筛选 `web-heartbeat`、`web-reconnect`、`web-auto-reply`、`web-inbound`。
 
-For Discord and other chat providers, the session line does not represent socket liveness.
-`openclaw sessions`, Gateway `sessions.list`, and the agent’s `sessions_list` tool
-read stored session state. A provider may reconnect and show healthy channel status before any new session line is generated. Please use the channel status and health commands above for real-time connectivity checks.
+对于 Discord 和其他聊天提供商，会话行不代表套接字的存活状态。
+`openclaw sessions`、网关的 `sessions.list` 以及代理的 `sessions_list` 工具
+读取已存储的会话状态。提供商可能会重新连接，并在生成任何新的会话行之前显示频道状态正常。请使用上述频道状态和健康检查命令来检查实时连接情况。
 
 ## 深度诊断
 
-- Creds on disk: `ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json` (mtime should be recent).
-- Session store: `ls -l ~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`. Count and recent recipients are surfaced via `status`.
-- Relink flow: `openclaw channels logout && openclaw channels login --verbose` when status codes 409-515 or `loggedOut` appear in logs. The QR login flow auto-restarts once for status 515 after pairing.
-- Diagnostics are enabled by default (`diagnostics.enabled: false` disables them). Memory events record RSS/heap byte counts and threshold/growth pressure. Liveness warnings record event-loop delay/utilization, CPU-core ratio, and active/waiting/queued session counts when the process is running but saturated. Oversized-payload events record what was rejected/truncated/chunked plus sizes and limits, never message text, attachment contents, webhook bodies, raw request/response bodies, tokens, cookies, or secret values.
-- The same heartbeat drives the bounded stability recorder: `openclaw gateway stability` (or the `diagnostics.stability` Gateway RPC). Fatal Gateway exits, shutdown timeouts, and restart startup failures persist the latest snapshot under `~/.openclaw/logs/stability/`. Inspect the newest bundle with `openclaw gateway stability --bundle latest`.
-- For bug reports, run `openclaw gateway diagnostics export` and attach the generated zip: a Markdown summary, the newest stability bundle, sanitized log metadata, sanitized Gateway status/health snapshots, and config shape. Chat text, webhook bodies, tool outputs, credentials, cookies, account/message identifiers, and secret values are omitted or redacted. See [Diagnostics Export](/gateway/diagnostics).
+- 磁盘上的凭据：`ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json`（mtime 应为最近时间）。
+- 会话存储：`ls -l ~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`。`status` 会显示计数和最近的接收方。
+- 重新关联流程：当日志中出现状态码 409-515 或 `loggedOut` 时，运行 `openclaw channels logout && openclaw channels login --verbose`。配对后，如果状态码为 515，QR 登录流程会自动重启一次。
+- 默认启用诊断功能（`diagnostics.enabled: false` 可禁用）。内存事件会记录 RSS/堆内存字节数以及阈值/增长压力。进程仍在运行但处于饱和状态时，存活性警告会记录事件循环延迟/利用率、CPU 核心比例，以及活跃/等待中/排队中的会话数量。超大负载事件会记录被拒绝/截断/分块处理的内容及其大小和限制，但绝不会记录消息文本、附件内容、Webhook 正文、原始请求/响应正文、令牌、Cookie 或机密值。
+- 同一个心跳机制还会驱动有界稳定性记录器：`openclaw gateway stability`（或 `diagnostics.stability` Gateway RPC）。Gateway 致命退出、关闭超时以及重启启动失败会将最新快照持久化到 `~/.openclaw/logs/stability/`。使用 `openclaw gateway stability --bundle latest` 检查最新的捆绑包。
+- 提交错误报告时，运行 `openclaw gateway diagnostics export` 并附上生成的 zip 文件：其中包含 Markdown 摘要、最新稳定性捆绑包、经过清理的日志元数据、经过清理的 Gateway 状态/健康检查快照，以及配置结构。聊天文本、Webhook 正文、工具输出、凭据、Cookie、账户/消息标识符和机密值都会被省略或编辑。参见[诊断导出](/gateway/diagnostics)。
 
 ## 健康监控配置
 
-- `channels.<provider>.healthMonitor.enabled`: disable health-monitor restarts for a specific channel while leaving global monitoring enabled.
-- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`: multi-account override that wins over the channel-level setting.
-- These per-channel overrides apply to the built-in channels that expose them today: Discord, Google Chat, iMessage, IRC, Microsoft Teams, Signal, Slack, Telegram, and WhatsApp.
-- A crashing channel is recovered by its own auto-restart backoff first (`auto-restart attempt N/10` in the logs). The health monitor stays out of the way until that ladder ends with `giving up after 10 restart attempts`, then takes over as the last restart owner.
+- `channels.<provider>.healthMonitor.enabled`：在保持全局监控启用的同时，禁用特定频道的健康监控重启。
+- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`：多账户覆盖设置，其优先级高于频道级设置。
+- 这些频道级覆盖设置目前适用于支持它们的频道：Discord、Google Chat、iMessage、IRC、Microsoft Teams、Signal、Slack、Telegram 和 WhatsApp。
+- 崩溃的频道首先由其自身的自动重启退避机制恢复（日志中的 `auto-restart attempt N/10`）。在该重启阶梯以 `giving up after 10 restart attempts` 结束之前，健康监控不会介入；之后健康监控才会作为最后的重启负责方接管。
 
-## Inbound ingress health
+## 入站接入健康状态
 
-Channel connectivity and inbound admission are separate failure domains. A channel can hold a healthy transport connection — sending replies normally — while its durable ingress queue is unavailable, so not a single inbound message is admitted.
+通道连接性和入站接纳属于相互独立的故障域。通道可以保持健康的传输连接——正常发送回复——同时其持久化入站队列不可用，导致一个入站消息也无法被接纳。
 
-- When a channel cannot open its durable ingress queue, its start fails and the gateway records the account as unable to receive. `openclaw channels status` reports `Channel cannot admit inbound events; its durable ingress queue is unavailable. Outbound may still work.`
-- Such an account is **unhealthy** regardless of transport state, and readiness reports it as failing. Previously it reported `health: healthy` and the health monitor never touched it.
-- Recovery stays automatic. The ingress verdict describes the account's last start attempt and is cleared by the next one, so the ordinary restart path is also how a transient queue-open failure recovers. Those restarts log as `health-monitor: restarting (reason: ingress-unavailable)` instead of the generic `stuck`.
-- If the restarts keep repeating, the cause is not transient. Check the logged ingress failure: a plugin denied the `openChannelIngressQueue` capability, for example, needs operator action rather than another restart.
-- Channels that never report ingress state are unaffected: absence means "no signal", never "broken". There is no traffic-staleness heuristic, so a genuinely quiet channel is never marked unhealthy for having received nothing.
+- 当通道无法打开其持久化入站队列时，通道启动会失败，网关会记录该账户无法接收消息。`openclaw channels status` 报告 `通道无法接纳入站事件；其持久化入站队列不可用。出站可能仍然正常工作。`
+- 无论传输状态如何，此类账户均属于**不健康**状态，就绪检查也会将其报告为失败。此前它会报告 `health: healthy`，健康监控器也从未处理过它。
+- 恢复过程仍会自动进行。入站判定描述的是该账户最近一次启动尝试的结果，并会在下一次启动时清除，因此普通的重启流程同样可以恢复临时性的队列打开失败。这些重启会记录为 `health-monitor: restarting (reason: ingress-unavailable)`，而不是通用的 `stuck`。
+- 如果重启持续重复发生，原因就不是临时性的。请检查日志中记录的入站失败原因：例如，插件拒绝了 `openChannelIngressQueue` 能力，这种情况需要操作员采取措施，而不是再次重启。
+- 从未报告入站状态的通道不受影响：缺少状态意味着“无信号”，绝不意味着“已损坏”。不存在流量陈旧度启发式判断，因此一个确实安静的通道不会因为没有收到任何消息而被标记为不健康。
 
 ## 正常运行时间监控
 
@@ -63,13 +63,13 @@ Channel connectivity and inbound admission are separate failure domains. A chann
 
 - **BetterStack：** 将健康检查 URL 设置为 `https://<your-gateway-host>:<port>/health`
 - **UptimeRobot：** 添加一个新的 HTTP 监控，URL 为 `https://<your-gateway-host>:<port>/health`
-- **通用：** 任何对 `/health` 的 HTTP GET，在网关健康时都会返回 200 和 `{"ok":true}`
+- **通用：** 任何对 `/health` 的 HTTP GET，在网关健康时都会返回 200 和 `{"ok":true}`。
 
 ## 当出现故障时
 
-- `logged out` or status 409-515 -> relink with `openclaw channels logout` then `openclaw channels login`.
-- Gateway unreachable -> start it: `openclaw gateway --port 18789` (use `--force` if the port is busy).
-- No inbound messages -> confirm linked phone is online and the sender is allowed (`channels.whatsapp.allowFrom`); for group chats, ensure allowlist + mention rules match (`channels.whatsapp.groups`, `agents.entries.*.groupChat.mentionPatterns`).
+- `已登出` 或状态码 409-515 -> 使用 `openclaw channels logout` 注销链接，然后使用 `openclaw channels login` 重新链接。
+- 网关无法访问 -> 启动网关：`openclaw gateway --port 18789`（如果端口被占用，请使用 `--force`）。
+- 没有收到消息 -> 确认已关联的手机处于在线状态，并且发送者已获允许（`channels.whatsapp.allowFrom`）；对于群聊，确保允许列表和提及规则相匹配（`channels.whatsapp.groups`、`agents.entries.*.groupChat.mentionPatterns`）。
 
 ## 专用“health”命令
 

@@ -34,9 +34,9 @@ OpenClaw 通过官方 Discord 网关以机器人身份连接到 Discord。支持
   <Step title="启用特权 intent">
     仍在 **Bot** 页面，在 **Privileged Gateway Intents** 下启用：
 
-    - **Message Content Intent**（必需）
-    - **Server Members Intent**（推荐；角色白名单、名称到 ID 匹配以及频道受众访问组都需要）
-    - **Presence Intent**（可选；仅用于 presence 更新）
+    - **Message Content Intent**（普通服务器消息所必需）
+    - **Server Members Intent**（推荐；角色允许列表、名称到 ID 的匹配以及频道受众访问组所必需）
+    - **Presence Intent**（可选；仅用于状态更新）
 
   </Step>
 
@@ -121,12 +121,12 @@ openclaw gateway
   <Step title="配置 OpenClaw 并完成配对">
 
     <Tabs>
-      <Tab title="Ask your agent">
+      <Tab title="询问你的代理">
         在现有频道（例如 Telegram）中与你的 OpenClaw 代理聊天并告知它。如果 Discord 是你的第一个频道，请改用 CLI / config 标签页。
 
         > “我已经把 Discord bot token 设置到配置中了。请使用 User ID `<user_id>` 和 Server ID `<server_id>` 完成 Discord 设置。”
       </Tab>
-      <Tab title="CLI / config">
+      <Tab title="CLI / 配置">
         基于文件的配置：
 
 ```json5
@@ -202,6 +202,10 @@ openclaw pairing approve discord <CODE>
 
   </Step>
 </Steps>
+
+如果 Discord 无法授予 Message Content Intent，OpenClaw 仍然可以在私信中运行，也可以在用户明确提及 bot 的服务器频道中运行。将
+`channels.discord.intents.messageContent: false` 设置为 `false`，这样网关就不会请求不可用的特权 intent，并确保每个已配置的服务器频道都保留
+`requireMention: true`。在此模式下，Discord 不会提供其他服务器消息中由用户撰写的内容。
 
 <Note>
 Token 解析是按账户感知的。配置中的 token 值优先于 env 回退值，且 `DISCORD_BOT_TOKEN` 仅用于默认账户。
@@ -589,7 +593,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
   </Tab>
 </Tabs>
 
-### Guild channel maps are allowlists
+### Guild 频道映射是允许名单
 
 如果某个 guild 条目没有 `channels` 映射，bot 就可以在它能看到的每个频道中工作，但仍受该 guild 的 `requireMention` 和 `users` 规则约束。**即使只添加一个频道条目，也会把该映射变成 allowlist**：任何未被条目匹配的频道都会被拒绝，而不只是保持 guild 默认值。
 
@@ -649,11 +653,11 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 - `commands.native` 默认为 `"auto"`，并且对 Discord 已启用。
 - 按频道覆盖：`channels.discord.commands.native`。
 - `commands.native=false` 会在启动期间跳过 Discord slash 命令注册和清理。之前注册的命令可能仍会在 Discord 中可见，直到你将它们从 Discord 应用中移除。
-- 原生命令授权使用与普通消息处理相同的 Discord allowlists/policies。
-- 对于未授权用户，命令在 Discord UI 中仍可能可见；执行时会强制进行 OpenClaw 授权并回复 "not authorized"。
+- 原生命令授权使用与普通消息处理相同的 Discord 允许列表/策略。
+- 对于未授权用户，命令在 Discord UI 中仍可能可见；执行时会强制进行 OpenClaw 授权并回复“未授权”。
 - 默认 slash 命令设置：`ephemeral: true`（`channels.discord.slashCommand.ephemeral`）。
 
-有关命令目录和行为，请参见 [Slash commands](/tools/slash-commands)。
+有关命令目录和行为，请参见 [斜杠命令](/tools/slash-commands)。
 
 ## 功能详情
 
@@ -713,16 +717,15 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 }
 ```
 
-    - `off` 会禁用 Discord 预览编辑。
-    - `partial` 会在 token 到达时编辑一条预览消息。
-    - `block` 会发出草稿大小的分块；可使用 `streaming.preview.chunk`（`minChars`、`maxChars`、`breakPreference`）来调节块大小和断点，并受 `textChunkLimit` 限制。显式启用 block 流式传输时，OpenClaw 会跳过预览流以避免双重流式输出。
-    - `progress` 会保留一条可编辑的状态草稿，直到最终发送。默认情况下，它只显示代理最近前言或叙述的一行，不包含生成的标签、间隔或工具行。
-    - 媒体、错误以及显式回复的最终消息会取消挂起的预览编辑。
-    - `streaming.preview.toolProgress` 在 `partial`/`block` 模式下默认是 `true`。Discord progress 模式默认不显示工具行；可设置 `streaming.progress.toolProgress: true` 以启用。
-    - 设置 `streaming.progress.toolProgress: true` 可添加简洁的工具/进度行，例如 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"`。为兼容起见，现有的 `progress.label` 或 `progress.labels` 配置会保留先前的工具行默认行为；若想要自定义标签但不显示工具行，请将 `toolProgress` 设为 `false`。
-    - `streaming.progress.commentary`（默认 `false`）会启用在临时进度草稿中显示原始助手评论。默认的前言/叙述状态行不受此选项影响。评论在显示前会被清理，保持临时性，并且不会改变最终答案的发送。
-    - `streaming.progress.maxLineChars` 控制每行进度预览的预算。散文会在词边界处截断；命令和路径细节会保留有用的后缀。
-    - `streaming.preview.commandText` / `streaming.progress.commandText` 控制紧凑进度行中的命令/执行细节：`raw`（默认）或 `status`（仅工具标签）。
+    - `off` 禁用 Discord 预览编辑。
+    - `partial` 会在令牌到达时编辑单条预览消息。
+    - `block` 会输出草稿大小的分块；使用 `streaming.preview.chunk`（`minChars`、`maxChars`、`breakPreference`）调整大小和断点，并将其限制在 `textChunkLimit` 以内。显式启用分块流式传输后，OpenClaw 会跳过预览流，以避免双重流式传输。
+    - `progress` 会持续维护一条可编辑的状态草稿，直到最终交付。它会将代理最新的前言或叙述显示为状态标题，下方显示紧凑的工具行，并且不显示生成标签。
+    - 媒体、错误和显式回复的最终消息会取消待处理的预览编辑。
+    - `streaming.preview.toolProgress` 和 `streaming.progress.toolProgress` 在所有模式下的默认值均为 `true`。无需配置即可显示 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"` 等工具行；将任一键设为 `false` 即可仅保留状态标题。
+    - `streaming.progress.commentary`（默认 `false`）用于选择在临时进度草稿中显示原始助手评论。默认的前言/叙述状态行不受此选项影响。评论会在显示前进行清理，保持临时状态，并且不会改变最终答案的交付。
+    - `streaming.progress.maxLineChars` 控制每行进度预览的字符预算。普通文本会在单词边界处缩短；命令和路径细节会保留有用的后缀。
+    - `streaming.preview.commandText` / `streaming.progress.commandText` 控制紧凑进度行中的命令/执行详情：`raw`（默认）或 `status`（仅工具标签）。
 
     隐藏原始命令/执行文本，同时保留紧凑进度行：
 
@@ -805,31 +808,12 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
     - 已弃用的 `spawnSubagentSessions`/`spawnAcpSessions` 键会由 `openclaw doctor --fix` 迁移。
     - 如果线程绑定被禁用，`/focus` 和相关操作将不可用。
 
-    参见 [Sub-agents](/tools/subagents)、[ACP Agents](/tools/acp-agents) 和 [Configuration Reference](/gateway/configuration-reference)。
-
-  </Accordion>
-
-  <Accordion title="源消息上的子代理进度">
-    将 `channels.discord.subagentProgress: true` 设为在启动父运行的 Discord 消息上显示后台子活动。
-
-```json5
-{
-  channels: {
-    discord: {
-      subagentProgress: true,
-    },
-  },
-}
-```
-
-    在子运行活跃期间，OpenClaw 会让 Discord 正在输入状态最多持续一小时，并在并发数量变化时替换一个计数反应（`1️⃣` 到 `🔟`）；`🔟` 也表示 10 或更多。最终子任务结束后会移除计数反应。失败、超时或被终止的子任务会留下 `🔴` 反应。
-
-    这是可选启用功能，并使用固定的内部计时和表情默认值。机器人需要 **添加反应** 权限才能提供反应反馈。账户级 `channels.discord.accounts.<id>.subagentProgress` 会覆盖顶层值。
+    参见 [子代理](/tools/subagents)、[ACP 代理](/tools/acp-agents) 和 [配置参考](/gateway/configuration-reference)。
 
   </Accordion>
 
   <Accordion title="持久化 ACP 频道绑定">
-    对于稳定的“始终在线” ACP 工作区，请配置顶层的类型化 ACP 绑定，以目标为 Discord 对话。
+    对于稳定的“始终在线”ACP 工作区，请配置面向 Discord 对话的顶层类型化 ACP 绑定。
 
     配置路径：`bindings[]`，其中 `type: "acp"` 且 `match.channel: "discord"`。
 
@@ -885,7 +869,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
     - 在已绑定的频道或线程中，`/new` 和 `/reset` 会就地重置同一个 ACP 会话。临时线程绑定在启用时可以覆盖目标解析。
     - `spawnSessions` 通过 `--thread auto|here` 控制子线程创建/绑定。
 
-    参见 [ACP Agents](/tools/acp-agents) 了解绑定行为详情。
+    参见 [ACP 代理](/tools/acp-agents) 了解绑定行为详情。
 
   </Accordion>
 
@@ -1096,12 +1080,12 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
     活动类型映射：
 
-    - 0: Playing
-    - 1: Streaming（需要 `activityUrl`；而 `activityUrl` 又要求 `activityType: 1`）
-    - 2: Listening
-    - 3: Watching
-    - 4: Custom（将活动文本作为状态值；表情可选）
-    - 5: Competing
+    - 0：游玩
+    - 1：直播（需要 `activityUrl`；而 `activityUrl` 又要求 `activityType: 1`）
+    - 2：听歌
+    - 3：观看
+    - 4：自定义（将活动文本作为状态值；表情可选）
+    - 5：竞技
 
     自动状态（运行时健康信号）：
 
@@ -1148,12 +1132,12 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
     网关认证和审批解析遵循共享的 Gateway 客户端契约（`plugin:` ID 通过 `plugin.approval.resolve` 解析；其他 ID 通过 `exec.approval.resolve` 解析）。审批默认在 30 分钟后过期。
 
-    参见 [Exec approvals](/tools/exec-approvals)。
+    参见 [执行审批](/tools/exec-approvals)。
 
   </Accordion>
 </AccordionGroup>
 
-我会保持原始 Markdown 结构不变，只翻译可见文本内容；代码块里的代码标识、HTML 标签/属性也会按规则保留。现在直接输出完整中文译文。## 工具与 action gate
+## 工具与操作门控
 
 Discord 消息动作涵盖消息、频道管理、审核、状态和元数据。
 
@@ -1166,9 +1150,9 @@ Discord 消息动作涵盖消息、频道管理、审核、状态和元数据。
 
 `event-create` 动作接受一个可选的 `image` 参数（URL 或本地文件路径）来设置计划事件封面图。
 
-Action gate 位于 `channels.discord.actions.*` 下。
+操作门控位于 `channels.discord.actions.*` 下。
 
-默认 gate 行为：
+默认门控行为：
 
 | 动作组                                                                                                                                                              | 默认值   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -1177,11 +1161,11 @@ Action gate 位于 `channels.discord.actions.*` 下。
 | moderation                                                                                                                                                          | 已禁用   |
 | presence                                                                                                                                                            | 已禁用   |
 
-## Components v2 UI
+## Components v2 用户界面
 
 OpenClaw 使用 Discord components v2 进行执行审批和跨上下文标记。Discord 消息动作也可以接受 `components` 来构建自定义 UI（高级用法；需要通过 discord 工具构造 component payload），而旧版 `embeds` 仍然可用，但不建议使用。
 
-- `channels.discord.ui.components.accentColor` 设置 Discord 组件容器使用的强调色（hex）。按账号：`channels.discord.accounts.<id>.ui.components.accentColor`。
+- `channels.discord.ui.components.accentColor` 设置 Discord 组件容器使用的强调色（十六进制）。按账号：`channels.discord.accounts.<id>.ui.components.accentColor`。
 - `channels.discord.agentComponents.ttlMs` 控制已发送的 Discord 组件回调保持注册的时长（默认 `1800000`，最大 `86400000`）。按账号：`channels.discord.accounts.<id>.agentComponents.ttlMs`。
 - 当存在 components v2 时，`embeds` 会被忽略。
 - 默认会抑制普通 URL 预览。当某个出站链接应展开时，请在消息动作中设置 `suppressEmbeds: false`。
@@ -1300,7 +1284,7 @@ openclaw channels capabilities --channel discord --target channel:<voice-channel
 - 如果接收日志在更新后持续出现 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。捆绑的 `@discordjs/voice` 版本包含 discord.js PR #11449 中的上游 padding 修复，该修复关闭了 discord.js issue #11419。
 - 出现 `The operation was aborted` 的接收事件是 OpenClaw 完成某个已捕获的说话者片段时的预期行为；它们是详细诊断信息，不是警告。
 - 详细的 Discord 语音日志会为每个被接受的说话者片段提供一个有边界的单行 STT 转录预览，因此调试时可以同时看到用户端和 agent 回复端，而不会倾倒无限制的转录文本。
-- 在 `agent-proxy` 模式下，强制 consult 回退会跳过可能不完整的转录片段，例如以 `...` 结尾的文本、以 "and" 之类的尾随连接词结尾的文本，以及明显不可操作的结尾语句如 "be right back" 或 "bye"。当这避免了一个过时的排队回答时，日志会显示 `forced agent consult skipped reason=...`。
+- 在 `agent-proxy` 模式下，强制 consult 回退会跳过可能不完整的转录片段，例如以 `...` 结尾的文本、以 "and" 之类的尾随连接词结尾的文本，以及明显不可操作的结尾语句如 "be right back" 或 "bye"。当这避免了一个过时的排队回答时，日志会显示 `forced agent consult skipped reason=...`】【。
 
 ### 在语音中跟随用户
 
@@ -1586,7 +1570,7 @@ openclaw logs --follow
   <Accordion title="Require mention 为 false，但仍被阻止">
     常见原因：
 
-    - `groupPolicy="allowlist"` without matching guild/channel allowlist
+    - `groupPolicy="allowlist"`，但没有匹配的 guild/channel allowlist
     - `requireMention` 配置在错误的位置（必须位于 `channels.discord.guilds` 下，或某个 channel 条目中）
     - sender 被 guild/channel `users` allowlist 阻止
 
@@ -1599,21 +1583,21 @@ openclaw logs --follow
     - `Slow listener detected ...`
     - `stuck session: sessionKey=agent:...:discord:... state=processing ...`
 
-    Discord does not apply a channel-owned timeout to queued agent turns. Message listeners hand off immediately, and queued Discord runs preserve per-session ordering until the session/tool/runtime lifecycle completes or aborts the work.
+    Discord 不会对排队中的 agent 轮次应用由 channel 所有的超时。消息监听器会立即移交处理，排队中的 Discord 运行会保持每个 session 的顺序，直到 session/tool/runtime 生命周期完成或工作被中止。
 
   </Accordion>
 
   <Accordion title="Gateway 元数据查询超时警告">
     OpenClaw 在连接前会获取 Discord 的 `/gateway/bot` 元数据。临时性失败会回退到 Discord 的默认 gateway URL，并在日志中限流。
 
-    The metadata timeout defaults to 30 seconds. `OPENCLAW_DISCORD_GATEWAY_INFO_TIMEOUT_MS` can override it for unusual host environments.
+    元数据超时默认为 30 秒。对于特殊的主机环境，可以通过 `OPENCLAW_DISCORD_GATEWAY_INFO_TIMEOUT_MS` 覆盖该值。
 
   </Accordion>
 
   <Accordion title="Gateway READY 超时重启">
     OpenClaw 在启动期间以及运行时重连后，会等待 Discord gateway 的 `READY` 事件。带有启动错峰的多账号设置，可能需要比默认值更长的启动 READY 窗口。
 
-    Startup waits 15 seconds and runtime reconnects wait 30 seconds. `OPENCLAW_DISCORD_READY_TIMEOUT_MS` and `OPENCLAW_DISCORD_RUNTIME_READY_TIMEOUT_MS` remain available for unusual host environments.
+    启动时等待 15 秒，运行时重连等待 30 秒。对于特殊的主机环境，仍可使用 `OPENCLAW_DISCORD_READY_TIMEOUT_MS` 和 `OPENCLAW_DISCORD_RUNTIME_READY_TIMEOUT_MS`。
 
   </Accordion>
 
@@ -1638,7 +1622,7 @@ openclaw logs --follow
     如果你设置 `channels.discord.allowBots=true`，请使用严格的 mention 和 allowlist 规则来避免循环行为。
     建议使用 `channels.discord.allowBots="mentions"`，这样只接受 mention 了机器人的 bot 消息。
 
-    OpenClaw 还提供共享的 [bot loop protection](/channels/bot-loop-protection)。每当 `allowBots` 让 bot 发送的消息进入 dispatch 时，Discord 会将入站事件映射为 `(account, channel, bot pair)` 事实，而通用 pair guard 会在其超过配置的 event budget 后抑制该 pair。这个 guard 可以防止此前必须依赖 Discord rate limit 才能停止的失控双 bot 循环；它不会影响单 bot 部署，也不会影响保持在预算内的一次性 bot 回复。
+    OpenClaw 还提供共享的 [bot 循环保护](/channels/bot-loop-protection)。每当 `allowBots` 让 bot 发送的消息进入 dispatch 时，Discord 会将入站事件映射为 `(account, channel, bot pair)` 事实，而通用 pair guard 会在其超过配置的 event budget 后抑制该 pair。这个 guard 可以防止此前必须依赖 Discord rate limit 才能停止的失控双 bot 循环；它不会影响单 bot 部署，也不会影响保持在预算内的一次性 bot 回复。
 
     默认设置（在设置 `allowBots` 时生效）：
 
@@ -1719,25 +1703,25 @@ openclaw logs --follow
 
 - startup/auth: `enabled`, `token`, `applicationId`, `accounts.*`, `allowBots`
 - policy: `groupPolicy`, `dmPolicy`, `allowFrom`, `dm.*`, `guilds.*`, `guilds.*.channels.*`
-- command: `commands.native`, `commands.useAccessGroups` (global), `configWrites`, `slashCommand.ephemeral`
+- command: `commands.native`, `commands.useAccessGroups` (全局), `configWrites`, `slashCommand.ephemeral`
 - gateway: `proxy`
 - reply/history: `replyToMode`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
-- delivery: `textChunkLimit` (default `2000`), `maxLinesPerMessage` (default `17`)
-- streaming: `streaming.mode`, `streaming.chunkMode`, `streaming.preview.*`, `streaming.progress.*`, `streaming.block.*` (legacy flat `streamMode`, `draftChunk`, `blockStreaming`, `blockStreamingCoalesce`, `chunkMode` keys are migrated into `streaming.*` by `openclaw doctor --fix`)
-- media: `mediaMaxMb` (caps outbound Discord uploads, default `100`)
+- delivery: `textChunkLimit`（默认 `2000`），`maxLinesPerMessage`（默认 `17`）
+- streaming: `streaming.mode`, `streaming.chunkMode`, `streaming.preview.*`, `streaming.progress.*`, `streaming.block.*`（旧版扁平键 `streamMode`、`draftChunk`、`blockStreaming`、`blockStreamingCoalesce`、`chunkMode` 会通过 `openclaw doctor --fix` 迁移到 `streaming.*`）
+- media: `mediaMaxMb`（限制向外发送的 Discord 上传文件大小，默认 `100`）
 - actions: `actions.*`
 - presence: `activity`, `status`, `activityType`, `activityUrl`, `autoPresence.*`
 - UI: `ui.components.accentColor`
-- features: `threadBindings`, top-level `bindings[]` (`type: "acp"`), `pluralkit`, `execApprovals`, `intents`, `agentComponents.enabled`, `agentComponents.ttlMs`, `activities`, `heartbeat`, `responsePrefix`
+- features: `threadBindings`、顶层 `bindings[]`（`type: "acp"`）、`pluralkit`、`execApprovals`、`intents`、`agentComponents.enabled`、`agentComponents.ttlMs`、`activities`、`heartbeat`、`responsePrefix`
 
 </Accordion>
 
-### Discord Activities
+### Discord 活动
 
-将 `channels.discord.activities` 设置为允许代理发布可在 Discord 内打开的独立 HTML 小组件。该区块为可选启用；若不存在，OpenClaw 不会注册任何 Activity 路由、工具或交互处理器。有关开发者门户、隧道、安全性和故障排查设置，请参见 [Discord Activities](/channels/discord-activities)。
+将 `channels.discord.activities` 设置为允许代理发布可在 Discord 内打开的独立 HTML 小组件。该区块为可选启用；若不存在，OpenClaw 不会注册任何活动路由、工具或交互处理器。有关开发者门户、隧道、安全性和故障排查设置，请参见 [Discord 活动](/channels/discord-activities)。
 
 - `activities.clientSecret`：Discord 应用的 OAuth2 客户端密钥；若未设置，则回退为 `DISCORD_CLIENT_SECRET`
-- `activities.applicationId`：可选的 Activity 应用 ID；默认使用网关启动时获取到的机器人应用 ID
+- `activities.applicationId`：可选的活动应用 ID；默认使用网关启动时获取到的机器人应用 ID
 
 ## 安全与运维
 
@@ -1748,25 +1732,25 @@ openclaw logs --follow
 ## 相关
 
 <CardGroup cols={2}>
-  <Card title="Discord Activities" icon="window" href="/channels/discord-activities">
+  <Card title="Discord 活动" icon="window" href="/channels/discord-activities">
     在 Discord 内启动交互式 HTML 小部件。
   </Card>
-  <Card title="Pairing" icon="link" href="/channels/pairing">
+  <Card title="配对" icon="link" href="/channels/pairing">
     将 Discord 用户与网关配对。
   </Card>
   <Card title="分组" icon="users" href="/channels/groups">
-    群聊和 allowlist 行为。
+    群聊和允许列表行为。
   </Card>
-  <Card title="Channel 路由" icon="route" href="/channels/channel-routing">
-    将入站消息路由给 agent。
+  <Card title="频道路由" icon="route" href="/channels/channel-routing">
+    将入站消息路由给智能体。
   </Card>
   <Card title="安全" icon="shield" href="/gateway/security">
     威胁模型与加固。
   </Card>
-  <Card title="多 agent 路由" icon="sitemap" href="/concepts/multi-agent">
-    将 guild 和 channel 映射到 agent。
+  <Card title="多智能体路由" icon="sitemap" href="/concepts/multi-agent">
+    将服务器和频道映射到智能体。
   </Card>
-  <Card title="Slash 命令" icon="terminal" href="/tools/slash-commands">
+  <Card title="斜杠命令" icon="terminal" href="/tools/slash-commands">
     原生命令行为。
   </Card>
 </CardGroup>

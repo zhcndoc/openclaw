@@ -24,7 +24,7 @@ sidebarTitle: "Mattermost"
   </Tab>
 </Tabs>
 
-详细信息： [插件](/tools/plugin)
+详细信息： [插件](/tools/plugin)。
 
 ## 快速设置
 
@@ -100,7 +100,7 @@ sidebarTitle: "Mattermost"
     - OpenClaw 会在接受每次回调前刷新当前的 Mattermost 命令注册信息，因此来自已删除或已重新生成的 slash 命令的过期令牌将不再被接受，无需重启网关。
     - 如果 Mattermost API 无法确认该命令仍然是当前命令，回调校验将失败并关闭；失败结果会短暂缓存，并发查询会合并，每个命令的新鲜查询会限流，以限制重放压力。
     - 当注册失败、启动未完整完成，或回调令牌与解析出的命令已注册令牌不匹配时，slash 回调会失败并关闭（对一个命令有效的令牌无法通过上游校验用于另一个命令）。
-    - 被接受的回调会以一个临时的 “Processing...” 回复确认；真正的答案会作为普通消息发送。
+    - 被接受的回调会以一个临时的“正在处理……”回复确认；真正的答案会作为普通消息发送。
 
   </Accordion>
   <Accordion title="可达性要求">
@@ -132,7 +132,7 @@ sidebarTitle: "Mattermost"
 <Note>
 环境变量只适用于**默认**账号（`default`）。其他账号必须使用配置值。
 
-`MATTERMOST_URL` 不能从工作区 `.env` 中设置；请参见 [Workspace .env files](/gateway/security)。
+`MATTERMOST_URL` 不能从工作区 `.env` 中设置；请参见 [工作区 .env 文件](/gateway/security)。
 </Note>
 
 ## 聊天模式
@@ -244,11 +244,11 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 
 在 `openclaw message send` 或 cron/webhook 中使用以下目标格式：
 
-| Target                              | Delivers to                                                   |
+| 目标                                 | 投递至                                                       |
 | ----------------------------------- | ------------------------------------------------------------- |
 | `channel:<id>`                      | 按 id 发送到频道                                           |
-| `channel:<name>` or `#channel-name` | 按名称发送到频道，在机器人所属团队内搜索 |
-| `user:<id>` or `mattermost:<id>`    | 与该用户私信                                                  |
+| `channel:<name>` 或 `#channel-name` | 按名称发送到频道，在机器人所属团队内搜索 |
+| `user:<id>` 或 `mattermost:<id>`    | 与该用户私信                                                  |
 | `@username`                         | 私信（通过 Mattermost API 解析用户名）                 |
 
 外发发送每条消息最多支持一个附件；请将多个文件拆分为多次发送。
@@ -323,7 +323,21 @@ Mattermost 会将思考过程、工具活动和部分回复文本流式写入一
   </Accordion>
 </AccordionGroup>
 
-## 反应（message 工具）
+## 读取频道历史记录（消息工具）
+
+使用 `message action=read` 或 CLI 读取已配置的 Mattermost 机器人可以访问的频道中的帖子：
+
+```bash
+openclaw message read --channel mattermost --target channel:<channelId> --limit 5 --json
+```
+
+- 结果遵循 Mattermost 的有序帖子列表，并包含规范化的 `timestampMs` 和 `timestampUtc` 字段。
+- `limit` 默认为 60，且上限为 Mattermost 的最大值 200。使用 `before=<postId>` 或 `after=<postId>` 进行分页；不能同时使用这两个游标。
+- 直接操作员调用依赖 Mattermost 的频道成员资格和 `read_channel` 权限。提供商返回的 403 会作为正常的、可见的工具错误。
+- 允许委托读取当前 Mattermost 对话。跨频道委托读取还需要在 `channels.mattermost.groups` 下配置目标频道 ID、配置 `"*"` 频道条目，或将 `groupPolicy` 设置为 `"open"`。跨账户和跨频道的私信读取会安全失败。
+- 默认情况下禁用历史记录读取。将 `channels.mattermost.actions.messages` 设置为 `true` 以启用。可通过 `channels.mattermost.accounts.<id>.actions.messages` 针对每个账户覆盖该设置。
+
+## 反应（消息工具）
 
 - 使用 `message action=react` 并设置 `channel=mattermost`。
 - `messageId` 是 Mattermost 帖子 ID。
@@ -341,7 +355,7 @@ message action=react channel=mattermost target=channel:<channelId> messageId=<po
 配置：
 
 - `channels.mattermost.actions.reactions`：启用/禁用反应动作（默认 true）。
-- 按账号覆盖：`channels.mattermost.accounts.<id>.actions.reactions`】【。
+- 按账号覆盖：`channels.mattermost.accounts.<id>.actions.reactions`。
 
 ## 交互式按钮（message 工具）
 
@@ -353,13 +367,13 @@ message action=react channel=mattermost target=channel:<channelId> messageId=<po
 message action=send channel=mattermost target=channel:<channelId> presentation={"blocks":[{"type":"buttons","buttons":[{"label":"是","value":"yes"},{"label":"否","value":"no"}]}]}
 ```
 
-Presentation button fields:
+按钮字段：
 
 <ParamField path="label" type="string" required>
   显示标签（别名：`text`）。
 </ParamField>
 <ParamField path="value" type="string">
-  点击后返回的值，用作 action ID（别名：`callback_data`、`callbackData`）。除非设置了 `url`，否则可点击按钮必须提供该字段。
+  点击后返回的值，用作操作 ID（别名：`callback_data`、`callbackData`）。除非设置了 `url`，否则可点击按钮必须提供该字段。
 </ParamField>
 <ParamField path="url" type="string">
   链接按钮；在消息正文中渲染为 `label: url` 文本，而不是交互式按钮。
@@ -398,8 +412,8 @@ Presentation button fields:
   <Accordion title="实现说明">
     - 按钮回调使用 HMAC-SHA256 验证（自动完成，无需配置）。
     - 点击时会替换整个附件块，因此所有按钮会一起被移除 - 不支持部分移除。
-    - 含有连字符或下划线的 action ID 会被自动清理（Mattermost 路由限制）。
-    - `action_id` 与原始帖子上的某个 action 不匹配的点击会被以 `403`（"未知操作"）拒绝。
+    - 含有连字符或下划线的操作 ID 会被自动清理（Mattermost 路由限制）。
+    - 与原始帖子上的任何操作都不匹配的 `action_id` 点击会被以 `403`（“未知操作”）拒绝。
 
   </Accordion>
   <Accordion title="配置与可达性">
@@ -436,7 +450,7 @@ Presentation button fields:
             integration: {
               url: "https://gateway.example.com/mattermost/interactions/default",
               context: {
-                action_id: "mybutton01", // must match button id
+                action_id: "mybutton01", // 必须与按钮 ID 匹配
                 action: "approve",
                 // ... 任何自定义字段 ...
                 _token: "<hmac>", // 见下方 HMAC 部分
@@ -469,7 +483,7 @@ gateway 使用 HMAC-SHA256 验证按钮点击。外部脚本必须生成与 gate
 
 <Steps>
   <Step title="从 bot token 派生 secret">
-    `HMAC-SHA256(key="openclaw-mattermost-interactions", data=botToken)`, 十六进制编码。
+    `HMAC-SHA256(key="openclaw-mattermost-interactions", data=botToken)`，十六进制编码。
   </Step>
   <Step title="构建上下文对象">
     构建包含除 `_token` 之外所有字段的上下文对象。
@@ -543,20 +557,20 @@ Mattermost 支持在 `channels.mattermost.accounts` 下配置多个账号：
   <Accordion title="频道中没有回复">
     确保 bot 在该频道中，并对其进行 mention（oncall），使用触发前缀（onchar），或设置 `chatmode: "onmessage"`。
   </Accordion>
-  <Accordion title="Auth or multi-account errors">
+  <Accordion title="身份验证或多账户错误">
     - 检查 bot token、base URL，以及该账户是否已启用。
     - 多账户问题：环境变量只适用于 `default` 账户。
     - 私有/LAN Mattermost 主机需要 `network.dangerouslyAllowPrivateNetwork: true`（SSRF 防护默认会阻止私有 IP）。
 
   </Accordion>
-  <Accordion title="Native slash commands fail">
+  <Accordion title="原生斜杠命令失败">
     - `Unauthorized: invalid command token.`：OpenClaw 未接受回调 token。典型原因：
       - slash command 注册失败，或仅在启动时部分完成
       - 回调指向了错误的 gateway/account
       - Mattermost 仍然有指向先前回调目标的旧命令
       - gateway 重启后没有重新激活 slash commands
-    - 如果 native slash commands 停止工作，检查日志中是否有 `mattermost: failed to register slash commands` 或 `mattermost: native slash commands enabled but no commands could be registered`。
-    - 如果省略了 `callbackUrl`，且日志警告回调解析为类似 `http://localhost:18789/...` 的 loopback URL，那么该 URL 很可能只有在 Mattermost 与 OpenClaw 运行在同一主机/网络命名空间时才可访问。请改为设置一个明确的、可从外部访问的 `commands.callbackUrl`。
+    - 如果原生斜杠命令停止工作，检查日志中是否有 `mattermost: failed to register slash commands` 或 `mattermost: native slash commands enabled but no commands could be registered`。
+    - 如果省略了 `callbackUrl`，且日志警告回调解析为类似 `http://localhost:18789/...` 的回环 URL，那么该 URL 很可能只有在 Mattermost 与 OpenClaw 运行在同一主机/网络命名空间时才可访问。请改为设置一个明确的、可从外部访问的 `commands.callbackUrl`。
 
   </Accordion>
   <Accordion title="按钮问题">

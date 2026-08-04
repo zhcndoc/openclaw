@@ -54,22 +54,18 @@ openclaw wiki obsidian daily
 
 ## Agent 选择
 
-当 `plugins.entries.memory-wiki.config.vault.scope` 为 `agent` 时，使用顶层 `--agent <id>` 选项选择
-vault：
+当 `plugins.entries.memory-wiki.config.vault.scope` 为 `agent` 时，使用命令的
+`--agent <id>` 选项选择知识库：
 
 ```bash
-openclaw wiki --agent support status
-openclaw wiki --agent support search "refund policy"
-openclaw wiki --agent marketing ingest ./campaign-notes.md
+openclaw wiki status --agent support
+openclaw wiki search "refund policy" --agent support
+openclaw wiki ingest ./campaign-notes.md --agent marketing
 ```
 
-在配置了多个 agent 的环境中，CLI 操作必须提供 `--agent`，这样命令就不能读取或写入任意默认 vault。如果
-只配置了一个 agent，则该 agent 仍然是默认值。未知的 agent id 会在 vault 操作开始之前失败。当
-`vault.scope` 为 `global` 时，此选项不会改变所选路径。
+省略 `--agent` 时，CLI 操作使用配置的默认 Agent，与其他按 Agent 作用域划分的 CLI 系列保持一致。传入该标志以选择其他 Agent。未知的 Agent ID 会在知识库操作开始前导致失败。如果无法解析默认 Agent，错误信息会提示你传入 `--agent <id>` 或配置一个 Agent。当 `vault.scope` 为 `global` 时，该选项不会改变所选路径。
 
-Gateway 客户端遵循相同规则：在 agent 作用域的多 agent 环境中，对基于 vault 的 `wiki.*`
-请求传递 `agentId`。缺少或未知的 id 都会报错。Agent turn、wiki 工具、memory 语料补充以及编译后的 prompt
-摘要已经携带了当前运行时的 agent 上下文。
+网关客户端仍需显式指定：在按 Agent 作用域划分的多 Agent 设置中，为基于知识库的 `wiki.*` 请求传入 `agentId`。缺少或未知的 ID 会导致错误。Agent 对话轮次、wiki 工具、记忆语料补充内容以及已编译的提示词摘要，都已携带当前运行时的 Agent 上下文。
 
 ## 命令
 
@@ -213,7 +209,7 @@ openclaw wiki chatgpt import --export ./conversations.json --dry-run
 
 ### `wiki chatgpt rollback <run-id>`
 
-回滚之前应用的 ChatGPT 导入运行，删除它创建的页面并恢复它覆盖的页面。如果该运行已经回滚，则不执行操作（并报告 `alreadyRolledBack`）。
+回滚之前执行的 ChatGPT 导入运行，删除该运行创建的页面，并恢复其覆盖的页面。导入后发生更改的页面会被移动到该运行的 `.openclaw-wiki/import-runs/<run-id>/recovered/` 目录下，而不是被删除。重试以及之后返回 `alreadyRolledBack` 的结果中，都会保留恢复路径。被中断的运行在目标恢复或派生 artifact 编译完成之前会保持为 `rolling_back` 状态。持久化的进程重启隔离栅栏会将这两个阶段分开：经过该隔离栅栏后，重试操作会重建索引和已编译缓存，但不会重写 source 页面或移动之后写入的路径名。之后进行一次普通的 compile 可能会刷新由机器管理的 Related 块。这涵盖了进程内故障，以及普通文件系统调用返回后发生的进程重启，但不涵盖内核或主机断电时的操作顺序问题。
 
 ### `wiki obsidian ...`
 

@@ -27,7 +27,10 @@ openclaw backup sqlite verify ~/Backups/openclaw-sqlite/<snapshot-id> --scratch 
 openclaw backup sqlite restore ~/Backups/openclaw-sqlite/<snapshot-id> --target ./restored/openclaw.sqlite
 ```
 
-## 注意
+归档 `create` 和 `verify`，以及 SQLite 的 `create`、`list`、`verify` 和
+`restore`，均接受 `--json`，用于在标准输出中返回一条机器可读的结果。
+
+## 注释
 
 - 该归档内嵌一个 `manifest.json`，其中包含已解析的源路径和归档布局。
 - 默认输出是在当前工作目录中的带时间戳 `.tar.gz` 归档。带时间戳的文件名使用你机器的本地时区，并包含 UTC 偏移量。如果当前工作目录位于已备份的源树内部，OpenClaw 会回退到你的主目录作为默认归档位置。

@@ -1,28 +1,30 @@
 ---
-summary: "为 Codex-mode OpenClaw 代理配置原生 Codex 插件"
+summary: "为 Codex 模式的 OpenClaw 代理配置原生 Codex 插件"
 title: "原生 Codex 插件"
 read_when:
-  - 您希望 Codex-mode OpenClaw 代理使用原生 Codex 插件
+  - 您希望 Codex 模式的 OpenClaw 代理使用原生 Codex 插件
   - 您正在迁移源安装的 openai-curated Codex 插件
   - 您正在配置现有的工作区目录 Codex 插件
   - 您正在排查 codexPlugins、应用清单、破坏性操作或插件应用诊断
 ---
 
-原生 Codex 插件支持让 Codex-mode OpenClaw agent 在处理 OpenClaw turn 的同一个 Codex thread 中使用 Codex
-app-server 自身的 app 和插件能力。插件调用保留在原生 Codex transcript 中；Codex app-server 负责基于 app 的 MCP 执行。OpenClaw 不会把
+原生 Codex 插件支持让 Codex 模式的 OpenClaw 代理在处理 OpenClaw 轮次时，使用同一个 Codex 线程中的 Codex
+app-server 自身的应用和插件能力。插件调用保留在原生 Codex 记录中；Codex app-server 负责基于应用的 MCP 执行。OpenClaw 不会把
 Codex 插件转换为合成的 `codex_plugin_*` OpenClaw 动态工具。
 
 请在基础 [Codex harness](/plugins/codex-harness) 已经可用之后再使用本页。
 
 ## 要求
 
-- 代理运行时必须是原生 Codex harness。
-- `plugins.entries.codex.enabled` 必须为 `true`。
-- `plugins.entries.codex.config.codexPlugins.enabled` 必须为 `true`。
-- 目标 Codex app-server 必须能够看到预期的 marketplace、插件和
-  应用库存。
-- 迁移仅支持其在源 Codex home 中观察到为源安装的 `openai-curated` 插件。
-- 手动配置的 `workspace-directory` 插件需要一个 Codex app-server，其 `plugin/list` 接受 `marketplaceKinds`，并且其不带路径的工作区摘要包含 `remotePluginId`。该插件必须已经安装并启用，并且其拥有的应用必须可在 `app/list` 中访问。
+- Agent 运行时必须是原生 Codex harness。
+- `plugins.entries.codex.enabled` 为 `true`。
+- `plugins.entries.codex.config.codexPlugins.enabled` 为 `true`。
+- Codex app-server 报告的版本必须严格稳定为 `0.146.0`。官方插件提供
+  `@openai/codex` `0.146.0`；自定义、远程以及由 macOS 桌面端管理的二进制文件
+  必须使用完全相同的版本。
+- 目标 Codex app-server 能够看到预期的 marketplace、插件和应用清单。
+- 迁移仅支持在源 Codex 主目录中观测到的、以源安装方式安装的 `openai-curated` 插件。Codex 会在 API 密钥和 Bedrock 账户下通过 `openai-api-curated` wire 名称提供相同的目录；OpenClaw 将这两个名称视为同一个精选目录，因此配置的 `openai-curated` 插件可以从任一名称解析。
+- 手动配置的 `workspace-directory` 插件必须已经以其确切的 marketplace 限定身份出现在 `plugin/installed` 中，并且处于已安装且已启用状态。它们所属的应用必须可供已配置的 Codex 线程访问和调用。
 
 `codexPlugins` 对 OpenClaw-provider 运行、ACP 会话
 绑定或其他运行环境没有影响，因为这些路径从不会使用原生 `apps` 配置
@@ -40,7 +42,9 @@ OpenAI 侧的 Codex 账户、应用可用性以及工作区应用/插件控制
 openclaw migrate codex --dry-run
 ```
 
-添加 `--verify-plugin-apps` 以使迁移调用源 `app/list`，并且在计划原生激活之前要求每个已拥有的 app 都存在、已启用且可访问：
+添加 `--verify-plugin-apps`，使迁移读取源已安装应用
+快照和应用元数据，并要求每个所属应用在规划原生激活之前都必须存在、已启用
+且可访问：
 
 ```bash
 openclaw migrate codex --dry-run --verify-plugin-apps
@@ -79,11 +83,10 @@ openclaw migrate apply codex --yes
 }
 ```
 
-迁移仍然仅限于 `openai-curated`。要使用现有的
-`workspace-directory` 插件，请使用 `plugin/list` 返回的精确
-marketplace-qualified `summary.id` 手动添加。例如，如果
-Codex 返回 `example-plugin@workspace-directory`，请配置该完整
-值，而不是其显示名称：
+迁移仍仅限于 `openai-curated`。要使用现有的
+`workspace-directory` 插件，请使用 `plugin/installed` 返回的、完整且精确的
+市场限定 `summary.id` 手动添加。如果 Codex 返回
+`example-plugin@workspace-directory`，请配置这个完整值，而不是其显示名称：
 
 ```json5
 {
@@ -109,7 +112,7 @@ Codex 返回 `example-plugin@workspace-directory`，请配置该完整
 }
 ```
 
-OpenClaw 不会为 `workspace-directory` 插件调用 `plugin/install` 或启动身份验证。在添加或启用 OpenClaw 策略之前，请先在 Codex 中安装、启用并完成身份验证。OpenClaw 在响应省略了精确的 marketplace、插件 ID、详情 ID 或 app 就绪证据时，会保持应用隐藏。如果 Codex 拒绝显式的 workspace `plugin/list` 请求，OpenClaw 会为每个已启用的 workspace 插件报告 `marketplace_missing`，并保留任何单独发现的 curated 插件可用。
+对于 `workspace-directory` 插件，OpenClaw 不会调用 `plugin/install`，也不会启动身份验证。请先在 Codex 中安装、启用并完成身份验证，然后再添加或启用 OpenClaw 策略。如果响应中缺少确切的市场、插件 ID、详细信息 ID 或应用就绪状态证据，OpenClaw 会将应用保持隐藏状态。如果已安装的快照中缺少工作区市场，OpenClaw 会为每个已启用的工作区插件报告 `marketplace_missing`，并继续提供任何独立发现的精选插件。
 
 在 `codexPlugins` 变更后，新的 Codex 会话会自动获取更新后的
 app 集。运行 `/new` 或 `/reset` 以刷新当前
@@ -149,26 +152,28 @@ app 集。运行 `/new` 或 `/reset` 以刷新当前
 对于 `openai-curated` 插件，迁移是持久化安装/资格判定
 步骤：
 
-- 在规划阶段，OpenClaw 会读取源 Codex `plugin/read` 详情，并
-  检查源 Codex app-server 账户是否为 ChatGPT 订阅
-  账户。非 ChatGPT 账户或缺失账户响应会跳过具备应用支持的
-  插件，并标记为 `codex_subscription_required`。
-- 默认情况下，迁移会跳过源 `app/list` 调用：通过账户门控的具备应用支持的源
-  插件会在没有源应用
-  可访问性验证的情况下进行规划，而账户查询传输失败会跳过并返回
-  `codex_account_unavailable`。
-- 使用 `--verify-plugin-apps` 时，迁移会获取一个新的源 `app/list`
-  快照，并要求每个所属应用在规划原生激活之前都必须存在、
-  处于启用状态且可访问。此时账户查询传输失败会转入源应用清单门控，
-  而不是直接跳过。
+- 在规划期间，OpenClaw 读取源 Codex 的 `plugin/read` 详情，并
+  检查源 Codex app-server 账户。`codex_subscription_required`
+  表示 `account/read` 已明确识别出 API 密钥或其他
+  非 ChatGPT 账户；账户缺失并不能证明没有订阅。
+- 默认情况下，迁移会跳过源应用清单调用：通过账户门槛的、基于应用的源
+  插件会在不验证源应用可访问性的情况下完成规划。账户缺失或
+  `account/read` 失败时，迁移会以 `codex_account_unavailable`
+  跳过这些插件。
+- 使用 `--verify-plugin-apps` 时，迁移会获取最新的源 `app/installed`
+  快照，通过 `app/read` 获取经过身份验证的元数据，并要求每个
+  所有者应用在源 Codex 账户中均已存在、启用且可访问，之后才会规划原生激活。
+  如果 `account/read` 缺失或失败，严格验证仍可通过源 app-server 配置的
+  bearer 或 header 身份验证来证明访问权限。已明确识别出的
+  非 ChatGPT 账户仍然不符合资格。
 
-对于 `workspace-directory` 插件，设置发生在 OpenClaw 之外。OpenClaw
-仅在至少配置了一个已启用的 workspace 条目时查询该 marketplace，按精确的 `summary.id` 解析每个插件，并复用现有的
-`plugin/read` 所有权和 `app/list` 就绪检查。未安装、
-已禁用、不可访问或未认证的插件不会暴露任何应用；OpenClaw
-不会尝试安装或认证。
+对于 `workspace-directory` 插件，设置在 OpenClaw 外部完成。OpenClaw
+仅在明确配置的启用条目中，或当 `allow_all_plugins` 要求识别由明确配置的禁用工作区插件所拥有的应用时，
+才使用其 `plugin/installed` 快照。它通过精确匹配 `summary.id` 来解析每个插件，并使用
+`plugin/read` 确定所有权。禁用插件检查是只读的：其应用仍保持拒绝状态，OpenClaw 不会安装、
+启用或验证该插件的身份。所有权缺失或存在歧义时会默认拒绝，而不是授予账户范围的访问权限。
 
-运行时应用清单是已迁移的 curated 插件和手动配置的 workspace 插件的目标会话可访问性检查。Codex
+运行时应用清单是已迁移的精选插件和手动配置的工作区插件的目标会话可访问性检查。Codex
 harness 会话设置会基于已启用且可访问的插件应用计算一个受限的线程应用配置；它不会在每一轮都重新计算，因此
 `/codex plugins enable`/`disable` 只会影响
 新的 Codex 对话。使用 `/new` 或 `/reset` 来让当前对话
@@ -176,24 +181,27 @@ harness 会话设置会基于已启用且可访问的插件应用计算一个受
 
 ## V1 支持边界
 
-- 只有已经安装在源 Codex 应用服务器库存中的 `openai-curated` 插件才具备迁移资格。
-- 运行时还支持在 app-server 构建上显式的 `workspace-directory` 条目，这些构建的 `plugin/list` 实现了 `marketplaceKinds`，并且会为无路径的 workspace 摘要返回 `remotePluginId`。这些条目必须使用其精确的带 marketplace 限定的 `summary.id`，并且必须已经安装、启用且可被应用访问。被拒绝的 workspace 列表请求会产生现有的按插件 `marketplace_missing` 诊断；缺少 marketplace、插件、详情或应用证据时，不会暴露 workspace app。默认列表请求中的 curated 库存仍然可用。
-- 基于应用的源插件必须通过迁移时的订阅门控。`--verify-plugin-apps` 会添加源 app 库存门控。订阅受限账户，以及在验证模式下不可访问/已禁用/缺失的源应用或 app 库存刷新失败，都会作为被跳过的手动项报告，而不是作为已启用的配置条目。不可读取的插件详情会在 app 库存门控之前被跳过。
-- 迁移会写入显式的插件身份（`marketplaceName` 和 `pluginName`）；不会写入本地 `marketplacePath` 缓存路径。
-- `codexPlugins.enabled` 是唯一的全局启用开关；不存在 `plugins["*"]` 通配符或可授予任意安装权限的配置键。
-- 非 curated 的 marketplace、缓存的插件包、hooks，以及 Codex 配置文件都会保留在迁移报告中供人工审查，不会自动激活。运行时接受手动配置的 `workspace-directory` 条目；其他 marketplace 仍不受支持。
+- 只有源 Codex 应用服务器清单中已安装的 `openai-curated` 插件才符合迁移条件。
+- 运行时还支持由 `plugin/installed` 报告的显式 `workspace-directory` 条目。这些条目必须使用其精确的、带市场限定的 `summary.id`，并且必须已经安装、启用且应用可访问。缺少市场、插件、所有权详情或应用就绪证据时，不会暴露工作区应用。OpenClaw 永远不会扫描市场目录来发现或激活工作区插件。
+- 已明确识别为非 ChatGPT 的源账户会无法通过订阅门槛。缺失或无法读取的源账户默认不可用。`--verify-plugin-apps` 则可以通过已认证的源应用清单来确认访问权限，包括使用 bearer 或标头认证的应用服务器。无法访问、已禁用或缺失的源应用，以及清单刷新失败，仍会作为跳过的手动处理项。无法读取的插件详情会在应用清单门槛检查前被跳过。
+- 迁移会写入显式的插件身份（`marketplaceName` 和 `pluginName`）；不会写入本地的 `marketplacePath` 缓存路径。
+- `codexPlugins.enabled` 是唯一的全局启用开关；不存在 `plugins["*"]` 通配符或授予任意安装权限的配置键。
+- 非精选市场、缓存的插件包、钩子和 Codex 配置文件会保留在迁移报告中供手动审核，不会自动激活。运行时接受手动配置的 `workspace-directory` 条目；其他市场仍不受支持。
 
 ## 应用清单与所有权
 
-OpenClaw 通过 app-server 的 `app/list` 读取 Codex 应用清单，将其缓存到内存中一小时，并异步刷新过期或缺失的条目。该缓存仅限于进程本地；重启 CLI 或网关会清除它，OpenClaw 会在下一次读取 `app/list` 时重新构建缓存。
+OpenClaw 首先读取并缓存一个限定于目标 Codex app-server 和已配置工作区的 `plugin/installed` 快照。该快照涵盖已安装的精选插件和工作区插件，包括已禁用的插件身份；失败或不完整的快照绝不会被缓存。`plugin/read` 仅限于获取建立所有权所需的精确已配置插件详情。常规线程设置不会扫描市场目录。`plugin/list` 仅用于查找或修复一个已明确启用但缺失的精选插件，而 `plugin/install` 仅用于安装该明确配置的精选插件。
+
+OpenClaw 通过 `app/installed` 读取已安装的应用运行时状态，并以每批最多 100 个应用 ID 的方式，通过 `app/read` 获取规范的应用元数据。首次读取会强制刷新冷启动的已安装运行时快照。当安装了多个已配置的精选插件时，OpenClaw 会将它们的缓存失效合并为一次应用清单刷新。普通的缓存读取不会因每个新线程而强制刷新连接器。OpenClaw 会将合并后的清单在内存中缓存一小时，并异步刷新过期或缺失的条目。该缓存仅限当前进程；重启 CLI 或网关会将其清除。
+
+缺失的清单方法、身份验证错误、传输失败和连接器刷新失败都会采取安全失败策略。
 
 迁移和运行时使用不同的缓存键：
 
-- 源迁移验证使用源 Codex home 和启动选项。它仅在 `--verify-plugin-apps` 下运行，并且会为该规划运行强制执行一次新的源 `app/list` 遍历。
-- 目标运行时设置在构建线程应用配置时，使用目标代理的 Codex app-server 身份。策划的插件激活会使该目标缓存键失效，然后在 `plugin/install` 之后强制刷新它。
-  `workspace-directory` 设置从不运行此激活路径。
+- 源迁移验证使用源 Codex 主目录和启动选项。它仅在使用 `--verify-plugin-apps` 时运行，并会为本次规划运行强制刷新源运行时快照和元数据读取。
+- 目标运行时设置在构建和验证线程应用配置时，使用目标代理的 Codex app-server 身份。精选插件激活会使该目标缓存键失效，然后在执行 `plugin/install` 后强制刷新该缓存。`workspace-directory` 设置永远不会运行此激活路径。
 
-只有当 OpenClaw 能通过稳定所有权将插件应用映射回已配置的插件时，才会公开该插件应用：来自插件详情的精确 app id、已知的 MCP 服务器名称，或唯一的稳定元数据。仅有显示名称或所有权存在歧义的情况会被排除，直到下一次清单刷新证明其所有权。
+只有当 OpenClaw 能通过稳定的所有权关系将插件应用映射回已配置的插件时，才会公开该插件应用：这可以依据插件详情中的精确 app id、已知的 MCP 服务器名称，或唯一的稳定元数据。仅有显示名称或所有权存在歧义的情况会被排除，直到下一次清单刷新证明其所有权。
 
 ## 已连接的账户应用
 
@@ -218,7 +226,9 @@ OpenClaw 通过 app-server 的 `app/list` 读取 Codex 应用清单，将其缓�
 }
 ```
 
-`allow_all_plugins: true` 在建立新的原生 Codex 线程时会获取完整的 `app/list` 快照，并且只允许该账户被标记为可访问的应用。它不会全局安装、认证或启用应用。现有线程会保留其持久化的应用集合；请使用 `/new`、`/reset`，或重启网关，以获取新连接或已撤销的应用。
+`allow_all_plugins: true` 会在建立新的原生 Codex 线程时读取已安装的应用快照和已认证的元数据。它只会接纳账户可访问的应用。Codex 还必须确认每个被接纳的应用都已为该线程启用且可调用。OpenClaw 不会全局安装、认证或启用应用。现有线程会保留其已持久化的应用集合；使用 `/new`、`/reset` 或重启网关来获取新连接或已撤销的应用。
+
+显式禁用的已配置插件始终会覆盖账户范围的应用访问权限。由于 Codex `app/read` 不会提供已禁用工作区插件的显示名称，OpenClaw 会使用其 `plugin/installed` 快照，并仅读取该确切已配置插件的详细信息，以保留其所拥有的应用 ID。此项范围狭窄的只读检查不会发现无关的市场应用、激活该插件或授予其应用权限。如果无法确认已禁用插件的所有权，账户范围的应用选择将默认拒绝。
 
 账户应用会继承全局的 `codexPlugins.allow_destructive_actions` 值，该值可接受 `true`、`false`、`"auto"` 或 `"ask"`。针对重叠应用 id 的显式按插件策略会覆盖全局策略。清单获取失败时会关闭失败，而不是回退到不受限制的默认值。
 
@@ -228,13 +238,13 @@ OpenClaw 会为 Codex 线程注入一个受限的 `config.apps` 补丁：
 `_default` 被禁用，且只有由已启用的已配置插件拥有的应用，或
 被 `allow_all_plugins` 允许访问的账户应用，才会被启用。
 
-每个应用上的 `destructive_enabled` 来自生效的全局或
-按插件的 `allow_destructive_actions` 策略；`true`、`"auto"` 和 `"ask"`
-都会将 `destructive_enabled` 设为 `true`，而 `false` 会将其设为 `false`。Codex 仍然
-根据其原生应用工具注解强制执行破坏性工具元数据。
-`_default` 使用 `open_world_enabled: false` 进行禁用；已启用的插件应用将
-`open_world_enabled: true`。OpenClaw 不提供单独的
-插件级 open-world 策略开关，也不维护按插件划分的破坏性工具名拒绝列表。
+应用可以已安装并完成身份验证，但在 `_default` 被禁用时，仍可能无法在账户级快照中调用。OpenClaw 仅临时接纳所有权已得到证明且符合策略要求的应用，创建受限线程，然后使用生成的线程 ID 和
+`forceRefresh: false` 再次读取一次 `app/installed`。在继续处理当前轮次之前，Codex 必须确认每个已接纳的应用在该线程的有效应用、托管、工作区和工具策略下均已启用且可调用。如果该证明失败，临时线程将永远不会被绑定或使用。OpenClaw 会删除失败的持久临时线程，取消订阅失败的临时线程；如果无法确认安全清理，则会停用应用服务器连接。
+
+每个应用的 `destructive_enabled` 来自有效的全局或插件级
+`allow_destructive_actions` 策略；`true`、`"auto"` 和 `"ask"`
+都会将 `destructive_enabled: true`，而 `false` 会将其设为 `false`。Codex 仍会根据其原生应用工具注解强制执行破坏性工具元数据。
+`_default` 通过 `open_world_enabled: false` 被禁用；已启用的插件应用会获得 `open_world_enabled: true`。OpenClaw 不提供单独的插件级开放世界策略开关，也不维护按插件划分的破坏性工具名称拒绝列表。
 
 工具批准模式对已接纳的应用默认设为自动，因此非破坏性
 读取工具可以在不触发同一线程批准提示的情况下运行。破坏性工具仍然
@@ -254,34 +264,27 @@ OpenClaw 会为 Codex 线程注入一个受限的 `config.apps` 补丁：
 
 ## 故障排查
 
-| Code                                              | 含义                                                                                                                                 | 修复                                                                                                                   |
+| 代码                                              | 含义                                                                                                                                 | 修复                                                                                                                   |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `auth_required`                                   | 迁移已安装该插件，但其某个应用仍需要身份验证。在你重新授权之前，该条目会以禁用状态写入。                                                            | 在 Codex 中重新授权该应用，然后在 OpenClaw 中启用该插件。                                                                |
-| `app_inaccessible`, `app_disabled`, `app_missing` | 使用 `--verify-plugin-apps` 时，源 Codex 应用清单未显示所有已拥有的应用都处于存在、已启用且可访问状态。                                               | 在 Codex 中重新授权或启用该应用，然后使用 `--verify-plugin-apps` 重新运行迁移。                                         |
-| `app_inventory_unavailable`                       | 请求了严格的源应用验证，但源 Codex 应用清单刷新失败。                                                                                             | 修复源 Codex app-server 访问，或在不使用 `--verify-plugin-apps` 的情况下重试，以接受更快的账户门控方案。                 |
-| `codex_subscription_required`                     | 源 Codex app-server 账户不是 ChatGPT 订阅账户。                                                                                                 | 使用订阅认证登录 Codex 应用，然后重新运行迁移。                                                                         |
-| `codex_account_unavailable`                       | 无法读取源 Codex app-server 账户。                                                                                                               | 修复源 Codex app-server 认证，或使用 `--verify-plugin-apps` 重新运行，让源应用清单决定是否符合条件。                    |
-| `marketplace_missing`, `plugin_missing`           | 市场或精确插件不可用；显式的工作区目录请求可能被拒绝；工作区应用采用失败即关闭策略。                                                               | 验证下面描述的兼容 app-server 协议和精确 ID。                                                                           |
-| `plugin_detail_unavailable`                       | OpenClaw 无法读取插件所有权详情。                                                                                                                | 检查目标 app-server 的 `plugin/list` 和 `plugin/read` 响应。                                                            |
-| `plugin_disabled`                                 | Codex 报告该插件已安装但已禁用。                                                                                                                | 经过整理的激活可能会修复它；在重试之前先在 Codex 中启用一个工作区插件。                                                  |
-| `plugin_activation_failed`                        | 插件激活未完成。                                                                                                                            | 使用附带的诊断信息区分市场、认证、刷新或工作区就绪性失败。                                                              |
-| `app_inventory_missing`, `app_inventory_stale`    | 应用就绪性来自空缓存或过期缓存。                                                                                                                | OpenClaw 会自动安排异步刷新；在确认所有权和就绪性之前，插件应用会一直被排除。                                          |
-| `app_ownership_ambiguous`                         | 应用清单仅通过显示名称匹配。                                                                                                                  | 在后续刷新证明所有权之前，该应用会继续对 Codex 线程隐藏。                                                               |
+| `auth_required`                                   | 迁移已安装插件，但其中一个应用仍需要身份验证。在您重新授权之前，该条目会以禁用状态写入。 | 在 Codex 中重新授权应用，然后在 OpenClaw 中启用插件。                                                      |
+| `app_inaccessible`, `app_disabled`, `app_missing` | 使用 `--verify-plugin-apps` 时，源 Codex 应用清单未显示所有已拥有的应用均存在、已启用且可访问。         | 在 Codex 中重新授权或启用应用，然后使用 `--verify-plugin-apps` 重新运行迁移。                              |
+| `app_inventory_unavailable`                       | 已请求严格的源应用验证，但源 Codex 应用清单刷新失败。                                      | 修复源 Codex 应用服务器访问问题，或不使用 `--verify-plugin-apps` 重试，以接受更快的账户门控方案。   |
+| `codex_subscription_required`                     | 源应用服务器明确识别出这是 API 密钥账户或其他非 ChatGPT 账户。                                                 | 使用订阅身份验证登录 Codex 应用，然后重新运行迁移。                                                  |
+| `codex_account_unavailable`                       | 源账户缺失，或在未进行严格应用验证的情况下 `account/read` 失败。                                             | 恢复源账户访问，或在已认证的源应用清单能够证明访问权限时使用 `--verify-plugin-apps`。 |
+| `marketplace_missing`, `plugin_missing`           | 已安装快照中不存在确切的市场或已配置插件；工作区应用会默认拒绝访问。                     | 验证目标应用服务器的 `plugin/installed` 响应以及已配置插件的确切身份。                       |
+| `plugin_detail_unavailable`                       | OpenClaw 无法读取确切已配置插件的所有权详细信息。                                                             | 检查目标应用服务器的 `plugin/installed` 和 `plugin/read` 响应。                                        |
+| `plugin_disabled`                                 | Codex 报告插件已安装但处于禁用状态。                                                                                     | 精选插件的激活可能会修复此问题；重试前，请在 Codex 中启用工作区插件。                                  |
+| `plugin_activation_failed`                        | 插件激活未完成。                                                                                                  | 使用附带的诊断信息区分市场、身份验证、刷新或工作区就绪状态问题。                |
+| `app_inventory_missing`, `app_inventory_stale`    | 应用就绪状态来自空缓存或过期缓存。                                                                                     | OpenClaw 会自动安排异步刷新；在确认所有权和就绪状态之前，插件应用会继续被排除。  |
+| `app_ownership_ambiguous`                         | 应用清单仅通过显示名称匹配。                                                                                          | 在后续刷新确认所有权之前，该应用会继续隐藏在 Codex 线程中。                                     |
 
 **工作区插件已安装但不可见：**确认工作区的
-`plugin/list` 结果报告所配置的精确 ID 已安装且已启用，
-然后确认 `app/list` 报告同一 Codex
-账户下每个已拥有应用都可访问。即使账户清单当前报告该应用已禁用，OpenClaw 也可以为线程启用一个可访问的应用。如果你在网关缓存了应用
-清单之后更改了该状态，请等待一小时的缓存刷新或重启网关，然后使用
-`/new` 或 `/reset`。OpenClaw 不会修复或验证工作区插件。
-如果显式的工作区列表请求被拒绝，每个已启用的工作区
-条目都会报告 `marketplace_missing`; 其他未相关的整理条目仍会根据默认列表响应继续处理。
+`plugin/installed` 快照报告确切的已配置 ID 已安装且已启用，然后确认
+`app/installed` 为同一 Codex 账户返回所有已拥有的应用，并且 `app/read` 返回其元数据。仅因账户范围的默认设置而禁用的应用，可以在 OpenClaw 启动并验证其明确配置的线程后恢复可调用状态。被撤销的身份验证、缺失的元数据、已禁用的工作区插件，以及 Codex 管理的限制或工作区限制仍会阻止访问。在启动新线程之前，请重新授权或修复这些上游条件。如果您在网关缓存应用清单后更改了这些状态，请等待一小时缓存刷新，或重启网关，然后使用 `/new` 或
+`/reset`。OpenClaw 不会修复或验证工作区插件。
 
-对于 `plugin_detail_unavailable`，无路径的工作区摘要必须包含
-`remotePluginId`; 当该选择器或后续的
-`plugin/read` 结果不可用时，OpenClaw 会将已拥有的应用隐藏。对于
-`plugin_activation_failed`，整理后的插件可能会报告市场、认证或
-安装后刷新失败。工作区插件在尚未处于活动状态时会报告此代码；请在 OpenClaw 之外安装、启用并认证它。
+对于 `plugin_detail_unavailable`，请确认确切的已安装市场和插件身份能够选出匹配的 `plugin/read` 结果。当该选择器或所有权详细信息不可用时，OpenClaw 会继续隐藏已拥有的应用。对于
+`plugin_activation_failed`，精选插件可能会报告市场、身份验证或安装后刷新失败。工作区插件在尚未处于活动状态时会报告此代码；请在 OpenClaw 外部安装、启用并验证该插件。
 
 **配置已更改但代理无法看到插件：**运行 `/codex plugins
 list` 以确认已配置状态，然后执行 `/new` 或 `/reset`。现有的

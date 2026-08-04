@@ -6,8 +6,8 @@ read_when:
 title: "日期和时间"
 ---
 
-OpenClaw 对传输时间戳使用**主机本地时间**，并且在系统提示中只放入**时区**。
-保留提供方时间戳，因此工具会保持其原生语义。当代理需要当前时间时，它会运行 `session_status` 工具。
+OpenClaw 对消息信封、系统事件和系统提示使用配置的**用户时区**。当未设置 `agents.defaults.userTimezone` 时，这些界面使用主机时区。提供商时间戳会被保留，以便工具继续使用其原生语义。
+当代理需要确切的当前时间且 `session_status` 可用时，它会运行该工具。
 
 ## 消息信封（默认使用本地时间）
 
@@ -17,26 +17,7 @@ OpenClaw 对传输时间戳使用**主机本地时间**，并且在系统提示�
 [WhatsApp +1555 Mon 2026-01-05 16:26:34 PST] message text
 ```
 
-信封时间戳默认使用**主机本地时间**，不受提供方时区影响。
-在 `agents.defaults` 下覆盖：
-
-```json5
-{
-  agents: {
-    defaults: {
-      envelopeTimezone: "local", // "utc" | "local" | "user" | IANA 时区
-      envelopeTimestamp: "on", // "on" | "off"
-      envelopeElapsed: "on", // "on" | "off"
-    },
-  },
-}
-```
-
-| Key                 | Values                                               | Behavior                                                                                                                                                                        |
-| ------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `envelopeTimezone`  | `local`（默认）、`utc`、`user`、显式 IANA 名称       | `user` 使用 `agents.defaults.userTimezone`（未设置时为主机时区）。显式 IANA 名称（例如 `"America/Chicago"`）会固定到一个时区；无法识别的名称会回退到 UTC。 |
-| `envelopeTimestamp` | `on`（默认）、`off`                                 | `off` 会从信封头、直接的 agent 提示前缀，以及嵌入的模型输入前缀中移除绝对时间戳。                                                       |
-| `envelopeElapsed`   | `on`（默认）、`off`                                 | `off` 会移除自会话上一条消息以来显示的经过时间后缀（`+30s` / `+2m` 这类）。                                                               |
+信封时间戳在配置了 `agents.defaults.userTimezone` 时使用该时区，否则使用主机时区。绝对时间戳和经过时间后缀会自动生成。
 
 ### 示例
 
@@ -52,53 +33,54 @@ OpenClaw 对传输时间戳使用**主机本地时间**，并且在系统提示�
 [WhatsApp +1555 Sun 2026-01-18 00:19:42 CST] hello
 ```
 
-**使用 `envelopeTimezone: "utc"` 的经过时间：**
+**经过时间：**
 
 ```
-[WhatsApp +1555 +30s Sun 2026-01-18T05:19:00Z] follow-up
+[WhatsApp +1555 +30s Sun 2026-01-18 00:20:12 CST] follow-up
 ```
 
-## 系统提示词：当前日期和时间
+## 系统提示：时间上下文
 
-系统提示词包含一个 **当前日期和时间** 部分，其中只包含 **时区**
-（不包含时钟或时间格式），以便提示缓存保持稳定：
+系统提示包含一个易变的**时间上下文**部分，其中包含本地日历日期和
+时区，但不包含实时钟表：
 
 ```
+Current date: 2026-01-05
 Time zone: America/Chicago
 ```
 
-该时区在配置时为 `agents.defaults.userTimezone`，否则为主机时区。
-提示词还指示代理在需要当前日期、时间或星期几时运行 `session_status` 工具。
+在配置了 `agents.defaults.userTimezone` 时，时区为该值，否则使用主机时区。
+该部分位于提示缓存边界之下，因此日期变更和时区变化不会使稳定前缀失效。
+在可用时，`session_status` 仍是获取精确当前时间的来源。
 
 ## 系统事件行（默认使用本地时间）
 
-插入到代理上下文中的排队系统事件会在时间戳前加上前缀，并使用与消息信封相同的 `envelopeTimezone` 选择（默认：主机本地）。
+在代理上下文中插入的排队系统事件会使用配置的 `agents.defaults.userTimezone`，否则使用主机时区。
 
 ```
 System: [2026-01-12 12:19:17 PST] Model switched.
 ```
 
-### 配置用户时区 + 格式
+### 配置用户时区
 
 ```json5
 {
   agents: {
     defaults: {
       userTimezone: "America/Chicago",
-      timeFormat: "auto", // 自动 | 12 | 24
     },
   },
 }
 ```
 
-- `userTimezone` 为提示上下文设置 **用户本地时区**（以及 `envelopeTimezone: "user"`）。
-- `timeFormat` 控制提示中显示时间的 **12 小时制/24 小时制**。`auto` 遵循操作系统偏好。
+- `userTimezone` 为消息信封、系统事件和提示上下文设置用户本地时区。
+- 使用 IANA 时区，例如 `America/Chicago`、`Europe/Vienna` 或 `Asia/Tokyo`。
 
-## 时间格式检测（auto）
+## 时间格式检测
 
-当 `timeFormat: "auto"` 时，OpenClaw 会检查操作系统偏好设置（macOS 和 Windows），
-并回退到区域设置格式。检测到的值会**按进程缓存**，
-以避免重复的系统调用。
+显示的时钟值遵循操作系统和区域设置偏好。OpenClaw
+会在 macOS 和 Windows 上检测 12 小时制或 24 小时制显示，然后回退到区域
+格式。检测到的值会按进程缓存。
 
 ## 工具载荷 + 连接器（原始提供方时间 + 规范化字段）
 

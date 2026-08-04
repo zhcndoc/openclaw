@@ -19,7 +19,7 @@ title: "Podman"
 - **Podman** 处于无根模式
 - 主机上已安装 **OpenClaw CLI**
 - **可选：** 如果你想要由 Quadlet 管理的自动启动，则需要 `systemd --user`
-- **可选：** 仅当你希望在无头主机上通过 `loginctl enable-linger "$(whoami)"` 实现开机持久化时才需要 `sudo`
+- **可选：** 仅当你希望在无头主机上通过 `loginctl enable-linger "$(whoami)"` 实现开机持久化时才需要 `sudo`。
 
 ## 快速开始
 
@@ -89,6 +89,14 @@ title: "Podman"
 </Steps>
 
 手动启动器只会从 `~/.openclaw/.env` 读取一小部分与 Podman 相关的允许列表键，并将显式的运行时环境变量传递给容器；它不会将整个 env 文件交给 Podman。
+
+## Agent Podman 后端
+
+本页面介绍如何在 Podman 容器中运行 Gateway 本身。Agent 沙箱是独立的。设置 `agents.defaults.sandbox.backend: "podman"` 可直接选择原生 Podman CLI。默认的 `"docker"` 后端仍仅支持 Docker。
+
+Podman 复用与 Docker 相同的 `agents.defaults.sandbox.docker.*` 容器设置，但会通过原生 `podman` CLI 执行。目前浏览器沙箱仍仅支持 Docker。
+
+请参阅[沙箱](/gateway/sandboxing#podman-backend)，了解配置示例和镜像构建命令。
 
 <a id="podman-and-tailscale"></a>
 
@@ -199,5 +207,6 @@ podman run --rm -it \
 ## 相关内容
 
 - [Docker](/install/docker)
-- [Gateway 后台进程](/gateway/background-process)
-- [Gateway 故障排除](/gateway/troubleshooting)
+- [沙箱隔离](/gateway/sandboxing#podman-backend)
+- [网关后台进程](/gateway/background-process)
+- [网关故障排查](/gateway/troubleshooting)

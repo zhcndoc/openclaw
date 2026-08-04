@@ -25,20 +25,20 @@ read_when:
 
 - 面向模型可见的工具列表会变为 `exec`、`wait`，再加上任何仅直接可用的工具  
   例如 `computer`，或原生视觉 `image` 加载器，其图像结果  
-  无法通过 guest bridge 继续传递。
-- `exec` 会在隔离的 QuickJS-WASI worker thread 中执行模型生成的 JavaScript 或 TypeScript。
-- 每个符合目录条件且已启用的工具（OpenClaw core、plugin、MCP、client）都会从  
+  无法通过访客桥接继续传递。
+- `exec` 会在隔离的 QuickJS-WASI 工作线程中执行模型生成的 JavaScript 或 TypeScript。
+- 每个符合目录条件且已启用的工具（OpenClaw 核心工具、插件、MCP、客户端）都会从  
   独立的模型工具中隐藏，并通过 `ALL_TOOLS`  
-  和 `tools` 暴露给 guest 程序。
-- `exec` 的描述包含一个受限的快速索引，列出精确的 OpenClaw/plugin  
-  catalog ids、紧凑的输入提示，以及在受信任工具提供输出 schema 时的紧凑声明输出提示。它省略了描述、完整 schema、  
-  MCP 条目和溢出条目；guest 侧的 catalog 查找仍然是回退方案。
-- Guest 代码会搜索隐藏目录，描述工具的 schema，并通过与普通 agent turn  
-  相同的执行路径调用工具（策略、审批、hooks、telemetry 仍然全部适用）。
-- MCP 工具会按 `MCP` 命名空间分组；在 code mode 中，这是调用它们的唯一支持方式。
-- 当嵌套工具调用仍在等待时，`wait` 会恢复一个已挂起的 code-mode 运行。
+  和 `tools` 暴露给访客程序。
+- `exec` 的描述包含一个受限的快速索引，列出精确的 OpenClaw/插件  
+  目录 ID、简洁的输入提示，以及在受信任工具提供输出 schema 时的简洁声明输出提示。它省略了描述、完整 schema、  
+  MCP 条目和溢出条目；访客侧的目录查找仍然是回退方案。
+- 访客代码会搜索隐藏目录，描述工具的 schema，并通过与普通 agent 回合  
+  相同的执行路径调用工具（策略、审批、hooks、遥测仍然全部适用）。
+- MCP 工具会按 `MCP` 命名空间分组；在代码模式中，这是调用它们的唯一支持方式。
+- 当嵌套工具调用仍在等待时，`wait` 会恢复一个已挂起的代码模式运行。
 
-Code mode 只会改变面向模型的编排层表面。它不会替换 tools、plugin tools、MCP tools、auth、approval policy、channel 行为或 model selection。
+代码模式只会改变面向模型的编排层表面。它不会替换工具、插件工具、MCP 工具、身份验证、审批策略、频道行为或模型选择。
 
 ## 为什么使用它
 
@@ -139,7 +139,7 @@ openclaw gateway
 
 [Swarm](/tools/swarm) 为来自 Code Mode 脚本的并发子代理编排添加了 `agents.run()`、`phase()` 和 `log()` 客户端全局变量。启用 `tools.codeMode` 和 `tools.swarm`，然后使用普通 JavaScript 控制流进行分发、决策门控和结构化收集。Swarm 是一个单独的可选开关；仅启用 Code Mode 并不会暴露 `agents.*` API。
 
-## Technical tour
+## 技术导览
 
 本页其余部分涵盖运行时契约和实现细节，
 适用于维护者、调试工具暴露的插件作者，以及
@@ -149,12 +149,12 @@ openclaw gateway
 
 |                     |                                                                                             |
 | ------------------- | ------------------------------------------------------------------------------------------- |
-| Runtime             | [`quickjs-wasi`](https://github.com/vercel-labs/quickjs-wasi)                               |
-| Default state       | `"auto"`（仅启用目录首选模型）                                            |
-| Stability           | 实验性的 OpenClaw 接口（Codex Code Mode 是一个独立、稳定的 Codex harness 接口） |
-| Target surface      | 通用 OpenClaw 代理运行                                                                 |
-| Security posture    | 模型代码是恶意的                                                                       |
-| User-facing promise | 启用代码模式绝不会静默回退为广泛的直接工具暴露                  |
+| 运行时              | [`quickjs-wasi`](https://github.com/vercel-labs/quickjs-wasi)                               |
+| 默认状态            | `"auto"`（仅启用目录首选模型）                                            |
+| 稳定性              | 实验性的 OpenClaw 接口（Codex Code Mode 是一个独立、稳定的 Codex harness 接口） |
+| 目标范围            | 通用 OpenClaw 代理运行                                                                 |
+| 安全态势            | 模型代码是恶意的                                                                       |
+| 面向用户的承诺      | 启用代码模式绝不会静默回退为广泛的直接工具暴露                  |
 
 ## 范围
 
@@ -191,19 +191,19 @@ Code mode 拥有已准备运行的面向模型的编排形态。它
 `tools.codeMode.enabled` 是激活门槛；仅设置其他字段不会单独启用此功能。
 
 | 字段                  | 默认值                       | 限制                                           |
-| --------------------- | ------------------------------ | ----------------------------------------------- |
-| `enabled`             | `"auto"`                       | `false`、`true` 或 `"auto"`（按模型）           |
-| `runtime`             | `"quickjs-wasi"`               | 仅支持的值                                      |
-| `mode`                | `"only"`                       | 暴露控制/直接工具，其余工具归类                 |
+| --------------------- | ---------------------------- | ----------------------------------------------- |
+| `enabled`             | `"auto"`                     | `false`、`true` 或 `"auto"`（按模型）           |
+| `runtime`             | `"quickjs-wasi"`             | 仅支持的值                                      |
+| `mode`                | `"only"`                     | 暴露控制/直接工具，其余工具归类                 |
 | `languages`           | `["javascript", "typescript"]` | 两者中的任意子集                                |
-| `timeoutMs`           | `10000`                        | `100`-`60000`                                   |
-| `memoryLimitBytes`    | `67108864`                     | `1048576`-`1073741824`                          |
-| `maxOutputBytes`      | `65536`                        | `1024`-`10485760`                               |
-| `maxSnapshotBytes`    | `10485760`                     | `1024`-`268435456`                              |
-| `maxPendingToolCalls` | `16`                           | `1`-`128`                                       |
-| `snapshotTtlSeconds`  | `900`                          | `1`-`86400`                                     |
-| `searchDefaultLimit`  | `8`                            | 限制为 `maxSearchLimit`                         |
-| `maxSearchLimit`      | `50`                           | `1`-`50`                                        |
+| `timeoutMs`            | `10000`                      | `100`-`60000`                                   |
+| `memoryLimitBytes`    | `67108864`                   | `1048576`-`1073741824`                          |
+| `maxOutputBytes`      | `65536`                      | `1024`-`10485760`                               |
+| `maxSnapshotBytes`    | `10485760`                   | `1024`-`268435456`                              |
+| `maxPendingToolCalls` | `16`                         | `1`-`128`                                       |
+| `snapshotTtlSeconds`  | `900`                        | `1`-`86400`                                     |
+| `searchDefaultLimit`  | `8`                          | 限制为 `maxSearchLimit`                         |
+| `maxSearchLimit`      | `50`                         | `1`-`50`                                        |
 
 如果代码模式已启用但 QuickJS-WASI 无法加载，OpenClaw 会在该次运行中直接失败并关闭；
 它不会在回退时静默暴露普通工具。此规则适用于 `true` 和模型解析结果为首选的 `"auto"` 运行：
@@ -343,9 +343,9 @@ type CodeModeFailedResult = {
 };
 ```
 
-当 guest 暂停并保留了仍然需要对模型可见的续执行状态时，`exec` 会返回 `waiting`——例如显式的 `yield_control(...)`，或是在 `exec` 截止时间内尚未完成的桥接工具调用。结果包含用于 `wait` 的 `runId`。桥接工具调用——`tools.search`/`describe`/`call` 以及命名空间调用（包括 MCP 命名空间调用）——会在同一次 `exec`/`wait` 调用中自动清空，只要它们在截止时间内完成；因此，一个等待多个工具的紧凑代码块可以在一个模型回合内执行完毕，而不必为每个 `await` 强制进行一次模型工具调用。可重启的运行永远不会自动清空；其待处理工作仍然会经过可重放安全检查。
+当来宾环境暂停并保留了仍然需要对模型可见的续执行状态时，`exec` 会返回 `waiting`——例如显式的 `yield_control(...)`，或是在 `exec` 截止时间内尚未完成的桥接工具调用。结果包含用于 `wait` 的 `runId`。桥接工具调用——`tools.search`/`describe`/`call` 以及命名空间调用（包括 MCP 命名空间调用）——会在同一次 `exec`/`wait` 调用中自动清空，只要它们在截止时间内完成；因此，一个等待多个工具的紧凑代码块可以在一个模型回合内执行完毕，而不必为每个 `await` 强制进行一次模型工具调用。可重启的运行永远不会自动清空；其待处理工作仍然会经过可重放安全检查。
 
-当 guest VM 没有待处理工作，并且在 OpenClaw 的输出适配器运行后最终值与 JSON 兼容时，`exec` 才返回 `completed`。
+当来宾虚拟机没有待处理工作，并且在 OpenClaw 的输出适配器运行后最终值与 JSON 兼容时，`exec` 才返回 `completed`。
 
 ## `wait`
 
@@ -396,9 +396,9 @@ declare function json(value: unknown): void;
 declare function yield_control(reason?: string): Promise<void>;
 ```
 
-`ALL_TOOLS` 是运行作用域目录的紧凑元数据；默认情况下它不包含完整 schema。模型可见的 `exec` 描述还包括一个有界、确定性的精确 OpenClaw/plugin id 子集、紧凑输入提示以及可信的声明式输出提示。描述会继续延后加载，因此对抗性的目录说明文字无法引导模型。当该索引未列出某个工具时，请读取 `ALL_TOOLS`，或在 guest 程序中调用 `tools.search(...)`。
+`ALL_TOOLS` 是运行作用域目录的紧凑元数据；默认情况下它不包含完整 schema。模型可见的 `exec` 描述还包括一个有界、确定性的精确 OpenClaw/插件 id 子集、紧凑输入提示以及可信的声明式输出提示。描述会继续延后加载，因此对抗性的目录说明文字无法引导模型。当该索引未列出某个工具时，请读取 `ALL_TOOLS`，或在 guest 程序中调用 `tools.search(...)`。
 
-每条快速索引行中的箭头描述的是 `tools.callValue(...)` 的返回值。`-> Array<{ id: string }>` 是一个声明式输出提示；`-> ?` 表示输出未知。未知输出保持 raw-first：先原样返回该值，观察它，然后在后续的 `exec` 中进行过滤或映射，而不是猜测字段名。当一个已声明输出的读取最终流向一个 `-> ?` 调用时，也同样适用：直接返回该调用的原始值，不要把它包装成请求的答案形状。
+每条快速索引行中的箭头描述的是 `tools.callValue(...)` 的返回值。`-> Array<{ id: string }>` 是一个声明式输出提示；`-> ?` 表示输出未知。未知输出保持原始值优先：先原样返回该值，观察它，然后在后续的 `exec` 中进行过滤或映射，而不是猜测字段名。当一个已声明输出的读取最终流向一个 `-> ?` 调用时，也同样适用：直接返回该调用的原始值，不要把它包装成请求的答案形状。
 
 ```typescript
 type ToolCatalogEntry = {
@@ -413,7 +413,7 @@ type ToolCatalogEntry = {
 };
 ```
 
-`input` 是针对常见情况的有界 TypeScript 风格签名。若仍需要精确的完整 schema，请使用 `tools.describe(...)`。远程 MCP 和 client 条目使用 `input: "unknown"`，因此它们不受信任的 schema 会继续延后，直到 `describe`。`output` 只在由受信任的 OpenClaw 核心或插件 `outputSchema` 派生出的完整紧凑提示时才会出现。MCP 和 client 的输出 schema 声明不会被提升为这个受信任的目录提示。
+`input` 是针对常见情况的有界 TypeScript 风格签名。若仍需要精确的完整 schema，请使用 `tools.describe(...)`。远程 MCP 和客户端条目使用 `input: "unknown"`，因此它们不受信任的 schema 会继续延后，直到 `describe`。`output` 只在由受信任的 OpenClaw 核心或插件 `outputSchema` 派生出的完整紧凑提示时才会出现。MCP 和客户端的输出 schema 声明不会被提升为这个受信任的目录提示。
 
 插件工具使用 `source: "openclaw"`，并将 `sourceName` 设为所属插件 id；不存在单独的 `"plugin"` source 值。`source: "mcp"` 只用于 `sourceName`/`mcp` 元数据中的 MCP 条目（并且会从 `ALL_TOOLS`/`tools.*` 中过滤掉，见下文）。
 
@@ -438,7 +438,7 @@ type ToolCatalog = {
 };
 ```
 
-配对的 Gateway 节点可通过 `nodes` 全局变量获取：
+配对的网关节点可通过 `nodes` 全局变量获取：
 
 ```typescript
 const available = await nodes.list();
@@ -747,26 +747,18 @@ type CodeModeErrorCode =
 
 ## 遥测
 
-每个结果的 `telemetry` 字段报告：隐藏目录大小以及来源
-拆分（`openclaw`/`mcp`/`client` 计数）、本次运行目录的累计 search/describe/call
-计数，以及模型可见的工具名称（`exec`、
-`wait` 和保留的仅直接调用工具）。
+每个结果的 `telemetry` 字段都会报告：隐藏目录大小和来源
+分解（`openclaw`/`mcp`/`client` 计数）、本次运行目录的累计搜索/描述/调用
+次数，以及模型可见的工具名称（`exec`、`wait` 和保留的仅直接调用工具）。
+`counterScope` 标识一个计数器生命周期：目录被替换或恢复时会发生变化，但在追加工具或提示策略缩小该目录范围时保持稳定。
 
 运行元数据（`openclaw agent --json` 中的 `meta.agentMeta`，在
 `agent exec --json` 包装层中也会镜像）会添加每次运行的统计信息：
 
-- `codeModeEngaged`：仅当代码模式实际接管了模型工具
-  面时为 `true`。这是可靠的接入信号——不要根据配置或工具名称来推断接入：
-  shell 工具也名为 `exec`，`"auto"` 层级按模型能力接入，
-  通过原生 harness 表面的模型（例如在其 harness 上的 OpenAI 系列模型）
-  即使 `tools.codeMode.enabled=true` 也会报告 `codeModeEngaged: false`，
-  使静默无操作变得可观测。
-- `assistantTurns`：整个运行中完成的 assistant/provider 往返次数。
-- `bridgeCalls`：本次运行累计的内部 bridge 计数
-  （`{ search, describe, call }`）。这些调用不会到达 provider；
-  provider 可见的外部工具调用仍保留在 `meta.toolSummary.calls` 中。
-- `costUsd`：根据本次运行累计用量和模型的成本配置估算的 USD 成本
-  （包含 cache read/write 分层）；如果模型没有成本数据则省略。
+- `codeModeEngaged`：仅当代码模式实际拥有模型工具面时才为 `true`。这是可靠的启用信号——不要根据配置或工具名称推断是否启用：shell 工具同样名为 `exec`，而 `"auto"` 层级会根据模型能力启用。桥接 OpenClaw 工具面的执行框架（Copilot）会报告其解析后的门控状态，因此当 `tools.codeMode.enabled=true` 且 `codeModeEngaged: false` 时，可以观察到静默无操作。运行自身原生工具面的执行框架（Codex）从不启用 OpenClaw 代码模式，因此其值始终为 `false`；出于同样原因，不报告该字段的尝试会被规范化为 `false`。Codex 自身的 `codeModeOnly` 是一个独立的原生功能，该字段不会对其进行跟踪。
+- `assistantTurns`：本次运行中已完成的 assistant/provider 往返次数。
+- `bridgeCalls`：本次运行累计的内部桥接调用次数（`{ search, describe, call }`）。这些调用不会到达 provider；provider 可见的外部工具调用仍保留在 `meta.toolSummary.calls` 中。
+- `costUsd`：根据本次运行累计的使用量和模型成本配置估算的美元成本（包含缓存读取/写入层级）；当模型没有成本数据时省略。
 
 遥测不得包含密钥、原始环境变量值，或超出现有 OpenClaw 轨迹策略之外的
 未脱敏工具输入。
@@ -790,18 +782,18 @@ openclaw gateway
 
 ## 实现布局
 
-- config contract: `tools.codeMode`
-- catalog builder: 有效工具，用于压缩条目和 id 映射
-- model-surface adapter: 用控制/直接工具替换可见工具
-- QuickJS-WASI runtime adapter: 加载、求值、快照、恢复、释放
-- worker supervisor: 超时、终止、崩溃隔离
-- bridge adapter: JSON 安全的宿主回调和结果传递
-- TypeScript transform adapter
-- snapshot store: TTL、大小上限、运行/会话作用域
+- 配置契约：`tools.codeMode`
+- 目录构建器：有效工具，用于压缩条目和 id 映射
+- 模型表面适配器：用控制/直接工具替换可见工具
+- QuickJS-WASI 运行时适配器：加载、求值、快照、恢复、释放
+- 工作线程监管器：超时、终止、崩溃隔离
+- 桥接适配器：JSON 安全的宿主回调和结果传递
+- TypeScript 转换适配器
+- 快照存储：TTL、大小上限、运行/会话作用域
 - 嵌套工具调用的轨迹投影
-- telemetry counters and diagnostics
+- 遥测计数器和诊断
 
-该实现复用了 Tool Search 中的目录和执行器概念，但
+该实现复用了工具搜索中的目录和执行器概念，但
 没有使用 `node:vm` 子进程作为沙箱。
 
 ## 验证清单
@@ -863,7 +855,7 @@ openclaw gateway
 
 ## 相关内容
 
-- [Swarm](/tools/swarm) 用于从 Code Mode 脚本进行 fan-out 代理编排
+- [Swarm](/tools/swarm) 用于从 Code Mode 脚本进行扇出式代理编排
 - [工具搜索](/tools/tool-search)
 - [代理运行时](/concepts/agent-runtimes)
 - [Exec 工具](/tools/exec)

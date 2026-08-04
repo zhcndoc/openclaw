@@ -1,61 +1,53 @@
 ---
-summary: "Choose and configure Google Meet, Microsoft Teams, or Zoom meeting participation"
+summary: "选择并配置 Google Meet、Microsoft Teams 或 Zoom 会议参与方式"
 read_when:
-  - You want an OpenClaw agent to join a video meeting
-  - You are choosing between the Google Meet, Microsoft Teams meetings, and Zoom meetings plugins
-  - You need the shared Chrome, BlackHole, SoX, or meeting-mode setup
-title: "Meeting plugins"
+  - 你希望 OpenClaw 代理加入视频会议
+  - 你正在 Google Meet、Microsoft Teams 会议和 Zoom 会议插件之间进行选择
+  - 你需要配置共享 Chrome、BlackHole、SoX 或会议模式
+title: "会议插件"
 ---
 
-OpenClaw has separate plugins for Google Meet, Microsoft Teams meetings, and Zoom. All three can join through Chrome, use the same participation modes, and run Chrome either on the Gateway host or on a paired node. Their platform URLs, installation model, and extra capabilities differ.
+OpenClaw 为 Google Meet、Microsoft Teams 会议和 Zoom 提供了独立的插件。这三个插件都可以通过 Chrome 加入会议，使用相同的参与模式，并在 Gateway 主机或配对节点上运行 Chrome。它们的平台 URL、安装模式和额外功能各不相同。
 
-These plugins participate in meetings. They are separate from messaging channels such as the [Microsoft Teams channel](/channels/msteams) and from the [Voice call plugin](/plugins/voice-call).
+这些插件用于参与会议。它们不同于 [Microsoft Teams 通道](/channels/msteams) 等消息通道，也不同于 [语音通话插件](/plugins/voice-call)。
 
-## Choose a plugin
+## 选择插件
 
-| Platform        | Plugin                                      | Accepted meeting links                                                                                      | Installation                                    | Participation paths                                      | Platform-specific capabilities                                                                                |
-| --------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Google Meet     | [`google-meet`](/plugins/google-meet)       | `meet.google.com/...`                                                                                       | Install from npm or ClawHub; enabled by default | Local Chrome, Chrome on a paired node, or Twilio dial-in | Can create meetings through the Meet API or a signed-in browser; can read supported Meet artifacts with OAuth |
-| Microsoft Teams | [`teams-meetings`](/plugins/teams-meetings) | Work links under `teams.microsoft.com/l/meetup-join/...` and consumer links under `teams.live.com/meet/...` | Included; enabled by default                    | Local Chrome or Chrome on a paired node                  | Guest join for work and consumer meetings                                                                     |
-| Zoom            | [`zoom-meetings`](/plugins/zoom-meetings)   | `zoom.us/j/...` and account subdomains such as `example.zoom.us/j/...`                                      | Included; enabled by default                    | Local Chrome or Chrome on a paired node                  | Guest join through the Zoom Web App                                                                           |
+| 平台            | 插件                                          | 接受的会议链接                                                                                              | 安装                                             | 参与方式                                                   | 平台特定功能                                                                                                  |
+| --------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Google Meet     | [`google-meet`](/plugins/google-meet)         | `meet.google.com/...`                                                                                       | 从 npm 或 ClawHub 安装；默认启用                  | 本地 Chrome、配对节点上的 Chrome，或通过 Twilio 拨入        | 可通过 Meet API 或已登录的浏览器创建会议；可通过 OAuth 读取受支持的 Meet 内容 |
+| Microsoft Teams | [`teams-meetings`](/plugins/teams-meetings)   | `teams.microsoft.com/l/meetup-join/...` 下的工作链接，以及 `teams.live.com/meet/...` 下的个人用户链接       | 从 npm 或 ClawHub 安装；默认启用                  | 本地 Chrome 或配对节点上的 Chrome                           | 支持以访客身份加入工作版和个人用户版会议                                                                    |
+| Zoom            | [`zoom-meetings`](/plugins/zoom-meetings)    | `zoom.us/j/...` 以及帐户子域名，例如 `example.zoom.us/j/...`                                                 | 从 npm 或 ClawHub 安装；默认启用                  | 本地 Chrome 或配对节点上的 Chrome                           | 通过 Zoom Web App 以访客身份加入                                                                               |
 
-Choose Google Meet when you need meeting creation, Google API artifacts, or a Twilio phone path. Choose Teams or Zoom for direct browser guest participation on those platforms. The Teams and Zoom plugins do not create meetings, dial in, call the vendor API, or capture audio/video recordings.
+当你需要创建会议、获取 Google API 内容，或使用 Twilio 电话方式时，请选择 Google Meet。在相应平台上直接通过浏览器以访客身份参与会议时，请选择 Teams 或 Zoom。Teams 和 Zoom 插件不会创建会议、拨入会议、调用供应商 API，也不会捕获音频/视频录制内容。
 
-## Choose a mode
+## 选择模式
 
-The three plugins share the same modes:
+三个插件共享相同的模式：
 
-| Mode         | Behavior                                                                                              | Audio requirements                                      |
-| ------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `agent`      | Realtime transcription goes to the configured OpenClaw agent; regular OpenClaw TTS speaks the reply.  | Chrome talk-back requires the BlackHole and SoX bridge. |
-| `bidi`       | A realtime voice model listens and replies directly.                                                  | Chrome talk-back requires the BlackHole and SoX bridge. |
-| `transcribe` | Joins observe-only and exposes a bounded live-caption transcript when the platform provides captions. | No BlackHole or SoX talk-back bridge.                   |
+| 模式         | 行为                                                                                              | 音频要求                                      |
+| ------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `agent`      | 实时转录内容发送到配置的 OpenClaw 代理；使用常规 OpenClaw TTS 播放回复。  | Chrome 回传音频需要 BlackHole 和 SoX 桥接。 |
+| `bidi`       | 实时语音模型直接进行监听和回复。                                                  | Chrome 回传音频需要 BlackHole 和 SoX 桥接。 |
+| `transcribe` | 以仅观察模式加入，并在平台提供字幕时公开有限的实时字幕转录。 | 不需要 BlackHole 或 SoX 回传音频桥接。                   |
 
-Use `transcribe` when the agent only needs meeting text. Use `agent` for normal OpenClaw reasoning and tools. Use `bidi` when low-latency direct voice is more important than routing each turn through the regular agent.
+当代理只需要会议文本时，使用 `transcribe`。需要进行常规 OpenClaw 推理和使用工具时，使用 `agent`。当低延迟直接语音比让每轮对话都经过常规代理更重要时，使用 `bidi`。
 
-The bounded live transcript remains available only in `transcribe` mode. In all
-three modes, browser joins also persist completed caption rows and a derived
-summary to the shared state database. Leaving the meeting finalizes visible
-captions and writes the summary; use [`openclaw transcripts`](/cli/transcripts)
-to list, inspect, or export it. This durable notes path does not change the live
-agent-consult transcript or create an audio/video recording.
+有限的实时转录内容仅在 `transcribe` 模式下可用。在所有三种模式中，浏览器加入会议后也会将已完成的字幕行和派生摘要持久化到共享状态数据库中；离开会议时会完成可见字幕并写入摘要；使用 [`openclaw transcripts`](/cli/transcripts) 可列出、检查或导出这些内容。这一持久化笔记路径不会改变实时代理咨询转录，也不会创建音频/视频录制。
 
-Automatic notes are on by default. Set `transcripts.enabled: false` to disable
-durable notes globally. An explicitly selected `transcribe` session retains its
-bounded live-caption tail without writing durable rows. Caption availability
-still depends on the meeting platform, account, language, and host policy.
+自动笔记默认开启。设置 `transcripts.enabled: false` 可全局禁用持久化笔记。显式选择的 `transcribe` 会话会保留其有限的实时字幕尾部，但不会写入持久化行。字幕是否可用仍取决于会议平台、账户、语言和主持人策略。
 
-## Prepare Chrome and audio
+## 准备 Chrome 和音频
 
-Chrome can run on the Gateway host or on a paired node. A remote Chrome node must allow `browser.proxy` plus the platform command:
+Chrome 可以运行在 Gateway 主机上，也可以运行在已配对的节点上。远程 Chrome 节点必须允许使用 `browser.proxy` 以及平台命令：
 
-| Plugin          | Node command           |
-| --------------- | ---------------------- |
-| Google Meet     | `googlemeet.chrome`    |
-| Microsoft Teams | `teamsmeetings.chrome` |
-| Zoom            | `zoommeetings.chrome`  |
+| 插件             | 节点命令                |
+| ---------------- | ----------------------- |
+| Google Meet      | `googlemeet.chrome`     |
+| Microsoft Teams  | `teamsmeetings.chrome`  |
+| Zoom             | `zoommeetings.chrome`   |
 
-For `agent` or `bidi` mode through Chrome, run Chrome on macOS and install the shared audio dependencies on that same host:
+要通过 Chrome 使用 `agent` 或 `bidi` 模式，请在 macOS 上运行 Chrome，并在同一主机上安装共享音频依赖项：
 
 ```bash
 brew install blackhole-2ch sox
@@ -64,18 +56,20 @@ system_profiler SPAudioDataType | grep -i BlackHole
 command -v sox
 ```
 
-The Gateway host still owns the OpenClaw agent and model credentials when Chrome runs on a paired node. Configure a realtime transcription provider and OpenClaw TTS for `agent` mode, or a realtime voice provider for `bidi` mode. The platform guides contain the provider and audio-command options.
+当 Chrome 运行在已配对的节点上时，Gateway 主机仍负责 OpenClaw 代理和模型凭据。为 `agent` 模式配置实时转录提供商和 OpenClaw TTS，或为 `bidi` 模式配置实时语音提供商。平台指南中包含提供商和音频命令选项。
 
-## Install or disable plugins
+## 安装或禁用插件
 
-Install Google Meet separately; it is enabled by default after installation. Teams meetings and Zoom are included with OpenClaw and enabled by default:
+安装所需的会议插件。每个插件在安装后默认启用：
 
 ```bash
-# Google Meet only
 openclaw plugins install npm:@openclaw/google-meet
+openclaw plugins install @openclaw/teams-meetings
+openclaw plugins install @openclaw/zoom-meetings
+openclaw gateway restart
 ```
 
-Disable any meeting plugin you do not use:
+禁用不使用的会议插件：
 
 ```bash
 openclaw plugins disable google-meet
@@ -83,40 +77,40 @@ openclaw plugins disable teams-meetings
 openclaw plugins disable zoom-meetings
 ```
 
-Restart the Gateway if your plugin-management path does not restart it automatically. Then run the platform setup check before joining.
+如果你的插件管理流程不会自动重启 Gateway，请重启 Gateway。然后在加入会议前运行平台设置检查。
 
-## Verify and join
+## 验证并加入
 
-| Platform        | Setup check                    | Join command                                                                  |
-| --------------- | ------------------------------ | ----------------------------------------------------------------------------- |
+| 平台            | 设置检查                       | 加入命令                                                                  |
+| --------------- | ------------------------------ | ------------------------------------------------------------------------- |
 | Google Meet     | `openclaw googlemeet setup`    | `openclaw googlemeet join 'https://meet.google.com/abc-defg-hij'`             |
 | Microsoft Teams | `openclaw teamsmeetings setup` | `openclaw teamsmeetings join 'https://teams.microsoft.com/l/meetup-join/...'` |
 | Zoom            | `openclaw zoommeetings setup`  | `openclaw zoommeetings join 'https://zoom.us/j/1234567890'`                   |
 
-Treat any failed setup check as a blocker for that transport and mode. For an observe-only smoke test, select `transcribe` mode and confirm that status reports an in-call session before expecting caption text.
+将任何失败的设置检查视为对应传输方式和模式的阻断因素。对于仅观察的冒烟测试，请选择 `transcribe` 模式，并确认状态报告显示通话中的会话，然后再期待字幕文本。
 
-For talk-back smoke tests, verified speech requires more than bytes accepted by the playback command. The shared command-pair bridge correlates a bounded waveform fingerprint from the current output generation with audio returning on the BlackHole microphone capture path; Google Meet, Teams, and Zoom do not report `speechOutputVerified: true` when only the output-byte counter advances or unrelated participant audio is present.
+对于回传语音冒烟测试，经过验证的语音需要的不仅仅是播放命令接受了字节数据。共享的命令对桥接器会将当前输出生成中的有界波形指纹与通过 BlackHole 麦克风捕获路径返回的音频进行关联；当只有输出字节计数器增加，或存在无关的参与者音频时，Google Meet、Teams 和 Zoom 不会报告 `speechOutputVerified: true`。
 
-## Handle platform policy prompts
+## 处理平台政策提示
 
-Browser automation handles the normal guest-name, prejoin camera and microphone, join, in-call, and leave controls. It does not bypass platform or organizer policy.
+浏览器自动化可以处理普通的访客姓名、加入前摄像头和麦克风、加入、通话中以及离开控件，但不会绕过平台或组织者的政策要求。
 
-- Google Meet may require Google sign-in, host admission, or a browser permission decision.
-- Microsoft Teams may require tenant sign-in, email verification, or organizer admission.
-- Zoom may require authentication, email verification, a passcode, CAPTCHA completion, or host admission; an account can also disable browser join.
+- Google Meet 可能要求登录 Google、由主持人准入，或作出浏览器权限决定。
+- Microsoft Teams 可能要求租户登录、电子邮件验证，或由组织者准入。
+- Zoom 可能要求身份验证、电子邮件验证、密码、完成 CAPTCHA 或由主持人准入；帐户还可能禁用浏览器加入功能。
 
-When a join or status result includes `manualAction`, complete its reported step in the same OpenClaw Chrome profile before retrying. Repeatedly opening new tabs does not resolve an account, tenant, lobby, or CAPTCHA gate.
+当加入或状态结果包含 `manualAction` 时，请在同一个 OpenClaw Chrome 配置文件中完成其报告的步骤，然后重试。反复打开新标签页无法解决帐户、租户、大厅或 CAPTCHA 闸门问题。
 
-Only join meetings where the operator is authorized to add an agent. Tell participants when local policy or consent rules require disclosure of automated participation, transcription, or synthesized speech.
+仅加入操作员获授权添加代理的会议。当当地政策或同意规则要求披露自动化参与、转录或合成语音时，请告知参与者。
 
-## Discord voice chat
+## Discord 语音聊天
 
-[Discord voice channels](/channels/discord#voice-channels) provide native, audio-only realtime conversation without browser meeting automation. OpenClaw can join a voice channel, listen, route turns through an OpenClaw agent or realtime voice model, and speak replies. It does not send or receive camera video or screen sharing, even when people use video in the same Discord channel, so Discord voice is a related live-conversation surface rather than a fourth browser meeting plugin.
+[Discord 语音频道](/channels/discord#voice-channels)提供原生的、仅音频的实时对话，无需浏览器会议自动化。OpenClaw 可以加入语音频道、聆听内容、通过 OpenClaw 智能体或实时语音模型处理对话轮次，并朗读回复。即使人们在同一 Discord 频道中使用视频，它也不会发送或接收摄像头视频或屏幕共享内容，因此 Discord 语音是一种相关的实时对话界面，而不是第四个浏览器会议插件。
 
-## Platform guides
+## 平台指南
 
-- [Google Meet plugin](/plugins/google-meet)
-- [Microsoft Teams meetings plugin](/plugins/teams-meetings)
-- [Zoom meetings plugin](/plugins/zoom-meetings)
-- [Manage plugins](/plugins/manage-plugins)
-- [Browser control](/tools/browser)
+- [Google Meet 插件](/plugins/google-meet)
+- [Microsoft Teams 会议插件](/plugins/teams-meetings)
+- [Zoom 会议插件](/plugins/zoom-meetings)
+- [管理插件](/plugins/manage-plugins)
+- [浏览器控制](/tools/browser)

@@ -15,9 +15,9 @@ title: "代理"
 openclaw proxy validate [--json] [--proxy-url <url>] [--proxy-ca-file <path>] [--allowed-url <url>] [--denied-url <url>] [--apns-reachable] [--apns-authority <url>] [--timeout-ms <ms>]
 openclaw proxy start [--host <host>] [--port <port>]
 openclaw proxy run [--host <host>] [--port <port>] -- <cmd...>
-openclaw proxy coverage
-openclaw proxy sessions [--limit <count>]
-openclaw proxy query --preset <name> [--session <id>]
+openclaw proxy coverage [--json]
+openclaw proxy sessions [--limit <count>] [--json]
+openclaw proxy query --preset <name> [--session <id>] [--json]
 openclaw proxy blob --id <blobId>
 openclaw proxy purge
 ```
@@ -76,6 +76,9 @@ openclaw proxy purge
 - `ws-duplicate-frames`
 - `missing-ack`
 - `error-bursts`
+
+`coverage`、`sessions` 和 `query` 默认已经返回 JSON。它们也接受 `--json`，作为显式的机器输出选项，以便脚本保持一致。
+在该模式下，`coverage` 保留其报告对象，而 `sessions` 和 `query` 分别将其行包装在 `sessions` 和 `rows` 下。
 
 `blob --id <blobId>` 打印已捕获负载 blob 的原始内容。
 

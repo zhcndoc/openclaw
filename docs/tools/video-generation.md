@@ -98,22 +98,22 @@ openclaw tasks cancel <lookup>
 
 | 提供商                | 默认模型                        | 文本 | 图像引用                                           | 视频引用                                      | 认证                                     |
 | --------------------- | ------------------------------- | :--: | ---------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
-| Alibaba               | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                      | 是（远程 URL）                                | `MODELSTUDIO_API_KEY`                    |
-| BytePlus (bundled)    | `seedance-1-0-pro-250528`       |  ✓   | 最多 2 张图片（首帧 + 末帧）                         | -                                               | `BYTEPLUS_API_KEY`                       |
-| BytePlus 1.5 plugin   | `seedance-1-5-pro-251215`       |  ✓   | 最多 2 张图片（通过角色指定首帧 + 末帧）             | -                                               | `BYTEPLUS_API_KEY`                       |
-| BytePlus Seedance 2.0 | `dreamina-seedance-2-0-260128`  |  ✓   | 最多 9 张参考图                                      | 最多 3 个视频                                    | `BYTEPLUS_API_KEY`                       |
-| ComfyUI               | `workflow`                      |  ✓   | 1 张图片                                              | -                                               | `COMFY_API_KEY` or `COMFY_CLOUD_API_KEY` |
-| DeepInfra             | `Pixverse/Pixverse-T2V`         |  ✓   | -                                                    | -                                               | `DEEPINFRA_API_KEY`                      |
+| Alibaba               | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                       | 是（远程 URL）                                  | `MODELSTUDIO_API_KEY`                    |
+| BytePlus plugin       | `seedance-1-0-pro-250528`       |  ✓   | 最多 2 张图片（首帧 + 末帧）                         | -                                             | `BYTEPLUS_API_KEY`                       |
+| BytePlus 1.5 plugin   | `seedance-1-5-pro-251215`       |  ✓   | 最多 2 张图片（通过角色指定首帧 + 末帧）             | -                                             | `BYTEPLUS_API_KEY`                       |
+| BytePlus Seedance 2.0 | `dreamina-seedance-2-0-260128`  |  ✓   | 最多 9 张参考图片                                     | 最多 3 个视频                                  | `BYTEPLUS_API_KEY`                       |
+| ComfyUI               | `workflow`                      |  ✓   | 1 张图片                                             | -                                             | `COMFY_API_KEY` 或 `COMFY_CLOUD_API_KEY` |
+| DeepInfra             | `Pixverse/Pixverse-T2V`         |  ✓   | -                                                   | -                                             | `DEEPINFRA_API_KEY`                      |
 | fal                   | `fal-ai/minimax/video-01-live`  |  ✓   | 1 张图片；使用 Seedance reference-to-video 时最多 9 张 | 使用 Seedance reference-to-video 时最多 3 个视频 | `FAL_KEY`                                |
-| Google                | `veo-3.1-fast-generate-preview` |  ✓   | 1 张图片                                              | 1 个视频                                        | `GEMINI_API_KEY`                         |
-| MiniMax               | `MiniMax-Hailuo-2.3`            |  ✓   | 1 张图片                                              | -                                               | `MINIMAX_API_KEY` 或 MiniMax OAuth       |
-| OpenAI                | `sora-2`                        |  ✓   | 1 张图片                                              | 1 个视频                                        | `OPENAI_API_KEY`                         |
-| OpenRouter            | `google/veo-3.1-fast`           |  ✓   | 最多 4 张图片（首帧/末帧或参考图）                    | -                                               | `OPENROUTER_API_KEY`                     |
-| Qwen                  | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                      | 是（远程 URL）                                | `QWEN_API_KEY`                           |
-| Runway                | `gen4.5`                        |  ✓   | 1 张图片                                              | 1 个视频                                        | `RUNWAYML_API_SECRET`                    |
-| Together              | `Wan-AI/Wan2.2-T2V-A14B`        |  ✓   | 仅 `Wan-AI/Wan2.2-I2V-A14B`                         | -                                               | `TOGETHER_API_KEY`                       |
-| Vydra                 | `veo3`                          |  ✓   | 1 张图片（`kling`）                                 | -                                               | `VYDRA_API_KEY`                          |
-| xAI                   | `grok-imagine-video`            |  ✓   | 经典版：1 张首帧或 7 张参考图；1.5：1 帧              | 经典版：1 个视频                                | `XAI_API_KEY`                            |
+| Google                | `veo-3.1-fast-generate-preview` |  ✓   | 1 张图片                                             | 1 个视频                                       | `GEMINI_API_KEY`                         |
+| MiniMax               | `MiniMax-Hailuo-2.3`            |  ✓   | 1 张图片                                             | -                                             | `MINIMAX_API_KEY` 或 MiniMax OAuth       |
+| OpenAI                | `sora-2`                        |  ✓   | 1 张图片                                             | 1 个视频                                       | `OPENAI_API_KEY`                         |
+| OpenRouter            | `google/veo-3.1-fast`           |  ✓   | 最多 4 张图片（首帧/末帧或参考图）                   | -                                             | `OPENROUTER_API_KEY`                     |
+| Qwen                  | `wan2.6-t2v`                    |  ✓   | 是（远程 URL）                                       | 是（远程 URL）                                | `QWEN_API_KEY`                           |
+| Runway                | `gen4.5`                        |  ✓   | 1 张图片                                             | 1 个视频                                       | `RUNWAYML_API_SECRET`                    |
+| Together              | `Wan-AI/Wan2.2-T2V-A14B`        |  ✓   | 仅 `Wan-AI/Wan2.2-I2V-A14B`                         | -                                             | `TOGETHER_API_KEY`                       |
+| Vydra                 | `veo3`                          |  ✓   | 1 张图片（`kling`）                                  | -                                             | `VYDRA_API_KEY`                          |
+| xAI                   | `grok-imagine-video`            |  ✓   | 经典版：1 张首帧或 7 张参考图；1.5：1 帧             | 经典版：1 个视频                                | `XAI_API_KEY`                            |
 
 某些提供商还接受额外或替代的 API 密钥环境变量。详情请参见各个[提供商页面](#related)。
 
@@ -121,24 +121,24 @@ openclaw tasks cancel <lookup>
 
 ### 功能矩阵
 
-`video_generate`、契约测试和共享 live sweep 使用的显式模式契约：
+`video_generate`、契约测试和共享实时 sweep 使用的显式模式契约：
 
-| 提供商     | `generate` | `imageToVideo` | `videoToVideo` | 当前共享 live 通道                                                                                                                |
+| 提供商     | `generate` | `imageToVideo` | `videoToVideo` | 当前共享实时通道                                                                                                                |
 | ---------- | :--------: | :------------: | :------------: | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Alibaba    |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` 已跳过，因为此提供商需要远程 `http(s)` 视频 URL                                          |
-| BytePlus   |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
+| Alibaba    |     ✓      |       ✓        |       ✓        | `generate`、`imageToVideo`；`videoToVideo` 已跳过，因为此提供商需要远程 `http(s)` 视频 URL                                          |
+| BytePlus   |     ✓      |       ✓        |       -        | `generate`、`imageToVideo`                                                                                                              |
 | ComfyUI    |     ✓      |       ✓        |       -        | 不在共享 sweep 中；工作流特定覆盖由 Comfy 测试负责                                                                                      |
 | DeepInfra  |     ✓      |       -        |       -        | `generate`；在插件契约中，原生 DeepInfra 视频 schema 属于文本生成视频                                                                    |
-| fal        |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 仅在使用 Seedance reference-to-video 时支持 `videoToVideo`                                                |
-| Google     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 共享的 `videoToVideo` 已跳过，因为当前基于缓冲区的 Gemini/Veo sweep 不接受该输入                          |
-| MiniMax    |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
-| OpenAI     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 共享的 `videoToVideo` 已跳过，因为此组织/输入路径当前需要提供商侧视频编辑权限                              |
-| OpenRouter |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
-| Qwen       |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` 已跳过，因为此提供商需要远程 `http(s)` 视频 URL                                              |
-| Runway     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 仅当所选模型为 `runway/gen4_aleph` 时运行 `videoToVideo`                                                   |
-| Together   |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
-| Vydra      |     ✓      |       ✓        |       -        | `generate`; 共享的 `imageToVideo` 已跳过，因为捆绑的 `veo3` 仅支持文本，而捆绑的 `kling` 需要远程图片 URL                                 |
-| xAI        |     ✓      |       ✓        |       ✓        | 经典版支持所有模式；Video 1.5 仅支持图生视频；远程 MP4 输入使 `videoToVideo` 不进入共享 sweep                                             |
+| fal        |     ✓      |       ✓        |       ✓        | `generate`、`imageToVideo`；仅在使用 Seedance reference-to-video 时支持 `videoToVideo`                                                |
+| Google     |     ✓      |       ✓        |       ✓        | `generate`、`imageToVideo`；共享的 `videoToVideo` 已跳过，因为当前基于缓冲区的 Gemini/Veo sweep 不接受该输入                          |
+| MiniMax    |     ✓      |       ✓        |       -        | `generate`、`imageToVideo`                                                                                                              |
+| OpenAI     |     ✓      |       ✓        |       ✓        | `generate`、`imageToVideo`；共享的 `videoToVideo` 已跳过，因为此组织/输入路径当前需要提供商侧视频编辑权限                              |
+| OpenRouter |     ✓      |       ✓        |       -        | `generate`、`imageToVideo`                                                                                                              |
+| Qwen       |     ✓      |       ✓        |       ✓        | `generate`、`imageToVideo`；`videoToVideo` 已跳过，因为此提供商需要远程 `http(s)` 视频 URL                                              |
+| Runway     |     ✓      |       ✓        |       ✓        | `generate`、`imageToVideo`；仅当所选模型为 `runway/gen4_aleph` 时运行 `videoToVideo`                                                   |
+| Together   |     ✓      |       ✓        |       -        | `generate`、`imageToVideo`                                                                                                              |
+| Vydra      |     ✓      |       ✓        |       -        | `generate`；共享的 `imageToVideo` 已跳过，因为 `veo3` 仅支持文本输入，而 `kling` 需要远程图片 URL                           |
+| xAI        |     ✓      |       ✓        |       ✓        | 经典版支持所有模式；Video 1.5 仅支持图像转视频；远程 MP4 输入不会使 `videoToVideo` 进入共享 sweep             |
 
 ## 工具参数
 
@@ -237,23 +237,11 @@ Seedance 会用它根据输入图像尺寸自动检测比例）。
 
 #### 回退与类型化选项
 
-Some capability checks apply at the fallback layer rather than the tool
-boundary, so a request that exceeds the primary provider's limits can still
-run on a capable fallback:
+某些能力检查会在回退层而不是工具边界执行，因此超出主提供方限制的请求仍可能在具备相应能力的回退提供方上运行：
 
-- Active candidate declaring no `maxInputAudios` (or `0`) is skipped when
-  the request contains audio references; next candidate is tried. The same
-  guard applies to image and video reference counts against
-  `maxInputImages`/`maxInputVideos`.
-- Active candidate's `maxDurationSeconds` below the requested `durationSeconds`
-  with no declared `supportedDurationSeconds` list -> skipped.
-- Request contains `providerOptions` and the active candidate explicitly
-  declares a typed `providerOptions` schema -> skipped if supplied keys are
-  not in the schema or value types do not match. Providers without a
-  declared schema receive options as-is (backward-compatible
-  pass-through). A provider can opt out of all provider options by
-  declaring an empty schema (`capabilities.providerOptions: {}`), which
-  causes the same skip as a type mismatch.
+- 当请求包含音频参考时，不声明 `maxInputAudios`（或声明为 `0`）的活动候选项会被跳过，并尝试下一个候选项。对于图像和视频参考数量与 `maxInputImages`/`maxInputVideos` 的限制，也采用相同的检查。
+- 如果活动候选项的 `maxDurationSeconds` 低于请求的 `durationSeconds`，且未声明 `supportedDurationSeconds` 列表，则该候选项会被跳过。
+- 当请求包含 `providerOptions`，且活动候选项明确声明了类型化的 `providerOptions` schema 时，如果提供的键不在 schema 中，或值类型不匹配，则该候选项会被跳过。未声明 schema 的提供方会原样接收选项（向后兼容的透传）。提供方可以通过声明空 schema（`capabilities.providerOptions: {}`）来选择完全不接受任何提供方选项；这会导致与类型不匹配相同的跳过行为。
 
 请求中的第一个跳过原因会以 `warn` 级别记录，因此运维人员能看到主提供方何时被跳过；后续跳过会以 `debug` 级别记录，以保持较长的回退链安静。如果所有候选项都被跳过，聚合错误会包含每个跳过原因。
 
@@ -265,20 +253,20 @@ run on a capable fallback:
 | `status`     | 检查当前会话中正在进行的视频任务状态，不会启动新的生成。 |
 | `list`       | 显示可用的提供方、模型及其能力。                                        |
 
-## Model Selection
+## 模型选择
 
-OpenClaw resolves models in the following order:
+OpenClaw 按以下顺序解析模型：
 
-1. **`model` tool parameter** - if specified by the agent in the call.
-2. **`videoGenerationModel.primary`** in the configuration.
-3. Use **`videoGenerationModel.fallbacks`** in order.
-4. **Auto-detection** - providers with valid authentication, starting from the current default provider and then processing the remaining providers in alphabetical order.
+1. **`model` 工具参数** - 如果代理在调用中指定了该参数。
+2. 配置中的 **`videoGenerationModel.primary`**。
+3. 按顺序使用 **`videoGenerationModel.fallbacks`**。
+4. **自动检测** - 具有有效身份验证的提供商，从当前默认提供商开始，然后按字母顺序处理其余提供商。
 
-If a provider fails, the next candidate is automatically tried. If all
-candidates fail, the error will include details of each attempt.
+如果某个提供商失败，则会自动尝试下一个候选项。如果所有
+候选项都失败，错误信息将包含每次尝试的详细信息。
 
-Automatic fallback across authenticated providers is always enabled. A per-call
-`model` remains authoritative.
+经过身份验证的提供商之间始终启用自动回退。每次调用中的
+`model` 参数仍具有最高优先级。
 
 ```json5
 {
@@ -287,7 +275,7 @@ Automatic fallback across authenticated providers is always enabled. A per-call
       videoGenerationModel: {
         primary: "google/veo-3.1-fast-generate-preview",
         fallbacks: ["runway/gen4.5", "qwen/wan2.6-t2v"],
-        timeoutMs: 180000, // Optional per-tool provider request timeout override
+        timeoutMs: 180000, // 可选的每个工具提供商请求超时覆盖值
       },
     },
   },
@@ -301,8 +289,9 @@ Automatic fallback across authenticated providers is always enabled. A per-call
     使用 DashScope / Model Studio 异步端点。参考图像和
     视频必须是远程 `http(s)` URL。
   </Accordion>
-  <Accordion title="BytePlus (bundled)">
-    提供方 id: `byteplus`。
+  <Accordion title="BytePlus plugin">
+    需要官方的 `@openclaw/byteplus-provider` 插件。
+    提供方 id：`byteplus`。
 
     模型：`seedance-1-0-pro-250528`（默认）、
     `seedance-1-5-pro-251215`。
@@ -390,8 +379,8 @@ Automatic fallback across authenticated providers is always enabled. A per-call
     仅支持单张图像参考。
   </Accordion>
   <Accordion title="Vydra">
-    直接使用 `https://www.vydra.ai/api/v1`，以避免认证丢失的
-    重定向。`veo3` 仅作为文本转视频捆绑；`kling` 需要
+    直接使用 `https://www.vydra.ai/api/v1`，以避免重定向时丢失身份验证信息。
+    `veo3` 仅支持文本转视频；`kling` 需要
     远程图像 URL。
   </Accordion>
   <Accordion title="xAI">

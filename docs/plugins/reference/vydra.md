@@ -11,12 +11,12 @@ title: "Vydra 插件"
 
 ## 分发
 
-- 包：`@openclaw/vydra-provider`
-- 安装方式：已包含在 OpenClaw 中
+- 软件包：`@openclaw/vydra-provider`
+- 安装渠道：npm；ClawHub：`clawhub:@openclaw/vydra-provider`
 
 ## 表面
 
-providers: `vydra`; contracts: `imageGenerationProviders`, `speechProviders`, `videoGenerationProviders`
+提供商：`vydra`；合约：`imageGenerationProviders`、`speechProviders`、`videoGenerationProviders`
 
 ## 相关文档
 

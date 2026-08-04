@@ -1,18 +1,18 @@
 ---
-summary: "Gateway 驱动的 `openclaw agent` 回合以及隔离的 `agent exec` 运行的 CLI 参考"
+summary: "由 Gateway 驱动的 `openclaw agent` 回合，以及隔离的 `agent exec` 运行的 CLI 参考"
 read_when:
-  - 你想从脚本中运行一次 agent 回合（可选地发送回复）
-  - 你需要为 CI 进行严格、一次性的临时 agent 运行
+  - 你想从脚本中运行一次 agent 回合（可选择发送回复）
+  - 你需要为 CI 执行严格的一次性临时 agent 运行
 title: "Agent"
 ---
 
 # `openclaw agent`
 
-通过 Gateway 运行一次 agent 回合。显式的 `--local` 标志是唯一的内嵌执行路径。
+通过 Gateway 运行一次 agent 回合。显式指定 `--local` 标志是唯一的内嵌执行路径。
 
 至少传入一个会话选择器：`--to`、`--session-key`、`--session-id` 或 `--agent`。
 
-相关内容：[Agent send tool](/tools/agent-send)
+相关内容：[Agent 发送工具](/tools/agent-send)。
 
 ## `agent exec`
 
@@ -24,11 +24,17 @@ openclaw agent exec --message-file task.md --cwd ./repo
 cat task.md | openclaw agent exec --message-file - --json
 ```
 
-默认情况下，该命令会创建一个临时状态目录，并在之后将其移除。其隐式配置会跳过工作区引导文件，禁用 agent 沙盒，选择 `coding` 工具配置文件，将文件系统工具限制为 `--cwd`，并为嵌入式本地工具运行时启用完整的 Gateway 主机执行策略。`--cwd` 默认为进程工作目录，并同时作为 agent 工作区和工具工作目录传入。
+默认情况下，该命令会创建临时状态目录，并在稍后将其移除；它会使用普通的 OpenClaw 配置运行，因此已配置的提供商、凭据和 `agentRuntime` harness 选择方式与其他地方完全一致。`--cwd` 默认为进程工作目录，并同时作为 agent 工作区和工具工作目录传入。
 
-使用 `--state-dir <dir>` 可保留会话和其他运行状态。该目录必须已存在，并且不会被命令创建或删除。该命令仍然使用其隔离的隐式策略配置；它不会读取该目录中的普通 OpenClaw 配置。
+配置分三部分分层，且完全在内存中处理：exec 会组合运行配置，并将其作为当前进程的运行时配置发布，而不是将副本写入磁盘。只有在配置未设置某项时，exec 默认值才会生效：跳过工作区引导文件、关闭 agent 沙箱、选择 `coding` 工具配置、将文件系统工具限制在 `--cwd` 范围内，并在无头回合所需的完整执行策略下运行。配置中设置的任何内容都会覆盖这些默认值，因此已配置的沙箱、shell 环境或工具配置不会被降级；当配置启用沙箱时，exec 的主机路由仍由沙箱负责。调用本身始终拥有最后决定权：运行范围限定为 `--cwd`，且永远不会执行引导。
 
-`--auth-env-only` 默认启用。在此模式下，运行可以使用进程环境中已存在的提供商密钥，但不会加载 OpenClaw 认证配置文件，也不会加载外部 Codex、Claude 或其他 CLI 凭据存储。提供商认证变量仍可用于模型认证，但不会传递给 agent 启动的主机命令。仅当运行有意依赖这些已存储凭据时，才使用 `--no-auth-env-only`。
+使用 `--state-dir <dir>` 保留会话和其他运行状态。该目录必须已存在，命令不会创建或删除它。
+
+当 exec 使用环境配置或固定配置时，已安装插件仍会从操作员普通的插件根目录解析；而会话及其他运行状态则使用临时目录。在这些模式下，`--state-dir` 仅控制运行状态；对于由已安装插件提供的已配置提供商、频道或 harness，不要求设置该参数。
+
+如需可复现的运行，请固定配置，而不是继承环境配置。`--config <path>` 会严格使用指定配置文件运行，并通过常规加载器读取，因此 JSON5 语法和 `$include` 会相对于该文件解析；缺失或无效的文件会导致运行失败，而不会回退到默认值。如果环境配置存在但无法解析，也同样会导致运行失败。`--isolated` 会完全忽略环境配置，只使用上述 exec 默认值。在 CI 中，这两种方式都是正确选择，因为继承操作员状态会使运行结果依赖机器环境。
+
+默认情况下会使用已存储的凭据，因此指定文件夹范围的运行可以访问与 CLI 其他部分相同的登录信息。传入 `--auth-env-only` 可将运行限制为进程环境中已有的提供商密钥。该模式完全不加载配置；如果同时使用 `--config`，则会被拒绝而不是静默忽略，因为配置可以通过多个入口同时提供提供商凭据：[内联密钥和机密标头](/reference/secretref-credential-surface)、`env` 块以及登录 shell 导入。它还会跳过 OpenClaw 身份验证配置文件，以及外部 Codex、Claude 或其他 CLI 凭据存储。提供商身份验证变量仍可用于模型身份验证，但不会传递给 agent 启动的主机命令。
 
 使用可重复标志来选择主模型和有序回退链：
 
@@ -41,7 +47,19 @@ openclaw agent exec "实现这个变更" \
 
 仅对该命令而言，显式的 `--fallback` 值在显式 `--model` 存在时仍然保持生效。其他 agent 入口点仍沿用其既有规则：用户选择的模型会禁用已配置的回退。
 
-`agent exec` 的超时默认是 600 秒；这不会改变现有嵌入式 `agent --local` 的默认值。成功运行退出码为 `0`，任何模型或结果错误退出码为 `1`，超时退出码为 `2`。失败包括 `meta.error`、中止的运行、耗尽模型回退、错误停止原因以及任何错误负载。
+比较本地模型或较小模型时，请显式选择一次性工具界面：
+
+```bash
+openclaw agent exec "Inspect this repository" \
+  --model ollama/qwen3.5:9b \
+  --code-mode code \
+  --local-model-lean \
+  --json
+```
+
+`--code-mode direct` 会禁用 Code Mode，`auto` 会使用模型能力元数据，而 `code` 会在支持工具的运行中强制使用通用 Code Mode 界面。`--local-model-lean` 会移除高延迟和依赖频道的工具，并为隔离运行启用有界 Tool Search 默认值。
+
+`agent exec` 的超时时间默认为 600 秒；这不会改变现有嵌入式 `agent --local` 的默认值。成功运行以 `0` 退出，任何模型或结果错误以 `1` 退出，超时以 `2` 退出。失败包括 `meta.error`、中止的运行、耗尽所有模型回退、错误停止原因以及任何错误负载。
 
 普通输出只会将最终 assistant 文本写入 stdout。诊断信息使用 stderr。`--json` 会为 stdout 预留以下稳定封装：
 
@@ -56,6 +74,7 @@ openclaw agent exec "实现这个变更" \
   "codeModeEngaged": false,
   "assistantTurns": 2,
   "bridgeCalls": { "search": 1, "describe": 0, "call": 3 },
+  "toolSummary": { "calls": 2, "tools": ["read", "write"], "totalToolTimeMs": 48 },
   "model": "gpt-5.6-sol",
   "provider": "openai",
   "sessionId": "019..."
@@ -66,26 +85,45 @@ openclaw agent exec "实现这个变更" \
 
 运行统计字段是可累加的，并且可能缺失：
 
-- `costUsd`：运行累计用量的预估 USD 成本，包括缓存读/写定价；当模型没有成本数据时省略。
-- `codeModeEngaged`：仅当 [code mode](/tools/code-mode) 实际接管了该运行的模型工具面时才为 `true`；仅设置 `tools.codeMode.enabled=true` 并不能保证接管；通过原生 harness 面运行的模型可能会使其保持 `false`。
-- `assistantTurns`：运行中已完成的 assistant/provider 往返次数；若无完成项则省略。
-- `bridgeCalls`：内部工具搜索/code-mode bridge 调用计数（`search`/`describe`/`call`）。这些对提供商不可见；外层工具调用保留在完整运行元数据的 `meta.toolSummary.calls` 中。
+- `costUsd`: 根据运行累计使用量估算的美元成本，包括缓存读取/写入定价；模型没有成本数据时省略。
+- `codeModeEngaged`: 仅当 [code mode](/tools/code-mode) 在本次运行中实际接管模型工具界面时才为 `true`。仅设置 `tools.codeMode.enabled=true` 并不能保证其启用；而由 harness 接管其原生工具界面的情况下，该值始终为 `false`，因为 OpenClaw code mode 不会接管这些工具。
+- `assistantTurns`: 本次运行中已完成的 assistant/provider 往返次数；没有完成任何往返时省略。
+- `bridgeCalls`: 内部工具搜索/Code Mode 桥接调用次数（`search`/`describe`/`call`）。这些调用对提供商不可见；外部工具调用会保留在完整运行元数据的 `meta.toolSummary.calls` 中。
+- `toolSummary`: 嵌入式运行中外部模型可见的工具调用次数、工具名称、失败次数以及工具总耗时。
 
-相同字段也会出现在 `openclaw agent --json` 响应的 `meta.agentMeta` 中。
+在 `openclaw agent --json` 响应中，agent 运行统计字段位于 `meta.agentMeta`；外部工具摘要仍位于 `meta.toolSummary`。
+
+### Code Mode 模型矩阵
+
+在源代码检出目录中，针对任意显式模型引用运行有界评估矩阵：
+
+```bash
+pnpm qa:code-mode-models -- --model ollama/qwen3.5:9b
+```
+
+重复使用 `--model` 可比较多个模型；也可以使用 `--mode`、`--task` 和 `--repetitions` 缩小默认的 direct/automatic/forced Code Mode 矩阵。每个单元都会运行一个隔离的 `agent exec` 任务，并记录模型/提供商身份、耗时、结果状态、失败类别、外部工具调用、Code Mode 桥接调用以及经过验证的输出/效果。
+
+输出目录包含规范的 QA Lab `qa-evidence.json`。`summary.json` 和 `results.jsonl` 是用于支持汇总和逐单元结果的文件；`manifest.json` 记录请求的矩阵和源代码身份。
+
+这些只是评估证据，不是 CI 或发布门禁。结果不会改变模型能力、运行时路由、回退机制或修复策略。
 
 ### `agent exec` 选项
 
-- `[message]`：位置参数提示文本
-- `--message-file <path>`：从文件读取 UTF-8 提示；`-` 表示读取 stdin
-- `--cwd <dir>`：同时设置 agent 工作区和工具工作目录
-- `--state-dir <dir>`：使用已有状态目录而不删除它
-- `--model <provider/model>`：显式主模型
-- `--thinking <level>`：单次运行的思考级别
-- `--fallback <provider/model>`：有序回退模型；可重复且需要 `--model`
-- `--auth-env-only`：忽略已存储和外部 CLI 凭据（默认）
-- `--no-auth-env-only`：允许已存储和外部 CLI 凭据
-- `--timeout <seconds>`：秒级截止时间（默认 `600`；`0` 表示禁用）
-- `--json`：输出稳定的 JSON 封装
+- `[message]`: 位置参数形式的提示文本
+- `--message-file <path>`: 从文件读取 UTF-8 提示；`-` 表示读取 stdin
+- `--cwd <dir>`: 同时设置 agent 工作区和工具工作目录
+- `--state-dir <dir>`: 使用现有状态目录，且不删除它
+- `--config <path>`: 使用该配置文件而不是环境配置运行（支持 JSON5 和 `$include`）
+- `--isolated`: 忽略环境配置，仅使用 exec 默认值
+- `--model <provider/model>`: 显式指定主模型
+- `--code-mode <mode>`: 选择 `direct`、`auto` 或强制使用 `code` 工具模式
+- `--local-model-lean`: 使用精简的本地模型工具界面
+- `--thinking <level>`: 本次运行的思考级别
+- `--fallback <provider/model>`: 有序回退模型；可重复使用，且要求同时指定 `--model`
+- `--auth-env-only`: 仅使用环境中的提供商密钥；跳过已存储凭据、外部 CLI 凭据以及配置
+- `--no-auth-env-only`: 允许使用已存储凭据和外部 CLI 凭据（默认）
+- `--timeout <seconds>`: 以秒为单位的截止时间（默认 `600`；`0` 表示禁用）
+- `--json`: 输出稳定的 JSON 封装
 
 ## 选项
 
@@ -105,7 +143,7 @@ openclaw agent exec "实现这个变更" \
 - `--local`: 直接运行嵌入式代理（在插件注册表预加载之后）
 - `--deliver`: 将回复发送回所选通道/目标
 - `--timeout <seconds>`: 覆盖此命令的代理轮次截止时间（默认 600 秒，或 `agents.defaults.timeoutSeconds`）；`0` 会禁用整体截止时间。600 秒的回退值属于此 CLI 命令，而不属于普通 Gateway 轮次，后者的默认值为 48 小时。
-- `--json`: 输出 JSON
+- `--json`: 输出 JSON。
 
 ## 示例
 

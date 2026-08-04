@@ -32,17 +32,17 @@ Client                    Gateway
 
 常见方法和事件：
 
-| Category   | Examples                                                   | Notes                                        |
+| 类别       | 示例                                                       | 说明                                         |
 | ---------- | ---------------------------------------------------------- | -------------------------------------------- |
-| Core       | `connect`, `health`, `status`                              | `connect` 必须是第一个                      |
-| Messaging  | `send`, `agent`, `agent.wait`, `system-event`, `logs.tail` | 具有副作用的方法需要 `idempotencyKey`       |
-| Chat       | `chat.history`, `chat.send`, `chat.abort`                  | WebChat 使用这些                            |
-| Sessions   | `sessions.list`, `sessions.patch`, `sessions.delete`       | 会话管理                                     |
-| Automation | `wake`, `cron.list`, `cron.run`, `cron.runs`               | 唤醒和 cron 控制                             |
-| Nodes      | `node.list`, `node.invoke`, `node.pair.*`                  | Gateway WS 以及节点操作                     |
-| Events     | `tick`, `presence`, `agent`, `chat`, `health`, `shutdown`  | 服务端推送                                   |
+| 核心       | `connect`, `health`, `status`                              | `connect` 必须是第一个                       |
+| 消息传递   | `send`, `agent`, `agent.wait`, `system-event`, `logs.tail` | 具有副作用的方法需要 `idempotencyKey`       |
+| 聊天       | `chat.history`, `chat.send`, `chat.abort`                  | WebChat 使用这些                             |
+| 会话       | `sessions.list`, `sessions.patch`, `sessions.delete`       | 会话管理                                     |
+| 自动化     | `wake`, `cron.list`, `cron.run`, `cron.runs`               | 唤醒和 cron 控制                             |
+| 节点       | `node.list`, `node.invoke`, `node.pair.*`                  | Gateway WS 以及节点操作                     |
+| 事件       | `tick`, `presence`, `agent`, `chat`, `health`, `shutdown`  | 服务端推送                                   |
 
-权威的已公布 **discovery** 清单位于 `src/gateway/server-methods-list.ts`（`listGatewayMethods`, `GATEWAY_EVENTS`）。
+权威的已公布**发现**清单位于 `src/gateway/server-methods-list.ts`（`listGatewayMethods`, `GATEWAY_EVENTS`）。
 
 ## 模式定义所在位置
 
@@ -59,10 +59,13 @@ Client                    Gateway
 
 - `pnpm protocol:gen` 将 JSON Schema（draft-07）写入 `dist/protocol.schema.json`。
 - `pnpm protocol:gen:swift` 生成 Swift 网关模型。
+- `pnpm protocol:check:swift` 在不重写已提交内容的情况下验证 Swift 模型。
 - `pnpm protocol:gen:kotlin` 生成 Android 协议模型和常量。
-- `pnpm protocol:check` 检查注册表结构，运行所有三个生成器，并验证已提交的 Swift 和 Kotlin 输出（JSON Schema 输出是一个被 git 忽略的构建产物）。
+- `pnpm protocol:check` 检查注册表结构，运行全部三个生成器，并验证已提交的 Swift 和 Kotlin 输出（JSON Schema 输出是被 gitignore 忽略的构建产物）。
 
-## 这些 schema 在运行时如何使用
+当网关 schema 影响原生客户端时，运行 `pnpm protocol:gen:swift`，检查生成的差异，然后运行 `pnpm protocol:check:swift`。将 schema 和 `GatewayModels.swift` 的更新一起提交。稳定的解码行为应归入专门的 `GatewayModelsCompatibilityTests.swift` 回归测试中，而不是手写模型副本。
+
+## 架构在运行时的使用方式
 
 - **服务端**：每个传入的帧都会使用 AJV 进行验证。握手只接受其参数与 `ConnectParams` 匹配的 `connect` 请求。
 - **客户端**：JS 客户端会在使用事件帧和响应帧之前对其进行验证。
@@ -179,7 +182,7 @@ ws.on("message", (data) => {
 
 示例：添加一个新的 `system.echo` 请求，返回 `{ ok: true, text }`。
 
-1. **Schema（唯一真相来源）**
+1. **模式（唯一真相来源）**
 
 添加到 `packages/gateway-protocol/src/schema/system.ts`（或最接近的功能模块）：
 
@@ -195,7 +198,7 @@ export const SystemEchoResultSchema = Type.Object(
 );
 ```
 
-将这两个条目添加到最接近其语义的 `packages/gateway-protocol/src/schema/protocol-schema-fragment-*.ts` 文件中。如果该片段尚未使用所有者模块，请将其作为命名空间导入，然后将稳定的注册表名称映射到规范的 Schema 对象：
+将这两个条目添加到最接近其语义的 `packages/gateway-protocol/src/schema/protocol-schema-fragment-*.ts` 文件中。如果该片段尚未使用所有者模块，请将其作为命名空间导入，然后将稳定的注册表名称映射到规范的模式对象：
 
 ```ts
 import * as system from "./system.js";
@@ -238,7 +241,7 @@ export const systemHandlers: GatewayRequestHandlers = {
 
 将其注册到 `src/gateway/server-methods.ts` 中（该文件已经合并了 `systemHandlers`），然后把 `"system.echo"` 添加到 `src/gateway/server-methods-list.ts` 里的 `listGatewayMethods` 输入中。
 
-如果该方法可被 operator 或 node 客户端调用，还需要在 `src/gateway/method-scopes.ts` 中对其分类，这样作用域强制校验和 `hello-ok` 特性通告才能保持一致。
+如果该方法可被操作员或节点客户端调用，还需要在 `src/gateway/method-scopes.ts` 中对其分类，这样作用域强制校验和 `hello-ok` 特性通告才能保持一致。
 
 4. **重新生成**
 
@@ -278,7 +281,7 @@ Swift 生成器会输出：
 
 生成的 JSON Schema 是构建产物，不会提交到仓库。在包发布期间，当前的 beta schema 可在以下位置获取：
 
-- [`protocol.schema.json`](https://unpkg.com/@openclaw/gateway-protocol@beta/protocol.schema.json)
+- [`protocol.schema.json`](https://unpkg.com/@openclaw/gateway-protocol@beta/protocol.schema.json)。
 
 ## 当你更改 schema 时
 

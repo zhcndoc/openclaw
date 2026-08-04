@@ -17,40 +17,40 @@ read_when:
 
 ## 做梦会写入什么
 
-- **Machine state** in `memory/.dreams/`（recall store、phase signals、ingestion checkpoints、locks）。
-- 在接受 `MEMORY.md` 重写之前，SQLite 支持的插件状态中的 **Rewrite preimages**。
-- `DREAMS.md`（或现有的 `dreams.md`）中的 **Human-readable output**，以及 `memory/dreaming/<phase>/YYYY-MM-DD.md` 下可选的 phase report 文件。
+- `memory/.dreams/` 中的**机器状态**（回忆存储、阶段信号、摄取检查点、锁）。
+- 在接受 `MEMORY.md` 重写之前，SQLite 支持的插件状态中的**重写前映像**。
+- `DREAMS.md`（或现有的 `dreams.md`）中的**人类可读输出**，以及 `memory/dreaming/<phase>/YYYY-MM-DD.md` 下可选的阶段报告文件。
 
 长期提升仍然只写入 `MEMORY.md`。
 每个新提升的条目都会带有从候选项派生的尾随回忆元数据：在 `<!-- trigger: phrase one, phrase two -->` 中最多三个概念标签，以及一个范围为 1 到 10 的受限 `<!-- importance: N -->` 值。整合会保持现有带注释的条目逐字节不变，除非它明确地合并或取代它们。
 
 ## 阶段模型
 
-Dreaming 每次扫描会按顺序执行三个协作阶段：light -> REM -> deep。这些是内部实现阶段，不是用户可单独配置的模式。
+Dreaming 每次扫描会按顺序执行三个协作阶段：轻度 -> REM -> 深度。这些是内部实现阶段，不是用户可单独配置的模式。
 
 | 阶段  | 目的                                      | 持久写入          |
 | ----- | ----------------------------------------- | ----------------- |
-| Light | 对近期短期材料进行排序和整理                | 否                |
+| 轻度  | 对近期短期材料进行排序和整理                | 否                |
 | REM   | 反思主题和重复出现的想法                    | 否                |
-| Deep  | 对持久候选项进行评分并提升                   | 是（`MEMORY.md`） |
+| 深度  | 对持久候选项进行评分并提升                   | 是（`MEMORY.md`） |
 
 <AccordionGroup>
-  <Accordion title="Light 阶段">
+  <Accordion title="轻度阶段">
     - 读取近期短期回忆状态、每日记忆文件，以及可用时的脱敏会话转录。
     - 去重信号并整理候选行。
     - 当存储包含行内输出时，写入受管理的 `## Light Sleep` 块。
-    - 记录强化信号，供后续 deep 排名使用。
+    - 记录强化信号，供后续深度排名使用。
     - 从不写入 `MEMORY.md`。
 
   </Accordion>
   <Accordion title="REM 阶段">
     - 基于近期短期轨迹构建主题和反思摘要。
     - 当存储包含行内输出时，写入受管理的 `## REM Sleep` 块。
-    - 记录供 deep 排名使用的 REM 强化信号。
+    - 记录供深度排名使用的 REM 强化信号。
     - 从不写入 `MEMORY.md`。
 
   </Accordion>
-  <Accordion title="Deep phase">
+  <Accordion title="深度阶段">
     - 使用加权评分和阈值门控对候选项进行排序（`minScore`、`minRecallCount`、`minUniqueQueries` 必须全部通过）。
     - 在写入前从实时每日文件中重新获取片段，因此会跳过过时/已删除的片段。
     - 将通过门控的所有者和代理派生候选项连同当前的 `MEMORY.md` 一起传递给一个整合子代理。
@@ -93,7 +93,7 @@ Dreaming 会在 `DREAMS.md` 中保留一份叙事性的 **Dream Diary**。在每
 此外还有一条用于审查和恢复工作的有依据历史回填通道：
 
 <AccordionGroup>
-  <Accordion title="Backfill commands">
+  <Accordion title="回填命令">
     - `memory rem-harness --path ... --grounded` 预览来自历史 `YYYY-MM-DD.md` 笔记的有依据日记输出。
     - `memory rem-backfill --path ...` 将可逆的有依据日记条目写入 `DREAMS.md`。
     - `memory rem-backfill --path ... --stage-short-term` 将有依据的持久候选条目暂存到与正常深度阶段使用的相同短期证据存储中。
@@ -106,18 +106,11 @@ Dreaming 会在 `DREAMS.md` 中保留一份叙事性的 **Dream Diary**。在每
   </Accordion>
 </AccordionGroup>
 
-Session backfill 使用规范化保留的转录身份，包括
-跨轮换保留的会话。消息会按配置的
-dreaming 时区分桶，并与实时摄取的已跟踪消息哈希和信号
-上限共享，因此受限重试可以继续向前进行，而不会重新摄取先前消息。
-Rollback 会移除生成的产物，但保留那些摄取检查点。
-通过 `--archive-files` 提供的外来文件会被保守处理。它们
-嵌入的所有权字段由调用方控制，因此仍然不受信任；
-如果没有经过认证的来源契约，它们不能进入短期
-暂存。工具输出、网页内容以及非所有者回合也会被排除在
-规范的会话路径之外。
+会话回填使用规范的保留会话标识，包括在轮换期间保留的会话。消息会按配置的梦境时区分桶，并共享实时摄取所跟踪的消息哈希和信号上限。应用操作会在一条命令中排空有界批次，直至完成。回滚会移除生成的产物，以及这些批次所拥有的哈希和游标进度，从而允许再次暂存相同的候选条目。
 
-Control UI 在代理的 Memory 选项卡（Agents 页面）中提供相同的日记回填/重置流程，因此你可以在决定这些有依据候选条目是否值得晋升之前，先在梦境场景中检查结果。一个独立的有依据 Scene 分区会显示哪些已暂存的短期条目来自历史回放、哪些已晋升项目是 grounded-led，并允许你只清除仅有依据的已暂存条目，而不影响实时短期状态。
+通过 `--archive-files` 提供的外部文件会按保守方式处理。其中嵌入的所有权字段由调用方控制，因此仍被视为不可信；在没有经过身份验证的来源证明契约的情况下，它们无法进入短期暂存。工具输出、网页内容以及非所有者发言也会从规范会话路径中排除。
+
+Control UI 在代理的 Memory 选项卡（Agents 页面）中提供相同的日记回填/重置流程，因此你可以在决定这些有依据候选条目是否值得晋升之前，先在梦境场景中检查结果。一个独立的有依据场景分区会显示哪些已暂存的短期条目来自历史回放、哪些已晋升项目是由有依据内容主导的，并允许你只清除仅有依据的已暂存条目，而不影响实时短期状态。
 
 ## 深度排序信号
 
@@ -136,7 +129,7 @@ Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加�
 
 ## 调度
 
-启用后，`memory-core` 会自动管理一个用于完整 dreaming 扫描的 cron 任务，并在主运行时工作区以及任何已配置的代理工作区之间去重，因此子代理工作区的扩展不会排除主代理的 `DREAMS.md` 和记忆状态。
+启用后，`memory-core` 会自动管理一个用于完整梦境扫描的 cron 任务，并在主运行时工作区以及任何已配置的代理工作区之间去重，因此子代理工作区的扩展不会排除主代理的 `DREAMS.md` 和记忆状态。
 
 | 设置                 | 默认值        |
 | -------------------- | ------------- |
@@ -184,7 +177,7 @@ Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加�
   </Tab>
 </Tabs>
 
-## Slash 命令
+## 斜杠命令
 
 ```text
 /dreaming status
@@ -193,7 +186,7 @@ Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加�
 /dreaming help
 ```
 
-`/dreaming on` 和 `/dreaming off` 对于频道调用者需要所有者状态，或者对于 Gateway 客户端需要 `operator.admin`。`/dreaming status` 和 `/dreaming help` 是只读的。
+`/dreaming on` 和 `/dreaming off` 要求频道调用者拥有所有者权限，或者 Gateway 客户端具备 `operator.admin` 权限。`/dreaming status` 和 `/dreaming help` 为只读命令。
 
 ## CLI 工作流
 
@@ -218,7 +211,7 @@ Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加�
     ```
 
   </Tab>
-  <Tab title="REM harness 预览">
+  <Tab title="REM 测试工具预览">
     预览 REM 反思、候选事实和深度提升输出，而不写入任何内容：
 
     ```bash
@@ -257,7 +250,7 @@ Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加�
 大多数阶段策略、阈值和存储行为都是内部实现细节。有关完整键列表，请参见 [Memory 配置参考](/reference/memory-config#dreaming)。
 </Note>
 
-## Dreams UI
+## 梦境 UI
 
 启用后，Gateway 的 **Dreams** 标签页会显示：
 
@@ -266,11 +259,18 @@ Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加�
 - 短期、有依据、信号以及今日已提升数量
 - 下次计划运行时间
 - 一个独立的有依据 Scene 通道，用于暂存历史重放条目
-- 一个由 `doctor.memory.dreamDiary` 支持的可展开 Dream Diary 阅读器
+- 一个由 `doctor.memory.dreamDiary` 支持的可展开梦境日记阅读器
 
-## 相关
+当内置的 [`memory-wiki`](/plugins/memory-wiki) 插件启用后，日记视图会在 Dreams 旁新增两个子标签页：
+
+- **导入的洞察**：由外部历史导入（例如 `openclaw wiki chatgpt import`）提供的聚类洞察，供审核后再将其中任何内容转化为持久记忆
+- **记忆 Wiki**：记忆系统可以搜索并据此进行推理的已编译 Wiki——包括综合页面、实体页面和概念页面（以及承载声明、待解决问题或矛盾的来源和报告），并提供每页计数、完整资料库明细以及内联页面预览
+
+当 `memory-wiki` 未启用时，这两个子标签页都会显示启用提示。
+
+## 相关内容
 
 - [记忆](/concepts/memory)
-- [Memory CLI](/cli/memory)
+- [记忆 CLI](/cli/memory)
 - [记忆配置参考](/reference/memory-config)
 - [记忆搜索](/concepts/memory-search)

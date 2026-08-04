@@ -16,14 +16,15 @@ sidebarTitle: "Linux 服务器"
 
 <CardGroup cols={2}>
   <Card title="Azure" href="/install/azure">Linux 虚拟机</Card>
+  <Card title="Daytona" href="/install/daytona">带预览 URL 的云沙箱</Card>
   <Card title="DigitalOcean" href="/install/digitalocean">简单的付费 VPS</Card>
   <Card title="exe.dev" href="/install/exe-dev">带 HTTPS 代理的虚拟机</Card>
-  <Card title="Fly.io" href="/install/fly">Fly 机器</Card>
-  <Card title="GCP" href="/install/gcp">计算引擎</Card>
+  <Card title="Fly.io" href="/install/fly">Fly Machines</Card>
+  <Card title="GCP" href="/install/gcp">Compute Engine</Card>
   <Card title="Hetzner" href="/install/hetzner">Hetzner VPS 上的 Docker</Card>
   <Card title="Hostinger" href="/install/hostinger">一键设置的 VPS</Card>
   <Card title="Northflank" href="/install/northflank">一键式浏览器设置</Card>
-  <Card title="Oracle Cloud" href="/install/oracle">永久免费 ARM 层</Card>
+  <Card title="Oracle Cloud" href="/install/oracle">永久免费 ARM 层级</Card>
   <Card title="Railway" href="/install/railway">一键式浏览器设置</Card>
   <Card title="Raspberry Pi" href="/install/raspberry-pi">ARM 自托管</Card>
 </CardGroup>

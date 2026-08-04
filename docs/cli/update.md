@@ -80,7 +80,7 @@ openclaw update status --timeout 10
 | `--json`              | `false` | 输出机器可读的状态 JSON。 |
 | `--timeout <seconds>` | `3`     | 检查超时时间。                 |
 
-对于 extended-stable 软件包安装，status 会执行与前台更新相同的公共选择器和精确软件包验证。当已安装版本较新时，它可以报告 `ahead of extended-stable`。JSON 失败信息包含 `registry.reason`（`selector_missing`、`selector_query_failed`、`exact_package_mismatch` 或 `unsupported_git_channel`）。
+对于 extended-stable 软件包安装，状态会执行与前台更新相同的公共选择器和精确软件包验证。当已安装版本较新时，它可以报告 `ahead of extended-stable`。JSON 失败信息包含 `registry.reason`（`selector_missing`、`selector_query_failed`、`exact_package_mismatch` 或 `unsupported_git_channel`）。
 
 ## `update repair`
 
@@ -171,7 +171,7 @@ Gateway 核心自动更新器（在配置中启用时）会在实时 Gateway 请
     仅 dev。
   </Step>
   <Step title="预检构建（仅 dev）">
-    在临时 worktree 中运行 TypeScript 构建。如果 tip 失败，会向后回退最多 10 个提交以找到最新的可构建提交。设置 `OPENCLAW_UPDATE_PREFLIGHT_LINT=1` 也会在此预检阶段运行 lint；由于用户更新主机通常比 CI runner 更小，lint 会在受限的串行模式下运行。
+    在临时工作树中运行 TypeScript 构建。如果当前 tip 构建失败，则最多向前回溯 10 个提交，以查找最新的可构建提交。成功候选提交中按内容寻址的声明文件输出会被最终检出构建复用；rebase 后的源代码更改会自动使受影响的缓存组失效。设置 `OPENCLAW_UPDATE_PREFLIGHT_LINT=1` 还会在此预检阶段运行 lint；由于用户更新主机通常比 CI runner 更小，lint 会以受限的串行模式运行。
   </Step>
   <Step title="Rebase">
     在所选提交上执行 rebase（仅 dev）。
@@ -179,8 +179,8 @@ Gateway 核心自动更新器（在配置中启用时）会在实时 Gateway 请
   <Step title="Install dependencies">
     使用仓库的包管理器。对于 pnpm 检出，更新器会按需引导 `pnpm`（先通过 `corepack`，再回退到临时的 `npm install pnpm@11`），而不是在 pnpm 工作区内运行 `npm run build`。如果 pnpm 引导仍然失败，更新器会尽早停止，并返回特定于包管理器的错误，而不是尝试在该检出中运行 `npm run build`。
   </Step>
-  <Step title="构建 Control UI">
-    构建 gateway 和 Control UI。
+  <Step title="构建检出">
+    在最终检出中构建 Gateway 和 Control UI，各执行一次。仅当目标构建缺少这些资源，或 doctor 随后将其移除时，更新器才会运行独立的 Control UI 构建。
   </Step>
   <Step title="运行 doctor">
     `openclaw doctor` 作为最终的安全更新检查运行。
@@ -206,7 +206,7 @@ OpenClaw 也会回退。这些回退警告不会
 <Note>
 更新后、针对受管插件且同步路径能够绕开的同步失败（例如某个非关键插件的 npm 注册表不可达）会在核心更新成功后作为警告报告。JSON 结果会保留顶层更新 `status: "ok"`，并报告 `postUpdate.plugins.status: "warning"`，同时给出 `openclaw update repair` 和 `openclaw plugins inspect <id> --runtime --json` 的指引。意外的更新器或同步异常仍会使更新结果失败。先修复插件安装或更新错误，然后重新运行 `openclaw update repair`。当一次失败的更新使某个受管插件不可用时，OpenClaw 会禁用其运行时条目并重置活动槽位，但不会更改操作员编写的 `plugins.allow` 或 `plugins.deny` 策略。
 
-在逐插件同步步骤之后，`openclaw update` 会在 gateway 重启之前运行一个强制性的 **post-core convergence**（核心后收敛）流程：它会修复缺失的已配置插件负载，验证磁盘上每个_处于激活状态_的跟踪安装记录，并静态验证其 `package.json` 可被解析（以及任何明确声明的 `main` 是否存在）。来自该流程的失败，以及无效的配置快照，会返回 `postUpdate.plugins.status: "error"` 并将顶层更新 `status` 置为 `"error"`，因此 `openclaw update` 会以非零状态退出，并且 gateway _不会_ 在未验证的插件集下重启。错误信息包含结构化的 `postUpdate.plugins.warnings[].guidance` 行，指向 `openclaw update repair` 和 `openclaw plugins inspect <id> --runtime --json`。已禁用的插件条目，以及不是受信任来源关联的官方同步目标的记录，会在此处被跳过（与缺失负载检查所使用的 `skipDisabledPlugins` 策略一致），因此过期的禁用插件记录不会阻止本来有效的更新。
+在逐个插件同步步骤之后、Gateway 重启之前，`openclaw update` 会运行强制性的**核心更新后收敛**流程：修复缺失的已配置插件载荷，验证磁盘上每个_活动的_受跟踪安装记录，并静态验证其 `package.json` 可解析，且其中声明的 `openclaw.extensions` 条目可加载。当软件包未声明 OpenClaw 扩展时，该检查会改为验证其显式声明的 npm `main`。此流程中的失败以及无效的配置快照会返回 `postUpdate.plugins.status: "error"`，并将顶层更新 `status` 切换为 `"error"`，因此 `openclaw update` 会以非零状态退出，Gateway 也_不会_使用未经验证的插件集重启。错误信息会包含结构化的 `postUpdate.plugins.warnings[].guidance` 行，指向 `openclaw update repair` 和 `openclaw plugins inspect <id> --runtime --json`。已禁用的插件条目，以及未与受信任来源关联的官方同步目标记录，会在此处跳过（与缺失载荷检查所使用的 `skipDisabledPlugins` 策略一致），因此过时的已禁用插件记录不会阻止其他有效的更新。
 
 当更新后的 Gateway 启动时，插件加载仅进行验证：启动过程不会运行包管理器，也不会修改依赖树。包管理器的 `update.run` 重启会交给 CLI 托管服务路径处理，因此包替换发生在旧 Gateway 进程之外，而服务健康检查会决定该更新是否可以被报告为完成。
 </Note>
@@ -220,4 +220,4 @@ OpenClaw 也会回退。这些回退警告不会
 - `openclaw doctor`（在 git 检出上会提示先运行更新）
 - [开发渠道](/install/development-channels)
 - [更新](/install/updating)
-- [CLI 参考](/cli)
+- [CLI 参考](/cli)。

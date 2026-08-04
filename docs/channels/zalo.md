@@ -16,7 +16,7 @@ Zalo 在当前 OpenClaw 发行版中作为捆绑插件提供，因此打包构�
 - 安装：`openclaw plugins install @openclaw/zalo`
 - 锁定版本：`openclaw plugins install @openclaw/zalo@2026.6.11`
 - 从本地检出安装：`openclaw plugins install ./path/to/local/zalo-plugin`
-- 详情：[插件](/tools/plugin)
+- 详情：[插件](/tools/plugin)。
 
 ## 快速设置
 
@@ -88,24 +88,24 @@ Zalo 是一款面向越南市场的消息应用。其 Bot API 允许 Gateway 运
 - 默认解析：当配置了 `channels.zalo` 时，未设置的 `groupPolicy` 会解析为 `open`。当完全未配置 `channels.zalo` 时，运行时会关闭并回退到 `allowlist`。
 - 已报告的真实世界注意事项：在某些 Marketplace-bot 配置中，机器人根本无法被添加到群组中。如果你遇到这种情况，请使用你的机器人 Zalo Bot Platform 设置进行验证；这是平台侧的限制，而不是 OpenClaw 策略。
 
-## 长轮询 vs webhook
+## 长轮询 vs Webhook
 
-- 默认：长轮询（无需公网 URL）。
+- 默认：长轮询（无需公共 URL）。
 - Webhook 模式：设置 `channels.zalo.webhookUrl` 和 `channels.zalo.webhookSecret`。
   - Webhook URL 必须使用 HTTPS。
   - Webhook 密钥必须为 8-256 个字符。
-  - Zalo 会使用 `X-Bot-Api-Secret-Token` 请求头发送事件，并通过常量时间比较进行校验。
-  - Gateway HTTP 在 `channels.zalo.webhookPath` 处理 webhook 请求（默认为 webhook URL 的路径）。
-  - 请求必须使用 `Content-Type: application/json`（或 `+json` 媒体类型）。
-  - 仅在原始事件已持久化存储后才返回 HTTP 200；存储失败返回 HTTP 500。
-  - 根据 Zalo API 文档，getUpdates 轮询和 webhook 互斥。
+  - Zalo 会在请求中发送 `X-Bot-Api-Secret-Token` 标头，并使用恒定时间比较进行验证。
+  - 网关 HTTP 在 `channels.zalo.webhookPath` 处理 Webhook 请求（默认为 Webhook URL 的路径）。
+  - 请求必须使用 `Content-Type: application/json`（或带有 `+json` 的媒体类型）。
+  - 仅在原始事件已持久化存储后才返回 HTTP 200；存储失败时返回 HTTP 500。持久化成功的 `200` 响应会携带 `x-openclaw-delivery-accepted: durable`，因此反向代理可以要求该标头，以便将 OpenClaw 的接受状态与通用的 `200` 区分开（身份验证、验证和存储错误响应不会携带该标头）。
+  - 根据 Zalo API 文档，getUpdates 轮询和 Webhook 在每个 Zalo API 实例中互斥。
 
-## 지원되는 메시지类型
+## 支持的消息类型
 
-- 텍스트: 완전 지원, 2000자 단위로 분할합니다.
-- 미디어: 인바운드/아웃바운드, `mediaMaxMb` 제한을 받습니다.
-- प्रतिक्र응, 스레드, 투표, 로컬 명령: 플러그인은 지원하지 않습니다.
-- 스트리밍 전송: 플러그인은 블록 스트리밍 전송을 지원한다고 선언하지만, Zalo에는 특별한 아웃바운드 큐/병합 텍스트 튜닝 옵션이 없습니다(다른 일부 지역 채널과 다름); 이것이 당신의 사용 사례에서 중요하다면, 환경에서 현재 동작을 검증하세요.
+- 文本：完全支持，按每 2000 个字符进行分割。
+- 媒体：支持入站/出站，受 `mediaMaxMb` 限制。
+- 反应、线程、投票、本地命令：插件不支持。
+- 流式传输：插件声明支持块流式传输，但 Zalo 没有特殊的出站队列/文本合并调优选项（不同于其他一些区域频道）；如果这对你的使用场景很重要，请在你的环境中验证当前行为。
 
 ## 功能
 
@@ -142,13 +142,13 @@ openclaw message send --channel zalo --target 123456789 --message "hi"
 - 确认 secret 长度为 8-256 个字符
 - 确认网关 HTTP 端点在配置的路径上可访问
 - 确认没有同时运行 getUpdates 轮询（两者互斥）
-- 请求突发可能返回 HTTP 429（每个 path+IP 每 60 秒 120 个请求）；请退避后重试
+- 请求突发可能返回 HTTP 429（每个 path+IP 每 60 秒 120 个请求）；请退避后重试。
 
 ## 配置参考
 
 完整配置：[配置](/gateway/configuration)
 
-| Setting                                      | Description                                       | Default               |
+| 设置                                         | 描述                                              | 默认值                |
 | -------------------------------------------- | ------------------------------------------------- | --------------------- |
 | `channels.zalo.enabled`                      | 启用/禁用频道                                      | `true`                |
 | `channels.zalo.accounts.<id>.botToken`       | 来自 Zalo Bot Platform 的 Bot 令牌                | -                     |
@@ -177,4 +177,4 @@ openclaw message send --channel zalo --target 123456789 --message "hi"
 - [配对](/channels/pairing) - DM 身份验证和配对流程
 - [群组](/channels/groups) - 群聊行为和提及限制
 - [频道路由](/channels/channel-routing) - 消息的会话路由
-- [安全性](/gateway/security) - 访问模型和加固
+- [安全性](/gateway/security) - 访问模型和加固。

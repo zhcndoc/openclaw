@@ -6,30 +6,36 @@ read_when:
 title: "Xiaomi MiMo"
 ---
 
-Xiaomi MiMo 是 **MiMo** 模型的 API 平台。捆绑的 `xiaomi`
-插件（`enabledByDefault: true`，无需安装步骤）注册了两个文本
-提供者以及一个语音（TTS）提供者：
+Xiaomi MiMo 是 **MiMo** 模型的 API 平台。官方外部
+`xiaomi` 插件注册了两个文本提供商和一个语音（TTS）提供商：
 
 - `xiaomi` - 按需付费密钥（`sk-...`）
 - `xiaomi-token-plan` - 具有区域端点预设的 Token Plan 密钥（`tp-...`）
 
-| Property         | Value                                                                                                                                              |
+| 属性             | 值                                                                                                                                                 |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Provider ids     | `xiaomi`（按需付费），`xiaomi-token-plan`（Token Plan）                                                                                         |
-| Auth env vars    | `XIAOMI_API_KEY`, `XIAOMI_TOKEN_PLAN_API_KEY`                                                                                                      |
-| Onboarding flags | `--auth-choice xiaomi-api-key`, `--auth-choice xiaomi-token-plan-cn`, `--auth-choice xiaomi-token-plan-sgp`, `--auth-choice xiaomi-token-plan-ams` |
-| Direct CLI flags | `--xiaomi-api-key <key>`, `--xiaomi-token-plan-api-key <key>`                                                                                      |
-| API              | 兼容 OpenAI 的 chat completions（`openai-completions`）                                                                                          |
-| Speech contract  | `speechProviders: ["xiaomi"]`                                                                                                                      |
-| Base URLs        | 按需付费：`https://api.xiaomimimo.com/v1`; Token Plan：`token-plan-{cn,sgp,ams}.xiaomimimo.com/v1`                                            |
-| Default models   | `xiaomi/mimo-v2.5`, `xiaomi-token-plan/mimo-v2.5-pro`                                                                                              |
-| TTS default      | `mimo-v2.5-tts`，语音 `mimo_default`；voicedesign 模型 `mimo-v2.5-tts-voicedesign`                                                               |
+| 提供商 ID        | `xiaomi`（按需付费），`xiaomi-token-plan`（Token Plan）                                                                                           |
+| 认证环境变量     | `XIAOMI_API_KEY`, `XIAOMI_TOKEN_PLAN_API_KEY`                                                                                                      |
+| 引导配置标志     | `--auth-choice xiaomi-api-key`, `--auth-choice xiaomi-token-plan-cn`, `--auth-choice xiaomi-token-plan-sgp`, `--auth-choice xiaomi-token-plan-ams` |
+| 直接 CLI 标志    | `--xiaomi-api-key <key>`, `--xiaomi-token-plan-api-key <key>`                                                                                      |
+| API              | 兼容 OpenAI 的聊天补全（`openai-completions`）                                                                                                   |
+| 语音契约         | `speechProviders: ["xiaomi"]`                                                                                                                       |
+| 基础 URL         | 按需付费：`https://api.xiaomimimo.com/v1`; Token Plan：`token-plan-{cn,sgp,ams}.xiaomimimo.com/v1`                                             |
+| 默认模型         | `xiaomi/mimo-v2.5`, `xiaomi-token-plan/mimo-v2.5-pro`                                                                                               |
+| TTS 默认值       | `mimo-v2.5-tts`，语音 `mimo_default`；voicedesign 模型 `mimo-v2.5-tts-voicedesign`                                                                |
 
 ## 开始使用
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/xiaomi-provider
+    openclaw gateway restart
+    ```
+  </Step>
+
   <Step title="获取正确的密钥">
-    在 [Xiaomi MiMo 控制台](https://platform.xiaomimimo.com/#/console/api-keys) 中创建一个按需付费密钥，或者打开你的 Token Plan 订阅页面，复制对应区域的 OpenAI 兼容 base URL 以及匹配的 `tp-...` 密钥。
+    在 [小米 MiMo 控制台](https://platform.xiaomimimo.com/#/console/api-keys) 中创建按需付费密钥，或打开 Token Plan 订阅页面，复制区域对应的 OpenAI 兼容基础 URL 以及匹配的 `tp-...` 密钥。
   </Step>
 
   <Step title="运行 onboarding">
@@ -76,36 +82,39 @@ Onboarding 会验证密钥格式，并在将 `tp-...` 密钥输入按需付费�
 
 选择与 Xiaomi 订阅界面中显示的区域 base URL 匹配的 Token Plan 认证选项：
 
-| Auth choice             | Base URL                                   |
+| 认证选项                | Base URL                                   |
 | ----------------------- | ------------------------------------------ |
 | `xiaomi-token-plan-cn`  | `https://token-plan-cn.xiaomimimo.com/v1`  |
 | `xiaomi-token-plan-sgp` | `https://token-plan-sgp.xiaomimimo.com/v1` |
 | `xiaomi-token-plan-ams` | `https://token-plan-ams.xiaomimimo.com/v1` |
 
-| Model ref                         | Input       | Context   | Max output | Reasoning | Notes         |
+| 模型引用                         | 输入        | 上下文    | 最大输出   | 推理      | 备注         |
 | --------------------------------- | ----------- | --------- | ---------- | --------- | ------------- |
 | `xiaomi-token-plan/mimo-v2.5-pro` | 文本        | 1,048,576 | 131,072    | 是        | 默认模型       |
 | `xiaomi-token-plan/mimo-v2.5`     | 文本, 图像  | 1,048,576 | 131,072    | 是        | 多模态       |
 
-`xiaomi-token-plan` 需要一个区域 base URL 才能解析。支持的方式是使用打包的 Token Plan onboarding 选项，或显式提供带有 `baseUrl` 设置的 `models.providers.xiaomi-token-plan` 配置块；如果没有其中之一，则不会提供该 provider。
+`xiaomi-token-plan` 需要区域 base URL 才能解析。支持的方式是选择 Token Plan 开通选项，或使用将 `baseUrl` 设置为相应值的显式
+`models.providers.xiaomi-token-plan` 配置块；若不采用上述任一方式，则不会提供该提供商。
 
 ## 推理模型
 
 `mimo-v2.5` 和 `mimo-v2.5-pro` 支持
-OpenClaw 的 [`/think` 指令](/tools/thinking)，其级别包括 `off`、
+OpenClaw 的 [`/think 指令](/tools/thinking)，其级别包括 `off`、
 `minimal`、`low`、`medium`、`high`、`xhigh` 和 `max`（默认 `high`）。
 
 ## 文本转语音
 
-捆绑的 `xiaomi` 插件还会将 Xiaomi MiMo 注册为 `tts` 的语音提供商。它会调用 Xiaomi 的 chat-completions TTS 协议，将文本作为 `assistant` 消息发送，并将可选的风格指导作为 `user` 消息发送。
+`xiaomi` 插件还会将 Xiaomi MiMo 注册为 `tts` 的语音提供商。
+它会调用小米的聊天补全 TTS 接口契约，将文本作为
+`assistant` 消息发送，并将可选的风格指导作为 `user` 消息发送。
 
 | 属性 | 值                                       |
 | -------- | ---------------------------------------- |
-| TTS id   | `xiaomi`（`mimo` 别名）                 |
-| Auth     | `XIAOMI_API_KEY`                         |
+| TTS 标识   | `xiaomi`（`mimo` 别名）                 |
+| 认证     | `XIAOMI_API_KEY`                         |
 | API      | 带 `audio` 的 `POST /v1/chat/completions` |
-| Default  | `mimo-v2.5-tts`，voice `mimo_default`    |
-| Output   | 默认输出 MP3；配置后为 WAV               |
+| 默认值  | `mimo-v2.5-tts`，语音 `mimo_default`    |
+| 输出   | 默认输出 MP3；配置后为 WAV               |
 
 ```json5
 {
@@ -185,7 +194,7 @@ voicedesign 模型 `mimo-v2.5-tts-voicedesign` 会根据自然语言风格提示
 }
 ```
 
-定价和兼容性标志来自捆绑的插件清单，因此配置示例省略了 `cost` 和 `compat`，以避免与运行时行为不一致。
+定价和兼容性标志来自插件清单，因此配置示例省略了 `cost` 和 `compat`，以避免与运行时行为不一致。
 
 Token Plan：
 
@@ -224,11 +233,11 @@ Token Plan：
 }
 ```
 
-Token Plan 按固定订阅的 Credits 计费，而不是按每个 token 的美元定价，因此其捆绑目录行使用零美元成本，配置示例也省略了 `cost`。
+Token Plan 按固定订阅的 Credits 额度计费，而不是按每个 Token 的美元价格计费，因此其目录条目使用零美元成本，配置示例省略了 `cost`。
 
 <AccordionGroup>
   <Accordion title="自动注入行为">
-    当你的环境中设置了 `XIAOMI_API_KEY` 或存在认证配置文件时，`xiaomi` 提供程序会自动启用。`xiaomi-token-plan` 需要区域性 base URL，因此受支持的路径是捆绑的 Token Plan 入门选择，或显式的 `models.providers.xiaomi-token-plan` 配置块。
+    当环境中设置了 `XIAOMI_API_KEY` 或存在认证配置文件时，会自动启用 `xiaomi` 提供商。`xiaomi-token-plan` 需要区域专用的 base URL，因此支持的方式是选择 Token Plan onboarding，或显式配置 `models.providers.xiaomi-token-plan` 配置块。
   </Accordion>
 
   <Accordion title="模型详情">

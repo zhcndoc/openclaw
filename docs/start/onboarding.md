@@ -83,29 +83,26 @@ Claude Code 或 Codex 登录、`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`，或者
 
 如果 Gateway 主机上没有 Claude CLI 登录，但你想使用 Claude 订阅，请在任意
 安装了 Claude Code 的机器上运行 `claude setup-token`，然后将打印出的 token 作为
-**Anthropic setup-token** 粘贴到 **Connect with an API key or token** 中。
+**Anthropic setup-token** 粘贴到 **使用 API 密钥或 token 连接** 中。
 
-已安装的 Gemini CLI、Antigravity、Pi 和 OpenCode CLI 会在它们不能作为
-可复用的引导式设置推理路径被选中时显示为上下文信息。Gemini 和 Antigravity
-无法强制执行免工具推理探测。Pi 和 OpenCode 是完整代理的运行框架，而不是
-设置推理路径；它们的会话集成需要单独的运行时和插件设置。
+当 Pi 和 OpenCode 安装无法作为可复用的引导式设置推理路径进行选择时，可能会显示它们
+以供参考。它们是完整的代理工具链，而不是设置推理路径；其会话集成需要单独的运行时和插件设置。
+Gemini CLI 和 Antigravity 不会作为检测到的设置路径提供。
 
 你也可以通过提供方自己的 OAuth 或设备配对流程登录。
-内置选项包括 OpenAI/ChatGPT、OpenRouter、GitHub Copilot、Google
-Gemini CLI、xAI、MiniMax Global 和 CN，以及 Chutes。该列表来自
-Gateway 当前启用的文本推理提供方插件，而不是固定的应用列表，
-因此其他提供方无需添加特定于提供方的 macOS 代码也可以选择接入。
+内置选项包括 OpenAI/ChatGPT、OpenRouter、GitHub Copilot、xAI、
+MiniMax Global 和 CN，以及 Chutes。Google 可通过受支持的 AI Studio API 密钥路径使用。
+列表来自 Gateway 当前启用的文本推理提供方插件，而不是固定的应用列表，
+因此其他提供方无需添加特定于 macOS 的代码也可以选择加入。
 
-The manual key/token picker uses the same provider registry. In every route,
-the provider supplies its starter model and configuration; OpenClaw verifies
-the credential with the same live test before storing its auth profile. Next
-remains locked until one backend has passed, so the first agent chat cannot
-start without working inference. After that live check passes, OpenClaw becomes
-available to help configure the remaining workspace, Gateway, channels, and
-other optional features. When OpenClaw offers a short list of choices, the app
-shows native option cards; choosing one sends the selection, and **Skip for
-now** always leaves the choice optional. OpenClaw is also available later under
-Settings → OpenClaw.
+手动密钥/token 选择器使用相同的提供方注册表。在每条路径中，
+提供方都会提供其初始模型和配置；OpenClaw 会在保存其身份验证配置之前，
+使用相同的实时测试验证凭据。只有一个后端通过测试后，下一步按钮才会解锁，
+因此首次代理聊天无法在没有可用推理的情况下启动。实时检查通过后，
+OpenClaw 就可以帮助配置剩余的工作区、Gateway、频道和其他可选功能。
+当 OpenClaw 提供一个简短的选项列表时，应用会显示原生选项卡片；
+选择一个选项会发送该选择，而**暂时跳过**始终会保留该选项的可选性。
+之后也可以在“设置 → OpenClaw”中使用 OpenClaw。
 </Step>
 <Step title="导入记忆（检测到时显示）">
 对于本地 Gateway，上手流程会检查 Mac 上来自受支持 AI 工具的记忆：Claude Code

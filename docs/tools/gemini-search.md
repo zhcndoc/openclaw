@@ -1,15 +1,16 @@
 ---
-summary: "Gemini 使用 Google Search grounding 的网页搜索"
+summary: "使用 Google Search grounding 的 Gemini 网页搜索"
 read_when:
-  - 你想使用 Gemini 进行 web_search
-  - 你需要一个 GEMINI_API_KEY 或 models.providers.google.apiKey
+  - 你想使用 Gemini 进行网页搜索
+  - 你需要 GEMINI_API_KEY 或 models.providers.google.apiKey
   - 你想使用 Google Search grounding
+  - 你的 Gemini 网关需要请求标头
 title: "Gemini 搜索"
 ---
 
-OpenClaw 支持内置
-[Google Search grounding](https://ai.google.dev/gemini-api/docs/grounding) 的 Gemini 模型，
-它会返回由实时 Google Search 结果支持、带有引用的 AI 综合答案。
+OpenClaw 支持内置的
+[Google Search grounding](https://ai.google.dev/gemini-api/docs/grounding) Gemini 模型，
+它会返回由实时 Google 搜索结果支持、带有引用的 AI 综合答案。
 
 ## 获取 API 密钥
 
@@ -40,6 +41,14 @@ OpenClaw 支持内置
           webSearch: {
             apiKey: "AIza...", // 如果已设置 GEMINI_API_KEY 或 models.providers.google.apiKey，则可选
             baseUrl: "https://generativelanguage.googleapis.com/v1beta", // 可选；回退到 models.providers.google.baseUrl
+            headers: {
+              "X-Routing-Target": "staging",
+              "X-Gateway-Token": {
+                source: "env",
+                provider: "default",
+                id: "GEMINI_GATEWAY_TOKEN",
+              },
+            },
             model: "gemini-2.5-flash", // 默认
           },
         },
@@ -63,6 +72,26 @@ OpenClaw 支持内置
 `models.providers.google.baseUrl`。
 
 对于 gateway 安装，请将环境变量键放在 `~/.openclaw/.env` 中。
+
+### 请求标头
+
+当运营商网关需要额外的请求元数据时，设置
+`plugins.entries.google.config.webSearch.headers`。普通字符串值使用常规配置处理；
+它们不会仅仅因为是标头就自动被视为机密。当标头包含机密时，请使用如上所示的
+[SecretRef](/gateway/secrets) 值。OpenClaw 会在运行时解析该值，并对其应用现有的
+机密脱敏路径。
+
+Gemini 请求会保留对 `Content-Type`、`x-goog-api-key` 和 `x-goog-api-client` 的所有权；
+这些值会覆盖同名的已配置标头。不会继承 `models.providers.google.headers`，因为它们属于
+模型提供商端点，而该端点可能与 web-search 端点不同。
+
+空的普通字符串值是有效的。无效字段以及传输层所有或成帧相关的名称（例如
+`Content-Length`、`Host` 和 `Transfer-Encoding`）会导致当前搜索在缓存查找或网络 I/O
+之前失败。
+
+有效的标头名称和值会通过摘要对内存中的搜索缓存进行分区，因此两个路由目标不会共享结果。
+针对上述提供商所有名称配置的值会被忽略，也不会对缓存进行分区。在跨源重定向时，受保护的
+fetch 路径仅保留其标准安全重定向标头。
 
 ## 工作原理
 
@@ -88,11 +117,11 @@ Gemini 搜索支持 `query`、`freshness`、`date_after` 和 `date_before`。
 `date_after`/`date_before` 范围会设置 Gemini Google Search grounding 的
 `timeRangeFilter`。不支持 `country`、`language` 和 `domain_filter`。
 
-## Model Selection
+## 模型选择
 
-The default model is `gemini-2.5-flash` (fast and cost-effective). Any Gemini model that supports grounding can be used via `plugins.entries.google.config.webSearch.model`.
+默认模型是 `gemini-2.5-flash`（快速且经济高效）。任何支持 grounding 的 Gemini 模型都可以通过 `plugins.entries.google.config.webSearch.model` 使用。
 
-## Base URL 覆盖
+## 基础 URL 覆盖
 
 当 Gemini 网页搜索必须通过运营商代理或自定义的 Gemini 兼容端点路由时，
 请设置 `plugins.entries.google.config.webSearch.baseUrl`。如果未设置该项，
@@ -102,6 +131,6 @@ Gemini 网页搜索会复用 `models.providers.google.baseUrl`。纯粹的
 
 ## 相关内容
 
-- [Web Search 概览](/tools/web) -- 所有提供商和自动检测
-- [Brave Search](/tools/brave-search) -- 带摘要的结构化结果
-- [Perplexity Search](/tools/perplexity-search) -- 结构化结果 + 内容提取
+- [网络搜索概览](/tools/web) -- 所有提供商和自动检测
+- [Brave 搜索](/tools/brave-search) -- 带摘要的结构化结果
+- [Perplexity 搜索](/tools/perplexity-search) -- 结构化结果 + 内容提取

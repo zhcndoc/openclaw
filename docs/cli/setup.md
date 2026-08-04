@@ -29,14 +29,15 @@ title: "设置"
 如果现有的代理阵列会被重新映射，经典向导需要明确确认；
 非交互式 setup 会保留当前的 fleet 工作区并打印警告。
 
-引导式推理检测会在 macOS 或 Linux 的 Gateway 主机上运行。CLI
-和 macOS 应用调用的是同一个由 Gateway 负责的检测器，它会检查已配置的
-模型、受支持的 CLI 登录、API key 环境变量，以及已安装的 Ollama 或 LM Studio 模型。
-本自动流程不会下载本地模型。检测到的本地运行时会在 CLI 和 API key 候选项之后自动测试；
-当有多个本地模型可用时，OpenClaw 会优先选择最强的工具调用指令模型族。
-被选中的候选项必须先完成一次真实补全，其提供方和模型配置才会被保存。
-已安装的 Gemini、Antigravity、Pi 和 OpenCode CLI 也会被报告，
-即使它们不能作为引导式设置可复用的推理路线。
+引导式推理检测在 macOS 或 Linux 上的 Gateway 主机上运行。CLI
+和 macOS 应用调用同一个由 Gateway 管理的检测器，该检测器会检查已配置的
+模型、受支持的 CLI 登录、API 密钥环境变量，以及已安装的 Ollama 或 LM Studio
+模型。本地模型不会在此自动检测过程中下载。检测到的本地运行时会在 CLI 和 API
+密钥候选项之后自动进行测试；当有多个本地模型可用时，OpenClaw 会优先选择
+工具调用能力最强的 instruct 系列。选定的候选项必须先完成一次真实的补全请求，
+其提供商和模型配置才会被保存。
+当 Pi 和 OpenCode CLI 无法作为引导式设置的可复用推理路径时，也可能会将其
+报告出来以供参考。Gemini CLI 和 Antigravity 不会作为检测到的设置路径提供。
 
 `setup` 接受与 `openclaw onboard` 相同的 onboarding 标志，包括
 auth（`--auth-choice`、`--token`、provider key flags）、Gateway
@@ -107,9 +108,10 @@ openclaw setup --non-interactive --accept-risk --mode remote --remote-url wss://
 
 ## 说明
 
-- 在 OpenClaw 聊天中，`configure skills` 和 `configure web search` 会运行托管的技能和网络搜索设置流程；当需要凭证时，`open search wizard` 会转交给屏蔽终端向导。请参阅 [`openclaw setup` operations](/cli/openclaw#operations-and-approval)。
-- 完成基础设置后，运行 `openclaw onboard` 以获得完整的引导流程，运行 `openclaw configure` 进行有针对性的更改，或运行 `openclaw channels add` 添加频道账户。
-- 如果检测到 Hermes 状态，交互式 onboarding 可以自动提供迁移。导入式 onboarding 需要全新的设置；在 onboarding 之外，请使用 [Migrate](/cli/migrate) 进行 dry-run 计划、备份和覆盖模式。
+- 在交互式 OpenClaw 聊天中，`configure skills`、`configure web search` 和 `configure gateway` 会运行托管式设置流程。`open search wizard` 和 `open gateway wizard` 会将凭据输入交给带掩码的终端向导。Gateway 设置仅限本地且仅修改配置；之后请在聊天中使用 `restart gateway`，或在终端中使用 `openclaw gateway restart` 进行重启。请参阅 [`openclaw setup` 操作](/cli/openclaw#operations-and-approval)。
+- `import memory` 会将检测到的本地记忆复制到现有的默认代理工作区，但不会导入配置、凭据或技能。请先完成入门流程；聊天会报告部分复制和复制失败的情况，而不会默认认为操作成功。
+- 完成基础设置后，运行 `openclaw onboard` 以进行完整的引导式流程，运行 `openclaw configure` 进行针对性更改，或运行 `openclaw channels add` 添加频道账户。
+- 如果检测到 Hermes 状态，交互式入门流程可以自动提供迁移选项。导入入门要求全新设置；如需在入门流程之外执行试运行计划、备份和覆盖模式，请使用[迁移](/cli/migrate)。
 
 ## 相关
 

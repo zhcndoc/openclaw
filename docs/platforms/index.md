@@ -6,7 +6,7 @@ read_when:
 title: "平台"
 ---
 
-OpenClaw core 使用 TypeScript 编写。**Node 是必需的运行时**，因为
+OpenClaw 核心使用 TypeScript 编写。**Node 是必需的运行时**，因为
 规范状态存储使用 `node:sqlite`。Bun 仍可用于
 依赖安装和包脚本；请参见 [Bun](/install/bun)。
 
@@ -23,20 +23,21 @@ Linux 配套应用在计划中，但 Gateway 目前已完全支持。在 Windows
 
 ## VPS 和托管
 
-- VPS 中心: [VPS 托管](/vps)
-- Fly.io: [Fly.io](/install/fly)
-- Hetzner (Docker): [Hetzner](/install/hetzner)
-- GCP (Compute Engine): [GCP](/install/gcp)
-- Azure (Linux VM): [Azure](/install/azure)
-- exe.dev (VM + HTTPS proxy): [exe.dev](/install/exe-dev)
-- EasyRunner (Podman + Caddy): [EasyRunner](/platforms/easyrunner)
+- VPS 中心：[VPS 托管](/vps)
+- Azure（Linux 虚拟机）：[Azure](/install/azure)
+- Daytona（云沙箱）：[Daytona](/install/daytona)
+- EasyRunner（Podman + Caddy）：[EasyRunner](/platforms/easyrunner)
+- exe.dev（虚拟机 + HTTPS 代理）：[exe.dev](/install/exe-dev)
+- Fly.io：[Fly.io](/install/fly)
+- GCP（Compute Engine）：[GCP](/install/gcp)
+- Hetzner（Docker）：[Hetzner](/install/hetzner)
 
 ## 常用链接
 
-- 安装指南: [Getting Started](/start/getting-started)
-- Windows Hub: [Windows](/platforms/windows)
+- 安装指南: [开始使用](/start/getting-started)
+- Windows 中心: [Windows](/platforms/windows)
 - Gateway 运行手册: [Gateway](/gateway)
-- Gateway 配置: [Configuration](/gateway/configuration)
+- Gateway 配置: [配置](/gateway/configuration)
 - 服务状态: `openclaw gateway status`
 
 ## Gateway 服务安装（CLI）
@@ -52,7 +53,7 @@ Linux 配套应用在计划中，但 Gateway 目前已完全支持。在 Windows
 
 - macOS: LaunchAgent (`ai.openclaw.gateway`，或命名配置文件使用 `ai.openclaw.<profile>`)
 - Linux/WSL2: systemd 用户服务 (`openclaw-gateway[-<profile>].service`)
-- 原生 Windows: 计划任务 (`OpenClaw Gateway` 或 `OpenClaw Gateway (<profile>)`)，如果任务创建被拒绝，则回退为按用户的 Startup-folder 登录项
+- 原生 Windows: 计划任务 (`OpenClaw Gateway` 或 `OpenClaw Gateway (<profile>)`)，如果任务创建被拒绝，则回退为按用户的 Startup-folder 登录项。
 
 ## 相关内容
 

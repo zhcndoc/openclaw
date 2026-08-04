@@ -1,8 +1,8 @@
 ---
-summary: "会话仪表盘：架构与实现计划（技术设计，GA 前）"
+summary: "会话仪表盘：架构与实现计划（技术设计，正式发布前）"
 read_when:
-  - Implementing or reviewing the session dashboard (boards) feature
-  - Changing widget hosting, the widget bridge, or board storage
+  - 实现或审查会话仪表盘（面板）功能
+  - 更改小组件承载、组件桥接或面板存储
 title: "仪表盘架构"
 ---
 
@@ -36,19 +36,19 @@ title: "仪表盘架构"
 
 ## UX 流程
 
-- **升级：** agent 在任意聊天中调用 `show_widget` → widget 以内联方式渲染
-  在对话记录中，和现在一样 → 悬停显示 **Pin to dashboard** → widget
-  出现在该会话的 board 上。agent 也可以传入 `pin: true` 来实现同样效果。
-- **Board 视图：** 带有 board 的会话会获得一个正反切换（Chat / Dashboard）。
-  Board 视图 = tab 条（仅当 >1 个 tab 时）+ 流式网格 + 固定聊天面板。
-  聊天停靠栏可调整大小、可移动（左/右/底部），并且像侧边栏一样可折叠。
-  每个 tab 的停靠状态都会被记住。
-- **拖拽：** 用户拖动 widgets；网格会自动紧凑排列（widgets 向上浮动，相邻项重新流动）。
+- **升级：** 代理在任意聊天中调用 `show_widget` → 小组件以内联方式渲染  
+  在对话记录中，和现在一样 → 悬停显示 **固定到仪表盘** → 小组件  
+  出现在该会话的面板上。代理也可以传入 `pin: true` 来实现同样效果。
+- **面板视图：** 带有面板的会话会获得一个正反切换（聊天 / 仪表盘）。  
+  面板视图 = 标签栏（仅当 >1 个标签时）+ 流式网格 + 固定聊天面板。  
+  聊天停靠栏可调整大小、可移动（左 / 右 / 底部），并且像侧边栏一样可折叠。  
+  每个标签的停靠状态都会被记住。
+- **拖拽：** 用户拖动小组件；网格会自动紧凑排列（小组件向上浮动，相邻项重新流动）。  
   通过把手调整大小会吸附到尺寸步进。没有像素级定位——对任何人都没有。
-- **重置警告：** 在带有 board 的会话中执行 `/new` / `/reset` 时，会在 web UI 中请求确认（“上下文会重置，dashboard 会保留”）并保留 board。
-- **侧边栏：** 已固定的会话在拥有 board 时会渲染它们的正面视图。
-  Home 会话的 board 是默认的“agent dashboard”。
-- **交互**（三个层级，见下文）：静默状态事件、可见的 prompt 发送，以及自动化触发器。
+- **重置警告：** 在带有面板的会话中执行 `/new` / `/reset` 时，会在网页界面中请求确认（“上下文会重置，仪表盘会保留”）并保留面板。
+- **侧边栏：** 已固定的会话在拥有面板时会渲染它们的正面视图。  
+  Home 会话的面板是默认的“代理仪表盘”。
+- **交互**（三个层级，见下文）：静默状态事件、可见的提示发送，以及自动化触发器。
 
 ## 交互层级
 
@@ -101,7 +101,7 @@ MCP app 并没有定义 widget 模型；是 widget 获得了托管它们的能�
   不需要 gateway 介入。
 - **授权。** 未声明任何内容的 widget 会立即渲染（已沙箱化，
   `default-src 'none'`，逐条确认 prompt 发送）——与今天的内联聊天 widget 的信任等级相同。
-  声明了工具/origin 的 widget 会在 board 上进入 `pending`：一个占位卡片会以人类可读的方式列出这些内容，并提供一键 **Allow**/**Reject**。
+  声明了工具/origin 的 widget 会在 board 上进入 `pending`：一个占位卡片会以人类可读的方式列出这些内容，并提供一键 **允许**/**拒绝**。
   授权按 widget 名称生效；对于 `html` widget，它们是字节冻结的（sha256），而变更后的字节只有在声明缩小的情况下才保留授权。
 - **作者包装层。** 文档外壳注入 `window.openclaw.prompt`、`window.openclaw.state`、
   `window.openclaw.data` 和 `window.openclaw.cron`，作为稳定的作者 API。Dashboard 调用共享一条以 view-ticket 绑定的请求通道；尺寸上报和主题 token 仍然作为单独的主机通知存在。
@@ -126,7 +126,7 @@ MCP app 并没有定义 widget 模型；是 widget 获得了托管它们的能�
 
 ### 服务端来源的 widget（固定的 MCP app）
 
-在统一主机下，固定一个第三方 MCP app 只是一个内容来自服务端而不是存储中的 widget：`board_widgets` 保存的是描述符（`serverName`、`toolName`、`uiResourceUri`、来源 `toolCallId` + `sessionKey`），而不是 HTML 字节；board 会在聊天回合 10 分钟 TTL 之后重新 mint 该视图租约（在过期时重新抓取 `ui://` 资源）。聊天内联 MCP app 视图获得与 agent widget 相同的 **Pin to dashboard** 入口。重新打开的视图按设计今天就是只读；希望保持交互性的已固定 app，会获得对服务器 app 可见工具的持久授权（固定时会把明确的 allowlist 展示给操作者），并与 mint 运行解耦。未授权的固定项仍然只读——但对展示型 dashboard 仍然有用。v1 只固定到来源会话的 board；跨会话固定需要 lease broker，并需等待。请与 open PR #109807（`ui/message` composer 路由、主题/尺寸传播）协同。
+在统一主机下，固定一个第三方 MCP app 只是一个内容来自服务端而不是存储中的 widget：`board_widgets` 保存的是描述符（`serverName`、`toolName`、`uiResourceUri`、来源 `toolCallId` + `sessionKey`），而不是 HTML 字节；board 会在聊天回合 10 分钟 TTL 之后重新 mint 该视图租约（在过期时重新抓取 `ui://` 资源）。聊天内联 MCP app 视图获得与 agent widget 相同的 **固定到 dashboard** 入口。重新打开的视图按设计今天就是只读；希望保持交互性的已固定 app，会获得对服务器 app 可见工具的持久授权（固定时会把明确的 allowlist 展示给操作者），并与 mint 运行解耦。未授权的固定项仍然只读——但对展示型 dashboard 仍然有用。v1 只固定到来源会话的 board；跨会话固定需要 lease broker，并需等待。请与 open PR #109807（`ui/message` composer 路由、主题/尺寸传播）协同。
 
 ### WorkBoard 集成
 
@@ -141,10 +141,10 @@ WorkBoard 集成计划保持 cards 和 boards 由插件拥有，同时通过现�
 - `after: <widgetName>` 可选的排序锚点；省略 = 追加
 - 用户可自由拖拽/调整大小；相同的顺序+尺寸模型可往返保持一致。
 
-## 数据模型（每个 agent 的 DB）
+## 数据模型（每个代理的数据库）
 
 `agents/<agentId>/agent/openclaw-agent.sqlite` 中的新表
-（**需要提升 agent-DB 的 schema 版本——在此功能上线前需要运营方签字确认**）：
+（**需要提升代理数据库的架构版本——在此功能上线前需要运营方签字确认**）：
 
 ```sql
 CREATE TABLE board_tabs (
@@ -152,25 +152,25 @@ CREATE TABLE board_tabs (
   tab_id      TEXT NOT NULL,           -- slug
   title       TEXT NOT NULL,
   position    INTEGER NOT NULL,
-  chat_dock   TEXT NOT NULL DEFAULT 'right',  -- left|right|bottom|hidden
-  created_by  TEXT NOT NULL,           -- 'user' | 'agent'
+  chat_dock   TEXT NOT NULL DEFAULT 'right',  -- 左侧|右侧|底部|隐藏
+  created_by  TEXT NOT NULL,           -- '用户' | '代理'
   PRIMARY KEY (session_key, tab_id)
 ) STRICT;
 
 CREATE TABLE board_widgets (
   session_key  TEXT NOT NULL,
-  name         TEXT NOT NULL,          -- stable widget name
+  name         TEXT NOT NULL,          -- 稳定的组件名称
   tab_id       TEXT NOT NULL,
   title        TEXT,
-  html         BLOB NOT NULL,          -- wrapped document source
+  html         BLOB NOT NULL,          -- 包装后的文档源代码
   sha256       TEXT NOT NULL,
   revision     INTEGER NOT NULL,
   size_w       INTEGER NOT NULL,
   size_h       INTEGER NOT NULL,
-  position     INTEGER NOT NULL,       -- order within tab (auto-compact input)
-  manifest     TEXT NOT NULL DEFAULT '{}',  -- capability manifest JSON
-  grant_state  TEXT NOT NULL DEFAULT 'none', -- none|pending|granted|rejected
-  granted_sha  TEXT,                   -- byte-frozen grant
+  position     INTEGER NOT NULL,       -- 标签页内的顺序（自动压缩输入）
+  manifest     TEXT NOT NULL DEFAULT '{}',  -- 能力清单 JSON
+  grant_state  TEXT NOT NULL DEFAULT 'none', -- 无|待处理|已授予|已拒绝
+  granted_sha  TEXT,                   -- 字节冻结的授权
   created_by   TEXT NOT NULL,
   created_at   INTEGER NOT NULL,
   updated_at   INTEGER NOT NULL,
@@ -178,7 +178,7 @@ CREATE TABLE board_widgets (
 ) STRICT;
 ```
 
-Board 的存在 = `sessionKey` 对应的任何行。删除一个 session 会删除它的 board 行。`/new`/`/reset` 不会影响它们。
+面板的存在 = `sessionKey` 对应的任何行。删除一个会话会删除其面板行。`/new`/`/reset` 不会影响它们。
 
 ## 协议表面
 
@@ -214,15 +214,15 @@ RPC（核心方法表，`gateway-protocol` 中的 typebox schemas）：
 总共三个工具（核心工具，始终注册；渲染是否启用取决于当前的 `inline-widgets` 客户端能力）：
 
 - `show_widget { title, widget_code, name?, pin?, size?, tab?, after?,
-capabilities? }` — 按名称创建/更新；`pin` 会将其放到面板上。
-  如果没有 `name`/`pin`，其行为与现在完全一致（内联、临时）。
-- `dashboard { action, ... }` — 面板管理动词：`read`、`tab_create`、
+capabilities? }` — 按名称创建/更新；`pin` 将其放置到面板上。
+  不使用 `name`/`pin` 时，其行为与当前完全一致（内嵌、临时）。
+- `dashboard { action, ... }` — 面板管理操作：`read`、`tab_create`、
   `tab_update`、`tab_delete`、`tabs_reorder`、`widget_move`、`widget_remove`、
   `unpin`、`focus_tab`、`set_chat_dock`。
-- 现有的 `cron` 工具覆盖自动化层；无需新工具。
+- 现有的 `automations` 工具负责自动化层；无需新增工具。
 
 工具描述会教授 size/anchor 词汇和层级模型。系统会通过会话通知告知代理用户的一级事件，例如：
-`[dashboard] user clicked "Refresh" on widget weather (tab main)`。
+`[dashboard] 用户在小组件 weather（标签页 main）上点击了“刷新”。`
 
 ## 这替代了什么
 
@@ -240,16 +240,16 @@ false`，从未进入稳定版本（最早出现在 2026.7.2 beta 版中）。�
 
 ## 实施计划
 
-独立工作树，由 Codex 构建，按顺序 review+land。先 land 再修复。
+独立工作树，由 Codex 构建，按顺序审查并合入。先合入，再修复。
 
 | #   | 分支                                 | 范围                                                                                                                                                                              | 依赖于                           |
 | --- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| T1  | `claude/dashboard-remove-workspaces` | 删除 workspaces 插件 + UI + 文档 + i18n 键；doctor 清理规则                                                                                                                       | —                                |
-| T2  | `claude/dashboard-canvas-core`       | 将 widget 托管 + `show_widget` 提升到 core；canvas 插件保留 node tool；行为零变化                                                                                                 | —                                |
-| T3  | `claude/dashboard-domain`            | Agent-DB 表（schema bump）、`board.*` RPCs + 事件、`dashboard` 工具、`show_widget` pin/name/manifest 参数、tier-1 通知、reset 保留 board                                        | T2                               |
-| T4  | `claude/dashboard-ui`                | Board face + tab strip + 流式 auto-compact grid + chat dock（left/right/bottom/hidden）+ transcript pin 交互 + sidebar board face + reset 确认                                 | T3（通过 dev fixtures 先做 mock） |
-| T5  | `claude/dashboard-capabilities`      | Grant store/UI + byte freezing；将 `html` widgets 移到共享 sandbox host；host tools（`openclaw.prompt.send/state.emit/data.read/cron.trigger`）；`net` CSP；authoring shim | T3, T4                           |
-| T7  | `claude/dashboard-mcp-apps`          | `mcp-app` content kind：inline app views 上的 pin 交互、descriptor 存储、lease 重新签发/刷新、持久化 server-tool grants（复用已发布的 MCP Apps host）                            | T3, T4                           |
-| T6  | polish                               | 在 scratch gateway 上进行真实密钥的 Live E2E、截图、修复、面向用户的 `/web/dashboard` 重写、默认启用审查                                                                      | all                              |
+| T1  | `claude/dashboard-remove-workspaces` | 删除 workspaces 插件 + UI + 文档 + i18n 键；清理 doctor 规则                                                                                                                       | —                                |
+| T2  | `claude/dashboard-canvas-core`       | 将 widget 托管 + `show_widget` 提升到 core；canvas 插件保留节点工具；行为不变                                                                                                      | —                                |
+| T3  | `claude/dashboard-domain`            | Agent-DB 表（schema bump）、`board.*` RPC + 事件、`dashboard` 工具、`show_widget` 的 pin/name/manifest 参数、一级通知、重置时保留 board                                        | T2                               |
+| T4  | `claude/dashboard-ui`                | Board 界面 + 标签页条 + 流式自动紧凑网格 + 聊天停靠栏（左/右/底部/隐藏）+ transcript pin 交互 + 侧边栏 Board 界面 + 重置确认                                 | T3（通过开发 fixture 先做模拟） |
+| T5  | `claude/dashboard-capabilities`      | Grant 存储/UI + 字节冻结；将 `html` widgets 移到共享 sandbox 主机；主机工具（`openclaw.prompt.send/state.emit/data.read/cron.trigger`）；`net` CSP；创作 shim | T3, T4                           |
+| T7  | `claude/dashboard-mcp-apps`          | `mcp-app` 内容类型：inline app views 上的 pin 交互、描述符存储、lease 重新签发/刷新、持久化 server-tool grants（复用已发布的 MCP Apps 主机）                            | T3, T4                           |
+| T6  | polish                               | 在 scratch gateway 上使用真实密钥进行实时端到端测试、截图、修复、面向用户的 `/web/dashboard` 重写、默认启用审查                                                                      | all                              |
 
-每个仓库的验证规则：本地跑聚焦的 vitest，在 Crabbox/Testbox 上跑完整门禁，每次 land 前都要 `$autoreview`，T6 需要 live 证明。
+每个仓库的验证规则：本地运行聚焦的 vitest，在 Crabbox/Testbox 上运行完整门禁，每次合入前都要执行 `$autoreview`，T6 需要实时证明。

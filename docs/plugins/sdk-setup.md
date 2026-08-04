@@ -107,9 +107,9 @@ read_when:
 
 `openclaw.channel` 是用于运行时加载之前的频道发现和设置界面的轻量包元数据。
 
-### Channel-owned setup fields
+### 由频道拥有的设置字段
 
-Channel plugins should define setup fields once in runtime code with `defineChannelSetupContract(...)` and publish the matching serializable projection under `openclaw.channel.setup.fields`. The runtime definition infers the plugin-local input type, parses both guided and non-interactive values, and keeps channel-specific keys out of core types. Package metadata lets `openclaw channels add <channel-id> --help` and `openclaw channels add --channel <channel-id> --help` discover only the selected channel's options without loading the plugin.
+频道插件应在运行时代码中使用 `defineChannelSetupContract(...)` 一次性定义设置字段，并在 `openclaw.channel.setup.fields` 下发布匹配的可序列化投影。运行时定义会推断插件本地的输入类型，解析引导式和非交互式值，并将频道专属键排除在核心类型之外。包元数据使 `openclaw channels add <channel-id> --help` 和 `openclaw channels add --channel <channel-id> --help` 能够在不加载插件的情况下，仅发现所选频道的选项。
 
 ```ts
 import { defineChannelSetupContract } from "openclaw/plugin-sdk/channel-setup";
@@ -160,32 +160,32 @@ export const setupContract = defineChannelSetupContract({
 }
 ```
 
-Supported field kinds are `string`, `boolean`, `integer`, `string-list`, and `choice`. Use `sensitive: true` for credentials. Each field key must equal the camelCased attribute name of its long CLI flag, including any negated form, such as `apiToken` for `--api-token`. Boolean fields may add `cli.negatedFlags` when both positive and `--no-*` forms are needed. `channel`, `account`, and the account display `name` remain the shared control envelope.
+支持的字段类型包括 `string`、`boolean`、`integer`、`string-list` 和 `choice`。凭据请使用 `sensitive: true`。每个字段键必须等于其长 CLI 标志的驼峰式属性名称，包括任何否定形式，例如 `--api-token` 对应 `apiToken`。当同时需要正向形式和 `--no-*` 形式时，布尔字段可以添加 `cli.negatedFlags`。`channel`、`account` 以及账户显示名称 `name` 仍属于共享控制信封。
 
-The released `setup`/`ChannelSetupInput` adapter stays available for existing external plugins. New plugins should expose `setupContract`; OpenClaw always prefers it when both are present.
+已发布的 `setup`/`ChannelSetupInput` 适配器仍可供现有外部插件使用。新插件应公开 `setupContract`；当两者同时存在时，OpenClaw 始终优先使用它。
 
-| Field                                  | Type       | What it means                                                                 |
-| -------------------------------------- | ---------- | ----------------------------------------------------------------------------- |
-| `id`                                   | `string`   | Canonical channel id.                                                         |
-| `label`                                | `string`   | Primary channel label.                                                        |
-| `selectionLabel`                       | `string`   | Picker/setup label when it should differ from `label`.                        |
-| `detailLabel`                          | `string`   | Secondary detail label for richer channel catalogs and status surfaces.       |
-| `docsPath`                             | `string`   | Docs path for setup and selection links.                                      |
-| `docsLabel`                            | `string`   | Override label used for docs links when it should differ from the channel id. |
-| `blurb`                                | `string`   | Short onboarding/catalog description.                                         |
-| `order`                                | `number`   | Sort order in channel catalogs.                                               |
-| `aliases`                              | `string[]` | Extra lookup aliases for channel selection.                                   |
-| `preferOver`                           | `string[]` | Lower-priority plugin/channel ids this channel should outrank.                |
-| `systemImage`                          | `string`   | Optional icon/system-image name for channel UI catalogs.                      |
-| `selectionDocsPrefix`                  | `string`   | Prefix text before docs links in selection surfaces.                          |
-| `selectionDocsOmitLabel`               | `boolean`  | Show the docs path directly instead of a labeled docs link in selection copy. |
-| `selectionExtras`                      | `string[]` | Extra short strings appended in selection copy.                               |
-| `markdownCapable`                      | `boolean`  | Marks the channel as markdown-capable for outbound formatting decisions.      |
-| `exposure`                             | `object`   | Channel visibility controls for setup, configured lists, and docs surfaces.   |
-| `quickstartAllowFrom`                  | `boolean`  | Opt this channel into the standard quickstart `allowFrom` setup flow.         |
-| `forceAccountBinding`                  | `boolean`  | Require explicit account binding even when only one account exists.           |
-| `preferSessionLookupForAnnounceTarget` | `boolean`  | Prefer session lookup when resolving announce targets for this channel.       |
-| `setup`                                | `object`   | Serializable channel-owned setup fields used for lazy CLI option discovery.   |
+| 字段                                  | 类型       | 含义                                                                         |
+| ------------------------------------- | ---------- | ---------------------------------------------------------------------------- |
+| `id`                                   | `string`   | 规范频道 ID。                                                               |
+| `label`                                | `string`   | 主要频道标签。                                                               |
+| `selectionLabel`                       | `string`   | 当需要与 `label` 不同时，用于选择器/设置界面的标签。                         |
+| `detailLabel`                          | `string`   | 用于更丰富的频道目录和状态界面的次要详细标签。                               |
+| `docsPath`                             | `string`   | 用于设置和选择链接的文档路径。                                               |
+| `docsLabel`                            | `string`   | 当文档链接标签需要与频道 ID 不同时使用的覆盖标签。                            |
+| `blurb`                                | `string`   | 简短的入门/目录描述。                                                         |
+| `order`                                | `number`   | 频道目录中的排序顺序。                                                       |
+| `aliases`                              | `string[]` | 用于频道选择的额外查找别名。                                                 |
+| `preferOver`                           | `string[]` | 该频道应优先于的低优先级插件/频道 ID。                                       |
+| `systemImage`                          | `string`   | 可选的频道 UI 目录图标/系统图像名称。                                        |
+| `selectionDocsPrefix`                  | `string`   | 选择界面中文档链接前的前缀文本。                                             |
+| `selectionDocsOmitLabel`               | `boolean`  | 在选择文案中直接显示文档路径，而不是带标签的文档链接。                       |
+| `selectionExtras`                      | `string[]` | 附加到选择文案末尾的其他简短字符串。                                         |
+| `markdownCapable`                      | `boolean`  | 将频道标记为支持 Markdown，以用于出站格式化决策。                            |
+| `exposure`                             | `object`   | 用于控制频道在设置、已配置列表和文档界面中的可见性。                         |
+| `quickstartAllowFrom`                  | `boolean`  | 将该频道加入标准快速入门的 `allowFrom` 设置流程。                            |
+| `forceAccountBinding`                  | `boolean`  | 即使只有一个账户，也要求显式绑定账户。                                       |
+| `preferSessionLookupForAnnounceTarget` | `boolean`  | 为该频道解析通知目标时，优先使用会话查找。                                   |
+| `setup`                                | `object`   | 由频道拥有、用于延迟 CLI 选项发现的可序列化设置字段。                        |
 
 示例：
 
@@ -221,7 +221,7 @@ The released `setup`/`ChannelSetupInput` adapter stays available for existing ex
 
 - `configured`：在已配置/状态类列表界面中包含该频道
 - `setup`：在交互式设置/配置选择器中包含该频道
-- `docs`：在文档/导航界面中将该频道标记为面向公众
+- `docs`：在文档/导航界面中将该频道标记为面向公众。
 
 ### `openclaw.install`
 
@@ -266,27 +266,7 @@ The released `setup`/`ChannelSetupInput` adapter stays available for existing ex
   </Accordion>
 </AccordionGroup>
 
-### 延迟完整加载
-
-频道插件可以通过以下方式启用延迟加载：
-
-```json
-{
-  "openclaw": {
-    "extensions": ["./index.ts"],
-    "setupEntry": "./setup-entry.ts",
-    "startup": {
-      "deferConfiguredChannelFullLoadUntilAfterListen": true
-    }
-  }
-}
-```
-
-启用后，OpenClaw 会仅在监听前的启动阶段加载 `setupEntry`，即使对于已经配置好的频道也是如此。完整入口会在网关开始监听后加载。
-
-<Warning>
-只有当你的 `setupEntry` 在网关开始监听前注册了网关所需的一切内容时，才启用延迟加载（频道注册、HTTP 路由、网关方法）。如果完整入口承担了必需的启动能力，请保持默认行为。
-</Warning>
+### 设置时网关方法
 
 如果你的设置/完整入口注册了网关 RPC 方法，请将它们放在插件专用前缀下。保留的核心管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）仍由核心拥有，并始终规范化为 `operator.admin`。
 
@@ -342,7 +322,7 @@ The released `setup`/`ChannelSetupInput` adapter stays available for existing ex
 
 ## ClawHub 发布
 
-Skills 和 plugin packages 使用单独的 ClawHub 发布命令。对于 plugin packages，请使用包特定的命令：
+技能和插件包使用单独的 ClawHub 发布命令。对于插件包，请使用特定于包的命令：
 
 ```bash
 clawhub package publish your-org/your-plugin --dry-run
@@ -350,7 +330,7 @@ clawhub package publish your-org/your-plugin
 ```
 
 <Note>
-`clawhub skill publish <path>` 是用于发布 skill 文件夹的不同命令，不是 plugin package。请参阅 [Publishing on ClawHub](/clawhub/publishing)。
+`clawhub skill publish <path>` 是用于发布技能文件夹的不同命令，不是插件包。请参阅 [在 ClawHub 上发布](/clawhub/publishing)。
 </Note>
 
 ## Setup 入口
@@ -370,18 +350,16 @@ export default defineSetupPluginEntry(myChannelPlugin);
 将设置安全导出保留在侧车模块中的打包工作区频道，可以使用 `openclaw/plugin-sdk/channel-entry-contract` 中的 `defineBundledChannelSetupEntry(...)` 代替 `defineSetupPluginEntry(...)`。该打包契约还支持可选的 `runtime` 导出，因此设置阶段的运行时绑定可以保持轻量且明确。
 
 <AccordionGroup>
-  <Accordion title="OpenClaw 何时使用 setupEntry 而不是完整入口">
-    - 频道已禁用，但仍需要设置/引导界面。
-    - 频道已启用但尚未配置。
-    - 已启用延迟加载（`deferConfiguredChannelFullLoadUntilAfterListen`）。
+  <Accordion title="OpenClaw 何时使用 setupEntry，而不是完整入口">
+    - 频道已禁用，但需要设置/引导界面。
+    - 频道已启用，但尚未完成配置。
 
   </Accordion>
   <Accordion title="setupEntry 必须注册什么">
     - 频道插件对象（通过 `defineSetupPluginEntry`）。
-    - 在 gateway listen 之前所需的任何 HTTP 路由。
-    - 启动期间需要的任何 gateway 方法。
+    - 通过 `registerSetupRuntime` 声明的设置阶段运行时界面（如有需要）。
 
-    这些启动阶段的 gateway 方法仍应避免使用保留的核心管理命名空间，例如 `config.*` 或 `update.*`。
+    设置阶段的 gateway 方法仍应避开 `config.*` 或 `update.*` 等保留的核心管理命名空间。
 
   </Accordion>
   <Accordion title="setupEntry 不应包含什么">
@@ -397,25 +375,20 @@ export default defineSetupPluginEntry(myChannelPlugin);
 
 对于热路径的仅设置场景，当你只需要设置面的部分能力时，优先使用更细粒度的 setup 辅助接口，而不是更宽泛的 `plugin-sdk/setup` 总入口：
 
-| Import path                | Use it for                                                                                | Key exports                                                                                                                                                                                                                                                                                                           |
-| -------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `plugin-sdk/setup-runtime` | setup-time runtime helpers that stay available in `setupEntry` / deferred channel startup | `createSetupTranslator`, `createPatchedAccountSetupAdapter`, `createEnvPatchedAccountSetupAdapter`, `createSetupInputPresenceValidator`, `noteChannelLookupFailure`, `noteChannelLookupSummary`, `promptResolvedAllowFrom`, `splitSetupEntries`, `createAllowlistSetupWizardProxy`, `createDelegatedSetupWizardProxy` |
-| `plugin-sdk/setup-tools`   | setup/install CLI/archive/docs helpers                                                    | `formatCliCommand`, `detectBinary`, `extractArchive`, `resolveBrewExecutable`, `formatDocsLink`, `CONFIG_DIR`                                                                                                                                                                                                         |
+| Import path                | Use it for                                                     | Key exports                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plugin-sdk/setup-runtime` | setup-time runtime helpers that stay available in `setupEntry` | `createSetupTranslator`, `createPatchedAccountSetupAdapter`, `createEnvPatchedAccountSetupAdapter`, `createSetupInputPresenceValidator`, `noteChannelLookupFailure`, `noteChannelLookupSummary`, `promptResolvedAllowFrom`, `splitSetupEntries`, `createAllowlistSetupWizardProxy`, `createDelegatedSetupWizardProxy` |
+| `plugin-sdk/setup-tools`   | setup/install CLI/archive/docs helpers                         | `formatCliCommand`, `detectBinary`, `extractArchive`, `resolveBrewExecutable`, `formatDocsLink`, `CONFIG_DIR`                                                                                                                                                                                                         |
 
 当你想要完整的共享设置工具箱时，请使用更宽泛的 `plugin-sdk/setup` 接口，包括诸如 `moveSingleAccountChannelSectionToDefaultAccount(...)` 之类的配置补丁辅助工具。
 
-Use `createSetupTranslator(...)` for fixed setup wizard copy. It uses the first nonblank value from `OPENCLAW_LOCALE`, `LC_ALL`, `LC_MESSAGES`, and `LANG`, in that order, then falls back to English. Set `OPENCLAW_LOCALE=en` for an explicit English override. Keep plugin-specific setup text in plugin-owned code and use shared catalog keys only for common setup labels, status text, and official bundled plugin setup copy.
+使用 `createSetupTranslator(...)` 处理固定的设置向导文案。它会按顺序使用 `OPENCLAW_LOCALE`、`LC_ALL`、`LC_MESSAGES` 和 `LANG` 中第一个非空的值，然后回退到英语。设置 `OPENCLAW_LOCALE=en` 可显式指定使用英语。将插件专属的设置文本保留在插件自有代码中；共享目录键仅用于通用设置标签、状态文本以及官方内置插件的设置文案。
 
 setup 补丁适配器在导入时对热路径是安全的。其打包后的单账户提升契约面查找是懒加载的，因此导入 `plugin-sdk/setup-runtime` 不会在适配器真正被使用之前就急切地加载打包契约面的发现逻辑。
 
-### Channel-owned setup input fields
+### 频道自有的设置输入字段
 
-`ChannelSetupInput` is a generic envelope shared by setup callers and channel
-plugins. Its permanently typed fields are `name`, `token`, `tokenFile`,
-`useEnv`, `allowFrom`, and `defaultTo`. Additional plugin-owned keys can still
-be present on the runtime input object, but the shared type does not declare an
-index signature. Each plugin must declare and narrow its own setup fields or
-validate them with a plugin-owned schema at the adapter boundary:
+`ChannelSetupInput` 是由设置调用方和频道插件共享的通用封装。其永久类型化的字段为 `name`、`token`、`tokenFile`、`useEnv`、`allowFrom` 和 `defaultTo`。运行时输入对象中仍可以存在其他由插件自有的键，但共享类型不会声明索引签名。每个插件都必须声明并收窄其自身的设置字段，或在适配器边界处使用插件自有的 schema 对其进行验证：
 
 ```typescript
 import type { ChannelSetupAdapter, ChannelSetupInput } from "openclaw/plugin-sdk/channel-setup";
@@ -443,29 +416,23 @@ export const acmeSetupAdapter: ChannelSetupAdapter = {
 };
 ```
 
-Channel-specific fields that were previously declared directly on
-`ChannelSetupInput` remain temporarily typed for external source compatibility.
-They are deprecated. A 2026-07-22 registry sweep of 426 published out-of-tree
-channel plugins removed 21 fields with no readers and retained 22 with known
-readers. Each retained field is deleted as soon as no published plugin reads it;
-no version boundary is required. New and bundled plugins must not rely on this
-tier; declare the fields they own locally.
+此前直接声明在 `ChannelSetupInput` 上的频道专属字段，为兼容外部源代码，暂时仍保留类型定义。这些字段已被弃用。对 426 个已发布的外部频道插件进行的 2026-07-22 注册表扫描移除了 21 个没有读取方的字段，并保留了 22 个已知存在读取方的字段。一旦没有任何已发布插件读取某个保留字段，就会立即将其删除；无需等待版本边界。新的插件和内置插件不得依赖这一层；请在本地声明其自有字段。
 
-### Channel-owned single-account promotion
+### 频道自有的单账户提升
 
 当频道从顶层单账户配置升级到 `channels.<id>.accounts.*` 时，默认的共享行为会将被提升的账户作用域值移动到 `accounts.default`。
 
-Every channel plugin can extend or narrow that promotion through its setup adapter:
+每个频道插件都可以通过其设置适配器扩展或收窄该提升行为：
 
 - `singleAccountKeysToMove`：应移动到被提升账户中的额外顶层键
 - `namedAccountPromotionKeys`：当已存在命名账户时，仅这些键会移动到被提升账户；共享的策略/投递键保留在频道根部
 - `resolveSingleAccountPromotionTarget(...)`：选择哪个现有账户接收被提升的值
 
-The presence of `singleAccountKeysToMove` marks the promotion contract complete. Declare the field even when it is an empty array to opt out of legacy key promotion. Adapters that omit the field retain a reader-backed pre-declaration promotion tier for already-published plugins. The 2026-07-22 registry sweep removed 23 keys with no published dependents and retained six common keys plus the setup-only `rooms` key. Each retained key is deleted as soon as its published readers migrate to declarations; no version boundary is required.
+存在 `singleAccountKeysToMove` 即表示提升契约已完成。即使要传递空数组，也应声明该字段，以选择退出旧版键提升。省略该字段的适配器会保留一个由读取方支持的预声明前提升层，以兼容已经发布的插件。2026-07-22 的注册表扫描移除了 23 个没有已发布依赖方的键，并保留了六个通用键以及仅供设置使用的 `rooms` 键。一旦已发布的读取方迁移到声明中，就会立即删除每个保留键；无需等待版本边界。
 
-Declare `openclaw.setupFeatures.configPromotion: true` in the plugin package manifest when doctor must load these declarations from the lightweight bundled setup artifact. The setup-only plugin surface and the full channel plugin must expose the same declarations.
+当 doctor 必须从轻量级的内置设置产物中加载这些声明时，请在插件包清单中声明 `openclaw.setupFeatures.configPromotion: true`。仅供设置使用的插件界面和完整频道插件必须公开相同的声明。
 
-When calling `moveSingleAccountChannelSectionToDefaultAccount(...)` with an already resolved plugin, pass its setup adapter as `setupSurface`. Caller-supplied setup surfaces take precedence over loaded and bundled lookup, which keeps scoped or setup-only plugins independent of global registration.
+调用 `moveSingleAccountChannelSectionToDefaultAccount(...)` 时，如果已经解析出插件，请将其设置适配器作为 `setupSurface` 传入。调用方提供的设置界面优先于已加载和内置的查找结果，这使得作用域插件或仅供设置使用的插件不依赖全局注册。
 
 <Note>
 Matrix 是当前的打包示例。如果已经恰好存在一个命名的 Matrix 账户，或者 `defaultAccount` 指向一个现有的非规范键，例如 `Ops`，那么提升会保留该账户，而不是创建一个新的 `accounts.default` 条目。
@@ -576,8 +543,8 @@ const setupWizard: ChannelSetupWizard = {
 `ChannelSetupWizard` 也支持 `textInputs`、`dmPolicy`、`allowFrom`、`groupAccess`、`prepare`、`finalize` 等更多功能。完整的打包示例请参见 Discord 插件的 `src/setup-core.ts`。
 
 <AccordionGroup>
-  <Accordion title="Shared allowFrom prompts">
-    For DM allowlist prompts that only need the standard `note -> prompt -> parse -> merge -> patch` flow, prefer the shared setup helpers from `openclaw/plugin-sdk/setup`: `createPromptParsedAllowFromForAccount(...)` and `createTopLevelChannelParsedAllowFromPrompt(...)`.
+  <Accordion title="共享的 allowFrom 提示">
+    对于只需要标准 `note -> prompt -> parse -> merge -> patch` 流程的私信 allowlist 提示，优先使用 `openclaw/plugin-sdk/setup` 中的共享设置辅助函数：`createPromptParsedAllowFromForAccount(...)` 和 `createTopLevelChannelParsedAllowFromPrompt(...)`。
   </Accordion>
   <Accordion title="标准频道设置状态">
     对于仅在标签、分数和可选附加行上有所不同的频道设置状态块，优先使用 `openclaw/plugin-sdk/setup` 中的 `createStandardChannelSetupStatus(...)`，而不是在每个插件里手写相同的 `status` 对象。
@@ -605,10 +572,10 @@ const setupWizard: ChannelSetupWizard = {
   <Accordion title="基于二进制的设置辅助">
     对于基于二进制的设置 UI，优先使用共享的委派辅助函数，而不是在每个频道里重复同样的二进制/状态粘合代码：
 
-    - `createDetectedBinaryStatus(...)` for status blocks that vary only by labels, hints, scores, and binary detection
-    - `createCliPathTextInput(...)` for path-backed text inputs
-    - `createDelegatedSetupWizardProxy(...)` when `setupEntry` needs to forward status, prepare, or finalize behavior to a heavier full wizard lazily
-    - `createDelegatedTextInputShouldPrompt(...)` when `setupEntry` only needs to delegate a `textInputs[*].shouldPrompt` decision
+    - `createDetectedBinaryStatus(...)`：用于仅在标签、提示、分数和二进制检测方面有所不同的状态块
+    - `createCliPathTextInput(...)`：用于基于路径的文本输入
+    - `createDelegatedSetupWizardProxy(...)`：当 `setupEntry` 需要将状态、准备或完成行为延迟转发给更完整的安装向导时使用
+    - `createDelegatedTextInputShouldPrompt(...)`：当 `setupEntry` 只需要委派 `textInputs[*].shouldPrompt` 的判断时使用
 
   </Accordion>
 </AccordionGroup>
@@ -657,4 +624,4 @@ const setupWizard: ChannelSetupWizard = {
 
 - [构建插件](/plugins/building-plugins) — 分步入门指南
 - [插件 Manifest](/plugins/manifest) — 完整的 manifest schema 参考
-- [SDK 入口点](/plugins/sdk-entrypoints) — `definePluginEntry` 和 `defineChannelPluginEntry`
+- [SDK 入口点](/plugins/sdk-entrypoints) — `definePluginEntry` 和 `defineChannelPluginEntry`。

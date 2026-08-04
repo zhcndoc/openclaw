@@ -73,6 +73,8 @@ sidebarTitle: "图像生成"
 同一个工具同时处理文本到图像和参考图像编辑。对单个参考图像使用 `image`，对多个参考图像使用 `images`。对于 fal 上的 Krea 2 模型，这些参考图像会作为风格参考发送，而不是作为编辑输入。  
 当可用时，诸如 `quality`、`outputFormat` 和 `background` 之类的提供方支持的输出提示会被转发；当某个提供方未声明支持时，则会报告为被忽略。内置的透明背景支持是 OpenAI 特有的；其他提供方如果其后端输出了 PNG alpha 通道，仍可能保留该通道。
 
+OpenAI 通过直接的 Images API 或 Codex Responses 后端，支持文本到图像生成和参考图像编辑使用 `low` 和 `auto` 内容审核。对于 CLI 请求，请将 `--openai-moderation low|auto` 传递给 `openclaw infer image generate` 或 `openclaw infer image edit`。
+
 ## 支持的提供方
 
 | 提供方            | 默认模型                                | 编辑支持                          | 认证                                                  |
@@ -102,13 +104,13 @@ sidebarTitle: "图像生成"
 
 ## 提供方能力
 
-| Capability            | ComfyUI            | DeepInfra | fal                                            | Google         | Microsoft Foundry | MiniMax               | OpenAI         | Vydra | xAI            |
+| 能力                  | ComfyUI            | DeepInfra | fal                                            | Google         | Microsoft Foundry | MiniMax               | OpenAI         | Vydra | xAI            |
 | --------------------- | ------------------ | --------- | ---------------------------------------------- | -------------- | ----------------- | --------------------- | -------------- | ----- | -------------- |
-| Generate (max count)  | 1                  | 4         | 4                                              | 4              | 1                 | 9                     | 4              | 1     | 4              |
-| Edit / reference      | 1 image (workflow) | 1 image   | Flux: 1; GPT: 10; Krea style refs: 10; NB2: 14 | Up to 5 images | 1 image           | 1 image (subject ref) | Up to 5 images | -     | Up to 3 images |
-| Size control          | -                  | ✓         | ✓                                              | ✓              | ✓                 | -                     | Up to 4K       | -     | -              |
-| Aspect ratio          | -                  | -         | ✓                                              | ✓              | -                 | ✓                     | -              | -     | ✓              |
-| Resolution (1K/2K/4K) | -                  | -         | ✓                                              | ✓              | -                 | -                     | -              | -     | 1K, 2K         |
+| 生成（最大数量）      | 1                  | 4         | 4                                              | 4              | 1                 | 9                     | 4              | 1     | 4              |
+| 编辑 / 参考           | 1 张图片（工作流） | 1 张图片  | Flux：1；GPT：10；Krea 风格参考：10；NB2：14 | 最多 5 张图片  | 1 张图片          | 1 张图片（主体参考） | 最多 5 张图片  | -     | 最多 3 张图片  |
+| 尺寸控制              | -                  | ✓         | ✓                                              | ✓              | ✓                 | -                     | 最大 4K        | -     | -              |
+| 宽高比                | -                  | -         | ✓                                              | ✓              | -                 | ✓                     | -              | -     | ✓              |
+| 分辨率（1K/2K/4K）    | -                  | -         | ✓                                              | ✓              | -                 | -                     | -              | -     | 1K、2K         |
 
 ## 工具参数
 
@@ -251,7 +253,15 @@ OpenAI、OpenRouter 和 Google 通过 `images` 参数支持最多 5 张参考图
     `aspectRatio` 或 `resolution`；在可能的情况下，OpenClaw 会将这些参数映射为受支持的 `size` 值，否则工具会将其报告为
     被忽略的覆盖项。
 
-    OpenAI 特定选项位于 `openai` 对象下：
+    对于直接的 OpenAI Images API 请求，`gpt-image-2` 及其
+    `gpt-image-2-2026-04-21` 快照会保留有效的显式
+    `WIDTHxHEIGHT` 尺寸，而不是将其调整为预设值。两个
+    维度都必须是 16 的倍数，且都不得超过 3840 像素，
+    宽高比不得超过 3:1，图像像素数必须介于
+    655,360 和 8,294,400 之间。例如，`1024x640` 是
+    有效的。当仅指定 `aspectRatio` 时，OpenClaw 仍会选择最接近的受支持尺寸。
+
+    OpenAI 专属选项位于 `openai` 对象中：
 
     ```json
     {
@@ -469,10 +479,14 @@ openclaw infer image generate \
   </Tab>
 </Tabs>
 
-相同的 `--output-format`、`--background`、`--quality` 和
-`--openai-moderation` 标志也可用于 `openclaw infer image edit`；`--openai-background` 仍然是一个 OpenAI 特定别名。除 OpenAI 之外的内置提供方
-目前没有声明显式的背景控制，因此
-对于它们，`background: "transparent"` 将被报告为被忽略。
+`--output-format`、`--background` 和 `--quality` 标志同样适用于
+`openclaw infer image edit`；`--openai-background` 仍是一个
+OpenAI 专用别名。对 OpenAI 图像生成和参考图编辑均可使用
+`--openai-moderation low|auto`。直接的 OpenAI Images API 以及
+ChatGPT/Codex OAuth Responses 后端都支持 moderation 提示。
+除 OpenAI 外，当前捆绑的其他提供商均未声明
+显式的背景控制，因此对它们而言，`background: "transparent"` 会报告为
+已忽略。
 
 ## 相关内容
 
@@ -486,4 +500,4 @@ openclaw infer image generate \
 - [Vydra](/providers/vydra) - Vydra 图像、视频和语音设置
 - [xAI](/providers/xai) - Grok 图像、视频、搜索、代码执行和 TTS 设置
 - [配置参考](/gateway/config-agents#agent-defaults) - `imageGenerationModel` 配置
-- [模型](/concepts/models) - 模型配置和故障转移
+- [模型](/concepts/models) - 模型配置和故障转移。

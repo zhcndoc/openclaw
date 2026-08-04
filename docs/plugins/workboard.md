@@ -14,13 +14,13 @@ Workboard 的设计刻意保持小巧：它只跟踪一个 OpenClaw Gateway 的�
 
 ## 启用它
 
-Workboard 已捆绑，但默认是禁用的：
+Workboard 已捆绑，但默认处于禁用状态：
 
-1. 在 Control UI 中打开 **Plugins**，或使用相对于
+1. 在 Control UI 中打开 **插件**，或使用相对于
    已配置 Control UI 基础路径的 `/settings/plugins`。例如，基础路径为 `/openclaw` 时，
    使用 `/openclaw/settings/plugins`。
-2. 找到 **Workboard** 并选择 **Enable**。由于 Workboard 已包含在
-   OpenClaw 中，因此不需要 **Install** 操作。
+2. 找到 **Workboard** 并选择 **启用**。由于 Workboard 已包含在
+   OpenClaw 中，因此不需要执行 **安装** 操作。
 3. 如果 UI 提示需要重启，请重启 Gateway。
 
 在插件运行时加载后，Workboard 选项卡会出现在仪表板导航中。
@@ -39,8 +39,7 @@ openclaw dashboard
 
 ## 配置
 
-Workboard 没有插件特定的配置。使用标准
-插件条目启用/禁用它：
+Workboard 没有特定于插件的配置。使用标准的插件条目启用/禁用它：
 
 ```json5
 {
@@ -69,7 +68,7 @@ openclaw gateway restart
 | `labels`    | 自由格式字符串                                                                                             |
 | `agentId`   | 可选分配的代理                                                                                       |
 | linked refs | 可选的任务、运行、会话或源 URL                                                                    |
-| `execution` | 针对从卡片启动的 Codex/Claude 运行的可选元数据（engine、mode、model、session、run id、status） |
+| `execution` | 针对从卡片启动的 Codex/Claude 运行的可选元数据（engine、mode、model、session、run id、status）                    |
 
 卡片还携带用于尝试、评论、链接、证明、
 制品、自动化设置、附件、工作进程日志、工作进程协议
@@ -91,17 +90,12 @@ openclaw gateway restart
 事件只包含存储时钟周期和修订号；随后 UI 会通过正常的 `operator.read` RPC
 重新读取规范化卡片。多个修订会合并为
 一次后续读取。Workboard 会在卡片被拖动、
-编辑或写入时延迟该读取，然后在本地交互结束后恢复。重新连接时总会执行一次规范化重新加载。没有常规的整卡轮询，**Refresh**
+编辑或写入时延迟该读取，然后在本地交互结束后恢复。重新连接时总会执行一次规范化重新加载。没有常规的整卡轮询，**刷新**
 仍可作为手动恢复手段。
 
-When more than one board exists, the toolbar includes a **Board** filter backed
-by persisted board metadata rather than only the currently visible cards. Empty
-and archived boards therefore remain selectable. Cards without an explicit
-board id belong to the canonical `default` board. Each board has a canonical
-`/workboard/<boardId>` page that can be bookmarked, shared, or pinned in the
-sidebar. The previously shipped `/workboard?board=<boardId>` form remains a
-compatibility alias and redirects to that page while preserving other query
-parameters. Choosing **All boards** returns to `/workboard`.
+当存在多个看板时，工具栏会包含一个由已持久化的看板元数据支持的**看板**筛选器，而不仅仅依赖当前可见的卡片。因此，空看板和已归档看板仍然可以被选择。没有显式看板 id 的卡片属于规范的 `default` 看板。每个看板都有一个规范的
+`/workboard/<boardId>` 页面，可添加书签、共享或固定到侧边栏。之前发布的
+`/workboard?board=<boardId>` 形式仍作为兼容别名保留，并在保留其他查询参数的同时重定向到该页面。选择**所有看板**会返回 `/workboard`。
 
 卡片存储在插件自身的 Gateway 状态中，并随着该 Gateway 的其余 OpenClaw 状态一起移动（见 [存储](#storage)）。
 
@@ -142,24 +136,9 @@ parameters. Choosing **All boards** returns to `/workboard`.
 | `workboard_move`                                                                                                                                 | 将卡片移动到另一种状态；已认领的卡片需要调用方的代理认领作用域。                                                                                                      |
 | `workboard_dispatch`                                                                                                                             | 在不启动工作者的情况下，推动依赖提升或清理过期认领；工作者启动使用 Gateway 或斜杠命令分派。                                                        |
 
-Proof statuses are worker-reported outcomes, not independent verification. A `passed`
-entry means the worker reports that its command or check succeeded; consumers that need
-an independent quality gate should inspect the attached command, URL, or artifact and
-run their own verifier. `workboard_proof` returns the new record's `proofId`. When
-`workboard_complete` reports that same proof's terminal status, pass `proofId` so the
-pending record is resolved in place without losing its identity or timestamp. A proof that
-already has the same terminal status is reused unchanged. Completion proof without
-`proofId` remains append-only, so a later retry cannot rewrite older history merely because
-its command or note is identical.
+证明状态是工作者报告的结果，而非独立验证。`passed` 条目表示工作者报告其命令或检查已成功；需要独立质量门禁的使用者应检查所附的命令、URL 或工件，并运行自己的验证器。`workboard_proof` 会返回新记录的 `proofId`。当 `workboard_complete` 报告同一证明的终止状态时，传入 `proofId`，即可在原位置解决待处理记录，同时保留其身份和时间戳。已经具有相同终止状态的证明将原样复用。不带 `proofId` 的完成证明仍采用追加模式，因此后续重试不会仅仅因为命令或备注相同就重写较早的历史记录。
 
-Claimed cards reject agent-tool mutations from other agents unless the caller
-holds the claim token returned by `workboard_claim`. Every card returned by an
-agent tool or Gateway RPC call redacts `metadata.claim.token` to `[redacted]`
-(the token itself is returned once, top-level, only from `workboard_claim`),
-so dashboard operators and other agents can inspect claim state without ever
-seeing a usable token. Recovery goes through
-`workboard_promote`/`workboard_reassign`/`workboard_reclaim`, which do not
-require the token.
+已认领的卡片会拒绝来自其他代理的代理工具变更，除非调用方持有 `workboard_claim` 返回的认领令牌。代理工具或 Gateway RPC 调用返回的每张卡片都会将 `metadata.claim.token` 脱敏为 `[redacted]`（令牌本身仅从 `workboard_claim` 顶层返回一次），因此控制面板操作员和其他代理可以检查认领状态，而不会看到可用的令牌。恢复操作通过 `workboard_promote`/`workboard_reassign`/`workboard_reclaim` 进行，这些操作不需要令牌。
 
 ## 调度
 
@@ -169,7 +148,7 @@ OpenClaw 子代理会话仍然负责执行。一次调度流程：
 1. 提升依赖已就绪的卡片。
 2. 在就绪卡片上记录调度元数据。
 3. 阻止已过期的认领或超时运行。
-4. 将 बोर्ड 配置的分诊卡标记为编排候选。
+4. 将看板配置的分诊卡标记为编排候选。
 5. 认领一小批就绪卡片，并通过
    Gateway 子代理运行时启动 worker 运行。
 
@@ -298,32 +277,32 @@ Create、move 和 dispatch 在聊天界面上需要所有者权限，或者使�
 5. 在 agent 工作时，从卡片打开关联的 session。
 6. 让 lifecycle sync 将运行中的工作移动到 `review`/`blocked`，然后在被接受时手动将卡片移至 `done`。
 
-### Session-board widgets
+### 会话看板小组件
 
-Workboard ships two native widgets for session dashboards (see
-[Dashboards](/web/dashboards)). The agent pins them with its `dashboard` tool
-using `content: { kind: "plugin", pluginKind, props }`, and they render as
-first-party UI with live data — no sandbox frame or capability grant:
+Workboard 为会话仪表板提供两个原生小组件（参见
+[仪表板](/web/dashboards)）。agent 使用其 `dashboard` 工具并通过
+`content: { kind: "plugin", pluginKind, props }` 固定这些小组件；它们会以带有实时数据的一等 UI 组件进行渲染——无需沙盒框架或能力授权：
 
-- `workboard:card` with `props: { cardId }` shows one card with its status
-  control, priority, and assigned agent.
-- `workboard:mini` with optional `props: { boardId, limit }` shows per-status
-  counts plus the top ready/running cards, and links to the full board page.
-  Without `boardId` it aggregates every board; with `boardId` it scopes to that
-  board (cards created without an explicit board id live on `default`).
+- `workboard:card` 配合 `props: { cardId }` 显示一张卡片，其中包含其状态
+  控件、优先级和分配的 agent。
+- `workboard:mini` 可选配 `props: { boardId, limit }`，显示各状态的
+  数量、排名靠前的 ready/running 卡片，并链接到完整的看板页面。
+  不提供 `boardId` 时，它会汇总所有看板；提供 `boardId` 时，它会限定在
+  该看板内（未明确指定看板 id 创建的卡片会归属于 `default`）。
 
-## Diagnostics
+## 诊断
 
 诊断结果由本地卡片元数据计算得出。内置检查会标记：
 
 | 类型                        | 条件                                                                           |
 | --------------------------- | ------------------------------------------------------------------------------ |
-| `stranded_ready`            | 分配为 `todo`/`backlog`/`ready` 的卡片超过 1 小时未更新。                       |
-| `running_without_heartbeat` | `running` 卡片在超过 20 分钟内没有领取心跳或执行更新。                           |
-| `blocked_too_long`          | `blocked` 卡片超过 24 小时未更新。                                              |
-| `repeated_failures`         | 卡片跟踪的失败次数达到 2 次或更多。                                              |
-| `missing_proof`             | `done` 卡片没有证明、产物或附件。                                                |
-| `orphaned_session`          | 带有 `sessionKey` 但没有 `execution` 元数据的 `running` 卡片。                  |
+| `stranded_ready`            | 已分配的 `todo`/`backlog`/`ready` 卡片超过 1 小时未更新。             |
+| `running_without_heartbeat` | `running` 卡片超过 20 分钟没有认领心跳或执行更新。 |
+| `blocked_too_long`          | `blocked` 卡片超过 24 小时未更新。                                   |
+| `repeated_failures`         | 卡片记录的失败次数达到 2 次或以上。                                |
+| `missing_proof`             | `done` 卡片没有证明、工件或附件。                          |
+| `orphaned_session`          | 具有 `sessionKey` 但没有 `execution` 元数据的 `running` 卡片。                |
+| `archived_but_active`       | 已归档卡片仍处于任何非 `done` 生命周期状态。                      |
 
 ## 权限
 
@@ -339,7 +318,7 @@ operator 访问连接的浏览器可以检查看板，但不能修改卡片。�
 
 ## 存储
 
-Workboard 将持久化数据存储在 OpenClaw 状态目录下一个由插件拥有的关系型 SQLite 数据库中：看板、卡片、标签、生命周期事件、运行尝试、评论、依赖链接、证明、工件引用、附件元数据和二进制内容、诊断信息、通知、worker 日志、协议状态以及订阅都保存在 Workboard 的表中（而不是插件的键值条目中）。卡片导出会保留看板叙事内容，而不会内联附件二进制内容。
+Workboard 将持久化数据存储在 OpenClaw 状态目录下一个由插件拥有的关系型 SQLite 数据库中：看板、卡片、标签、生命周期事件、运行尝试、评论、依赖链接、证明、工件引用、附件元数据和二进制内容、诊断信息、通知、工作器日志、协议状态以及订阅都保存在 Workboard 的表中（而不是插件的键值条目中）。卡片导出会保留看板叙事内容，而不会内联附件二进制内容。
 
 在 `.28` 版本中使用过 Workboard 的安装，可以运行 `openclaw doctor --fix`，将随附的旧版插件状态命名空间（`workboard.cards`、`workboard.boards`、`workboard.notify`，以及如果存在的话 `workboard.attachments`）迁移到关系型数据库中。
 
@@ -360,10 +339,10 @@ openclaw plugins inspect workboard --runtime --json
 
 **启动卡片不会打开预期的会话**
 
-检查卡片的 agent id 和关联会话，然后打开 Sessions 或 Chat 以
+检查卡片的 agent id 和关联会话，然后打开 Sessions 或 Chat，以
 查看实际的运行状态。
 
-**Dispatch 不会启动 worker**
+**Dispatch 不会启动工作进程**
 
 确认至少有一张没有活动认领的 `ready` 卡片：
 
@@ -371,7 +350,7 @@ openclaw plugins inspect workboard --runtime --json
 openclaw workboard list --status ready
 ```
 
-如果 CLI 报告的是仅数据分发（data-only dispatch），请启动或重启 Gateway 后重试——仅数据分发会更新本地看板状态，但不能启动 subagent worker 运行。若同一 owner 或 agent 的另一张卡片已经在运行或等待审查，当前卡片也可能会被跳过；请先完成、阻塞或释放该活动工作，再为同一 owner 继续分发更多卡片。
+如果 CLI 报告的是仅数据分发（data-only dispatch），请启动或重启 Gateway 后重试——仅数据分发会更新本地看板状态，但不能启动子代理工作进程运行。若同一 owner 或 agent 的另一张卡片已经在运行或等待审查，当前卡片也可能会被跳过；请先完成、阻塞或释放该活动工作，再为同一 owner 继续分发更多卡片。
 
 ## 相关内容
 

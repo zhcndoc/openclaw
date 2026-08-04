@@ -11,8 +11,8 @@ title: "OpenCode Go 插件"
 
 ## 分发
 
-- 包：`@openclaw/opencode-go-provider`
-- 安装方式：已包含在 OpenClaw 中
+- 软件包：`@openclaw/opencode-go-provider`
+- 安装渠道：npm；ClawHub：`clawhub:@openclaw/opencode-go-provider`
 
 ## 范围
 

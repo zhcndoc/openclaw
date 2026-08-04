@@ -18,37 +18,27 @@ title: "入职重设计"
 
 设计原则（已决定，不要随意重提）：
 
-- **带有易于撤销的已宣布默认值** 取代阻塞式提问。唯一的硬性要求是推理可用；其他一切都是提供项。
-- **第一个问题是同意边界**： “Full access” （推荐）意味着发现是静默且自动的；“Ask first” 会把每一次发现——AI 扫描、应用扫描以及记忆来源扫描——都置于一个明确的 yes 之后，并提供一条从不扫描的完全手动路径。
-- **对话即 UI，并带有渐进式智能**：管家界面在任何 AI 开始工作之前就已存在（脚本化对话），在路由验证通过的瞬间变为由模型驱动，并且会明显说明这一点。它绝不假装智能：在路由验证通过之前输入自由文本，会得到一个体面的“让我先把我的大脑运行起来”。
-- **孵化是一场仪式**：同一线程，头像切换，agent 自我命名并选择自己的脸。管家会一次性教会层级：“问我系统相关的事，或者直接问你的 agent——它会转述。”
-- **信任按来源分层**：官方目录条目可以预先选中；第三方 ClawHub 技能无论模型排名如何都绝不会被预先选中，并且它们的标签会说明它们安装的是发布者的代码。
-- **已配置的安装是神圣的**：重新运行 onboarding 只是一次验证流程。它绝不会重新应用设置，也绝不会重启 Gateway 服务。
-- **终端是后备方案，不是提问**：当网关可达时，优先使用浏览器仪表板；绝不要问“terminal or browser?”。
-- **弱模型使用精简界面**（自动 `localModelLean`），并用通俗的话解释——绝不用工具、代码模式或上下文窗口这类说法。
+- **已宣布且易于撤销的默认值**取代阻塞式问题。唯一的
+  硬性要求是推理功能可用；其他一切都是可选的提议。
+- **问题零是同意边界**：“完全访问”（推荐）意味着发现过程静默且自动进行；“先询问”则会让每一次发现——AI 扫描、应用扫描以及记忆来源扫描——都必须经过一次明确同意，同时提供一条完全手动的路径，永远不会进行扫描。
+- **以对话作为 UI，并逐步提升智能**：管家界面在任何 AI 生效之前就已存在（脚本化对话），一旦某个路由验证通过，就立即由模型提供支持，并明确告知用户这一点。它绝不假装智能：在路由验证通过前输入自由文本时，会礼貌地提示“请先让我把大脑运转起来”。
+- **孵化舱门是一场仪式**：同一线程中完成、替换头像，agent 自己命名并挑选自己的面孔。管家只教一次层级关系：“问我系统相关的问题，或者直接问你的 agent——它会代为转达。”
+- **信任按来源分级**：官方目录条目可以预先选中；第三方 ClawHub 技能无论模型排名如何，都绝不会预先选中，并且其标签会说明它们安装的是发布者的代码。
+- **已配置的安装神圣不可侵犯**：重新运行引导流程只是一次验证过程。它绝不会重新应用设置，也绝不会重启 Gateway 服务。
+- **终端是备用方案，而不是问题**：只要 Gateway 能提供服务，就优先使用浏览器仪表盘；绝不要询问“终端还是浏览器？”。
+- **较弱的模型会获得精简后的界面**（自动启用 `localModelLean`），并用通俗的语言解释——绝不用工具、代码模式或上下文窗口等术语。
 
 ## 当前已发布流程（第 1-3 阶段后）
 
 在全新安装的 macOS 上运行 `openclaw onboard`，按最佳路径走——总共需要按四次回车：
 
-1. 安全提示 → 按一次回车确认（已持久化；之后不再询问）。
-2. **问题零**："我应该如何设置？" — 完全访问（推荐）
-   或先询问。已持久化为 `wizard.accessMode`；再次运行时默认使用已保存
-   的选择。受保护 + “手动配置” 会在不进行任何扫描的情况下进入提供程序选择器，
-   并且也会跳过内存源扫描。
-3. **发现流程**：检测编码 CLI、环境键和本地运行时；当找到编码代理时会吐槽；
-   依次对候选项进行实时测试，并将失败静默汇总到一行摘要中（详情在“查看其他
-   选项”后面）。第一个可用路径会被宣布为默认项，并提供一键进入完整选择器的路径；
-   继续浏览和跳过都会保留可用路径。
-4. 内存导入提示（Claude Code / Codex / Hermes），如果之前拒绝了发现流程则会跳过。
-5. 仅全新安装：自动应用标准设置计划（工作区、Gateway 服务、会话——与对话式
-   “是”所执行的同一计划）。已配置的安装会打印“已完成设置”，且绝不会触碰该服务。
-6. **应用推荐**：通过已验证模型与官方目录 + ClawHub 匹配已安装应用；官方频道插件
-   以预勾选方式到达，第三方技能默认不选中并带有警告标签。可跳过；总开关
-   `wizard.appRecommendations`。
-7. **Hatch**：当网关可访问时，会打开浏览器接管（GUI）或打印（headless/SSH）仪表板 URL，
-   并等待 Control UI 连接——“Dashboard connected — continuing in your browser.” 否则，
-   或使用 `--tui` 时，终端 TUI 会以引导 hatch 消息作为种子打开，代理会自我介绍。
+1. 安全提示 → 按一次回车确认（该选择会持久化保存；之后不再询问）。
+2. **问题零**：“我应该如何设置？”——完全访问权限（推荐）或先询问。该选择会持久化保存为 `wizard.accessMode`；重新运行时默认使用已保存的选择。受保护模式 +“手动配置”会直接进入提供商选择器，不执行任何扫描，也会跳过记忆源扫描。
+3. **发现演示**：检测编码 CLI、环境变量密钥和本地运行时；发现编码代理时会插科打诨；按顺序实时测试候选项，并将失败项静默汇总为一行摘要（详情位于“查看其他选项”之后）。第一个可用的路由会作为默认选项公布，并提供一键进入完整选择器的路径；继续探索或跳过都会保留该可用路由。
+4. 仅限全新安装：标准设置计划会自动应用（工作区、Gateway 服务、会话——与对话式“是”所执行的计划相同）。对于已配置的安装，会打印“已完成设置”，并且绝不会触碰该服务。
+5. 提供记忆导入选项（Claude Code / Codex / Hermes）；如果拒绝了发现流程，则跳过此项。导入使用设置完成后最终持久化保存的工作区。
+6. **应用推荐**：通过已验证的模型，将已安装的应用与官方目录及 ClawHub 进行匹配；官方频道插件会预先勾选，第三方技能则需要主动选择加入，并带有警告标签。可跳过；关闭开关为 `wizard.appRecommendations`。
+7. **孵化**：Gateway 在后台构建缺失的控制界面资源。一旦能够提供仪表盘，浏览器交接流程会打开它（GUI），或在无头模式/SSH 环境下打印不含身份验证密钥的 URL，并等待控制界面连接——“仪表盘已连接——将在浏览器中继续。”否则，或者使用 `--tui` 时，终端 TUI 会打开，并预置孵化消息，然后由代理进行自我介绍。
 
 远程网关引导保留其旧式对话式接管方式（`handoffMode: "chat"`）；设置必须应用到远程网关上。
 
@@ -78,19 +68,19 @@ title: "入职重设计"
 
 ### 第二阶段 — CLI 守护脊柱（PR #109841）
 
-- 在 `src/commands/onboard-guided.ts` 中重构流程；远程网关引导仍通过 `handoffMode: "chat"` 保留其旧版聊天交接。
-- 问题零保留 `wizard.accessMode`（"full" | "guarded"）；重新运行默认使用已保存的选择（接受默认值绝不会静默地将 guarded 降级为 full）。Guarded + manual 使用 `listManualSetupInferenceOptions`（仅配置/清单，不进行探测），并跳过 memory-source 扫描。
-- 发现：静默失败收集（单行摘要；详情在 “See other options” 后面）、coding-agent 俏皮提示、已宣布的 route 默认值。在存在廉价 session-count seam 之前，俏皮提示中的会话计数被延后处理（仅定性描述）。
-- 全新安装：`applySystemAgentSetup`（确定性的对话式 “yes”），然后通过注入 bootstrap 消息的 `launchTuiCli` 启动。已配置的安装（预先存在的 model 或 gateway 配置——向导时间戳无法证明任何事情，它们与 configure/doctor 共享）：
-  仅验证——不 apply，不重启 Gateway 服务。apply 失败则回退到对话式 chat。
+- `src/commands/onboard-guided.ts` 中重新设计了流程；远程网关引导仍通过 `handoffMode: "chat"` 保留其旧版聊天交接方式。
+- 第零个问题会持久化 `wizard.accessMode`（"full" | "guarded"）；重新运行时默认采用已保存的选择（接受默认值绝不会将 guarded 静默降级为 full）。Guarded + 手动模式使用 `listManualSetupInferenceOptions`（仅配置/清单，不进行探测），并跳过记忆源扫描。
+- 发现流程：静默收集失败信息（单行摘要；详细信息隐藏在“查看其他选项”后），加入 coding-agent 式俏皮话，并公布路由默认值。俏皮话中的会话计数将在存在廉价的会话计数接缝之前延后提供（目前仅作定性描述）。
+- 全新安装：`applySystemAgentSetup`（确定性的对话式“是”）会持久化工作区，并在导入记忆之前启动网关；终端入口使用以 bootstrap 消息初始化的 `launchTuiCli`。
+  已配置的安装（已有模型或网关配置——向导时间戳不能证明任何事情，因为它们与 configure/doctor 共享）仅执行验证——不执行 apply，也不重启网关服务。只有待处理的 onboarding 回执才允许中断的全新设置继续执行。Apply 失败时会回退到对话式聊天。
 
 ### 第 3 阶段 — 以浏览器优先的接管（PR #110054，已合并）
 
-- `src/commands/onboard-browser-handoff.ts` 负责纯图形会话检测（Linux 上的 `SSH_CONNECTION`/`SSH_TTY`；`DISPLAY`/`WAYLAND_DISPLAY`）以及 60 秒 GUI / 300 秒 SSH 等待。引导式 onboarding 目前仅在 macOS 上启用该接管；`--tui` 和其他平台仍保留终端出口。Linux/Windows 的启用将作为后续工作。
-- 仪表板链接使用与经典 finalize 相同的 `resolveAdvertisedControlUiLinks`、`resolveLocalControlUiProbeLinks` 和 `buildOnboardingControlUiUrl` 辅助函数。浏览器启动使用共享的 `openUrl` 辅助函数。
-- 就绪检查轮询现有的 `system-presence` RPC，作为一个**CLI 模式 loopback 客户端，携带已配置的共享密钥**——这是每个 `openclaw` 命令使用的受信任路径。在 SecretRef 网关上，原始的共享认证 Control UI 客户端会被拒绝，并返回“需要设备身份（device identity required）”。连通性预检会解析与等待循环相同的目标（以及密钥），因此网关和等待逻辑在认证上绝不会产生分歧。只有当已连接的 `openclaw-control-ui`/`webchat` presence 行相对于启动前基线是新的时候，接管才算完成（已打开的仪表板不能完成该流程）。
+- `src/commands/onboard-browser-handoff.ts` 负责纯图形会话检测（`SSH_CONNECTION`/`SSH_TTY`；Linux 上的 `DISPLAY`/`WAYLAND_DISPLAY`）以及 60 秒 GUI / 300 秒 SSH 等待。引导式 onboarding 支持 macOS、Linux 和 Windows 上的图形桌面会话；无头/SSH 会话会打印仪表盘 URL，而 `--tui` 会强制使用终端入口。
+- `src/commands/control-ui-handoff.ts` 负责仪表盘目标、已提供文档的就绪状态，以及 onboarding 和 `openclaw dashboard` 的一次性浏览器配对。GUI 启动会收到一次性 bootstrap 链接；无头/SSH 输出会打印干净的 URL，并提供手动认证指引。浏览器启动使用共享的 `openUrl` 辅助函数。
+- 一个已解析的目标会确认网关提供仪表盘文档，捕获启动前的存在基线，并等待新连接。缺失的 Control UI 资源会异步构建，不会阻塞网关启动。连接跟踪会轮询现有的 `system-presence` RPC，作为**使用已配置共享密钥的 CLI 模式回环客户端**——这是每个 `openclaw` 命令使用的可信路径。SecretRef 网关会拒绝原始共享认证 Control UI 客户端，并返回“需要设备身份”。只有当已连接的 `openclaw-control-ui`/`webchat` presence 行相对于基线而言是新的，交接才会完成（已打开的仪表盘无法完成交接）。
 - `gateway.controlUi.enabled: false` 会在显示任何 URL 之前直接短路。
-- 已在一个隔离的、相同配置的网关上完成端到端验证：URL 输出 → 真实浏览器连接 → “Dashboard connected — continuing in your browser” → 无终端出口。之前出现的“token mismatch”挂起是测试桩的产物——见下方的测试手册。
+- 已针对隔离的同配置网关完成端到端验证：打印 URL → 真实浏览器连接 → “仪表盘已连接——正在浏览器中继续” → 不出现终端入口。此前的“令牌不匹配”阻塞是测试框架产物——请参阅下面的测试操作手册。
 
 ### 第 4 阶段 — web custodian 界面（合并：#110141、#110242）
 
@@ -131,7 +121,9 @@ title: "入职重设计"
 
 阶段 4–6 剩余的后续事项（已跟踪，未排期）：hatch 的头像/图像生成梯子；macOS 应用对类型化 `question` 字段的渲染；为 custodian 提供一个停靠式内联 Settings 面板（需要共享的 conversation-view 抽取）；事件响应式评论以及 channel 召唤/agent-down 恢复（第 6 阶段 PR2）；为弱模型自动设置 `localModelLean`；以及现有用户已保存的侧边栏固定项是否应采用 OpenClaw 入口。
 
-## 测试与上线手册（血泪经验；在第 4-6 阶段前阅读）
+macOS 应用现在也遵循相同的浏览器优先原则：推理验证完成后（安装 + AI 设置页面），原生 onboarding 即告结束，Finish 会在 `/custodian?onboarding=1` 打开仪表盘。原生的记忆导入和权限页面已从首次运行流程中移除（Settings → Permissions 仍然保留）；删除如今已无法访问的原生记忆导入模块将作为后续事项。
+
+## 测试与上线操作手册（来之不易；请在第 4–6 阶段前阅读）
 
 - **`OPENCLAW_STATE_DIR` 不会隔离 Gateway 服务。** `LaunchAgent` 标签（`ai.openclaw.gateway`）是全局机器级的：使用隔离 state dir 进行 fresh-install onboarding 测试时，会 **重写并重启** 真实机器上的服务（包装脚本会落到隔离目录里；下次服务启动时，如果该目录被清理，就会失败）。在任何 fresh-install 测试之后，都要从真实环境执行 `openclaw gateway install --force && openclaw gateway restart` 恢复，并验证 plist。产品后续事项：按 state-dir 范围划分的服务标签，或者由 onboarding 检测到外部服务。
 - **安全的端到端 harness**：在隔离配置中预先填入一个 `gateway` section（这样 onboarding 会走已配置安装路径，并且永远不会碰到服务），然后在备用端口上以普通前台进程运行 `openclaw gateway run`，使用普通 token。这个 harness 证明了第 3 阶段的循环，包括真实浏览器连接。
@@ -145,7 +137,12 @@ title: "入职重设计"
 
   该运行必须在 branch ref 上执行，这样 `head_sha` 才会匹配，并且标题会变成 `CI release gate <sha>`，`scripts/verify-pr-hosted-gates.mjs` 会接受它。然后照常使用 `scripts/pr` 进行 prepare/merge。
 
-- **CI 除了聚焦测试之外还强制执行的门禁**：文档映射（在添加任何 docs 页面后运行 `pnpm docs:map:gen`）、oxlint（`no-map-spread`、`max-lines` —— 拆分文件，绝不抑制）、`check:test-types`、knip deadcode（只导出生产环境会消费的内容；通过 public APIs 路由测试），以及 live-test 分片分类器（`test/scripts/test-live-shard.test.ts` 必须列出任何新的 `*.live.test.ts`）。
+- **CI 除了重点测试之外还会强制执行的门禁**：文档一致性
+  （修改文档后执行 `pnpm check:docs`）、oxlint（`no-map-spread`、
+  `max-lines` —— 拆分文件，绝不要禁用检查）、`check:test-types`、knip
+  死代码检查（只导出生产代码会使用的内容；让测试通过公共 API
+  调用），以及实时测试分片分类器
+  （`test/scripts/test-live-shard.test.ts` 必须列出任何新增的 `*.live.test.ts`）。
 
 ## 决策记录
 
@@ -164,8 +161,7 @@ title: "入职重设计"
 
 ## 已知缺口和后续事项
 
-- LaunchAgent 标签不受 state-dir 作用域限制（上面的测试陷阱；也是一个真实的多实例产品缺口）。
-- recommendations 的 once 语义以及已存储的扫描（第 5 阶段）；当前重新运行会再次提供。
-- 浏览器接力目前仅支持 macOS；Linux/Windows 的启用仍在等待中。
-- 会话计数的俏皮说法是定性的；计数需要一个低成本的会话计数切入点。
-- 浏览器接力会进入普通仪表板；onboarding 模式的 custodian 深链接将在第 4 阶段到来。
+- LaunchAgent 标签未按状态目录隔离（上述测试陷阱；同时也是实际存在的多实例产品缺口）。
+- 推荐的一次性语义和已存储的扫描结果（第 5 阶段）；目前重新运行时仍会再次提供推荐。
+- 会话计数的俏皮说法是定性的；计数需要一个开销低的会话计数接缝。
+- 浏览器交接会进入常规仪表板；引导模式下的管理者深层链接将在第 4 阶段到达。

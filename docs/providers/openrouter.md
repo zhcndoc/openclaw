@@ -37,7 +37,7 @@ OpenRouter 将请求路由到多个模型，统一使用一个 API 和一个密�
     </Steps>
 
   </Tab>
-  <Tab title="API key">
+  <Tab title="API 密钥">
     <Steps>
       <Step title="获取你的 API 密钥">
         在 [openrouter.ai/keys](https://openrouter.ai/keys) 创建一个 API 密钥。
@@ -64,7 +64,7 @@ OpenRouter 将请求路由到多个模型，统一使用一个 API 和一个密�
 
 ```json5
 {
-  env: { OPENROUTER_API_KEY: "sk-or-..." },
+  env: { vars: { OPENROUTER_API_KEY: "sk-or-..." } },
   agents: {
     defaults: {
       model: { primary: "openrouter/auto" },
@@ -93,64 +93,70 @@ OpenRouter 将请求路由到多个模型，统一使用一个 API 和一个密�
 
 ## 图像生成
 
-OpenRouter can back the `image_generate` tool. Set an OpenRouter image model
-under `agents.defaults.mediaModels.image`:
+OpenRouter 支持 `image_generate` 工具。将 OpenRouter 图像模型设置在
+`agents.defaults.mediaModels.image` 下：
 
 ```json5
 {
-  env: { OPENROUTER_API_KEY: "sk-or-..." },
+  env: { vars: { OPENROUTER_API_KEY: "sk-or-..." } },
   agents: {
     defaults: {
-      imageGenerationModel: {
-        primary: "openrouter/google/gemini-3.1-flash-image-preview",
-        timeoutMs: 180_000,
+      mediaModels: {
+        image: {
+          primary: "openrouter/google/gemini-3.1-flash-image-preview",
+          timeoutMs: 180000,
+        },
       },
     },
   },
 }
 ```
 
-OpenClaw sends image requests to OpenRouter's chat-completions image API with
-`modalities: ["image", "text"]`. Gemini image models additionally receive
-`aspectRatio` and `resolution` hints through OpenRouter's `image_config`; other
-image models do not. Use `agents.defaults.mediaModels.image.timeoutMs` for
-slower models; the `image_generate` tool's per-call `timeoutMs` still wins.
+OpenClaw 使用带有 `modalities: ["image", "text"]` 的 OpenRouter 聊天补全图像 API
+发送图像请求。Gemini 图像模型还会通过 OpenRouter 的 `image_config` 接收
+`aspectRatio` 和 `resolution` 提示；其他图像模型则不会。对于响应较慢的模型，请使用
+`agents.defaults.mediaModels.image.timeoutMs`；`image_generate` 工具每次调用的
+`timeoutMs` 仍具有更高优先级。
 
-## Video Generation
+## 视频生成
 
-OpenRouter can back the `video_generate` tool through its asynchronous
-`/videos` API. Set an OpenRouter video model under
-`agents.defaults.mediaModels.video`:
+OpenRouter 可以通过其异步的
+`/videos` API 支持 `video_generate` 工具。在
+`agents.defaults.mediaModels.video` 下设置 OpenRouter 视频模型：
 
 ```json5
 {
-  env: { OPENROUTER_API_KEY: "sk-or-..." },
+  env: { vars: { OPENROUTER_API_KEY: "sk-or-..." } },
   agents: {
     defaults: {
-      videoGenerationModel: {
-        primary: "openrouter/google/veo-3.1-fast",
+      mediaModels: {
+        video: {
+          primary: "openrouter/google/veo-3.1-fast",
+        },
       },
     },
   },
 }
 ```
 
-OpenClaw will submit text-to-video and image-to-video tasks, poll the returned `polling_url`, and download the completed video from OpenRouter's `unsigned_urls` or the task content endpoint. Reference images default to the first/last frame images; images marked as `reference_image` are sent as input references. The built-in `google/veo-3.1-fast` supports 4/6/8 second durations, `720P`/`1080P` resolutions, and `16:9`/`9:16` aspect ratios by default. Video-to-video is not supported: the upstream API only accepts text and image references.
+OpenClaw 将提交文生视频和图生视频任务，轮询返回的
+`polling_url`，并从 OpenRouter 的 `unsigned_urls` 或任务内容端点下载已完成的视频。默认情况下，参考图像使用首帧/末帧图像；标记为 `reference_image` 的图像将作为输入参考发送。内置的 `google/veo-3.1-fast` 默认支持 4/6/8 秒时长、`720P`/`1080P` 分辨率以及 `16:9`/`9:16` 宽高比。不支持视频到视频：上游 API 仅接受文本和图像参考。
 
 ## 音乐生成
 
-OpenRouter can back the `music_generate` tool through chat-completions audio
-output. Set an OpenRouter audio model under
-`agents.defaults.mediaModels.music`:
+OpenRouter 可以通过聊天补全的音频输出支持 `music_generate` 工具。
+在 `agents.defaults.mediaModels.music` 下设置一个 OpenRouter 音频模型：
 
 ```json5
 {
-  env: { OPENROUTER_API_KEY: "sk-or-..." },
+  env: { vars: { OPENROUTER_API_KEY: "sk-or-..." } },
   agents: {
     defaults: {
-      musicGenerationModel: {
-        primary: "openrouter/google/lyria-3-pro-preview",
-        timeoutMs: 180_000,
+      mediaModels: {
+        music: {
+          primary: "openrouter/google/lyria-3-pro-preview",
+          timeoutMs: 180000,
+        },
       },
     },
   },
@@ -185,8 +191,8 @@ OpenRouter 可以通过其与 OpenAI 兼容的
 }
 ```
 
-If `tts.providers.openrouter.apiKey` is omitted, TTS falls back to
-`models.providers.openrouter.apiKey`, then `OPENROUTER_API_KEY`.
+如果未设置 `tts.providers.openrouter.apiKey`，TTS 将回退使用
+`models.providers.openrouter.apiKey`，然后使用 `OPENROUTER_API_KEY`。
 
 ## 语音转文本（入站音频）
 
@@ -199,10 +205,14 @@ OpenRouter 可以通过共享的
 {
   tools: {
     media: {
-      audio: {
-        enabled: true,
-        models: [{ provider: "openrouter", model: "openai/whisper-large-v3-turbo" }],
-      },
+      models: [
+        {
+          provider: "openrouter",
+          model: "openai/whisper-large-v3-turbo",
+          capabilities: ["audio"],
+        },
+      ],
+      audio: { enabled: true },
     },
   },
 }
@@ -221,11 +231,13 @@ OpenRouter Fusion 会将一个 OpenClaw 模型引用并行发送给多个 OpenRo
 openclaw models set openrouter/openrouter/fusion
 ```
 
-通过模型的 `params.extraBody` 配置 Fusion 的面板和裁判；这些字段会直接透传到 OpenRouter chat-completions 请求体中。Fusion 同时支持 OAuth 或 API key 引导；如果你使用 OAuth，请省略下面的 `env.OPENROUTER_API_KEY` 行。
+通过模型的 `params.extraBody` 配置 Fusion 的面板和裁判；
+这些字段会直接转发到 OpenRouter 聊天补全请求体中。Fusion 同时支持 OAuth 或 API 密钥接入；如果使用 OAuth，请省略下面的
+`env.vars.OPENROUTER_API_KEY` 行。
 
 ```json5
 {
-  env: { OPENROUTER_API_KEY: "sk-or-..." },
+  env: { vars: { OPENROUTER_API_KEY: "sk-or-..." } },
   agents: {
     defaults: {
       model: { primary: "openrouter/openrouter/fusion" },

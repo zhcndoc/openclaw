@@ -25,7 +25,7 @@ read_when:
       allowUploadedArchives: false,
     },
     workshop: {
-      autonomous: { enabled: false },
+      autonomous: { mode: "auto" },
       allowSymlinkTargetWrites: false,
       approvalPolicy: "auto",
       maxPending: 50,
@@ -228,29 +228,29 @@ process.stdin.on("end", () => {
   skills 不受影响。
 </ParamField>
 
-## 按 skill 的条目（`skills.entries`）
+## 按技能的条目（`skills.entries`）
 
-`entries` 下的键默认与 skill 的 `name` 匹配。如果某个 skill 定义了 `metadata.openclaw.skillKey`，则改用该键。带连字符的名称需要加引号（JSON5 允许带引号的键）。
+`entries` 下的键默认与技能的 `name` 匹配。如果某个技能定义了 `metadata.openclaw.skillKey`，则改用该键。带连字符的名称需要加引号（JSON5 允许带引号的键）。
 
 <ParamField path="skills.entries.<key>.enabled" type="boolean">
-  `false` 会在 skill 即使已捆绑或已安装时也将其禁用。`coding-agent` 捆绑的 skill 默认不启用——将其设为 `true`，并确保已安装且已认证 `claude`、`codex`、`opencode` 或其他受支持的 CLI 之一。
+  `false` 会在技能即使已捆绑或已安装时也将其禁用。`coding-agent` 捆绑的技能默认不启用——将其设为 `true`，并确保已安装且已认证 `claude`、`codex`、`opencode` 或其他受支持的 CLI 之一。
 </ParamField>
 
 <ParamField path="skills.entries.<key>.apiKey" type='string | { source, provider, id }'>
-  适用于声明了 `metadata.openclaw.primaryEnv` 的 skill 的便捷字段。支持明文字符串或 SecretRef：`{ source: "env", provider: "default", id: "VAR_NAME" }`。
+  适用于声明了 `metadata.openclaw.primaryEnv` 的技能的便捷字段。支持明文字符串或 SecretRef：`{ source: "env", provider: "default", id: "VAR_NAME" }`。
 </ParamField>
 
 <ParamField path="skills.entries.<key>.env" type="Record<string, string>">
-  为 agent 运行注入的环境变量。仅在该变量尚未在进程中设置时才会注入。
+  为代理运行注入的环境变量。仅在该变量尚未在进程中设置时才会注入。
 </ParamField>
 
 <ParamField path="skills.entries.<key>.config" type="object">
-  自定义按 skill 配置字段的可选对象。
+  自定义按技能配置字段的可选对象。
 </ParamField>
 
-## Agent Allowlist（`agents`）
+## Agent 允许列表（`agents`）
 
-当你希望使用相同的机器/工作区技能根目录，但为每个 agent 提供不同的可见技能集时，请使用 agent 配置。
+当你希望使用相同的机器/工作区技能根目录，但为每个代理提供不同的可见技能集时，请使用代理配置。
 
 ```json5
 {
@@ -268,32 +268,32 @@ process.stdin.on("end", () => {
 ```
 
 <ParamField path="agents.defaults.skills" type="string[]">
-  被未指定 `agents.entries.*.skills` 的 agent 继承的共享基线允许列表。完全省略则默认不限制技能。
+被未指定 `agents.entries.*.skills` 的代理继承的共享基线允许列表。完全省略则默认不限制技能。
 </ParamField>
 
 <ParamField path="agents.entries.*.skills" type="string[]">
-  该 agent 的显式最终技能集。显式列表会**替换**继承的默认值——不会合并。设置为 `[]` 可为该 agent 暴露零个技能。
+该代理的显式最终技能集。显式列表会**替换**继承的默认值——不会合并。设置为 `[]` 可为该代理暴露零个技能。
 </ParamField>
 
 <Warning>
-  Agent 技能允许列表是 OpenClaw 技能发现、提示词、斜杠命令发现、沙箱同步和技能快照的可见性与加载过滤器。它们不是 shell 运行时的授权边界。如果某个 agent 可以运行主机 `exec`，那么该 shell 仍然可以运行外部客户端，或读取执行用户可见的主机文件，包括诸如 `~/.openclaw/skills/config/mcporter.json` 之类的 MCP 客户端注册表。对于按 agent 隔离 MCP，请将技能允许列表与沙箱/OS 用户隔离结合使用，禁止或严格允许主机 `exec`，并优先在 MCP 服务器端为每个 agent 使用凭据。
+代理技能允许列表是 OpenClaw 技能发现、提示词、斜杠命令发现、沙箱同步和技能快照的可见性与加载过滤器。它们不是 shell 运行时的授权边界。如果某个代理可以运行主机 `exec`，那么该 shell 仍然可以运行外部客户端，或读取执行用户可见的主机文件，包括诸如 `~/.openclaw/skills/config/mcporter.json` 之类的 MCP 客户端注册表。对于按代理隔离 MCP，请将技能允许列表与沙箱/OS 用户隔离结合使用，禁止或严格允许主机 `exec`，并优先在 MCP 服务器端为每个代理使用凭据。
 </Warning>
 
 ## 工作坊 (`skills.workshop`)
 
-<ParamField path="skills.workshop.autonomous.enabled" type="boolean" default="false">
-  当为 `true` 时，OpenClaw 可以从持久性修正中创建待处理提案，并且在系统变为空闲后可以审查成功且实质性的已完成工作。这可能会在符合条件的回合之后额外触发一次后台模型运行。即使该设置为 `false`，用户提示的技能创建和 `/learn` 仍然可以正常工作。
+<ParamField path="skills.workshop.autonomous.mode" type='"off" | "propose" | "auto"' default='"auto"'>
+  `off` 禁用自主捕获，但保留持久指令建议提示。`propose` 根据更正和已完成的重要工作创建待处理提案。`auto` 通过由扫描器控制的常规工作坊应用路径发送相同的捕获内容。用户提示的技能创建、`/learn` 和手动历史记录扫描在所有模式下均可继续使用。
 </ParamField>
 
 请参见 [自学习](/tools/self-learning) 了解资格、隐私、成本、仅提案权限以及故障排除。
 
 <ParamField path="skills.workshop.approvalPolicy" type='"pending" | "auto"' default='"auto"'>
-  `auto` 允许由代理发起的 apply、reject 或 quarantine，无需额外的审批提示。`pending` 需要操作员批准。
+  `auto` 允许代理发起应用、拒绝或隔离操作，无需额外的审批提示。`pending` 需要操作员批准。
 </ParamField>
 
 <ParamField path="skills.workshop.allowSymlinkTargetWrites" type="boolean" default="false">
-  允许 Skill Workshop apply 通过工作区技能符号链接写入，其真实目标已被 `skills.load.allowSymlinkTargets` 视为受信任。
-  除非生成的提案 apply 应该修改该共享技能根目录，否则请保持禁用。
+  允许技能工作坊应用通过工作区技能符号链接写入，其真实目标已被 `skills.load.allowSymlinkTargets` 视为受信任。
+  除非生成的提案应用应该修改该共享技能根目录，否则请保持禁用。
 </ParamField>
 
 <ParamField path="skills.workshop.maxPending" type="number" default="50">
@@ -305,7 +305,7 @@ process.stdin.on("end", () => {
 </ParamField>
 
 有关该配置控制的提案生命周期、CLI
-命令、agent 工具参数以及 Gateway 方法，请参见 [技能工作坊](/tools/skill-workshop)。
+命令、代理工具参数以及网关方法，请参见 [技能工作坊](/tools/skill-workshop)。
 
 ## 符号链接的技能根目录
 
@@ -401,7 +401,7 @@ skills.load.extraDirs (最低)
     编写自定义工作区技能。
   </Card>
   <Card title="技能工作坊" href="/tools/skill-workshop" icon="flask">
-    agent 草拟技能的提案队列。
+    代理草拟技能的提案队列。
   </Card>
   <Card title="自学习" href="/tools/self-learning" icon="brain">
     来自已完成工作的保守、可选择加入的提案。

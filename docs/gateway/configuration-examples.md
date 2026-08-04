@@ -89,7 +89,7 @@ title: "配置示例"
     },
   },
 
-  // Identity is per agent — set it on agents.entries.<id>.identity below.
+  // 身份信息按 agent 区分——在下方的 agents.entries.<id>.identity 中设置。
 
   // 日志
   logging: {
@@ -126,7 +126,7 @@ title: "配置示例"
     },
   },
 
-  // Session behavior
+  // 会话行为
   session: {
     scope: "per-sender",
     dmScope: "per-channel-peer", // 推荐用于多用户收件箱
@@ -290,8 +290,8 @@ title: "配置示例"
         fastModeDefault: false, // 每个 agent 的快速模式
       },
       quick: {
-        skills: [], // no skills for this agent
-        fastModeDefault: true, // this agent always runs fast
+        skills: [], // 此 agent 不使用任何技能
+        fastModeDefault: true, // 此 agent 始终以快速模式运行
         thinkingDefault: "off",
       },
     },
@@ -367,7 +367,6 @@ title: "配置示例"
   // Cron 任务
   cron: {
     enabled: true,
-    store: "~/.openclaw/cron/jobs.json",
     sessionRetention: "24h",
   },
 
@@ -491,9 +490,9 @@ title: "配置示例"
 }
 ```
 
-- `agents.defaults.skills` is the shared baseline.
-- `agents.entries.*.skills` replaces that baseline for one agent.
-- Use `skills: []` when an agent should see no skills.
+- `agents.defaults.skills` 是共享基线。
+- `agents.entries.*.skills` 会为某个代理替换该基线。
+- 当某个代理不应看到任何技能时，使用 `skills: []`。
 
 ### 多平台设置
 

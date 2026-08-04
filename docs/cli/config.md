@@ -15,18 +15,20 @@ sidebarTitle: "配置"
 ## 根选项
 
 <ParamField path="--section <section>" type="string">
-  Reusable guided setup section filter, used when you run `openclaw config` without a subcommand.
+  可复用的引导式设置部分筛选器，在不带子命令运行 `openclaw config` 时使用。
 </ParamField>
 
-Guided sections: `workspace`, `model`, `web`, `gateway`, `daemon`, `channels`, `plugins`, `skills`, `health`.
+引导式部分：`workspace`、`model`、`web`、`gateway`、`daemon`、`channels`、`plugins`、`skills`、`health`。
 
 ## 示例
 
 ```bash
 openclaw config file
+openclaw config file --json
 openclaw config --section model
 openclaw config --section gateway --section daemon
 openclaw config schema
+openclaw config schema --json
 openclaw config get browser.executablePath
 openclaw config set browser.executablePath "/usr/bin/google-chrome"
 openclaw config set browser.profiles.work.executablePath "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
@@ -55,7 +57,7 @@ openclaw config set 'agents.entries.work.tools.exec.node' "node-id-or-name"
 
 ### `config get`
 
-从已脱敏的配置快照中读取一个值（机密信息不会输出）。`--json` 会将原始值以 JSON 形式输出；否则，字符串/数字/布尔值会直接输出，而对象/数组会以格式化 JSON 输出。
+从脱敏后的配置快照中读取值（不会打印密钥）。`--json` 会将相同的脱敏值以 JSON 格式打印；否则字符串/数字/布尔值会直接打印，而对象/数组会以格式化后的 JSON 打印。
 
 当路径缺失时，`--json` 会将 `{ "error": "Config path not found: <path>" }` 写入 stdout，并以状态码 1 退出。不使用 `--json` 时，诊断信息仍会输出到 stderr。
 
@@ -67,6 +69,8 @@ openclaw config get agents.defaults.model --json
 ### `config file`
 
 打印当前激活的配置文件路径，该路径由 `OPENCLAW_CONFIG_PATH` 或默认位置解析得到。该路径指向一个普通文件，而不是符号链接；请参见 [写入安全](#write-safety)。
+
+使用 `--json` 时，stdout 会包含一个对象，其中包含解析后的路径，键名为 `path`。
 
 ### `config schema`
 
@@ -89,8 +93,11 @@ openclaw config get agents.defaults.model --json
 
 ```bash
 openclaw config schema
+openclaw config schema --json
 openclaw config schema > openclaw.schema.json
 ```
+
+两种模式下 schema 均为 JSON。`--json` 作为明确的机器输出写法接受，并确保 stdout 仅用于输出 schema 文档。
 
 ### `config validate`
 
@@ -115,7 +122,7 @@ openclaw config set gateway.port 19001 --strict-json
 openclaw config set channels.whatsapp.groups '["*"]' --strict-json
 ```
 
-`config get <path> --json` 会将原始值以 JSON 形式打印，而不是终端格式化输出。
+`config get <path> --json` 会将脱敏后的值以 JSON 格式打印，而不是打印为终端格式化文本。
 
 当写入更改 `agents.defaults.model` 或每个代理的 `agents.entries.*.model` 时，OpenClaw 会在写入前通过已配置的提供方目录解析每个已更改的主模型或回退模型。未知的模型引用会被拒绝，且不会更改当前配置；运行 `openclaw models list` 以查看可用模型。
 
@@ -381,7 +388,7 @@ openclaw config set channels.discord.token \
     {
       "ok": true,
       "operations": 1,
-      "configPath": "~/.openclaw/openclaw.json",
+      "configPath": "/home/user/.openclaw/openclaw.json",
       "inputModes": ["builder"],
       "checks": {
         "schema": false,
@@ -398,7 +405,7 @@ openclaw config set channels.discord.token \
     {
       "ok": false,
       "operations": 1,
-      "configPath": "~/.openclaw/openclaw.json",
+      "configPath": "/home/user/.openclaw/openclaw.json",
       "inputModes": ["builder"],
       "checks": {
         "schema": false,
@@ -435,11 +442,11 @@ openclaw config set channels.discord.token \
 
 每次成功执行 `config set` / `config patch` / `config unset` 后，CLI 都会打印以下三种提示之一，以便你知道网关是否需要重启：
 
-| 提示                                                | 含义                                   |
-| --------------------------------------------------- | -------------------------------------- |
-| `Restart the gateway to apply.`                     | 已更改的路径需要完全重启。             |
-| `Change will apply without restarting the gateway.` | 热重载会自动应用更改。                  |
-| `No gateway restart needed.`                        | 没有影响运行时的内容发生变化。          |
+| 提示                   | 含义                          |
+| ---------------------- | ----------------------------- |
+| `重启网关以应用更改。` | 已更改的路径需要完全重启。    |
+| `无需重启网关即可应用更改。` | 热重载会自动应用更改。        |
+| `无需重启网关。`       | 没有影响运行时的内容发生变化。 |
 
 对 `plugins.entries`（或其任何子路径）的写入始终需要重启，因为 CLI 无法证明每个插件的重载元数据都已加载。
 
@@ -473,15 +480,15 @@ openclaw config validate
 
 整文件恢复仅保留给 doctor 修复使用。插件 schema 变更或 `minHostVersion` 不匹配会继续报错，而不会回滚无关的用户设置，例如模型、提供方、认证配置文件、渠道、gateway 暴露、工具、内存、浏览器或 cron 配置。
 
-## Fix loop
+## 修复循环
 
-After `openclaw config validate` passes, use the local TUI to let an embedded agent compare the current configuration with the documentation, while validating each change in the same terminal:
+在 `openclaw config validate` 通过后，使用本地 TUI，让嵌入式代理将当前配置与文档进行比较，同时在同一终端中验证每项更改：
 
 ```bash
 openclaw chat
 ```
 
-In the TUI, a leading `!` runs a local shell command as-is (the first time you use it in each session, you will first see a confirmation prompt):
+在 TUI 中，开头带有 `!` 的命令会原样运行本地 shell 命令（每个会话中首次使用时，你会先看到确认提示）：
 
 ```text
 !openclaw config file
@@ -491,17 +498,17 @@ In the TUI, a leading `!` runs a local shell command as-is (the first time you u
 ```
 
 <Steps>
-  <Step title="Compare with the documentation">
-    Ask the agent to compare your current configuration with the relevant documentation pages and suggest the smallest possible fix.
+  <Step title="与文档进行比较">
+    要求代理将当前配置与相关文档页面进行比较，并建议尽可能小的修复方案。
   </Step>
-  <Step title="Apply targeted edits">
-    Use `openclaw config set` or `openclaw configure` to apply targeted changes.
+  <Step title="应用有针对性的编辑">
+    使用 `openclaw config set` 或 `openclaw configure` 应用有针对性的更改。
   </Step>
-  <Step title="Re-validate">
-    Re-run `openclaw config validate` after each change.
+  <Step title="重新验证">
+    每次更改后重新运行 `openclaw config validate`。
   </Step>
-  <Step title="Use doctor for runtime issues">
-    If validation passes but the runtime is still unhealthy, run `openclaw doctor` or `openclaw doctor --fix` to get migration and repair help.
+  <Step title="使用 doctor 处理运行时问题">
+    如果验证通过但运行时仍不正常，请运行 `openclaw doctor` 或 `openclaw doctor --fix`，以获取迁移和修复帮助。
   </Step>
 </Steps>
 

@@ -13,14 +13,14 @@ read_when:
 - 已安装 [flyctl CLI](https://fly.io/docs/hands-on/install-flyctl/)
 - Fly.io 账户（免费套餐即可）
 - 模型认证：你所选模型提供商的 API key
-- 频道凭证：Discord bot token、Telegram token 等
+- 频道凭证：Discord bot token、Telegram token 等。
 
 ## 新手快速路径
 
 1. 克隆仓库，自定义 `fly.toml`
 2. 创建应用 + 卷，设置密钥
 3. 使用 `fly deploy` 部署
-4. 通过 SSH 登录创建配置，或使用 Control UI
+4. 通过 SSH 登录创建配置，或使用控制界面
 
 <Steps>
   <Step title="创建 Fly 应用">
@@ -40,7 +40,7 @@ read_when:
   </Step>
 
   <Step title="配置 fly.toml">
-    编辑 `fly.toml` 以匹配你的应用名称和需求。仓库中跟踪的 `fly.toml` 是下面展示的公开模板；`deploy/fly.private.toml` 是加固过的、无公网 IP 的变体（参见 [Private deployment](#private-deployment-hardened)）。
+    编辑 `fly.toml` 以匹配你的应用名称和需求。仓库中跟踪的 `fly.toml` 是下面展示的公开模板；`deploy/fly.private.toml` 是加固过的、无公网 IP 的变体（参见 [私有部署（加固版）](#private-deployment-hardened)）。
 
     ```toml
     app = "my-openclaw"  # 你的应用名称
@@ -75,7 +75,7 @@ read_when:
       destination = "/data"
     ```
 
-    OpenClaw Docker 镜像的 entrypoint 是 `tini`，默认运行 `node openclaw.mjs gateway`。Fly 的 `[processes]` 会替换 Docker 的 `CMD`（这里它直接运行 `node dist/index.js gateway ...`，即相同的编译后入口），而不会影响 `ENTRYPOINT`，因此进程仍然运行在 `tini` 之下。
+    OpenClaw Docker 镜像的入口点是 `tini`，默认运行 `node openclaw.mjs gateway`。Fly 的 `[processes]` 会替换 Docker 的 `CMD`（这里它直接运行 `node dist/index.js gateway ...`，即相同的编译后入口），而不会影响 `ENTRYPOINT`，因此进程仍然运行在 `tini` 之下。
 
     **关键设置：**
 
@@ -105,7 +105,7 @@ read_when:
     fly secrets set DISCORD_BOT_TOKEN=example-discord-bot-token
     ```
 
-    非 loopback 绑定（`--bind lan`）需要有效的 gateway 认证路径。此示例使用 `OPENCLAW_GATEWAY_TOKEN`，但 `gateway.auth.password` 或配置正确的 non-loopback trusted-proxy 部署也同样满足要求。有关 SecretRef 合同，请参见 [Secrets management](/gateway/secrets)。
+    非 loopback 绑定（`--bind lan`）需要有效的 gateway 认证路径。此示例使用 `OPENCLAW_GATEWAY_TOKEN`，但 `gateway.auth.password` 或配置正确的非 loopback trusted-proxy 部署也同样满足要求。有关 SecretRef 合同，请参见 [密钥管理](/gateway/secrets)。
 
     把这些令牌当作密码处理。API 密钥和令牌应优先使用环境变量/`fly secrets`，而不是配置文件，这样机密信息就不会出现在 `openclaw.json` 中。
 
@@ -171,7 +171,7 @@ read_when:
           "groupPolicy": "allowlist",
           "guilds": {
             "YOUR_GUILD_ID": {
-              "channels": { "general": { "allow": true } },
+              "channels": { "general": { "enabled": true } },
               "requireMention": false
             }
           }
@@ -195,7 +195,7 @@ read_when:
 
     通过 `OPENCLAW_STATE_DIR=/data`，配置路径为 `/data/openclaw.json`。
 
-    将 `https://my-openclaw.fly.dev` 替换为你真实的 Fly 应用来源。gateway 启动时会根据运行时的 `--bind` 和 `--port` 值为本地 Control UI 的 origin 设定初始值，因此首次启动即使配置尚不存在也可以继续，但通过 Fly 进行浏览器访问仍然需要在 `gateway.controlUi.allowedOrigins` 中列出准确的 HTTPS origin。
+    将 `https://my-openclaw.fly.dev` 替换为你真实的 Fly 应用来源。gateway 启动时会根据运行时的 `--bind` 和 `--port` 值为本地控制界面的来源设定初始值，因此首次启动即使配置尚不存在也可以继续，但通过 Fly 进行浏览器访问仍然需要在 `gateway.controlUi.allowedOrigins` 中列出准确的 HTTPS 来源。
 
     Discord 令牌可以来自以下任一方式：
 
@@ -212,7 +212,7 @@ read_when:
   </Step>
 
   <Step title="访问 Gateway">
-    ### Control UI
+    ### 控制界面
 
     ```bash
     fly open
@@ -240,7 +240,7 @@ read_when:
 
 ## 故障排查
 
-### “App is not listening on expected address”
+### “应用未监听预期地址”
 
 gateway 绑定到了 `127.0.0.1`，而不是 `0.0.0.0`。
 
@@ -252,7 +252,7 @@ Fly 无法通过配置的端口访问 gateway。
 
 **修复：** 确保 `internal_port` 与 gateway 端口一致（`--port 3000` 或 `OPENCLAW_GATEWAY_PORT=3000`）。
 
-### OOM / memory issues
+### OOM / 内存问题
 
 容器一直重启或被杀死。表现：`SIGABRT`、`v8::internal::Runtime_AllocateInYoungGeneration`，或者静默重启。
 

@@ -6,11 +6,11 @@ read_when:
 title: "钩子"
 ---
 
-钩子是在代理事件触发时在 Gateway 内部运行的小脚本：像 `/new`、`/reset`、`/stop` 这样的命令，session 压缩，Gateway 生命周期，以及消息流。它们从目录中发现，并通过 `openclaw hooks` 管理。只有在你启用钩子，或者配置至少一个钩子条目、钩子包、旧版处理器或额外的钩子目录之后，Gateway 才会加载内部钩子。
+钩子是在代理事件触发时在网关内部运行的小脚本：像 `/new`、`/reset`、`/stop` 这样的命令、会话压缩、网关生命周期以及消息流。它们从目录中发现，并通过 `openclaw hooks` 管理。只有在你启用钩子，或者配置至少一个钩子条目、钩子包、旧版处理器或额外的钩子目录之后，网关才会加载内部钩子。
 
 OpenClaw 中有两种钩子：
 
-- **内部钩子**（本页）：在代理事件触发时在 Gateway 内部运行。
+- **内部钩子**（本页）：在代理事件触发时在网关内部运行。
 - **Webhooks**：外部 HTTP 端点，让其他系统触发 OpenClaw 中的工作。参见 [Webhooks](/automation/cron-jobs#webhooks)。
 
 钩子也可以打包在插件中。`openclaw hooks list` 会同时显示独立钩子和由插件管理的钩子（显示为 `plugin:<id>`）。
@@ -26,6 +26,8 @@ OpenClaw 有几个看起来相似但用途不同的扩展面：
 | 仅添加遥测导出或可观测性                                                                                              | 诊断事件                               | 可观测性是单独的事件总线，而不是策略钩子面                                                      |
 
 当你需要像小型已安装集成一样运行的自动化时，使用内部钩子。当你需要运行时生命周期控制时，使用类型化插件钩子。
+
+内部钩子处理程序是请求/事件处理程序。它们不得持有长生命周期的计时器、监视器、套接字或客户端；插件应注册服务，或改用类型化的 `gateway_start` / `gateway_stop` 生命周期。
 
 ## 快速开始
 
@@ -53,23 +55,24 @@ hook 加载器会对这类名称记录警告
 （例如 `command:nwe`），并且 `openclaw hooks info <name>` 会将它们标记出来，因此
 从未运行过的 hook 是可以诊断的。
 
-| 事件                    | 触发时机                                               |
-| ----------------------- | ------------------------------------------------------ |
-| `command:new`            | 触发 `/new` 命令时                                      |
-| `command:reset`          | 触发 `/reset` 命令时                                    |
-| `command:stop`           | 触发 `/stop` 命令时                                     |
-| `command`                | 任何 command 事件（通用监听器）                          |
-| `session:compact:before` | 压缩在汇总历史之前                                       |
-| `session:compact:after`  | 压缩完成之后                                            |
-| `session:patch`          | 会话属性被修改时                                         |
-| `agent:bootstrap`        | 工作区 bootstrap 文件被注入之前                          |
-| `gateway:startup`        | 通道启动且 hooks 已加载之后                               |
-| `gateway:shutdown`       | gateway 关闭开始时                                       |
-| `gateway:pre-restart`    | 预期的 gateway 重启之前                                  |
-| `message:received`       | 来自任意通道的入站消息                                    |
-| `message:transcribed`    | 音频转写完成后                                          |
-| `message:preprocessed`   | 媒体和链接预处理完成或被跳过后                            |
-| `message:sent`           | 尝试发送出站消息时（`context.success` 包含结果）          |
+| 事件                     | 触发时机                                                     |
+| ------------------------ | ------------------------------------------------------------ |
+| `command:new`            | 执行 `/new` 命令                                             |
+| `command:reset`          | 执行 `/reset` 命令                                           |
+| `command:stop`           | 执行 `/stop` 命令                                            |
+| `command`                | 任何命令事件（通用监听器）                                   |
+| `session:auto-reset`     | 每日重置或空闲重置替换当前会话                               |
+| `session:compact:before` | 压缩操作汇总历史记录之前                                     |
+| `session:compact:after`  | 压缩操作完成之后                                             |
+| `session:patch`          | 修改会话属性时                                               |
+| `agent:bootstrap`        | 注入工作区引导文件之前                                       |
+| `gateway:startup`        | 通道启动且 hooks 加载完成之后                                |
+| `gateway:shutdown`       | 网关关闭开始时                                               |
+| `gateway:pre-restart`    | 预期的网关重启之前                                           |
+| `message:received`       | 从任何通道接收入站消息                                       |
+| `message:transcribed`    | 音频转录完成之后                                             |
+| `message:preprocessed`   | 媒体和链接预处理完成或跳过之后                               |
+| `message:sent`           | 尝试发送出站消息（结果位于 `context.success` 中）            |
 
 ## 编写钩子
 
@@ -123,7 +126,7 @@ const handler = async (event) => {
   }
 
   console.log(`[my-hook] 新命令被触发`);
-  // 你的逻辑写在这里
+  // 在这里编写你的逻辑
 
   // 可选：在可回复的面上发送回复
   event.messages.push("Hook executed!");
@@ -147,11 +150,13 @@ export default handler;
 
 **命令事件**（`command:stop`）：`context.sessionEntry`、`context.sessionId`、`context.commandSource`、`context.senderId`。
 
-**消息事件** (`message:received`): `context.from`, `context.content`, `context.channelId`, `context.media` (按顺序暂存的附件事实)，`context.originalMedia` 以及当远程媒体尚未在本地暂存时的 `context.mediaStagingPending`，还有 `context.metadata`（提供方特定数据，包括 `senderId`、`senderName`、`guildId`）。`context.content` 优先使用命令类消息中非空的命令正文，然后回退到原始传入正文和通用正文；它不包含仅供 agent 使用的增强内容，例如线程历史或链接摘要。`metadata` 中的旧媒体别名已弃用。
+**自动重置事件**（`session:auto-reset`）：`context.sessionEntry`、`context.reason`（`daily` 或 `idle`）、`context.transcriptArchived`、`context.nextSessionId`、`context.nextSessionKey`、`context.agentId`、`context.workspaceDir`、`context.storePath` 和 `context.cfg`。
+
+**消息事件**（`message:received`）：`context.from`、`context.content`、`context.channelId`、`context.media`（按顺序排列的暂存附件信息）、远程媒体尚未在本地暂存时的 `context.originalMedia` 以及 `context.mediaStagingPending`，还有 `context.metadata`（包括 `senderId`、`senderName`、`guildId` 等提供商特定数据）。对于类似命令的消息，`context.content` 优先使用非空的命令正文，然后回退到原始入站正文和通用正文；它不包含仅供 agent 使用的增强内容，例如线程历史或链接摘要。`metadata` 中的旧版媒体别名已弃用。
 
 **消息事件**（`message:sent`）：`context.to`、`context.content`、`context.success`、`context.channelId`，发送失败时还包括 `context.error`。
 
-**消息事件** (`message:transcribed`): `context.transcript`, `context.from`, `context.channelId`, and `context.media`. `context.mediaPath` and `context.mediaType` 仍然是第一个事实的弃用别名。
+**消息事件**（`message:transcribed`）：`context.transcript`、`context.from`、`context.channelId` 和 `context.media`。`context.mediaPath` 和 `context.mediaType` 仍然是第一个事实的弃用别名。
 
 **消息事件**（`message:preprocessed`）：`context.bodyForAgent`（最终增强后的正文）、`context.from`、`context.channelId`。
 
@@ -219,13 +224,13 @@ Npm 规格仅限注册表（包名 + 可选的精确版本或 dist-tag）。Git/
 
 ## 捆绑钩子
 
-| 钩子                  | 事件                                              | 它的作用                                                     |
-| --------------------- | ------------------------------------------------- | ------------------------------------------------------------ |
-| session-memory        | `command:new`, `command:reset`                    | 将会话上下文保存到 `<workspace>/memory/`                     |
-| bootstrap-extra-files | `agent:bootstrap`                                 | 从 glob 模式注入额外的 bootstrap 文件                        |
-| command-logger        | `command`                                         | 将所有命令记录到 `~/.openclaw/logs/commands.log`            |
-| compaction-notifier   | `session:compact:before`, `session:compact:after` | 在会话紧凑化开始/结束时发送可见的聊天通知                    |
-| boot-md               | `gateway:startup`                                 | 在网关启动时运行 `BOOT.md`                                   |
+| 钩子                  | 事件                                               | 功能                                                           |
+| --------------------- | -------------------------------------------------- | -------------------------------------------------------------- |
+| session-memory        | `command:new`、`command:reset`、`session:auto-reset` | 将会话上下文保存到 `<workspace>/memory/`                 |
+| bootstrap-extra-files | `agent:bootstrap`                                  | 从 glob 模式注入其他引导文件                                  |
+| command-logger        | `command`                                          | 将所有命令记录到 `~/.openclaw/logs/commands.log`           |
+| compaction-notifier   | `session:compact:before`、`session:compact:after`  | 在会话紧凑化开始和结束时发送可见的聊天通知                   |
+| boot-md               | `gateway:startup`                                  | 网关启动时运行 `BOOT.md`                                     |
 
 启用任意捆绑钩子：
 
@@ -237,7 +242,16 @@ openclaw hooks enable <hook-name>
 
 ### session-memory 详情
 
-提取最后的用户/助手消息（默认 15 条，可通过 `hooks.internal.entries.session-memory.messages` 配置）并使用主机本地日期将它们保存到 `<workspace>/memory/YYYY-MM-DD-HHMM.md`。内存捕获在后台运行，因此 `/new` 和 `/reset` 的确认不会因转录读取或可选的 slug 生成而延迟。将 `hooks.internal.entries.session-memory.llmSlug: true` 设为启用可生成描述性的文件名 slug，并且还可以将 `hooks.internal.entries.session-memory.model` 设置为已配置的别名（例如 `sonnet`）、代理默认提供商上的裸模型 ID，或 `provider/model` 引用。若未提供 `model`，slug 生成将使用代理的默认模型；在不可用时则回退为时间戳 slug。需要配置 `workspace.dir`。
+在执行 `/new`、`/reset`、每日重置或闲置过期时，提取最近的用户/助手消息（默认为 15 条，可通过 `hooks.internal.entries.session-memory.messages` 配置），并使用 `agents.defaults.userTimezone` 将其保存到 `<workspace>/memory/YYYY-MM-DD-HHMM.md`。未配置用户时区时，将回退到主机时区。记忆捕获在后台运行，因此重置处理和替换会话不会因读取转录或生成可选 slug 而延迟。设置 `hooks.internal.entries.session-memory.llmSlug: true` 可生成描述性文件名 slug，还可以选择将 `hooks.internal.entries.session-memory.model` 设置为已配置的别名（例如 `sonnet`）、代理默认提供商上的裸模型 ID，或 `provider/model` 引用。如果省略 `model`，slug 生成会使用代理的默认模型；当默认模型不可用时，则回退到时间戳 slug。要求配置 `workspace.dir`。
+
+<Note>
+`memory` 源已经会为此钩子保存的对话摘录建立索引。如果同时启用了
+[会话转录索引](/reference/memory-config#session-memory-search)，
+同一对话可能会同时出现在 `memory` 和 `sessions` 中，从而产生重叠的搜索结果并增加额外的嵌入计算。
+若只使用钩子进行召回，请设置 `memory.search.sources: ["memory"]` 和
+`memory.search.rememberAcrossConversations: false`；仅设置 `sources` 并不能阻止跨对话召回添加 `sessions`。
+若要召回完整转录，则运行 `openclaw hooks disable session-memory`。仅当你确实希望同时使用这两种表示形式时，才启用两者。
+</Note>
 
 <a id="bootstrap-extra-files"></a>
 
@@ -282,17 +296,17 @@ openclaw hooks enable <hook-name>
 
 ## 插件钩子
 
-插件可以通过 Plugin SDK 注册类型化钩子，以实现更深度的集成：
+插件可以通过插件 SDK 注册类型化钩子，以实现更深度的集成：
 拦截工具调用、修改提示词、控制消息流等。
 当你需要 `before_tool_call`、`before_agent_reply`、
 `before_install` 或其他进程内生命周期钩子时，请使用插件钩子。
 
-Plugin-managed 内部钩子是不同的：它们参与此页面的
+插件管理的内部钩子是不同的：它们参与此页面的
 粗粒度命令/生命周期事件系统，并在 `openclaw hooks list` 中显示为
-`plugin:<id>`。请将它们用于副作用和与 hook pack 的兼容性，而不是用于
+`plugin:<id>`。请将它们用于副作用和与钩子包的兼容性，而不是用于
 有序中间件或策略门控。
 
-完整的插件钩子参考请见 [Plugin hooks](/plugins/hooks)。
+完整的插件钩子参考请见 [插件钩子](/plugins/hooks)。
 
 ## 配置
 
@@ -362,12 +376,12 @@ openclaw hooks enable <hook-name>
 openclaw hooks disable <hook-name>
 ```
 
-## Best Practices
+## 最佳实践
 
-- **Keep handlers fast.** Hooks run during command processing. For heavier work, use `void processInBackground(event)` for fire-and-forget handling.
-- **Handle errors gracefully.** Wrap risky operations in try/catch; do not throw exceptions so other handlers can continue running.
-- **Filter events early.** If the event type/action is not relevant, return immediately.
-- **Use specific event keys.** Compared with `"events": ["command"]`, it is recommended to use `"events": ["command:new"]` to reduce overhead.
+- **保持处理程序快速。** 钩子会在命令处理期间运行。对于较繁重的工作，请使用 `void processInBackground(event)` 进行即发即弃式处理。
+- **优雅地处理错误。** 将有风险的操作包装在 try/catch 中；不要抛出异常，以便其他处理程序能够继续运行。
+- **尽早过滤事件。** 如果事件类型/操作不相关，请立即返回。
+- **使用具体的事件键。** 与 `"events": ["command"]` 相比，建议使用 `"events": ["command:new"]`，以减少开销。
 
 ## 故障排查
 

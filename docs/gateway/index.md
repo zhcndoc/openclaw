@@ -91,7 +91,7 @@ OpenClaw 的最高杠杆兼容性接触面：
 - 许多 RAG 和 memory 流水线期望有 `/v1/embeddings`。
 - 原生 agent 客户端越来越倾向于 `/v1/responses`。
 
-`/v1/models` 是 agent-first：它会为每个已配置的 agent 返回 `openclaw`、`openclaw/default` 和 `openclaw/<agentId>`。`openclaw/default` 是稳定别名，始终映射到已配置的默认 agent。需要后端 provider/model 覆盖时，请发送 `x-openclaw-model`；否则，所选 agent 的常规模型和 embedding 配置将保持控制权。
+`/v1/models` 采用 agent 优先模式：它会为每个已配置的 agent 返回 `openclaw`、`openclaw/default` 和 `openclaw/<agentId>`。`openclaw/default` 是稳定别名，始终映射到已配置的默认 agent。需要后端 provider/model 覆盖时，请发送 `x-openclaw-model`；否则，所选 agent 的常规模型和 embedding 配置将保持控制权。
 
 所有这些端点都运行在主 Gateway 端口上，并使用与 Gateway 其余 HTTP API 相同的受信操作员认证边界。
 
@@ -110,12 +110,12 @@ Gateway 启动时使用相同的实际端口和绑定方式，并在为非 loopb
 
 ### 热重载模式
 
-| `gateway.reload.mode` | 行为                                      |
-| --------------------- | ----------------------------------------- |
-| `off`                 | 不进行配置重载                            |
-| `hot`                 | 仅应用热安全变更                          |
-| `restart`             | 在需要重载的变更上重启                    |
-| `hybrid`（默认）      | 安全时热应用，必要时重启                  |
+| `gateway.reload.mode` | 行为                                   |
+| --------------------- | -------------------------------------- |
+| `off`                 | 不重新加载配置                         |
+| `hybrid` (默认)       | 安全时热应用，需要时重启               |
+
+早期的 `hot` 和 `restart` 模式已弃用；[`openclaw doctor --fix`](/cli/doctor) 会将两者都映射为 `hybrid`。
 
 ## 操作员命令集
 
@@ -168,7 +168,7 @@ OPENCLAW_CONFIG_PATH=~/.openclaw/b.json OPENCLAW_STATE_DIR=~/.openclaw-b opencla
 
 ## 远程访问
 
-首选：Tailscale/VPN。
+首选：Tailscale/VPN。  
 备选：SSH 隧道。
 
 ```bash
@@ -202,6 +202,19 @@ openclaw gateway stop
 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`。这会将 LaunchAgent 从当前启动会话中移除，但不会持久化禁用，因此在意外崩溃后仍可通过 KeepAlive 自动恢复，并且 `gateway start` 会干净地重新启用。若要在重启后持续抑制自动重启，请传入 `--disable`：`openclaw gateway stop --disable`。
 
 LaunchAgent 标签为 `ai.openclaw.gateway`（默认）或 `ai.openclaw.<profile>`（命名 profile）。`openclaw doctor` 会审计并修复服务配置漂移。
+
+### 已存在的系统 LaunchDaemon
+
+OpenClaw 会安装并管理每用户的 LaunchAgent，但不会安装或管理系统 LaunchDaemon。如果自定义 LaunchDaemon 已经使用相同的网关标签，OpenClaw 将拒绝写入、启动、重启或修复用户 LaunchAgent，因为两个 `KeepAlive` 管理器可能会反复重启同一个网关。
+
+所有权检查会读取 `launchctl print system/<label>`，同时检查 `/Library/LaunchDaemons` 下已安装的 plist。当无法验证系统所有权时，检查将采取默认拒绝策略，并且 `--force` 也无法绕过。`openclaw gateway status` 会报告已加载的同标签系统任务；添加 `--deep` 可扫描已安装的系统服务文件。
+
+在重试前，请选择一个生命周期所有者：
+
+- 若要保留自定义系统 LaunchDaemon，请移除任何冲突的用户 LaunchAgent，并在运行 Doctor 时设置 `OPENCLAW_SERVICE_REPAIR_POLICY=external`，使其在服务生命周期方面仅执行诊断。
+- 若要恢复到受支持的用户 LaunchAgent，请使用 `sudo launchctl bootout system/<label>` 卸载系统任务，移除或迁移其实际 plist，以目标用户身份登录 macOS 桌面，然后运行 `openclaw gateway install`。
+
+对于默认 profile，`<label>` 为 `ai.openclaw.gateway`。命名 profile 使用 `ai.openclaw.<profile>`。
 
   </Tab>
 
@@ -282,7 +295,7 @@ sudo systemctl enable --now openclaw-gateway[-<profile>].service
   </Tab>
 </Tabs>
 
-Invalid configuration errors exit with code `78`. Linux systemd units use `RestartPreventExitStatus=78` to stop relaunching until the config is fixed. launchd and Windows Task Scheduler do not have an equivalent per-exit-code stop rule, so the Gateway also persists rapid unclean boot history and suppresses channel/provider account auto-start after repeated startup failures. In that safe mode the control plane still starts for inspection and repair, config hot reloads and `secrets.reload` refuse automatic channel restarts, and an explicit operator `channels.start` request can override the suppression. Step-by-step recovery lives in [Restart recovery](/gateway/restart-recovery#safety-valves-and-observability).
+无效配置错误会以代码 `78` 退出。Linux systemd unit 使用 `RestartPreventExitStatus=78`，在配置修复之前停止重新启动。launchd 和 Windows 任务计划程序没有按退出代码停止的等效规则，因此 Gateway 还会持久化快速且不干净的启动历史，并在多次启动失败后抑制渠道/提供商账户的自动启动。在该安全模式下，控制平面仍会启动，以便进行检查和修复；配置热重载和 `secrets.reload` 会拒绝自动重启渠道，而操作员明确发起的 `channels.start` 请求可以覆盖这一抑制。分步恢复说明请参阅[重启恢复](/gateway/restart-recovery#safety-valves-and-observability)。
 
 ## 开发者配置快速路径
 
@@ -306,12 +319,12 @@ openclaw --dev status
   `session.approval`、`sessions.changed`、`presence`、`tick`、`health`、
   `heartbeat`、配对/审批生命周期事件，以及 `shutdown`。
 
-Agent 运行分为两个阶段：
+代理运行分为两个阶段：
 
 1. 立即返回已接受确认（`status:"accepted"`）
 2. 最终完成响应（`status:"ok"|"error"`），中间会有流式的 `agent` 事件。
 
-查看完整协议文档：[Gateway 协议](/gateway/protocol)。
+查看完整协议文档：[网关协议](/gateway/protocol)。
 
 ## 运行检查
 
@@ -334,14 +347,14 @@ openclaw health
 
 ## 常见失败特征
 
-| Signature                                                      | 可能的问题                                                                  |
+| 特征                                                           | 可能的问题                                                                  |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `refusing to bind gateway ... without auth`                    | 非回环地址绑定，但没有有效的网关认证路径                           |
 | `another gateway instance is already listening` / `EADDRINUSE` | 端口冲突                                                                 |
 | `Gateway start blocked: set gateway.mode=local`                | 配置被设为远程模式，或损坏的配置中缺少 `gateway.mode` |
 | `unauthorized` during connect                                  | 客户端与网关之间的认证不匹配                                      |
 
-如需完整诊断阶梯，请使用 [Gateway Troubleshooting](/gateway/troubleshooting)。
+如需完整诊断阶梯，请使用 [网关故障排除](/gateway/troubleshooting)。
 
 ## 安全保障
 

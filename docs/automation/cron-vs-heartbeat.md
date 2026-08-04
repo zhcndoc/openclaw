@@ -1,12 +1,12 @@
 ---
 summary: "重定向到 /automation"
-title: "Cron 与 heartbeat"
+title: "Cron 与心跳"
 ---
 
-此页面已移动。请参阅 [Scheduled Tasks (Cron) vs Heartbeat](/automation#scheduled-tasks-cron-vs-heartbeat) 以查看决策表。
+此页面已迁移。请参阅[自动化与心跳](/automation#automations-vs-heartbeat)中的决策表。
 
 ## 相关内容
 
-- [计划任务](/automation/cron-jobs)
+- [自动化](/automation/cron-jobs)
 - [心跳](/gateway/heartbeat)
 - [后台任务](/automation/tasks)

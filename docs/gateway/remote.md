@@ -43,6 +43,8 @@ ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
 
 隧道建立后，`openclaw health` 和 `openclaw status --deep` 会通过 `ws://127.0.0.1:18789` 访问远程 Gateway。`openclaw gateway status`、`openclaw gateway health`、`openclaw gateway probe` 和 `openclaw gateway call` 也可以通过 `--url` 目标转发后的 URL。
 
+要使用一个私有的 `wss://` 端点替代每个客户端的 SSH 隧道，同时让 Gateway 保持在回环地址上，请参阅[为你的 Gateway 提供稳定的 HTTPS URL](/gateway/stable-https-url)。
+
 <Note>
 将 `18789` 替换为你配置的 `gateway.port`（或 `--port` / `OPENCLAW_GATEWAY_PORT`）。
 </Note>
@@ -90,19 +92,19 @@ ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
 
 Gateway 凭据解析在调用 / 探测 / 状态路径以及 Discord exec-approval 监控中遵循同一共享契约。Node-host 使用相同契约，但有一个本地模式例外（它会忽略 `gateway.remote.*`）。
 
-- Explicit credentials (`--token`, `--password`, or a tool's `gatewayToken`) always win on call paths that accept explicit auth.
-- URL override safety:
-  - CLI `--url` never reuses implicit config/env credentials.
-  - Env `OPENCLAW_GATEWAY_URL` may use env credentials only (`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`).
-- Local mode defaults:
-  - token: `gateway.auth.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.remote.token` (remote fallback only when the local token is unset)
-  - password: `gateway.auth.password` -> `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` (remote fallback only when the local password is unset)
-- Remote mode defaults:
-  - token: `gateway.remote.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token`
-  - password: `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` -> `gateway.auth.password`
-- Node-host local-mode exception: environment credentials stay first and `gateway.remote.token` / `gateway.remote.password` are ignored because node commands target an explicit host and port.
-- Remote probe/status token checks are strict by default: they use `gateway.remote.token` only (no local token fallback) when targeting remote mode.
-- Gateway env overrides use `OPENCLAW_GATEWAY_*` only.
+- 显式凭据（`--token`、`--password` 或工具的 `gatewayToken`）在接受显式身份验证的调用路径上始终具有最高优先级。
+- URL 覆盖安全性：
+  - CLI `--url` 永远不会复用隐式配置或环境凭据。
+  - 环境变量 `OPENCLAW_GATEWAY_URL` 只能使用环境凭据（`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`）。
+- 本地模式默认值：
+  - token：`gateway.auth.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.remote.token`（仅当本地 token 未设置时才回退到远程值）
+  - password：`gateway.auth.password` -> `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password`（仅当本地 password 未设置时才回退到远程值）
+- 远程模式默认值：
+  - token：`gateway.remote.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token`
+  - password：`OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` -> `gateway.auth.password`
+- Node-host 本地模式例外：环境凭据仍具有最高优先级，并且会忽略 `gateway.remote.token` / `gateway.remote.password`，因为 node 命令会连接到显式指定的主机和端口。
+- 远程探测/状态 token 检查默认是严格的：以远程模式为目标时，仅使用 `gateway.remote.token`（不回退到本地 token）。
+- Gateway 环境变量覆盖仅使用 `OPENCLAW_GATEWAY_*`。
 
 ## Chat UI 远程访问
 
@@ -120,16 +122,16 @@ macOS 菜单栏应用端到端驱动相同的设置：远程状态检查、WebCh
 
 除非你确定需要绑定，否则请让 Gateway 保持为 **仅限 loopback**。
 
-- **Loopback + SSH/Tailscale Serve** is the safest default (no public exposure).
-- Plaintext `ws://` is accepted for loopback, private/LAN (RFC 1918), link-local, CGNAT, `.local`, and `.ts.net` hosts. Public remote hosts must use `wss://`.
-- **Non-loopback binds** (`lan`/`tailnet`/`custom`, or `auto` when loopback is unavailable) must use Gateway auth: token, password, or an identity-aware reverse proxy with `gateway.auth.mode: "trusted-proxy"`.
-- `gateway.remote.token` / `.password` are client credential sources; they do not configure server auth by themselves.
-- Local call paths can use `gateway.remote.*` as a fallback only when `gateway.auth.*` is unset.
-- If `gateway.auth.token` / `gateway.auth.password` is explicitly configured via SecretRef and unresolved, resolution fails closed (no remote fallback masking).
-- `gateway.remote.tlsFingerprint` pins the remote TLS cert for `wss://`, including both operator/control traffic and the companion node in macOS direct mode. Without a stored pin, macOS pins on first use only after normal system trust passes; self-signed or private-CA Gateways need an explicit fingerprint or Remote over SSH.
-- **Tailscale Serve** can authenticate Control UI/WebSocket traffic via identity headers when `gateway.auth.allowTailscale: true`. HTTP API endpoints do not use that header auth and instead follow the Gateway's normal HTTP auth mode. This tokenless flow assumes the Gateway host is trusted; set it to `false` for shared-secret auth everywhere.
-- **Trusted-proxy** auth expects a non-loopback identity-aware proxy by default. Same-host loopback reverse proxies require explicit `gateway.auth.trustedProxy.allowLoopback = true`.
-- Treat browser control like operator access: tailnet-only plus deliberate node pairing.
+- **Loopback + SSH/Tailscale Serve** 是最安全的默认配置（不暴露到公共网络）。
+- 明文 `ws://` 可用于 loopback、私有网络/LAN（RFC 1918）、链路本地地址、CGNAT、`.local` 和 `.ts.net` 主机。公共远程主机必须使用 `wss://`。
+- **非 loopback 绑定**（`lan`/`tailnet`/`custom`，或 loopback 不可用时的 `auto`）必须使用 Gateway 身份验证：令牌、密码，或配置了 `gateway.auth.mode: "trusted-proxy"` 的身份感知反向代理。
+- `gateway.remote.token` / `.password` 是客户端凭据来源；它们本身不会配置服务器身份验证。
+- 只有在 `gateway.auth.*` 未设置时，本地调用路径才能将 `gateway.remote.*` 作为回退方案。
+- 如果通过 SecretRef 显式配置了 `gateway.auth.token` / `gateway.auth.password`，但 SecretRef 无法解析，则解析会安全失败（不会使用远程回退方案进行掩盖）。
+- `gateway.remote.tlsFingerprint` 会为 `wss://` 固定远程 TLS 证书，包括操作员/控制流量以及 macOS 直连模式下的伴随节点。如果没有存储的指纹，macOS 仅会在首次使用时、且正常通过系统信任验证后进行固定；自签名或私有 CA Gateway 需要显式指纹，或通过 SSH 使用 Remote。
+- **Tailscale Serve** 可以在 `gateway.auth.allowTailscale: true` 时，通过身份标头对控制界面/WebSocket 流量进行身份验证。HTTP API 端点不使用该标头身份验证，而是遵循 Gateway 的常规 HTTP 身份验证模式。此无令牌流程默认 Gateway 主机是受信任的；如果希望所有地方都使用共享密钥身份验证，请将其设置为 `false`。
+- **Trusted-proxy** 身份验证默认要求使用非 loopback 的身份感知代理。同主机上的 loopback 反向代理必须显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
+- 将浏览器控制视同操作员访问：仅限 tailnet，并有意进行节点配对。
 
 深入了解：[安全](/gateway/security)。
 
@@ -216,7 +218,7 @@ launchctl kickstart -k gui/$UID/ai.openclaw.ssh-tunnel
 launchctl bootout gui/$UID/ai.openclaw.ssh-tunnel
 ```
 
-| Config entry                         | 它的作用                                                 |
+| 配置项                              | 它的作用                                                 |
 | ------------------------------------ | ------------------------------------------------------------ |
 | `LocalForward 18789 127.0.0.1:18789` | 将本地端口 18789 转发到远程端口 18789               |
 | `ssh -N`                             | 不执行远程命令的 SSH（仅端口转发） |

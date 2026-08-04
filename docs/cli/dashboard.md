@@ -1,14 +1,16 @@
 ---
-summary: "openclaw dashboard 的 CLI 参考（打开控制 UI）"
+summary: "`openclaw dashboard` 的 CLI 参考（安全打开控制界面）
 read_when:
-  - 你想使用当前令牌打开 Control UI
-  - 你想在不启动浏览器的情况下打印 URL
-title: "仪表盘"
+  - 想要从 Gateway 主机打开或重新配对控制界面
+  - 想要打印 URL 而不启动浏览器
+title: "仪表板"
 ---
 
 # `openclaw dashboard`
 
-使用当前身份验证打开 Control UI。
+使用短期有效的一次性浏览器配对链接打开控制界面。成功完成交接后，
+该浏览器会拥有自己的持久设备凭据，因此重新打开仪表板不依赖
+共享的 Gateway 令牌。
 
 ```bash
 openclaw dashboard
@@ -29,17 +31,28 @@ openclaw dashboard --yes
 openclaw dashboard --json
 ```
 
-响应包含 `url`、`httpUrl`、`wsUrl`、`port` 和 `tokenIncluded`。如果 Gateway 尚未就绪，命令会返回 `{"ok":false,"reason":"..."}` 并以非零状态退出。由 SecretRef 管理的 token 绝不会包含在 `url` 中。
+响应包含向后兼容的共享身份验证 `url`，以及 `browserUrl`、
+`browserBootstrapExpiresAtMs`、`httpUrl`、`wsUrl`、`port` 和 `tokenIncluded`。浏览器集成
+应打开 `browserUrl`；需要共享 Gateway 凭据的原生 RPC 客户端可以继续使用
+`url`。如果 Gateway 尚未就绪或无法签发浏览器交接地址，命令将返回
+`{"ok":false,"reason":"..."}` 并以非零状态退出。由 SecretRef 管理的共享令牌绝不会包含在
+`url` 中。
 
 注意：
 
-- 在可能的情况下，解析已配置的 `gateway.auth.token` SecretRef。
-- 遵循 `gateway.tls.enabled`：启用 TLS 的 Gateway 会打印/打开 `https://` 的 Control UI URL，并通过 `wss://` 连接。
-- 对于 `lan` 或通配符 `custom` 绑定，跨主机启动始终使用回环地址，因为通配符不是浏览器目的地。明文 `tailnet` 和 `custom` 绑定也会使用 `127.0.0.1`，以便浏览器拥有安全上下文；启用 TLS 的特定主机会保留已配置地址，以便证书名称匹配。
-- 在为特定接口绑定交付带认证的回环 URL 之前，命令会探测已配置接口，并验证它与 `127.0.0.1` 是否由同一个 Gateway 进程拥有。若监听器所有权存在歧义，则会安全失败并给出状态指导。
-- 对于由 SecretRef 管理的 token（已解析或未解析），打印/复制/打开的 URL 都不会包含 token，因此外部密钥不会泄漏到终端输出、剪贴板历史或浏览器启动参数中。
-- 如果 `gateway.auth.token` 由 SecretRef 管理但尚未解析，命令会打印一个未带 token 的 URL 和修复指导，而不是无效的 token 占位符。
-- 如果针对已 token 认证的 URL，剪贴板/浏览器交付失败，命令会记录一条安全的手动认证提示，提及 `OPENCLAW_GATEWAY_TOKEN`、`gateway.auth.token` 和 URL 片段键 `token`，但不会打印 token 值。
+- 尽可能解析配置的 `gateway.auth.token` SecretRef。
+- `browserUrl` 在 URL 片段中携带一次性、有效期十分钟的引导信息。Control UI 会立即移除
+  该信息，将其绑定到浏览器已签名的设备身份，并仅存储最终生成的
+  每设备凭据。
+- 遵循 `gateway.tls.enabled`：启用 TLS 的 Gateway 会打印/打开 `https://` Control UI URL，并通过 `wss://` 连接。
+- 对于 `lan` 或通配符 `custom` 绑定，同主机启动始终使用回环地址，因为通配符不是浏览器目标地址。纯文本的 `tailnet` 和 `custom` 绑定同样使用 `127.0.0.1`，以便浏览器拥有安全上下文；启用 TLS 的特定主机则保留配置的地址，以确保其与证书名称匹配。
+- 在为特定接口绑定交付经过身份验证的回环 URL 之前，命令会探测配置的接口，并验证该接口与 `127.0.0.1` 由同一 Gateway 进程拥有。监听器所有权不明确时将安全失败，并提供状态指导。
+- 交互式命令只打印干净的基础 URL；剪贴板/浏览器启动会接收
+  一次性 `browserUrl`，绝不会接收共享令牌。因此，由 SecretRef 管理的共享令牌不会泄露到
+  终端输出、剪贴板历史记录或浏览器启动参数中。
+- 如果针对使用令牌身份验证的 URL 的剪贴板/浏览器交付失败，命令会记录一条安全的手动身份验证提示，其中指出 `OPENCLAW_GATEWAY_TOKEN`、`gateway.auth.token` 和 URL 片段键 `token`，但不会打印令牌值。
+- 如果共享令牌无法放入 URL 且剪贴板/浏览器交付失败，请运行
+  `openclaw dashboard --json`，并在十分钟内打开其中短时有效的 `browserUrl`。
 
 ## 相关内容
 

@@ -6,12 +6,19 @@ read_when:
 title: "NovitaAI"
 ---
 
-NovitaAI is a hosted AI infrastructure provider with an OpenAI-compatible API.
-It ships as a bundled OpenClaw provider (no separate plugin install), so
-credentials go through the normal model auth flow and model refs look like
-`novita/deepseek/deepseek-v4-pro`.
+NovitaAI 是一家提供托管式 AI 基础设施的服务商，提供兼容 OpenAI 的 API。
+OpenClaw 通过官方外部
+`@openclaw/novita-provider` 插件提供 NovitaAI 支持。模型引用使用
+`novita/deepseek/deepseek-v4-pro` 这种形式。
 
 ## 设置
+
+安装插件并重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/novita-provider
+openclaw gateway restart
+```
 
 在 [novita.ai/settings/key-management](https://novita.ai/settings/key-management) 创建 API 密钥，然后运行：
 
@@ -22,20 +29,21 @@ openclaw onboard --auth-choice novita-api-key
 或者设置：
 
 ```bash
-export NOVITA_API_KEY="<your-novita-api-key>" # pragma: allowlist secret
+export NOVITA_API_KEY="<your-novita-api-key>" # pragma: 允许列入白名单的密钥
 ```
 
 ## 默认值
 
-| Setting       | Value                             |
+| 设置          | 值                                |
 | ------------- | --------------------------------- |
-| Provider id   | `novita`                          |
-| Aliases       | `novita-ai`, `novitaai`           |
-| Base URL      | `https://api.novita.ai/openai/v1` |
-| Env var       | `NOVITA_API_KEY`                  |
-| Default model | `novita/deepseek/deepseek-v4-pro` |
+| 插件          | `@openclaw/novita-provider`       |
+| 提供商 ID     | `novita`                          |
+| 别名          | `novita-ai`, `novitaai`           |
+| 基础 URL      | `https://api.novita.ai/openai/v1` |
+| 环境变量      | `NOVITA_API_KEY`                  |
+| 默认模型      | `novita/deepseek/deepseek-v4-pro` |
 
-## 捆绑模型目录
+## 模型目录
 
 - `novita/moonshotai/kimi-k3`
 - `novita/moonshotai/kimi-k2.7-code`
@@ -45,8 +53,8 @@ export NOVITA_API_KEY="<your-novita-api-key>" # pragma: allowlist secret
 - `novita/deepseek/deepseek-v4-flash`
 - `novita/qwen/qwen3.7-max`
 
-`novita/minimax/minimax-m2.7` remains selectable as a deprecated compatibility
-entry but is hidden from model pickers.
+`novita/minimax/minimax-m2.7` 仍可作为已弃用的兼容性条目进行选择，
+但在模型选择器中处于隐藏状态。
 
 这只是一个起点，不是一个实时目录。你的账户、地区，或者
 Novita 当前的服务内容可能会添加、移除或限制路由。请在设置

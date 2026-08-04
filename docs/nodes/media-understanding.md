@@ -117,7 +117,7 @@ OpenClaw 可以在回复流程运行之前对入站媒体（图像/音频/视频
 
 ### 提供方凭证
 
-Provider media understanding 使用与普通模型调用相同的认证解析方式：认证配置文件、环境变量，然后是 `models.providers.<providerId>.apiKey`。`tools.media.models[]` 条目不接受内联的 `apiKey` 字段。
+提供方媒体理解使用与普通模型调用相同的认证解析方式：认证配置文件、环境变量，然后是 `models.providers.<providerId>.apiKey`。`tools.media.models[]` 条目不接受内联的 `apiKey` 字段。
 
 ```json5
 {
@@ -130,7 +130,7 @@ Provider media understanding 使用与普通模型调用相同的认证解析方
 }
 ```
 
-有关配置文件、环境变量和自定义基础 URL，请参见 [Tools and custom providers](/gateway/config-tools)。
+有关配置文件、环境变量和自定义基础 URL，请参见 [工具和自定义提供方](/gateway/config-tools)。
 
 ## 规则和行为
 
@@ -173,9 +173,6 @@ Provider media understanding 使用与普通模型调用相同的认证解析方
     - 图像：Anthropic/OpenAI → Google → MiniMax → Deepinfra → MiniMax Portal → Z.AI
     - 视频：Google → Qwen → Moonshot
 
-  </Step>
-  <Step title="Antigravity CLI（仅图像/视频）">
-    首先尝试已安装的 `agy` 或 `antigravity` 二进制（可通过 `OPENCLAW_ANTIGRAVITY_CLI` 覆盖），并对媒体所在目录进行沙盒限制。
   </Step>
 </Steps>
 
@@ -230,17 +227,17 @@ Provider media understanding 使用与普通模型调用相同的认证解析方
 | 视频      | Google, Moonshot, Qwen                                                                                                                                  | 通过厂商插件进行提供方视频理解；Qwen 视频理解使用标准 DashScope 端点。                                                                        |
 
 <Note>
-**MiniMax 注**：`minimax`, `minimax-cn`, `minimax-portal`, and `minimax-portal-cn` 的图像理解始终来自插件拥有的 `MiniMax-VL-01` 媒体提供方，即使旧版 MiniMax M2.x 聊天元数据声称支持图像输入。
+**MiniMax 注**：`minimax`、`minimax-cn`、`minimax-portal` 和 `minimax-portal-cn` 的图像理解始终来自插件拥有的 `MiniMax-VL-01` 媒体提供方，即使旧版 MiniMax M2.x 聊天元数据声称支持图像输入。
 </Note>
 
-## Model Selection Guide
+## 模型选择指南
 
-- When quality and safety matter, prefer the strongest model from the current generation for each media capability.
-- For agentic tools that handle untrusted input, avoid older/weaker media models.
-- Keep at least one fallback option for each capability to ensure availability (a high-quality model + a faster/cheaper model).
-- When the provider API is unavailable, CLI fallbacks (`whisper-cli`, `whisper`, `gemini`) come in handy.
-- Known file output patterns are authoritative: empty or missing inferred transcription files do not fall back to CLI progress output, and instead no transcription content will be generated.
-- `parakeet-mlx`: use `--output-format txt` (or `all`) together with `--output-dir` and the default `{filename}` output template. Upstream `PARAKEET_OUTPUT_FORMAT` and `PARAKEET_OUTPUT_TEMPLATE` environment variables are also honored. OpenClaw reads `<output-dir>/<media-basename>.txt`; the default `srt` format, other formats, and custom output templates still use stdout.
+- 当质量和安全性至关重要时，请针对每种媒体能力，优先选择当前一代中最强大的模型。
+- 对于处理不受信任输入的智能代理工具，避免使用较旧或较弱的媒体模型。
+- 为每种能力至少保留一个备用选项，以确保可用性（一个高质量模型 + 一个更快速/更便宜的模型）。
+- 当提供商 API 不可用时，CLI 备用方案（`whisper-cli`、`whisper`、`gemini`）会派上用场。
+- 已知的文件输出模式具有权威性：推断出的转录文件为空或缺失时，不会回退到 CLI 进度输出，而是不会生成任何转录内容。
+- `parakeet-mlx`：将 `--output-format txt`（或 `all`）与 `--output-dir` 以及默认的 `{filename}` 输出模板结合使用。上游的 `PARAKEET_OUTPUT_FORMAT` 和 `PARAKEET_OUTPUT_TEMPLATE` 环境变量同样会被遵循。OpenClaw 会读取 `<output-dir>/<media-basename>.txt`；默认的 `srt` 格式、其他格式以及自定义输出模板仍会使用 stdout。
 
 ## 附件策略
 
@@ -288,7 +285,7 @@ Provider media understanding 使用与普通模型调用相同的认证解析方
                 "gemini-3-flash",
                 "--allowed-tools",
                 "read_file",
-                "Read the media at {{AttachmentPath}} and describe it in <= {{MaxChars}} characters.",
+                "读取 {{AttachmentPath}} 中的媒体，并用不超过 {{MaxChars}} 个字符进行描述。",
               ],
               capabilities: ["image", "video"],
             },
@@ -333,7 +330,7 @@ Provider media understanding 使用与普通模型调用相同的认证解析方
                   "gemini-3-flash",
                   "--allowed-tools",
                   "read_file",
-                  "Read the media at {{AttachmentPath}} and describe it in <= {{MaxChars}} characters.",
+                  "读取 {{AttachmentPath}} 中的媒体，并用不超过 {{MaxChars}} 个字符进行描述。",
                 ],
               },
             ],
@@ -363,7 +360,7 @@ Provider media understanding 使用与普通模型调用相同的认证解析方
                   "gemini-3-flash",
                   "--allowed-tools",
                   "read_file",
-                  "Read the media at {{AttachmentPath}} and describe it in <= {{MaxChars}} characters.",
+                  "读取 {{AttachmentPath}} 中的媒体，并用不超过 {{MaxChars}} 个字符进行描述。",
                 ],
               },
             ],

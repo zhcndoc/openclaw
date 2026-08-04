@@ -53,10 +53,15 @@ export default definePluginEntry({
 
 `api.on(name, handler, opts?)` 接受：
 
-| Option      | Effect                                                                                                                                                                                            |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `priority`  | 顺序；数值越高越先运行。                                                                                                                                                                           |
-| `timeoutMs` | 每个钩子的等待预算。到期后，OpenClaw 会停止等待该处理器并继续执行下一个。它不会取消该处理器或其副作用。省略则使用运行器的默认每钩子超时。 |
+| 选项               | 作用                                                                                                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `matcher`          | 由 `before_tool_call` 或 `after_tool_call` 处理的规范 OpenClaw 工具 ID 非空列表，例如 `exec`、`apply_patch` 或 `spawn_agent`。省略则匹配所有工具。空列表、通配符、空白值和提供商特定的别名均无效。 |
+| `priority`         | 排序；数值越高越先运行。                                                                                                                                                                                                                           |
+| `registrationId`   | 插件内某次注册的稳定标识。技能评估器将其用作 `evaluatorId`；否则使用插件 ID。                                                                                                                       |
+| `timeoutMs`        | 每个钩子的等待预算。超时后，OpenClaw 会停止等待该处理器并继续执行。它不会取消处理器或其副作用。省略则使用运行器默认的每个钩子超时值。                                                      |
+| `eligibleTriggers` | 仅适用于 `before_agent_reply`，将宿主分发限制为 `cron`、`heartbeat` 或 `user` 中的一个或多个触发器。                                                                                                                                                  |
+
+触发器资格由宿主在调用处理器之前强制执行。因此，使用 `eligibleTriggers: ["heartbeat", "cron"]` 注册的钩子对用户回合处于非活动状态，并且不会阻塞被中断用户回合的恢复。省略、为空、格式错误或部分包含未知值的列表仍不受限制，从而使分发和恢复在失败时默认采取安全策略。其他钩子类型不接受此选项。
 
 运维人员可以在不修改插件代码的情况下设置钩子预算：
 
@@ -80,7 +85,11 @@ export default definePluginEntry({
 
 `hooks.timeouts.<hookName>` 会覆盖 `hooks.timeoutMs`，后者又会覆盖插件作者通过 `api.on(..., { timeoutMs })` 指定的值。每个值都必须是一个不超过 600000 ms 的正整数。对于已知较慢的钩子，优先使用按钩子覆盖，这样某个插件不会在所有地方都获得更长的预算。
 
-超时的处理器 promise 会继续运行，因为钩子回调不会收到取消信号。钩子分发在插件工作仍在进行时就可以释放其 Gateway admission。拥有长时间运行工作的插件必须提供自己的取消与关闭生命周期。
+处理器 Promise 超时后仍会继续运行，因为钩子回调不会接收由超时管理的取消信号。`before_tool_call` 会接收所属工具调用的 `ctx.abortSignal`，但钩子超时不会触发该信号。即使插件工作仍在进行，钩子分发也可以释放其 Gateway 准入。拥有长时间运行任务的插件必须提供自己的取消机制和关闭生命周期。
+
+策略钩子 `before_tool_call` 和 `before_install` 默认对每个处理器使用 15 秒。超时将采取安全失败策略：工具调用或安装会被拒绝，而不是在没有策略决策的情况下继续执行。
+
+`gateway_stop` 默认对每个处理器使用 5 秒。超时的处理器会被记录日志，关闭流程将继续，以免插件清理工作耗尽 Gateway 进程监视器的时间预算。
 
 出站修改类钩子 `message_sending` 和 `reply_payload_sending` 默认每个处理器使用 15 秒。若某个处理器超时，OpenClaw 会记录插件错误并继续使用最新的 payload，以便序列化交付通道能够稳定下来。对于有意在交付前执行更慢工作的插件，请为每个钩子设置更大的预算。
 
@@ -96,14 +105,14 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 | Hook                            | Purpose                                                                                  |
 | ------------------------------- | ---------------------------------------------------------------------------------------- |
-| `before_model_resolve`          | Override provider or model before session messages load                                  |
-| `agent_turn_prepare`            | Consume queued plugin turn injections and add same-turn context before prompt hooks      |
-| `before_prompt_build`           | Add dynamic context or system-prompt text before the model call                          |
-| **`before_agent_run`**          | Inspect the final prompt and session messages before model submission; can block the run |
-| **`before_agent_reply`**        | Short-circuit the model turn with a synthetic reply or silence                           |
-| **`before_agent_finalize`**     | Inspect the natural final answer and request one more model pass                         |
-| `agent_end`                     | Observe final messages, success state, and run duration                                  |
-| `heartbeat_prompt_contribution` | Add heartbeat-only context for background monitor and lifecycle plugins                  |
+| `before_model_resolve`          | 在加载会话消息之前覆盖提供方或模型                                  |
+| `agent_turn_prepare`            | 消费排队的插件回合注入内容，并在提示词钩子之前添加同一回合的上下文      |
+| `before_prompt_build`           | 添加提示词上下文，或缩小当前回合提交的工具范围                   |
+| **`before_agent_run`**          | 在提交给模型之前检查最终提示词和会话消息；可以阻止运行 |
+| **`before_agent_reply`**        | 使用合成回复或静默来提前结束模型回合                           |
+| **`before_agent_finalize`**     | 检查自然生成的最终答案，并请求模型再次处理                         |
+| `agent_end`                     | 观察最终消息、成功状态和运行时长                                  |
+| `heartbeat_prompt_contribution` | 为后台监控和生命周期插件添加仅用于心跳的上下文                  |
 
 **对话观察**
 
@@ -125,18 +134,20 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 **消息与传递**
 
-| Hook                            | Purpose                                                           |
-| ------------------------------- | ----------------------------------------------------------------- |
-| **`inbound_claim`**             | 在代理路由前认领传入消息（合成回复） |
-| **`channel_pairing_requested`** | 观察新创建的 DM 配对请求                         |
-| `message_received`              | 观察传入内容、发送者、线程和元数据             |
-| **`message_sending`**           | 重写外发内容或取消投递                       |
-| **`reply_payload_sending`**     | 在投递前修改或取消规范化的回复负载        |
-| `message_sent`                  | 观察外发投递成功或失败                      |
-| **`before_dispatch`**           | 在通道交接前检查或重写外发分发    |
-| **`reply_dispatch`**            | 参与最终的回复分发管线                  |
+| Hook                        | Purpose                                                                    |
+| --------------------------- | -------------------------------------------------------------------------- |
+| **`inbound_claim`**         | 为拥有该消息会话绑定的插件认领入站消息 |
+| `channel_pairing_requested` | 观察新创建的私信配对请求                                  |
+| `message_received`          | 观察入站内容、发送者、线程和元数据                      |
+| **`message_sending`**       | 重写出站内容或取消传递                                |
+| **`reply_payload_sending`** | 在传递前修改或取消规范化的回复负载                 |
+| `message_sent`              | 观察出站传递的成功或失败                               |
+| **`before_dispatch`**       | 在交给通道之前检查或重写出站分发             |
+| **`reply_dispatch`**        | 参与最终的回复分发流程                           |
 
-**Sessions 与压缩**
+`inbound_claim` 不是全局的预路由广播。OpenClaw 仅对拥有该消息核心管理会话绑定的插件调用它。若要在模型输入之前抑制普通代理回合，同时不将原始提示词保留在转录中，请使用 `before_agent_run`。若要使用合成回复或静默来提前结束代理回合，请使用 `before_agent_reply`。
+
+**会话与压缩**
 
 | Hook                                     | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -144,9 +155,11 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 | `before_compaction` / `after_compaction` | 观察或注释压缩周期                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `before_reset`                           | 观察会话重置事件（`/reset`、程序化重置）                                                                                                                                                                                                                                                                                                                                                                                                     |
 
-For `sessions.create` calls with `parentSessionKey` and `emitCommandHooks: true`, a distinct child always receives `session_start`. Callers declare whether the parent also receives terminal `session_end` with `succeedsParent`: `true` means successor, `false` means parallel child. Omission preserves the legacy parent-rollover behavior. The `command:new` and `before_reset` hooks still describe the requested `/new` action in both cases.
+关闭和重启会在所有活跃会话及插件处理程序之间共享一个**总计 2 秒的 `session_end` 排空预算**；该预算不是按处理程序分别计算的。请快速返回，或限制最终处理时间并确保持久化在崩溃时保持一致。如果预算耗尽，OpenClaw 会记录 `session-end-drain timed out` 并继续关闭，因此未完成的插件工作可能会被中断。
 
-**Subagents**
+对于带有 `parentSessionKey` 和 `emitCommandHooks: true` 的 `sessions.create` 调用，独立的子会话始终会收到 `session_start`。调用方通过 `succeedsParent` 声明父会话是否也会收到终端 `session_end`：`true` 表示后继会话，`false` 表示并行子会话。省略该字段会保留旧版的父会话轮换行为。在两种情况下，`command:new` 和 `before_reset` 钩子仍会描述所请求的 `/new` 操作。
+
+**子代理**
 
 - `subagent_spawned` / `subagent_ended` - 观察子代理的启动和完成。
 - `subagent_delivery_target` - 当没有核心会话绑定可投射路由时，用于完成投递的兼容性钩子。
@@ -159,14 +172,49 @@ For `sessions.create` calls with `parentSessionKey` and `emitCommandHooks: true`
 | Hook                             | Purpose                                                                                              |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `gateway_start` / `gateway_stop` | 随 Gateway 启动或停止插件拥有的服务                                                 |
-| `deactivate`                     | `gateway_stop` 的已弃用兼容别名；在新插件中使用 `gateway_stop`                 |
-| `cron_reconciled`                | 在启动或重新加载后，根据完整的 Gateway cron 状态进行协调                            |
-| `cron_changed`                   | 观察 Gateway 拥有的 cron 生命周期变更（添加、更新、移除、启动、完成、计划） |
-| **`before_install`**             | 检查已加载插件运行时中的暂存技能或插件安装材料                         |
+| `deactivate`                     | `gateway_stop` 的弃用兼容性别名；新插件请使用 `gateway_stop`                 |
+| `cron_reconciled`                | 启动或重新加载后，根据完整的 Gateway cron 状态进行协调                            |
+| `cron_changed`                   | 观察 Gateway 管理的 cron 生命周期变化（添加、更新、移除、启动、完成、计划） |
+| **`before_install`**             | 从已加载的插件运行时检查暂存的技能或插件安装材料                         |
+| **`skill_proposal_evaluate`**    | 评估一份确切的 Skill Workshop 草案，并返回归属明确的发现、指标或决策       |
+| `skill_proposal_changed`         | 观察持久化的 Skill Workshop 提案在提交后的生命周期事件                           |
+| `skill_changed`                  | 观察已提交的实时技能创建、更新和移除事件                                      |
 
-### Channel pairing requests
+### 技能生命周期与评估
 
-当插件需要在未配对的 DM 发送者创建待处理配对请求后通知操作员或写入审计记录时，使用 `channel_pairing_requested`。该钩子会在请求创建时派发；配对回复的通道投递不会因为缓慢或失败的钩子处理程序而延迟。
+对于静态分析器、安全扫描器、基准测试、基于模型的评分器或其他第三方评估器，请使用 `skill_proposal_evaluate`。OpenClaw 会传递包含文件哈希和树哈希的不可变候选包。更新提案还会将完整的当前技能作为 `baseline` 包含在内。文本文件使用 UTF-8 内容；二进制文件使用 base64。
+
+评估器注册会并发运行。请为每个评估器提供稳定的 `registrationId`：
+
+```typescript
+api.on(
+  "skill_proposal_evaluate",
+  async (event) => {
+    const score = await evaluateBundle(event.candidate, event.baseline);
+    return {
+      evaluatorVersion: "rules-2026-07",
+      mode: "baseline-comparison",
+      decision: score.regressed ? "revise" : "pass",
+      summary: score.summary,
+      metrics: score.metrics,
+      findings: score.findings,
+    };
+  },
+  { registrationId: "quality-regression", timeoutMs: 90_000 },
+);
+```
+
+存储的结果会标识评估器、插件 ID、插件包版本、状态以及返回的结果。超时和抛出的错误会作为归因错误结果记录；它们不会导致整个评估失败。只有当已完成的评估器返回 `decision: "block"` 时，应用提案才会被阻止。应用操作会在 Workshop 修改锁下重新验证已评估的目标树，因此任何实时技能资产漂移都需要重新评估。持久化的评估器合并结果上限为 512 KiB。
+
+`skill_proposal_changed` 会在匹配的提案行和仅追加生命周期事件提交后触发。它携带事件 ID、序列号、精确的提案修订哈希、可选的关联 ID 以及评估结果。
+`skill_changed` 会在实时技能创建、更新或移除提交后触发，并在可用时包含带有内容、树、声明和源版本的变更前后工件。
+
+这些钩子是基础构件，而不是优化调度器。插件或外部控制器可以观察持久化的提案事件，评估其精确的修订哈希，使用该哈希和关联 ID 进行修订，然后重复此过程。OpenClaw 不会自动修订提案，也不会运行无界的评估循环。
+事件重放受字节数限制；当还有可用的下一页时，会返回 `nextSequence`。
+
+### 频道配对请求
+
+当插件需要在未配对的私信发送者创建待处理配对请求后通知操作员或写入审计记录时，使用 `channel_pairing_requested`。该钩子会在请求创建时派发；配对回复的通道投递不会因为缓慢或失败的钩子处理程序而延迟。
 
 ```typescript
 api.on("channel_pairing_requested", async (event) => {
@@ -203,6 +251,9 @@ api.on("channel_pairing_requested", async (event) => {
 - optional `event.toolCallId`
 - context fields such as `ctx.agentId`, `ctx.sessionKey`, `ctx.sessionId`,
   `ctx.runId`, `ctx.toolKind`, `ctx.toolInputKind`, and diagnostic `ctx.trace`
+- optional `ctx.abortSignal`, which aborts when the owning tool call is
+  cancelled; handlers should pass it to cancellable I/O and remove any
+  listeners they register
 - optional `ctx.requester`, the host-derived requester that initiated the current
   message run. It can include `channel`, `accountId`, `senderId`,
   `senderIsOwner`, and provider-native `roleIds`. Missing fields are unproven,
@@ -244,12 +295,9 @@ type BeforeToolCallResult = {
 - `onResolution` 接收已解析的决策：`allow-once`、`allow-always`、
   `deny`、`timeout` 或 `cancelled`。
 
-### Sender-aware policy in one file
+### 单文件中的发送者感知策略
 
-A standalone plugin file can keep deployment-specific policy in code instead
-of adding another configuration schema. This example gives owners every tool,
-lets configured maintainers use a conservative tool and message-action set,
-and exposes `/fix` to senders already authorized by the channel configuration:
+独立插件文件可以将部署特定的策略保存在代码中，而无需添加其他配置模式。此示例为所有者提供每个工具的访问权限，让已配置的维护者使用一组保守的工具和消息操作，并向已获得频道配置授权的发送者开放 `/fix`：
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
@@ -323,7 +371,7 @@ export default definePluginEntry({
 });
 ```
 
-Load the file directly and restart the Gateway:
+直接加载该文件并重启 Gateway：
 
 ```json5
 {
@@ -351,29 +399,17 @@ Load the file directly and restart the Gateway:
 }
 ```
 
-`AGENT_ID` must name the agent bound to the maintenance conversation. The
-binding selects that agent for normal messages and `/fix`; the standalone file
-remains the single owner of owner-versus-maintainer tool policy.
+`AGENT_ID` 必须指向绑定到维护对话的代理。该绑定会为普通消息和 `/fix` 选择该代理；独立文件仍然是所有者与维护者工具策略的唯一控制方。
 
-`requireAuth: true` reuses each channel's existing sender admission. For
-Discord, a guild or channel `users`/`roles` allowlist can authorize the
-maintenance audience. Other channels can use stable sender ids. The hook then
-applies the finer per-tool decision on every tool call in the run, including
-Codex native `PreToolUse` calls. It can veto a tool the model sees, but cannot
-add a tool omitted by the host. Existing sandbox, exec approval, owner-only
-core-tool, and channel policies still apply; the hook cannot grant past them.
+`requireAuth: true` 会复用每个频道现有的发送者准入机制。对于 Discord，服务器或频道的 `users`/`roles` 允许列表可以为维护受众授予授权。其他频道可以使用稳定的发送者 ID。随后，钩子会在运行中的每次工具调用上应用更细粒度的逐工具决策，包括 Codex 原生的 `PreToolUse` 调用。它可以否决模型可见的工具，但不能添加宿主省略的工具。现有的沙箱、exec 审批、仅所有者可用的核心工具以及频道策略仍然适用；钩子无法越过这些策略授予权限。
 
-Scope sender and role ids to an exact channel/account pair as shown; both are
-provider-local namespaces. Keep the allowlists conservative. Add write or
-execution tools only when the deployment's sandbox and approval policy make
-that safe. For automated or system runs, decide explicitly whether an absent
-`ctx.requester` should pass; the example denies it for the scoped agent.
+如上所示，将发送者 ID 和角色 ID 限定在精确的频道/账户对中；二者都是提供方本地的命名空间。保持允许列表保守。仅当部署的沙箱和审批策略能够确保安全时，才添加写入或执行工具。对于自动化或系统运行，请明确决定缺少 `ctx.requester` 时是否应当放行；此示例会拒绝其作用域代理的此类请求。
 
-See [Plugin permission requests](/plugins/plugin-permission-requests) for
-approval routing, decision behavior, and when to use `requireApproval` instead
-of optional tools or exec approvals.
+参见[插件权限请求](/plugins/plugin-permission-requests)，了解审批路由、决策行为，以及何时应使用 `requireApproval` 而不是可选工具或 exec 审批。
 
 需要宿主级策略的插件可以通过 `api.registerTrustedToolPolicy(...)` 注册受信任的工具策略。这些策略会在普通的 `before_tool_call` 钩子之前以及正常钩子决策之前运行。捆绑的受信任策略最先运行；已安装插件的受信任策略随后按插件加载顺序运行；普通的 `before_tool_call` 钩子在它们之后运行。捆绑插件保留现有的受信任策略路径。已安装插件必须显式启用，并在 `contracts.trustedToolPolicies` 中声明每个策略 id；未声明的 id 会在注册前被拒绝。策略 id 仅在注册该策略的插件范围内有效，因此不同插件可以重用相同的本地 id。仅在工作区策略、预算执行或保留工作流安全等宿主信任的门控场景中使用这一层。
+
+受信任策略可以将 `matcher` 设置为与 `before_tool_call` 接受的相同规范工具 ID 列表。省略 matcher 可保留匹配全部工具的行为。
 
 ### Exec 环境钩子
 
@@ -409,25 +445,12 @@ of optional tools or exec approvals.
 
 新插件应使用按阶段划分的钩子：
 
-- `before_model_resolve`: 仅接收当前提示词和附件
-  元数据。返回 `providerOverride` 或 `modelOverride`。
-- `agent_turn_prepare`: 接收当前提示词、已准备好的会话
-  消息，以及本会话中已清空的任何 exactly-once 队列注入。
-  返回 `prependContext` 或 `appendContext`。
-- `before_prompt_build`: 接收当前提示词和会话消息。
-  返回 `prependContext`、`appendContext`、`systemPrompt`、
-  `prependSystemContext` 或 `appendSystemContext`。
-- `heartbeat_prompt_contribution`: 仅在 heartbeat 回合运行，返回
-  `prependContext` 或 `appendContext`。适用于需要总结当前状态
-  但不改变用户发起回合的后台监控。
+- `before_model_resolve`: 仅接收当前提示词和附件元数据。返回 `providerOverride` 或 `modelOverride`。
+- `agent_turn_prepare`: 接收当前提示词、准备好的会话消息，以及为此会话清空的、恰好一次的排队注入。返回 `prependContext` 或 `appendContext`。
+- `before_prompt_build`: 接收当前提示词和会话消息。返回 `prependContext`、`appendContext`、`systemPrompt`、`prependSystemContext`、`appendSystemContext` 或 `toolsAllow`。`toolsAllow` 只能缩小主机为当前回合解析出的工具范围；`[]` 表示不提交任何可选工具，而省略该字段则保持现有范围不变。多个钩子返回的限制会取交集。嵌入式运行器和 Copilot harness 会将此字段应用于当前回合提交的工具范围。Codex app-server harness 会拒绝限制性值，因为其动态工具是线程级的，而 Codex `turn/start` 不支持工具范围覆盖；当插件需要此策略时，请使用嵌入式或 Copilot 运行时。
+- `heartbeat_prompt_contribution`: 仅在心跳回合运行，并返回 `prependContext` 或 `appendContext`。用于需要在不改变用户发起回合的情况下总结当前状态的后台监控器。
 
-`before_agent_run` runs after prompt construction and before any model input,
-including prompt-local image loading and `llm_input` observation. It receives
-the current user input as `prompt`, plus loaded session history in `messages`
-and the active system prompt. Return `{ outcome: "block", reason, message? }`
-to stop the run before the model reads the prompt. `reason` is internal;
-`message` is the user-facing replacement. Only `pass` and `block` outcomes are
-supported; unsupported decision shapes fail closed.
+`before_agent_run` 在提示词构建完成后、任何模型输入之前运行，包括提示词本地图片加载和 `llm_input` 观测。它接收作为 `prompt` 的当前用户输入，以及作为 `messages` 的已加载会话历史和当前活动系统提示词。返回 `{ outcome: "block", reason, message? }` 可在模型读取提示词前停止运行。`reason` 是内部信息；`message` 是面向用户的替换文本。仅支持 `pass` 和 `block` 两种结果；不受支持的决策结构会以安全失败方式处理。
 
 当运行被阻止时，OpenClaw 只会在 `message.content` 中存储替换文本，
 以及非敏感的阻止元数据，例如阻止插件 id 和时间戳。原始用户文本
@@ -435,11 +458,7 @@ supported; unsupported decision shapes fail closed.
 不会出现在转录、历史、广播、日志和诊断载荷中。可观测性应使用
 已清洗字段，例如阻止者 id、结果、时间戳或安全分类。
 
-Agent-turn hooks including `agent_end` include `event.runId` when OpenClaw can
-identify the active run; the same value is also on `ctx.runId`. Cron-driven
-runs also expose `ctx.jobId` (the originating cron job id) on the agent-turn
-context so hooks can scope metrics, side effects, or state to a specific
-scheduled job. `ctx.jobId` is not part of the `before_tool_call` tool context.
+包括 `agent_end` 在内的 agent 回合钩子，在 OpenClaw 能识别活动运行时会包含 `event.runId`；相同的值也会出现在 `ctx.runId` 中。由 Cron 驱动的运行还会在 agent 回合上下文中暴露 `ctx.jobId`（发起该运行的 cron 作业 id），因此钩子可以将指标、副作用或状态限定到特定的计划作业。`ctx.jobId` 不属于 `before_tool_call` 工具上下文。
 
 对于通道发起的运行，`ctx.channel` 和 `ctx.messageProvider` 用于标识
 提供方表面，例如 `discord` 或 `telegram`，而 `ctx.channelId` 是会话
@@ -447,9 +466,9 @@ scheduled job. `ctx.jobId` is not part of the `before_tool_call` tool context.
 
 当发送者身份可用时，agent 钩子上下文还包括：
 
-- `ctx.senderId` - channel-scoped sender ID（例如 Feishu `open_id`、Discord
-  user ID）。当运行源自带有已知发送者元数据的用户消息时填充。
-- `ctx.chatId` - transport-native conversation identifier（例如 Feishu `chat_id`、
+- `ctx.senderId` - 通道范围内的发送者 ID（例如 Feishu `open_id`、Discord
+  用户 ID）。当运行源自带有已知发送者元数据的用户消息时填充。
+- `ctx.chatId` - 传输层原生的会话标识符（例如 Feishu `chat_id`、
   Telegram `chat_id`）。当来源通道提供原生会话 ID 时填充。
 - `ctx.channelContext.sender.id` - 与 `ctx.senderId` 相同的发送者 ID，
   位于一个由通道拥有的对象下，插件可以通过通道特定字段进行扩展。
@@ -524,9 +543,10 @@ type BeforeAgentFinalizeRetry = {
 `idempotencyKey` 允许宿主在等价的 finalize 决策之间统计同一插件请求的重试次数，
 而 `maxAttempts` 则限制宿主在继续使用自然最终答案之前允许的额外传递次数。
 
-非捆绑插件若需要原始对话钩子（`before_model_resolve`、
-`before_agent_reply`、`llm_input`、`llm_output`、`before_agent_finalize`、
-`agent_end` 或 `before_agent_run`），必须设置：
+需要原始会话钩子（`before_model_resolve`、
+`agent_turn_prepare`、`before_prompt_build`、`before_agent_reply`、`llm_input`、
+`llm_output`、`before_agent_finalize`、`agent_end` 或 `before_agent_run`）的非捆绑插件必须
+设置：
 
 ```json
 {
@@ -542,8 +562,10 @@ type BeforeAgentFinalizeRetry = {
 }
 ```
 
-Prompt-mutating hooks 和 durable next-turn injections 可以通过
-`plugins.entries.<id>.hooks.allowPromptInjection=false` 按插件禁用。
+`agent_turn_prepare` 和 `before_prompt_build` 还会改变提示词构建，
+因此需要会话访问权限，并且仍受
+`plugins.entries.<id>.hooks.allowPromptInjection` 约束。
+可以通过将该选项设置为 `false`，按插件禁用会修改提示词的钩子和持久化的下一回合注入。
 
 ### 会话扩展与下一回合注入
 
@@ -570,14 +592,14 @@ OpenClaw 会在提示词钩子之前清空已排队的注入，丢弃过期注�
 
 将消息钩子用于通道级路由和投递策略：
 
-- `message_received`: observe inbound content, sender, `threadId`,
-  `messageId`, `senderId`, optional run/session correlation, ordered `media`,
-  and metadata.
-- `message_sending`: rewrite `content` or return `{ cancel: true }`.
-- `reply_payload_sending`: rewrite normalized `ReplyPayload` objects
-  (including `presentation`, `delivery`, media refs, and text) or return
-  `{ cancel: true }`.
-- `message_sent`: observe final success or failure.
+- `message_received`：观察入站内容、发送者、`threadId`、
+  `messageId`、`senderId`、可选的运行/会话关联信息、有序的
+  `media` 以及元数据。
+- `message_sending`：重写 `content` 或返回 `{ cancel: true }`。
+- `reply_payload_sending`：重写规范化的 `ReplyPayload` 对象
+  （包括 `presentation`、`delivery`、媒体引用和文本），或返回
+  `{ cancel: true }`。
+- `message_sent`：观察最终的成功或失败结果。
 
 对于仅音频的 TTS 回复，即使通道负载中没有可见文本/标题，`content` 也可能包含隐藏的口语转写。
 重写该 `content` 只会更新钩子可见的转写内容；它不会
@@ -591,23 +613,22 @@ OpenClaw 会在提示词钩子之前清空已排队的注入，丢弃过期注�
 和 `before_dispatch` 上下文在通道具有可见性过滤的引用消息数据时也会暴露回复元数据：`replyToId`、`replyToIdFull`、
 `replyToBody`、`replyToSender` 和 `replyToIsQuote`。在读取旧版元数据之前，请优先使用这些一等字段。
 
-优先使用类型化的 `threadId` 和 `replyToId` 字段，然后再使用特定于通道的元数据。
+`before_dispatch` 在其事件和上下文中都会接收规范的入站 `messageId`。
 
-Inbound claim and message-received events expose `media?:
-PluginHookMediaFact[]` as the canonical attachment API. Each fact can carry
-`path`, `url`, `contentType`, `kind`, `transcribed`, `messageId`, and
-`workspaceDir`; array position is attachment identity. When a remote attachment
-has not been staged locally yet, `media` is omitted,
-`mediaStagingPending: true`, and `originalMedia` contains the provider-side
-facts. Do not treat `originalMedia.path` as locally readable until a later
-staged event supplies `media`.
+在使用特定于通道的元数据之前，应优先使用类型化的 `threadId` 和 `replyToId` 字段。
 
-The singular/plural `mediaPath`, `mediaUrl`, `mediaType`, `mediaPaths`,
-`mediaUrls`, `mediaTypes`, and matching `originalMedia*` metadata properties are
-deprecated compatibility aliases. New hooks should use the typed top-level
-arrays.
+入站声明和消息接收事件会通过 `media?:
+PluginHookMediaFact[]` 暴露规范的附件 API。每个事实可以包含
+`path`、`url`、`contentType`、`kind`、`transcribed`、`messageId` 和
+`workspaceDir`；数组位置即为附件标识。当远程附件尚未在本地暂存时，会省略
+`media`，设置 `mediaStagingPending: true`，并由 `originalMedia` 包含提供方一侧的
+事实。在后续暂存事件提供 `media` 之前，不要将 `originalMedia.path` 视为本地可读路径。
 
-Decision rules:
+单数/复数形式的 `mediaPath`、`mediaUrl`、`mediaType`、`mediaPaths`、
+`mediaUrls`、`mediaTypes` 以及匹配的 `originalMedia*` 元数据属性都是
+已弃用的兼容性别名。新的钩子应使用顶层的类型化数组。
+
+决策规则：
 
 - `message_sending` 中的 `cancel: true` 是终态。
 - `message_sending` 中的 `cancel: false` 视为未作出决定。
@@ -786,28 +807,13 @@ export function registerCronProjection(api: OpenClawPluginApi, host: ExternalWak
 
 有少数与钩子相邻的接口已弃用，但仍受支持。请在下一次重大版本发布前迁移：
 
-- **Plaintext channel envelopes** in `inbound_claim` and `message_received`
-  handlers. Read `BodyForAgent` and the structured user-context blocks
-  instead of parsing flat envelope text. See
-  [Plaintext channel envelopes → BodyForAgent](/plugins/sdk-migration#active-deprecations).
-- **`subagent_spawning`** remains for compatibility with older plugins, but
-  new plugins should not return thread routing from it. Core prepares
-  `thread: true` subagent bindings through channel session-binding adapters
-  before `subagent_spawned` fires.
-- **`deactivate`** remains as a deprecated cleanup compatibility alias until
-  after 2026-08-16. New plugins should use `gateway_stop`.
-- **`onResolution` in `before_tool_call`** now uses the typed
-  `PluginApprovalResolution` union (`allow-once` / `allow-always` / `deny` /
-  `timeout` / `cancelled`) instead of a free-form `string`.
-- **`api.registerSessionExtension` / `api.enqueueNextTurnInjection`** remain
-  as top-level compatibility aliases. New plugins should use
-  `api.session.state.registerSessionExtension(...)` and
-  `api.session.workflow.enqueueNextTurnInjection(...)`.
+- `inbound_claim` 和 `message_received` 处理程序中的**纯文本频道信封**。请读取 `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。请参阅[纯文本频道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
+- **`subagent_spawning`** 仍为兼容旧版插件而保留，但新插件不应再从中返回线程路由。核心会在 `subagent_spawned` 触发前，通过频道会话绑定适配器准备好 `thread: true` 子代理绑定。
+- **`deactivate`** 仍作为已弃用的清理兼容别名保留，直到 2026-08-16 之后。新插件应使用 `gateway_stop`。
+- **`before_tool_call` 中的 `onResolution`** 现在使用类型化的 `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` / `timeout` / `cancelled`），而不是自由格式的 `string`。
+- **`api.registerSessionExtension` / `api.enqueueNextTurnInjection`** 仍作为顶层兼容别名保留。新插件应使用 `api.session.state.registerSessionExtension(...)` 和 `api.session.workflow.enqueueNextTurnInjection(...)`。
 
-有关完整列表——内存能力注册、提供方思维
-配置文件、外部认证提供方、提供方发现类型、任务运行时
-访问器，以及 `command-auth` → `command-status` 重命名——请参见
-[插件 SDK 迁移 → 活跃弃用项](/plugins/sdk-migration#active-deprecations)。
+有关完整列表——内存能力注册、提供方思维配置文件、外部认证提供方、提供方发现类型、任务运行时访问器，以及 `command-auth` → `command-status` 重命名——请参见[插件 SDK 迁移 → 活跃弃用项](/plugins/sdk-migration#active-deprecations)。
 
 ## 相关内容
 

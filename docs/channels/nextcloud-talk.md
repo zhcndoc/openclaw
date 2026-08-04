@@ -21,7 +21,7 @@ openclaw plugins install @openclaw/nextcloud-talk
 openclaw plugins install ./path/to/local/nextcloud-talk-plugin
 ```
 
-安装后重启网关。详情：[插件](/tools/plugin)
+安装后重启网关。详情：[插件](/tools/plugin)。
 
 ## 快速设置（入门）
 
@@ -82,21 +82,22 @@ openclaw plugins install ./path/to/local/nextcloud-talk-plugin
 
 ## 说明
 
-- Bot 不能主动发起私信。用户必须先给 bot 发送消息。
-- Webhook URL 必须能从 Nextcloud 服务器访问；当网关位于代理后面时，请设置 `webhookPublicUrl`。Webhook 请求使用 bot secret 进行 HMAC-SHA256 签名；无效签名会被拒绝并进行限流。
-- 该 bot API 不支持媒体上传；外发媒体会以 `Attachment: <url>` 行的形式附加。
-- Webhook 载荷无法区分私信和房间；设置 `apiUser` + `apiPassword` 以启用房间类型查询（缓存约 5 分钟）。如果不设置它们，所有会话都会被视为房间。
-- 外发请求会经过 SSRF 防护。对于位于受信任私有/内部网络中的 Nextcloud 主机，可通过 `channels.nextcloud-talk.network.dangerouslyAllowPrivateNetwork: true` 显式允许。
-- 在设置了 `apiUser`/`apiPassword` 和 `webhookPublicUrl` 的情况下，`openclaw channels status` 会探测 bot，并在缺少 `response` 功能时发出警告。
+- Bot 无法发起私信。用户必须先向 Bot 发送消息。
+- webhook URL 必须能够从 Nextcloud 服务器访问；如果网关位于代理之后，请设置 `webhookPublicUrl`。Webhook 请求使用 Bot 密钥进行 HMAC-SHA256 签名；无效签名会被拒绝并受到速率限制。
+- 只有在原始事件被持久化存储后才会返回 HTTP 200；存储失败时返回 HTTP 500。持久化的 `200` 会携带 `x-openclaw-delivery-accepted: durable`（签名、验证和存储错误响应不会携带该标记），因此反向代理可以要求此标记，以区分 OpenClaw 的接受响应与普通的 `200`。
+- Bot API 不支持媒体上传；出站媒体会追加为一行 `Attachment: <url>`。
+- Webhook 负载无法区分私信和房间；设置 `apiUser` + `apiPassword` 可启用房间类型查询（缓存时间约为 5 分钟）。未设置时，每个会话都会被视为房间。
+- 出站请求会经过 SSRF 防护。对于位于受信任的私有/内部网络中的 Nextcloud 主机，请使用 `channels.nextcloud-talk.network.dangerouslyAllowPrivateNetwork: true` 选择启用。
+- 设置 `apiUser`/`apiPassword` 和 `webhookPublicUrl` 后，`openclaw channels status` 会探测 Bot，并在缺少 `response` 功能时发出警告。
 
-## Access Control (Direct Messages)
+## 访问控制（直接消息）
 
-- Default: `channels.nextcloud-talk.dmPolicy = "pairing"`. Unknown senders will receive a pairing code.
-- Approve via:
+- 默认值：`channels.nextcloud-talk.dmPolicy = "pairing"`。未知发送者将收到配对代码。
+- 通过以下命令批准：
   - `openclaw pairing list nextcloud-talk`
   - `openclaw pairing approve nextcloud-talk <CODE>`
-- Public direct messages: `channels.nextcloud-talk.dmPolicy="open"` plus `channels.nextcloud-talk.allowFrom=["*"]`.
-- `allowFrom` only matches Nextcloud user IDs (lowercase); display names are ignored.
+- 公开直接消息：`channels.nextcloud-talk.dmPolicy="open"`，并设置 `channels.nextcloud-talk.allowFrom=["*"]`。
+- `allowFrom` 仅匹配 Nextcloud 用户 ID（小写）；显示名称会被忽略。
 
 ## 房间（群组）
 

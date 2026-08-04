@@ -22,6 +22,8 @@ openclaw tasks list --status running
 openclaw tasks show <lookup>
 openclaw tasks notify <lookup> state_changes
 openclaw tasks cancel <lookup>
+openclaw tasks retry <lookup> [lookup...]
+openclaw tasks dismiss <lookup> [lookup...]
 openclaw tasks audit
 openclaw tasks maintenance
 openclaw tasks maintenance --apply
@@ -32,7 +34,7 @@ openclaw tasks flow cancel <lookup>
 
 ## 根选项
 
-| Flag               | Description                                                                                        |
+| 标志               | 描述                                                                                               |
 | ------------------ | -------------------------------------------------------------------------------------------------- |
 | `--json`           | 输出 JSON。                                                                                       |
 | `--runtime <name>` | 按类型筛选：`subagent`、`acp`、`cron` 或 `cli`。                                               |
@@ -71,6 +73,22 @@ openclaw tasks cancel <lookup>
 ```
 
 取消正在运行的后台任务。
+
+### `retry`
+
+```bash
+openclaw tasks retry <lookup> [lookup...]
+```
+
+重试 1-10 个被阻塞的子代理完成结果投递。子任务执行仍保持成功状态；重试会基于保留的规范结果创建一个隔离的投递代次。较早且存在歧义的确认仍可能导致可见结果重复。
+
+### `dismiss`
+
+```bash
+openclaw tasks dismiss <lookup> [lookup...]
+```
+
+记录 1-10 个被阻塞的子代理完成结果的有意不投递。任务会继续显示被阻塞的终止结果，并保留其结果，直到 7 天的完成结果保留期限结束。
 
 ### `audit`
 

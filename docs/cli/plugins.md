@@ -1,14 +1,14 @@
 ---
 summary: "CLI 参考，适用于 `openclaw plugins`（init、build、validate、list、install、marketplace、uninstall、enable/disable、doctor）"
 read_when:
-  - 你想安装或管理 Gateway 插件或兼容捆绑包
+  - 你想安装或管理网关插件或兼容捆绑包
   - 你想为简单的工具插件搭建脚手架或验证
   - 你想调试插件加载失败问题
 title: "插件"
 sidebarTitle: "插件"
 ---
 
-管理 Gateway 插件、hook 包和兼容捆绑包。
+管理网关插件、钩子包和兼容捆绑包。
 
 <CardGroup cols={2}>
   <Card title="插件系统" href="/tools/plugin">
@@ -21,7 +21,7 @@ sidebarTitle: "插件"
     捆绑包兼容性模型。
   </Card>
   <Card title="插件清单" href="/plugins/manifest">
-    清单字段和配置 schema。
+    清单字段和配置模式。
   </Card>
   <Card title="安全" href="/gateway/security">
     为插件安装提供安全加固。
@@ -42,17 +42,17 @@ openclaw plugins disable <id>
 openclaw plugins uninstall <id> [--dry-run] [--keep-files] [--force]
 openclaw plugins update <id-or-npm-spec> | --all [--dry-run]
 openclaw plugins registry [--refresh] [--json]
-openclaw plugins doctor
+openclaw plugins doctor [--json]
 openclaw plugins init <id> [--name <name>] [--type tool|provider] [--directory <path>]
 openclaw plugins build [--entry <path>] [--check]
-openclaw plugins validate [--entry <path>]
+openclaw plugins validate [--entry <path>] [--json]
 openclaw plugins marketplace entries [--offline] [--feed-profile <name>] [--json]
 openclaw plugins marketplace list <source> [--json]
 openclaw plugins marketplace refresh [--feed-profile <name>] [--expected-sha256 <sha256>] [--json]
 ```
 
 对于缓慢的安装、检查、卸载或 registry-refresh 排查，请使用
-`OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1` 运行命令。该 trace 会将各阶段耗时写入 stderr，并保持 JSON 输出可解析。参见 [调试](/help/debugging#plugin-lifecycle-trace)。
+`OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1` 运行命令。该跟踪会将各阶段耗时写入 stderr，并保持 JSON 输出可解析。参见 [调试](/help/debugging#plugin-lifecycle-trace)。
 
 <Note>
 在 Nix 模式（`OPENCLAW_NIX_MODE=1`）下，`openclaw.json` 是不可变的。`install`、`update`、`uninstall`、`enable` 和 `disable` 都会拒绝运行。请改为编辑此安装的 Nix 源（对于 nix-openclaw，则是 `programs.openclaw.config` 或 `instances.<name>.config`），然后重新构建。请参阅 agent-first 的 [快速开始](https://github.com/openclaw/nix-openclaw#quick-start)。
@@ -82,15 +82,15 @@ id 作为默认输出目录和包命名。工具脚手架使用
 `plugin:validate`，前者先构建，然后调用 `openclaw plugins build`/`validate`。
 
 `plugins build` 会导入构建后的入口，读取其静态工具元数据，写入
-`openclaw.plugin.json`，并保持 `package.json` 中的 `openclaw.extensions` 一致。
-`plugins validate` 会检查生成的清单、包元数据，以及
-当前入口导出是否仍然一致。有关完整的编写流程，请参见 [工具插件](/plugins/tool-plugins)。
+`openclaw.plugin.json`，并保持 `package.json` 的
+`openclaw.extensions` 同步。`plugins validate` 会检查生成的清单、包元数据和
+当前入口导出是否仍然一致。传入 `--json` 可获取机器可读的验证结果。完整的编写流程请参阅[工具插件](/plugins/tool-plugins)。
 
 脚手架会写入 TypeScript 源码，但会从构建后的
 `./dist/index.js` 入口生成元数据，因此该流程也适用于已发布的 CLI。当前入口不是默认包入口时，请使用
 `--entry <path>`。在 CI 中使用 `plugins build --check`，即可在生成元数据过期但未重写文件时使构建失败。
 
-### Provider 脚手架
+### 提供方脚手架
 
 ```bash
 openclaw plugins init acme-models --name "Acme Models" --type provider
@@ -101,11 +101,11 @@ npm test
 npm run validate
 ```
 
-Provider 脚手架会创建一个通用的、兼容 OpenAI 的模型提供方插件，
-包含 API key 认证相关配置、一个运行
+提供方脚手架会创建一个通用的、兼容 OpenAI 的模型提供方插件，
+包含 API 密钥认证相关配置、一个运行
 `clawhub package validate` 的 `npm run validate` 脚本、ClawHub 包元数据，以及一个手动
 触发的 GitHub Actions 工作流，用于未来通过 GitHub
-OIDC 进行受信任发布。Provider 脚手架不会生成技能，也不会使用
+OIDC 进行受信任发布。提供方脚手架不会生成技能，也不会使用
 `openclaw plugins build`/`validate`；这些命令用于工具
 脚手架的生成元数据流程。
 
@@ -126,8 +126,8 @@ openclaw plugins install git:github.com/<owner>/<repo>   # git 仓库
 openclaw plugins install git:github.com/<owner>/<repo>@<ref>
 openclaw plugins install <path>                          # 本地路径或归档
 openclaw plugins install -l <path>                       # 使用链接而不是复制
-openclaw plugins install <plugin>@<marketplace>          # marketplace 简写
-openclaw plugins install <plugin> --marketplace <name>   # marketplace（显式）
+openclaw plugins install <plugin>@<marketplace>          # 市场简写
+openclaw plugins install <plugin> --marketplace <name>   # 市场（显式）
 openclaw plugins install <package> --force               # 确认来源 / 覆盖现有项
 openclaw plugins install <package> --pin                  # 固定解析到的 npm 版本
 openclaw plugins install clawhub:<package> --acknowledge-clawhub-risk
@@ -145,7 +145,7 @@ openclaw plugins install <package> --dangerously-force-unsafe-install
 <Warning>
 ClawHub 包和 OpenClaw 捆绑/官方目录是受信任的安装
 来源。新的任意 npm、`npm-pack:`、git、本地路径/归档，或
-marketplace 来源会在继续前发出警告并要求确认。非交互式任意
+市场来源会在继续前发出警告并要求确认。非交互式任意
 安装必须在你审查并信任来源后传入 `--force`。同样的
 标志在需要时会覆盖现有安装目标。对
 已跟踪安装的正常更新不需要它。此确认与
@@ -174,8 +174,8 @@ Beta 通道安装和更新在可用时优先使用 npm 的 `beta` dist-tag，
 </Note>
 
 <AccordionGroup>
-  <Accordion title="Config includes 和无效配置修复">
-    如果你的 `plugins` 部分由单文件 `$include` 支持，`plugins install/update/enable/disable/uninstall` 会写回到那个被包含的文件，而保持 `openclaw.json` 不变。根级 includes、include 数组以及带有同级覆盖的 includes 会直接失败，而不是被扁平化。支持的形状请参见 [Config includes](/gateway/configuration)。
+  <Accordion title="配置包含项和无效配置修复">
+    如果你的 `plugins` 部分由单文件 `$include` 支持，`plugins install/update/enable/disable/uninstall` 会写回到那个被包含的文件，而保持 `openclaw.json` 不变。根级 includes、include 数组以及带有同级覆盖的 includes 会直接失败，而不是被扁平化。支持的形状请参见 [配置包含项](/gateway/configuration)。
 
     如果安装前配置无效，`plugins install` 通常会失败并提示你先运行 `openclaw doctor --fix`。在 Gateway 启动和热重载期间，无效的插件配置会像其他无效配置一样失败；`openclaw doctor --fix` 可以隔离无效的插件条目。唯一的既有配置例外是一条狭窄的捆绑插件恢复路径，适用于明确选择加入 `openclaw.install.allowInvalidConfigRecovery` 的插件。
 
@@ -183,13 +183,13 @@ Beta 通道安装和更新在可用时优先使用 npm 的 `beta` dist-tag，
 
   </Accordion>
   <Accordion title="--force 确认以及重新安装与更新">
-    `--force` 会在不提示的情况下确认非 ClawHub 来源。它不会绕过 `security.installPolicy` 或剩余的安装安全检查。当插件或 hook pack 已经安装时，它还会复用现有目标并就地覆盖。请在审查任意 npm、本地、归档、git 或 marketplace 来源后使用它，或者在有意从不同来源重新安装相同 id 时使用它。对于已跟踪的 npm 插件的常规升级，请优先使用 `openclaw plugins update <id-or-npm-spec>`。
+    `--force` 会在不提示的情况下确认非 ClawHub 来源。它不会绕过 `security.installPolicy` 或剩余的安装安全检查。当插件或 hook pack 已经安装时，它还会复用现有目标并就地覆盖。请在审查任意 npm、本地、归档、git 或市场来源后使用它，或者在有意从不同来源重新安装相同 id 时使用它。对于已跟踪的 npm 插件的常规升级，请优先使用 `openclaw plugins update <id-or-npm-spec>`。
 
-    如果你对一个已安装的插件 id 运行 `plugins install`，OpenClaw 会停止并引导你使用 `plugins update <id-or-npm-spec>` 进行正常升级，或者在你确实想要从不同来源覆盖当前安装时使用 `plugins install <package> --force`。任意来源仍会显示交互式来源警告；非交互式安装必须在审查后传入 `--force`。受信任的 ClawHub 和 OpenClaw 目录来源不需要它。使用 `--link` 时，`--force` 只确认来源，但不会改变链接路径的安装模式。
+    如果你对一个已安装的插件 id 运行 `plugins install`，OpenClaw 会停止并引导你使用 `plugins update <id-or-npm-spec>` 进行正常升级，或者在你确实想要从不同来源覆盖当前安装时使用 `openclaw plugins install <package> --force`。任意来源仍会显示交互式来源警告；非交互式安装必须在审查后传入 `--force`。受信任的 ClawHub 和 OpenClaw 目录来源不需要它。使用 `--link` 时，`--force` 只确认来源，但不会改变链接路径的安装模式。
 
   </Accordion>
   <Accordion title="--pin 作用范围">
-    `--pin` 只适用于 npm 安装，并记录解析后的精确 `<name>@<version>`。它不支持 `git:` 安装（请在 spec 中固定 ref，例如 `git:github.com/acme/plugin@v1.2.3`），也不支持 `--marketplace`（marketplace 安装会保留 marketplace 源元数据，而不是 npm spec）。
+    `--pin` 只适用于 npm 安装，并记录解析后的精确 `<name>@<version>`。它不支持 `git:` 安装（请在 spec 中固定 ref，例如 `git:github.com/acme/plugin@v1.2.3`），也不支持 `--marketplace`（市场安装会保留市场源元数据，而不是 npm spec）。
   </Accordion>
   <Accordion title="--dangerously-force-unsafe-install">
     `--dangerously-force-unsafe-install` 已弃用，现在不再起作用。OpenClaw 不再对插件安装运行内置的危险代码拦截。
@@ -205,14 +205,14 @@ Beta 通道安装和更新在可用时优先使用 npm 的 `beta` dist-tag，
     只有在查看 ClawHub 警告并决定在没有交互提示的情况下继续时，才使用 `--acknowledge-clawhub-risk`。待处理或过期的（尚未清理的）扫描结果会发出警告，但不要求确认。官方 ClawHub 包和捆绑的 OpenClaw 插件来源会完全绕过此发布信任检查。
 
   </Accordion>
-  <Accordion title="Hook packs 和 npm specs">
-    `plugins install` 也是安装暴露 `package.json` 中 `openclaw.hooks` 的 hook packs 的入口。请使用 `openclaw hooks` 进行过滤后的 hook 可见性和逐个 hook 启用，而不是进行包安装。
+  <Accordion title="Hook 包和 npm spec">
+    `plugins install` 也是安装暴露 `package.json` 中 `openclaw.hooks` 的 Hook 包的入口。请使用 `openclaw hooks` 进行过滤后的 Hook 可见性和逐个 Hook 启用，而不是进行包安装。
 
-    Npm specs **仅限 registry**（包名加上可选的 **精确版本** 或 **dist-tag**）。Git/URL/file specs 和 semver 范围都会被拒绝。依赖安装会在每个插件的单独受管 npm 项目中运行，并使用 `--ignore-scripts` 以确保安全，即使你的 shell 配置了全局 npm 安装选项也是如此。受管插件 npm 项目会继承 OpenClaw 的包级 npm `overrides`，因此宿主安全固定也会应用于提升后的插件依赖。
+    Npm spec **仅限 registry**（包名加上可选的 **精确版本** 或 **dist-tag**）。Git/URL/file spec 和 semver 范围都会被拒绝。依赖安装会在每个插件的单独受管 npm 项目中运行，并使用 `--ignore-scripts` 以确保安全，即使你的 shell 配置了全局 npm 安装选项也是如此。受管插件 npm 项目会继承 OpenClaw 的包级 npm `overrides`，因此宿主安全固定也会应用于提升后的插件依赖。
 
     使用 `npm:<package>` 可以明确指定 npm 解析。裸 spec 在发布切换期间也会直接从 npm 安装，除非它们匹配官方插件 id。
 
-    与捆绑插件匹配的原始 `@openclaw/*` specs 会优先解析为镜像拥有的捆绑副本，然后才回退到 npm。例如，`openclaw plugins install @openclaw/discord@2026.5.20 --pin` 会使用当前 OpenClaw 构建中的捆绑 Discord 插件，而不是创建一个受管 npm 覆盖。若要强制使用外部 npm 包，请使用 `openclaw plugins install npm:@openclaw/discord@2026.5.20 --pin`。
+    与捆绑插件匹配的原始 `@openclaw/*` spec 会优先解析为镜像拥有的捆绑副本，然后才回退到 npm。例如，`openclaw plugins install @openclaw/discord@2026.5.20 --pin` 会使用当前 OpenClaw 构建中的捆绑 Discord 插件，而不是创建一个受管 npm 覆盖。若要强制使用外部 npm 包，请使用 `openclaw plugins install npm:@openclaw/discord@2026.5.20 --pin`。
 
     裸 spec 和 `@latest` 会保持在稳定通道。OpenClaw 这样的带日期修正版本如 `2026.5.3-1` 在此检查中也算作稳定版。如果 npm 将任一形式解析为预发布版本，OpenClaw 会停止并要求你通过预发布标签（`@beta`/`@rc`）或精确预发布版本（`@1.2.3-beta.4`）显式选择加入。
 
@@ -234,7 +234,7 @@ Beta 通道安装和更新在可用时优先使用 npm 的 `beta` dist-tag，
 
     当文件是 npm-pack tarball，并且你希望使用与 registry 安装相同的、按插件划分的受管 npm 项目路径时，请使用 `npm-pack:<path.tgz>`，这包括 `package-lock.json` 验证、提升后的依赖扫描和 npm 安装记录。普通归档路径仍会作为本地归档安装到插件扩展根目录下。
 
-    也支持 Claude marketplace 安装。
+    也支持 Claude 市场安装。
 
   </Accordion>
 </AccordionGroup>
@@ -263,9 +263,9 @@ openclaw plugins install npm:@scope/plugin-name@1.0.1
 OpenClaw 在安装前会检查声明的插件 API / 最低 gateway 兼容性。当所选 ClawHub 版本发布了 ClawPack 产物时，OpenClaw 会下载带版本的 npm-pack `.tgz`，验证 ClawHub digest 头和产物 digest，然后通过常规归档路径安装它。没有 ClawPack 元数据的旧版 ClawHub 版本仍然会通过传统的包归档验证路径安装。已记录的安装会保留其 ClawHub 源元数据、产物类型、npm integrity、npm shasum、tarball 名称和 ClawPack digest 事实，以便后续更新使用。
 未版本化的 ClawHub 安装会保留未版本化的已记录 spec，因此 `openclaw plugins update` 可以跟随较新的 ClawHub 发布；显式版本或标签选择器，例如 `clawhub:pkg@1.2.3` 和 `clawhub:pkg@beta`，仍会固定在该选择器上。
 
-### Marketplace 简写
+### Marketplace 缩写
 
-当 marketplace 名称存在于 Claude 的本地 registry 缓存 `~/.claude/plugins/known_marketplaces.json` 中时，可使用 `plugin@marketplace` 简写：
+当 marketplace 名称存在于 Claude 的本地 registry 缓存 `~/.claude/plugins/known_marketplaces.json` 中时，可使用 `plugin@marketplace` 缩写：
 
 ```bash
 openclaw plugins marketplace list <marketplace-name>
@@ -299,7 +299,7 @@ openclaw plugins install <plugin-name> --marketplace ./my-marketplace
 
 - 原生 OpenClaw 插件（`openclaw.plugin.json`）
 - 兼容 Codex 的 bundle（`.codex-plugin/plugin.json`）
-- 兼容 Claude 的 bundle（`.claude-plugin/plugin.json`，如果该 manifest 文件缺失，则使用默认的 Claude component 布局）
+- 兼容 Claude 的 bundle（`.claude-plugin/plugin.json`，如果该 manifest 文件缺失，则使用默认的 Claude 组件布局）
 - 兼容 Cursor 的 bundle（`.cursor-plugin/plugin.json`）
 
 受管本地安装必须是插件目录或归档。独立的 `.js`、
@@ -310,7 +310,7 @@ openclaw plugins install <plugin-name> --marketplace ./my-marketplace
 `plugins.load.paths` 中显式列出独立文件。
 
 <Note>
-兼容 bundle 会安装到常规插件根目录，并参与相同的 list/info/enable/disable 流程。当前支持 bundle skills、Claude 命令技能、Claude `settings.json` 默认项、Claude `.lsp.json` / manifest 声明的 `lspServers` 默认项、Cursor 命令技能，以及兼容的 Codex hook 目录；其他已检测到的 bundle 能力会在诊断/info 中显示，但尚未接入运行时执行。
+兼容 bundle 会安装到常规插件根目录，并参与相同的列表/信息/启用/禁用流程。当前支持 bundle 技能、Claude 命令技能、Claude `settings.json` 默认项、Claude `.lsp.json` / manifest 声明的 `lspServers` 默认项、Cursor 命令技能，以及兼容的 Codex hook 目录；其他已检测到的 bundle 能力会在诊断/信息中显示，但尚未接入运行时执行。
 </Note>
 
 使用 `-l`/`--link` 可指向本地插件目录而不复制它（会添加到
@@ -325,7 +325,7 @@ openclaw plugins install -l ./my-plugin
 它会确认来源，但不会复制或覆盖已链接的目录。
 
 <Note>
-从 workspace extensions root 发现的 workspace-origin 插件，在显式启用之前不会被导入或执行。对于本地开发，请运行 `openclaw plugins enable <plugin-id>` 或设置
+从 workspace extensions 根目录发现的 workspace-origin 插件，在显式启用之前不会被导入或执行。对于本地开发，请运行 `openclaw plugins enable <plugin-id>` 或设置
 `plugins.entries.<plugin-id>.enabled: true`；如果你的配置使用
 `plugins.allow`，也请在其中包含同一个插件 id。这个 fail-closed 规则
 也适用于当 channel setup 显式针对 workspace-origin 插件进行仅设置加载时，因此当该 workspace 插件保持禁用或被排除在 allowlist 之外时，本地 channel 插件设置代码不会运行。链接安装和显式 `plugins.load.paths` 条目会遵循其解析后的插件来源的常规策略。请参见
@@ -377,9 +377,10 @@ id，并将受信任的 id 复制到 `openclaw.json` 中的 `plugins.allow`。�
 
 用于运行时 hook 调试：
 
-- `openclaw plugins inspect <id> --runtime --json` 显示来自模块加载检查的已注册 hooks 和诊断信息。运行时检查绝不会安装依赖；请使用 `openclaw doctor --fix` 清理旧的依赖状态，或恢复配置中引用的缺失可下载插件。
-- `openclaw gateway status --deep --require-rpc` 确认可达的 Gateway URL/profile、服务/进程提示、配置路径和 RPC 健康状态。
-- 非捆绑的 conversation hooks（`llm_input`、`llm_output`、`before_model_resolve`、`before_agent_reply`、`before_agent_run`、`before_agent_finalize`、`agent_end`）需要 `plugins.entries.<id>.hooks.allowConversationAccess=true`。
+- `openclaw plugins inspect <id> --runtime --json` 会显示模块加载检查过程中注册的 hook 和诊断信息。运行时检查绝不会安装依赖；请使用 `openclaw doctor --fix` 清理旧的依赖状态，或恢复配置中引用的缺失可下载插件。
+- `openclaw gateway status --deep --require-rpc` 可确认可访问的 Gateway URL/profile、服务/进程提示、配置路径和 RPC 健康状态。
+- 如果某个仅包含 hook 的插件未出现在运行时检查中，请确认其[hook 启动意图](/tools/plugin#plugin-hooks)：要么清单中的 `activation.onCapabilities: ["hook"]` 配合显式启用插件，要么使用会发出启动信号的 `plugins.entries.<id>.hooks` 策略，例如 `allowConversationAccess: true`。全局禁用、拒绝规则和限制性 allowlist 仍然优先。
+- 非捆绑的会话 hook（`before_model_resolve`、`agent_turn_prepare`、`before_prompt_build`、`before_agent_reply`、`llm_input`、`llm_output`、`before_agent_run`、`before_agent_finalize`、`agent_end`）要求 `plugins.entries.<id>.hooks.allowConversationAccess=true`。
 
 ### 插件索引
 
@@ -396,9 +397,9 @@ openclaw plugins uninstall <id> --keep-files
 openclaw plugins uninstall <id> --force
 ```
 
-`uninstall` 会从 `plugins.entries`、持久化的插件索引、插件允许/拒绝列表条目中移除插件记录，并在适用时移除关联的 `plugins.load.paths` 条目。除非设置了 `--keep-files`，否则卸载还会删除受跟踪的受管安装目录，但仅限于该目录解析到 OpenClaw 插件扩展根目录内时。如果该插件当前占用 `memory` 或 `contextEngine` 插槽，该插槽将重置为其默认值（`memory` 为 `memory-core`，上下文引擎为 `legacy`）。
+`uninstall` 会从 `plugins.entries`、持久化插件索引、插件允许/拒绝列表条目，以及任何解析后与记录的安装路径完全一致的 `plugins.load.paths` 条目中移除插件记录。对于链接路径安装，还会移除与其记录的源路径完全一致的条目。父目录、子路径、前缀匹配项和无关的加载路径都会保留。除非设置了 `--keep-files`，否则 `uninstall` 还会移除受跟踪的托管安装目录，但仅当该目录解析后位于 OpenClaw 的插件扩展根目录内时才会执行。如果插件当前占用 `memory` 或 `contextEngine` 槽位，则该槽位会重置为其默认值（`memory` 对应 `memory-core`，上下文引擎对应 `legacy`）。
 
-`uninstall` 会先打印将被移除内容的预览，然后在进行更改前提示 `Uninstall plugin "<id>"?`。传入 `--force` 可跳过确认提示（适用于脚本和非交互式运行）；不使用该选项时，卸载需要交互式 TTY。`--dry-run` 会打印相同的预览并退出，不会提示或更改任何内容。
+`uninstall` 会先打印将被移除内容的预览，然后在进行更改前提示 `卸载插件 "<id>"？`。传入 `--force` 可跳过确认提示（适用于脚本和非交互式运行）；不使用该选项时，卸载需要交互式 TTY。`--dry-run` 会打印相同的预览并退出，不会提示或更改任何内容。
 
 <Note>
 `--keep-config` 作为已弃用的 `--keep-files` 别名仍受支持。
@@ -432,7 +433,7 @@ openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-ins
 
   </Accordion>
   <Accordion title="Beta 通道更新">
-    定向的 `openclaw plugins update <id-or-npm-spec>` 会复用已跟踪的插件 spec，除非你传入新的 spec。批量 `openclaw plugins update --all` 在将受信任的官方插件记录同步到官方目录目标时会使用配置的 `update.channel`，因此 beta 通道安装可以保持在 beta 发布线上，而不会被悄悄规范化为 stable/latest。
+    定向的 `openclaw plugins update <id-or-npm-spec>` 会复用已跟踪的插件 spec，除非你传入新的 spec。批量的 `openclaw plugins update --all` 会在将受信任的官方插件记录同步到官方目录目标时，使用规范的注册表通道解析器。这样，已安装的 beta 核心在 `update.channel` 未设置时，会继续让官方插件处于 beta 发布线，行为与核心更新器保持一致，而不会将它们静默规范化为 stable/latest。显式选择的 `beta`、`dev` 和 `extended-stable` 仍保持现有的优先级。
 
     `openclaw update` 也知道当前活跃的 OpenClaw 更新通道：在 beta 通道上，默认发布线的 npm 和 ClawHub 插件记录会先尝试 `@beta`。如果不存在插件 beta 版本，它们会回退到已记录的 default/latest spec；npm 插件在 beta 包存在但安装验证失败时也会回退。该回退会以警告形式报告，并不会使核心更新失败。精确版本和显式标签在定向更新中会保持对该选择器的锁定。
 
@@ -483,9 +484,12 @@ openclaw plugins inspect --all
 
 ```bash
 openclaw plugins doctor
+openclaw plugins doctor --json
 ```
 
-`doctor` 会报告插件加载错误、清单/发现诊断、兼容性提示，以及过期的插件配置引用，例如缺失的插件槽位。当安装树和插件配置都干净时，它会打印 `No plugin issues detected.`。如果仍存在过期配置，但安装树其他方面是健康的，总结会如实说明，而不是暗示插件完全健康。
+`doctor` 会报告插件加载错误、清单/发现诊断、兼容性提示，以及过时的插件配置引用，例如缺少的插件槽位。它会加载插件模块但不会激活插件，也不会查询正在运行的 Gateway。当这些本地检查通过时，它会打印 `插件发现、模块加载、兼容性和配置检查已通过。运行 "openclaw health" 以检查正在运行的 Gateway，包括运行时隔离和回退状态。`。[健康检查命令](/cli/health) 会从 Gateway 读取当前的运行时隔离和回退状态。如果仍存在过时配置，但安装目录树总体正常，摘要会明确说明这一点，而不是暗示插件完全健康。
+
+使用 `--json` 时，相同的发现、兼容性和配置诊断信息会作为一个机器可读对象返回。
 
 如果某个已配置插件存在于磁盘上，但被加载器的路径安全检查阻止，配置验证会保留该插件条目并将其报告为 `present but blocked`。请修复前面的被阻止插件诊断，例如路径所有权或 world-writable 权限，而不是移除 `plugins.entries.<id>` 或 `plugins.allow` 配置。
 
@@ -525,9 +529,9 @@ openclaw plugins marketplace refresh --expected-sha256 <sha256> --json
 
 `plugins marketplace refresh` 会刷新已配置的托管源快照，并报告 OpenClaw 接受的是托管数据、托管快照还是捆绑回退数据。对于调用方需要命令在新鲜的托管负载不匹配固定校验和时失败的场景，请使用 `--expected-sha256`。
 
-Marketplace `list` 接受本地 marketplace 路径、`marketplace.json` 路径、类似 `owner/repo` 的 GitHub 简写、GitHub 仓库 URL，或 git URL。`--json` 会打印解析后的源标签，以及已解析的 marketplace 清单和插件条目。
+市场 `list` 接受本地市场路径、`marketplace.json` 路径、类似 `owner/repo` 的 GitHub 简写、GitHub 仓库 URL，或 git URL。`--json` 会打印解析后的源标签，以及已解析的市场清单和插件条目。
 
-Marketplace refresh 会加载一个托管的 OpenClaw marketplace 源，并将
+市场刷新会加载一个托管的 OpenClaw 市场源，并将
 经过验证的响应持久化为本地托管源快照。默认情况下，它使用
 已配置的默认源配置文件。使用 `--feed-profile <name>` 可刷新一个
 特定的已配置配置文件，使用 `--feed-url <url>` 可刷新一个明确的托管源

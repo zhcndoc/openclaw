@@ -95,16 +95,15 @@ OpenClaw 会创建一个带有 `plugin:` ID 的待批准项，将其发送到
 | `allow-once`      | 当前调用继续。                                                           |
 | `allow-always`    | 当前调用继续，并将该决策传递给插件。                                     |
 | `deny`            | 该调用被阻止，并返回拒绝的工具结果。                                     |
-| Timeout           | 该调用被阻止。                                                            |
-| Cancellation      | 当运行被中止时，该调用被阻止。                                            |
-| No approval route | 该调用被阻止，因为没有已连接的批准界面能够解析它。                        |
+| 超时              | 该调用被阻止。                                                            |
+| 取消              | 当运行被中止时，该调用被阻止。                                            |
+| 无批准路由        | 该调用被阻止，因为没有已连接的批准界面能够解析它。                        |
 
 只有请求明确允许的 `allow-once` 和 `allow-always` 决策才会允许执行。未知、格式错误、不匹配、缺失以及超时的决策都会以关闭方式失败。为兼容插件，旧的 `timeoutBehavior` 字段仍然被接受，但已弃用且会被忽略；不要在新的 hook 中设置它。
 
 只有当请求插件或运行时实现了该持久化时，`allow-always` 才会真正持久化。对于普通的 `before_tool_call.requireApproval` hooks，OpenClaw 会将 `allow-once` 和 `allow-always` 视为当前调用的批准决策，并将解析后的值传递给 `onResolution`。如果你的插件提供 `allow-always`，请明确记录并实现它对未来哪些调用可信。
 
-如果该 hook 还返回了 `params`，OpenClaw 只会在批准成功后应用这些参数更改。
-较低优先级的 hook 仍然可以在较高优先级的 hook 请求批准后进行阻止。
+如果 hook 还返回 `params`，OpenClaw 会在请求批准时保存基础参数及其覆盖值，然后仅在批准成功后应用这些覆盖值。优先级较低的 hook 仍然可以阻止调用，但无法重写待批准项所涵盖的参数。
 
 `allowedDecisions` 会限制展示给用户的按钮和命令。对于请求未提供的任何决策，
 Gateway 都会拒绝解析尝试。
@@ -180,4 +179,4 @@ Codex 原生权限提示也可以通过插件批准流转，但它们与
 - [构建插件](/plugins/building-plugins#registering-tools)
 - [高级执行审批](/tools/exec-approvals-advanced#plugin-approval-forwarding)
 - [网关协议](/gateway/protocol)
-- [Codex harness 运行时](/plugins/codex-harness-runtime#native-permissions-and-mcp-elicitations)
+- [Codex harness 运行时](/plugins/codex-harness-runtime#native-permissions-and-mcp-elicitations)。

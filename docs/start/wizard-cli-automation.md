@@ -13,7 +13,7 @@ sidebarTitle: "CLI 自动化"
 `--json` 并不意味着非交互式模式。请在脚本中显式传入 `--non-interactive --accept-risk`。
 </Note>
 
-## Baseline Non-Interactive Example
+## 基准非交互式示例
 
 ```bash
 openclaw onboard --non-interactive --accept-risk \
@@ -28,11 +28,11 @@ openclaw onboard --non-interactive --accept-risk \
   --skip-skills
 ```
 
-If you need a machine-readable summary, add `--json`.
+如果需要机器可读的摘要，请添加 `--json`。
 
-- `--gateway-port` defaults to `18789`; pass it only when you need to override it.
-- `--skip-bootstrap` skips creating the default workspace file, which is useful in automated scenarios where you have already prepopulated your own workspace.
-- `--secret-input-mode ref` stores an environment-variable-based reference in the authentication config (`{ source: "env", provider: "default", id: "<ENV_VAR>" }`) instead of a plaintext secret. In non-interactive `ref` mode, the provider environment variable must already be set in the process environment: if you pass an inline secret flag without the corresponding environment variable, it will fail fast.
+- `--gateway-port` 默认为 `18789`；仅在需要覆盖默认值时传入。
+- `--skip-bootstrap` 会跳过创建默认工作区文件，适用于预先准备好自身工作区的自动化场景。
+- `--secret-input-mode ref` 会将新凭据存储为由环境变量支持的引用（`{ source: "env", provider: "default", id: "<ENV_VAR>" }`）；在添加凭据或传递内联密钥标志时，设置提供商环境变量。现有的可解析命名配置文件及其 `env`、`file` 或 `exec` 引用将原样复用，不会写入新凭据，也不会额外设置提供商环境变量。现有的明文凭据不会被迁移；请运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。参见[密钥管理](/gateway/secrets)。
 
 ```bash
 openclaw onboard --non-interactive --accept-risk \
@@ -204,6 +204,6 @@ openclaw agents add work \
 
 ## 相关文档
 
-- Onboarding 入口：[Onboarding (CLI)](/start/wizard)
+- 入门引导（CLI）：[入门引导（CLI）](/start/wizard)
 - 完整参考：[CLI 设置参考](/start/wizard-cli-reference)
 - 命令参考：[`openclaw onboard`](/cli/onboard)

@@ -93,23 +93,26 @@ openclaw gateway
 
 ### 账号配置键
 
-| Key                     | Default             | Notes                                                                                   |
-| ----------------------- | ------------------- | --------------------------------------------------------------------------------------- |
-| `baseUrl`               | 无（必填）          | 用于浏览器可见链接的公共 ClickClack URL。                                              |
-| `apiBaseUrl`            | `baseUrl`           | 用于 REST 和实时 WebSocket 流量的可选服务端到服务端端点。                                |
-| `token`                 | 无                  | 机器人令牌，既可以是纯字符串，也可以是密钥引用（`source: "env" \| "file" \| "exec"`）。 |
-| `tokenFile`             | 无                  | 指向机器人令牌文件的路径；优先于 `token`。                                              |
-| `workspace`             | 无（必填）          | 工作区 id、slug 或名称。                                                                |
-| `replyMode`             | `"agent"`           | `"agent"` 运行完整的 agent 管道；`"model"` 发送简短的直接模型补全。                      |
-| `defaultTo`             | `"channel:general"` | 当外发路径没有给出目标时使用的目标。                                                    |
-| `allowFrom`             | `["*"]`             | 用于入站私信和频道消息的用户 id 白名单。                                                |
-| `botUserId`             | 自动检测             | 在启动时根据机器人令牌身份解析。                                                        |
-| `agentId`               | 路由默认值           | 将该账号的入站消息固定路由到某个 agent。                                                 |
-| `toolsAllow`            | 无                  | 该账号的 agent 回复所允许使用的工具白名单。                                              |
-| `model`, `systemPrompt` | 无                  | 用于 `replyMode: "model"` 的补全。                                                      |
-| `commandMenu`           | `true`              | 向 ClickClack composer 自动补全发布原生命令。                                            |
-| `reconnectMs`           | `1500`              | 实时重连延迟（100 到 60000）。                                                          |
-| `discussions`           | 已禁用              | 按会话管理的频道设置；参见 [Session discussions](#session-discussions)。                |
+| 键                       | 默认值              | 说明                                                                                                                  |
+| ------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `baseUrl`                | 无（必填）          | 用于面向浏览器的链接的公共 ClickClack URL。                                                                            |
+| `apiBaseUrl`             | `baseUrl`           | 可选的服务器到服务器端点，用于 REST 和实时 WebSocket 流量。                                                            |
+| `token`                  | 无                  | 机器人令牌，可以是普通字符串或机密引用（`source: "env" \| "file" \| "exec"`）。                                        |
+| `tokenFile`              | 无                  | 机器人令牌文件的路径；优先级高于 `token`。                                                                             |
+| `workspace`              | 无（必填）          | 工作区 id、slug 或名称。                                                                                                |
+| `replyMode`              | `"agent"`           | `"agent"` 运行完整的智能体处理流程；`"model"` 发送简短的直接模型补全。                                                 |
+| `defaultTo`              | `"channel:general"` | 当出站路径未提供目标时使用的目标。                                                                                     |
+| `allowFrom`              | `["*"]`             | 入站私信和频道消息的用户 id 允许列表。                                                                                  |
+| `botUserId`              | 自动检测            | 启动时根据机器人令牌身份解析。                                                                                         |
+| `agentId`                | 路由默认值          | 将此账号的入站消息固定到一个智能体。                                                                                    |
+| `toolsAllow`             | 无                  | 此账号智能体回复所允许使用的工具列表。                                                                                  |
+| `model`、`systemPrompt`  | 无                  | 用于 `replyMode: "model"` 补全。                                                                                        |
+| `commandMenu`            | `true`              | 将原生命令发布到 ClickClack 编辑器的自动补全中。                                                                       |
+| `reconnectMs`             | `1500`              | 实时连接重连延迟（100 至 60000）。                                                                                      |
+| `discussions`             | 已禁用              | 按会话管理的频道设置；请参阅[会话讨论](#session-discussions)。                                                         |
+| `requireMention`          | `false`             | 要求直接提及后才分派群组消息。请参阅[群组提及门控](#group-mention-gating)。                                             |
+| `mentionPatterns`         | `[]`                | 此账号在群组频道中的提及模式。请参阅[群组提及门控](#group-mention-gating)。                                            |
+| `groups`                  | `{}`                | 按 ClickClack 频道 ID 设置的频道级群组策略覆盖项。请参阅[群组提及门控](#group-mention-gating)。                        |
 
 ### 保持一个受 auth 保护的公共主机名
 
@@ -132,9 +135,9 @@ openclaw gateway
 
 如果 `plugins.allow` 是一个非空的限制性列表，那么在 channel 设置中显式选择 ClickClack，或运行 `openclaw plugins enable clickclack`，都会将 `clickclack` 追加到该列表中。Onboarding 安装使用相同的显式选择行为。这些路径不会覆盖 `plugins.deny` 或全局的 `plugins.enabled: false` 设置。直接执行 `openclaw plugins install @openclaw/clickclack` 会遵循正常的插件安装策略，并且也会将 ClickClack 记录到现有的 allowlist 中。
 
-## Multiple Robots
+## 多个机器人
 
-Each account will open its own ClickClack real-time connection and use its respective bot token.
+每个账户都会建立各自的 ClickClack 实时连接，并使用相应的机器人令牌。
 
 ```json5
 {
@@ -230,7 +233,7 @@ ClickClack 服务器必须在频道创建和更新时支持受管频道字段（
 
 如果你只使用默认的 `agent` 回复模式，就保持该信任位关闭；在那里并不需要它。
 
-## Command menu
+## 命令菜单
 
 在网关启动时，每个已配置的账户都会将 OpenClaw 的原生命令发布到 ClickClack。它们会以机器人的 handle 作为标签显示在 composer 自动补全中。每次启动时，已发布的集合都会整体替换，包括在原生命令目录为空时清除过期的菜单。
 
@@ -251,9 +254,9 @@ ClickClack 服务器必须在频道创建和更新时支持受管频道字段（
 
 该 token 需要 `commands:write`。当前 ClickClack 的 `bot:write` 和 `bot:admin` 套件包含该权限范围，也可以单独授予。创建于命令菜单引入之前的 token 可能需要添加该权限范围，或更换为新的 token。
 
-同步尽力而为，并且每次网关启动时仅运行一次。缺少权限范围或网络失败会记录警告；较旧、没有该端点的 ClickClack 服务器会以 debug 级别记录。以上任何失败都不会阻止实时启动。在代理离线时，菜单仍然可用；当机器人离开 workspace 时，菜单会被移除。
+同步尽力而为，并且每次网关启动时仅运行一次。缺少权限范围或网络失败会记录警告；较旧、没有该端点的 ClickClack 服务器会以调试级别记录。以上任何失败都不会阻止实时启动。在代理离线时，菜单仍然可用；当机器人离开 workspace 时，菜单会被移除。
 
-此版本仅发布原生命令规范。别名以及 skill、plugin 或 custom-command 目录不会添加到菜单中。如果某个名称也注册为 HTTP slash command，ClickClack 会优先分发该注册；其他菜单命令则继续通过正常消息传递进行。
+此版本仅发布原生命令规范。别名以及 skill、plugin 或 custom-command 目录不会添加到菜单中。如果某个名称也注册为 HTTP 斜杠命令，ClickClack 会优先分发该注册；其他菜单命令则继续通过正常消息传递进行。
 
 使用 `agent` 模式获取跨服务关联证据。对于其规范 `msg_<ulid>` 形式中的权威 ClickClack 消息 id，该通道会推导出确定性的 OpenClaw 运行 id `clickclack:<message-id>`。随后每次模型调用都会在诊断中显示为 `clickclack:<message-id>:model:<n>`；当该轮使用 ClawRouter 时，同一个 model-call id 会作为 `X-Request-ID` 发送。`model` 模式会绕过正常的 agent run/session 诊断，因此不适用于此证据路径。
 
@@ -302,6 +305,56 @@ ClickClack 服务器必须在频道创建和更新时支持受管频道字段（
 - 行按每个回合（`turn_id`）分组，并进行合并，使一个逻辑步骤对应一行；工具行使用与 Discord/Slack/Telegram 相同的进度格式（工具名称加命令详情）。
 - **归属元数据。** 由 agent 撰写的帖子（活动行和最终回复）会携带 `author_model` 和 `author_thinking` 字段，这些字段根据该回合实际使用的模型解析而来（包括回退后的情况）。未定义这些列的服务器会忽略未知的 JSON 字段；会持久化这些字段的服务器则可以按消息回答“这一行是谁用什么模型、在什么思考级别说的”。
 
+## 群组提及门控
+
+默认情况下，ClickClack 中的每条群组消息都会分发给同一工作区内所有已启用的 ClickClack 账户。此行为与旧版本兼容。为账户添加 `requireMention: true` 后，必须先直接提及该账户，代理管道才会运行。
+
+实际生效的策略按以下顺序解析：
+
+1. `groups` 中的精确频道条目（以 ClickClack 频道 ID 为键）。
+2. `groups` 中的通配符 `"*"` 条目。
+3. 账户级别的 `requireMention` / `mentionPatterns`。
+4. 向后兼容的默认值（`{ requireMention: false, mentionPatterns: [] }`）。
+
+私信永远不会受 `requireMention` 限制。收到私信时，会完全跳过提及检查。
+
+### 提及检测
+
+在以下情况下会检测到 ClickClack 提及：
+
+- 消息正文匹配 `mentionPatterns` 中的任意模式（每个模式都是正则表达式）。
+- 消息中包含机器人在 ClickClack 中的 `@handle`。网关会在启动时从已认证的机器人身份中读取该 handle。
+
+普通显示名称（例如 `Blackbird`）**不会**被视为提及，除非将其明确配置为模式。
+
+### 配置示例
+
+```json5
+{
+  channels: {
+    clickclack: {
+      enabled: true,
+      token: { source: "env", provider: "default", id: "CLICKCLACK_BOT_TOKEN" },
+      workspace: "default",
+      requireMention: true,
+      mentionPatterns: ["\\bBlackbird\\b"],
+      groups: {
+        "*": { requireMention: true },
+        chn_command_and_control: { requireMention: false },
+      },
+    },
+  },
+}
+```
+
+同一工作区中的多个账户会分别评估同一条消息。`requireMention: true` 的账户会拒绝未提及的消息，而 `requireMention: false` 的账户仍可能处理该消息。
+
+### 迁移警告
+
+ClickClack 频道 ID（例如 `chn_...`）不会自动对应为 Discord 频道 ID。配置按频道规则时，必须使用实际的 ClickClack 频道标识符。除非 ClickClack 服务器明确将其存储为 `external_ref`，且适配器具有文档说明的转换层，否则不要复用 Discord ID。
+
+仅添加 `requireMention: true` 而不同时限制 `allowFrom`，不会悄然改变群组消息现有的发送者允许列表行为；提及门控是在现有发送者策略之上增加的额外限制。
+
 ## 目标
 
 - `channel:<name-or-id>` 发送到工作区频道。裸目标默认使用 `channel:`。
@@ -324,13 +377,13 @@ openclaw message send --channel clickclack --target thread:msg_123 --message "fo
 
 ClickClack token 作用域由 ClickClack API 强制执行。
 
-- `bot:read`: 读取 workspace/channel/message/thread/DM/realtime/profile 数据。
-- `bot:write`: 包括 `bot:read`，以及 channel 消息、thread 回复、DM、上传和 command-menu 发布。
-- `bot:admin`: 包括 `bot:write`，以及 channel 创建。
-- `commands:write`: 发布 bot 的 command menu。已包含在当前的 `bot:write` 和 `bot:admin` bundle 中，也可单独授予。
-- `agent_activity:write`: 持久化 agent activity 行（`agent_commentary` / `agent_tool`）。不会被 `bot:write` 或 `bot:admin` 继承；仅在设置 `agentActivity: true` 时需要。
+- `bot:read`：读取 workspace/channel/message/thread/DM/realtime/profile 数据。
+- `bot:write`：包括 `bot:read`，以及 channel 消息、thread 回复、DM、上传和命令菜单发布。
+- `bot:admin`：包括 `bot:write`，以及 channel 创建。
+- `commands:write`：发布 bot 的命令菜单。已包含在当前的 `bot:write` 和 `bot:admin` 权限包中，也可单独授予。
+- `agent_activity:write`：持久化 agent activity 行（`agent_commentary` / `agent_tool`）。不会被 `bot:write` 或 `bot:admin` 继承；仅在设置 `agentActivity: true` 时需要。
 
-OpenClaw 仅需当前的 `bot:write` 即可用于正常的 agent 聊天和 command-menu 同步。启用 [agent activity rows](#agent-activity-rows) 时，添加 `agent_activity:write`。
+OpenClaw 仅需当前的 `bot:write` 即可用于正常的 agent 聊天和命令菜单同步。启用 [agent activity 行](#agent-activity-rows) 时，添加 `agent_activity:write`。
 
 ## 故障排查
 

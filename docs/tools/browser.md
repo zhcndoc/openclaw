@@ -40,7 +40,7 @@ openclaw browser --browser-profile openclaw open https://example.com
 openclaw browser --browser-profile openclaw snapshot
 ```
 
-“Browser disabled” 表示插件或 `browser.enabled` 已关闭；请参见
+“浏览器已禁用” 表示插件或 `browser.enabled` 已关闭；请参见
 [配置](#configuration) 和 [插件控制](#plugin-control)。
 
 如果 `openclaw browser` 完全缺失，或者代理提示浏览器工具不可用，请跳到 [缺少 browser 命令或工具](#missing-browser-command-or-tool)。
@@ -67,7 +67,7 @@ openclaw browser --browser-profile openclaw snapshot
 
 ## 代理指南
 
-Tool-profile note: `tools.profile: "coding"` 包括 `web_search` 和
+工具配置说明：`tools.profile: "coding"` 包括 `web_search` 和
 `web_fetch`，但不包括完整的 `browser` 工具。要让代理或
 派生的子代理使用浏览器自动化，请在配置文件
 阶段添加 browser：
@@ -146,9 +146,10 @@ channel 配置行为一致。`plugins.entries.browser.enabled=true` 和
     enabled: true, // 默认：true
     evaluateEnabled: true, // 默认：true；false 会禁用 act:evaluate（任意 JS）
     ssrfPolicy: {
-      // dangerouslyAllowPrivateNetwork: true, // 仅在信任的私有网络访问场景下启用
-      // hostnameAllowlist: ["*.example.com", "example.com"],
+      // dangerouslyAllowPrivateNetwork: true, // 仅针对受信任的私有网络访问选择启用
       // allowedHostnames: ["localhost"],
+      // allowRfc2544BenchmarkRange: true, // 受信任的伪 IP 代理范围
+      // allowIpv6UniqueLocalRange: true, // 受信任的伪 IP 代理 IPv6 范围
     },
     // cdpUrl: "http://127.0.0.1:18792", // 旧版单配置文件覆盖
     tabCleanup: {
@@ -191,7 +192,7 @@ channel 配置行为一致。`plugins.entries.browser.enabled=true` 和
 
 在具有稳定文档标识的驱动上，对同一标签页、文档和选项族重复进行 AI 或角色 snapshot 时，会将新出现的、带 ref 的元素标记为 `[new]`。第一次 snapshot——以及导航后的第一次 snapshot——会建立一个无标记基线。现有会话 snapshot 会省略差异。
 
-### Tab cleanup ownership
+### 标签页清理所有权
 
 会话标签页清理仅适用于由 OpenClaw 浏览器工具通过 `action: "open"` 创建的标签页。OpenClaw 不会接管已经打开的标签页、由用户打开的标签页，或所有权未知的其他标签页。`browser.tabCleanup` 区块控制主会话的周期性空闲和上限清理；禁用它并不会禁用显式的会话生命周期清理。
 
@@ -261,14 +262,16 @@ Chrome MCP `--autoConnect`、其 `/json/version` 响应缺少稳定浏览器身�
 
 <Accordion title="SSRF 策略">
 
-- 浏览器导航和打开标签页请求会先进行预检。在动作执行期间以及有限的动作后宽限期内，受保护的 Playwright 交互（点击、坐标点击、悬停、拖拽、滚动、选择、按键、输入、表单填充和 evaluate）会在 HTTP 请求字节发送之前拦截被策略拒绝的顶层文档加载和子框架文档加载，然后尽力重新检查最终的 `http(s)` URL。
-- 在每次新启动一个 OpenClaw 管理的 Chrome 之前，OpenClaw 会尽力禁用网络预测，从而抑制 Chromium 对这些被拒绝加载的观察到的推测性预连接。这属于纵深防御，不是策略边界：在控制服务重启期间复用的浏览器以及其他浏览器后端可能不会共享这种加固。Playwright 路由仍然不是网络防火墙，且不会拦截重定向跳转、弹出窗口的首个请求、Service Worker 流量、在有限保护窗口之后运行的页面代码，或所有后台/子资源路径。要实现完整的出站流量隔离，需要由所有者侧进行隔离或使用执行策略的代理。
-- 在严格 SSRF 模式下，远程 CDP 端点发现和 `/json/version` 探测（`cdpUrl`）也会被检查。
-- Gateway/提供方的 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY` 环境变量不会自动代理 OpenClaw 管理的浏览器。受管 Chrome 默认直接启动，因此提供方的代理设置不会削弱浏览器的 SSRF 检查。
-- OpenClaw 管理的本地 CDP 就绪探测和 DevTools WebSocket 连接会绕过受管网络代理，直接针对所启动的回环地址端点，因此当操作员代理阻止回环出站时，`openclaw browser start` 仍可工作。
-- 若要代理受管浏览器本身，请通过 `browser.extraArgs` 传入显式的 Chrome 代理参数，例如 `--proxy-server=...` 或 `--proxy-pac-url=...`。严格 SSRF 模式会阻止显式的浏览器代理路由，除非有意启用私有网络浏览器访问。
-- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 默认关闭；仅在明确信任私有网络浏览器访问时启用。
-- `browser.ssrfPolicy.allowPrivateNetwork` 仍作为旧版别名受支持。
+- 浏览器导航和打开标签页请求会经过预检。在操作期间以及有界的操作后宽限期内，受保护的 Playwright 交互（点击、坐标点击、悬停、拖动、滚动、选择、按键、输入、表单填充和 evaluate）会在 HTTP 请求字节发出之前，拦截策略拒绝的顶层文档和子框架文档加载，然后尽力重新检查最终的 `http(s)` URL。
+- 在每次新的 OpenClaw 管理的 Chrome 启动之前，OpenClaw 会尽力禁用网络预测，抑制 Chromium 针对这些被拒绝加载所观察到的推测性预连接。这是纵深防御，而不是策略边界：跨控制服务重启后复用的浏览器以及其他浏览器后端可能不会共享此加固措施。Playwright 路由仍然不是网络防火墙，也不会拦截重定向跳转、弹窗的首次请求、Service Worker 流量、有界保护窗口之后运行的页面代码，或所有后台/子资源路径。完整的出站隔离需要由所有者一侧进行隔离，或使用执行策略的代理。
+- 在严格 SSRF 模式下，远程 CDP 端点发现和 `/json/version` 探测（`cdpUrl`）也会受到检查。
+- Gateway/提供方的 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY` 环境变量不会自动代理 OpenClaw 管理的浏览器。受管 Chrome 默认直接连接，因此提供方代理设置不会削弱浏览器 SSRF 检查。
+- OpenClaw 管理的本地 CDP 就绪探测和 DevTools WebSocket 连接会绕过受管网络代理，仅连接到确切启动的回环端点，因此当操作员代理阻止回环出站连接时，`openclaw browser start` 仍然可以正常工作。
+- 若要代理受管浏览器本身，请通过 `browser.extraArgs` 传递显式的 Chrome 代理标志，例如 `--proxy-server=...` 或 `--proxy-pac-url=...`。除非有意启用私有网络浏览器访问，否则严格 SSRF 模式会阻止显式的浏览器代理路由。
+- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 默认关闭；仅在有意信任私有网络浏览器访问时启用。
+- `browser.ssrfPolicy.allowedHostnames` 会授予精确主机访问权限，同时继续阻止其余私有网络。
+- `browser.ssrfPolicy.allowRfc2544BenchmarkRange` 和 `browser.ssrfPolicy.allowIpv6UniqueLocalRange` 会狭义地允许受信任的伪 IP 代理范围。
+- `browser.ssrfPolicy.allowPrivateNetwork` 仍作为旧版别名受到支持。
 
 </Accordion>
 
@@ -345,11 +348,11 @@ openclaw config set browser.profiles.work.executablePath "/Applications/Google C
 ## 本地控制 vs 远程控制
 
 - **本地控制（默认）：** Gateway 启动回环控制服务，并且可以启动本地浏览器。
-- **远程控制（node host）：** 在拥有浏览器的机器上运行 node host；Gateway 将浏览器操作代理到它。
+- **远程控制（节点主机）：** 在拥有浏览器的机器上运行节点主机；Gateway 将浏览器操作代理到它。
 - **远程 CDP：** 设置 `browser.profiles.<name>.cdpUrl`（或 `browser.cdpUrl`）以
   附加到远程基于 Chromium 的浏览器。在这种情况下，OpenClaw 不会启动本地浏览器。
 - 对于在回环上外部托管的 CDP 服务（例如在 Docker 中发布到 `127.0.0.1` 的 Browserless），也要设置 `attachOnly: true`。没有 `attachOnly` 的回环 CDP 会被视为本地的、由 OpenClaw 管理的浏览器配置文件。
-- `headless` 只影响 OpenClaw 启动的本地托管配置文件。它不会重启或更改 existing-session 或远程 CDP 浏览器。
+- `headless` 只影响 OpenClaw 启动的本地托管配置文件。它不会重启或更改现有会话或远程 CDP 浏览器。
 - `executablePath` 遵循相同的本地托管配置文件规则。对正在运行的本地托管配置文件更改它，会将该配置文件标记为需要重启/协调，以便
   下一次启动使用新的二进制文件。
 
@@ -366,7 +369,7 @@ openclaw config set browser.profiles.work.executablePath "/Applications/Google C
 - HTTP Basic 认证（例如 `https://user:pass@provider.example`）
 
 OpenClaw 在调用 `/json/*` 端点以及连接
-CDP WebSocket 时都会保留认证信息。请优先使用环境变量或 secrets manager
+CDP WebSocket 时都会保留认证信息。请优先使用环境变量或机密管理器
 来管理令牌，而不是将其提交到配置文件中。
 
 ## Node 浏览器代理（零配置默认）
@@ -502,8 +505,8 @@ CDP URL 形式，并会自动选择正确的连接策略：
 说明：
 
 - [注册](https://www.browserbase.com/sign-up)并从
-  [概览面板](https://www.browserbase.com/overview)复制你的 **API Key**。
-- 将 `<BROWSERBASE_API_KEY>` 替换为你真实的 Browserbase API key。
+  [概览面板](https://www.browserbase.com/overview)复制你的 **API 密钥**。
+- 将 `<BROWSERBASE_API_KEY>` 替换为你真实的 Browserbase API 密钥。
 - Browserbase 会在 WebSocket 连接时自动创建浏览器会话，因此无需手动创建会话步骤。
 - 查看 [定价](https://www.browserbase.com/pricing) 以了解当前免费套餐限制和付费方案。
 - 查看 [Browserbase 文档](https://docs.browserbase.com) 获取完整的 API
@@ -532,8 +535,8 @@ CDP URL 形式，并会自动选择正确的连接策略：
 说明：
 
 - [注册](https://console.notte.cc)并从
-  控制台设置页面复制你的 **API Key**。
-- 将 `<NOTTE_API_KEY>` 替换为你真实的 Notte API key。
+  控制台设置页面复制你的 **API 密钥**。
+- 将 `<NOTTE_API_KEY>` 替换为你真实的 Notte API 密钥。
 - Notte 会在 WebSocket 连接时自动创建浏览器会话，因此无需手动
   创建会话步骤。会话会在
   WebSocket 断开时销毁。
@@ -545,11 +548,11 @@ CDP URL 形式，并会自动选择正确的连接策略：
 
 核心要点：
 
-- Browser control 仅限本地回环访问；访问通过 Gateway 的认证或节点配对来完成。
+- 浏览器控制仅限本地回环访问；访问通过 Gateway 的认证或节点配对来完成。
 - 独立的回环浏览器 HTTP API 仅使用 **共享密钥认证**：
-  gateway token bearer auth、`x-openclaw-password`，或使用已配置的 gateway 密码进行 HTTP Basic auth。
+  Gateway token bearer auth、`x-openclaw-password`，或使用已配置的 Gateway 密码进行 HTTP Basic auth。
 - Tailscale Serve 身份头和 `gateway.auth.mode: "trusted-proxy"` **不会**对这个独立的回环浏览器 API 进行认证。
-- 如果启用了 browser control 且未配置共享密钥认证，OpenClaw 会在启动时自动生成并持久化一个 browser-control 凭据：
+- 如果启用了浏览器控制且未配置共享密钥认证，OpenClaw 会在启动时自动生成并持久化一个浏览器控制凭据：
   当 `gateway.auth.mode` 为 `none` 时生成 token；当其为 `trusted-proxy` 时生成密码（通过 `gateway.auth.password` 持久化，因此进程外的回环客户端可以解析到它）。如果该模式下已经显式配置了字符串凭据，或者 `gateway.auth.mode` 为 `password`，则会跳过自动生成。
 - 如果你想使用自己控制的稳定密钥，而不是自动生成的密钥，请显式配置 `gateway.auth.token`、`gateway.auth.password`、`OPENCLAW_GATEWAY_TOKEN` 或 `OPENCLAW_GATEWAY_PASSWORD`。
 
@@ -808,4 +811,4 @@ Agent 只有 **一个工具** 用于浏览器自动化：
 
 - [工具概览](/tools) - 所有可用的 agent 工具
 - [沙箱环境](/gateway/sandboxing) - 沙箱环境中的浏览器控制
-- [安全性](/gateway/security) - 浏览器控制风险与加固
+- [安全性](/gateway/security) - 浏览器控制风险与加固。

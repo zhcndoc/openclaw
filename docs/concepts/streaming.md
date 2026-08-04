@@ -126,7 +126,7 @@ token-delta 流式传输**到频道消息：
 
 ## 预览流式模式
 
-Canonical key: `channels.<channel>.streaming`（嵌套 `{ mode, ... }`；旧版顶层布尔值/字符串写法会由 `openclaw doctor --fix` 重写）。
+规范键：`channels.<channel>.streaming`（嵌套 `{ mode, ... }`；旧版顶层布尔值/字符串写法会由 `openclaw doctor --fix` 重写）。
 
 | 模式       | 行为                                                                 |
 | ---------- | -------------------------------------------------------------------- |
@@ -141,31 +141,33 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 
 ### 频道映射
 
-| Channel    | `off` | `partial` | `block` | `progress`              |
-| ---------- | ----- | --------- | ------- | ----------------------- |
-| Telegram   | Yes   | Yes       | Yes     | 可编辑的进度草稿         |
-| Discord    | Yes   | Yes       | Yes     | 可编辑的进度草稿         |
-| Slack      | Yes   | Yes       | Yes     | Yes                     |
-| Mattermost | Yes   | Yes       | Yes     | Yes                     |
-| MS Teams   | Yes   | Yes       | Yes     | 原生进度流                |
+当未设置 `streaming` 时，Discord 和 Telegram 默认为 `progress`；Slack、Mattermost 和 MS Teams 默认为 `partial`。
+
+| 频道      | `off` | `partial` | `block` | `progress`                   |
+| --------- | ----- | --------- | ------- | ---------------------------- |
+| Telegram  | 是    | 是        | 是      | 可编辑的进度草稿（默认）     |
+| Discord   | 是    | 是        | 是      | 可编辑的进度草稿（默认）     |
+| Slack     | 是    | 是        | 是      | 是                           |
+| Mattermost | 是   | 是        | 是      | 是                           |
+| MS Teams  | 是    | 是        | 是      | 原生进度流                   |
 
 预览分块配置（`streaming.preview.chunk.*`，例如在 `channels.discord.streaming` 或 `channels.telegram.streaming` 下）默认值为 `minChars: 200`、`maxChars: 800`（会限制在频道的 `textChunkLimit` 之内），以及 `breakPreference: "paragraph"`。
 
 仅限 Slack：
 
 - 当 `channels.slack.streaming.mode="partial"` 时，`channels.slack.streaming.nativeTransport` 会切换 Slack 原生流式 API 调用（`chat.startStream`/`chat.appendStream`/`chat.stopStream`）（默认：`true`）。
-- Slack 原生流式传输和 Slack assistant 线程状态都需要一个回复线程目标。顶层 DM 不会显示那种线程样式的预览，但仍然可以使用 Slack 草稿预览帖子和编辑。
+- Slack 原生流式传输和 Slack 助手线程状态都需要一个回复线程目标。顶层 DM 不会显示那种线程样式的预览，但仍然可以使用 Slack 草稿预览帖子和编辑。
 
 ### 旧键迁移
 
-| Channel  | Legacy keys                                                 | Status                                                                                                                                               |
-| ---------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Telegram | `streamMode`, scalar/boolean `streaming`                    | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                       |
-| Discord  | `streamMode`, boolean `streaming`                           | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                       |
-| Slack    | `streamMode`; boolean `streaming`; legacy `nativeStreaming` | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（以及布尔值/旧形式对应的 `streaming.nativeTransport`）；运行时不会读取                                 |
-| Matrix   | scalar/boolean `streaming`                                  | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（包括 Matrix 的 `"quiet"` 模式）；运行时不会读取                                                   |
-| Feishu   | boolean `streaming`                                         | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                       |
-| QQ Bot   | boolean `streaming`; `streaming.c2cStreamApi`               | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（以及布尔值/`c2cStreamApi` 形式对应的 `streaming.nativeTransport`）；运行时不会读取                   |
+| 频道      | 旧版键                                                       | 状态                                                                                                                                               |
+| --------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Telegram  | `streamMode`、标量/布尔值 `streaming`                         | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                |
+| Discord   | `streamMode`、布尔值 `streaming`                              | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                |
+| Slack     | `streamMode`；布尔值 `streaming`；旧版 `nativeStreaming`       | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（以及布尔值/旧形式对应的 `streaming.nativeTransport`）；运行时不会读取                      |
+| Matrix    | 标量/布尔值 `streaming`                                       | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（包括 Matrix 的 `"quiet"` 模式）；运行时不会读取                                                |
+| Feishu    | 布尔值 `streaming`                                           | 由 `openclaw doctor --fix` 重写为 `streaming.mode`；运行时不会读取                                                                                |
+| QQ Bot    | 布尔值 `streaming`；`streaming.c2cStreamApi`                  | 由 `openclaw doctor --fix` 重写为 `streaming.mode`（以及布尔值/`c2cStreamApi` 形式对应的 `streaming.nativeTransport`）；运行时不会读取          |
 
 ## 运行时行为
 
@@ -219,13 +221,13 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 
 支持的场景：
 
-- **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流处于活动状态时，默认会将工具进度和 Codex 前言更新流入实时预览编辑。Microsoft Teams 在个人聊天中使用其原生进度流。
-- Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用可保留该已发布行为。
-- **Mattermost** 会在 `partial` 和 `progress` 模式下将工具活动折叠到一条预览帖子中，或在 `block` 模式下将一条工具活动帖子插入文本块之间（见上文）。
-- 工具进度编辑会遵循当前活动的预览流模式；当预览流为 `off` 或块流已经接管消息时，它们会被跳过。在 Telegram 上，`streaming.mode: "off"` 表示仅最终输出：通用进度闲聊也会被抑制，不会作为独立状态消息发送，而审批提示、媒体载荷和错误仍会正常路由。
-- 要保留预览流但隐藏工具进度行，可为该频道将 `streaming.preview.toolProgress` 设为 `false`（默认值为 `true`）。要在隐藏命令/执行文本的同时保留工具进度行可见，可将 `streaming.preview.commandText` 设为 `"status"`，或将 `streaming.progress.commandText` 设为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略适用于使用 OpenClaw 紧凑进度渲染器的草稿/进度通道，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
+- **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流处于活动状态时，默认会将工具进度和 Codex 前言更新流式传输到实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
+- Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用状态即可保留该已发布行为。
+- **Mattermost** 会在 `partial` 和 `progress` 模式下，将工具活动合并到一条预览消息中；在 `block` 模式下，则会在文本块之间发送一条工具活动消息（见上文）。
+- 工具进度编辑遵循当前激活的预览流模式；当预览流为 `off` 或分块流已接管消息时，会跳过这些更新。在 Telegram 上，`streaming.mode: "off"` 表示仅发送最终结果：通用进度提示也会被抑制，而不会作为独立状态消息发送；但审批提示、媒体载荷和错误仍会正常传递。
+- 若要保留预览流但隐藏工具进度行，请将该频道的 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，且在所有模式下都会生效）。若要在隐藏命令/执行文本的同时保留工具进度行可见，请将 `streaming.preview.commandText` 设置为 `"status"`，或将 `streaming.progress.commandText` 设置为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`。
 
-## Progress 草稿渲染
+## 进度草稿渲染
 
 进度模式草稿（`streaming.progress.*`）是有上限且可按
 通道配置的：
@@ -302,4 +304,4 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 - [进度草稿](/concepts/progress-drafts) - 在长时间轮次中更新的可见进行中消息
 - [消息](/concepts/messages) - 消息生命周期和传递
 - [重试](/concepts/retry) - 传递失败时的重试行为
-- [通道](/channels) - 各通道的流式支持
+- [通道](/channels) - 各通道的流式支持。

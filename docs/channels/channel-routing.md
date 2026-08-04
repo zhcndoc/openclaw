@@ -12,13 +12,13 @@ OpenClaw 会将回复**路由回消息来源所在的频道**。
 
 ## 关键术语
 
-- **Channel**: 一个捆绑的渠道插件，例如 `discord`、`googlechat`、`imessage`、`irc`、`line`、`signal`、`slack`、`telegram` 或 `whatsapp`，以及已安装的插件渠道。`webchat` 是内部 WebChat UI 渠道，不是可配置的出站渠道。
-- **AccountId**: 每个渠道的账户实例（在支持的情况下）。
-- 可选的渠道默认账户：`channels.<channel>.defaultAccount` 用于选择
-  当出站路径未指定 `accountId` 时使用哪个账户。
-  - 在多账户设置中，当配置了两个或更多账户时，请设置一个明确的默认值（`defaultAccount` 或名为 `default` 的账户）。如果不设置，回退路由可能会选择第一个标准化后的账户 ID。
-- **AgentId**: 一个隔离的工作区 + 会话存储（"brain"）。
-- **SessionKey**: 用于存储上下文和控制并发的桶键。
+- **Channel**：频道插件，例如 `discord`、`googlechat`、`imessage`、`irc`、`line`、`signal`、`slack`、`telegram` 或 `whatsapp`。`webchat` 是内部 WebChat UI 频道，不是可配置的出站频道。
+- **AccountId**：每个频道的账户实例（在支持的情况下）。
+- 可选的频道默认账户：`channels.<channel>.defaultAccount` 用于选择
+  当出站路径未指定 `accountId` 时使用的账户。
+  - 在多账户配置中，当配置了两个或更多账户时，设置一个明确的默认账户（`defaultAccount` 或名为 `default` 的账户）。如果未设置，回退路由可能会选择第一个规范化的账户 ID。
+- **AgentId**：一个隔离的工作区 + 会话存储（“大脑”）。
+- **SessionKey**：用于存储上下文和控制并发的分桶键。
 
 ## 外发目标前缀
 

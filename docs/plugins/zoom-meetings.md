@@ -1,25 +1,27 @@
 ---
-summary: "Zoom meetings plugin: join meetings as a Chrome browser guest"
+summary: "Zoom 会议插件：以 Chrome 浏览器访客身份加入会议"
 read_when:
-  - You want an OpenClaw agent to join a Zoom meeting
-  - You are configuring Chrome, BlackHole, or SoX for Zoom meeting talk-back
-title: "Zoom meetings plugin"
+  - 你希望 OpenClaw 代理加入 Zoom 会议
+  - 你正在为 Zoom 会议的双向通话配置 Chrome、BlackHole 或 SoX
+title: "Zoom 会议插件"
 ---
 
-The `zoom-meetings` plugin joins Zoom meeting links as a guest through the Zoom Web App in the OpenClaw Chrome profile. It accepts meeting links under `zoom.us/j/...` and account subdomains such as `example.zoom.us/j/...`. It does not create meetings, dial in, use the Zoom Meeting SDK, or capture audio/video recordings.
+`zoom-meetings` 插件通过 OpenClaw Chrome 配置文件中的 Zoom Web App，以访客身份加入 Zoom 会议链接。它接受 `zoom.us/j/...` 形式的会议链接，以及账户子域名形式的链接，例如 `example.zoom.us/j/...`。它不会创建会议、拨入会议、使用 Zoom Meeting SDK，也不会录制音频或视频。
 
-## Setup
+## 设置
 
-Talk-back uses the same local audio prerequisites as the [Google Meet plugin](/plugins/google-meet): macOS, the `BlackHole 2ch` virtual audio device, and SoX.
+Talk-back 使用与 [Google Meet 插件](/plugins/google-meet) 相同的本地音频前置条件：macOS、`BlackHole 2ch` 虚拟音频设备和 SoX。
 
 ```bash
+openclaw plugins install @openclaw/zoom-meetings
+openclaw gateway restart
 brew install blackhole-2ch sox
 sudo reboot
 system_profiler SPAudioDataType | grep -i BlackHole
 command -v sox
 ```
 
-The plugin is included and enabled by default. Add an entry only to customize it, then check setup:
+安装后默认启用该插件。只有在需要自定义时才添加配置项，然后检查设置：
 
 ```json5
 {
@@ -36,45 +38,42 @@ The plugin is included and enabled by default. Add an entry only to customize it
 }
 ```
 
-Run `openclaw plugins disable zoom-meetings` if you do not want the plugin active.
+如果不希望启用该插件，请运行 `openclaw plugins disable zoom-meetings`。
 
 ```bash
 openclaw zoommeetings setup
 openclaw zoommeetings join 'https://zoom.us/j/1234567890'
 ```
 
-Use `chromeNode.node` to run Chrome, BlackHole, and SoX on a paired macOS node. The node must allow `zoommeetings.chrome` and `browser.proxy`.
+使用 `chromeNode.node`，在已配对的 macOS 节点上运行 Chrome、BlackHole 和 SoX。该节点必须允许 `zoommeetings.chrome` 和 `browser.proxy`。
 
-## Modes
+## 模式
 
-| Mode         | Behavior                                                                    |
-| ------------ | --------------------------------------------------------------------------- |
-| `agent`      | Realtime transcription consults the configured OpenClaw agent; TTS replies. |
-| `bidi`       | A realtime voice model listens and replies directly.                        |
-| `transcribe` | Observe-only join with live-caption transcript snapshots.                   |
+| 模式         | 行为                                                                    |
+| ------------ | ----------------------------------------------------------------------- |
+| `agent`      | 实时转写会调用配置的 OpenClaw 代理；使用 TTS 回复。 |
+| `bidi`       | 实时语音模型直接监听并回复。                        |
+| `transcribe` | 仅观察模式加入，并提供实时字幕转写快照。              |
 
-Zoom live captions are enabled after admission in every mode so OpenClaw can
-persist meeting notes. The `transcript` action still returns the bounded live
-buffer only for `transcribe` sessions. On leave, OpenClaw stores the durable
-transcript and derived summary in the shared state database; list or export
-them with [`openclaw transcripts`](/cli/transcripts).
+在每种模式下，获准加入后都会启用 Zoom 实时字幕，以便 OpenClaw
+持久化会议记录。`transcript` 操作仍仅为 `transcribe` 会话返回有界的实时
+缓冲区。离开时，OpenClaw 会将持久化转写内容和生成的摘要存储在共享状态数据库中；可使用 [`openclaw transcripts`](/cli/transcripts) 列出或导出这些内容。
 
-Automatic notes are enabled by default. Set `transcripts.enabled: false` to
-disable durable notes globally; explicit `transcribe` mode still exposes only
-its bounded live tail.
+默认启用自动记录。设置 `transcripts.enabled: false` 可全局禁用持久化记录；显式使用
+`transcribe` 模式时仍只会公开其有界的实时尾部。
 
-## Guest join limits
+## 访客加入限制
 
-The browser adapter chooses **Join from browser**, fills the guest name, turns the camera off, configures the microphone for the selected mode, and clicks **Join**. Zoom Web App runs under `app.zoom.us`; the plugin grants that origin microphone and speaker-selection permissions before navigation. In-call state uses Zoom's Leave control. Lobby, sign-in, passcode, CAPTCHA, and device-permission states return explicit manual-action reasons.
+浏览器适配器选择 **从浏览器加入**，填写访客姓名，关闭摄像头，为所选模式配置麦克风，然后点击 **加入**。Zoom Web App 运行在 `app.zoom.us` 下；插件会在导航前授予该来源使用麦克风和选择扬声器的权限。通话中状态使用 Zoom 的 **离开** 控件。等候室、登录、密码、验证码和设备权限状态会返回明确的手动操作原因。
 
-Zoom host and account policy can disable browser join, require authentication or email verification, show a CAPTCHA, or require host admission. Complete that step in the OpenClaw Chrome profile, then retry status or speech. The plugin does not bypass Zoom policy.
+Zoom 主持人和账户策略可能会禁用浏览器加入、要求身份验证或电子邮件验证、显示验证码，或要求主持人允许加入。在 OpenClaw Chrome 配置文件中完成相应步骤，然后重试状态检查或语音操作。插件不会绕过 Zoom 的策略。
 
-The Zoom Web App has been live-validated with an official Zoom test meeting for the app interstitial, iframe guest-name entry, prejoin microphone and camera controls, join, browser and macOS media permissions, in-call detection, live-caption enablement, and host-ended detection. Lobby and authentication states depend on host policy and retain text fallbacks when no stable DOM identifier is available.
+Zoom Web App 已通过官方 Zoom 测试会议完成实时验证，涵盖应用中间页、iframe 访客姓名输入、加入前的麦克风和摄像头控件、加入、浏览器和 macOS 媒体权限、通话中检测、实时字幕启用以及主持人结束会议检测。等候室和身份验证状态取决于主持人策略；当没有可用的稳定 DOM 标识符时，会保留文本回退方案。
 
-## Tool and gateway surface
+## 工具和网关接口
 
-The `zoom_meetings` agent tool supports `join`, `leave`, `status`, `transcript`, and `speak`. Gateway methods use the `zoommeetings.*` prefix. The node command is `zoommeetings.chrome`.
+`zoom_meetings` 代理工具支持 `join`、`leave`、`status`、`transcript` 和 `speak`。网关方法使用 `zoommeetings.*` 前缀。节点命令为 `zoommeetings.chrome`。
 
-## Related
+## 相关内容
 
-- [Meeting plugins overview](/plugins/meeting-plugins)
+- [会议插件概览](/plugins/meeting-plugins)

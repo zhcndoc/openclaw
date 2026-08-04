@@ -70,23 +70,23 @@ OpenClaw 自带一个内置的 `legacy` 引擎，并默认使用它。只有当�
 每次 OpenClaw 运行模型提示词时，上下文引擎都会在四个生命周期点参与：
 
 <AccordionGroup>
-  <Accordion title="1. Ingest">
+  <Accordion title="1. 摄取">
     当向会话添加新消息时调用。引擎可以将该消息存储或索引到自己的数据存储中。
   </Accordion>
-  <Accordion title="2. Assemble">
+  <Accordion title="2. 组装">
     在每次模型运行之前调用。引擎返回一个有序的消息集合（以及可选的 `systemPromptAddition`），这些内容要适配令牌预算。
   </Accordion>
-  <Accordion title="3. Compact">
+  <Accordion title="3. 压缩">
     当上下文窗口已满，或用户运行 `/compact` 时调用。引擎会总结较旧的历史以释放空间。
   </Accordion>
-  <Accordion title="4. After turn">
+  <Accordion title="4. 回合结束后">
     在一次运行完成后调用。引擎可以持久化状态、触发后台压缩，或更新索引。
   </Accordion>
 </AccordionGroup>
 
 引擎还可以实现一个可选的 `maintain()` 方法，用于在引导完成后、某次成功回合后或压缩后进行转录维护（通过 `runtimeContext.rewriteTranscriptEntries()` 进行安全重写）。将 `info.turnMaintenanceMode` 设为 `"background"`，即可让它作为延迟任务运行，而不是阻塞回复。
 
-对于捆绑的非 ACP Codex harness，OpenClaw 通过将组装后的上下文投影到 Codex 开发者指令和当前回合提示中来应用相同的生命周期。Codex 仍然负责其原生线程历史和原生压缩器。
+对于捆绑的非 ACP Codex 执行环境，OpenClaw 通过将组装后的上下文投影到 Codex 开发者指令和当前回合提示中来应用相同的生命周期。Codex 仍然负责其原生线程历史和原生压缩器。
 
 ### 子代理生命周期（可选）
 
@@ -107,10 +107,10 @@ OpenClaw 会调用两个可选的子代理生命周期钩子：
 
 内置的 `legacy` 引擎保留了 OpenClaw 的原始行为：
 
-- **Ingest**：无操作（会话管理器直接处理消息持久化）。
-- **Assemble**：透传（运行时中现有的 sanitize → validate → limit 流水线负责上下文组装）。
-- **Compact**：委托给内置的摘要压缩，它会为较旧消息创建单个摘要，并保留最近消息不变。
-- **After turn**：无操作。
+- **摄取**：无操作（会话管理器直接处理消息持久化）。
+- **组装**：透传（运行时中现有的 sanitize → validate → limit 流水线负责上下文组装）。
+- **压缩**：委托给内置的摘要压缩，它会为较旧消息创建单个摘要，并保留最近消息不变。
+- **回合后**：无操作。
 
 legacy 引擎不会注册工具，也不会提供 `systemPromptAddition`。
 
@@ -129,6 +129,7 @@ export default function register(api) {
       id: "my-engine",
       name: "My Context Engine",
       ownsCompaction: true,
+      acceptedHostParams: ["sessionKey"],
     },
 
     async ingest({ sessionId, message, isHeartbeat }) {
@@ -189,12 +190,19 @@ export default function register(api) {
 
 必需成员：
 
-| 成员               | 类型     | 作用                                                     |
-| ------------------ | -------- | -------------------------------------------------------- |
-| `info`             | 属性     | 引擎 id、名称、版本，以及它是否拥有压缩控制权            |
-| `ingest(params)`   | 方法     | 存储单条消息                                             |
-| `assemble(params)` | 方法     | 为模型运行构建上下文（返回 `AssembleResult`）            |
-| `compact(params)`  | 方法     | 总结/缩减上下文                                           |
+| 成员               | 类型     | 用途                                                                               |
+| ------------------ | -------- | ---------------------------------------------------------------------------------- |
+| `info`             | 属性     | 引擎 id、名称、版本、接受的宿主参数，以及是否拥有压缩控制权                         |
+| `ingest(params)`   | 方法     | 存储单条消息                                                                       |
+| `assemble(params)` | 方法     | 为模型运行构建上下文（返回 `AssembleResult`）                                     |
+| `compact(params)`  | 方法     | 总结/缩减上下文                                                                    |
+
+设置 `info.acceptedHostParams`，以声明引擎接受的由宿主添加的生命周期字段。
+当前的键包括 `sessionKey`、`prompt`、`runtimeSettings`、
+`sessionTarget` 和 `runtimeContext`。OpenClaw 会将该声明与每个生命周期方法
+可用的字段取交集，因此不会注入未声明或未知的键。没有此声明的引擎会在
+2026-08-12 之前通过预先添加宿主字段的 legacy 参数集接收参数；在该日期之后，
+未声明的引擎会接收当前所有宿主字段。
 
 `assemble` 返回一个 `AssembleResult`，包含：
 
@@ -221,15 +229,15 @@ export default function register(api) {
 
 可选成员：
 
-| Member                         | Kind   | Purpose                                                                                                                                      |
+| 成员                           | 类型   | 用途                                                                                                                                         |
 | ------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bootstrap(params)`            | Method | 初始化会话的引擎状态。引擎首次看到某个会话时调用一次（例如导入历史记录）。                              |
-| `maintain(params)`             | Method | 引导后、成功轮次后或压缩后的转录维护。使用 `runtimeContext.rewriteTranscriptEntries()` 进行安全重写。 |
-| `ingestBatch(params)`          | Method | 以批处理方式摄取已完成的一轮。运行结束后调用，一次性接收该轮中的所有消息。                                  |
-| `afterTurn(params)`            | Method | 运行后的生命周期工作（持久化状态、触发后台压缩）。                                                                      |
-| `prepareSubagentSpawn(params)` | Method | 在子会话启动前为其设置共享状态。                                                                                    |
-| `onSubagentEnded(params)`      | Method | 子代理结束后的清理工作。                                                                                                              |
-| `dispose()`                    | Method | 释放资源。Gateway 关闭或插件重新加载期间调用——不是按会话调用。                                                        |
+| `bootstrap(params)`            | 方法   | 初始化会话的引擎状态。引擎首次看到某个会话时调用一次（例如导入历史记录）。                               |
+| `maintain(params)`             | 方法   | 引导后、成功轮次后或压缩后的转录维护。使用 `runtimeContext.rewriteTranscriptEntries()` 进行安全重写。 |
+| `ingestBatch(params)`          | 方法   | 以批处理方式摄取已完成的一轮。运行结束后调用，一次性接收该轮中的所有消息。                                  |
+| `afterTurn(params)`            | 方法   | 运行后的生命周期工作（持久化状态、触发后台压缩）。                                                                      |
+| `prepareSubagentSpawn(params)` | 方法   | 在子会话启动前为其设置共享状态。                                                                                    |
+| `onSubagentEnded(params)`      | 方法   | 子代理结束后的清理工作。                                                                                                              |
+| `dispose()`                    | 方法   | 释放资源。Gateway 关闭或插件重新加载期间调用——不是按会话调用。                                                        |
 
 ### 运行时设置
 
@@ -245,7 +253,9 @@ export default function register(api) {
 - `limits`：已知时的提示词令牌预算和最大输出令牌数
 - `diagnostics`：已知时的关闭式回退和降级原因代码
 
-未知字段会表示为 `null`；诸如运行时模式和选择来源之类的区分字段仍保持非空。旧版引擎仍然兼容：如果严格的 legacy 引擎将 `runtimeSettings` 作为未知属性而拒绝，OpenClaw 会在不带它的情况下重试生命周期调用，而不是将该引擎隔离。
+可能未知的字段以 `null` 表示；运行时模式和选择来源等判别字段
+仍不可为 null。在兼容窗口期间，接受 `runtimeSettings` 的引擎必须在
+`info.acceptedHostParams` 中包含它。
 
 ### 主机要求
 
@@ -337,8 +347,8 @@ OpenClaw 将所选插件引擎与核心回复路径隔离。如果一个非 lega
   <Accordion title="压缩">
     压缩是上下文引擎的一项职责。legacy 引擎会委托给 OpenClaw 内置的摘要功能。插件引擎可以实现任何压缩策略（DAG 摘要、向量检索等）。
   </Accordion>
-  <Accordion title="Memory plugins">
-    Memory 插件（`plugins.slots.memory`）与上下文引擎是分开的。Memory 插件提供搜索/检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎在组装过程中可能会使用 Memory 插件数据。希望使用活动 memory 提示路径的插件引擎，应使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将主机预先准备好的 memory 提示部分转换为可直接前置的 `systemPromptAddition`，而不会暴露 memory-plugin 的布局。
+  <Accordion title="记忆插件">
+    记忆插件（`plugins.slots.memory`）与上下文引擎是分开的。记忆插件提供搜索/检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎在组装过程中可能会使用记忆插件数据。希望使用活动记忆提示路径的插件引擎，应使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将主机预先准备好的记忆提示部分转换为可直接前置的 `systemPromptAddition`，而不会暴露记忆插件的布局。
   </Accordion>
   <Accordion title="会话裁剪">
     无论当前激活的是哪个上下文引擎，内存中对旧工具结果的裁剪都会继续运行。
@@ -358,4 +368,4 @@ OpenClaw 将所选插件引擎与核心回复路径隔离。如果一个非 lega
 - [上下文](/concepts/context) - 上下文如何为代理轮次构建
 - [插件架构](/plugins/architecture) - 注册上下文引擎插件
 - [插件清单](/plugins/manifest) - 插件清单字段
-- [插件](/tools/plugin) - 插件概览
+- [插件](/tools/plugin) - 插件概览。

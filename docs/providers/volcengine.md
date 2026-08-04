@@ -7,18 +7,24 @@ read_when:
   - 你想使用 Volcengine Speech 文本转语音
 ---
 
-Volcengine 提供程序可访问豆包模型以及托管在火山引擎上的第三方模型，并为通用工作负载和编程工作负载提供独立端点。相同的捆绑插件还会将 Volcengine Speech 注册为一个 TTS 提供程序。
+火山引擎提供对豆包模型和托管于火山引擎的第三方模型的访问，并为通用工作负载和代码工作负载提供独立的端点。同一官方插件还会将火山引擎语音注册为 TTS 提供商。
 
 | 详情       | 值                                                         |
 | ---------- | ---------------------------------------------------------- |
-| Providers  | `volcengine`（通用 + TTS），`volcengine-plan`（代码）   |
-| Model auth | `VOLCANO_ENGINE_API_KEY`                                   |
-| TTS auth   | `VOLCENGINE_TTS_API_KEY` 或 `BYTEPLUS_SEED_SPEECH_API_KEY` |
-| API        | 兼容 OpenAI 的模型，BytePlus Seed Speech TTS         |
+| 提供商     | `volcengine`（通用 + TTS），`volcengine-plan`（代码）   |
+| 模型认证   | `VOLCANO_ENGINE_API_KEY`                                   |
+| TTS 认证   | `VOLCENGINE_TTS_API_KEY` 或 `BYTEPLUS_SEED_SPEECH_API_KEY` |
+| API        | 兼容 OpenAI 的模型、BytePlus Seed Speech TTS         |
 
 ## 入门
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/volcengine-provider
+    openclaw gateway restart
+    ```
+  </Step>
   <Step title="设置 API 密钥">
     运行交互式引导：
 
@@ -71,27 +77,27 @@ openclaw onboard --non-interactive \
 两个提供方均通过单个 API key 进行配置。设置过程会自动注册两者，而编码提供方的模型选择器也会复用通用提供方的认证（`volcengine-plan` 是 `volcengine` 的认证别名）。
 </Note>
 
-## Built-in directory
+## 内置目录
 
 <Tabs>
-  <Tab title="General (volcengine)">
-    | Model ref                                      | Name                    | Input              | Context   |
+  <Tab title="通用（volcengine）">
+    | 模型引用                                      | 名称                    | 输入              | 上下文   |
     | ---------------------------------------------- | ----------------------- | ------------------ | --------- |
-    | `volcengine/doubao-seed-evolving`              | Doubao Seed Evolving    | text, image, video | 1,024,000 |
-    | `volcengine/doubao-seed-2-1-pro-260628`        | Doubao Seed 2.1 Pro     | text, image, video | 256,000   |
-    | `volcengine/doubao-seed-2-1-turbo-260628`      | Doubao Seed 2.1 Turbo   | text, image, video | 256,000   |
-    | `volcengine/glm-5-2-260617`                    | GLM 5.2                 | text               | 1,024,000 |
-    | `volcengine/deepseek-v4-pro-260425`            | DeepSeek V4 Pro         | text               | 1,024,000 |
-    | `volcengine/deepseek-v4-flash-260425`          | DeepSeek V4 Flash       | text               | 1,024,000 |
+    | `volcengine/doubao-seed-evolving`              | Doubao Seed Evolving    | 文本、图像、视频 | 1,024,000 |
+    | `volcengine/doubao-seed-2-1-pro-260628`        | Doubao Seed 2.1 Pro     | 文本、图像、视频 | 256,000   |
+    | `volcengine/doubao-seed-2-1-turbo-260628`      | Doubao Seed 2.1 Turbo   | 文本、图像、视频 | 256,000   |
+    | `volcengine/glm-5-2-260617`                    | GLM 5.2                 | 文本               | 1,024,000 |
+    | `volcengine/deepseek-v4-pro-260425`            | DeepSeek V4 Pro         | 文本               | 1,024,000 |
+    | `volcengine/deepseek-v4-flash-260425`          | DeepSeek V4 Flash       | 文本               | 1,024,000 |
   </Tab>
-  <Tab title="Coding (volcengine-plan)">
-    | Model ref                                  | Name                  | Input              | Context   |
+  <Tab title="编码（volcengine-plan）">
+    | 模型引用                                  | 名称                  | 输入              | 上下文   |
     | ------------------------------------------ | --------------------- | ------------------ | --------- |
-    | `volcengine-plan/ark-code-latest`          | Ark Coding Plan       | text               | 256,000   |
-    | `volcengine-plan/doubao-seed-2.1-turbo`    | Doubao Seed 2.1 Turbo | text, image, video | 256,000   |
-    | `volcengine-plan/glm-5.2`                  | GLM 5.2               | text               | 1,024,000 |
-    | `volcengine-plan/deepseek-v4-pro`          | DeepSeek V4 Pro       | text               | 1,024,000 |
-    | `volcengine-plan/deepseek-v4-flash`        | DeepSeek V4 Flash     | text               | 1,024,000 |
+    | `volcengine-plan/ark-code-latest`          | Ark 编码计划       | 文本               | 256,000   |
+    | `volcengine-plan/doubao-seed-2.1-turbo`    | Doubao Seed 2.1 Turbo | 文本、图像、视频 | 256,000   |
+    | `volcengine-plan/glm-5.2`                  | GLM 5.2               | 文本               | 1,024,000 |
+    | `volcengine-plan/deepseek-v4-pro`          | DeepSeek V4 Pro       | 文本               | 1,024,000 |
+    | `volcengine-plan/deepseek-v4-flash`        | DeepSeek V4 Flash     | 文本               | 1,024,000 |
   </Tab>
 </Tabs>
 

@@ -6,7 +6,11 @@ read_when:
 title: "Tailscale"
 ---
 
-OpenClaw 可以为 Gateway 仪表盘和 WebSocket 端口自动配置 Tailscale **Serve**（tailnet）或 **Funnel**（public）。这样可以让 gateway 绑定到回环地址，同时由 Tailscale 提供 HTTPS、路由，以及（对于 Serve）身份标头。
+OpenClaw 可以为 Gateway 仪表盘和 WebSocket 端口自动配置 Tailscale **Serve**（tailnet）或 **Funnel**（公网）。这样可以让 gateway 绑定到回环地址，同时由 Tailscale 提供 HTTPS、路由，以及（对于 Serve）身份标头。
+
+<Note>
+需要分步设置指南？请参阅[为 Gateway 提供稳定的 HTTPS URL](/gateway/stable-https-url)。
+</Note>
 
 ## 模式
 
@@ -14,9 +18,9 @@ OpenClaw 可以为 Gateway 仪表盘和 WebSocket 端口自动配置 Tailscale *
 
 | 模式            | 行为                                                                      |
 | --------------- | ------------------------------------------------------------------------- |
-| `serve`         | 仅限 tailnet 的 Serve，通过 `tailscale serve` 提供。网关保持在 `127.0.0.1`。 |
+| `serve`         | 仅限尾网的 Serve，通过 `tailscale serve` 提供。网关保持在 `127.0.0.1`。 |
 | `funnel`        | 通过 `tailscale funnel` 提供公共 HTTPS。需要共享密码。                    |
-| `off` (默认)    | 不进行 Tailscale 自动化。                                                 |
+| `off`（默认）  | 不进行 Tailscale 自动化。                                                 |
 
 状态和审计输出会针对这种 OpenClaw Serve/Funnel 模式使用 **Tailscale 暴露**。`off` 表示 OpenClaw 不管理 Serve 或 Funnel；这并不意味着本地 Tailscale 守护进程已停止或已登出。
 
@@ -110,9 +114,9 @@ openclaw gateway --tailscale funnel --auth password
 
 绕过的适用范围：
 
-- 仅适用于 Control UI 的 WebSocket 身份验证面。HTTP API 端点（`/v1/*`、`/tools/invoke`、`/api/channels/*` 等）从不使用 Tailscale 身份头认证；它们始终遵循网关正常的 HTTP 认证模式。
-- 对于已经携带浏览器设备身份的 Control UI 操作员会话，已验证的 Tailscale 身份会跳过 bootstrap-token/QR 配对往返流程。
-- 它不会绕过设备身份本身：没有设备的客户端仍会被拒绝，而节点角色连接仍会经过正常的配对和认证检查。
+- 适用于 Control UI WebSocket 身份验证界面，以及 Control UI 配置文件头像的只读 `GET`/`HEAD` 请求。其他 HTTP API 端点（`/v1/*`、`/tools/invoke`、`/api/channels/*` 等）绝不会使用 Tailscale 身份头身份验证；它们始终遵循网关的常规 HTTP 身份验证模式。
+- 对于已经携带浏览器设备身份的 Control UI 操作员会话，经过验证的 Tailscale 身份可以跳过引导令牌/二维码配对往返流程。
+- 它不会绕过设备身份验证本身：没有设备身份的客户端仍会被拒绝，节点角色连接仍会经过正常的配对和身份验证检查。
 
 ## 说明
 
@@ -144,10 +148,10 @@ openclaw gateway --tailscale funnel --auth password
 - Tailscale Serve 概览：[https://tailscale.com/kb/1312/serve](https://tailscale.com/kb/1312/serve)
 - `tailscale serve` 命令：[https://tailscale.com/kb/1242/tailscale-serve](https://tailscale.com/kb/1242/tailscale-serve)
 - Tailscale Funnel 概览：[https://tailscale.com/kb/1223/tailscale-funnel](https://tailscale.com/kb/1223/tailscale-funnel)
-- `tailscale funnel` 命令：[https://tailscale.com/kb/1311/tailscale-funnel](https://tailscale.com/kb/1311/tailscale-funnel)
+- `tailscale funnel` 命令：[https://tailscale.com/kb/1311/tailscale-funnel](https://tailscale.com/kb/1311/tailscale-funnel)。
 
 ## 相关内容
 
 - [远程访问](/gateway/remote)
 - [发现](/gateway/discovery)
-- [认证](/gateway/authentication)
+- [认证](/gateway/authentication)。

@@ -10,13 +10,15 @@ status: active
 
 **代理**是完整的按人格划分的作用域：工作区文件、认证配置文件、模型注册表和会话存储。**绑定**将一个通道账户（如一个 Slack 工作区、一个 WhatsApp 号码等）映射到这些代理中的某一个。
 
+有关账户和对话示例的专门设置指南，请参阅[代理绑定](/concepts/agent-bindings)。
+
 ## 什么是一个 agent
 
 每个 agent 都有自己的：
 
-- **Workspace**: 文件、`AGENTS.md`/`SOUL.md`/`USER.md`、本地笔记、角色规则。
-- **State directory** (`agentDir`): 认证配置文件、模型注册表、每个 agent 的配置。
-- **Session store**: 聊天历史和路由状态，位于 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`。
+- **工作区**：文件、`AGENTS.md`/`SOUL.md`/`USER.md`、本地笔记、角色规则。
+- **状态目录** (`agentDir`)：认证配置文件、模型注册表、每个 agent 的配置。
+- **会话存储**：聊天历史和路由状态，位于 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`。
 
 认证配置文件是按 agent 分开的，读取自：
 
@@ -32,12 +34,12 @@ status: active
 切勿在不同 agent 之间复用 `agentDir` —— 这会导致认证/会话状态冲突。当某个次级 agent 的本地 OAuth 凭据过期或刷新失败时，OpenClaw 会回读同一 profile id 的默认/主 agent 凭据，并采用最新的那个 token，而不会把 refresh token 复制到次级 agent 的存储中。如果你想要一个完全独立的 OAuth 账号，请在那个 agent 里重新登录。如果你手动复制凭据，只复制可移植的静态 `api_key` 或 `token` 配置文件即可——OAuth 刷新材料默认不可移植（`copyToAgents` 可以显式将某个 profile 纳入）。
 </Warning>
 
-技能会从每个 agent 的工作区以及诸如 `~/.openclaw/skills` 之类的共享根目录加载，然后再根据实际生效的 agent 技能允许列表进行过滤。共享基线请使用 `agents.defaults.skills`，而按 agent 的替换请使用 `agents.entries.*.skills`（显式条目会替换默认值，不会进行合并）。另请参见 [Skills: per-agent vs shared](/tools/skills#per-agent-vs-shared-skills) 和 [Skills: agent allowlists](/tools/skills#agent-allowlists)。
+技能会从每个 agent 的工作区以及诸如 `~/.openclaw/skills` 之类的共享根目录加载，然后再根据实际生效的 agent 技能允许列表进行过滤。共享基线请使用 `agents.defaults.skills`，而按 agent 的替换请使用 `agents.entries.*.skills`（显式条目会替换默认值，不会进行合并）。另请参见 [技能：按 agent 划分与共享](/tools/skills#per-agent-vs-shared-skills) 和 [技能：agent 允许列表](/tools/skills#agent-allowlists)。
 
 插件拥有的存储遵循该插件自身的配置；添加第二个 agent 不会自动把所有全局插件存储拆分开。例如，当不同角色不能共享已编译的 wiki 知识时，请配置 [按 agent 划分的 Memory Wiki 保管库](/concepts/multi-agent#per-agent-memory-wiki-vaults)。
 
 <Note>
-**工作区说明：** 每个 agent 的工作区都是**默认 cwd**，而不是硬性沙箱。相对路径会在工作区内解析，但只要未启用沙箱，绝对路径仍可访问其他主机位置。参见 [Sandboxing](/gateway/sandboxing)。
+**工作区说明：** 每个 agent 的工作区都是**默认 cwd**，而不是硬性沙箱。相对路径会在工作区内解析，但只要未启用沙箱，绝对路径仍可访问其他主机位置。参见 [沙箱](/gateway/sandboxing)。
 </Note>
 
 ## 路径
@@ -61,7 +63,7 @@ status: active
 - 工作区默认是 `~/.openclaw/workspace`（如果 `OPENCLAW_PROFILE` 设置为 `default` 之外的其他值，则为 `workspace-<profile>`）。
 - 状态默认是 `~/.openclaw/agents/main/agent`。
 
-## Agent 助手
+## 代理助手
 
 添加一个新的隔离代理：
 
@@ -80,20 +82,20 @@ openclaw agents list --bindings
 ## 快速开始
 
 <Steps>
-  <Step title="创建每个 agent 工作区">
+  <Step title="创建每个智能体工作区">
     ```bash
     openclaw agents add coding
     openclaw agents add social
     ```
 
-    每个 agent 都会获得自己的工作区，其中包含 `SOUL.md`、`AGENTS.md` 和可选的 `USER.md`，以及位于 `~/.openclaw/agents/<agentId>` 下的专用 `agentDir` 和会话存储。
+    每个智能体都会获得自己的工作区，其中包含 `SOUL.md`、`AGENTS.md` 和可选的 `USER.md`，以及位于 `~/.openclaw/agents/<agentId>` 下的专用 `agentDir` 和会话存储。
 
   </Step>
   <Step title="创建通道账户">
-    在你偏好的通道上为每个 agent 创建一个账户：
+    在你偏好的通道上为每个智能体创建一个账户：
 
-    - Discord：每个 agent 一个 bot，启用 Message Content Intent，复制每个 token。
-    - Telegram：通过 BotFather 为每个 agent 创建一个 bot，复制每个 token。
+    - Discord：每个智能体一个 bot，启用 Message Content Intent，复制每个 token。
+    - Telegram：通过 BotFather 为每个智能体创建一个 bot，复制每个 token。
     - WhatsApp：为每个账户关联一个电话号码。
 
     ```bash
@@ -103,8 +105,8 @@ openclaw agents list --bindings
     参见通道指南：[Discord](/channels/discord)、[Telegram](/channels/telegram)、[WhatsApp](/channels/whatsapp)。
 
   </Step>
-  <Step title="添加 agents、账户和绑定">
-    在 `agents.entries` 下添加 agents，在 `channels.<channel>.accounts` 下添加通道账户，并使用 `bindings` 将它们连接起来（示例见下文）。
+  <Step title="添加智能体、账户和绑定">
+    在 `agents.entries` 下添加智能体，在 `channels.<channel>.accounts` 下添加通道账户，并使用 `bindings` 将它们连接起来（示例见下文）。
   </Step>
   <Step title="重启并验证">
     ```bash
@@ -115,15 +117,15 @@ openclaw agents list --bindings
   </Step>
 </Steps>
 
-## Multiple Agents, Multiple Roles
+## 多个代理，多个角色
 
-Each configured `agentId` is an independent persona boundary for the core agent state:
+每个配置的 `agentId` 都是核心代理状态的独立角色边界：
 
-- Each channel uses a different account (distinguished by `accountId`).
-- Different personalities (distinguished by the agent’s `AGENTS.md`/`SOUL.md`).
-- Independent authentication and sessions, with cross-agent access allowed only when enabled through explicit features or plugin configuration.
+- 每个频道使用不同的账户（通过 `accountId` 区分）。
+- 不同的个性（通过代理的 `AGENTS.md`/`SOUL.md` 区分）。
+- 独立的身份验证和会话，只有在通过明确的功能或插件配置启用后，才允许跨代理访问。
 
-This allows multiple people to share one Gateway while keeping core agent states separate from one another.
+这使得多个人可以共享一个 Gateway，同时保持彼此独立的核心代理状态。
 
 ## 每个代理的 Memory Wiki 保管库
 
@@ -156,9 +158,9 @@ Memory Wiki 默认使用一个全局保管库。为了将支持代理的
 过滤、迁移以及信任边界的详细信息，请参见
 [每个代理的 Memory Wiki 保管库](/plugins/memory-wiki#per-agent-vaults)。
 
-## 跨 agent 的 QMD 内存搜索
+## 跨代理的 QMD 内存搜索
 
-要让一个 agent 搜索另一个 agent 的 QMD 会话转录，请在 `agents.entries.*.memory.search.qmd.extraCollections` 下添加额外集合。如果所有 agent 都应共享相同的集合，请使用 `memory.search.qmd.extraCollections`。
+要让一个代理搜索另一个代理的 QMD 会话转录，请在 `agents.entries.*.memory.search.qmd.extraCollections` 下添加额外集合。如果所有代理都应共享相同的集合，请使用 `memory.search.qmd.extraCollections`。
 
 ```json5
 {
@@ -168,6 +170,7 @@ Memory Wiki 默认使用一个全局保管库。为了将支持代理的
     },
     entries: {
       main: {
+        default: true,
         workspace: "~/workspaces/main",
         memory: {
           search: {
@@ -192,7 +195,7 @@ Memory Wiki 默认使用一个全局保管库。为了将支持代理的
 }
 ```
 
-额外集合的路径可以在多个 agent 之间共享，但当路径位于 agent 工作区之外时，其 `name` 仍需显式指定。工作区内的路径会保持 agent 作用域，因此每个 agent 都会保留自己的转录搜索集合。
+额外集合的路径可以在多个代理之间共享，但当路径位于代理工作区之外时，其 `name` 仍需显式指定。工作区内的路径会保持代理作用域，因此每个代理都会保留自己的转录搜索集合。
 
 ## 一个 WhatsApp 号码，多个人（DM 拆分）
 
@@ -205,10 +208,10 @@ Memory Wiki 默认使用一个全局保管库。为了将支持代理的
 ```json5
 {
   agents: {
-    list: [
-      { id: "alex", workspace: "~/.openclaw/workspace-alex" },
-      { id: "mia", workspace: "~/.openclaw/workspace-mia" },
-    ],
+    entries: {
+      alex: { default: true, workspace: "~/.openclaw/workspace-alex" },
+      mia: { workspace: "~/.openclaw/workspace-mia" },
+    },
   },
   bindings: [
     {
@@ -229,17 +232,17 @@ Memory Wiki 默认使用一个全局保管库。为了将支持代理的
 }
 ```
 
-DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，而不是按代理分别设置。对于共享群组，请将该群组绑定到一个代理，或者使用 [广播群组](/channels/broadcast-groups)。
+DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，而不是按代理分别设置的。对于共享群组，请将该群组绑定到一个代理，或者使用 [广播群组](/channels/broadcast-groups)。
 
 ## 路由规则
 
-绑定是确定性的，且最具体的规则优先。完整的层级顺序请参见 [Channel routing](/channels/channel-routing#routing-rules-how-an-agent-is-chosen)（精确 peer、父级 peer、peer 通配符、guild+roles、guild、team、account、channel、默认 agent）。这里有几条值得特别指出的规则：
+绑定是确定性的，且最具体的规则优先。完整的层级顺序请参见 [通道路由](/channels/channel-routing#routing-rules-how-an-agent-is-chosen)（精确 peer、父级 peer、peer 通配符、guild+roles、guild、team、account、channel、默认代理）。这里有几条值得特别指出的规则：
 
 - 如果同一层级中有多个绑定匹配，则配置顺序中的第一个生效。
 - 如果某个绑定设置了多个匹配字段（例如 `peer` + `guildId`），则所有指定字段都必须匹配（`AND` 语义）。
-- 省略 `accountId` 的绑定只匹配默认账户，而不是所有账户。使用 `accountId: "*"` 表示整个 channel 的回退规则，或使用 `accountId: "<name>"` 表示某一个账户。再次添加相同绑定并显式指定 account id，会将现有的仅 channel 绑定升级，而不是创建重复项。
+- 省略 `accountId` 的绑定只匹配默认账户，而不是所有账户。使用 `accountId: "*"` 表示整个通道的回退规则，或使用 `accountId: "<name>"` 表示某一个账户。再次添加相同绑定并显式指定账户 ID，会将现有的仅通道绑定升级，而不是创建重复项。
 
-对于现有的多 agent 配置，`openclaw doctor --fix` 会将旧的环境默认路由具体化为 channel 级绑定，并显式设置 heartbeat、Custodian 和 Talk 目标。单 agent 配置不受影响。
+对于现有的多代理配置，`openclaw doctor --fix` 会将旧的环境默认路由具体化为通道级绑定，并显式设置心跳、Custodian 和 Talk 目标。单代理配置不受影响。
 
 ## 多个账户 / 电话号码
 
@@ -251,9 +254,9 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
 
 ## 概念
 
-- `agentId`：一个“脑袋”（workspace、每个 agent 的认证、每个 agent 的会话存储）。
+- `agentId`：一个“脑袋”（工作区、每个 agent 的认证、每个 agent 的会话存储）。
 - `accountId`：一个频道账号实例（例如 WhatsApp 账号 `personal` vs `biz`）。
-- `binding`：通过 `(channel, accountId, peer)` 将传入消息路由到某个 `agentId`，并可选地包含 guild/team id。
+- `binding`：通过 `(channel, accountId, peer)` 将传入消息路由到某个 `agentId`，并可选地包含公会/团队 ID。
 - 直接聊天会折叠为 `agent:<agentId>:<mainKey>`（每个 agent 的“主会话”；见 `session.mainKey`）。
 
 ## 平台示例
@@ -265,10 +268,10 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
     ```json5
     {
       agents: {
-        list: [
-          { id: "main", workspace: "~/.openclaw/workspace-main" },
-          { id: "coding", workspace: "~/.openclaw/workspace-coding" },
-        ],
+        entries: {
+          main: { default: true, workspace: "~/.openclaw/workspace-main" },
+          coding: { workspace: "~/.openclaw/workspace-coding" },
+        },
       },
       bindings: [
         { agentId: "main", match: { channel: "discord", accountId: "default" } },
@@ -283,7 +286,7 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
               guilds: {
                 "123456789012345678": {
                   channels: {
-                    "222222222222222222": { allow: true, requireMention: false },
+                    "222222222222222222": { enabled: true, requireMention: false },
                   },
                 },
               },
@@ -293,7 +296,7 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
               guilds: {
                 "123456789012345678": {
                   channels: {
-                    "333333333333333333": { allow: true, requireMention: false },
+                    "333333333333333333": { enabled: true, requireMention: false },
                   },
                 },
               },
@@ -312,10 +315,10 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
     ```json5
     {
       agents: {
-        list: [
-          { id: "main", workspace: "~/.openclaw/workspace-main" },
-          { id: "alerts", workspace: "~/.openclaw/workspace-alerts" },
-        ],
+        entries: {
+          main: { default: true, workspace: "~/.openclaw/workspace-main" },
+          alerts: { workspace: "~/.openclaw/workspace-alerts" },
+        },
       },
       bindings: [
         { agentId: "main", match: { channel: "telegram", accountId: "default" } },
@@ -361,21 +364,19 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
     ```js
     {
       agents: {
-        list: [
-          {
-            id: "home",
+        entries: {
+          home: {
             default: true,
             name: "Home",
             workspace: "~/.openclaw/workspace-home",
             agentDir: "~/.openclaw/agents/home/agent",
           },
-          {
-            id: "work",
+          work: {
             name: "Work",
             workspace: "~/.openclaw/workspace-work",
             agentDir: "~/.openclaw/agents/work/agent",
           },
-        ],
+        },
       },
 
       // 确定性路由：第一个匹配项生效（最具体的规则优先）。
@@ -431,20 +432,19 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
     ```json5
     {
       agents: {
-        list: [
-          {
-            id: "chat",
+        entries: {
+          chat: {
+            default: true,
             name: "Everyday",
             workspace: "~/.openclaw/workspace-chat",
             model: "anthropic/claude-sonnet-4-6",
           },
-          {
-            id: "opus",
+          opus: {
             name: "Deep Work",
             workspace: "~/.openclaw/workspace-opus",
             model: "anthropic/claude-opus-4-6",
           },
-        ],
+        },
       },
       bindings: [
         { agentId: "chat", match: { channel: "whatsapp", accountId: "*" } },
@@ -462,20 +462,19 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
     ```json5
     {
       agents: {
-        list: [
-          {
-            id: "chat",
+        entries: {
+          chat: {
+            default: true,
             name: "Everyday",
             workspace: "~/.openclaw/workspace-chat",
             model: "anthropic/claude-sonnet-4-6",
           },
-          {
-            id: "opus",
+          opus: {
             name: "Deep Work",
             workspace: "~/.openclaw/workspace-opus",
             model: "anthropic/claude-opus-4-6",
           },
-        ],
+        },
       },
       bindings: [
         {
@@ -496,9 +495,9 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
     ```json5
     {
       agents: {
-        list: [
-          {
-            id: "family",
+        entries: {
+          family: {
+            default: true,
             name: "Family",
             workspace: "~/.openclaw/workspace-family",
             identity: { name: "Family Bot" },
@@ -522,7 +521,7 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
               deny: ["write", "edit", "apply_patch", "browser", "canvas", "nodes", "cron"],
             },
           },
-        ],
+        },
       },
       bindings: [
         {
@@ -540,27 +539,26 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
   </Tab>
 </Tabs>
 
-## 每个 agent 的 sandbox 和工具配置
+## 每个 agent 的沙箱和工具配置
 
-每个 agent 都可以拥有自己的 sandbox 和工具限制：
+每个 agent 都可以拥有自己的沙箱和工具限制：
 
 ```js
 {
   agents: {
-    list: [
-      {
-        id: "personal",
+    entries: {
+      personal: {
+        default: true,
         workspace: "~/.openclaw/workspace-personal",
         sandbox: {
-          mode: "off",  // personal agent 不使用 sandbox
+          mode: "off",  // personal agent 不使用沙箱
         },
         // 没有工具限制 - 所有工具都可用
       },
-      {
-        id: "family",
+      family: {
         workspace: "~/.openclaw/workspace-family",
         sandbox: {
-          mode: "all",     // 始终处于 sandbox 中
+          mode: "all",     // 始终处于沙箱中
           scope: "agent",  // 每个 agent 一个容器
           docker: {
             // 容器创建后的一次性可选设置
@@ -572,7 +570,7 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
           deny: ["exec", "write", "edit", "apply_patch"],    // 拒绝其他工具
         },
       },
-    ],
+    },
   },
 }
 ```
@@ -584,19 +582,19 @@ DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，
 这带来以下优势：
 
 - **安全隔离**：限制不受信任 agent 的工具。
-- **资源控制**：对特定 agent 使用 sandbox，同时让其他 agent 继续在主机上运行。
+- **资源控制**：对特定 agent 使用沙箱，同时让其他 agent 继续在主机上运行。
 - **灵活策略**：为不同 agent 提供不同权限。
 
 <Note>
 `tools.elevated` 同时具有全局门控（`tools.elevated.enabled`/`allowFrom`）和每个 agent 的门控（`agents.entries.*.tools.elevated.enabled`/`allowFrom`）。每个 agent 的门控只能进一步收紧全局设置——两者都必须允许某个发送者，提权命令才能运行。对于组目标，请使用 `agents.entries.*.groupChat.mentionPatterns`，这样 @提及 就能正确映射到目标 agent。
 </Note>
 
-查看 [多 agent 的 sandbox 和 tools](/tools/multi-agent-sandbox-tools) 以获取详细示例。
+查看 [多 agent 的沙箱和工具](/tools/multi-agent-sandbox-tools) 以获取详细示例。
 
 ## 相关内容
 
-- [ACP agents](/tools/acp-agents) — 运行外部编码框架
-- [Channel routing](/channels/channel-routing) — 消息如何路由到代理
-- [Presence](/concepts/presence) — 代理在线状态和可用性
-- [Session](/concepts/session) — 会话隔离和路由
-- [Sub-agents](/tools/subagents) — 启动后台代理运行
+- [ACP 代理](/tools/acp-agents) — 运行外部编码框架
+- [通道路由](/channels/channel-routing) — 消息如何路由到代理
+- [在线状态](/concepts/presence) — 代理在线状态和可用性
+- [会话](/concepts/session) — 会话隔离和路由
+- [子代理](/tools/subagents) — 启动后台代理运行。

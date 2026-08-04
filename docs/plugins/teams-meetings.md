@@ -1,25 +1,27 @@
 ---
-summary: "Microsoft Teams meetings plugin: join work or consumer meetings as a Chrome browser guest"
+summary: "Microsoft Teams 会议插件：作为 Chrome 浏览器访客加入工作或个人会议"
 read_when:
-  - You want an OpenClaw agent to join a Microsoft Teams meeting
-  - You are configuring Chrome, BlackHole, or SoX for Teams meeting talk-back
-title: "Microsoft Teams meetings plugin"
+  - 你希望 OpenClaw 代理加入 Microsoft Teams 会议
+  - 你正在为 Teams 会议的双向通话配置 Chrome、BlackHole 或 SoX
+title: "Microsoft Teams 会议插件"
 ---
 
-The `teams-meetings` plugin joins Microsoft Teams links as a guest in the OpenClaw Chrome profile. It accepts work links under `teams.microsoft.com/l/meetup-join/...` and consumer links under `teams.live.com/meet/...`. It does not create meetings, dial in, call Microsoft Graph, or capture audio/video recordings.
+`teams-meetings` 插件会在 OpenClaw Chrome 配置文件中以访客身份加入 Microsoft Teams 链接。它支持 `teams.microsoft.com/l/meetup-join/...` 下的工作链接，以及 `teams.live.com/meet/...` 下的个人链接。它不会创建会议、拨号加入、调用 Microsoft Graph，也不会录制音频或视频。
 
-## Setup
+## 设置
 
-Talk-back uses the same local audio prerequisites as the [Google Meet plugin](/plugins/google-meet): macOS, the `BlackHole 2ch` virtual audio device, and SoX.
+Talk-back 使用与 [Google Meet 插件](/plugins/google-meet) 相同的本地音频前置条件：macOS、`BlackHole 2ch` 虚拟音频设备以及 SoX。
 
 ```bash
+openclaw plugins install @openclaw/teams-meetings
+openclaw gateway restart
 brew install blackhole-2ch sox
 sudo reboot
 system_profiler SPAudioDataType | grep -i BlackHole
 command -v sox
 ```
 
-The plugin is included and enabled by default. Add an entry only to customize it, then check setup:
+安装后默认启用该插件。仅在需要自定义时添加配置项，然后检查设置：
 
 ```json5
 {
@@ -28,7 +30,7 @@ The plugin is included and enabled by default. Add an entry only to customize it
       "teams-meetings": {
         config: {
           defaultMode: "agent",
-          chrome: { guestName: "OpenClaw Agent" },
+          chrome: { guestName: "OpenClaw 代理" },
         },
       },
     },
@@ -36,46 +38,43 @@ The plugin is included and enabled by default. Add an entry only to customize it
 }
 ```
 
-Run `openclaw plugins disable teams-meetings` if you do not want the plugin active.
+如果不希望启用该插件，请运行 `openclaw plugins disable teams-meetings`。
 
 ```bash
 openclaw teamsmeetings setup
 openclaw teamsmeetings join 'https://teams.microsoft.com/l/meetup-join/...'
 ```
 
-Use `chromeNode.node` to run Chrome, BlackHole, and SoX on a paired macOS node. The node must allow `teamsmeetings.chrome` and `browser.proxy`.
+使用 `chromeNode.node` 在已配对的 macOS 节点上运行 Chrome、BlackHole 和 SoX。该节点必须允许 `teamsmeetings.chrome` 和 `browser.proxy`。
 
-## Modes
+## 模式
 
-| Mode         | Behavior                                                                    |
-| ------------ | --------------------------------------------------------------------------- |
-| `agent`      | Realtime transcription consults the configured OpenClaw agent; TTS replies. |
-| `bidi`       | A realtime voice model listens and replies directly.                        |
-| `transcribe` | Observe-only join with live-caption transcript snapshots.                   |
+| 模式         | 行为                                                                    |
+| ------------ | ----------------------------------------------------------------------- |
+| `agent`      | 实时转录会咨询已配置的 OpenClaw 代理；回复通过 TTS 播放。 |
+| `bidi`       | 实时语音模型直接聆听并回复。                        |
+| `transcribe` | 仅观察模式加入，并提供实时字幕转录快照。                   |
 
-Teams live captions are enabled after admission in every mode so OpenClaw can
-persist speaker-attributed notes. The `transcript` action still returns the
-bounded live buffer only for `transcribe` sessions. On leave, OpenClaw stores
-the durable transcript and derived summary in the shared state database; list
-or export them with [`openclaw transcripts`](/cli/transcripts).
+在所有模式下，Teams 实时字幕会在加入后启用，以便 OpenClaw
+保存带有发言者归属的笔记。`transcript` 操作仍仅为 `transcribe` 会话返回
+有界实时缓冲区。离开时，OpenClaw 会将持久化转录和派生摘要存储到共享状态数据库中；可通过 [`openclaw transcripts`](/cli/transcripts) 列出或导出。
 
-Automatic notes are enabled by default. Set `transcripts.enabled: false` to
-disable durable notes globally; explicit `transcribe` mode still exposes only
-its bounded live tail.
+自动笔记默认启用。设置 `transcripts.enabled: false` 可在全局范围内
+禁用持久化笔记；显式使用 `transcribe` 模式时仍只会公开其有界的实时尾部。
 
-## Guest join limits
+## 来宾加入限制
 
-The browser adapter dismisses the app interstitial, fills the guest name, turns the camera off, configures the microphone for the selected mode, and clicks the join button. In-call state uses the hang-up control; lobby, tenant sign-in, and device-permission states return explicit manual-action reasons. Consumer meeting launcher redirects and the `BlackHole 2ch (Virtual)` labels shown by Chrome are supported.
+浏览器适配器会关闭应用中间页，填写来宾姓名，关闭摄像头，按照所选模式配置麦克风，并点击加入按钮。通话中状态使用挂断控件；大厅、租户登录和设备权限状态会返回明确的手动操作原因。支持消费者会议启动器重定向，以及 Chrome 显示的 `BlackHole 2ch (Virtual)` 标签。
 
-Teams tenant policy can require sign-in, email verification, or organizer admission. Complete that step in the OpenClaw Chrome profile, then retry status or speech. The plugin does not bypass tenant policy.
+Teams 租户策略可能要求登录、验证电子邮件或由组织者批准加入。在 OpenClaw Chrome 配置文件中完成相应步骤，然后重试状态或语音操作。该插件不会绕过租户策略。
 
-The consumer Teams web client has been live-validated for the app interstitial, guest-name entry, prejoin microphone/camera toggles, join, lobby admission, media permissions, in-call detection, live captions, BlackHole input/output routing, leave, and post-call detection. Work tenants can impose different sign-in, email-verification, admission, and leave-confirmation policy; complete any reported manual action in the OpenClaw Chrome profile.
+消费者 Teams Web 客户端已对应用中间页、来宾姓名输入、加入前麦克风/摄像头切换、加入、大厅批准、媒体权限、通话中检测、实时字幕、BlackHole 输入/输出路由、离开以及通话后检测进行了实时验证。工作租户可能会施加不同的登录、电子邮件验证、加入批准和离开确认策略；请在 OpenClaw Chrome 配置文件中完成报告的任何手动操作。
 
-## Tool and gateway surface
+## 工具和网关接口
 
-The `teams_meetings` agent tool supports `join`, `leave`, `status`, `transcript`, and `speak`. Gateway methods use the `teamsmeetings.*` prefix. The node command is `teamsmeetings.chrome`.
+`teams_meetings` 代理工具支持 `join`、`leave`、`status`、`transcript` 和 `speak`。网关方法使用 `teamsmeetings.*` 前缀。节点命令是 `teamsmeetings.chrome`。
 
-## Related
+## 相关内容
 
-- [Meeting plugins overview](/plugins/meeting-plugins)
-- [Microsoft Teams channel](/channels/msteams)
+- [会议插件概览](/plugins/meeting-plugins)
+- [Microsoft Teams 频道](/channels/msteams)

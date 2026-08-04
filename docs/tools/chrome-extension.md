@@ -76,9 +76,33 @@ openclaw config set browser.defaultProfile chrome
 - 代理也可以打开新标签页；这些标签页会自动进入该组。
 - 撤销：再次点击按钮，将标签页拖出该组，或者关闭 Chrome 的调试横幅。代理会立即失去对该标签页的访问权限。
 
-### Tab copilot 侧边栏
+### 外部 CDP 客户端（chrome-devtools-mcp、Puppeteer）
 
-配对扩展后，在其工具栏弹出窗口中点击 **Open tab copilot**。
+中继是一个标准的 CDP 浏览器端点，因此 OpenClaw 之外的工具也可以通过它驱动已配对的 Chrome——使用相同的许可模型（仅限共享标签页）、相同的主机本地令牌，并且仍然不会出现“允许远程调试？”提示。打印端点和身份验证标头：
+
+```bash
+openclaw browser extension cdp
+```
+
+例如，Google 的 [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp)
+可以通过以下方式连接：
+
+```bash
+npx chrome-devtools-mcp --wsEndpoint ws://127.0.0.1:18799/cdp \
+  --wsHeaders '{"Authorization":"Bearer <token>"}'
+```
+
+`openclaw browser extension cdp --json` 会输出用于脚本处理的 `{ browserUrl, wsEndpoint,
+headers }`。该令牌与配对字符串携带的主机本地中继密钥相同：请将其视为私密信息，并通过删除
+`credentials/browser-extension-relay.secret` 后重新配对来轮换令牌。
+
+[mcporter](https://github.com/openclaw/mcporter) 完全不需要额外配置：当已配对的中继在此主机上响应时，它会透明地将
+`chrome-devtools-mcp --autoConnect` 服务器命令重写为中继端点，因此通过 mcporter 调用 Chrome DevTools 的代理会自动跳过远程调试提示（如需退出，请在此处设置
+`MCPORTER_DISABLE_CHROME_DEVTOOLS_RELAY=1`）。
+
+### 标签页 copilot 侧边栏
+
+配对扩展后，在其工具栏弹出窗口中点击 **打开标签页 copilot**。
 
 OpenClaw 会为那个特定的 Chrome 标签页配置 `sidepanel.html`；manifest 中没有全局侧边栏路径。因此，每个标签页都会获得一个单独的面板文档、Gateway 会话、消息订阅以及类型化的浏览器工具绑定。
 
@@ -95,13 +119,13 @@ openclaw devices approve <requestId>
 
 如果在运行期间 Gateway 连接中断，扩展会保留该运行 ID 的持久托管。重连时，它会在重新启用任何面板之前终止未解决的运行，然后重新加载会话记录。这种故障关闭步骤可防止浏览器操作在投递间隙中无形继续执行。
 
-关闭标签页会立即移除其实时订阅、中止任何可见运行，并将该标签页的会话标记为已归档。如果 Gateway 暂时离线，扩展会持久保存待处理的归档，并仅在同一 Gateway 端点重新连接时重试；它绝不会向不同的 Gateway 发送归档请求。在浏览器崩溃后，下一次启动会归档由前一个浏览器实例留下的会话。已归档会话会拒绝新工作，而其会话记录仍可在会话历史中查看。Browser-copilot 键属于线程会话，因此正常的年龄和条目数维护会保留它们。每个代理的会话磁盘预算仍然适用（默认 `2gb`），并且在压力下可能会逐出最旧的会话；请参阅 [会话维护](/reference/session-management-compaction#store-maintenance-and-disk-controls)。
+关闭标签页会立即移除其活动订阅、中止任何可见运行，并将该标签页的会话标记为已归档。如果 Gateway 暂时离线，扩展会持久保存待处理的归档操作，并且仅在同一 Gateway 端点重新连接时重试；它绝不会向其他 Gateway 发送归档请求。浏览器崩溃后，下一次启动时会归档上一个浏览器实例留下的会话。已归档的会话会拒绝新工作，但其记录仍可在会话历史中使用。浏览器 copilot 密钥属于线程会话，因此常规的使用年限和条目数维护会保留这些密钥。每个代理的会话磁盘预算仍然适用（默认值为 `10gb`），并可能在磁盘空间紧张时淘汰最旧的会话；请参阅[会话维护](/reference/session-management-compaction#store-maintenance-and-disk-controls)。
 
 侧边栏当前需要 Gateway 托管的扩展中继或直接的远程 Gateway 中继。浏览器节点上的回环中继目前无法提供类型化标签页绑定所需的节点路由，因此该面板会拒绝这种拓扑，而不是回退到全局浏览器路由。
 
 ## 将页面发送到 OpenClaw
 
-在工具栏弹出窗口中使用 **Send page to OpenClaw**，将可读的页面文本分享给你的主 OpenClaw 会话。你可以添加可选备注，使用页面或选中文本的右键菜单，或按 `Alt+Shift+S`。OpenClaw 会优先使用你当前的选区（如果存在），将分享排队为系统事件，并立即唤醒主会话。
+在工具栏弹出窗口中使用 **发送页面到 OpenClaw**，将可读的页面文本分享给你的主 OpenClaw 会话。你可以添加可选备注，使用页面或选中文本的右键菜单，或按 `Alt+Shift+S`。OpenClaw 会优先使用你当前的选区（如果存在），将分享排队为系统事件，并立即唤醒主会话。
 
 该标签页不需要位于 OpenClaw 标签组中。这是一次性、显式的分享：页面上不会暴露任何其他内容，并且不会授予任何持续访问权限。Google Docs 会使用你已登录的浏览器会话导出为纯文本，无需 Google API 设置。X 和 Twitter 线程会在去除周围界面外壳后提取。
 

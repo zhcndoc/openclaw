@@ -15,7 +15,7 @@ title: "访问组"
 
 ## 静态消息发送者组
 
-静态发送者组使用 `type: "message.senders"`。`members` 以 message-channel id 为键，另外还有 `"*"` 用于每个频道共享的条目：
+静态发送者组使用 `type: "message.senders"`。`members` 以消息频道 ID 为键，另外还有 `"*"` 用于每个频道共享的条目：
 
 ```json5
 {
@@ -36,9 +36,9 @@ title: "访问组"
 | 键                        | 含义                                                                     |
 | ------------------------- | ------------------------------------------------------------------------ |
 | `"*"`                      | 对引用该组的每个消息频道都会检查的共享条目。 |
-| `discord`, `telegram`, ... | 仅针对该频道的 allowlist 匹配进行检查的条目。                 |
+| `discord`, `telegram`, ... | 仅针对该频道的允许列表匹配进行检查的条目。                 |
 
-条目会按照目标频道的常规 `allowFrom` 规则进行匹配。OpenClaw 不会在不同频道之间转换发送者 id：如果 Alice 有一个 Telegram id 和一个 Discord id，请在匹配的频道键下同时列出这两个 id。
+条目会按照目标频道的常规 `allowFrom` 规则进行匹配。OpenClaw 不会在不同频道之间转换发送者 ID：如果 Alice 有一个 Telegram ID 和一个 Discord ID，请在匹配的频道键下同时列出这两个 ID。
 
 ## 在允许列表中引用组
 
@@ -121,7 +121,7 @@ DM 允许列表示例：
 - 使用相同发送者匹配规则的、按房间划分的频道特定发送者允许列表（例如 Google Chat `groups.<space>.users`）
 - 复用消息渠道发送者允许列表的命令授权路径
 
-频道支持情况取决于该频道是否通过共享的 OpenClaw 发送者授权辅助函数接入。当前内置支持包括 ClickClack、Discord、飞书、Google Chat、iMessage、IRC、LINE、Mattermost、Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Signal、Slack、SMS、Telegram、WhatsApp、Zalo 和 Zalo Personal。静态 `message.senders` 组与具体频道无关，因此新的消息频道可以通过使用共享的插件 SDK 入口辅助函数，而不是自定义允许列表扩展，来获得它们。
+消息渠道是否受支持取决于该渠道是否通过共享的 OpenClaw 发送者授权辅助工具接入。目前受支持的渠道集成包括 ClickClack、Discord、Feishu、Google Chat、iMessage、IRC、LINE、Mattermost、Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Signal、Slack、SMS、Telegram、WhatsApp、Zalo 和 Zalo Personal。静态的 `message.senders` 组与具体渠道无关，因此新消息渠道只需使用共享插件 SDK 的入口辅助工具，而无需自定义允许列表扩展，即可获得这些支持。
 
 ## Discord 渠道受众
 
@@ -156,7 +156,7 @@ Discord 还支持一种动态访问组类型：
 - 机器人需要启用 Discord Developer Portal 的 **Server Members Intent**。
 - 当 Discord 返回 `Missing Access`、发送者无法被解析为服务器成员，或该频道属于另一个服务器时，访问组会以关闭失败的方式处理。
 
-更多 Discord 特定示例：[Discord 访问控制](/channels/discord#access-control-and-routing)
+更多 Discord 特定示例：[Discord 访问控制](/channels/discord#access-control-and-routing)。
 
 ## 插件诊断
 

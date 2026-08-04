@@ -48,6 +48,9 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 <ParamField path="--from <path>" type="string">
   覆盖源状态目录。Hermes 会遵循 `$HERMES_HOME` 和当前活动配置文件，然后使用平台默认值（`~/.hermes` 或 `%LOCALAPPDATA%\hermes`）。Codex 默认为 `~/.codex`（或 `$CODEX_HOME`），Claude 默认为 `~/.claude`。
 </ParamField>
+<ParamField path="--agent <id>" type="string">
+  导入到已配置的代理中。仅当已配置的默认代理是预期的所有者时，才可省略此参数。无效和未知的代理 ID 将被拒绝。
+</ParamField>
 <ParamField path="--include-secrets" type="boolean">
   在不提示的情况下导入受支持的凭据。交互式 apply 会在检测到身份验证凭据时询问是否导入，默认选中 yes；非交互式 `--yes` 需要 `--include-secrets` 才会导入它们。
 </ParamField>
@@ -66,8 +69,11 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 <ParamField path="--plugin <name>" type="string">
   按插件名称或项目 ID 选择一个 Codex 插件安装项。重复该标志可迁移多个 Codex 插件。省略时，交互式 Codex 迁移会显示原生的 Codex 插件复选框选择器，非交互式迁移会保留所有计划中的插件。仅适用于由 Codex 应用服务器清单发现的源端已安装 `openai-curated` Codex 插件。
 </ParamField>
+<ParamField path="--item <id>" type="string">
+  按计划 ID 选择一个确切的迁移项。重复该标志可迁移多个项目。例如，`--item auth:openai` 会将 Codex 迁移限制为检测到的 OpenAI 凭据项。
+</ParamField>
 <ParamField path="--verify-plugin-apps" type="boolean">
-  仅限 Codex。在规划原生插件激活之前，强制重新遍历源端 Codex 应用服务器的 `app/list`。默认关闭，以保持迁移规划快速。
+  仅适用于 Codex。在规划原生插件激活之前，强制重新读取源 Codex 应用服务器的 `app/installed` 快照。默认关闭，以保持迁移规划的快速运行。
 </ParamField>
 <ParamField path="--backup-output <path>" type="string">
   迁移前备份归档路径或目录。透传给 `openclaw backup create`。
@@ -133,7 +139,14 @@ Claude hooks、权限、环境默认值、项目 `CLAUDE.local.md`、`.claude/ru
 
 当你要迁移到 OpenClaw Codex harness，并且希望有意地保留有用的个人 Codex CLI 资产时，请使用此提供程序。本地 Codex app-server 启动会为每个 agent 使用单独的 `CODEX_HOME`，因此默认情况下不会读取你个人的 `~/.codex`。不过，普通进程的 `HOME` 仍然会被继承，所以 Codex 可以看到共享的 `$HOME/.agents/*` skills/plugin marketplace 条目，而子进程也可以找到用户主目录中的配置和 token。
 
-在交互式终端中运行 `openclaw migrate codex` 时，会先预览完整计划，然后在最终应用确认前打开复选框选择器。首先会提示复制 skill 项目。使用 `Toggle all on` 或 `Toggle all off` 进行批量选择。按 Space 可切换行，或按 Enter 激活高亮行并继续。计划中的 skills 默认勾选，冲突 skills 默认不勾选，而 `Skip for now` 会在本次运行中跳过 skill 复制，但仍继续进行 plugin 选择。当可迁移的源安装精选 Codex plugins 存在，且未提供 `--plugin` 时，迁移随后会按 plugin 名称提示启用原生 Codex plugin。除非目标 OpenClaw Codex plugin 配置中已经包含该 plugin，否则 plugin 项默认勾选。现有的目标 plugins 默认不勾选，并显示类似 `conflict: plugin exists` 的冲突提示；选择 `Toggle all off` 可在本次运行中不迁移任何原生 Codex plugins，或选择 `Skip for now` 在应用前停止。
+Codex 的 `auth.json` 凭据属于敏感的迁移输入。默认的 agent 作用域运行时不会直接使用复制或挂载的 `auth.json`；请将这些凭据显式导入所属 agent 的 OpenClaw auth store。将 `<agent-id>` 替换为该 agent 配置的 ID：
+
+```bash
+openclaw migrate plan codex --from <codex-home> --agent <agent-id> --include-secrets --item auth:openai
+openclaw migrate apply codex --from <codex-home> --agent <agent-id> --include-secrets --item auth:openai --yes
+```
+
+在交互式终端中运行 `openclaw migrate codex` 会预览完整计划，然后在最终应用确认前打开复选框选择器。技能复制项会首先提示。使用 `Toggle all on` 或 `Toggle all off` 批量选择。按空格键切换行，或按 Enter 激活高亮行并继续。计划中的技能默认处于选中状态，冲突技能默认未选中；`Skip for now` 会跳过本次运行中的技能复制，但仍会继续进行插件选择。当源端已安装的精选 Codex 插件可迁移且未提供 `--plugin` 时，迁移随后会按插件名称提示激活原生 Codex 插件。除非目标 OpenClaw Codex 插件配置中已经存在相应插件，否则插件项默认处于选中状态。现有目标插件默认未选中，并显示类似 `conflict: plugin exists` 的冲突提示；选择 `Toggle all off` 可在本次运行中不迁移任何原生 Codex 插件，选择 `Skip for now` 则会在应用前停止。
 
 对于脚本化或精确运行，请显式选择一个或多个 skills 或 plugins：
 
@@ -146,16 +159,20 @@ openclaw migrate apply codex --yes --plugin google-calendar
 
 ### Codex 导入内容
 
-- 从 `$CODEX_HOME/memories` 汇总的 Codex `MEMORY.md` 和 `memory_summary.md`，复制到 `memory/imports/codex/` 下用于索引回忆。原始 rollout memory 不会被导入。
-- `$CODEX_HOME/skills` 下的 Codex CLI skill 目录，不包括 Codex 的 `.system` 缓存。
-- `$HOME/.agents/skills` 下的个人 AgentSkills，会复制到当前 OpenClaw agent 工作区中，以便按 agent 归属管理。
-- 通过 Codex app-server `plugin/list` 发现的源安装 `openai-curated` Codex plugins。规划阶段会针对每个已启用的已安装 plugin 读取 `plugin/read`。
+- 来自 `$CODEX_HOME/auth.json` 的 ChatGPT OAuth 或 OpenAI API 密钥凭据，
+  仅在设置了 `--include-secrets` 时导入 agent 的 OpenClaw auth store。
+- 来自 `$CODEX_HOME/memories` 的整合版 Codex `MEMORY.md` 和
+  `memory_summary.md`，复制到 `memory/imports/codex/` 下以供索引检索。
+  不会导入原始 rollout memory。
+- `$CODEX_HOME/skills` 下的 Codex CLI 技能目录，不包括 Codex 的 `.system` 缓存。
+- `$HOME/.agents/skills` 下的个人 AgentSkills，复制到当前 OpenClaw agent 工作区中，以实现按 agent 所有。
+- 通过 Codex app-server 的 `plugin/installed` 发现的源端已安装 `openai-curated` Codex 插件。规划时会对每个已启用的已安装插件读取 `plugin/read`。
 
 基于 App 的 plugin 迁移有额外门槛：
 
-- 基于 App 的 plugins 要求源 Codex app-server 账号是 ChatGPT 订阅账号。非 ChatGPT 账号或缺失账号响应会被跳过，并标记为 `codex_subscription_required`。
-- 默认情况下，迁移不会调用源 `app/list`，因此即使通过账号门槛的基于 App plugins 也会在未进行源 app 可访问性验证的情况下进入规划；账号查询的传输失败会跳过，并标记为 `codex_account_unavailable`。
-- 传入 `--verify-plugin-apps` 可强制获取一份新的源 `app/list` 快照，并要求在规划原生启用之前，每个归属 app 都必须存在、已启用且可访问。在这种模式下，账号查询的传输失败会继续进入源 app 清单验证。该快照仅保存在当前进程的内存中；绝不会写入迁移输出或目标配置。
+- 基于 App 的插件要求源 Codex app-server 账户为 ChatGPT 订阅账户。非 ChatGPT 账户或缺少账户的响应会被跳过，并标记为 `codex_subscription_required`。
+- 默认情况下，迁移不会读取源端 App 清单，因此通过账户门槛的基于 App 的插件会在不验证源端 App 可访问性的情况下被纳入计划；账户查询传输失败则会跳过，并标记为 `codex_account_unavailable`。
+- 传入 `--verify-plugin-apps` 可强制获取最新的源端 `app/installed` 快照（元数据通过批量 `app/read` 并使用授权信息），并要求每个所属 App 在规划原生激活前都已存在、已启用且可访问。在此模式下，账户查询传输失败会继续进行源端 App 清单验证。该快照仅保存在当前进程的内存中；绝不会写入迁移输出或目标配置。
 
 被禁用的 plugins、不可读的 plugin 详情、受订阅门控的源账号，以及（当设置了 `--verify-plugin-apps` 时）缺失、禁用或不可访问的 apps，都会成为带类型原因的手动跳过项，而不是目标配置条目。即使目标 app-server 已报告该 plugin 已安装并启用，应用阶段仍会对每个被选中的合格 plugin 调用 app-server `plugin/install`。迁移后的 Codex plugins 只能在选择原生 Codex harness 的会话中使用；它们不会在 OpenClaw provider 运行、ACP conversation bindings 或其他 harness 中暴露。
 
@@ -168,7 +185,7 @@ Codex `config.toml`、原生 `hooks/hooks.json`、非精选 marketplaces、不�
 - `plugins.entries.codex.enabled: true`
 - `plugins.entries.codex.config.codexPlugins.enabled: true`
 - `plugins.entries.codex.config.codexPlugins.allow_destructive_actions: true`
-- one explicit plugin entry with `marketplaceName: "openai-curated"` and `pluginName` for each selected plugin
+- 为每个选中的插件写入一个明确的插件条目，其中包含 `marketplaceName: "openai-curated"` 和 `pluginName`
 
 Migration 绝不会写入 `plugins["*"]`，也绝不会存储本地 marketplace 缓存路径。
 
@@ -196,7 +213,7 @@ Migration 绝不会写入 `plugins["*"]`，也绝不会存储本地 marketplace 
 
 ### 支持的 `.env` 密钥
 
-`AI_GATEWAY_API_KEY`, `ALIBABA_API_KEY`, `ANTHROPIC_API_KEY`, `ARCEEAI_API_KEY`, `CEREBRAS_API_KEY`, `CHUTES_API_KEY`, `CLOUDFLARE_AI_GATEWAY_API_KEY`, `COPILOT_GITHUB_TOKEN`, `DASHSCOPE_API_KEY`, `DEEPINFRA_API_KEY`, `DEEPSEEK_API_KEY`, `FIREWORKS_API_KEY`, `GEMINI_API_KEY`, `GH_TOKEN`, `GITHUB_TOKEN`, `GLM_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, `HF_TOKEN`, `HUGGINGFACE_HUB_TOKEN`, `KILOCODE_API_KEY`, `KIMICODE_API_KEY`, `KIMI_API_KEY`, `KIMI_CODING_API_KEY`, `MINIMAX_API_KEY`, `MINIMAX_CODING_API_KEY`, `MISTRAL_API_KEY`, `MODELSTUDIO_API_KEY`, `MOONSHOT_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`, `OPENCODE_API_KEY`, `OPENCODE_GO_API_KEY`, `OPENCODE_ZEN_API_KEY`, `OPENROUTER_API_KEY`, `QIANFAN_API_KEY`, `QWEN_API_KEY`, `TOGETHER_API_KEY`, `VENICE_API_KEY`, `XAI_API_KEY`, `XIAOMI_API_KEY`, `ZAI_API_KEY`, `Z_AI_API_KEY`.
+`AI_GATEWAY_API_KEY`, `ALIBABA_API_KEY`, `ANTHROPIC_API_KEY`, `ARCEEAI_API_KEY`, `CEREBRAS_API_KEY`, `CHUTES_API_KEY`, `CLOUDFLARE_AI_GATEWAY_API_KEY`, `COPILOT_GITHUB_TOKEN`, `DASHSCOPE_API_KEY`, `DEEPINFRA_API_KEY`, `DEEPSEEK_API_KEY`, `FIREWORKS_API_KEY`, `GEMINI_API_KEY`, `GH_TOKEN`, `GITHUB_TOKEN`, `GLM_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, `HF_TOKEN`, `HUGGINGFACE_HUB_TOKEN`, `KILOCODE_API_KEY`, `KIMICODE_API_KEY`, `KIMI_API_KEY`, `KIMI_CODING_API_KEY`, `MINIMAX_API_KEY`, `MINIMAX_CODING_API_KEY`, `MISTRAL_API_KEY`, `MODELSTUDIO_API_KEY`, `MOONSHOT_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`, `OPENCODE_API_KEY`, `OPENCODE_GO_API_KEY`, `OPENCODE_ZEN_API_KEY`, `OPENROUTER_API_KEY`, `QIANFAN_API_KEY`, `QWEN_API_KEY`, `TOGETHER_API_KEY`, `VENICE_API_KEY`, `XAI_API_KEY`, `XIAOMI_API_KEY`, `ZAI_API_KEY`, `Z_AI_API_KEY`。
 
 ### 仅归档状态
 

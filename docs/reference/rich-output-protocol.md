@@ -31,13 +31,36 @@ title: "丰富输出协议"
 为兼容性起见，旧版最终回复文本仍可能被规范化，但这不是通用的插件/工具协议。
 </Warning>
 
-普通 Markdown 图片语法（`![alt](url)`）默认仍作为文本处理。希望将 Markdown 图片作为媒体回复处理的通道，会在其出站适配器中选择启用；Telegram 就是这样做的，因此 `![alt](url)` 会变成媒体附件。
+## 传统的 `MEDIA:` 行
+
+传统的最终助手回复仍然可以通过单独一行的纯文本
+`MEDIA:` 附加本地媒体。解析器只识别去除首尾空白后的文本以 `MEDIA:` 开头，且位于 Markdown 包装和代码围栏之外的行。
+
+有效的传统最终回复：
+
+```text
+这是生成的图像。
+
+MEDIA:/workspace/image.png
+```
+
+以下内容仍然是普通文本，不会附加媒体：
+
+```text
+**MEDIA:/workspace/image.png**
+`MEDIA:/workspace/image.png`
+这是你的图像：MEDIA:/workspace/image.png
+```
+
+对于工具、插件、浏览器输出、流式传输块和消息操作，优先使用结构化的 `mediaUrl` / `mediaUrls` 字段。
+
+默认情况下，纯 Markdown 图片语法仍然是文本。明确将 Markdown 图片回复映射为媒体附件的渠道可以选择启用此功能；Telegram 已启用，因此 `![alt](url)` 仍然可以成为媒体回复。
 
 启用块流式传输时，媒体必须通过结构化负载字段传递。如果同一个媒体 URL 同时出现在流式块中以及最终的助手负载中，OpenClaw 只会传递一次，并从最终负载中移除重复项。
 
 ## `[embed ...]`
 
-`[embed ...]` 是 Control UI 唯一面向 agent 的富渲染语法。自闭合示例：
+`[embed ...]` 是 Control UI 唯一面向智能体的富渲染语法。自闭合示例：
 
 ```text
 [embed ref="cv_123" title="状态" /]
@@ -46,7 +69,7 @@ title: "丰富输出协议"
 规则：
 
 - `[view ...]` 不再对新的输出有效。
-- Embed 短代码仅在 assistant 消息区域中渲染。
+- Embed 短代码仅在助手消息区域中渲染。
 - 只有基于 URL 的 embed 才会渲染；请使用 `ref="..."` 或 `url="..."`。
 - 块级形式的内联 HTML embed 短代码不会渲染。
 - Web UI 会从可见文本中移除该短代码，并将 embed 以内联方式渲染。

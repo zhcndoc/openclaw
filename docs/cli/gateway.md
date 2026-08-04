@@ -1,15 +1,15 @@
 ---
-summary: "OpenClaw Gateway CLI (`openclaw gateway`) —— 运行、查询和发现网关"
+summary: "OpenClaw 网关 CLI（`openclaw gateway`）——运行、查询和发现网关"
 read_when:
-  - 从 CLI 运行 Gateway（开发或服务器）
-  - 调试 Gateway 认证、绑定模式和连接性
+  - 从 CLI 运行网关（开发或服务器）
+  - 调试网关身份验证、绑定模式和连接性
   - 通过 Bonjour 发现网关（本地 + 广域 DNS-SD）
-  - 集成外部 Gateway 进程监督器
-title: "Gateway"
-sidebarTitle: "Gateway"
+  - 集成外部网关进程监督器
+title: "网关"
+sidebarTitle: "网关"
 ---
 
-Gateway 是 OpenClaw 的 WebSocket 服务器（channels、nodes、sessions、hooks）。以下所有子命令都位于 `openclaw gateway ...` 下。
+网关是 OpenClaw 的 WebSocket 服务器（频道、节点、会话、钩子）。以下所有子命令都位于 `openclaw gateway ...` 下。
 
 <CardGroup cols={3}>
   <Card title="Bonjour 发现" href="/gateway/bonjour">
@@ -19,7 +19,7 @@ Gateway 是 OpenClaw 的 WebSocket 服务器（channels、nodes、sessions、hoo
     OpenClaw 如何发布和查找网关。
   </Card>
   <Card title="配置" href="/gateway/configuration">
-    顶层 gateway 配置键。
+    顶层网关配置键。
   </Card>
 </CardGroup>
 
@@ -107,7 +107,19 @@ openclaw gateway run   # 等价，显式形式
 
 对于 `--bind custom`，请将 `gateway.customBindHost` 设置为一个 IPv4 地址。除 `127.0.0.1` 或 `0.0.0.0` 之外的任何地址，还要求同一端口上的 `127.0.0.1` 供同主机客户端使用；如果任一监听无法绑定，启动都会失败。通配符 `0.0.0.0` 不会额外添加一个必需别名。仅 IPv6 的自带主机部署需要在 Gateway 前面放置一个 IPv4 sidecar 或代理。
 
-## 重启网关
+## 显示已配置的令牌
+
+当客户端需要已配置的共享令牌时，在 Gateway 主机上运行：
+
+```bash
+openclaw gateway auth-token --show
+```
+
+该命令会解析 `gateway.auth.token`、`OPENCLAW_GATEWAY_TOKEN` 和已配置的 SecretRefs，然后仅输出令牌。它要求使用交互式终端，并拒绝重定向或管道输出，以避免凭据无意中进入命令日志。请将终端输出视为机密信息。
+
+如果未配置持久令牌，请运行 `openclaw doctor --generate-gateway-token`，重启 Gateway，然后重新运行该命令。通用的 `openclaw config get` 输出仍会被脱敏，包括使用 `--json` 时也是如此。
+
+## 重启 Gateway
 
 ```bash
 openclaw gateway restart
@@ -128,6 +140,16 @@ openclaw gateway restart --wait 30s
 <Warning>
 行内 `--password` 可能会暴露在本地进程列表中。建议使用 `--password-file`、环境变量或由 SecretRef 支持的 `gateway.auth.password`。
 </Warning>
+
+### 安装身份
+
+服务管理（`install`、`start`、`stop`、`restart`、`uninstall`、Doctor 服务修复以及自更新服务处理）归属于拥有主机服务的安装。该安装是操作系统账户主目录下规范的 `.openclaw` 目录，或命名配置文件映射到该位置的 `.openclaw-<profile>` 目录。命名配置文件使用彼此独立的原生服务身份。
+
+`OPENCLAW_HOME`，或指向其他位置的 `OPENCLAW_STATE_DIR` 或 `OPENCLAW_CONFIG_PATH`，会被视为隔离状态并跳过。重定位或复制的状态树无法接管并重写账户的主机服务。
+
+在 macOS 和 Windows 上，由原生服务管理的配置文件名称必须为小写。仅运行时使用的配置文件仍可使用大写，但在普通不区分大小写的文件系统上，`Main` 和 `main` 等仅大小写不同的名称会共享路径，因此无法安全地拥有彼此独立的原生服务。在 macOS 上，小写名称 `gateway` 和 `node` 也无法用于原生服务管理，因为其历史 LaunchAgent 标签会与默认的 Gateway 和 node-host 服务发生冲突。
+
+命名配置文件还必须使用从 `OPENCLAW_PROFILE` 派生的原生服务身份。在进行服务管理前，需取消设置 `OPENCLAW_LAUNCHD_LABEL`、`OPENCLAW_SYSTEMD_UNIT` 或 `OPENCLAW_WINDOWS_TASK_NAME`；自定义身份仍可用于默认配置文件，或仅运行时/外部监督器设置。
 
 ### 外部监督器
 
@@ -153,7 +175,7 @@ openclaw gateway restart-handoff consume --expected-pid <pid> --json
 
 ### Gateway 性能分析
 
-- `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 在启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟以及插件查找表耗时（installed-index、manifest registry、startup planning、owner-map work）。
+- `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 在启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟以及插件查找表耗时（已安装索引、清单注册表、启动规划、所有者映射工作）。
 - `OPENCLAW_GATEWAY_RESTART_TRACE=1` 记录重启范围内的 `restart trace:` 行：信号处理、活跃工作排空、关闭阶段、下次启动、就绪时间以及内存指标。
 - `OPENCLAW_DIAGNOSTICS=timeline` 配合 `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=<path>` 会为外部 QA harness 写出尽力而为的 JSONL 启动诊断时间线（等同于配置 `diagnostics.flags: ["timeline"]`；该路径仍然只能通过环境变量设置）。再添加 `OPENCLAW_DIAGNOSTICS_EVENT_LOOP=1` 可包含事件循环样本。
 - `pnpm build` 然后执行 `pnpm test:startup:gateway -- --runs 5 --warmup 1`，将 Gateway 启动与已构建的 CLI 入口进行基准测试：首次进程输出、`/healthz`、`/readyz`、启动 trace 时序、事件循环延迟以及插件查找表耗时。
@@ -195,7 +217,7 @@ openclaw gateway health --port 18789
 `/healthz` 是一个存活探针：只要服务器能够响应 HTTP，它就会立即返回。`/readyz` 更严格，在启动插件 sidecar、通道或已配置的钩子仍在初始化时，它会保持红色。本地或经过认证的详细 `/readyz` 响应包含一个 `eventLoop` 诊断块（延迟、利用率、CPU 核心比率、`degraded` 标志）。
 
 <ParamField path="--port <port>" type="number">
-  目标是此端口上的本地回环 Gateway。此调用会覆盖 `OPENCLAW_GATEWAY_URL` 和 `OPENCLAW_GATEWAY_PORT`。
+  目标是此端口上的本地回环网关。此调用会覆盖 `OPENCLAW_GATEWAY_URL` 和 `OPENCLAW_GATEWAY_PORT`。
 </ParamField>
 
 ### `gateway usage-cost`
@@ -214,15 +236,15 @@ openclaw gateway usage-cost --json
   要包含的天数。
 </ParamField>
 <ParamField path="--agent <id>" type="string">
-  将摘要限定到某个已配置的 agent id。
+  将摘要限定到某个已配置的代理 id。
 </ParamField>
 <ParamField path="--all-agents" type="boolean">
-  汇总所有已配置的 agents。不能与 `--agent` 同时使用。
+  汇总所有已配置的代理。不能与 `--agent` 同时使用。
 </ParamField>
 
-### `gateway stability`
+### `网关稳定性`
 
-从正在运行的 Gateway 获取最近的诊断稳定性记录器。
+从正在运行的网关获取最近的诊断稳定性记录器。
 
 ```bash
 openclaw gateway stability
@@ -242,7 +264,7 @@ openclaw gateway stability --json
   仅包含某个诊断序号之后的事件。
 </ParamField>
 <ParamField path="--bundle [path]" type="string">
-  读取已持久化的稳定性 bundle，而不是调用正在运行的 Gateway。`--bundle latest`（或直接使用裸 `--bundle`）会选择状态目录下最新的 bundle；你也可以直接传入 bundle JSON 路径。
+  读取已持久化的稳定性 bundle，而不是调用正在运行的网关。`--bundle latest`（或直接使用裸 `--bundle`）会选择状态目录下最新的 bundle；你也可以直接传入 bundle JSON 路径。
 </ParamField>
 <ParamField path="--export" type="boolean">
   写出一个可共享的支持诊断 zip，而不是打印稳定性细节。
@@ -254,14 +276,14 @@ openclaw gateway stability --json
 <AccordionGroup>
   <Accordion title="隐私和 bundle 行为">
     - 记录会保留运行元数据：事件名称、计数、字节大小、内存读数、队列/会话状态、审批 id、通道/插件名称，以及已脱敏的会话摘要。它们不包含聊天文本、webhook 正文、工具输出、原始请求/响应正文、令牌、cookie、密钥值、主机名以及原始会话 id。设置 `diagnostics.enabled: false` 可完全禁用记录器。
-    - 当记录器已有事件时，严重的 Gateway 退出、关闭超时以及重启启动失败会将相同的诊断快照写入 `~/.openclaw/logs/stability/openclaw-stability-*.json`。使用 `openclaw gateway stability --bundle latest` 检查最新的 bundle；`--limit`、`--type` 和 `--since-seq` 也同样适用于 bundle 输出。
+    - 当记录器已有事件时，严重的网关退出、关闭超时以及重启启动失败会将相同的诊断快照写入 `~/.openclaw/logs/stability/openclaw-stability-*.json`。使用 `openclaw gateway stability --bundle latest` 检查最新的 bundle；`--limit`、`--type` 和 `--since-seq` 也同样适用于 bundle 输出。
 
   </Accordion>
 </AccordionGroup>
 
 ### `gateway diagnostics export`
 
-Writes a local diagnostic zip designed for bug reports. See [Diagnostics Export](/gateway/diagnostics) for the privacy model and bundle contents.
+写入一个用于错误报告的本地诊断 zip 文件。有关隐私模型和捆绑包内容，请参阅[诊断导出](/gateway/diagnostics)。
 
 ```bash
 openclaw gateway diagnostics export
@@ -270,36 +292,36 @@ openclaw gateway diagnostics export --json
 ```
 
 <ParamField path="--output <path>" type="string">
-  Output zip path. Defaults to the support export in the state directory.
+  输出 zip 路径。默认为状态目录中的支持导出文件。
 </ParamField>
 <ParamField path="--log-lines <count>" type="number" default="5000">
-  Maximum number of sanitized log lines to include.
+  要包含的已清理日志行的最大数量。
 </ParamField>
 <ParamField path="--log-bytes <bytes>" type="number" default="1000000">
-  Maximum number of log bytes to inspect.
+  要检查的日志字节数上限。
 </ParamField>
 <ParamField path="--url <url>" type="string">
-  Gateway WebSocket URL for health snapshots.
+  用于健康状态快照的网关 WebSocket URL。
 </ParamField>
 <ParamField path="--token <token>" type="string">
-  Gateway token for health snapshots.
+  用于健康状态快照的网关令牌。
 </ParamField>
 <ParamField path="--password <password>" type="string">
-  Gateway password for health snapshots.
+  用于健康状态快照的网关密码。
 </ParamField>
 <ParamField path="--timeout <ms>" type="number" default="3000">
-  Status/health snapshot timeout.
+  状态/健康状态快照超时时间。
 </ParamField>
 <ParamField path="--no-stability-bundle" type="boolean">
-  Skip searching for a persisted stability bundle.
+  跳过对持久化稳定性捆绑包的搜索。
 </ParamField>
 <ParamField path="--json" type="boolean">
-  Print write path, size, and manifest as JSON.
+  以 JSON 格式输出写入路径、大小和清单。
 </ParamField>
 
-The export contains: `manifest.json` (file manifest), `summary.md` (Markdown summary), `diagnostics.json` (top-level config/logs/findings/stability/status/health summary), `config/sanitized.json`, `status/gateway-status.json`, `health/gateway-health.json`, `logs/openclaw-sanitized.jsonl`, and, if present, `stability/latest.json`.
+导出内容包括：`manifest.json`（文件清单）、`summary.md`（Markdown 摘要）、`diagnostics.json`（顶层配置/日志/发现项/稳定性/状态/健康状态摘要）、`config/sanitized.json`、`status/gateway-status.json`、`health/gateway-health.json`、`logs/openclaw-sanitized.jsonl`，以及在存在时的 `stability/latest.json`。
 
-It is designed for sharing. It preserves debugging-useful runtime details—safe log fields, subsystem names, status codes, durations, configured modes, ports, plugin/provider ids, non-sensitive feature settings, and sanitized runtime log messages—and omits or redacts chat text, webhook bodies, tool output, credentials, cookies, account/message identifiers, prompt/instruction text, hostnames, and secret values. When a log message looks like user/chat/tool payload text (for example, “user said”, “chat text”, “tool output”, “webhook body”), the export keeps only that the message was omitted and its byte count.
+该导出旨在用于共享。它会保留对调试有用的运行时详细信息——安全的日志字段、子系统名称、状态码、持续时间、已配置的模式、端口、插件/提供商 ID、非敏感的功能设置，以及经过清理的运行时日志消息——并省略或删除聊天文本、webhook 正文、工具输出、凭据、Cookie、账户/消息标识符、提示词/指令文本、主机名和机密值。当日志消息看起来像用户/聊天/工具负载文本时（例如“用户说”“聊天文本”“工具输出”“webhook 正文”），导出内容只会保留该消息已被省略及其字节数的信息。
 
 ### `gateway status`
 
@@ -379,7 +401,7 @@ openclaw gateway probe --port 18789
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="Interpretation">
+  <Accordion title="解释">
     - `Reachable: yes` 表示至少有一个目标接受了 WebSocket 连接。
     - `Capability: read-only|write-capable|admin-capable|pairing-pending|connect-only` 报告探测能够证明的认证能力，与可达性分开。
     - `Read probe: ok` 表示读取范围内的详细 RPC 调用（`health`/`status`/`system-presence`/`config.get`）也成功了。
@@ -405,7 +427,7 @@ openclaw gateway probe --port 18789
     每个目标（`targets[].auth`）：在可用时，`hello-ok` 中报告的 `role` 和 `scopes`，以及展示出的 `capability` 分类。
 
   </Accordion>
-  <Accordion title="Common warning codes">
+  <Accordion title="常见警告代码">
     - `ssh_tunnel_failed`: SSH 隧道设置失败；命令回退到直接探测。
     - `multiple_gateways`: 探测到了不同的网关身份，或者 OpenClaw 无法证明可达目标是同一个网关。指向同一网关的 SSH 隧道、代理 URL 或已配置远程 URL 不会触发此项。
     - `auth_secretref_unresolved`: 无法为失败目标解析已配置的 auth SecretRef。
@@ -415,7 +437,7 @@ openclaw gateway probe --port 18789
   </Accordion>
 </AccordionGroup>
 
-#### 通过 SSH 的远程（Mac app parity）
+#### 通过 SSH 的远程（macOS 应用一致性）
 
 macOS 应用的“通过 SSH 远程”模式会使用本地端口转发，因此仅能通过回环访问的远程网关会变为可通过 `ws://127.0.0.1:<port>` 访问。
 
@@ -440,7 +462,7 @@ OpenClaw 仅启动在操作系统管理的系统目录中找到的 SSH 客户端
   从解析出的发现端点（`local.` 加上已配置的广域域名，如有）中选择发现到的第一个 gateway 主机作为 SSH 目标。TXT-only 提示会被忽略。
 </ParamField>
 
-Config defaults (optional): `gateway.remote.sshTarget`, `gateway.remote.sshIdentity`.
+配置默认值（可选）：`gateway.remote.sshTarget`、`gateway.remote.sshIdentity`。
 
 ### `gateway call <method>`
 
@@ -527,12 +549,13 @@ openclaw gateway restart
 
   </Accordion>
   <Accordion title="生命周期行为">
-    - `gateway start` 是幂等的：当受管服务已经运行时，它会报告正在运行的进程并保持原样。对于已加载但已停止的服务，则会照常启动。
-    - 使用 `gateway restart` 来重启受管服务。不要把 `gateway stop` 和 `gateway start` 串联起来作为重启的替代方案。
-    - 在非交互式 shell 中，`gateway stop` 需要 `--force`。交互式终端仍保持现有的无提示行为。对于自动化和测试，建议使用 `gateway run --dev` 或带有空闲端口的隔离 `--profile`。
-    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，它会将 LaunchAgent 从当前启动会话中移除，而不会持久化禁用——KeepAlive 自动恢复在未来崩溃时仍然有效，并且 `gateway start` 可以干净地重新启用，而无需手动 `launchctl enable`。传入 `--disable` 可持久地抑制 KeepAlive 和 RunAtLoad，这样 gateway 就不会再次启动，直到下一次显式执行 `gateway start`；当手动停止需要跨重启持续生效时使用此选项。
-    - Gateway 生命周期变更会尽力向 `<state-dir>/logs/gateway-restart.log` 追加键值审计记录，包括 CLI 的启动、停止和重启操作、安全重启请求、监督进程重启以及分离式交接。
-    - 生命周期命令支持 `--json`，便于脚本化使用。
+    - `gateway start` 具有幂等性：当受管服务已经运行时，它会报告正在运行的进程并保持其不变。已加载但已停止的服务则会像之前一样启动。
+    - 如果 `gateway start` 或 `gateway restart` 需要修复过时的服务定义，而调用该命令的 shell 所解析出的状态目录、配置路径或端口与已安装的服务不一致，则命令会拒绝执行。请匹配这些环境覆盖项，或取消设置冲突的环境覆盖项；也可以使用 `openclaw gateway install --force` 有意地重新定位服务。
+    - 使用 `gateway restart` 重启受管服务。不要通过串联 `gateway stop` 和 `gateway start` 来替代重启。
+    - 在非交互式 shell 中，`gateway stop` 需要使用 `--force`。交互式终端仍保持现有的无提示行为。对于自动化和测试，优先使用 `gateway run --dev`，或使用带有空闲端口的隔离 `--profile`。
+    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，这会从当前启动会话中移除 LaunchAgent，但不会持久化禁用状态——KeepAlive 自动恢复功能会继续对未来的崩溃保持 सक्रिय，而 `gateway start` 可以干净地重新启用服务，无需手动执行 `launchctl enable`。传入 `--disable` 可持久化抑制 KeepAlive 和 RunAtLoad，使 Gateway 在下一次显式执行 `gateway start` 之前不会重新生成；当手动停止应在重启后继续生效时，请使用此选项。
+    - Gateway 生命周期变更会以尽力而为的方式，将键值审计记录追加到 `<state-dir>/logs/gateway-restart.log`，其中包括 CLI 启动、停止和重启操作、安全重启请求、supervisor 重启以及脱离式交接。
+    - 生命周期命令支持使用 `--json` 进行脚本处理。
 
   </Accordion>
   <Accordion title="受管 Gateway 堆大小设置">

@@ -22,7 +22,7 @@ doc-schema-version: 1
 - 可用的 OpenClaw 检出或安装环境，以及可用的 `openclaw` CLI
 - 能够访问所选来源的网络（ClawHub、npm 或 git 主机）
 - 该插件设置文档中提到的任何插件特定凭据、配置键或操作系统工具
-- 重新加载或重启为你的频道提供服务的 Gateway 的权限
+- 重新加载或重启为你的频道提供服务的 Gateway 的权限。
 
 ## 快速开始
 
@@ -148,7 +148,7 @@ doc-schema-version: 1
 当 `plugins.allow` 未设置且从工作区或全局插件根目录自动发现了一个非捆绑插件时，启动日志会显示
 `plugins.allow is empty; discovered non-bundled plugins may auto-load: ...`
 并附上发现的插件 id；对于较短的列表，还会提供一个最小的 `plugins.allow` 片段。在将受信任的插件复制到 `openclaw.json` 之前，请先运行 [`openclaw plugins list --enabled --verbose`](/cli/plugins#list)
-或 [`openclaw plugins inspect <id>`](/cli/plugins#inspect) 查看列出的插件 id。當诊断信息显示某个插件是
+或 [`openclaw plugins inspect <id>`](/cli/plugins#inspect) 查看列出的插件 id。当诊断信息显示某个插件是
 `without install/load-path provenance` 加载的时，也适用相同的信任固定原则：先检查插件 id，然后将其固定到 `plugins.allow` 中，或从受信任的来源重新安装，以便 OpenClaw 记录安装来源。
 
 当配置验证报告过期的插件 id、allowlist/工具不匹配，或旧版捆绑插件路径时，请运行 `openclaw doctor` 或 `openclaw doctor --fix`。
@@ -178,11 +178,20 @@ OpenClaw 识别两种插件格式：
 
 由插件管理的内部钩子会在 `openclaw hooks list` 中以 `plugin:<id>` 的形式出现。你不能通过 `openclaw hooks` 启用或禁用它们；应改为启用或禁用该插件。
 
-## 验证活动 Gateway
+钩子注册还取决于网关的启动选择。对于仅包含钩子的插件，请在
+`openclaw.plugin.json` 中声明 `activation.onCapabilities: ["hook"]`，然后启用该插件，并在配置了
+`plugins.allow` 时将其加入其中。清单提示不会绕过全局禁用、拒绝或按插件设置的启用策略。
+
+明确的钩子策略也表示启动意图。例如，
+`plugins.entries.<id>.hooks.allowConversationAccess: true` 既会授权
+非内置的会话钩子，也会选择该配置的插件用于网关启动；正常的插件策略仍然适用。更改清单或钩子策略后，重启网关，并使用
+`openclaw plugins inspect <id> --runtime --json` 验证注册情况。
+
+## 验证活动网关
 
 `openclaw plugins list` 和普通的 `openclaw plugins inspect` 读取冷配置、
 清单和注册表状态。它们不能证明一个已经运行中的
-Gateway 已导入相同的插件代码。
+网关已导入相同的插件代码。
 
 当某个插件看起来已经安装，但实时聊天流量没有使用它时：
 
@@ -192,7 +201,7 @@ openclaw plugins inspect <plugin-id> --runtime --json
 openclaw gateway restart
 ```
 
-受管理的 Gateway 会在插件安装、更新和卸载导致插件源发生变化后自动重启。
+受管理的网关会在插件安装、更新和卸载导致插件源发生变化后自动重启。
 在 VPS 或容器安装中，请确保任何手动重启都针对实际提供通道服务的 `openclaw gateway run` 子进程，
 而不仅仅是包装器或守护进程。
 
@@ -291,4 +300,4 @@ openclaw plugins inspect <plugin-id> --runtime --json
 - [插件依赖解析](/plugins/dependency-resolution) - 安装根、注册表记录和运行时边界
 - [构建插件](/plugins/building-plugins) - 原生插件编写指南
 - [插件 SDK 概览](/plugins/sdk-overview) - 运行时注册、hooks 和 API 字段
-- [插件清单](/plugins/manifest) - 清单和包元数据
+- [插件清单](/plugins/manifest) - 清单和包元数据】【。

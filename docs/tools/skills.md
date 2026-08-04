@@ -116,13 +116,31 @@ frontmatter 字段匹配。
   </Accordion>
 </AccordionGroup>
 
-## Plugins and Skills
+## 插件和技能
 
-Plugins can provide their own skills by listing the `skills` directory in `openclaw.plugin.json` (the path is relative to the plugin root). When a plugin is enabled, its plugin skills are loaded—for example, the browser plugin provides a `browser-automation` skill for multi-step browser control.
+插件可以通过在 `openclaw.plugin.json` 中列出 `skills` 目录来提供自己的技能（该路径相对于插件根目录）。启用插件后，其插件技能会被加载——例如，浏览器插件提供了用于多步骤浏览器控制的 `browser-automation` 技能。
 
-Plugin skill directories are merged at the same lower-priority level as `skills.load.extraDirs`, so built-in, hosted, agent, or workspace skills with the same name will override them. The applicability of plugin skills themselves can be controlled via `metadata.openclaw.requires` in their frontmatter, in the same way as other skills.
+插件技能目录会与 `skills.load.extraDirs` 处于同一较低优先级级别进行合并，因此名称相同的内置、托管、代理或工作区技能将覆盖它们。插件技能本身的适用性可以通过其 frontmatter 中的 `metadata.openclaw.requires` 进行控制，其方式与其他技能相同。
 
-For the complete plugin system, see [Plugins](/tools/plugin) and [Tools](/tools).
+有关完整的插件系统，请参阅 [插件](/tools/plugin) 和 [工具](/tools)。
+
+## 在提示词中引用技能
+
+在 Control UI 编辑器中输入 `$`，即可搜索当前代理可用的技能。选择搜索结果后，会插入其稳定的命令名称，例如
+`$release_notes`，而不会替换消息的其余内容。一个提示词可以引用多个技能：
+
+```text
+使用 $github 和 $release_notes 总结此更改，以便发布。
+```
+
+OpenClaw 会根据当前代理具备的、可由用户调用且对模型可见的技能解析这些引用，并告知模型在执行操作前读取每个被引用技能的 `SKILL.md`。
+一条消息最多可以引用八个不同的技能；如果超出数量限制，OpenClaw 会返回可见错误，而不是忽略多余的引用。
+`$` 形式是可组合的提示词文本；`/release_notes ...` 仍然是独立的命令形式，并且当技能声明了 `command-dispatch: tool` 时，可以使用直接工具分发。
+常见的大写 shell 变量，例如 `$HOME`、`$PATH` 和 `$EDITOR`，仍会被视为普通文本；如果要引用具有这些名称的技能，请使用小写形式 `$home`、`$path` 或 `$editor`。
+
+设置了 `disable-model-invocation: true` 的技能不会出现在 `$` 选择器中，因为它们的指令会被有意排除在模型提示词之外。请改用其独立的斜杠命令显式调用这些技能。
+
+`$` 引用会在 WebChat/Control UI 的消息轮次中进行解析。其他消息渠道会将 `$name` 保留为普通文本；请在那里使用技能的斜杠命令。
 
 ## 技能工作坊
 
@@ -131,6 +149,7 @@ For the complete plugin system, see [Plugins](/tools/plugin) and [Tools](/tools)
 ```bash
 openclaw skills workshop list
 openclaw skills workshop inspect <proposal-id>
+openclaw skills workshop evaluate <proposal-id>
 openclaw skills workshop apply <proposal-id>
 ```
 
@@ -233,15 +252,15 @@ description: 通过基于提供商的图像工作流生成或编辑图像
 <Note>
   OpenClaw 遵循 [AgentSkills](https://agentskills.io) 规范。Frontmatter
   会先按 YAML 解析；如果失败，则回退到仅单行解析器。嵌套的 `metadata`
-  块（包括多行 YAML 映射）会被展平为 JSON 字符串，并重新按 JSON5 解析，因此
-  在 [Gating](#gating) 下展示的块形式可正常工作。请在正文中使用 `{baseDir}`
+  块（包括多行 YAML 映射）会被展平为 JSON 字符串，并重新按 JSON5
+  解析，因此在 [门控](#gating) 下展示的块形式可正常工作。请在正文中使用 `{baseDir}`
   来引用 skill 文件夹路径。
 </Note>
 
 ### 可选 frontmatter 键
 
 <ParamField path="homepage" type="string">
-  在 macOS Skills UI 中显示为“Website”的 URL。也支持通过
+  在 macOS Skills UI 中显示为“网站”的 URL。也支持通过
   `metadata.openclaw.homepage` 配置。
 </ParamField>
 
@@ -291,15 +310,15 @@ metadata:
 </ParamField>
 
 <ParamField path="emoji" type="string">
-  在 macOS Skills UI 中显示的可选 emoji。
+  在 macOS 技能界面中显示的可选 emoji。
 </ParamField>
 
 <ParamField path="homepage" type="string">
-  在 macOS Skills UI 中显示为“网站”的可选 URL。
+  在 macOS 技能界面中显示为“网站”的可选 URL。
 </ParamField>
 
 <ParamField path="os" type='("darwin" | "linux" | "win32")[]'>
-  平台过滤器。设置后，该技能仅在所列 OS 上符合条件。
+  平台过滤器。设置后，该技能仅在所列操作系统上符合条件。
 </ParamField>
 
 <ParamField path="requires.bins" type="string[]">
@@ -323,7 +342,7 @@ metadata:
 </ParamField>
 
 <ParamField path="install" type="object[]">
-  macOS Skills UI 使用的可选安装器规格（brew / node / go / uv / download）。
+  macOS 技能界面使用的可选安装器规格（brew / node / go / uv / download）。
 </ParamField>
 
 <Note>
@@ -332,7 +351,7 @@ metadata:
 
 ### 安装器规格
 
-安装器规格告诉 macOS Skills UI 如何安装依赖：
+安装器规格告诉 macOS 技能界面如何安装依赖：
 
 ```markdown
 ---
@@ -361,11 +380,11 @@ metadata:
 
 <AccordionGroup>
   <Accordion title="安装器选择规则">
-    - 当列出多个安装器时，gateway 会选择一个首选项（可用时优先 brew，否则 node）。
+    - 当列出多个安装器时，网关会选择一个首选项（可用时优先 brew，否则 node）。
     - 如果所有安装器都是 `download`，OpenClaw 会列出每个条目，以便你查看所有可用制品。
     - 规格可以包含 `os: ["darwin"|"linux"|"win32"]` 来按平台过滤。
     - Node 安装会遵循 `openclaw.json` 中的 `skills.install.nodeManager`（默认：npm；可选：npm / pnpm / yarn / bun）。这只影响技能安装；Gateway 运行时仍应使用 Node。
-    - Gateway 安装器优先级：Homebrew → uv → 已配置的 node manager → go → download。
+    - 网关安装器优先级：Homebrew → uv → 已配置的 node manager → go → download。
   </Accordion>
   <Accordion title="每个安装器的详细信息">
     - **Homebrew:** OpenClaw 不会自动安装 Homebrew，也不会将 brew
@@ -434,18 +453,18 @@ metadata:
 
 ## 环境注入
 
-当 agent 运行开始时，OpenClaw 会：
+当代理运行开始时，OpenClaw 会：
 
 <Steps>
-  <Step title="读取 skill 元数据">
-    OpenClaw 会解析 agent 的有效 skill 列表，应用门控规则、允许列表和配置覆盖。
+  <Step title="读取技能元数据">
+    OpenClaw 会解析代理的有效技能列表，应用门控规则、允许列表和配置覆盖。
   </Step>
   <Step title="注入环境变量和 API 密钥">
     `skills.entries.<key>.env` 和 `skills.entries.<key>.apiKey` 会在运行期间应用到
     `process.env`。
   </Step>
   <Step title="构建系统提示词">
-    符合条件的 skills 会被编译成一个紧凑的 XML 块，并注入到系统提示词中。
+    符合条件的技能会被编译成一个紧凑的 XML 块，并注入到系统提示词中。
   </Step>
   <Step title="恢复环境">
     运行结束后，原始环境会被恢复。
@@ -453,11 +472,11 @@ metadata:
 </Steps>
 
 <Warning>
-  环境注入仅作用于**主机**上的 agent 运行，而不作用于沙箱。在沙箱内，`env` 和 `apiKey` 不会生效。有关如何将密钥传递到沙箱运行，请参阅
-  [Skills 配置](/tools/skills-config#sandboxed-skills-and-env-vars)。
+  环境注入仅作用于**主机**上的代理运行，而不作用于沙箱。在沙箱内，`env` 和 `apiKey` 不会生效。有关如何将密钥传递到沙箱运行，请参阅
+  [技能配置](/tools/skills-config#sandboxed-skills-and-env-vars)。
 </Warning>
 
-对于内置的 `claude-cli` 后端，OpenClaw 还会将同一份符合条件的 skill 快照作为临时 Claude Code 插件落盘，并通过 `--plugin-dir` 传递。其他 CLI 后端只使用提示词目录。
+对于内置的 `claude-cli` 后端，OpenClaw 还会将同一份符合条件的技能快照作为临时 Claude Code 插件落盘，并通过 `--plugin-dir` 传递。其他 CLI 后端只使用提示词目录。
 
 ## 快照与刷新
 
@@ -465,13 +484,13 @@ OpenClaw 会在会话开始时对符合条件的 skills 进行快照，并在该
 
 以下两种情况下，skills 会在会话中刷新：
 
-- skills watcher 检测到 `SKILL.md` 变更。
+- skills 监视器检测到 `SKILL.md` 变更。
 - 新的符合条件的远程节点连接上来。
 
 刷新后的列表会在下一次 agent 轮次中生效。如果有效的 agent 允许列表发生变化，OpenClaw 会刷新快照以保持可见 skills 的一致性。
 
 <AccordionGroup>
-  <Accordion title="Skills watcher">
+  <Accordion title="Skills 监视器">
     默认情况下，OpenClaw 会监视 skill 文件夹，并在 `SKILL.md` 文件变更时更新快照。在 `skills.load` 下配置：
 
     ```json5
@@ -480,7 +499,7 @@ OpenClaw 会在会话开始时对符合条件的 skills 进行快照，并在该
         load: {
           extraDirs: ["~/Projects/agent-scripts/skills"],
           allowSymlinkTargets: ["~/Projects/manager/skills"],
-          watch: true, // 默认
+          watch: true, // 默认值
         },
       },
     }
@@ -491,7 +510,7 @@ OpenClaw 会在会话开始时对符合条件的 skills 进行快照，并在该
     仅当 Skill Workshop 也应通过这些受信任的符号链接路径应用提案时，才启用 `skills.workshop.allowSymlinkTargetWrites`。
 
   </Accordion>
-  <Accordion title="远程 macOS 节点（Linux gateway）">
+  <Accordion title="远程 macOS 节点（Linux 网关）">
     如果 Gateway 运行在 Linux 上，但连接了一个允许 `system.run` 的**macOS 节点**，那么当所需二进制文件存在于该节点上时，OpenClaw 可以将仅适用于 macOS 的 skills 视为符合条件。agent 应通过带 `host=node` 的 `exec` 工具运行这些 skills。
 
     离线节点不会让仅远程可用的 skills 可见。如果某个节点停止响应 bin 探测，OpenClaw 会清除其缓存的 bin 匹配结果。

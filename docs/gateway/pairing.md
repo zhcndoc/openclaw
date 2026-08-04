@@ -68,24 +68,23 @@ openclaw nodes rename --node <id|name|ip> --name "客厅 iPad"
 
 注意：
 
-- 使用未变更表面的重新连接会复用该待处理请求；重复
-  请求会刷新存储的节点元数据以及最新的允许列表中的已声明命令快照，以便 operator 查看。
-- Operator 范围级别和批准时检查已在
-  [Operator scopes](/gateway/operator-scopes) 中总结。
-- `node.pair.approve` 使用待处理请求中声明的命令来强制执行额外的批准范围：
-  - 无命令请求：`operator.pairing`
+- 表面未发生变化的重新连接会复用待处理请求；重复请求会刷新存储的节点元数据以及最新的、列入允许列表的声明命令快照，供 operator 查看。
+- operator 作用域级别和批准时检查的摘要，请参阅
+  [Operator 作用域](/gateway/operator-scopes)。
+- `node.pair.approve` 使用待处理请求声明的命令来强制执行额外的批准作用域：
+  - 不含命令的请求：`operator.pairing`
   - 普通命令请求：`operator.pairing` + `operator.write`
-  - 包含 `system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`fs.listDir` 或
-    `system.execApprovals.get/set` 的管理员敏感请求：`operator.pairing` + `operator.admin`
+  - 包含 `system.run`、`system.run.prepare`、
+    `system.which`、`browser.proxy`、`browser.proxy.upload.v1`、`fs.listDir`、
+    或 `system.execApprovals.get/set` 的管理员敏感请求：`operator.pairing` + `operator.admin`
 
 <Warning>
 节点配对批准会记录受信任的能力表面。它**不会**按节点固定实时 node 命令表面。
 
-- Live node commands come from what the node declares on connect, filtered by
-  the gateway's global node command policy (`gateway.nodes.commands.allow` and
-  `gateway.nodes.commands.deny`).
-- Per-node `system.run` allow and ask policy lives on the node in
-  `exec.approvals.node.*`, not in the pairing record.
+- 实时节点命令来自节点在连接时声明的内容，并受
+  Gateway 的全局节点命令策略（`gateway.nodes.commands.allow` 和 `gateway.nodes.commands.deny`）过滤。
+- 每个节点的 `system.run` 允许和询问策略位于节点上的
+  `exec.approvals.node.*` 中，而不在配对记录中。
 
 </Warning>
 
@@ -113,7 +112,27 @@ openclaw nodes rename --node <id|name|ip> --name "客厅 iPad"
 
 持久化的节点存在状态更新遵循相同的身份边界：`node.presence.alive` 事件仅接受来自已认证的节点设备会话，并且只有在设备/节点身份已经配对时才会更新配对元数据。仅仅自声明一个 `client.id` 值不足以写入最后一次在线状态。
 
-## 基于 SSH 验证的设备自动批准（默认）
+## 静默本地配对
+
+Gateway 将环回源地址视为本地地址。这包括客户端通过 SSH 端口转发连接到远程的仅环回 Gateway：SSH 服务器在 Gateway 主机上终止连接，因此 Gateway 将转发的连接视为环回连接。这是有意为之，因为普通的 SSH 访问本身已经意味着本地信任，包括读取共享 Gateway 令牌的能力。
+
+默认情况下，受信任的本地连接会静默批准首次设备配对以及角色和作用域升级。这使普通的同主机连接和 SSH 隧道重连更加便捷。使用无 shell、仅端口转发的 SSH 密钥或多用户 Mac 的操作员可以要求每台设备都进行显式批准：
+
+```json5
+{
+  gateway: {
+    nodes: {
+      pairing: {
+        autoApproveLocal: false,
+      },
+    },
+  },
+}
+```
+
+启用此设置后，即使连接是本地连接，新的配对请求、角色升级和作用域升级也会使用常规批准流程。仅元数据的重连仍会自动刷新，因此日常的客户端或操作系统元数据变更不会造成批准请求过多。
+
+## SSH 验证的设备自动批准（默认）
 
 从私有/CGNAT 地址进行的首次 `role: node` 设备配对，只要网关能够通过 SSH **证明机器所有权**，就会被自动批准：它会回连到配对主机（`BatchMode`、`StrictHostKeyChecking=yes`），在那里运行 `openclaw node identity --json`，并且仅当远程设备 id 和公钥与待处理请求完全匹配时才予以批准。正是密钥匹配让这一机制安全：仅凭可达性绝不会批准，因此 NAT 共享邻居、共享主机上的其他用户以及局域网欺骗都会继续进入正常提示流程。
 

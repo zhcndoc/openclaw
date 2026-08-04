@@ -10,7 +10,7 @@ title: "节点"
 
 管理已配对的节点（设备）并调用节点能力。
 
-Related: [节点概览](/nodes) - [活动计算机存在](/nodes/presence) - [摄像头节点](/nodes/camera) - [图像节点](/nodes/images)
+相关内容：[节点概览](/nodes) - [活动计算机存在](/nodes/presence) - [摄像头节点](/nodes/camera) - [图像节点](/nodes/images)
 
 每个子命令的通用选项：`--url <url>`、`--token <token>`、`--timeout <ms>`（默认 `10000`）、`--json`。
 
@@ -38,15 +38,15 @@ openclaw nodes rename --node <id|name|ip> --name <displayName>
 
 这些命令驱动网关拥有的 `node.pair.*` 存储，与设备配对（`openclaw devices approve`）分离；设备配对用于控制节点的 WS `connect` 握手。有关二者的关系，请参见 [节点](/nodes)。
 
-- `remove` 会撤销该节点的配对角色条目。对于由设备支持的节点，这会撤销设备配对存储中的 `node` 角色，并断开其 node-role 会话：混合角色设备会保留其记录，只失去 `node` 角色；仅节点设备的记录会被删除。它还会清除任何匹配的旧版网关拥有的节点配对记录。
-- `pending` 仅需要 `operator.pairing` 作用域。
-- `gateway.nodes.pairing.autoApproveCidrs` 可以为明确受信任的、首次 `role: node` 设备配对跳过待处理步骤。默认关闭；不会批准角色升级。
-- `gateway.nodes.pairing.sshVerify`（默认开启）在网关能够通过 SSH 向节点主机验证设备密钥时，会自动批准首次 `role: node` 设备配对；首个能力表面会在同一步中获批。另请参见 [节点配对](/gateway/pairing#ssh-verified-device-auto-approval-default)。
-- `approve` 的作用域要求取决于待处理请求中声明的命令：
-  - 无命令请求：`operator.pairing`
+- `remove` 撤销节点的配对角色条目。对于由设备支持的节点，此命令会撤销设备配对存储中的 `node` 角色，并断开其节点角色会话：混合角色设备会保留其条目，但仅失去 `node` 角色；仅有节点角色的设备条目会被删除。同时，它还会清除任何匹配的旧版网关拥有的节点配对记录。
+- `pending` 只需要 `operator.pairing` 作用域。
+- `gateway.nodes.pairing.autoApproveCidrs` 可以跳过待处理步骤，自动批准明确受信任的、首次进行 `role: node` 设备配对的请求。默认关闭；不会批准角色升级。
+- `gateway.nodes.pairing.sshVerify`（默认开启）会在网关能够通过 SSH 验证节点主机上的设备密钥时，自动批准首次进行 `role: node` 的设备配对；首次能力范围会在同一步骤中批准。请参见 [节点配对](/gateway/pairing#ssh-verified-device-auto-approval-default)。
+- `approve` 的作用域要求取决于待处理请求声明的命令：
+  - 无命令的请求：`operator.pairing`
   - 普通节点命令：`operator.pairing` + `operator.write`
-  - 管理员敏感命令（`system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`fs.listDir` 以及 `system.execApprovals.get/set`）：`operator.pairing` + `operator.admin`
-- `remove` 作用域：`operator.pairing` 可以移除非 operator 的节点记录；调用者若是设备令牌并且要在混合角色设备上撤销自身的 node 角色，则还需要 `operator.admin`。
+  - 管理员敏感命令（`system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`browser.proxy.upload.v1`、`fs.listDir` 和 `system.execApprovals.get/set`）：`operator.pairing` + `operator.admin`
+- `remove` 的作用域：`operator.pairing` 可以移除非操作员节点条目；设备令牌调用方在混合角色设备上撤销其自身的节点角色时，还需要 `operator.admin`。
 
 ## 调用
 
@@ -72,10 +72,11 @@ openclaw nodes location get --node <id> --accuracy precise
 openclaw nodes screen record --node <id> --duration 10s --fps 10 --out ./clip.mp4
 ```
 
-- `notify` 会在声明了 `system.notify` 的节点上发送本地通知，包括 macOS、iOS、Android 和直接连接的 watchOS 节点。直接向 watchOS 投递需要 OpenClaw 处于活动状态。需要 `--title` 或 `--body`。选项：`--sound <name>`、`--priority <passive|active|timeSensitive>`、`--delivery <system|overlay|auto>`（默认 `system`）、`--invoke-timeout <ms>`（默认 `15000`）。
-- `push` 会向 iOS 节点发送一条 APNs 测试推送。选项：`--title <text>`（默认 `OpenClaw`）、`--body <text>`、`--environment <sandbox|production>` 用于覆盖检测到的 APNs 环境。
-- `location get` 获取节点当前的位置。选项：`--max-age <ms>`（复用缓存的定位结果）、`--accuracy <coarse|balanced|precise>`、`--location-timeout <ms>`（默认 `10000`）、`--invoke-timeout <ms>`（默认 `20000`）。
-- `screen record` 捕获一段短视频并打印保存路径（或使用 `--json` 输出 JSON）。选项：`--screen <index>`（默认 `0`）、`--duration <ms|10s>`（默认 `10000`）、`--fps <fps>`（默认 `10`）、`--no-audio`、`--out <path>`、`--invoke-timeout <ms>`（默认 `120000`）。
+- `notify` 在声明了 `system.notify` 的节点上发送本地通知，包括 macOS、iOS、Android 和直接连接的 watchOS 节点。直接向 watchOS 发送通知需要 OpenClaw 处于活动状态。需要指定 `--title` 或 `--body`。选项：`--sound <name>`、`--priority <passive|active|timeSensitive>`、`--delivery <system|overlay|auto>`（默认值为 `system`）、`--invoke-timeout <ms>`（默认值为 `15000`）。
+- `push` 向 iOS 节点发送 APNs 测试推送。选项：`--title <text>`（默认值为 `OpenClaw`）、`--body <text>`、`--environment <sandbox|production>`，用于覆盖检测到的 APNs 环境。成功投递时退出码为 `0`；对于明确的 APNs 拒绝，会保留完整的文本或 JSON 诊断信息，并以非零状态退出。
+- `location get` 获取节点的当前位置。选项：`--max-age <ms>`（复用缓存的位置修复结果）、`--accuracy <coarse|balanced|precise>`、`--location-timeout <ms>`（默认值为 `10000`）、`--invoke-timeout <ms>`（默认值为 `20000`）。
+- `screen record` 捕获短视频片段并输出保存路径（或使用 `--json` 写入 JSON）。选项：`--screen <index>`（默认值为 `0`）、`--duration <ms|10s>`（默认值为 `10000`）、`--fps <fps>`（默认值为 `10`）、`--no-audio`、`--out <path>`、`--invoke-timeout <ms>`（默认值为 `120000`）。
+- 明确指定的屏幕输出路径会在目标文件旁暂存，并且仅在完整写入后替换目标文件；写入失败时，已有文件保持不变。
 
 Camera 和 Canvas 命令有各自的文档：[Camera 节点](/nodes/camera)、[Canvas](/platforms/mac/canvas)。Canvas 由捆绑的实验性 Canvas 插件实现；核心将 `openclaw nodes canvas` 保留为兼容性挂载点。
 

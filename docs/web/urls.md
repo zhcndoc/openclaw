@@ -1,13 +1,13 @@
 ---
 summary: "控制 UI URL 路由、稳定的会话链接语法和连接交接参数"
 read_when:
-  - 你需要为 Control UI 会话添加书签或分享
-  - 你正在添加或更改 Control UI 路由
+  - 你需要为控制 UI 会话添加书签或分享
+  - 你正在添加或更改控制 UI 路由
   - 你需要终端、批准、入门引导或远程 Gateway URL
-title: "Control UI URLs"
+title: "控制 UI URL"
 ---
 
-Control UI 为页面和会话链接使用可读路径。已配置的
+控制 UI 为页面和会话链接使用可读路径。已配置的
 `gateway.controlUi.basePath` 会作为下面每个路径的前缀。例如，当基础路径为 `/openclaw` 时，`/chat/main`
 会变成 `/openclaw/chat/main`。
 
@@ -73,50 +73,65 @@ agent 的主会话。其他形式通过两种方式之一编码一个不可变�
 
 | 页面                | 规范路径                      | 别名                      | 参数或动态形式                                     |
 | ------------------- | --------------------------- | ------------------------- | ------------------------------------------------ |
-| 聊天                | `/chat`                     | -                         | 上方基于密钥的会话表单；`?draft=<text>`  |
-| 仪表板              | `/dashboard`                | -                         | 上方基于密钥的会话表单；`?draft=<text>`  |
+| 聊天                | `/chat`                     | -                         | 上述基于密钥的会话表单；`?draft=<text>`  |
+| 仪表板              | `/dashboard`                | -                         | 上述基于密钥的会话表单；`?draft=<text>`  |
 | 仪表板列表          | `/dashboards`               | -                         | -                                                |
-| 咨询 OpenClaw       | `/custodian`                | -                         | `?intent=new-agent`, `?onboarding=1`             |
-| 新会话              | `/new`                      | -                         | `?agent=<agentId>`, `?catalog=<catalogId>`       |
+| 询问 OpenClaw       | `/custodian`                | -                         | `?intent=new-agent`、`?onboarding=1`             |
+| 新建会话            | `/new`                      | -                         | `?agent=<agentId>`、`?catalog=<catalogId>`       |
 | 活动                | `/activity`                 | -                         | -                                                |
 | 应用                | `/apps`                     | -                         | -                                                |
-| 代理                | `/settings/agents`          | `/agents`                 | `?agent=<agentId>`                               |
-| 渠道                | `/settings/channels`        | `/channels`               | 下方共享的设置参数                               |
-| 连接                | `/settings/connection`      | -                         | 下方共享的设置参数                               |
-| 通用设置            | `/settings/general`         | `/config`                 | 下方共享的设置参数                               |
-| 个人资料            | `/settings/profile`         | `/profile`                | 下方共享的设置参数                               |
-| 通讯                | `/settings/communications`  | `/communications`         | 下方共享的设置参数                               |
-| 外观                | `/settings/appearance`      | `/appearance`             | 下方共享的设置参数                               |
-| 通知                | `/settings/notifications`   | -                         | 下方共享的设置参数                               |
-| 安全                | `/settings/security`        | -                         | 下方共享的设置参数                               |
-| 高级                | `/settings/advanced`        | -                         | 下方共享的设置参数                               |
-| 审批                | `/settings/approvals`       | -                         | 下方共享的设置参数                               |
-| 自动化设置          | `/settings/automation`      | `/automation`             | 下方共享的设置参数                               |
-| MCP                 | `/settings/mcp`             | `/mcp`                    | 下方共享的设置参数                               |
-| 基础设施            | `/settings/infrastructure`  | `/infrastructure`         | 下方共享的设置参数                               |
-| 实验室              | `/settings/labs`            | -                         | 下方共享的设置参数                               |
-| 关于                | `/settings/about`           | -                         | 下方共享的设置参数                               |
-| AI 和代理           | `/settings/ai-agents`       | `/ai-agents`              | 下方共享的设置参数                               |
+| 代理                | `/settings/agents`          | `/agents`                 | `/settings/agents/<agentId>[/<panel>]`           |
+| 渠道                | `/settings/channels`        | `/channels`               | 以下共享的设置参数                 |
+| 连接                | `/settings/connection`      | -                         | 以下共享的设置参数                 |
+| 旧版常规            | `/settings/general`         | `/config`                 | 重定向至外观 → 语言               |
+| 个人资料            | `/settings/profile`         | `/profile`                | 以下共享的设置参数                 |
+| 通信                | `/settings/communications`  | `/communications`         | 以下共享的设置参数                 |
+| 外观                | `/settings/appearance`      | `/appearance`             | 以下共享的设置参数                 |
+| 通知                | `/settings/notifications`   | -                         | 以下共享的设置参数                 |
+| 安全                | `/settings/security`        | -                         | 以下共享的设置参数                 |
+| 高级                | `/settings/advanced`        | -                         | 以下共享的设置参数                 |
+| 审批                | `/settings/approvals`       | -                         | 以下共享的设置参数                 |
+| 自动化设置          | `/settings/automation`      | `/automation`             | 以下共享的设置参数                 |
+| MCP                 | `/settings/mcp`             | `/mcp`                    | 以下共享的设置参数                 |
+| 记忆                | `/settings/memory`          | -                         | `/settings/memory/memories\|dreams\|settings`    |
+| 基础设施            | `/settings/infrastructure`  | `/infrastructure`         | 以下共享的设置参数                 |
+| 实验室              | `/settings/labs`            | -                         | 以下共享的设置参数                 |
+| 关于                | `/settings/about`           | -                         | 以下共享的设置参数                 |
+| AI 与代理           | `/settings/ai-agents`       | `/ai-agents`              | 以下共享的设置参数                 |
 | 模型设置            | `/settings/model-setup`     | `/model-setup`            | `?firstRun=1`                                    |
-| 模型提供方          | `/settings/model-providers` | `/model-providers`        | 下方共享的设置参数                               |
+| 模型提供商          | `/settings/model-providers` | `/model-providers`        | 以下共享的设置参数                 |
 | 导入记忆            | `/memory-import`            | `/settings/memory-import` | -                                                |
-| 工作板              | `/workboard`                | -                         | `/workboard/<boardId>`                           |
+| 工作看板            | `/workboard`                | -                         | `/workboard/<boardId>`                           |
 | 工作树              | `/worktrees`                | `/settings/worktrees`     | -                                                |
-| 会话                | `/sessions`                 | `/settings/sessions`      | `?session=<sessionKey>`, `?status=archived\|all` |
+| 会话                | `/sessions`                 | `/settings/sessions`      | `?session=<sessionKey>`、`?status=archived\|all` |
 | 使用情况            | `/usage`                    | -                         | -                                                |
 | 调试                | `/debug`                    | -                         | -                                                |
 | 日志                | `/logs`                     | -                         | -                                                |
-| 技能工作坊          | `/skills/workshop`          | -                         | -                                                |
+| 技能工坊            | `/skills/workshop`          | -                         | -                                                |
 | 技能                | `/skills`                   | -                         | -                                                |
-| 插件                | `/settings/plugins`         | -                         | `?tab=discover\|installed`                       |
+| 插件                | `/settings/plugins`         | -                         | `/settings/plugins/discover`                     |
 | 自动化              | `/cron`                     | -                         | -                                                |
 | 任务                | `/tasks`                    | -                         | -                                                |
-| 设备                | `/settings/devices`         | `/nodes`                  | 下方共享的设置参数                               |
-| 插件选项卡宿主      | `/plugin`                   | -                         | `?plugin=<pluginId>&id=<tabId>`                  |
+| 设备                | `/settings/devices`         | `/nodes`                  | 以下共享的设置参数                 |
+| 插件标签页宿主      | `/plugin`                   | -                         | `?plugin=<pluginId>&id=<tabId>`                  |
 
 使用基于 schema 的深链接的设置路由接受 `?section=<section>`、
 `?advanced=1` 和 `#<setting-id>`。这些值用于选择页面内的内容；
 它们不会改变路由标识。
+
+已弃用的常规路由及其 `/config` 别名会被一次性替换为
+`/settings/appearance?section=__appearance__#settings-language`。历史上的
+`#settings-general-model` 目标则会跳转到“模型”行为部分。
+
+记忆标签页使用表中的路径，而不是 `?tab=`。带有
+`?tab=memories|dreams|settings`、`?tab=dreaming`、`?tab=search` 或
+`?section=memory` 的旧版记忆链接会被一次性替换为相应路径，同时保留任何设置锚点。
+
+插件目录标签页也使用路径，而不是 `?tab=`。带有
+`?tab=discover|installed` 的旧版链接会被一次性替换为相应路径，同时保留其他查询参数和片段。
+
+代理选择及其 `overview|files|tools|skills|channels|cron|memory`
+面板使用路径。带有 `?agent=<agentId>` 的旧版链接会被一次性替换为代理路径，同时保留其他查询参数和片段。
 
 ## 特殊文档和启动模式
 
@@ -145,4 +160,4 @@ http://localhost:5173/?gatewayUrl=wss%3A%2F%2F<gateway-host>%3A18789#token=<gate
 
 - [控制界面](/web/control-ui)
 - [仪表盘](/web/dashboard)
-- [会话仪表盘](/web/dashboards)
+- [会话仪表盘](/web/dashboards)。

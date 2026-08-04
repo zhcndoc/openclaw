@@ -11,14 +11,12 @@ macOS 应用是 OpenClaw 的 **菜单栏伴侣**：原生托盘界面、macOS
 权限提示、通知、WebChat、语音输入、Canvas，以及
 由 Mac 托管的节点工具，例如 `system.run`。
 
-Use **Quick Chat** for a Spotlight-style main-session composer without opening a full window. Press Option-Space (⌥Space) by default, choose it from the menu bar menu, or record another shortcut in **Settings → General**.
+使用 **Quick Chat**，即可在不打开完整窗口的情况下，使用 Spotlight 风格的主会话输入框。默认按下 Option-Space（⌥Space），从菜单栏菜单中选择，或在 **设置 → 通用** 中录制其他快捷键。
 
-The full native chat accepts image attachments through its picker, paste, and
-drag and drop. Assistant-generated images render inline through short-lived
-Gateway artifact URLs and open in a larger preview; iOS and macOS share the same
-bounded image model and renderer.
+完整的原生聊天支持通过选择器、粘贴以及拖放来添加图片附件。助手生成的图片会通过短期有效的
+Gateway artifact URL 内联显示，并可在更大的预览中打开；iOS 和 macOS 共享同一套有界图片模型和渲染器。
 
-Only need the CLI and Gateway? Start with [Getting started](/start/getting-started).
+只需要 CLI 和 Gateway？请从[开始使用](/start/getting-started)开始。
 
 ## 下载
 
@@ -35,11 +33,13 @@ Only need the CLI and Gateway? Start with [Getting started](/start/getting-start
 ## 首次运行
 
 1. 安装并启动 **OpenClaw.app**。
-2. 选择 **This Mac** 作为本地 Gateway，或连接到远程 Gateway。
+2. 对于本地 Gateway，选择 **此 Mac**；或者连接到远程 Gateway。
 3. 等待应用安装匹配的 CLI 运行时。在本地模式下，它还会
    安装并启动 Gateway。
-4. 通过实时模型检查建立推理。通过后，OpenClaw 会处理剩余的设置。
-5. 完成 macOS 权限清单，并发送入门测试消息。
+4. 通过实时模型检查建立推理连接。如果应用复用了你不想使用的登录信息，请在成功横幅上选择
+   **选择其他 AI**，以重新打开选择器，其中包括 API 密钥选项。
+5. 完成。应用会打开仪表板，OpenClaw 将在一次对话中引导完成其余设置
+   （导入记忆、频道、权限）。你可以随时从 **设置 → 权限** 授予 macOS 权限。
 
 如果应用连接到一个现有 Gateway，且其默认 agent 已配置
 模型，则会将该 Gateway 视为已完成设置，跳过 provider onboarding 和
@@ -51,19 +51,13 @@ OpenClaw，并打开仪表板。如果 Gateway 无法连接，或者其
 
 ## 更新
 
-The dashboard update card names what the app will update:
+仪表盘更新卡片会说明应用将更新的内容：
 
-- **Update Mac app + Gateway** means the signed app owns the local launchd
-  Gateway. Sparkle updates the app first; after relaunch, the app automatically
-  updates and restarts its Gateway at the matching version, then verifies the
-  connection.
-- **Update Gateway** means the app is connected to a remote Gateway, a manually
-  managed local Gateway, or another install the app does not own. The button
-  runs that Gateway's normal update flow instead of changing the Mac app.
+- **更新 Mac 应用 + Gateway** 表示已签名的应用拥有本地的 launchd
+  Gateway。Sparkle 会先更新应用；重新启动后，应用会自动将其 Gateway 更新并重启到匹配的版本，然后验证连接。
+- **更新 Gateway** 表示应用连接的是远程 Gateway、手动管理的本地 Gateway，或应用不拥有的其他安装实例。此按钮会运行该 Gateway 的常规更新流程，而不是更改 Mac 应用。
 
-A failed coordinated update stays in its setup-style window with retry,
-[update guide](/install/updating), and Discord actions. Automatic repair never
-downgrades a newer Gateway or overrides an `extended-stable` channel pin.
+协调更新失败后，会保留在类似设置的窗口中，并提供重试、[更新指南](/install/updating)和 Discord 操作。自动修复不会将更新版本的 Gateway 降级，也不会覆盖 `extended-stable` 频道固定设置。
 
 成功更新后，应用会找到最近一次由人使用的、顶层的直接会话，并向该代理发送一次性的更新事件。心跳和 cron
 活动不会影响这一选择。然后，代理可以从你最可能正在使用的对话中欢迎你回来。在远程模式下，应用只会更新本地 Mac 节点运行时，并且当远程 Gateway 版本比应用更旧时会跳过通知。
@@ -72,7 +66,7 @@ Sparkle 遵循 Gateway 的 `update.channel` 设置。`beta` 和 `dev` 会启用 
 
 ## 打开仪表盘链接
 
-In the macOS app's embedded dashboard, clicking an external web link opens it in a resizable browser sidebar at half the window width while keeping the dashboard navigation visible. Drag the divider to choose another width; the app remembers it. Each link opens in its own tab, the tab strip appears when multiple pages are open, and clicking the same link again reuses its existing tab. Drag tabs to reorder them, close them with the tab close button or a middle-click, and right-click a tab for **Open in Default Browser**, **Copy Link**, **Reload**, **Close Tab**, and **Close Other Tabs**. The window's titlebar back/forward controls and trackpad swipes navigate dashboard history; the sidebar's own back/forward controls navigate the active tab's history. The sidebar also has reload, open-in-default-browser, and close controls.
+在 macOS 应用内嵌的仪表盘中，点击外部网页链接会在可调整大小的浏览器侧边栏中打开页面，宽度为窗口的一半，同时保留仪表盘导航可见。拖动分隔线即可选择其他宽度；应用会记住该设置。每个链接都会在自己的标签页中打开；当打开多个页面时，标签栏会显示出来；再次点击同一链接时，会复用其现有标签页。拖动标签页即可重新排序；使用标签页关闭按钮或鼠标中键点击即可关闭标签页；右键单击标签页可选择 **在默认浏览器中打开**、**复制链接**、**重新加载**、**关闭标签页** 和 **关闭其他标签页**。窗口标题栏中的后退/前进控件以及触控板滑动手势可浏览仪表盘历史记录；侧边栏自身的后退/前进控件则用于浏览当前标签页的历史记录。侧边栏还提供重新加载、在默认浏览器中打开和关闭控件。
 
 标题栏控件会随应用侧边栏变化：当侧边栏展开时，后退/前进按钮位于其右侧边缘，紧挨着侧边栏切换按钮；当侧边栏折叠时，它们则为搜索按钮（打开命令面板）和新会话按钮让出位置。
 
@@ -97,22 +91,16 @@ Gateway，而不会再启动第二个本地 Gateway。
 
 ## 应用程序拥有的内容
 
-- Menu bar status, notifications, health, WebChat, and the floating Quick Chat bar.
-- macOS permission prompts for screen, microphone, speech, automation, and accessibility.
-- One Mac node that combines native Canvas, camera/screen capture, notifications,
-  location, and computer control with the CLI node host's system, browser,
-  plugin, skill, and MCP commands.
-- Exec approval prompts for Mac-hosted commands.
-- App-context execution for approved shell commands, preserving the app's macOS
-  permission attribution while the CLI runtime owns shared node policy.
-- Remote-mode SSH tunnels or direct Gateway connections.
+- 菜单栏状态、通知、健康状态、WebChat 以及浮动的 Quick Chat 栏。
+- macOS 针对屏幕、麦克风、语音、自动化和辅助功能的权限提示。
+- 一个 Mac 节点，将原生 Canvas、摄像头/屏幕捕获、通知、位置和电脑控制，与 CLI 节点主机的系统、浏览器、插件、技能和 MCP 命令相结合。
+- Mac 主机命令的执行批准提示。
+- 经批准的 Shell 命令的应用上下文执行，同时保留应用的 macOS 权限归属，并由 CLI 运行时负责共享节点策略。
+- 远程模式下的 SSH 隧道或直接 Gateway 连接。
 
-In the embedded Control UI, **Settings → Notifications** shows the app's native
-notification permission instead of browser push because the app delivers notifications natively.
+在嵌入式控制界面中，**设置 → 通知**显示的是应用的原生通知权限，而不是浏览器推送权限，因为应用会以原生方式发送通知。
 
-The app does **not** replace the Gateway or general CLI docs. Gateway
-configuration, providers, plugins, channels, tools, and security live in their
-own docs.
+应用**不会**取代 Gateway 或通用 CLI 文档。Gateway 配置、提供商、插件、频道、工具和安全性都有各自的文档。
 
 ## macOS 详细页面
 

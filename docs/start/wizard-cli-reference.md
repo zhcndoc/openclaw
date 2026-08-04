@@ -121,30 +121,30 @@ sidebarTitle: "CLI 参考"
 
 ## 远程模式详情
 
-远程模式会将此机器配置为连接到其他位置的 Gateway。它不会在远程主机上安装或修改任何内容。
+远程模式会将此机器配置为连接到其他位置的网关。它不会在远程主机上安装或修改任何内容。
 
 你需要设置的内容：
 
 - 远程网关 URL (`ws://...` 或 `wss://...`)
-- Token、密码，或无需认证，需与远程 Gateway 的配置匹配
+- 令牌、密码，或无需认证，需与远程网关的配置匹配
 
 <Steps>
   <Step title="发现（可选）">
-    如果可用 `dns-sd`（macOS）或 `avahi-browse`（Linux），引导流程会先尝试搜索 Bonjour/mDNS 网关信标，然后再回退到手动输入 URL。若已配置，也会尝试广域 DNS-SD 发现。文档：[Gateway discovery](/gateway/discovery), [Bonjour](/gateway/bonjour).
+    如果可用 `dns-sd`（macOS）或 `avahi-browse`（Linux），引导流程会先尝试搜索 Bonjour/mDNS 网关信标，然后再回退到手动输入 URL。若已配置，也会尝试广域 DNS-SD 发现。文档：[网关发现](/gateway/discovery), [Bonjour](/gateway/bonjour).
   </Step>
   <Step title="连接方式">
     选中某个信标后，选择直接 WebSocket 或 SSH 隧道：
-    - **Direct**：通过 `wss://` 连接，并提示你信任发现到的 TLS 指纹（首次使用信任固定；只有在你接受时才会固定）。
-    - **SSH tunnel**：先打印一条需要运行的 `ssh -N -L 18789:127.0.0.1:18789 <user>@<host>`
+    - **直接连接**：通过 `wss://` 连接，并提示你信任发现到的 TLS 指纹（首次使用信任固定；只有在你接受时才会固定）。
+    - **SSH 隧道**：先打印一条需要运行的 `ssh -N -L 18789:127.0.0.1:18789 <user>@<host>`
       命令，然后连接到本地隧道端点。
   </Step>
   <Step title="认证">
-    选择 token（推荐）、密码或无需认证，然后可选择将其存储为 SecretRef 而不是明文。
+    选择令牌（推荐）、密码或无需认证，然后可选择将其存储为 SecretRef 而不是明文。
   </Step>
 </Steps>
 
 <Note>
-如果 gateway 仅限回环且不可发现，请手动使用 SSH 隧道或 tailnet。
+如果网关仅限回环且不可发现，请手动使用 SSH 隧道或 tailnet。
 明文 `ws://` 仅接受回环、本地私有 IP 字面量、`.local` 和 Tailnet `*.ts.net` URL；其他私有 DNS 名称需要 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。
 </Note>
 
@@ -235,7 +235,7 @@ sidebarTitle: "CLI 参考"
     Moonshot（Kimi K2）和 Kimi Coding 配置会自动写入。
     更多详情：[Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot).
   </Accordion>
-  <Accordion title="Custom provider">
+  <Accordion title="自定义提供方">
     适用于 OpenAI-compatible、OpenAI Responses-compatible 和 Anthropic-compatible 端点。
 
     交互式 onboarding 支持与其他提供方 API key 流程相同的存储选项：
@@ -277,29 +277,31 @@ sidebarTitle: "CLI 参考"
 
 凭证存储模式：
 
-- 默认 onboarding 行为会将 API key 作为明文值持久化到 auth profiles 中。
-- `--secret-input-mode ref` 会启用引用模式，而不是明文 key 存储。
+- 默认 onboarding 行为会将 API key 以明文值的形式持久化到 auth profiles 中。
+- `--secret-input-mode ref` 会启用引用模式，而不是存储明文 key。
   在交互式设置中，你可以选择：
   - 环境变量引用（例如 `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`）
-  - 已配置 provider 引用（`file` 或 `exec`），带 provider 别名 + id
+  - 已配置的 provider 引用（`file` 或 `exec`），带有 provider 别名和 id
 - 交互式引用模式会在保存前运行快速预检验证。
-  - Env refs：验证当前 onboarding 环境中的变量名 + 非空值。
-  - Provider refs：验证 provider 配置并解析请求的 id。
+  - 环境变量引用：验证变量名，以及当前 onboarding 环境中的值是否非空。
+  - Provider 引用：验证 provider 配置，并解析请求的 id。
   - 如果预检失败，onboarding 会显示错误并允许你重试。
-- 在非交互模式下，`--secret-input-mode ref` 仅支持 env-backed。
-  - 在 onboarding 进程环境中设置 provider 环境变量。
-  - 内联 key 标志（例如 `--openai-api-key`）要求该环境变量已设置；否则 onboarding 会快速失败。
-  - 对于自定义提供方，非交互式 `ref` 模式会将 `models.providers.<id>.apiKey` 存储为 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`。
-  - 在该自定义提供方场景中，`--custom-api-key` 要求已设置 `CUSTOM_API_KEY`；否则 onboarding 会快速失败。
-- 网关认证凭证在交互式设置中支持明文和 SecretRef 两种选择：
-  - 令牌模式：**生成/保存明文令牌**（默认）或 **使用 SecretRef**。
-  - 密码模式：明文或 SecretRef。
-- 非交互式令牌 SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
-- 现有的明文设置会保持不变并继续工作。
+- 在非交互式模式下，`--secret-input-mode ref` 只会为新凭证创建基于环境变量的引用。
+  - 添加新凭证时，在 onboarding 进程的环境中设置 provider 环境变量。
+  - 内联 key 标志（例如 `--openai-api-key`）要求设置对应的环境变量；否则 onboarding 会快速失败。
+  - 现有的可解析命名 auth profiles 会原样复用，包括现有的 `env`、`file` 和 `exec` 引用；不会写入新的 `apiKey` 或 `keyRef`，也不要求额外的 provider 环境变量。
+  - 对于新的自定义 provider 凭证，非交互式 `ref` 模式会将 `models.providers.<id>.apiKey` 存储为 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`。
+  - 在该自定义 provider 场景中，`--custom-api-key` 要求设置 `CUSTOM_API_KEY`；否则 onboarding 会快速失败。
+  - 现有的明文 profile 凭证会保持不变；引用模式不会迁移它们。运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。参见[密钥管理](/gateway/secrets)。
+- Gateway 认证凭证在交互式设置中支持明文和 SecretRef 选项：
+  - Token 模式：**生成/存储明文 token**（默认）或**使用 SecretRef**。
+  - Password 模式：明文或 SecretRef。
+- 非交互式 token SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
+- 现有的明文设置将继续正常工作，不会发生变化。
 
 <Note>
-无头和服务器提示：先在一台带浏览器的机器上完成 OAuth，然后将该 agent 的 `auth-profiles.json`（例如
-`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`，或对应的
+无头和服务器提示：先在一台带浏览器的机器上完成 OAuth，然后将该 agent 的
+`auth-profiles.json`（例如 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`，或对应的
 `$OPENCLAW_STATE_DIR/...` 路径）复制到网关主机。`credentials/oauth.json`
 只是一个旧版导入来源。
 </Note>
@@ -328,10 +330,10 @@ sidebarTitle: "CLI 参考"
 
 `openclaw agents add` 会写入 `agents.entries.*` 和可选的 `bindings`。
 
-WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
-活动会话和转录内容存储在
-`~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` 中。
-`~/.openclaw/agents/<agentId>/sessions/` 目录用于旧版迁移
+WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。  
+活动会话和转录内容存储在  
+`~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` 中。  
+`~/.openclaw/agents/<agentId>/sessions/` 目录用于旧版迁移  
 输入以及归档/支持工件。
 
 <Note>
