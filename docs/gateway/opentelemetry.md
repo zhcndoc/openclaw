@@ -19,9 +19,10 @@ OTLP/HTTP works without code changes. For local file logs, see
 - **`diagnostics-otel`** subscribes to those events and exports them as
   OpenTelemetry **metrics**, **traces**, and **logs** over OTLP/HTTP, and can
   mirror log records to stdout JSONL.
-- **Provider calls** receive a W3C `traceparent` header from OpenClaw's
-  trusted model-call span context when the provider transport accepts custom
-  headers. Plugin-emitted trace context is not propagated.
+- **Provider calls** receive a W3C `traceparent` header from the actual current
+  OpenTelemetry model-call span when the provider transport accepts custom
+  headers. Diagnostic IDs remain local correlation keys, and plugin-emitted
+  trace context is not propagated.
 - Exporters attach only when both the diagnostics surface and the plugin are
   enabled, so in-process cost stays near zero by default.
 
@@ -125,6 +126,31 @@ paths.
   through the Gateway, or use `openclaw agent --local`, when you need traces
   from a headless run.
 
+## Exporter health
+
+`openclaw doctor` and `openclaw status --all` show a bounded, redacted snapshot
+of the running Gateway's latest trusted exporter state for each signal and
+transport. For `diagnostics-otel`, the snapshot distinguishes:
+
+- OTLP/HTTP protobuf with an endpoint supplied by config or an `OTEL_*`
+  environment fallback.
+- OTLP/HTTP protobuf using the exporter dependency's default endpoint because
+  no endpoint was supplied.
+- Stdout log export.
+- Trace or metric export owned by an externally preloaded OpenTelemetry SDK.
+
+OTLP export failure and recovery transitions are recorded from the exporter's
+final result callback, after dependency-owned retries finish. A retryable
+response that later succeeds is therefore not reported as a failure. Startup,
+log preparation or emit, export, and shutdown failures use fixed reason
+categories rather than raw errors.
+
+The snapshot never includes endpoint values, headers, certificates, payloads,
+or raw error messages. Transport is retained only in this local health
+projection. It is not added to the existing
+`openclaw.telemetry.exporter.events` metric attributes, and existing Prometheus
+label sets are unchanged.
+
 ## Configuration reference
 
 ```json5
@@ -226,10 +252,13 @@ bounded event metadata (mode, transport, provider, event type) - no
 transcripts, audio payloads, session ids, turn ids, call ids, room ids, or
 handoff tokens.
 
-Outbound model requests may include a W3C `traceparent` header generated only
-from OpenClaw-owned diagnostic trace context for the active model call.
-Existing caller-supplied `traceparent` headers are replaced, so plugins or
-custom provider options cannot spoof cross-service trace ancestry.
+When `diagnostics-otel` tracing is active, outbound model requests may include
+a W3C `traceparent` header from the actual exporter-owned model-call span.
+Diagnostic trace IDs and span IDs only correlate events to that span; they are
+not used as outbound OTel identities. If the exporter cannot resolve a real
+span context, OpenClaw omits the header instead of naming an unexported parent.
+Existing caller-supplied `traceparent` headers are removed or replaced, so
+plugins or custom provider options cannot spoof cross-service trace ancestry.
 
 Set `diagnostics.otel.captureContent` to `true` only when your collector and
 retention policy are approved for prompt, response, tool, and tool-definition
@@ -490,9 +519,14 @@ Liveness warnings also emit:
 
 - `openclaw.model.usage`
   - `openclaw.channel`, `openclaw.provider`, `openclaw.model`
+  - Optional host-derived `openclaw.plugin` only for trusted plugin runtime completions
   - `openclaw.tokens.*` (input/output/cache_read/cache_write/total)
   - `gen_ai.system` by default, or `gen_ai.provider.name` when the latest GenAI semantic conventions are opted in
   - `gen_ai.request.model`, `gen_ai.operation.name`, `gen_ai.usage.*`
+
+Plugin attribution is span-only. It does not add a plugin dimension to shared
+OpenTelemetry metrics or change Prometheus metric labels.
+
 - `openclaw.run`
   - `openclaw.outcome`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`, `openclaw.errorCategory`
 - `openclaw.model.call`
