@@ -63,7 +63,7 @@ openclaw plugins marketplace refresh [--feed-profile <name>] [--expected-sha256 
 
 原生 OpenClaw 插件会随 `openclaw.plugin.json` 一起提供，并内嵌 JSON Schema（`configSchema`，即使为空也是如此）。兼容的捆绑包则使用各自的 bundle manifest。
 
-`plugins list` 会显示 `Format: openclaw` 或 `Format: bundle`。详细列表/信息输出还会显示 bundle 子类型（`codex`、`claude` 或 `cursor`）以及检测到的 bundle 能力。
+`plugins list` 显示 `Format: openclaw` 或 `Format: bundle`。详细列表/信息输出还会显示捆绑包子类型（`agent (Agent Plugins)`、`codex`、`claude` 或 `cursor`）以及检测到的捆绑包功能。
 </Note>
 
 ## 作者
@@ -298,39 +298,40 @@ openclaw plugins install <plugin-name> --marketplace ./my-marketplace
 对于本地路径和压缩包，OpenClaw 会自动检测：
 
 - 原生 OpenClaw 插件（`openclaw.plugin.json`）
+- Agent Plugins bundle（根目录中的 `plugin.json` 声明了 [Agent Plugins](https://agent-plugins.org) `$schema`）
 - 兼容 Codex 的 bundle（`.codex-plugin/plugin.json`）
-- 兼容 Claude 的 bundle（`.claude-plugin/plugin.json`，如果该 manifest 文件缺失，则使用默认的 Claude 组件布局）
+- 兼容 Claude 的 bundle（`.claude-plugin/plugin.json`，或者该 manifest 文件缺失时使用默认的 Claude 组件布局）
 - 兼容 Cursor 的 bundle（`.cursor-plugin/plugin.json`）
 
-受管本地安装必须是插件目录或归档。独立的 `.js`、
-`.mjs`、`.cjs` 和 `.ts` 插件文件不会被 `plugins install` 复制到受管插件
-根目录中，也不会通过直接放入
-`~/.openclaw/extensions` 或 `<workspace>/.openclaw/extensions` 而加载；这些
-自动发现的根目录会加载插件包或 bundle 目录，并将顶层脚本文件跳过，视为本地辅助文件。请改为在
+受管本地安装必须是插件目录或归档。独立的 `.js`、  
+`.mjs`、`.cjs` 和 `.ts` 插件文件不会被 `plugins install` 复制到受管插件  
+根目录中，也不会通过直接放入  
+`~/.openclaw/extensions` 或 `<workspace>/.openclaw/extensions` 而加载；这些  
+自动发现的根目录会加载插件包或 bundle 目录，并将顶层脚本文件跳过，视为本地辅助文件。请改为在  
 `plugins.load.paths` 中显式列出独立文件。
 
 <Note>
-兼容 bundle 会安装到常规插件根目录，并参与相同的列表/信息/启用/禁用流程。当前支持 bundle 技能、Claude 命令技能、Claude `settings.json` 默认项、Claude `.lsp.json` / manifest 声明的 `lspServers` 默认项、Cursor 命令技能，以及兼容的 Codex hook 目录；其他已检测到的 bundle 能力会在诊断/信息中显示，但尚未接入运行时执行。
+兼容的 bundle 会安装到正常的插件根目录中，并参与相同的列表/信息查看/启用/禁用流程。目前支持 bundle skills、bundle MCP 服务器、Agent Plugins skills/MCP（采用 `PLUGIN_ROOT`/`PLUGIN_DATA` 子进程契约）、Claude command-skills、Claude `settings.json` 默认值、Claude `.lsp.json` / manifest 声明的 `lspServers` 默认值、Cursor command-skills，以及兼容的 Codex hook 目录；检测到的其他 bundle 功能会显示在诊断信息/插件信息中，但尚未接入运行时执行。有关各格式的映射，请参见[插件 bundle](/plugins/bundles)。
 </Note>
 
-使用 `-l`/`--link` 可指向本地插件目录而不复制它（会添加到
+使用 `-l`/`--link` 可指向本地插件目录而不复制它（会添加到  
 `plugins.load.paths`）：
 
 ```bash
 openclaw plugins install -l ./my-plugin
 ```
 
-`--link` 不支持与 `--marketplace` 或 `git:` 安装一起使用，并且
-它要求一个已存在的本地路径。对于非交互式本地链接，请在查看来源后使用 `--force`；
+`--link` 不支持与 `--marketplace` 或 `git:` 安装一起使用，并且  
+它要求一个已存在的本地路径。对于非交互式本地链接，请在查看来源后使用 `--force`；  
 它会确认来源，但不会复制或覆盖已链接的目录。
 
 <Note>
-从 workspace extensions 根目录发现的 workspace-origin 插件，在显式启用之前不会被导入或执行。对于本地开发，请运行 `openclaw plugins enable <plugin-id>` 或设置
-`plugins.entries.<plugin-id>.enabled: true`；如果你的配置使用
-`plugins.allow`，也请在其中包含同一个插件 id。这个 fail-closed 规则
-也适用于当 channel setup 显式针对 workspace-origin 插件进行仅设置加载时，因此当该 workspace 插件保持禁用或被排除在 allowlist 之外时，本地 channel 插件设置代码不会运行。链接安装和显式 `plugins.load.paths` 条目会遵循其解析后的插件来源的常规策略。请参见
-[配置插件策略](/tools/plugin#configure-plugin-policy)
-和 [配置参考](/gateway/configuration-reference#plugins)。
+从 workspace extensions 根目录发现的 workspace-origin 插件，在显式启用之前不会被导入或执行。对于本地开发，请运行 `openclaw plugins enable <plugin-id>` 或设置  
+`plugins.entries.<plugin-id>.enabled: true`；如果你的配置使用  
+`plugins.allow`，也请在其中包含同一个插件 id。这个 fail-closed 规则  
+也适用于当 channel setup 显式针对 workspace-origin 插件进行仅设置加载时，因此当该 workspace 插件保持禁用或被排除在 allowlist 之外时，本地 channel 插件设置代码不会运行。链接安装和显式 `plugins.load.paths` 条目会遵循其解析后的插件来源的常规策略。请参见  
+[配置插件策略](/tools/plugin#configure-plugin-policy)  
+和[配置参考](/gateway/configuration-reference#plugins)。
 
 在 npm 安装上使用 `--pin` 可将解析出的精确 spec（`name@version`）保存到受管插件索引中，同时保持默认行为不固定。
 </Note>
@@ -423,7 +424,9 @@ openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-ins
   <Accordion title="解析 plugin id 与 npm spec 的区别">
     当你传入插件 id 时，OpenClaw 会复用该插件记录中的安装 spec。这意味着之前存储的 dist-tag（如 `@beta`）和精确锁定版本会继续在后续的 `update <id>` 运行中使用。
 
-    在 `update <id> --dry-run` 期间，精确锁定的 npm 安装仍会保持锁定状态。如果 OpenClaw 还可以解析出该包注册表的默认发布线，并且该默认发布线比已安装的锁定版本更新，那么 dry run 会报告该锁定，并打印后续要执行的显式 `@latest` 包更新命令，以跟随注册表默认发布线。
+    唯一的狭义例外是：受信任的官方包正在完成目录声明的插件 id 替换。此更新会从目录中的包选择器开始，因此重命名后的清单可以替换旧版 id。
+
+    在执行 `update <id> --dry-run` 期间，精确锁定的 npm 安装仍会保持锁定。如果 OpenClaw 还可以解析该包的 registry 默认发布线，并且该默认发布线比已安装的锁定版本更新，则试运行会报告当前锁定状态，并打印显式的 `@latest` 包更新命令，以便跟随 registry 默认发布线。
 
     这种定向更新规则不同于批量 `openclaw plugins update --all` 维护路径。批量更新仍会遵守普通的已跟踪安装 spec，但受信任的官方 OpenClaw 插件记录可以同步到当前官方目录目标，而不是停留在过时的精确官方包上。当你有意想保留精确或带标签的官方 spec 不变时，请使用定向的 `update <id>`。
 
@@ -432,10 +435,10 @@ openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-ins
     只传入不带版本或标签的 npm 包名也会解析回已跟踪的插件记录。当某个插件曾被锁定到精确版本，而你想把它切回 registry 的默认发布线时，可以使用这种方式。
 
   </Accordion>
-  <Accordion title="Beta 通道更新">
-    定向的 `openclaw plugins update <id-or-npm-spec>` 会复用已跟踪的插件 spec，除非你传入新的 spec。批量的 `openclaw plugins update --all` 会在将受信任的官方插件记录同步到官方目录目标时，使用规范的注册表通道解析器。这样，已安装的 beta 核心在 `update.channel` 未设置时，会继续让官方插件处于 beta 发布线，行为与核心更新器保持一致，而不会将它们静默规范化为 stable/latest。显式选择的 `beta`、`dev` 和 `extended-stable` 仍保持现有的优先级。
+  <Accordion title="Beta 频道更新">
+    定向的 `openclaw plugins update <id-or-npm-spec>` 会复用已跟踪的插件 spec，除非你传入新的 spec。对于浮动的受信任官方记录，它会使用规范的 registry 频道解析器来选择安装目标，而不会重写存储的选择器。批量的 `openclaw plugins update --all` 在将受信任的官方插件记录同步到官方目录目标时，也会使用相同的解析器。因此，已安装的 beta 核心在 `update.channel` 未设置时，会继续让官方插件处于 beta 发布线，这与核心更新器保持一致，而不会静默地将它们规范化为 stable/latest。显式选择的 `beta`、`dev` 和 `extended-stable` 仍保留现有的优先级。
 
-    `openclaw update` 也知道当前活跃的 OpenClaw 更新通道：在 beta 通道上，默认发布线的 npm 和 ClawHub 插件记录会先尝试 `@beta`。如果不存在插件 beta 版本，它们会回退到已记录的 default/latest spec；npm 插件在 beta 包存在但安装验证失败时也会回退。该回退会以警告形式报告，并不会使核心更新失败。精确版本和显式标签在定向更新中会保持对该选择器的锁定。
+    `openclaw update` 也了解当前生效的 OpenClaw 更新频道：在 beta 频道上，默认发布线的 npm 和 ClawHub 插件记录会优先尝试 `@beta`。如果没有插件 beta 版本，则回退到记录的默认/latest spec；对于 npm 插件，如果 beta 包存在但未通过安装验证，也会回退。此回退会作为警告报告，不会导致核心更新失败。对于定向更新，精确版本和显式标签会继续锁定到该选择器，只有在完成上述受信任的插件 id 替换时例外。
 
   </Accordion>
   <Accordion title="版本检查与完整性漂移">

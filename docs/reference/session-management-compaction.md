@@ -35,12 +35,12 @@ Gateway 历史读取器会避免在表面层需要任意历史访问时才将整
 
 | Key                     | Default               | Notes                                                                                       |
 | ----------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
-| `mode`                  | `"enforce"`           | 或 `"warn"`（仅报告，不进行修改）                                                            |
-| `pruneAfter`            | `"30d"`               | 过期条目年龄截止时间                                                                      |
-| `maxEntries`            | `500`                 | 会话条目上限                                                                              |
-| `resetArchiveRetention` | 保持（无年龄截止）     | `*.reset.*`/`*.deleted.*` 转录归档的年龄截止时间；设置持续时间会启用删除                    |
-| `maxDiskBytes`          | `10gb`                | 每个 agent 的会话磁盘预算；`false` 表示禁用                                                  |
-| `highWaterBytes`        | `maxDiskBytes` 的 80% | 预算清理后的目标值                                                                        |
+| `mode`                  | `"enforce"`           | or `"warn"` (report only, no mutation)                                                      |
+| `pruneAfter`            | `"30d"`               | stale-entry age cutoff                                                                      |
+| `maxEntries`            | `500`                 | cap on session entries                                                                      |
+| `resetArchiveRetention` | keep (no age cutoff)  | age cutoff for `*.reset.*`/`*.deleted.*` transcript archives; a duration opts into deletion |
+| `maxDiskBytes`          | `10gb`                | per-agent sessions disk budget; `false`, `0`, or `"0"` disables                             |
+| `highWaterBytes`        | 80% of `maxDiskBytes` | target after budget cleanup                                                                 |
 
 Reset 会推进现有的 `sessionKey -> sessionId` 映射，但会保留之前的 SQLite 会话、转录、轨迹和搜索行。该历史仍可在相同 session key 下搜索；普通条目和会话列表只显示新的当前映射。保留的 reset 历史受磁盘预算限制，而不是受 `resetArchiveRetention` 限制，后者只会影响归档制品的过期时间。显式删除则不同：它会先写入并校验一个压缩的转录归档（如果可用 zstd，则为 `*.jsonl.deleted.<timestamp>.zst`），然后再删除被删除会话的行。
 
@@ -67,9 +67,8 @@ OpenClaw 不再在 Gateway 写入期间自动创建 `sessions.json.bak.*` 轮转
 
 转录修改会针对 SQLite 转录目标使用会话写入队列：
 
-Session write locks use fixed production defaults. The corresponding
-`OPENCLAW_SESSION_WRITE_LOCK_*` environment variables remain available for
-process-level diagnostics and emergency overrides.
+会话写锁使用固定的生产默认值。相应的
+`OPENCLAW_SESSION_WRITE_LOCK_*` 环境变量仍可用于进程级诊断和紧急覆盖。
 
 ### 在 SQLite 切换后降级
 
@@ -87,7 +86,7 @@ openclaw doctor --session-sqlite restore --session-sqlite-all-agents
 
 隔离的 cron 运行会创建它们自己的会话条目/转录，并具有专门的保留策略：
 
-- `cron.sessionRetention` (default `"24h"`) 会从存储中清除较旧的隔离 cron 运行会话；`false` 可禁用。
+- `cron.sessionRetention`（默认值为 `"24h"`）会从存储中清除较旧的隔离 cron 运行会话；设置为 `false` 可禁用。
 - 运行历史会为每个 cron 作业保留最新的 2000 个终端行。丢失的行仍保留其 24 小时的清理窗口。
 
 当 cron 强制创建一个新的隔离运行会话时，它会在写入新行之前清理之前的 `cron:<jobId>` 会话条目：它会保留安全偏好（thinking/fast/verbose/reasoning 设置、标签、显示名称）以及用户显式选择的模型/认证覆盖，但会丢弃环境中的会话上下文（channel/group 路由、发送/排队策略、提权、来源、ACP 运行时绑定），这样一个新的隔离运行就不会从旧运行中继承过时的投递或运行时权限。
@@ -144,22 +143,22 @@ Gateway 是权威来源：它可以在会话运行时重写或重新补全条目
 `openclaw doctor --session-sqlite import --session-sqlite-all-agents` 进行迁移，而不是
 编辑 `sessions.json` 并期望运行时继续读取该文件。
 
-## Transcription Event Structure
+## 转录事件结构
 
-Transcripts are managed by the OpenClaw session accessor and exposed to runtime code via identity-based helper tools. The event stream is append-only:
+转录内容由 OpenClaw 会话访问器管理，并通过基于身份的辅助工具向运行时代码公开。事件流为仅追加：
 
-- First: session header - `type: "session"`, `id`, `cwd`, `timestamp`, optional `parentSession`.
-- Then: entries with `id` + `parentId` (tree structure).
+- 首先：会话标头 - `type: "session"`、`id`、`cwd`、`timestamp`、可选的 `parentSession`。
+- 然后：包含 `id` + `parentId` 的条目（树结构）。
 
-Notable entry types:
+值得注意的条目类型：
 
-- `message`: user/assistant/toolResult messages
-- `custom_message`: messages injected by extensions, _do_ enter model context (rendered in TUI when `display: true`, completely hidden when `display: false`)
-- `custom`: extension state that does not enter model context (used to persist extension state between reloads)
-- `compaction`: persisted compaction summary, containing `firstKeptEntryId` and `tokensBefore`
-- `branch_summary`: persisted summary when navigating tree branches
+- `message`：用户/助手/工具结果消息
+- `custom_message`：由扩展注入的消息，_确实_会进入模型上下文（当 `display: true` 时在 TUI 中渲染，当 `display: false` 时完全隐藏）
+- `custom`：不会进入模型上下文的扩展状态（用于在重新加载之间持久化扩展状态）
+- `compaction`：持久化的压缩摘要，包含 `firstKeptEntryId` 和 `tokensBefore`
+- `branch_summary`：在浏览树分支时保存的摘要
 
-OpenClaw intentionally does not “repair” transcripts; Gateway uses `SessionManager` to read and write them.
+OpenClaw 有意不会“修复”转录内容；Gateway 使用 `SessionManager` 对其进行读取和写入。
 
 ## 上下文窗口 vs 已跟踪 token
 
@@ -239,7 +238,7 @@ OpenClaw 采用由上下文引擎返回的显式后继身份。内置的 SQLite 
 - `openclaw status`（CLI）
 - `openclaw sessions` / `openclaw sessions --json`
 - 网关日志（`pnpm gateway:watch` 或 `openclaw logs --follow`）：`embedded run auto-compaction start` + `complete`
-- 详细模式：`🧹 自动压缩完成` 以及压缩次数
+- 详细模式：`🧹 自动压缩完成` 以及压缩次数。
 
 ## 静默事务处理（`NO_REPLY`）
 
@@ -276,10 +275,10 @@ OpenClaw 在扩展 API 中暴露了一个 `session_before_compact` 钩子，但�
 
 ## 故障排查清单
 
-- **Session key 错误？** 从 [/concepts/session](/concepts/session) 开始，并检查 `/status` 中的 `sessionKey`。
-- **Store 与 transcript 不匹配？** 使用 `openclaw status` 确认 Gateway 主机和 store 路径。
-- **Compaction 刷屏？** 检查模型的上下文窗口（太小会导致频繁 compaction）以及工具结果膨胀（调整 session pruning）。
-- **在小型本地模型上，似乎每个 prompt 都会溢出？** 确认 provider 报告了正确的模型上下文窗口。只有在该窗口已知时，OpenClaw 才能限制有效保留量。
+- **会话密钥错误？** 从 [/concepts/session](/concepts/session) 开始，并检查 `/status` 中的 `sessionKey`。
+- **存储与转录不匹配？** 使用 `openclaw status` 确认 Gateway 主机和存储路径。
+- **压缩刷屏？** 检查模型的上下文窗口（太小会导致频繁压缩）以及工具结果膨胀（调整会话修剪）。
+- **在小型本地模型上，似乎每个提示词都会溢出？** 确认提供商报告了正确的模型上下文窗口。只有在该窗口已知时，OpenClaw 才能限制有效保留量。
 - **静默轮次泄漏？** 确认回复是否以精确的静默 token `NO_REPLY` 开头（不区分大小写），并且你使用的是包含 streaming-suppression 修复（`2026.1.10`+）的构建版本。
 
 ## 相关内容

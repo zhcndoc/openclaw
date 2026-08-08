@@ -3,16 +3,16 @@ title: "斜杠命令"
 sidebarTitle: "斜杠命令"
 summary: "所有可用的斜杠命令、说明和内联快捷方式——配置、路由以及特定界面的行为。"
 read_when:
-  - when using or configuring chat commands
-  - when debugging command routing or permissions
-  - when understanding how skill commands are registered
+  - 使用或配置聊天命令时
+  - 调试命令路由或权限时
+  - 了解技能命令的注册方式时
 ---
 
 Gateway 处理以 `/` 开头并作为独立消息发送的命令。
 仅限主机的 bash 命令使用 `! <cmd>`（`/bash <cmd>` 是别名）。
 
 当会话绑定到 ACP 会话时，普通文本会路由到 ACP
-harness。Gateway 管理命令仍然保持本地：`/acp ...` 始终会到达
+运行框架。Gateway 管理命令仍然保持本地：`/acp ...` 始终会到达
 OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` 和 `/unfocus` 会保持本地。
 
 ## 三种命令类型
@@ -34,13 +34,10 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
 <AccordionGroup>
   <Accordion title="指令行为详情">
     - 指令会在模型看到消息之前从消息中剥离。
-    - 在 **仅指令** 消息中（消息只有指令），它们会
-      持久化到会话中并返回确认。
-    - 在包含其他文本的 **普通聊天** 消息中，它们作为行内提示生效，
-      并且**不会**持久化会话设置。
-    - 指令仅适用于**授权发送者**。如果设置了 `commands.allowFrom`，
-      它就是唯一使用的允许列表；否则授权来源于频道允许列表、配对，以及始终启用的访问组强制执行。未授权的
-      发送者会将指令视为纯文本。
+    - 在**仅含指令**的消息中（消息仅包含指令），指令会持久化到会话，并回复确认信息。
+    - 在包含其他文本的**普通聊天**消息中，指令会作为行内提示，不会持久化会话设置。
+      模型选择是例外：经过授权的行内 `/model` 或已配置的 `/<alias>` 会持久化会话选择；所有者/管理员在不带 `-s` 的情况下进行选择时，还可能请求更新已配置的默认值。
+    - 指令仅适用于**授权发送者**。如果设置了 `commands.allowFrom`，则只使用该允许列表；否则，授权来自频道允许列表、配对机制以及始终启用的访问组强制机制。未经授权的发送者发送的指令会被视为普通文本。
   </Accordion>
 </AccordionGroup>
 
@@ -92,19 +89,19 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
 </ParamField>
 
 <ParamField path="commands.config" type="boolean" default="false">
-  启用 `/config`（读写 `openclaw.json`）。仅限 owner。
+  启用 `/config`（读写 `openclaw.json`）。仅限所有者。
 </ParamField>
 
 <ParamField path="commands.mcp" type="boolean" default="false">
-  启用 `/mcp`（读写 `mcp.servers` 下由 OpenClaw 管理的 MCP 配置）。仅限 owner。
+  启用 `/mcp`（读写 `mcp.servers` 下由 OpenClaw 管理的 MCP 配置）。仅限所有者。
 </ParamField>
 
 <ParamField path="commands.plugins" type="boolean" default="false">
-  启用 `/plugins`（插件发现/状态以及安装 + 启用/禁用）。写操作仅限 owner。
+  启用 `/plugins`（插件发现/状态以及安装 + 启用/禁用）。写操作仅限所有者。
 </ParamField>
 
 <ParamField path="commands.debug" type="boolean" default="false">
-  启用 `/debug`（仅运行时配置覆盖）。仅限 owner。
+  启用 `/debug`（仅运行时配置覆盖）。仅限所有者。
 </ParamField>
 
 <ParamField path="commands.restart" type="boolean" default="true">
@@ -112,15 +109,15 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
 </ParamField>
 
 <ParamField path="commands.ownerAllowFrom" type="string[]">
-  owner-only 命令界面的显式 owner 允许列表。与 `commands.allowFrom` 和 DM 配对访问分开。
+  仅限所有者的命令界面的显式所有者允许列表。与 `commands.allowFrom` 和 DM 配对访问分开。
 </ParamField>
 
 <ParamField path="channels.<channel>.commands.enforceOwnerForCommands" type="boolean" default="false">
-  每个频道：要求 owner 身份才能执行 owner-only 命令。为 `true` 时，发送者必须匹配 `commands.ownerAllowFrom` 或拥有内部 `operator.admin` 范围。通配符 `allowFrom` 条目**不足以满足要求**。
+  每个频道：要求所有者身份才能执行仅限所有者的命令。为 `true` 时，发送者必须匹配 `commands.ownerAllowFrom` 或拥有内部 `operator.admin` 范围。通配符 `allowFrom` 条目**不足以满足要求**。
 </ParamField>
 
 <ParamField path="commands.ownerDisplay" type='"raw" | "hash"'>
-  控制 owner id 在系统提示词中的显示方式。
+  控制所有者 ID 在系统提示词中的显示方式。
 </ParamField>
 
 <ParamField path="commands.ownerDisplaySecret" type="string">
@@ -133,13 +130,13 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
 
 ## 命令列表
 
-Commands 来自三个来源：
+命令来自三个来源：
 
 - **核心内置：** `src/auto-reply/commands-registry.shared.ts`
 - **生成的 dock 命令：** `src/auto-reply/commands-registry.data.ts`
 - **插件命令：** 插件的 `registerCommand()` 调用
 
-可用性取决于配置标志、频道表面，以及已安装/已启用的
+可用性取决于配置标志、频道界面，以及已安装/已启用的
 插件。
 
 ### 核心命令
@@ -180,14 +177,14 @@ Commands 来自三个来源：
     | `/reasoning [on\|off\|stream]` | 切换推理可见性。别名：`/reason` |
     | `/elevated [on\|off\|ask\|full]` | 切换提升模式。别名：`/elev` |
     | `/exec host=<auto\|sandbox\|gateway\|node> security=<deny\|allowlist\|full> ask=<off\|on-miss\|always> node=<id>` | 显示或设置 exec 默认值 |
-    | `/login [codex\|openai\|openai-codex]` | 从私聊或 Web UI 会话中配对 Codex/OpenAI 登录。仅限 owner/admin |
-    | `/model [name\|#\|status]` | 显示或设置模型 |
-    | `/models [provider] [page] [limit=<n>\|all]` | 列出已配置/认证可用的提供方或模型 |
-    | `/queue <mode>` | 管理活动运行队列行为。参见 [Queue](/concepts/queue) 和 [Queue steering](/concepts/queue-steering) |
-    | `/steer <message>` | 将指引注入到活动运行中。别名：`/tell`。参见 [Steer](/tools/steer) |
+    | `/login [codex\|openai\|openai-codex]` | 从私聊或 Web UI 会话配对 Codex/OpenAI 登录。仅限 owner/管理员 |
+    | `/model [name\|#\|status] [-s\|--session]` | 显示或选择模型。owner/管理员的直接选择会请求更新已配置的默认值；`-s` 仅更改当前会话 |
+    | `/models [provider] [page] [limit=<n>\|all]` | 列出已配置或通过身份验证可用的提供方或模型 |
+    | `/queue <mode>` | 管理活动运行的队列行为。参见 [Queue](/concepts/queue) 和 [Queue steering](/concepts/queue-steering) |
+    | `/steer <message>` | 向活动运行注入指导。别名：`/tell`。参见 [Steer](/tools/steer) |
 
     <AccordionGroup>
-      <Accordion title="verbose / trace / fast / reasoning 安全性">
+      <Accordion title="verbose / trace / fast / reasoning 的安全性">
         - `/verbose` 用于调试——正常使用时请保持**关闭**。
         - `/trace` 只会显示插件拥有的跟踪/调试行；普通的 verbose 输出仍保持关闭。
         - `/fast auto|on|off` 会持久化会话覆盖；使用 Sessions UI 的 `inherit` 选项可清除它。
@@ -196,9 +193,20 @@ Commands 来自三个来源：
 
       </Accordion>
       <Accordion title="模型切换详情">
-        - `/model` 会立即将新模型持久化到会话中。
+        **一句话说明范围：** owner/管理员直接执行 `/model <model>` 会更改会话，并请求尽力更新已配置的默认值；`-s` 仅更改当前会话。当代理继承 `agents.defaults.model` 时，更新目标是该共享的全局回退值。
+
+        已配置的 `/<alias>` 简写接受与 `/model <alias>` 相同的末尾 `--runtime`、`-s` 和 `--session` 选项。
+
+        | 目标 | 命令 | 效果 |
+        | --- | --- | --- |
+        | 请求更改已配置的默认值 | 作为 owner/管理员执行 `/model <model>` | 更改此会话，并开始尽力更新代理的有效已配置默认值。如果代理没有显式主模型，目标就是共享的 `agents.defaults.model` 回退值 |
+        | 仅更改此会话 | `/model <model> -s`（或 `--session`） | 更改此会话；已配置的默认值保持不变 |
+        | 再次使用已配置的默认值 | `/model default`（带或不带 `-s`） | 清除当前会话的模型选择，使其继承当前已配置的默认值；兼容的身份验证固定设置会保留，不兼容的固定设置会被清除 |
+
+        非 owner 执行的 `/model <model>` 选择同样只对当前会话有效，因为其无法写入已配置的默认值。不可变配置保持不变，异步写入失败会被记录，但不会回退会话选择。明确的用户模型/配置文件固定设置会跨越 `/new`、`/reset`、会话轮换、压缩和冷却窗口而保留；自动配置文件固定设置可能会轮换或清除。使用 `/model default -s` 重置会清除会话模型选择，保留兼容的身份验证固定设置，并清除不兼容的固定设置。它不会恢复先前由 owner/管理员选择替换的已配置默认值。
+
         - 如果代理处于空闲状态，下一次运行会立即使用它。
-        - 如果运行正在进行，切换会被标记为待处理，并在下一次干净的重试点应用。
+        - 如果当前有运行正在进行，切换会被标记为待处理，并在下一个干净的重试点应用。
 
       </Accordion>
     </AccordionGroup>
@@ -292,7 +300,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 | `/card ...`                                             | 发送 LINE 富卡片预设。参见 [LINE](/channels/line)                                                                                                                                        |
 | `/codex <action> ...`                                   | 绑定、指引和检查 Codex 应用服务器脚手架（status、threads、resume、model、fast、permissions、compact、review、mcp、skills 等）。参见 [Codex harness](/plugins/codex-harness) |
 
-仅 QQBot：`/bot-ping`、`/bot-version`、`/bot-help`、`/bot-upgrade`、`/bot-logs`
+仅 QQBot：`/bot-ping`、`/bot-version`、`/bot-help`、`/bot-upgrade`、`/bot-logs`。
 
 ### 技能命令
 
@@ -335,20 +343,21 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 ## `/model`: 模型选择
 
+直接所有者/管理员的 `/model <model>` 请求使用**默认作用域**：它会更改当前会话，并开始尽力更新已配置的默认值。添加 `-s` 使用**会话作用域**：仅更改当前会话。对于未显式指定主模型的代理，更新目标是共享的全局 `agents.defaults.model` 回退值。
+
 ```text
 /model             # 显示模型选择器
-/model list        # 同上
+/model list        # 相同
 /model 3           # 从选择器中按编号选择
-/model openai/gpt-5.4
-/model opus@anthropic:default
-/model default     # 清除会话模型选择
-/model status      # 带端点和 API 模式的详细视图
+/model openai/gpt-5.4    # 直接所有者/管理员：会话 + 默认值更新请求
+/model openai/gpt-5.4 -s # 仅当前会话；已配置的默认值不变
+/model default -s        # 清除当前会话的模型选择；使用已配置的默认值
+/model opus@anthropic:default -s # 为当前会话固定此配置
+/model default     # 相同的重置操作；不会恢复较早配置的默认值
+/model status      # 查看包含端点和 API 模式的详细信息
 ```
 
-在 Discord 中，`/model` 和 `/models` 会打开一个交互式选择器，包含提供方和
-模型下拉菜单。该选择器会遵守 `agents.defaults.modelPolicy.allow`，
-包括 `provider/*` 条目。若没有显式的允许列表，模型条目和
-别名不会限制选择。
+在 Discord 上，`/model` 和 `/models` 会打开一个交互式选择器，其中包含提供商和模型下拉菜单，并遵循直接命令流程。所有者/管理员提交的请求会尽力更新已配置的默认值。Telegram 回调选择器中的选择仅限当前会话。该选择器遵循 `agents.defaults.modelPolicy.allow`，包括 `provider/*` 条目。如果没有显式的允许列表，模型条目和别名不会限制选择。
 
 ## `/config`：磁盘上的配置写入
 
@@ -366,7 +375,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 写入前会进行配置校验。无效更改会被拒绝。`/config` 的更新会在重启后保留。
 
-## `/mcp`: MCP 服务器配置
+## `/mcp`：MCP 服务器配置
 
 <Note>
   仅限所有者。默认禁用——通过启用 `commands.mcp: true` 打开。
@@ -385,10 +394,10 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 ## `/debug`：仅运行时覆盖
 
-<Note>
-  仅限 owner。默认禁用——通过启用 `commands.debug: true` 打开。
+<注>
+  仅限所有者。默认禁用——通过启用 `commands.debug: true` 打开。
   覆盖会立即应用到新的配置读取，但**不会**写入磁盘。
-</Note>
+</注>
 
 ```text
 /debug show
@@ -401,7 +410,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 ## `/plugins`：插件管理
 
 <Note>
-  仅限 owner 执行写入操作。默认禁用——通过启用 `commands.plugins: true` 打开。
+  仅限所有者执行写入操作。默认禁用——通过启用 `commands.plugins: true` 打开。
 </Note>
 
 ```text
@@ -416,15 +425,12 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 /plugins install git:<repository>@<ref> --force
 ```
 
-`/plugins enable|disable` 会更新插件配置，并为新的 agent turn 热重载 Gateway
-插件运行时。由于插件源模块已更改，`/plugins install` 会自动重启受管
-Gateway。受信任的 ClawHub 和官方目录安装不需要额外确认。任意的 npm、
+`/plugins enable|disable` 会更新插件配置，并为新的代理回合热重载网关插件运行时。由于插件源模块已更改，`/plugins install` 会自动重启受管网关。受信任的 ClawHub 和官方目录安装不需要额外确认。任意的 npm、
 git、archive、`npm-pack:` 和本地路径来源会显示来源警告，并且在你审查
 来源后需要在末尾添加 `--force`。此标志表示你已确认该来源，并允许替换
-现有安装；它不会绕过 `security.installPolicy` 或安装器安全检查。带有
-风险警告的 ClawHub 发布版本仍然需要单独的仅 shell 使用的
-`--acknowledge-clawhub-risk` 标志。Marketplace、linked 和 pinned 安装也
-仍然仅限 shell 使用。
+现有安装；它不会绕过 `security.installPolicy` 或安装器安全检查。带有风
+险警告的 ClawHub 发布版本仍然需要单独的仅 shell 使用的
+`--acknowledge-clawhub-risk` 标志。市场、已链接和已固定安装也仍然仅限 shell 使用。
 
 ## `/trace`：插件跟踪输出
 
@@ -436,7 +442,7 @@ git、archive、`npm-pack:` 和本地路径来源会显示来源警告，并且�
 
 `/trace` 会显示会话范围内的插件跟踪/调试行，而不会进入完整 verbose 模式。它不能替代 `/debug`（运行时覆盖）或 `/verbose`（正常工具输出）。
 
-## `/btw`: 附带问题
+## `/btw`：附带问题
 
 `/btw` 是一个关于当前会话上下文的快速顺便提问。别名：`/side`。
 

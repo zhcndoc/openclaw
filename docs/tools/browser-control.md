@@ -19,20 +19,20 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 并在 HTTP 端点可用之前重启 gateway。若不设置此变量，浏览器控制运行时仍可通过 CLI 和
 代理工具工作，但不会有任何服务监听回环控制端口。
 
-- 状态/启动/停止: `GET /`, `GET /doctor`, `POST /start`, `POST /stop`, `POST /reset-profile`
-- 配置文件: `GET /profiles`, `POST /profiles/create`, `DELETE /profiles/:name`
-- 标签页: `GET /tabs`, `POST /tabs/open`, `POST /tabs/focus`, `DELETE /tabs/:targetId`, `POST /tabs/action`
-- 快照/截图/提取: `GET /snapshot`, `POST /screenshot`, `POST /extract`
-- 操作: `POST /navigate`, `POST /act`
-- 钩子: `POST /hooks/file-chooser`, `POST /hooks/dialog`
-- 下载: `POST /download`, `POST /wait/download`
-- 权限: `POST /permissions/grant`
-- 调试: `GET /console`, `POST /pdf`
-- 调试: `GET /errors`, `GET /requests`, `GET /dialogs`, `POST /trace/start`, `POST /trace/stop`, `POST /highlight`
-- 网络: `POST /response/body`
-- 状态: `GET /cookies`, `POST /cookies/set`, `POST /cookies/clear`
-- 状态: `GET /storage/:kind`, `POST /storage/:kind/set`, `POST /storage/:kind/clear`
-- 设置: `POST /set/offline`, `POST /set/headers`, `POST /set/credentials`, `POST /set/geolocation`, `POST /set/media`, `POST /set/timezone`, `POST /set/locale`, `POST /set/device`
+- 状态/启动/停止：`GET /`、`GET /doctor`、`POST /start`、`POST /stop`、`POST /reset-profile`
+- 配置文件：`GET /profiles`、`POST /profiles/create`、`DELETE /profiles/:name`
+- 标签页：`GET /tabs`、`POST /tabs/open`、`POST /tabs/focus`、`DELETE /tabs/:targetId`、`POST /tabs/action`
+- 快照/截图：`GET /snapshot`、`POST /screenshot`
+- 操作：`POST /navigate`、`POST /act`
+- 钩子：`POST /hooks/file-chooser`、`POST /hooks/dialog`
+- 下载：`POST /download`、`POST /wait/download`
+- 权限：`POST /permissions/grant`
+- 调试：`GET /console`、`POST /pdf`
+- 调试：`GET /errors`、`GET /requests`、`GET /dialogs`、`POST /trace/start`、`POST /trace/stop`、`POST /highlight`
+- 网络：`POST /response/body`
+- 状态：`GET /cookies`、`POST /cookies/set`、`POST /cookies/clear`
+- 状态：`GET /storage/:kind`、`POST /storage/:kind/set`、`POST /storage/:kind/clear`
+- 设置：`POST /set/offline`、`POST /set/headers`、`POST /set/credentials`、`POST /set/geolocation`、`POST /set/media`、`POST /set/timezone`、`POST /set/locale`、`POST /set/device`
 
 `POST /tabs/action` 是 CLI 内部用于
 `browser tab` 子命令的批处理形式（`{"action":"new"|"label"|"select"|"close"|"list", ...}`）；
@@ -46,29 +46,10 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 句柄（如 `t1`）也被接受。原始 CDP target id 和唯一的原始
 target-id 前缀仍然可用，但它们是易变的诊断句柄。
 
-### 页面提取
-
-代理工具接受带有必需 `query` 和可选
-`targetId`、`timeoutMs`、`selector`、`ignoreSelectors` 和 `schema` 的 `action="extract"`。`selector`
-是一个 CSS 选择器，用于将捕获范围限制到匹配的子树；若没有匹配则
-视为错误，且绝不会回退到整个页面。`ignoreSelectors` 是一个 CSS 选择器数组，
-在可读文本转换之前会从捕获的子树中移除，因此导航、页脚、广告和横幅不会消耗模型
-上下文窗口。报告的 `chars` 计数反映的是该限定范围内转换后的文本。
-
-`schema` 是用于结构化提取的 JSON Schema 对象。成功结果会将验证后的值
-存储在 `details.json` 中，并在包装后的文本块里显示紧凑的 JSON。无效 JSON
-或 schema 不匹配会触发一次纠正重试；如果这也失败了，请在不使用 `schema` 的情况下重试，或调整 schema。没有
-`schema` 时，提取会保留其自由文本答案和 `NOT_FOUND` 行为。
-
-CLI 通过 `--selector <css>`、可重复的
-`--ignore-selector <css>` 和 `--schema <json>` 镜像这些字段。私有的 `POST /extract`
-捕获路由接受 `targetId`、`timeoutMs`、`selector` 和
-`ignoreSelectors`；schema 验证发生在调用的代理工具或 CLI 中。
-
-如果配置了共享密钥网关认证，浏览器 HTTP 路由也需要认证：
+如果配置了共享密钥网关身份验证，浏览器 HTTP 路由也需要身份验证：
 
 - `Authorization: Bearer <gateway token>`
-- `x-openclaw-password: <gateway password>` 或使用该密码的 HTTP Basic 认证
+- `x-openclaw-password: <gateway password>`，或使用该密码的 HTTP Basic 认证
 
 注意：
 
@@ -98,9 +79,7 @@ CLI 通过 `--selector <css>`、可重复的
 
 ### Playwright 要求
 
-某些功能（navigate/act/AI snapshot/role snapshot, extract, element
-screenshots, PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回
-清晰的 501 错误。
+某些功能（导航/操作/AI 快照/角色快照、元素截图、PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回明确的 501 错误。
 
 不使用 Playwright 仍可用的功能：
 
@@ -117,20 +96,19 @@ screenshots, PDF）需要 Playwright。如果未安装 Playwright，这些端点
 
 - `navigate`
 - `act`
-- 依赖于 Playwright 原生 AI 快照格式的 AI snapshots
-- 基于 CSS 选择器的元素截图（`--element`）
-- 整个浏览器的 PDF 导出
-- 页面问题提取
+- 依赖 Playwright 原生 AI 快照格式的 AI 快照
+- CSS 选择器元素截图（`--element`）
+- 完整浏览器 PDF 导出
 
-元素截图也会拒绝 `--full-page`；该路由会返回 `fullPage is
-not supported for element screenshots`。
+元素截图也会拒绝 `--full-page`；该路由会返回
+`fullPage is not supported for element screenshots`。
 
 如果你看到 `Playwright is not available in this gateway build`，说明打包的
 Gateway 缺少核心浏览器运行时依赖。请重新安装或更新
 OpenClaw，然后重启 gateway。对于 Docker，还请按如下所示安装 Chromium
 浏览器二进制文件。
 
-#### Docker 中安装 Playwright
+#### 在 Docker 中安装 Playwright
 
 如果你的 Gateway 运行在 Docker 中，请避免使用 `npx playwright`（npm 覆盖冲突）。
 对于自定义镜像，请将 Chromium 烘焙进镜像：
@@ -205,8 +183,6 @@ openclaw browser snapshot --urls
 openclaw browser snapshot --selector "#main" --interactive
 openclaw browser snapshot --frame "iframe#main" --interactive
 openclaw browser snapshot --out snapshot.txt
-openclaw browser extract "这个页面的主要结论是什么？"
-openclaw browser extract "列出这些发布版本" --selector "main" --ignore-selector "nav" --schema '{"type":"array","items":{"type":"object"}}'
 openclaw browser console --level error
 openclaw browser errors --clear
 openclaw browser requests --filter api --clear
@@ -216,7 +192,7 @@ openclaw browser responsebody "**/api" --max-chars 5000
 
 </Accordion>
 
-<Accordion title="操作：navigate、click、type、drag、wait、evaluate">
+<Accordion title="操作：导航、点击、输入、拖动、等待、执行">
 
 ```bash
 openclaw browser navigate https://example.com
@@ -249,7 +225,7 @@ openclaw browser trace stop
 
 </Accordion>
 
-<Accordion title="状态：cookies、storage、offline、headers、geo、device">
+<Accordion title="状态：cookies、存储、离线、标头、地理位置、设备">
 
 ```bash
 openclaw browser cookies
@@ -274,13 +250,26 @@ openclaw browser set device "iPhone 14"
 
 注意：
 
-- 当你需要从当前页面获取答案，但不需要交互 refs 时，请使用 `browser extract "<question>"` 或 agent-tool `action="extract"`。它会对可读页面内容进行清理，截断到 80,000 个字符，执行一次模型调用，并且只返回包装后的答案。总体超时时间默认是 60 秒，并会限制在 5–120 秒之间。如果提取失败，请回退到 `snapshot`；现有会话配置文件不支持提取。
-- 面向 agent 的 `browser` 工具暴露了 `action=download`（必需 `ref` 和 `path`）以及 `action=waitfordownload`（可选 `path`）。两者都会返回已保存的下载 URL、建议文件名以及受保护的本地路径。对于受管的 Playwright 配置文件，可以显式拦截下载；现有会话配置文件会返回不支持该操作的错误。
-- 优先使用原子化的选择器上传：在上传时传入触发用的 `--ref`，这样 OpenClaw 就会在一个请求中完成准备和点击。仅传路径的 `upload` 仍然受支持，但适用于确实要稍后触发的场景。使用 `--input-ref` 或 `--element` 可以直接设置文件输入。`dialog` 是一个准备调用；请在触发该对话框的点击/按键之前先运行它。如果某个动作打开了模态框，动作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；传入该 `dialogId` 可直接响应。OpenClaw 之外处理的对话框会显示在 `browserState.dialogs.recent` 中。
-- `click`/`type` 等操作需要来自 `snapshot` 的 `ref`（数字 `12`、role ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器刻意不支持用于操作。当前可见视口位置是唯一可靠目标时，请使用 `click-coords`。
-- 下载和 trace 路径受 OpenClaw 临时根目录限制：`/tmp/openclaw{,/downloads}`（备用：`${os.tmpdir()}/openclaw/...`）。
-- `upload` 接受来自 OpenClaw 临时 uploads 根目录的文件，以及 OpenClaw 管理的传入媒体。受管传入媒体可通过 `media://inbound/<id>`、沙箱相对路径 `media/inbound/<id>`，或受管传入媒体目录中的解析后路径来引用。嵌套媒体引用、路径穿越、符号链接、硬链接以及任意本地路径仍会被拒绝。
-- `upload` 也可以通过 `--input-ref` 或 `--element` 直接设置文件输入。
+- 面向代理的 `browser` 工具提供了 `action=download`（要求使用 `ref` 和
+  `path`）以及 `action=waitfordownload`（可选使用 `path`）。两者都会返回已保存的
+  下载 URL、建议的文件名以及经过保护的本地路径。对于受管 Playwright 配置文件，
+  可以显式拦截下载；现有会话配置文件则会返回不支持此操作的错误。
+- 优先使用原子化的选择器上传：将触发元素的 `--ref` 与上传操作一并传入，使 OpenClaw
+  在一个请求中完成准备和点击。仅传入路径的 `upload` 仍受支持，适用于有意稍后触发的情况。
+  使用 `--input-ref` 或 `--element` 可以直接设置文件输入框。`dialog` 是准备调用；请在
+  执行触发对话框的点击/按键之前运行它。如果某个操作打开了模态框，操作响应会包含
+  `blockedByDialog` 和 `browserState.dialogs.pending`；将其中的 `dialogId` 传入即可直接响应。
+  在 OpenClaw 外部处理的对话框会显示在 `browserState.dialogs.recent` 下。
+- `click`/`type` 等操作要求使用来自 `snapshot` 的 `ref`（数字 `12`、角色 ref `e12` 或
+  可操作的 ARIA ref `ax12`）。操作有意不支持 CSS 选择器。仅当可见视口位置是唯一可靠的目标时，
+  才使用 `click-coords`。
+- 下载和跟踪路径受限于 OpenClaw 临时根目录：`/tmp/openclaw{,/downloads}`
+  （备用路径：`${os.tmpdir()}/openclaw/...`）。
+- `upload` 接受来自 OpenClaw 临时上传根目录的文件以及由 OpenClaw 管理的入站媒体。
+  受管理的入站媒体可以通过 `media://inbound/<id>`、相对于沙箱的
+  `media/inbound/<id>`，或受管理入站媒体目录中的已解析路径进行引用。嵌套媒体引用、
+  路径遍历、符号链接、硬链接和任意本地路径仍会被拒绝。
+- `upload` 还可以通过 `--input-ref` 或 `--element` 直接设置文件输入框。
 
 当 OpenClaw 能证明替换后的标签页时，稳定的 tab id 和 label 会在 Chromium 原始目标替换后保持不变，例如同一 URL 的唯一旧/新配对，或者表单提交后单个旧标签页变为单个新标签页。含糊的重复 URL 替换会获得新的句柄。原始目标 id 仍然是易变的；在脚本中请优先使用 `tabs` 返回的 `suggestedTargetId`。
 
@@ -381,7 +370,7 @@ openclaw browser wait "#main" \
 5. 深度调试：记录 trace：
    - `openclaw browser trace start`
    - 复现问题
-   - `openclaw browser trace stop`（输出 `TRACE:<path>`）
+   - `openclaw browser trace stop`（输出 `TRACE:<path>`）。
 
 ## JSON 输出
 

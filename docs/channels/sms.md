@@ -34,6 +34,25 @@ OpenClaw 通过 Twilio 电话号码或消息服务接收和发送 SMS/MMS。Gate
 
 如果一个 Twilio 号码同时具备这两种能力，它既可以用于 SMS，也可以用于 [语音通话](/plugins/voice-call)。SMS webhook 和语音 webhook 在 Twilio 中分别配置，并使用不同的 Gateway 路径；本页仅涵盖 SMS webhook。
 
+## 美国 A2P / 10DLC 投递
+
+应用通过美国本地 10DLC 号码向美国收件人发送的 SMS 和 MMS 需要进行美国 A2P 10DLC 注册。免费电话号码和短代码使用单独的验证流程。这与 OpenClaw 渠道设置分开：Webhook 签名验证、配对和出站凭据都可能正确，但运营商仍可能阻止或过滤消息投递。
+
+在依赖美国 10DLC 发送方之前，请在 Twilio 中确认：
+
+- 账户已付费；Twilio 试用账户无法注册 A2P 10DLC。
+- Twilio Trust Hub 中的主要或次要合规档案已获批准。
+- 品牌和活动已完成注册并获批准。
+- Twilio 电话号码的 A2P 状态为 `REGISTERED`，并且位于与已批准活动关联的消息服务的发送方池中；或者，你在此处配置的 `messagingServiceSid` 就是该已批准的服务。
+- 活动描述的是真实的 OpenClaw 消息使用场景，并包含相匹配的示例消息。
+- 每个网站、关键词、线下、纸质或二维码选择加入路径都已完整说明。如果该流程未公开可见，请提供可公开访问的截图或其他证据。
+- 消息同意是自愿的，并且与必需的服务条款、账户创建或购买行为相互独立，同时包含 Twilio 要求的隐私政策、条款、发送频率、资费和退订说明。
+- 你保留同意证明、明确标识发送方、遵守标准的一步退订关键词，并且不购买、租用、出售或转让同意。退订后，除非收件人再次选择加入，否则只能发送一条确认消息。
+
+请以 Twilio 作为当前要求的权威来源：[A2P 10DLC 概览](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc)、[注册快速入门](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/quickstart)以及[所需的企业和活动信息](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/collect-business-info)。本节提供的是设置指导，不构成法律建议。
+
+如果 Twilio 在注册审核期间拒绝品牌或活动，请先在 Twilio 中解决该问题，然后再将发送方用于 OpenClaw。[`30909`](https://www.twilio.com/docs/api/errors/30909) 表示消息流程或行动号召不完整或无法验证。[`30923`](https://www.twilio.com/docs/api/errors/30923) 表示消息同意是服务、账户创建或购买的必要条件，或与服务条款捆绑在一起。[`30893`](https://www.twilio.com/docs/api/errors/30893) 表示示例消息与声明的使用场景不匹配。
+
 ## 快速设置
 
 <Steps>
@@ -43,7 +62,7 @@ OpenClaw 通过 Twilio 电话号码或消息服务接收和发送 SMS/MMS。Gate
     ```
   </Step>
   <Step title="创建或选择 Twilio 发送方">
-    在 Twilio 中，打开 **Phone Numbers > Manage > Active numbers**，然后选择一个支持 SMS 的号码。要发送附件，请选择一个同时支持 MMS 的号码。保存：
+    在 Twilio 中，打开 **电话号码 > 管理 > 活动号码**，然后选择一个支持 SMS 的号码。要发送附件，请选择一个同时支持 MMS 的号码。保存：
 
     - Account SID，例如 `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
     - Auth Token
@@ -81,8 +100,8 @@ openclaw config patch --file ./sms.patch.json5
 
   </Step>
 
-  <Step title="将 Twilio 指向 Gateway webhook">
-    在 Twilio 电话号码设置中，打开 **Messaging**，并将 **A message comes in** 设置为：
+  <Step title="将 Twilio 指向网关 webhook">
+    在 Twilio 电话号码设置中，打开 **消息传送**，并将 **收到消息时** 设置为：
 
 ```text
 https://gateway.example.com/webhooks/sms
@@ -453,7 +472,17 @@ OpenClaw 会在生成的投递 `StatusCallback` URL 中添加 `5xx` 重试策略
 
 ### 外发发送失败
 
-确认 `accountSid`、`authToken`，以及 `fromNumber` 或 `messagingServiceSid` 已正确解析。如果你使用的是 Twilio 试用账户，目标号码在发送外发 SMS 前可能需要先在 Twilio 中完成验证。
+确认 `accountSid`、`authToken` 以及 `fromNumber` 或 `messagingServiceSid` 之一已成功解析。Twilio 试用账户只能向账户注册国家/地区内已验证的收件人发送消息，并且必须使用 Twilio 预定义的内容；不支持自定义 SMS 正文。试用账户也无法注册 A2P 10DLC，因此请先升级账户，然后再注册美国 10DLC 发送方。
+
+### Twilio 接受发送请求，但后续传递失败
+
+先查看 OpenClaw 存储的传递状态：
+
+```bash
+openclaw channels status --channel sms --probe --json
+```
+
+如果最近的外发状态为 `failed` 或 `undelivered`，请使用其 `messageSid` 在 Twilio 中检查最终的消息状态和错误代码。[`30034`](https://www.twilio.com/docs/api/errors/30034) 表示发送方尚未注册，或不在与已批准 Campaign 关联的 Messaging Service 的 Sender Pool 中。[`30035`](https://www.twilio.com/docs/api/errors/30035) 表示 Twilio 仍在注册、注销或重新分配该号码；请等待其状态变为 `REGISTERED` 后再发送。
 
 ### 消息已到达，但代理没有回复
 

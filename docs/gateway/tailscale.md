@@ -65,10 +65,11 @@ OpenClaw 可以为 Gateway 仪表盘和 WebSocket 端口自动配置 Tailscale *
 }
 ```
 
-从另一台 Tailnet 设备连接：
+从另一台 Tailnet 设备连接原生客户端或 CLI 客户端：
 
-- 控制 UI：`http://<tailscale-ip>:18789/`
 - WebSocket：`ws://<tailscale-ip>:18789`
+
+不要在浏览器 Control UI 中使用直接的纯 HTTP 地址。远程纯 HTTP 无法创建浏览器设备身份，而令牌/密码身份验证无法替代这一点。请使用 Tailscale Serve 访问 Control UI。
 
 <Note>
 当存在可绑定的 Tailnet IPv4 时，Gateway 还需要 `http://127.0.0.1:18789` 以便经过身份验证的同主机客户端使用。如果启动时没有可用的 Tailnet 地址，它会回退为仅绑定 loopback；在 Tailscale 可用后重新启动，即可添加直接的 Tailnet 访问。两种路径都不会带来 LAN 或公网暴露。

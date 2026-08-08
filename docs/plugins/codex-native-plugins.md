@@ -9,22 +9,27 @@ read_when:
 ---
 
 原生 Codex 插件支持让 Codex 模式的 OpenClaw 代理在处理 OpenClaw 轮次时，使用同一个 Codex 线程中的 Codex
-app-server 自身的应用和插件能力。插件调用保留在原生 Codex 记录中；Codex app-server 负责基于应用的 MCP 执行。OpenClaw 不会把
+应用服务器自身的应用和插件能力。插件调用保留在原生 Codex 记录中；Codex 应用服务器负责基于应用的 MCP 执行。OpenClaw 不会把
 Codex 插件转换为合成的 `codex_plugin_*` OpenClaw 动态工具。
 
-请在基础 [Codex harness](/plugins/codex-harness) 已经可用之后再使用本页。
+请在基础 [Codex 运行框架](/plugins/codex-harness) 已经可用之后再使用本页。
 
 ## 要求
 
-- Agent 运行时必须是原生 Codex harness。
+- 代理运行时必须是原生 Codex harness。
 - `plugins.entries.codex.enabled` 为 `true`。
 - `plugins.entries.codex.config.codexPlugins.enabled` 为 `true`。
-- Codex app-server 报告的版本必须严格稳定为 `0.146.0`。官方插件提供
-  `@openai/codex` `0.146.0`；自定义、远程以及由 macOS 桌面端管理的二进制文件
+- Codex app-server 报告的版本必须严格为稳定版 `0.146.1`。官方插件提供
+  `@openai/codex` `0.146.1`；自定义、远程和由 macOS 桌面端管理的二进制文件
   必须使用完全相同的版本。
-- 目标 Codex app-server 能够看到预期的 marketplace、插件和应用清单。
-- 迁移仅支持在源 Codex 主目录中观测到的、以源安装方式安装的 `openai-curated` 插件。Codex 会在 API 密钥和 Bedrock 账户下通过 `openai-api-curated` wire 名称提供相同的目录；OpenClaw 将这两个名称视为同一个精选目录，因此配置的 `openai-curated` 插件可以从任一名称解析。
-- 手动配置的 `workspace-directory` 插件必须已经以其确切的 marketplace 限定身份出现在 `plugin/installed` 中，并且处于已安装且已启用状态。它们所属的应用必须可供已配置的 Codex 线程访问和调用。
+- 目标 Codex app-server 必须能够看到预期的 marketplace、插件和
+  应用清单。
+- 迁移仅支持在源 Codex 主目录中观测到的、作为源安装的
+  `openai-curated` 插件。Codex 会在 API-key 和 Bedrock 账户下通过
+  `openai-api-curated` wire name 提供相同的目录；OpenClaw 将这两个名称视为同一个精选目录，
+  因此已配置的 `openai-curated` 插件可以从任一名称解析。
+- 手动配置的 `workspace-directory` 插件必须已经以其准确的 marketplace 限定身份出现在
+  `plugin/installed` 中，并处于已安装且已启用状态。其所属应用必须能够被配置的 Codex 线程访问和调用。
 
 `codexPlugins` 对 OpenClaw-provider 运行、ACP 会话
 绑定或其他运行环境没有影响，因为这些路径从不会使用原生 `apps` 配置
@@ -143,11 +148,11 @@ app 集。运行 `/new` 或 `/reset` 以刷新当前
 
 集成跟踪三种状态：
 
-| State      | Meaning                                                                                                                            |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Installed  | Codex 在目标应用服务器运行时中包含该插件 bundle。                                                                      |
-| Enabled    | Codex 报告该插件已启用，且 OpenClaw 配置允许它用于 Codex harness turns。                                           |
-| Accessible | Codex app-server 确认该插件的应用条目对当前账户可用，并映射到配置的插件身份。 |
+| 状态       | 含义                                                                                                                            |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 已安装     | Codex 在目标应用服务器运行时中包含该插件 bundle。                                                                      |
+| 已启用     | Codex 报告该插件已启用，且 OpenClaw 配置允许它用于 Codex harness 回合。                                           |
+| 可访问     | Codex app-server 确认该插件的应用条目对当前账户可用，并映射到配置的插件身份。 |
 
 对于 `openai-curated` 插件，迁移是持久化安装/资格判定
 步骤：
@@ -170,7 +175,7 @@ app 集。运行 `/new` 或 `/reset` 以刷新当前
 对于 `workspace-directory` 插件，设置在 OpenClaw 外部完成。OpenClaw
 仅在明确配置的启用条目中，或当 `allow_all_plugins` 要求识别由明确配置的禁用工作区插件所拥有的应用时，
 才使用其 `plugin/installed` 快照。它通过精确匹配 `summary.id` 来解析每个插件，并使用
-`plugin/read` 确定所有权。禁用插件检查是只读的：其应用仍保持拒绝状态，OpenClaw 不会安装、
+  `plugin/read` 确定所有权。禁用插件检查是只读的：其应用仍保持拒绝状态，OpenClaw 不会安装、
 启用或验证该插件的身份。所有权缺失或存在歧义时会默认拒绝，而不是授予账户范围的访问权限。
 
 运行时应用清单是已迁移的精选插件和手动配置的工作区插件的目标会话可访问性检查。Codex

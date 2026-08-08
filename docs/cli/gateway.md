@@ -470,6 +470,7 @@ OpenClaw 仅启动在操作系统管理的系统目录中找到的 SSH 客户端
 
 ```bash
 openclaw gateway call status
+openclaw gateway call health --port 18999
 openclaw gateway call logs.tail --params '{"limit": 200}'
 ```
 
@@ -478,6 +479,9 @@ openclaw gateway call logs.tail --params '{"limit": 200}'
 </ParamField>
 <ParamField path="--url <url>" type="string">
   Gateway WebSocket URL。
+</ParamField>
+<ParamField path="--port <port>" type="number">
+  以此端口定位本地回环 Gateway。对于本次调用，它会覆盖 `OPENCLAW_GATEWAY_URL` 和 `OPENCLAW_GATEWAY_PORT`。不能与 `--url` 组合使用。
 </ParamField>
 <ParamField path="--token <token>" type="string">
   Gateway 令牌。
@@ -496,7 +500,7 @@ openclaw gateway call logs.tail --params '{"limit": 200}'
 </ParamField>
 
 <Note>
-`--params` 必须是有效的 JSON，且每个方法都会验证其自身的参数结构（额外/拼写错误的字段会被拒绝）。
+`--params` 必须是有效的 JSON，并且每个方法都会验证其自身的参数结构（多余字段或字段名错误会被拒绝）。对于自定义端口的本地 Gateway，请使用 `--port`；显式指定的 `--url` 仍然需要显式凭据。
 </Note>
 
 ## 管理 Gateway 服务
@@ -553,7 +557,7 @@ openclaw gateway restart
     - 如果 `gateway start` 或 `gateway restart` 需要修复过时的服务定义，而调用该命令的 shell 所解析出的状态目录、配置路径或端口与已安装的服务不一致，则命令会拒绝执行。请匹配这些环境覆盖项，或取消设置冲突的环境覆盖项；也可以使用 `openclaw gateway install --force` 有意地重新定位服务。
     - 使用 `gateway restart` 重启受管服务。不要通过串联 `gateway stop` 和 `gateway start` 来替代重启。
     - 在非交互式 shell 中，`gateway stop` 需要使用 `--force`。交互式终端仍保持现有的无提示行为。对于自动化和测试，优先使用 `gateway run --dev`，或使用带有空闲端口的隔离 `--profile`。
-    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，这会从当前启动会话中移除 LaunchAgent，但不会持久化禁用状态——KeepAlive 自动恢复功能会继续对未来的崩溃保持 सक्रिय，而 `gateway start` 可以干净地重新启用服务，无需手动执行 `launchctl enable`。传入 `--disable` 可持久化抑制 KeepAlive 和 RunAtLoad，使 Gateway 在下一次显式执行 `gateway start` 之前不会重新生成；当手动停止应在重启后继续生效时，请使用此选项。
+    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，这会从当前启动会话中移除 LaunchAgent，但不会持久化禁用状态——KeepAlive 自动恢复功能会继续对未来的崩溃保持活跃，而 `gateway start` 可以干净地重新启用服务，无需手动执行 `launchctl enable`。传入 `--disable` 可持久化抑制 KeepAlive 和 RunAtLoad，使 Gateway 在下一次显式执行 `gateway start` 之前不会重新生成；当手动停止应在重启后继续生效时，请使用此选项。
     - Gateway 生命周期变更会以尽力而为的方式，将键值审计记录追加到 `<state-dir>/logs/gateway-restart.log`，其中包括 CLI 启动、停止和重启操作、安全重启请求、supervisor 重启以及脱离式交接。
     - 生命周期命令支持使用 `--json` 进行脚本处理。
 

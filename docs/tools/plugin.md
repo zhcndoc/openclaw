@@ -3,17 +3,17 @@ summary: "安装、配置和管理 OpenClaw 插件"
 read_when:
   - 安装或配置插件
   - 了解插件发现和加载规则
-  - 使用与 Codex/Claude 兼容的插件包
+  - 使用与 Agent 插件、Codex、Claude 或 Cursor 兼容的插件包
 title: "插件"
-sidebarTitle: "快速开始"
+sidebarTitle: "入门"
 doc-schema-version: 1
 ---
 
-插件为 OpenClaw 扩展了通道、模型提供方、agent harness、工具、
+插件为 OpenClaw 扩展了通道、模型提供方、智能体运行框架、工具、
 技能、语音、实时转录、语音、媒体理解、生成、
 网页抓取、网页搜索以及其他运行时能力。
 
-使用此页面来安装插件、重启 Gateway、验证运行时已加载它，并排查常见的设置失败。仅含命令示例，请参见
+使用此页面来安装插件、重启网关、验证运行时已加载它，并排查常见的设置失败。仅含命令示例，请参见
 [管理插件](/plugins/manage-plugins)。关于捆绑的、官方的外部插件以及仅源代码插件的生成清单，请参见
 [插件清单](/plugins/plugin-inventory)。
 
@@ -157,10 +157,10 @@ doc-schema-version: 1
 
 OpenClaw 识别两种插件格式：
 
-| 格式                    | 加载方式                                                                 | 适用场景                                                              |
-| ----------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 原生 OpenClaw 插件       | `openclaw.plugin.json` 以及在进程内加载的运行时模块                       | 你正在安装或构建 OpenClaw 专用的运行时能力                           |
-| 兼容包                   | 映射到 OpenClaw 插件清单的 Codex、Claude 或 Cursor 插件布局             | 你正在复用兼容的技能、命令、钩子或包元数据                           |
+| 格式                   | 加载方式                                                                                  | 适用场景                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 原生 OpenClaw 插件     | `openclaw.plugin.json` 加上在进程中加载的运行时模块                                         | 安装或构建 OpenClaw 专用的运行时功能                                   |
+| 兼容包                 | 将 Agent Plugins、Codex、Claude 或 Cursor 插件布局映射到 OpenClaw 插件清单中               | 复用兼容的技能、命令、钩子或包元数据                                   |
 
 这两种格式都会出现在 `openclaw plugins list`、`openclaw plugins inspect`、
 `openclaw plugins enable` 和 `openclaw plugins disable` 中。有关包兼容边界，请参见
@@ -300,4 +300,4 @@ openclaw plugins inspect <plugin-id> --runtime --json
 - [插件依赖解析](/plugins/dependency-resolution) - 安装根、注册表记录和运行时边界
 - [构建插件](/plugins/building-plugins) - 原生插件编写指南
 - [插件 SDK 概览](/plugins/sdk-overview) - 运行时注册、hooks 和 API 字段
-- [插件清单](/plugins/manifest) - 清单和包元数据】【。
+- [插件清单](/plugins/manifest) - 清单和包元数据。

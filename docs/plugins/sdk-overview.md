@@ -11,11 +11,11 @@ read_when:
 插件 SDK 是插件与核心之间的类型化契约。此页面是关于**导入什么**以及**可以注册什么**的参考。
 
 <Note>
-  此页面面向在 OpenClaw 内部使用 `openclaw/plugin-sdk/*` 的插件作者。对于希望通过 Gateway 运行 agent 的外部应用、脚本、仪表板、CI 作业和 IDE 扩展，请改用 [面向外部应用的 Gateway 集成](/gateway/external-apps)。
+  此页面面向在 OpenClaw 内部使用 `openclaw/plugin-sdk/*` 的插件作者。对于希望通过 Gateway 运行代理的外部应用、脚本、仪表板、CI 作业和 IDE 扩展，请改用 [面向外部应用的 Gateway 集成](/gateway/external-apps)。
 </Note>
 
 <Tip>
-在寻找操作指南吗？请从 [构建插件](/plugins/building-plugins) 开始。关于 channel，请使用 [Channel 插件](/plugins/sdk-channel-plugins)；关于模型提供方，请使用 [Provider 插件](/plugins/sdk-provider-plugins)；关于本地 AI CLI 后端，请使用 [CLI 后端插件](/plugins/cli-backend-plugins)；关于原生 agent 执行器，请使用 [Agent harness 插件](/plugins/sdk-agent-harness)；关于工具或生命周期钩子，请使用 [插件 hooks](/plugins/hooks)。
+在寻找操作指南吗？请从 [构建插件](/plugins/building-plugins) 开始。关于频道，请使用 [频道插件](/plugins/sdk-channel-plugins)；关于模型提供方，请使用 [提供方插件](/plugins/sdk-provider-plugins)；关于本地 AI CLI 后端，请使用 [CLI 后端插件](/plugins/cli-backend-plugins)；关于原生代理执行器，请使用 [Agent harness 插件](/plugins/sdk-agent-harness)；关于工具或生命周期钩子，请使用 [插件 hooks](/plugins/hooks)。
 </Tip>
 
 ## 导入约定
@@ -486,7 +486,11 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 | `api.registerContextEngine(id, factory)`   | 上下文引擎（一次只能激活一个）。通过 `info.acceptedHostParams` 声明接受的宿主添加的生命周期字段；未声明的引擎在 2026-08-12 之前接收旧版字段集合，之后接收所有当前宿主字段。 |
 | `api.registerMemoryCapability(capability)` | 统一内存能力                                                                                                                                                                                                                   |
 
-### 已弃用的 memory embedding 适配器
+要参与持久化的已接纳回合，上下文引擎必须在 `info.transcriptSemantics` 下声明
+`currentTurnFence: "before-current-turn-entry-v1"` 和
+`turnAdvancementIdempotency: "atomic-idempotent-v1"`，然后将 `commitTurn(...)` 实现为一个以 `advancementKey` 为键的原子幂等写入。若不具备完整契约，OpenClaw 会在整个逻辑回合及其重试过程中使用旧版上下文路径，保持已配置的引擎不变，并在下一个逻辑回合再次尝试使用该引擎。
+
+### 已弃用的内存嵌入适配器
 
 | 方法                                         | 注册内容                              |
 | ---------------------------------------------- | ---------------------------------------------- |
@@ -545,20 +549,20 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
 ### API 对象字段
 
-| Field                    | Type                      | Description                                                                               |
-| ------------------------ | ------------------------- | ----------------------------------------------------------------------------------------- |
-| `api.id`                 | `string`                  | 插件 ID                                                                                   |
-| `api.name`               | `string`                  | 显示名称                                                                                  |
-| `api.version`            | `string?`                 | 插件版本（可选）                                                                         |
-| `api.description`        | `string?`                 | 插件描述（可选）                                                                         |
-| `api.source`             | `string`                  | 插件源路径                                                                                |
-| `api.rootDir`            | `string?`                 | 插件根目录（可选）                                                                       |
-| `api.config`             | `OpenClawConfig`          | 当前配置快照（可用时为活跃的内存运行时快照）                                               |
-| `api.pluginConfig`       | `Record<string, unknown>` | 来自 `plugins.entries.<id>.config` 的插件专属配置                                          |
-| `api.runtime`            | `PluginRuntime`           | [运行时辅助工具](/plugins/sdk-runtime)                                                    |
-| `api.logger`             | `PluginLogger`            | 作用域日志记录器（`debug`、`info`、`warn`、`error`）                                      |
-| `api.registrationMode`   | `PluginRegistrationMode`  | 当前加载模式；`"setup-runtime"` 是可使用运行时的轻量级设置流程                           |
-| `api.resolvePath(input)` | `(string) => string`      | 解析相对于插件根目录的路径                                                                  |
+| 字段                     | 类型                      | 描述                                                                                    |
+| ------------------------ | ------------------------- | --------------------------------------------------------------------------------------- |
+| `api.id`                 | `string`                  | 插件 ID                                                                                 |
+| `api.name`               | `string`                  | 显示名称                                                                                |
+| `api.version`            | `string?`                 | 插件版本（可选）                                                                       |
+| `api.description`        | `string?`                 | 插件描述（可选）                                                                       |
+| `api.source`             | `string`                  | 插件源路径                                                                              |
+| `api.rootDir`            | `string?`                 | 插件根目录（可选）                                                                     |
+| `api.config`             | `OpenClawConfig`          | 当前配置快照（可用时为活跃的内存运行时快照）                                             |
+| `api.pluginConfig`       | `Record<string, unknown>` | 来自 `plugins.entries.<id>.config` 的插件专属配置                                        |
+| `api.runtime`            | `PluginRuntime`           | [运行时辅助工具](/plugins/sdk-runtime)                                                  |
+| `api.logger`             | `PluginLogger`            | 作用域日志记录器（`debug`、`info`、`warn`、`error`）                                     |
+| `api.registrationMode`   | `PluginRegistrationMode`  | 当前加载模式；`"setup-runtime"` 是可使用运行时的轻量级设置流程                          |
+| `api.resolvePath(input)` | `(string) => string`      | 解析相对于插件根目录的路径                                                                |
 
 ## 内部模块约定
 

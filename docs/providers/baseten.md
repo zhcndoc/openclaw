@@ -1,38 +1,38 @@
 ---
-summary: "Baseten setup for Inkling and hosted Model APIs"
+summary: "Inkling 和托管模型 API 的 Baseten 配置"
 title: "Baseten"
 read_when:
-  - You want to run Thinking Machines Lab's Inkling in OpenClaw
-  - You want one OpenAI-compatible API for Baseten's hosted models
+  - 你希望在 OpenClaw 中运行 Thinking Machines Lab 的 Inkling
+  - 你希望为 Baseten 的托管模型使用一个 OpenAI 兼容 API
 ---
 
-[Baseten Model APIs](https://docs.baseten.co/inference/model-apis/overview) provide hosted, OpenAI-compatible access to frontier models. The official external plugin uses authenticated discovery, so OpenClaw follows the complete model set enabled for your Baseten account. Its offline fallback contains every Model API available when this OpenClaw release was built.
+[Baseten 模型 API](https://docs.baseten.co/inference/model-apis/overview) 提供对前沿模型的托管式、OpenAI 兼容访问。官方外部插件使用经过身份验证的发现机制，因此 OpenClaw 会遵循你的 Baseten 账户启用的完整模型集。其离线回退列表包含构建此 OpenClaw 版本时可用的每个模型 API。
 
-| Property        | Value                                                    |
-| --------------- | -------------------------------------------------------- |
-| Provider id     | `baseten`                                                |
-| Plugin          | official external package (`@openclaw/baseten-provider`) |
-| Auth env var    | `BASETEN_API_KEY`                                        |
-| Onboarding flag | `--auth-choice baseten-api-key`                          |
-| Direct CLI flag | `--baseten-api-key <key>`                                |
-| API             | OpenAI-compatible (`openai-completions`)                 |
-| Base URL        | `https://inference.baseten.co/v1`                        |
-| Default model   | `baseten/thinkingmachines/inkling`                       |
+| 属性            | 值                                                        |
+| --------------- | --------------------------------------------------------- |
+| 提供商 ID       | `baseten`                                                 |
+| 插件            | 官方外部软件包（`@openclaw/baseten-provider`）            |
+| 身份验证环境变量 | `BASETEN_API_KEY`                                        |
+| 引导标志        | `--auth-choice baseten-api-key`                           |
+| 直接 CLI 标志   | `--baseten-api-key <key>`                                 |
+| API             | OpenAI 兼容（`openai-completions`）                       |
+| 基础 URL        | `https://inference.baseten.co/v1`                         |
+| 默认模型        | `baseten/thinkingmachines/inkling`                        |
 
-## Install plugin
+## 安装插件
 
 ```bash
 openclaw plugins install @openclaw/baseten-provider
 openclaw gateway restart
 ```
 
-## Getting started
+## 开始使用
 
 <Steps>
-  <Step title="Create a Baseten account and API key">
-    Baseten's Basic plan has no monthly platform fee; Model API calls are usage-priced. Create a key in [Baseten API key settings](https://app.baseten.co/settings/api_keys) and check current rates on the [pricing page](https://www.baseten.co/pricing).
+  <Step title="创建 Baseten 账户和 API 密钥">
+    Baseten 的 Basic 计划不收取月度平台费用；模型 API 调用按使用量计费。在 [Baseten API 密钥设置](https://app.baseten.co/settings/api_keys) 中创建密钥，并在[定价页面](https://www.baseten.co/pricing)查看当前费率。
   </Step>
-  <Step title="Run onboarding">
+  <Step title="运行初始化">
     <CodeGroup>
 
 ```bash Onboarding
@@ -52,19 +52,19 @@ export BASETEN_API_KEY=...
     </CodeGroup>
 
   </Step>
-  <Step title="Verify the live catalog">
+  <Step title="验证在线目录">
     ```bash
     openclaw models list --provider baseten
     ```
 
-    With usable auth, the plugin requests `GET /v1/models` and lists every model returned for the account. Without auth, it stays offline and uses the bundled fallback.
+    使用可用的身份验证信息时，插件会请求 `GET /v1/models`，并列出该账户返回的所有模型。没有身份验证信息时，插件会保持离线状态并使用捆绑的备用目录。
 
   </Step>
 </Steps>
 
 ## Inkling
 
-[Thinking Machines Lab's Inkling](https://thinkingmachines.ai/news/introducing-inkling/) is the default model. In OpenClaw it supports text and image input, tool calling, structured tool schemas, configurable reasoning effort, a 1.048M-token context window, and up to 32k output tokens:
+[Thinking Machines Lab 的 Inkling](https://thinkingmachines.ai/news/introducing-inkling/) 是默认模型。在 OpenClaw 中，它支持文本和图像输入、工具调用、结构化工具模式、可配置的推理强度、1.048M token 的上下文窗口，以及最多 32k 个输出 token：
 
 ```json5
 {
@@ -76,37 +76,37 @@ export BASETEN_API_KEY=...
 }
 ```
 
-Use `/model baseten/thinkingmachines/inkling` to switch an existing chat.
+使用 `/model baseten/thinkingmachines/inkling -s` 切换当前会话。
 
-## Bundled fallback catalog
+## 捆绑的备用目录
 
-The authenticated live catalog is authoritative. These rows keep setup and model selection useful before discovery succeeds:
+经过身份验证的实时目录具有权威性。在发现成功之前，这些条目可确保设置和模型选择功能可用：
 
-| Model ref                                          | Input       | Context | Max output |
+| 模型引用                                           | 输入       | 上下文 | 最大输出 |
 | -------------------------------------------------- | ----------- | ------: | ---------: |
-| `baseten/deepseek-ai/DeepSeek-V4-Pro`              | text        |    262k |       262k |
-| `baseten/zai-org/GLM-4.7`                          | text        |    200k |       200k |
-| `baseten/zai-org/GLM-5`                            | text        |    202k |       202k |
-| `baseten/zai-org/GLM-5.1`                          | text        |    202k |       202k |
-| `baseten/zai-org/GLM-5.2`                          | text        |    524k |       262k |
-| `baseten/zai-org/GLM-5.2-Fast`                     | text        |    524k |       262k |
-| `baseten/thinkingmachines/inkling`                 | text, image |  1.048M |        32k |
-| `baseten/moonshotai/Kimi-K2.5`                     | text, image |    262k |       262k |
-| `baseten/moonshotai/Kimi-K2.6`                     | text, image |    262k |       262k |
-| `baseten/moonshotai/Kimi-K2.7-Code`                | text, image |    262k |       262k |
-| `baseten/nvidia/Nemotron-120B-A12B`                | text        |    202k |       202k |
-| `baseten/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B` | text        |    202k |       202k |
-| `baseten/openai/gpt-oss-120b`                      | text        |    128k |       128k |
+| `baseten/deepseek-ai/DeepSeek-V4-Pro`              | 文本        |    262k |       262k |
+| `baseten/zai-org/GLM-4.7`                          | 文本        |    200k |       200k |
+| `baseten/zai-org/GLM-5`                            | 文本        |    202k |       202k |
+| `baseten/zai-org/GLM-5.1`                          | 文本        |    202k |       202k |
+| `baseten/zai-org/GLM-5.2`                          | 文本        |    524k |       262k |
+| `baseten/zai-org/GLM-5.2-Fast`                     | 文本        |    524k |       262k |
+| `baseten/thinkingmachines/inkling`                 | 文本、图像 |  1.048M |        32k |
+| `baseten/moonshotai/Kimi-K2.5`                     | 文本、图像 |    262k |       262k |
+| `baseten/moonshotai/Kimi-K2.6`                     | 文本、图像 |    262k |       262k |
+| `baseten/moonshotai/Kimi-K2.7-Code`                | 文本、图像 |    262k |       262k |
+| `baseten/nvidia/Nemotron-120B-A12B`                | 文本        |    202k |       202k |
+| `baseten/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B` | 文本        |    202k |       202k |
+| `baseten/openai/gpt-oss-120b`                      | 文本        |    128k |       128k |
 
-All bundled models support tool calling and reasoning. OpenClaw maps its thinking levels to models with native `reasoning_effort`. Baseten's opt-in GLM, Kimi, and Nemotron models default to thinking off; most expose a binary off/on control, while GLM 5.2 exposes off, high, and max. OpenClaw sends these choices through Baseten's `chat_template_args.enable_thinking` control and, for GLM 5.2, the validated top-level `reasoning_effort` parameter.
+所有捆绑模型均支持工具调用和推理。OpenClaw 将其思考级别映射到原生支持 `reasoning_effort` 的模型。Baseten 中选择启用的 GLM、Kimi 和 Nemotron 模型默认关闭思考功能；大多数模型提供二进制的关闭/开启控制，而 GLM 5.2 提供关闭、高和最高三个级别。OpenClaw 通过 Baseten 的 `chat_template_args.enable_thinking` 控制项发送这些选项；对于 GLM 5.2，则通过经过验证的顶层 `reasoning_effort` 参数发送。
 
 <Note>
-Baseten can add, remove, or change Model APIs independently of OpenClaw releases. The plugin refreshes model ids, context limits, output limits, and input, cached-input, and output pricing from the authenticated API while retaining model-specific OpenClaw transport policy.
+Baseten 可以独立于 OpenClaw 的发布版本添加、移除或更改 Model API。该插件会从经过身份验证的 API 刷新模型 ID、上下文限制、输出限制，以及输入、缓存输入和输出定价，同时保留特定于模型的 OpenClaw 传输策略。
 </Note>
 
-## Manual config
+## 手动配置
 
-Most setups only need the API key. To pin the provider explicitly:
+大多数设置只需要 API 密钥。若要明确指定提供商：
 
 ```json5
 {
@@ -140,22 +140,22 @@ Most setups only need the API key. To pin the provider explicitly:
 ```
 
 <Note>
-If the Gateway runs as a daemon (launchd, systemd, Docker), make sure `BASETEN_API_KEY` is available to that process. A key exported only in an interactive shell is not visible to an already-running managed service.
+如果 Gateway 作为守护进程（launchd、systemd、Docker）运行，请确保 `BASETEN_API_KEY` 对该进程可用。仅在交互式 shell 中导出的密钥，对于已经运行的受管理服务不可见。
 </Note>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model providers" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型提供商" href="/concepts/model-providers" icon="layers">
+    选择提供商、模型引用和故障转移行为。
   </Card>
-  <Card title="Thinking modes" href="/tools/thinking" icon="brain">
-    Select OpenClaw reasoning effort levels.
+  <Card title="思考模式" href="/tools/thinking" icon="brain">
+    选择 OpenClaw 推理强度级别。
   </Card>
-  <Card title="Models CLI" href="/cli/models" icon="terminal">
-    List, inspect, and select discovered models.
+  <Card title="模型 CLI" href="/cli/models" icon="terminal">
+    列出、检查并选择已发现的模型。
   </Card>
-  <Card title="Models FAQ" href="/help/faq-models" icon="circle-question">
-    Auth profiles and model-selection troubleshooting.
+  <Card title="模型常见问题" href="/help/faq-models" icon="circle-question">
+    身份验证配置和模型选择故障排除。
   </Card>
 </CardGroup>

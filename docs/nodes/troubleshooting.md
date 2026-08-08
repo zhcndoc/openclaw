@@ -8,6 +8,35 @@ title: "节点故障排查"
 
 当节点在状态中可见但节点工具失败时，请使用此页面。
 
+## SSH 注销后节点离线（Linux）
+
+在 Linux 上，`openclaw node install` 会创建一个**用户级** systemd 服务。
+当最后一个登录会话结束时，`systemd --user` 实例也会被终止，因此节点服务会在你注销的瞬间停止——即使在你连接期间它看起来仍然运行正常
+（`enabled` + `running`）。
+
+检查 lingering 状态：
+
+```bash
+loginctl show-user "$USER" -p Linger
+```
+
+如果显示 `Linger=no`，请启用它（可能需要 sudo 权限）：
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
+然后重启节点服务，并验证注销后它仍能继续运行：
+
+```bash
+openclaw node restart
+# 注销，然后从另一台机器执行：
+openclaw nodes status
+```
+
+当检测到 lingering 已禁用时，`openclaw node install` 会打印一条包含此恢复命令的警告。不要让同一个节点同时使用用户级服务和系统级服务。用于防止两个管理器运行同名单元的重复作用域保护机制，适用于网关单元
+（同一端口上的两个监管进程会互相发送 SIGTERM，从而陷入重启循环）；对于节点服务，安装程序不会启用此保护，因此另一个作用域中残留的单元可能会使节点处于不明确的状态。切换前请彻底移除其中一个。
+
 ## 命令阶梯
 
 ```bash
@@ -34,7 +63,7 @@ openclaw approvals get --node <idOrNameOrIp>
 
 ## 前台要求
 
-`canvas.*`, `camera.*`, and `screen.*` 在 iOS/Android 节点上仅限前台使用。
+`canvas.*`、`camera.*` 和 `screen.*` 在 iOS/Android 节点上仅限前台使用。
 
 快速检查和修复：
 
@@ -76,14 +105,14 @@ openclaw approvals allowlist add --node <idOrNameOrIp> "/usr/bin/uname"
 ```
 
 - 缺少配对：先为该节点批准设备。
-- `nodes describe` 缺少某个命令：检查网关节点命令策略，以及该节点在连接时是否 वास्तव上通告了该命令。
+- `nodes describe` 缺少某个命令：检查网关节点命令策略，以及该节点在连接时是否实际上通告了该命令。
 - 配对正常但 `system.run` 失败：修复该节点上的执行审批/允许列表。
 
 对于基于审批的 `host=node` 运行，网关还会将执行绑定到预先构建的规范化 `systemRunPlan`。如果调用方在已批准的运行转发之前，随后修改了命令、cwd 或会话元数据，网关会将其视为审批不匹配并拒绝，而不是信任被编辑过的载荷。
 
 ## 常见节点错误代码
 
-| Code                                   | Meaning                                                                                                                                                                                 |
+| 代码                                   | 含义                                                                                                                                                                                 |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `NODE_BACKGROUND_UNAVAILABLE`          | 应用已进入后台；请将其切换到前台。                                                                                                                                        |
 | `CAMERA_DISABLED`                      | 节点设置中摄像头开关已禁用。                                                                                                                                                |
@@ -94,7 +123,7 @@ openclaw approvals allowlist add --node <idOrNameOrIp> "/usr/bin/uname"
 | `COMPUTER_DISABLED`                    | 在 macOS 应用中启用 **允许计算机控制**，然后批准配对更新。                                                                                                    |
 | `ACCESSIBILITY_REQUIRED`               | 在 macOS 系统设置中，将辅助功能权限授予当前的 OpenClaw 应用包。                                                                                                        |
 | `SYSTEM_RUN_DENIED: approval required` | Exec 请求需要明确批准。                                                                                                                                                   |
-| `SYSTEM_RUN_DENIED: allowlist miss`    | 命令被允许列表模式阻止。在 Windows 节点主机上，像 `cmd.exe /c ...` 这样的 shell-wrapper 形式会在允许列表模式下被视为允许列表未命中，除非通过 ask 流程获批。 |
+| `SYSTEM_RUN_DENIED: allowlist miss`    | 命令被允许列表模式阻止。在 Windows 节点主机上，像 `cmd.exe /c ...` 这样的 shell 包装器形式会在允许列表模式下被视为允许列表未命中，除非通过 ask 流程获批。 |
 
 ## 快速恢复循环
 

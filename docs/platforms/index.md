@@ -15,11 +15,12 @@ Linux 配套应用在计划中，但 Gateway 目前已完全支持。在 Windows
 
 ## 选择你的操作系统
 
-- macOS: [macOS](/platforms/macos)
-- iOS: [iOS](/platforms/ios)
 - Android: [Android](/platforms/android)
-- Windows: [Windows](/platforms/windows)
+- ChromeOS: [ChromeOS（Crostini）](/platforms/chromeos)
+- iOS: [iOS](/platforms/ios)
 - Linux: [Linux](/platforms/linux)
+- macOS: [macOS](/platforms/macos)
+- Windows: [Windows](/platforms/windows)
 
 ## VPS 和托管
 

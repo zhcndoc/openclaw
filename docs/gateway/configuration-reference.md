@@ -45,7 +45,7 @@ Schema 的 `uiHints` 还会为每条路径携带一个已解析的 `advanced` �
   - `talk.consultFastMode`：Control UI Talk 实时咨询所使用的一次性快速模式覆盖值
   - `talk.speechLocale`：Talk 在 Android、iOS 和 macOS 上进行语音识别，以及 iOS 系统语音回退时可选的 BCP 47 区域设置 ID
   - `talk.silenceTimeoutMs`：未设置时，Talk 会在发送转录文本前保持平台默认的暂停窗口（macOS 和 Android 上为 `700 ms`，iOS 上为 `900 ms`）
-  - `talk.realtime.consultRouting`：针对跳过 `openclaw_agent_consult` 的已完成实时 Talk 转录文本的网关中继回退方案
+  - `talk.realtime.consultRouting`：针对跳过 `openclaw_agent_consult` 的已完成实时 Talk 转录文本的网关中继回退方案。
 
 ## 工具和自定义 provider
 
@@ -82,9 +82,9 @@ provider 定义、模型白名单，以及自定义 provider 设置位于
 
 ## MCP
 
-OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被嵌入式 OpenClaw 以及其他运行时适配器消费。`openclaw mcp list`、
+OpenClaw 管理的 MCP 服务器定义位于 `mcp.servers` 下，并被嵌入式 OpenClaw 以及其他运行时适配器消费。`openclaw mcp list`、
 `show`、`set` 和 `unset` 命令可在配置编辑期间管理该块，而无需连接到
-目标 server。
+目标服务器。
 
 ```json5
 {
@@ -125,37 +125,37 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被嵌入式 O
 }
 ```
 
-- `mcp.servers`：面向公开已配置 MCP 工具的运行时的命名 stdio 或远程 MCP server 定义。
+- `mcp.servers`：面向公开已配置 MCP 工具的运行时的命名 stdio 或远程 MCP 服务器定义。
   远程条目使用 `transport: "streamable-http"` 或 `transport: "sse"`；
   `type: "http"` 是 CLI 原生别名，`openclaw mcp set` 和
   `openclaw doctor --fix` 会将其规范化为标准的 `transport` 字段。
-- `mcp.servers.<name>.enabled`：设置为 `false` 可保留已保存的 server 定义，
+- `mcp.servers.<name>.enabled`：设置为 `false` 可保留已保存的服务器定义，
   同时将其排除在嵌入式 OpenClaw MCP 发现和工具投影之外。
-- `mcp.servers.<name>.requestTimeoutMs`：每个 server 的 MCP 请求超时时间，单位为毫秒。
-- `mcp.servers.<name>.connectionTimeoutMs`：每个 server 的连接超时时间，单位为毫秒。
+- `mcp.servers.<name>.requestTimeoutMs`：每个服务器的 MCP 请求超时时间，单位为毫秒。
+- `mcp.servers.<name>.connectionTimeoutMs`：每个服务器的连接超时时间，单位为毫秒。
 - `mcp.servers.<name>.supportsParallelToolCalls`：可选的并发提示，供能够决定是否并行发起 MCP 工具调用的适配器使用。
-- `mcp.servers.<name>.auth`：对于需要 OAuth 的 HTTP MCP server，设置为 `"oauth"`。
+- `mcp.servers.<name>.auth`：对于需要 OAuth 的 HTTP MCP 服务器，设置为 `"oauth"`。
   运行 `openclaw mcp login <name>` 可将令牌存储在 OpenClaw 状态目录下。
 - `mcp.servers.<name>.oauth`：可选的 OAuth 作用域、重定向 URL 和客户端元数据 URL 覆盖项。
 - `mcp.servers.<name>.sslVerify`、`clientCert`、`clientKey`：用于私有端点和双向 TLS 的 HTTP TLS 控制项。
-- `mcp.servers.<name>.toolFilter`：可选的每个 server 的工具选择配置。`include`
+- `mcp.servers.<name>.toolFilter`：可选的每个服务器的工具选择配置。`include`
   会将发现到的 MCP 工具限制为匹配的名称；`exclude` 会隐藏匹配的名称。条目可以是精确的 MCP 工具名称或简单的 `*` 通配符。
-  带有资源或提示的 server 还会生成实用工具名称（`resources_list`、
+  带有资源或提示的服务器还会生成实用工具名称（`resources_list`、
   `resources_read`、`prompts_list`、`prompts_get`），这些名称也使用相同的筛选规则。
 - `mcp.servers.<name>.codex`：可选的 Codex app-server 投影控制项。
   此块是仅供 Codex app-server 线程使用的 OpenClaw 元数据；不会影响 ACP 会话、通用 Codex harness 配置或其他运行时适配器。
-  非空的 `codex.agents` 会将 server 限制为列出的 OpenClaw agent id。
+  非空的 `codex.agents` 会将服务器限制为列出的 OpenClaw agent id。
   空、空白或无效的作用域 agent 列表会被配置验证拒绝，并在运行时投影路径中被省略，而不会变成全局配置。
-  `codex.defaultToolsApprovalMode` 会为该 server 输出 Codex 原生的
+  `codex.defaultToolsApprovalMode` 会为该服务器输出 Codex 原生的
   `default_tools_approval_mode`。OpenClaw 会在将原生的 `mcp_servers` 配置传递给 Codex 前移除 `codex` 块。
-  省略此块可使 server 投影到每个 Codex app-server agent，并使用 Codex 默认的 MCP 审批行为。
+  省略此块可使服务器投影到每个 Codex app-server agent，并使用 Codex 默认的 MCP 审批行为。
 - 以会话为作用域的捆绑 MCP 运行时使用内置的 10 分钟空闲 TTL。
   一次性嵌入式运行会请求在运行结束时清理；对于长生命周期会话和未来调用方，TTL 是兜底机制。
 - `mcp.*` 下的更改会通过释放缓存的会话 MCP 运行时来热应用。
   下一次工具发现或使用时会根据新配置重新创建它们，因此被移除的 `mcp.servers` 条目会立即被回收，而无需等待空闲 TTL。
 - 运行时发现还会遵循 MCP 工具列表变更通知，并丢弃该会话的缓存目录。
-  声明资源或提示的 server 会获得用于列出/读取资源以及列出/获取提示的实用工具。
-  重复的工具调用失败会使受影响的 server 暂停一小段时间，然后再尝试下一次调用。
+  声明资源或提示的服务器会获得用于列出/读取资源以及列出/获取提示的实用工具。
+  重复的工具调用失败会使受影响的服务器暂停一小段时间，然后再尝试下一次调用。
 
 有关运行时行为，请参见 [MCP](/cli/mcp#openclaw-as-an-mcp-client-registry) 和
 [CLI 后端](/gateway/cli-backends#bundle-mcp-overlays)。
@@ -441,12 +441,12 @@ conversation bindings 或任何非 Codex harness 启用 Codex plugins。
 }
 ```
 
-- `seamColor`：原生应用界面装饰的强调色（对话模式气泡色调等）。
-- `assistant`：控制界面身份覆盖设置。默认使用活动代理的身份。
-- `prefs`：跨设备的操作者偏好设置。这是规范存储位置，因此代理可以通过审批门控修改这些设置，并让每个控制界面客户端保持同步；浏览器会将这些值镜像到本地存储中，以便即时启动，并在无法写入配置时（查看者权限、离线）保留一份设备本地副本。
-  `chatPersistCommentary` 默认为 `true`。将其设置为 `false` 后，运行期间仍会显示实时评论，但在运行完成时会移除这些评论，并阻止新的 Codex 评论进入持久化会话记录镜像。消息频道的投递保持独立且不变。
-  仅用于呈现的偏好设置，例如高级层级可见性、文本缩放、聊天宽度和实时侧边栏活动，将保留在浏览器本地，并在“设置”中配置。
-  已连接的客户端会实时应用服务器端更改：网关在每次持久化配置写入后广播仅包含哈希的 `config.changed` 事件，客户端随后刷新其快照（本地设置草稿存在未保存编辑时跳过）。重新连接的客户端会在连接时进行同步。
+- `seamColor`：原生应用界面装饰的强调色（聊天模式气泡着色等）。
+- `assistant`：控制界面身份覆盖设置。默认使用当前活动代理的身份。
+- `prefs`：跨设备操作员偏好设置。这是规范存储位置，因此代理可以通过审批流程修改这些设置，并让每个控制界面客户端保持同步；浏览器会将这些值镜像到本地存储中，以实现即时启动。显式只读连接会保留该浏览器中的编辑内容，而不会尝试写入配置。离线编辑会排队等待之后建立可写连接，并在重新连接只读状态下继续作为浏览器本地偏好设置。
+  `chatPersistCommentary` 默认为 `true`。将其设置为 `false` 后，运行期间仍会显示实时评论，但在运行完成时会移除这些评论，并阻止新的 Codex 评论进入持久化转录镜像。消息频道的传送保持独立且不变。
+  仅影响呈现的偏好设置（例如高级层级可见性、文本缩放、聊天宽度和实时侧边栏活动状态）会保留在浏览器本地，并在“设置”中配置。
+  已连接的客户端会实时应用服务器端更改：网关在每次持久化配置写入后广播仅包含哈希的 `config.changed` 事件，客户端随后刷新其快照（本地设置草稿存在未保存编辑时会跳过刷新）。重新连接的客户端会在连接时进行协调。
 
 ---
 
@@ -1048,14 +1048,14 @@ openclaw gateway --port 19001
 
 说明：
 
-- `file` 提供方支持 `mode: "json"` 和 `mode: "singleValue"`（在 singleValue 模式下，`id` 必须是 `"value"`）。
-- 当 Windows ACL 验证不可用时，文件和 exec 提供方路径会以 fail closed 方式处理。仅对无法验证的受信任路径设置 `allowInsecurePath: true`。
-- `exec` 提供方要求绝对的 `command` 路径，并通过 stdin/stdout 使用协议负载。
-- 默认情况下会拒绝符号链接的命令路径。设置 `allowSymlinkCommand: true` 可允许符号链接路径，同时验证解析后的目标路径。
-- 如果配置了 `trustedDirs`，则 trusted-dir 检查适用于解析后的目标路径。
-- `exec` 子进程环境默认是最小化的；请使用 `passEnv` 显式传递所需变量。
-- 密钥引用在激活时解析为内存中的快照，之后请求路径只读取该快照。
-- 激活期间会应用活动面过滤：启用的面上未解析的引用会导致启动/重载失败，而不活动的面会被跳过并输出诊断信息。
+- `file` 提供方支持 `mode: "json"` 和 `mode: "singleValue"`（在 singleValue 模式下，`id` 必须为 `"value"`）。
+- Windows ACL 验证不可用时，文件和 exec 提供方路径会默认拒绝。请使用 OpenClaw 可以验证其 ACL 的路径；提供方级别不支持绕过此限制。
+- `exec` 提供方要求使用绝对 `command` 路径，并通过标准输入/标准输出使用协议载荷。
+- 符号链接命令路径会被拒绝。请改为配置解析后的绝对二进制文件路径。
+- 如果配置了 `trustedDirs`，命令路径必须位于已批准的目录内。
+- `exec` 子进程环境默认最小化；请使用 `passEnv` 显式传递所需变量。
+- 密钥引用会在激活时解析为内存中的快照，之后请求路径仅读取该快照。
+- 激活期间会应用活动范围过滤：启用范围内无法解析的引用会导致启动/重新加载失败，而非活动范围会跳过并记录诊断信息。
 
 ---
 
@@ -1095,7 +1095,8 @@ openclaw gateway --port 19001
   logging: {
     audit: {
       enabled: true,
-      messages: "off", // off | direct | all
+      executionIdentity: false,
+      messages: "off", // 关闭 | 直接 | 全部
     },
   },
 }
@@ -1103,14 +1104,13 @@ openclaw gateway --port 19001
 
 Gateway 会将代理运行和工具操作的**仅元数据**审计事件记录到共享状态数据库中。消息生命周期元数据是单独的可选功能。该账本存储身份、时间信息、工具名称和规范化结果，但绝不会存储提示词、消息正文、工具参数、结果或原始错误文本。消息行不会存储原始平台账户、会话、消息和目标 ID。运行/工具会话密钥仍可用于关联，并且其本身可能包含平台账户或对端 ID。记录会在 30 天后过期，账本最多保存 100,000 行。使用 [`openclaw audit`](/cli/audit) 或 [`audit.activity.list`](/gateway/protocol#audit-ledger-rpc) Gateway RPC 查询这些记录。有关完整的数据模型、隐私语义和覆盖范围限制，请参阅[审计历史](/gateway/audit)。
 
-- `enabled`：记录新的审计事件（默认值：`true`）。账本默认启用，因为只有在事件发生后才启用的审计跟踪无法解释该事件。设置为 `false` 后，Gateway 重启后将停止插入新事件；现有记录会继续可读，直到过期。重新启用后，将从该时刻恢复记录——中间的空缺不会补录。
-- `messages`：消息元数据范围（默认值：`"off"`）。`"direct"` 仅记录已知的直接会话。`"all"` 还会记录群组、频道和未知类型的会话。两种模式都不包含内容，并会在可进行关联的情况下，使用安装本地的密钥伪名替换原始标识符。这些是关联辅助信息，而非匿名化处理；状态数据库会存储派生密钥，但 RPC 和 CLI 导出不会存储。
+- `enabled`：记录新的审计事件（默认值：`true`）。账本默认启用，因为只有在事件发生后才启用的审计跟踪无法解释该事件。设置为 `false` 后，Gateway 重启时将停止插入新事件；现有记录会继续可读，直到过期。重新启用后会从该时间点恢复记录——空缺部分不会补录。
+- `executionIdentity`：保留受限的归因上下文，以便进行精确的执行检查（默认值：`false`）。此隐私敏感元数据在全新安装和升级时均处于禁用状态。收集该元数据需要 `enabled: true`；使用 `openclaw config set logging.audit.executionIdentity true`，然后重启 Gateway。没有对应的环境变量别名。
+- `messages`：消息元数据范围（默认值：`"off"`）。`"direct"` 仅记录已知的直接对话。`"all"` 还会记录群组、频道和未知的对话类型。两种模式都不会包含内容，并会在可以进行关联的情况下使用安装本地的密钥伪名替换原始标识符。这些是关联辅助信息，而非匿名化措施；状态数据库会存储派生密钥，但 RPC 和 CLI 导出不会包含该密钥。
 
 根级别的 `audit` 块已弃用；规范路径是 `logging.audit`。根配置对象是严格的，因此旧的顶级 `audit` 块会被拒绝。运行 [`openclaw doctor --fix`](/cli/doctor) 将其移动到 `logging.audit`。
 
-运行中的 Gateway 会在启动时读取 `logging.audit.enabled` 和
-`logging.audit.messages`；
-修改任一设置后都需要重启。当前的消息覆盖范围包括到达核心分发的已接受入站消息，以及到达共享持久化交付流程的每个原始逻辑出站回复负载对应的一条终端记录。绕过这些共享边界的插件本地路径和直接发送路径目前尚未覆盖。这个有界后台写入器是尽力而为的，并非无损合规存档。
+运行中的 Gateway 会在启动时读取 `logging.audit.enabled`、`logging.audit.executionIdentity` 和 `logging.audit.messages`；更改其中任何设置后都需要重启 Gateway。当前的消息覆盖范围包括到达核心分发的已接受入站消息，以及到达共享持久化传递层的每个原始逻辑出站回复负载对应的一条终端记录。绕过这些共享边界的插件本地路径和直接发送路径目前尚未覆盖。受限的后台写入器采用尽力而为策略，并非无损的合规归档。
 
 ---
 
@@ -1173,21 +1173,22 @@ Gateway 会将代理运行和工具操作的**仅元数据**审计事件记录�
 
 - `enabled`：检测输出的主开关（默认值：`true`）。
 - `flags`：启用定向日志输出的标志字符串数组（支持 `"telegram.*"` 或 `"*"` 等通配符）。
-- `otel.enabled`：启用 OpenTelemetry 导出管道（默认值：`false`）。有关完整配置、信号目录和隐私模型，请参阅 [OpenTelemetry 导出](/gateway/opentelemetry)。
+- `otel.enabled`：启用 OpenTelemetry 导出管道（默认值：`false`）。完整配置、信号目录和隐私模型请参阅 [OpenTelemetry 导出](/gateway/opentelemetry)。
 - `otel.endpoint`：OTel 导出的收集器 URL。
-- `otel.tracesEndpoint` / `otel.metricsEndpoint` / `otel.logsEndpoint`：可选的信号专用 OTLP 端点。设置后，仅对相应信号覆盖 `otel.endpoint`。
-- `otel.protocol`：`"http/protobuf"`（默认值）。gRPC 导出已弃用；运行 [`openclaw doctor --fix`](/cli/doctor) 可修复已持久化的旧值，或获取针对源代码的手动编辑指导。
+- `otel.tracesEndpoint` / `otel.metricsEndpoint` / `otel.logsEndpoint`：可选的按信号区分的 OTLP 端点。设置后，仅对相应信号覆盖 `otel.endpoint`。
+- `otel.protocol`：`"http/protobuf"`（默认值）。gRPC 导出已停用；运行 [`openclaw doctor --fix`](/cli/doctor) 可修复已持久化的旧值，或获取特定来源的手动编辑指导。
 - `otel.headers`：随 OTel 导出请求发送的额外 HTTP 请求标头。
 - `otel.serviceName`：资源属性中的服务名称。
 - `otel.traces` / `otel.metrics` / `otel.logs`：启用追踪、指标或日志导出。
-- `otel.logsExporter`：日志导出目标：`"otlp"`（默认值）、每行标准输出一个 JSON 对象的 `"stdout"`，或 `"both"`。
-- `otel.sampleRate`：`0`-`1` 范围内的追踪采样率。
-- `otel.flushIntervalMs`：遥测数据定期刷新的时间间隔，单位为毫秒。
-- `otel.captureContent`：选择性启用 OTEL span 属性中的内容捕获。默认关闭。`true` 会捕获非系统可见的消息、工具和工具定义内容，以及 OTLP 日志正文；提供商内部的思考载荷仍会被排除。
-- `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`：用于启用最新实验性 GenAI 推理 span 结构的环境开关，包括使用 `{gen_ai.operation.name} {gen_ai.request.model}` 作为 span 名称、使用 `CLIENT` span 类型，以及使用 `gen_ai.provider.name` 替代旧版 `gen_ai.system`。默认情况下，为保持兼容性，span 仍使用 `openclaw.model.call` 和 `gen_ai.system`；GenAI 指标使用有界语义属性。
-- `OPENCLAW_OTEL_PRELOADED=1`：适用于已注册全局 OpenTelemetry SDK 的主机的环境开关。此时 OpenClaw 会跳过由插件负责的 SDK 启动/关闭流程，同时保持诊断监听器处于活动状态。
-- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`、`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` 和 `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`：当对应的配置项未设置时使用的信号专用端点环境变量。
-- `OTEL_EXPORTER_OTLP_PROTOCOL`：仅在未设置 `otel.protocol` 时使用的协议回退值。将其设为 `http/protobuf` 或留空；当某个 OTLP 信号启用时，不支持的值会被拒绝，且不会由 Doctor 重写。
+- `otel.logsExporter`：日志导出目标：`"otlp"`（默认值）、`"stdout"`（每行标准输出一个 JSON 对象）或 `"both"`。
+- `otel.sampleRate`：`0`-`1` 之间的追踪采样率。
+- `otel.flushIntervalMs`：遥测数据定期刷新的间隔（单位：毫秒）。
+- `otel.captureContent`：选择性启用 OTEL span 属性中的内容捕获。默认关闭。`true` 会捕获非系统可见的消息、工具和工具定义内容，以及 OTLP 日志正文；供应商内部的思考负载仍会被排除。
+- `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`：启用最新实验性 GenAI 推理 span 形态的环境开关，包括使用 `{gen_ai.operation.name} {gen_ai.request.model}` 作为 span 名称、使用 `CLIENT` span 类型，以及使用 `gen_ai.provider.name` 替代旧版 `gen_ai.system`。默认情况下，为保持兼容性，span 仍使用 `openclaw.model.call` 和 `gen_ai.system`；GenAI 指标使用有界语义属性。
+- `OPENCLAW_OTEL_PRELOADED=1`：适用于已注册全局 OpenTelemetry SDK 的主机的环境开关。启用后，OpenClaw 会跳过由插件负责的 SDK 启动和关闭，同时保持诊断监听器处于活动状态。
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`、`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` 和 `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`：当对应配置项未设置时使用的按信号区分的端点环境变量。
+- `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`、`OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` 和 `OTEL_EXPORTER_OTLP_LOGS_PROTOCOL`：当 `otel.protocol` 未设置时使用的按信号区分的协议回退值。每个变量都会针对相应信号覆盖 `OTEL_EXPORTER_OTLP_PROTOCOL`。
+- `OTEL_EXPORTER_OTLP_PROTOCOL`：当 `otel.protocol` 和对应的按信号区分的变量均未设置时使用的共享协议回退值。仅支持 `http/protobuf`。协议验证按信号隔离，因此不受支持的解析值会禁用相应信号的 OTLP 导出器，而不会阻止其他受支持的同级信号。Doctor 不会重写环境变量。
 - `cacheTrace.enabled`：记录嵌入式运行的缓存追踪快照（默认值：`false`）。
 
 ---

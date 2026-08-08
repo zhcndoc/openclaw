@@ -10,10 +10,10 @@ read_when:
 OpenClaw 通过官方 `diagnostics-otel` 插件使用 **OTLP/HTTP (protobuf)** 导出诊断信息。日志也可以作为 stdout JSONL 写入，用于容器和沙箱日志管道。任何接受 OTLP/HTTP 的收集器或后端都无需代码更改即可使用。如需本地文件日志，请参阅
 [日志](/logging)。
 
-- **诊断事件** 是结构化的、进程内记录，由 Gateway 和捆绑的插件在模型运行、消息流、会话、队列和 exec 过程中发出。
-- **`diagnostics-otel`** 订阅这些事件，并通过 OTLP/HTTP 将它们导出为 OpenTelemetry **metrics**、**traces** 和 **logs**，还可以将日志记录镜像到 stdout JSONL。
-- **Provider 调用** 在 provider 传输支持自定义头时，会从 OpenClaw 受信任的模型调用 span 上下文接收 W3C `traceparent` 头。插件发出的 trace 上下文不会被传播。
-- 只有当诊断表面和插件都启用时，导出器才会附加，因此默认情况下进程内开销几乎为零。
+- **诊断事件**是结构化的进程内记录，由 Gateway 和捆绑插件针对模型运行、消息流、会话、队列和执行操作发出。
+- **`diagnostics-otel`** 订阅这些事件，并通过 OTLP/HTTP 将其导出为 OpenTelemetry **指标**、**追踪**和**日志**，还可以将日志记录镜像到 stdout JSONL。
+- 当提供商传输接受自定义请求头时，**提供商调用**会从实际当前的 OpenTelemetry 模型调用 span 接收 W3C `traceparent` 请求头。诊断 ID 仍是本地关联键，并且不会传播插件发出的追踪上下文。
+- 只有在诊断面和插件均启用时，导出器才会挂载，因此默认情况下进程内开销接近于零。
 
 ## 快速开始
 
@@ -52,7 +52,8 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
 `diagnostics.otel.protocol` 仅接受 `http/protobuf`。如果持久化配置（包括通过 `${VAR}` 插值提供的值）解析后仍将此字段设置为已废弃的 `grpc` 值，请运行
 [`openclaw doctor --fix`](/cli/doctor)。Doctor 会修复直接编写的值，以及唯一一个拥有顶层 `diagnostics` 部分的内部单文件 include。对于根目录或数组 include、嵌套 include 链、同级覆盖、外部 include 目标，或其他存在歧义的来源，Doctor 会保持文件不变，并列出需要手动编辑的候选源文件。
 
-`OTEL_EXPORTER_OTLP_PROTOCOL` 是仅在未设置 `diagnostics.otel.protocol` 时使用的进程环境回退值。Doctor 不会重写进程环境变量。当启用 OTLP 信号时，不支持的回退值会在运行时被拒绝；请将其设置为 `http/protobuf` 或取消设置。仅输出到 stdout 的日志配置不使用 OTLP 传输，仍可正常工作。
+当未设置 `diagnostics.otel.protocol` 时，每个插件拥有的 OTLP 信号会先检查其非空的 `OTEL_EXPORTER_OTLP_*_PROTOCOL` 值，然后检查
+`OTEL_EXPORTER_OTLP_PROTOCOL`，最后默认为 `http/protobuf`。Doctor 不会重写进程环境变量。不受支持的值只会禁用该插件拥有的 OTLP 信号；支持的同级信号仍会继续运行，`logsExporter: "both"` 的 stdout 分支也不例外。预加载的 trace 和 metric SDK 拥有各自的传输选择机制，不会被此插件拒绝。
 </Note>
 
 ## 导出的信号
@@ -64,6 +65,12 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
 | **日志**    | 当启用 `diagnostics.otel.logs` 时，通过 OTLP 导出或 stdout JSONL 导出的结构化 `logging.file` 记录；除非显式启用内容捕获，否则会隐藏日志正文。                          |
 
 可分别切换 `traces`、`metrics` 和 `logs`。当 `diagnostics.otel.enabled` 为 true 时，traces 和 metrics 默认开启；logs 默认关闭，仅在 `diagnostics.otel.logs` 显式设为 `true` 时才导出。日志导出默认使用 OTLP；将 `diagnostics.otel.logsExporter` 设置为 `stdout` 可在 stdout 输出 JSONL，设置为 `both` 则两者都输出。
+
+<Note>
+共享的 `endpoint` 和 `OTEL_EXPORTER_OTLP_ENDPOINT` 是所有已启用信号的基础地址。OpenClaw 会将 `/v1/traces`、`/v1/metrics` 或 `/v1/logs` 附加到根路径和自定义收集器路径之后。为了兼容托管前端，如果共享端点已以这些信号路径之一结尾，则会为匹配的信号保留该路径，并为其他信号替换末尾部分。
+
+特定信号的 `tracesEndpoint`、`metricsEndpoint` 和 `logsEndpoint` 设置，以及与之匹配的 `OTEL_EXPORTER_OTLP_*_ENDPOINT` 回退设置，会作为精确 URL 传递给导出器。OpenClaw 不会附加或重写它们的路径。
+</Note>
 
 ## 哪些进程会导出
 
@@ -81,6 +88,19 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
 - `openclaw agent exec` 同样会在 CLI 进程中嵌入运行 agent，但目前
   尚未启动此导出器，因此其运行不会导出任何遥测数据。需要从无头运行中获取 traces
   时，请通过 Gateway 分派，或使用 `openclaw agent --local`。
+
+## 导出器健康状态
+
+`openclaw doctor` 和 `openclaw status --all` 会显示正在运行的 Gateway 针对每种信号和传输方式的最新可信导出器状态的有限、已脱敏快照。对于 `diagnostics-otel`，该快照会区分：
+
+- 配置或 `OTEL_*` 环境变量回退机制提供端点的 OTLP/HTTP protobuf。
+- 未提供端点时使用导出器依赖项默认端点的 OTLP/HTTP protobuf。
+- 标准输出日志导出。
+- 由外部预加载的 OpenTelemetry SDK 所拥有的跟踪或指标导出。
+
+OTLP 导出失败和恢复的状态转换记录自导出器的最终结果回调，即依赖项负责的重试完成之后。因此，之后成功的可重试响应不会被报告为失败。启动、日志准备或发送、导出以及关闭失败使用固定的原因类别，而不是原始错误。
+
+快照绝不会包含端点值、标头、证书、负载或原始错误消息。传输方式仅保留在此本地健康状态投影中。它不会添加到现有的 `openclaw.telemetry.exporter.events` 指标属性中，现有的 Prometheus 标签集合也不会改变。
 
 ## 配置参考
 
@@ -114,14 +134,27 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
 
 ### 环境变量
 
-| 变量                                                                                                          | 用途                                                                                                                                                                                                                                                                                                        |
-| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                                                     | 当配置中未设置 `diagnostics.otel.endpoint` 时，作为其回退值。                                                                                                                                                                                                                                         |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` / `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` / `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | 当匹配的 `diagnostics.otel.*Endpoint` 配置项未设置时使用的信号专用端点回退值。信号专用配置优先于信号专用环境变量，后者优先于共享端点。                                                                                                         |
-| `OTEL_SERVICE_NAME`                                                                                               | 当配置中未设置 `diagnostics.otel.serviceName` 时，作为其回退值。默认服务名称为 `openclaw`。                                                                                                                                                                                                  |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`                                                                                     | 仅在未设置 `diagnostics.otel.protocol` 时使用的进程环境回退值。只有 `http/protobuf` 会启用 OTLP 导出；当启用 OTLP 信号时，不支持的值会被拒绝，且不会由 Doctor 重写。                                                                                    |
-| `OTEL_SEMCONV_STABILITY_OPT_IN`                                                                                   | 设置为 `gen_ai_latest_experimental`，以发出最新的 GenAI 推理 span 形态：`{gen_ai.operation.name} {gen_ai.request.model}` span 名称、`CLIENT` span 类型，以及 `gen_ai.provider.name`（而非旧版的 `gen_ai.system`）。无论如何，GenAI 指标始终使用有界的低基数属性。 |
-| `OPENCLAW_OTEL_PRELOADED`                                                                                         | 当另一个预加载程序或主机进程已经注册全局 OpenTelemetry SDK 时设置为 `1`。此时插件会跳过自身的 NodeSDK 生命周期管理，但仍会连接诊断监听器，并遵循 `traces`/`metrics`/`logs` 的设置。                                                                                    |
+| 变量                                                                                                                                                                                                                                    | 用途                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                                                                                                                                                                          | 当配置键未设置时，作为 `diagnostics.otel.endpoint` 的回退值。                                                                                                                                                                                                                                                                                                           |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` / `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` / `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`                                                                                                                      | 当匹配的 `diagnostics.otel.*Endpoint` 配置键未设置时使用的信号专用端点回退值。信号专用配置优先于信号专用环境变量，后者优先于共享端点。                                                                                                                                                                                                                                                                                                           |
+| `OTEL_SERVICE_NAME`                                                                                                                                                                                                                    | 当配置键未设置时，作为 `diagnostics.otel.serviceName` 的回退值。默认服务名称为 `openclaw`。                                                                                                                                                                                                                                                                    |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`                                                                                                                                                                                                          | 当 `diagnostics.otel.protocol` 和信号专用协议变量均未设置时使用的共享进程环境回退值。只有 `http/protobuf` 才会启用插件自有的 OTLP 导出器。                                                                                                                                                                                        |
+| `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL` / `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` / `OTEL_EXPORTER_OTLP_LOGS_PROTOCOL`                                                                                                                      | 当 `diagnostics.otel.protocol` 未设置时使用的信号专用协议回退值。非空的信号专用值优先于共享协议值。不支持的值只会禁用该插件自有的 OTLP 信号。                                                                                                                                                          |
+| `OTEL_PROPAGATORS`                                                                                                                                                                                                                     | 为每个插件自有的生成注册的传播器，包括 `OTEL_SDK_DISABLED=true` 时。默认为 `tracecontext,baggage`；`none` 会禁用自动传播。值不区分大小写。不可用的值以及已弃用的 `jaeger` 用法会发出插件警告。                                                                                                |
+| `OTEL_SDK_DISABLED`                                                                                                                                                                                                                    | 不区分大小写的 `true` 会在端点、协议或 TLS 设置之前禁用所有插件自有的追踪、指标、日志和 stdout 路由。任何其他值都会使 SDK 保持启用；无法识别的值会发出插件警告并回退为 `false`。异步上下文和 `OTEL_PROPAGATORS` 仍保持活动状态。                                                                               |
+| `OTEL_NODE_RESOURCE_DETECTORS`                                                                                                                                                                                                         | 为插件自有的追踪和指标提供程序选择资源检测器。支持的标记为 `env`、`host`、`os`、`process` 和 `serviceinstance`；`all` 按主机、操作系统、服务实例、进程、环境的顺序运行这些检测器，而 `none` 会禁用检测。默认顺序为环境、进程，然后是主机。显式的 OpenClaw 服务配置优先于检测器属性。       |
+| `OTEL_TRACES_SAMPLER` / `OTEL_TRACES_SAMPLER_ARG`                                                                                                                                                                                      | 当 `diagnostics.otel.sampleRate` 未设置时使用的标准 OpenTelemetry 采样器选择。显式的 `sampleRate` 仍然是优先级更高的 OpenClaw 采样器。                                                                                                                                                                                                              |
+| `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT` / `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` / `OTEL_SPAN_EVENT_COUNT_LIMIT` / `OTEL_SPAN_LINK_COUNT_LIMIT` / `OTEL_SPAN_ATTRIBUTE_PER_EVENT_COUNT_LIMIT` / `OTEL_SPAN_ATTRIBUTE_PER_LINK_COUNT_LIMIT` | 每个插件自有的追踪提供程序所应用的标准 OpenTelemetry span 限制。                                                                                                                                                                                                                                                                                                 |
+| `OTEL_BSP_MAX_QUEUE_SIZE` / `OTEL_BSP_MAX_EXPORT_BATCH_SIZE` / `OTEL_BSP_SCHEDULE_DELAY` / `OTEL_BSP_EXPORT_TIMEOUT`                                                                                                                   | 插件自有追踪导出的批处理 span 处理器设置。值必须为正数；无效值使用 OpenTelemetry 默认值。导出批次大小不会超过队列大小。                                                                                                                                                                                                      |
+| `OTEL_METRIC_EXPORT_INTERVAL` / `OTEL_METRIC_EXPORT_TIMEOUT`                                                                                                                                                                           | 插件自有指标的周期性导出间隔和超时时间。值必须为正数；无效值使用 OpenTelemetry 默认值，并且超时时间不会超过当前活动间隔。`diagnostics.otel.flushIntervalMs` 会覆盖该间隔。                                                                                                                               |
+| `OTEL_NODE_EXPERIMENTAL_SDK_METRICS`                                                                                                                                                                                                   | 设置为 `true` 时，为私有 meter、tracer 和批处理 span 处理器启用 OpenTelemetry SDK 自观测指标。                                                                                                                                                                                                                                                   |
+| `OTEL_LOG_LEVEL`                                                                                                                                                                                                                       | 自有模式不会替换进程级的 OpenTelemetry 诊断日志记录器，因为公共 SDK API 没有提供生成专用的等效机制。preload 或宿主可以在 OpenClaw 启动前配置此变量；插件会保留该外部诊断所有者。                                                                                                   |
+| `OTEL_SEMCONV_STABILITY_OPT_IN`                                                                                                                                                                                                        | 设置为 `gen_ai_latest_experimental` 时，发出最新的 GenAI 推理 span 形态：使用 `{gen_ai.operation.name} {gen_ai.request.model}` 作为 span 名称、使用 `CLIENT` span 类型，并使用 `gen_ai.provider.name` 替代旧版的 `gen_ai.system`。无论如何，GenAI 指标始终使用有界的低基数属性。                                                                   |
+| `OPENCLAW_OTEL_PRELOADED`                                                                                                                                                                                                              | 当其他 preload 或宿主进程已经注册全局 OpenTelemetry 提供程序时设置为 `1`。插件会使用外部的追踪、指标、上下文、传播和日志记录器所有权，而不会注册、替换、禁用、注销或关闭它们。当 `OTEL_SDK_DISABLED=true` 时，外部所有权仍保持活动状态，而插件自有日志会保持禁用。 |
+
+如果没有设置 `OPENCLAW_OTEL_PRELOADED=1`，追踪、指标和日志提供程序均为
+生成专用。插件只通过公共 OpenTelemetry API 发布其异步上下文管理器和传播器，并且仅当这些公共行为仍与正在停止的生成相匹配时才会移除它们。因此，替换后的宿主或后续生成会在清理过程中继续保有所有权。
 
 ## 继续上游 WebSocket 追踪
 
@@ -149,7 +182,9 @@ Gateway 会创建一个子请求上下文，保留上游追踪 ID 和采样标�
 看起来像有作用域的代理会话密钥的值（例如以
 `agent:` 开头的值）会在低基数属性上被替换为 `unknown`。OTLP 日志记录默认保留严重性、日志记录器、代码位置、受信任的 trace 上下文以及经过清理的属性；仅当 `diagnostics.otel.captureContent` 为 `true` 时，才会导出原始日志消息正文。对话指标仅导出有界事件元数据（模式、传输方式、提供方、事件类型）——不包含转录文本、音频载荷、会话 ID、轮次 ID、通话 ID、房间 ID 或交接令牌。
 
-向外发出的模型请求可能包含一个 W3C `traceparent` 标头，该标头仅根据 OpenClaw 所拥有的、用于当前模型调用的诊断 trace 上下文生成。现有的调用方提供的 `traceparent` 标头会被替换，因此插件或自定义提供方选项无法伪造跨服务的 trace 祖先关系。
+当 `diagnostics-otel` 跟踪处于活动状态时，出站模型请求可能会包含一个来自实际由导出器拥有的模型调用 span 的 W3C `traceparent` 标头。
+诊断 trace ID 和 span ID 仅用于将事件关联到该 span；它们不会被用作出站 OTel 身份。如果导出器无法解析出真实的 span 上下文，OpenClaw 会省略该标头，而不是为未导出的父级命名。
+现有的调用方提供的 `traceparent` 标头会被移除或替换，因此插件或自定义提供方选项无法伪造跨服务 trace 祖先关系。
 
 仅当你的收集器和保留策略已获批准，可处理提示、响应、工具及工具定义文本时，才将
 `diagnostics.otel.captureContent` 设置为 `true`。此设置会启用经过限制和脱敏的输入消息、输出消息、工具输入、工具输出、工具定义以及 OTLP 日志正文的捕获。系统提示仍会被排除。提供方内部的 `thinking` 和 `redacted_thinking` 载荷也会被排除：兼容性属性仅保留经过脱敏的结构标记，而 GenAI 消息属性会省略这些部分。
@@ -245,39 +280,39 @@ CLI 边界：
 
 ### 消息流
 
-- `openclaw.webhook.received` (计数器，属性：`openclaw.channel`, `openclaw.webhook`)
-- `openclaw.webhook.error` (计数器，属性：`openclaw.channel`, `openclaw.webhook`)
-- `openclaw.webhook.duration_ms` (直方图，属性：`openclaw.channel`, `openclaw.webhook`)
-- `openclaw.message.queued` (计数器，属性：`openclaw.channel`, `openclaw.source`)
-- `openclaw.message.received` (计数器，属性：`openclaw.channel`, `openclaw.source`)
-- `openclaw.message.dispatch.started` (计数器，属性：`openclaw.channel`, `openclaw.source`)
-- `openclaw.message.dispatch.completed` (计数器，属性：`openclaw.channel`, `openclaw.outcome`, `openclaw.reason`, `openclaw.source`)
-- `openclaw.message.dispatch.duration_ms` (直方图，属性：`openclaw.channel`, `openclaw.outcome`, `openclaw.reason`, `openclaw.source`)
-- `openclaw.message.processed` (计数器，属性：`openclaw.channel`, `openclaw.outcome`)
-- `openclaw.message.duration_ms` (直方图，属性：`openclaw.channel`, `openclaw.outcome`)
-- `openclaw.message.delivery.started` (计数器，属性：`openclaw.channel`, `openclaw.delivery.kind`)
-- `openclaw.message.delivery.duration_ms` (直方图，属性：`openclaw.channel`, `openclaw.delivery.kind`, `openclaw.outcome`, `openclaw.errorCategory`)
+- `openclaw.webhook.received`（计数器，属性：`openclaw.channel`、`openclaw.webhook`）
+- `openclaw.webhook.error`（计数器，属性：`openclaw.channel`、`openclaw.webhook`）
+- `openclaw.webhook.duration_ms`（直方图，属性：`openclaw.channel`、`openclaw.webhook`）
+- `openclaw.message.queued`（计数器，属性：`openclaw.channel`、`openclaw.source`）
+- `openclaw.message.received`（计数器，属性：`openclaw.channel`、`openclaw.source`）
+- `openclaw.message.dispatch.started`（计数器，属性：`openclaw.channel`、`openclaw.source`）
+- `openclaw.message.dispatch.completed`（计数器，属性：`openclaw.channel`、`openclaw.outcome`、`openclaw.reason`、`openclaw.source`）
+- `openclaw.message.dispatch.duration_ms`（直方图，属性：`openclaw.channel`、`openclaw.outcome`、`openclaw.reason`、`openclaw.source`）
+- `openclaw.message.processed`（计数器，属性：`openclaw.channel`、`openclaw.outcome`）
+- `openclaw.message.duration_ms`（直方图，属性：`openclaw.channel`、`openclaw.outcome`）
+- `openclaw.message.delivery.started`（计数器，属性：`openclaw.channel`、`openclaw.delivery.kind`）
+- `openclaw.message.delivery.duration_ms`（直方图，属性：`openclaw.channel`、`openclaw.delivery.kind`、`openclaw.outcome`、`openclaw.errorCategory`）
 
-### Talk
+### 语音对话
 
-- `openclaw.talk.event`（计数器，属性：`openclaw.talk.event_type`, `openclaw.talk.mode`, `openclaw.talk.transport`, `openclaw.talk.brain`, `openclaw.talk.provider`）
+- `openclaw.talk.event`（计数器，属性：`openclaw.talk.event_type`、`openclaw.talk.mode`、`openclaw.talk.transport`、`openclaw.talk.brain`、`openclaw.talk.provider`）
 - `openclaw.talk.event.duration_ms`（直方图，属性同 `openclaw.talk.event`；当 Talk 事件报告持续时间时发出）
 - `openclaw.talk.audio.bytes`（直方图，属性同 `openclaw.talk.event`；为报告字节长度的 Talk 音频帧事件发出）
 
 ### 队列与会话
 
-- `openclaw.queue.lane.enqueue` (计数器，属性：`openclaw.lane`)
-- `openclaw.queue.lane.dequeue` (计数器，属性：`openclaw.lane`)
-- `openclaw.queue.depth` (直方图，属性：`openclaw.lane` 或 `openclaw.channel=heartbeat`)
-- `openclaw.queue.wait_ms` (直方图，属性：`openclaw.lane`)
-- `openclaw.session.state` (计数器，属性：`openclaw.state`, `openclaw.reason`)
-- `openclaw.session.stuck` (计数器，属性：`openclaw.state`；为可恢复的陈旧会话清理发出)
-- `openclaw.session.stuck_age_ms` (直方图，属性：`openclaw.state`；为可恢复的陈旧会话清理发出)
-- `openclaw.session.turn.created` (计数器，属性：`openclaw.agent`, `openclaw.channel`, `openclaw.trigger`)
-- `openclaw.session.recovery.requested` (计数器，属性：`openclaw.state`, `openclaw.action`, `openclaw.active_work_kind`, `openclaw.reason`)
-- `openclaw.session.recovery.completed` (计数器，属性：`openclaw.state`, `openclaw.action`, `openclaw.status`, `openclaw.active_work_kind`, `openclaw.reason`)
-- `openclaw.session.recovery.age_ms` (直方图，属性：与对应的恢复计数器相同)
-- `openclaw.run.attempt` (计数器，属性：`openclaw.attempt`)
+- `openclaw.queue.lane.enqueue`（计数器，属性：`openclaw.lane`）
+- `openclaw.queue.lane.dequeue`（计数器，属性：`openclaw.lane`）
+- `openclaw.queue.depth`（直方图，属性：`openclaw.lane` 或 `openclaw.channel=heartbeat`）
+- `openclaw.queue.wait_ms`（直方图，属性：`openclaw.lane`）
+- `openclaw.session.state`（计数器，属性：`openclaw.state`、`openclaw.reason`）
+- `openclaw.session.stuck`（计数器，属性：`openclaw.state`；为可恢复的陈旧会话清理发出）
+- `openclaw.session.stuck_age_ms`（直方图，属性：`openclaw.state`；为可恢复的陈旧会话清理发出）
+- `openclaw.session.turn.created`（计数器，属性：`openclaw.agent`、`openclaw.channel`、`openclaw.trigger`）
+- `openclaw.session.recovery.requested`（计数器，属性：`openclaw.state`、`openclaw.action`、`openclaw.active_work_kind`、`openclaw.reason`）
+- `openclaw.session.recovery.completed`（计数器，属性：`openclaw.state`、`openclaw.action`、`openclaw.status`、`openclaw.active_work_kind`、`openclaw.reason`）
+- `openclaw.session.recovery.age_ms`（直方图，属性：与对应的恢复计数器相同）
+- `openclaw.run.attempt`（计数器，属性：`openclaw.attempt`）
 
 ### 会话存活遥测
 
@@ -285,52 +320,57 @@ CLI 边界：
 
 OpenClaw 按其仍能观察到的工作对会话进行分类：
 
-- `session.long_running`: 活跃的嵌入式工作、模型调用或工具调用仍在取得进展。由系统拥有的静默模型调用在达到内置中止阈值之前也会报告为长期运行，因此在可观测到中止之前，运行缓慢或不进行流式传输的模型提供商不会被视为停滞的网关会话。
-- `session.stalled`: 存在活跃工作，但活跃运行最近没有报告进度。由系统拥有的模型调用在达到或超过内置中止阈值时，会从 `session.long_running` 切换为 `session.stalled`；没有所有者的陈旧模型/工具活动不会被视为无害的长期运行工作。停滞的嵌入式运行最初保持仅观测状态，之后在达到中止阈值且仍无进度时进入中止排空状态，使该通道后面排队的轮次能够继续运行。
-- `session.stuck`: 没有活跃工作的陈旧会话记录，或存在陈旧的无所有者模型/工具活动的空闲排队会话。在恢复门控条件通过后，这会立即释放受影响的会话通道。
+- `session.long_running`：活跃的嵌入式工作、模型调用或工具调用仍在取得进展。由系统拥有的静默模型调用在达到内置中止阈值之前也会报告为长期运行，因此在可观测到中止之前，运行缓慢或不进行流式传输的模型提供商不会被视为停滞的网关会话。
+- `session.stalled`：存在活跃工作，但活跃运行最近没有报告进度。由系统拥有的模型调用在达到或超过内置中止阈值时，会从 `session.long_running` 切换为 `session.stalled`；没有所有者的陈旧模型/工具活动不会被视为无害的长期运行工作。停滞的嵌入式运行最初保持仅观测状态，之后在达到中止阈值且仍无进度时进入中止排空状态，使该通道后面排队的轮次能够继续运行。
+- `session.stuck`：没有活跃工作的陈旧会话记录，或存在陈旧的无所有者模型/工具活动的空闲排队会话。在恢复门控条件通过后，这会立即释放受影响的会话通道。
 
 恢复会发出结构化的 `session.recovery.requested` 和 `session.recovery.completed` 事件。只有在变更型恢复结果（`aborted` 或 `released`）之后，且仅当相同的处理代次仍然是当前代次时，诊断会话状态才会标记为空闲。
 
-只有 `session.stuck` 会发出 `openclaw.session.stuck` 计数器、`openclaw.session.stuck_age_ms` 直方图以及 `openclaw.session.stuck` span。只要会话保持不变，重复的 `session.stuck` 诊断就会退避，因此仪表板应监控持续增长，而不是每次 heartbeat tick 都告警。配置开关和默认值请参见 [Configuration reference](/gateway/configuration-reference#diagnostics)。
+只有 `session.stuck` 会发出 `openclaw.session.stuck` 计数器、`openclaw.session.stuck_age_ms` 直方图以及 `openclaw.session.stuck` span。只要会话保持不变，重复的 `session.stuck` 诊断就会退避，因此仪表板应监控持续增长，而不是每次 heartbeat tick 都告警。配置开关和默认值请参见 [配置参考](/gateway/configuration-reference#diagnostics)。
 
 存活警告也会发出：
 
-- `openclaw.liveness.warning` (计数器，属性：`openclaw.liveness.reason`)
-- `openclaw.liveness.event_loop_delay_p99_ms` (直方图，属性：`openclaw.liveness.reason`)
-- `openclaw.liveness.event_loop_delay_max_ms` (直方图，属性：`openclaw.liveness.reason`)
-- `openclaw.liveness.event_loop_utilization` (直方图，属性：`openclaw.liveness.reason`)
-- `openclaw.liveness.cpu_core_ratio` (直方图，属性：`openclaw.liveness.reason`)
+- `openclaw.liveness.warning`（计数器，属性：`openclaw.liveness.reason`）
+- `openclaw.liveness.event_loop_delay_p99_ms`（直方图，属性：`openclaw.liveness.reason`）
+- `openclaw.liveness.event_loop_delay_max_ms`（直方图，属性：`openclaw.liveness.reason`）
+- `openclaw.liveness.event_loop_utilization`（直方图，属性：`openclaw.liveness.reason`）
+- `openclaw.liveness.cpu_core_ratio`（直方图，属性：`openclaw.liveness.reason`）
 
 ### Harness 生命周期
 
-- `openclaw.harness.duration_ms`（直方图，属性：`openclaw.harness.id`, `openclaw.harness.plugin`, `openclaw.outcome`, `openclaw.harness.phase`（在错误时））
+- `openclaw.harness.duration_ms`（直方图，属性：`openclaw.harness.id`、`openclaw.harness.plugin`、`openclaw.outcome`、`openclaw.harness.phase`（在错误时））
 
 ### 工具执行与循环检测
 
-- `openclaw.tool.execution.duration_ms` (直方图，属性：`gen_ai.tool.name`, `openclaw.toolName`, `openclaw.tool.source`, `openclaw.tool.owner`, `openclaw.tool.params.kind`，以及错误时的 `openclaw.errorCategory`)
-- `openclaw.tool.execution.blocked` (计数器，属性：`gen_ai.tool.name`, `openclaw.toolName`, `openclaw.tool.source`, `openclaw.tool.owner`, `openclaw.tool.params.kind`, `openclaw.deniedReason`)
-- `openclaw.tool.loop` (计数器，属性：`openclaw.toolName`, `openclaw.loop.level`, `openclaw.loop.action`, `openclaw.loop.detector`, `openclaw.loop.count`, 可选 `openclaw.loop.paired_tool`；当检测到重复的工具调用循环时发出)
+- `openclaw.tool.execution.duration_ms`（直方图，属性：`gen_ai.tool.name`、`openclaw.toolName`、`openclaw.tool.source`、`openclaw.tool.owner`、`openclaw.tool.params.kind`，以及错误时的 `openclaw.errorCategory`）
+- `openclaw.tool.execution.blocked`（计数器，属性：`gen_ai.tool.name`、`openclaw.toolName`、`openclaw.tool.source`、`openclaw.tool.owner`、`openclaw.tool.params.kind`、`openclaw.deniedReason`）
+- `openclaw.tool.loop`（计数器，属性：`openclaw.toolName`、`openclaw.loop.level`、`openclaw.loop.action`、`openclaw.loop.detector`、`openclaw.loop.count`，可选 `openclaw.loop.paired_tool`；当检测到重复的工具调用循环时发出）
 
-### Exec
+### 执行
 
-- `openclaw.exec.duration_ms`（直方图，属性：`openclaw.exec.target`, `openclaw.exec.mode`, `openclaw.outcome`, `openclaw.failureKind`）
+- `openclaw.exec.duration_ms`（直方图，属性：`openclaw.exec.target`、`openclaw.exec.mode`、`openclaw.outcome`、`openclaw.failureKind`）
 
 ### 诊断内部项（内存、负载、导出器健康）
 
-- `openclaw.payload.large` (计数器，属性：`openclaw.payload.surface`, `openclaw.payload.action`, `openclaw.channel`, `openclaw.plugin`, `openclaw.reason`)
-- `openclaw.payload.large_bytes` (直方图，属性同 `openclaw.payload.large`)
-- `openclaw.memory.rss_bytes` / `openclaw.memory.heap_used_bytes` / `openclaw.memory.heap_total_bytes` / `openclaw.memory.external_bytes` / `openclaw.memory.array_buffers_bytes` (直方图，无属性；进程内存采样)
-- `openclaw.memory.pressure` (计数器，属性：`openclaw.memory.level`, `openclaw.memory.reason`)
-- `openclaw.diagnostic.async_queue.dropped` (计数器，属性：`openclaw.diagnostic.async_queue.drop_class`；内部诊断队列背压丢弃)
-- `openclaw.telemetry.exporter.events` (计数器，属性：`openclaw.exporter`, `openclaw.signal`, `openclaw.status`, 可选 `openclaw.reason`, 可选 `openclaw.errorCategory`；导出器生命周期/失败自遥测)
+- `openclaw.payload.large`（计数器，属性：`openclaw.payload.surface`、`openclaw.payload.action`、`openclaw.channel`、`openclaw.plugin`、`openclaw.reason`）
+- `openclaw.payload.large_bytes`（直方图，属性同 `openclaw.payload.large`）
+- `openclaw.memory.rss_bytes` / `openclaw.memory.heap_used_bytes` / `openclaw.memory.heap_total_bytes` / `openclaw.memory.external_bytes` / `openclaw.memory.array_buffers_bytes`（直方图，无属性；进程内存采样）
+- `openclaw.memory.pressure`（计数器，属性：`openclaw.memory.level`、`openclaw.memory.reason`）
+- `openclaw.diagnostic.async_queue.dropped`（计数器，属性：`openclaw.diagnostic.async_queue.drop_class`；内部诊断队列背压丢弃）
+- `openclaw.telemetry.exporter.events`（计数器，属性：`openclaw.exporter`、`openclaw.signal`、`openclaw.status`，可选 `openclaw.reason`、可选 `openclaw.errorCategory`；导出器生命周期/失败自遥测）
 
 ## 导出的 spans
 
 - `openclaw.model.usage`
   - `openclaw.channel`、`openclaw.provider`、`openclaw.model`
-  - `openclaw.tokens.*`（输入/输出/缓存读取/缓存写入/总计）
+  - 仅适用于受信任插件运行时完成的、可选的源自主机的 `openclaw.plugin`
+  - `openclaw.tokens.*`（input/output/cache_read/cache_write/total）
   - 默认使用 `gen_ai.system`，或者在启用最新 GenAI 语义约定时使用 `gen_ai.provider.name`
   - `gen_ai.request.model`、`gen_ai.operation.name`、`gen_ai.usage.*`
+
+插件归属信息仅存在于 span 中。它不会向共享的
+OpenTelemetry 指标添加插件维度，也不会更改 Prometheus 指标标签。
+
 - `openclaw.run`
   - `openclaw.outcome`、`openclaw.channel`、`openclaw.provider`、`openclaw.model`、`openclaw.errorCategory`
 - `openclaw.model.call`
@@ -524,6 +564,12 @@ OPENCLAW_DIAGNOSTICS=telegram.http,telegram.payload openclaw gateway
 
 或者将 `diagnostics-otel` 从 `plugins.allow` 中移除，或者运行
 `openclaw plugins disable diagnostics-otel`。
+
+当插件原本会拥有 NodeSDK 时，在禁用所有插件拥有的导出器、监听器、健康检查路由和标准输出接收器的同时，保持传播功能可用：
+
+```bash
+OTEL_SDK_DISABLED=true openclaw gateway
+```
 
 ## 相关内容
 

@@ -776,9 +776,15 @@ TTS 语音投递由通道能力驱动。通道插件会声明
 语音风格的 TTS 是否应向提供方请求原生 `voice-note` 目标，还是
 保持普通 `audio-file` 合成，以及通道在发送前是否会对非原生输出进行转码。
 
-合成完成后，OpenClaw 会将批量 TTS 输出持久化到媒体存储中的
-`tool-speech-synthesis` 下。回复会使用该稳定的媒体路径，而不是提供方的临时文件，并且常规媒体维护会清理过期输出。
-本地 CLI 提供方在 OpenClaw 导入已完成的字节前，仍可能使用 `{{OutputPath}}` 作为临时空间。有关内联播放器格式和限制，请参阅[媒体播放](/nodes/media-playback)。
+Telegram 还支持带字幕的最终 TTS。启用 `tts.mode: "final"` 并将
+Auto-TTS 设置为 `always`（或符合条件的 `inbound` 模式）时，流式文本会一直保留
+到合成完成，并作为语音笔记的字幕发送。超出 Telegram 字幕限制的文本会以普通文本消息的形式
+跟随语音笔记发送。如果合成失败，或已确认的发送前投递步骤失败，OpenClaw 会改为发送可见文本。
+`tagged` 模式保持其正常的流式行为，而 `[[tts:text]]` 块中的文本仍然仅作为音频发送。
+
+合成后，OpenClaw 会将批量 TTS 输出持久化到媒体存储中的
+`tool-speech-synthesis` 下。回复使用该稳定的媒体路径，而不是提供方的临时文件，并且常规媒体维护会清理过期输出。
+本地 CLI 提供方仍可能在 OpenClaw 导入已完成的字节数据之前，将 `{{OutputPath}}` 用作临时空间。参见[媒体播放](/nodes/media-playback)，了解内联播放器格式和限制。
 
 | 目标                                | 格式                                                                                                                                |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -810,10 +816,10 @@ OpenAI 和 ElevenLabs 会按上表为各通道选择输出格式。显式的 Ope
 当启用 `tts.auto` 时，OpenClaw：
 
 - 如果回复已经包含结构化媒体，则跳过 TTS。
-- 跳过非常短的回复（少于 10 个字符）。
-- 在启用摘要时，对长回复进行摘要，使用 `summaryModel`（或 `agents.defaults.model.primary`）。
+- 跳过非常简短的回复（少于 10 个字符）。
+- 启用摘要时，使用 `summaryModel`（或 `agents.defaults.model.primary`）对较长的回复进行摘要。
 - 将生成的音频附加到回复中。
-- 在 `mode: "final"` 下，即使对于流式最终回复，在文本流完成后仍会发送仅音频的 TTS；生成的媒体会像普通回复附件一样经过相同的通道媒体规范化。
+- 在 `mode: "final"` 下，流式文本完成后发送 TTS。没有带字幕最终消息支持的频道会收到一个仅包含音频的补充消息；Telegram 会将不超过其字幕限制的文本放入语音消息的字幕中，并将超出部分作为后续文本发送。生成的媒体会经过与普通回复附件相同的频道媒体规范化处理。
 
 如果回复超过 `maxLength`，OpenClaw 绝不会直接跳过音频：
 
@@ -912,7 +918,7 @@ OpenAI 和 ElevenLabs 会按上表为各通道选择输出格式。显式的 Ope
     <ParamField path="audioProfile" type="string">在口语文本前添加的自然语言风格提示。</ParamField>
     <ParamField path="speakerName" type="string">当你的提示使用了命名说话人时，可选地在口语文本前添加的说话人标签。</ParamField>
     <ParamField path="promptTemplate" type='"audio-profile-v1"'>设置为 `audio-profile-v1`，可将当前角色提示字段包装进确定性的 Gemini TTS 提示结构中。</ParamField>
-    <ParamField path="personaPrompt" type="string">追加到模板 Director's Notes 的 Google 专用额外角色提示文本。</ParamField>
+    <ParamField path="personaPrompt" type="string">追加到模板“导演备注”的 Google 专用额外角色提示文本。</ParamField>
     <ParamField path="baseUrl" type="string">仅接受 `https://generativelanguage.googleapis.com`。</ParamField>
   </Accordion>
 
@@ -1065,4 +1071,4 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且 `pt
 - [音乐生成](/tools/music-generation)
 - [视频生成](/tools/video-generation)
 - [斜杠命令](/tools/slash-commands)
-- [语音通话插件](/plugins/voice-call)
+- [语音通话插件](/plugins/voice-call)。

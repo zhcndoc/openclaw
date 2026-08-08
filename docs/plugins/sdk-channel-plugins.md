@@ -50,13 +50,25 @@ read_when:
 
 会就地完成草稿预览定稿的渠道应通过 `defineFinalizableLivePreviewAdapter(...)` 和 `deliverWithFinalizableLivePreviewAdapter(...)` 来承载运行时逻辑，并使用 `verifyChannelMessageLiveCapabilityAdapterProofs(...)` 与 `verifyChannelMessageLiveFinalizerProofs(...)` 测试来保持声明的能力有据可依，这样原生预览、进度、编辑、回退/保留、清理和收据行为就不会悄然偏离。
 
-延迟平台确认的入站接收器应声明 `message.receive.defaultAckPolicy` 和 `supportedAckPolicies`，而不是把确认时机隐藏在监控器本地状态中。用 `verifyChannelMessageReceiveAckPolicyAdapterProofs(...)` 覆盖每一种已声明的策略。
+### 进度可见性验收
 
-像 `dispatchInboundReplyWithBase` 和
-`recordInboundSessionAndDispatchReply` 这样的旧版回复辅助函数仍可供兼容性
-分发器使用。不要在新的渠道代码中使用它们；请改为从
-`openclaw/plugin-sdk/channel-outbound` 中的 `message`
-适配器、收据以及接收/发送生命周期辅助函数开始。
+进度回调报告的是操作员能够看到的内容，而不仅仅是插件排队的内容。在接受可见进度后返回
+`true`，在投递仍处于等待状态或没有发生可见更新时返回 `false`。现有返回 `void` 的同步和异步回调仍保持向后兼容，并被视为可见；新的支持接纳结果的实现应使用显式布尔值。
+
+会延迟平台确认的入站接收器应声明
+`message.receive.defaultAckPolicy` 和 `supportedAckPolicies`，而不是将确认时机隐藏在监控器本地状态中。请使用
+`verifyChannelMessageReceiveAckPolicyAdapterProofs(...)` 覆盖每个已声明的策略。
+
+### TTS 语音投递
+
+在 `capabilities.tts.voice` 下声明原生语音消息行为。当 TTS 提供商应生成原生语音消息格式时，设置
+`synthesisTarget: "voice-note"`。仅当出站语音操作接受可见的最终文本，并执行其传输层的说明文字和溢出规则时，才设置
+`captionedFinalText: true`。对于该操作，core 随后会暂存最终模式下的流式文本，并在语音负载被证明未发送时回退到文本。
+
+诸如 `dispatchInboundReplyWithBase` 和
+`recordInboundSessionAndDispatchReply` 之类的旧版回复辅助函数仍可供兼容性分发器使用。
+不要在新的渠道代码中使用它们；应从
+`openclaw/plugin-sdk/channel-outbound` 上的 `message` 适配器、收据以及接收/发送生命周期辅助函数开始。
 
 ### 入站入口（实验性）
 
@@ -800,7 +812,7 @@ if (decision.shouldSkip) return;
 ```text
 <bundled-plugin-root>/acme-chat/
 ├── package.json              # openclaw.channel 元数据
-├── openclaw.plugin.json      # 带有配置 schema 的清单
+├── openclaw.plugin.json      # 带有配置模式的清单
 ├── index.ts                  # defineChannelPluginEntry
 ├── setup-entry.ts            # defineSetupPluginEntry
 ├── api.ts                    # 公共导出（可选）
@@ -841,7 +853,7 @@ if (decision.shouldSkip) return;
 - [Provider 插件](/plugins/sdk-provider-plugins) - 如果你的插件还提供模型
 - [SDK 概览](/plugins/sdk-overview) - 完整的子路径导入参考
 - [SDK 测试](/plugins/sdk-testing) - 测试工具和契约测试
-- [插件清单](/plugins/manifest) - 完整的清单架构.schemas
+- [插件清单](/plugins/manifest) - 完整的清单架构.schemas。
 
 ## 相关内容
 

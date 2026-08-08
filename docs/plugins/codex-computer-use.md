@@ -142,22 +142,22 @@ OpenClaw 会在一个正在运行的 Gateway 中串行化原生 Codex 配置读�
 OpenClaw 使用与 Codex 本身公开的相同 app-server API。marketplace 字段
 用于选择 Codex 应该在哪里查找 `computer-use`。
 
-| 字段                 | 使用场景                                                       | 安装支持                                               |
-| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------ |
+| 字段                   | 使用场景                                                       | 安装支持                                               |
+| ---------------------- | -------------------------------------------------------------- | ------------------------------------------------------ |
 | 未设置 marketplace 字段 | 希望 Codex app-server 使用其已知的 marketplace。                | 支持从发现的本地或远程 marketplace 安装。              |
-| `marketplaceSource`   | 已有一个 Codex marketplace 源，app-server 可以添加该源。       | 支持显式执行 `/codex computer-use install`。           |
-| `marketplacePath`     | 已知主机上本地 marketplace 文件的路径。                        | 支持显式安装和回合开始时自动安装。                     |
-| `marketplaceName`     | 希望按名称选择一个已注册的 marketplace。                        | 支持从选定的本地或远程 marketplace 安装。             |
+| `marketplaceSource`     | 已有一个 Codex marketplace 源，app-server 可以添加该源。       | 支持显式执行 `/codex computer-use install`。           |
+| `marketplacePath`       | 已知主机上本地 marketplace 文件的路径。                        | 支持显式安装和回合开始时自动安装。                     |
+| `marketplaceName`       | 希望按名称选择一个已注册的 marketplace。                        | 支持从选定的本地或远程 marketplace 安装。             |
 
-新的 Codex home 可能需要片刻时间来填充其官方 marketplaces。在安装期间，OpenClaw 会轮询 `plugin/list`，最长可达
-`marketplaceDiscoveryTimeoutMs` 毫秒（默认 60 秒）。
+新的 Codex 主目录可能需要片刻时间来填充其官方 marketplace。在安装期间，OpenClaw 会轮询
+`plugin/list`，最长可达 `marketplaceDiscoveryTimeoutMs` 毫秒（默认 60 秒）。
 
 如果多个已知 marketplace 包含 Computer Use，OpenClaw 会优先选择
-`openai-bundled`，然后是 `openai-curated`，然后是 `local`。未知且有歧义的
+`openai-bundled`，然后是 `openai-curated`，最后是 `local`。未知且有歧义的
 匹配会直接失败，并要求你设置 `marketplaceName` 或
 `marketplacePath`。
 
-## 捆绑的 macOS marketplace
+## 捆绑的 macOS 市场
 
 当前 ChatGPT 桌面版构建会在此处捆绑 Computer Use；旧版独立  
 Codex 桌面版构建在 `Codex.app` 下使用相同布局：
@@ -168,8 +168,8 @@ Codex 桌面版构建在 `Codex.app` 下使用相同布局：
 ```
 
 当 `computerUse.autoInstall` 为 true 且未注册包含  
-`computer-use` 的 marketplace 时，OpenClaw 会尝试添加存在的第一个标准  
-捆绑 marketplace 根目录：
+`computer-use` 的市场时，OpenClaw 会尝试添加存在的第一个标准  
+捆绑市场根目录：
 
 ```text
 /Applications/ChatGPT.app/Contents/Resources/plugins/openai-bundled
@@ -184,19 +184,19 @@ codex plugin marketplace add /Applications/ChatGPT.app/Contents/Resources/plugin
 
 如果你使用的是非标准的 Codex 应用路径，请运行 `/codex computer-use install
 --source <marketplace-root>` 一次，或者将 `computerUse.marketplacePath` 设置为
-本地 marketplace 文件路径。只有在你持有 marketplace 的 JSON 文件路径时才使用
-`--marketplace-path`，不要使用捆绑的 marketplace 根目录。
+本地市场文件路径。只有在你持有市场的 JSON 文件路径时才使用
+`--marketplace-path`，不要使用捆绑的市场根目录。
 
 ### 共享插件缓存
 
-默认的 `pluginCacheMode: "independent"` 会让每个 Codex home 及其  
-插件缓存处于未管理状态。将 `pluginCacheMode` 设置为 `"shared"`，可在 app-server 启动前将捆绑的 Computer Use 插件复制到当前 Codex home 可发现的插件缓存中。共享模式会保留较旧的缓存版本，因为正在运行的 Codex 客户端仍可能引用其带版本号的插件目录；如果替换复制失败，也会保留当前缓存。显式的  
+默认的 `pluginCacheMode: "independent"` 会让每个 Codex 主目录及其  
+插件缓存处于未管理状态。将 `pluginCacheMode` 设置为 `"shared"`，可在应用服务器启动前将捆绑的 Computer Use 插件复制到当前 Codex 主目录可发现的插件缓存中。共享模式会保留较旧的缓存版本，因为正在运行的 Codex 客户端仍可能引用其带版本号的插件目录；如果替换复制失败，也会保留当前缓存。显式的  
 `marketplaceName` 或 `marketplacePath` 配置会禁用此  
 协调过程，因此 OpenClaw 不会覆盖该选择。
 
 ## 远程市场
 
-Codex 0.146.0 可以从发现的远程市场读取并安装 Computer Use 插件。OpenClaw 会将 Codex 返回的不透明远程插件 ID 传递给
+Codex 0.146.1 可以从已发现的远程市场读取并安装计算机使用插件。OpenClaw 会将 Codex 返回的不透明远程插件 ID 传递给
 `plugin/read` 和 `plugin/install`；人类可读的插件名称不能替代该 ID。
 
 `/codex computer-use install` 可以显式安装或重新启用已发现的远程插件。回合开始时的 `autoInstall` 也可以使用已发现的本地或远程市场。不带 `autoInstall` 的状态检查和回合不会安装插件或修改 Codex 配置。
@@ -236,8 +236,8 @@ Codex 0.146.0 可以从发现的远程市场读取并安装 Computer Use 插件�
 | `autoInstall`                | `OPENCLAW_CODEX_COMPUTER_USE_AUTO_INSTALL`                     |
 | `marketplaceDiscoveryTimeoutMs` | `OPENCLAW_CODEX_COMPUTER_USE_MARKETPLACE_DISCOVERY_TIMEOUT_MS` |
 | `liveTestTimeoutMs`          | `OPENCLAW_CODEX_COMPUTER_USE_LIVE_TEST_TIMEOUT_MS`             |
-| `toolCallTimeoutMs`          | `OPENCLAW_CODEX_COMPUTER_USE_TOOL_CALL_TIMEOUT_MS`             |
-| `healthCheckEnabled`         | `OPENCLAW_CODEX_COMPUTER_USE_HEALTH_CHECK_ENABLED`             |
+| `toolCallTimeoutMs`           | `OPENCLAW_CODEX_COMPUTER_USE_TOOL_CALL_TIMEOUT_MS`             |
+| `healthCheckEnabled`          | `OPENCLAW_CODEX_COMPUTER_USE_HEALTH_CHECK_ENABLED`             |
 | `healthCheckIntervalMinutes` | `OPENCLAW_CODEX_COMPUTER_USE_HEALTH_CHECK_INTERVAL_MINUTES`    |
 | `pluginCacheMode`            | `OPENCLAW_CODEX_COMPUTER_USE_PLUGIN_CACHE_MODE`                |
 | `strictReadiness`            | `OPENCLAW_CODEX_COMPUTER_USE_STRICT_READINESS`                 |

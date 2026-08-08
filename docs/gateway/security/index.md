@@ -106,7 +106,7 @@ openclaw security audit --json
 | --------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------- |
 | `gateway.auth`（token/password/trusted-proxy/device auth） | 对网关 API 的调用方进行身份验证                  | “为了安全，每一帧都需要逐消息签名”                                        |
 | `sessionKey`                                              | 用于上下文/会话选择的路由键                      | “会话密钥就是用户认证边界”                                                |
-| Prompt/内容防护栏                                         | 降低模型滥用风险                                  | “仅凭 prompt injection 就能证明认证绕过”                                  |
+| 提示词/内容防护栏                                         | 降低模型滥用风险                                  | “仅凭提示词注入就能证明认证绕过”                                          |
 | `canvas.eval` / 浏览器 evaluate                          | 启用时属于有意开放给操作者的能力                  | “任何 JS eval 原语在这种信任模型下都自动是漏洞”                            |
 | 本地 TUI `!` shell                                       | 由操作者显式触发的本地执行                        | “本地 shell 便捷命令就是远程注入”                                          |
 | 节点配对和节点命令                                      | 已配对设备上的操作者级远程执行                    | “远程设备控制默认应被视为不可信用户访问”                                  |
@@ -612,9 +612,9 @@ HTTP API 端点（`/v1/*`、`/tools/invoke`、`/api/channels/*`）不使用 Tail
 
 无令牌的 Serve 认证默认信任网关主机本身——它不能防御同主机上的恶意进程。如果不受信任的本地代码可能在网关主机上运行，请禁用 `allowTailscale` 并要求显式共享密钥认证（`token` 或 `password`）。
 
-不要从你自己的反向代理转发这些头。如果你在网关前终止 TLS 或进行代理，请禁用 `allowTailscale`，并改用共享密钥认证或 [可信代理认证](/gateway/trusted-proxy-auth)。
+不要从你自己的反向代理转发这些头。如果你在网关前终止 TLS 或进行代理，请禁用 `allowTailscale`，并改用共享密钥认证或[可信代理认证](/gateway/trusted-proxy-auth)。
 
-参见 [Tailscale](/gateway/tailscale) 和 [Web 概览](/web)。
+参见 [Tailscale](/gateway/tailscale) 和[Web 概览](/web)。
 
 ### 反向代理配置
 
@@ -660,11 +660,9 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 控制 UI 需要安全上下文（HTTPS 或 localhost）来生成设备身份。
 
-- `gateway.controlUi.allowInsecureAuth`：本地兼容性开关。在 localhost 上，当页面通过非安全 HTTP 加载时，允许控制 UI 在没有设备身份的情况下进行身份验证。不会绕过配对检查，也不会放宽远程（非 localhost）设备身份要求。优先使用 HTTPS（Tailscale Serve），或在 `127.0.0.1` 上打开 UI。
-- `gateway.controlUi.dangerouslyDisableDeviceAuth`：已废弃的紧急解锁配置项。旧配置会保留仅需身份验证和配对的控制 UI 访问权限，以便进行修复，直到浏览器通过 HTTPS 或 localhost 重新打开并完成有界且明确的自配对迁移；不要将其添加到当前配置中。
-- 与这些标志分开的是，成功启用 `gateway.auth.mode: "trusted-proxy"` 后，可以允许**操作员**控制 UI 会话在没有设备身份的情况下接入——这是有意设计的身份验证模式行为，不是 `allowInsecureAuth` 快捷方式，并且不会扩展到节点角色的控制 UI 会话。
-
-当启用 `allowInsecureAuth` 时，`openclaw security audit` 会发出警告。
+- Token/密码身份验证无法替代通过远程纯 HTTP 访问时的浏览器设备身份。请使用 HTTPS（例如 Tailscale Serve），或在 Gateway 主机上通过 `127.0.0.1` 打开 UI。
+- `gateway.controlUi.dangerouslyDisableDeviceAuth`：已弃用的紧急解锁配置项。旧配置会保留经过身份验证、仅限配对的 Control UI 访问权限，以便进行修复；直到通过 HTTPS 或 localhost 重新打开浏览器，完成范围受限且明确的自配对迁移为止；请勿将其添加到当前配置中。
+- 另外，成功通过 `gateway.auth.mode: "trusted-proxy"` 完成身份验证后，可以允许 **operator** Control UI 会话在没有设备身份的情况下访问。这不适用于 node-role Control UI 会话。
 
 ### 不安全/危险标志
 
@@ -672,7 +670,6 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 <AccordionGroup>
   <Accordion title="当前审计跟踪的标志">
-    - `gateway.controlUi.allowInsecureAuth=true`
     - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true`
     - 从已停用的 `gateway.controlUi.dangerouslyDisableDeviceAuth=true` 导入的待处理控制 UI 设备身份验证迁移
     - `security.audit.suppressions configured (<count>)`
@@ -744,20 +741,20 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 也可用于备份决策：
 
 - WhatsApp: `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-- Telegram bot token: config/env or `channels.telegram.tokenFile` (regular file only; symlinks rejected)
-- Discord bot token: config/env or SecretRef (env/file/exec providers)
-- Slack tokens: config/env (`channels.slack.*`)
-- Pairing allowlists: `~/.openclaw/credentials/<channel>-allowFrom.json` (default account) / `<channel>-<accountId>-allowFrom.json` (non-default accounts)
-- Model auth profiles: `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` (`auth_profile_store`)
-- MCP OAuth sessions: `~/.openclaw/state/openclaw.sqlite` (`mcp_oauth_stores`)
-- Legacy OAuth import: `~/.openclaw/credentials/oauth.json`
+- Telegram 机器人令牌：配置/环境变量或 `channels.telegram.tokenFile`（仅限普通文件；拒绝符号链接）
+- Discord 机器人令牌：配置/环境变量或 SecretRef（环境变量/文件/执行提供程序）
+- Slack 令牌：配置/环境变量（`channels.slack.*`）
+- 配对允许列表：`~/.openclaw/credentials/<channel>-allowFrom.json`（默认账户）/ `<channel>-<accountId>-allowFrom.json`（非默认账户）
+- 模型身份验证配置文件：`~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`（`auth_profile_store`）
+- MCP OAuth 会话：`~/.openclaw/state/openclaw.sqlite`（`mcp_oauth_stores`）
+- 旧版 OAuth 导入：`~/.openclaw/credentials/oauth.json`
 
-加固：保持严格权限（目录用 `700`，文件用 `600`）；在网关主机上使用全盘加密；如果主机是共享的，优先使用专用的 OS 用户账户。
+加固：保持严格权限（目录使用 `700`，文件使用 `600`）；在网关主机上使用全盘加密；如果主机是共享的，优先使用专用的操作系统用户账户。
 
 ### 文件权限
 
-- `~/.openclaw/openclaw.json`: `600`（仅用户可读写）
-- `~/.openclaw`: `700`（仅用户可访问）
+- `~/.openclaw/openclaw.json`：`600`（仅用户可读写）
+- `~/.openclaw`：`700`（仅用户可访问）
 
 `openclaw doctor` 可以发出警告并建议收紧这些权限。
 

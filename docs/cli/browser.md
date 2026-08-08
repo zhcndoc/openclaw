@@ -1,8 +1,8 @@
 ---
-summary: "openclaw browser 浏览器的 CLI 参考（生命周期、配置文件、标签页、操作、状态和调试）"
+summary: "openclaw 浏览器 CLI 参考（生命周期、配置文件、标签页、操作、状态和调试）"
 read_when:
   - 你使用 `openclaw browser`，并希望查看常见任务示例
-  - 你想通过 node host 远程控制运行在另一台机器上的浏览器
+  - 你想通过节点主机远程控制运行在另一台机器上的浏览器
   - 你想通过 Chrome MCP 连接到本地已登录的 Chrome
 title: "浏览器"
 ---
@@ -11,7 +11,7 @@ title: "浏览器"
 
 管理 OpenClaw 的浏览器控制面并运行浏览器操作：生命周期、配置文件、标签页、快照、截图、导航、输入、状态模拟和调试。
 
-相关：[浏览器工具](/tools/browser)
+相关：[浏览器工具](/tools/browser)。
 
 ## 常用标志
 
@@ -50,7 +50,7 @@ openclaw browser --browser-profile openclaw tabs
 openclaw browser --browser-profile openclaw open https://example.com
 ```
 
-详细说明：[浏览器排障](/tools/browser#cdp-startup-failure-vs-navigation-ssrf-block)
+详细说明：[浏览器排障](/tools/browser#cdp-startup-failure-vs-navigation-ssrf-block)。
 
 ## 生命周期
 
@@ -89,11 +89,11 @@ openclaw browser --browser-profile openclaw reset-profile
 
 ## 配置文件
 
-Profiles 是命名的浏览器路由配置：
+配置文件是命名的浏览器路由配置：
 
 - `openclaw`（默认）：启动或连接到一个由 OpenClaw 管理的专用 Chrome 实例（隔离的用户数据目录）。
 - `user`：通过 Chrome DevTools MCP 控制你现有的已登录 Chrome 会话。
-- 自定义 CDP profiles：指向本地或远程的 CDP 端点。
+- 自定义 CDP 配置文件：指向本地或远程的 CDP 端点。
 
 ```bash
 openclaw browser profiles
@@ -107,13 +107,13 @@ openclaw browser create-profile --name remote --cdp-url https://browser-host.exa
 openclaw browser delete-profile --name work
 ```
 
-可在任意子命令中使用 `--browser-profile <name>` 指定特定 profile，例如 `openclaw browser --browser-profile work tabs`。
+可在任意子命令中使用 `--browser-profile <name>` 指定特定配置文件，例如 `openclaw browser --browser-profile work tabs`。
 
-在 macOS 上，`system-profiles` 会列出主机上可用的真实 Chrome、Brave、Edge 或 Chromium profiles。`import-profile` 会在一次 macOS 钥匙串/Touch ID 许可提示后解密它们的 cookies，并将其注入到一个全新的、由 OpenClaw 管理的 profile 中。它只会导入 cookies；本地存储和 IndexedDB 不会改变。某些 Google 会话使用设备绑定会话凭据（DBSC），因此在导入后仍可能需要重新认证。
+在 macOS 上，`system-profiles` 会列出主机上可用的真实 Chrome、Brave、Edge 或 Chromium 配置文件。`import-profile` 会在一次 macOS 钥匙串/Touch ID 许可提示后解密它们的 cookies，并将其注入到一个全新的、由 OpenClaw 管理的配置文件中。它只会导入 cookies；本地存储和 IndexedDB 不会改变。某些 Google 会话使用设备绑定会话凭据（DBSC），因此在导入后仍可能需要重新认证。
 
-当 macOS 应用使用本地 Gateway 时，它可以提供一次这种导入，并将隔离后的已导入 profile 设为代理浏览的默认配置。导入始终需要明确点击；成功导入或取消都会抑制后续的自动提示，且 **Settings → General → Browser login** 仍可用于重新导入。
+当 macOS 应用使用本地 Gateway 时，它可以提供一次这种导入，并将隔离后的已导入配置文件设为代理浏览的默认配置。导入始终需要明确点击；成功导入或取消都会抑制后续的自动提示，且 **设置 → 通用 → 浏览器登录** 仍可用于重新导入。
 
-系统 profile 导入默认已启用。将 `browser.allowSystemProfileImport=false` 可同时禁用 CLI 和 agent 触发的导入。导入仅在主机本地执行，无法通过 browser node proxy 运行。
+系统配置文件导入默认已启用。将 `browser.allowSystemProfileImport=false` 可同时禁用 CLI 和 agent 触发的导入。导入仅在主机本地执行，无法通过 browser node proxy 运行。
 
 ## 选项卡
 
@@ -132,24 +132,7 @@ openclaw browser close t1
 
 原始 target id 是易变的诊断句柄，不是持久的代理记忆：当 Chromium 在导航或表单提交期间替换底层原始 target 时，如果 OpenClaw 能够证明匹配关系，它会将稳定的 `tabId`/标签保留并附加到替换后的标签页上。优先使用 `suggestedTargetId`。
 
-## 提取 / 快照 / 截图 / 操作
-
-在不打印页面内容的情况下回答当前页面上的问题：
-
-```bash
-openclaw browser extract "主要结论是什么？"
-openclaw browser extract "列出了哪个截止日期？" --target-id docs --timeout-ms 90000
-openclaw browser extract "列出发布项" --selector "main" --ignore-selector "nav" --schema '{"type":"array","items":{"type":"object"}}'
-```
-
-`extract` 会使用所选的代理模型，只返回包装后的答案，并且
-在答案不存在时报告 `NOT_FOUND`。其总体超时时间默认为
-60 秒，并限制在 5–120 秒之间。它要求使用基于 Playwright 的
-配置文件；当你需要 refs，或者无法进行提取时，请使用 `snapshot`。
-使用 `--selector <css>` 可将大型页面限制为匹配的子树，并可重复使用
-`--ignore-selector <css>` 在转换前移除导航栏、页脚、广告或横幅。`--schema <json>` 会在
-`details.json` 中请求经过验证的结构化输出；无效的结构化输出会重试一次，然后失败并
-提示在不使用 schema 的情况下重试。
+## 快照 / 截图 / 操作
 
 快照：
 
@@ -219,7 +202,7 @@ openclaw browser batch --actions-file plan.json
 openclaw browser batch --actions-file - --continue
 ```
 
-`openclaw browser batch` 会发送一个 `kind="batch"` 的 `/act` 请求，包含嵌套的 `BrowserActRequest` 操作（`wait`、`click`、`type`、`evaluate`、...）——而不是 `open`/`navigate`/`snapshot`/`screenshot`，这些是 CLI 子命令，不是 `/act` 的 kind。`--continue` 会设置 `stopOnError=false`（默认在第一个错误处停止）；`--target-id` 将整个批处理限定到一个标签页。任一嵌套操作失败都会使命令以非零状态退出；使用 `--json` 可保留有序的 `results` 响应。请参阅 [Browser batch CLI](/tools/browser-control#browser-batch-cli) 了解完整约定（ref 生命周期、target id 冲突、错误摘要）。`batch` 不支持 `profile="user"` / existing-session 配置文件。
+`openclaw browser batch` 会发送一个 `kind="batch"` 的 `/act` 请求，包含嵌套的 `BrowserActRequest` 操作（`wait`、`click`、`type`、`evaluate`、...）——而不是 `open`/`navigate`/`snapshot`/`screenshot`，这些是 CLI 子命令，不是 `/act` 的 kind。`--continue` 会设置 `stopOnError=false`（默认在第一个错误处停止）；`--target-id` 将整个批处理限定到一个标签页。任一嵌套操作失败都会使命令以非零状态退出；使用 `--json` 可保留有序的 `results` 响应。请参阅 [浏览器批量 CLI](/tools/browser-control#browser-batch-cli) 了解完整约定（ref 生命周期、target id 冲突、错误摘要）。`batch` 不支持 `profile="user"` / existing-session 配置文件。
 
 ## 状态和存储
 
@@ -278,26 +261,26 @@ openclaw browser --browser-profile chrome-live tabs
 
 当前 existing-session 限制：
 
-- 基于快照的操作使用 refs，而不是 CSS 选择器。
-- 当调用方省略 `timeoutMs` 时，支持的 `act` 请求会使用内置的 60000 ms 默认值；每次调用传入的 `timeoutMs` 仍然优先。
+- 由快照驱动的操作使用引用，而不是 CSS 选择器。
+- 当调用方省略 `timeoutMs` 时，支持的 `act` 请求使用内置的 60000 毫秒默认值；每次调用的 `timeoutMs` 仍然优先。
 - `click` 仅支持左键单击。
 - `type` 不支持 `slowly=true`。
 - `press` 不支持 `delayMs`。
-- `hover`、`scrollintoview`、`drag`、`select` 和 `fill` 会拒绝按调用传入的超时覆盖；`evaluate` 接受 `--timeout-ms`。
-- `select` 仅支持一个值。
-- 不支持 `wait --load networkidle`（在托管和原始/远程 CDP 配置文件中可用）。
-- 文件上传需要 `--ref` / `--input-ref`，不支持 CSS `--element`，且一次只支持一个文件。
+- `hover`、`scrollintoview`、`drag`、`select` 和 `fill` 拒绝每次调用的超时覆盖；`evaluate` 接受 `--timeout-ms`。
+- `select` 一次仅支持一个值。
+- 不支持 `wait --load networkidle`（在托管配置文件和原始/远程 CDP 配置文件上可用）。
+- 文件上传需要使用 `--ref` / `--input-ref`，不支持 CSS `--element`，并且一次仅支持一个文件。
 - 对话框钩子不支持 `--timeout`。
-- 截图支持页面捕获和 `--ref`，但不支持 CSS `--element`。
-- `extract`、`responsebody`、下载拦截、PDF 导出以及批量操作仍然需要托管浏览器或原始 CDP 配置文件。
+- 屏幕截图支持页面捕获和 `--ref`，但不支持 CSS `--element`。
+- `responsebody`、下载拦截、PDF 导出和批量操作仍然需要托管浏览器或原始 CDP 配置文件。
 
-## Remote Browser Control (node host proxy)
+## 远程浏览器控制（节点主机代理）
 
-If Gateway is running on a machine different from the browser, run a **node host** on the machine where Chrome/Brave/Edge/Chromium is installed. Gateway will proxy browser operations to that node; no separate browser control server is required.
+如果 Gateway 运行在与浏览器不同的机器上，请在安装了 Chrome/Brave/Edge/Chromium 的机器上运行一个**节点主机**。Gateway 会将浏览器操作代理到该节点；无需单独的浏览器控制服务器。
 
-Use `gateway.nodes.browser.mode` to control automatic routing; if multiple nodes are connected, use `gateway.nodes.browser.node` to pin to a specific node.
+使用 `gateway.nodes.browser.mode` 控制自动路由；如果连接了多个节点，请使用 `gateway.nodes.browser.node` 固定到特定节点。
 
-Security and remote setup: [Browser tool](/tools/browser), [Remote access](/gateway/remote), [Tailscale](/gateway/tailscale), [Security](/gateway/security)
+安全性和远程设置：[浏览器工具](/tools/browser)、[远程访问](/gateway/remote)、[Tailscale](/gateway/tailscale)、[安全性](/gateway/security)
 
 ## 相关
 

@@ -150,7 +150,7 @@ openclaw gateway
 DISCORD_BOT_TOKEN=...
 ```
 
-        对于脚本化或远程设置，使用 `openclaw config patch --file ./discord.patch.json5 --dry-run` 写入相同的 JSON5 块，然后在不带 `--dry-run` 的情况下重新运行。纯文本 `token` 字符串也可以使用，并且 `channels.discord.token` 支持跨 env/file/exec 提供者的 SecretRef 值。参见 [Secrets Management](/gateway/secrets)。
+        对于脚本化或远程设置，使用 `openclaw config patch --file ./discord.patch.json5 --dry-run` 写入相同的 JSON5 块，然后在不带 `--dry-run` 的情况下重新运行。纯文本 `token` 字符串也可以使用，并且 `channels.discord.token` 支持跨 env/file/exec 提供者的 SecretRef 值。参见 [机密管理](/gateway/secrets)。
 
         对于多个 Discord bot，将每个 bot token 和 application ID 保持在各自的账户下。顶层的 `channels.discord.applicationId` 会被账户继承，因此只有当所有账户都使用相同的 application ID 时才应在这里设置。
 
@@ -215,11 +215,11 @@ Token 解析是按账户感知的。配置中的 token 值优先于 env 回退�
 
 ## 推荐：设置 guild 工作区
 
-一旦 DM 正常工作，你就可以把服务器变成一个完整的工作区，让每个频道都有自己独立的代理会话和上下文。推荐用于只有你和机器人在的私有服务器。
+一旦私信正常工作，你就可以把服务器变成一个完整的工作区，让每个频道都有自己独立的代理会话和上下文。推荐用于只有你和机器人在的私有服务器。
 
 <Steps>
   <Step title="将你的服务器添加到 guild 白名单">
-    这样可以让你的代理在服务器上的任何频道响应，而不只是 DM。
+    这样可以让你的代理在服务器上的任何频道响应，而不只是私信。
 
     <Tabs>
       <Tab title="询问你的代理">
@@ -253,7 +253,7 @@ Token 解析是按账户感知的。配置中的 token 值优先于 env 回退�
 
     在 guild 频道中，普通回复默认会自动发送。对于共享的始终在线房间，可以选择启用 `messages.groupChat.visibleReplies: "message_tool"`，这样代理就可以潜伏，只在它认为频道回复有用时才发送。这在最新一代、工具调用可靠的模型上效果最好，例如 GPT-5.6 Sol。环境房间事件会保持静默，除非工具发送消息。完整的潜伏模式配置请参见 [环境房间事件](/channels/ambient-room-events)。
 
-    如果 Discord 显示正在输入，而且日志显示 token 使用量但没有实际发出消息，请检查该轮次是否被配置为 ambient room event，或者是否启用了 message-tool visible replies。
+    如果 Discord 显示正在输入，而且日志显示 token 使用量但没有实际发出消息，请检查该轮次是否被配置为环境房间事件，或者是否启用了消息工具可见回复。
 
     <Tabs>
       <Tab title="询问你的代理">
@@ -276,7 +276,7 @@ Token 解析是按账户感知的。配置中的 token 值优先于 env 回退�
 }
 ```
 
-        若要要求 message-tool 发送可见的 group/channel 回复，请设置 `messages.groupChat.visibleReplies: "message_tool"`。
+        若要要求消息工具发送可见的群组/频道回复，请设置 `messages.groupChat.visibleReplies: "message_tool"`。
 
       </Tab>
     </Tabs>
@@ -284,7 +284,7 @@ Token 解析是按账户感知的。配置中的 token 值优先于 env 回退�
   </Step>
 
   <Step title="规划 guild 频道中的记忆">
-    长期记忆（MEMORY.md）只会在 DM 会话中自动加载；guild 频道不会加载它。
+    长期记忆（MEMORY.md）只会在私信会话中自动加载；guild 频道不会加载它。
 
     <Tabs>
       <Tab title="询问你的代理">
@@ -416,6 +416,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
     },
   },
 }
+```
 
 ## 访问控制与路由
 
@@ -719,12 +720,12 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
     - `off` 禁用 Discord 预览编辑。
     - `partial` 会在令牌到达时编辑单条预览消息。
-    - `block` 会输出草稿大小的分块；使用 `streaming.preview.chunk`（`minChars`、`maxChars`、`breakPreference`）调整大小和断点，并将其限制在 `textChunkLimit` 以内。显式启用分块流式传输后，OpenClaw 会跳过预览流，以避免双重流式传输。
-    - `progress` 会持续维护一条可编辑的状态草稿，直到最终交付。它会将代理最新的前言或叙述显示为状态标题，下方显示紧凑的工具行，并且不显示生成标签。
+    - `block` 会发送草稿大小的分块；使用 `streaming.preview.chunk`（`minChars`、`maxChars`、`breakPreference`）调整大小和断点，并将其限制在 `textChunkLimit` 范围内。显式的非 `off` 预览模式会覆盖继承的 `agents.defaults.blockStreamingDefault: "on"`；显式的 `streaming.block.enabled: true` 会覆盖预览模式。如果某一轮无法使用预览，继承的分块投递仍会生效。
+    - `progress` 会持续使用一条可编辑的状态草稿，直到最终投递。它会将代理最新的前言或旁白显示为状态标题，并在下方显示紧凑的工具行，且不带生成标签。
     - 媒体、错误和显式回复的最终消息会取消待处理的预览编辑。
-    - `streaming.preview.toolProgress` 和 `streaming.progress.toolProgress` 在所有模式下的默认值均为 `true`。无需配置即可显示 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"` 等工具行；将任一键设为 `false` 即可仅保留状态标题。
-    - `streaming.progress.commentary`（默认 `false`）用于选择在临时进度草稿中显示原始助手评论。默认的前言/叙述状态行不受此选项影响。评论会在显示前进行清理，保持临时状态，并且不会改变最终答案的交付。
-    - `streaming.progress.maxLineChars` 控制每行进度预览的字符预算。普通文本会在单词边界处缩短；命令和路径细节会保留有用的后缀。
+    - `streaming.preview.toolProgress` 和 `streaming.progress.toolProgress` 在所有模式下的默认值均为 `true`。无需配置即可显示诸如 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"` 之类的工具行；将任一键设为 `false` 即可仅保留状态标题。
+    - `streaming.progress.commentary`（默认值为 `false`）可选择将原始助手旁白加入临时进度草稿。默认的前言/旁白状态行不受此选项影响。旁白会在显示前进行清理，保持临时状态，且不会改变最终答案的投递。
+    - `streaming.progress.maxLineChars` 控制每行进度预览的字符预算。普通文本会在单词边界处缩短；命令和路径详情会保留有用的后缀。
     - `streaming.preview.commandText` / `streaming.progress.commandText` 控制紧凑进度行中的命令/执行详情：`raw`（默认）或 `status`（仅工具标签）。
 
     隐藏原始命令/执行文本，同时保留紧凑进度行：
@@ -1161,9 +1162,9 @@ Discord 消息动作涵盖消息、频道管理、审核、状态和元数据。
 | moderation                                                                                                                                                          | 已禁用   |
 | presence                                                                                                                                                            | 已禁用   |
 
-## Components v2 用户界面
+## 组件 v2 用户界面
 
-OpenClaw 使用 Discord components v2 进行执行审批和跨上下文标记。Discord 消息动作也可以接受 `components` 来构建自定义 UI（高级用法；需要通过 discord 工具构造 component payload），而旧版 `embeds` 仍然可用，但不建议使用。
+OpenClaw 使用 Discord 组件 v2 进行执行审批和跨上下文标记。Discord 消息动作也可以接受 `components` 来构建自定义 UI（高级用法；需要通过 discord 工具构造 component payload），而旧版 `embeds` 仍然可用，但不建议使用。
 
 - `channels.discord.ui.components.accentColor` 设置 Discord 组件容器使用的强调色（十六进制）。按账号：`channels.discord.accounts.<id>.ui.components.accentColor`。
 - `channels.discord.agentComponents.ttlMs` 控制已发送的 Discord 组件回调保持注册的时长（默认 `1800000`，最大 `86400000`）。按账号：`channels.discord.accounts.<id>.agentComponents.ttlMs`。
@@ -1284,7 +1285,7 @@ openclaw channels capabilities --channel discord --target channel:<voice-channel
 - 如果接收日志在更新后持续出现 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。捆绑的 `@discordjs/voice` 版本包含 discord.js PR #11449 中的上游 padding 修复，该修复关闭了 discord.js issue #11419。
 - 出现 `The operation was aborted` 的接收事件是 OpenClaw 完成某个已捕获的说话者片段时的预期行为；它们是详细诊断信息，不是警告。
 - 详细的 Discord 语音日志会为每个被接受的说话者片段提供一个有边界的单行 STT 转录预览，因此调试时可以同时看到用户端和 agent 回复端，而不会倾倒无限制的转录文本。
-- 在 `agent-proxy` 模式下，强制 consult 回退会跳过可能不完整的转录片段，例如以 `...` 结尾的文本、以 "and" 之类的尾随连接词结尾的文本，以及明显不可操作的结尾语句如 "be right back" 或 "bye"。当这避免了一个过时的排队回答时，日志会显示 `forced agent consult skipped reason=...`】【。
+- 在 `agent-proxy` 模式下，强制 consult 回退会跳过可能不完整的转录片段，例如以 `...` 结尾的文本、以 "and" 之类的尾随连接词结尾的文本，以及明显不可操作的结尾语句如 "be right back" 或 "bye"。当这避免了一个过时的排队回答时，日志会显示 `forced agent consult skipped reason=...`。
 
 ### 在语音中跟随用户
 
@@ -1542,7 +1543,7 @@ message(action="send", channel="discord", target="channel:123", path="/path/to/a
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="使用了不允许的 intents，或机器人看不到任何 guild 消息">
+  <Accordion title="使用了不允许的 intents，或机器人看不到任何服务器消息">
 
     - 启用 Message Content Intent
     - 在依赖用户/member 解析时启用 Server Members Intent
@@ -1550,11 +1551,11 @@ message(action="send", channel="discord", target="channel:123", path="/path/to/a
 
   </Accordion>
 
-  <Accordion title="Guild 消息被意外阻止">
+  <Accordion title="服务器消息被意外阻止">
 
     - 验证 `groupPolicy`
-    - 验证 `channels.discord.guilds` 下的 guild allowlist
-    - 如果存在某个 guild 的 `channels` map，则只允许列表中的 channels
+    - 验证 `channels.discord.guilds` 下的服务器 allowlist
+    - 如果存在某个服务器的 `channels` map，则只允许列表中的 channels
     - 验证 `requireMention` 行为和 mention 模式
 
     有用的检查：
@@ -1567,12 +1568,12 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="Require mention 为 false，但仍被阻止">
+  <Accordion title="要求提及为 false，但仍被阻止">
     常见原因：
 
-    - `groupPolicy="allowlist"`，但没有匹配的 guild/channel allowlist
+    - `groupPolicy="allowlist"`，但没有匹配的服务器或频道 allowlist
     - `requireMention` 配置在错误的位置（必须位于 `channels.discord.guilds` 下，或某个 channel 条目中）
-    - sender 被 guild/channel `users` allowlist 阻止
+    - sender 被服务器或频道 `users` allowlist 阻止
 
   </Accordion>
 
@@ -1608,15 +1609,15 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="DM 和配对问题">
+  <Accordion title="私信和配对问题">
 
-    - DM 已禁用：`channels.discord.dm.enabled=false`
-    - DM 策略已禁用：`channels.discord.dmPolicy="disabled"`（旧版：`channels.discord.dm.policy`）
+    - 私信已禁用：`channels.discord.dm.enabled=false`
+    - 私信策略已禁用：`channels.discord.dmPolicy="disabled"`（旧版：`channels.discord.dm.policy`）
     - 在 `pairing` 模式下等待配对审批
 
   </Accordion>
 
-  <Accordion title="Bot 到 bot 的循环">
+  <Accordion title="机器人之间的循环">
     默认会忽略 bot 发送的消息。
 
     如果你设置 `channels.discord.allowBots=true`，请使用严格的 mention 和 allowlist 规则来避免循环行为。
@@ -1682,7 +1683,7 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="Voice STT 因 DecryptionFailed(...) 丢失">
+  <Accordion title="语音 STT 因 DecryptionFailed(...) 丢失">
 
     - 保持 OpenClaw 为最新版本（`openclaw update`），以包含 Discord voice 接收恢复逻辑
     - 确认 `channels.discord.voice.daveEncryption=true`（默认值）

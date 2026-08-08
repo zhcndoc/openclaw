@@ -127,52 +127,19 @@ type ReplyPayloadDelivery = {
 
 按钮语义：
 
-- `action.type: "command"` runs a native slash command through core's command
-  path. Use this for built-in command buttons and menus.
-- `action.type: "callback"` carries opaque plugin data through the channel's
-  interaction path. Channel plugins must not reinterpret callback data as slash
-  commands.
-- `action.type: "approval"` identifies one durable operator approval, its
-  explicit `exec` or `plugin` kind, and the requested decision. Channel plugins
-  encode that action into a transport-private callback and resolve it through
-  the approval service; they must not parse `/approve` command text or infer
-  kind from the ID.
-- `action.type: "question"` identifies one choice for a live, runtime-authored
-  `ask_user` question. Like `approval`, this is an OpenClaw runtime action;
-  agents and plugins must not synthesize question IDs. Telegram, Discord, and
-  Slack map it to transport-private native callbacks and resolve the choice
-  through the Gateway. When the question becomes answered, expired, or
-  cancelled, those channels edit the delivered message, remove its actions,
-  and append the terminal status. WhatsApp, Signal, and iMessage render up to
-  four single-select choices as `1️⃣` through `4️⃣` reactions. Other question
-  shapes degrade to label text, and the user can answer with a plain-text
-  reply.
-- `action.type: "url"` opens a normal link.
-- `action.type: "web-app"` launches a channel-native web app. Set `url` for a
-  URL-backed app or `widgetId` for an OpenClaw-hosted widget whose launch
-  mechanics are owned by the channel; at least one is required. When both are
-  present, a channel can prefer its native hosted-widget launch and use the URL
-  where that mechanism is unavailable.
-- `value` is the legacy opaque callback value. New controls should use `action`
-  so channel plugins can map commands and callbacks without guessing from text.
-- `url`, `webApp`, and `web_app` remain accepted as deprecated boundary inputs.
-  Normalizers preserve these fields so renderers can distinguish shipped legacy
-  semantics from explicit typed actions. New producers should use `action`.
-- `label` is required and is also used in text fallback.
-- `style` is advisory. Renderers should map unsupported styles to a safe
-  default, not fail the send.
-- `priority` is optional. When a channel advertises action limits and controls
-  must be dropped, core keeps higher-priority buttons first and preserves
-  original order among equal priority buttons. When all controls fit, authored
-  order is preserved.
-- `disabled` is optional. Channels must opt in with `supportsDisabled`; otherwise
-  core degrades the disabled control to non-interactive fallback text. A
-  disabled button always renders label-only in fallback text, even when it
-  carries a `command` action.
-- `reusable` is optional. Channels that support reusable native callbacks may
-  keep the action available after a successful interaction. Use it for
-  repeatable or idempotent actions such as refresh, inspect, or more details;
-  leave it unset for normal one-shot approvals and destructive actions.
+- `action.type: "command"` 通过核心的命令路径运行原生斜杠命令。内置命令按钮和菜单应使用此类型。
+- `action.type: "callback"` 通过频道的交互路径传递不透明的插件数据。频道插件不得将回调数据重新解释为斜杠命令。
+- `action.type: "approval"` 标识一个持久化的操作员审批、其明确的 `exec` 或 `plugin` 类型，以及请求的决定。频道插件会将该动作编码到传输层私有的回调中，并通过审批服务解析；不得解析 `/approve` 命令文本，也不得根据 ID 推断类型。
+- `action.type: "question"` 标识一个面向实时运行时编写的 `ask_user` 问题的选项。与 `approval` 一样，这是一个 OpenClaw 运行时动作；代理和插件不得自行生成问题 ID。Telegram、Discord 和 Slack 会将其映射为传输层私有的原生回调，并通过 Gateway 解析选项。当问题变为已回答、已过期或已取消时，这些频道会编辑已发送的消息、移除其动作，并追加最终状态。WhatsApp、Signal 和 iMessage 会将最多四个单选选项渲染为 `1️⃣` 至 `4️⃣` 的反应。其他问题形状会降级为标签文本，用户可以用纯文本回复。
+- `action.type: "url"` 打开普通链接。
+- `action.type: "web-app"` 启动频道原生 Web 应用。对于基于 URL 的应用，设置 `url`；对于由 OpenClaw 托管、启动机制由频道负责的 widget，设置 `widgetId`；两者至少需要一个。当两者同时存在时，频道可以优先使用其原生的托管 widget 启动方式，并在该机制不可用时使用 URL。
+- `value` 是旧版不透明回调值。新控件应使用 `action`，这样频道插件就能映射命令和回调，而无需根据文本猜测。
+- `url`、`webApp` 和 `web_app` 仍作为已弃用的边界输入接受。规范化器会保留这些字段，以便渲染器区分已发布的旧版语义和显式类型化动作。新的生产者应使用 `action`。
+- `label` 是必需的，也会用于文本回退。
+- `style` 仅供参考。渲染器应将不支持的样式映射为安全的默认值，而不是使发送失败。
+- `priority` 是可选的。当频道声明了动作数量限制且必须丢弃控件时，核心会优先保留优先级较高的按钮，并在优先级相同的按钮之间保持原始顺序。当所有控件都能容纳时，则保持编写时的顺序。
+- `disabled` 是可选的。频道必须通过 `supportsDisabled` 显式选择支持；否则核心会将禁用控件降级为不可交互的回退文本。禁用按钮在回退文本中始终只渲染标签，即使它携带了 `command` 动作。
+- `reusable` 是可选的。支持可复用原生回调的频道可以在交互成功后继续保留该动作。可将其用于刷新、检查或查看更多详情等可重复或幂等的动作；普通的一次性审批和破坏性操作应保持未设置。
 
 选择器语义：
 
@@ -412,8 +379,23 @@ const adapter: ChannelOutboundAdapter = {
 };
 ```
 
-能力布尔值描述了渲染器可以将哪些内容做成交互式。可选的
-`limits` 描述了 core 在调用渲染器之前可以适配的通用边界：
+当某项能力取决于每个账户的配置或投递的文本处理流程时——例如，Telegram
+仅会在启用 `richMessages` 的账户上，并且仅在 Markdown 路径中渲染原生表格——请在静态对象旁声明可选的
+`resolvePresentationCapabilities({ cfg, accountId, formatting })` 钩子。Core 会在每次投递时解析一次能力，并且该钩子的优先级高于静态声明；请将静态对象保留为与账户无关的基线。
+
+```ts
+const adapter: ChannelOutboundAdapter = {
+  presentationCapabilities: BASE_CAPABILITIES,
+  resolvePresentationCapabilities: ({ cfg, accountId, formatting }) => ({
+    ...BASE_CAPABILITIES,
+    tables: isRichAccount(cfg, accountId) && formatting?.parseMode !== "HTML",
+  }),
+  // ...
+};
+```
+
+能力布尔值描述渲染器可以创建哪些可交互元素。可选的
+`limits` 描述了 Core 在调用渲染器之前可以适配的通用封装限制：
 
 ```ts
 type ChannelPresentationCapabilities = {
@@ -473,45 +455,39 @@ core 会在渲染前将通用限制应用于语义化控件。渲染器仍然负
 
 展示必须能够安全地发送到受限频道。
 
+手动编写相同事实的纯文本呈现的生产者，可以在回复载荷中通过 `presentationTextMode: "fallback"` 标记该文本。原生渲染展示数据区块的频道会丢弃这段文本；当每个 `table` 和 `chart` 区块都发生降级且不再有交互区块时，系统会原样发送手动编写的文本，而不是使用下方的通用扁平化文本。
+
 回退文本包括：
 
-- `title` as the first line
-- `text` blocks as normal paragraphs
-- `context` blocks as compact context lines
-- `divider` blocks as a visual separator
-- button labels, including URLs for link buttons
-- select option labels
-- chart title, type, axes, categories, series, and values
-- table caption, headers, and every row value
+- `title` 作为第一行
+- `text` 区块作为普通段落
+- `context` 区块作为紧凑的上下文行
+- `divider` 区块作为视觉分隔符
+- 按钮标签，包括链接按钮的 URL
+- 选择选项标签
+- 图表标题、类型、坐标轴、类别、系列和值
+- 表格标题、表头以及每一行的值
 
 ### 按钮值回退可见性
 
 当某个频道无法渲染交互控件时，按钮和值选择会回退为纯文本。此回退行为在保持可用性的同时，会保护不透明的回调数据私密：
 
-- **`command`-typed actions** render as `` label: `command` `` so users can
-  copy the command and run it manually in the channel input.
-- **`callback`-typed actions** and legacy **`value`** fields render as
-  label-only. The opaque callback value is not exposed in fallback text.
-- **`approval`-typed actions** render label-only. Approval IDs and decisions are
-  transport data and are not exposed through generic scalar helpers or fallback
-  text.
-- **`url` actions**, URL-backed **`web-app` actions**, and deprecated **`url` /
-  `webApp` / `web_app`** inputs render the URL text alongside the button label,
-  since the URL is user-facing. Hosted-widget-only actions render label-only on
-  channels without a native widget launch.
-- **Select options** render as label-only. The underlying option value is not
-  exposed in fallback text.
+- **`command`-typed actions** 渲染为 `` label: `command` ``，这样用户可以复制该命令，并在频道输入框中手动运行。
+- **`callback`-typed actions** 和旧版 **`value`** 字段仅渲染标签。不透明的回调值不会暴露在回退文本中。
+- **`approval`-typed actions** 仅渲染标签。审批 ID 和决策属于传输数据，不会通过通用标量辅助函数或回退文本暴露。
+- **`url` actions**、基于 URL 的 **`web-app` actions**，以及已弃用的 **`url` / `webApp` / `web_app`** 输入，会在按钮标签旁渲染 URL 文本，因为 URL 是面向用户的内容。仅支持托管小组件的操作，在不具备原生小组件启动能力的频道中仅渲染标签。
+- **选择选项**仅渲染标签。底层选项值不会暴露在回退文本中。
 
 在回退 UI 中添加手动命令指引的频道适配器（例如飞书文档评论说明）必须从与回退渲染器相同的展示区块中派生命令存在性检查，因此只有在实际显示手动命令时，指引文本才会出现。
 
 不支持的原生控件应当降级，而不是让整个发送失败。例如：
 
-- Telegram with inline buttons disabled sends text fallback.
-- A channel without select support lists select options as text.
-- A channel without native chart support lists the chart data as text.
-- A channel without native table support lists every table row as text.
-- A URL-only button becomes either a native link button or a fallback URL line.
-- Optional pin failures do not fail the delivered message.
+- 禁用内联按钮的 Telegram 会发送文本回退。
+- 不支持选择控件的频道会将选择选项列为文本。
+- 不支持原生图表的频道会将图表数据列为文本。
+- 不支持原生表格的频道会将每一行表格内容列为文本。
+- 仅支持 URL 的按钮会变为原生链接按钮或回退 URL 行。
+- 可选的置顶失败不会导致已投递消息失败。
 
 主要例外是 `delivery.pin.required: true`；如果请求置顶为必需，而频道无法将已发送消息置顶，则投递会报告失败。
 
@@ -519,16 +495,16 @@ core 会在渲染前将通用限制应用于语义化控件。渲染器仍然负
 
 当前内置渲染器：
 
-| Channel         | 原生渲染目标                               | 说明                                                                                                                                                                                                             |
+| 通道            | 原生渲染目标                               | 说明                                                                                                                                                                                                             |
 | --------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Discord         | 组件和组件容器                              | 为现有的 provider 原生载荷生产者保留旧版 `channelData.discord.components`，但新的共享发送应使用 `presentation`。                                                                                                      |
+| Discord         | 组件和组件容器                              | 为现有的提供方原生载荷生产者保留旧版 `channelData.discord.components`，但新的共享发送应使用 `presentation`。                                                                                                      |
 | Feishu          | 交互式卡片                                  | 卡片头部可以使用 `title`；正文避免重复该标题。                                                                                                                                                                   |
 | Matrix          | 文本回退加结构化事件字段                    | 按钮/选择器被标记为受支持，但当前每个块都会渲染为 `renderMessagePresentationFallbackText` 的输出，并携带在 `com.openclaw.presentation` 事件字段中，而不是原生交互式小部件。                                      |
 | Mattermost      | 文本加交互属性                               | 不支持选择器和分隔符；这些块会降级为文本。                                                                                                                                                                        |
-| Microsoft Teams | 自适应卡片                                  | 当同时提供时，普通 `message` 文本会与卡片一起包含。 不支持选择器、样式和禁用状态。                                                                                                                                |
+| Microsoft Teams | 自适应卡片                                  | 当同时提供时，普通 `message` 文本会与卡片一起包含。不支持选择器、样式和禁用状态。                                                                                                                                |
 | Slack           | Block Kit                                  | 将 `chart` 渲染为原生 `data_visualization`，将 `table` 渲染为原生 `data_table`；保留旧版 `channelData.slack.blocks`，但新的共享发送应使用 `presentation`。                                                         |
 | Telegram        | 文本加内联键盘                              | 按钮/选择器需要目标界面具备内联按钮能力；否则使用文本回退。                                                                                                                                                       |
-| Plain channels  | 文本回退                                    | 没有渲染器的通道仍会获得可读输出。                                                                                                                                                                                |
+| 普通通道        | 文本回退                                    | 没有渲染器的通道仍会获得可读输出。                                                                                                                                                                                |
 
 提供方原生载荷兼容性是为现有回复生产者提供的过渡性便利。它不是新增共享原生字段的理由。
 
@@ -542,13 +518,13 @@ core 会在渲染前将通用限制应用于语义化控件。渲染器仍然负
 
 `MessagePresentation` 是规范的共享发送契约。它新增了：
 
-- title
-- tone
-- context
-- divider
-- chart
-- table
-- URL-only 按钮
+- 标题
+- 语调
+- 上下文
+- 分隔线
+- 图表
+- 表格
+- 仅包含 URL 的按钮
 - 通过 `ReplyPayload.delivery` 提供的通用发送元数据
 
 在桥接旧代码时，请使用 `openclaw/plugin-sdk/interactive-runtime` 中的辅助函数：
@@ -599,7 +575,7 @@ import {
 SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 `@deprecated`：
 
-- `InteractiveReply`, `InteractiveReplyBlock`, `InteractiveReplyButton`, and
+- `InteractiveReply`、`InteractiveReplyBlock`、`InteractiveReplyButton` 和
   `InteractiveReplyOption`
 - `normalizeInteractiveReply(...)`
 - `hasInteractiveReplyBlocks(...)`
@@ -615,7 +591,7 @@ SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 
 审批辅助工具也有以 presentation 为优先的替代方案：
 
-- use `buildApprovalPresentation(...)` instead of
+- 使用 `buildApprovalPresentation(...)` 代替
   `buildApprovalInteractiveReply(...)`
 - 使用 `buildExecApprovalPresentation(...)` 代替
   `buildExecApprovalInteractiveReply(...)`
@@ -628,7 +604,7 @@ SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 `approval` action，而不是从 `/approve` 文本推断语义。
 
 `renderMessagePresentationFallbackText(...)` 会为
-没有文本回退内容的 presentation 块返回空字符串，例如仅包含 divider 的 presentation。要求发送正文非空的传输层可以传入
+没有文本回退内容的 presentation 块返回空字符串，例如仅包含分隔线的 presentation。要求发送正文非空的传输层可以传入
 `emptyFallback`，在不改变默认回退
 契约的情况下启用一个最小正文。
 

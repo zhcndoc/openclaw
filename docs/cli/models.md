@@ -35,7 +35,7 @@ openclaw models scan
 直接运行 `openclaw models` 等同于运行 `openclaw models status`。  
 `openclaw models --json` 返回与 `openclaw models status --json` 相同的对象。
 
-`openclaw models status` 会显示解析后的默认模型/回退模型以及认证概览。对于 Codex 等由插件拥有的 agent 运行时，它还会检查所属插件是否已启用，以及是否通过了启动负载验证。拥有有效凭据但运行时不可用的路由会报告 `status: unavailable`，而不是 `usable`；JSON 输出会分别包含 `authStatus`、`runtimeStatus` 以及受限的运行时诊断信息。当提供方使用情况快照可用时，OAuth/API 密钥状态部分会包含提供方使用窗口和配额快照。目前支持使用窗口的提供方：Anthropic、GitHub Copilot、OpenAI、MiniMax、Xiaomi 和 z.ai。使用情况认证在可用时来自提供方专用钩子；否则 OpenClaw 会从认证配置文件、环境变量或配置中匹配 OAuth/API 密钥凭据。
+`openclaw models status` 显示解析后的默认模型/回退模型以及认证概览。活跃的 profile 冷却状态会显示在 **不可用的认证 profile** 下，并包含已存储的原因和恢复操作；JSON 输出会在 `auth.unusableProfiles` 中公开相同数据。对于 Codex 等由插件拥有的 agent 运行时，status 还会检查所属插件是否已启用，以及是否通过启动载荷验证。具有有效凭据但运行时不可用的路由会报告 `status: unavailable`，而不是 `usable`；JSON 输出会分别包含 `authStatus`、`runtimeStatus` 和受限的运行时诊断信息。当提供方使用情况快照可用时，OAuth/API key 状态部分会包含提供方使用时间窗口和配额快照。目前支持使用情况窗口的提供方包括：Anthropic、GitHub Copilot、OpenAI、MiniMax、小米和 z.ai。使用情况认证在可用时来自提供方专用钩子；否则 OpenClaw 会从认证 profile、环境变量或配置中匹配的 OAuth/API key 凭据回退获取。
 
 在 `--json` 输出中，`auth.providers` 是面向环境/配置/存储且感知的提供方概览，而 `auth.oauth` 仅表示 auth-store 中 profile 的健康状态。
 
@@ -162,7 +162,7 @@ openclaw models auth order clear --provider <id>
 
 `models auth add` 是交互式认证助手。根据你选择的 provider，它可以启动 provider 的认证流程（OAuth/API key），也可以引导你手动粘贴 token。
 
-`models auth list` 会列出所选 agent 的已保存认证配置文件，但不会打印 token、API key 或 OAuth 密钥材料。使用 `--provider <id>` 可筛选到某个 provider，例如 `openai`，使用 `--json` 便于脚本化处理。
+`models auth list` 会列出所选 agent 的已保存认证配置文件，但不会打印 token、API key 或 OAuth 密钥材料。活动中的冷却和禁用条目会包含其原因及恢复操作。对于旧版 Gemini CLI OAuth 冷却，该命令会引导你使用受支持的 Google AI Studio API key 设置，而不是提供不可用的 Gemini CLI 登录流程。使用 `--provider <id>` 可筛选单个 provider，例如 `openai`；使用 `--json` 可用于脚本处理。
 
 `models auth login` 会运行 provider 插件的认证流程（OAuth/API key）。使用 `openclaw plugins list` 查看已安装哪些 provider。`login` 支持 `--profile-id <id>`，适用于在登录期间支持命名配置文件的 provider（可用来将同一 provider 的多个登录分开保存），`--method <id>` 用于选择特定认证方法，`--device-code` 作为 `--method device-code` 的快捷方式，`--set-default` 用于应用 provider 推荐的默认模型，`--force` 用于先移除该 provider 现有的配置文件（当缓存的 OAuth 配置文件卡住，或你想切换账号时使用）。
 

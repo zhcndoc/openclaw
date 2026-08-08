@@ -78,7 +78,7 @@ openclaw node run --host <gateway-host> --port 18789
 - `--no-tls`: 即使本地 Gateway 配置启用了 TLS，也强制使用明文 Gateway 连接
 - `--tls-fingerprint <sha256>`: 期望的 TLS 证书指纹（sha256）
 - `--node-id <id>`: 覆盖存储在共享 SQLite 状态中的客户端实例 ID（不会重置配对）
-- `--display-name <name>`: 覆盖节点显示名称
+- `--display-name <name>`: 覆盖节点显示名称。
 
 ## 节点主机的 Gateway 认证
 
@@ -119,6 +119,12 @@ openclaw node install --host <gateway-host> --port 18789
 - `--display-name <name>`: 覆盖 node 显示名称
 - `--runtime <runtime>`: 服务运行时（`node`）
 - `--force`: 如果已安装，则重新安装/覆盖
+
+> **Linux（systemd 用户服务）：** 安装后运行
+> `sudo loginctl enable-linger <user>`。如果不启用 linger，
+> `systemd --user` 会在最后一个 SSH 会话结束时拆除 node 服务，因此 node
+> 会在注销后无提示地离线。
+> 当检测到 linger 已禁用时，`openclaw node install` 会打印此警告。
 
 管理服务：
 
@@ -203,8 +209,8 @@ openclaw node identity --json
 
 `system.run` 受本地 exec 批准控制：
 
-- `$OPENCLAW_STATE_DIR/state/openclaw.sqlite#exec_approvals_config`, or
-  `~/.openclaw/state/openclaw.sqlite#exec_approvals_config` when the variable is unset
+- `$OPENCLAW_STATE_DIR/state/openclaw.sqlite#exec_approvals_config`, 或
+  未设置该变量时使用 `~/.openclaw/state/openclaw.sqlite#exec_approvals_config`
 - [Exec 批准](/tools/exec-approvals)
 - `openclaw approvals --node <id|name|ip>`（从 Gateway 编辑）
 

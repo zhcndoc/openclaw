@@ -28,7 +28,7 @@ OpenClaw 会将规范化的 `MessagePresentation` 元数据附加到发出的 Ma
         "options": [
           {
             "label": "DeepSeek",
-            "value": "/model deepseek/deepseek-chat"
+            "value": "/model deepseek/deepseek-chat -s"
           }
         ]
       }
@@ -54,22 +54,22 @@ OpenClaw 总是会在 `body` 中渲染可读的纯文本回退内容。结构化
 
 不支持的客户端会继续显示回退文本。支持 OpenClaw 的客户端可以在保留回退内容用于复制、搜索、通知和无障碍访问的同时，优先使用结构化元数据进行显示。
 
-## 支持的 block
+## 支持的区块
 
-Matrix outbound adapter 原生支持以下内容：
+Matrix 出站适配器原生支持以下内容：
 
 - `buttons`
 - `select`
 - `context`
 - `divider`
 
-`text` blocks 始终通过 fallback body 支持。请将所有 block 视为尽力呈现的提示；忽略未知字段和 block 类型，而不是使整条消息失败。
+`text` 区块始终通过 fallback 正文支持。请将所有区块视为尽力呈现的提示；忽略未知字段和区块类型，而不是使整条消息失败。
 
 ## 交互
 
 此元数据不会添加 Matrix 回调语义。按钮和选择值是备用交互载荷，通常是斜杠命令或文本命令。希望支持交互的 Matrix 客户端会解析控件值（`action.command`，然后是 `action.value`，最后是 `value`），并将其作为普通消息发送回房间。
 
-例如，值为 `/model deepseek/deepseek-chat` 的按钮可以通过在同一房间中将该值作为加密的 Matrix 文本消息发送来处理。
+例如，值为 `/model deepseek/deepseek-chat -s` 的按钮可以通过在同一房间内将该值作为加密的 Matrix 文本消息发送来处理。显式的会话标志可防止展示控件请求更新已配置的默认值。
 
 ## 与审批元数据的关系
 

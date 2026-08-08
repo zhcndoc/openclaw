@@ -52,33 +52,29 @@ OAuth 提供商通常会在每次登录/刷新时新铸造一个新的刷新令�
 
 ## 存储（令牌存放在哪里）
 
-Secrets and auth-routing state live in each agent's canonical SQLite database:
+机密信息和身份验证路由状态存储在每个 agent 的规范 SQLite 数据库中：
 
 - `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
-- Credential rows: `auth_profile_store`
-- Order, last-good, cooldown, and usage rows: `auth_profile_state`
+- 凭据记录：`auth_profile_store`
+- 顺序、最近可用、冷却和使用情况记录：`auth_profile_state`
 
-Older installations may still contain `auth-profiles.json`, `auth-state.json`,
-per-agent `auth.json`, or shared `credentials/oauth.json`. Run
-`openclaw doctor --fix` once after upgrading. Doctor imports verified values,
-records a migration receipt, and renames the original file to a timestamped
-archive. Runtime never reads these retired files and reports
-`AUTH_PROFILE_MIGRATION_REQUIRED` when a legacy credential source has not been
-migrated.
+较旧的安装可能仍包含 `auth-profiles.json`、`auth-state.json`、
+每个 agent 的 `auth.json`，或共享的 `credentials/oauth.json`。升级后请运行一次
+`openclaw doctor --fix`。Doctor 会导入已验证的值，记录迁移回执，并将原始文件重命名为带时间戳的
+归档文件。运行时永远不会读取这些已弃用的文件；当旧版凭据来源尚未迁移时，会报告
+`AUTH_PROFILE_MIGRATION_REQUIRED`。
 
-The database and migration sources respect `$OPENCLAW_STATE_DIR`. Full reference: [/gateway/configuration-reference#auth-storage](/gateway/configuration-reference#auth-storage)
+数据库和迁移来源遵循 `$OPENCLAW_STATE_DIR`。完整参考：[配置参考：身份验证存储](/gateway/configuration-reference#auth-storage)
 
-关于静态密钥引用和运行时快照激活行为，见 [Secrets Management](/gateway/secrets)。
+关于静态密钥引用和运行时快照激活行为，见 [机密信息管理](/gateway/secrets)。
 
 当次级 agent 没有本地 auth profile 时，OpenClaw 会从默认/主 agent 存储进行读穿式继承；读取时不会克隆主 agent 的存储。OAuth 刷新令牌尤其敏感：由于某些提供商会在使用后轮换或使刷新令牌失效，正常的复制流程默认会跳过它们。若某个 agent 需要独立账户，请为其单独配置 OAuth 登录。
 
 ## Anthropic Claude CLI 复用
 
-OpenClaw 支持 Anthropic Claude CLI 复用以及 `claude -p` 作为经批准的
-身份验证路径。如果你已经在主机上有本地 Claude 登录，
-onboarding/configure 可以直接复用它。Anthropic setup-token 仍然
-作为受支持的 token-auth 路径可用，但 OpenClaw 在可用时更倾向于 Claude CLI
-复用。
+OpenClaw 支持复用 Anthropic Claude CLI，以及将 `claude -p` 作为经批准的
+身份验证路径。如果你已经在主机上登录了 Claude，onboarding/configure 可以直接复用该登录状态。Anthropic setup-token 仍然
+作为受支持的 token-auth 路径可用，但 OpenClaw 在可用时更倾向于复用 Claude CLI。
 
 <Warning>
 Anthropic 的公开 Claude Code 文档说明，直接使用 Claude Code 仍属于 Claude 订阅额度内，且 Anthropic 员工告诉我们，类似 OpenClaw 的 Claude CLI 用法已再次获准。因此，除非 Anthropic
@@ -136,12 +132,12 @@ openclaw models auth login --provider openai
 
 ## 刷新 + 过期
 
-Profiles 会存储一个 `expires` 时间戳。在运行时：
+配置文件会存储一个 `expires` 时间戳。在运行时：
 
 - 如果 `expires` 在未来，则使用已存储的访问令牌
 - 如果已过期，则进行刷新（在文件锁下），并覆盖已存储的凭据
-- 如果某个辅助 agent 读取了继承的主 agent OAuth profile，则刷新会写回主 agent 存储，而不是把刷新令牌复制到辅助 agent 存储中
-- 外部管理的 CLI 凭据（Claude CLI、窄化的 Codex CLI 引导；见 [令牌汇](#the-token-sink-why-it-exists)）会被重新读取，而不是消耗一个复制来的刷新令牌。如果受管刷新失败，OpenClaw 会报告受影响的 profile 需要重新认证，而不是返回外部 CLI 令牌内容。
+- 如果某个辅助代理读取了继承的主代理 OAuth 配置文件，则刷新会写回主代理存储，而不是把刷新令牌复制到辅助代理存储中
+- 外部管理的 CLI 凭据（Claude CLI、窄化的 Codex CLI 引导；见 [令牌汇](#the-token-sink-why-it-exists)）会被重新读取，而不是消耗一个复制来的刷新令牌。如果受管刷新失败，OpenClaw 会报告受影响的配置文件需要重新认证，而不是返回外部 CLI 令牌内容。
 
 刷新流程是自动的；通常你无需手动管理令牌。
 
@@ -165,12 +161,12 @@ openclaw agents add personal
 认证配置存储支持同一提供方的多个配置文件 ID。
 选择要使用的配置文件：
 
-- 全局：通过配置顺序（`auth.order`）
-- 按会话：通过 `/model ...@<profileId>`
+- 通过全局配置排序（`auth.order`）
+- 按会话通过 `/model ...@<profileId> -s`
 
 示例（会话覆盖）：
 
-- `/model Opus@anthropic:work`
+- `/model Opus@anthropic:work -s`
 
 列出现有的配置文件 ID：
 
@@ -181,10 +177,10 @@ openclaw models auth list --provider <id>
 相关文档：
 
 - [模型故障转移](/concepts/model-failover)（轮换 + 冷却规则）
-- [斜杠命令](/tools/slash-commands)（命令入口）
+- [斜杠命令](/tools/slash-commands)（命令入口）。
 
 ## 相关内容
 
 - [认证](/gateway/authentication) - 模型提供商认证概览
 - [Secrets](/gateway/secrets) - 凭据存储和 SecretRef
-- [配置参考](/gateway/configuration-reference#auth-storage) - 认证配置键
+- [配置参考](/gateway/configuration-reference#auth-storage) - 认证配置键。

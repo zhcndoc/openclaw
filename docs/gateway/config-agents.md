@@ -26,7 +26,7 @@ title: "配置 — 代理"
 
 ### `agents.defaults.repoRoot`
 
-可选的仓库根目录，将显示在系统提示词的 Runtime 行中。如果未设置，OpenClaw 将通过从工作区向上遍历自动检测它。
+可选的仓库根目录，将显示在系统提示词的运行时行中。如果未设置，OpenClaw 将通过从工作区向上遍历自动检测它。
 
 ```json5
 {
@@ -150,7 +150,7 @@ title: "配置 — 代理"
 
 ### `agents.defaults.bootstrapPromptTruncationWarning`
 
-控制在引导上下文被截断时，向代理显示的系统提示通知。
+控制在引导上下文被截断时，向代理显示的系统提示通知。  
 默认值：`"always"`。
 
 - `"off"`：从不向系统提示中注入截断通知文本。
@@ -281,7 +281,7 @@ OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按�
 
 在传递给提供方调用之前，转录/工具图像块中最长边的最大像素尺寸。默认值：`1200`。
 
-较低的值通常会减少视觉 token 的使用量以及截图较多的运行中的请求负载大小。
+较低的值通常会减少视觉 token 的使用量以及截图较多的运行中的请求负载大小。  
 较高的值会保留更多视觉细节。
 
 ```json5
@@ -292,7 +292,7 @@ OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按�
 
 ### `agents.defaults.imageQuality`
 
-从文件路径、URL 和媒体引用加载的图片的图像工具压缩/细节偏好。
+从文件路径、URL 和媒体引用加载的图片的图像工具压缩/细节偏好。  
 默认值：`auto`。
 
 OpenClaw 会根据所选图像模型调整缩放梯度。例如，Claude Opus 4.8、OpenAI GPT-5.6 Sol、Qwen VL 和托管的 Llama 4 视觉模型可以使用比旧版/默认高细节视觉路径更大的图像，而在 `auto` 模式下，多图像轮次会被更积极地压缩，以控制 token 和延迟成本。
@@ -476,9 +476,9 @@ OpenClaw 会根据所选图像模型调整缩放梯度。例如，Claude Opus 4.
 
 你配置的别名始终优先于默认值。
 
-Z.AI GLM-4.x 模型会自动启用 thinking 模式，除非你设置 `--thinking off`，或者自行定义 `agents.defaults.models["zai/<model>"].params.thinking`。
+Z.AI GLM-4.x 模型会自动启用思考模式，除非你设置 `--thinking off`，或者自行定义 `agents.defaults.models["zai/<model>"].params.thinking`。
 Z.AI 模型默认会为工具调用流式传输启用 `tool_stream`。将 `agents.defaults.models["zai/<model>"].params.tool_stream` 设为 `false` 可将其禁用。
-Anthropic Claude Opus 4.8 在 OpenClaw 中默认关闭 thinking；当显式启用自适应 thinking 时，Anthropic 的 provider 自有 effort 默认值为 `high`。Claude 4.6 模型在未设置明确 thinking 级别时默认使用 `adaptive`】【。
+Anthropic Claude Opus 4.8 在 OpenClaw 中默认关闭思考；当显式启用自适应思考时，Anthropic 的 provider 自有 effort 默认值为 `high`。Claude 4.6 模型在未设置明确思考级别时默认使用 `adaptive`】【。
 
 ### CLI 后端选择
 
@@ -707,10 +707,10 @@ CLI 适配器机制由插件注册，而不是在代理默认设置下配置。�
   agents: {
     defaults: {
       sandbox: {
-        mode: "non-main", // off (default) | non-main | all
-        backend: "docker", // docker (default) | podman | openshell | ssh
-        scope: "agent", // session | agent (default) | shared
-        workspaceAccess: "none", // none (default) | ro | rw
+        mode: "non-main", // off（默认）| non-main | all
+        backend: "docker", // docker（默认）| podman | openshell | ssh
+        scope: "agent", // session | agent（默认）| shared
+        workspaceAccess: "none", // none（默认）| ro | rw
         workspaceRoot: "~/.openclaw/sandboxes",
         docker: {
           image: "openclaw-sandbox:bookworm-slim",
@@ -853,14 +853,14 @@ CLI 适配器机制由插件注册，而不是在代理默认设置下配置。�
       openshell: {
         enabled: true,
         config: {
-          mode: "mirror", // mirror（默认） | remote
+          mode: "mirror", // mirror（默认）| remote
           command: "openshell",
           from: "openclaw",
           remoteWorkspaceDir: "/sandbox",
           remoteAgentWorkspaceDir: "/agent",
           gateway: "lab", // 可选
           gatewayEndpoint: "https://lab.example", // 可选
-          policy: "strict", // 可选 OpenShell policy id
+          policy: "strict", // 可选 OpenShell 策略 ID
           providers: ["openai"], // 可选
           autoProviders: true,
           timeoutSeconds: 120,
@@ -1013,7 +1013,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 
 ## 多代理路由
 
-在一个 Gateway 中运行多个彼此隔离的代理。参见 [Multi-Agent](/concepts/multi-agent)。
+在一个 Gateway 中运行多个彼此隔离的代理。参见 [多代理](/concepts/multi-agent)。
 
 ```json5
 {
@@ -1147,7 +1147,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 
 </Accordion>
 
-有关优先级的详细信息，请参见 [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools)。
+有关优先级的详细信息，请参见 [多代理沙箱与工具](/tools/multi-agent-sandbox-tools)。
 
 ---
 
@@ -1206,38 +1206,38 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 <Accordion title="会话字段详情">
 
 - **`scope`**：群聊上下文的基础会话分组策略。
-  - `per-sender`（默认）：在一个频道上下文中，每个发送者都拥有隔离的会话。
-  - `global`：频道上下文中的所有参与者共享单个会话（仅在确实需要共享上下文时使用）。
+  - `per-sender`（默认）：在一个频道上下文中，每个发送者都获得一个隔离的会话。
+  - `global`：频道上下文中的所有参与者共享一个会话（仅在确实需要共享上下文时使用）。
 - **`dmScope`**：私信的分组方式。
   - `main`：所有私信共享主会话。
   - `per-peer`：跨频道按发送者 ID 隔离。
   - `per-channel-peer`：按频道 + 发送者隔离（推荐用于多用户收件箱）。
   - `per-account-channel-peer`：按账户 + 频道 + 发送者隔离（推荐用于多账户）。
-- **`identityLinks`**：将规范 ID 映射到带提供商前缀的对端，以实现跨频道会话共享。`/dock_discord` 等停靠命令使用同一映射，将当前会话的回复路由切换到另一个已关联的频道对端；参见[频道停靠](/concepts/channel-docking)。
-- **`reset`**：主要重置策略。`none` 禁用自动重置，也是默认值；系统会改为通过压缩限制活跃上下文。`daily` 在本地时间的 `atHour` 时重置；`idle` 在 `idleMinutes` 后重置。如果两者都已配置，则以先到期者为准。在所有模式下，`/new` 和 `/reset` 仍然可用。每日重置的新鲜度使用会话行的 `sessionStartedAt`；空闲重置的新鲜度使用 `lastInteractionAt`。心跳、cron 唤醒、执行通知和网关记账等后台/系统事件写入可能会更新 `updatedAt`，但不会使每日/空闲会话保持新鲜。
+- **`identityLinks`**：将规范 ID 映射到带提供商前缀的对端，以实现跨频道会话共享。诸如 `/dock_discord` 的停靠命令使用同一映射，将当前会话的回复路由切换到另一个已关联的频道对端；请参阅[频道停靠](/concepts/channel-docking)。
+- **`reset`**：主要重置策略。`none` 禁用自动重置，也是默认值；系统会改用压缩来限制活动上下文。`daily` 在本地时间 `atHour` 时重置；`idle` 在 `idleMinutes` 后重置。如果两者都已配置，则先到期者生效。`/new` 和 `/reset` 在所有模式下都可用。每日重置的新鲜度使用会话行的 `sessionStartedAt`；空闲重置的新鲜度使用 `lastInteractionAt`。心跳、cron 唤醒、执行通知和网关记录等后台/系统事件写入可以更新 `updatedAt`，但不会让每日/空闲会话保持新鲜。
   - **`resetByType`**：按类型覆盖（`direct`、`group`、`thread`）。Doctor 会将旧版 `dm` 条目迁移为 `direct`；架构会拒绝 `dm`。
-- **`resetByChannel`**：按提供商/频道 ID 设置的频道级重置覆盖。当会话所在频道存在匹配条目时，该条目将完全优先于该会话的 `resetByType`/`reset`。仅当某个频道需要与类型级策略不同的重置行为时使用。
-- **`mainKey`**：旧版字段。运行时始终使用 `"main"` 作为主直接聊天存储桶。
-- **`sendPolicy`**：按 `channel`、`chatType`（`direct|group|channel`，以及旧版 `dm` 别名）、`keyPrefix` 或 `rawKeyPrefix` 进行匹配。第一个拒绝规则优先。
+- **`resetByChannel`**：按提供商/频道 ID 设置的频道级重置覆盖。当会话所在频道存在匹配条目时，该条目将完全优先于该会话的 `resetByType`/`reset`。仅当某个频道需要不同于类型级策略的重置行为时使用。
+- **`mainKey`**：旧版字段。运行时始终对主私聊桶使用 `"main"`。
+- **`sendPolicy`**：按 `channel`、`chatType`（`direct|group|channel`，兼容旧版 `dm` 别名）、`keyPrefix` 或 `rawKeyPrefix` 进行匹配。先匹配到的拒绝规则优先。
 - **`maintenance`**：会话存储清理和保留控制。
-  - `mode`：`enforce` 会应用清理策略，也是默认值；`warn` 仅发出警告。
+  - `mode`：`enforce` 执行清理，也是默认值；`warn` 仅发出警告。
   - `pruneAfter`：过期条目的时间阈值（默认 `30d`）。
-  - `maxEntries`：SQLite 会话条目的最大数量（默认 `500`）。运行时写入会使用较小的高水位缓冲区批量执行清理，以适应生产规模的上限；`openclaw sessions cleanup --enforce` 会立即应用该上限。
-  - 短生命周期的网关模型运行探测会话使用固定的 `24h` 保留期，但清理操作受压力条件控制：只有在会话条目维护/上限压力达到时，才会删除过期的严格模型运行探测行。只有匹配 `agent:*:explicit:model-run-<uuid>` 的严格显式探测键符合条件；普通直接会话、群组会话、线程会话、cron、hook、心跳、ACP 和子代理会话不会继承这一 `24h` 保留期。模型运行清理执行时，会先于更宽泛的 `pruneAfter` 过期条目清理和 `maxEntries` 上限处理。
-  - 当前架构会拒绝旧版 `rotateBytes`；`openclaw doctor --fix` 会从旧配置中移除该字段。
-  - `resetArchiveRetention`：重置/删除的转录存档的基于时间的保留策略。默认情况下，存档会一直保留，直到磁盘预算驱逐；设置持续时间可选择按墙上时钟删除，设置为 `false` 则显式禁用该功能。
-  - `maxDiskBytes`：可选的会话目录磁盘预算。在 `warn` 模式下记录警告；在 `enforce` 模式下优先删除最旧的工件/会话。
+  - `maxEntries`：SQLite 会话条目的最大数量（默认 `500`）。运行时写入会针对生产规模的上限批量执行清理，并保留少量高水位缓冲；`openclaw sessions cleanup --enforce` 会立即应用该上限。
+  - 网关短生命周期模型运行探测会话固定保留 `24h`，但清理受压力条件控制：只有达到会话条目维护/容量上限压力时，才会删除过期的严格模型运行探测行。只有匹配 `agent:*:explicit:model-run-<uuid>` 的严格显式探测键符合条件；普通私聊、群聊、线程、cron、hook、心跳、ACP 和子代理会话不会继承此 24 小时保留策略。模型运行清理执行时，会先于更广泛的 `pruneAfter` 过期条目清理和 `maxEntries` 上限处理。
+  - 当前架构会拒绝旧版 `rotateBytes`；`openclaw doctor --fix` 会从旧配置中删除该字段。
+  - `resetArchiveRetention`：重置/删除的转录档案的基于时间的保留策略。默认情况下，档案会一直保留，直到因磁盘预算而被驱逐；设置持续时间可选择按实际时间删除，设置为 `false` 可显式禁用该功能。
+  - `maxDiskBytes`：可选的会话目录磁盘预算。在 `warn` 模式下记录警告；在 `enforce` 模式下优先删除最早的构件/会话。设置为 `false`、`0` 或 `"0"` 可完全禁用该预算。
   - `highWaterBytes`：预算清理后的可选目标值。默认为 `maxDiskBytes` 的 `80%`。
 - **`threadBindings`**：线程绑定会话功能的全局默认值。
-  - `enabled`：受支持的频道线程绑定的总开关。
+  - `enabled`：受支持的频道线程绑定功能的总开关。
   - `idleHours`：默认的非活动自动取消聚焦时间（小时）（`0` 禁用；提供商可以覆盖）。
-  - `maxAgeHours`：默认的最大时长（小时）（`0` 禁用；提供商可以覆盖）。
+  - `maxAgeHours`：默认的硬性最大存续时间（小时）（`0` 禁用；提供商可以覆盖）。
   - `spawnSessions`：通过 `sessions_spawn` 和 ACP 线程生成创建线程绑定工作会话的默认开关。启用线程绑定时默认为 `true`；提供商/账户可以覆盖。
   - `defaultSpawnContext`：线程绑定生成任务的默认原生子代理上下文（`"fork"` 或 `"isolated"`）。默认为 `"fork"`。
-- **`sharing`**：控制所有者和 `operator.admin` 连接可以选择的每会话协作模式。每个标志默认均为 `true`；将某个标志设置为 `false` 会从控制界面中移除对应选项，并使创建时的可见性设置或 `session.visibility.set` 拒绝该选项。除非控制界面以草稿形式启动会话，否则新会话以 `shared` 模式启动。
-  - `readOnly`：允许使用 `read-only` 模式，非成员可以观看，但不能发送消息、操控、终止、审批或修改会话状态。
-  - `suggest`：允许使用 `suggest` 模式。在此阶段，它执行与 `read-only` 相同的准入行为；建议队列将在后续功能中提供。
-  - `drafts`：允许使用 `draft` 模式，该模式会将会话从非管理员、非所有者的会话列表和事件广播中隐藏。
+- **`sharing`**：控制所有者和 `operator.admin` 连接可以选择的每会话协作模式。每个标志默认为 `true`；将某项设置为 `false` 会从控制界面中移除相应选项，并使创建时的可见性设置或 `session.visibility.set` 拒绝该选项。除非控制界面以草稿形式启动新会话，否则新会话将以 `shared` 模式开始。
+  - `readOnly`：允许使用 `read-only`，非成员可以观看，但不能发送消息、调整方向、中止、批准或修改会话状态。
+  - `suggest`：允许使用 `suggest`。在此阶段，它执行与 `read-only` 相同的准入行为；建议队列将在后续功能中提供。
+  - `drafts`：允许使用 `draft`，这会将会话从非管理员、非所有者的会话列表和事件广播中隐藏。
 
 成员资格和可见性变更会以系统备注的形式写入会话转录。这些控制用于协调共享同一代理的操作员；它们不是租户之间的安全边界。当工作需要隔离时，请使用独立的网关或代理。
 
@@ -1387,9 +1387,9 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 
 ---
 
-## Talk
+## 语音对话
 
-Talk 模式的默认值（macOS/iOS/Android 和浏览器 Control UI）。
+语音对话模式的默认值（macOS/iOS/Android 和浏览器控制界面）。
 
 ```json5
 {
@@ -1438,19 +1438,19 @@ Talk 模式的默认值（macOS/iOS/Android 和浏览器 Control UI）。
 }
 ```
 
-- 当配置了多个 Talk 提供商时，`talk.provider` 必须与 `talk.providers` 中的某个键匹配。
-- 对于未指定代理作用域会话密钥而创建的 Talk 会话，`talk.agentId` 负责管理这些会话。会话作用域的 Talk 调用仍会使用该密钥中编码的代理。对于现有的多代理配置，Doctor 可能会创建一个仅包含此所有者的最小 `talk` 块。
-- 旧版扁平 Talk 键（`talk.voiceId`、`talk.voiceAliases`、`talk.modelId`、`talk.outputFormat`、`talk.apiKey`）仅用于兼容。运行 `openclaw doctor --fix`，将持久化配置重写为 `talk.providers.<provider>`。
-- Voice ID 会回退到 `ELEVENLABS_VOICE_ID` 或 `SAG_VOICE_ID`（macOS Talk 客户端行为）。
+- 当配置了多个语音对话提供商时，`talk.provider` 必须与 `talk.providers` 中的某个键匹配。
+- 对于未指定代理作用域会话密钥而创建的语音对话会话，`talk.agentId` 负责管理这些会话。会话作用域的语音对话调用仍会使用该密钥中编码的代理。对于现有的多代理配置，Doctor 可能会创建一个仅包含此所有者的最小 `talk` 块。
+- 旧版扁平语音对话键（`talk.voiceId`、`talk.voiceAliases`、`talk.modelId`、`talk.outputFormat`、`talk.apiKey`）仅用于兼容。运行 `openclaw doctor --fix`，将持久化配置重写为 `talk.providers.<provider>`。
+- Voice ID 会回退到 `ELEVENLABS_VOICE_ID` 或 `SAG_VOICE_ID`（macOS 语音对话客户端行为）。
 - `providers.*.apiKey` 接受纯文本字符串或 SecretRef 对象。
-- 仅当未配置 Talk API 密钥时，才会应用 `ELEVENLABS_API_KEY` 回退值。
-- `providers.*.voiceAliases` 允许 Talk 指令使用易记名称。
+- 仅当未配置语音对话 API 密钥时，才会应用 `ELEVENLABS_API_KEY` 回退值。
+- `providers.*.voiceAliases` 允许语音对话指令使用易记名称。
 - `providers.mlx.modelId` 选择 macOS 本地 MLX 辅助程序所使用的 Hugging Face 仓库。如果省略，macOS 将使用 `mlx-community/Soprano-80M-bf16`。
 - macOS MLX 播放会在可用时通过捆绑的 `openclaw-mlx-tts` 辅助程序运行，否则使用 `PATH` 上的可执行文件；`OPENCLAW_MLX_TTS_BIN` 可在开发过程中覆盖辅助程序路径。
-- `consultThinkingLevel` 控制 Control UI Talk 实时 `openclaw_agent_consult` 调用背后完整 OpenClaw 代理运行时的思考级别。不设置则保持正常的会话/模型行为。
-- `consultFastMode` 为 Control UI Talk 实时咨询设置一次性的快速模式覆盖，不会更改会话的正常快速模式设置。
-- `speechLocale` 设置由 Android、iOS 和 macOS Talk 语音识别以及 iOS 系统语音回退所使用的 BCP 47 区域设置 ID。Android 还会使用其中的语言组件来辅助实时输入转录。不设置则使用设备默认值。
-- `silenceTimeoutMs` 控制 Talk 模式在用户静音后等待多长时间再发送转录文本。不设置则保留平台默认的暂停时间窗口（`macOS 和 Android 为 700 ms，iOS 为 900 ms`）。
+- `consultThinkingLevel` 控制控制界面语音对话实时 `openclaw_agent_consult` 调用背后完整 OpenClaw 代理运行时的思考级别。不设置则保持正常的会话/模型行为。
+- `consultFastMode` 为控制界面语音对话实时咨询设置一次性的快速模式覆盖，不会更改会话的正常快速模式设置。
+- `speechLocale` 设置由 Android、iOS 和 macOS 语音对话语音识别以及 iOS 系统语音回退所使用的 BCP 47 区域设置 ID。Android 还会使用其中的语言组件来辅助实时输入转录。不设置则使用设备默认值。
+- `silenceTimeoutMs` 控制语音对话模式在用户静音后等待多长时间再发送转录文本。不设置则保留平台默认的暂停时间窗口（`macOS 和 Android 为 700 ms，iOS 为 900 ms`）。
 - `realtime.instructions` 会将面向提供商的系统指令附加到 OpenClaw 的内置实时提示词中，因此无需丢失默认的 `openclaw_agent_consult` 指导即可配置语音风格。
 - `realtime.vadThreshold` 将提供商的语音活动阈值设置为从 `0`（最敏感）到 `1`（最不敏感）。不设置则保留提供商默认值。
 - `realtime.silenceDurationMs` 设置提供商提交实时用户回合之前的正整数静音时间窗口。不设置则保留提供商默认值。

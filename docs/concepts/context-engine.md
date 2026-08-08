@@ -129,7 +129,11 @@ export default function register(api) {
       id: "my-engine",
       name: "My Context Engine",
       ownsCompaction: true,
-      acceptedHostParams: ["sessionKey"],
+      acceptedHostParams: ["sessionKey", "runtimeContext"],
+      transcriptSemantics: {
+        currentTurnFence: "before-current-turn-entry-v1",
+        turnAdvancementIdempotency: "atomic-idempotent-v1",
+      },
     },
 
     async ingest({ sessionId, message, isHeartbeat }) {
@@ -160,6 +164,16 @@ export default function register(api) {
     async compact({ sessionId, force }) {
       // 总结较旧的上下文
       return { ok: true, compacted: true };
+    },
+
+    async commitTurn({ advancementKey, messages, prePromptMessageCount }) {
+      // 原子地存储已接受的轮次和 advancementKey。当该确切键已由之前的重试提交时，返回
+      // "duplicate"。
+      return await commitAcceptedTurn({
+        advancementKey,
+        messages,
+        prePromptMessageCount,
+      });
     },
   }));
 }
@@ -204,7 +218,23 @@ export default function register(api) {
 2026-08-12 之前通过预先添加宿主字段的 legacy 参数集接收参数；在该日期之后，
 未声明的引擎会接收当前所有宿主字段。
 
-`assemble` 返回一个 `AssembleResult`，包含：
+对于持久化的已接纳轮次，请声明以下两种转录语义：
+
+- `currentTurnFence: "before-current-turn-entry-v1"`
+- `turnAdvancementIdempotency: "atomic-idempotent-v1"`
+
+并将 `commitTurn(...)` 实现为一个以 `advancementKey` 为键的原子幂等写入。
+首次写入时返回 `{ status: "committed" }`；当宿主重试提交一个已提交的键时，
+返回 `{ status: "duplicate" }`。这样，在引导、维护、组装和重试期间进行的
+轮次前转录读取，就能看到已接纳用户消息之前的确切转录前缀。宿主仅会为
+已接受且成功的轮次调用 `commitTurn`；失败或中止的轮次不会推进上下文引擎状态。
+
+如果缺少完整的声明和方法，OpenClaw 会在整个逻辑轮次（包括重试）中使用
+legacy 上下文路径。配置的上下文引擎槽位不会改变，OpenClaw 会在下一个逻辑
+轮次再次尝试配置的引擎。如果声明了轮次栅栏，但由于确切的已接纳消息缺失、
+被重写，或已被转录游标越过而无法遵守，同一轮次也会发生相同的局部降级。
+
+`assemble` 返回一个 `AssembleResult`，其中包含：
 
 <ParamField path="messages" type="Message[]" required>
   要发送给模型的有序消息。

@@ -57,7 +57,7 @@ openclaw skills curator restore <skill>
 
 所有 curator 命令都接受 `--json`。Status 还会仅作为建议报告确定性的重叠候选项；它绝不会合并技能或调用模型。
 
-## Chat
+## 聊天
 
 向代理说明你想要的技能；它会调用 `skill_workshop` 并返回一个
 提案 ID。
@@ -147,16 +147,16 @@ openclaw skills workshop quarantine <proposal-id> --reason "需要安全审查"
 Gateway 插件可以扩展 Skill Workshop，而无需拥有提案存储或实时技能写入权限：
 
 - `skill_proposal_evaluate` 接收精确的候选包；对于更新提案，还会接收完整的基线技能。它返回带归属信息的发现结果、指标，以及可选的 `pass`、`revise` 或 `block` 决策。
-- `skill_proposal_changed` 观察持久化的 `created`、`revised`、
-  `evaluation_completed`、`applied`、`rejected`、`quarantined` 和 `stale`
+- `skill_proposal_changed` 观察持久化的 `created`、`revised`、  
+  `evaluation_completed`、`applied`、`rejected`、`quarantined` 和 `stale`  
   事件。
-- `skill_changed` 观察 Workshop 以及受支持的安装/卸载路径所提交的实时技能的 `created`、`updated` 和
+- `skill_changed` 观察 Workshop 以及受支持的安装/卸载路径所提交的实时技能的 `created`、`updated` 和  
   `removed` 事件。
 
-评估可通过 CLI、控制界面、Gateway
+评估可通过 CLI、控制界面、Gateway  
 的 `skills.proposals.evaluate` 方法或代理的 `skill_workshop` 操作显式触发。结果会存储在确切的提案修订版本上，并记录在仅追加的提案事件账本中。评估器故障仍会作为带归属信息的结果保留；只有已完成且 `decision: "block"` 的结果会阻止应用。应用时还会重新验证经过评估的目标树，因此任何实时技能资产漂移都需要重新评估。
 
-该生命周期支持外部优化循环，而不会将其内置其中。控制器可以消费 `skills.proposals.events.list`，评估确切的
+该生命周期支持外部优化循环，而不会将其内置其中。控制器可以消费 `skills.proposals.events.list`，评估确切的  
 `revisionHash`，使用 `expectedRevisionHash` 和 `correlationId` 进行修订，然后从返回的事件序列继续执行。OpenClaw 不会调度、自动修订，也不会决定此类循环应在何时停止。
 
 ## 提案内容
@@ -221,9 +221,11 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 `skill_workshop` 是一个内置代理工具，并包含在 `tools.profile: "coding"` 中。如果更严格的策略隐藏了它，请将 `skill_workshop` 添加到当前的 `tools.allow` 列表，或者在使用不带显式 `tools.allow` 的 profile 时，使用 `tools.alsoAllow: ["skill_workshop"]`。沙箱运行不会构造宿主侧的 Skill Workshop 工具，因此请从正常的宿主侧代理会话或 CLI 中运行提案审查操作。
 </Note>
 
-## 建议技能
+## 自学习
 
-OpenClaw 会在交互轮次结束时（包括失败的轮次）检测诸如“下次”“记住”和响应式更正之类的持久指令。在下一轮中，代理会通过 `skill_workshop` 提议保存最近检测到的工作流程；是否创建提案由用户决定。此内置建议本身不会创建或更改技能。将 `skills.workshop.autonomous.mode` 设置为 `propose`，可直接创建待处理提案；设置为 `auto`，则可通过常规 Workshop 服务应用经扫描器批准的捕获内容。控制界面的 Workshop 选项卡会显示是否已启用自学习；使用配置设置可选择全部三种模式。
+经过大量工作后，隔离的后台审查可以将更正和成功的操作转化为 Workshop 提案；请参阅
+[自学习](/tools/self-learning)。将 `skills.workshop.autonomous.mode` 设置为
+`propose` 可创建待处理提案，或设置为 `auto` 通过常规 Workshop 服务应用扫描器批准的捕获结果。控制界面的 Workshop 标签页会显示自学习是否已启用；使用配置设置可选择三种模式。
 
 ### 扫描过往会话
 
@@ -237,7 +239,7 @@ OpenClaw 会在交互轮次结束时（包括失败的轮次）检测诸如“�
 
 即使 `skills.workshop.autonomous.mode` 为 `off`，历史审查仍需手动执行。每次点击都会启动一次模型运行，因此提供商定价和数据处理条款均适用。游标和覆盖计数存储在共享的 OpenClaw 状态数据库中；转录内容不会复制到扫描状态中。
 
-在 `propose` 和 `auto` 模式下，OpenClaw 还可以在成功完成重要工作后，以及整个代理系统进入空闲状态后，执行保守审查。该隔离审查最多可以创建或修订一个待处理提案。它无法更新正在运行的技能，也无法应用、拒绝或隔离提案。在 `auto` 模式下，编排捕获管道随后会通过常规的、受扫描器控制的服务应用结果。
+在 `propose` 和 `auto` 模式下，OpenClaw 还可以在成功完成大量工作后，以及整个代理系统进入空闲状态后，执行一次保守审查。该隔离审查最多可以起草一个待处理提案——新技能、现有工作区技能的补丁、完整正文更新，或对待处理提案的修订。它绝不会直接写入正在运行的技能，也不能应用、拒绝或隔离提案。补丁提案会引用要更改的确切现有文本；工具会根据当前技能组合出完整正文。在 `auto` 模式下，编排捕获流水线随后会通过常规的扫描器门控服务应用新技能和补丁结果；完整正文更新提案始终保持待处理状态，供操作员审查。
 
 有关启用方式、资格、隐私和成本详情、提案阈值以及故障排除，请参阅 [自学习](/tools/self-learning)。
 
@@ -261,15 +263,13 @@ OpenClaw 会在交互轮次结束时（包括失败的轮次）检测诸如“�
 
 | 设置                       | 默认值   | 作用                                                                                                                                                              |
 | -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `autonomous.mode`          | `"auto"` | `"off"` 保留建议提示，`"propose"` 创建待处理捕获，而 `"auto"` 则通过常规工作坊扫描和应用路径应用捕获内容。         |
-| `allowSymlinkTargetWrites` | `false`  | 允许应用操作通过工作区技能符号链接进行写入，前提是其真实目标已列在 `skills.load.allowSymlinkTargets` 中。                                                 |
-| `approvalPolicy`           | `"auto"` | `"auto"` 会跳过代理发起的 `apply`、`reject` 或 `quarantine` 的额外提示（代理仍必须调用相应操作）。“pending” 则需要批准。 |
+| `autonomous.mode`          | `"auto"` | `"off"` 禁用自主捕获，`"propose"` 创建待处理捕获，`"auto"` 通过常规 Workshop 扫描和应用路径应用捕获。        |
+| `allowSymlinkTargetWrites` | `false`  | 允许应用操作写入工作区技能符号链接的真实目标，前提是该目标已列入 `skills.load.allowSymlinkTargets`。                                                 |
+| `approvalPolicy`           | `"auto"` | `"auto"` 跳过代理发起的 `apply`、`reject` 或 `quarantine` 操作的额外提示（代理仍必须调用该操作）。`"pending"` 则需要批准。 |
 | `maxPending`               | `50`     | 限制每个工作区中待处理和已隔离提案的数量（1-200）。                                                                                                       |
 | `maxSkillBytes`            | `40000`  | 限制提案正文的字节数（1024-200000）。                                                                                                                     |
 
-`propose` 和 `auto` 模式下的自主捕获可以识别预期规则（例如“从现在开始”）和反应式纠正（例如“这不是我要求的”）。它会按主题将新指令分组，每轮最多生成三个提案；将词汇匹配路由到现有的可写工作区技能；当另一条纠正针对同一技能时，还会修订其自身的待处理提案。
-
-对于成功完成的大量工作，如果没有明确的纠正，所选模型的独立运行会决定已完成的轨迹是否达到保守的提案标准。前台模型在回复前不会收到学习提示。后台审阅器会保留前台运行作为提案来源，无法访问通用代理工具，也不能做出生命周期决策。在 `auto` 模式下，捕获流水线只会在独立运行完成后应用由此产生的待处理提案。只有当前台运行时报告其已解析的模型，并确认 `skill_workshop` 确实可用时，审阅才会开始。因此，限制性或未知的工具策略会安全失败，不会创建提案。
+在 `propose` 和 `auto` 模式下，所选模型的隔离运行实例会决定已完成的轨迹是否达到以证据为门槛的提案标准。前台模型在回复前不会收到学习提示。后台审阅器会将前台运行保留为提案溯源信息，无法访问通用代理工具，也不能做出生命周期决策。在 `auto` 模式下，捕获管道仅会在隔离运行完成后应用由此产生的新技能和补丁提案；完整正文更新提案始终保持待处理状态，供操作员审阅，因为审阅器创建这些提案时没有机械式保留保证。只有当前台运行时报告其已解析的模型，并确认 `skill_workshop` 确实可用时，审阅才会开始。因此，受限或未知的工具策略会以故障关闭方式处理，不会创建提案。
 
 有关完整的自主审阅行为和安全模型，请参阅 [自学习](/tools/self-learning)。
 

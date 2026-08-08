@@ -26,9 +26,9 @@ Gateway 会从与 Gateway WebSocket 相同的端口提供一个小型 **浏览�
 }
 ```
 
-## Webhooks
+## Webhook
 
-当 `hooks.enabled=true` 时，Gateway 还会在同一个 HTTP 服务器上暴露一个 webhook 端点。有关认证和负载，请参见 [Gateway configuration reference](/gateway/configuration-reference#hooks) 中的 `hooks`。
+当 `hooks.enabled=true` 时，Gateway 还会在同一个 HTTP 服务器上暴露一个 webhook 端点。有关认证和负载，请参见 [Gateway 配置参考](/gateway/configuration-reference#hooks) 中的 `hooks`。
 
 ## 管理 HTTP RPC
 
@@ -58,33 +58,13 @@ Gateway 会从与 Gateway WebSocket 相同的端口提供一个小型 **浏览�
     打开 `https://<magicdns>/`（或你配置的 `gateway.controlUi.basePath`）。
 
   </Tab>
-  <Tab title="Tailnet 绑定 + token">
-    ```json5
-    {
-      gateway: {
-        bind: "tailnet",
-        controlUi: { enabled: true },
-        auth: { mode: "token", token: "your-token" },
-      },
-    }
-    ```
-
-    启动 gateway（这个非 loopback 示例使用共享密钥 token 认证）：
-
-    ```bash
-    openclaw gateway
-    ```
-
-    打开 `http://<tailscale-ip>:18789/`（或你配置的 `gateway.controlUi.basePath`）。
-
-  </Tab>
-  <Tab title="公网互联网（Funnel）">
+  <Tab title="公共互联网（Funnel）">
     ```json5
     {
       gateway: {
         bind: "loopback",
         tailscale: { mode: "funnel" },
-        auth: { mode: "password" }, // or OPENCLAW_GATEWAY_PASSWORD
+        auth: { mode: "password" }, // 或 OPENCLAW_GATEWAY_PASSWORD
       },
     }
     ```

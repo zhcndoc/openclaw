@@ -107,20 +107,18 @@ Claude Code 自动记忆、Codex 合并记忆和 Hermes 记忆
 它提供相同的仅记忆范围。（完整的 [`openclaw migrate`](/cli/migrate) 运行范围更广：
 它还可以导入配置、技能和凭据。）经典向导在准备好工作区后也会显示相同的页面。
 
-在推理通过后（以及记忆导入提议之后），引导式 onboarding 会自动应用标准设置——
-workspace、Gateway 和 sessions，这与对话式 `openclaw setup` 聊天在回答“yes”时应用的方案相同——
-然后从已安装的应用中提供插件和技能推荐；应用名称会通过你配置的模型和 ClawHub 搜索进行匹配，
-并且该步骤可以通过 [`wizard.appRecommendations`](/gateway/configuration-reference#wizard) 禁用。
-在 macOS、Linux 或 Windows 桌面会话中，它随后会打开已认证的
-Control UI 仪表盘，并等待最多 60 秒让浏览器客户端连接。
-在无头 Linux 或通过 SSH 的情况下，它会打印一个醒目的、可复制粘贴的
-仪表盘 URL，包括用于 loopback Gateway 的 SSH 端口转发命令，
-并等待最多五分钟。连接成功后会在浏览器中继续；如果 Gateway 无法访问或超时，
-则会回退到与之前相同的终端出口。传入 `--tui` 可跳过浏览器交接并强制使用该终端出口。
-如果应用设置失败，引导会回退到对话式 OpenClaw
-聊天以交互完成。频道、代理、
-插件和其他可选功能仍属于 OpenClaw 聊天的范围：运行 `openclaw`
-并使用 `open channel wizard for <channel>` 将频道凭据收集交给一个带掩码的终端向导。
+推理通过后（以及提供记忆导入选项后），引导式 onboarding 会自动应用标准设置——工作区、Gateway 和会话，
+这与对话式 `openclaw setup` 聊天中回答“是”时应用的方案相同——
+然后根据已安装的应用提供插件和技能建议；应用名称会通过你配置的模型和 ClawHub 搜索进行匹配，
+并且可以通过 [`wizard.appRecommendations`](/gateway/configuration-reference#wizard) 禁用此步骤。
+在 macOS、Linux 或 Windows 桌面会话中，随后会打开已认证的 Control UI 仪表板，并等待浏览器客户端连接，最长 60 秒。
+这个短暂的交接过程会为该确切的已签名浏览器授予持久的管理员凭据。
+在无头 Linux 环境或通过 SSH 连接时，它会打印醒目的、可复制粘贴的仪表板 URL，其中包括用于回环 Gateway 的 SSH 端口转发命令，
+并等待最长五分钟。连接成功后会在浏览器中继续；Gateway 无法访问或超时则会回退到之前相同的终端入口。
+传入 `--tui` 可跳过浏览器交接并强制使用该终端入口。
+如果应用设置失败，onboarding 会回退到对话式 OpenClaw 聊天，以交互方式完成设置。
+频道、agent、插件和其他可选功能仍属于 OpenClaw 聊天的范围：运行
+`openclaw`，并使用 `open channel wizard for <channel>` 将频道凭据收集交给带掩码显示的终端向导。
 要更改模型提供商或其认证方式，请退出 OpenClaw 并运行 `openclaw onboard`；
 OpenClaw 不会打开引导式或经典的提供商流程。
 
@@ -289,7 +287,7 @@ openclaw onboard --non-interactive --accept-risk \
 
 基于 Token 的模型认证（与 `--auth-choice token` 一起使用）：
 
-| Flag                            | Description                                                                                                                 |
+| 标志                            | 描述                                                                                                                 |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `--token-provider <id>`         | 颁发该 token 的 token 提供方 ID                                                                                         |
 | `--token <token>`               | 用于模型认证的 token 值                                                                                        |
@@ -298,13 +296,13 @@ openclaw onboard --non-interactive --accept-risk \
 
 Cloudflare AI Gateway：`--cloudflare-ai-gateway-account-id <id>`、`--cloudflare-ai-gateway-gateway-id <id>`。
 
-Daemon 安装控制：`--no-install-daemon` / `--skip-daemon`（别名；跳过 gateway 服务安装）、`--daemon-runtime <node>`。
+Daemon 安装控制：`--no-install-daemon` / `--skip-daemon`（别名；跳过网关服务安装）、`--daemon-runtime <node>`。
 
 技能：`--node-manager <npm|pnpm|bun>`（默认 `npm`）、`--skip-skills`。
 
-UI 和 hook 设置：`--skip-ui`（跳过 Control UI/TUI 提示）、`--skip-hooks`（跳过 webhook/hook 设置）、`--skip-channels`、`--skip-search`。
+用户界面和 hook 设置：`--skip-ui`（跳过 Control UI/TUI 提示）、`--skip-hooks`（跳过 webhook/hook 设置）、`--skip-channels`、`--skip-search`。
 
-输出：`--suppress-gateway-token-output` 会抑制带有 token 的 Gateway/UI 输出（token 提示、包含嵌入式 token 的自动登录 URL，以及自动启动 Control UI）——在共享终端和 CI 中很有用。
+输出：`--suppress-gateway-token-output` 会抑制带有 token 的网关/用户界面输出（token 提示、包含嵌入式 token 的自动登录 URL，以及自动启动 Control UI）——在共享终端和 CI 中很有用。
 
 <Note>
 `--json` 并不意味着在引导式或经典安装流程中进入非交互模式。

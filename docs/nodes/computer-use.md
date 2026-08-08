@@ -47,7 +47,19 @@ title: "计算机使用"
 
 2. 在交互式桌面会话中启动 `openclaw node run`。该插件会按需创建其配置的 SDK 运行时，然后为节点主机命令执行创建一个由 OpenClaw 所有的可信会话。当命令主机停止或重启时，它会关闭该会话并关闭运行时。
 
-该执行器目前只能控制主显示器。由于 CUA Driver SDK 没有桌面范围的按键保持输入契约，因此 `hold_key`、`left_mouse_down` 和 `left_mouse_up` 不可用。由于类型化桌面方法不接受修饰键，因此带修饰键的点击、滚动和拖动会被拒绝。`key` 操作接受命名键、字母和修饰键组合（例如 `cmd+c` 或 `Return`）；数字和标点键会被拒绝，因为驱动会丢弃它们依赖布局的 Shift 状态，因此请改用 `type` 操作发送这类文本。每次节点调用都会将取消操作传递给 SDK。
+3. 将 `computer.act` 添加到 Gateway 允许列表中。该插件会将 `computer.act` 注册为危险的插件节点命令，因此仅启用插件还不够；操作员必须显式选择加入：
+
+   ```json5
+   {
+     gateway: {
+       nodes: { commands: { allow: ["computer.act"] } },
+     },
+   }
+   ```
+
+   如果没有此配置项，即使节点声明支持 `computer.act`，`node.invoke` 仍会拒绝它。
+
+此执行器目前仅控制主显示器。由于 CUA Driver SDK 没有桌面范围的按住输入契约，因此 `hold_key`、`left_mouse_down` 和 `left_mouse_up` 不可用。由于类型化的桌面方法不接受修饰键，带修饰键的点击、滚动和拖动会被拒绝。`key` 操作接受命名键、字母和修饰键组合（例如 `cmd+c` 或 `Return`）；数字和标点键会被拒绝，因为驱动会丢弃其依赖布局的 Shift 状态，因此请改用 `type` 操作发送这类文本。取消操作会针对每次节点调用传递给 SDK。
 
 该插件调用的是 `CuaDriver.createConfigured`，从不调用裸 `create()`。其授权上限、可信会话标识符、TTL 以及桌面范围均由 OpenClaw 固定；面向模型的 `screen.snapshot` 和 `computer.act` 输入无法选择会话或扩大该授权范围。由于驱动不会报告稳定的显示器标识，帧授权会绑定到可信会话代次以及实时主显示器几何信息。新会话会使未完成的帧失效，但在同一会话中发生具有相同几何信息的主显示器替换时无法检测到；对于此执行器，建议使用稳定的单显示器会话。
 
@@ -57,7 +69,7 @@ title: "计算机使用"
 
 `cua-computer` 执行器会在工具结果和节点日志中显示类型化错误代码。常见的有：
 
-| Code                                                 | Cause                                                                                                                                                         | Fix                                                                                                                                                                             |
+| 代码                                                 | 原因                                                                                                                                                         | 修复                                                                                                                                                                             |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `COMPUTER_DRIVER_UNAVAILABLE`                        | CUA Driver SDK 运行时无法初始化，节点不是 Windows/Linux，或者其桌面权限/会话不可用。                              | 在交互式桌面会话中运行 `openclaw node run`，并检查平台桌面权限。如果捆绑的 CUA Driver SDK 软件包缺失，请重新安装 OpenClaw。 |
 | `COMPUTER_REFUSED_<code>`                            | 驱动使用结构化代码拒绝了操作，例如 `background_unavailable`、`background_occluded` 或 `foreground_unavailable`（KDE/KWin Wayland）。 | 将目标窗口置于前台，切换到 X11，或使用受支持的合成器。请参阅上面的兼容性说明。                                                               |
@@ -96,7 +108,7 @@ title: "计算机使用"
 
 在 macOS 上，默认开启意味着，一旦所需的 macOS 授权存在，已配对的网关就可以立即驱动指针和键盘输入。没有逐次操作确认。请在配对之前，或之后的任何时候，关闭 **Allow Computer Control**，以停止声明并接受 `computer.act`。
 
-`gateway.nodes.commands.deny` 仍然是显式的全局撤销，并且始终优先生效。`computer.act` 不需要 `gateway.nodes.commands.allow` 条目。拥有 `operator.write` 的已认证操作员可以通过 `node.invoke` 调用已启用且已配对的命令；这里没有逐次操作的管理员检查。
+`gateway.nodes.commands.deny` 仍然是显式的全局撤销设置，并且始终优先生效。对于 macOS 执行器，`computer.act` 不需要在 `gateway.nodes.commands.allow` 中添加条目。实验性的 `cua-computer` 插件会将 `computer.act` 注册为危险的插件节点命令，因此启用该插件后，操作者必须将其添加到 `gateway.nodes.commands.allow` 中（请参阅上面的 Windows/Linux 设置）；无论平台如何，插件注册都会将其排除在默认允许列表之外。拥有 `operator.write` 权限的已认证操作者可以通过 `node.invoke` 调用已启用且已配对的命令；不存在针对每次操作的管理员检查。
 
 ## 安全
 
@@ -109,8 +121,8 @@ title: "计算机使用"
 
 **设置 → 通用 → 功能** 中的计算机控制状态会分别检查辅助功能、事件发布和屏幕录制。即使输入仍被拒绝，屏幕捕获也可能正常工作，因为 macOS 会将这些授权存储在不同的 TCC 存储桶中。
 
-如果状态显示 **辅助功能授权可能已过期**，即使 macOS 拒绝它，OpenClaw 也可能已经在 **系统设置 → 隐私与安全性 → 辅助功能** 下显示为已启用。当辅助功能条目固定到较旧的应用构建版本时，就会发生这种情况。在该列表中选择 OpenClaw，使用 **−** 将其移除，然后重新添加 `/Applications/OpenClaw.app`。更改授权后，请退出并重新打开 OpenClaw，因为 macOS 可能会在进程生命周期内缓存辅助功能信任。
+如果状态显示 **辅助功能授权可能已过期**，即使 macOS 拒绝了该授权，OpenClaw 也可能已经在 **系统设置 → 隐私与安全性 → 辅助功能** 下显示为已启用。当辅助功能条目固定到较旧的应用构建版本时，就会发生这种情况。在该列表中选择 OpenClaw，使用 **−** 将其移除，然后重新添加 `/Applications/OpenClaw.app`。更改授权后，请退出并重新打开 OpenClaw，因为 macOS 可能会在进程生命周期内缓存辅助功能信任。
 
 ## 与其他桌面控制路径的关系
 
-这是由代理驱动的路径。请参见 [Peekaboo bridge](/platforms/mac/peekaboo)，了解它与 PeekabooBridge 主机、Codex Computer Use 以及直接的 `cua-driver` MCP 之间的关系。
+这是由代理驱动的路径。请参见 [Peekaboo 桥接](/platforms/mac/peekaboo)，了解它与 PeekabooBridge 主机、Codex Computer Use 以及直接的 `cua-driver` MCP 之间的关系。

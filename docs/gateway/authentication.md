@@ -168,10 +168,10 @@ openclaw models auth login --provider anthropic --force
 
 ### 按会话（聊天命令）
 
-- `/model <alias-or-id>@<profileId>` 为当前会话固定指定某个提供方凭据（示例配置文件 id：`anthropic:default`、`anthropic:work`）。
-- `/model`（或 `/model list`）会显示一个简洁选择器；`/model status` 会显示完整视图（候选项 + 下一个 auth 配置文件，以及在已配置时的提供方端点详情）。
+- `/model <alias-or-id>@<profileId> -s` 会为当前会话固定特定的提供方凭据（配置文件 id 示例：`anthropic:default`、`anthropic:work`）。
+- `/model`（或 `/model list`）显示紧凑选择器；`/model status` 显示完整视图（候选项 + 下一个 auth 配置文件，以及配置完成时的提供方端点详细信息）。
 
-如果你更改了已经运行中的聊天的 auth 顺序或配置文件固定设置，请发送 `/new` 或 `/reset` 以开始一个新会话——现有会话会一直保留当前的模型/配置文件选择，直到重置。
+对 `auth.order` 的更改会影响自动配置文件选择。`/new` 和 `/reset` 会清除自动选择的回退/轮换状态，但会保留有效的显式用户模型/配置文件固定设置；选择其他显式的 `@profile` 选项即可替换用户配置文件固定设置。
 
 ### 按代理（CLI 覆盖）
 

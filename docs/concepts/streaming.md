@@ -122,7 +122,9 @@ token-delta 流式传输**到频道消息：
   刷出，内容很长时可能会分成多个块）。
 - **不进行分块流式输出：** `blockStreamingDefault: "off"`（仅最终回复）。
 
-除非 `*.streaming.block.enabled` 明确设置为 `true`，否则块流式输出为**关闭**状态（例外：QQ Bot 没有 `streaming.block` 相关键，且会流式输出块回复，除非 `channels.qqbot.streaming.mode` 为 `"off"`）。各渠道可以在不启用块回复的情况下，流式输出实时预览（`channels.<channel>.streaming.mode`）。`blockStreaming*` 的默认值位于 `agents.defaults` 下，而不是配置根目录。
+分块流式输出遵循 `agents.defaults.blockStreamingDefault`，除非某个渠道或账户显式设置了 `*.streaming.block.enabled`。QQ Bot 没有 `streaming.block` 相关键，并且会进行分块回复流式输出，除非 `channels.qqbot.streaming.mode` 为 `"off"`。渠道可以流式传输实时预览（`channels.<channel>.streaming.mode`），而不发送分块回复。`blockStreaming*` 默认值位于 `agents.defaults` 下，而不是配置根目录。
+
+对于 Discord 和 Telegram，显式配置的非 `off` 预览模式优先于继承的 `agents.defaults.blockStreamingDefault: "on"`。当分块回复应覆盖其预览时，将该渠道的 `streaming.block.enabled` 设置为 `true`。如果某一轮对话无法使用预览，继承的分块传递仍会生效。
 
 ## 预览流式模式
 
@@ -181,7 +183,7 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 - 如果在完成文本被确认之前最终编辑失败，OpenClaw 会使用常规最终投递并清理过期预览。
 - 当 Telegram block streaming 被显式启用时，会跳过预览流式传输，以避免双重流式传输。
 - `/reasoning stream` 可以将推理写入一个临时预览，该预览会在最终投递后被删除。
-- Telegram 选中的引用回复是一个例外：当 `replyToMode` 不是 `"off"` 且存在选中的引用文本时，OpenClaw 会跳过该轮的答案预览流（最终答案必须通过原生引用回复路径），因此工具进度预览行无法渲染。没有选中引用文本的当前消息回复仍会保留预览流。详情请参见 [Telegram channel docs](/channels/telegram)。
+- Telegram 选中的引用回复是一个例外：当 `replyToMode` 不是 `"off"` 且存在选中的引用文本时，OpenClaw 会跳过该轮的答案预览流（最终答案必须通过原生引用回复路径），因此工具进度预览行无法渲染。没有选中引用文本的当前消息回复仍会保留预览流。详情请参见 [Telegram 频道文档](/channels/telegram)。
 
 ### Discord
 
@@ -225,7 +227,7 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 - Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用状态即可保留该已发布行为。
 - **Mattermost** 会在 `partial` 和 `progress` 模式下，将工具活动合并到一条预览消息中；在 `block` 模式下，则会在文本块之间发送一条工具活动消息（见上文）。
 - 工具进度编辑遵循当前激活的预览流模式；当预览流为 `off` 或分块流已接管消息时，会跳过这些更新。在 Telegram 上，`streaming.mode: "off"` 表示仅发送最终结果：通用进度提示也会被抑制，而不会作为独立状态消息发送；但审批提示、媒体载荷和错误仍会正常传递。
-- 若要保留预览流但隐藏工具进度行，请将该频道的 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，且在所有模式下都会生效）。若要在隐藏命令/执行文本的同时保留工具进度行可见，请将 `streaming.preview.commandText` 设置为 `"status"`，或将 `streaming.progress.commandText` 设置为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`。
+- 若要保留预览流但隐藏工具进度行，请将该频道的 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，且在所有模式下都会生效）。若要在隐藏命令/执行文本的同时保留工具进度行可见，请将 `streaming.preview.commandText` 设置为 `"status"`，或将 `streaming.progress.commandText` 设置为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`】【。
 
 ## 进度草稿渲染
 
@@ -244,7 +246,7 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 除了工具进度之外，紧凑进度渲染器还可以在草稿中显示另一条通道：
 
 - **`streaming.progress.commentary`** - 渲染模型在工具调用前的
-  **commentary**（一段简短的“我会检查……然后……”式叙述），并与
+  **评论**（一段简短的“我会检查……然后……”式叙述），并与
   工具行交错显示在进度草稿中。在 Discord 和 Telegram 的进度模式下，
   即使关闭了这个可选通道，同样的前导文本也会提供状态标题；其他通道则保留其现有的进度行为。参见
   [进度草稿](/concepts/progress-drafts#status-headline)。

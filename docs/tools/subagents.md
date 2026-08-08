@@ -536,14 +536,11 @@ announce 载荷会在末尾包含一行统计信息（即使已包裹）：
 
 子代理使用与父代理或目标代理相同的 profile 和工具策略管道。之后，OpenClaw 会应用子代理限制层。
 
-无论深度或角色如何（系统级/交互式工具，或主代理应协调的工具），子代理都会失去 `gateway`、`agents_list`、`session_status` 和 `cron`。叶子子代理（默认的 depth-1 行为，并且在 depth 2 时始终如此）还会额外失去 `subagents`、`sessions_list`、`sessions_history` 和 `sessions_spawn`。子代理永远不会获得 `message` 工具——它在生成时就被禁用了，而不是通过这个拒绝列表过滤掉的——并且 `sessions_send` 仍然被拒绝，因此子代理只能通过 announce 链进行通信。
+无论深度或角色如何（系统级/交互式工具、直接交付界面，或主代理应协调的工具），子代理始终会失去 `gateway`、`agents_list`、`session_status`、`cron`、`message`、`sessions_send` 和 `conversations_*` 工具。该硬拒绝层会在每一轮中根据持久化的子代理会话封装重新派生，包括恢复的会话和可见的仪表板会话；普通的 `allow`/`alsoAllow` 条目无法覆盖它。作为纵深防御，隐藏式启动会在工具构建之前禁用 `message`。叶子子代理（默认的深度 1 行为，以及始终处于深度 2 的子代理）还会额外失去 `subagents`、`sessions_list`、`sessions_history` 和 `sessions_spawn`，因此子代理通信会保持在通知链上。
 
-`sessions_history` 在这里仍然是一个有边界、经过清理的回溯视图——它
-不是原始转录内容的完整转储。
+`sessions_history` 在这里仍然是一个有边界、经过清理的回溯视图——它不是原始转录内容的完整转储。
 
-当 `maxSpawnDepth >= 2` 时，深度 1 的编排器子代理还会额外获得
-`sessions_spawn`、`subagents`、`sessions_list` 和
-`sessions_history`，以便它们管理自己的子级。
+当 `maxSpawnDepth >= 2` 时，深度 1 的编排器子代理还会额外获得 `sessions_spawn`、`subagents`、`sessions_list` 和 `sessions_history`，以便它们管理自己的子级。
 
 ### 通过配置覆盖
 
@@ -569,12 +566,7 @@ announce 载荷会在末尾包含一行统计信息（即使已包裹）：
 }
 ```
 
-`tools.subagents.tools.allow` 是最终的仅允许过滤器。它可以缩小
-已经解析出的工具集，但不能**重新添加**一个被
-`tools.profile` 移除的工具。例如，`tools.profile: "coding"` 包含
-`web_search`/`web_fetch`，但不包含 `browser` 工具。若要让
-使用 coding profile 的子代理能够使用浏览器自动化，请在
-profile 阶段添加 browser：
+`tools.subagents.tools.allow` 是最终的仅允许过滤器。它可以缩小已经解析出的工具集，但不能**重新添加**一个被 `tools.profile` 移除的工具。例如，`tools.profile: "coding"` 包含 `web_search`/`web_fetch`，但不包含 `browser` 工具。若要让使用 coding profile 的子代理能够使用浏览器自动化，请在 profile 阶段添加 browser：
 
 ```json5
 {
@@ -594,7 +586,7 @@ profile 阶段添加 browser：
 - **通道名称：** `subagent`
 - **并发数：** `agents.defaults.subagents.maxConcurrent`（默认 `8`）
 
-保留的阻塞完成结果也能防止网关出现无界扇出。
+保留的阻塞完成结果也能防止网关出现无界扇出。  
 当投递积压达到 25 条时，OpenClaw 会发出警告；达到 50 条时会阻止新的子代理生成，直到操作员重试或忽略足够多的保留投递结果。它不会通过清理结果来腾出空间。
 
 ## 活跃性与恢复

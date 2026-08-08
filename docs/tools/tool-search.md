@@ -46,21 +46,21 @@ Codex harness 运行不会接收这些实验性的 OpenClaw 工具搜索
 Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 工具以及嵌套工具调用。
 
-## 一次 turn 如何运行
+## 一次回合如何运行
 
-在规划阶段，OpenClaw 内嵌运行器会为该运行构建有效目录：
+在规划阶段，OpenClaw 内嵌运行器会为此次运行构建有效目录：
 
 1. 为代理、配置文件、沙箱和会话解析当前生效的工具策略。
-2. 列出符合条件的 OpenClaw 和插件工具。
+2. 列出符合条件的 OpenClaw 工具和插件工具。
 3. 通过会话 MCP 运行时列出符合条件的 MCP 工具。
-4. 添加为当前运行提供的符合条件的客户端工具。
-5. 将核心编码原语和仅直接可用工具保持为模型可见，并为其余目录中符合条件的工具索引紧凑描述符。
-6. 将确定性、有界、经策略过滤的能力目录添加到缓存稳定的系统提示前缀中。
-7. 将 OpenClaw 代码桥、结构化回退工具或紧凑目录表面，与那些稳定的、可直接调用的工具一起暴露出来。
+4. 添加为此次运行提供的符合条件的客户端工具。
+5. 将核心编码原语和仅可直接使用的工具保持为模型可见，并为目录中其余符合条件的工具编制紧凑描述符。
+6. 将确定性、有界且经过策略过滤的能力目录添加到缓存稳定的系统提示前缀中。
+7. 将 OpenClaw 代码桥、结构化回退工具或紧凑目录界面，与那些稳定且可直接调用的工具一同暴露出来。
 
-在执行阶段，每一次真实工具调用都会返回到 OpenClaw。隔离的 Node
+在执行阶段，每一次真实的工具调用都会返回到 OpenClaw。隔离的 Node
 运行时不持有插件实现、MCP 客户端对象或密钥。
-`openclaw.tools.call(...)` 会跨越桥接返回 Gateway，在那里
+`openclaw.tools.call(...)` 会通过桥接返回 Gateway，在那里
 正常的策略、审批、钩子、日志和结果处理仍然生效。
 
 ## 模式
@@ -194,6 +194,40 @@ await openclaw.tools.call(calendarCreate.id, {
 - `tool_describe`
 - `tool_call`
 
+`tool_search` 接受现有的单查询格式，也接受由多个
+独立查询组成的批次：
+
+```json
+{
+  "query": "today's calendar events",
+  "limit": 3
+}
+```
+
+```json
+{
+  "queries": [
+    { "query": "today's calendar events", "limit": 3 },
+    { "query": "Slack messages needing attention", "limit": 3 }
+  ]
+}
+```
+
+单查询调用仍会直接返回紧凑的候选数组。
+批量调用则按请求顺序返回 `{ results: [{ query, candidates }] }`。
+每个查询使用与普通搜索相同的有效目录、排序、筛选和单查询限制；
+同一个候选项可以出现在多个结果组中。
+描述会在输出前进行压缩。如果完整批次超过
+4,000 个字符的响应预算，则会移除排名较低的候选项，
+并且响应中会包含 `truncated: true`。丢失了候选项的结果组
+也会包含 `truncated: true`，因此不会将一个被截断的空结果组误认为
+没有匹配项的查询。
+省略的单查询限制使用 `searchDefaultLimit`。一次批次中的有效限制
+最多可以请求总计 50 个候选项。一个批次最多接受 16 个查询，
+每个查询最多 512 个字符，序列化查询列表总计最多 512 个 UTF-8 字节。
+无效批次会作为一个请求整体失败，而没有匹配项的有效查询
+会返回空的 `candidates` 数组。
+
 目录模式暴露：
 
 - `tool_search`
@@ -319,28 +353,28 @@ openclaw config set tools.toolSearch true
 - 模型一开始看到了多少个工具 schema
 - 它执行了多少次搜索和描述操作
 - 最终调用了哪个工具
-- 结果来自 OpenClaw、MCP 还是客户端工具
+- 结果来自 OpenClaw、MCP 还是客户端工具。
 
 ## 端到端验证
 
-QA 实验室网关场景使用 OpenClaw 运行时验证了两条路径：
+QA Lab 网关场景通过 OpenClaw 运行时验证全部三条路径：
 
 ```bash
 pnpm openclaw qa suite --provider-mode mock-openai --scenario tool-search-gateway-e2e
 ```
 
-它会创建一个带有大型工具目录的临时假插件，启动 mock
-OpenAI provider，在直接模式下启动一次 Gateway，再在启用工具搜索
-的情况下启动一次，然后比较 provider 请求负载和会话日志。
+它会创建一个包含大型工具目录的临时虚假插件，启动模拟 OpenAI 提供商，然后分别以直连模式、代码模式工具搜索和结构化工具搜索模式运行网关。它会比较直连模式和代码模式下的提供商请求负载，然后验证三条路径中的会话日志和工具调用流程。
 
 该回归验证证明：
 
-1. 直接模式可以调用假插件工具。
-2. 工具搜索可以调用相同的假插件工具。
-3. 直接模式会将假插件工具的 schema 直接暴露给 provider。
-4. 工具搜索只暴露紧凑的桥接工具，以及任何仅直接模式可用的工具。
-5. 对于大型假目录，工具搜索的请求负载更小。
-6. 会话日志显示了预期的工具调用次数和桥接调用遥测数据。
+1. Direct mode can call the fake plugin tool.
+2. Tool Search can call the same fake plugin tool.
+3. Direct mode exposes the fake plugin tool schemas directly to the provider.
+4. Tool Search exposes only the compact bridge plus any direct-only tools.
+5. The Tool Search request payload is smaller for the large fake catalog.
+6. Session logs show the expected tool-call counts and bridged call telemetry.
+7. Structured mode resolves two queries with one `tool_search` call before the
+   selected plugin tool runs through `tool_call`.
 
 ## 失败行为
 

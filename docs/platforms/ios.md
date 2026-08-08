@@ -33,7 +33,8 @@ title: "iOS 应用"
 
 ## 快速开始（配对 + 连接）
 
-首次启动时，应用会引导完成一个简短的配对说明页面，以及一个权限页面（通知、相机、麦克风、照片、联系人、日历、提醒事项、位置）。所有授权都是可选的，之后也可以在 **Settings** -> **Permissions** 中，或在 iOS 的 Settings 应用中更改。
+首次启动时，应用会先引导你完成简短的配对说明，然后进行 Gateway
+设置。应用不会显示汇总权限页面。使用相关功能时，或你在 **Settings** -> **Permissions** -> **Privacy & Access** 下点击该权限对应的 **Continue** 后，应用才会请求可选访问权限。点击 **Continue** 会立即显示原生 iOS 授权提示。之后可以在 iOS 的“设置”应用中更改已授予的访问权限。
 
 1. 使用手机能够访问的路由启动一个已认证的 Gateway。推荐的远程路径是 Tailscale Serve：
 
@@ -92,10 +93,7 @@ openclaw gateway call node.list --params "{}"
 
 ## 健康摘要
 
-The iOS node can return an opt-in, read-only HealthKit aggregate for the current
-calendar day. iOS device consent and explicit Gateway command authorization are
-independent gates. See [HealthKit summaries](/platforms/ios-healthkit) for
-setup, invocation, payload fields, privacy behavior, and troubleshooting.
+iOS 节点可以返回一份针对当前日历日期的、需用户主动选择加入且只读的 HealthKit 汇总数据。iOS 设备授权和显式的 Gateway 命令授权是彼此独立的门槛。有关设置、调用、载荷字段、隐私行为和故障排除，请参阅 [HealthKit 摘要](/platforms/ios-healthkit)。
 
 默认情况下，Apple Watch 配套端会继续使用现有的 iPhone 中继，并且
 不需要单独的 Gateway 配对。请在 Apple 的 Watch app 中将 Watch 与 iPhone 配对，
@@ -236,7 +234,7 @@ export OPENCLAW_APNS_PRIVATE_KEY_PATH="$HOME/.openclaw/credentials/apns/AuthKey_
 
 ### Bonjour（局域网）
 
-iOS 应用在 `local.` 上浏览 `_openclaw-gw._tcp`，并且在配置后，也会浏览相同的广域 DNS-SD 发现域。同一局域网中的网关会从 `local.` 自动出现；跨网络发现可以使用已配置的广域域，而无需更改 beacon 类型。
+iOS 应用在 `local.` 上浏览 `_openclaw-gw._tcp`，并且在配置后，也会浏览相同的广域 DNS-SD 发现域。同一局域网中的网关会从 `local.` 自动出现；跨网络发现可以使用已配置的广域域，而无需更改信标类型。
 
 ### Tailnet（跨网络）
 
@@ -244,7 +242,7 @@ iOS 应用在 `local.` 上浏览 `_openclaw-gw._tcp`，并且在配置后，也�
 
 ### 手动主机/端口
 
-在设置中启用 **手动主机**，然后输入 gateway 主机 + 端口（默认 `18789`）。
+在设置中启用 **手动主机**，然后输入网关主机 + 端口（默认 `18789`）。
 
 ## 多个网关
 
@@ -255,7 +253,7 @@ iOS 应用在 `local.` 上浏览 `_openclaw-gw._tcp`，并且在配置后，也�
 - 轻扫某个已配对网关（或使用其上下文菜单）以 **忘记** 它，这会移除其凭据、设备令牌、TLS 指纹以及缓存的聊天记录。
 - 已发现的网关必须在网络上可见才能切换到它们；手动添加的网关则会通过已保存的主机和端口重新连接。
 
-## Canvas + A2UI
+## 画布 + A2UI
 
 iOS 节点渲染一个 WKWebView 画布。使用 `node.invoke` 来驱动它：
 
@@ -298,10 +296,10 @@ openclaw nodes invoke --node "iOS Node" --command canvas.snapshot --params '{"ma
 - `NODE_BACKGROUND_UNAVAILABLE`: 将 iOS 应用切换到前台（canvas/camera/screen 命令需要它）。
 - `A2UI_HOST_UNAVAILABLE`: 捆绑的 A2UI 页面在应用 WebView 中无法访问；请保持应用在 Screen 选项卡上处于前台并重试。
 - 配对提示从未出现：运行 `openclaw devices list` 并手动批准。
-- Watch 未显示 iPhone 状态：确认 iPhone 在 `watch.status` 中报告 `watchPaired: true`
+- Apple Watch 未显示 iPhone 状态：确认 iPhone 在 `watch.status` 中报告 `watchPaired: true`
   和 `watchAppInstalled: true`。如果 pairing 为 false，请在 Apple 的 Watch 应用中配对
-  Watch。如果 installation 为 false，请从 **My Watch -> Available Apps** 安装配套应用。
-  在任一更改后，在 Watch 上打开一次 OpenClaw；要立即可达仍需要两个应用都在运行，
+  Apple Watch。如果 installation 为 false，请从 **我的手表 -> 可用 App** 安装配套应用。
+  在任一更改后，在 Apple Watch 上打开一次 OpenClaw；要立即可达仍需要两个应用都在运行，
   而排队的更新可能会稍后在后台到达。
 - 重新安装后重连失败：Keychain 配对令牌已被清除；请重新为该节点配对。
 

@@ -22,49 +22,49 @@ title: "QA 概览"
 - [Mantis](/concepts/mantis)：针对需要真实传输、浏览器截图、虚拟机状态和 PR 证据的 bug，
   提供前后对比的实时验证。
 
-## 命令面
+## 命令界面
 
 每个 QA 流程都在 `pnpm openclaw qa <subcommand>` 下运行。许多流程都有 `pnpm qa:*`
 脚本别名；两种形式都可用。
 
 | 命令                                             | 用途                                                                                                                                                                                                                                                             |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `qa run`                                            | 不带 `--qa-profile` 时运行捆绑的 QA 自检；使用 `--qa-profile smoke-ci`、`--qa-profile release` 或 `--qa-profile all` 时，运行由 taxonomy 支持的成熟度 profile。                                                                                                  |
-| `qa suite`                                          | 针对 QA gateway lane 运行由仓库支持的场景。`--runner multipass` 使用一次性的 Linux 虚拟机，而不是宿主机。                                                                                                                                         |
-| `qa coverage`                                       | 输出 YAML 场景覆盖清单（机器输出使用 `--json`；使用 `--match <query>` 查找与已修改行为相关的场景；使用 `--tools` 查看运行时工具 fixture 覆盖）。                                                                                  |
-| `qa parity-report`                                  | 比较两个 `qa-suite-summary.json` 文件以执行模型轴 parity gate，或使用 `--runtime-axis --token-efficiency` 写入 Codex 与 OpenClaw 的运行时 parity 和 token 效率报告。                                                                          |
-| `qa confidence-report`                              | 根据 manifest 对 QA 证明工件进行分类，生成不含 unknown 项的置信度报告。                                                                                                                                                                               |
-| `qa confidence-self-test`                           | 写入预置的负控制 canary，证明置信度 gate 能检测漂移。                                                                                                                                                                                   |
-| `qa jsonl-replay`                                   | 通过运行时 parity replay harness 重放精选的 JSONL transcript。                                                                                                                                                                                         |
+| `qa run`                                            | 不带 `--qa-profile` 时运行捆绑的 QA 自检；使用 `--qa-profile smoke-ci`、`--qa-profile release` 或 `--qa-profile all` 时，运行由分类体系支持的成熟度配置。                                                                                                  |
+| `qa suite`                                          | 针对 QA 网关通道运行仓库支持的场景。`--runner multipass` 使用一次性的 Linux 虚拟机，而不是宿主机。                                                                                                                                         |
+| `qa coverage`                                       | 输出 YAML 场景覆盖清单（机器输出使用 `--json`；使用 `--match <query>` 查找与已修改行为相关的场景；使用 `--tools` 查看运行时工具夹具覆盖）。                                                                                  |
+| `qa parity-report`                                  | 比较两个 `qa-suite-summary.json` 文件以执行执行模型轴一致性门禁，或使用 `--runtime-axis --token-efficiency` 写入 Codex 与 OpenClaw 的运行时一致性和令牌效率报告。                                                                          |
+| `qa confidence-report`                              | 根据清单对 QA 证明工件进行分类，生成不含 unknown 项的置信度报告。                                                                                                                                                                               |
+| `qa confidence-self-test`                           | 写入预置的负控制 canary，证明置信度门禁能检测漂移。                                                                                                                                                                                   |
+| `qa jsonl-replay`                                   | 通过运行时一致性重放测试工具重放精选的 JSONL transcript。                                                                                                                                                                                         |
 | `qa character-eval`                                 | 使用带评审报告的方式，在多个在线模型上运行 character QA 场景。参见[报告](#reporting)。                                                                                                                                                        |
-| `qa manual`                                         | 针对选定的 provider/model lane 运行一次性 prompt。                                                                                                                                                                                                      |
+| `qa manual`                                         | 针对选定的 provider/model 通道运行一次性提示。                                                                                                                                                                                                      |
 | `qa ui`                                             | 启动 QA 调试器 UI 和本地 QA 总线（别名：`pnpm qa:lab:ui`）。                                                                                                                                                                                                |
 | `qa docker-build-image`                             | 构建预制的 QA Docker 镜像。                                                                                                                                                                                                                                 |
-| `qa docker-scaffold`                                | 为 QA dashboard + gateway lane 写入 docker-compose scaffold。                                                                                                                                                                                                |
+| `qa docker-scaffold`                                | 为 QA dashboard + gateway 通道写入 docker-compose scaffold。                                                                                                                                                                                                |
 | `qa up`                                             | 构建 QA 站点，启动 Docker 支持的堆栈，并输出 URL（别名：`pnpm qa:lab:up`；`:fast` 变体会额外添加 `--use-prebuilt-image --bind-ui-dist --skip-ui-build`）。                                                                                              |
 | `qa aimock`                                         | 仅启动 AIMock provider server。                                                                                                                                                                                                                              |
 | `qa mock-openai`                                    | 仅启动面向场景的 `mock-openai` provider server。                                                                                                                                                                                                        |
 | `qa credentials doctor` / `add` / `list` / `remove` | 管理共享的 Convex credential pool。                                                                                                                                                                                                                           |
-| `qa buzz`                                           | 针对真实 Buzz relay room 的实时传输 lane，使用专用的 driver 和 SUT 身份。                                                                                                                                                                        |
-| `qa discord`                                        | 针对真实私有 Discord guild channel 的实时传输 lane。                                                                                                                                                                                                   |
-| `qa matrix`                                         | 针对一次性的 Tuwunel homeserver，运行 QA Lab Matrix catalog 场景。参见 [Matrix 实时 lane](#matrix-live-lane)。                                                                                                                                                 |
-| `qa slack`                                          | 针对真实私有 Slack channel 的实时传输 lane。                                                                                                                                                                                                           |
-| `qa telegram`                                       | 针对真实私有 Telegram group 的实时传输 lane。                                                                                                                                                                                                          |
-| `qa whatsapp`                                       | 针对真实 WhatsApp Web 账户的实时传输 lane。                                                                                                                                                                                                             |
+| `qa buzz`                                           | 针对真实 Buzz relay room 的实时传输通道，使用专用的 driver 和 SUT 身份。                                                                                                                                                                        |
+| `qa discord`                                        | 针对真实私有 Discord guild channel 的实时传输通道。                                                                                                                                                                                                   |
+| `qa matrix`                                         | 针对一次性的 Tuwunel homeserver，运行 QA Lab Matrix catalog 场景。参见 [Matrix 实时通道](#matrix-live-lane)。                                                                                                                                                 |
+| `qa slack`                                          | 针对真实私有 Slack channel 的实时传输通道。                                                                                                                                                                                                           |
+| `qa telegram`                                       | 针对真实私有 Telegram group 的实时传输通道。                                                                                                                                                                                                          |
+| `qa whatsapp`                                       | 针对真实 WhatsApp Web 账户的实时传输通道。                                                                                                                                                                                                             |
 | `qa mantis`                                         | 用于实时传输 bug 的前后验证 runner，包含 Discord 状态 reaction 证据、Crabbox 桌面端/浏览器 smoke，以及 Slack-in-VNC smoke。参见 [Mantis](/concepts/mantis) 和 [Mantis Slack Desktop Runbook](/concepts/mantis-slack-desktop-runbook)。 |
 
-### 基于 Profile 的 `qa run`
+### 基于配置的 `qa run`
 
-基于 profile 的 `qa run` 会从 `taxonomy.yaml` 读取 membership，然后通过
+基于配置的 `qa run` 会从 `taxonomy.yaml` 读取成员关系，然后通过
 `qa suite` 分发已解析的场景。`--surface` 和 `--category` 会过滤
-所选 profile，而不是定义单独的 lane。生成的
-`qa-evidence.json` 包含一个 profile 记分卡摘要，其中有已选 category 计数和缺失的覆盖 ID；各个 evidence 条目仍然是测试、覆盖角色和结果的事实来源。taxonomy feature
+所选配置，而不是定义单独的通道。生成的
+`qa-evidence.json` 包含一个配置记分卡摘要，其中有已选 category 计数和缺失的覆盖 ID；各个 evidence 条目仍然是测试、覆盖角色和结果的事实来源。taxonomy feature
 覆盖 ID 是精确的证明目标，而不是别名：主场景覆盖满足匹配的 ID，而次级覆盖仅作为建议。每个覆盖
 ID 都严格采用 `taxonomy-surface.feature` 的形式，使用来自
-`taxonomy.yaml` 的简短 surface ID。某个场景单独的 `surface` 字段是执行/报告标签（例如 `channel` 或 `runtime-tool`）；它不定义 taxonomy 归属。显式的 profile 覆盖 ID 会选择该 ID 下所有符合条件的主所有者，并按场景去重。场景文件和 taxonomy 顺序不会影响 membership 或执行顺序。
+`taxonomy.yaml` 的简短 surface ID。某个场景单独的 `surface` 字段是执行/报告标签（例如 `channel` 或 `runtime-tool`）；它不定义 taxonomy 归属。显式的配置覆盖 ID 会选择该 ID 下所有符合条件的主所有者，并按场景去重。场景文件和 taxonomy 顺序不会影响成员关系或执行顺序。
 
 `scenario.execution.channels` 是一个 OR eligibility 列表：特定 channel 的
-runner 可以在所列 channel 中任选一个执行该场景。基于 profile 的执行会将同一列表扩展到所选 driver 支持的每个 channel，并且只有在每个扩展后的 channel 执行都通过时，profile 执行才会通过。这一规则统一适用于每个 taxonomy profile。
+runner 可以在所列 channel 中任选一个执行该场景。基于配置的执行会将同一列表扩展到所选 driver 支持的每个 channel，并且只有在每个扩展后的 channel 执行都通过时，配置执行才会通过。这一规则统一适用于每个 taxonomy profile。
 
 精简 evidence 会省略每个条目的 `execution`，并设置 `evidenceMode: "slim"`；
 `smoke-ci` 默认使用 slim，而 `--evidence-mode full` 会恢复完整条目：
@@ -77,7 +77,7 @@ pnpm openclaw qa run \
   --output-dir .artifacts/qa-e2e/smoke-ci-profile-dispatch
 ```
 
-使用 `smoke-ci` 可获得带 mock 模型 provider 和 Crabline 本地 provider servers 的确定性 profile 证明。使用 `release` 可针对 live channels 进行 Stable/LTS 证明。仅在显式的全 taxonomy evidence 运行时使用 `all`；它会选择所有活跃的成熟度 category，并且可以通过
+使用 `smoke-ci` 可获得带 mock 模型 provider 和 Crabline 本地 provider servers 的确定性配置证明。使用 `release` 可针对 live channels 进行 Stable/LTS 证明。仅在显式的全 taxonomy evidence 运行时使用 `all`；它会选择所有活跃的成熟度 category，并且可以通过
 `QA Profile Evidence` GitHub Actions workflow 使用 `qa_profile=all` 进行分发。当一个
 命令还需要 OpenClaw root profile 时，将 root profile 放在 QA 命令之前：
 
@@ -251,11 +251,11 @@ CI 在
 Discord 也有仅供 Mantis 使用的按需场景，用于 bug 复现。使用
 `--scenario discord-status-reactions-tool-only` 可运行明确的状态 reaction 时间线，或者使用
 `--scenario discord-thread-reply-filepath-attachment` 创建一个真实的 Discord thread，并验证 `message.thread-reply`
-保留了一个 `filePath` 附件。这些场景不会进入默认的 live Discord 通道，因为它们是前/后对比的复现探针，而不是广泛的烟雾覆盖。线程附件的 Mantis 工作流在
+保留了一个 `filePath` 附件。这些场景不会进入默认的实时 Discord 通道，因为它们是前后对比的复现探针，而不是广泛的烟雾测试覆盖。线程附件的 Mantis 工作流在
 `MANTIS_DISCORD_VIEWER_CHROME_PROFILE_DIR` 或
-`MANTIS_DISCORD_VIEWER_CHROME_PROFILE_TGZ_B64` 已在 QA 环境中配置时，还可以添加一个已登录的 Discord Web witness 视频。该 viewer profile 仅用于视觉捕获；通过/失败的决定仍然来自 Discord REST oracle。
+`MANTIS_DISCORD_VIEWER_CHROME_PROFILE_TGZ_B64` 已在 QA 环境中配置时，还可以添加一个已登录的 Discord Web 见证视频。该 viewer profile 仅用于视觉捕获；通过/失败的决定仍然来自 Discord REST oracle。
 
-对于其他真实传输的 smoke 线路：
+对于其他真实传输的烟雾测试线路：
 
 ```bash
 pnpm openclaw qa buzz
@@ -371,8 +371,8 @@ pnpm openclaw qa suite --runner multipass --scenario channel-chat-baseline
 
 ## Buzz、Discord、Slack、Telegram 和 WhatsApp QA 参考
 
-Matrix 适配器使用上文记录的基于一次性 Docker 的通道。
-Buzz、Discord、Slack、Telegram 和 WhatsApp 针对预先存在的真实传输运行，
+Matrix 适配器使用上文记录的基于一次性 Docker 的通道。  
+Buzz、Discord、Slack、Telegram 和 WhatsApp 针对预先存在的真实传输运行，  
 因此它们的参考信息位于此处。
 
 ### 共享 CLI 标志
@@ -423,9 +423,9 @@ pnpm openclaw qa buzz \
 pnpm openclaw qa telegram
 ```
 
-目标是一个真实的私有 Telegram 群组，包含两个不同的机器人（driver +
-SUT）。SUT 机器人必须具有 Telegram 用户名；当两个机器人都在 `@BotFather`
-中启用了 **Bot-to-Bot Communication Mode** 时，机器人之间的观察效果最佳。
+目标是一个真实的私有 Telegram 群组，包含两个不同的机器人（驱动机器人 +
+被测系统机器人）。被测系统机器人必须具有 Telegram 用户名；当两个机器人都在 `@BotFather`
+中启用了 **机器人间通信模式** 时，机器人之间的观察效果最佳。
 
 在使用 `--credential-source env` 时所需的环境变量：
 
@@ -434,7 +434,7 @@ SUT）。SUT 机器人必须具有 Telegram 用户名；当两个机器人都在
 - `OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN`
 
 `release` 配置文件会选择由分类体系管理的 Telegram 场景，这些场景声明了
-频道、使用 flow 执行类型，并匹配所请求的 provider 和 model 通道。显式指定
+频道、使用流程执行类型，并匹配所请求的提供商和模型通道。显式指定
 `--scenario` 的值会收窄同一选择范围，而不是绕过这些约束。使用
 `pnpm openclaw qa telegram --list-scenarios
 --provider-mode mock-openai` 可打印当前选择及回归引用。提供 `--model` 时，
@@ -448,12 +448,12 @@ SUT）。SUT 机器人必须具有 Telegram 用户名；当两个机器人都在
 
 - `qa-suite-report.md`
 - `qa-suite-summary.json`
-- `qa-evidence.json` - live transport 检查的证据条目，
-  包括 profile、coverage、provider、channel、artifacts、result 和 RTT
+- `qa-evidence.json` - 实时传输检查的证据条目，
+  包括配置文件、覆盖范围、提供商、频道、产物、结果和 RTT
   字段。
 
 Package Telegram 运行使用相同的 Telegram 凭证契约。重复 RTT 测量是
-package Telegram live lane 的正常组成部分；当下游选择 RTT 检查时，
+Package Telegram 实时通道的正常组成部分；当下游选择 RTT 检查时，
 RTT 分布会折叠到 `qa-evidence.json` 的 `result.timing` 下。
 
 ```bash
@@ -461,10 +461,10 @@ OPENCLAW_QA_CREDENTIAL_SOURCE=convex \
 pnpm test:docker:npm-telegram-live
 ```
 
-当设置了 `OPENCLAW_QA_CREDENTIAL_SOURCE=convex` 时，package live wrapper
-会租用一个 `kind: "telegram"` 凭证，将租用到的 group/driver/SUT
-bot 环境变量导出到已安装包的运行中，持续发送心跳维护该租约，并在关闭时释放它。
-当选择 Convex 时，package wrapper 在 CI 外默认执行 20 次
+当设置了 `OPENCLAW_QA_CREDENTIAL_SOURCE=convex` 时，Package 实时包装器
+会租用一个 `kind: "telegram"` 凭证，将租用到的群组/驱动机器人/被测系统机器人
+环境变量导出到已安装包的运行中，持续发送心跳维护该租约，并在关闭时释放它。
+当选择 Convex 时，Package 包装器在 CI 外默认执行 20 次
 `channel-canary` RTT 检查、30s RTT 超时，以及 Convex 角色
 `maintainer`。可通过覆盖
 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES`、`OPENCLAW_NPM_TELEGRAM_RTT_TIMEOUT_MS`
@@ -477,7 +477,7 @@ bot 环境变量导出到已安装包的运行中，持续发送心跳维护该�
 pnpm openclaw qa discord
 ```
 
-针对一个真实的私有 Discord guild 频道，使用两个机器人：一个由 harness 控制的 driver bot，以及一个通过捆绑的 Discord 插件由子 OpenClaw gateway 启动的 SUT bot。验证频道提及处理、SUT bot 是否已向 Discord 注册原生的 `/help` 命令，以及可选的 Mantis 证据场景。
+针对一个真实的私有 Discord 服务器频道，使用两个机器人：一个由 harness 控制的驱动机器人，以及一个通过捆绑的 Discord 插件由子 OpenClaw 网关启动的被测机器人（SUT bot）。验证频道提及处理、SUT bot 是否已向 Discord 注册原生的 `/help` 命令，以及可选的 Mantis 证据场景。
 
 在 `--credential-source env` 时所需的环境变量：
 
@@ -485,12 +485,12 @@ pnpm openclaw qa discord
 - `OPENCLAW_QA_DISCORD_CHANNEL_ID`
 - `OPENCLAW_QA_DISCORD_DRIVER_BOT_TOKEN`
 - `OPENCLAW_QA_DISCORD_SUT_BOT_TOKEN`
-- `OPENCLAW_QA_DISCORD_SUT_APPLICATION_ID` - 必须与 Discord 返回的 SUT bot 用户 id 一致
-  （否则该 lane 会快速失败）。
+- `OPENCLAW_QA_DISCORD_SUT_APPLICATION_ID` - 必须与 Discord 返回的 SUT bot 用户 ID 一致
+  （否则该场景会快速失败）。
 
 可选项：
 
-- `OPENCLAW_QA_DISCORD_VOICE_CHANNEL_ID` 选择 `discord-voice-autojoin` 的语音/stage 频道；如果不提供，场景会为 SUT bot 选择第一个可见的语音/stage 频道。
+- `OPENCLAW_QA_DISCORD_VOICE_CHANNEL_ID` 选择 `discord-voice-autojoin` 的语音/Stage 频道；如果不提供，场景会为 SUT bot 选择第一个可见的语音/Stage 频道。
 
 Discord YAML 模块场景（`qa/scenarios/channels/discord-*.yaml`）：
 
@@ -499,11 +499,11 @@ Discord YAML 模块场景（`qa/scenarios/channels/discord-*.yaml`）：
 - `discord-native-help-command-registration`
 - `discord-voice-autojoin` - 可选的语音场景。它会单独运行，启用
   `channels.discord.voice.autoJoin`，并验证 SUT bot 当前的
-  Discord 语音状态是否为目标语音/stage 频道。Convex Discord
+  Discord 语音状态是否为目标语音/Stage 频道。Convex Discord
   凭据可以包含可选的 `voiceChannelId`；否则 runner
-  适配器会在 guild 中发现第一个可见的语音/stage 频道。
-- `discord-status-reactions-tool-only` - 可选的 Mantis 场景。它会单独运行，因为它会将 SUT 切换为始终在线、仅工具的 guild 回复，设置 `messages.statusReactions.enabled=true`，然后捕获 REST
-  reaction 时间线以及 HTML/PNG 可视化工件。Mantis 前后
+  适配器会在服务器中发现第一个可见的语音/Stage 频道。
+- `discord-status-reactions-tool-only` - 可选的 Mantis 场景。它会单独运行，因为它会将 SUT 切换为始终在线、仅工具的服务器回复，设置 `messages.statusReactions.enabled=true`，然后捕获 REST
+  反应时间线以及 HTML/PNG 可视化工件。Mantis 前后
   报告也会将场景提供的 MP4 工件分别保存为 `baseline.mp4`
   和 `candidate.mp4`。
 - `discord-thread-reply-filepath-attachment` - 可选的 Mantis 场景；请参见
@@ -997,13 +997,13 @@ Provider 通道的实现位于 `extensions/qa-lab/src/providers/`。
 
 新增通道的最低接入门槛：
 
-1. 保持由 `qa-lab` 负责共享的 `qa` 根命令。
+1. 保持 `qa-lab` 作为共享 `qa` 根命令的所有者。
 2. 在共享的 `qa-lab` 主机接缝上实现传输运行器。
 3. 将传输特定的机制保留在运行器插件或通道 harness 中。
-4. 将运行器挂载为 `openclaw qa <runner>`，而不是注册一个相互竞争的根命令。运行器插件应在 `openclaw.plugin.json` 中声明 `qaRunners`，并从轻量级的 `qa-runner-api.ts` 表面导出匹配的 `qaRunnerCliRegistrations` 数组。使用随附 `runtime-api.ts` 契约的已安装插件在作者迁移期间仍受支持，截止日期为 2026-10-01。让运行器执行位于惰性入口点之后。可选的 `adapterFactory` 会将传输暴露给共享场景，而不会改变命令现有的场景目录。相同通道的分区默认为串行执行，除非工厂声明每个实例都拥有隔离的凭据或可丢弃的服务器、Gateway 状态和制品路径。
+4. 将运行器挂载为 `openclaw qa <runner>`，而不是注册一个相互竞争的根命令。运行器插件应在 `openclaw.plugin.json` 中声明 `qaRunners`，并从轻量级的 `qa-runner-api.ts` 表面导出匹配的 `qaRunnerCliRegistrations` 数组。使用随附 `runtime-api.ts` 契约的已安装插件在作者迁移期间仍受支持，直到 2026-10-01。通过延迟入口点将运行器执行置于其后。可选的 `adapterFactory` 会将传输暴露给共享场景，而不会更改命令现有的场景目录。如果工厂声明每个实例都拥有隔离的凭据或一次性服务器、Gateway 状态和制品路径，则同通道分区可以并行执行；否则应串行执行。由模块支持的流程场景还要求 `adapterFactory.supportsModuleFlows: true`；这些工厂必须返回实现了 `prepareFlow` 的适配器。
 5. 在主题化的 `qa/scenarios/` 目录下编写或调整 YAML 场景。
-6. 对于新场景，使用通用场景辅助函数。
-7. 保持现有兼容别名继续工作，除非仓库正在进行有意的迁移。
+6. 对新场景使用通用场景辅助函数。
+7. 保持现有兼容别名继续有效，除非仓库正在进行有意的迁移。
 
 决策规则是严格的：
 

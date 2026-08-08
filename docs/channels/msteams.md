@@ -162,11 +162,14 @@ teams app doctor <teamsAppId>
 
 **团队 + 频道允许列表**
 
-- 通过在 `channels.msteams.teams` 下列出团队和频道来限定群组/频道回复的作用域。
-- 使用来自 Teams 链接的稳定 Teams 会话 ID 作为键，而不是可变的显示名称（参见 [团队和频道 ID](#team-and-channel-ids-common-gotcha)）。
-- 当 `groupPolicy="allowlist"` 且存在团队允许列表时，只接受列出的团队/频道（需通过提及触发）。
-- 配置向导接受 `团队/频道` 条目并为你存储它们。
-- 启动时，OpenClaw 会将团队/频道以及用户允许列表名称解析为 ID（当 Graph 权限允许时），并记录映射。未解析的名称会按原样保留，但除非设置了 `channels.msteams.dangerouslyAllowNameMatching: true`，否则在路由中会被忽略。
+- 通过在 `channels.msteams.teams` 下列出团队和频道，限定群组/频道回复的范围。
+- 使用 Teams 链接中的稳定 Teams 会话 ID 作为键，而不是可变的显示名称（参见[团队和频道 ID](#team-and-channel-ids-common-gotcha)）。
+- 当 `groupPolicy="allowlist"` 且存在团队允许列表时，只有列出的团队/频道会被接受（需要提及才能触发）。
+- `groupAllowFrom` 授权群组发送者，而不是授权通过委托 Graph 读取其他频道。如果现有配置仅设置了 `groupAllowFrom`，请保留默认的 `groupPolicy: "allowlist"`，并在 `channels.msteams.teams.<team>.channels` 下配置目标。
+- 另外，也可以有意将 `groupPolicy: "open"` 设置为允许更广泛的委托读取。这同样会允许**任何群组发送者**（默认仍需提及才能触发），因此其限制性低于限定范围的团队/频道路由。
+- 直接操作员读取以及当前会话中的读取不需要额外的团队/频道路由。
+- 配置向导接受 `Team/Channel` 条目，并会为你保存这些条目。
+- 启动时，OpenClaw 会将团队/频道和用户允许列表中的名称解析为 ID（当 Graph 权限允许时），并记录映射关系。无法解析的名称会按输入内容保留，但在路由时会被忽略，除非设置了 `channels.msteams.dangerouslyAllowNameMatching: true`。
 
 示例：
 
@@ -175,10 +178,11 @@ teams app doctor <teamsAppId>
   channels: {
     msteams: {
       groupPolicy: "allowlist",
+      groupAllowFrom: ["00000000-0000-0000-0000-000000000000"],
       teams: {
-        "My Team": {
+        "19:team-id@thread.tacv2": {
           channels: {
-            General: { requireMention: true },
+            "19:channel-id@thread.tacv2": { requireMention: true },
           },
         },
       },
@@ -201,7 +205,7 @@ teams app doctor <teamsAppId>
 
 ### 第 1 步：创建 Azure Bot
 
-1. 前往 [创建 Azure Bot](https://portal.azure.com/#create/Microsoft.AzureBot)
+1. 前往[创建 Azure Bot](https://portal.azure.com/#create/Microsoft.AzureBot)
 2. 填写 **基础信息** 选项卡：
 
    | 字段               | 值                                                       |
@@ -230,7 +234,7 @@ teams app doctor <teamsAppId>
 1. Azure Bot → **配置**。
 2. 设置 **消息传递端点**：
    - 生产环境：`https://your-domain.com/api/messages`
-   - 本地开发：使用隧道（参见 [本地开发](#local-development-tunneling)）
+   - 本地开发：使用隧道（参见[本地开发](#local-development-tunneling)）
 
 ### 第 4 步：启用 Teams 通道
 
@@ -243,7 +247,7 @@ teams app doctor <teamsAppId>
 - 包含一个 `bot` 条目，并设置 `botId = <App ID>`。
 - 作用域：`personal`、`team`、`groupChat`。
 - `supportsFiles: true`（个人作用域文件处理所必需）。
-- 添加 RSC 权限（参见 [当前 Teams RSC 权限](#current-teams-rsc-permissions-manifest)）。
+- 添加 RSC 权限（参见[当前 Teams RSC 权限](#current-teams-rsc-permissions-manifest)）。
 - 创建图标：`outline.png`（32x32）和 `color.png`（192x192）。
 - 将 `manifest.json`、`outline.png` 和 `color.png` 一起打包成 zip。
 
@@ -426,7 +430,7 @@ teams app update <teamsAppId> --endpoint "https://<new-url>/api/messages"
 teams app doctor <teamsAppId>
 ```
 
-一次性检查 bot 注册、AAD 应用、清单和 SSO 配置。
+一次性检查机器人注册、AAD 应用、清单和 SSO 配置。
 
 **发送测试消息：**
 
@@ -457,10 +461,10 @@ OpenClaw 为 Microsoft Teams 提供了一个基于 Graph 的 `member-info` 操�
 
 - `ChannelSettings.Read.Group` 和 `TeamMember.Read.Group` RSC 权限（已包含在推荐的清单中）。
 
-只要配置了 Graph 凭据，该操作即可使用；不存在单独的 `channels.msteams.actions.memberInfo` 开关。
-标准频道查询会返回匹配的团队成员身份、显示名称、电子邮件和角色。
-在当前 DM 或群聊中，该操作可以返回受信任发送者的稳定用户 ID。
-私有/共享频道以及非当前聊天成员的查询需要额外的成员名单权限，
+只要配置了 Graph 凭据，该操作即可使用；不存在单独的 `channels.msteams.actions.memberInfo` 开关。  
+标准频道查询会返回匹配的团队成员身份、显示名称、电子邮件和角色。  
+在当前 DM 或群聊中，该操作可以返回受信任发送者的稳定用户 ID。  
+私有/共享频道以及非当前聊天成员的查询需要额外的成员名单权限，  
 并且会被默认权限基线拒绝。
 
 ## 历史上下文
@@ -1075,7 +1079,7 @@ https://teams.microsoft.com/l/channel/19%3A15bc...%40thread.tacv2/ChannelName?gr
 - [RSC 权限参考](https://learn.microsoft.com/en-us/microsoftteams/platform/graph-api/rsc/resource-specific-consent)
 - [Teams bot 文件处理](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/bots-filesv4)（频道/群组需要 Graph）
 - [主动消息发送](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/conversations/send-proactive-messages)
-- [@microsoft/teams.cli](https://www.npmjs.com/package/@microsoft/teams.cli) - 用于 bot 管理的 Teams CLI】【。
+- [@microsoft/teams.cli](https://www.npmjs.com/package/@microsoft/teams.cli) - 用于 bot 管理的 Teams CLI
 
 ## 相关内容
 
@@ -1083,4 +1087,4 @@ https://teams.microsoft.com/l/channel/19%3A15bc...%40thread.tacv2/ChannelName?gr
 - [配对](/channels/pairing) - DM 认证和配对流程
 - [群组](/channels/groups) - 群聊行为和提及门控
 - [频道路由](/channels/channel-routing) - 消息的会话路由
-- [安全性](/gateway/security) - 访问模型和加固
+- [安全性](/gateway/security) - 访问模型和加固。

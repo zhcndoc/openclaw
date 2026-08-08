@@ -275,16 +275,8 @@ fly machine update <machine-id> --vm-memory 2048 -y
 
 在容器重启后，Gateway 因“already running”错误而拒绝启动。
 
-运行时锁文件位于 `<tmpdir>/openclaw-<uid>/gateway.<hash>.lock`
-和 `gateway.state.<hash>.lock`（Linux：
-`/tmp/openclaw-<uid>/gateway.*.lock`），而不在持久化的 `/data` 卷中，因此
-完整的容器重启通常会将它们与容器文件系统的其余部分一并清除。如果锁仍然存在（例如 `fly machine restart`
-会保留容器文件系统）并阻止启动，请手动删除：
-
-```bash
-fly ssh console --command "rm -f /tmp/openclaw-*/gateway.*.lock"
-fly machine restart <machine-id>
-```
+当设置了 `OPENCLAW_STATE_DIR=/data` 时，锁目录位于
+`/data/tmp/openclaw-<uid>` 下，并会随卷持久化。OpenClaw 通常会自动回收已失效的所有者。如果启动时仍然报告存在所有者，请先使用 `fly status` 和 `fly logs` 验证是否有其他机器或 Gateway 进程正在使用该卷。当所有者可能仍在运行时，不要删除锁目录；有关所有权和失效恢复约定，请参阅[网关锁](/gateway/gateway-lock)。
 
 ### 未读取配置
 

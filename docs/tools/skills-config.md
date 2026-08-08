@@ -1,14 +1,14 @@
 ---
-title: "Skills 配置"
-sidebarTitle: "Skills 配置"
-summary: "skills.* 配置模式、agent 白名单、工作坊设置以及沙箱环境变量处理的完整参考。"
+title: "技能配置"
+sidebarTitle: "技能配置"
+summary: "skills.* 配置模式、代理白名单、工作坊设置以及沙箱环境变量处理的完整参考。"
 read_when:
-  - 配置 skill 加载、安装或门控行为
-  - 设置按 agent 的 skill 可见性
-  - 调整 Skill Workshop 限制或审批策略
+  - 配置技能加载、安装或门控行为
+  - 设置按代理划分的技能可见性
+  - 调整技能工作坊限制或审批策略
 ---
 
-大多数 skills 配置位于 `~/.openclaw/openclaw.json` 中的 `skills` 下。按 agent 的可见性位于 `agents.defaults.skills` 和 `agents.entries.*.skills` 中。
+大多数技能配置位于 `~/.openclaw/openclaw.json` 中的 `skills` 下。按代理划分的可见性位于 `agents.defaults.skills` 和 `agents.entries.*.skills` 中。
 
 ```json5
 {
@@ -46,8 +46,8 @@ read_when:
 
 <Note>
   对于内置图像生成，请使用 `agents.defaults.mediaModels.image`
-  加上核心的 `image_generate` 工具，而不是 `skills.entries`。Skill
-  entries 仅用于自定义或第三方 skill 工作流。
+  加上核心的 `image_generate` 工具，而不是 `skills.entries`。技能条目
+  仅用于自定义或第三方技能工作流。
 </Note>
 
 ## 加载（`skills.load`）
@@ -146,13 +146,7 @@ read_when:
   可选的目录白名单，策略可执行文件可以位于其中。
 </ParamField>
 
-<ParamField path="security.installPolicy.exec.allowInsecurePath" type="boolean" default="false">
-  绕过命令路径的所有权和权限检查。仅在该路径由其他机制保护时使用。
-</ParamField>
-
-<ParamField path="security.installPolicy.exec.allowSymlinkCommand" type="boolean" default="false">
-  允许配置的命令路径为符号链接。解析后的目标仍必须满足其他路径检查。解释器脚本参数必须是直接的普通文件，而不是符号链接。
-</ParamField>
+策略命令和解释器脚本参数必须是具有受信任所有权、受限权限且其父目录可验证的直接常规文件。符号链接和不安全路径将被拒绝。
 
 策略会在 stdin 上接收一个 JSON 对象，其中包含 `protocolVersion: 1`、`openclawVersion`、`targetType`、`targetName`、`sourcePath`、`sourcePathKind`、可选的结构化 `source`、结构化 `origin` 和 `request`。它必须在 stdout 上写入一个 JSON 对象：`{ "protocolVersion": 1, "decision": "allow" }` 或 `{ "protocolVersion": 1, "decision": "block", "reason": "..." }`。非零退出、超时、JSON 格式错误、缺失字段或不支持的协议版本都会导致失败并关闭。
 
@@ -220,12 +214,12 @@ process.stdin.on("end", () => {
 });
 ```
 
-## 捆绑 skill 白名单
+## 捆绑技能白名单
 
 <ParamField path="skills.allowBundled" type="string[]">
-  仅适用于 **bundled** skills 的可选允许列表。设置后，只有列表中的 bundled
-  skills 才具备资格。Managed、agent-level 和 workspace
-  skills 不受影响。
+  仅适用于 **捆绑** 技能的可选允许列表。设置后，只有列表中的捆绑
+  技能才具备资格。托管、代理级别和工作区
+  技能不受影响。
 </ParamField>
 
 ## 按技能的条目（`skills.entries`）
@@ -248,7 +242,7 @@ process.stdin.on("end", () => {
   自定义按技能配置字段的可选对象。
 </ParamField>
 
-## Agent 允许列表（`agents`）
+## 代理允许列表（`agents`）
 
 当你希望使用相同的机器/工作区技能根目录，但为每个代理提供不同的可见技能集时，请使用代理配置。
 

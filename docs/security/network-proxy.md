@@ -39,7 +39,7 @@ openclaw gateway install --force
 openclaw gateway start
 ```
 
-`OPENCLAW_PROXY_URL` 环境变量回退最适合前台运行。若要在已安装的服务中使用它，请将其放入服务的持久环境中（`$OPENCLAW_STATE_DIR/.env`，默认 `~/.openclaw/.env`），然后重新安装，以便 launchd/systemd/计划任务能够读取它。
+`OPENCLAW_PROXY_URL` 环境变量回退最适合前台运行。若要将其用于已安装的服务，请将其放入服务的持久环境中（`$OPENCLAW_STATE_DIR/.env`，默认为 `~/.openclaw/.env`），然后重新安装，以便 launchd/systemd/计划任务能够获取该变量。此变量会被复制到生成的服务环境中，而不是作为受管理的 dotenv 键进行跟踪，因此 systemd 仅重启时进行的受管理 dotenv 刷新不适用于此变量。
 
 ### 使用私有 CA 的 HTTPS 代理端点
 

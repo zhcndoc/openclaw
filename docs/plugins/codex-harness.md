@@ -28,13 +28,12 @@ read_when:
 
 ## 需求
 
-- 已安装官方 `@openclaw/codex` 插件。如果您的配置使用 allowlist，请在
+- 已安装官方 `@openclaw/codex` 插件。如果配置使用了允许列表，请在
   `plugins.allow` 中包含 `codex`。
-- Codex app-server `0.146.0`。该插件默认随附并管理 `@openai/codex`
-  `0.146.0`，因此 `PATH` 上的 `codex` 命令不会影响正常启动。显式指定的自定义、远程以及由 macOS 桌面端管理的 app-server
-  必须报告完全相同的稳定版本 `0.146.0`。
-- 当设置了 `remoteWorkspaceRoot` 且必须传输跨机器工作区附件时，远程 Codex app-server 主机上必须安装 Node.js。
-- 通过 `openclaw models auth login --provider openai` 进行 Codex 认证、代理的 Codex 主目录中已存在 app-server 账户，或使用显式的 Codex API 密钥认证配置文件。
+- Codex app-server `0.146.1`。插件默认会随附并管理 `@openai/codex`
+  `0.146.1`，因此 `PATH` 中的 `codex` 命令不会影响正常启动。显式指定的自定义、远程以及由 macOS 桌面端拥有的 app-server 必须报告完全相同的稳定版 `0.146.1`。
+- 当设置了 `remoteWorkspaceRoot` 且必须传输跨机器工作区附件时，远程 Codex app-server 主机上需要安装 Node.js。
+- 通过 `openclaw models auth login --provider openai` 完成 Codex 认证、代理的 Codex 主目录中已存在 app-server 账户，或使用显式的 Codex API 密钥认证配置文件。
 
 有关认证优先级、环境隔离、自定义 app-server 命令、模型发现以及完整的配置字段列表，请参阅
 [Codex 运行时参考](/plugins/codex-harness-reference)。
@@ -83,7 +82,7 @@ openclaw models auth login --provider openai
 ```
 
 修改插件配置后，请重启网关。如果某个聊天已经有一个
-session，请先运行 `/new` 或 `/reset`，这样下一轮就会根据当前配置解析 harness。
+会话，请先运行 `/new` 或 `/reset`，这样下一轮就会根据当前配置解析运行框架。
 
 ## 与 Codex Desktop 和 CLI 共享线程
 
@@ -304,8 +303,7 @@ agent 作用域的 app-server 只会接收准备好的 key；操作员原生的
 [API 定价](https://developers.openai.com/api/docs/pricing)。
 </Warning>
 
-本页其余内容涵盖部署形态、失败即关闭路由、guardian  
-批准策略、原生 Codex 插件以及 Computer Use。有关完整的选项  
+本页其余内容涵盖部署形态、失败即关闭路由、监护人批准策略、原生 Codex 插件以及 Computer Use。有关完整的选项  
 列表、默认值、枚举、发现、环境隔离、超时，以及  
 app-server 传输字段，请参阅  
 [Codex harness 参考](/plugins/codex-harness-reference)。
@@ -525,8 +523,8 @@ Codex 姿态，请使用 `tools.exec.mode: "full"`。旧版
 但 `tools.exec.mode: "auto"` 才是规范化的 OpenClaw 接口。
 
 关于该模式与主机 exec 批准及 ACPX 权限的对比，请参见
-[Permission modes](/tools/permission-modes)。关于所有 app-server 字段、认证顺序、环境隔离和超时行为，
-请参见 [Codex harness reference](/plugins/codex-harness-reference)。
+[权限模式](/tools/permission-modes)。关于所有 app-server 字段、认证顺序、环境隔离和超时行为，
+请参见 [Codex harness 参考](/plugins/codex-harness-reference)。
 
 ## 命令与诊断
 
@@ -571,7 +569,7 @@ codex resume <thread-id>
 ```
 
 可从已完成的 `/diagnostics` 回复、`/codex binding`，
-或 `/codex threads [filter]` 中获取线程 id。
+或 `/codex threads [filter]` 中获取线程 ID。
 
 有关上传机制和运行时级诊断边界，请参见
 [Codex harness 运行时](/plugins/codex-harness-runtime#codex-feedback-upload)。
@@ -671,7 +669,7 @@ home 及其现有账户，而不会注入 OpenClaw 认证配置文件。
 允许使用 `--dns-result-order=ipv4first --no-network-family-autoselection`。
 格式错误或未知的选项，以及 `--require` 或
 `--import` 等代码加载选项，都会以故障安全方式失败。如果 Codex 不需要某个继承的选项，请使用
-`appServer.clearEnv` 移除 `NODE_OPTIONS`。
+`appServer.clearEnv` 移除 `NODE_OPTIONS`】【。
 
 ### 动态工具和网页搜索
 
@@ -949,7 +947,10 @@ gateway 摘录，展示 model、runtime、所选 provider 和
 
 **旧版 Codex 模型引用配置仍然存在：** 运行 `openclaw doctor --fix`。Doctor 会将旧版模型引用重写为 `openai/*`，移除过期的会话和整 agent runtime 固定配置，并保留现有的 auth-profile 覆盖。
 
-**app-server 被拒绝：** 请严格使用稳定版 Codex `0.146.0`。由于 OpenClaw 会根据其附带的 Codex 版本，对生成的 schema 和 runtime contract 进行验证，因此旧版本或新版本、预发布版本、带构建后缀的版本以及未指定版本的服务器都会被拒绝。请更新或移除选择其他版本的自定义、远程或桌面 binary override。
+**app-server 被拒绝：** 使用完全匹配的稳定版 Codex `0.146.1`。由于
+OpenClaw 会根据其随附的 Codex 版本，验证生成的 schema 和 runtime contract，
+因此旧版或新版、预发布版、带构建后缀的版本以及未标注版本的服务器都会被拒绝。
+请更新或移除选择其他版本的自定义、远程或桌面二进制覆盖配置。
 
 **`/codex status` 无法连接：** 检查 `codex` 插件是否
 已启用；如果配置了 allowlist，检查 `plugins.allow` 是否包含它；并确认任何自定义的

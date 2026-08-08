@@ -47,13 +47,13 @@ openclaw hooks info session-memory
 
 ## 事件类型
 
-Hooks 订阅此表中的特定键，或订阅一个裸的家族名称
+钩子订阅此表中的特定键，或订阅一个裸的家族名称
 (`command`, `session`, `agent`, `gateway`, `message`) 来接收该家族中的每个动作。
 OpenClaw 核心不会发出任何其他事件，因此任何其他名称几乎
-总是一个拼写错误，会让 hook 悄无声息地失效（只有发出自定义事件的插件才可能触发它）。
-hook 加载器会对这类名称记录警告
+总是一个拼写错误，会让钩子悄无声息地失效（只有发出自定义事件的插件才可能触发它）。
+钩子加载器会对这类名称记录警告
 （例如 `command:nwe`），并且 `openclaw hooks info <name>` 会将它们标记出来，因此
-从未运行过的 hook 是可以诊断的。
+从未运行过的钩子是可以诊断的。
 
 | 事件                     | 触发时机                                                     |
 | ------------------------ | ------------------------------------------------------------ |
@@ -66,7 +66,7 @@ hook 加载器会对这类名称记录警告
 | `session:compact:after`  | 压缩操作完成之后                                             |
 | `session:patch`          | 修改会话属性时                                               |
 | `agent:bootstrap`        | 注入工作区引导文件之前                                       |
-| `gateway:startup`        | 通道启动且 hooks 加载完成之后                                |
+| `gateway:startup`        | 通道启动且钩子加载完成之后                                   |
 | `gateway:shutdown`       | 网关关闭开始时                                               |
 | `gateway:pre-restart`    | 预期的网关重启之前                                           |
 | `message:received`       | 从任何通道接收入站消息                                       |
@@ -170,7 +170,7 @@ export default handler;
 
 ## Gateway 生命周期事件
 
-`gateway:shutdown` 包含 `reason` 和 `restartExpectedMs`，并在 gateway 关闭开始时触发。`gateway:pre-restart` 包含相同的上下文，但仅在关闭是预期重启的一部分且提供了有限的 `restartExpectedMs` 值时触发。在关闭期间，每个生命周期 hook 的等待都是尽力而为且有上限的，因此如果某个处理器卡住，关闭仍会继续。默认等待预算是 `gateway:shutdown` 5 秒，`gateway:pre-restart` 10 秒。
+`gateway:shutdown` 包含 `reason` 和 `restartExpectedMs`，并在 gateway 开始关闭时触发。`gateway:pre-restart` 包含相同的上下文，但仅在关闭是预期重启的一部分且提供了有限的 `restartExpectedMs` 值时触发。在关闭期间，每个生命周期 hook 的等待都是尽力而为且有上限的，因此即使某个处理器卡住，关闭仍会继续。默认等待预算为：`gateway:shutdown` 5 秒，`gateway:pre-restart` 10 秒。
 
 当通道仍然可用时，请使用 `gateway:pre-restart` 发送简短的重启通知：
 
@@ -197,7 +197,7 @@ export default async function handler(event) {
 }
 ```
 
-在 `gateway:shutdown`（或 `gateway:pre-restart`）事件与后续关闭流程之间，gateway 还会为进程停止时仍处于活动状态的每个会话触发一个类型化的 `session_end` 插件 hook。对于普通的 SIGTERM/SIGINT 停止，事件的 `reason` 为 `shutdown`；当关闭是预期重启的一部分时，`reason` 为 `restart`。此清理过程有上限，因此较慢的 `session_end` 处理器不会阻塞进程退出，并且已经通过 replace / reset / delete / compaction 完成终结的会话会被跳过，以避免重复触发。
+在 `gateway:shutdown`（或 `gateway:pre-restart`）事件与后续关闭流程之间，gateway 还会为进程停止时仍处于活动状态的每个会话触发一个类型化的 `session_end` 插件 hook。对于普通的 SIGTERM/SIGINT 停止，事件的 `reason` 为 `shutdown`；当关闭是预期重启的一部分时，`reason` 为 `restart`。此清理过程有上限，因此较慢的 `session_end` 处理器不会阻塞进程退出；已经通过 replace / reset / delete / compaction 完成终结的会话也会被跳过，以避免重复触发。
 
 ## 钩子发现
 
@@ -306,7 +306,14 @@ openclaw hooks enable <hook-name>
 `plugin:<id>`。请将它们用于副作用和与钩子包的兼容性，而不是用于
 有序中间件或策略门控。
 
-完整的插件钩子参考请见 [插件钩子](/plugins/hooks)。
+旧版插件 SDK 的 `api.registerHook` 仅注册到内部事件系统
+（`command:new`、`gateway:startup`、`message:received` 等）。
+诸如 `before_tool_call`、`message_received` 或 `session_start` 之类的类型化
+生命周期事件名称，只由类型化钩子运行器分发，**不会**通过
+`registerHook` 调用。使用 `registerHook` 注册类型化名称时，会发出注册警告，
+并指向作为替代方案的公共 `api.on(...)` API；它绝不会静默地不执行任何操作。
+
+如需完整的插件钩子参考，请参阅[插件钩子](/plugins/hooks)。
 
 ## 配置
 
@@ -415,4 +422,4 @@ openclaw hooks info my-hook
 - [CLI 参考：hooks](/cli/hooks)
 - [Webhooks](/automation/cron-jobs#webhooks)
 - [插件 hooks](/plugins/hooks) — 进程内插件生命周期 hooks
-- [配置](/gateway/configuration-reference#hooks)
+- [配置](/gateway/configuration-reference#hooks)。

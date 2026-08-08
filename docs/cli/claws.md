@@ -9,10 +9,9 @@ title: "Claws"
 
 # `openclaw claws`
 
-Claw 是一个用于创建一个新的 OpenClaw 代理的版本化配置。它可以描述
-该代理的可移植身份、工作区文件、技能、插件、MCP 服务器和
-cron 任务。特定于 Harness 的代理设置可以通过引用的
-包配置文件来承载。Claw 不会替换或修改现有代理。
+Claw 是一个用于创建新的 OpenClaw 代理的版本化配置。它可以描述代理的
+可移植身份、工作区文件、技能、插件、MCP 服务器和 cron 任务。特定于宿主环境的代理设置
+可以存放在常规的软件包配置文件中。Claw 不会替换或修改现有代理。
 
 Claws 仍处于实验阶段。其 schema、命令输出和生命周期可能会发生变化。
 请显式启用该命令接口：
@@ -27,8 +26,8 @@ export OPENCLAW_EXPERIMENTAL_CLAWS=1
 
 ## 创建一个 Claw 包
 
-一个包包含 `package.json`、一个 `CLAW.md` 清单，以及该清单引用的任何 profile 或
-workspace sidecar：
+一个包包含 `package.json`、一个 `CLAW.md` manifest，以及该 manifest 使用的任何常规
+配置文件、引导说明或可移植资源：
 
 ```json
 {
@@ -47,8 +46,6 @@ schemaVersion: 1
 agent:
   id: incident-triage
   name: Incident triage
-metadata:
-  openclaw.config: profiles/openclaw.yml
 workspace:
   bootstrapFiles: {}
 packages: []
@@ -61,7 +58,12 @@ cronJobs: []
 你审查传入的事故，识别严重性和归属，并留下带有证据的简洁交接说明。
 ```
 
-`metadata` 是一个字符串到字符串的映射，用于可移植的消费者提示。OpenClaw 的 `openclaw.config` 键指向一个可选的、包相对的 YAML profile。导出的默认值是 `profiles/openclaw.yml`；该指针是规范性的，因此包可以选择另一个安全的相对 `.yml` 或 `.yaml` 路径。
+OpenClaw 会自动发现可选的 `profiles/openclaw.yml` 文件。
+Manifest 中没有指向该文件的字段。其他 harness 可以发现自己的常规配置文件，例如
+`profiles/codex.yml`，而无需修改可移植 manifest。
+
+使用了 `metadata.openclaw.config` 的实验性包必须将该文件移动到
+`profiles/openclaw.yml`，并移除 metadata 条目。
 
 ```yaml
 schemaVersion: 1
@@ -79,13 +81,18 @@ agent:
       sources: [memory, sessions]
 ```
 
-这个 profile 只存在于 Claw 包内部。OpenClaw 在检查、添加、更新和导出该 Claw 时会验证并使用它；它不会被复制到用户正常的 OpenClaw 配置路径。其他运行环境可以忽略这个带命名空间的 metadata 键，并消费可移植的 manifest 字段。
+此配置文件仅存在于 Claw 包内部。OpenClaw 会在检查、添加、更新和导出该 Claw 时对其进行验证和使用；它不会被复制到用户正常的 OpenClaw 配置路径中。其他 harness 会使用可移植 manifest，并且只解释它们自己的常规配置文件。
 
-同样严格的 1 版 schema 继续接受分组的 JSON manifest。分组 JSON 使用相同的 `metadata.openclaw.config` 指针，而不是嵌入第二份 OpenClaw profile。此页其余的 schema 片段使用 JSON，在 `CLAW.md` frontmatter 中也有等价的键可用。
+相同的严格版本 1 schema 仍然接受分组 JSON manifest。分组 JSON 会发现相同的常规配置文件，而不是嵌入一份 OpenClaw 设置副本。本页面其余的 schema 片段使用 JSON；`CLAW.md` frontmatter 中提供了等效的键。
 
-OpenClaw 包 profile 可以选择由当前运行的 OpenClaw 版本注册的任意内置工具 profile，然后通过 `alsoAllow`、`deny` 和 `tools.fs.workspaceOnly: true` 进行细化。Claw 不能将该字段设为 `false` 从而削弱主机文件系统隔离。`tools.allow` 仍然可作为显式白名单使用，但不能与 `alsoAllow` 组合。Claw 也可以设置 `memory.search.enabled`，选择可移植的 `memory` 和 `sessions` 源，并通过 `rememberAcrossConversations` 启用跨对话记忆。声明 `sessions` 源需要该显式启用。
-主机策略仍然会约束这些设置，而 Claw 不携带自定义 profile 定义、提供者、凭据、绑定或本地记忆路径。
-所引用的 profile 限制为 256 KiB，必须是 JSON 兼容的 YAML，不能使用别名、锚点、标签或合并键，并且必须是包内的普通文件，不能是符号链接，也不能是硬链接。
+OpenClaw 包配置可以选择运行中的 OpenClaw 版本所注册的任何内置工具配置文件，然后使用
+`alsoAllow`、`deny` 和 `tools.fs.workspaceOnly: true` 对其进行细化。Claw 不能将该字段设置为
+`false`，从而削弱主机文件系统隔离。`tools.allow` 仍可作为显式 allowlist 使用，但不能与
+`alsoAllow` 结合使用。Claw 还可以设置 `memory.search.enabled`，选择可移植的
+`memory` 和 `sessions` 源，并通过 `rememberAcrossConversations` 选择启用跨会话记忆。
+声明 `sessions` 源要求同时启用该选项。
+主机策略仍会限制这些设置，并且 Claw 不携带自定义配置文件定义、提供商、凭据、绑定或本地记忆路径。
+常规配置文件大小限制为 256 KiB，必须是兼容 JSON 的 YAML，不得使用别名、锚点、标签或合并键，并且必须是包内的常规、非符号链接、非硬链接文件。
 
 包和 workspace 路径必须始终位于包根目录内。Manifest 限制为 1 MiB，包元数据限制为 256 KiB，workspace 源文件对单文件和总量限制分别生效。Workspace 源文件还会拒绝符号链接的父目录。
 
@@ -106,6 +113,12 @@ OpenClaw 包 profile 可以选择由当前运行的 OpenClaw 版本注册的任�
   }
 }
 ```
+
+额外文件是可移植资源机制。作者可以将包源文件组织在诸如
+`assets/`、`schemas/`、`templates/` 和 `examples/` 等目录下，然后使用
+`workspace.files` 将其映射到新 agent 的 workspace 中。应用时会将这些目标记录为受管理文件；更新时会重新协调未更改的受管理资源，而移除时会保留已修改或由用户拥有的文件。
+
+可选的包根目录 `BOOTSTRAP.md` 用于提供对话式首次运行说明。OpenClaw 会将其植入新 agent 的 workspace，并通过原生 workspace bootstrap 状态记录进度。一旦 agent 使用或移除该文件，Claw 更新就不会重新创建它。因此，根目录中的 `BOOTSTRAP.md` 不能同时通过 `workspace.files` 声明。移除 Claw 时，在验证其记录的摘要后，会删除未更改且仍处于待处理状态的包 bootstrap；对于已编辑的 bootstrap 内容以及入门过程中创建的文件，则会予以保留。
 
 技能和插件使用精确的 ClawHub 版本：
 
@@ -195,9 +208,7 @@ openclaw claws add ./incident-triage.claw.json \
 请传入显式的 `--workspace`；`OPENCLAW_STATE_DIR` 会重定位运行时状态，
 但不会更改默认的 workspace 位置。
 
-添加一个 Claw 会创建新的 agent 和 workspace 配置，写入声明的 workspace 文件，
-安装或复用声明的 skill 和 plugin 构件，并记录 package、MCP 和 cron 的来源。
-现有文件不会被覆盖，并且当受拥有内容发生漂移时，重试会以失败关闭。
+添加 Claw 会创建新的 agent 和 workspace 配置，写入可选的首次运行指令，写入声明的 workspace 资产，安装或复用声明的 skill 和 plugin 构件，并记录 package、MCP 和 cron 的来源信息。现有文件不会被覆盖；如果由工具管理的内容发生了漂移，重试操作将安全失败。
 
 ## 检查已安装状态
 
@@ -207,14 +218,14 @@ openclaw claws status incident-triage --json
 openclaw doctor
 ```
 
-`status` 会将已安装的 agent 及其记录的 workspace、package、MCP 和 cron 溯源与当前状态进行比较。它会报告不完整的安装、缺失的资源以及漂移，而不会更改本地状态。`openclaw doctor` 会增加 Claw 特定的诊断，包括不完整的所有权记录、不安全的受管文件，以及无法与实时 Gateway 清单相互印证的 cron 任务。
+`status` 会将已安装的代理及其记录的工作区、软件包、MCP 和 cron 来源与当前状态进行比较。它还会报告原生首次运行引导是否仍处于待处理状态。它会报告安装不完整、资源缺失和状态偏移，但不会更改本地状态。`openclaw doctor` 还会针对 Claw 添加特定诊断，包括所有权记录不完整、不安全的受管文件，以及无法通过实时 Gateway 清单核实的 cron 作业。
 
 Claw 溯源区分两种关系：
 
 - **Managed：** 该 Claw 引入并当前管理该资源。在资源未变更且不存在冲突所有者时，它是清理候选项。
 - **Referenced：** 该资源独立存在或为共享资源。移除会释放该 Claw 的引用，并默认保留该资源。
 
-这不是引用计数。普通的 plugin、skill 和 agent 命令会保持其现有行为；Claws 在此基础上增加了溯源信息和受保护的生命周期操作。
+这不是引用计数。普通的插件、技能和代理命令会保持其现有行为；Claws 在此基础上增加了溯源信息和受保护的生命周期操作。
 
 ## 更新已安装的 Claw
 
@@ -271,7 +282,7 @@ openclaw claws remove incident-triage \
 
 只有在查看了显示的依赖项、独立所有者以及预先存在的来源之后，才使用 `--force-referenced`。它允许在这些冲突存在的情况下执行所选清理；但不会跳过 plan-integrity 同意。
 
-## 导出已安装的 agent
+## 导出已安装的代理
 
 导出会创建一个新的包目录，并在目标已存在或受管状态发生漂移时失败：
 
@@ -280,9 +291,9 @@ openclaw claws export incident-triage --out ./incident-triage-export --json
 ```
 
 结果包含 `package.json`、规范化的 `CLAW.md` 以及受管工作区的
-sidecar。受管的 `SOUL.md` 内容在其为非空 UTF-8 且合并后的文档
+辅助文件。受管的 `SOUL.md` 内容在其为非空 UTF-8 且合并后的文档
 符合清单限制时，会作为 `CLAW.md` 的正文输出。否则，
-导出会将其保留为显式 sidecar，以便该包仍可导入。它是一个可移植的 Claw 包，而不是整个实例的备份：不相关的 agent、
+导出会将其保留为显式辅助文件，以便该包仍可导入。它是一个可移植的 Claw 包，而不是整个实例的备份：不相关的代理、
 凭据、会话以及未归属的本地状态都会被排除。
 
 ## 命令参考

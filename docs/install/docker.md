@@ -143,28 +143,29 @@ doctor 完成后，使用默认命令重新启动网关容器。在 Kubernetes �
 
 | 变量                                            | 用途                                                                                                              |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_IMAGE`                                | 使用远程镜像而不是在本地构建                                                                                       |
+| `OPENCLAW_IMAGE`                                | 使用远程镜像，而不是在本地构建                                                                                    |
 | `OPENCLAW_IMAGE_APT_PACKAGES`                   | 在构建期间安装额外的 apt 软件包（以空格分隔）。旧版别名：`OPENCLAW_DOCKER_APT_PACKAGES`                         |
 | `OPENCLAW_IMAGE_PIP_PACKAGES`                   | 在构建期间安装额外的 Python 软件包（以空格分隔）                                                                  |
-| `OPENCLAW_EXTENSIONS`                           | 编译/打包选定的受支持插件，并安装其运行时依赖（以逗号或空格分隔的 ID）                                             |
-| `OPENCLAW_DOCKER_BUILD_NODE_OPTIONS`            | 覆盖本地源码构建的 Node 选项（默认为 `--max-old-space-size=8192`）                                                 |
-| `OPENCLAW_DOCKER_BUILD_TSDOWN_MAX_OLD_SPACE_MB` | 以 MB 为单位覆盖本地源码构建的 tsdown 堆大小                                                                       |
+| `OPENCLAW_EXTENSIONS`                           | 编译/打包选定的受支持插件，并安装其运行时依赖项（以逗号或空格分隔的 ID）                                           |
+| `OPENCLAW_DOCKER_BUILD_NODE_OPTIONS`            | 覆盖本地源码构建的 Node 选项（默认为 `--max-old-space-size=8192`）                                                |
+| `OPENCLAW_DOCKER_BUILD_TSDOWN_MAX_OLD_SPACE_MB` | 以 MB 为单位覆盖本地源码构建的 tsdown 堆内存大小                                                                  |
 | `OPENCLAW_DOCKER_BUILD_SKIP_DTS`                | 在仅运行时的本地镜像构建期间跳过声明文件输出（默认为 `1`）                                                        |
 | `OPENCLAW_INSTALL_BROWSER`                      | 在构建时将 Chromium + Xvfb 内置到镜像中                                                                           |
-| `OPENCLAW_EXTRA_MOUNTS`                         | 额外的主机绑定挂载（以逗号分隔的 `source:target[:opts]`）                                                         |
-| `OPENCLAW_HOME_VOLUME`                          | 将 `/home/node` 持久化到命名 Docker 卷中                                                                          |
-| `OPENCLAW_TZ`                                   | 将网关和 CLI 容器的时区设置为 IANA 名称（默认为 `UTC`）                                                            |
-| `OPENCLAW_SANDBOX`                              | 选择启用沙箱引导（`1`、`true`、`yes`、`on`）                                                                      |
+| `OPENCLAW_EXTRA_MOUNTS`                         | 额外的主机绑定挂载（以逗号分隔的 `source:target[:opts]`）                                                          |
+| `OPENCLAW_HOME_VOLUME`                          | 将 `/home/node` 持久化到一个命名 Docker 卷中                                                                      |
+| `OPENCLAW_TZ`                                   | 将网关和 CLI 容器的时区设置为 IANA 名称（默认为 `UTC`）                                                           |
+| `OPENCLAW_SANDBOX`                              | 选择加入沙箱引导（`1`、`true`、`yes`、`on`）                                                                      |
 | `OPENCLAW_SKIP_ONBOARDING`                      | 跳过交互式入门步骤（`1`、`true`、`yes`、`on`）                                                                     |
 | `OPENCLAW_DOCKER_SOCKET`                        | 覆盖 Docker 套接字路径                                                                                             |
-| `OPENCLAW_DISABLE_BONJOUR`                      | 强制开启（`0`）或关闭（`1`）Bonjour/mDNS 广播；参见 [Bonjour / mDNS](#bonjour--mdns)                              |
-| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS`      | 禁用捆绑插件源绑定挂载覆盖                                                                                         |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`                   | 用于 OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点                                                                |
-| `OTEL_EXPORTER_OTLP_*_ENDPOINT`                 | 针对跟踪、指标或日志的特定信号 OTLP 端点                                                                           |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`                   | OTLP 协议覆盖。目前仅支持 `http/protobuf`                                                                          |
+| `OPENCLAW_DISABLE_BONJOUR`                      | 强制开启（`0`）或关闭（`1`）Bonjour/mDNS 广播；请参阅 [Bonjour / mDNS](#bonjour--mdns)                           |
+| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS`      | 禁用内置插件源绑定挂载覆盖                                                                                         |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                   | 用于 OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点                                                               |
+| `OTEL_EXPORTER_OTLP_*_ENDPOINT`                 | 针对追踪、指标或日志的特定信号 OTLP 端点                                                                            |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`                   | 共享 OTLP 协议回退设置。目前仅支持 `http/protobuf`                                                                |
+| `OTEL_EXPORTER_OTLP_*_PROTOCOL`                 | 针对追踪、指标或日志的特定信号协议回退设置；优先于共享回退设置                                                     |
 | `OTEL_SERVICE_NAME`                             | 用于 OpenTelemetry 资源的服务名称                                                                                  |
-| `OTEL_SEMCONV_STABILITY_OPT_IN`                 | 选择启用最新的实验性 GenAI 语义属性                                                                                |
-| `OPENCLAW_OTEL_PRELOADED`                       | 在已预加载一个 OpenTelemetry SDK 时跳过启动第二个 SDK                                                              |
+| `OTEL_SEMCONV_STABILITY_OPT_IN`                 | 选择加入最新的实验性 GenAI 语义属性                                                                                 |
+| `OPENCLAW_OTEL_PRELOADED`                       | 在已预加载 OpenTelemetry SDK 时跳过启动第二个 SDK                                                                  |
 
 官方镜像不包含 Homebrew。在入门过程中，OpenClaw 会在一个没有 `brew` 的 Linux 容器中隐藏仅适用于 brew 的技能依赖安装器；请通过自定义镜像提供这些依赖，或手动安装。对于 Debian 打包的依赖，请使用 `OPENCLAW_IMAGE_APT_PACKAGES`；对于 Python 依赖，请使用 `OPENCLAW_IMAGE_PIP_PACKAGES`（构建时会运行 `python3 -m pip install --break-system-packages`，因此请锁定版本，并且只使用你信任的索引）。
 

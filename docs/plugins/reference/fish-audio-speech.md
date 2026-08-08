@@ -1,11 +1,11 @@
 ---
 summary: "由 Fish Audio S2.1 托管的文本转语音，支持流式传输、语音留言和电话输出。"
 read_when:
-  - 安装、配置或审核 fish-audio 插件时
-title: "Fish Audio 插件"
+  - 您正在安装、配置或审核 fish-audio-speech 插件
+title: "Fish Audio Speech 插件"
 ---
 
-# Fish Audio 插件
+# Fish Audio Speech 插件
 
 由 Fish Audio S2.1 托管的文本转语音，支持流式传输、语音留言和电话输出。
 

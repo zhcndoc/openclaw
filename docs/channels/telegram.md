@@ -396,7 +396,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     对于仅文本回复：短预览会就地完成最终编辑；拆分为多条消息的长最终内容会复用预览作为第一块，然后只发送剩余部分；进度模式下的最终内容会清除状态草稿并使用正常的最终发送；如果在确认完成之前最终编辑失败，OpenClaw 会回退到正常的最终发送，并清理过期的预览。对于复杂回复（媒体载荷），OpenClaw 始终回退到正常的最终发送，并清理预览。
 
-    预览流式传输与块流式传输互斥——当显式启用块流式传输时，OpenClaw 会跳过预览流，以避免双重流式传输。
+    Preview streaming and block streaming are mutually exclusive. An explicit non-`off` preview mode overrides inherited `agents.defaults.blockStreamingDefault: "on"`; explicit `streaming.block.enabled: true` overrides the preview. If a turn cannot use previews, inherited block delivery still applies.
 
     原因说明：`/reasoning stream` 会在生成时把推理过程流式发送到实时预览中，然后在最终发送后删除推理预览（使用 `/reasoning on` 可使其保持可见）。最终答案发送时不包含推理文本。
 
@@ -513,14 +513,19 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
   action: "send",
   channel: "telegram",
   to: "123456789",
-  message: "请选择一个选项：",
-  buttons: [
-    [
-      { text: "是", callback_data: "yes" },
-      { text: "否", callback_data: "no" },
+  message: "Choose an option:",
+  presentation: {
+    blocks: [
+      {
+        type: "buttons",
+        buttons: [
+          { label: "Yes", action: { type: "callback", value: "yes" }, style: "success" },
+          { label: "No", action: { type: "callback", value: "no" }, style: "danger" },
+          { label: "Cancel", action: { type: "callback", value: "cancel" } },
+        ],
+      },
     ],
-    [{ text: "取消", callback_data: "cancel" }],
-  ],
+  },
 }
 ```
 
@@ -536,16 +541,21 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     blocks: [
       {
         type: "buttons",
-        buttons: [{ label: "启动", web_app: { url: "https://example.com/app" } }],
+        buttons: [
+          {
+            label: "Launch",
+            action: { type: "web-app", url: "https://example.com/app" },
+          },
+        ],
       },
     ],
   },
 }
 ```
 
-    `web_app` 按钮仅适用于用户与 bot 之间的私聊。
+    Mini App buttons only work in private chats between a user and the bot.
 
-    未被已注册插件交互处理器认领的回调点击，会作为文本传递给代理：`callback_data: <value>`。
+    Callback action values not claimed by a registered plugin interactive handler are passed to the agent as text: `callback_data: <value>`.
 
   </Accordion>
 
@@ -719,7 +729,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     `own` 表示仅用户对 bot 发送消息的反应（通过已发送消息缓存尽力实现）。反应事件仍会遵守 Telegram 访问控制（`dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`）；未授权发送者会被丢弃。
 
-    Telegram 不会在反应更新中提供线程 ID：非论坛群组会路由到群聊会话；论坛群组会路由到通用话题会话（`:topic:1`），而不是精确的原始话题。
+    Telegram does not provide thread IDs in reaction updates. Non-forum groups route to the group chat session. Forum groups recover the originating topic from OpenClaw's bounded message cache (keyed by account, chat, and message ID), so the reaction routes to that topic's session, including its topic agent and conversation bindings. When the reacted-to message is no longer cached the topic is unknown, so OpenClaw skips the reaction notification and logs a warning instead of attributing it to General (`:topic:1`).
 
     轮询/webhook 的 `allowed_updates` 会自动包含 `message_reaction`。
 

@@ -209,24 +209,30 @@ acme-cli/acme-large
 | Hook                               | 用途                                                                         |
 | ---------------------------------- | --------------------------------------------------------------------------- |
 | `normalizeConfig(config, context)` | 使用运行时上下文规范化已注册的静态适配器                                   |
-| `resolveExecutionArgs(ctx)`        | 添加请求范围的标志，例如思考力度或旁问题隔离                               |
+| `resolveExecutionArgs(ctx)`        | 添加请求范围的标志，例如思考强度或侧问题隔离                               |
 | `prepareExecution(ctx)`            | 在启动前创建临时身份验证、配置或环境桥接                                   |
 | `transformSystemPrompt(ctx)`       | 应用最终的 CLI 特定系统提示词转换                                           |
-| `textTransforms`                   | 双向提示词/输出替换                                                         |
-| `defaultAuthProfileId`             | 优先使用特定的 OpenClaw 身份验证配置文件                                   |
+| `textTransforms`                   | 双向提示词/输出替换                                                          |
+| `defaultAuthProfileId`             | 优先使用特定的 OpenClaw 身份验证配置                                       |
 | `authEpochMode`                    | 决定身份验证变更如何使存储的 CLI 会话失效                                   |
-| `nativeToolMode`                   | 声明原生工具是不存在、始终启用还是由宿主选择                               |
-| `toolAvailabilityEnforcement`      | 声明确切的工具上限是在 argv 中还是在执行准备阶段强制执行                    |
-| `sideQuestionToolMode`             | 为 `/btw` 旁问题声明禁用的原生工具                                         |
+| `nativeToolMode`                   | 声明原生工具是不存在、始终启用，还是由宿主选择                             |
+| `toolAvailabilityEnforcement`      | 声明是在 argv 中还是在执行暂存阶段强制执行精确的工具上限                   |
+| `sideQuestionToolMode`             | 为 `/btw` 侧问题声明禁用的原生工具                                         |
 | `bundleMcp` / `bundleMcpMode`      | 选择加入 OpenClaw 的回环 MCP 工具桥接                                      |
-| `ownsNativeCompaction`              | 后端拥有自己的压缩机制——OpenClaw 延后处理                                  |
-| `subscriptionAuthDispatch`         | 选择加入：使用订阅凭据的嵌入式运行通过此后端执行                           |
+| `ownsNativeCompaction`             | 后端拥有自己的压缩机制——OpenClaw 延后处理                                 |
+| `subscriptionAuthDispatch`         | 选择加入的、使用订阅凭据执行的嵌入式运行通过此后端执行                     |
 | `runtimeArtifact`                  | 将脚本启动器绑定到其完整的捆绑包树                                         |
+| `liveSessionRequirement`           | 要求在信任长期会话输出前具备初始化能力                                     |
 
 保持这些钩子的提供方所有权。不要在核心中为 CLI 添加特定分支，若某个后端钩子可以表达该行为。
 
-`prepareExecution(ctx)` 接收 `ctx.contextTokenBudget`，即为本次运行选择的有效 token
-上限。拥有原生压缩的后端可以将该预算映射到其 CLI 特定的启动契约中。
+`liveSessionRequirement` 声明 CLI 必须在其初始化记录中公布的一项确切能力，之后
+OpenClaw 才会信任流式输出。它还提供首个已知兼容版本、版本探测参数以及设置和 Doctor
+使用的更新命令。运行时支持仍基于能力，因此兼容的回移版本或包装器不会仅仅因为版本
+字符串而被拒绝。
+
+`prepareExecution(ctx)` 会接收 `ctx.contextTokenBudget`，即为本次运行选择的有效令牌
+上限。拥有原生压缩机制的后端可以将该预算映射到其特定于 CLI 的启动契约中。
 
 `runtimeArtifact` 由插件负责。它仅在实时推理轮次创建或重新验证已验证的设置权限时
 使用；正常的 CLI 运行不需要它。没有此声明的后端无法创建已验证的 CLI 设置权限。
@@ -283,13 +289,13 @@ acme-cli/acme-large
 
 ### `ownsNativeCompaction`：选择退出 OpenClaw 压缩
 
-如果你的后端运行的代理会压缩它**自己的**对话记录，请设置 `ownsNativeCompaction: true`，这样 OpenClaw 的保护性摘要器就绝不会对其会话运行——CLI 的压缩生命周期会返回一个 no-op，当前轮次继续执行。`claude-cli` 声明了它，因为 Claude Code 会在内部压缩，而且没有 harness 端点。像 Codex 这样的 native-harness 会话则继续路由到它们各自的 harness 压缩端点。
+如果你的后端运行的代理会压缩它**自己的**对话记录，请设置 `ownsNativeCompaction: true`，这样 OpenClaw 的保护性摘要器就绝不会对其会话运行——CLI 的压缩生命周期会返回一个 no-op，当前轮次继续执行。`claude-cli` 声明了它，因为 Claude Code 会在内部压缩，而且没有 harness 端点。像 Codex 这样的原生 harness 会话则继续路由到它们各自的 harness 压缩端点。
 
 **只有在以下所有条件都满足时才声明它**，否则一个延后且超出预算的会话可能会继续超预算或变得陈旧（OpenClaw 将不再对其进行挽救）：
 
 - 后端在接近其窗口上限时能够可靠地压缩或限制自己的对话记录；
 - 它会持久化一个可恢复的会话，以便压缩后的状态能跨轮次保留（例如 `--resume` / `--session-id`）；
-- 它不是一个 native-harness 压缩会话——与 `agentHarnessId` 匹配的会话会改为路由到 harness 端点。
+- 它不是一个原生 harness 压缩会话——与 `agentHarnessId` 匹配的会话会改为路由到 harness 端点。
 
 ## MCP 工具桥接
 
@@ -375,4 +381,4 @@ openclaw agent --message "回复必须完全是：backend ok" --model acme-cli/a
 - [构建插件](/plugins/building-plugins) - 软件包和清单基础
 - [插件 SDK 概览](/plugins/sdk-overview) - 注册 API 参考
 - [插件清单](/plugins/manifest) - `cliBackends` 和设置描述符
-- [代理工具链](/plugins/sdk-agent-harness) - 完整的外部代理运行时
+- [代理工具链](/plugins/sdk-agent-harness) - 完整的外部代理运行时。

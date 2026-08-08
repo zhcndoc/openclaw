@@ -17,7 +17,7 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
 
 - DigitalOcean 账户（[注册](https://cloud.digitalocean.com/registrations/new)）
 - SSH 密钥对（或愿意使用密码认证）
-- 大约 20 分钟
+- 大约 20 分钟。
 
 ## 设置
 
@@ -28,13 +28,13 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
     </Warning>
 
     1. 登录 [DigitalOcean](https://cloud.digitalocean.com/)。
-    2. 点击 **Create > Droplets**。
+    2. 点击 **创建 > Droplets**。
     3. 选择：
-       - **Region:** 离你最近的区域
-       - **Image:** Ubuntu 24.04 LTS
-       - **Size:** Basic, Regular, 1 vCPU / 1 GB RAM / 25 GB SSD
-       - **Authentication:** SSH key（推荐）或密码
-    4. 点击 **Create Droplet** 并记下 IP 地址。
+       - **区域：** 离你最近的区域
+       - **镜像：** Ubuntu 24.04 LTS
+       - **规格：** Basic、Regular、1 vCPU / 1 GB RAM / 25 GB SSD
+       - **身份验证：** SSH 密钥（推荐）或密码
+    4. 点击 **创建 Droplet** 并记下 IP 地址。
 
   </Step>
 
@@ -44,7 +44,7 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
 
     apt update && apt upgrade -y
 
-    # Install Node.js 26
+    # 安装 Node.js 26
     curl -fsSL https://deb.nodesource.com/setup_26.x | bash -
     apt install -y nodejs
 
@@ -60,16 +60,16 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
     openclaw --version
     ```
 
-    仅在系统引导阶段使用 root shell。请以非 root 的 `openclaw` 用户运行 OpenClaw 命令，这样状态会保存在 `/home/openclaw/.openclaw/` 下，并且 Gateway 会作为该用户的 systemd `--user` 服务安装。
+    仅在系统引导阶段使用 root shell。请以非 root 的 `openclaw` 用户运行 OpenClaw 命令，这样状态会保存在 `/home/openclaw/.openclaw/` 下，并且网关会作为该用户的 systemd `--user` 服务安装。
 
   </Step>
 
-  <Step title="运行 onboarding">
+  <Step title="运行引导流程">
     ```bash
     openclaw onboard --install-daemon
     ```
 
-    向导会引导你完成模型认证、通道设置、gateway token 生成以及 daemon 安装（systemd 用户服务）。
+    向导会引导你完成模型认证、通道设置、网关令牌生成以及守护进程安装（systemd 用户服务）。
 
   </Step>
 
@@ -83,7 +83,7 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
     ```
   </Step>
 
-  <Step title="验证 gateway">
+  <Step title="验证网关">
     ```bash
     openclaw status
     systemctl --user status openclaw-gateway.service
@@ -91,8 +91,8 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
     ```
   </Step>
 
-  <Step title="访问 Control UI">
-    默认情况下，gateway 绑定到回环地址。请选择以下选项之一。
+  <Step title="访问控制界面">
+    默认情况下，网关绑定到回环地址。请选择以下选项之一。
 
     **选项 A：SSH 隧道（最简单）**
 
@@ -114,16 +114,7 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
 
     然后从你 tailnet 中的任何设备打开 `https://<magicdns>/`。
 
-    Tailscale Serve 会通过 tailnet 身份头对 Control UI 和 WebSocket 流量进行身份验证，这假设 gateway 主机本身是可信的。无论如何，HTTP API 端点仍然遵循 gateway 的正常认证模式（token/password）。若要通过 Serve 强制使用显式共享密钥凭据，请设置 `gateway.auth.allowTailscale: false`，并使用 `gateway.auth.mode: "token"` 或 `"password"`。
-
-    **选项 C：Tailnet bind（不使用 Serve）**
-
-    ```bash
-    openclaw config set gateway.bind tailnet
-    openclaw gateway restart
-    ```
-
-    然后打开 `http://<tailscale-ip>:18789`（需要 token）。
+    Tailscale Serve 会通过 tailnet 身份标头对控制界面和 WebSocket 流量进行身份验证，这假设网关主机本身是可信的。无论如何，HTTP API 端点仍然遵循网关的正常认证模式（令牌/密码）。若要通过 Serve 强制使用显式共享密钥凭据，请设置 `gateway.auth.allowTailscale: false`，并使用 `gateway.auth.mode: "token"` 或 `"password"`。
 
   </Step>
 </Steps>
@@ -132,8 +123,8 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
 
 OpenClaw 状态存放在：
 
-- `~/.openclaw/` -- `openclaw.json`、channel/provider 凭据、按 agent 划分的 `auth-profiles.json`，以及会话数据。
-- `~/.openclaw/workspace/` -- agent 工作区（SOUL.md、memory、artifacts）。
+- `~/.openclaw/` -- `openclaw.json`、频道/提供商凭据、按代理划分的 `auth-profiles.json`，以及会话数据。
+- `~/.openclaw/workspace/` -- 代理工作区（SOUL.md、记忆、工件）。
 
 这些内容会在 Droplet 重启后保留。要创建一个可移植的快照：
 
@@ -141,7 +132,7 @@ OpenClaw 状态存放在：
 openclaw backup create
 ```
 
-DigitalOcean snapshots 会备份整个 Droplet；`openclaw backup create` 可跨主机移植。
+DigitalOcean 快照会备份整个 Droplet；`openclaw backup create` 可跨主机移植。
 
 ## 1 GB RAM 提示
 
@@ -162,9 +153,9 @@ DigitalOcean snapshots 会备份整个 Droplet；`openclaw backup create` 可跨
 
 ## 下一步
 
-- [Channels](/channels) -- 连接 Telegram、WhatsApp、Discord 等
-- [Gateway configuration](/gateway/configuration) -- 所有配置选项
-- [Updating](/install/updating) -- 保持 OpenClaw 为最新版本
+- [频道](/channels) -- 连接 Telegram、WhatsApp、Discord 等
+- [网关配置](/gateway/configuration) -- 所有配置选项
+- [更新](/install/updating) -- 保持 OpenClaw 为最新版本。
 
 ## 相关
 

@@ -406,8 +406,8 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
     openclaw models status --probe --probe-provider openai
     ```
 
-    对同一代理中的多个 Codex OAuth 登录，请使用 `--profile-id`，然后
-    通过认证顺序或 `/model ...@<profileId>` 进行控制：
+    对于同一代理中的多个 Codex OAuth 登录，请使用 `--profile-id`，然后通过认证排序或
+    `/model ...@<profileId> -s` 控制它们：
 
     ```bash
     openclaw models auth login --provider openai --profile-id openai:ritsuko

@@ -18,6 +18,15 @@ OpenClaw 支持通过两种不同方式使用 Fish Audio：
 
 ## 托管 S2.1
 
+安装 `fish-audio-speech` 插件：
+
+```bash
+openclaw plugins install @openclaw/fish-audio-speech
+```
+
+插件 ID 为 `fish-audio-speech`。提供商和 TTS 配置 ID
+仍为 `fish-audio`。
+
 从 [Fish Audio API 密钥](https://fish.audio/app/api-keys) 页面设置 API 密钥：
 
 ```bash
@@ -105,7 +114,7 @@ S2 和 S2.1 接受内联自然语言标签。将标签放入朗读文本中：
       mlx: {
         modelId: "mlx-community/fish-audio-s2-pro-8bit",
         referenceAudioPath: "/Users/example/Voices/reference.wav",
-        referenceText: "The exact words spoken in the reference recording.",
+        referenceText: "参考录音中说出的确切词语。",
       },
     },
   },

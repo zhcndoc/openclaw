@@ -1,9 +1,9 @@
 ---
-summary: "Gateway 单例守护：文件锁加上 WebSocket/HTTP 绑定"
+summary: "网关单例守护：文件锁加上 WebSocket/HTTP 绑定"
 read_when:
-  - 运行或调试 gateway 进程时
+  - 运行或调试网关进程时
   - 调查单实例强制执行时
-title: "Gateway 锁"
+title: "网关锁"
 ---
 
 ## 为什么
@@ -24,10 +24,12 @@ title: "Gateway 锁"
 
 ### 状态和配置锁
 
-- 锁的存活性来自记录的 PID、平台进程启动标识（如果可用）以及 Gateway 进程标识。在启动期间、其端口开始监听之前，经验证的拥有者仍然具有权威性。
-- 一个专用的 SQLite 协调器会串行化元数据检查、过期拥有者回收以及锁替换。如果拥有该锁的进程崩溃，它的独占事务会自动释放。
-- 如果锁文件缺失，或者记录的拥有者进程已不存在，启动会回收该锁并继续。
-- 如果任一锁正被主动持有，启动会重试最多 5 秒（默认），然后放弃：
+- 锁文件、SQLite 协调器和临时回收保护文件位于
+  `$OPENCLAW_STATE_DIR/tmp/openclaw-<uid>` 下（在没有用户 ID 的平台上则位于 `openclaw` 下）。因此，被覆盖的状态目录拥有其完整的锁目录树。
+- 锁的存活状态来自记录的 PID、平台进程启动标识（如果可用）以及 Gateway 进程标识。在启动过程中，即使其端口尚未开始监听，经过验证的拥有者仍保持权威性。
+- 专用的 SQLite 协调器会串行处理元数据检查、陈旧拥有者回收和锁替换。如果拥有进程崩溃，其独占事务会自动释放。
+- 如果锁文件缺失，或记录的拥有者进程已终止，启动会回收该锁并继续。
+- 如果任一锁正被主动持有，启动会默认重试最多 5 秒，之后放弃：
 
   ```text
   GatewayLockError("gateway already running (pid <pid>); lock timeout after <ms>ms")
@@ -50,7 +52,9 @@ title: "Gateway 锁"
 
 关闭时，gateway 会关闭 HTTP/WebSocket 服务器，并删除其状态锁和配置锁文件。
 
-## 运维说明
+状态目录的本地布局构成了一个清晰的版本边界。在此变更之前的二进制文件使用进程临时目录，因此在升级期间，共享同一状态目录的新旧二进制文件不会通过这些锁相互排斥。
+
+## 操作说明
 
 - 如果端口被另一个非网关进程占用，错误信息相同；请释放该端口或使用 `openclaw gateway --port <port>` 选择其他端口。
 - `OPENCLAW_ALLOW_MULTI_GATEWAY=1` 允许多个配置/运行时实例，不允许共享可变状态。每个实例仍然需要唯一的 `OPENCLAW_STATE_DIR`。
@@ -60,4 +64,4 @@ title: "Gateway 锁"
 ## 相关内容
 
 - [多个网关](/gateway/multiple-gateways) - 使用不同端口运行多个实例
-- [故障排查](/gateway/troubleshooting) - 诊断 `EADDRINUSE` 和端口冲突
+- [故障排查](/gateway/troubleshooting) - 诊断 `EADDRINUSE` 和端口冲突。

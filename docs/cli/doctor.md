@@ -14,7 +14,9 @@ title: "医生"
 
 当通道入口事件被投递到 dead-letter 时，doctor 会指出每个受影响的通道账户，并指向 [`openclaw channels dead-letters list`](/cli/channels#inbound-dead-letters) 以便检查和恢复。
 
-相关：
+当 Gateway 包含导出器健康状态信息时，doctor 会在 **遥测导出器** 下报告最新的、可信的各信号状态和传输方式。摘要经过脱敏处理，不包含端点值、标头、证书、负载或原始错误。
+
+相关内容：
 
 - 故障排查: [疑难解答](/gateway/troubleshooting)
 - 安全审计: [安全](/gateway/security)
@@ -94,7 +96,7 @@ openclaw channels status --probe
 | `--skip <id>`                     | 配合 `--lint`：跳过一个检查 id。可重复。                                                                                                                                                         |
 | `--only <id>`                     | 配合 `--lint`：仅运行指定的检查 id。可重复。                                                                                                                                                       |
 
-`--severity-min`、`--all`、`--only` 和 `--skip` 仅在与 `--lint` 一起使用时才被接受；`--json` 可与 `--lint`、`--post-upgrade`、`--state-sqlite` 和 `--session-sqlite` 一起使用】【。
+`--severity-min`、`--all`、`--only` 和 `--skip` 仅在与 `--lint` 一起使用时才被接受；`--json` 可与 `--lint`、`--post-upgrade`、`--state-sqlite` 和 `--session-sqlite` 一起使用。
 
 ## 语法检查模式
 
@@ -113,9 +115,9 @@ openclaw doctor --lint --only core/doctor/local-audio-acceleration --severity-mi
 人类可读输出很简洁：
 
 ```text
-doctor --lint: ran 6 check(s), 1 finding(s)
-  [warning] core/doctor/gateway-config gateway.mode - gateway.mode is unset; gateway start will be blocked.
-    fix: 运行 `openclaw configure` 并设置 Gateway 模式（local/remote），或 `openclaw config set gateway.mode local`。
+doctor --lint：已运行 6 项检查，发现 1 个问题
+  [warning] core/doctor/gateway-config gateway.mode - gateway.mode 未设置；Gateway 启动将被阻止。
+    修复：运行 `openclaw configure` 并设置 Gateway 模式（local/remote），或 `openclaw config set gateway.mode local`。
 ```
 
 JSON 输出是脚本接口：
@@ -129,7 +131,7 @@ JSON 输出是脚本接口：
     {
       "checkId": "core/doctor/gateway-config",
       "severity": "warning",
-      "message": "gateway.mode is unset; gateway start will be blocked.",
+      "message": "gateway.mode 未设置；Gateway 启动将被阻止。",
       "path": "gateway.mode",
       "fixHint": "运行 `openclaw configure` 并设置 Gateway 模式（local/remote），或 `openclaw config set gateway.mode local`。"
     }

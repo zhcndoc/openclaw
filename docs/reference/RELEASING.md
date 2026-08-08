@@ -116,8 +116,25 @@ gh workflow run openclaw-npm-release.yml \
   -f plugin_npm_run_id=<plugin-npm-run-id>
 ```
 
-仅用于非生产演练时，在预检和发布中添加
-`-f bypass_extended_stable_guard=true`。它只绕过月份守卫，绝不绕过规范引用、SHA/标签/版本一致性、来源、审批或回读检查。切勿将其用于生产。
+如果不可变候选版本已经通过保存的预检和完整发布验证，但核心发布需要仅限工作流的恢复，请改为调度受信任的当前 `main` 工作流。保持相同的标签和证据身份；不要移动标签或重新发布插件：
+
+```bash
+gh workflow run openclaw-npm-release.yml \
+  --ref main \
+  -f tag=vYYYY.M.P \
+  -f preflight_only=false \
+  -f npm_dist_tag=extended-stable \
+  -f release_candidate_branch=extended-stable/YYYY.M.33 \
+  -f preflight_run_id=<npm-preflight-run-id> \
+  -f full_release_validation_run_id=<full-validation-run-id> \
+  -f full_release_validation_run_attempt=<full-validation-run-attempt> \
+  -f plugin_npm_run_id=<plugin-npm-run-id>
+```
+
+此恢复路径会检出并发布不可变标签，并要求使用该标签所隐含的规范分支。它直接接受来自规范候选分支的完整发布验证证据，直接接受当前 `main` 的证据（前提是其工作流 SHA 可从当前 `main` 访问），或接受来自固定于受信任 `main` 的测试工具的证据。每种被接受的形式都必须证明不可变标签的 SHA。仅当候选源和记录的证据未发生变化时才使用此路径。
+
+仅用于非生产演练时，可在预检和发布中添加
+`-f bypass_extended_stable_guard=true`。它仅绕过月份限制，绝不会绕过规范引用、SHA/标签/版本一致性、来源证明、审批或回读检查。绝不要在生产环境中使用。
 
 ### 验证与恢复
 
@@ -400,7 +417,7 @@ QA 实验室盒子也是 `OpenClaw Release Checks` 的一部分。它是代理�
 
 发布 QA 实验室覆盖包括：
 
-- mock 一致性通道，将 OpenAI 候选通道与 `anthropic/claude-opus-4-8` 基线进行比较，使用代理行为一致性测试包
+- 模拟一致性通道，将 OpenAI 候选通道与 `anthropic/claude-opus-4-8` 基线进行比较，使用代理行为一致性测试包
 - 使用 `qa-live-shared` 环境的 Matrix 实时适配器目录通道
 - 使用 Convex CI 凭证租约的 Telegram 实时 QA 通道
 - 当发布遥测需要明确的本地证明时，运行 `pnpm qa:otel:smoke`、`pnpm qa:otel:collector-smoke`、`pnpm qa:prometheus:smoke` 或 `pnpm qa:observability:smoke`

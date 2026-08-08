@@ -109,7 +109,31 @@ openclaw config set agents.defaults.timeoutSeconds 43200
 
 ### Claude CLI 特定说明
 
-内置的 `claude-cli` 后端优先使用 Claude Code 的原生技能解析器。当当前技能快照中至少有一个已选择技能且具有已物化路径时，OpenClaw 会通过 `--plugin-dir` 传递一个临时的 Claude Code 插件，并从附加的系统提示中省略重复的 OpenClaw 技能目录。若没有已物化的插件技能，OpenClaw 会保留提示目录作为回退。技能环境变量/API 密钥覆盖在本次运行中仍会应用到子进程环境。
+OpenClaw 管理的 Claude stdio 会话要求具备 `msg_lifecycle_v1`
+能力，该能力首次在已发布的 Claude Code 2.1.206 版本中被发现。在运行时，
+OpenClaw 不会仅凭版本字符串建立信任：它会等待 Claude Code 的
+`system/init` 记录声明 `msg_lifecycle_v1`，然后仅在匹配的输入生命周期
+开始后接受助手、工具和结果记录。未知能力会被忽略。缺少所需能力的 CLI
+会立即失败，并提供 `claude update` 和重启 Gateway 的指导，而不是等待无输出监视器触发。
+
+设置和 Doctor 会将 2.1.206 视为建议版本，因此仍可选择较低版本的兼容性
+回移版本或包装器，并由运行时门控进行验证。
+
+```bash
+claude --version
+claude update
+# 更新后重启 OpenClaw Gateway。
+```
+
+Claude Code 的公开 CLI 文档涵盖了 stream-json 模式和更新，但目前尚未记录
+该生命周期事件。因此，OpenClaw 会检测所声明的能力；2.1.206 是目前观察到的
+首个提供该能力的已发布 Claude Code 版本。
+
+捆绑的 `claude-cli` 后端优先使用 Claude Code 原生的技能解析器。当当前技能快照中
+至少有一个已选技能具有已物化的路径时，OpenClaw 会通过 `--plugin-dir` 传递一个
+临时的 Claude Code 插件，并从附加的系统提示中省略重复的 OpenClaw 技能目录。
+如果没有已物化的插件技能，OpenClaw 会保留提示目录作为后备方案。技能环境变量/API
+密钥覆盖仍会应用于本次运行的子进程环境。
 
 Claude CLI 有自己的非交互式权限模式；OpenClaw 将其映射到现有的 exec 策略，而不是添加 Claude 专用配置。对于由 OpenClaw 管理的 Claude 实时会话，有效的 exec 策略具有权威性：YOLO（`tools.exec.mode: "full"`）通常会使用 `--permission-mode bypassPermissions` 启动 Claude，而限制性策略则使用 `--permission-mode default` 启动。以 root 身份运行的 Gateway 也使用 `default`，因为 Claude Code 会拒绝 root 使用绕过模式。针对单个代理的 `agents.entries.*.tools.exec` 设置会覆盖该代理的全局 `tools.exec` 设置。Anthropic 插件会将 Claude 的权限标志规范化，使其与有效策略和主机限制保持一致。
 
@@ -170,7 +194,7 @@ OpenClaw 会将 base64 图片写入临时文件。如果设置了 `imageArg`，�
 
 ## 输入和输出
 
-- `output: "text"` (default) 将 stdout 视为最终响应。
+- `output: "text"`（默认）将 stdout 视为最终响应。
 - `output: "json"` 尝试解析 JSON，并提取文本和会话 ID。
 - `output: "jsonl"` 解析 JSONL 流，并提取最终代理消息以及（如有）会话标识符。
 - 对于 Gemini CLI JSON 输出，当 `usage` 缺失或为空时，OpenClaw 会从 `response` 中读取回复文本，并从 `stats` 中读取使用情况。内置的 Gemini CLI 适配器使用 `stream-json`。
@@ -181,9 +205,9 @@ OpenClaw 会将 base64 图片写入临时文件。如果设置了 `imageArg`，�
 - `input: "stdin"` 通过 stdin 发送提示。
 - 如果提示非常长，并且设置了 `maxPromptArgChars`，则会改用 stdin。
 
-## 插件所有的默认值
+## 插件的所有默认值
 
-CLI 后端默认值是插件表面的一部分：
+CLI 后端默认值是插件接口的一部分：
 
 - 插件通过 `api.registerCliBackend(...)` 注册这些默认值。
 - 后端 `id` 会成为模型引用中的提供商前缀。
@@ -194,23 +218,24 @@ Anthropic 负责 `claude-cli`，Google 负责 `google-gemini-cli`。OpenAI Codex
 
 内置的 Anthropic 插件为 `claude-cli` 注册：
 
-| Key                   | Value                                                                                                                                                                                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `command`             | `claude`                                                                                                                                                                                                      |
-| `args`                | `-p --output-format stream-json --include-partial-messages --verbose --setting-sources user --allowedTools mcp__openclaw__* --disallowedTools ScheduleWakeup,CronCreate,Bash(run_in_background:true),Monitor` |
-| `output`              | `jsonl`                                                                                                                                                                                                       |
-| `input`               | `stdin`                                                                                                                                                                                                      |
-| `modelArg`            | `--model`                                                                                                                                                                                                     |
-| `sessionArgs`         | `["--session-id", "{sessionId}"]`                                                                                                                                                                             |
-| `sessionMode`         | `always`                                                                                                                                                                                                      |
-| `imageArg`            | `@`                                                                                                                                                                                                           |
-| `imagePathScope`      | `workspace`                                                                                                                                                                                                   |
-| `systemPromptFileArg` | `--append-system-prompt-file`                                                                                                                                                                                 |
-| `systemPromptMode`    | `append`                                                                                                                                                                                                      |
+| 键                       | 值                                                                                                                                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command`                | `claude`                                                                                                                                                                                                      |
+| `args`                   | `-p --output-format stream-json --include-partial-messages --verbose --setting-sources user --allowedTools mcp__openclaw__* --disallowedTools ScheduleWakeup,CronCreate,Bash(run_in_background:true),Monitor` |
+| `output`                 | `jsonl`                                                                                                                                                                                                       |
+| `input`                  | `stdin`                                                                                                                                                                                                       |
+| `modelArg`               | `--model`                                                                                                                                                                                                     |
+| `sessionArgs`            | `["--session-id", "{sessionId}"]`                                                                                                                                                                             |
+| `sessionMode`            | `always`                                                                                                                                                                                                      |
+| 实时会话要求             | `msg_lifecycle_v1`（首次出现于 Claude Code 2.1.206）                                                                                                                                                           |
+| `imageArg`               | `@`                                                                                                                                                                                                           |
+| `imagePathScope`         | `workspace`                                                                                                                                                                                                   |
+| `systemPromptFileArg`    | `--append-system-prompt-file`                                                                                                                                                                                 |
+| `systemPromptMode`       | `append`                                                                                                                                                                                                      |
 
 内置的 Google 插件为 `google-gemini-cli` 注册：
 
-| Key                       | Value                                                                                  |
+| 键                        | 值                                                                                  |
 | ------------------------- | -------------------------------------------------------------------------------------- |
 | `command`                 | `gemini`                                                                               |
 | `args`                    | `--skip-trust --approval-mode auto_edit --output-format stream-json --prompt {prompt}` |

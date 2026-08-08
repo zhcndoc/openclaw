@@ -165,7 +165,7 @@ openclaw nodes approve <requestId>
 - [安装与更新](/install/updating)
 - 可选： [Bun 包工作流](/install/bun), [Nix](/install/nix), [Docker](/install/docker)
 
-## Gateway 服务（systemd）
+## 网关服务（systemd）
 
 使用以下任一方式安装：
 
@@ -181,9 +181,9 @@ openclaw configure   # 提示时选择 "Gateway 服务"
 openclaw doctor
 ```
 
-`openclaw gateway install` 默认会生成一个 systemd **user** 单元。完整
+`openclaw gateway install` 默认会生成一个 systemd **用户**单元。完整
 的服务指南，包括适用于共享或
-始终在线主机的 **system** 级单元变体，请参见 [Gateway runbook](/gateway#supervision-and-service-lifecycle)。
+始终在线主机的 **系统**级单元变体，请参见 [网关运行手册](/gateway#supervision-and-service-lifecycle)。
 
 仅在自定义设置时才手动编写单元。最小用户单元示例
 （`~/.config/systemd/user/openclaw-gateway[-<profile>].service`）：
@@ -211,7 +211,7 @@ KillMode=control-group
 WantedBy=default.target
 ```
 
-手写单元不会继承 `openclaw gateway install` 为受管 Gateway 服务写入的自适应堆大小设置。请优先使用受管安装程序，或者在自定义 supervisor 中在考虑本地内存余量后设置显式堆限制。
+手写单元不会继承 `openclaw gateway install` 为受管网关服务写入的自适应堆大小设置。请优先使用受管安装程序，或者在自定义 supervisor 中在考虑本地内存余量后设置显式堆限制。
 
 启用它：
 
@@ -250,6 +250,7 @@ systemd 单元的 `OOMPolicy=continue` 可在临时子进程被 OOM killer 选�
 
 - [安装概览](/install)
 - [Linux 服务器](/vps)
-- [Raspberry Pi](/platforms/raspberry-pi)
+- [ChromeOS（Crostini）](/platforms/chromeos)
+- [树莓派](/platforms/raspberry-pi)
 - [网关运行手册](/gateway)
 - [网关配置](/gateway/configuration)。

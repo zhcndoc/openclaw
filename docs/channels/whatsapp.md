@@ -19,12 +19,12 @@ openclaw plugins install clawhub:@openclaw/whatsapp
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
-    未知发送者的默认 DM 策略是配对。
+    未知发送者的默认私信策略是配对。
   </Card>
   <Card title="频道故障排查" icon="wrench" href="/channels/troubleshooting">
     跨频道诊断和修复操作手册。
   </Card>
-  <Card title="Gateway 配置" icon="settings" href="/gateway/configuration">
+  <Card title="网关配置" icon="settings" href="/gateway/configuration">
     完整的频道配置模式和示例。
   </Card>
 </CardGroup>
@@ -49,7 +49,7 @@ openclaw plugins install clawhub:@openclaw/whatsapp
 
   </Step>
 
-  <Step title="绑定 WhatsApp（QR）">
+  <Step title="绑定 WhatsApp（二维码）">
 
 ```bash
 openclaw channels login --channel whatsapp
@@ -72,7 +72,7 @@ openclaw channels login --channel whatsapp --account work
 
   </Step>
 
-  <Step title="启动 gateway">
+  <Step title="启动网关">
 
 ```bash
 openclaw gateway
@@ -80,17 +80,17 @@ openclaw gateway
 
   </Step>
 
-  <Step title="批准第一条 DM 访问请求（配对模式）">
+  <Step title="批准第一条私信访问请求（配对模式）">
 
-    打开 **Settings → Channels → DM access requests**，找到 WhatsApp 账号，
-    然后批准该发送者。如果你更喜欢使用 CLI：
+    打开 **设置 → 频道 → 私信访问请求**，找到 WhatsApp 账号，
+    然后批准该发送者。如果你更喜欢使用命令行：
 
 ```bash
 openclaw pairing list whatsapp
 openclaw pairing approve whatsapp <CODE>
 ```
 
-    DM 访问请求会在 1 小时后过期；待处理请求每个账号最多 3 个。
+    私信访问请求会在 1 小时后过期；待处理请求每个账号最多 3 个。
     这个批准与用于绑定账号本身的 WhatsApp 登录二维码是分开的。
 
   </Step>
@@ -105,7 +105,7 @@ openclaw pairing approve whatsapp <CODE>
 <AccordionGroup>
   <Accordion title="专用号码（推荐）">
     - 为 OpenClaw 单独使用一个 WhatsApp 身份
-    - 更清晰的 DM 白名单和路由边界
+    - 更清晰的私信白名单和路由边界
     - 降低自聊混淆的可能性
 
     ```json5
@@ -226,7 +226,7 @@ WhatsApp 可以将 exec 和 plugin 的审批提示渲染为 `👍`/`👎` 反应
 }
 ```
 
-`approvals.exec` 和 `approvals.plugin` 是相互独立的；仅将 WhatsApp 启用为一个通道，只会连接传输层，并不会发送任何内容，除非对应的审批家族已启用并路由到那里。session 模式仅对源自 WhatsApp 的审批传递原生 emoji 审批。target 模式使用共享的转发管道处理显式目标，不会创建单独的 approver-DM 扇出。
+`approvals.exec` 和 `approvals.plugin` 相互独立；仅将 WhatsApp 启用为一个通道，只会连接传输层，并不会发送任何内容，除非对应的审批家族已启用并路由到那里。session 模式仅对源自 WhatsApp 的审批传递原生 emoji 审批。target 模式使用共享的转发管道处理显式目标，不会创建单独的 approver-DM 扇出。
 
 WhatsApp 审批反应要求在 `allowFrom` 中显式指定审批人（或使用 `"*"`）。`defaultTo` 设置的是普通默认消息目标，而不是审批人列表。在审批解析之前，手动 `/approve` 命令仍会先经过正常的 WhatsApp 发送者授权路径。
 
@@ -255,30 +255,30 @@ WhatsApp 审批反应要求在 `allowFrom` 中显式指定审批人（或使用 
 ## 访问控制与激活
 
 <Tabs>
-  <Tab title="DM policy">
+  <Tab title="私信策略">
     `channels.whatsapp.dmPolicy`:
 
-    | Value | Behavior |
+    | 值 | 行为 |
     | --- | --- |
-    | `pairing` (default) | 未知发送者请求配对；所有者批准 |
+    | `pairing` (默认) | 未知发送者请求配对；所有者批准 |
     | `allowlist` | 仅允许 `allowFrom` 中的发送者 |
     | `open` | 需要 `allowFrom` 包含 `"*"` |
     | `disabled` | 阻止所有私信 |
 
-    `allowFrom` 接受 E.164 风格号码（内部会规范化）。它仅是 DM 发送者访问控制列表——不会限制显式发往群组 JID 或 `@newsletter` 频道 JID 的外发消息。
+    `allowFrom` 接受 E.164 风格号码（内部会规范化）。它仅是私信发送者访问控制列表——不会限制显式发往群组 JID 或 `@newsletter` 频道 JID 的外发消息。
 
     多账号覆盖：`channels.whatsapp.accounts.<id>.dmPolicy`（以及 `.allowFrom`）会优先于该账号的频道级默认值。
 
     运行时说明：
 
     - 配对会保留在频道 allow-store 中，并与已配置的 `allowFrom` 合并
-    - 定时自动化和心跳接收者回退会使用显式投递目标或已配置的 `allowFrom`；DM 配对批准不会被视为隐式的 cron/heartbeat 接收者
+    - 定时自动化和心跳接收者回退会使用显式投递目标或已配置的 `allowFrom`；私信配对批准不会被视为隐式的 cron/heartbeat 接收者
     - 如果未配置 allowlist，默认允许已绑定的本人号码
-    - OpenClaw 永远不会自动配对 outbound `fromMe` DMs（你从已绑定设备自行发送的消息）
+    - OpenClaw 永远不会自动配对外发的 `fromMe` 私信（你从已绑定设备自行发送的消息）
 
   </Tab>
 
-  <Tab title="Group policy and allowlists">
+  <Tab title="群组策略与允许列表">
     群组访问有两层：
 
     1. **群组成员 allowlist**（`channels.whatsapp.groups`）：如果省略 `groups`，则所有群组都符合条件；如果存在，则它充当群组 allowlist（`"*"` 允许全部）。
@@ -294,7 +294,7 @@ WhatsApp 审批反应要求在 `allowFrom` 中显式指定审批人（或使用 
 
   </Tab>
 
-  <Tab title="Mentions and /activation">
+  <Tab title="提及与 /activation">
     群组回复默认需要提及。提及检测包括：
 
     - 对机器人身份的显式 WhatsApp 提及
@@ -492,7 +492,14 @@ WhatsApp 通过顶层的 `bindings[]` 支持持久化 ACP 绑定：
 
 注意：`channels.whatsapp.ackReaction` 仍然控制直接消息和群组的可用性；queued 状态使用与普通 ack 反应相同的有效表情符号；WhatsApp 对每条消息只有一个机器人反应槽位，因此生命周期更新会就地替换当前反应，并在最终的 done/error 状态后恢复 ack。
 
-## 多账号与凭据
+## 活跃回合中的输入状态
+
+对于允许输入状态的已接纳自动回合，代理执行开始时，WhatsApp 会发送一条
+`composing` 状态更新，并在回合保持活跃期间刷新该状态。运行完成时（包括终止失败或取消），刷新会停止。当回复分发器报告空闲时，控制器会封存并清理；如果未收到该信号，则会在一段较短的安全超时后执行。现有输入状态和抑制策略禁用输入状态的回合不会启动此活动。
+
+输入状态是短暂的、尽力而为的活动反馈。它不是持久化消息、送达回执，也不保证每个 WhatsApp 客户端都会显示持续的活动状态；重新连接和客户端行为可能会使该指示器消失。生命周期状态反应仍然是上文所述的、具有持久外观的自愿选择状态界面。
+
+## 多账户和凭据
 
 <AccordionGroup>
   <Accordion title="账户选择和默认值">
@@ -663,13 +670,13 @@ WhatsApp 通过 `groups` 和 `direct` 映射支持类似 Telegram 的群组与�
 
 | 区域             | 字段                                                                                                         |
 | ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| Access           | `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`                                             |
-| Delivery         | `textChunkLimit`, `streaming.chunkMode`, `mediaMaxMb`, `sendReadReceipts`, `ackReaction`, `reactionLevel`      |
-| Multi-account    | `accounts.<id>.enabled`, `accounts.<id>.authDir`, and other per-account overrides                              |
-| Operations       | `configWrites`, `enabled`                                                                                      |
-| Inbound batching | `messages.inbound.debounceMs`, `messages.inbound.byChannel.whatsapp`                                           |
-| Session behavior | `session.dmScope`, `historyLimit`, `dmHistoryLimit`, `dms.<id>.historyLimit`                                   |
-| Prompts          | `groups.<id>.systemPrompt`, `groups["*"].systemPrompt`, `direct.<id>.systemPrompt`, `direct["*"].systemPrompt` |
+| 访问控制         | `dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`、`groups`                                             |
+| 消息投递         | `textChunkLimit`、`streaming.chunkMode`、`mediaMaxMb`、`sendReadReceipts`、`ackReaction`、`reactionLevel`      |
+| 多账户           | `accounts.<id>.enabled`、`accounts.<id>.authDir`，以及其他每个账户的覆盖设置                              |
+| 操作             | `configWrites`、`enabled`                                                                                      |
+| 入站批处理       | `messages.inbound.debounceMs`、`messages.inbound.byChannel.whatsapp`                                           |
+| 会话行为         | `session.dmScope`、`historyLimit`、`dmHistoryLimit`、`dms.<id>.historyLimit`                                   |
+| 提示词           | `groups.<id>.systemPrompt`、`groups["*"].systemPrompt`、`direct.<id>.systemPrompt`、`direct["*"].systemPrompt` |
 
 ## 相关内容
 

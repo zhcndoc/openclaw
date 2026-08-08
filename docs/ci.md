@@ -8,7 +8,7 @@ read_when:
   - 你正在更改 ClawSweeper 派发或 GitHub 活动转发
 ---
 
-OpenClaw CI 在推送到 `main` 时运行（`Markdown` 和 `docs/**` 路径在触发时会被忽略），在每个非草稿拉取请求上运行，以及在手动分发时运行。规范的 `main` 推送是单飞的：`CI` 并发组允许一次完整的集成周期运行，而 GitHub 只保留最新的待处理推送。新的合并会替换那个待处理运行，而不会取消已经注册了 Blacksmith 矩阵的工作。拉取请求仍然会取消被取代的 head，而手动分发使用隔离的组。`preflight` 会对差异进行分类，并在只更改了无关区域时关闭昂贵的流水线。手动 `workflow_dispatch` 运行会有意绕过智能范围控制，并展开完整图谱，用于发布候选和广泛验证。Android 流水线仍通过 `include_android`（或 `release_gate` 输入）保持可选。仅发布时的插件覆盖位于单独的 [`Plugin Prerelease`](#plugin-prerelease) 工作流中，并且只会从 [`Full Release Validation`](#full-release-validation) 或显式的手动分发中运行。
+OpenClaw CI 在推送到 `main` 时运行（`Markdown` 和 `docs/**` 路径在触发时会被忽略），在每个非草稿拉取请求上运行，以及在手动分发时运行。规范的 `main` 推送是单飞的：`CI` 并发组允许一次完整的集成周期运行，而 GitHub 只保留最新的待处理推送。新的合并会替换那个待处理运行，而不会取消已经注册了 Blacksmith 矩阵的工作。拉取请求仍然会取消被取代的 head，而手动分发使用隔离的组。`preflight` 会对差异进行分类，并在只更改了无关区域时关闭昂贵的流水线。手动 `workflow_dispatch` 运行会有意绕过智能范围控制，并展开完整图谱，用于发布候选和广泛验证。Android 流水线仍通过 `include_android`（或 `release_gate` 输入）保持可选。仅发布时的插件覆盖位于单独的 [`插件预发布`](#plugin-prerelease) 工作流中，并且只会从 [`完整发布验证`](#full-release-validation) 或显式的手动分发中运行。
 
 ## 流水线概览
 
@@ -20,7 +20,7 @@ OpenClaw CI 在推送到 `main` 时运行（`Markdown` 和 `docs/**` 路径在�
 | `build-artifacts`                  | 构建 `dist/`、Control UI、已构建 CLI 冒烟检查、启动内存，以及嵌入式已构建制品检查                                                                                                                               | 与 Node 相关的变更                            |
 | `control-ui-i18n`                  | 验证生成的 Control UI 语言包、元数据和翻译记忆；自动运行时为建议性，手动发布 CI 时为阻塞性                                                                                                                     | 与 Control UI i18n 相关的变更和手动 CI        |
 | `checks-fast-core`                 | 快速 Linux 正确性线路：抑制基线 max-lines 递增、bundled + protocol、Bun 启动器，以及 CI 路由 fast 任务                                                                                                         | 与 Node 相关的变更                            |
-| `qa-smoke-ci-profile`              | 自包含、平衡的自动 QA Smoke 覆盖集的一部分；完整的分类覆盖仍可通过显式 QA 配置文件获得                                                                                                                         | 与 Node 相关的变更                            |
+| `qa-smoke-ci-profile`              | 自包含、平衡的自动 QA 冒烟覆盖集的一部分；完整的分类覆盖仍可通过显式 QA 配置文件获得                                                                                                                         | 与 Node 相关的变更                            |
 | `checks-fast-contracts-plugins-*`  | 两个加权插件契约分片                                                                                                                                                                                                  | 与 Node 相关的变更                            |
 | `checks-fast-contracts-channels-*` | 两个加权通道契约分片                                                                                                                                                                                                  | 与 Node 相关的变更                            |
 | `checks-node-*`                    | 拉取请求上对变更目标 Node 测试；在 `main`、手动、发布和广泛回退运行中执行完整核心分片                                                                                                                       | 与 Node 相关的变更                            |
@@ -34,19 +34,19 @@ OpenClaw CI 在推送到 `main` 时运行（`Markdown` 和 `docs/**` 路径在�
 | `macos-node`                       | 聚焦的 macOS TypeScript 测试：launchd、Homebrew、运行时路径、打包脚本、进程组包装器                                                                                                                               | 与 macOS 相关的变更                           |
 | `macos-swift`                      | macOS 应用的 Swift lint 和构建，以及应用和共享 OpenClawKit 包的测试                                                                                                                                                 | 与 macOS 相关的变更                           |
 | `ios-build`                        | Xcode 项目生成以及 iOS 应用模拟器构建                                                                                                                                                                                | iOS 应用、共享 app kit，或 Swabble 变更        |
-| `android`                          | 两种 flavor 的 Android 单元测试，以及一个 debug APK 构建                                                                                                                                                            | 与 Android 相关的变更                        |
+| `android`                          | 两种 flavor 的 Android 单元测试，以及一个 debug APK 构建                                                                                                                                                            | 与 Android 相关的变更                          |
 | `openclaw/ci-gate`                 | 最终汇总：要求 preflight 和 security；仅接受那些由清单禁用的下游线路的跳过                                                                                                                                        | 每次非草稿 CI 运行                             |
 | `test-performance-agent`           | 独立工作流：在可信活动之后，每日进行 Codex 慢测试优化                                                                                                                                                               | 主 CI 成功或手动调度                           |
 | `openclaw-performance`             | 独立工作流：通过 mock-provider、deep-profile 和 GPT 5.6 live 线路，按日/按需生成 Kova 运行时性能报告                                                                                                           | 定时和手动调度                                 |
 
-独立的 Periphery 工作流会强制 iOS 和 macOS 应用保持零死代码发现。共享的 OpenClawKit 工作流会并行扫描两个消费者，并且只有当 Periphery 在两个构建中都发出相同的 Swift USR 时，才会报告一个声明。其生成的 `OpenClawProtocol/GatewayModels.swift` schema 合同被保留为生成器拥有的代码，而不是被视为应用本地死代码。
+独立的 Periphery 工作流会强制 iOS 和 macOS 应用保持零死代码发现。共享的 OpenClawKit 工作流会并行扫描两个消费者，并且只有当 Periphery 在两个构建中都发出相同的 Swift USR 时，才会报告一个声明。其生成的 `OpenClawProtocol/GatewayModels.swift` schema 契约被保留为生成器拥有的代码，而不是被视为应用本地死代码。
 
-## 先失败顺序
+## 快速失败顺序
 
-1. `preflight` 决定了哪些 lane 实际存在。`docs-scope` 和 `changed-scope` 逻辑是这个作业中的步骤，而不是独立作业。规范化的 `main` 会立即开始，但其并发组一次只允许一个完整运行，并会将后续推送合并为一个最新的待处理运行。与 Node 相关的 `main` 推送还会在下游作业挂载 key 之前，在这里串行化唯一的依赖磁盘写入者及其大小维护；Blacksmith 可能只会让稍后的工作流运行暴露一个新提交，因此同一运行中的消费者会保留带标记检查的本地回退方案。
-2. `security-fast`、`check-*`、`check-additional-*`、`check-docs` 和 `skills-python` 会快速失败，不必等待更重的 artifact 和平台矩阵作业。
+1. `preflight` 决定哪些 lane 实际存在。`docs-scope` 和 `changed-scope` 逻辑是此工作流中的步骤，而不是独立作业。规范化的 `main` 会立即开始，但其并发组一次只允许一个完整运行，并会将后续推送合并为一个最新的待处理运行。与 Node 相关的 `main` 推送还会在下游作业挂载 key 之前，在此处串行化唯一的依赖磁盘写入者及其大小维护；Blacksmith 可能只会让稍后的工作流运行暴露一个新提交，因此同一运行中的消费者会保留带标记检查的本地回退方案。
+2. `security-fast`、`check-*`、`check-additional-*`、`check-docs` 和 `skills-python` 会快速失败，无需等待更重的 artifact 和平台矩阵作业。
 3. `build-artifacts` 和区域设置检查会与快速的 Linux lane 并行。Control UI 和原生应用源代码 PR 会排除生成的区域设置快照/资源；它们串行化的刷新工作流会在后台修复并自动合并隔离的生成 PR。源代码 CI 仍会阻止过期的源清单和不安全的本地化调用。生成的 PR、手动 CI 和发布准备会强制要求完整的翻译/平台生成一致性。规范化的 `release/YYYY.M.PATCH` 分支可以将发布准备中的区域设置修复与其他生成的发布输出一并包含。
-4. 更重的平台和运行时 lane 随后展开：`checks-fast-core`、`checks-fast-contracts-plugins-*`、`checks-fast-contracts-channels-*`、`checks-node-*`、`checks-windows`、`macos-node`、`macos-swift`、`ios-build` 和 `android`。
+4. 随后会展开更重的平台和运行时 lane：`checks-fast-core`、`checks-fast-contracts-plugins-*`、`checks-fast-contracts-channels-*`、`checks-node-*`、`checks-windows`、`macos-node`、`macos-swift`、`ios-build` 和 `android`。
 5. `openclaw/ci-gate` 会等待所有被选中的 lane。Preflight 和 security 必须成功；下游作业只有在清单未选中它们时才可跳过。任何失败或被取消的已选 lane 都会使聚合失败。
 
 合并协调器可以对同一个 pull request head 复用一个已认证且成功的 `openclaw/ci-gate`，最长可达 24 小时。这样可以避免在与无关的 `main` 变更之后重写贡献者分支。这个可复用结果并不能替代针对当前 `main` 的、由 App 拥有的独立严格 test-merge 检查。对于该未变化的 head，在 freshness 窗口内，后续的 pending 或 failed rerun 不会抹去先前的成功结果。
@@ -71,30 +71,30 @@ OpenClaw CI 在推送到 `main` 时运行（`Markdown` 和 `docs/**` 路径在�
 
 单独的 iOS 和 macOS Periphery 工作流会强制执行零发现死代码策略。每个工作流仅在非草稿拉取请求触及其原生扫描范围时运行，或在手动派发时运行。
 
-- **CI 工作流编辑**会验证 Node CI 图、工作流 lint，以及 Windows 车道（由 `ci.yml` 执行），但不会单独强制执行 iOS、Android 或 macOS 原生构建；这些平台车道仍仅针对平台源代码变更运行。
-- **工作流健全性检查**会对所有工作流 YAML 文件运行 `actionlint` 和 `zizmor`，运行复合操作插值守卫，以及冲突标记守卫。PR 范围内的 `security-fast` 作业还会对变更的工作流文件运行 `zizmor`，使工作流安全问题能够在主 CI 图中尽早导致失败。
-- **`main` 推送中的文档**由独立的 `Docs` 工作流检查，该工作流使用与 CI 相同的 ClawHub 文档镜像，因此代码与文档混合推送不会再次排队 CI 的 `check-docs` 分片。拉取请求和手动 CI 仍会在文档发生变更时从 CI 运行 `check-docs`。
-- **TUI PTY**按运行时所有权拆分。Linux Node 分片运行确定性的源代码级 `TuiBackend` 固件车道。`build-artifacts` 作业会使用 `OPENCLAW_TUI_PTY_INCLUDE_LOCAL=1` 和 `OPENCLAW_TUI_PTY_USE_BUILT_CLI=1` 重新运行 `test/vitest/vitest.tui-pty.config.ts`，因此较慢的 `tui --local` 冒烟测试会测试精确头版本的已构建 CLI，而只模拟外部模型端点。
-- **仅涉及 CI 路由的编辑、快速任务直接运行的一小组核心测试固件，以及范围狭窄的插件契约辅助工具编辑**使用快速的仅 Node 清单路径：`preflight`、`security-fast`，以及变更涉及的快速车道——单个 `checks-fast-core` CI 路由任务、两个插件契约分片，或两者。该路径会跳过构建产物、Node 22 兼容性、频道契约、完整核心分片、捆绑插件分片和额外守卫矩阵。
-- **Windows Node 检查**仅针对 Windows 特有的进程/路径包装器、npm/pnpm/UI 运行器辅助工具、包管理器配置，以及执行该车道的 CI 工作流界面；无关的源代码、插件、安装冒烟测试和仅测试变更仍留在 Linux Node 车道中。
+- **CI 工作流编辑**会验证 Node CI 图、工作流 lint，以及 Windows 车道（由 `ci.yml` 执行），但不会自行强制执行 iOS、Android 或 macOS 原生构建；这些平台车道仍只在平台源代码发生变更时运行。
+- **工作流健全性检查**会对所有工作流 YAML 文件运行 `actionlint` 和 `zizmor`，运行复合操作插值守卫，以及冲突标记守卫。PR 范围内的 `security-fast` 作业还会对发生变更的工作流文件运行 `zizmor`，使工作流安全发现能够在主 CI 图中尽早失败。
+- **`main` 推送中的文档**由独立的 `Docs` 工作流检查，并使用与 CI 相同的 ClawHub 文档镜像，因此代码与文档混合推送不会再次排队 CI 的 `check-docs` 分片。拉取请求和手动 CI 仍会在文档发生变更时从 CI 运行 `check-docs`。
+- **TUI PTY**按证明责任拆分。专用的 `core-runtime-tui-pty` Node 分片负责针对精确头部构建 CLI 运行完整的真实后端套件。`build-artifacts` 作业仅保留本地模型往返测试和真实 Gateway 连接 canary，因此每个构建产物边界都会验证构建出的启动器，而不会在构建作业中重复完整的串行套件。
+- **仅涉及 CI 路由的编辑、快速任务直接运行的一小组核心测试 fixture，以及范围较窄的插件契约辅助函数编辑**使用快速的仅 Node manifest 路径：`preflight`、`security-fast`，以及变更所触及的快速车道——单个 `checks-fast-core` CI 路由任务、两个插件契约分片，或两者。该路径会跳过构建产物、Node 22 兼容性、频道契约、完整核心分片、捆绑插件分片和额外守卫矩阵。
+- **Windows Node 检查**仅覆盖 Windows 特定的进程/路径包装器、npm/pnpm/UI runner 辅助函数、包管理器配置，以及执行该车道的 CI 工作流界面；无关的源代码、插件、安装冒烟测试和仅测试变更仍留在 Linux Node 车道上。
 
 最慢的 Node 测试家族被拆分或均衡分配，以便每个作业保持较小规模，而不会过度占用 runner：
 
-- 插件契约和频道契约各自运行两个由 Blacksmith 支持、标准 GitHub runner 作为回退的加权分片。
-- 核心单元快速/支持车道分别运行；核心运行时基础设施拆分为进程、共享、钩子、密钥以及三个 cron 域分片。
-- 自动回复以均衡的工作进程运行，其中 reply 子树拆分为 agent-runner、commands、dispatch、session 和 state-routing 分片。
-- Agentic gateway/server（控制平面）配置拆分到聊天、身份验证、模型、HTTP/插件、运行时和启动车道，而不是等待构建产物。
-- 普通 CI 仅将隔离的基础设施 include-pattern 分片打包成最多包含 64 个测试文件的确定性批次，从而减少 Node 矩阵，同时不合并非隔离的 command/cron、有状态 agents-core 或 gateway/server 套件。重量级固定套件使用 8 vCPU，而捆绑和低权重车道使用 4 vCPU。
-- 规范仓库中的拉取请求会针对合成合并树差异复用变更测试解析器。精确变更只运行一个目标 Node 作业；每个选定的测试文件使用独立进程，因此有状态套件的隔离性仍然完整。规划器会将兄弟测试与导入图依赖项结合起来；对于工作区包、包/锁文件、共享测试框架、拆分配置、重命名或删除变更、公共扩展契约变更、具有特殊分片设置的测试、部分解析或空目标、超大路径或目标计划，以及规划器错误，则回退到现有的 14 作业紧凑完整套件计划。目标计划始终保留完整的构建产物边界门禁，因为其仓库扫描器无法从导入关系推导出来。`main` 推送运行相同的完整紧凑套件：待处理的中间推送事件可以合并，因此最新保留下来的运行必须验证完整的集成树，而不能只验证其最终的单次推送差异。手动派发和发布门禁保留完整的按名称划分的分片矩阵。
-- 完整 Node 矩阵会优先接纳持续运行较慢的串行工具、自动回复命令分片以及广泛的 core-fast 缓存写入器。这使作业数保持在 28 个的上限内，同时避免关键路径工作和下一次运行的转换种子被推迟到后续波次。
-- 广泛的浏览器、QA、媒体和杂项插件测试使用专用的 Vitest 配置，而不是共享的插件兜底配置。Include-pattern 分片会使用 CI 分片名称记录计时条目，使 `.artifacts/vitest-shard-timings.json` 能够区分完整配置和经过筛选的分片。
-- Linux Node 分片作业通过上游 Actions 缓存 API 持久化 Vitest 的实验性文件系统模块缓存，Blacksmith 会在其 runner 上透明地加速该缓存。每个 CI 分片均为仅恢复模式，并将受保护的种子解包到各自 runner 本地的根目录；随后分片包装器会为并发的 Vitest 进程提供彼此独立的活动子目录。只有不取消其他作业的每日预热任务或明确派发的预热任务才会保存新的不可变归档，因此拉取请求无法发布转换结果或创建每个 PR 独有的缓存族。转换输入指纹会清除不兼容的锁文件、包、tsconfig 和 Vitest 配置版本。受保护的写入器会扫描并清理恢复的缓存；当其超过 2 GiB 后，将其缩减至 75%。Vitest 会对模块 ID、源内容、环境和解析后的转换配置进行哈希，因此普通的部分源代码变更会让未变更的条目保持温热，而变更模块则会安全地未命中缓存。粗粒度的恢复前缀用于衔接工作流运行；普通 Actions 缓存的 LRU 和非活动淘汰机制会限制旧的不可变归档。
-- 受信任的 Linux Node 作业还会从每条受支持的 Node 线路所对应的一个受保护依赖磁盘中挂载 pnpm store 和 `node_modules`。包清单、安装设置、runner 平台和精确的 Node 补丁版本不会纳入磁盘键；精确运行时和安装输入指纹决定作业是复用目录，还是重新安装并刷新同一磁盘。哈希前会对清单进行规范化。经过审计的直接根钩子仅保留 pnpm 的安装生命周期脚本，因此格式化以及普通测试/构建脚本编辑会继续使用温热的依赖树；未经审计的生命周期钩子漂移会在其源输入加入指纹契约之前安全失败。依赖、包管理器、钩子源代码和锁文件变更始终会使快照失效。匹配的指纹是必要条件但并不充分：设置过程还会检查导入器归档和清单校验和，然后验证 postinstall 保留的、由注册表支持的锁文件依赖是否与 Node 从其导入器解析出的包清单一致。缺失或过期的导入器内容会回退到全新安装，而不是提供根提升目录。只读快照不可用的拉取请求会解除工作区挂载，并安装到 runner 本地存储中，避免向无法发布的克隆写入缓慢数据。持续的冷安装会禁用 pnpm 内部的获取重试，并从逐步预热的 store 中最多尝试三次有界的完整安装；超时仍会导致失败。在内容验证的恢复或冻结锁文件安装之后，设置过程会禁用 pnpm 多余的运行前依赖检查：仓库会有意清理插件本地的 `node_modules`，而 pnpm 会将其视为过期内容，并在分片扇出期间通过不安全的并发隐式安装进行修复。规范的 main preflight 是唯一的写入器，并在每次刷新时测量 store 大小；只有当已退役的包版本将其推高到 8 GiB 以上时，才会运行 `pnpm store prune`。即使写入器作业完成后，Blacksmith 快照发布仍是异步的，因此新键或新指纹首次运行时仍可能是冷的；之后基于内容验证的精确标记恢复才是发布证明。必需的 CI 作业和拉取请求使用一次性克隆，因此依赖变更不会创建新磁盘、竞争快照或可能取消构建的缓存锁。
-- Node 分片和构建产物作业还会通过不可变 Actions 缓存恢复 Node 的便携式磁盘编译缓存。独立的 `test` 和 `build` 命名空间可防止各自的写入器替换对方的归档：计划中的测试预热器拥有受保护的测试种子，而 `build-artifacts` 最多可以每天从受信任的 `main` 推送中发布一个受保护的构建归档。PR 和普通测试作业只读取受保护的快照，因此功能分支字节码不会进入共享种子，PR 流量也不会创建缓存归档。这会在不同检出路径之间复用 Node 加载的编排代码、构建工具和外部依赖的 V8 字节码缓存，即使源代码图只有部分发生变化时也是如此。Vitest 子进程会禁用继承的编译缓存，因为动态配置中可能启用覆盖率，而当脚本从字节码反序列化时，V8 覆盖率可能失去源代码位置精度。
-- 构建产物作业还会持久化带有内容指纹的 `build-all` 步骤输出。CI 自行构建的插件 SDK 声明会对完整的、仓库自有的 TypeScript/JSON 源代码图进行哈希，排除已安装和生成的目录，并在 `tsdown` 清除 `dist` 后恢复扁平声明和包桥接文件。文档、工作流、插件以及该图之外的其他变更可以复用声明快照；源代码变更则会在导出门禁运行前重新构建。
-- 完整声明构建会将 `tsdown` 拆分为 AI、工作区包和统一组。每组只缓存声明，然后仍会在恢复这些声明前重新构建运行时 JavaScript。因此，核心或插件变更只会使大型统一图失效，而工作区包变更则会保守地使所有依赖声明组失效。公共完整构建通常使用不可变 Actions 缓存；粗粒度恢复键为部分变更提供种子，每组内容指纹会拒绝过期数据，GitHub 的缓存配额会淘汰旧版本。每周的 Node 22 车道则会在 `main` 成功运行后发布一个 14 天的构建产物，并且仅恢复其不可变生产者身份解析到 `main` 上该工作流的构建产物，从而避免配额 churn，同时不允许 PR 代码写入共享缓存。Private-QA 声明从不持久化到 Actions 缓存，因为缓存命名空间并不是机密边界。
-- `check-additional-*` 会将补充边界守卫列表（`scripts/run-additional-boundary-checks.mjs`）分成一个提示词密集型分片（`check-additional-boundaries-a`，其中包括 Codex 提示词快照漂移检查）和一个包含其余条带的组合分片（`check-additional-boundaries-bcd`）；每个分片都会并发运行独立守卫，并打印每项检查的计时。包边界编译/金丝雀工作保持在一起，而运行时拓扑架构则与嵌入 `build-artifacts` 的 gateway watch 覆盖范围分开运行。
-- 在 32 vCPU 的自托管构建 runner 上，Gateway watch、频道测试和核心支持边界分片会在 `build-artifacts` 内一起启动，此时 `dist/` 和 `dist-runtime/` 已经构建完成。GitHub 托管的回退运行会让 Gateway watch 串行执行，以避免低核心数竞争消耗其就绪期限。
+- 插件契约和频道契约分别作为两个加权的 Blacksmith 支持分片运行，并提供标准 GitHub runner 回退。
+- 核心单元快速/支持车道分开运行；核心运行时基础设施拆分为进程、共享、hooks、secrets，以及三个 cron 域分片。
+- 自动回复作为均衡 worker 运行，其中 reply 子树拆分为 agent-runner、commands、dispatch、session 和 state-routing 分片。
+- Agentic gateway/server（控制平面）配置拆分到 chat、auth、model、HTTP/plugin、runtime 和 startup 车道，而不是等待构建产物。
+- 普通 CI 仅将隔离的基础设施 include-pattern 分片打包为每批最多 64 个测试文件的确定性 bundle，从而减少 Node 矩阵，同时不会合并非隔离的 command/cron、有状态 agents-core 或 gateway/server 套件。繁重的固定套件保持使用 8 vCPU，而捆绑和较低权重的车道使用 4 vCPU。
+- 规范仓库中的拉取请求会针对合成合并树 diff 重用变更测试解析器。精确变更只运行一个目标 Node 作业；每个选中的测试文件使用独立进程，因此有状态套件的隔离仍保持不变。规划器会将同级测试与导入图依赖方结合起来；对于工作区包、包/lockfile、共享 harness、拆分配置、重命名或删除变更、公共扩展契约变更、需要特殊分片设置的测试、部分解析或空目标、路径或目标计划过大，以及规划器错误，则回退到现有的 14 作业紧凑完整套件计划。目标计划始终保留完整的构建产物边界门禁，因为其仓库扫描器无法从导入关系推导出来。`main` 推送运行相同的完整紧凑套件：待处理的中间推送事件可以合并，因此最新保留的运行必须验证完整的集成树，而不能只验证最终的单次推送 diff。手动派发和发布门禁保留完整的按名称分片矩阵。
+- 完整 Node 矩阵会优先接纳持续运行缓慢的串行工具、自动回复命令分片，以及广泛的 core-fast 缓存写入器。这会保持 28 作业上限，同时防止关键路径工作和下一次运行的 transform seed 被推迟到后续波次。
+- 广泛的浏览器、QA、媒体和其他插件测试使用各自专用的 Vitest 配置，而不是共享的插件兜底配置。Include-pattern 分片会使用 CI 分片名称记录计时条目，因此 `.artifacts/vitest-shard-timings.json` 可以区分完整配置和经过过滤的分片。
+- Linux Node 分片作业通过上游 Actions 缓存 API 持久化 Vitest 的实验性文件系统模块缓存，Blacksmith 会在其 runner 上透明地加速该缓存。每个 CI 分片都仅负责恢复，并将受保护的 seed 解包到自己的 runner 本地根目录；随后分片包装器会为并发的 Vitest 进程提供独立的实时子目录。只有不取消运行的每日 warmer 或显式派发的 warmer 才会保存新的不可变归档，因此拉取请求无法发布 transforms，也不会创建每个 PR 独有的缓存族。warmer 会在全新的子进程中以并发数 1 启动每个选定的分片/配置 envelope，同时保留其 include pattern 和环境，并复用同一个串行缓存叶节点。这可以防止配置全局状态泄漏，避免将经过过滤的分片扩展为完整配置，并保留前一个子进程生成的 transforms。transform 输入指纹会清除不兼容的 lockfile、package、tsconfig 和 Vitest 配置版本。受保护的写入器会扫描并清理恢复的缓存；当缓存超过 2 GiB 后，将其缩减至 75%。Vitest 会对模块 id、源代码内容、环境和解析后的 transform 配置进行哈希，因此普通的部分源代码变更会保留未变更的热缓存条目，而变更模块会安全地缓存未命中。粗粒度恢复前缀会跨工作流运行提供衔接；常规 Actions 缓存 LRU 和非活动淘汰会限制旧的不可变归档。
+- 受信任的 Linux Node 作业还会从每个受支持 Node 版本线对应的一个受保护依赖磁盘绑定 pnpm store 和 `node_modules`。包 manifest、安装设置、runner 平台和精确的 Node 补丁版本不会包含在磁盘键中；精确运行时和安装输入指纹决定作业是复用该树，还是重新安装并刷新同一磁盘。manifest 在哈希前会被规范化。经过审计的直接根 hooks 仅保留 pnpm 的安装生命周期脚本，因此格式化和普通测试/构建脚本编辑仍会保留热依赖树；未经审计的生命周期 hook 漂移会在其源输入加入指纹契约之前直接失败。依赖、包管理器、hook 源代码和 lockfile 变更始终会使快照失效。匹配的指纹是必要条件但并不充分：设置过程还会检查 importer 归档和 manifest 校验和，然后验证由 postinstall 保留的、由 registry 支持的 lockfile 依赖是否与 Node 从其 importer 解析的包 manifest 相符。缺失或过时的 importer 内容会回退到全新安装，而不是提供根 hoist。只读快照不可用的拉取请求会解除工作区绑定，并安装到 runner 本地存储，避免向无法发布的克隆写入缓慢数据。持续的冷安装会禁用 pnpm 内部的 fetch 重试，并从逐步预热的 store 中最多进行三次有界的完整安装尝试；超时仍会视为失败。在内容验证恢复或 frozen-lockfile 安装后，设置过程会禁用 pnpm 多余的运行前依赖检查：仓库会有意清理插件本地的 `node_modules`，而 pnpm 否则会将其视为过时，并在分片扇出期间通过不安全的并发隐式安装进行修复。规范的 main preflight 是唯一写入器，并在每次刷新时测量 store；只有在已退役的包版本使其超过 8 GiB 后，才会运行 `pnpm store prune`。即使写入作业完成后，Blacksmith 快照发布仍是异步的，因此新键或新指纹首次运行时仍可能是冷启动；后续通过内容验证的精确标记恢复才是推广证明。必需的 CI 作业和拉取请求会获得一次性克隆，因此依赖变更不会创建新磁盘、竞争快照或可能取消构建的缓存锁。
+- Node 分片和构建产物作业还会通过不可变 Actions 缓存恢复 Node 的便携式磁盘编译缓存。独立的 `test` 和 `build` 命名空间可防止各自的写入器相互替换归档：计划中的测试 warmer 拥有受保护的测试 seed，而 `build-artifacts` 最多可以在每个 UTC 日从受信任的 `main` 推送中发布一个受保护的构建归档。PR 和普通测试作业只读取受保护的快照，因此功能分支字节码不会进入共享 seed，PR 流量也不会创建缓存归档。这会在不同 checkout 路径之间复用 Node 加载的编排代码、构建工具和外部依赖的 V8 字节码，即使源代码图只有部分发生变化也一样。Vitest 子进程会禁用继承的编译缓存，因为 coverage 可能在动态配置中启用，并且当脚本从字节码反序列化时，V8 coverage 可能失去源代码位置精度。
+- 构建产物作业还会持久化带内容指纹的 `build-all` 步骤输出。CI 自行构建的插件 SDK 声明会对完整的仓库所有 TypeScript/JSON 源代码图进行哈希，排除已安装和生成的目录，并在 `tsdown` 清除 `dist` 后恢复扁平声明和包桥接。文档、工作流、插件以及该图之外的其他变更可以复用声明快照；源代码变更会在导出门禁运行前重新构建声明。
+- 完整声明构建会将 `tsdown` 拆分为 AI、工作区包和统一组。每组仅缓存声明，然后仍会在恢复这些声明前重新构建运行时 JavaScript。因此，核心或插件变更只会使大型统一图失效，而工作区包变更则会保守地使每个依赖声明组失效。公共完整构建通常使用不可变 Actions 缓存；粗粒度恢复键为部分变更提供 seed，每组内容指纹会拒绝过时数据，GitHub 的缓存配额则会淘汰旧版本。每周的 Node 22 车道会在成功的 `main` 运行后发布一个 14 天的 artifact，并且只恢复其不可变生产者身份解析到 `main` 上该工作流的 artifact，从而避免配额抖动，同时不允许 PR 代码写入共享缓存。Private-QA 声明永远不会持久化到 Actions 缓存中，因为缓存命名空间并不是机密性边界。
+- `check-additional-*` 会将补充边界守卫列表（`scripts/run-additional-boundary-checks.mjs`）分成一个包含大量 prompt 的分片（`check-additional-boundaries-a`，其中包括 Codex prompt 快照漂移检查）和一个包含其余分片的组合分片（`check-additional-boundaries-bcd`）；两者都会并发运行独立守卫，并打印每项检查的计时。包边界编译/canary 工作保持在一起，而运行时拓扑架构则与嵌入 `build-artifacts` 的 gateway watch 覆盖分开运行。
+- 在 32-vCPU 自托管构建 runner 上，Gateway watch、频道测试和核心支持边界分片会在 `build-artifacts` 中同时启动，此时 `dist/` 和 `dist-runtime/` 已经构建完成。GitHub 托管的回退运行会让 Gateway watch 串行执行，以防低核心数竞争消耗其就绪期限。随后，两条路径都会单独运行两个构建出的 TUI PTY artifact canary；专用 Node 分片负责完整的串行套件。
 
 一旦被接纳，canonical Linux CI 允许最多 28 个并发 Node 测试作业，而较小的 fast/check 车道则允许 12 个；Windows 和 Android 保持在两个，因为这些 runner 池更窄。紧凑的整配置批次使用 120 分钟的批次超时，而 include-pattern 组共享同一个受限作业预算。
 
@@ -108,16 +108,17 @@ Blacksmith 持久磁盘键会有意限制在受支持的运行时或任务维度
 
 `.github/workflows/clawsweeper-dispatch.yml` 是从 OpenClaw 仓库活动到 ClawSweeper 的目标端桥接。它不会检出或执行不受信任的 pull request 代码。该工作流会使用 `CLAWSWEEPER_APP_PRIVATE_KEY` 创建一个 GitHub App token，然后将精简的 `repository_dispatch` 负载派发到 `openclaw/clawsweeper`。
 
-该工作流有四条流水线：
+该工作流包含三条通道：
 
 - `clawsweeper_item`：用于精确的 issue 和 pull request 审查请求；
 - `clawsweeper_comment`：用于 issue 评论中的显式 ClawSweeper 命令；
-- `clawsweeper_commit_review`：用于 `main` push 上的提交级审查请求；
-- `github_activity`：用于 ClawSweeper 代理可能检查的一般 GitHub 活动。
+- `github_activity`：用于 ClawSweeper 代理可能检查的常规 GitHub 活动。
 
 `github_activity` 流水线仅转发规范化的元数据：事件类型、动作、actor、仓库、条目编号、URL、标题、状态，以及在存在时评论或审查的简短摘录。它有意避免转发完整 webhook 正文。`openclaw/clawsweeper` 中接收的工作流是 `.github/workflows/github-activity.yml`，它会把规范化事件发布到 OpenClaw Gateway hook，供 ClawSweeper 代理使用。
 
-一般活动是观察，而不是默认投递。ClawSweeper 代理会在提示中接收 Discord 目标，并且应当只在事件出乎意料、可执行、有风险或对运维有用时发布到 `#clawsweeper`。常规打开、编辑、bot churn、重复 webhook 噪音以及正常的审查流量都应返回 `NO_REPLY`。
+主分支上的推送仍作为 `github_activity` 观察事件处理。它们不会生成托管的逐提交报告或提交 Check Runs。
+
+常规活动属于观察，而非默认交付。ClawSweeper 代理会在其提示中收到 Discord 目标，并且仅当事件令人意外、可采取行动、存在风险或具有运维价值时，才应发布到 `#clawsweeper`。常规的开启、编辑、机器人活动、重复的 webhook 噪声和正常的审查流量都应返回 `NO_REPLY`。
 
 将 GitHub 标题、评论、正文、审查文本、分支名和提交消息在整个路径中都视为不受信任的数据。它们是用于摘要和分诊的输入，而不是用于工作流或代理运行时的指令。
 
@@ -125,9 +126,9 @@ Barnacle 将带有 bug 标签的 issue 视为待验证候选项，而不是因�
 
 ## 手动派发
 
-手动 CI 派发运行与常规 CI 相同的作业图，但会强制启用每个非 Android 范围的任务通道：Linux Node 分片、bundled-plugin 分片、插件和 channel contract 分片、Node 22 兼容性、`check-*`、`check-additional-*`、构建产物冒烟检查、文档检查、Python skills、Windows、macOS、iOS 构建，以及 Control UI/原生应用国际化。自动源代码 PR 会验证原生提取清单和 Android/Apple 本地化安全性，但不要求在同一个 PR 中包含已翻译或平台生成的输出。串行化的 Native App Locale Refresh 工作流会在一个隔离的 PR 中重新构建这些产物，并在必需检查通过后启用精确头提交自动合并。对于生成产物 PR、手动 CI、Full Release Validation 和发布准备，完整原生对等性仍然是阻塞性要求。Control UI 本地化对等性在自动 PR 和 `main` 运行中仍仅供参考，而在手动/发布 CI 中是阻塞性要求。独立的手动 CI 派发仅在使用 `include_android=true` 时运行 Android（`release_gate` 输入也会强制启用 Android）；完整发布总流程通过传入 `include_android=true` 来启用 Android。插件预发布静态检查、仅限发布的 `agentic-plugins` 分片、完整扩展批量扫描，以及插件预发布 Docker 通道均不包含在 CI 中。Docker 预发布套件仅在 `Full Release Validation` 启用发布验证门控并派发独立的 `Plugin Prerelease` 工作流时运行。
+手动 CI 派发运行与常规 CI 使用相同的作业图，但会强制启用每个非 Android 范围的任务通道：Linux Node 分片、bundled-plugin 分片、插件和 channel contract 分片、Node 22 兼容性、`check-*`、`check-additional-*`、构建产物冒烟检查、文档检查、Python skills、Windows、macOS、iOS 构建，以及 Control UI/原生应用国际化。自动源代码 PR 会验证原生提取清单和 Android/Apple 本地化安全性，但不要求在同一个 PR 中包含已翻译或平台生成的输出。串行化的 Native App Locale Refresh 工作流会在一个隔离的 PR 中重新构建这些产物，并在必需检查通过后启用精确头提交自动合并。对于生成产物 PR、手动 CI、Full Release Validation 和发布准备，完整原生对等性仍然是阻塞性要求。Control UI 本地化对等性在自动 PR 和 `main` 运行中仍仅供参考，而在手动/发布 CI 中是阻塞性要求。独立的手动 CI 派发仅在使用 `include_android=true` 时运行 Android（`release_gate` 输入也会强制启用 Android）；完整发布总流程通过传入 `include_android=true` 来启用 Android。插件预发布静态检查、仅限发布的 `agentic-plugins` 分片、完整扩展批量扫描，以及插件预发布 Docker 通道均不包含在 CI 中。Docker 预发布套件仅在 `Full Release Validation` 启用发布验证门控并派发独立的 `Plugin Prerelease` 工作流时运行。
 
-PR max-lines 检查会从已检出的合成合并树中推导基线，并验证其头父提交与事件头提交一致。手动运行使用唯一的并发组，因此同一引用上的另一个 push 或 PR 运行不会取消某个 release-candidate 完整套件。可选的 `target_ref` 输入允许受信任的调用者使用所选派发 ref 上的工作流文件，将该作业图运行在分支、标签或完整 commit SHA 上；max-lines 基线会与该运行所解析出的默认分支 head 的目标合并基点进行比较。`release_gate` 输入是容量受阻 PR CI 的精确 SHA 维护者回退方案：它要求 `target_ref` 为完整 commit SHA，且与已派发分支 head 匹配，并要求 `pull_request_number` 用于标识其合并树将被验证的打开状态 PR。
+PR 最大行数检查会从已检出的合成合并树中推导基线，并验证其头父提交与事件头提交一致。手动运行使用唯一的并发组，因此同一引用上的另一个推送或 PR 运行不会取消某个发布候选完整套件。可选的 `target_ref` 输入允许受信任的调用者使用所选派发引用上的工作流文件，将该作业图运行在分支、标签或完整提交 SHA 上；最大行数基线会与该运行所解析出的默认分支头部的目标合并基点进行比较。`release_gate` 输入是容量受阻 PR CI 的精确 SHA 维护者回退方案：它要求 `target_ref` 为完整提交 SHA，且与已派发分支头部匹配，并要求 `pull_request_number` 用于标识其合并树将被验证的开放状态 PR。
 
 ```bash
 gh workflow run ci.yml --ref release/YYYY.M.PATCH
@@ -151,13 +152,13 @@ Gateway extended-stable 从 `extended-stable/YYYY.M.33` 运行 npm 预检、Full
 
 ## 运行器注册预算
 
-OpenClaw 当前的 GitHub runner-registration bucket 在 `ghx api rate_limit` 中报告每 5 分钟有 10,000 次自托管 runner 注册。每次调优前都要重新检查 `actions_runner_registration`，因为 GitHub 可能会更改这个 bucket。该限制由 `openclaw` 组织中所有 Blacksmith runner 注册共享，因此再添加一个 Blacksmith 安装也不会带来新的 bucket。
+OpenClaw 当前的 GitHub runner-registration bucket 在 `ghx api rate_limit` 中报告每 5 分钟有 10,000 次自托管运行器注册。每次调优前都要重新检查 `actions_runner_registration`，因为 GitHub 可能会更改这个 bucket。该限制由 `openclaw` 组织中所有 Blacksmith 运行器注册共享，因此再添加一个 Blacksmith 安装也不会带来新的 bucket。
 
 将 Blacksmith 标签视为突发控制的稀缺资源。只负责路由、通知、汇总、选择分片或运行短时 CodeQL 扫描的作业，除非已测得明确的 Blacksmith 特定需求，否则应继续使用 GitHub 托管运行器。任何新的 Blacksmith matrix、更大的 `max-parallel` 或高频工作流，都必须展示其最坏情况下的注册次数，并将组织级目标控制在实时 bucket 的约 60% 以下。按当前 10,000 次注册的 bucket 计算，这意味着 6,000 次注册的运行目标，为并发仓库、重试和突发重叠留出余量。
 
 已更改目标的 PR 方案将常见的 Node 测试突发从 14 次 Blacksmith 注册减少到 1 次。广泛风险的 PR 仍保留 14 次注册的紧凑回退方案，因此最坏情况不会增加。
 
-Canonical 仓库的 CI 将 Blacksmith 保持为正常 push 和 pull-request 运行的默认运行器路径。`workflow_dispatch` 和非 canonical 仓库运行使用 GitHub 托管运行器，但正常的 canonical 运行目前不会探测 Blacksmith 队列健康状况，也不会在 Blacksmith 不可用时自动回退到 GitHub 托管标签。
+规范仓库的 CI 将 Blacksmith 保持为正常推送和拉取请求运行的默认运行器路径。`workflow_dispatch` 和非规范仓库运行使用 GitHub 托管运行器，但正常的规范仓库运行目前不会探测 Blacksmith 队列健康状况，也不会在 Blacksmith 不可用时自动回退到 GitHub 托管标签。
 
 ## 表面棘轮
 
@@ -216,17 +217,17 @@ gh workflow run openclaw-performance.yml --ref main -f profile=smoke -f repeat=1
 gh workflow run openclaw-performance.yml --ref main -f target_ref=v2026.5.2 -f profile=diagnostic -f repeat=3
 ```
 
-手动派发通常会基准测试工作流所指向的 ref。将 `target_ref` 设置为某个发布标签或另一分支，以使用当前工作流实现进行基准测试。已发布报告路径和最新指针以被测试的 ref 为键，每个 `index.md` 都会记录被测试的 ref/SHA、工作流 ref/SHA、Kova ref、profile、lane auth 模式、模型、重复次数和场景过滤器。
+手动派发通常会基准测试工作流所指向的 ref。将 `target_ref` 设置为某个发布标签或另一分支，以使用当前工作流实现进行基准测试。已发布报告路径和最新指针以被测试的 ref 为键，每个 `index.md` 都会记录被测试的 ref/SHA、工作流 ref/SHA、Kova ref、profile、通道认证模式、模型、重复次数和场景过滤器。
 
-该工作流会从固定版本中安装 OCM，并从 `openclaw/Kova` 中安装 Kova，使用固定的 `kova_ref` 输入，然后运行三条 lane：
+该工作流会从固定版本中安装 OCM，并从 `openclaw/Kova` 中安装 Kova，使用固定的 `kova_ref` 输入，然后运行三条通道：
 
-- `mock-provider`: 针对本地构建运行时的 Kova 诊断场景，使用确定性的假 OpenAI 兼容认证。
+- `mock-provider`: 针对本地构建运行时的 Kova 诊断场景，使用确定性的模拟 OpenAI 兼容认证。
 - `mock-deep-profile`: 针对启动、网关和 agent-turn 热点进行 CPU/heap/trace 性能分析。在计划任务中运行，或在派发时设置 `deep_profile=true` 运行。
 - `live-openai-candidate`: 一次真实的 OpenAI `openai/gpt-5.6-luna` agent turn；当 `OPENAI_API_KEY` 不可用时会跳过。在计划任务中运行，或在派发时设置 `live_openai_candidate=true` 运行。
 
-在 Kova 通过后，`mock-provider` lane 还会运行 OpenClaw 原生源代码探测：默认、跳过 channel、internal-hook 和 fifty-plugin 启动场景下的网关启动时间和内存；捆绑插件导入 RSS、重复的 mock-OpenAI `channel-chat-baseline` 问候循环、针对已启动网关的 CLI 启动命令，以及 SQLite 状态 smoke 性能探测。当被测试 ref 对应的上一份已发布 mock-provider 源代码报告可用时，源代码摘要会将当前 RSS 和 heap 值与该基线进行比较，并将较大的 RSS 增长标记为 `watch`。源代码探测的 Markdown 摘要位于报告包中的 `source/index.md`，其原始 JSON 与之相邻。
+在 Kova 通过后，`mock-provider` 通道还会运行 OpenClaw 原生源代码探测：默认、跳过通道、internal-hook 和 fifty-plugin 启动场景下的网关启动时间和内存；捆绑插件导入 RSS、重复的模拟 OpenAI `channel-chat-baseline` 问候循环、针对已启动网关的 CLI 启动命令，以及 SQLite 状态 smoke 性能探测。当被测试 ref 对应的上一份已发布 mock-provider 源代码报告可用时，源代码摘要会将当前 RSS 和 heap 值与该基线进行比较，并将较大的 RSS 增长标记为 `watch`。源代码探测的 Markdown 摘要位于报告包中的 `source/index.md`，其原始 JSON 与之相邻。
 
-每条 lane 都会上传其完整的 GitHub artifact，包括 CPU、heap、trace 和压缩后的诊断包。一个单独的发布器作业会下载并验证这些 artifact，然后生成一个短期的 ClawSweeper GitHub App token，该 token 仅限于 `openclaw/clawgrit-reports` 的内容权限，并且只会将其传递给 Git push 步骤。它会在 `openclaw-performance/<tested-ref>/<run-id>-<attempt>/<lane>/` 下提交 `report.json`、`report.md`、`index.md`、源探测 artifact 以及 bundle 元数据/校验和；完整的诊断归档仍保留在关联的 Actions artifact 中。发布器在尝试推送之前，会拒绝任何超过 50 MB 的报告文件。当前的 tested-ref 指针是 `openclaw-performance/<tested-ref>/latest-<lane>.json`。计划运行和 `profile=release` 派发如果 app-token 创建或报告发布失败，则会失败。非 release 的手动派发会在认证或发布失败时将发布视为建议性操作，并保留 GitHub artifact。上一份源基线会从公共报告仓库匿名获取，因此成功获取基线并不能证明发布器认证有效。
+每条通道都会上传其完整的 GitHub 构建产物，包括 CPU、heap、trace 和压缩后的诊断包。一个单独的发布器作业会下载并验证这些构建产物，然后生成一个短期的 ClawSweeper GitHub App 令牌，该令牌仅限于 `openclaw/clawgrit-reports` 的内容权限，并且只会将其传递给 Git 推送步骤。它会在 `openclaw-performance/<tested-ref>/<run-id>-<attempt>/<lane>/` 下提交 `report.json`、`report.md`、`index.md`、源探测构建产物以及 bundle 元数据/校验和；完整的诊断归档仍保留在关联的 Actions 构建产物中。发布器在尝试推送之前，会拒绝任何超过 50 MB 的报告文件。当前的 tested-ref 指针是 `openclaw-performance/<tested-ref>/latest-<lane>.json`。计划运行和 `profile=release` 派发如果应用令牌创建或报告发布失败，则会失败。非 release 的手动派发会在认证或发布失败时将发布视为建议性操作，并保留 GitHub 构建产物。上一份源基线会从公共报告仓库匿名获取，因此成功获取基线并不能证明发布器认证有效。
 
 ## 完整发布验证
 
@@ -421,7 +422,7 @@ gh workflow run package-acceptance.yml \
 
 `Install Smoke` 工作流不再在拉取请求或向 `main` 推送时运行。其夜间/手动封装器以及发布验证都会调用只读的 `install-smoke-reusable.yml` 核心工作流，并且每次运行都会在 GitHub 托管的 runner 上执行完整的安装烟测路径：
 
-- 根 Dockerfile 烟测镜像会针对每个目标 SHA 只构建一次，并绑定到工作流修订版和生成者尝试，作为不可变制品保存；随后由 CLI 烟测、agents 删除共享工作区的 CLI 烟测、容器网关网络 E2E，以及带有 `matrix` 插件的捆绑 `build-arg` 烟测加载。插件烟测会验证运行时依赖安装镜像行为，并确认插件加载时没有 entry-escape 诊断信息。
+- 根 Dockerfile 烟测镜像会针对每个目标 SHA 只构建一次，并绑定到工作流修订版和生成者尝试，作为不可变制品保存；随后由 CLI 烟测、代理删除共享工作区的 CLI 烟测、容器网关网络 E2E，以及带有 `matrix` 插件的捆绑 `build-arg` 烟测加载。插件烟测会验证运行时依赖安装镜像行为，并确认插件加载时没有 entry-escape 诊断信息。
 - QR 包安装以及安装器/更新 Docker 烟测（包括 Rocky Linux 安装器通道和针对可配置 `update_baseline_version` npm 基线的更新通道）会作为独立作业运行，因此安装器相关工作不会排在根镜像烟测后面等待。
 
 较慢的 Bun 全局安装 image-provider 烟测会由 `run_bun_global_install_smoke` 单独控制。它会在夜间计划任务中运行，默认在来自发布检查的工作流调用中开启，手动触发 `Install Smoke` 时也可以选择启用它。常规 PR CI 仍会针对与 Node 相关的变更运行快速的 Bun 启动器回归通道。QR 和安装器 Docker 测试则继续使用各自专门面向安装的 Dockerfile。
@@ -483,7 +484,8 @@ pnpm test:docker:timings <summary>   # 慢 lane 和阶段关键路径摘要
 
 QA 实验室在主智能作用域工作流之外拥有专用的 CI 流水线。智能体一致性检查被嵌套在更广泛的 QA 和发布测试框架中，而不是独立的 PR 工作流。若需要让一致性检查随更广泛的验证运行一起执行，请使用 `Full Release Validation` 并设置 `rerun_group=qa-parity`。
 
-- `QA-Lab - All Lanes` 工作流在 `main` 上按夜间计划运行，并支持手动触发；它会扇出模拟一致性检查以及实时 Matrix、Telegram、Discord、WhatsApp 和 Slack 作业。实时作业使用 `qa-live-shared` 环境；Telegram、Discord、WhatsApp 和 Slack 使用 Convex 租约，而 Matrix 会配置可丢弃的本地凭据。
+- `QA-Lab - All Lanes` 工作流每晚在 `main` 上运行，也支持手动触发；它会分发运行模拟一致性检查，以及实时的 Matrix、Telegram、Discord、WhatsApp 和 Slack 作业。实时作业使用 `qa-live-shared` 环境；Telegram、Discord、WhatsApp 和 Slack 使用 Convex 租约，而 Matrix 会配置一次性本地凭据。
+- 发布版 Matrix 目录验证会在配备 16 个 vCPU 的 Blacksmith runner 上串行运行，作业预算为 90 分钟。对该超时时间、runner 规格或并发设置的更改，都需要匹配的工作流防护措施和精确候选版本的发布证明。
 
 计划、手动和发布版的 Matrix 检查使用确定性的模拟 provider，因此实时传输契约与模型延迟和常规 provider 插件启动相互隔离。Telegram 发布版检查使用相同的确定性模型边界。实时传输网关会禁用 memory search，因为 QA 一致性检查会单独覆盖 memory 行为；provider 连通性则由单独的实时模型、原生 provider 和 Docker provider 套件覆盖。
 
@@ -493,9 +495,9 @@ QA 实验室在主智能作用域工作流之外拥有专用的 CI 流水线。�
 
 ## CodeQL
 
-`CodeQL` 工作流有意被设计为一个窄范围的首轮安全扫描器，而不是对整个仓库的全面扫描。每日、手动、`main` push 以及非草稿 pull request 保护运行会扫描 Actions 工作流代码，以及最高风险的 JavaScript/TypeScript 表面，并使用筛选到高/严重 `security-severity` 的高置信度安全查询。
+`CodeQL` 工作流有意被设计为一个范围狭窄的首轮安全扫描器，而不是对整个仓库进行全面扫描。每日运行、手动运行、推送到 `main` 以及非草稿拉取请求保护运行会扫描 Actions 工作流代码，以及最高风险的 JavaScript/TypeScript 表面，并使用筛选到高/严重 `security-severity` 的高置信度安全查询。
 
-pull request 保护保持轻量：它只会在 `.github/actions`、`.github/codeql`、`.github/workflows`、`packages`、`scripts`、`src`，或负责流程的捆绑插件运行时路径下有变更时启动，并且会运行与定时工作流相同的高置信度安全矩阵。Android 和 macOS CodeQL 不包含在 PR 默认项中。
+拉取请求保护保持轻量：它只会在 `.github/actions`、`.github/codeql`、`.github/workflows`、`packages`、`scripts`、`src`，或负责流程的捆绑插件运行时路径发生变更时启动，并且会运行与定时工作流相同的高置信度安全矩阵。Android 和 macOS CodeQL 不包含在拉取请求默认项中。
 
 ### 安全类别
 
@@ -515,7 +517,7 @@ pull request 保护保持轻量：它只会在 `.github/actions`、`.github/code
 
 ### 关键质量类别
 
-`CodeQL Critical Quality` 是对应的非安全分片。它仅在 GitHub 托管的 Linux runner 上，对狭窄但高价值的表面运行错误严重度、非安全的 JavaScript/TypeScript 质量查询，因此质量扫描不会消耗 Blacksmith runner 注册预算。它的 pull request 保护故意比定时配置更小：非草稿 PR 只会对其涉及的表面运行匹配的分片，来自十三个可由 PR 路由的分片——`agent-runtime-boundary`、`channel-runtime-boundary`、`config-boundary`、`core-auth-secrets`、`gateway-runtime-boundary`、`mcp-process-runtime-boundary`、`memory-runtime-boundary`、`network-runtime-boundary`、`plugin-boundary`、`plugin-sdk-package-contract`、`plugin-sdk-reply-runtime`、`provider-runtime-boundary` 和 `session-diagnostics-boundary`。`ui-control-plane` 和 `web-media-runtime-boundary` 不包含在 PR 运行中。CodeQL 配置和质量工作流的变更会运行完整的 PR 分片集合（网络运行时分片依据其自己的 CodeQL 配置文件和网络归属的源路径来触发）。
+`CodeQL Critical Quality` 是对应的非安全分片。它仅在 GitHub 托管的 Linux runner 上，对范围狭窄但高价值的表面运行错误严重度、非安全的 JavaScript/TypeScript 质量查询，因此质量扫描不会消耗 Blacksmith runner 注册预算。它的拉取请求保护故意比定时配置更小：非草稿拉取请求只会对其涉及的表面运行匹配的分片，来自十三个可由拉取请求路由的分片——`agent-runtime-boundary`、`channel-runtime-boundary`、`config-boundary`、`core-auth-secrets`、`gateway-runtime-boundary`、`mcp-process-runtime-boundary`、`memory-runtime-boundary`、`network-runtime-boundary`、`plugin-boundary`、`plugin-sdk-package-contract`、`plugin-sdk-reply-runtime`、`provider-runtime-boundary` 和 `session-diagnostics-boundary`。`ui-control-plane` 和 `web-media-runtime-boundary` 不包含在拉取请求运行中。CodeQL 配置和质量工作流的变更会运行完整的拉取请求分片集合（网络运行时分片依据其自己的 CodeQL 配置文件和网络归属的源路径来触发）。
 
 手动派发接受：
 
@@ -523,7 +525,7 @@ pull request 保护保持轻量：它只会在 `.github/actions`、`.github/code
 profile=all|agent-runtime-boundary|config-boundary|core-auth-secrets|channel-runtime-boundary|gateway-runtime-boundary|memory-runtime-boundary|mcp-process-runtime-boundary|network-runtime-boundary|plugin-boundary|plugin-sdk-package-contract|plugin-sdk-reply-runtime|provider-runtime-boundary|session-diagnostics-boundary
 ```
 
-这些窄范围配置是用于单独运行一个质量分片的教学/迭代钩子。
+这些范围狭窄的配置用于单独运行一个质量分片，是教学和迭代钩子。
 
 | 类别                                                | 表面                                                                                                                                                           |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -543,7 +545,7 @@ profile=all|agent-runtime-boundary|config-boundary|core-auth-secrets|channel-run
 | `/codeql-critical-quality/plugin-boundary`          | loader、registry、public-surface，以及 Plugin SDK 入口点契约                                                                                                       |
 | `/codeql-critical-quality/plugin-sdk-package-contract` | 已发布包侧的 Plugin SDK 源代码以及 plugin package contract 辅助工具                                                                                                |
 
-质量与安全分离，这样质量发现可以被调度、度量、禁用或扩展，而不会掩盖安全信号。Swift、Python 和捆绑插件的 CodeQL 扩展应仅在窄范围配置具备稳定运行时间和稳定信号之后，作为有范围或分片化的后续工作再加回来。
+质量与安全分离，这样质量发现可以被调度、度量、禁用或扩展，而不会掩盖安全信号。Swift、Python 和捆绑插件的 CodeQL 扩展应仅在范围狭窄的配置具备稳定运行时间和稳定信号之后，作为有范围或分片化的后续工作再加回来。
 
 ## 维护工作流
 

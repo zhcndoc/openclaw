@@ -1,21 +1,21 @@
 ---
 summary: "通过其 OpenClaw 插件使用 Qwen 云"
 read_when:
-  - You want to use Qwen with OpenClaw
-  - You have an Alibaba Cloud Token Plan subscription
+  - 你想在 OpenClaw 中使用 Qwen
+  - 你拥有阿里云 Token Plan 订阅
 title: "Qwen"
 ---
 
-Qwen Cloud is an official external OpenClaw provider plugin with canonical id `qwen`. It targets Qwen Cloud / Alibaba DashScope Standard and Coding Plan endpoints, exposes Token Plan as `qwen-token-plan`, keeps `modelstudio` as a compatibility alias, and independently owns Alibaba's documented `bailian-token-plan` custom-provider id.
+Qwen Cloud 是官方的外部 OpenClaw 提供商插件，规范 ID 为 `qwen`。它面向 Qwen Cloud / 阿里云 DashScope Standard 和 Coding Plan 端点，将 Token Plan 公开为 `qwen-token-plan`，保留 `modelstudio` 作为兼容性别名，并独立使用阿里云文档中所述的 `bailian-token-plan` 自定义提供商 ID。
 
 | 属性                   | 值                                         |
 | ---------------------- | ------------------------------------------ |
-| Provider               | `qwen`                                     |
-| Token Plan provider    | `qwen-token-plan`                          |
-| Preferred env var      | `QWEN_API_KEY`                             |
-| Token Plan env var     | `QWEN_TOKEN_PLAN_API_KEY`                  |
-| Also accepted (compat) | `MODELSTUDIO_API_KEY`, `DASHSCOPE_API_KEY` |
-| API style              | OpenAI-compatible                          |
+| 提供商                 | `qwen`                                     |
+| Token Plan 提供商      | `qwen-token-plan`                          |
+| 首选环境变量           | `QWEN_API_KEY`                             |
+| Token Plan 环境变量    | `QWEN_TOKEN_PLAN_API_KEY`                  |
+| 也接受（兼容性）       | `MODELSTUDIO_API_KEY`、`DASHSCOPE_API_KEY` |
+| API 风格               | OpenAI 兼容                               |
 
 <Tip>
 `qwen3.7-plus` 和 `qwen3.6-plus` 可与 Coding Plan 和 Standard 端点配合使用。
@@ -75,9 +75,9 @@ openclaw gateway restart
     </Steps>
 
     <Note>
-    旧的 `modelstudio-*` auth-choice id 和 `modelstudio/...` model 引用仍然
+    旧的 `modelstudio-*` auth-choice ID 和 `modelstudio/...` 模型引用仍然
     可以作为兼容别名使用，但新的设置流程应优先使用规范的
-    `qwen-*` auth-choice id 和 `qwen/...` model 引用。如果你定义了一个精确的
+    `qwen-*` auth-choice ID 和 `qwen/...` 模型引用。如果你定义了一个精确的
     自定义 `models.providers.modelstudio` 条目并使用了不同的 `api` 值，那么该
     自定义提供方会拥有 `modelstudio/...` 引用，而不是 Qwen 兼容
     别名。
@@ -85,7 +85,7 @@ openclaw gateway restart
 
   </Tab>
 
-  <Tab title="Standard (pay-as-you-go)">
+  <Tab title="标准（按量付费）">
     **最适合：** 通过 Standard Model Studio 端点按量付费访问，包括 `qwen3.7-max` 和 `qwen3.6-flash`，这些模型在 Coding Plan 中不可用。
 
     <Steps>
@@ -124,9 +124,9 @@ openclaw gateway restart
     </Steps>
 
     <Note>
-    旧的 `modelstudio-*` auth-choice id 和 `modelstudio/...` model 引用仍然
+    旧的 `modelstudio-*` auth-choice ID 和 `modelstudio/...` 模型引用仍然
     可以作为兼容别名使用，但新的设置流程应优先使用规范的
-    `qwen-*` auth-choice id 和 `qwen/...` model 引用。如果你定义了一个精确的
+    `qwen-*` auth-choice ID 和 `qwen/...` 模型引用。如果你定义了一个精确的
     自定义 `models.providers.modelstudio` 条目并使用了不同的 `api` 值，那么该
     自定义提供方会拥有 `modelstudio/...` 引用，而不是 Qwen 兼容
     别名。
@@ -134,12 +134,12 @@ openclaw gateway restart
 
   </Tab>
 
-  <Tab title="Token Plan (Team Edition)">
+  <Tab title="Token Plan（团队版）">
     **最适合：** 通过阿里云 Model Studio 访问 Qwen 及受支持的第三方模型的基于积分的团队订阅。
 
     <Steps>
       <Step title="获取你的专属密钥">
-        分配一个 Token Plan 席位并创建其专属的 `sk-sp-...` 密钥。Token Plan、Coding Plan 和按量付费密钥不能互换。请参阅 [Global Token Plan overview](https://www.alibabacloud.com/help/en/model-studio/token-plan-overview) 或 [China Token Plan overview](https://help.aliyun.com/zh/model-studio/token-plan-overview)。
+        分配一个 Token Plan 席位并创建其专属的 `sk-sp-...` 密钥。Token Plan、Coding Plan 和按量付费密钥不能互换。请参阅 [Global Token Plan 概览](https://www.alibabacloud.com/help/en/model-studio/token-plan-overview) 或 [China Token Plan 概览](https://help.aliyun.com/zh/model-studio/token-plan-overview)。
       </Step>
       <Step title="运行引导配置">
         对于新加坡的 **Global / International** 端点：
@@ -164,7 +164,7 @@ openclaw gateway restart
 
     <Note>
     阿里巴巴的 OpenClaw 指南在手动自定义提供方中使用 `bailian-token-plan`。
-    该插件将该 id 注册为兼容性所有者，但新配置应使用 `qwen-token-plan`。
+    该插件将该 ID 注册为兼容性所有者，但新配置应使用 `qwen-token-plan`。
     精确的自定义 `models.providers.bailian-token-plan` 条目会保留其已配置的传输
     和目录所有权；它绝不会合并到规范的 OpenAI 目录中。
     </Note>
@@ -181,17 +181,16 @@ openclaw gateway restart
 
 ## 计划类型和端点
 
-| Plan                       | Region | Auth choice                | Endpoint                                                         |
-| -------------------------- | ------ | -------------------------- | ---------------------------------------------------------------- |
-| Coding Plan (subscription) | China  | `qwen-api-key-cn`          | `coding.dashscope.aliyuncs.com/v1`                               |
-| Coding Plan (subscription) | Global | `qwen-api-key`             | `coding-intl.dashscope.aliyuncs.com/v1`                          |
-| Standard (pay-as-you-go)   | China  | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`                      |
-| Standard (pay-as-you-go)   | Global | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1`                 |
-| Token Plan (Team Edition)  | China  | `qwen-token-plan-cn`       | `token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`     |
-| Token Plan (Team Edition)  | Global | `qwen-token-plan`          | `token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1` |
+| 计划                       | 区域   | 认证选项                  | 端点                                                             |
+| -------------------------- | ------ | ------------------------- | ---------------------------------------------------------------- |
+| 编程计划（订阅）           | 中国   | `qwen-api-key-cn`         | `coding.dashscope.aliyuncs.com/v1`                               |
+| 编程计划（订阅）           | 全球   | `qwen-api-key`            | `coding-intl.dashscope.aliyuncs.com/v1`                          |
+| 标准计划（按量付费）       | 中国   | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`                      |
+| 标准计划（按量付费）       | 全球   | `qwen-standard-api-key`   | `dashscope-intl.aliyuncs.com/compatible-mode/v1`                 |
+| 令牌计划（团队版）         | 中国   | `qwen-token-plan-cn`      | `token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`     |
+| 令牌计划（团队版）         | 全球   | `qwen-token-plan`         | `token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1` |
 
-提供方会根据你的认证选择自动选择端点。标准化
-选项使用 `qwen-*` 系列；`modelstudio-*` 仅保留兼容模式。
+提供方会根据你的认证选项自动选择端点。标准化选项使用 `qwen-*` 系列；`modelstudio-*` 仅保留兼容模式。  
 可通过配置中的自定义 `baseUrl` 覆盖。
 
 <Tip>
@@ -204,41 +203,37 @@ openclaw gateway restart
 OpenClaw 提供此 Qwen 静态目录。该目录支持端点感知：Coding
 Plan 配置会省略那些仅适用于 Standard 端点的模型。
 
-| Model ref                   | Input       | Context   | Notes                   |
-| --------------------------- | ----------- | --------- | ----------------------- |
-| `qwen/qwen3.5-plus`         | text, image | 1,000,000 | 默认模型           |
-| `qwen/qwen3.6-flash`        | text, image | 1,000,000 | 仅 Standard 端点 |
-| `qwen/qwen3.6-plus`         | text, image | 1,000,000 | Coding Plan + Standard  |
-| `qwen/qwen3.7-max`          | text        | 1,000,000 | 仅 Standard 端点 |
-| `qwen/qwen3.7-plus`         | text, image | 1,000,000 | Coding Plan + Standard  |
-| `qwen/qwen3-max-2026-01-23` | text        | 262,144   | Qwen Max 系列           |
-| `qwen/qwen3-coder-next`     | text        | 262,144   | Coding                  |
-| `qwen/qwen3-coder-plus`     | text        | 1,000,000 | Coding                  |
-| `qwen/MiniMax-M2.5`         | text        | 1,000,000 | 支持推理       |
-| `qwen/glm-5`                | text        | 202,752   | GLM                     |
-| `qwen/glm-4.7`              | text        | 202,752   | GLM                     |
-| `qwen/kimi-k2.5`            | text, image | 262,144   | Moonshot AI via Alibaba |
+| 模型引用                    | 输入        | 上下文    | 备注                 |
+| --------------------------- | ----------- | --------- | -------------------- |
+| `qwen/qwen3.5-plus`         | 文本、图像  | 1,000,000 | 默认模型             |
+| `qwen/qwen3.6-flash`        | 文本、图像  | 1,000,000 | 仅 Standard 端点     |
+| `qwen/qwen3.6-plus`        | 文本、图像  | 1,000,000 | Coding Plan + Standard  |
+| `qwen/qwen3.7-max`          | 文本        | 1,000,000 | 仅 Standard 端点     |
+| `qwen/qwen3.7-plus`         | 文本、图像  | 1,000,000 | Coding Plan + Standard  |
+| `qwen/qwen3-max-2026-01-23` | 文本        | 262,144   | Qwen Max 系列        |
+| `qwen/qwen3-coder-next`     | 文本        | 262,144   | Coding               |
+| `qwen/qwen3-coder-plus`     | 文本        | 1,000,000 | Coding               |
+| `qwen/MiniMax-M2.5`         | 文本        | 1,000,000 | 支持推理             |
+| `qwen/glm-5`                | 文本        | 202,752   | GLM                  |
+| `qwen/glm-4.7`              | 文本        | 202,752   | GLM                  |
+| `qwen/kimi-k2.5`            | 文本、图像  | 262,144   | 由阿里巴巴提供的 Moonshot AI |
 
 <Note>
 即使某个模型存在于静态目录中，可用性仍可能因端点和计费计划而异。
 </Note>
 
-### Token Plan 目录
+### 令牌计划目录
 
-Token Plan uses a separate exact-string allowlist. The built-in catalog shows
-Alibaba's currently recommended plan models and keeps the newer Qwen3-Coder
-compatibility tier selectable but hidden. Other allowlisted model IDs remain
-available as custom model refs. Image-generation-only plan models are not
-included here because they use different APIs.
+令牌计划使用单独的精确字符串允许列表。内置目录展示阿里巴巴当前推荐的计划模型，并保留较新的 Qwen3-Coder 兼容性层以供选择，但将其隐藏。其他列入允许列表的模型 ID 仍可作为自定义模型引用使用。仅用于图像生成的计划模型未包含在此处，因为它们使用不同的 API。
 
-| Model ref                          | Input       | Context   | Picker status |
-| ---------------------------------- | ----------- | --------- | ------------- |
-| `qwen-token-plan/qwen3.7-plus`     | text, image | 1,000,000 | visible       |
-| `qwen-token-plan/qwen3.6-plus`     | text, image | 1,000,000 | visible       |
-| `qwen-token-plan/qwen3-coder-next` | text        | 262,144   | hidden        |
-| `qwen-token-plan/kimi-k2.5`        | text, image | 262,144   | visible       |
-| `qwen-token-plan/glm-5`            | text        | 202,752   | visible       |
-| `qwen-token-plan/MiniMax-M2.5`     | text        | 196,608   | visible       |
+| 模型引用                         | 输入        | 上下文    | 选择器状态 |
+| -------------------------------- | ----------- | --------- | ---------- |
+| `qwen-token-plan/qwen3.7-plus`     | 文本、图像  | 1,000,000 | 可见       |
+| `qwen-token-plan/qwen3.6-plus`     | 文本、图像  | 1,000,000 | 可见       |
+| `qwen-token-plan/qwen3-coder-next` | 文本        | 262,144   | 隐藏       |
+| `qwen-token-plan/kimi-k2.5`        | 文本、图像  | 262,144   | 可见       |
+| `qwen-token-plan/glm-5`            | 文本        | 202,752   | 可见       |
+| `qwen-token-plan/MiniMax-M2.5`     | 文本        | 196,608   | 可见       |
 
 ## 思考控制
 
@@ -260,8 +255,8 @@ Token Plan 模型也被标记为具备推理能力。`kimi-k2.7-code` 和
 `qwen` 插件仅在 **Standard** DashScope
 端点上公开多模态能力，不支持 Coding Plan 端点：
 
-- **Image and video understanding** via `qwen3.6-plus`
-- **Wan video generation** via `wan2.6-t2v` (default), `wan2.6-i2v`, `wan2.6-r2v`, `wan2.6-r2v-flash`, `wan2.7-r2v`
+- 通过 `qwen3.6-plus` 进行**图像和视频理解**
+- 通过 `wan2.6-t2v`（默认）、`wan2.6-i2v`、`wan2.6-r2v`、`wan2.6-r2v-flash`、`wan2.7-r2v` 进行**Wan 视频生成**
 
 媒体理解会根据已配置的 Qwen 认证信息自动解析；无需额外
 配置。请确保你使用的是 Standard（按量付费）端点，以便媒体理解正常工作。
@@ -278,12 +273,18 @@ Token Plan 模型也被标记为具备推理能力。`kimi-k2.7-code` 和
 }
 ```
 
-视频生成限制：每次请求最多输出 1 个视频，最多 1 张输入图片
-（图生视频）、最多 4 个输入视频（视频转视频），时长最多 10 秒。
-支持 `size`、`aspectRatio`、`resolution`、`audio` 和
-`watermark`。参考图片/视频输入需要远程 http(s) URL；本地
-文件路径会在前置阶段直接被拒绝，因为 DashScope 视频端点不接受
-为这些引用上传本地缓冲区。
+每个 Wan 模型仅声明与其匹配的运行模式：
+
+| 模式                         | 模型                             | 参考输入限制                         | 最大时长 | 支持的控制参数                                                   |
+| ---------------------------- | -------------------------------- | ------------------------------------- | ------------ | -------------------------------------------------------------------- |
+| 文生视频                     | `wan2.6-t2v`                     | 不适用                               | 15 秒         | `size`、`aspectRatio`、`resolution`、`audio`、`watermark`            |
+| 图生视频                     | `wan2.6-i2v`                     | 1 张图像                             | 15 秒         | `resolution`、`audio`、`watermark`                                   |
+| 参考生视频（Wan 2.6）        | `wan2.6-r2v`、`wan2.6-r2v-flash` | 总计 5 个图像/视频；最多 3 个视频    | 10 秒         | `size`、`aspectRatio`、`resolution`、`audio`、`watermark`            |
+| 参考生视频（Wan 2.7）        | `wan2.7-r2v`                     | 总计 5 个图像/视频；最多 3 个视频    | 10 秒         | `size`、`aspectRatio`、`resolution`、`watermark`；音频始终开启 |
+
+Wan 2.6 文生视频和参考生视频模型会将 `resolution` 与 `aspectRatio` 转换为文档中规定的精确 `size`。Wan 2.6 图生视频会发送 `resolution` 档位，并使用输入图像的宽高比。Wan 2.7 参考生视频会发送 `media`、`resolution` 和 `ratio`，并始终生成音频。
+
+参考图像/视频输入要求使用远程 http(s) URL；本地文件路径会被预先拒绝，因为 DashScope 视频端点不接受这些参考输入的本地上传缓冲区。
 
 <Note>
 参见 [视频生成](/tools/video-generation)，了解共享工具参数、提供商选择和故障转移行为。

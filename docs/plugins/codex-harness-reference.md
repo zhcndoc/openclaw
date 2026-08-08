@@ -43,10 +43,10 @@ read_when:
 | `discovery`                | 已启用                  | Codex app-server `model/list` 的模型发现设置。                                                                                               |
 | `appServer`                | 托管的 stdio app-server | 传输、命令、认证、审批、沙箱和超时设置。普通 harness 默认使用 agent 作用域状态。                                                             |
 | `codexDynamicToolsLoading` | `"searchable"`           | 使用 `"direct"` 可将 OpenClaw 动态工具直接放入初始 Codex 工具上下文中。                                                                      |
-| `codexDynamicToolsExclude` | `[]`                     | 从 Codex app-server 轮次中排除的额外 OpenClaw 动态工具名称。                                                                                 |
+| `codexDynamicToolsExclude` | `[]`                     | 从 Codex app-server 轮次中排除的其他 OpenClaw 动态工具名称。                                                                                 |
 | `codexPlugins`             | 已禁用                   | 原生 Codex 插件/app 支持，包括对已连接账户应用的可选访问。参见 [原生 Codex 插件](/plugins/codex-native-plugins)。                              |
 | `computerUse`              | 已禁用                   | Codex Computer Use 配置。参见 [Codex Computer Use](/plugins/codex-computer-use)。                                                          |
-| `sessionCatalog`           | 已启用                   | 侧边栏的原生 Codex 会话发现。设置 `enabled: false` 可在不禁用 provider 或 harness 的情况下关闭发现。                                           |
+| `sessionCatalog`           | 已启用                   | 侧边栏中的原生 Codex 会话发现。设置 `enabled: false` 可在不禁用 provider 或 harness 的情况下关闭发现。                                           |
 | `supervision`              | 已禁用                   | 面向 agent 的原生会话转录和写入控制策略。参见 [Codex supervision](/plugins/codex-supervision)。                                               |
 
 ## 监管
@@ -83,13 +83,13 @@ read_when:
 
 | 字段           | 适用于        | 含义                                                          |
 | -------------- | ------------- | ------------------------------------------------------------- |
-| `id`           | all           | 稳定的端点 id。                                                 |
+| `id`            | all           | 稳定的端点 id。                                                 |
 | `label`        | all           | 可选显示标签。                                                 |
 | `transport`    | all           | `"stdio-proxy"` 或 `"websocket"`。                              |
 | `command`      | `stdio-proxy` | 可选的 App Server 命令。                                       |
-| `args`         | `stdio-proxy` | 可选的命令参数。                                               |
+| `args`          | `stdio-proxy` | 可选的命令参数。                                               |
 | `cwd`          | `stdio-proxy` | 可选的子进程工作目录。                                         |
-| `url`          | `websocket`   | 必需的 WebSocket 或受支持的本地 socket URL。                   |
+| `url`           | `websocket`   | 必需的 WebSocket 或受支持的本地 socket URL。                   |
 | `authTokenEnv` | `websocket`   | 可选的环境变量，其值用于认证该端点。                            |
 
 **Codex 会话**页面使用插件的监管 App Server，并且只显示未归档会话。若没有显式的 `appServer` 连接设置，该连接会由托管的 user-home stdio 管理。存储的或空闲的本地行可以通过最后一个终端持久化的来源回合，创建一个带有受限用户和助手历史的模型锁定 Chat。其私有绑定会保留快照 fork、规范的 `appServer`-source 分支、历史注入以及该连接上的后续回合。第一次规范启动会使用 fork 返回的配对。之后的恢复会省略 OpenClaw 模型和提供方覆盖，以便 Codex 恢复规范线程中持久化的配对；单独的原生更改可以更新该配对，但外部模型和回退链绝不会替换它。存储的和空闲的行在经过无其他运行器确认后可以归档，除非另一个活跃的 OpenClaw 绑定拥有确切目标或其未归档的已生成后代之一。OpenClaw 遵循 Codex 的后代分页，并在枚举错误、循环或安全限制耗尽时失败关闭。确认仍然涵盖未知的原生客户端以及从状态到归档的竞态。受监管的模型锁定 Chat 在保护原生绑定时无法被删除。活跃来源不能创建分支或被归档，但现有的受监管 Chat 仍然可以打开。每一条配对节点行都保持只读；节点传输目前尚未提供 harness 所需的流式生命周期。
@@ -100,7 +100,8 @@ read_when:
 
 ## App-server 传输
 
-对于普通 harness turn，OpenClaw 会启动官方插件随附的受管理 Codex 二进制文件（当前为 `@openai/codex` `0.146.0`）：
+对于普通 harness turn，OpenClaw 会启动官方插件随附的受管理 Codex 二进制文件（当前为
+`@openai/codex` `0.146.1`）：
 
 ```bash
 codex app-server --listen stdio://
@@ -194,7 +195,7 @@ export default {
 
 如果正常的 app-server 运行时本应是 `danger-full-access`，启用 `networkProxy` 会改为为生成的权限配置文件使用工作区风格的文件系统访问。Codex 管理的网络强制执行是经过沙箱化的网络，因此 full-access 配置文件不会保护出站流量。
 
-该插件严格接受稳定版 Codex app-server `0.146.0`。更早或更新的版本、预发布版本、带构建后缀的版本以及未提供版本号的 app-server 握手都会被拒绝。同样的精确版本要求也适用于显式自定义可执行文件、远程 app-server 和 macOS 桌面二进制文件。
+该插件仅接受稳定版 Codex app-server `0.146.1`。旧版或新版、预发布版、带构建后缀的版本以及未提供版本号的 app-server 握手都会被拒绝。同样的精确版本要求也适用于显式指定的自定义可执行文件、远程 app-server 和 macOS 桌面二进制文件。
 
 OpenClaw 将非回环 WebSocket app-server URL 视为远程连接，并要求通过 `appServer.authToken` 或 `Authorization` 标头提供包含身份信息的 WebSocket 身份验证。`appServer.authToken` 和每个 `appServer.headers.*` 值都可以是 SecretInput；在 OpenClaw 构建 app-server 启动选项前，机密运行时会解析 SecretRef 和环境变量简写，未解析的结构化 SecretRef 会在发送任何令牌或标头前失败。
 
@@ -208,7 +209,7 @@ Codex 应用的默认拒绝策略按 thread 评估，因此显式允许的应用
 
 使用 `allow_all_plugins` 时，显式禁用的已配置工作区插件仍会拒绝其拥有的应用。当 `app/read` 未公开该所有权时，OpenClaw 会使用其 `plugin/installed` 快照，并仅读取完全匹配的已配置插件详情，以保留被拒绝的应用 ID。它不会扫描无关的市场，也不会安装、启用或验证被禁用的插件；缺失所有权会安全失败。
 
-OpenClaw 只能连接到受信任的 `0.146.0` 远程 app-server，并确保其接受已配置的市场插件安装和清单刷新。缺失现代清单方法，以及服务器、身份验证或传输失败，都会安全失败。
+仅将 OpenClaw 连接到受信任的 `0.146.1` 远程 app-server，并确保其能够接受已配置的市场插件安装和清单刷新。缺失现代清单方法，以及服务器、身份验证或传输故障，都会以故障关闭方式处理。
 
 ## 审批和沙箱模式
 
@@ -265,10 +266,7 @@ Ubuntu/AppArmor 主机上表现为 `bwrap: setting up uid map: Permission denied
 
 ## 沙箱化原生执行
 
-稳定默认行为是故障关闭：启用活动 OpenClaw 沙箱后，将禁用原本会在 Codex app-server
-主机上运行的原生 Codex 执行入口。仅当你希望尝试使用 OpenClaw 沙箱后端支持的 Codex
-远程环境时，才使用 `appServer.experimental.sandboxExecServer: true`。
-此预览路径使用固定版本的 Codex `0.146.0` app-server。
+稳定默认行为是故障关闭：启用 OpenClaw 沙箱后，会禁用原本会从 Codex app-server 主机运行的原生 Codex 执行接口。只有当你希望尝试 Codex 的远程环境支持与 OpenClaw 沙箱后端时，才使用 `appServer.experimental.sandboxExecServer: true`。此预览路径使用固定版本的 Codex `0.146.1` app-server。
 
 ```json5
 {
@@ -485,7 +483,8 @@ Codex 特定的超时文本：可重放安全的情况会说明响应可能不�
 离线提示永远不能证明账户拥有相应权限。即使经过身份验证的发现响应中没有可见模型，它仍然具有权威性；HTTP `401` 和 `403` 会返回空目录，而不会暴露备用模型。
 
 <Note>
-当前捆绑的 harness 是 `@openai/codex` `0.146.0`。针对官方 `0.146.0` app-server 的实时 `model/list` 探测返回了以下公开选择器条目：
+当前捆绑的 harness 是 `@openai/codex` `0.146.1`。针对官方 `0.146.1` app-server 的实时 `model/list`
+探测返回了以下公开选择器条目：
 
 | 模型 ID        | 输入模态 | 推理能力                    |
 | --------------- | -------- | --------------------------- |
@@ -579,4 +578,4 @@ OpenClaw 不会为 persona 文件编写合成的 Codex 项目文档文件，也�
 - [原生 Codex 插件](/plugins/codex-native-plugins)
 - [Codex 计算机使用](/plugins/codex-computer-use)
 - [OpenAI 提供商](/providers/openai)
-- [配置参考](/gateway/configuration-reference)
+- [配置参考](/gateway/configuration-reference)。

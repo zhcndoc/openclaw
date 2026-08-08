@@ -33,6 +33,7 @@ openclaw config get browser.executablePath
 openclaw config set browser.executablePath "/usr/bin/google-chrome"
 openclaw config set browser.profiles.work.executablePath "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 openclaw config set agents.defaults.heartbeat.every "2h"
+openclaw config set logging.audit.executionIdentity true
 openclaw config set 'agents.entries.main.tools.exec.node' "node-id-or-name"
 openclaw config set agents.defaults.models '{"openai/gpt-5.4":{}}' --strict-json --merge
 openclaw config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN
@@ -227,7 +228,6 @@ Provider 构建器目标必须使用 `secrets.providers.<alias>` 作为路径。
     - `--provider-path <path>`（必需）
     - `--provider-mode <singleValue|json>`
     - `--provider-max-bytes <bytes>`
-    - `--provider-allow-insecure-path`
 
   </Accordion>
   <Accordion title="执行 provider（--provider-source exec）">
@@ -236,11 +236,9 @@ Provider 构建器目标必须使用 `secrets.providers.<alias>` 作为路径。
     - `--provider-no-output-timeout-ms <ms>`
     - `--provider-max-output-bytes <bytes>`
     - `--provider-json-only`
-    - `--provider-env <KEY=VALUE>`（可重复）
-    - `--provider-pass-env <ENV_VAR>`（可重复）
-    - `--provider-trusted-dir <path>`（可重复）
-    - `--provider-allow-insecure-path`
-    - `--provider-allow-symlink-command`
+    - `--provider-env <KEY=VALUE>` (repeatable)
+    - `--provider-pass-env <ENV_VAR>` (repeatable)
+    - `--provider-trusted-dir <path>` (repeatable)
 
   </Accordion>
 </AccordionGroup>

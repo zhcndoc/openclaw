@@ -93,15 +93,7 @@ openclaw browser --browser-profile openclaw snapshot
 
 当插件启用时，插件捆绑的技能会列在代理可用的技能中。完整的技能说明按需加载，因此常规轮次不会消耗全部 token 成本。
 
-对于“读取此页面并回答 X”，请使用 browser 的 `action="extract"` 并提供
-`query`。它通过一次模型调用发送经过清理、受限的可读文本，
-并且只返回答案；`snapshot` 则用于选择操作和获取引用。提取
-需要支持 Playwright 的配置文件，如果无法完成，则会回退到快照工作流。
-
-在大型页面上，传入 `selector` 仅捕获相关的 CSS 子树，并传入
-`ignoreSelectors` 在转换前移除重复的界面部分。当调用方需要在
-`details.json` 中获得经过验证、可供机器使用的字段时，传入 JSON
-`schema`；如果没有它，提取结果仍然只是自由文本答案。
+对于页面文本，请使用限定于选择器范围的快照，或使用仅返回相关文本或结构化数据的 `act:evaluate`，然后让当前代理模型基于这一受限结果进行推理。请使用高效的快照来发现控件和操作；它们会有意省略大部分不可交互的正文内容。
 
 ## 缺少浏览器命令或工具
 
@@ -387,7 +379,7 @@ CDP WebSocket 时都会保留认证信息。请优先使用环境变量或机密
 - 如果你设置了 `nodeHost.browserProxy.allowProfiles`，OpenClaw 会将其视为最小权限边界，仅限制代理可目标指向的配置文件名称。
 - 如果你不想启用它，可以禁用：
   - 在节点上：`nodeHost.browserProxy.enabled=false`
-  - 在网关上：`gateway.nodes.browser.mode="off"`（也接受 `"auto"`，用于选择单个已连接的浏览器节点，或 `"manual"`，用于要求显式的节点参数）
+  - 在网关上：`gateway.nodes.browser.mode="off"`（也接受 `"auto"`，用于选择单个已连接的浏览器节点，或 `"manual"`，用于要求显式的节点参数）】【。
 
 ## Browserless（托管远程 CDP）
 

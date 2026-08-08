@@ -140,9 +140,10 @@ title: "常见问题"
   <Accordion title="如何为不同任务使用不同的模型或设置？">
     支持的模式：
 
-    - **Cron 任务**：隔离任务可以为每个任务设置一个 `model` 覆盖。
-    - **智能体**：将任务路由到不同的智能体，并为其设置不同的默认模型、思考级别和流式参数。
-    - **按需切换**：`/model` 可在任何时候切换当前会话模型。
+    - **Cron 任务**：隔离任务可以为每个任务设置 `model` 覆盖。
+    - **智能体**：将任务路由到不同的智能体，每个智能体可以拥有不同的默认模型、思考级别和流式传输参数。
+    - **已配置的默认值 + 当前会话**：直接所有者/管理员使用 `/model <model>` 会更改当前会话，并尽力更新已配置的默认值。如果智能体没有显式的主要模型，目标就是共享的 `agents.defaults.model` 回退值。
+    - **仅当前会话**：`/model <model> -s`（或 `--session`）只更改当前会话，不修改已配置的默认值。
 
     示例 - 同一个模型，不同的按智能体设置：
 
@@ -946,7 +947,7 @@ title: "常见问题"
     - 来自当前工作目录的 `.env`。
     - 来自 `~/.openclaw/.env`（`$OPENCLAW_STATE_DIR/.env`）的全局兜底 `.env`。
 
-    这两个 `.env` 文件都不会覆盖已存在的环境变量。提供商凭据和端点路由键对工作区 `.env` 是例外：像 `GEMINI_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY`，或任何以 `_ENDPOINT` 结尾的键（以及其他捆绑提供商的认证或端点环境变量）都会被工作区 `.env` 忽略，应该放在进程环境、`~/.openclaw/.env` 或配置 `env` 中。
+    通常，这两个 `.env` 文件都不会覆盖已有的环境变量。对于通过 OpenClaw 安装的 systemd 服务，全局 `.env` 只能替换 OpenClaw 记录为托管的服务值；操作员自行设置的服务值仍然优先。对于工作区 `.env`，提供商凭据和端点路由键是例外：`GEMINI_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY` 或任何以 `_ENDPOINT` 结尾的键（以及其他内置提供商的身份验证或端点环境变量）会被忽略，这些变量应放在进程环境、`~/.openclaw/.env` 或配置中的 `env` 内。
 
     配置中的内联环境变量仅在进程环境中缺失时才会生效：
 
@@ -1564,7 +1565,7 @@ title: "常见问题"
 
 <AccordionGroup>
   <Accordion title="我如何阻止内部系统消息显示在聊天中？">
-    大多数内部/工具消息仅在该会话启用 **verbose**、**trace** 或 **reasoning** 时才会显示。
+    大多数内部/工具消息仅在该会话启用 **详细输出**、**追踪** 或 **推理** 时才会显示。
 
     在你看到它的聊天中修复：
 
@@ -1574,9 +1575,9 @@ title: "常见问题"
     /reasoning off
     ```
 
-    如果仍然很吵：检查 Control UI 中的会话设置，将 verbose 设为 **inherit**；确认你没有在配置中使用带有 `verboseDefault: "on"` 的 bot profile。
+    如果仍然很吵：检查 Control UI 中的会话设置，将 verbose 设为 **继承**；确认你没有在配置中使用带有 `verboseDefault: "on"` 的 bot profile。
 
-    文档：[Thinking and verbose](/tools/thinking)，[Security](/gateway/security/index#reasoning-and-verbose-output-in-groups)。
+    文档：[思考与详细输出](/tools/thinking)，[安全](/gateway/security/index#reasoning-and-verbose-output-in-groups)。
 
   </Accordion>
 
@@ -1589,11 +1590,11 @@ title: "常见问题"
     process action:kill sessionId:XXX
     ```
 
-    大多数斜杠命令必须作为以 `/` 开头的**独立**消息发送，但少数快捷方式（例如 `/status`）也可以由允许名单中的发送者以内联方式使用。请参阅 [Slash commands](/tools/slash-commands)。
+    大多数斜杠命令必须作为以 `/` 开头的**独立**消息发送，但少数快捷方式（例如 `/status`）也可以由允许名单中的发送者以内联方式使用。请参阅 [斜杠命令](/tools/slash-commands)。
 
   </Accordion>
 
-  <Accordion title='我如何从 Telegram 向 Discord 发送消息？（"Cross-context messaging denied"）'>
+  <Accordion title='我如何从 Telegram 向 Discord 发送消息？（“跨上下文消息传递被拒绝”）'>
     OpenClaw 默认会阻止**跨提供方**消息传递。如果某个工具调用绑定到 Telegram，除非你明确允许，否则它不会发送到 Discord——而且这一更改会立即生效，无需重启网关：
 
     ```json5
@@ -1619,7 +1620,7 @@ title: "常见问题"
     - `collect` - 将兼容消息排队，并在当前运行结束后只回复一次。
     - `interrupt` - 中止当前运行并重新开始。
 
-    可为排队模式添加选项，例如 `debounce:0.5s cap:25 drop:summarize`。请参阅 [Command queue](/concepts/queue) 和 [Steering queue](/concepts/queue-steering)。
+    可为排队模式添加选项，例如 `debounce:0.5s cap:25 drop:summarize`。请参阅 [命令队列](/concepts/queue) 和 [引导队列](/concepts/queue-steering)。
 
   </Accordion>
 </AccordionGroup>

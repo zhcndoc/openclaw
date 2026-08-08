@@ -7,16 +7,16 @@ read_when:
 title: "环境变量"
 ---
 
-OpenClaw 从多个来源加载环境变量。规则是**绝不覆盖现有值**。
-工作区 `.env` 文件属于低信任来源：OpenClaw 在应用优先级规则前，会忽略工作区 `.env` 中的提供商凭据和受保护的运行时控制项。
+OpenClaw 从多个来源加载环境变量。通常的规则是**绝不覆盖现有值**。对于通过 OpenClaw 安装的 systemd 服务，全局 `.env` 只能替换 OpenClaw 记录为由其管理的服务值；由操作员自行设置的服务值仍然具有更高优先级。
+工作区 `.env` 文件属于较低信任级别的来源：OpenClaw 会在应用优先级顺序之前，忽略工作区 `.env` 中的提供商凭据和受保护的运行时控制项。
 
 ## 优先级（从高到低）
 
-1. **进程环境**（Gateway 进程从父 shell/daemon 继承的内容）。
-2. **当前工作目录中的 `.env`**（dotenv 默认行为；不会覆盖；会忽略提供商凭据和受保护的运行时控制键）。
-3. **全局 `.env`**：`~/.openclaw/.env`（即 `$OPENCLAW_STATE_DIR/.env`；建议用于提供商 API 密钥；不会覆盖）。
-4. **`~/.openclaw/openclaw.json` 中的 `env` 块**（仅在缺失时应用）。
-5. **可选的登录 shell 导入**（`env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1`），仅应用于缺失的期望键。
+1. **进程环境**（Gateway 进程已经从父 shell/守护进程获得的环境）。
+2. **当前工作目录中的 `.env`**（dotenv 默认行为；不会覆盖现有值；提供商凭据和受保护的运行时控制项会被忽略）。
+3. **全局 `.env`**，位于 `~/.openclaw/.env`（即 `$OPENCLAW_STATE_DIR/.env`；推荐用于提供商 API 密钥；除已记录的 OpenClaw 管理的 systemd 服务值外，不会覆盖现有值）。
+4. **`~/.openclaw/openclaw.json` 中的配置 `env` 块**（仅在变量缺失时应用）。
+5. **可选的登录 shell 导入**（`env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1`），仅用于填充缺失的预期变量。
 
 在使用默认状态目录的全新 Ubuntu 安装中，OpenClaw 还会在全局 `.env` 之后使用 `~/.config/openclaw/gateway.env` 作为兼容性回退。如果两个文件都存在且内容不同，OpenClaw 会保留 `~/.openclaw/.env` 并打印警告。
 
@@ -223,7 +223,7 @@ OpenClaw 支持两种基于环境变量的模式：
 | `OPENCLAW_CONFIG_PATH`   | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                                                                                    |
 | `OPENCLAW_INCLUDE_ROOTS` | 可供 `$include` 指令解析配置目录之外文件的一组目录路径（默认：无——`$include` 仅限于配置目录）。支持波浪号展开。                                                         |
 
-## Agent 辅助工具下载
+## 代理辅助工具下载
 
 设置 `OPENCLAW_OFFLINE=1` 可阻止 OpenClaw 下载其固定版本的 `fd`
 和 `ripgrep` 辅助二进制文件。OpenClaw 工具目录下现有的辅助工具以及可用的系统二进制文件仍然符合使用条件；缺失的辅助工具将保持不可用，而不会触发网络请求。

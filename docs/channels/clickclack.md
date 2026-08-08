@@ -12,7 +12,7 @@ ClickClack 通过一等公民的 ClickClack bot token 将 OpenClaw 连接到一�
 
 ## 快速设置
 
-在 ClickClack 中，打开 **Workspace settings → Integrations → OpenClaw**，使用 **Setup code (recommended)** 创建一个机器人，并复制生成的命令：
+在 ClickClack 中，打开 **工作区设置 → 集成 → OpenClaw**，使用 **设置代码（推荐）** 创建一个机器人，并复制生成的命令：
 
 ```bash
 openclaw channels add clickclack --code 'https://clickclack.example.com/#XXXX-XXXX-XXXX'
@@ -50,13 +50,13 @@ openclaw onboard
 
 ### 其他方式：手动令牌
 
-在配置非 OpenClaw 客户端时，或当你明确需要自行管理令牌时，在 ClickClack 中选择 **Manual token**：
+在配置非 OpenClaw 客户端时，或当你明确需要自行管理令牌时，在 ClickClack 中选择 **手动令牌**：
 
 ```bash
 openclaw channels add clickclack --base-url https://clickclack.example.com --token ccb_... --workspace default
 ```
 
-`workspace` 接受工作区 id（`wsp_...`）、slug 或显示名称。
+`workspace` 接受工作区 id（`wsp_...`）、slug 或显示名称。  
 `--code` 不能与 `--token`、`--token-file` 或 `--use-env` 组合使用。
 
 ### 其他方式：基于环境变量的令牌
@@ -108,15 +108,15 @@ openclaw gateway
 | `toolsAllow`             | 无                  | 此账号智能体回复所允许使用的工具列表。                                                                                  |
 | `model`、`systemPrompt`  | 无                  | 用于 `replyMode: "model"` 补全。                                                                                        |
 | `commandMenu`            | `true`              | 将原生命令发布到 ClickClack 编辑器的自动补全中。                                                                       |
-| `reconnectMs`             | `1500`              | 实时连接重连延迟（100 至 60000）。                                                                                      |
+| `reconnectMs`            | `1500`              | 实时连接重连延迟（100 至 60000）。                                                                                      |
 | `discussions`             | 已禁用              | 按会话管理的频道设置；请参阅[会话讨论](#session-discussions)。                                                         |
 | `requireMention`          | `false`             | 要求直接提及后才分派群组消息。请参阅[群组提及门控](#group-mention-gating)。                                             |
 | `mentionPatterns`         | `[]`                | 此账号在群组频道中的提及模式。请参阅[群组提及门控](#group-mention-gating)。                                            |
 | `groups`                  | `{}`                | 按 ClickClack 频道 ID 设置的频道级群组策略覆盖项。请参阅[群组提及门控](#group-mention-gating)。                        |
 
-### 保持一个受 auth 保护的公共主机名
+### 保持一个受身份验证保护的公共主机名
 
-当 ClickClack 和 OpenClaw 网关运行在同一主机上，但公共的 ClickClack 主机名受某个认证网关保护时，例如 Cloudflare Access，请使用 `apiBaseUrl`：
+当 ClickClack 和 OpenClaw 网关运行在同一主机上，但公共的 ClickClack 主机名受某个身份验证网关保护时，例如 Cloudflare Access，请使用 `apiBaseUrl`：
 
 ```json5
 {
@@ -131,9 +131,9 @@ openclaw gateway
 }
 ```
 
-公共主机名可以继续完全对浏览器用户启用 auth gate。OpenClaw 会对 REST 请求、设置验证以及实时 WebSocket 使用回环端点，而讨论中的 `embedUrl` 和 `openUrl` 链接仍然使用公共的 `baseUrl`。如果省略 `apiBaseUrl`，所有流量都会使用 `baseUrl`，从而保留现有行为。
+公共主机名可以继续完全对浏览器用户启用身份验证门控。OpenClaw 会对 REST 请求、设置验证以及实时 WebSocket 使用回环端点，而讨论中的 `embedUrl` 和 `openUrl` 链接仍然使用公共的 `baseUrl`。如果省略 `apiBaseUrl`，所有流量都会使用 `baseUrl`，从而保留现有行为。
 
-如果 `plugins.allow` 是一个非空的限制性列表，那么在 channel 设置中显式选择 ClickClack，或运行 `openclaw plugins enable clickclack`，都会将 `clickclack` 追加到该列表中。Onboarding 安装使用相同的显式选择行为。这些路径不会覆盖 `plugins.deny` 或全局的 `plugins.enabled: false` 设置。直接执行 `openclaw plugins install @openclaw/clickclack` 会遵循正常的插件安装策略，并且也会将 ClickClack 记录到现有的 allowlist 中。
+如果 `plugins.allow` 是一个非空的限制性列表，那么在频道设置中显式选择 ClickClack，或运行 `openclaw plugins enable clickclack`，都会将 `clickclack` 追加到该列表中。引导式设置安装使用相同的显式选择行为。这些路径不会覆盖 `plugins.deny` 或全局的 `plugins.enabled: false` 设置。直接执行 `openclaw plugins install @openclaw/clickclack` 会遵循正常的插件安装策略，并且也会将 ClickClack 记录到现有的允许列表中。
 
 ## 多个机器人
 
@@ -195,17 +195,15 @@ openclaw gateway
 
 仅在一个 ClickClack 账户上启用讨论。gateway provider 没有账户选择器，因此如果启用了多个讨论账户，会被拒绝，而不是按配置顺序选择其中一个。
 
-打开讨论会创建一个公开的 ClickClack 频道，并标记为外部管理。插件会同步会话标签、分类和归档状态。恢复会话会恢复其频道；清除会话分类会将频道移回配置的默认分区。删除一个
-OpenClaw 会话时，会归档 ClickClack 频道而不是删除它，因此其历史仍可访问。插件在使用讨论 RPC 时以及在存在任何绑定时大约每分钟进行一次绑定协调。
+打开讨论会创建一个公开的 ClickClack 频道，并将其标记为由外部管理。插件会使会话标签和类别保持同步，但频道生命周期仍然独立。清除会话类别会将频道移回配置的默认分区。归档、重置或删除 OpenClaw 会话，永远不会归档或替换 ClickClack 频道。ClickClack 独立负责频道的归档和恢复。使用讨论 RPC 时，插件会协调绑定；只要存在任何绑定，插件还会大约每分钟进行一次协调。
 
-受管频道中的入站消息会在与附加主会话相同的 agent id 下使用一个确定性的侧会话。侧 agent 会被告知要观察哪个主会话，并且可以使用 `sessions_history` 和 `session_status`
-（`changesSince` 对增量检查很有用）。只有当讨论中的人要求它转达或引导主会话时，它才会使用 `sessions_send`。
-绑定、受管所有权引用以及侧会话对等身份都包含具体的 OpenClaw 会话 id，以及固定的 ClickClack 服务器和频道。重置可复用会话 key 或重新指向账户会撤销本地旧频道；如果旧凭据仍可用，则会将其归档，并且不能复用其侧边转录。通过已归档、已重置、已禁用或已重新指向的绑定到达的消息会被丢弃，而不会回退到账户的普通频道路由。已释放的绑定会留下持久的已撤销频道标记，因此延迟的实时事件仍会以 fail-closed 方式处理。远程所有权按 ClickClack 服务器和频道 id 进行键控，因此重命名本地账户不会把受管频道变成普通频道。
+受管理频道中的入站消息会使用一个与所附加主会话具有相同 agent id 的确定性侧会话。系统会告知该侧 agent 应观察哪个主会话；它可以使用 `sessions_history` 和 `session_status`（`changesSince` 对增量检查很有用）。只有当讨论中的人员要求它转发或控制主会话时，它才会使用 `sessions_send`。该绑定将持久的房间标识与可替换的会话附加关系分离开来。侧会话对等方身份和作用域授权中包含确切的具体 OpenClaw 会话 id，因此重置可复用的会话键会轮换附加关系，且无法重用旧的侧会话记录。ClickClack 频道 id、URL、历史记录和所有权引用保持不变。通过非活动、已禁用或已重新定向的附加关系到达的消息会被丢弃，而不会回退到账户的普通频道路由。释放的绑定会留下一个持久的已撤销频道标记，以便延迟到达的实时事件继续保持故障关闭。远程所有权由 ClickClack 服务器和频道 id 共同确定，因此重命名本地账户不会将受管理频道变成普通频道。
 
 将 `tools.sessions.visibility` 保持在更安全的默认值 `tree`。插件仅在每个侧会话与其附加主会话之间安装一个主机作用域的授权，并加上一个阻止会话发现和跨会话目标的工具策略钩子。它只允许 `sessions_history`、`session_status` 和 `sessions_send` 作用于附加主会话，并防止 status 调用更改该会话的模型。这些工具仍必须存在于 agent 的有效工具允许列表中。系统提示只是指导；主机授权和钩子才是授权边界。
 
-ClickClack 服务器必须在频道创建和更新时支持受管频道字段（`external_managed`、`external_ref`、`external_url` 和 `sidebar_section`），并在频道响应中返回它们。OpenClaw 会在持久化绑定前验证该契约。如果创建响应丢失，下一次打开会通过服务器强制的 `external_ref` 接管该频道，而不是再创建一个。在该结果尚未协调完成之前，挂起的预留会将原本未绑定的事件隔离到目标工作区中。粗粒度协调器会在同一会话仍然存活时接管该频道，或在重置后将其归档；如果没有创建远程频道，它会清除该预留。
-该引用包含一个持久的、每个 OpenClaw 安装唯一的命名空间，以及会话 key、具体会话 id、ClickClack 目标和持久绑定代际的哈希。不同 gateway 不能接管彼此的频道，重置的会话不能继承旧的频道历史，账户或工作区往返也不能重新接管之前的频道。绑定还会固定到配置的 ClickClack 服务器 URL，并且在账户被重新指向时失效。更改或移除 `controlUrlBase` 会在下一次协调过程中更新或清除受管频道链接。更改 `discussions.workspace` 时，会先归档并释放旧绑定，然后才能在新的工作区中打开频道，前提是旧工作区凭据仍在配置中。如果令牌已替换为无法访问旧工作区的工作区作用域凭据，OpenClaw 会将旧频道记录为已撤销，并在不尝试替换令牌的情况下释放绑定；请从 ClickClack 中归档那个残留频道。
+ClickClack 服务器必须在频道创建和更新时支持受管理频道字段（`external_managed`、`external_ref`、`external_url` 和 `sidebar_section`），并在频道响应中返回这些字段。OpenClaw 会在持久化绑定之前验证这一契约。如果创建响应丢失，下一次打开时会根据服务器强制设置的 `external_ref` 采用该频道，而不是再创建一个频道。在该结果完成协调之前，待处理的预留会隔离目标工作区中原本未绑定的事件。粗粒度协调器会在逻辑会话处于活动状态时采用该频道，包括其具体会话 id 发生变化之后；如果没有创建远程频道，则会清除预留。
+
+该引用包含一个持久的、按 OpenClaw 安装划分的命名空间，以及会话键、ClickClack 目标和持久绑定代数的哈希值。不同的 gateway 无法采用彼此的频道，而具体会话的重置会保留同一个频道。账户或工作区往返切换无法再次采用之前的频道。绑定还固定到配置的 ClickClack 服务器 URL；如果账户被重新定向，绑定将失效。更改或移除 `controlUrlBase` 后，下一次协调过程会更新或清除受管理频道链接。更改 `discussions.workspace` 时，会先释放旧的附加关系，然后才能在新工作区打开频道。旧房间永远不会被归档。如果令牌被替换为无法访问旧工作区的工作区作用域凭据，OpenClaw 会将旧频道记录为已撤销并释放绑定，而不会尝试使用替换后的令牌。
 
 附加的主会话还会收到一个仅拉取的 `discussion` 工具。它将最新消息和最近的线程回复以每条消息一个已转义、带归属的记录形式读取出来，并且没有写入或生命周期副作用。频道根和线程查找有固定的请求预算；结果会明确警告：这种安全边界可能会遗漏一个更早的活动线程。
 
@@ -280,9 +278,9 @@ ClickClack 服务器必须在频道创建和更新时支持受管频道字段（
 
 旧版服务器的通用 404 不被视为该发送不存在的证明。OpenClaw 会让传输保持未解决状态，而不是冒着重复发送的风险；在启用会产生媒体的代理回复之前，请先更新 ClickClack。
 
-## Agent 活动行
+## 原生进度和代理活动行
 
-默认情况下，当一个 agent 回合运行时，ClickClack 频道不会显示任何内容；只有最终回复会出现。将账户上的 `agentActivity` 设为 `true`，即可在回合进行中发布持久化的 `agent_commentary` 和 `agent_tool` 消息行：
+原生进度按账户选择启用。设置 `nativeProgress: true`，即可在代理回合运行期间显示短暂的 `<agent name> 正在响应` 状态和进度行。代理名称来自配置的账户名称、ClickClack 机器人句柄或代理 ID。这些内容使用临时的 `agent.progress` 事件，并会在回合结束时清除；只有最终回复会持久化。单独设置 `agentActivity: true`，即可在回合进行期间发布持久化的 `agent_commentary` 和 `agent_tool` 消息行：
 
 ```json5
 {
@@ -291,6 +289,7 @@ ClickClack 服务器必须在频道创建和更新时支持受管频道字段（
       enabled: true,
       token: { source: "env", provider: "default", id: "CLICKCLACK_BOT_TOKEN" },
       workspace: "default",
+      nativeProgress: true,
       agentActivity: true,
     },
   },
@@ -299,11 +298,13 @@ ClickClack 服务器必须在频道创建和更新时支持受管频道字段（
 
 要求和行为：
 
-- **默认关闭。** 现有配置和旧版 ClickClack 服务器不会受到影响。
-- **需要 `agent_activity:write` 令牌范围。** 该范围独立于 `bot:write`，且不会从中继承；在启用该选项之前，请使用 `--scopes bot:write,agent_activity:write` 创建机器人令牌（或向现有令牌授予该范围）。
-- **尽力降级。** 如果令牌缺少 `agent_activity:write`，或者服务器拒绝活动写入，会记录失败，但最终回复仍会正常送达；不会出现活动行。
-- 行按每个回合（`turn_id`）分组，并进行合并，使一个逻辑步骤对应一行；工具行使用与 Discord/Slack/Telegram 相同的进度格式（工具名称加命令详情）。
-- **归属元数据。** 由 agent 撰写的帖子（活动行和最终回复）会携带 `author_model` 和 `author_thinking` 字段，这些字段根据该回合实际使用的模型解析而来（包括回退后的情况）。未定义这些列的服务器会忽略未知的 JSON 字段；会持久化这些字段的服务器则可以按消息回答“这一行是谁用什么模型、在什么思考级别说的”。
+- **原生进度默认关闭。** 仅对支持临时实时端点的 ClickClack 部署设置 `nativeProgress: true`。
+- **持久化活动默认单独关闭。** 设置 `agentActivity: true` 可持久化活动行；这不会自动启用原生进度。
+- **原生进度采用尽力而为策略。** 进度发布使用临时实时端点和有界请求超时。失败或停滞的进度请求会被记录，并且不会阻塞最终文本的传递。
+- **持久化活动需要 `agent_activity:write` 令牌作用域。** 此作用域独立于 `bot:write`，不会由后者继承；启用 `agentActivity` 前，请使用 `--scopes bot:write,agent_activity:write` 创建机器人令牌。
+- **尽力而为的降级处理。** 如果令牌缺少 `agent_activity:write`，或服务器拒绝活动写入，失败会被记录，最终回复仍会正常传递；不会出现活动行。
+- 行会按回合（`turn_id`）分组，并进行合并，使一个逻辑步骤对应一行；工具行使用与 Discord/Slack/Telegram 相同的进度格式（工具名称加命令详情）。
+- **归属元数据。** 代理发布的内容（活动行和最终回复）会携带 `author_model` 和 `author_thinking` 字段，这些字段根据该回合实际使用的模型解析得出（包括发生回退之后）。未定义这些列的服务器会忽略未知的 JSON 字段；持久化这些字段的服务器则可以针对每条消息回答“这行内容由哪个模型、以哪个思考级别生成”。
 
 ## 群组提及门控
 
@@ -383,7 +384,7 @@ ClickClack token 作用域由 ClickClack API 强制执行。
 - `commands:write`：发布 bot 的命令菜单。已包含在当前的 `bot:write` 和 `bot:admin` 权限包中，也可单独授予。
 - `agent_activity:write`：持久化 agent activity 行（`agent_commentary` / `agent_tool`）。不会被 `bot:write` 或 `bot:admin` 继承；仅在设置 `agentActivity: true` 时需要。
 
-OpenClaw 仅需当前的 `bot:write` 即可用于正常的 agent 聊天和命令菜单同步。启用 [agent activity 行](#agent-activity-rows) 时，添加 `agent_activity:write`。
+OpenClaw 在正常的 agent 聊天和命令菜单同步中只需要当前的 `bot:write`。启用[原生进度和 agent activity 行](#native-progress-and-agent-activity-rows)时，请添加 `agent_activity:write`。
 
 ## 故障排查
 

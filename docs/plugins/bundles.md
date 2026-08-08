@@ -1,15 +1,16 @@
 ---
-summary: "将 Codex、Claude 和 Cursor bundle 作为 OpenClaw 插件安装并使用"
+summary: "将 Agent Plugins、Codex、Claude 和 Cursor 捆绑包安装并作为 OpenClaw 插件使用"
 read_when:
-  - 你想安装一个兼容 Codex、Claude 或 Cursor 的 bundle
-  - 你需要了解 OpenClaw 如何将 bundle 内容映射为原生功能
-  - 你正在排查 bundle 检测或缺失能力的问题
-title: "插件 bundles"
+  - 你想安装兼容 Agent Plugins、Codex、Claude 或 Cursor 的捆绑包
+  - 你需要了解 OpenClaw 如何将捆绑包内容映射为原生功能
+  - 你正在调试捆绑包检测或缺失的功能
+title: "插件捆绑包"
 ---
 
-OpenClaw 可以从三个外部生态系统安装插件：**Codex**、**Claude**，
-以及 **Cursor**。这些被称为 **bundles**——内容和元数据包，
-OpenClaw 会将其映射为技能、hooks 和 MCP 工具等原生功能。
+OpenClaw 可以从四个外部生态系统安装插件：与供应商无关的
+[**Agent Plugins**](https://agent-plugins.org) 标准，以及 **Codex**、
+**Claude** 和 **Cursor**。这些被称为**捆绑包**——OpenClaw 会将其中的内容和元数据
+包映射为技能、钩子和 MCP 工具等原生功能。
 
 <Info>
   Bundles **并不**等同于原生 OpenClaw 插件。原生插件在进程内运行，
@@ -19,9 +20,9 @@ OpenClaw 会将其映射为技能、hooks 和 MCP 工具等原生功能。
 
 ## 为什么存在 bundles
 
-许多实用的插件以 Codex、Claude 或 Cursor 格式发布。OpenClaw 不要求作者将它们重写为原生 OpenClaw 插件，而是会检测这些格式，并将其支持的内容映射到原生功能集。你可以安装一个 Claude 命令包或一个 Codex skill bundle，并立即使用它。
+许多实用的插件以 Agent Plugins、Codex、Claude 或 Cursor 格式发布。OpenClaw 无需作者将它们重写为原生 OpenClaw 插件，而是会识别这些格式，并将其中受支持的内容映射到原生功能集。你可以安装 Agent Plugins 软件包、Claude 命令包或 Codex 技能捆绑包，并立即使用。
 
-## 安装 bundle
+## 安装 Bundle
 
 <Steps>
   <Step title="从目录、压缩包或市场安装">
@@ -47,8 +48,8 @@ OpenClaw 会将其映射为技能、hooks 和 MCP 工具等原生功能。
     openclaw plugins inspect <id>
     ```
 
-    Bundle 会显示 `Format: bundle` 以及 `Bundle format:` 值为 `codex`、
-    `claude` 或 `cursor`。
+    Bundle 会显示 `Format: bundle`，以及值为
+    `agent (Agent Plugins)`、`codex`、`claude` 或 `cursor` 的 `Bundle format:`。
 
   </Step>
 
@@ -62,20 +63,21 @@ OpenClaw 会将其映射为技能、hooks 和 MCP 工具等原生功能。
   </Step>
 </Steps>
 
-## OpenClaw 从 bundles 中映射了什么
+## OpenClaw 从 bundle 中映射了什么
 
 并不是所有 bundle 功能今天都能在 OpenClaw 中运行。下面说明哪些可用，以及哪些已被检测到但尚未接通。
 
 ### 目前支持
 
-| 功能          | 映射方式                                                                                      | 适用范围       |
-| ------------- | --------------------------------------------------------------------------------------------- | -------------- |
-| Skill 内容    | Bundle skill roots 作为普通 OpenClaw skills 加载                                              | 所有格式       |
-| 命令          | `commands/` 和 `.cursor/commands/` 被视为 skill roots                                         | Claude, Cursor |
-| Hook packs    | OpenClaw 风格的 `HOOK.md` + `handler.ts` 布局                                                  | Codex          |
-| MCP 工具      | Bundle MCP 配置合并到嵌入式 OpenClaw 设置中；支持的 stdio 和 HTTP 服务器会被加载              | 所有格式       |
-| LSP 服务器   | Claude `.lsp.json` 和 manifest 中声明的 `lspServers` 合并到嵌入式 OpenClaw LSP 默认值中       | Claude         |
-| 设置          | Claude `settings.json` 导入为嵌入式 OpenClaw 默认值                                            | Claude         |
+| 功能          | 映射方式                                                                                          | 适用范围       |
+| ------------- | ------------------------------------------------------------------------------------------------- | -------------- |
+| Skill 内容    | Bundle skill roots 会作为普通 OpenClaw skill 加载                                                 | 所有格式       |
+| 命令          | `commands/` 和 `.cursor/commands/` 会被视为 skill roots                                              | Claude、Cursor |
+| Hook 包       | OpenClaw 风格的 `HOOK.md` + `handler.ts` 布局                                                     | Codex          |
+| MCP 工具      | Bundle MCP 配置会合并到嵌入式 OpenClaw 设置中；支持的 stdio 和 HTTP 服务器会被加载                 | 所有格式       |
+| 环境变量契约  | `PLUGIN_ROOT` 和 `PLUGIN_DATA` 环境变量，以及对 stdio MCP 服务器的占位符展开                       | Agent Plugins  |
+| LSP 服务器    | Claude `.lsp.json` 和 manifest 声明的 `lspServers` 会合并到嵌入式 OpenClaw LSP 默认值中             | Claude         |
+| 设置          | Claude `settings.json` 会作为嵌入式 OpenClaw 默认设置导入                                            | Claude         |
 
 #### Skill 内容
 
@@ -86,7 +88,7 @@ OpenClaw 会将其映射为技能、hooks 和 MCP 工具等原生功能。
 Claude markdown 命令文件和 Cursor 命令 markdown 都通过
 正常的 OpenClaw skill 加载器工作。
 
-#### Hook packs
+#### Hook 包
 
 Bundle hook roots 只有在使用正常的 OpenClaw hook-pack
 布局时才会工作：`HOOK.md` 加上 `handler.ts` 或 `handler.js`。目前这主要
@@ -185,28 +187,59 @@ OpenClaw 会以 `serverName__toolName` 的形式为 bundle MCP 工具注册适�
 
 这些内容可以识别并显示在诊断中，但 OpenClaw 不会运行它们：
 
-- Claude `agents`, `hooks/hooks.json` 自动化, `outputStyles`
-- Cursor `.cursor/agents`, `.cursor/hooks.json`, `.cursor/rules`
-- Codex `.app.json` 中除能力报告之外的元数据
+- Claude `agents`、`hooks/hooks.json` 自动化、`outputStyles`
+- Cursor `.cursor/agents`、`.cursor/hooks.json`、`.cursor/rules`
+- Codex `.app.json` 中除能力报告之外的元数据。
 
 ## Bundle 格式
 
 <AccordionGroup>
-  <Accordion title="Codex bundles">
+  <Accordion title="Agent Plugins 包">
+    标记：包根目录中的 `plugin.json`，遵循
+    [Agent Plugins 1.0.0 标准](https://agent-plugins.org)
+
+    可选内容：`skills/`、`mcp.json`
+
+    格式行为：
+
+    - 清单是严格 JSON（不是 JSON5）。OpenClaw 要求非空的
+      `name`；清单中的其他字段均为可选，未知字段会被忽略
+    - `skills/` 的直接子目录中，包含 `SKILL.md` 的会作为技能加载；不包含该文件的子目录会
+      跳过并发出警告，且不会扫描更深层的目录
+    - `mcp.json` 必须声明 1.0.0 `$schema`，且只能包含一个 `mcpServers` 对象；
+      支持 `stdio`、`streamable-http` 和旧版 `sse` 传输
+    - stdio 服务器启动时，其环境中会包含 `PLUGIN_ROOT`（插件根目录）和
+      `PLUGIN_DATA`（OpenClaw 在其状态目录下为每个插件创建的持久化数据目录）；
+      `${PLUGIN_ROOT}` 和 `${PLUGIN_DATA}` 占位符会在 `args`、`env` 值和
+      `cwd` 中进行单次展开
+    - stdio `command` 必须是裸可执行文件名，或插件内以 `./` 开头的相对路径；
+      `cwd` 必须位于 `PLUGIN_ROOT` 或 `PLUGIN_DATA` 内
+    - 无效的 `mcp.json` 会通过诊断信息禁用该插件的 MCP，但技能仍会继续加载；
+      无效的单个服务器条目会被跳过
+    - 此格式不会读取 `.mcp.json`（点号前缀）和内联清单中的 `mcpServers`；
+      以该标准的封闭式架构为准
+    - OpenClaw 会读取 `extensions["ai.openclaw"]`；目前支持具有与其他 bundle
+      清单相同语义的 `activation`
+    - 其他清单扩展命名空间会被忽略，并保留给其客户端使用
+    - 反向域名客户端目录会被忽略并保留
+
+  </Accordion>
+
+  <Accordion title="Codex 包">
     标记：`.codex-plugin/plugin.json`
 
     可选内容：`skills/`、`hooks/`、`.mcp.json`、`.app.json`
 
-    当 Codex bundles 使用 skill roots 和 OpenClaw 风格的 hook-pack 目录
+    当 Codex 包使用 skill 根目录和 OpenClaw 风格的 hook-pack 目录
     （`HOOK.md` + `handler.ts`）时，它们与 OpenClaw 的契合度最佳。
 
   </Accordion>
 
-  <Accordion title="Claude bundles">
+  <Accordion title="Claude 包">
     两种检测模式：
 
-    - **基于 manifest：** `.claude-plugin/plugin.json`
-    - **无 manifest：** 默认 Claude 布局（`skills/`、`commands/`、`agents/`、`hooks/`、`.mcp.json`、`.lsp.json`、`settings.json`）
+    - **基于清单：** `.claude-plugin/plugin.json`
+    - **无清单：** 默认 Claude 布局（`skills/`、`commands/`、`agents/`、`hooks/`、`.mcp.json`、`.lsp.json`、`settings.json`）
 
     Claude 特定行为：
 
@@ -219,7 +252,7 @@ OpenClaw 会以 `serverName__toolName` 的形式为 bundle MCP 工具注册适�
 
   </Accordion>
 
-  <Accordion title="Cursor bundles">
+  <Accordion title="Cursor 包">
     标记：`.cursor-plugin/plugin.json`
 
     可选内容：`skills/`、`.cursor/commands/`、`.cursor/agents/`、`.cursor/rules/`、`.cursor/hooks.json`、`.mcp.json`
@@ -234,10 +267,15 @@ OpenClaw 会以 `serverName__toolName` 的形式为 bundle MCP 工具注册适�
 
 OpenClaw 会先检查原生插件格式：
 
-1. `openclaw.plugin.json` 或带有 `openclaw.extensions` 的有效 `package.json` - 视为 **原生插件**
-2. Bundle 标记（`.codex-plugin/`、`.claude-plugin/`，或默认的 Claude/Cursor 布局）- 视为 **bundle**
+1. `openclaw.plugin.json` 或带有 `openclaw.extensions` 的有效 `package.json` - 视为**原生插件**
+2. 客户端特定的包标记（`.codex-plugin/`、`.cursor-plugin/`、`.claude-plugin/`）- 视为该格式的**软件包**
+3. 根目录下的 `plugin.json` - 视为 **Agent Plugins 软件包**
+4. 默认的无清单 Claude 布局（`skills/`、`commands/`、`.mcp.json` 等）- 视为 **Claude 软件包**
 
-如果一个目录同时包含两者，OpenClaw 会使用原生路径。这样可以防止双格式包被作为 bundle 部分安装。
+如果一个软件包同时包含客户端特定标记和根目录下的 `plugin.json`，
+则优先使用客户端特定格式，以保留其更丰富的映射（命令、钩子、
+设置）。如果一个目录同时包含原生清单和软件包标记，OpenClaw 将使用原生路径。
+这样可以防止双格式软件包被以软件包形式部分安装。
 
 ## 运行时依赖和清理
 
@@ -285,4 +323,4 @@ bundle 视为其所暴露功能的受信任内容。
 
 - [安装和配置插件](/tools/plugin)
 - [构建插件](/plugins/building-plugins) - 创建原生插件
-- [插件清单](/plugins/manifest) - 原生清单模式
+- [插件清单](/plugins/manifest) - 原生清单模式。

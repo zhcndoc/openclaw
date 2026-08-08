@@ -221,7 +221,7 @@ openclaw plugins inspect discord --runtime --json
 
 - **[fireworks](/plugins/reference/fireworks)** (`@openclaw/fireworks-provider`) - npm；ClawHub：`clawhub:@openclaw/fireworks-provider`。为 OpenClaw 添加 Fireworks 模型提供方支持。
 
-- **[fish-audio](/plugins/reference/fish-audio)** (`@openclaw/fish-audio-speech`) - npm；ClawHub：`clawhub:@openclaw/fish-audio-speech`。Fish Audio S2.1 托管式文本转语音，支持流式传输、语音笔记和电话系统输出。
+- **[fish-audio-speech](/plugins/reference/fish-audio-speech)** (`@openclaw/fish-audio-speech`) - npm；ClawHub：`clawhub:@openclaw/fish-audio-speech`。Fish Audio S2.1 托管式文本转语音，支持流式传输、语音留言和电话系统输出。
 
 - **[gmi](/plugins/reference/gmi)** (`@openclaw/gmi-provider`) - npm；ClawHub：`clawhub:@openclaw/gmi-provider`。OpenClaw GMI Cloud 提供程序插件。
 

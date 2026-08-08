@@ -4,8 +4,8 @@ read_when:
   - 更改模型回退行为或选择 UX
   - 调试“model is not allowed”或过时的默认 provider 回退
   - 处理 models.json 合并/密钥行为
-title: "Models CLI"
-sidebarTitle: "Models CLI"
+title: "模型 CLI"
+sidebarTitle: "模型 CLI"
 ---
 
 <CardGroup cols={2}>
@@ -15,7 +15,7 @@ sidebarTitle: "Models CLI"
   <Card title="模型提供商" href="/concepts/model-providers">
     供应商概览和快速示例。
   </Card>
-  <Card title="Models CLI 参考" href="/cli/models">
+  <Card title="模型 CLI 参考" href="/cli/models">
     完整的 `openclaw models` 命令和标志参考。
   </Card>
   <Card title="配置参考" href="/gateway/config-agents#agent-defaults">
@@ -27,15 +27,15 @@ sidebarTitle: "Models CLI"
 agent 运行时。在未设置运行时策略或设置为 `auto` 时，OpenAI 的 provider-owned
 路由策略可能只会为精确匹配的官方 HTTPS Platform
 Responses 或 ChatGPT Responses 路由选择 Codex，且不能带有作者指定的请求覆盖；仅仅使用
-`openai/*` 前缀永远不会选择 Codex。Completions 适配器、自定义
+`openai/*` 前缀永远不会选择 Codex。补全适配器、自定义
 端点，以及作者指定的请求行为都会保留在 OpenClaw 上。纯文本的官方
 HTTP 端点会被拒绝。参见 [OpenAI 隐式 agent 运行时](/providers/openai#implicit-agent-runtime)。
 
 订阅 Copilot 引用（`github-copilot/*`）可以选择接入外部
 GitHub Copilot agent 运行时插件，但该路径始终是显式的（绝不会被 `auto` 选择）。运行时覆盖应配置在 provider/model 策略上，而不是整个 agent 或会话上。运行时选择不决定计费：
 OpenAI API 密钥和 ChatGPT/Codex 订阅凭证仍然是不同的。参见
-[Agent runtimes](/concepts/agent-runtimes) 和
-[GitHub Copilot agent runtime](/plugins/copilot)。
+[Agent 运行时](/concepts/agent-runtimes) 和
+[GitHub Copilot agent 运行时](/plugins/copilot)。
 
 ## 选择顺序
 
@@ -164,26 +164,32 @@ openclaw config set agents.defaults.modelPolicy.allow '["openai/gpt-5.4","anthro
 
 ## 聊天中的 `/model`
 
+直接由所有者/管理员发出的 `/model <model>` 请求使用**默认作用域**：它会更改当前会话，并尽力更新已配置的默认值。添加 `-s` 则使用**会话作用域**：只更改当前会话。如果代理没有显式的主模型，则其有效默认模型是共享的全局 `agents.defaults.model` 回退值。
+
 ```text
 /model
 /model list
 /model 3
 /model openai/gpt-5.4
+/model openai/gpt-5.4 -s
+/model default -s
 /model default
 /model status
 ```
 
-- `/model` 和 `/model list` 会显示一个紧凑的编号选择器（模型家族 + 可用提供方）；`/model <#>` 会从中进行选择。在 Discord 中，这会打开提供方/模型下拉菜单，并带有一个提交步骤；在 Telegram 中，选择器的选择仅限于当前会话范围，且绝不会重写 `openclaw.json` 中代理的持久默认值。`/models add` 已弃用，并且会返回一条消息，而不是从聊天中注册模型。
-- `/model` 会立即持久化新的会话选择。如果代理处于空闲状态，下一次运行会立即使用它；如果某次运行已经在进行中，则切换会排队，等待下一次干净的重试点（如果工具活动或回复输出已经开始，则会等待更晚的重试点）。
-- `/model default` 会清除会话选择，使其重新继承已配置的主模型。
-- 用户选择的 `/model` 引用对该会话是严格生效的：如果它变得不可达，回复会显式失败，而不会悄悄通过 `agents.defaults.model.fallbacks` 回退。已配置的默认值和 cron 作业主模型仍然使用回退链。
-- `/model status` 是详细视图：每个提供方的认证候选项，以及（在已配置时）提供方端点 `baseUrl` 和 `api` 模式。
-- 模型引用通过在第一个 `/` 处分割来解析；类型为 `provider/model`。如果模型 ID 本身包含 `/`（OpenRouter 风格），请包含提供方前缀，例如 `/model openrouter/moonshotai/kimi-k2`。如果省略提供方，OpenClaw 会依次尝试：(1) 别名匹配，(2) 对该未加前缀的精确模型 ID 进行唯一的已配置提供方匹配，(3) 已配置的默认提供方（已弃用的回退）——并且如果该提供方不再暴露已配置的默认模型，则使用第一个已配置的提供方/模型，以避免显示一个已失效、已移除提供方的默认值。
-- 模型引用会规范化为小写；但提供方 ID 仍然保持精确匹配，因此请使用插件所公布的 ID。
+- `/model` 和 `/model list` 会显示一个紧凑的编号选择器（模型系列 + 可用提供商）；`/model <#>` 可从中选择。Telegram 的回调选择器仅作用于当前会话。Discord 的选择器遵循直接命令流程，因此所有者/管理员提交后会请求更新已配置的默认值。`/models add` 已弃用，现在会返回一条消息，而不会从聊天中注册模型。
+- **已配置的默认值：** 直接由所有者/管理员执行 `/model <model>` 会更改当前会话，并请求尽力更新有效的已配置默认值。如果代理存在显式主模型，OpenClaw 会以其为目标；否则会以共享的 `agents.defaults.model` 回退值为目标。不可变配置保持不变，异步写入失败会被记录日志，但不会回滚会话中的模型选择。
+- **仅当前会话：** `/model <model> -s`（或 `--session`）会更改当前会话，而不会更改任何一个已配置的默认值。非所有者执行不带参数的 `/model <model>` 时，也仅作用于当前会话，因为该调用者无法写入已配置的默认值。只要提供商仍支持显式用户选择的模型和身份验证配置文件，它们就会在 `/new`、`/reset`、会话轮换、压缩和冷却窗口期间保持固定；自动配置文件固定可能会轮换或清除。
+- **使用已配置的默认值：** `/model default`（带或不带 `-s`）会清除当前会话的模型选择，使其继承当前有效的已配置默认值。兼容的身份验证配置文件固定会保留；不兼容的固定会被清除。它不会恢复之前某次所有者/管理员执行 `/model <model>` 所替换掉的旧已配置默认值。
+- 如果代理处于空闲状态，模型更改会立即应用于下一次运行。如果已有运行正在进行，则切换会排队到下一个干净的重试点（如果工具活动或回复输出已经开始，也可能会延后到更晚的重试点）。
+- 用户选择的 `/model` 引用对该会话是严格的：如果它变得不可访问，回复会明确失败，而不会通过 `agents.defaults.model.fallbacks` 静默回退。已配置的默认值和 cron 任务的主模型仍会使用回退链。
+- `/model status` 是详细视图：显示每个提供商的身份验证候选项，以及（在已配置时）提供商端点的 `baseUrl` 和 `api` 模式。
+- 模型引用通过在第一个 `/` 处分割来解析；格式为 `provider/model`。如果模型 ID 本身包含 `/`（OpenRouter 风格），请包含提供商前缀，例如 `/model openrouter/moonshotai/kimi-k2`。如果省略提供商，OpenClaw 会依次尝试：(1) 别名匹配；(2) 针对该完全匹配的未加前缀模型 ID，查找唯一的已配置提供商匹配项；(3) 使用已配置的默认提供商（已弃用的回退方式）——如果该提供商不再提供已配置的默认模型，则改用第一个已配置的提供商/模型，以避免显示已过时的、已移除提供商的默认值。
+- 模型引用会被规范化为小写；除此之外，提供商 ID 区分大小写，因此请使用插件公布的 ID。
 
-完整的命令行为和配置：[/Slash commands](/tools/slash-commands)。
+完整的命令行为和配置：[/斜杠命令](/tools/slash-commands)。
 
-## CLI
+## 命令行界面
 
 ```bash
 openclaw models status
@@ -197,11 +203,11 @@ openclaw models image-fallbacks list|add|remove|clear
 openclaw models auth list|add|login|paste-api-key|paste-token|setup-token|order
 ```
 
-不带子命令的 `openclaw models` 是 `models status` 的快捷方式，它也会显示 auth-store 配置文件的 OAuth 过期时间（默认在 24 小时内发出警告）。完整标志、JSON 结构以及 auth-profile 子命令：[Models CLI 参考](/cli/models)。
+不带子命令的 `openclaw models` 是 `models status` 的快捷方式，它也会显示身份验证存储配置文件的 OAuth 过期时间（默认在 24 小时内发出警告）。完整标志、JSON 结构以及身份验证配置文件子命令：[模型 CLI 参考](/cli/models)。
 
 <AccordionGroup>
   <Accordion title="扫描（OpenRouter 免费模型）">
-    `openclaw models scan` 会检查 OpenRouter 的公开免费模型目录，并可实时探测候选项是否支持工具和图像。目录本身是公开的，因此仅元数据扫描（`--no-probe`）不需要密钥；实时探测以及 `--set-default`/`--set-image` 需要 OpenRouter API 密钥（auth 配置文件或 `OPENROUTER_API_KEY`），否则会退回到仅元数据输出并失败关闭。
+    `openclaw models scan` 会检查 OpenRouter 的公开免费模型目录，并可实时探测候选项是否支持工具和图像。目录本身是公开的，因此仅元数据扫描（`--no-probe`）不需要密钥；实时探测以及 `--set-default`/`--set-image` 需要 OpenRouter API 密钥（身份验证配置文件或 `OPENROUTER_API_KEY`），否则会退回到仅元数据输出并失败关闭。
 
     结果的排序依据为：图像支持，其次是工具延迟，然后是上下文大小，最后是参数数量。在 TTY 中，探测结果会提示进行交互式回退选择；非交互模式需要使用 `--yes` 来接受默认值。
 
@@ -247,4 +253,4 @@ OpenClaw 可以在不等待新的 OpenClaw 版本发布的情况下，刷新已�
 - [模型提供商](/concepts/model-providers) — 提供商路由和认证
 - [Models CLI 参考](/cli/models) — 完整命令和标志参考
 - [音乐生成](/tools/music-generation) — 音乐模型配置
-- [视频生成](/tools/video-generation) — 视频模型配置
+- [视频生成](/tools/video-generation) — 视频模型配置。
