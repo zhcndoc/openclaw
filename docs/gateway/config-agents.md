@@ -120,7 +120,7 @@ title: "配置 — 代理"
 }
 ```
 
-按代理覆盖：`agents.entries.*.bootstrapTotalMaxChars`。省略的值将继承
+按代理覆盖：`agents.entries.*.bootstrapTotalMaxChars`。省略的值将继承  
 `agents.defaults.bootstrapTotalMaxChars`。
 
 ### 逐代理引导配置文件覆盖
@@ -170,12 +170,11 @@ title: "配置 — 代理"
 OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按子系统拆分，而不是全部通过一个通用开关流转。
 
 | Budget                                                         | Covers                                                                                                                                                          |
-| -------------------------------------------------------------- | --------------------------------------------------------------- |
-| `agents.defaults.bootstrapMaxChars` / `bootstrapTotalMaxChars` | 常规工作区引导注入                                                                                |
-| `agents.defaults.startupContext.*`                             | 一次性重置/启动模型运行前奏，包括最近的每日 `memory/*.md` 文件。裸聊天 `/new` 和 `/reset` 会在不调用模型的情况下被确认 |
-| `skills.limits.*`                                              | 注入系统提示词中的紧凑技能列表                                                                    |
-| `agents.defaults.contextLimits.*`                              | 有边界的运行时摘录以及注入的运行时所有块                                                          |
-| `memory.qmd.limits.*`                                          | 索引化的记忆搜索片段和注入大小                                                                    |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agents.defaults.bootstrapMaxChars` / `bootstrapTotalMaxChars` | Normal workspace bootstrap injection                                                                                                                            |
+| `agents.defaults.startupContext.*`                             | One-shot reset/startup model-run prelude, including recent daily `memory/*.md` files. Bare chat `/new` and `/reset` are acknowledged without invoking the model |
+| `skills.limits.*`                                              | The compact skills list injected into the system prompt                                                                                                         |
+| `agents.defaults.contextLimits.*`                              | Bounded runtime excerpts and injected runtime-owned blocks                                                                                                      |
 
 匹配的按代理覆盖：
 
@@ -357,6 +356,7 @@ OpenClaw 会根据所选图像模型调整缩放梯度。例如，Claude Opus 4.
       pdfMaxMb: 10,
       pdfMaxPages: 20,
       thinkingDefault: "low",
+      fastModeDefault: false,
       verboseDefault: "off",
       toolProgressDetail: "explain",
       reasoningDefault: "off",
@@ -373,57 +373,58 @@ OpenClaw 会根据所选图像模型调整缩放梯度。例如，Claude Opus 4.
 - `model`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
   - 字符串形式仅设置主模型。
   - 对象形式设置主模型以及按顺序排列的故障转移模型。
-- `utilityModel`：用于短内部任务的可选 `provider/model` 引用或别名。目前用于生成 Control UI 会话标题、Telegram 私聊主题标题、Discord 自动线程标题，以及[进度草稿旁白](/concepts/progress-drafts#narrated-status)。未设置时，如果主提供商声明了小模型默认值，OpenClaw 会使用该默认值（OpenAI → `gpt-5.6-luna`，Anthropic → `claude-haiku-4-5`）；否则标题任务使用代理的主模型，旁白保持关闭。如果独立的 utility 模型无法准备或完成生成的标题，OpenClaw 会使用主模型重试该标题一次。对于控制面板标题，自动 utility 推导和常规故障转移会使用有效会话提供商和认证配置；显式设置的 utility 模型则使用其配置的提供商和认证。设置 `utilityModel: ""` 可跳过备用 utility 路由；控制面板标题生成仍会直接使用常规会话模型。`agents.entries.*.utilityModel` 会覆盖默认值，针对特定操作的模型覆盖则优先于两者。Utility 任务会单独调用模型，并将特定于任务的内容发送给所选模型提供商。控制面板标题生成最多发送第一条非命令消息的前 1,000 个字符；旁白会发送入站请求以及经过精简和脱敏的工具摘要。请选择符合成本和数据处理要求的提供商。
+- `utilityModel`：可选的 `provider/model` 引用或别名，用于短时内部任务。目前用于生成 Control UI 会话标题、Telegram 私聊主题标题、Discord 自动线程标题，以及[进度草稿旁白](/concepts/progress-drafts#narrated-status)。未设置时，如果主提供商声明了小模型默认值，OpenClaw 会使用该默认值（OpenAI → `gpt-5.6-luna`，Anthropic → `claude-haiku-4-5`）；否则标题任务使用代理的主模型，旁白保持关闭。如果独立的 utility 模型无法准备或完成生成的标题，OpenClaw 会使用主模型重试该标题一次。对于仪表板标题，自动 utility 推导和常规回退会使用有效会话提供商和身份验证配置文件；显式设置的 utility 模型则保留其配置的提供商/身份验证。设置 `utilityModel: ""` 可跳过备用 utility 路由；仪表板标题生成仍会直接使用常规会话模型继续进行。`agents.entries.*.utilityModel` 会覆盖默认值，而特定操作的模型覆盖项优先级高于两者。Utility 任务会单独调用模型，并将特定于任务的内容发送给所选模型提供商。仪表板标题生成最多发送第一条非命令消息的前 1,000 个字符；旁白会发送入站请求以及经过精简和脱敏的工具摘要。请选择符合成本和数据处理要求的提供商。
 - `imageModel`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
-  - 当活动模型无法接受图像时，`image` 工具路径会将其用作视觉模型配置。原生视觉模型则直接接收已加载的图像字节。
-  - 当所选或默认模型无法接受图像输入时，也会将其用作故障转移路由。
-  - 优先使用显式的 `provider/model` 引用。为兼容性支持不带提供商的 ID；如果该 ID 在 `models.providers.*.models` 中唯一匹配已配置的图像能力条目，OpenClaw 会将其限定为对应提供商。对于多个匹配的已配置条目，必须显式添加提供商前缀。
+  - 当活动模型无法接受图像时，`image` 工具路径会将其视觉模型配置用于图像处理。原生视觉模型则会直接接收已加载的图像字节。
+  - 当所选/默认模型无法接受图像输入时，也会用作回退路由。
+  - 优先使用显式的 `provider/model` 引用。为兼容性也接受不带提供商的 ID；如果某个不带提供商的 ID 在 `models.providers.*.models` 中唯一匹配已配置的图像能力条目，OpenClaw 会将其限定到对应提供商。对于多个已配置匹配项，必须显式添加提供商前缀。
 - `mediaModels.image`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
-  - 由共享图像生成能力以及未来任何生成图像的工具/插件界面使用。
-  - 典型值：原生 Gemini 图像生成使用 `google/gemini-3.1-flash-image`，fal 使用 `fal/fal-ai/flux/dev`，OpenAI Images 使用 `openai/gpt-image-2`，透明背景 OpenAI PNG/WebP 输出使用 `openai/gpt-image-1.5`。
-  - 如果直接选择提供商/模型，还需配置匹配的提供商认证（例如，`google/*` 使用 `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`，`openai/gpt-image-2` / `openai/gpt-image-1.5` 使用 `OPENAI_API_KEY` 或 OpenAI Codex OAuth，`fal/*` 使用 `FAL_KEY`）。
-  - 如果省略，`image_generate` 仍可推断出基于认证的提供商默认值。它会先尝试当前默认提供商，然后按提供商 ID 顺序尝试其余已注册的图像生成提供商。
+  - 由共享的图像生成能力以及未来任何生成图像的工具/插件界面使用。
+  - 典型值包括：用于原生 Gemini 图像生成的 `google/gemini-3.1-flash-image`，用于 fal 的 `fal/fal-ai/flux/dev`，用于 OpenAI Images 的 `openai/gpt-image-2`，或用于透明背景 OpenAI PNG/WebP 输出的 `openai/gpt-image-1.5`。
+  - 如果直接选择提供商/模型，也请配置匹配的提供商身份验证（例如，`google/*` 使用 `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`，`openai/gpt-image-2` / `openai/gpt-image-1.5` 使用 `OPENAI_API_KEY` 或 OpenAI Codex OAuth，`fal/*` 使用 `FAL_KEY`）。
+  - 如果省略，`image_generate` 仍可推断出具有身份验证支持的提供商默认值。它会首先尝试当前默认提供商，然后按提供商 ID 顺序尝试其余已注册的图像生成提供商。
 - `mediaModels.music`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
-  - 由共享音乐生成能力和内置的 `music_generate` 工具使用。
-  - 典型值：`google/lyria-3-clip-preview`、`google/lyria-3-pro-preview` 或 `minimax/music-2.6`。
-  - 如果省略，`music_generate` 仍可推断出基于认证的提供商默认值。它会先尝试当前默认提供商，然后按提供商 ID 顺序尝试其余已注册的音乐生成提供商。
-  - 如果直接选择提供商/模型，还需配置匹配的提供商认证/API 密钥。
+  - 由共享的音乐生成能力和内置的 `music_generate` 工具使用。
+  - 典型值包括：`google/lyria-3-clip-preview`、`google/lyria-3-pro-preview` 或 `minimax/music-2.6`。
+  - 如果省略，`music_generate` 仍可推断出具有身份验证支持的提供商默认值。它会首先尝试当前默认提供商，然后按提供商 ID 顺序尝试其余已注册的音乐生成提供商。
+  - 如果直接选择提供商/模型，也请配置匹配的提供商身份验证/API 密钥。
 - `mediaModels.video`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
-  - 由共享视频生成能力和内置的 `video_generate` 工具使用。
-  - 典型值：`qwen/wan2.6-t2v`、`qwen/wan2.6-i2v`、`qwen/wan2.6-r2v`、`qwen/wan2.6-r2v-flash` 或 `qwen/wan2.7-r2v`。
-  - 如果省略，`video_generate` 仍可推断出基于认证的提供商默认值。它会先尝试当前默认提供商，然后按提供商 ID 顺序尝试其余已注册的视频生成提供商。
-  - 如果直接选择提供商/模型，还需配置匹配的提供商认证/API 密钥。
-  - 官方 Qwen 视频生成插件最多支持 1 个输出视频、1 张输入图像、4 个输入视频、10 秒时长，以及提供商级别的 `size`、`aspectRatio`、`resolution`、`audio` 和 `watermark` 选项。
+  - 由共享的视频生成能力和内置的 `video_generate` 工具使用。
+  - 典型值包括：`qwen/wan2.6-t2v`、`qwen/wan2.6-i2v`、`qwen/wan2.6-r2v`、`qwen/wan2.6-r2v-flash` 或 `qwen/wan2.7-r2v`。
+  - 如果省略，`video_generate` 仍可推断出具有身份验证支持的提供商默认值。它会首先尝试当前默认提供商，然后按提供商 ID 顺序尝试其余已注册的视频生成提供商。
+  - 如果直接选择提供商/模型，也请配置匹配的提供商身份验证/API 密钥。
+  - 官方 Qwen 视频生成插件支持最多 1 个输出视频、1 张输入图像、4 个输入视频、10 秒时长，以及提供商级别的 `size`、`aspectRatio`、`resolution`、`audio` 和 `watermark` 选项。
 - `pdfModel`：接受字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。
   - 由 `pdf` 工具用于模型路由。
-  - 如果省略，PDF 工具会回退到 `imageModel`，然后回退到解析后的会话/默认模型。
+  - 如果省略，PDF 工具会回退到 `imageModel`，然后回退到已解析的会话/默认模型。
 - `pdfMaxMb`：当调用时未传入 `maxBytesMb`，`pdf` 工具使用的默认 PDF 大小限制。
-- `pdfMaxPages`：`pdf` 工具在提取回退模式下默认考虑的最大页数。
+- `pdfMaxPages`：`pdf` 工具在提取回退模式下考虑的默认最大页数。
+- `fastModeDefault`：代理的默认快速模式。取值：`"auto"`、`true`、`false`。当未设置每条消息或会话级快速模式覆盖项时，每个代理的 `agents.entries.*.fastModeDefault` 会覆盖此设置。
 - `verboseDefault`：代理的默认详细程度。取值：`"off"`、`"on"`、`"full"`。默认值：`"off"`。
-- `toolProgressDetail`：`/verbose` 工具摘要和进度草稿工具行的详细程度模式。取值：`"explain"`（默认，简洁的用户可读标签）或 `"raw"`（可用时附加原始命令/详细信息）。每个代理的 `agents.entries.*.toolProgressDetail` 会覆盖此默认值。
-- `reasoningDefault`：代理默认的推理可见性。取值：`"off"`、`"on"`、`"stream"`。每个代理的 `agents.entries.*.reasoningDefault` 会覆盖此默认值。只有在未设置每条消息或会话的推理覆盖项时，配置的推理默认值才会应用于所有者、已授权发送者或操作员管理员网关上下文。
-- `elevatedDefault`：代理默认的提升输出级别。取值：`"off"`、`"on"`、`"ask"`、`"full"`。默认值：`"on"`。
-- `model.primary`：格式为 `provider/model`（例如，使用 Codex OAuth 访问时的 `openai/gpt-5.6-sol`）。如果省略提供商，OpenClaw 会依次尝试别名、对该确切模型 ID 的唯一已配置提供商匹配，最后才回退到已配置的默认提供商（这是已弃用的兼容行为，因此优先使用显式的 `provider/model`）。如果该提供商不再提供已配置的默认模型，OpenClaw 会回退到第一个已配置的提供商/模型，而不是显示已失效的已删除提供商默认值。
-- `contextTokens`：可选的代理级上限。它可以降低更大模型的有效预算，但不能将模型上限提高到其已配置或发现的 `contextTokens` 之上。若要让某个直接使用的 OpenAI 模型启用更大的原生上下文窗口，请为该模型设置 `models.providers.openai.models[].contextWindow` 和 `contextTokens`；详见 [OpenAI 上下文窗口默认值](/providers/openai#context-window-defaults-and-long-context-opt-in)。
-- `models`：已配置的别名和每个模型的设置。每个条目可以包含 `alias`（快捷方式）和 `params`（提供商特定参数，例如 `temperature`、`maxTokens`、`cacheRetention`、`context1m`、`responsesServerCompaction`、`responsesCompactThreshold`、OpenRouter 的 `provider` 路由、`chat_template_kwargs`、`extra_body`/`extraBody`）。添加条目不会限制模型覆盖。
-  - 使用 `"openai/*": {}` 或 `"vllm/*": {}` 等 `provider/*` 条目，可显示所选提供商发现的所有模型，而无需手动列出每个模型 ID。
-  - 如果某个提供商动态发现的所有模型都应使用相同的运行时，请将 `agentRuntime` 添加到 `provider/*` 条目中。精确的 `provider/model` 运行时策略仍优先于通配符。
+- `toolProgressDetail`：`/verbose` 工具摘要和进度草稿工具行的详细程度模式。取值：`"explain"`（默认，简洁的人类可读标签）或 `"raw"`（如果可用，则附加原始命令/详细信息）。每个代理的 `agents.entries.*.toolProgressDetail` 会覆盖此默认值。
+- `reasoningDefault`：代理的默认推理可见性。取值：`"off"`、`"on"`、`"stream"`。每个代理的 `agents.entries.*.reasoningDefault` 会覆盖此默认值。当未设置每条消息或会话级推理覆盖项时，配置的推理默认值仅会应用于所有者、已授权发送者或操作员管理员网关上下文。
+- `elevatedDefault`：代理的默认提升输出级别。取值：`"off"`、`"on"`、`"ask"`、`"full"`。默认值：`"on"`。
+- `model.primary`：格式为 `provider/model`（例如，用于 Codex OAuth 访问的 `openai/gpt-5.6-sol`）。如果省略提供商，OpenClaw 会依次尝试别名、与该确切模型 ID 匹配的唯一已配置提供商，最后才回退到已配置的默认提供商（这是已弃用的兼容行为，因此建议使用显式的 `provider/model`）。如果该提供商不再提供已配置的默认模型，OpenClaw 会回退到第一个已配置的提供商/模型，而不是暴露一个已过时的已移除提供商默认值。
+- `contextTokens`：可选的代理级上限。它可以降低更大模型的有效预算，但无法将模型上限提高到其已配置或发现的 `contextTokens` 以上。若要让某个直接使用的 OpenAI 模型采用其更大的原生窗口，请为该模型设置 `models.providers.openai.models[].contextWindow` 和 `contextTokens`；请参阅 [OpenAI 上下文窗口默认值](/providers/openai#context-window-defaults-and-long-context-opt-in)。
+- `models`：已配置的别名和每个模型的设置。每个条目可包含 `alias`（快捷方式）和 `params`（提供商特定参数，例如 `temperature`、`maxTokens`、`cacheRetention`、`context1m`、`responsesServerCompaction`、`responsesCompactThreshold`、OpenRouter `provider` 路由、`chat_template_kwargs`、`extra_body`/`extraBody`）。添加条目不会限制模型覆盖。
+  - 使用 `"openai/*": {}` 或 `"vllm/*": {}` 等 `provider/*` 条目，可以显示所选提供商发现的所有模型，而无需手动列出每个模型 ID。
+  - 如果某提供商动态发现的每个模型都应使用相同的运行时，请将 `agentRuntime` 添加到 `provider/*` 条目。确切的 `provider/model` 运行时策略仍优先于通配符。
   - 安全的元数据编辑：使用 `openclaw config set agents.defaults.models '<json>' --strict-json --merge` 添加条目。如果不传入 `--replace`，`config set` 会拒绝删除现有条目的替换操作。
-- `modelPolicy.allow`：显式覆盖允许列表。接受别名、精确的 `provider/model` 引用，以及末尾带前缀的通配符，例如 `openai/*` 或 `clawrouter/anthropic/*`。省略它或使用 `[]` 可允许任意模型。`agents.entries.*.modelPolicy.allow` 会替换该代理的默认策略；显式的空列表会让该代理允许使用任意模型。
-  - 按提供商范围执行的配置/引导流程会将所选提供商的模型合并到此映射中，并保留此前已配置的不相关提供商。
-  - 对于直接使用的 OpenAI Responses 模型，服务端压缩会自动启用。使用 `params.responsesServerCompaction: false` 可停止注入 `context_management`，或使用 `params.responsesCompactThreshold` 覆盖阈值。详见 [OpenAI 服务端压缩](/providers/openai#advanced-configuration)。
+- `modelPolicy.allow`：显式覆盖允许列表。接受别名、确切的 `provider/model` 引用，以及尾部前缀通配符，例如 `openai/*` 或 `clawrouter/anthropic/*`。省略它或使用 `[]` 可允许任何模型。`agents.entries.*.modelPolicy.allow` 会替换该代理的默认策略；显式的空列表会让该代理允许任何模型。
+  - 按提供商限定的配置/引导流程会将所选提供商的模型合并到此映射中，并保留此前已配置的不相关提供商。
+  - 对于直接使用的 OpenAI Responses 模型，服务端压缩会自动启用。使用 `params.responsesServerCompaction: false` 可停止注入 `context_management`，或使用 `params.responsesCompactThreshold` 覆盖阈值。请参阅 [OpenAI 服务端压缩](/providers/openai#advanced-configuration)。
 - `params`：应用于所有模型的全局默认提供商参数。在 `agents.defaults.params` 中设置（例如 `{ cacheRetention: "long" }`）。
-- `params` 合并优先级（配置）：`agents.defaults.params`（全局基础值）会被 `agents.defaults.models["provider/model"].params`（每个模型）覆盖，然后 `agents.entries.*.params`（匹配的代理 ID）按键覆盖前者。详见[提示词缓存](/reference/prompt-caching)。
-- `models.providers.openrouter.params.provider`：OpenRouter 范围的默认提供商路由策略。OpenClaw 会将其转发到 OpenRouter 请求的 `provider` 对象；每个模型的 `agents.defaults.models["openrouter/<model>"].params.provider` 和代理参数会按键覆盖它。详见 [OpenRouter 提供商路由](/providers/openrouter#advanced-configuration)。
-- `params.extra_body`/`params.extraBody`：高级透传 JSON，会合并到 `api: "openai-completions"` 的请求体中，用于兼容 OpenAI 的代理。如果它与生成的请求键发生冲突，则额外请求体优先；非原生 completions 路由仍会在之后移除仅限 OpenAI 的 `store`。
-- `params.chat_template_kwargs`：vLLM/OpenAI 兼容聊天模板参数，会合并到顶层 `api: "openai-completions"` 请求体中。对于关闭思考的 `vllm/nemotron-3-*`，内置 vLLM 插件会自动发送 `enable_thinking: false` 和 `force_nonempty_content: true`；显式的 `chat_template_kwargs` 会覆盖生成的默认值，而 `extra_body.chat_template_kwargs` 仍拥有最终优先级。已配置的 vLLM Qwen 和 Nemotron 思考模型会公开二进制 `/think` 选项（`off`、`on`），而不是多级努力程度阶梯。
-- `compat.thinkingFormat`：OpenAI 兼容的思考负载样式。Together 风格的 `reasoning.enabled` 使用 `"together"`，Qwen 风格顶层 `enable_thinking` 使用 `"qwen"`，对于支持请求级聊天模板参数的 Qwen 系列后端（例如 vLLM），使用 `chat_template_kwargs.enable_thinking` 对应的 `"qwen-chat-template"`。OpenClaw 会将禁用思考映射为 `false`，将启用思考映射为 `true`；已配置的 vLLM Qwen 模型会针对这些格式公开二进制 `/think` 选项。
-- `compat.supportedReasoningEfforts`：每个模型的 OpenAI 兼容推理努力程度列表。对于确实接受 `"xhigh"` 的自定义端点，可将其加入列表；随后 OpenClaw 会在命令菜单、Gateway 会话行、会话补丁验证、代理 CLI 验证以及该配置提供商/模型的 `llm-task` 验证中公开 `/think xhigh`。当后端需要提供商特定的规范级别值时，使用 `compat.reasoningEffortMap`。
-- `params.preserveThinking`：Z.AI 专用的保留思考选择加入项。启用且思考开启时，OpenClaw 会发送 `thinking.clear_thinking: false` 并重放之前的 `reasoning_content`；详见 [Z.AI 思考与保留思考](/providers/zai#advanced-configuration)。
-- `localService`：用于本地/自托管模型服务器的可选提供商级进程管理器。当所选模型属于该提供商时，OpenClaw 会探测 `healthUrl`（或 `baseUrl + "/models"`）；如果端点关闭，则使用 `args` 启动 `command`，等待最长 `readyTimeoutMs`，然后发送模型请求。`command` 必须是绝对路径。`idleStopMs: 0` 会使进程保持运行，直到 OpenClaw 退出；正值则会在指定的空闲毫秒数后停止由 OpenClaw 启动的进程。详见[本地模型服务](/gateway/local-model-services)。
-- 运行时策略应配置在提供商或模型上，而不是 `agents.defaults` 上。提供商范围的规则使用 `models.providers.<provider>.agentRuntime`，模型特定规则使用 `agents.defaults.models["provider/model"].agentRuntime` / `agents.entries.*.models["provider/model"].agentRuntime`。仅提供提供商/模型前缀绝不会选择某个运行框架。当运行时未设置或为 `auto` 时，只有在精确匹配官方 HTTPS Platform Responses 或 ChatGPT Responses 路由且没有自定义请求覆盖的情况下，OpenAI 才可能隐式选择 Codex。详见 [OpenAI 隐式代理运行时](/providers/openai#implicit-agent-runtime)。
-- 修改这些字段的配置写入器（例如 `/models set`、`/models set-image` 以及添加/删除故障转移模型的命令）会保存规范对象形式，并在可能时保留现有的故障转移列表。
-- `maxConcurrent`：跨会话的最大并行代理运行数（每个会话仍然串行执行）。默认情况下，OpenClaw 使用 `min(16, max(8, available CPU parallelism))`，其依据是 `os.availableParallelism()`，并在不可用时回退到 `os.cpus().length`。
+- `params` 合并优先级（配置）：`agents.defaults.params`（全局基础设置）会被 `agents.defaults.models["provider/model"].params`（每个模型）覆盖，然后 `agents.entries.*.params`（匹配的代理 ID）按键覆盖。详情请参阅[提示缓存](/reference/prompt-caching)。
+- `models.providers.openrouter.params.provider`：OpenRouter 全局默认提供商路由策略。OpenClaw 会将其转发到 OpenRouter 请求的 `provider` 对象；每个模型的 `agents.defaults.models["openrouter/<model>"].params.provider` 和代理参数会按键覆盖它。请参阅 [OpenRouter 提供商路由](/providers/openrouter#advanced-configuration)。
+- `params.extra_body`/`params.extraBody`：高级透传 JSON，会合并到面向 OpenAI 兼容代理的 `api: "openai-completions"` 请求体中。如果与生成的请求键冲突，额外请求体优先；非原生 completions 路由仍会在之后移除仅限 OpenAI 的 `store`。
+- `params.chat_template_kwargs`：vLLM/OpenAI 兼容聊天模板参数，会合并到顶层 `api: "openai-completions"` 请求体中。对于关闭思考的 `vllm/nemotron-3-*`，内置 vLLM 插件会自动发送 `enable_thinking: false` 和 `force_nonempty_content: true`；显式的 `chat_template_kwargs` 会覆盖生成的默认值，而 `extra_body.chat_template_kwargs` 仍具有最终优先级。已配置的 vLLM Qwen 和 Nemotron 思考模型会公开二进制的 `/think` 选项（`off`、`on`），而不是多级努力程度阶梯。
+- `compat.thinkingFormat`：OpenAI 兼容的思考负载样式。对于 Together 风格的 `reasoning.enabled`，使用 `"together"`；对于 Qwen 风格顶层 `enable_thinking`，使用 `"qwen"`；对于支持请求级聊天模板参数的 Qwen 系列后端（例如 vLLM）中的 `chat_template_kwargs.enable_thinking`，使用 `"qwen-chat-template"`。OpenClaw 会将禁用思考映射为 `false`，将启用思考映射为 `true`；已配置的 vLLM Qwen 模型会为这些格式公开二进制 `/think` 选项。
+- `compat.supportedReasoningEfforts`：每个模型的 OpenAI 兼容推理努力程度列表。对于确实接受 `"xhigh"` 的自定义端点，可将其包含在内；随后 OpenClaw 会在命令菜单、Gateway 会话行、会话补丁验证、代理 CLI 验证以及针对该已配置提供商/模型的 `llm-task` 验证中公开 `/think xhigh`。当后端需要提供商特定的规范级别值时，使用 `compat.reasoningEffortMap`。
+- `params.preserveThinking`：仅限 Z.AI 的保留思考选择启用项。启用后且思考功能开启时，OpenClaw 会发送 `thinking.clear_thinking: false` 并重放之前的 `reasoning_content`；请参阅 [Z.AI 思考与保留思考](/providers/zai#advanced-configuration)。
+- `localService`：可选的提供商级进程管理器，用于本地/自托管模型服务器。当所选模型属于该提供商时，OpenClaw 会探测 `healthUrl`（或 `baseUrl + "/models"`）；如果端点未运行，则使用 `args` 启动 `command`；最多等待 `readyTimeoutMs`，然后发送模型请求。`command` 必须是绝对路径。`idleStopMs: 0` 会让进程一直运行，直到 OpenClaw 退出；正值则会在指定的空闲毫秒数后停止由 OpenClaw 启动的进程。请参阅[本地模型服务](/gateway/local-model-services)。
+- 运行时策略应属于提供商或模型，而不是 `agents.defaults`。对于提供商级规则，使用 `models.providers.<provider>.agentRuntime`；对于模型特定规则，使用 `agents.defaults.models["provider/model"].agentRuntime` / `agents.entries.*.models["provider/model"].agentRuntime`。仅使用提供商/模型前缀不会选择运行框架。当运行时未设置或为 `auto` 时，只有在确切的官方 HTTPS Platform Responses 或 ChatGPT Responses 路由中，且没有编写请求覆盖项时，OpenAI 才可能隐式选择 Codex。请参阅 [OpenAI 隐式代理运行时](/providers/openai#implicit-agent-runtime)。
+- 修改这些字段的配置写入器（例如 `/models set`、`/models set-image` 以及添加/移除回退模型的命令）会保存规范对象形式，并在可能的情况下保留现有的回退列表。
+- `maxConcurrent`：跨会话的最大并行代理运行数（每个会话仍会串行执行）。默认情况下，OpenClaw 使用 `min(16, max(8, available CPU parallelism))`；该值基于 `os.availableParallelism()`，并在不可用时回退到 `os.cpus().length`。
 
 ### 运行时策略
 
@@ -583,7 +584,7 @@ CLI 适配器机制由插件注册，而不是在代理默认设置下配置。�
         postIndexSync: "async", // off | async | await
         postCompactionSections: ["Session Startup", "Red Lines"],
         model: "openrouter/anthropic/claude-sonnet-4-6", // 可选的仅用于压缩的模型覆盖
-        maxActiveTranscriptBytes: "20mb", // opt in to preflight local compaction
+        maxActiveTranscriptBytes: "20mb", // 启用压缩前本地预检
         notifyUser: true, // 压缩开始/完成以及 memory-flush 降级时发送通知（默认：false）
         memoryFlush: {
           enabled: true,
@@ -990,21 +991,21 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 
 - `agents.entries` 中的每个键都是稳定的代理 ID。
 - `default`：必须且只能有一个代理条目设置 `default: true`。
-- `model`：字符串形式会为代理设置严格的专用主模型，且不使用模型回退；对象形式 `{ primary }` 同样是严格模式，除非添加 `fallbacks`。使用 `{ primary, fallbacks: [...] }` 可为该代理启用回退，或使用 `{ primary, fallbacks: [] }` 明确指定严格行为。仅覆盖 `primary` 的 Cron 作业仍会继承默认回退设置，除非将 `fallbacks` 设置为 `[]`。
-- `utilityModel`：可选的每个代理覆盖设置，用于生成会话标题和线程标题等简短的内部任务。若未设置，则回退到 `agents.defaults.utilityModel`，再回退到当前生效会话提供商声明的小模型默认值。控制面板标题会使用当前生效的常规会话模型重试一次。空字符串会为该代理跳过备用的实用模型路径，但不会禁用控制面板标题生成。
-- `params`：每个代理的流参数，会与 `agents.defaults.models` 中所选模型条目合并。可用于设置代理专用的覆盖项，例如 `cacheRetention`、`temperature` 或 `maxTokens`，而无需重复整个模型目录。
-- `tts`：可选的每个代理文本转语音覆盖设置。该配置块会与 `tts` 进行深度合并，因此共享的提供商凭据和回退策略应保留在 `tts` 中，此处只需设置提供商、语音、模型、风格或自动模式等角色专用值。
-- `skills`：可选的每个代理技能允许列表。省略时，如果设置了 `agents.defaults.skills`，代理会继承该设置；显式列表会替换默认值，而不是进行合并，`[]` 表示不使用任何技能。
-- `thinkingDefault`：可选的每个代理默认思考级别（`off | minimal | low | medium | high | xhigh | adaptive | max`）。当未设置每条消息或会话级覆盖时，会覆盖该代理的 `agents.defaults.thinkingDefault`。所选提供商/模型配置决定哪些值有效；对于 Google Gemini，`adaptive` 会保留提供商控制的动态思考（Gemini 3/3.1 不设置 `thinkingLevel`，Gemini 2.5 使用 `thinkingBudget: -1`）。
+- `model`：字符串形式会为代理设置严格的专用主模型，且没有模型回退；对象形式 `{ primary }` 同样是严格模式，除非添加 `fallbacks`。使用 `{ primary, fallbacks: [...] }` 可为该代理启用回退，或使用 `{ primary, fallbacks: [] }` 明确指定严格行为。仅覆盖 `primary` 的 Cron 任务仍会继承默认回退模型，除非设置 `fallbacks: []`。
+- `utilityModel`：可选的每个代理覆盖项，用于生成会话标题和线程标题等简短内部任务。若未设置，则回退到 `agents.defaults.utilityModel`，再回退到当前有效会话提供商声明的小模型默认值。仪表板标题会使用有效的常规会话模型再重试一次。空字符串会跳过该代理的备用 utility 路由，但不会禁用仪表板标题生成。
+- `params`：每个代理的流参数，会合并到 `agents.defaults.models` 中所选模型条目的参数之上。可使用此项设置代理专用覆盖项，例如 `cacheRetention`、`temperature` 或 `maxTokens`，而无需复制整个模型目录。
+- `tts`：可选的每个代理文本转语音覆盖项。该配置块会深度合并到 `tts` 之上，因此应将共享的提供商凭据和回退策略保留在 `tts` 中，而这里只设置提供商、语音、模型、风格或自动模式等角色专属值。
+- `skills`：可选的每个代理技能允许列表。若省略，则代理会在设置时继承 `agents.defaults.skills`；显式列表会替换默认值，而不是进行合并；`[]` 表示不使用任何技能。
+- `thinkingDefault`：可选的每个代理默认思考级别（`off | minimal | low | medium | high | xhigh | adaptive | max`）。当未设置每条消息或会话级覆盖时，会覆盖该代理的 `agents.defaults.thinkingDefault`。有效值由所选提供商/模型配置决定；对于 Google Gemini，`adaptive` 会保留提供商控制的动态思考（Gemini 3/3.1 不设置 `thinkingLevel`，Gemini 2.5 设置 `thinkingBudget: -1`）。
 - `reasoningDefault`：可选的每个代理默认推理可见性（`on | off | stream`）。当未设置每条消息或会话级推理覆盖时，会覆盖该代理的 `agents.defaults.reasoningDefault`。
-- `fastModeDefault`：可选的每个代理快速模式默认值（`"auto" | true | false`）。当未设置每条消息或会话级快速模式覆盖时生效。
-- `models`：可选的每个代理模型目录/运行时覆盖设置，以完整的 `provider/model` ID 为键。使用 `models["provider/model"].agentRuntime` 可设置每个代理的运行时例外。
-- `runtime`：可选的每个代理运行时描述符。当代理应默认使用 ACP 宿主会话时，使用 `type: "acp"`，并通过 `runtime.acp` 设置默认值（`agent`、`backend`、`mode`、`cwd`）。
+- `fastModeDefault`：可选的每个代理快速模式默认值（`"auto" | true | false`）。当未设置每条消息或会话级快速模式覆盖时，会覆盖该代理的 `agents.defaults.fastModeDefault`。
+- `models`：可选的每个代理模型目录/运行时覆盖项，以完整的 `provider/model` ID 为键。使用 `models["provider/model"].agentRuntime` 可设置每个代理的运行时例外。
+- `runtime`：可选的每个代理运行时描述符。当代理应默认使用 ACP harness 会话时，使用 `type: "acp"`，并通过 `runtime.acp` 设置默认值（`agent`、`backend`、`mode`、`cwd`）。
 - `identity.avatar`：相对于工作区的路径、`http(s)` URL 或 `data:` URI。
-- 本地工作区相对路径的 `identity.avatar` 图片大小限制为 2 MB。`http(s)` URL 和 `data:` URI 不受本地文件大小限制检查。
-- `identity` 会派生默认值：根据 `emoji` 派生 `ackReaction`，根据 `name`/`emoji` 派生 `mentionPatterns`。
-- `subagents.allowAgents`：为显式的 `sessions_spawn.agentId` 目标设置已配置代理 ID 的允许列表（`["*"]` = 任意已配置目标；默认值：仅允许同一代理）。如果应允许以自身为目标的 `agentId` 调用，请包含请求者 ID。配置已被删除的代理所对应的过时条目会被 `sessions_spawn` 拒绝，并从 `agents_list` 中省略；运行 `openclaw doctor --fix` 清理这些条目，或者添加一个最小的 `agents.entries.*` 条目，以便该目标在继承默认设置的同时仍可被生成。
-- 沙箱继承保护：如果请求者会话处于沙箱中，`sessions_spawn` 会拒绝运行在非沙箱环境中的目标。
+- 本地相对于工作区的 `identity.avatar` 图片文件大小上限为 2 MB。`http(s)` URL 和 `data:` URI 不受本地文件大小限制检查。
+- `identity` 会推导默认值：从 `emoji` 推导 `ackReaction`，从 `name`/`emoji` 推导 `mentionPatterns`。
+- `subagents.allowAgents`：为显式的 `sessions_spawn.agentId` 目标设置已配置代理 ID 的允许列表（`["*"]` = 任意已配置目标；默认值：仅当前代理）。如果允许使用以自身为目标的 `agentId` 调用，请包含请求方 ID。配置已被删除的代理所对应的过期条目会被 `sessions_spawn` 拒绝，并从 `agents_list` 中省略；运行 `openclaw doctor --fix` 清理它们，或者添加一个最小的 `agents.entries.*` 条目，以便该目标在继承默认值的同时仍可生成。
+- 沙箱继承保护：如果请求方会话处于沙箱中，`sessions_spawn` 会拒绝运行时不处于沙箱中的目标。
 - `subagents.requireAgentId`：为 `true` 时，阻止省略 `agentId` 的 `sessions_spawn` 调用（强制显式选择配置；默认值：`false`）。
 - `subagents.maxConcurrent`：子代理执行期间允许的最大并发子代理运行数。默认值：`8`。
 - `subagents.maxChildrenPerAgent`：单个代理会话可生成的最大活动子代理数。默认值：`5`。
@@ -1177,7 +1178,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
     resetTriggers: ["/new", "/reset"],
     store: "~/.openclaw/agents/{agentId}/sessions/sessions.json",
     maintenance: {
-      mode: "enforce", // enforce (default) | warn
+      mode: "enforce", // enforce（默认） | warn
       pruneAfter: "30d",
       maxEntries: 500,
       resetArchiveRetention: "30d", // 持续时间或 false
@@ -1194,7 +1195,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
       suggest: true,
       drafts: true,
     },
-    mainKey: "main", // legacy (runtime always uses "main")
+    mainKey: "main", // 旧版（运行时始终使用 "main"）
     sendPolicy: {
       rules: [{ action: "deny", match: { channel: "discord", chatType: "group" } }],
       default: "allow",
@@ -1441,7 +1442,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 - 当配置了多个语音对话提供商时，`talk.provider` 必须与 `talk.providers` 中的某个键匹配。
 - 对于未指定代理作用域会话密钥而创建的语音对话会话，`talk.agentId` 负责管理这些会话。会话作用域的语音对话调用仍会使用该密钥中编码的代理。对于现有的多代理配置，Doctor 可能会创建一个仅包含此所有者的最小 `talk` 块。
 - 旧版扁平语音对话键（`talk.voiceId`、`talk.voiceAliases`、`talk.modelId`、`talk.outputFormat`、`talk.apiKey`）仅用于兼容。运行 `openclaw doctor --fix`，将持久化配置重写为 `talk.providers.<provider>`。
-- Voice ID 会回退到 `ELEVENLABS_VOICE_ID` 或 `SAG_VOICE_ID`（macOS 语音对话客户端行为）。
+- 语音 ID 会回退到 `ELEVENLABS_VOICE_ID` 或 `SAG_VOICE_ID`（macOS 语音对话客户端行为）。
 - `providers.*.apiKey` 接受纯文本字符串或 SecretRef 对象。
 - 仅当未配置语音对话 API 密钥时，才会应用 `ELEVENLABS_API_KEY` 回退值。
 - `providers.*.voiceAliases` 允许语音对话指令使用易记名称。

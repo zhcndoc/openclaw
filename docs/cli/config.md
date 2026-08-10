@@ -113,6 +113,8 @@ openclaw config validate --json
 如果验证已经失败，请先运行 `openclaw configure` 或 `openclaw doctor --fix`。`openclaw chat` 不会绕过无效配置保护。
 </Note>
 
+Provider 和 runtime 的 `params` 包有意被类型化为 `Record<string, unknown>`，因为受支持的键和值由其所属方定义。`openclaw config validate` 可以验证容器及整体配置结构，但无法对特定 provider 的参数名称或值进行类型检查。通过验证并不能证明某个参数受支持；请查阅 provider 文档，并在选定的 runtime 和 provider 上验证其行为。
+
 ## 值
 
 值在可能时会被解析为 JSON5；否则将被视为原始字符串。使用 `--strict-json` 可要求使用不带字符串回退的标准 JSON（此时会拒绝仅属于 JSON5 的语法，例如注释、尾随逗号或未加引号的键）。`config set` 中的 `--json` 是 `--strict-json` 的旧别名。
@@ -221,7 +223,7 @@ Provider 构建器目标必须使用 `secrets.providers.<alias>` 作为路径。
 
   </Accordion>
   <Accordion title="环境变量 provider（--provider-source env）">
-    - `--provider-allowlist <ENV_VAR>`（可重复）
+    - `--provider-allowlist <ENV_VAR>`（可重复指定）
 
   </Accordion>
   <Accordion title="文件 provider（--provider-source file）">
@@ -232,13 +234,13 @@ Provider 构建器目标必须使用 `secrets.providers.<alias>` 作为路径。
   </Accordion>
   <Accordion title="执行 provider（--provider-source exec）">
     - `--provider-command <path>`（必需）
-    - `--provider-arg <arg>`（可重复）
+    - `--provider-arg <arg>`（可重复指定）
     - `--provider-no-output-timeout-ms <ms>`
     - `--provider-max-output-bytes <bytes>`
     - `--provider-json-only`
-    - `--provider-env <KEY=VALUE>` (repeatable)
-    - `--provider-pass-env <ENV_VAR>` (repeatable)
-    - `--provider-trusted-dir <path>` (repeatable)
+    - `--provider-env <KEY=VALUE>`（可重复指定）
+    - `--provider-pass-env <ENV_VAR>`（可重复指定）
+    - `--provider-trusted-dir <path>`（可重复指定）
 
   </Accordion>
 </AccordionGroup>
@@ -300,14 +302,20 @@ ssh user@gateway-host 'openclaw config patch --stdin' < ./openclaw.patch.json5
     defaults: {
       model: { primary: "openai/gpt-5.6-sol" },
       models: {
-        "openai/gpt-5.6-sol": { params: { fastMode: true } },
+        "openai/gpt-5.6-sol": {
+          agentRuntime: { id: "openclaw" },
+          params: { fastMode: true },
+        },
       },
     },
   },
 }
 ```
 
-当对象或数组必须精确设置为所提供的值，而不是递归补丁时，请使用 `--replace-path <path>`：
+运行时固定项使其成为一个嵌入式 OpenClaw 配方。有效的 `fastMode`
+值是一种可移植的类型化运行时控制项，并不会自行选择 OpenClaw。
+
+当某个对象或数组必须完全变为所提供的值，而不是进行递归补丁时，请使用 `--replace-path <path>`：
 
 ```bash
 openclaw config patch --file ./discord.patch.json5 --replace-path 'channels.discord.guilds["123"].channels'

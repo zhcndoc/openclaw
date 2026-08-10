@@ -16,18 +16,19 @@ read_when:
 
 ## 当前已文档化的标志
 
-| Surface             | Key                                                                                           | 何时使用它                                                                                                                  | 更多                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Local model runtime | `agents.defaults.experimental.localModelLean`, `agents.entries.*.experimental.localModelLean` | 较小或更严格的本地后端无法处理 OpenClaw 完整的默认工具表面                                                                  | [本地模型](/gateway/local-models)                                                    |
-| Codex harness       | `plugins.entries.codex.config.appServer.experimental.sandboxExecServer`                       | 你希望原生 Codex app-server 0.143.0 或更新版本，直接针对 OpenClaw 基于沙箱的 exec-server，而不是禁用 Code Mode | [Codex harness 参考](/plugins/codex-harness-reference#sandboxed-native-execution) |
-| Code Mode           | `tools.codeMode.enabled`                                                                      | 你希望以紧凑的方式，通过代码编排访问隐藏的 OpenClaw 工具目录                                                                | [Code Mode](/tools/code-mode)                                                        |
-| Swarm               | `tools.swarm.enabled`                                                                         | 你希望 Code Mode 脚本并行编排受限数量的子代理                                                                        | [Swarm](/tools/swarm)                                                                |
+| 表面             | 键                                                                                           | 使用场景                                                                                                                       | 更多                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 本地模型运行时 | `agents.defaults.experimental.localModelLean`, `agents.entries.*.experimental.localModelLean` | 较小或限制更严格的本地后端无法处理 OpenClaw 的完整默认工具集                                                | [本地模型](/gateway/local-models)                                                  |
+| Codex harness       | `plugins.entries.codex.config.appServer.experimental.sandboxExecServer`                       | 希望原生 Codex app-server 0.143.0 或更高版本将目标设为由 OpenClaw 沙箱支持的 exec-server，而不是禁用 Code Mode | [Codex harness 参考](/plugins/codex-harness-reference#sandboxed-native-execution) |
+| Code Mode           | `tools.codeMode.enabled`                                                                      | 希望以紧凑的代码编排方式访问隐藏的 OpenClaw 工具目录                                                       | [Code Mode](/tools/code-mode)                                                          |
+| 云端工作器       | `cloudWorkers.desktop`                                                                        | 希望通过控制 UI 监视或控制支持桌面的云端工作器环境                                        | [云端工作器桌面](/gateway/cloud-workers#desktop-interactive)                     |
+| Swarm               | `tools.swarm.enabled`                                                                         | 希望 Code Mode 脚本并行编排受限规模的子代理组                                                | [Swarm](/tools/swarm)                                                                  |
 
 ## 控制 UI 实验室
 
-打开 **Settings → Agents & Tools → Labs** 以管理带有 Control UI 开关的实验。启用或禁用某个实验会立即修补规范的 Gateway 配置；只有当某个功能需要重启时，页面才会显示重启提示。
+打开 **设置 → 代理与工具 → 实验室**，以管理带有控制 UI 开关的实验。启用或禁用某个实验会立即修补规范的网关配置；只有当某个功能需要重启时，页面才会显示重启提示。
 
-Code Mode 和 Swarm 是当前已发布的实验室条目。这两个开关都会写入现有的已验证配置键，并且通常会在不重启 Gateway 的情况下对后续的代理运行生效。
+目前已发布的实验室条目包括代码模式、群集、工具搜索、工具循环检测、本地模型的 Lean 工具、消息审计元数据和云端工作器桌面。消息审计元数据和云端工作器桌面需要重启网关；其他开关通常会在未来的代理运行中生效，无需重启。
 
 ## 本地模型精简模式
 

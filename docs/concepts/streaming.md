@@ -8,10 +8,10 @@ title: "流式传输与分块"
 ---
 
 OpenClaw 有两个独立的流式层，并且当前**没有真正的
-token-delta 流式传输**到频道消息：
+令牌增量流式传输**到频道消息：
 
 - **区块流式传输（频道）：** 在助手
-  写入时发出已完成的**区块**。这些是普通的频道消息，不是 token delta。
+  写入时发出已完成的**区块**。这些是普通的频道消息，不是令牌增量。
 - **预览流式传输（Telegram/Discord/Slack/Matrix/Mattermost/MS Teams）：**
   在生成过程中更新一个临时的**预览消息**（发送 + 编辑/追加）。
 
@@ -143,15 +143,16 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 
 ### 频道映射
 
-当未设置 `streaming` 时，Discord 和 Telegram 默认为 `progress`；Slack、Mattermost 和 MS Teams 默认为 `partial`。
+Discord 未设置 `streaming` 时默认为 `off`，Telegram 默认为
+`progress`，而 Slack、Mattermost 和 MS Teams 默认为 `partial`。
 
-| 频道      | `off` | `partial` | `block` | `progress`                   |
-| --------- | ----- | --------- | ------- | ---------------------------- |
-| Telegram  | 是    | 是        | 是      | 可编辑的进度草稿（默认）     |
-| Discord   | 是    | 是        | 是      | 可编辑的进度草稿（默认）     |
-| Slack     | 是    | 是        | 是      | 是                           |
-| Mattermost | 是   | 是        | 是      | 是                           |
-| MS Teams  | 是    | 是        | 是      | 原生进度流                   |
+| 频道      | `off`         | `partial` | `block` | `progress`                        |
+| ---------- | ------------- | --------- | ------- | --------------------------------- |
+| Telegram   | 是           | 是       | 是     | 可编辑的进度草稿（默认） |
+| Discord    | 是（默认） | 是       | 是     | 可编辑的进度草稿（选择启用）  |
+| Slack      | 是           | 是       | 是     | 是                               |
+| Mattermost | 是           | 是       | 是     | 是                               |
+| MS Teams   | 是           | 是       | 是     | 原生进度流                       |
 
 预览分块配置（`streaming.preview.chunk.*`，例如在 `channels.discord.streaming` 或 `channels.telegram.streaming` 下）默认值为 `minChars: 200`、`maxChars: 800`（会限制在频道的 `textChunkLimit` 之内），以及 `breakPreference: "paragraph"`。
 
@@ -227,7 +228,7 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 - Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用状态即可保留该已发布行为。
 - **Mattermost** 会在 `partial` 和 `progress` 模式下，将工具活动合并到一条预览消息中；在 `block` 模式下，则会在文本块之间发送一条工具活动消息（见上文）。
 - 工具进度编辑遵循当前激活的预览流模式；当预览流为 `off` 或分块流已接管消息时，会跳过这些更新。在 Telegram 上，`streaming.mode: "off"` 表示仅发送最终结果：通用进度提示也会被抑制，而不会作为独立状态消息发送；但审批提示、媒体载荷和错误仍会正常传递。
-- 若要保留预览流但隐藏工具进度行，请将该频道的 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，且在所有模式下都会生效）。若要在隐藏命令/执行文本的同时保留工具进度行可见，请将 `streaming.preview.commandText` 设置为 `"status"`，或将 `streaming.progress.commandText` 设置为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`】【。
+- 若要保留预览流但隐藏工具进度行，请将该频道的 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，且在所有模式下都会生效）。若要在隐藏命令/执行文本的同时保留工具进度行可见，请将 `streaming.preview.commandText` 设置为 `"status"`，或将 `streaming.progress.commandText` 设置为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`。
 
 ## 进度草稿渲染
 

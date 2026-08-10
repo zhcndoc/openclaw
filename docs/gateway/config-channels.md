@@ -119,12 +119,12 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
   },
   channels: {
     whatsapp: {
-      dmPolicy: "pairing", // pairing | allowlist | open | disabled
+      dmPolicy: "pairing", // 配对 | 允许列表 | 开放 | 禁用
       allowFrom: ["+15555550123", "+447700900123"],
       textChunkLimit: 4000,
-      streaming: { chunkMode: "length" }, // length | newline
+      streaming: { chunkMode: "length" }, // 按长度 | 按换行符
       mediaMaxMb: 50,
-      sendReadReceipts: true, // 已读回执（self-chat 模式下为 false）
+      sendReadReceipts: true, // 已读回执（自聊模式下为 false）
       groups: {
         "*": { requireMention: true },
       },
@@ -147,7 +147,7 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
         default: {},
         personal: {},
         biz: {
-          // authDir: "~/.openclaw/credentials/whatsapp/biz",
+          // 认证目录："~/.openclaw/credentials/whatsapp/biz",
         },
       },
     },
@@ -256,7 +256,7 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
         events: true,
         moderation: false,
       },
-      replyToMode: "off", // 关闭 | 首条 | 全部 | 批量
+      replyToMode: "off", // off | first | all | batch
       dmPolicy: "pairing",
       allowFrom: ["1234567890", "123456789012345678"],
       dm: { enabled: true, groupEnabled: false, groupChannels: ["openclaw-dm"] },
@@ -283,8 +283,8 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
       textChunkLimit: 2000,
       suppressEmbeds: true,
       streaming: {
-        mode: "progress", // 关闭 | 部分 | 块状 | 进度（Discord 默认：进度）
-        chunkMode: "length", // 长度 | 换行
+        mode: "progress", // 显式启用；Discord 默认关闭
+        chunkMode: "length", // length | newline
         progress: {
           label: "auto",
           maxLines: 8,
@@ -330,44 +330,44 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
 }
 ```
 
-- Token：`channels.discord.token`；对于默认账户，可回退使用 `DISCORD_BOT_TOKEN`。
-- 提供显式 Discord `token` 的直接出站调用会使用该令牌；账户策略设置仍来自活动运行时快照中选定的账户。
-- 可选的 `channels.discord.defaultAccount` 会在其匹配已配置的账户 ID 时覆盖默认账户选择。
-- 使用 `user:<id>`（私信）或 `channel:<id>`（公会频道）作为投递目标；不带前缀的纯数字 ID 将被拒绝。
-- 公会 slug 使用小写形式，空格替换为 `-`；频道键使用 slug 化后的名称（不含 `#`）。优先使用公会 ID。
-- 默认忽略机器人发送的消息。`allowBots: true` 会启用这些消息；使用 `allowBots: "mentions"` 可仅接受提及机器人的机器人消息（自身消息仍会被过滤）。
-- 支持机器人发送的入站消息的频道可以使用共享的[机器人循环保护](/channels/bot-loop-protection)。设置 `channels.defaults.botLoopProtection` 作为基础的成对预算，然后仅在某个界面需要不同限制时覆盖频道或账户设置。
+- Token：`channels.discord.token`；对于默认账户，如果未设置，则回退使用 `DISCORD_BOT_TOKEN`。
+- 直接出站调用如果提供了显式的 Discord `token`，则该调用使用此令牌；账户策略设置仍来自活动运行时快照中选定的账户。
+- 可选的 `channels.discord.defaultAccount` 会在其与已配置的账户 ID 匹配时覆盖默认账户选择。
+- 使用 `user:<id>`（私信）或 `channel:<id>`（服务器频道）作为投递目标；不带前缀的纯数字 ID 会被拒绝。
+- 服务器 slug 为小写形式，空格替换为 `-`；频道键使用经过 slug 化的名称（不含 `#`）。建议优先使用服务器 ID。
+- 默认情况下会忽略机器人发送的消息。`allowBots: true` 可启用此类消息；使用 `allowBots: "mentions"` 可仅接受提及该机器人的机器人消息（机器人自身的消息仍会被过滤）。
+- 支持机器人发送的入站消息的频道可以使用共享的[机器人循环保护](/channels/bot-loop-protection)。设置 `channels.defaults.botLoopProtection` 以配置基础的成对预算，然后仅在某个界面需要不同限制时覆盖频道或账户设置。
 - `channels.discord.guilds.<id>.ignoreOtherMentions`（以及频道覆盖设置）会丢弃提及其他用户或角色但未提及机器人的消息（不包括 @everyone/@here）。
 - `channels.discord.mentionAliases` 会在发送前将稳定的出站 `@handle` 文本映射为 Discord 用户 ID，因此即使临时目录缓存为空，也能确定性地提及已知队友。每个账户的覆盖设置位于 `channels.discord.accounts.<accountId>.mentionAliases` 下。
-- `maxLinesPerMessage`（默认值为 `17`）会拆分过高的消息，即使其字符数少于 2000。
-- `channels.discord.suppressEmbeds` 默认为 `true`，因此出站 URL 不会展开为 Discord 链接预览，除非禁用此设置。显式的 `embeds` 负载仍会正常发送；每次消息的工具调用都可以使用 `suppressEmbeds` 覆盖此设置。
+- `maxLinesPerMessage`（默认值为 `17`）会拆分过高的消息，即使消息长度小于 2000 个字符。
+- `channels.discord.suppressEmbeds` 默认为 `true`，因此出站 URL 不会展开为 Discord 链接预览，除非禁用此设置。显式的 `embeds` 载荷仍会正常发送；每次消息的工具调用都可以通过 `suppressEmbeds` 覆盖此设置。
 - `channels.discord.threadBindings` 控制 Discord 线程绑定的路由：
-  - `enabled`：针对线程绑定会话功能的 Discord 覆盖设置（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age` 以及绑定的投递/路由）
-  - `idleHours`：针对非活动自动取消聚焦时间（小时）的 Discord 覆盖设置（`0` 表示禁用）
-  - `maxAgeHours`：针对最大期限（小时）的 Discord 覆盖设置（`0` 表示禁用）
-  - `spawnSessions`：`sessions_spawn({ thread: true })` 以及 ACP 线程生成时自动创建/绑定线程的开关（默认值：`true`）
-  - `defaultSpawnContext`：线程绑定生成任务的原生子代理上下文（默认为 `"fork"`）
-- 顶层的 `bindings[]` 条目以及 `type: "acp"` 会为频道和线程配置持久 ACP 绑定（在 `match.peer.id` 中使用频道/线程 ID）。字段语义详见 [ACP 代理](/tools/acp-agents#persistent-channel-bindings)。
-- `channels.discord.agentComponents.ttlMs` 控制已发送 Discord 组件回调保持注册的时长。默认值为 `1800000`（30 分钟），最大值为 `86400000`（24 小时）。每个账户的覆盖设置位于 `channels.discord.accounts.<accountId>.agentComponents.ttlMs` 下。建议使用满足工作流需求的最短 TTL。
-- `channels.discord.voice` 启用 Discord 语音频道对话，以及可选的自动加入、LLM 和 TTS 覆盖设置。纯文本 Discord 配置默认关闭语音；设置 `channels.discord.voice.enabled=true` 可选择启用。
+  - `enabled`：Discord 对线程绑定会话功能的覆盖设置（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age` 以及绑定的投递/路由）
+  - `idleHours`：Discord 对不活跃自动取消聚焦时间的覆盖设置，单位为小时（`0` 表示禁用）
+  - `maxAgeHours`：Discord 对最大有效时长的覆盖设置，单位为小时（`0` 表示禁用）
+  - `spawnSessions`：用于控制 `sessions_spawn({ thread: true })` 以及 ACP 线程生成时自动创建/绑定线程的开关（默认值：`true`）
+  - `defaultSpawnContext`：线程绑定生成任务使用的原生子代理上下文（默认为 `"fork"`）
+- 顶层的 `bindings[]` 条目中，`type: "acp"` 用于为频道和线程配置持久 ACP 绑定（在 `match.peer.id` 中使用频道/线程 ID）。字段语义请参阅 [ACP 代理](/tools/acp-agents#persistent-channel-bindings)。
+- `channels.discord.agentComponents.ttlMs` 控制已发送的 Discord 组件回调保持注册的时长。默认值为 `1800000`（30 分钟），最大值为 `86400000`（24 小时）。每个账户的覆盖设置位于 `channels.discord.accounts.<accountId>.agentComponents.ttlMs` 下。建议使用满足工作流需求的最短 TTL。
+- `channels.discord.voice` 启用 Discord 语音频道对话，以及可选的自动加入、LLM 和 TTS 覆盖设置。纯文本 Discord 配置默认关闭语音功能；设置 `channels.discord.voice.enabled=true` 可选择启用。
 - `channels.discord.voice.model` 可选地覆盖用于 Discord 语音频道响应的 LLM 模型。
-- `channels.discord.voice.daveEncryption`（默认值：`true`）和 `channels.discord.voice.decryptionFailureTolerance`（默认值：`24`）会传递给 `@discordjs/voice` 的 DAVE 选项。
-- `channels.discord.voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试等待 `@discordjs/voice` Ready 状态的初始时长（默认值：`30000`）。
-- `channels.discord.voice.reconnectGraceMs` 控制断开的语音会话在 OpenClaw 销毁该会话前，进入重新连接信令所允许的时长（默认值：`15000`）。
-- Discord 语音播放不会因其他用户开始说话的事件而中断。为避免反馈循环，TTS 播放期间 OpenClaw 会忽略新的语音捕获。
-- OpenClaw 还会在重复解密失败后，通过离开并重新加入语音会话来尝试恢复语音接收。
-- `channels.discord.streaming` 是规范的流模式键。Discord 默认使用 `streaming.mode: "progress"`，因此工具/工作进度会显示在一条经过编辑的预览消息中；设置 `streaming.mode: "off"` 可将其禁用。旧版扁平键（`streamMode`、`chunkMode`、`blockStreaming`、`draftChunk`、`blockStreamingCoalesce`）在运行时不再读取；运行 `openclaw doctor --fix` 迁移持久化配置。
-- `channels.discord.autoPresence` 将运行时可用性映射为机器人状态（健康 => 在线、降级 => 闲置、耗尽 => 请勿打扰），并允许可选的状态文本覆盖。
-- `channels.discord.guilds.<id>.presenceEvents` 会将用户可用性到达事件路由到一个已配置的 Discord 频道，作为代理系统事件。符合条件的成员必须能够查看 `channelId`；公开线程继承父级可见性，而私有线程还需要具备成员资格或“管理线程”权限。`users` 可以进一步缩小该受众范围。它会从完整的 `GUILD_CREATE` 快照中初始化当前在线成员，路由观测到的离线到在线转换，并将未见过的成员首次出现的后续在线信号视为新近可用，但不会断言他们是上线了还是在快照之后加入。成员数超过 Discord 75,000 人快照限制的公会需要先明确进行离线更新。限流参数：`reconnectSuppressSeconds`（新 Gateway 会话建立后、重建公会状态期间的静默窗口，默认值为 300，`0` 表示禁用）以及 `burstLimit`/`burstWindowSeconds`（每个公会成功排队事件的速率限制，默认在 60 秒滑动窗口内最多 8 个事件）。恢复的会话不会启动重新连接抑制窗口。现有的每用户重新问候冷却时间仍为八小时。此功能要求 `channels.discord.intents.presence=true`、Discord 开发者门户中的特权 Presence Intent，以及已启用的代理心跳。
-- `channels.discord.intents.messageContent` 默认为 `true`。仅当 Discord 无法授予特权 Message Content intent 时，才将其设置为 `false` 以启用仅提及模式；私信和明确提及机器人的消息仍会携带消息内容，而其他公会消息不会。在此模式下，应对每个已配置的公会频道保留 `requireMention: true`。
+- `channels.discord.voice.daveEncryption`（默认值为 `true`）和 `channels.discord.voice.decryptionFailureTolerance`（默认值为 `24`）会传递给 `@discordjs/voice` 的 DAVE 选项。
+- `channels.discord.voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试等待 `@discordjs/voice` 就绪的初始时长（默认值为 `30000`）。
+- `channels.discord.voice.reconnectGraceMs` 控制断开的语音会话在 OpenClaw 销毁它之前进入重新连接信令的等待时长（默认值为 `15000`）。
+- Discord 语音播放不会因其他用户开始说话的事件而中断。为避免反馈循环，TTS 播放期间 OpenClaw 会忽略新的语音采集。
+- OpenClaw 还会尝试恢复语音接收：在重复解密失败后离开并重新加入语音会话。
+- `channels.discord.streaming` 是规范的流模式键。Discord 预览流默认为 `off`；设置 `streaming.mode: "progress"` 可选择启用一条经过编辑的工具/工作进度消息，或选择 `partial` 或 `block` 来显示回答预览。旧版扁平键（`streamMode`、`chunkMode`、`blockStreaming`、`draftChunk`、`blockStreamingCoalesce`）在运行时不再读取；运行 `openclaw doctor --fix` 以迁移已持久化的配置。
+- `channels.discord.autoPresence` 会将运行时可用性映射为机器人状态（正常 => 在线，降级 => 闲置，耗尽 => 请勿打扰），并允许可选的状态文本覆盖。
+- `channels.discord.guilds.<id>.presenceEvents` 会将用户可用性上线事件路由到一个配置的 Discord 频道，作为代理系统事件。符合条件的成员必须能够查看 `channelId`；公共线程继承父频道的可见性，而私有线程还要求用户是线程成员或拥有管理线程权限。`users` 可进一步缩小受众范围。该功能会从完整的 `GUILD_CREATE` 快照中记录当前在线成员，路由观测到的离线到在线转换，并将未在快照中出现的成员之后首次发出的在线信号视为新上线，但不会断言他们是上线还是在快照之后加入。成员数超过 Discord 75,000 人快照限制的服务器，需要先明确收到离线更新。限流选项：`reconnectSuppressSeconds`（新的 Gateway 会话建立后、服务器状态重建期间的静默窗口，默认值为 300，`0` 表示禁用）以及 `burstLimit`/`burstWindowSeconds`（每个服务器成功排队事件的速率限制，默认在 60 秒滑动窗口内最多 8 个事件）。恢复的会话不会启动重新连接抑制窗口。现有的每用户重新问候冷却时间仍为八小时。此功能要求 `channels.discord.intents.presence=true`、Discord 开发者门户中的特权 Presence Intent，以及已启用的代理心跳。
+- `channels.discord.intents.messageContent` 默认为 `true`。仅当 Discord 无法授予特权 Message Content intent 时，才将其设置为 `false` 以启用仅提及模式；私信和明确提及机器人的消息仍会携带消息内容，而其他服务器消息不会。使用此模式时，请确保每个已配置的服务器频道都设置 `requireMention: true`。
 - `channels.discord.dangerouslyAllowNameMatching` 会重新启用可变的名称/标签匹配（紧急兼容模式）。
-- `channels.discord.execApprovals`：Discord 原生的命令执行审批投递和审批者授权。
-  - `enabled`：`true`、`false` 或 `"auto"`（默认值）。在自动模式下，当可以从 `approvers` 或 `commands.ownerAllowFrom` 中解析审批者时，命令执行审批会被激活。
-  - `approvers`：允许批准命令执行请求的 Discord 用户 ID。省略时回退使用 `commands.ownerAllowFrom`。
-  - `agentFilter`：可选的代理 ID 允许列表。省略则转发所有代理的审批请求。
+- `channels.discord.execApprovals`：Discord 原生的执行审批投递和审批者授权。
+  - `enabled`：`true`、`false` 或 `"auto"`（默认值）。在自动模式下，当可以从 `approvers` 或 `commands.ownerAllowFrom` 中解析出审批者时，执行审批会启用。
+  - `approvers`：允许审批执行请求的 Discord 用户 ID。省略时回退使用 `commands.ownerAllowFrom`。
+  - `agentFilter`：可选的代理 ID 允许列表。省略时转发所有代理的审批请求。
   - `sessionFilter`：可选的会话键模式（子字符串或正则表达式）。
-  - `target`：审批提示的发送位置。`"dm"`（默认值）发送到审批者的私信，`"channel"` 发送到发起频道，`"both"` 同时发送到两者。当目标包含 `"channel"` 时，按钮仅可由已解析的审批者使用。
-  - `cleanupAfterResolve`：设为 `true` 时，在批准、拒绝或超时后删除审批私信。
+  - `target`：审批提示的发送位置。`"dm"`（默认值）发送到审批者的私信，`"channel"` 发送到发起请求的频道，`"both"` 同时发送到两者。当目标包含 `"channel"` 时，按钮仅可由已解析的审批者使用。
+  - `cleanupAfterResolve`：当设置为 `true` 时，在审批、拒绝或超时后删除审批私信。
 
 **Reaction 通知模式：** `off`（无）、`own`（机器人的消息，默认）、`all`（所有消息）、`allowlist`（来自 `guilds.<id>.users` 的所有消息）。
 
@@ -585,7 +585,7 @@ OpenClaw 会启动 `imsg rpc`（通过 stdio 的 JSON-RPC）。不需要守护�
 
 已移除 BlueBubbles 支持。`channels.bluebubbles` 不是当前 OpenClaw 上受支持的运行时配置面。请将旧配置迁移到 `channels.imessage`；简要说明请参阅 [BlueBubbles removal and the imsg iMessage path](/announcements/bluebubbles-imessage)，完整对照表请参阅 [Coming from BlueBubbles](/channels/imessage-from-bluebubbles)。
 
-如果 Gateway 没有运行在已登录 Messages 的那台 Mac 上，请保持 `channels.imessage.enabled=true`，并将 `channels.imessage.cliPath` 设置为在那台 Mac 上运行 `imsg "$@"` 的 SSH 包装器。默认的本地 `imsg` 路径仅适用于 macOS。
+如果 Gateway 未运行在已登录 Messages 的 Mac 上，请保留 `channels.imessage.enabled=true`，并将 `channels.imessage.cliPath` 设置为 Gateway 本地的 SSH 包装器的绝对路径，该包装器应在该 Mac 上运行 `imsg "$@"`。将 `remoteHost` 设置为 Messages Mac，而不是 Gateway 主机。OpenClaw 会自动检测简单的透明 SSH 包装器以确保兼容性，但复杂包装器需要显式设置 `remoteHost`。默认的本地 `imsg` 路径仅适用于 macOS。
 
 在依赖 SSH 包装器进行生产发送之前，请通过该完全相同的包装器验证一次外发 `imsg send`。某些 macOS TCC 状态会将 Messages Automation 分配给 `/usr/libexec/sshd-keygen-wrapper`，这可能导致读取和探测正常工作，但发送时因 AppleEvents `-1743` 失败；请参阅 [iMessage](/channels/imessage) 中的 SSH 包装器故障排除部分。
 
@@ -594,9 +594,9 @@ OpenClaw 会启动 `imsg rpc`（通过 stdio 的 JSON-RPC）。不需要守护�
   channels: {
     imessage: {
       enabled: true,
-      cliPath: "imsg",
-      dbPath: "~/Library/Messages/chat.db",
-      remoteHost: "user@gateway-host",
+      cliPath: "/home/openclaw/.openclaw/scripts/imsg-ssh",
+      dbPath: "/Users/user/Library/Messages/chat.db",
+      remoteHost: "user@messages-mac",
       dmPolicy: "pairing",
       allowFrom: ["+15555550123", "user@example.com", "chat_id:123"],
       historyLimit: 50,
@@ -620,26 +620,29 @@ OpenClaw 会启动 `imsg rpc`（通过 stdio 的 JSON-RPC）。不需要守护�
 }
 ```
 
-- 可选的 `channels.imessage.defaultAccount` 会在其与已配置的账户 id 匹配时覆盖默认账户选择。
-- 需要对 Messages 数据库授予完全磁盘访问权限。
+- 可选的 `channels.imessage.defaultAccount` 会在其匹配已配置的账户 id 时覆盖默认账户选择。
+- 需要对 Messages 数据库具有完全磁盘访问权限。
 - 优先使用 `chat_id:<id>` 目标。使用 `imsg chats --limit 20` 列出聊天。
-- `cliPath` 可以指向 SSH 包装器；将 `remoteHost`（`host` 或 `user@host`）用于通过 SCP 获取附件。
-- `attachmentRoots` 和 `remoteAttachmentRoots` 会限制传入附件路径（默认：`/Users/*/Library/Messages/Attachments`）。
-- SCP 使用严格的主机密钥检查，因此请确保中继主机密钥已存在于 `~/.ssh/known_hosts` 中。
+- 对于 SSH 设置，`cliPath` 是 Gateway 主机上的绝对路径。`remoteHost`（`host` 或 `user@host`）是 Messages Mac，`dbPath` 会在该 Mac 上解释。请使用远程数据库的绝对路径，而不要根据 Gateway 用户的主目录展开路径。
+- 已配置或自动检测到的 `remoteHost` 会通过现有的严格 SSH/SCP 传输启用入站附件获取和出站文件暂存。出站文件使用仅所有者可访问的远程临时路径，并在成功、失败或超时后尽力清理；清理失败时会发出警告，并可能留下仅所有者可访问的残留文件。
+- `attachmentRoots` 和 `remoteAttachmentRoots` 会限制入站附件路径（默认值：`/Users/*/Library/Messages/Attachments`）。
+- SCP 使用严格的主机密钥检查，因此请确保 Messages Mac 的主机密钥已经存在于 `~/.ssh/known_hosts` 中。
 - `channels.imessage.configWrites`：允许或拒绝由 iMessage 发起的配置写入。
-- `channels.imessage.sendTransport`：用于正常外发回复的首选 `imsg` RPC 发送传输。`auto`（默认）会在可用时对现有聊天使用 IMCore 桥接，然后回退到 AppleScript；`bridge` 要求使用私有 API 发送；`applescript` 会强制使用公开的 Messages 自动化路径。
-- `channels.imessage.actions.*`：启用也受 `imsg status` / `openclaw channels status --probe` 门控的私有 API 操作。
-- `channels.imessage.includeAttachments` 默认关闭；在期望代理回合中出现入站媒体之前，请将其设置为 `true`。
-- 桥接/网关重启后的入站恢复会自动进行（GUID 去重加上过期回溯年龄栅栏）。现有的 `channels.imessage.catchup.enabled: true` 配置仍会被接受，作为已弃用的兼容配置；`catchup` 默认禁用。
-- `channels.imessage.groups`：群组注册表和每组设置。使用 `groupPolicy: "allowlist"` 时，请配置显式的 `chat_id` 键或 `"*"` 通配符条目，以便群组消息可以通过注册表门控。
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目可以将 iMessage 对话绑定到持久化 ACP 会话。请在 `match.peer.id` 中使用规范化的 handle 或显式聊天目标（`chat_id:*`、`chat_guid:*`、`chat_identifier:*`）。共享字段语义： [ACP Agents](/tools/acp-agents#persistent-channel-bindings)。
+- `channels.imessage.sendTransport`：用于普通出站回复的首选 `imsg` RPC 发送传输方式。`auto`（默认值）会在 IMCore bridge 运行时对现有聊天使用它，然后回退到 AppleScript；`bridge` 要求使用私有 API 发送；`applescript` 强制使用公开的 Messages 自动化路径。
+- `channels.imessage.actions.*`：启用私有 API 操作，这些操作还受 `imsg status` / `openclaw channels status --probe` 控制。
+- `channels.imessage.includeAttachments` 默认关闭；在希望代理轮次接收入站媒体之前，请将其设置为 `true`。
+- bridge/Gateway 重启后的入站恢复是自动的（GUID 去重加上过期积压年龄限制）。现有的 `channels.imessage.catchup.enabled: true` 配置仍会作为已弃用的兼容性配置文件受到支持；`catchup` 默认关闭。
+- `channels.imessage.groups`：群组注册表和每个群组的设置。使用 `groupPolicy: "allowlist"` 时，请配置明确的 `chat_id` 键或 `"*"` 通配符条目，以便群组消息通过注册表检查。
+- 顶层的 `bindings[]` 条目（`type: "acp"`）可以将 iMessage 对话绑定到持久化 ACP 会话。在 `match.peer.id` 中使用规范化句柄或显式聊天目标（`chat_id:*`、`chat_guid:*`、`chat_identifier:*`）。共享字段语义请参阅：[ACP Agents](/tools/acp-agents#persistent-channel-bindings)。
 
 <Accordion title="iMessage SSH 包装器示例">
 
 ```bash
 #!/usr/bin/env bash
-exec ssh -T gateway-host imsg "$@"
+exec ssh -T messages-mac imsg "$@"
 ```
+
+使用远程 `imsg` v0.13.4 时，投票必须使用 `pollOptionId`；其 `poll.vote` RPC 方法不会解析索引或文本选择器。远程环境也无法回复非零部分索引的附件。这些限制不会改变本地 `imsg` 的行为。
 
 </Accordion>
 
@@ -701,7 +704,7 @@ Microsoft Teams 由插件支持，并在 `channels.msteams` 下配置。
     msteams: {
       enabled: true,
       configWrites: true,
-      // appId, appPassword, tenantId, webhook, 团队/频道策略：
+      // appId, appPassword, tenantId, webhook，团队/频道策略：
       // 见 /channels/msteams
     },
   },

@@ -50,9 +50,11 @@ gh workflow run full-release-validation.yml \
 
 包接受测试通常会根据解析后的 `ref` 构建候选 tarball，包括通过 `pnpm ci:full-release` 分派的完整 SHA 运行。在 beta 发布之后，传入 `release_package_spec=openclaw@YYYY.M.PATCH-beta.N`，以在发布检查、包接受测试、跨 OS、发布路径 Docker 和 package Telegram 中复用已发布的 npm 包。仅当包接受测试需要有意证明不同的包时，才使用 `package_acceptance_package_spec`。Codex 插件 live 包线路遵循相同状态：已发布的 `release_package_spec` 值派生出 `codex_plugin_spec=npm:@openclaw/codex@<version>`；SHA/artifact 运行会从所选 `ref` 打包 `extensions/codex`；操作员也可以直接为 `npm:`、`npm-pack:` 或 `git:` 插件源设置 `codex_plugin_spec`。该线路会授予该插件所需的显式 Codex CLI 安装批准，然后运行 Codex CLI 预检和同会话 OpenAI agent 回合。其最后一个零重试、中等思考的回合会发送可见进度，但省略 Codex `final`，读取随机化的工作区输入，写入其精确的产物，并发送明确的完成信号。这可以捕获 v2026.7.1 回归，即一次普通的进度发送终止了该回合。
 
+仅当发布负责人明确将包接受测试 Telegram E2E 延后到后续 beta 版本时，才使用 `-f skip_package_telegram_e2e=true`。对于 `stable` 和 `full`，该输入会被拒绝，并记录在验证证据中，同时不会禁用专门的 `rerun_group=npm-telegram` 工作流。
+
 ## 顶层阶段
 
-对于 `rerun_group=all`，会首先运行一个 `Check for reusable validation evidence` 作业。它会查找与相同发布配置、有效浸泡设置和验证输入相匹配的最新先前绿色完整验证。精确目标重跑使用 `exact-target-full-validation-v1`。其后代中完整 delta 恰好为 `CHANGELOG.md` 的使用 `changelog-only-release-v1`；所有产品泳道都会被跳过，验证器会独立重新检查 GitHub commit 比较、不可变父工件、子运行和派发日志。任何其他目标变更都需要全新的 Code SHA 验证。传入 `reuse_evidence=false` 可强制执行全新的完整运行。证据复用仅在 `main` 或规范化、固定 SHA 的 `release-ci/*` ref 上运行，且其工作流提交仍位于受信任的 `main` 血缘上；其他工作流 ref 会重新运行所选泳道。
+对于 `rerun_group=all`，会首先运行一个 `Check for reusable validation evidence` 作业。它会查找与相同发布配置、有效浸泡设置和验证输入相匹配的最新先前绿色完整验证。精确目标重跑使用 `exact-target-full-validation-v1`。其后代中完整 delta 恰好为 `CHANGELOG.md` 的使用 `changelog-only-release-v1`；所有产品泳道都会被跳过，验证器会独立重新检查 GitHub 提交比较、不可变父工件、子运行和派发日志。任何其他目标变更都需要全新的 Code SHA 验证。传入 `reuse_evidence=false` 可强制执行全新的完整运行。证据复用仅在 `main` 或规范化、固定 SHA 的 `release-ci/*` ref 上运行，且其工作流提交仍位于受信任的 `main` 血缘上；其他工作流 ref 会重新运行所选泳道。
 
 新的面向包的验证会在派发 Plugin Prerelease 和 OpenClaw Release Checks 之前，准备一个不可变 tarball 和一个 Docker 镜像工件。两个子流程都会在使用前验证相同的包 SHA、工件 ID、服务摘要、生产者运行尝试和 Docker 归档摘要。与包无关的裸 Docker 层使用内容寻址的 GHCR 缓存；候选特定镜像仍然是不可变的 GitHub 工件。针对显式已发布包规范的聚焦运行则会保留现有的包路径。
 

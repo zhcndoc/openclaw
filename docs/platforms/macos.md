@@ -57,12 +57,18 @@ OpenClaw，并打开仪表板。如果 Gateway 无法连接，或者其
   Gateway。Sparkle 会先更新应用；重新启动后，应用会自动将其 Gateway 更新并重启到匹配的版本，然后验证连接。
 - **更新 Gateway** 表示应用连接的是远程 Gateway、手动管理的本地 Gateway，或应用不拥有的其他安装实例。此按钮会运行该 Gateway 的常规更新流程，而不是更改 Mac 应用。
 
-协调更新失败后，会保留在类似设置的窗口中，并提供重试、[更新指南](/install/updating)和 Discord 操作。自动修复不会将更新版本的 Gateway 降级，也不会覆盖 `extended-stable` 频道固定设置。
+任一按钮都会先请求确认。只有在你选择**更新 Mac 应用并重新启动**后，卡片才会将更新交给应用处理，因此误点击不会启动
+Sparkle。
+
+协调更新失败后，应用会停留在设置样式的窗口中，并提供重试、[更新指南](/install/updating)和 Discord 操作。自动修复绝不会将较新的 Gateway
+降级，也不会覆盖 `extended-stable` 通道固定设置。
 
 成功更新后，应用会找到最近一次由人使用的、顶层的直接会话，并向该代理发送一次性的更新事件。心跳和 cron
 活动不会影响这一选择。然后，代理可以从你最可能正在使用的对话中欢迎你回来。在远程模式下，应用只会更新本地 Mac 节点运行时，并且当远程 Gateway 版本比应用更旧时会跳过通知。
 
-Sparkle 遵循 Gateway 的 `update.channel` 设置。`beta` 和 `dev` 会启用 beta 应用构建；`stable`、`extended-stable`，以及缺失或未知的值都会保持在 stable 应用构建上。
+Sparkle 遵循 Gateway 的 `update.channel` 设置。`beta` 和 `dev` 会选择加入
+beta 应用构建版本；`extended-stable` 只接受 extended-stable 应用版本，因此在没有匹配的应用版本时会保持静默。`stable`、缺失值和
+未知值会继续使用 stable 应用构建版本。
 
 ## 打开仪表盘链接
 

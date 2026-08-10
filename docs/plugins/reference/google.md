@@ -14,9 +14,9 @@ title: "Google 插件"
 - 包：`@openclaw/google-plugin`
 - 安装方式：已包含在 OpenClaw 中
 
-## Surface
+## 表面
 
-providers: `google`, `google-gemini-cli`, `google-vertex`; contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `memoryEmbeddingProviders`, `musicGenerationProviders`, `realtimeVoiceProviders`, `speechProviders`, `usageProviders`, `videoGenerationProviders`, `webSearchProviders`
+提供商：`google`、`google-gemini-cli`、`google-vertex`；契约：`imageGenerationProviders`、`mediaUnderstandingProviders`、`memoryEmbeddingProviders`、`musicGenerationProviders`、`realtimeVoiceProviders`、`speechProviders`、`videoGenerationProviders`、`webSearchProviders`
 
 ## 相关文档
 

@@ -151,15 +151,15 @@ provider-plugin 启动。这些 live transport gateway
 - `pnpm test:docker:session-runtime-context`
   - 对嵌入式运行时上下文 transcript 运行确定性的已构建应用 Docker smoke。验证隐藏的 OpenClaw 运行时上下文会作为不显示的自定义消息持久化，而不会泄露到可见的用户对话中；随后注入一个受影响的损坏 session JSONL，并验证 `openclaw doctor --fix` 会将其重写到活动分支，同时创建备份。
 - `pnpm test:docker:npm-telegram-live`
-  - 在 Docker 中安装 OpenClaw 包候选版本，运行已安装包的 onboarding，通过已安装的 CLI 配置 Telegram，然后复用 live Telegram QA lane，并将该已安装包作为被测系统（SUT）的 Gateway。
-  - wrapper 只挂载检出内容中的 `qa-lab` harness 源码；已安装的包拥有 `dist`、`openclaw/plugin-sdk` 和捆绑的插件运行时，因此该 lane 不会将当前检出内容中的插件混入被测包。
-  - 默认使用 `OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC=openclaw@beta`；设置 `OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ=/path/to/openclaw-current.tgz` 或 `OPENCLAW_CURRENT_PACKAGE_TGZ`，可测试已解析的本地 tarball，而不是从 registry 安装。
-  - 默认在 `qa-evidence.json` 中输出重复的 RTT 计时，使用 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES=20`。可覆盖 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES`、`OPENCLAW_NPM_TELEGRAM_RTT_TIMEOUT_MS` 或 `OPENCLAW_NPM_TELEGRAM_RTT_MAX_FAILURES` 来调整运行。`OPENCLAW_NPM_TELEGRAM_RTT_CHECKS` 选择要采样的 Telegram QA 场景；受支持的 RTT 目标是 `channel-canary`。
-  - 使用与 `pnpm openclaw qa telegram` 相同的 Telegram 环境凭据或 Convex 凭据源。对于 CI/发布自动化，设置 `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE=convex`，以及 `OPENCLAW_QA_CONVEX_SITE_URL` 和一个角色密钥。如果 CI 中存在 `OPENCLAW_QA_CONVEX_SITE_URL` 和 Convex 角色密钥，Docker wrapper 会自动选择 Convex。
-  - wrapper 会在 Docker 构建/安装工作开始前，于主机上验证 Telegram 或 Convex 凭据环境变量。仅当有意调试凭据预检之前的设置时，才设置 `OPENCLAW_NPM_TELEGRAM_SKIP_CREDENTIAL_PREFLIGHT=1`。
-  - `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE=ci|maintainer` 仅为此 lane 覆盖共享的 `OPENCLAW_QA_CREDENTIAL_ROLE`。选择 Convex 凭据且未设置角色时，wrapper 在 CI 中使用 `ci`，在 CI 外使用 `maintainer`。
-  - GitHub Actions 将此 lane 暴露为手动 maintainer 工作流 `NPM Telegram Beta E2E`。它不会在合并时运行。该工作流使用 `qa-live-shared` 环境和 Convex CI 凭据租约。
-- GitHub Actions 还提供 `Package Acceptance`，用于针对一个候选包进行旁路产品证明。它接受 Git ref、已发布的 npm spec、带 SHA-256 的 HTTPS tarball URL、受信任的 URL 策略，或来自另一次运行的 tarball artifact（`source=ref|npm|url|trusted-url|artifact`），上传规范化的 `openclaw-current.tgz` 作为 `package-under-test`，然后使用 `smoke`、`package`、`product`、`full` 或 `custom` lane 配置运行现有的 Docker E2E 调度器。设置 `telegram_mode=mock-openai` 或 `live-frontier`，可针对同一个 `package-under-test` artifact 运行 Telegram QA 工作流。
+  - 在 Docker 中安装一个 OpenClaw 软件包候选版本，运行已安装软件包的 onboarding，通过已安装的 CLI 配置 Telegram，然后使用该已安装软件包作为被测系统（SUT）Gateway，重新运行 live Telegram QA lane。
+  - 受信任的检出内容负责 QA harness 源码、taxonomy、场景、依赖项和私有 SDK 构建。已安装的软件包仍是测试中的绝对 CLI、Gateway 和捆绑插件运行时，其 CLI 会写入候选软件包持久化的身份验证状态。
+  - 默认使用 `OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC=openclaw@beta`；设置 `OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ=/path/to/openclaw-current.tgz` 或 `OPENCLAW_CURRENT_PACKAGE_TGZ`，即可测试解析后的本地 tarball，而不是从 registry 安装。
+  - 默认通过 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES=20` 在 `qa-evidence.json` 中输出重复的 RTT 计时。可覆盖 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES`、`OPENCLAW_NPM_TELEGRAM_RTT_TIMEOUT_MS` 或 `OPENCLAW_NPM_TELEGRAM_RTT_MAX_FAILURES` 来调整运行。`OPENCLAW_NPM_TELEGRAM_RTT_CHECKS` 用于选择要采样的 Telegram QA 场景；支持的 RTT 目标是 `channel-canary`。软件包 runner 会将这一可移植的 canary 提升到第一位，并且只提升一次，使 canary+RTT 成为其余由 taxonomy 支持的快速失败发布场景之前的预检步骤。
+  - 使用与 `pnpm openclaw qa telegram` 相同的 Telegram 环境凭据或 Convex 凭据源。在 CI/发布自动化中，设置 `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE=convex`，并提供 `OPENCLAW_QA_CONVEX_SITE_URL` 和角色密钥。如果 CI 中存在 `OPENCLAW_QA_CONVEX_SITE_URL` 和 Convex 角色密钥，Docker wrapper 会自动选择 Convex。
+  - wrapper 会在 Docker 构建/安装工作开始前，在主机上验证 Telegram 或 Convex 凭据环境变量。只有在有意调试凭据前置设置时，才设置 `OPENCLAW_NPM_TELEGRAM_SKIP_CREDENTIAL_PREFLIGHT=1`。
+  - `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE=ci|maintainer` 仅覆盖此 lane 使用的共享 `OPENCLAW_QA_CREDENTIAL_ROLE`。选择 Convex 凭据且未设置角色时，wrapper 会在 CI 中使用 `ci`，在 CI 外使用 `maintainer`。
+  - GitHub Actions 将此 lane 暴露为手动维护者工作流 `NPM Telegram Beta E2E`。它不会在合并时运行。该工作流使用 `qa-live-shared` 环境和 Convex CI 凭据租约。
+- GitHub Actions 还提供 `Package Acceptance`，用于针对单个候选软件包执行旁路产品证明。它接受 Git ref、已发布的 npm spec、带 SHA-256 的 HTTPS tarball URL、受信任 URL 策略，或来自另一次运行的 tarball artifact（`source=ref|npm|url|trusted-url|artifact`），将规范化的 `openclaw-current.tgz` 作为 `package-under-test` 上传，然后使用 `smoke`、`package`、`product`、`full` 或 `custom` lane 配置运行现有的 Docker E2E 调度器。设置 `telegram_mode=mock-openai` 或 `live-frontier`，即可针对同一个 `package-under-test` artifact 运行 Telegram QA 工作流。
   - 最新 beta 产品证明：
 
 ```bash
@@ -277,8 +277,8 @@ Live transport lane 共享一个标准契约，以避免新增 transport 发生�
 
 ### 通过 Convex 共享 Telegram 凭证（v1）
 
-当 live transport QA 启用 `--credential-source convex`（或
-`OPENCLAW_QA_CREDENTIAL_SOURCE=convex`）时，QA lab 会从基于 Convex 的凭证池中获取独占租约，在通道运行期间为该租约发送心跳，并在关闭时释放租约。本节名称早于 Buzz、Discord、Slack 和 WhatsApp 支持；该租约契约在不同类型之间共享。
+当实时传输 QA 启用 `--credential-source convex`（或
+`OPENCLAW_QA_CREDENTIAL_SOURCE=convex`）时，QA 实验室会从基于 Convex 的凭证池中获取独占租约，在通道运行期间为该租约发送心跳，并在关闭时释放租约。本节名称早于 Buzz、Discord、Slack 和 WhatsApp 支持；该租约契约在不同类型之间共享。
 
 Convex 项目参考脚手架：`qa/convex-credential-broker/`
 
@@ -299,8 +299,8 @@ Convex 项目参考脚手架：`qa/convex-credential-broker/`
 - `OPENCLAW_QA_CREDENTIAL_ACQUIRE_TIMEOUT_MS`（默认 `90000`）
 - `OPENCLAW_QA_CREDENTIAL_HTTP_TIMEOUT_MS`（默认 `15000`）
 - `OPENCLAW_QA_CONVEX_ENDPOINT_PREFIX`（默认 `/qa-credentials/v1`）
-- `OPENCLAW_QA_CREDENTIAL_OWNER_ID`（可选 trace id）
-- `OPENCLAW_QA_ALLOW_INSECURE_HTTP=1` 允许仅用于本地开发的 loopback `http://` Convex URL。
+- `OPENCLAW_QA_CREDENTIAL_OWNER_ID`（可选跟踪 ID）
+- `OPENCLAW_QA_ALLOW_INSECURE_HTTP=1` 允许仅用于本地开发的回环 `http://` Convex URL。
 
 `OPENCLAW_QA_CONVEX_SITE_URL` 在正常运行中应使用 `https://`。
 
@@ -316,7 +316,7 @@ pnpm openclaw qa credentials list --kind telegram
 pnpm openclaw qa credentials remove --credential-id <credential-id>
 ```
 
-在 live 运行前先使用 `doctor` 检查 Convex site URL、broker 密钥、
+在实时运行前先使用 `doctor` 检查 Convex site URL、broker 密钥、
 endpoint prefix、HTTP timeout 以及 admin/list 可达性，而不会打印
 密钥值。脚本和 CI 工具中可使用 `--json` 以获得机器可读输出。
 
@@ -469,20 +469,19 @@ Slack 通道也可以从凭证池中获取租约，但 Slack payload 的校验�
 
   <Accordion title="性能调试">
 
-    - `pnpm test:perf:imports` 会启用 Vitest 导入耗时报告以及导入分解输出。
-    - `pnpm test:perf:imports:changed` 会将相同的性能分析视图限定为自
+    - `pnpm test:perf:imports` 启用 Vitest 导入耗时报告以及导入细分输出。
+    - `pnpm test:perf:imports:changed` 将相同的性能分析视图限定到自
       `origin/main` 以来发生变更的文件。
-    - 分片耗时数据会写入 `.artifacts/vitest-shard-timings.json`。
-      整个配置的运行会使用配置路径作为键；包含模式的 CI 分片会附加分片名称，
-      以便分别跟踪经过筛选的分片。
-    - 当某个高耗时测试的大部分时间仍花在启动导入上时，应将重型依赖置于范围狭窄的本地 `*.runtime.ts` 接缝之后，并直接 mock 该接缝，而不是仅为了将运行时辅助程序传入 `vi.mock(...)` 就进行深层导入。
+    - 分片计时数据写入 `.artifacts/vitest-shard-timings.json`。
+      完整配置运行会使用配置路径作为键；包含模式的 CI
+      分片会追加分片名称，以便分别跟踪经过筛选的分片。
+    - 当某个热点测试的大部分耗时仍花在启动导入上时，请将重量级依赖放在一个范围狭窄的本地 `*.runtime.ts` 接缝之后，并直接模拟该接缝，而不是仅仅为了将运行时辅助程序传递给 `vi.mock(...)` 而进行深层导入。
     - `pnpm test:perf:changed:bench -- --ref <git-ref>` 会将路由后的
-      `test:changed` 与该已提交 diff 的原生根项目路径进行比较，并输出耗时以及 macOS 最大 RSS。
+      `test:changed` 与该已提交 diff 对应的原生根项目路径进行比较，并输出墙钟时间以及 macOS 最大 RSS。
     - `pnpm test:perf:changed:bench -- --worktree` 会通过
-      `scripts/test-projects.mjs` 和根目录 Vitest 配置路由变更文件列表，
-      对当前存在未提交修改的工作树进行基准测试。
-    - `pnpm test:perf:profile:main` 会为 Vitest/Vite 启动和转换开销写入主线程 CPU 配置文件。
-    - `pnpm test:perf:profile:runner` 会在禁用文件并行的情况下，为单元测试套件写入运行器 CPU + 堆配置文件。
+      `scripts/test-projects.mts` 和根 Vitest 配置，将变更文件列表路由到当前有未提交修改的工作树并进行基准测试。
+    - `pnpm test:perf:profile:main` 会为 Vitest/Vite 启动和转换开销写入主线程 CPU 性能分析文件。
+    - `pnpm test:perf:profile:runner` 会在禁用文件并行后，为单元测试套件写入运行器 CPU + 堆性能分析文件。
 
   </Accordion>
 </AccordionGroup>
@@ -610,19 +609,19 @@ Slack 通道也可以从凭证池中获取租约，但 Slack payload 的校验�
 
 这些 Docker 运行器分成两类：
 
-- 直接模型运行器：`test:docker:live-models` 和 `test:docker:live-gateway` 只在仓库 Docker 镜像中运行与其匹配的 profile-key live 文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），并挂载你的本地配置目录、工作区和可选的 profile env 文件。对应的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
+- Live-model 运行器：`test:docker:live-models` 和 `test:docker:live-gateway` 只会在仓库 Docker 镜像中运行与其匹配的 profile-key live 文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），并挂载本地配置目录、工作区以及可选的 profile 环境变量文件。对应的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
 - Docker live 运行器会在需要时保留各自的实际限制：
-  `test:docker:live-models` 默认使用经过筛选的高信号支持集合，而
+  `test:docker:live-models` 默认使用精选的高信号支持集合，而
   `test:docker:live-gateway` 默认使用 `OPENCLAW_LIVE_GATEWAY_SMOKE=1`、
   `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`、
-  `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000` 和 `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`。当你明确需要更小的上限或更大的扫描范围时，可设置 `OPENCLAW_LIVE_MAX_MODELS`
-  或 gateway 环境变量。
-- `test:docker:all` 通过 `test:docker:live-build` 只构建一次 live Docker 镜像，通过 `scripts/package-openclaw-for-docker.mjs` 将 OpenClaw 打包成一个 npm tarball，然后构建/复用两个 `scripts/e2e/Dockerfile` 镜像。裸镜像只是用于 install/update/plugin-dependency 通道的 Node/Git 运行器；这些通道会挂载预构建的 tarball。功能镜像会将同一个 tarball 安装到 `/app`，用于已构建应用功能通道。Docker 通道定义位于 `scripts/lib/docker-e2e-scenarios.mjs`；规划逻辑位于 `scripts/lib/docker-e2e-plan.mjs`；`scripts/test-docker-all.mjs` 负责执行所选计划。聚合流程使用加权本地调度器：`OPENCLAW_DOCKER_ALL_PARALLELISM` 控制进程槽位，而资源上限会阻止过重的 live、npm-install 和多服务通道同时启动。如果单个通道比当前上限更重，调度器仍然可以在池为空时启动它，然后让它单独运行，直到再次有容量。默认值为 10 个槽位、`OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`、`OPENCLAW_DOCKER_ALL_NPM_LIMIT=5` 和 `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`；只有当 Docker 主机有更多余量时，才调整 `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` 或 `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT`（以及其他 `OPENCLAW_DOCKER_ALL_<RESOURCE>_LIMIT` 覆盖项）。运行器默认会执行 Docker 预检，移除过期的 OpenClaw E2E 容器，每 30 秒打印状态，将成功的通道计时存储在 `.artifacts/docker-tests/lane-timings.json`，并利用这些计时在后续运行中优先启动更长的通道。使用 `OPENCLAW_DOCKER_ALL_DRY_RUN=1` 可在不构建或运行 Docker 的情况下打印加权通道清单，或使用 `node scripts/test-docker-all.mjs --plan-json` 打印所选通道、包/镜像需求和凭据的 CI 计划。
-- `Package Acceptance` 是 GitHub 原生的包门禁，用于判断“这个可安装 tarball 是否能作为产品工作？”它会从 `source=npm`、`source=ref`、`source=url`、`source=trusted-url` 或 `source=artifact` 中解析一个候选包，将其作为 `package-under-test` 上传，然后针对这个精确 tarball 运行可复用的 Docker E2E 通道，而不是重新打包所选 ref。Profile 按广度排序：`smoke`、`package`、`product` 和 `full`（以及用于显式通道列表的 `custom`）。有关包/更新/插件契约、已发布升级幸存者矩阵、发布默认值和失败分流，请参见 [Testing updates and plugins](/help/testing-updates-plugins)。
-- 构建和发布检查会在 tsdown 之后运行 `scripts/check-cli-bootstrap-imports.mjs`。该守卫从 `dist/entry.js` 和 `dist/cli/run-main.js` 追踪静态构建图，如果命令分发之前的预分发启动图静态导入了任何外部包，就会失败（Commander、prompt UI、undici、日志记录以及类似启动阶段负载较重的依赖都包括在内）；它还会将打包后的 gateway 运行 chunk 限制在 70 KB，并拒绝从该 chunk 静态导入已知的冷门 gateway 路径（`control-ui-assets`、`diagnostic-stability-bundle`、`onboard-helpers`、`process-respawn`、`restart-sentinel`、`server-close`、`server-reload-handlers`）。`scripts/release-check.ts` 还会分别使用 `--help`、`onboard --help`、`doctor --help`、`status --json --timeout 1`、`config schema` 和 `models list --provider openai` 对打包后的 CLI 执行 smoke 测试。
-- Package Acceptance 的旧版兼容性上限为 `2026.4.25`（包含 `2026.4.25-beta.*`）。在该截止点之前，harness 只容忍已发布包的元数据缺口：省略的 private QA 清单项、缺失的 `gateway install --wrapper`、tarball 派生的 git fixture 中缺失的 patch 文件、缺失的持久化 `update.channel`、旧版插件安装记录位置、缺失的 marketplace 安装记录持久化，以及 `plugins update` 期间的配置元数据迁移。对于 `2026.4.25` 之后的包，这些路径都属于严格失败。
+  `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000` 和
+  `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`。当你明确需要更小的限制或更大范围的扫描时，可设置 `OPENCLAW_LIVE_MAX_MODELS` 或 gateway 环境变量。
+- `test:docker:all` 会通过 `test:docker:live-build` 构建一次 live Docker 镜像，通过 `scripts/package-openclaw-for-docker.mjs` 将 OpenClaw 打包一次为 npm tarball，然后构建/复用两个 `scripts/e2e/Dockerfile` 镜像。裸镜像仅用于安装/更新/插件依赖测试通道的 Node/Git 运行器；这些测试通道会挂载预构建的 tarball。功能镜像会将相同的 tarball 安装到 `/app`，用于已构建应用的功能测试通道。Docker 测试通道定义位于 `scripts/lib/docker-e2e-scenarios.mts`；规划逻辑位于 `scripts/lib/docker-e2e-plan.mts`；`scripts/test-docker-all.mjs` 执行选定的计划。聚合运行器使用加权本地调度器：`OPENCLAW_DOCKER_ALL_PARALLELISM` 控制进程槽位，而资源限制会防止高负载 live、npm 安装和多服务测试通道同时全部启动。如果单个测试通道的负载高于当前限制，调度器仍可在资源池为空时启动它，然后让它单独运行，直到再次有可用容量。默认值为 10 个槽位、`OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`、`OPENCLAW_DOCKER_ALL_NPM_LIMIT=5` 和 `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`；仅当 Docker 主机有更多余量时，才调整 `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` 或 `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT`（以及其他 `OPENCLAW_DOCKER_ALL_<RESOURCE>_LIMIT` 覆盖项）。运行器默认执行 Docker 预检查，移除过期的 OpenClaw E2E 容器，每 30 秒打印一次状态，将成功测试通道的耗时保存到 `.artifacts/docker-tests/lane-timings.json`，并在后续运行中使用这些耗时优先启动更长的测试通道。使用 `OPENCLAW_DOCKER_ALL_DRY_RUN=1` 可在不构建或运行 Docker 的情况下打印加权测试通道清单；使用 `node scripts/test-docker-all.mjs --plan-json` 可打印所选测试通道、所需软件包/镜像以及凭据的 CI 计划。
+- `Package Acceptance` 是 GitHub 原生的软件包门禁，用于验证“这个可安装的 tarball 能否作为产品正常工作”。它会从 `source=npm`、`source=ref`、`source=url`、`source=trusted-url` 或 `source=artifact` 中解析一个候选软件包，将其上传为 `package-under-test`，然后针对该精确 tarball 运行可复用的 Docker E2E 测试通道，而不是重新打包选定的 ref。Profile 按覆盖范围排序：`smoke`、`package`、`product` 和 `full`（另有用于显式测试通道列表的 `custom`）。有关软件包/更新/插件契约、已发布升级幸存者矩阵、发布默认值和故障排查，请参阅[测试更新和插件](/help/testing-updates-plugins)。
+- 构建和发布检查会在 tsdown 之后运行 `scripts/check-cli-bootstrap-imports.mts`。该守卫会从 `dist/entry.js` 和 `dist/cli/run-main.js` 遍历静态构建图；如果调度命令前的引导图静态导入了任何外部软件包，就会失败（Commander、提示 UI、undici、日志记录以及类似启动开销较大的依赖都算在内）。它还会将打包后的 gateway 运行区块限制为 70 KB，并拒绝该区块静态导入已知的冷启动 gateway 路径（`control-ui-assets`、`diagnostic-stability-bundle`、`onboard-helpers`、`process-respawn`、`restart-sentinel`、`server-close`、`server-reload-handlers`）。`scripts/release-check.ts` 则会分别使用 `--help`、`onboard --help`、`doctor --help`、`status --json --timeout 1`、`config schema` 和 `models list --provider openai` 对打包后的 CLI 进行 smoke 测试。
+- Package Acceptance 的旧版兼容性上限为 `2026.4.25`（包含 `2026.4.25-beta.*`）。在该截止版本之前，测试框架仅容忍已发布软件包的元数据缺失：省略私有 QA 清单条目、缺少 `gateway install --wrapper`、tarball 派生 git fixture 中缺少补丁文件、缺少持久化的 `update.channel`、旧版插件安装记录位置、缺少 marketplace 安装记录持久化，以及 `plugins update` 期间的配置元数据迁移。对于 `2026.4.25` 之后的软件包，这些路径都会被视为严格失败。
 - 容器 smoke 运行器：`test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:release-user-journey`、`test:docker:release-typed-onboarding`、`test:docker:release-media-memory`、`test:docker:release-upgrade-user-journey`、`test:docker:release-plugin-marketplace`、`test:docker:skill-install`、`test:docker:update-channel-switch`、`test:docker:upgrade-survivor`、`test:docker:published-upgrade-survivor`、`test:docker:session-runtime-context`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:browser-cdp-snapshot`、`test:docker:mcp-channels`、`test:docker:agent-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update`、`test:docker:plugin-lifecycle-matrix` 和 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层级的集成路径。
-- 通过 `scripts/lib/openclaw-e2e-instance.sh` 安装打包后的 OpenClaw tarball 的 Docker/Bash E2E 通道，会将 `npm install` 限制在 `OPENCLAW_E2E_NPM_INSTALL_TIMEOUT` 内（默认 `600s`；设置为 `0` 可在调试时禁用该包装器）。
+- 通过 `scripts/lib/openclaw-e2e-instance.sh` 安装打包后的 OpenClaw tarball 的 Docker/Bash E2E 测试通道，会将 `npm install` 限制在 `OPENCLAW_E2E_NPM_INSTALL_TIMEOUT` 指定的时长内（默认 `600s`；设置为 `0` 可在调试时禁用该包装器）。
 
 live-model Docker 运行器还会以 bind-mount 方式挂载当前检出内容，并设为只读，然后将其暂存到容器内的临时工作目录中。这样既能保持运行时镜像精简，又能让 Vitest 针对你本地的确切源代码/配置运行。暂存步骤会跳过大型本地缓存和应用构建输出，例如 `.pnpm-store`、`.worktrees`、`__openclaw_vitest__` 以及应用本地的 `.build` 或 Gradle 输出目录，因此 Docker live 运行不会花费数分钟复制与机器相关的构建产物。它们还会设置
 `OPENCLAW_SKIP_CHANNELS=1`，确保 gateway live 探测不会在容器内启动真实的 Telegram/Discord 等通道工作进程。

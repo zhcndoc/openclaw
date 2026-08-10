@@ -47,7 +47,7 @@ openclaw plugins inspect discord --runtime --json
 
 ## 核心 npm 包
 
-54 个插件
+55 个插件
 
 - **[admin-http-rpc](/plugins/reference/admin-http-rpc)** (`@openclaw/admin-http-rpc`) - 包含在 OpenClaw 中。OpenClaw 管理 HTTP RPC 端点。
 
@@ -127,6 +127,8 @@ openclaw plugins inspect discord --runtime --json
 
 - **[openai](/plugins/reference/openai)** (`@openclaw/openai-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 OpenAI 模型提供方支持。
 
+- **[opencode-go](/plugins/reference/opencode-go)** (`@openclaw/opencode-go-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 OpenCode Go 模型提供方支持。
+
 - **[openrouter](/plugins/reference/openrouter)** (`@openclaw/openrouter-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 OpenRouter 模型提供方支持。
 
 - **[policy](/plugins/reference/policy)** (`@openclaw/policy`) - 包含在 OpenClaw 中。添加由策略支持的 workspace 合规性 doctor 检查。
@@ -159,7 +161,7 @@ openclaw plugins inspect discord --runtime --json
 
 ## 官方外部包
 
-91 个插件
+90 plugins
 
 - **[acpx](/plugins/reference/acpx)** (`@openclaw/acpx`) - npm；ClawHub。OpenClaw ACP 运行时后端，提供由插件拥有的会话和传输管理。
 
@@ -275,9 +277,7 @@ openclaw plugins inspect discord --runtime --json
 
 - **[opencode](/plugins/reference/opencode)** (`@openclaw/opencode-provider`) - npm；ClawHub：`clawhub:@openclaw/opencode-provider`。为 OpenClaw 添加 OpenCode 模型提供方支持。
 
-- **[opencode-go](/plugins/reference/opencode-go)** (`@openclaw/opencode-go-provider`) - npm；ClawHub：`clawhub:@openclaw/opencode-go-provider`。为 OpenClaw 添加 OpenCode Go 模型提供方支持。
-
-- **[openshell](/plugins/reference/openshell)** (`@openclaw/openshell-sandbox`) - npm；ClawHub。适用于 NVIDIA OpenShell CLI 的 OpenClaw 沙盒后端，支持镜像本地工作区和 SSH 命令执行。
+- **[openshell](/plugins/reference/openshell)** (`@openclaw/openshell-sandbox`) - npm；ClawHub。OpenClaw 的 NVIDIA OpenShell CLI 沙盒后端，支持镜像本地工作区和 SSH 命令执行。
 
 - **[parallel](/tools/parallel-search)** (`@openclaw/parallel-plugin`) - npm；ClawHub：`clawhub:@openclaw/parallel-plugin`。添加网页搜索提供方支持。
 
@@ -299,7 +299,7 @@ openclaw plugins inspect discord --runtime --json
 
 - **[slack](/plugins/reference/slack)** (`@openclaw/slack`) - npm；ClawHub。OpenClaw Slack 频道插件，支持频道、私信、命令和应用事件。
 
-- **[sms](/plugins/reference/sms)** (`@openclaw/sms`) - npm；ClawHub：`clawhub:@openclaw/sms`。用于 OpenClaw 文本消息的 Twilio SMS 频道插件。
+- **[sms](/plugins/reference/sms)** (`@openclaw/sms`) - npm；ClawHub：`clawhub:@openclaw/sms`。用于 OpenClaw 消息的 Twilio SMS/MMS 频道插件。
 
 - **[stepfun](/plugins/reference/stepfun)** (`@openclaw/stepfun-provider`) - npm；ClawHub：`clawhub:@openclaw/stepfun-provider`。为 OpenClaw 添加 StepFun、StepFun Plan 模型提供方支持。
 

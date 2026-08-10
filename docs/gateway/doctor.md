@@ -198,14 +198,14 @@ Flags:
     - 设备配对问题检测（待处理的首次配对请求、待处理的角色/范围升级、陈旧的本地 device-token 缓存漂移，以及已配对记录的认证漂移）。
 
   </Accordion>
-  <Accordion title="工作区和 shell">
-    - Linux 上的 systemd linger 检查。
-    - 工作区 bootstrap 文件大小检查（上下文文件的截断/接近上限警告）。
-    - 默认 agent 的 Skills 就绪性检查；报告允许的 skills 中缺少 bin、env、config 或 OS 要求的项，且 `--fix` 可以在 `skills.entries` 中禁用不可用的 skills。
-    - Shell 补全状态检查和自动安装/升级。
-    - 记忆搜索 embedding provider 就绪性检查（本地模型、远程 API key 或 QMD 二进制）。
-    - 源码安装检查（pnpm 工作区不匹配、缺少 UI 资源、缺少 tsx 二进制）。
-    - 写入更新后的配置 + 向导元数据。
+  <Accordion title="Workspace and shell">
+    - systemd linger check on Linux.
+    - Workspace bootstrap file size check (truncation/near-limit warnings for context files).
+    - Skills readiness check for the default agent; reports allowed skills with missing bins, env, config, or OS requirements, and `--fix` can disable unavailable skills in `skills.entries`.
+    - Shell completion status check and auto-install/upgrade.
+    - Memory search embedding provider readiness check (local model or remote API key).
+    - Source install checks (pnpm workspace mismatch, missing UI assets, missing tsx binary).
+    - Writes updated config + wizard metadata.
 
   </Accordion>
 </AccordionGroup>
@@ -287,7 +287,7 @@ That stages grounded durable candidates into the short-term dreaming store while
     | `plugins.entries.voice-call.config.streaming.openaiApiKey`/`sttModel`/`silenceDurationMs`/`vadThreshold` | `plugins.entries.voice-call.config.streaming.providers.openai.*`             |
     | `models.providers.*.api: "openai"`                                                               | `"openai-completions"` (gateway startup also skips providers whose `api` is a future/unknown enum value rather than failing closed) |
     | `browser.ssrfPolicy.allowPrivateNetwork`                                                         | `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork`                          |
-    | `browser.profiles.*.driver: "extension"`                                                         | `"existing-session"`                                                          |
+    | `browser.profiles.*.driver: "extension"` with a stale `cdpUrl`                                  | driver preserved; stale relay URL removed                                     |
     | `browser.relayBindHost`                                                                          | removed (legacy Chrome extension relay setting)                             |
     | `mcp.servers.*.type` (CLI-native aliases)                                                        | `mcp.servers.*.transport`                                                    |
     | `mcp.servers.*.disabled`                                                                         | inverse `mcp.servers.*.enabled`                                              |
@@ -355,7 +355,9 @@ That stages grounded durable candidates into the short-term dreaming store while
     If you have added `models.providers.opencode`, `opencode-zen`, or `opencode-go` manually while the matching official external plugin is installed and enabled, it overrides that plugin-provided catalog. That can force models onto the wrong API or zero out costs. Doctor warns so you can remove the override and restore per-model API routing + costs. Without the matching plugin, the entry remains a valid standalone custom provider.
   </Accordion>
   <Accordion title="2c. Browser migration and Chrome MCP readiness">
-    If your browser config still points at the removed Chrome extension path, doctor normalizes it to the current host-local Chrome MCP attach model (`browser.profiles.*.driver: "extension"` → `"existing-session"`; `browser.relayBindHost` removed).
+    If an extension-driver profile still carries a retired relay `cdpUrl`, doctor removes that URL while preserving `driver: "extension"`; the current extension relay owns its endpoint. Doctor also removes the retired `browser.relayBindHost` setting.
+
+    Doctor warns while `browser.extensionRelay.allowLegacyAuth` is enabled. Upgrade paired Chrome extensions and external CDP clients to Browser Relay Authentication v2, then set the flag to `false`. V2 clients do not downgrade to legacy authentication.
 
     当你使用 `defaultProfile: "user"` 或配置了 `existing-session` 配置文件时，doctor 还会审计主机本地的 Chrome MCP 路径：
 
@@ -558,10 +560,9 @@ That stages grounded durable candidates into the short-term dreaming store while
   <Accordion title="13. Gateway 健康检查 + 重启">
     Doctor 会运行健康检查，并在 gateway 看起来不健康时提供重启它的选项。
   </Accordion>
-  <Accordion title="13b. 记忆搜索就绪性">
-    Doctor 会检查为默认 agent 配置的记忆搜索 embedding provider 是否就绪。具体行为取决于配置的后端和 provider：
+  <Accordion title="13b. Memory search readiness">
+    Doctor checks whether the configured memory search embedding provider is ready for the default agent. The behavior depends on the configured provider:
 
-    - **QMD backend**: probes whether the `qmd` binary is available and startable. If not, prints fix guidance including `npm install -g @tobilu/qmd` (or the Bun equivalent) and a manual binary path option.
     - **Explicit local provider**: checks for a local model file or a recognized remote/downloadable model URL. If missing, suggests switching to a remote provider.
     - **Explicit remote provider** (`openai`, `voyage`, etc.): verifies an API key is present in the environment or auth store. Prints actionable fix hints if missing.
     - **Legacy auto provider**: treats `memorySearch.provider: "auto"` as OpenAI, checks OpenAI readiness, and `doctor --fix` rewrites it to `provider: "openai"`.

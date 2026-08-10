@@ -10,7 +10,7 @@ title: "记忆 wiki"
 
 `memory-wiki` 是一个捆绑插件，它将持久知识编译成一个可导航的 wiki：确定性的页面、带有证据的结构化声明、来源、仪表盘以及机器可读的摘要。
 
-它不会替代活动记忆插件。回忆、晋升、索引和做梦仍然由所配置的记忆后端负责（`memory-core`、QMD、Honcho 等）。`memory-wiki` 作为其旁路存在，并将知识编译成一个受维护的 wiki 层。
+它不会取代活动记忆插件。回忆、晋升、索引和做梦仍由已配置的记忆插件（`memory-core`、Honcho 及其他插件）负责。`memory-wiki` 与其并行运行，将知识编译到一个受维护的 wiki 层中。
 
 在使用其 CLI、工具或运行时集成之前，启用该插件：
 
@@ -30,7 +30,7 @@ openclaw gateway restart
 - `wiki_search` / `wiki_get` 用于你需要 wiki 特定排序、来源，或页面级信念结构时
 - 当活动记忆插件支持语料库选择时，使用 `memory_search corpus=all` 可在一次调用中跨越两层
 
-一种常见的本地优先设置：使用 QMD 作为活动记忆后端负责回忆，而 `memory-wiki` 以 `bridge` 模式生成持久的综合页面。参见 [配置](#configuration) 下的 QMD + bridge 模式示例。
+一种常见的本地优先配置是使用内置记忆进行回忆，并在 `bridge` 模式下使用 `memory-wiki` 来生成持久化的综合页面。请参阅[配置](#configuration)下的桥接模式示例。
 
 如果 bridge 模式报告导出的工件数量为零，则说明活动记忆插件当前没有暴露公共 bridge 输入。先运行 `openclaw wiki doctor`，然后确认活动记忆插件支持公共工件。
 
@@ -54,10 +54,10 @@ Bridge 模式可以按每个 `bridge.*` 配置开关索引以下内容：
 - 梦境报告（`indexDreamReports`）
 - memory 事件日志（`followMemoryEvents`）
 
-当 bridge 模式处于激活状态且启用了 `bridge.readMemoryArtifacts` 时，
-`openclaw wiki status`、`openclaw wiki doctor` 和 `openclaw wiki bridge
-import` 会通过正在运行的 Gateway 路由，因此它们看到的 active memory
-插件上下文与 agent/runtime memory 中相同。若 bridge 被禁用，或未开启产物
+当 bridge 模式处于激活状态且启用了 `bridge.readMemoryArtifacts` 时，  
+`openclaw wiki status`、`openclaw wiki doctor` 和 `openclaw wiki bridge  
+import` 会通过正在运行的 Gateway 路由，因此它们看到的 active memory  
+插件上下文与 agent/runtime memory 中相同。若 bridge 被禁用，或未开启产物  
 读取，这些命令将保持本地/离线行为。
 
 ## 库布局
@@ -115,8 +115,7 @@ claim 都可以包含 `id`、`text`、`status`、`confidence`、`evidence[]` 和
 
 ## 面向代理的实体元数据
 
-实体页面承载通用路由元数据，可用于人物、团队、
-系统、项目或任何其他实体类型：
+实体页面承载通用路由元数据，可用于人物、团队、系统、项目或任何其他实体类型：
 
 - `entityType`：例如 `person`、`team`、`system`、`project`
 - `canonicalId`：跨别名和导入保持稳定的身份键
@@ -180,7 +179,7 @@ claims:
 
 ## 编译管线
 
-Compile 读取 wiki 页面，规范化摘要，并将面向机器的快照持久化到 OpenClaw 的共享 SQLite 插件状态中。运行时代码使用由生命周期负责的所有者快照，在异步提示准备期间加载 SQLite；同步提示组装不会抓取 Markdown 或读取缓存文件。
+编译器读取 wiki 页面，规范化摘要，并将面向机器的快照持久化到 OpenClaw 的共享 SQLite 插件状态中。运行时代码使用由生命周期负责的所有者快照，在异步提示准备期间加载 SQLite；同步提示组装不会抓取 Markdown 或读取缓存文件。
 编译后的输出还用于搜索/获取的首轮 wiki 索引、将 claim-id 查回所属页面、紧凑提示补充内容以及报告生成。
 
 源文件编辑和 vault 恢复只有在下一次编译后才会对机器可见。重启或刷新插件生命周期时，会将 vault 中因果链式关联的编译发布与 SQLite 进行比较，并拒绝来自更新但已回滚状态的快照。在回滚之前启动的编译器无法基于已恢复的前置状态发布。提示准备不会轮询 vault，也不会安装文件监视器。
@@ -225,7 +224,7 @@ ChatGPT 导入回滚会在编译前记录导入后的编辑，并将其恢复路
 | ----------------- | -------------------------------------------------------------- |
 | `auto`            | 平衡默认值                                                     |
 | `find-person`     | 类人物实体、别名、用户名、社交账号、规范 ID                    |
-| `route-question`   | agent cards、ask-for/best-used-for 提示、关系上下文             |
+| `route-question`  | agent cards、ask-for/best-used-for 提示、关系上下文             |
 | `source-evidence` | 来源页面和结构化证据元数据                                       |
 | `raw-claim`       | 匹配结构化 claim；返回 claim/evidence 元数据                    |
 
@@ -391,15 +390,12 @@ CLI 调用使用配置的默认 agent，除非命令传入 `--agent <agentId>`�
 [独立的 Gateway 配置文件](/gateway/multiple-gateways)。
 </Warning>
 
-### 示例：QMD + 桥接模式
+### 示例：内置 memory + 桥接模式
 
-当你希望使用 QMD 进行回忆，并使用 `memory-wiki` 维护知识层时，可以使用此配置。每一层都保持专注：QMD 负责原始笔记、会话导出和额外集合的可搜索性，而 `memory-wiki` 负责编译稳定的实体、声明、仪表盘和源页面。
+当你希望使用内置 memory 进行回忆，并使用 `memory-wiki` 提供持续维护的知识层时，可以使用此配置。每一层各司其职：`memory-core` 搜索 memory 笔记和符合条件的会话来源，而 `memory-wiki` 编译稳定的实体、声明、仪表盘和来源页面。
 
 ```json5
 {
-  memory: {
-    backend: "qmd",
-  },
   plugins: {
     entries: {
       "memory-wiki": {
@@ -428,7 +424,7 @@ CLI 调用使用配置的默认 agent，除非命令传入 `--agent <agentId>`�
 }
 ```
 
-这会让 QMD 负责活动记忆回忆，让 `memory-wiki` 专注于已编译的页面和仪表盘，并且在你有意启用编译摘要提示之前，提示词结构保持不变。
+这样可以让内置 memory 负责主动回忆，让 `memory-wiki` 专注于编译后的页面和仪表盘，并且在你主动启用编译摘要提示词之前，保持提示词结构不变。
 
 ## 命令行界面
 

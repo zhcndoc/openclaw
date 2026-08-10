@@ -36,6 +36,12 @@ read_when:
 
 一个 harness 会执行一个准备好的尝试；它不会选择 provider、替换通道传递，或静默切换模型。
 
+### 原生工具策略强制执行
+
+仅当 `runAttempt` 对原生工具和内置工具、OpenClaw 工具、请求方和已配置的 MCP 服务器、应用、委派以及恢复的线程，强制执行每一层显式的 OpenClaw 工具策略时，才将 `conversationToolPolicySupport: "exact"` 设置为 `"exact"`。Core 会将 `params.pluginHarnessToolPolicyRestricted` 作为已准备好的决策传入，指示原生界面必须被隔离。默认的工具配置文件收窄不会设置此标志。
+
+当任何原生能力可以绕过这些层时，请省略该声明。OpenClaw 随后会在调用 harness 之前，明确拒绝显式受限的 turn。操作员可以将会话切换到嵌入式运行时，或升级 harness。带有限制性直接策略的通道 `/btw` 侧边问题会被 core 拒绝，不受此声明涵盖。
+
 ### Harness 拥有的认证引导
 
 默认情况下，core 会在调用 harness 之前解析 provider 凭据。一个受信任的、可以通过其自身原生运行时进行认证的 harness，可能会在其静态 `AgentHarness` 注册中将 `authBootstrap` 设为 `"harness"`。此时，core 会跳过其通用的 provider 凭据引导，以及对该 harness 所声明的每次尝试中缺失凭据的失败处理。
@@ -51,8 +57,8 @@ harness 必须将其与所获取的精确原生进程进行比较，并在启动
 
 准备好的尝试还包含 `params.runtimePlan`，这是一个由 OpenClaw 拥有的运行时决策策略包，必须在 OpenClaw 与原生 harness 之间保持共享：
 
-- `runtimePlan.tools.normalize(...)` 和 `runtimePlan.tools.logDiagnostics(...)` 用于 provider 感知的工具 schema 策略
-- `runtimePlan.transcript.resolvePolicy(...)` 用于转录清理和 tool-call 修复策略
+- `runtimePlan.tools.normalize(...)` 和 `runtimePlan.tools.logDiagnostics(...)` 用于感知 provider 的工具 schema 策略
+- `runtimePlan.transcript.resolvePolicy(...)` 用于转录清理和工具调用修复策略
 - `runtimePlan.delivery.isSilentPayload(...)` 用于共享 `NO_REPLY` 和媒体传递抑制
 - `runtimePlan.outcome.classifyRunResult(...)` 用于模型回退分类
 - `runtimePlan.observability` 用于已解析的 provider/model/harness 元数据
@@ -99,7 +105,7 @@ const myHarness: AgentHarness = {
 
 export default definePluginEntry({
   id: "my-native-agent",
-  name: "My Native Agent",
+  name: "我的原生 Agent",
   description: "通过原生 agent 守护进程运行选定模型。",
   register(api) {
     api.registerAgentHarness(myHarness);

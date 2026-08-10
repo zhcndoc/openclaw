@@ -65,6 +65,19 @@ OpenClaw 不会在引入替代方案的同一变更中移除或重新解释已�
 5. 记录弃用信息和迁移路径。
 6. 仅在已公布的迁移窗口结束后移除，通常是在主要版本中。
 
+### 频道状态迁移声明
+
+频道插件应在
+`openclaw.plugin.json` 中声明 `doctorContract.stateMigrations: true`，并从其 doctor-contract
+构件中导出 `stateMigrations`。基于计划的迁移可以使用
+`openclaw/plugin-sdk/runtime-doctor` 中的
+`definePluginDoctorMigrationFromPlans(...)`，以保留现有的移动、复制、预览和插件状态导入行为。
+
+设置入口的 `legacyStateMigrations` 选项和功能标志
+`setupFeatures.legacyStateMigrations`、
+`BundledChannelLegacyStateMigrationDetector` 以及
+`ChannelPlugin.lifecycle.detectLegacyStateMigrations` 仍通过一个面向外部插件的 doctor 流水线适配器得到支持，但已被弃用。移除计划：仅当已发布插件读取方扫描确认不再有任何使用者后，才在 OpenClaw 2027.1 之后移除该适配器。
+
 ### AuthStorage SQLite 迁移
 
 `AuthStorage.forAgent(agentDir)` 是按提供商密钥划分的会话 SDK 标准门面。它通过代理的
@@ -111,7 +124,7 @@ Discord 软件包还从 `openclaw/plugin-sdk/setup-runtime` 导入
 这些导出仍作为已弃用的运行时兼容适配器提供。新的及重新发布的插件应在本地维护其配置架构和设置策略，并使用
 `channel-config-schema` 和 `setup-runtime` 中的通用基础原语。只有在最低支持的已发布软件包版本不再导入这些导出后，才能移除这些兼容性导出。
 
-### Channel setup 输入字段兼容性
+### 频道设置输入字段兼容性
 
 `ChannelSetupInput` 现在只永久保留跨频道设置信封的类型。频道特定字段仍在已弃用的兼容层中保留类型，以便现有外部插件继续编译，同时插件作者将这些字段迁移到插件本地的设置输入类型中。
 
@@ -213,7 +226,7 @@ const ctx = finalizeInboundContext({ Body: caption, media });
 
     | 需求 | 导入 |
     | --- | --- |
-    | Config types such as `OpenClawConfig` | `openclaw/plugin-sdk/config-contracts` |
+    | `OpenClawConfig` 等配置类型 | `openclaw/plugin-sdk/config-contracts` |
     | 插件入口配置查找 | `api.pluginConfig` |
     | 配置合并 | 配置边界处的插件本地逻辑 |
     | 当前运行时快照读取 | `openclaw/plugin-sdk/runtime-config-snapshot` |
@@ -355,15 +368,15 @@ const ctx = finalizeInboundContext({ Body: caption, media });
   </Step>
 
   <Step title="替换宽泛的 infra-runtime 导入">
-    `openclaw/plugin-sdk/infra-runtime` 仍为外部兼容性而保留，但新代码应导入实际需要的聚焦接口：
+    `openclaw/plugin-sdk/infra-runtime` 仍为外部兼容性而保留，但新代码应使用实际所需的受支持接口：
 
-    | 需求 | 导入 |
+    | 需求 | 替代项 |
     | --- | --- |
-    | 系统事件队列辅助工具 | `openclaw/plugin-sdk/system-event-runtime` |
+    | 新系统事件生产者 | `api.runtime.system.enqueueSystemEvent` |
     | 心跳唤醒、事件和可见性辅助工具 | `openclaw/plugin-sdk/heartbeat-runtime` |
     | 待处理投递队列排空 | `openclaw/plugin-sdk/delivery-queue-runtime` |
     | 通道活动遥测 | `openclaw/plugin-sdk/channel-activity-runtime` |
-    | 内存型和持久化后端去重缓存 | `openclaw/plugin-sdk/dedupe-runtime` |
+    | 内存及持久化后端去重缓存 | `openclaw/plugin-sdk/dedupe-runtime` |
     | 安全的本地文件/媒体路径辅助工具 | `openclaw/plugin-sdk/file-access-runtime` |
     | 感知调度器的 fetch | `openclaw/plugin-sdk/runtime-fetch` |
     | 代理和受保护的 fetch 辅助工具 | `openclaw/plugin-sdk/fetch-runtime` |
@@ -376,11 +389,13 @@ const ctx = finalizeInboundContext({ Body: caption, media });
     | 有界异步任务并发 | `openclaw/plugin-sdk/concurrency-runtime` |
     | 可证明不变量所需的值断言 | `openclaw/plugin-sdk/expect-runtime` |
     | 数值强制转换 | `openclaw/plugin-sdk/number-runtime` |
-    | 进程内异步锁 | `openclaw/plugin-sdk/async-lock-runtime` |
+    | 进程本地异步锁 | `openclaw/plugin-sdk/async-lock-runtime` |
     | 文件锁 | `openclaw/plugin-sdk/file-lock` |
 
-    文件锁嵌套的作用域属于所有者。仅在同一个逻辑操作中进行嵌套获取时传入相同的
-    `reentrantOwner`；普通加锁时省略它。绝不要使用进程范围的常量，因为无关工作会错误地共享临界区。
+    系统事件快照检查和消费辅助工具仍仅通过已弃用的
+    `openclaw/plugin-sdk/infra-runtime` 兼容性接口提供；没有现代公开替代项。当前快照携带一个用于标识某个排队事件的非透明 `id`。将快照返回以供消费时，应在复制和序列化过程中保留该标识。没有 ID 的旧调用方仍保留结构匹配行为，但在队列发生变化后可能出现歧义。不要将该 ID 视为持久标识，也不要认为它在重启后仍然有效。
+
+    文件锁嵌套的作用域为所有者。仅在同一逻辑操作中的嵌套获取时传入相同的 `reentrantOwner`；普通加锁时省略该参数。绝不要使用进程范围的常量，否则不相关的工作会错误地共享同一个临界区。
 
     捆绑插件受到扫描器保护，不得使用 `infra-runtime`，因此仓库代码无法回退到宽泛的统一入口。
 

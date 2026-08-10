@@ -30,7 +30,7 @@ openclaw plugins install @openclaw/imessage
 
 <CardGroup cols={3}>
   <Card title="私有 API 操作" icon="wand-sparkles" href="#private-api-actions">
-    回复、tapback、效果、投票、附件和群组管理。
+    回复、轻点回应、效果、投票、附件和群组管理。
   </Card>
   <Card title="配对" icon="link" href="/channels/pairing">
     iMessage 私信默认使用配对模式。
@@ -99,9 +99,9 @@ openclaw pairing approve imessage <CODE>
 
   </Tab>
 
-  <Tab title="通过 SSH 远程连接 Mac">
-    大多数设置不需要 SSH。只有当 Gateway 无法在已登录 Messages 的 Mac 上运行时，才使用这种拓扑结构。OpenClaw 只需要一个兼容 stdio 的 `cliPath`，因此你可以将 `cliPath` 指向一个包装脚本，该脚本通过 SSH 连接到远程 Mac 并运行 `imsg`。
-    请在那台远程 Mac 上安装和更新 `imsg`，而不是在 Gateway 主机上：
+  <Tab title="通过 SSH 连接远程 Mac">
+    大多数设置不需要 SSH。仅当 Gateway 无法在已登录 Messages 的 Mac 上运行时，才使用此拓扑。将 `cliPath` 指向 **Gateway 主机**上的一个兼容 stdio 的包装器，该包装器通过 SSH 连接到 Messages Mac 并运行 `imsg`。使用包装器的绝对路径，这样服务启动就不依赖 shell 的主目录展开。
+    在远程 Mac 上安装和更新 `imsg`，而不是在 Gateway 主机上：
 
 ```bash
 ssh messages-mac 'brew install steipete/tap/imsg && brew update && brew upgrade imsg'
@@ -119,8 +119,10 @@ exec ssh -T messages-mac imsg "$@"
   channels: {
     imessage: {
       enabled: true,
-      cliPath: "~/.openclaw/scripts/imsg-ssh",
-      remoteHost: "user@gateway-host", // 用于通过 SCP 拉取附件
+      cliPath: "/home/openclaw/.openclaw/scripts/imsg-ssh",
+      remoteHost: "user@messages-mac", // 运行 Messages.app 和 imsg 的 Mac
+      // 此路径在 Messages Mac 上解析，而不是在 Gateway 主机上解析。
+      dbPath: "/Users/user/Library/Messages/chat.db",
       includeAttachments: true,
       // 可选：额外允许的附件根目录（与默认的
       // /Users/*/Library/Messages/Attachments 合并）。
@@ -131,9 +133,11 @@ exec ssh -T messages-mac imsg "$@"
 }
 ```
 
-    如果未设置 `remoteHost`，OpenClaw 会尝试通过解析 SSH 包装脚本自动检测它。
-    `remoteHost` 必须是 `host` 或 `user@host`（不能有空格或 SSH 选项）；不安全的值会被忽略。
-    OpenClaw 对 SCP 使用严格的主机密钥检查，因此中继主机密钥必须已存在于 `~/.ssh/known_hosts` 中。
+    `remoteHost` 用于标识 Messages Mac。OpenClaw 使用它获取入站附件，并暂存出站附件。对于出站文件，OpenClaw 会在该 Mac 上创建一个仅所有者可访问的临时路径，通过现有的严格 SSH/SCP 传输将文件复制过去，仅将远程路径传递给 `imsg`，并尝试在成功、失败或超时后删除该路径。清理操作的 SSH 调用失败时会发出警告，并可能在远程 Mac 上留下仅所有者可访问的临时目录。
+
+    建议显式设置 `remoteHost`，设置后它具有优先权。为兼容现有配置，OpenClaw 会在每个进程中自动检测一次透明的 `exec ssh ... imsg "$@"` 包装器形式，并在监控、探测、发送和私有操作之间复用该主机。自动检测仅涵盖文档中简单的透明包装器；使用 ProxyJump/ProxyCommand 等包含丰富选项的包装器时，必须配置 `remoteHost`。
+    `remoteHost` 必须是 `host` 或 `user@host`（不含空格或 SSH 选项）；不安全的值会被忽略。
+    OpenClaw 对 SSH/SCP 使用严格的主机密钥检查，因此 Messages Mac 的主机密钥必须已存在于 Gateway 主机上的 `~/.ssh/known_hosts` 中。
     附件路径会根据允许的根目录（`attachmentRoots` / `remoteAttachmentRoots`）进行验证。
 
 <Warning>
@@ -455,10 +459,10 @@ iMessage 聊天可以绑定到 ACP 会话。
   <Accordion title="通过 Tailscale 连接远程 Mac（示例）">
     常见拓扑：
 
-    - gateway 运行在 Linux/VM 上
-    - iMessage + `imsg` 运行在你 tailnet 中的一台 Mac 上
-    - `cliPath` 包装脚本使用 SSH 运行 `imsg`
-    - `remoteHost` 启用通过 SCP 拉取附件
+    - 网关运行在 Linux/VM 上
+    - iMessage + `imsg` 运行在 tailnet 中的一台 Mac 上
+    - `cliPath` 包装器使用 SSH 运行 `imsg`
+    - `remoteHost` 通过 SSH/SCP 启用入站获取以及仅限所有者的出站暂存
 
     示例：
 
@@ -467,7 +471,7 @@ iMessage 聊天可以绑定到 ACP 会话。
       channels: {
         imessage: {
           enabled: true,
-          cliPath: "~/.openclaw/scripts/imsg-ssh",
+          cliPath: "/home/openclaw/.openclaw/scripts/imsg-ssh",
           remoteHost: "bot@mac-mini.tailnet-1234.ts.net",
           includeAttachments: true,
           dbPath: "/Users/bot/Library/Messages/chat.db",
@@ -481,8 +485,10 @@ iMessage 聊天可以绑定到 ACP 会话。
     exec ssh -T bot@mac-mini.tailnet-1234.ts.net imsg "$@"
     ```
 
-    使用 SSH 密钥，以便 SSH 和 SCP 都是非交互式的。
-    先确保主机密钥是受信任的（例如 `ssh bot@mac-mini.tailnet-1234.ts.net`），以便填充 `known_hosts`。
+    `cliPath` 是网关本地的绝对包装器路径。`remoteHost` 和 `dbPath` 指向 Messages Mac；不要使用网关用户的主目录重写远程数据库路径。
+
+    使用 SSH 密钥，以确保 SSH 和 SCP 均可非交互式运行。
+    先确保主机密钥已受信任（例如执行 `ssh bot@mac-mini.tailnet-1234.ts.net`），以便填充 `known_hosts`。
 
   </Accordion>
 
@@ -505,12 +511,13 @@ iMessage 聊天可以绑定到 ACP 会话。
 
 <AccordionGroup>
   <Accordion title="附件和媒体">
-    - 默认情况下，入站附件摄取是**关闭**的——设置 `channels.imessage.includeAttachments: true` 可将照片、语音备忘录、视频和其他附件转发给代理。若保持禁用，仅包含附件的 iMessage 会在到达代理之前被丢弃，甚至可能完全不会产生任何 `Inbound message` 日志行。
-    - 当设置了 `remoteHost` 时，可通过 SCP 获取远程附件路径
-    - 附件路径必须匹配允许的根目录：
+    - 入站附件接收**默认关闭** — 设置 `channels.imessage.includeAttachments: true` 可将照片、语音备忘录、视频和其他附件转发给代理。禁用后，仅包含附件的 iMessage 会在到达代理之前被丢弃，甚至可能完全不会产生 `Inbound message` 日志行。
+    - 设置 `remoteHost` 后，可通过 SCP 获取远程入站附件路径
+    - 出站文件会暂存到已配置或自动检测到的 Messages Mac 上一个仅所有者可访问的临时路径中，通过该远程路径传递给 `imsg`，并在成功、失败或超时后尽力清理；清理失败会发出警告，并可能留下仅所有者可访问的残留文件
+    - 附件路径必须匹配允许的根路径：
       - `channels.imessage.attachmentRoots`（本地）
       - `channels.imessage.remoteAttachmentRoots`（远程 SCP 模式）
-      - 配置的根目录会扩展默认根路径模式 `/Users/*/Library/Messages/Attachments`（是合并，不是替换）
+      - 已配置的根路径会扩展默认根路径模式 `/Users/*/Library/Messages/Attachments`（合并而非替换）
     - SCP 使用严格的主机密钥检查（`StrictHostKeyChecking=yes`）
     - 出站媒体大小使用 `channels.imessage.mediaMaxMb`（默认 16 MB）
 
@@ -533,7 +540,7 @@ iMessage 聊天可以绑定到 ACP 会话。
     - `chat_guid:...`
     - `chat_identifier:...`
 
-    也支持 handle 目标：
+    也支持句柄目标：
 
     - `imessage:+1555...`
     - `sms:+1555...`
@@ -577,17 +584,17 @@ iMessage 聊天可以绑定到 ACP 会话。
 
 <AccordionGroup>
   <Accordion title="可用动作">
-    - **react**：添加/移除 iMessage tapback（`messageId`、`emoji`、`remove`）。支持的 tapback 映射到 love、like、dislike、laugh、emphasize 和 question。不带 emoji 进行移除会清除已设置的任意 tapback。
-    - **reply**：向现有消息发送线程回复（`messageId`、`text` 或 `message`，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。带附件的回复还需要一个 `imsg` 构建版本，其 `send-rich` 支持 `--file`。
-    - **sendWithEffect**：发送带 iMessage 效果的文本（`text` 或 `message`，`effect` 或 `effectId`）。短名称：slam、loud、gentle、invisibleink、confetti、lasers、fireworks、balloon、heart、echo、happybirthday、shootingstar、sparkles、spotlight。
-    - **edit**：在受支持的 macOS/private API 版本上编辑已发送消息（`messageId`、`text` 或 `newText`）。只能编辑网关自身发送的消息。
-    - **unsend**：在受支持的 macOS/private API 版本上撤回已发送消息（`messageId`）。只能撤回网关自身发送的消息。
-    - **upload-file**：发送媒体/文件（`buffer` 以 base64 形式，或已 hydrated 的 `media`/`path`/`filePath`，`filename`，可选 `asVoice`）。旧别名：`sendAttachment`。
-    - **renameGroup**、`setGroupIcon`、`addParticipant`、`removeParticipant`、`leaveGroup`：当当前目标是群聊时管理群聊。这些操作会修改主机的 Messages 身份，因此需要 owner sender 或 `operator.admin` Gateway 客户端。
-    - **poll**：创建原生 Apple Messages 投票（`pollQuestion`、`pollOption` 重复 2 到 12 次，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。iOS/iPadOS/macOS 26+ 上的接收者会原生查看并投票；较旧的 OS 版本会收到“Sent a poll”文本回退。需要 `selectors.pollPayloadMessage`。
-    - **poll-vote**：对现有投票进行投票（`pollId` 或 `messageId`，以及 `pollOptionIndex`、`pollOptionId` 或 `pollOptionText` 中恰好一个）。需要 `selectors.pollVoteMessage` 和 `poll.vote` RPC 方法。
+    - **react**：添加或移除 iMessage 点按回应（`messageId`、`emoji`、`remove`）。支持的点按回应分别对应喜爱、赞、不喜欢、大笑、强调和疑问。移除时不提供 emoji 会清除已设置的点按回应。
+    - **reply**：向现有消息发送线程回复（`messageId`、`text` 或 `message`，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to`）。本地的带附件回复还需要 `imsg` 构建版本的 `send-rich` 支持 `--file`。使用远程 `imsg` v0.13.4 时，附件回复使用 JSON-RPC，并支持整条消息或第 `0` 部分；RPC 方法不支持非零附件部分索引。
+    - **sendWithEffect**：发送带有 iMessage 效果的文本（`text` 或 `message`、`effect` 或 `effectId`）。短名称：slam、loud、gentle、invisibleink、confetti、lasers、fireworks、balloon、heart、echo、happybirthday、shootingstar、sparkles、spotlight。
+    - **edit**：在受支持的 macOS / 私有 API 版本上编辑已发送的消息（`messageId`、`text` 或 `newText`）。只能编辑由网关自身发送的消息。
+    - **unsend**：在受支持的 macOS / 私有 API 版本上撤回已发送的消息（`messageId`）。只能撤回由网关自身发送的消息。
+    - **upload-file**：发送媒体/文件（`buffer` 以 base64 表示，或使用已解析的 `media`/`path`/`filePath`、`filename`，以及可选的 `asVoice`）。旧版别名：`sendAttachment`。
+    - **renameGroup**、**setGroupIcon**、**addParticipant**、**removeParticipant**、**leaveGroup**：当当前目标是群组会话时管理群聊。这些动作会修改主机的 Messages 身份，因此要求发送者为所有者，或 Gateway 客户端具有 `operator.admin` 权限。
+    - **poll**：创建原生 Apple Messages 投票（`pollQuestion`、重复 2 至 12 次的 `pollOption`，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to`）。使用 iOS/iPadOS/macOS 26 及更高版本的收件人可以原生查看并投票；较旧的操作系统版本会收到“已发送投票”文本回退。需要 `selectors.pollPayloadMessage`。
+    - **poll-vote**：对现有投票进行投票（`pollId` 或 `messageId`，以及 `pollOptionIndex`、`pollOptionId` 或 `pollOptionText` 三者之一且只能选择一个）。需要 `selectors.pollVoteMessage` 和 `poll.vote` RPC 方法。远程 `imsg` v0.13.4 RPC 仅接受选项 ID，因此远程设置必须使用 `pollOptionId`；索引和文本选择器仍可用于本地设置。
 
-    被接受的入站投票会向代理呈现问题、带编号的选项标签、票数，以及 `poll-vote` 所需的投票消息 ID。
+    已接受的入站投票会以问题、选项标签、投票数以及 `poll-vote` 所需的投票消息 ID 呈现给代理。远程账号还会包含每个稳定的选项 ID，并指示代理使用 `pollOptionId`。
 
   </Accordion>
 
@@ -618,14 +625,14 @@ iMessage 聊天可以绑定到 ACP 会话。
 
   </Accordion>
 
-  <Accordion title="入站 tapback">
-    OpenClaw 会订阅 iMessage tapback，并将收到的反应作为系统事件路由，而不是普通消息文本，因此用户的 tapback 不会触发普通回复循环。
+  <Accordion title="入站点按回应">
+    OpenClaw 会订阅 iMessage 点按回应，并将收到的反应作为系统事件路由，而不是普通消息文本，因此用户的点按回应不会触发普通回复循环。
 
     通知模式由 `channels.imessage.reactionNotifications` 控制：
 
     - `"own"`（默认）：仅在用户对机器人生成的消息作出反应时通知。
-    - `"all"`：对所有来自授权发送者的入站 tapback 通知。
-    - `"off"`：忽略入站 tapback。
+    - `"all"`：对所有来自授权发送者的入站点按回应通知。
+    - `"off"`：忽略入站点按回应。
 
     按账号覆盖使用 `channels.imessage.accounts.<id>.reactionNotifications`。
 
@@ -635,8 +642,8 @@ iMessage 聊天可以绑定到 ACP 会话。
     当 `approvals.exec.enabled` 或 `approvals.plugin.enabled` 为 true 且请求原生路由到 iMessage 时，网关会提供带原生控件的批准提示：
 
     - 在经过探测、且支持投票和隐藏说明的私有 API 桥接上，提示会包含一个 Messages 投票，每个允许的决策各占一项。缺少 `poll send --no-comment` 的旧版 `imsg` 仍会使用文本控件。
-    - 如果通过 `channels.imessage.actions.polls: false` 禁用了投票、桥接不支持投票、发送投票失败，或者可用决策少于两个，则提示会保留文本和 tapback 控件。
-    - 文本回退会将 `👍`（Like）映射为 `allow-once`，将 `👎`（Dislike）映射为 `deny`。它还包含 `/approve <id> <decision>` 命令，在请求允许时也包括 `allow-always`。
+    - 如果通过 `channels.imessage.actions.polls: false` 禁用了投票、桥接不支持投票、发送投票失败，或者可用决策少于两个，则提示会保留文本和点按回应控件。
+    - 文本回退会将 `👍`（赞）映射为 `allow-once`，将 `👎`（不喜欢）映射为 `deny`。它还包含 `/approve <id> <decision>` 命令，在请求允许时也包括 `allow-always`。
 
     投票和反应要求执行操作的用户句柄必须是显式批准者。批准者列表从 `channels.imessage.allowFrom`（或 `channels.imessage.accounts.<id>.allowFrom`）读取；请添加用户的 E.164 格式电话号码或其 Apple ID 邮箱（如 `chat_id:*` 这类聊天目标不是有效的批准者条目）。通配符条目 `"*"` 会被接受，但会允许任何发送者批准；空的批准者列表会完全禁用投票和反应快捷方式。这些快捷方式会有意绕过 `reactionNotifications`、`dmPolicy` 和 `groupAllowFrom`，因为显式批准者白名单才是批准解析时真正重要的唯一门槛。
 
@@ -645,10 +652,10 @@ iMessage 聊天可以绑定到 ACP 会话。
     `/approve` 文本命令的授权遵循相同列表：当 `channels.imessage.allowFrom` 非空时，`/approve <id> <decision>` 会依据该批准者列表进行授权（而不是更宽泛的 DM 白名单），而只在 DM 白名单中获准、但不在 `allowFrom` 中的发送者会收到明确拒绝。当 `allowFrom` 为空时，仍保持同聊天回退机制，`/approve` 会授权 DM 白名单允许的任何人。请把所有应当批准的操作员——无论是通过 `/approve` 还是通过反应——都加入 `allowFrom`。
 
     操作员注意：
-    - 投票和反应绑定同时存储在内存中和网关的持久键值存储中（TTL 与批准到期时间一致），网关还会轮询待处理提示以查找 tapback。网关重启后，对旧控件的点击会被识别并吞掉，而不会进入代理聊天，但重启会终止进行中的命令；应请求新的批准，而不要指望旧控件恢复它。
-    - 当该句柄是显式批准者时，操作员自己的 `is_from_me=true` tapback（例如来自配对的 Apple 设备）会解析批准。
+    - 投票和反应绑定同时存储在内存中和网关的持久键值存储中（TTL 与批准到期时间一致），网关还会轮询待处理提示以查找点按回应。网关重启后，对旧控件的点击会被识别并吞掉，而不会进入代理聊天，但重启会终止进行中的命令；应请求新的批准，而不要指望旧控件恢复它。
+    - 当该句柄是显式批准者时，操作员自己的 `is_from_me=true` 点按回应（例如来自配对的 Apple 设备）会解析批准。
     - 只有在配置了显式批准者时，批准提示才会路由到群组对话；否则群组中的任何成员都可能批准。
-    - 旧式文本样式 tapback（来自非常旧 Apple 客户端的纯文本 `Liked "…"`）无法解析批准，因为它们不携带消息 GUID；反应解析需要当前 macOS / iOS 客户端发出的结构化 tapback 元数据。
+    - 旧式文本样式点按回应（来自非常旧 Apple 客户端的纯文本 `Liked "…"`）无法解析批准，因为它们不携带消息 GUID；反应解析需要当前 macOS / iOS 客户端发出的结构化点按回应元数据。
 
   </Accordion>
 

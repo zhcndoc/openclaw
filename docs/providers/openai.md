@@ -52,9 +52,9 @@ OpenAI 的 [API 使用情况仪表板](https://help.openai.com/en/articles/10478
 | 你看到的名称                          | 层级              | 含义                                                                                     |
 | --------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------- |
 | `openai`                                | 提供者前缀         | 规范的 OpenAI 模型路由；路由事实决定隐式运行时。                                          |
-| `codex` 插件                          | 插件              | 捆绑插件，提供原生 Codex app-server 运行时和 `/codex` 聊天控制。                          |
-| provider/model `agentRuntime.id: codex` | Agent 运行时       | 为匹配的嵌入式轮次强制使用原生 Codex app-server harness。                                 |
-| `/codex ...`                            | 聊天命令集         | 从对话中绑定/控制 Codex app-server 线程。                                                 |
+| `codex` 插件                          | 插件              | 捆绑插件，提供原生 Codex 应用服务器运行时和 `/codex` 聊天控制。                          |
+| 提供者/模型 `agentRuntime.id: codex` | Agent 运行时       | 为匹配的嵌入式轮次强制使用原生 Codex 应用服务器运行框架。                                 |
+| `/codex ...`                            | 聊天命令集         | 从对话中绑定/控制 Codex 应用服务器线程。                                                 |
 | `runtime: "acp", agentId: "codex"`      | ACP 会话路由       | 显式回退路径，通过 ACP/acpx 运行 Codex。                                                  |
 
 ## 隐式代理运行时
@@ -62,13 +62,15 @@ OpenAI 的 [API 使用情况仪表板](https://help.openai.com/en/articles/10478
 当 provider/model 的 `agentRuntime` 策略未设置或为 `auto` 时，OpenAI 的
 provider-owned 路由策略会根据有效端点和适配器选择隐式运行时：
 
-| 有效路由事实                                                                                                                                                  | 隐式运行时            |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| 精确的官方 Platform HTTPS 端点，使用 `openai-responses`；或精确的官方 ChatGPT HTTPS 端点，使用 `openai-chatgpt-responses`；且没有作者指定的请求覆盖 | 可选择 Codex         |
-| 作者指定的 `openai-completions` 适配器                                                                                                                                  | OpenClaw              |
-| 自定义端点                                                                                                                                                        | OpenClaw              |
-| 明确的、精确的官方端点但使用 HTTP                                                                                                                            | 拒绝                 |
-| 带有作者指定的 provider/model 请求覆盖的路由                                                                                                                 | OpenClaw              |
+| 有效路由事实                                                                                                                                                           | 隐式运行时      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| 使用 `openai-responses` 的官方 Platform HTTPS 端点，或使用 `openai-chatgpt-responses` 的官方 ChatGPT HTTPS 端点；且未编写 provider 请求覆盖 | 可能选择 Codex |
+| 已编写的 `openai-completions` 适配器                                                                                                                                   | OpenClaw        |
+| 自定义端点                                                                                                                                                             | OpenClaw        |
+| 使用 HTTP 的显式官方精确端点                                                                                                                                           | 拒绝            |
+| 带有已编写的 provider/model 请求覆盖的路由                                                                                                                            | OpenClaw        |
+
+有效的模型范围 `params.fastMode` / `params.fast_mode` 值和有效的截止键属于类型化的代理运行时控制项，而不是已编写的 provider 请求参数。它们不会使路由失去隐式选择 Codex 的资格，也不会自行选择运行时。当某个配置方案依赖特定运行时时，请固定设置 `agentRuntime.id: "openclaw"` 或 `agentRuntime.id: "codex"`。
 
 显式的、非默认的 provider/model `agentRuntime.id` 仍然具有权威性。
 例如，`agentRuntime.id: "openclaw"` 会将原本有资格使用 Codex 的
@@ -133,16 +135,16 @@ OpenClaw 会暴露上游访问错误，不会静默地将一个 GPT-5.6 选择�
 | 文本转语音                | `tts.provider: "openai"` / `tts`                                                               | 是                                                                       |
 | 批量语音转文本            | `tools.media.audio` / 媒体理解                                                                  | 是                                                                       |
 | 流式语音转文本            | 语音通话 `streaming.provider: "openai"`                                                        | 是                                                                       |
-| 实时语音                  | 语音通话 `realtime.provider: "openai"` / 控制界面 Talk `talk.realtime.provider: "openai"`      | 是（Platform API 密钥；浏览器/Gateway 中继 GPT-Live 使用 ChatGPT OAuth） |
+| 实时语音                  | 语音通话 `realtime.provider: "openai"` / 控制界面 Talk `talk.realtime.provider: "openai"`      | 是（平台 API 密钥；浏览器/Gateway 中继 GPT-Live 使用 ChatGPT OAuth） |
 | 嵌入                      | 记忆嵌入提供商                                                                                | 是                                                                       |
 
 <Note>
 GA OpenAI 实时语音通过公开的 **OpenAI Platform Realtime
-API** 提供，并需要 Platform API 密钥。浏览器和 Gateway 中继 GPT-Live
+API** 提供，并需要平台 API 密钥。浏览器和 Gateway 中继 GPT-Live
 是例外：它们原生的 `api.openai.com/v1/live` 路由优先使用 ChatGPT
-OAuth 配置，并在该账户拥有受候补名单限制的访问权限时，回退到 Platform API 密钥认证。其他 GPT-Live 后端语音桥接使用 Frameless Bidi WebSocket，并需要 Platform API 密钥认证。
+OAuth 配置，并在该账户拥有受候补名单限制的访问权限时，回退到平台 API 密钥认证。其他 GPT-Live 后端语音桥接使用 Frameless Bidi WebSocket，并需要平台 API 密钥认证。
 
-Platform 身份验证按以下顺序解析：已配置的实时 API 密钥、`openai`
+平台身份验证按以下顺序解析：已配置的实时 API 密钥、`openai`
 API 密钥配置文件，然后是 `OPENAI_API_KEY`。ChatGPT OAuth 不会配置 GA
 Talk、语音通话、Discord 实时语音或实时转录。
 
@@ -151,11 +153,11 @@ Talk、语音通话、Discord 实时语音或实时转录。
 [platform.openai.com/account/billing](https://platform.openai.com/account/billing)
 为支撑你的 realtime 凭证的组织配置账单。实时语音接受通过
 `openclaw onboard --auth-choice openai-api-key` 创建的 `openai` API 密钥认证配置文件、通过
-`talk.realtime.providers.openai.apiKey` 为控制界面 Talk 设置的 Platform API 密钥、通过
+`talk.realtime.providers.openai.apiKey` 为控制界面 Talk 设置的平台 API 密钥、通过
 `plugins.entries.voice-call.config.realtime.providers.openai.apiKey` 为语音通话设置的密钥，或
 `OPENAI_API_KEY` 环境变量。
 
-在使用 Platform 身份验证的控制界面视频通话中，OpenAI WebRTC 会按需接收摄像头上下文：
+在使用平台身份验证的控制界面视频通话中，OpenAI WebRTC 会按需接收摄像头上下文：
 当模型调用 `describe_view` 时，浏览器会通过实时数据通道发送一张有大小限制的 JPEG 图片。OpenClaw 不会向 OpenAI 会话附加持续的摄像头轨道。
 </Note>
 
@@ -445,11 +447,26 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
     `contextTokens` 上限之上。
 
     对于直接 API 密钥 GPT-5.5 和 GPT-5.6，OpenAI 记录的提供商窗口为 `1050000`
-    个令牌，最大输出令牌数为 `128000`。预留完整的输出额度后，可为输入保留
-    `922000` 个令牌。这是推导出的运行预算，而不是提供商单独公布的输入限制。请参阅官方的
+    个令牌，最大输出令牌数为 `128000`。预留完整的输出额度后，以下两个
+    运行时方案使用相同的安全输入预算：
+
+    ```text
+    1050000 总计 - 128000 最大输出 = 922000 安全活动输入
+    自动压缩阈值 = 700000 个活动令牌
+    ```
+
+    `922000` 是推导出的运行预算，并非提供商单独公布的
+    输入限制。两个运行时会以不同方式转换该预算：嵌入式
+    OpenClaw 发送 Responses 压缩控制，而原生 Codex 管理自己的
+    目录窗口和自动压缩。请参阅官方的
     [模型比较](https://developers.openai.com/api/docs/models/compare)
     和 [GPT-5.5 模型页面](https://developers.openai.com/api/docs/models/gpt-5.5)。
-    以下示例让一个 Terra 模型选择加入该额度，并要求 OpenAI 在 `700000` 个活动令牌时进行压缩：
+
+    #### 嵌入式 OpenClaw 转换
+
+    此示例将精确的 Sol 模型固定到嵌入式 OpenClaw 运行时，
+    通过共享运行时控制启用 OpenAI API 快速模式，并要求 OpenAI Responses
+    在 `700000` 个活动令牌处执行压缩：
 
     ```json5
     {
@@ -458,8 +475,8 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
           openai: {
             models: [
               {
-                id: "gpt-5.6-terra",
-                name: "GPT-5.6 Terra",
+                id: "gpt-5.6-sol",
+                name: "GPT-5.6 Sol",
                 contextWindow: 1050000,
                 contextTokens: 922000,
                 maxTokens: 128000,
@@ -470,11 +487,12 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
       },
       agents: {
         defaults: {
-          model: { primary: "openai/gpt-5.6-terra" },
+          model: { primary: "openai/gpt-5.6-sol" },
           models: {
-            "openai/gpt-5.6-terra": {
+            "openai/gpt-5.6-sol": {
               agentRuntime: { id: "openclaw" },
               params: {
+                fastMode: true,
                 responsesServerCompaction: true,
                 responsesCompactThreshold: 700000,
               },
@@ -485,17 +503,66 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
     }
     ```
 
-    此示例中的 `agentRuntime.id: "openclaw"` 是有意设置的。它证明嵌入式
-    OpenClaw Responses 路径正在使用上述模型元数据和服务器端压缩设置。原生 Codex harness 线程
-    则在 Codex 配置中管理自己的上下文预算；请参阅
+    OpenAI Responses 自动压缩会生成一个加密的 `compaction`
+    输出项。无状态客户端会将最新项带入下一次请求，并可以丢弃所有更早的输入项。
+    OpenClaw 会以不透明方式持久化该项，按路由、会话和认证阻止不当重用，
+    重放该项，清理被替换的前缀，使其经过工作进程转录提交，并从显示内容和诊断信息中移除。
+    切勿打印、记录或暴露加密内容。
+
+    一个由进程拥有的隔离 Gateway 运行验证了这一精确的
+    `openai/gpt-5.6-sol` 配置。密集轮次分别达到 `295098`、`586562`
+    和 `863664` 个提示令牌。第三轮生成并持久化了一个一等服务器压缩项；
+    下一次请求重放了该精确的不透明项，清理其前缀，并使用了 `9602` 个提示令牌。
+    一个确定性的长响应生成了 `5480` 个输出令牌，持久化标记在压缩和 Gateway 重启后仍然保留，
+    重启延迟为 `12081` 毫秒，每次调用都报告 `serviceTier: priority`，
+    整个测试套件耗时 `220.03` 秒。这些计时是观测结果，并非服务级别保证。
+
+    #### 原生 Codex 转换
+
+    保持相同的 OpenClaw 模型选择，但将 Codex 设为显式运行时，
+    并且不要向此模型条目添加 Responses 压缩参数：
+
+    ```json5
+    {
+      agents: {
+        defaults: {
+          model: { primary: "openai/gpt-5.6-sol" },
+          models: {
+            "openai/gpt-5.6-sol": {
+              agentRuntime: { id: "codex" },
+              params: { fastMode: true },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    Codex 必须将 `922000` 同时用于 `context_window` 和
+    `max_context_window`，将 `700000` 用于 `auto_compact_token_limit`，
+    并设置匹配的应用服务器覆盖项，其中包含
+    `model_auto_compact_token_limit_scope=total`。Codex 随后会应用其有效窗口的 95% 预留，
+    得到 `875900` 个活动令牌。配置一个有序的 OpenAI API 密钥配置文件，并保留默认的
+    隔离代理范围 Codex 主目录。完整的目录、应用服务器、认证和重启方案位于
     [Codex harness 长上下文](/plugins/codex-harness#direct-api-long-context)。
 
+    这些示例是两个明确的运行时选择，而不是一个会自动选择的配置。
+    以模型为范围的 `agentRuntime` 和由运行时负责的压缩设置必须同步更改。
+    OpenClaw 只有在两者的模型引用或代理配置可区分时，才能同时保留这两种选择；
+    否则，应将模型运行时及其匹配配置作为一个原子更改一起切换。然后重启 Gateway
+    和原生 Codex app-server，运行 `/model default -s`，并开始新的聊天。
+    现有的原生 Codex 线程会保留创建时记录的提供商和模型。
+
     <Warning>
-    一旦 GPT-5.5 或 GPT-5.6 请求超过 `272000` 个输入令牌，OpenAI 将采用更高的长上下文价格：
-    整个符合条件的请求将按输入 2 倍、输出 1.5 倍的费率计费。较大的提示会在多轮之间重新发送或压缩，
-    因此，即使可见回复很短，选择加入的会话成本也可能大幅高于默认值。请参阅
-    [OpenAI API 定价](https://developers.openai.com/api/docs/pricing)。API
-    仍然是账户访问权限、实际限制和计费的权威来源。
+    一旦 GPT-5.5 或 GPT-5.6 请求超过 `272000` 个输入令牌，
+    OpenAI 就会应用更高的长上下文定价：整个符合条件的请求将按输入和缓存费率的 2 倍计费，
+    输出费率按 1.5 倍计费。快速模式定价取决于具体模型；GPT-5.6 Sol API 快速模式目前
+    在标准模式基础上还要增加 2 倍。因此，对于该模型，长上下文快速流量的综合价格为短上下文
+    标准输入侧定价的 4 倍，以及短上下文标准输出侧定价的 3 倍。大型提示会在多轮之间重新发送或压缩，
+    因此即使可见回复很短，选择加入的会话也可能比默认设置昂贵得多。请参阅
+    [快速模式](https://openai.com/api-priority-processing/)
+    和 [OpenAI API 定价](https://developers.openai.com/api/docs/pricing)。
+    账户访问权限、实际限制和计费以 API 为准。
     </Warning>
 
     ### 目录恢复
@@ -903,8 +970,8 @@ GPT-5 提示词贡献会为匹配的 OpenClaw 组装提示添加一个带标签�
     维护者可以使用选择性启用的 live 测试来执行 OpenClaw 完整的 OAuth 路径。没有 ChatGPT OAuth 凭据时测试会跳过，并且永远不会打印令牌内容：
 
     ```bash
-    OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_GPT_LIVE=1 node scripts/test-live.mjs -- extensions/openai/realtime-quicksilver.live.test.ts
-    OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_GPT_LIVE=1 node scripts/test-live.mjs -- extensions/openai/realtime-quicksilver-gateway-bridge.live.test.ts
+    OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_GPT_LIVE=1 node --import tsx scripts/test-live.mts -- extensions/openai/realtime-quicksilver.live.test.ts
+    OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_GPT_LIVE=1 node --import tsx scripts/test-live.mts -- extensions/openai/realtime-quicksilver-gateway-bridge.live.test.ts
     ```
 
     <Note>
@@ -1056,11 +1123,7 @@ OpenClaw 的隐藏归因请求头 - 请参见
 
 ## 高级配置
 
-下方按模型的 `params` 示例会影响 OpenClaw 的内置提供程序
-请求。对它们进行配置属于有意编写的请求行为，因此一个原本符合条件的
-`auto` 路由会继续停留在 OpenClaw 上，而不会隐式选择 Codex。原生
-Codex app-server harness 使用其自己的传输和请求设置；当有效路由未声明为
-与 Codex 兼容时，显式的 `agentRuntime.id: "codex"` 会直接失败。
+下面的 `transport` 和 `serviceTier` 示例是由作者编写的嵌入式提供程序请求设置，因此，原本符合条件的 `auto` 路由会保持使用 OpenClaw，而不会隐式选择 Codex。有效的 `fastMode` / `fast_mode` 值以及有效的截止时间键属于类型化的 agent-runtime 控制项，不会选择运行时。因此，特定于运行时的示例会显式固定 `agentRuntime.id`。原生 Codex app-server harness 管理自身的传输和请求设置；当有效路由未声明为兼容 Codex 时，显式设置 `agentRuntime.id: "codex"` 会安全失败。
 
 <AccordionGroup>
   <Accordion title="传输（WebSocket vs SSE）">
@@ -1084,6 +1147,7 @@ Codex app-server harness 使用其自己的传输和请求设置；当有效路�
         defaults: {
           models: {
             "openai/gpt-5.5": {
+              agentRuntime: { id: "openclaw" },
               params: { transport: "auto" },
             },
           },
@@ -1104,20 +1168,28 @@ Codex app-server harness 使用其自己的传输和请求设置；当有效路�
     - **聊天/界面：** `/fast status|auto|on|off`
     - **配置：** `agents.defaults.models["<provider>/<model>"].params.fastMode`
 
-    启用后，OpenClaw 会将快速模式映射到 OpenAI 优先处理
-    （`service_tier = "priority"`）。现有的 `service_tier` 值会被
-    保留，且快速模式不会重写 `reasoning` 或
-    `text.verbosity`。`fastMode: "auto"` 会让新的模型调用在自动
-    截止时间之前以快速模式启动，然后让后续的重试、回退、工具结果或
-    续写调用不使用快速模式。默认截止时间为 60 秒；可在当前模型上设置
-    `params.fastAutoOnSeconds` 来更改。
+    有效的 `params.fastMode` / `params.fast_mode` 值以及有效的截止时间键
+    属于类型化的运行时控制项。它们不计入作者编写的提供程序请求参数，
+    也不会选择 OpenClaw 或 Codex。下面的示例固定使用嵌入式
+    OpenClaw，因为它描述的是直接的提供程序请求。
+
+    在嵌入式运行时中启用后，OpenClaw 会将快速模式映射到 OpenAI API
+    快速模式（以前称为优先处理），目前发送
+    `service_tier = "priority"`。快速模式不会重写 `reasoning` 或
+    `text.verbosity`。`fastMode: "auto"` 会让新的模型调用在自动截止时间
+    之前以快速模式启动，之后启动的重试、回退、工具结果或续接调用则不使用
+    快速模式。截止时间默认为 60 秒；在活动模型上设置
+    `params.fastAutoOnSeconds` 可更改该值。
 
     ```json5
     {
       agents: {
         defaults: {
           models: {
-            "openai/gpt-5.5": { params: { fastMode: "auto", fastAutoOnSeconds: 30 } },
+            "openai/gpt-5.5": {
+              agentRuntime: { id: "openclaw" },
+              params: { fastMode: "auto", fastAutoOnSeconds: 30 },
+            },
           },
         },
       },
@@ -1125,22 +1197,40 @@ Codex app-server harness 使用其自己的传输和请求设置；当有效路�
     ```
 
     <Note>
-    会话覆盖优先于配置。 在 Sessions UI 中清除会话覆盖后，
-    会话将恢复为配置中的默认值。
+    完整的优先级顺序为：内联消息、已存储会话、每个 agent 的默认值、
+    全局默认值、每个模型的 `params.fastMode`，最后是关闭。
+    `/fast default` 只会清除会话层。`/status` 报告的是解析后的 OpenClaw
+    策略和运行时，而不是上游实际采用或返回的服务层级。请参阅
+    [思考级别](/tools/thinking#fast-mode-fast) 和
+    [Codex harness](/plugins/codex-harness#shared-fast-mode-and-codex-fast-mode)。
     </Note>
+
+    快速模式按高级价格计费，并且因模型而异。GPT-5.6 Sol API 快速模式
+    目前按标准 token 价格的 2 倍计费，长上下文乘数会按上文所述叠加。
+    ChatGPT/Codex 积分快速模式是独立的计费系统：GPT-5.6 和 GPT-5.5
+    目前消耗 2.5 倍的标准积分，而使用 API 密钥运行 Codex 则采用 API token
+    价格。请参阅
+    [快速模式](https://openai.com/api-priority-processing/)、
+    [API 定价](https://developers.openai.com/api/docs/pricing) 和
+    [Codex 速度](https://learn.chatgpt.com/docs/agent-configuration/speed)。
 
   </Accordion>
 
-  <Accordion title="优先处理（service_tier）">
-    OpenAI 的 API 通过 `service_tier` 提供优先处理。可在
-    OpenClaw 中按模型设置：
+  <Accordion title="带有 service_tier 的 OpenAI API 快速模式">
+    OpenAI 现在将此 API 产品称为快速模式；它以前称为优先处理。
+    OpenClaw 目前发送的线路值为
+    `service_tier = "priority"`。在嵌入式 OpenClaw 运行时中，按模型设置
+    显式层级：
 
     ```json5
     {
       agents: {
         defaults: {
           models: {
-            "openai/gpt-5.5": { params: { serviceTier: "priority" } },
+            "openai/gpt-5.5": {
+              agentRuntime: { id: "openclaw" },
+              params: { serviceTier: "priority" },
+            },
           },
         },
       },
@@ -1150,10 +1240,12 @@ Codex app-server harness 使用其自己的传输和请求设置；当有效路�
     支持的值：`auto`、`default`、`flex`、`priority`。
 
     <Warning>
-    `serviceTier` 仅会转发到原生 OpenAI 端点
-    （`api.openai.com`）和原生 Codex 端点（`chatgpt.com/backend-api`）。
-    如果你通过代理路由任一提供程序，OpenClaw 会保留
-    `service_tier` 不变。
+    `params.serviceTier` 是由作者编写的嵌入式提供程序设置，而不是原生
+    Codex app-server 配置。它仅由嵌入式运行时转发到原生 OpenAI 端点
+    （`api.openai.com`）和原生 ChatGPT 端点（`chatgpt.com/backend-api`）。
+    如果通过代理路由任一提供程序，OpenClaw 会原样保留 `service_tier`。
+    请通过 `plugins.entries.codex.config.appServer.serviceTier` 单独配置
+    原生 harness；共享的快速模式运行控制可能会覆盖该值。
     </Warning>
 
   </Accordion>
@@ -1171,6 +1263,12 @@ Codex app-server harness 使用其自己的传输和请求设置；当有效路�
     这适用于内置的 OpenClaw 运行时路径以及嵌入式运行所使用的 OpenAI 提供程序
     钩子。原生 Codex app-server harness 通过 Codex 自行管理其上下文，
     不受此设置影响。
+
+    OpenAI 会将压缩后的状态作为加密的 `compaction` 输出项发出。
+    请将该项视为不透明数据。对于无状态续接，请向前传递最新的项，并丢弃
+    它所替代的较早输入前缀。OpenClaw 会自动执行此操作：仅针对匹配的路由、
+    会话和身份验证身份持久化并重放该项，在 worker 提交会话记录期间保留该项，
+    并将其从用户可见历史记录和诊断信息中过滤掉。绝不要显示或记录加密内容。
 
     <Tabs>
       <Tab title="显式启用">
@@ -1261,8 +1359,8 @@ Codex app-server harness 使用其自己的传输和请求设置；当有效路�
 
     <Note>
     该契约完全存在于 OpenClaw 的嵌入式 agent runner 中。它不适用于原生
-    Codex app-server harness；后者会自行管理轮次与计划行为。对于原生 Codex 运行，
-    harness 选择比 execution-contract 设置更重要。
+    Codex app-server harness；后者会自行管理轮次与计划行为。对于原生 Codex 运
+    行，harness 选择比 execution-contract 设置更重要。
     </Note>
 
   </Accordion>

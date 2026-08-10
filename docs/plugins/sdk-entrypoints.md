@@ -137,17 +137,26 @@ export default definePluginEntry({
 | `securityAuditCollectors` | `OpenClawPluginSecurityAuditCollector[]`                          | 否   | -                   |
 | `register`                | `(api: OpenClawPluginApi) => void`                               | 是   | -                   |
 
-- `id` 必须与 `openclaw.plugin.json` 清单中的内容匹配。
+- `id` 必须与 `openclaw.plugin.json` 清单中的值匹配。
 - 外部会话目录使用
-  `openclaw/plugin-sdk/session-catalog`，并使用
-  `api.registerSessionCatalog({ id, label, list, read, continueSession?, archive? })` 进行注册。
-  核心负责 `sessions.catalog.*` Gateway 方法；提供程序返回主机、会话和规范化的会话记录投影，而无需注册 RPC。
-  列表提供程序应在每个主机完成处理时调用可选的 `onHost(host)` 回调；返回的主机数组仍必须作为最终的兼容性快照提供。
-- `kind` 已弃用：请在 `openclaw.plugin.json` 清单的 `kind` 字段中声明一个专属插槽（`"memory"` 或 `"context-engine"`）。
-  运行时入口中的 `kind` 仅作为旧版插件的兼容性回退。
-- `configSchema` 可以是一个用于延迟求值的函数。OpenClaw 会在首次访问时解析并缓存 schema，因此开销较大的 schema 构建器只会运行一次。
-- `nodeHostCommands` 描述符可以定义 `isAvailable({ config, env })`。
-  返回 `false` 会从无头节点的 Gateway 声明中省略该命令及其功能。OpenClaw 会根据节点本地的启动配置对其进行求值；命令处理程序在调用时仍应验证可用性。
+  `openclaw/plugin-sdk/session-catalog`，并通过 `api.registerSessionCatalog(...)` 注册
+  `SessionCatalogProvider`。必需的提供程序字段为 `id`、`label`、`list` 和 `read`；可选钩子包括
+  `resolveCreateSession`、`continueSession`、`checkUpstreamActivity`、`archive`、
+  `openTerminal` 和 `startTerminalSession`。核心负责
+  `sessions.catalog.*` 网关方法；提供程序返回主机、会话、转录记录和终端计划的投影，而无需注册 RPC。列表提供程序应在每个主机完成处理时调用可选的
+  `onHost(host)` 回调；返回的主机数组仍必须作为最终的兼容性快照提供。
+  `resolveCreateSession({ agentId })` 必须在 OpenClaw 宣布支持创建会话或调用 `startTerminalSession` 之前，返回一个从配置派生的模型/运行时目标。
+  使用
+  [`api.runtime.agent.resolveSessionCatalogCreateTarget(...)`](/plugins/sdk-runtime#apiruntimeagent)
+  应用主机的运行时和模型允许列表策略，而不是重复实现这些逻辑。
+
+  `startTerminalSession({ agentId, cwd, initialMessage?, nodeId? })` 会创建一个全新的 CLI 终端计划。返回本地计划（`kind: "local"`、`argv` 和精确的 `cwd`，以及可选的 `env`、`pathEnv` 和 `title`），或配对节点计划（`kind: "node"`、`nodeId`、`command`、`paramsJSON` 和精确的 `cwd`）。`sessions.catalog.startTerminal` RPC 要求具备 `operator.admin` 权限，并启用
+  `gateway.cliAgents.enabled` 和 `gateway.terminal.enabled`。调用方负责提供
+  `cwd`；网关要求本地目录已存在且为绝对路径，拒绝发生变化的计划 `cwd` 或主机，并在打开 PTY 之前执行常规的代理沙箱、节点配对、截止时间和连接所有权检查。
+
+- `kind` 已弃用：应改为在 `openclaw.plugin.json` 清单的 `kind` 字段中声明一个互斥插槽（`"memory"` 或 `"context-engine"`）。运行时入口中的 `kind` 仅作为旧版插件的兼容性回退保留。
+- `configSchema` 可以是一个函数，以便延迟求值。OpenClaw 会在首次访问时解析并缓存 schema，因此开销较大的 schema 构建器只会运行一次。
+- `nodeHostCommands` 描述符可以定义 `isAvailable({ config, env })`。返回 `false` 会从无头节点的网关声明中省略该命令及其能力。OpenClaw 会根据节点本地的启动配置对其进行评估；命令处理程序在调用时仍应验证可用性。
 
 ## `defineChannelPluginEntry`
 
@@ -238,21 +247,21 @@ export default defineSetupPluginEntry(myChannelPlugin);
 当通道被禁用或尚未配置时，OpenClaw 会加载此入口，而不是完整入口。有关这点何时重要，请参阅
 [设置和配置](/plugins/sdk-setup#setup-entry)。
 
-将 `defineSetupPluginEntry(...)` 与以下更窄的 setup 辅助家族搭配使用：
+将 `defineSetupPluginEntry(...)` 与以下更窄的设置辅助工具系列搭配使用：
 
-| Import                                  | 用途                                                                                                                                                                               |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openclaw/plugin-sdk/setup-runtime`     | 运行时安全的 setup 辅助工具：`createSetupTranslator`、导入安全的 setup 补丁适配器、查找备注输出、`promptResolvedAllowFrom`、`splitSetupEntries`、委托式 setup 代理 |
-| `openclaw/plugin-sdk/channel-setup`     | 可选安装的 setup 表面                                                                                                                                                              |
-| `openclaw/plugin-sdk/channel-dm-policy` | 面向账户的 DM 策略描述符，用于 setup 流程                                                                                                                                            |
-| `openclaw/plugin-sdk/setup-tools`       | Setup/安装 CLI、归档和文档辅助工具                                                                                                                                                  |
-| `openclaw/plugin-sdk/archive`           | 有界归档提取和单条目读取                                                                                                                                                            |
-| `openclaw/plugin-sdk/root-walk`         | 预算受限、根目录有界的目录遍历                                                                                                                                                      |
-| `openclaw/plugin-sdk/secret-file`       | 固定目标的机密读取和先写入者优先创建                                                                                                                                                 |
+| 导入                                   | 用途                                                                                                                                                                               |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `openclaw/plugin-sdk/setup-runtime`    | 运行时安全的设置辅助工具：`createSetupTranslator`、导入安全的设置补丁适配器、查找备注输出、`promptResolvedAllowFrom`、`splitSetupEntries`、委托式设置代理 |
+| `openclaw/plugin-sdk/channel-setup`    | 可选安装的设置接口                                                                                                                                                                |
+| `openclaw/plugin-sdk/channel-dm-policy` | 面向账户的 DM 策略描述符，用于设置流程                                                                                                                                            |
+| `openclaw/plugin-sdk/setup-tools`      | 设置/安装 CLI、归档和文档辅助工具                                                                                                                                                  |
+| `openclaw/plugin-sdk/archive`          | 有界归档提取和单条目读取                                                                                                                                                            |
+| `openclaw/plugin-sdk/root-walk`        | 预算受限、根目录有界的目录遍历                                                                                                                                                      |
+| `openclaw/plugin-sdk/secret-file`      | 固定目标的机密读取和先写入者优先创建                                                                                                                                                 |
 
 将重量级 SDK、CLI 注册和长期运行的运行时服务保留在完整入口中。
 
-拆分 setup 和 runtime 表面的打包工作区通道可以改用 `openclaw/plugin-sdk/channel-entry-contract` 中的 `defineBundledChannelSetupEntry(...)`。它允许 setup 入口保留 setup 安全的 plugin/secrets 导出，同时仍然暴露一个 runtime setter：
+拆分设置和运行时接口的打包工作区通道可以改用 `openclaw/plugin-sdk/channel-entry-contract` 中的 `defineBundledChannelSetupEntry(...)`。它允许设置入口保留设置安全的插件/机密导出，同时仍然暴露一个运行时 setter：
 
 ```typescript
 import { defineBundledChannelSetupEntry } from "openclaw/plugin-sdk/channel-entry-contract";
@@ -272,15 +281,15 @@ export default defineBundledChannelSetupEntry({
       path: "/my-channel/events",
       auth: "plugin",
       handler: async (req, res) => {
-        /* 仅限 setup 的安全路由 */
+        /* 仅限设置的安全路由 */
       },
     });
   },
 });
 ```
 
-仅当 setup 流程确实需要轻量级 runtime setter，或需要为未配置的通道提供 setup 安全的网关表面时，才使用此方式。
-`registerSetupRuntime` 仅在 `"setup-runtime"` 加载时运行；请将其限制为配置专用路由，或该 setup 流程所需的方法。
+仅当设置流程确实需要轻量级运行时 setter，或需要为未配置的通道提供设置安全的网关接口时，才使用此方式。
+`registerSetupRuntime` 仅在 `"setup-runtime"` 加载时运行；请将其限制为配置专用路由，或该设置流程所需的方法。
 
 ## 注册模式
 
@@ -373,4 +382,4 @@ OpenClaw 根据已加载插件的注册行为对其进行分类：
 - [运行时辅助工具](/plugins/sdk-runtime) - `api.runtime` 和 `createPluginRuntimeStore`
 - [设置与配置](/plugins/sdk-setup) - 清单和设置入口加载
 - [频道插件](/plugins/sdk-channel-plugins) - 构建 `ChannelPlugin` 对象
-- [提供商插件](/plugins/sdk-provider-plugins) - 提供商注册和钩子函数
+- [提供商插件](/plugins/sdk-provider-plugins) - 提供商注册和钩子函数。

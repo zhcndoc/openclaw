@@ -115,7 +115,26 @@ openclaw browser delete-profile --name work
 
 系统配置文件导入默认已启用。将 `browser.allowSystemProfileImport=false` 可同时禁用 CLI 和 agent 触发的导入。导入仅在主机本地执行，无法通过 browser node proxy 运行。
 
-## 选项卡
+## Chrome 扩展中继
+
+```bash
+openclaw browser extension path
+openclaw browser extension pair
+openclaw browser extension pair --gateway-url wss://gateway.example.com
+openclaw browser extension cdp
+openclaw browser extension cdp --json
+```
+
+- `extension path` 输出解压后的扩展目录，用于 Chrome 的**加载已解压的扩展程序**流程。
+- `extension pair` 在需要时创建主机本地中继密钥，并输出配对字符串。`--gateway-url` 创建直接连接远程网关的配对 URL；非回环 URL 必须使用 `wss://`。
+- `extension cdp` 输出非机密的浏览器中继身份验证 v2 元数据：回环浏览器/CDP 端点、协议版本、密钥 ID 以及固定的质询/完成绑定。默认情况下不会输出中继密钥或授权标头。
+
+`extension cdp --legacy-bearer` 是临时的迁移备用方案。仅当
+`browser.extensionRelay.allowLegacyAuth=true` 时，它才会在发出警告的同时输出旧版 Bearer 标头；否则会报错退出，且不会输出凭据。使用 `--json` 获取机器可读输出；警告仍会输出到 stderr，因此 stdout 保持有效的 JSON。
+
+设置、安全模型和迁移步骤：[Chrome 扩展](/tools/chrome-extension)。
+
+## 标签页
 
 ```bash
 openclaw browser tabs

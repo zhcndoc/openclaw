@@ -13,10 +13,10 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 | **Zen** | `opencode/...`    | `opencode`       |
 | **Go** | `opencode-go/...` | `opencode-go`    |
 
-这两个目录共用一个 OpenCode API 密钥（`OPENCODE_API_KEY`，别名
-`OPENCODE_ZEN_API_KEY`）。OpenClaw 会将运行时提供商 ID 分开，
-以便上游按模型路由保持正确，但入门和文档会将它们视为
-同一个 OpenCode 配置。
+两个目录使用相同的 OpenCode API 密钥基础设施（`OPENCODE_API_KEY`，
+别名为 `OPENCODE_ZEN_API_KEY`）。Go 仍然需要单独的付费订阅；
+拥有 Zen 密钥本身并不会授予 Go 的访问权限。OpenClaw 将运行时提供商 ID 分开，
+以确保上游的按模型路由保持正确。
 
 ## 开始使用
 
@@ -52,14 +52,12 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
   </Tab>
 
   <Tab title="Go 目录">
-    **最佳适用场景：** OpenCode 托管的 Kimi、GLM、MiniMax、Qwen 和 DeepSeek 系列。
+    **最佳适用场景：** 分别订阅的 Go 系列，涵盖 DeepSeek、GLM、GPT、
+    Grok、Hy3、Kimi、MiMo、MiniMax 和 Qwen。
 
     <Steps>
-      <Step title="安装 Go 目录插件">
-        ```bash
-        openclaw plugins install @openclaw/opencode-go-provider
-        openclaw gateway restart
-        ```
+      <Step title="使用内置的 Go 目录">
+        此版本已将 OpenCode Go 集成到 OpenClaw 中，因此无需单独安装插件或重启网关。
       </Step>
       <Step title="运行入门配置">
         ```bash
@@ -74,7 +72,7 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
       </Step>
       <Step title="将 Go 模型设为默认值">
         ```bash
-        openclaw config set agents.defaults.model.primary "opencode-go/kimi-k2.6"
+        openclaw config set agents.defaults.model.primary "opencode-go/kimi-k3"
         ```
       </Step>
       <Step title="验证模型是否可用">
@@ -100,22 +98,26 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 
 ### Zen
 
-| 属性             | 值                                                                                                  |
-| ---------------- | --------------------------------------------------------------------------------------------------- |
-| 运行时提供方     | `opencode`                                                                                         |
-| 示例模型         | `opencode/gpt-5.6-sol`、`opencode/gemini-3.6-flash`、`opencode/minimax-m3`、`opencode/big-pickle` |
+| 属性             | 值                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 运行时提供方     | `opencode`                                                                                                             |
+| 示例模型         | `opencode/gpt-5.6-sol`、`opencode/kimi-k3`、`opencode/gemini-3.6-flash`、`opencode/minimax-m3`、`opencode/big-pickle` |
 
-运行 `openclaw models list --provider opencode` 获取当前完整列表，其中还包括当前推荐的免费层模型条目：`opencode/big-pickle`、
+运行 `openclaw models list --provider opencode` 获取当前可用的模型列表，
+其中还包括已推广的免费层模型条目 `opencode/big-pickle`、
 `opencode/deepseek-v4-flash-free`、`opencode/laguna-s-2.1-free`、
-`opencode/ling-3.0-flash-free`、`opencode/mimo-v2.5-free`、
+`opencode/ling-3.0-tiny-free`、`opencode/longcat-2.0-free`、
+`opencode/mimo-v2.5-free`、
 `opencode/nemotron-3-ultra-free` 和 `opencode/north-mini-code-free`。
+
+实时发现功能会将 OpenCode 返回的 ID 与 OpenClaw 的可信元数据进行安全交集处理。按密钥限定的响应可能会省略当前工作区不可用的模型；缺少这些模型并不意味着离线定义已被弃用。已弃用的显式引用对于现有配置仍可解析，但不会显示为当前推荐项。
 
 ### Go
 
-| 属性             | 值                                                                    |
-| ---------------- | --------------------------------------------------------------------- |
-| 运行时提供方     | `opencode-go`                                                         |
-| 示例模型         | `opencode-go/kimi-k2.6`、`opencode-go/glm-5`、`opencode-go/minimax-m2.5` |
+| 属性             | 值                                                                           |
+| ---------------- | ---------------------------------------------------------------------------- |
+| 运行时提供方     | `opencode-go`                                                                |
+| 示例模型         | `opencode-go/kimi-k3`、`opencode-go/gpt-5.6-luna`、`opencode-go/qwen3.8-max` |
 
 参见 [OpenCode Go](/providers/opencode-go) 获取完整的 Go 模型表。
 
@@ -127,7 +129,7 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
   </Accordion>
 
   <Accordion title="共享凭据">
-    在设置过程中输入一个 OpenCode key 会为两个运行时提供方都存储凭据。你不需要分别为每个目录进行入门配置。
+    在设置期间输入一个 OpenCode 密钥，可以为两个运行时提供商存储凭据。它不会创建 Go 订阅或授予 Go 使用权；使用 Go 前，请先在 OpenCode 控制台中订阅 Go。
   </Accordion>
 
   <Accordion title="获取 API key">
@@ -142,6 +144,11 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 
   <Accordion title="非 Gemini 回放行为">
     非 Gemini 的 OpenCode 引用会保留最小化的 OpenAI 兼容回放策略。
+  </Accordion>
+  <Accordion title="定价和隐私">
+    计费、数据保留和训练政策因模型而异。在选择路径前，请查看最新的
+    [OpenCode Zen 定价和政策](https://opencode.ai/docs/zen/)。
+    免费模型可能属于临时性的反馈计划。
   </Accordion>
 </AccordionGroup>
 

@@ -20,7 +20,7 @@ title: "策略"
 只需要没有证明或漂移检测的本地行为，普通配置就足够了。
 
 另外，[`openclaw agent exec`](/cli/agent#agent-exec) 会为每次运行应用一个隔离的
-隐式策略配置：代理沙箱关闭，Gateway 主机执行完全允许，并且文件系统工具仅限于 `--cwd`】【。
+隐式策略配置：代理沙箱关闭，Gateway 主机执行完全允许，并且文件系统工具仅限于 `--cwd`】【。。
 
 ## 快速开始
 
@@ -194,8 +194,6 @@ openclaw plugins enable policy
 | `agentIds`   | `tools`、`agents.workspace`、`sandbox`、`dataHandling.memory`、`execApprovals` | 一个或多个运行时代理需要更严格的规则。            |
 | `channelIds` | `ingress.channels`                                                             | 一个或多个通道需要更严格的入口规则。              |
 
-如果 `agentIds` 条目不在 `agents.entries.*` 中出现，OpenClaw 会针对该运行时代理 id 的继承全局/默认姿态来评估该作用域规则，而不是跳过它。
-
 ```jsonc
 {
   "tools": {
@@ -360,12 +358,12 @@ openclaw plugins enable policy
 
 #### 数据处理
 
-| Policy 字段                                        | 观察到的状态                                                                                     | 适用场景                                                               |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `dataHandling.sensitiveLogging.requireRedaction`    | 运行时不变量 `oc://openclaw.invariant/logging/redaction`                                             | 设置为 `true` 以记录该要求；OpenClaw 始终满足它。                       |
-| `dataHandling.telemetry.denyContentCapture`         | `diagnostics.otel.captureContent`                                                                  | 设置为 `true` 以拒绝遥测内容捕获。                                     |
-| `dataHandling.retention.requireSessionMaintenance`  | `session.maintenance.mode`                                                                         | 设置为 `true` 以要求有效的会话维护模式为 `enforce`。                   |
-| `dataHandling.memory.denySessionTranscriptIndexing` | `memory.qmd.sessions.enabled`、`memory.search.experimental.sessionMemory` 和按代理设置的覆盖项 | 设置为 `true` 以拒绝将会话记录索引到内存中。                           |
+| 策略字段                                             | 观察到的状态                                                                                                  | 适用场景                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `dataHandling.sensitiveLogging.requireRedaction`    | 运行时不变量 `oc://openclaw.invariant/logging/redaction`                                                       | 设置为 `true` 以记录该要求；OpenClaw 始终满足该要求。                  |
+| `dataHandling.telemetry.denyContentCapture`         | `diagnostics.otel.captureContent`                                                                               | 设置为 `true` 以拒绝遥测内容捕获。                                     |
+| `dataHandling.retention.requireSessionMaintenance`  | `session.maintenance.mode`                                                                                      | 设置为 `true` 以要求有效的会话维护模式为 `enforce`。                   |
+| `dataHandling.memory.denySessionTranscriptIndexing` | `memory.search.experimental.sessionMemory`、`memory.search.rememberAcrossConversations` 和按代理设置的覆盖项 | 设置为 `true` 以拒绝将会话转录编入内存索引。                           |
 
 #### Secrets
 
@@ -375,9 +373,9 @@ openclaw plugins enable policy
 | `secrets.denySources`             | secret provider 来源和 SecretRef 来源                    | 拒绝诸如 `exec`、`file` 或其他已配置来源名称。                           |
 | `secrets.allowInsecureProviders`  | 不安全 secret-provider 姿态标志                         | 设置为 `false` 以拒绝选择进入不安全姿态的 provider。                    |
 
-#### Exec approvals
+#### Exec 审批
 
-Exec-approvals 检查默认读取运行时 `exec_approvals_config` 单例行，位置在 `~/.openclaw/state/openclaw.sqlite`；当设置了 `OPENCLAW_STATE_DIR` 时，则读取 `$OPENCLAW_STATE_DIR/state` 下的同一数据库。发现项会保留稳定的 `oc://exec-approvals.json/...` URI 方案；现在它表示该行中存储的权威 JSON 文档内的路径。
+Exec 审批检查默认读取运行时 `exec_approvals_config` 单例行，位置在 `~/.openclaw/state/openclaw.sqlite`；当设置了 `OPENCLAW_STATE_DIR` 时，则读取 `$OPENCLAW_STATE_DIR/state` 下的同一数据库。发现项会保留稳定的 `oc://exec-approvals.json/...` URI 方案；现在它表示该行中存储的权威 JSON 文档内的路径。
 `execApprovals.defaults.*` 或 `execApprovals.agents.*` 下的姿态规则需要可读的工件证据；缺失或无效的工件会被报告为不可观察证据，而不是尽力通过。一旦可读，省略字段会继承运行时默认值：缺失的 `defaults.security` 为 `full`，缺失的代理 security 也会继承该默认值。证据包括 `defaults`、`agents.*`、`agents.*.allowlist[].pattern`、可选的 `argPattern`、有效的 `autoAllowSkills` 姿态以及条目来源——绝不包括 socket 路径/token、`commandText`、`lastUsedCommand`、解析后的路径或时间戳。
 
 | Policy 字段                                | 观察到的状态                                                                         | 适用场景                                                                                |

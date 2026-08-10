@@ -199,7 +199,7 @@ meowcaller pair --store "$state_dir/wa-voip.db"
 
   <Step title="配置 TTS 并从 WhatsApp 发起通话">
 
-    配置一个支持电话功能的 [TTS 提供商](/tools/tts)，重启网关，然后发送类似 `Call me and say the build finished.` 的请求。该工具会从受信任的入站上下文中解析发送者，合成一个临时的私有 WAV 文件，在受限的通话窗口内运行 MeowCaller，并在之后删除音频文件。OpenClaw 会显式传递该账户的存储路径，等待接听/播放/挂断后的零退出状态，并将超时或非零退出视为工具调用失败。
+    配置一个支持电话功能的 [TTS 提供商](/tools/tts)，重启网关，然后发送类似 `给我打电话并说构建已完成。` 的请求。该工具会从受信任的入站上下文中解析发送者，合成一个临时的私有 WAV 文件，在受限的通话窗口内运行 MeowCaller，并在之后删除音频文件。OpenClaw 会显式传递该账户的存储路径，等待接听/播放/挂断后的零退出状态，并将超时或非零退出视为工具调用失败。
 
   </Step>
 </Steps>
@@ -615,7 +615,7 @@ WhatsApp 通过 `groups` 和 `direct` 映射支持类似 Telegram 的群组与�
 这种账号替换根级的提示词解析行为只是一个普通的浅层覆盖：任何账号级 `groups`/`direct` 键，包括显式的空对象，都会替换根级映射。它不同于上文描述的群成员白名单检查，后者在意外出现空的 `groups: {}` 时，对单账号提供了安全兜底。
 </Note>
 
-**与 Telegram 的区别：** Telegram 会在多账号设置中为每个账号抑制根级 `groups`（即使该账号自己没有 `groups`），以防止机器人接收其不属于的群组消息。WhatsApp 不会应用这个保护——根级 `groups`/`direct` 会被任何没有自己覆盖项的账号继承，而不考虑账号数量。在多账号 WhatsApp 设置中，如果你希望按账号区分提示词，请在每个账号下显式定义完整映射。
+**与 Telegram 的区别：** Telegram 在多账号配置中对 `groups` 使用相同的整个映射账号覆盖机制，但单个账号的空 `groups: {}` 会回退到根级 groups，作为迁移安全网。Telegram 的 `direct` 映射还具有独立的私聊主题语义。在 WhatsApp 中——或者在多个 Telegram 账号中的某一个账号中——当该账号不应继承根级群组默认设置时，请使用显式的空 `groups: {}`。
 
 重要行为：
 

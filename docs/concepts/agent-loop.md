@@ -1,8 +1,8 @@
 ---
 summary: "Agent 循环生命周期、流式传输与等待语义"
 read_when:
-  - 你需要对 Agent 循环或生命周期事件进行精确的逐步说明
-  - 你正在更改会话队列、对话记录写入或会话写锁行为
+  - 你需要准确了解 Agent 循环或生命周期事件的完整流程
+  - 你正在修改会话排队、写入器声明或转录写入隔离
 title: "Agent 循环"
 ---
 
@@ -19,7 +19,7 @@ Agent 循环是按会话串行执行的运行流程，它将一条消息转换�
 
 1. `agent` RPC 验证参数，解析会话（`sessionKey`/`sessionId`），持久化会话元数据，并立即返回 `{ runId, acceptedAt }`。
 2. `agentCommand` 执行该轮：解析模型 + thinking/verbose/trace 默认值，加载 skills 快照，调用 `runEmbeddedAgent`，并在嵌入式循环尚未发出时补发一个 **lifecycle end/error**。
-3. `runEmbeddedAgent`：通过按会话和全局队列串行化运行，解析模型 + 认证配置文件，构建 OpenClaw 会话，订阅运行时事件，流式输出 assistant/tool 增量，强制执行运行超时（到期时中止），并返回 payload 及 usage 元数据。对于 Codex app-server 轮次，它还会在已接受的轮次停止产生 app-server 进度且未触发终态事件时中止该轮次。
+3. `runEmbeddedAgent`：通过按会话和全局队列串行化运行，解析模型 + 认证配置文件，构建 OpenClaw 会话，订阅运行时事件，流式输出 assistant/tool 增量，强制执行运行超时（到期时中止），并返回负载及使用情况元数据。对于 Codex app-server 轮次，它还会在已接受的轮次停止产生 app-server 进度且未触发终态事件时中止该轮次。
 4. `subscribeEmbeddedAgentSession` 将运行时事件桥接到 `agent` 流：工具事件映射到 `stream: "tool"`，assistant 增量映射到 `stream: "assistant"`，生命周期事件映射到 `stream: "lifecycle"`（`phase: "start" | "end" | "error"`）。
 5. `agent.wait`（`waitForAgentRun`）等待某个 `runId` 上的 **lifecycle end/error**，并返回 `{ status: ok|error|timeout, startedAt, endedAt, error? }`。
 
@@ -27,14 +27,14 @@ Agent 循环是按会话串行执行的运行流程，它将一条消息转换�
 
 运行会按每个会话键（session lane）进行串行处理，并可选地通过全局 lane 进行处理，从而防止工具/会话竞争。消息通道会选择一种队列模式（steer/followup/collect/interrupt）并将其送入该 lane 系统；参见 [命令队列](/concepts/queue)。
 
-Transcript 写入由每个会话 lane 和 SQLite 写入队列串行化处理。每次追加或重写都会在其同步提交事务中验证当前会话标识，因此过期的运行无法覆盖更新的会话世代。
+在流式传输开始前，已获准的运行会记录其持久化的 `activeWriterRunId` 声明。每次追加或重写转录内容时都会提供 `expectedWriterRunId`，同步提交事务会验证它是否仍与当前活动声明匹配。因此，被取代的运行无法提交过时的转录数据。SQLite 写入队列会按代理对变更进行排序，而 Gateway 状态目录锁则防止另一个 Gateway 或 `openclaw agent --local` 进程同时拥有同一个状态目录。
 
 ## 会话和工作区准备
 
-- 工作区已解析并创建；在沙箱中运行时，可能会重定向到沙箱工作区根目录。
-- 技能已加载（或从快照中复用），并注入到环境和提示中。
-- 启动/上下文文件已解析，并注入到系统提示中。
-- 在流式传输开始之前，会获取会话写锁并准备会话转录目标。任何后续的转录重写、压缩或截断路径在修改 SQLite 转录行之前都必须获取同一把锁。
+- 工作区已解析并创建；沙箱运行可能会将其重定向到沙箱工作区根目录。
+- 技能已加载（或从快照中重复使用），并注入环境和提示词中。
+- 引导/上下文文件已解析并注入系统提示词中。
+- 会话记录目标和写入器声明已在开始流式传输之前准备就绪。之后的重写、压缩和截断会使用同一个事务内写入器声明围栏。
 
 ## 提示词组装
 
@@ -42,45 +42,45 @@ Transcript 写入由每个会话 lane 和 SQLite 写入队列串行化处理。�
 
 ## 钩子
 
-OpenClaw 有两套 hook 系统：
+OpenClaw 有两套钩子系统：
 
-- **内部 hooks**（Gateway hooks）：用于命令和生命周期事件的事件驱动脚本。
-- **插件 hooks**：agent/tool 生命周期和 gateway pipeline 内的扩展点。
+- **内部钩子**（Gateway 钩子）：用于命令和生命周期事件的事件驱动脚本。
+- **插件钩子**：agent/tool 生命周期和 Gateway 流水线内的扩展点。
 
-### 内部 hooks（Gateway hooks）
+### 内部钩子（Gateway 钩子）
 
 - **`agent:bootstrap`**: 在系统提示词最终确定之前，构建 bootstrap 文件时运行。可用于添加或移除 bootstrap 上下文文件。
-- **命令 hooks**：`/new`、`/reset`、`/stop`，以及其他命令事件（参见 Hooks 文档）。
+- **命令钩子**：`/new`、`/reset`、`/stop`，以及其他命令事件（参见钩子文档）。
 
-参见 [Hooks](/automation/hooks) 了解配置与示例。
+参见 [钩子](/automation/hooks) 了解配置与示例。
 
-### 插件 hooks
+### 插件钩子
 
-这些 hook 在 agent loop 或 gateway pipeline 内部运行：
+这些钩子在 agent 循环或 Gateway 流水线内部运行：
 
-| Hook                                                    | 运行时机                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 钩子                                                    | 运行时机                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `before_model_resolve`                                  | 会话前（无 `messages`），用于在解析前以确定性方式覆盖 provider/model。                                                                                                                                                                                                                                                                                                                                                |
 | `before_prompt_build`                                   | 会话加载后（包含 `messages`），用于注入 `prependContext`、`systemPrompt`、`prependSystemContext` 或 `appendSystemContext`；或者在支持按轮次提交工具面并且工具面受该轮次限制的运行时中，通过 `toolsAllow` 缩小工具面。空的 `toolsAllow` 不会提交任何可选工具；省略该字段则保持宿主解析出的工具面不变。不支持的运行时会拒绝限制性值，而不是忽略它们。 |
-| `before_agent_reply`                                    | 内联操作之后、LLM 调用之前运行。插件可以接管此轮并返回合成回复，或使其完全静默。                                                                                                                                                                                                                                                                                                                                      |
+| `before_agent_reply`                                    | 内联操作之后、调用 LLM 之前运行。插件可以接管此轮并返回合成回复，或使其完全静默。                                                                                                                                                                                                                                                                                                                                      |
 | `agent_end`                                             | 完成后运行，包含最终消息列表和运行元数据。                                                                                                                                                                                                                                                                                                                                                                            |
 | `before_compaction` / `after_compaction`                | 观察或标注压缩周期。                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `before_tool_call` / `after_tool_call`                  | 拦截工具参数/结果。                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `before_install`                                        | 运维安装策略运行后，在暂存的 skill/plugin 安装材料上运行；前提是插件 hook 已在当前进程中加载。                                                                                                                                                                                                                                                                                                                        |
+| `before_install`                                        | 运维安装策略运行后，在暂存的 skill/plugin 安装材料上运行；前提是插件钩子已在当前进程中加载。                                                                                                                                                                                                                                                                                                                        |
 | `tool_result_persist`                                   | 在工具结果写入 OpenClaw 所有的会话记录之前，同步转换工具结果。                                                                                                                                                                                                                                                                                                                                                       |
-| `message_received` / `message_sending` / `message_sent` | 入站和出站消息 hook。                                                                                                                                                                                                                                                                                                                                                                                               |
+| `message_received` / `message_sending` / `message_sent` | 入站和出站消息钩子。                                                                                                                                                                                                                                                                                                                                                                                               |
 | `session_start` / `session_end`                         | 会话生命周期边界。                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `gateway_start` / `gateway_stop`                        | Gateway 生命周期事件。                                                                                                                                                                                                                                                                                                                                                                                               |
 
-出站/工具守卫的 hook 决策规则：
+出站/工具守卫的钩子决策规则：
 
 - `before_tool_call`: `{ block: true }` 是终态并会停止低优先级处理器。`{ block: false }` 是无操作，不会清除先前的阻止。
 - `before_install`: 与上面的终态/无操作语义相同。对于必须覆盖 CLI 安装和更新路径的、由运维拥有的安装允许/阻止决策，请使用 `security.installPolicy`，而不是 `before_install`。
 - `message_sending`: `{ cancel: true }` 是终态并会停止低优先级处理器。`{ cancel: false }` 是无操作，不会清除先前的取消。
 
-参见 [Plugin hooks](/plugins/hooks) 了解 hook API 和注册细节。
+参见 [插件钩子](/plugins/hooks) 了解钩子 API 和注册细节。
 
-Harness 可以适配这些 hooks。Codex app-server harness 将 OpenClaw plugin hooks 作为文档化镜像表面的兼容性契约；Codex 原生 hooks 是一套独立的、更底层的 Codex 机制。
+Harness 可以适配这些钩子。Codex app-server harness 将 OpenClaw 插件钩子作为文档化镜像表面的兼容性契约；Codex 原生钩子是一套独立的、更底层的 Codex 机制。
 
 ## 流式传输
 

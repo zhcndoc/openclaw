@@ -30,23 +30,19 @@ read_when:
 
 ## Codex 表面
 
-Several surfaces share the Codex name:
+多个表面共用 Codex 这一名称：
 
 | 表面                                          | OpenClaw 名称/配置                 | 作用                                                                                                           |
 | ------------------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| 原生 Codex app-server 运行时                  | `openai/*` model refs                | 通过 Codex app-server 运行 OpenAI 嵌入式代理轮次。这是常见的 ChatGPT/Codex 订阅设置。 |
-| Codex OAuth 认证配置文件                      | `openai` OAuth profiles              | 存储 Codex app-server harness 使用的 ChatGPT/Codex 订阅认证信息。                             |
+| 原生 Codex app-server 运行时                  | `openai/*` 模型引用                | 通过 Codex app-server 运行 OpenAI 嵌入式代理轮次。这是常见的 ChatGPT/Codex 订阅设置。 |
+| Codex OAuth 认证配置文件                      | `openai` OAuth 配置文件              | 存储 Codex app-server harness 使用的 ChatGPT/Codex 订阅认证信息。                             |
 | Codex ACP 适配器                                | `runtime: "acp"`, `agentId: "codex"` | 通过外部 ACP/acpx 控制平面运行 Codex。仅在明确要求 ACP/acpx 时使用。        |
 | 原生 Codex 聊天控制命令集                      | `/codex ...`                         | 从聊天中绑定、恢复、引导、停止并检查 Codex app-server 线程。                                |
-| OpenAI Platform API 路由（用于非代理表面） | `openai/*` plus API-key auth         | 直接 OpenAI API，例如图像、嵌入、语音和实时。                                           |
+| OpenAI Platform API 路由（用于非代理表面） | `openai/*` 加 API 密钥认证         | 直接调用 OpenAI API，例如图像、嵌入、语音和实时 API。                                           |
 
-These surfaces are intentionally independent. Enabling the `codex` plugin
-makes native app-server features available; `openclaw doctor --fix` owns
-legacy Codex route repair and stale session pin cleanup. Selecting `openai/*`
-for an agent model now means "run this through Codex" unless a non-agent
-OpenAI API surface is being used.
+这些表面是有意相互独立的。启用 `codex` 插件会提供原生 app-server 功能；`openclaw doctor --fix` 负责修复旧版 Codex 路由和清理过时的会话固定配置。现在，为代理选择 `openai/*` 模型意味着“通过 Codex 运行此模型”，除非使用的是非代理的 OpenAI API 表面。
 
-常见的 ChatGPT/Codex 订阅设置使用 Codex OAuth 进行认证，但将模型 ref 保持为 `openai/*`，并选择 `codex` 运行时：
+常见的 ChatGPT/Codex 订阅设置使用 Codex OAuth 进行认证，但将模型引用保持为 `openai/*`，并选择 `codex` 运行时：
 
 ```json5
 {
@@ -58,29 +54,24 @@ OpenAI API surface is being used.
 }
 ```
 
-这意味着 OpenClaw 先选择一个 OpenAI model ref，然后让 Codex app-server 运行时执行这个嵌入式代理轮次。它并不意味着“使用 API 计费”，也不意味着通道、模型提供方目录或 OpenClaw 会话存储会变成 Codex。
+这意味着 OpenClaw 先选择一个 OpenAI 模型引用，然后让 Codex app-server 运行时执行这个嵌入式代理轮次。它并不意味着“使用 API 计费”，也不意味着通道、模型提供方目录或 OpenClaw 会话存储会变成 Codex。
 
-When the bundled `codex` plugin is enabled, use the native `/codex` command
-surface (`/codex bind`, `/codex threads`, `/codex resume`, `/codex steer`,
-`/codex stop`) for natural-language Codex control instead of ACP. Use ACP for
-Codex only when the user explicitly asks for ACP/acpx or is testing the ACP
-adapter path. Claude Code, Gemini CLI, OpenCode, Cursor, and similar external
-harnesses still use ACP.
+当捆绑的 `codex` 插件启用后，请使用原生 `/codex` 命令表面（`/codex bind`、`/codex threads`、`/codex resume`、`/codex steer`、`/codex stop`）进行自然语言 Codex 控制，而不是使用 ACP。只有在用户明确要求 ACP/acpx，或正在测试 ACP 适配器路径时，才对 Codex 使用 ACP。Claude Code、Gemini CLI、OpenCode、Cursor 以及类似的外部 harness 仍使用 ACP。
 
-Decision tree:
+决策树：
 
-1. **Codex bind/control/thread/resume/steer/stop** -> 在启用捆绑 `codex` 插件时，使用原生 `/codex` 命令表面。
-2. **Codex as the embedded runtime** or the normal subscription-backed Codex agent experience -> `openai/<model>`.
-3. **OpenClaw explicitly chosen for an OpenAI model** -> 保持 model ref 为 `openai/<model>`，并将 provider/model 运行时策略设置为 `agentRuntime.id: "openclaw"`。选中的 `openai` OAuth profile 会在内部通过 OpenClaw 的 Codex-auth 传输路由。
-4. **Legacy Codex model refs in config** -> 使用 `openclaw doctor --fix` 修复为 `openai/<model>`；doctor 会通过在旧 model ref 隐含的位置添加 provider/model 作用域的 `agentRuntime.id: "codex"` 来保留 Codex 认证路由。旧的 **`codex-cli/*`** model refs 会修复为相同的 `openai/<model>` Codex app-server 路由；OpenClaw 不再保留捆绑的 Codex CLI 后端。
-5. **ACP, acpx, or Codex ACP adapter explicitly requested** -> `runtime: "acp"` and `agentId: "codex"`.
-6. **Claude Code, Gemini CLI, OpenCode, Cursor, Droid, or another external harness** -> ACP/acpx，而不是原生子代理运行时。
+1. **Codex 绑定/控制/线程/恢复/引导/停止** -> 在启用捆绑 `codex` 插件时，使用原生 `/codex` 命令表面。
+2. **将 Codex 作为嵌入式运行时**，或使用通常由订阅支持的 Codex 代理体验 -> `openai/<model>`。
+3. **明确选择由 OpenClaw 使用 OpenAI 模型** -> 保持模型引用为 `openai/<model>`，并将提供方/模型运行时策略设置为 `agentRuntime.id: "openclaw"`。选中的 `openai` OAuth 配置文件会在内部通过 OpenClaw 的 Codex-auth 传输路由。
+4. **配置中的旧版 Codex 模型引用** -> 使用 `openclaw doctor --fix` 修复为 `openai/<model>`；doctor 会通过在旧模型引用隐含的位置添加提供方/模型作用域的 `agentRuntime.id: "codex"` 来保留 Codex 认证路由。旧的 **`codex-cli/*`** 模型引用会修复为相同的 `openai/<model>` Codex app-server 路由；OpenClaw 不再保留捆绑的 Codex CLI 后端。
+5. **明确请求 ACP、acpx 或 Codex ACP 适配器** -> `runtime: "acp"` and `agentId: "codex"`。
+6. **Claude Code、Gemini CLI、OpenCode、Cursor、Droid 或其他外部 harness** -> 使用 ACP/acpx，而不是原生子代理运行时。
 
 | 你指的是...                             | 使用...                                       |
 | --------------------------------------- | -------------------------------------------- |
 | Codex app-server 聊天/线程控制         | 来自捆绑 `codex` 插件的 `/codex ...`        |
-| Codex app-server 嵌入式代理运行时      | `openai/*` agent model refs                  |
-| OpenAI Codex OAuth                      | `openai` OAuth profiles                      |
+| Codex app-server 嵌入式代理运行时      | `openai/*` 代理模型引用                     |
+| OpenAI Codex OAuth                      | `openai` OAuth 配置文件                     |
 | Claude Code 或其他外部 harness         | ACP/acpx                                     |
 
 关于 OpenAI 系列前缀拆分，请参见 [OpenAI](/providers/openai) 和
@@ -170,9 +161,10 @@ CLI 后端别名与嵌入式 harness ids 不同。首选的 Claude CLI 形式如
 }
 ```
 
-该 harness 会在 `extensions/copilot/doctor-contract-api.ts` 中声明其提供商、运行时、CLI 会话键以及认证配置文件前缀，  
-`openclaw doctor` 会自动加载该文件。有关配置、认证、转录镜像、压缩、声明式 doctor 合同，以及  
-PI、Codex 与 Copilot SDK 之间更广泛的决策，请参见 [GitHub Copilot 代理运行时](/plugins/copilot)。
+插件清单声明了 harness 提供商、运行时、CLI 会话密钥和身份验证配置文件前缀，  
+无需 `openclaw doctor` 加载插件代码。有关配置、身份验证、记录镜像、压缩、  
+声明式 doctor 契约，以及更广泛的 PI、Codex 与 Copilot SDK 选型，请参阅  
+[GitHub Copilot 代理运行时](/plugins/copilot)。
 
 ## 兼容性契约
 

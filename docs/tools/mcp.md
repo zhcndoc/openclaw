@@ -110,7 +110,7 @@ openclaw mcp doctor docs --probe
 openclaw mcp login <name>
 ```
 
-按照输出的授权 URL 操作，并在提示时使用 `--code` 重新运行。
+Follow the printed authorization URL. OpenClaw normally captures the loopback redirect and saves the credentials automatically; use the printed `--code` command when the browser cannot reach the callback listener.
 
 ### 更改未传达到活动代理
 

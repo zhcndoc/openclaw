@@ -16,7 +16,7 @@ OpenClaw Linux 伴侣是一个用于本地 Gateway 的 Tauri 桌面应用。它�
 
 - 当缺失时会安装 OpenClaw CLI 和受管理的 Node 运行时；发布构建会自动安装稳定通道，而开发构建会先询问通道
 - 在尝试服务变更之前会附加到健康的 Gateway
-- 将 install、start、stop 和 restart 操作委托给 CLI 管理的 systemd 用户服务
+- 将安装、启动、停止和重启操作委托给 CLI 管理的 systemd 用户服务
 - 发现附近的 Bonjour Gateways，并在按路由作用域的窗口中打开每个 Control UI，因此可以让多个
   Gateway 仪表板保持连接并同时使用
 - 使用其已解析的认证 URL 打开 Gateway 提供的 Control UI
@@ -70,30 +70,28 @@ pnpm dlx @tauri-apps/cli@2.11.4 build --bundles deb,appimage
 
 ### 快速聊天
 
-使用 `Ctrl+Shift+Space` 或托盘项 **Quick Chat** 打开 Quick Chat。agent
+使用 `Ctrl+Shift+Space` 或托盘项 **快速聊天** 打开快速聊天。agent
 徽章会显示已配置的头像、表情符号或字母组合；选择它可切换 agent。
 消息使用所选 agent 的主会话，并遵循全局会话作用域。
 原生 Rust 客户端拥有持久的 Ed25519 设备身份。它仅使用
 CLI 交接中的共享令牌或密码来启动配对，然后在后续连接中存储并
 优先使用 Gateway 签发的设备令牌。身份和
-设备令牌位于应用配置目录中的一个模式为 `0600` 的文件内；Quick
-Chat 的 WebView 不会接收任何凭据或 WebSocket。
+设备令牌位于应用配置目录中的一个模式为 `0600` 的文件内；快速
+聊天的 WebView 不会接收任何凭据或 WebSocket。
 
-当原生连接不可用时，Quick Chat 会显示 **Gateway
-unreachable — retrying**，并在重新连接前禁用发送。已进入配对阶段的远程设备会显示 **Approve this device in the dashboard
-(Nodes)**，如果 Gateway 提供了短设备 ID，则会一并显示。需要缺失共享凭据的 Gateway 会显示 **Gateway requires a
-credential — open the dashboard on the gateway host**；在这种状态下不会有等待批准的配对请求。只有当服务器提供的修复指导更具体时，才会用其替换这些回退提示。
+当原生连接不可用时，快速聊天会显示 **Gateway 无法访问——正在重试**，并在重新连接前禁用发送。已进入配对阶段的远程设备会显示 **请在仪表板的
+（Nodes）中批准此设备**，如果 Gateway 提供了短设备 ID，则会一并显示。需要缺失共享凭据的 Gateway 会显示 **Gateway 需要凭据——请在 Gateway 主机上打开仪表板**；在这种状态下不会有等待批准的配对请求。只有当服务器提供的修复指导更具体时，才会用其替换这些回退提示。
 对于 TLS Gateway，CLI 会将 Gateway 证书的 SHA-256
 指纹传递给应用；原生客户端会固定该证书，并单独报告 **Gateway TLS
-trust failed — check the certificate fingerprint**，与宕机状态区分开来。
+信任失败——请检查证书指纹**，与宕机状态区分开来。
 通过 SecretRef 配置共享密钥的 Gateways 会在 CLI 交接中省略它。已存在的配对安装会通过其存储的设备令牌继续工作，但新安装无法在共享密钥
 认证下、没有该启动凭据的情况下创建待处理的配对请求。
-Setup-code 和 `bootstrapToken` 的兑换需要专门的产品 UI，仍然是后续事项；Quick Chat 不会尝试这两种流程。
+Setup-code 和 `bootstrapToken` 的兑换需要专门的产品 UI，仍然是后续事项；快速聊天不会尝试这两种流程。
 
-在 X11 上，使用 Quick Chat 中的齿轮来记录或重置自定义快捷键。
-**Quick Chat shortcut** 托盘切换项可启用或禁用它，而不会禁用普通的 **Quick Chat** 托盘项。全局快捷键在 Wayland 上不可用，因此
+在 X11 上，使用快速聊天中的齿轮来记录或重置自定义快捷键。
+**快速聊天快捷键**托盘切换项可启用或禁用它，而不会禁用普通的**快速聊天**托盘项。全局快捷键在 Wayland 上不可用，因此
 快捷键设置会被隐藏，托盘项仍然是入口。
-在一次被接受的发送之后，Quick Chat 会保持打开，并在编辑器下方流式显示所选 agent 的纯文本回复。按 `Esc` 可关闭该栏及其回复；
+在一次被接受的发送之后，快速聊天会保持打开，并在编辑器下方流式显示所选 agent 的纯文本回复。按 `Esc` 可关闭该栏及其回复；
 `Ctrl+Enter` 仍会打开仪表板。
 
 ### Canvas
@@ -190,7 +188,7 @@ openclaw doctor
 
 ```ini
 [Unit]
-Description=OpenClaw Gateway（配置文件：<profile>，v<version>）
+Description=OpenClaw Gateway (profile: <profile>)
 After=network-online.target
 Wants=network-online.target
 StartLimitBurst=5
@@ -223,7 +221,9 @@ systemctl --user enable --now openclaw-gateway[-<profile>].service
 
 在 Linux 上，当主机、虚拟机或容器 cgroup 内存耗尽时，内核会选择一个 OOM 受害者。Gateway 不是一个好的受害者，因为它持有长生命周期的会话和通道连接，所以 OpenClaw 会尽可能优先让短暂的子进程先被杀死。
 
-对于符合条件的 Linux 子进程启动，OpenClaw 会用一个简短的 `/bin/sh` 包装器来包裹命令，将子进程自身的 `oom_score_adj` 提升到 `1000`，然后 `exec` 真正的命令。这不需要特权：进程总是可以提高自己的 OOM 分数。
+对于符合条件的 Linux 子进程启动，OpenClaw 会将命令包装在一个简短的
+`/bin/sh` shim 中，尝试将子进程自身的 `oom_score_adj` 提高到
+`1000`，然后 `exec` 真实命令。此操作无需特权：进程始终可以提高自身的 OOM 分数。
 
 覆盖的子进程表面包括：
 
@@ -232,7 +232,11 @@ systemctl --user enable --now openclaw-gateway[-<profile>].service
 - MCP stdio 服务器子进程
 - OpenClaw 启动的浏览器/Chrome 进程（通过插件 SDK 进程运行时）
 
-该包装器仅适用于 Linux；当 `/bin/sh` 不可用，或者子进程环境将 `OPENCLAW_CHILD_OOM_SCORE_ADJ` 设为 `0`、`false`、`no` 或 `off` 时，会跳过该包装器。
+该包装器仅适用于 Linux；当 `/bin/sh` 不可用，或子进程环境将
+`OPENCLAW_CHILD_OOM_SCORE_ADJ` 设置为 `0`、`false`、`no` 或
+`off` 时会跳过。
+仅应在受控诊断场景下使用此退出选项：它会移除优先杀死子进程的 OOM
+保护，并使 Gateway 在实际内存压力下更有可能被选为受害者。
 
 验证子进程：
 
@@ -240,7 +244,9 @@ systemctl --user enable --now openclaw-gateway[-<profile>].service
 cat /proc/<child-pid>/oom_score_adj
 ```
 
-被覆盖的子进程预期值为 `1000`；Gateway 进程本身保持其正常分数（通常为 `0`）。
+写入成功时，受覆盖子进程的预期值为 `1000`。
+如果 `/proc` 不可用或不可写入，子进程仍会运行，但不会应用 OOM
+偏置。Gateway 进程本身保持其正常分数（通常为 `0`）。
 
 systemd 单元的 `OOMPolicy=continue` 可在临时子进程被 OOM killer 选中时保持 Gateway 服务存活，而不是将整个单元标记为失败并重启所有通道；失败的子进程/会话会报告其自身错误。
 

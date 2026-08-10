@@ -1,13 +1,13 @@
 ---
 summary: "选择并配置 Google Meet、Microsoft Teams 或 Zoom 会议参与方式"
 read_when:
-  - 你希望 OpenClaw 代理加入视频会议
-  - 你正在 Google Meet、Microsoft Teams 会议和 Zoom 会议插件之间进行选择
-  - 你需要配置共享 Chrome、BlackHole、SoX 或会议模式
+  - 您希望 OpenClaw 代理加入视频会议
+  - 您正在选择 Google Meet、Microsoft Teams 会议和 Zoom 会议插件
+  - 您需要配置共享 Chrome、虚拟音频或会议模式
 title: "会议插件"
 ---
 
-OpenClaw 为 Google Meet、Microsoft Teams 会议和 Zoom 提供了独立的插件。这三个插件都可以通过 Chrome 加入会议，使用相同的参与模式，并在 Gateway 主机或配对节点上运行 Chrome。它们的平台 URL、安装模式和额外功能各不相同。
+OpenClaw 为 Google Meet、Microsoft Teams 会议和 Zoom 提供了独立的插件。这三个插件都可以通过 Chrome 加入会议，使用相同的参与模式，并在网关主机或配对节点上运行 Chrome。它们的平台 URL、安装模式和额外功能各不相同。
 
 这些插件用于参与会议。它们不同于 [Microsoft Teams 通道](/channels/msteams) 等消息通道，也不同于 [语音通话插件](/plugins/voice-call)。
 
@@ -25,11 +25,11 @@ OpenClaw 为 Google Meet、Microsoft Teams 会议和 Zoom 提供了独立的插�
 
 三个插件共享相同的模式：
 
-| 模式         | 行为                                                                                              | 音频要求                                      |
-| ------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `agent`      | 实时转录内容发送到配置的 OpenClaw 代理；使用常规 OpenClaw TTS 播放回复。  | Chrome 回传音频需要 BlackHole 和 SoX 桥接。 |
-| `bidi`       | 实时语音模型直接进行监听和回复。                                                  | Chrome 回传音频需要 BlackHole 和 SoX 桥接。 |
-| `transcribe` | 以仅观察模式加入，并在平台提供字幕时公开有限的实时字幕转录。 | 不需要 BlackHole 或 SoX 回传音频桥接。                   |
+| 模式         | 行为                                                                                              | 音频要求                                           |
+| ------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `agent`      | 实时转录内容会发送到配置的 OpenClaw 代理；常规 OpenClaw TTS 会朗读回复。  | Chrome 回传语音需要受支持的虚拟音频后端。 |
+| `bidi`       | 实时语音模型直接进行监听和回复。                                                  | Chrome 回传语音需要受支持的虚拟音频后端。 |
+| `transcribe` | 以仅观察模式加入，并在平台提供字幕时公开有限的实时字幕转录内容。 | 不使用虚拟音频桥接。                                     |
 
 当代理只需要会议文本时，使用 `transcribe`。需要进行常规 OpenClaw 推理和使用工具时，使用 `agent`。当低延迟直接语音比让每轮对话都经过常规代理更重要时，使用 `bidi`。
 
@@ -47,7 +47,7 @@ Chrome 可以运行在 Gateway 主机上，也可以运行在已配对的节点�
 | Microsoft Teams  | `teamsmeetings.chrome`  |
 | Zoom             | `zoommeetings.chrome`   |
 
-要通过 Chrome 使用 `agent` 或 `bidi` 模式，请在 macOS 上运行 Chrome，并在同一主机上安装共享音频依赖项：
+要通过 Chrome 使用 `agent` 或 `bidi` 模式，请在运行 Chrome 的主机上安装原生音频依赖。在 macOS 上：
 
 ```bash
 brew install blackhole-2ch sox
@@ -55,6 +55,18 @@ sudo reboot
 system_profiler SPAudioDataType | grep -i BlackHole
 command -v sox
 ```
+
+在使用 PipeWire-Pulse 的 Linux 桌面上，请安装 PulseAudio 命令行工具。OpenClaw 会在桌面用户的音频会话中创建并复用一个 `OpenClaw Meeting Audio` 空接收器及其匹配的源：
+
+```bash
+# Debian/Ubuntu
+sudo apt install pipewire-audio pulseaudio-utils
+systemctl --user --now enable pipewire pipewire-pulse wireplumber
+pactl info
+command -v pactl pacat parec
+```
+
+请以运行 Chrome 的同一桌面用户身份运行 Gateway 或已配对的节点。没有该用户 `XDG_RUNTIME_DIR` 的 root 服务或无头服务无法访问 PipeWire-Pulse 套接字，并会在设置失败时提供可操作的错误信息。
 
 当 Chrome 运行在已配对的节点上时，Gateway 主机仍负责 OpenClaw 代理和模型凭据。为 `agent` 模式配置实时转录提供商和 OpenClaw TTS，或为 `bidi` 模式配置实时语音提供商。平台指南中包含提供商和音频命令选项。
 
@@ -89,7 +101,7 @@ openclaw plugins disable zoom-meetings
 
 将任何失败的设置检查视为对应传输方式和模式的阻断因素。对于仅观察的冒烟测试，请选择 `transcribe` 模式，并确认状态报告显示通话中的会话，然后再期待字幕文本。
 
-对于回传语音冒烟测试，经过验证的语音需要的不仅仅是播放命令接受了字节数据。共享的命令对桥接器会将当前输出生成中的有界波形指纹与通过 BlackHole 麦克风捕获路径返回的音频进行关联；当只有输出字节计数器增加，或存在无关的参与者音频时，Google Meet、Teams 和 Zoom 不会报告 `speechOutputVerified: true`。
+对于应答式冒烟测试，经过验证的语音所需条件不仅仅是播放命令已接受字节。共享命令对桥接器会将当前输出生成中的有界波形指纹，与从所选虚拟麦克风捕获路径返回的音频进行关联；当只有输出字节计数器递增，或存在无关的参与者音频时，Google Meet、Teams 和 Zoom 不会报告 `speechOutputVerified: true`。
 
 ## 处理平台政策提示
 
@@ -113,4 +125,4 @@ openclaw plugins disable zoom-meetings
 - [Microsoft Teams 会议插件](/plugins/teams-meetings)
 - [Zoom 会议插件](/plugins/zoom-meetings)
 - [管理插件](/plugins/manage-plugins)
-- [浏览器控制](/tools/browser)
+- [浏览器控制](/tools/browser)。

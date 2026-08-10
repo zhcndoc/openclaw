@@ -18,7 +18,9 @@ Talk 模式涵盖五种运行形态：
 
 客户端持有的 realtime Talk 通常通过 `talk.client.toolCall` 转发提供方工具调用，而不是直接调用 `chat.send`。GPT-Live WebRTC 会话在 Gateway 持有的 sideband 上进行委托，Gateway 会将每个委托绑定到持有该委托的浏览器或 Gateway 中继 Talk 会话。后端 WebSocket 桥接使用正常的中继咨询路径。在 realtime 咨询处于活动状态时，客户端可以调用 `talk.client.steer` 或 `talk.session.steer`，将语音输入分类为 `status`、`steer`、`cancel` 或 `followup`；这也包括 GPT-Live 委托。接受的引导会排入当前活动的嵌入式运行；被拒绝的引导会返回诸如 `no_active_run`、`not_streaming` 或 `compacting` 之类的原因。较新的 GPT-Live 语音任务也会取代正在运行的委托。
 
-已完成的实时用户和助手发言始终会实时追加到当前代理会话中，因此后续的聊天和语音轮次共享同一历史记录。客户端持有的传输会以稳定的条目 id 报告其已完成的转录；Gateway relay 会话则在服务端追加相同事件。提供方会话还会接收 Discord 语音所使用的受限 realtime profile 上下文。
+轻量音频客户端可以在 `talk.client.create.capabilities` 中请求 `gateway-control-v1`。OpenAI GA Realtime 仅在使用 Platform API 密钥时支持此模式。成功后会返回 `clientControl: { owner: "gateway" }`、一个有效期 60 秒且只能使用一次的 `clientSecret`，以及相对 offer URL `/plugins/openai/realtime/calls`。客户端会向该 Gateway 路由发起仅包含音频的 SDP offer，并且不会打开提供方数据通道。Gateway 会连接官方 OpenAI 服务端 sideband，并负责工具、转录、引导、取消和通话清理，而媒体仍直接在客户端与 OpenAI 之间传输。仅支持 OAuth 的配置会明确失败，而不会回退到客户端持有的控制模式。现有浏览器客户端不会声明此能力，并继续使用当前的临时令牌和 WebRTC 数据通道流程。
+
+实时会话中已完成的用户和助手发言始终会实时追加到活动的智能体会话中，因此后续的聊天和语音轮次共享同一历史记录。客户端持有的传输会使用稳定的条目 ID 报告已完成的转录；Gateway 中继和 Gateway 控制的 WebRTC 会话则会在服务端追加相同的事件。提供方会话还会接收 Discord 语音使用的有界实时配置文件上下文。
 
 由语音发起的咨询运行，在执行发送消息、控制节点、浏览器/计算机操作、服务变更、破坏性 shell 命令或发布等高影响操作前，需要新的、完全匹配的语音确认。该门禁适用于通过 `talk.client.toolCall`、Gateway 中继和 GPT-Live sideband 委托启动的运行。确认仅适用于规范的最终执行参数，并且只会被消费一次；如果策略或钩子重写了已批准的操作，OpenClaw 会阻止该操作，直到重写后的操作得到确认。不相关的并发运行不受影响。通话结束时，OpenClaw 可以将针对变更型工具的精简 **语音通话变更**摘要发送到会话最近使用的非 WebChat 投递目标。
 
@@ -92,16 +94,16 @@ Talk 模式涵盖五种运行形态：
 }
 ```
 
-OpenAI 浏览器 WebRTC 和 Gateway-relay Talk 通过
+OpenAI 浏览器 WebRTC 和 Gateway 中继 Talk 通过
 `https://api.openai.com/v1/live` 支持原生 GPT-Live。将 `talk.realtime.model` 设置为
 `gpt-live-1-codex`（推荐）或 `gpt-live-1-boulder-alpha`；`gpt-live-1`
-和 `gpt-live-1-mini` 在此路由上无效。浏览器和 Gateway-relay
+和 `gpt-live-1-mini` 在此路由上无效。浏览器和 Gateway 中继
 WebRTC 优先使用 ChatGPT OAuth 订阅配置，并回退到 Platform
-API key 身份验证。其他后端桥接通过 Frameless Bidi
-WebSocket 直接连接，并要求使用 Platform API key 身份验证；其 `/v1/live` 访问权限目前受
+API 密钥身份验证。其他后端桥接通过 Frameless Bidi
+WebSocket 直接连接，并要求使用 Platform API 密钥身份验证；其 `/v1/live` 访问权限目前受
 [候补名单限制](https://openai.com/form/gpt-live-1-in-the-api/)。
 
-最快的设置方式是使用 Control UI：**Settings → Talk**，选择 **OpenAI** 和
+最快的设置方式是使用控制界面：**设置 → Talk**，选择 **OpenAI** 和
 一个 `gpt-live-*` 模型。OAuth 前置条件是使用
 `openclaw models auth login --provider openai` 创建的 OpenClaw 身份验证配置文件——不会读取现有的
 Codex CLI 登录状态。GPT-Live 还要求以完整模式注册内置的 `openai`
@@ -115,29 +117,29 @@ GPT-Live 接受 `alloy`、`ash`、`ballad`、`cedar`、`coral`、`echo`、`marin
 `chatgpt.com` 后端路由也会返回 `403`；OpenClaw 改为使用原生
 `api.openai.com/v1/live` 路由。
 
-| Consumer                    | GPT-Live status                                                         |
-| --------------------------- | ----------------------------------------------------------------------- |
-| Browser Talk                | 在客户端 WebRTC 和 Gateway 所有的 sideband 下受支持                 |
-| Gateway-relay Talk          | 在 Gateway 所有的 WebRTC 和 sideband 下受支持                        |
-| Discord bidirectional voice | 通过 Platform key 后端 WebSocket 受支持                       |
-| Voice Call and telephony    | 通过 Platform key 后端 WebSocket 受支持                       |
-| iOS client-owned Talk       | 待定                                                                 |
-| Android realtime Talk       | 等待 Android 设备实时验证开关；Android 继续使用原生 Talk |
+| 使用者                    | GPT-Live 状态                                                         |
+| ------------------------- | --------------------------------------------------------------------- |
+| 浏览器 Talk               | 在客户端 WebRTC 和 Gateway 的所有带外通道下受支持                    |
+| Gateway 中继 Talk         | 在 Gateway 的所有 WebRTC 和带外通道下受支持                           |
+| Discord 双向语音          | 通过 Platform 密钥后端 WebSocket 受支持                               |
+| 语音通话和电话系统        | 通过 Platform 密钥后端 WebSocket 受支持                               |
+| iOS 客户端自有 Talk       | 待定                                                                   |
+| Android 实时 Talk         | 等待 Android 设备实时验证开关；Android 继续使用原生 Talk              |
 
-Gateway 所有的 WebRTC 路由不会将 OAuth 和 Platform 凭据暴露给
-relay 客户端。后端 WebSocket 路径会将 Platform key 保留在 Gateway 上；
+Gateway 的所有 WebRTC 路由不会将 OAuth 和 Platform 凭据暴露给
+中继客户端。后端 WebSocket 路径会将 Platform 密钥保留在 Gateway 上；
 OpenClaw 会将电话系统的 G.711 u-law 音频转换为 GPT-Live 的 24 kHz PCM
 格式，也会执行反向转换。
 
 对于 GA `gpt-realtime-2.1`、`gpt-realtime-2.1-mini` 和 `gpt-realtime-2`
-浏览器会话，Platform 凭据仍按以下顺序优先使用：已配置的 realtime API key、`openai`
-API key 配置文件，然后是 `OPENAI_API_KEY`。如果均未配置，浏览器 Talk 会回退到 OpenClaw
+浏览器会话，Platform 凭据仍按以下顺序优先使用：已配置的 realtime API 密钥、`openai`
+API 密钥配置文件，然后是 `OPENAI_API_KEY`。如果均未配置，浏览器 Talk 会回退到 OpenClaw
 ChatGPT OAuth 配置文件，并通过 Gateway 的一次性 offer broker 交换 SDP，因此 OAuth token 永远不会到达浏览器。若已配置的 Platform 凭据无法解析，则会安全失败，而不会静默回退到 OAuth。
 
-iOS 客户端所有的 WebRTC、Voice Call、GA Gateway relay、provider WebSocket
-传输、Discord realtime voice 以及 Android realtime 仍然
-仅支持 Platform key。GA 浏览器 Talk 保留现有的客户端所有数据通道和
-`talk.client.toolCall` 循环；在 OAuth 模式下，只有凭据所有者和 SDP 交换路径会发生变化。GPT-Live Gateway relay 优先使用 ChatGPT OAuth，并回退到已获得候补名单权限的 Platform 访问。
+iOS 客户端所有的 WebRTC、语音通话、GA Gateway 中继、provider WebSocket
+传输、Discord 实时语音以及 Android realtime 仍然
+仅支持 Platform 密钥。GA 浏览器 Talk 保留现有的客户端所有数据通道和
+`talk.client.toolCall` 循环；在 OAuth 模式下，只有凭据所有者和 SDP 交换路径会发生变化。GPT-Live Gateway 中继优先使用 ChatGPT OAuth，并回退到已获得候补名单权限的 Platform 访问。
 
 | 键                                      | 默认值                                    | 说明                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -155,16 +157,16 @@ iOS 客户端所有的 WebRTC、Voice Call、GA Gateway relay、provider WebSock
 | `providers.<id>.outputFormat`            | macOS/iOS 为 `pcm_44100`，Android 为 `pcm_24000` | 设置为 `mp3_*` 可强制使用 MP3 流式传输。                                                                                                                                                                                                                                               |
 | `consultThinkingLevel`                   | 未设置                                      | 为 realtime `openclaw_agent_consult` 调用背后的 agent 运行覆盖 thinking level。                                                                                                                                                                                                         |
 | `consultFastMode`                        | 未设置                                      | 为 realtime `openclaw_agent_consult` 调用覆盖 fast-mode。                                                                                                                                                                                                                               |
-| `realtime.provider`                      | -                                          | `openai` 用于 WebRTC，`google` 用于 provider WebSocket，或者通过 Gateway relay 使用仅桥接型 provider。                                                                                                                                                                                 |
-| `realtime.providers.<id>`                | -                                          | provider 拥有的 realtime 配置。浏览器只接收临时/受限的会话凭据，绝不会接收标准 API key。                                                                                                                                                                                                |
+| `realtime.provider`                      | -                                          | `openai` 用于 WebRTC，`google` 用于 provider WebSocket，或者通过 Gateway 中继使用仅桥接型 provider。                                                                                                                                                                                 |
+| `realtime.providers.<id>`                | -                                          | provider 拥有的 realtime 配置。浏览器只接收临时/受限的会话凭据，绝不会接收标准 API 密钥。                                                                                                                                                                                                |
 | `realtime.providers.openai.speakerVoice` | GA 为 `alloy`；GPT-Live 为 `marin`       | 内置 OpenAI Realtime voice id（旧的 `voice` 键仍然可用，但已弃用）。当前 `gpt-realtime-2.1` 和 GPT-Live voices：`alloy`、`ash`、`ballad`、`cedar`、`coral`、`echo`、`marin`、`sage`、`shimmer`、`verse`；推荐使用 `marin` 和 `cedar` 以获得最佳质量。 |
 | `realtime.model`                         | provider 默认值                           | Realtime 语音模型。当两者都设置时，会覆盖 `realtime.providers.<id>.model`——会话创建时 `talk.client.create` 采用相同的优先级。                                                                                                                                                        |
-| `realtime.transport`                     | -                                          | `webrtc`：iOS 和浏览器中由客户端拥有的 OpenAI WebRTC。`provider-websocket`：由浏览器拥有，在 iOS 上保持在 Gateway relay。`gateway-relay`：将 provider 音频保留在 Gateway 上；Android 仅在此传输方式下使用 realtime。                                                               |
+| `realtime.transport`                     | -                                          | `webrtc`：iOS 和浏览器中由客户端拥有的 OpenAI WebRTC。`provider-websocket`：由浏览器拥有，在 iOS 上保持在 Gateway 中继。`gateway-relay`：将 provider 音频保留在 Gateway 上；Android 仅在此传输方式下使用 realtime。                                                               |
 | `realtime.brain`                         | -                                          | `agent-consult` 通过 Gateway 策略路由 realtime 工具调用；`direct-tools` 是旧的直接工具兼容模式；`none` 用于转写/外部编排。                                                                                                                      |
 | `realtime.consultRouting`                | -                                          | `provider-direct` 在跳过 `openclaw_agent_consult` 时保留 provider 的直接回复；`force-agent-consult` 会将最终用户转写通过 OpenClaw 路由。                                                                                                       |
 | `realtime.instructions`                  | -                                          | 将面向 provider 的系统指令追加到 OpenClaw 内置的 realtime 提示词中。                                                                                                                                                                                                                  |
 
-`talk.catalog` 将公开规范化的 provider id 和注册表别名、每个 provider 的有效模式/传输方式/brain 策略/realtime 音频格式/能力标志，以及运行时选择的就绪结果。第一方 Talk 客户端应读取此 catalog，而不是在本地维护 provider 别名；如果较旧的 Gateway 省略了组就绪状态，应将其视为未验证，而不是明确视为未配置。流式转写 provider 通过 `talk.catalog.transcription` 发现；当前的 Gateway relay 会使用 Voice Call 流式 provider 配置，直到发布专门的 Talk 转写配置接口。
+`talk.catalog` 将公开规范化的 provider id 和注册表别名、每个 provider 的有效模式/传输方式/brain 策略/realtime 音频格式/能力标志，以及运行时选择的就绪结果。第一方 Talk 客户端应读取此 catalog，而不是在本地维护 provider 别名；如果较旧的 Gateway 省略了组就绪状态，应将其视为未验证，而不是明确视为未配置。流式转写 provider 通过 `talk.catalog.transcription` 发现；当前的 Gateway 中继会使用 Voice Call 流式 provider 配置，直到发布专门的 Talk 转写配置接口。
 
 ## macOS 界面
 

@@ -6,7 +6,7 @@ title: "测试"
 ---
 
 - 完整测试工具包（套件、实时、Docker）：[测试](/help/testing)
-- 更新和插件包验证：[测试更新和插件](/help/testing-updates-plugins)
+- 更新和插件包验证：[测试更新和插件](/help/testing-updates-plugins)。
 
 ## Agent 默认
 
@@ -57,10 +57,10 @@ Agent 会话仅在本地针对受信任源码、且现有依赖安装已准备�
 
 ## 共享测试状态和进程辅助工具
 
-- `src/test-utils/openclaw-test-state.ts`：当测试需要隔离的 `HOME`、`OPENCLAW_STATE_DIR`、`OPENCLAW_CONFIG_PATH`、配置夹具、工作区、代理目录或 auth-profile 存储时，在 Vitest 中使用。
-- `pnpm test:env-mutations:report`：对直接修改 `HOME`、`OPENCLAW_STATE_DIR`、`OPENCLAW_CONFIG_PATH`、`OPENCLAW_WORKSPACE_DIR` 或相关环境键的测试/测试框架进行非阻塞报告。用它来查找适合迁移到共享测试状态辅助工具的候选项。
-- `test/helpers/openclaw-test-instance.ts`：适用于需要在一个地方完成运行中的 Gateway、CLI 环境、日志捕获和清理的进程级 E2E 测试。
-- 源自 `scripts/lib/docker-e2e-image.sh` 的 Docker/Bash E2E 任务可以将 `docker_e2e_test_state_shell_b64 <label> <scenario>` 传入容器，并使用 `scripts/lib/openclaw-e2e-instance.sh` 对其解码；多 home 脚本可以传递 `docker_e2e_test_state_function_b64`，并在每个流程中调用 `openclaw_test_state_create <label> <scenario>`。`node scripts/lib/openclaw-test-state.mjs -- create --label <name> --scenario <name> --env-file <path> --json` 会写入一个可被 source 的宿主环境文件（`create` 前的 `--` 可防止较新的 Node 运行时将 `--env-file` 视为 Node 标志）。启动 Gateway 的任务可以源自 `scripts/lib/openclaw-e2e-instance.sh`，以获取入口点解析、模拟 OpenAI 启动、前台/后台启动、就绪探测、状态环境导出、日志转储以及进程清理。
+- `src/test-utils/openclaw-test-state.ts`：当测试需要隔离的 `HOME`、`OPENCLAW_STATE_DIR`、`OPENCLAW_CONFIG_PATH`、配置 fixture、工作区、代理目录或身份验证配置文件存储时，可在 Vitest 中使用。
+- `pnpm test:env-mutations:report`：用于生成非阻塞报告，列出直接修改 `HOME`、`OPENCLAW_STATE_DIR`、`OPENCLAW_CONFIG_PATH`、`OPENCLAW_WORKSPACE_DIR` 或相关环境变量的测试/测试框架。可使用它查找共享测试状态辅助工具的迁移候选项。
+- `test/helpers/openclaw-test-instance.ts`：用于需要运行中的网关、CLI 环境、日志捕获以及统一清理的进程级 E2E 测试。
+- 使用 `scripts/lib/docker-e2e-image.sh` 的 Docker/Bash E2E 流程可以将 `docker_e2e_test_state_shell_b64 <label> <scenario>` 传入容器，并使用 `scripts/lib/openclaw-e2e-instance.sh` 对其进行解码；多主目录脚本可以传入 `docker_e2e_test_state_function_b64`，并在每个流程中调用 `openclaw_test_state_create <label> <scenario>`。`node --import tsx scripts/lib/openclaw-test-state.mts -- create --label <name> --scenario <name> --env-file <path> --json` 会写入一个可由宿主机加载的环境文件（`create` 前的 `--` 可避免较新的 Node 运行时将 `--env-file` 误认为 Node 参数）。启动网关的流程可以加载 `scripts/lib/openclaw-e2e-instance.sh`，以获取入口点解析、模拟 OpenAI 启动、前台/后台启动、就绪探测、状态环境变量导出、日志转储和进程清理功能。
 
 ## 控制 UI、TUI 和扩展通道
 
@@ -83,12 +83,12 @@ Agent 会话仅在本地针对受信任源码、且现有依赖安装已准备�
 
 ## 完整 Docker 套件（`pnpm test:docker:all`）
 
-构建共享的 live 测试镜像，将 OpenClaw 仅打包一次为 npm tarball，构建/复用一个裸 Node/Git 运行器镜像以及一个功能镜像（将该 tarball 安装到 `/app`），然后通过加权调度器运行 Docker 冒烟测试通道。`scripts/package-openclaw-for-docker.mjs` 是本地/CI 唯一的打包器，并会在 Docker 消费该包之前验证 tarball 以及 `dist/postinstall-inventory.json`。
+构建共享的 live 测试镜像，将 OpenClaw 一次性打包为 npm tarball，构建或复用一个精简的 Node/Git runner 镜像，以及一个将该 tarball 安装到 `/app` 的功能镜像，然后通过加权调度器运行 Docker 冒烟测试通道。`scripts/package-openclaw-for-docker.mjs` 是稳定的本地/CI 软件包打包入口点，并会在 Docker 使用 tarball 前验证该 tarball 以及 `dist/postinstall-inventory.json`。
 
-- 裸镜像（`OPENCLAW_DOCKER_E2E_BARE_IMAGE`）：安装器/更新/插件依赖通道；挂载预构建的 tarball，而不是复制仓库源码。
-- 功能镜像（`OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE`）：正常的已构建应用功能通道。
-- 通道定义：`scripts/lib/docker-e2e-scenarios.mjs`。规划器：`scripts/lib/docker-e2e-plan.mjs`。执行器：`scripts/test-docker-all.mjs`。
-- `node scripts/test-docker-all.mjs --plan-json` 会输出由调度器拥有的 CI 计划（通道、镜像类型、包/live 镜像需求、状态场景、凭据检查），而不会构建或运行 Docker。
+- 精简镜像（`OPENCLAW_DOCKER_E2E_BARE_IMAGE`）：安装器/更新/插件依赖通道；挂载预构建的 tarball，而不是复制仓库源代码。
+- 功能镜像（`OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE`）：普通的已构建应用功能通道。
+- 通道定义：`scripts/lib/docker-e2e-scenarios.mts`。规划器：`scripts/lib/docker-e2e-plan.mts`。执行器：`scripts/test-docker-all.mjs`。
+- `node scripts/test-docker-all.mjs --plan-json` 会输出由调度器负责的 CI 计划（通道、镜像类型、软件包/live 镜像需求、状态场景、凭证检查），不会构建或运行 Docker。
 
 调度参数（环境变量，括号内为默认值）：
 

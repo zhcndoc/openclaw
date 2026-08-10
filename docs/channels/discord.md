@@ -21,79 +21,79 @@ OpenClaw 通过官方 Discord 网关以机器人身份连接到 Discord。支持
 
 ## 快速设置
 
-创建一个带有 bot 的 Discord 应用，将 bot 添加到你的服务器，并将其与 OpenClaw 配对。如果可以，请使用私有服务器；如有需要，先[创建一个](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)（**Create My Own > For me and my friends**）。
+创建一个带有机器人的 Discord 应用，将机器人添加到你的服务器，并将其与 OpenClaw 配对。如果可以，请使用私有服务器；如有需要，先[创建一个](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)（**创建我自己的 > 供我和我的朋友使用**）。
 
 <Steps>
-  <Step title="创建一个 Discord 应用和 bot">
-    在 [Discord Developer Portal](https://discord.com/developers/applications) 中，点击 **New Application** 并为其命名（例如 "OpenClaw"）。
+  <Step title="创建一个 Discord 应用和机器人">
+    在 [Discord 开发者门户](https://discord.com/developers/applications) 中，点击 **新建应用** 并为其命名（例如 "OpenClaw"）。
 
-    在侧边栏中打开 **Bot**，并将 **Username** 设置为你的代理名称。
-
-  </Step>
-
-  <Step title="启用特权 intent">
-    仍在 **Bot** 页面，在 **Privileged Gateway Intents** 下启用：
-
-    - **Message Content Intent**（普通服务器消息所必需）
-    - **Server Members Intent**（推荐；角色允许列表、名称到 ID 的匹配以及频道受众访问组所必需）
-    - **Presence Intent**（可选；仅用于状态更新）
+    在侧边栏中打开 **机器人**，并将 **用户名** 设置为你的代理名称。
 
   </Step>
 
-  <Step title="复制你的 bot token">
-    在 **Bot** 页面，点击 **Reset Token** 并复制该 token。
+  <Step title="启用特权意图">
+    仍在 **机器人** 页面，在 **特权网关意图** 下启用：
+
+    - **消息内容意图**（普通服务器消息所必需）
+    - **服务器成员意图**（推荐；角色允许列表、名称到 ID 的匹配以及频道受众访问组所必需）
+    - **在线状态意图**（可选；仅用于状态更新）
+
+  </Step>
+
+  <Step title="复制你的机器人令牌">
+    在 **机器人** 页面，点击 **重置令牌** 并复制该令牌。
 
     <Note>
-    尽管名称如此，这会生成你的第一个 token——并没有真正进行“重置”。
+    尽管名称如此，这会生成你的第一个令牌——并没有真正进行“重置”。
     </Note>
 
   </Step>
 
-  <Step title="生成邀请 URL 并将 bot 添加到你的服务器">
-    在侧边栏中打开 **OAuth2**。在 **OAuth2 URL Generator** 中，启用以下 scope：
+  <Step title="生成邀请 URL 并将机器人添加到你的服务器">
+    在侧边栏中打开 **OAuth2**。在 **OAuth2 URL 生成器** 中，启用以下作用域：
 
     - `bot`
     - `applications.commands`
 
-    在出现的 **Bot Permissions** 部分，至少启用：
+    在出现的 **机器人权限** 部分，至少启用：
 
-    **General Permissions**
-      - View Channels
+    **常规权限**
+      - 查看频道
 
-    **Text Permissions**
-      - Send Messages
-      - Read Message History
-      - Embed Links
-      - Attach Files
-      - Add Reactions（可选）
+    **文本权限**
+      - 发送消息
+      - 阅读消息历史记录
+      - 嵌入链接
+      - 附加文件
+      - 添加反应（可选）
 
-    这就是普通文本频道的基础权限。如果 bot 还会在线程中发消息——包括会创建或继续线程的 forum 或 media 频道工作流——也请启用 **Send Messages in Threads**。
+    这就是普通文本频道的基础权限。如果机器人还会在线程中发消息——包括会创建或继续线程的论坛或媒体频道工作流——也请启用 **在线程中发送消息**。
 
-    复制生成的 URL，在浏览器中打开，选择你的服务器，然后点击 **Continue**。此时 bot 应该会出现在你的服务器中。
+    复制生成的 URL，在浏览器中打开，选择你的服务器，然后点击 **继续**。此时机器人应该会出现在你的服务器中。
 
   </Step>
 
   <Step title="启用开发者模式并收集你的 ID">
     在 Discord 应用中，启用开发者模式以便你可以复制 ID：
 
-    1. **User Settings**（齿轮图标）→ **Developer** → 打开 **Developer Mode**
-       *（在移动端：**App Settings** → **Advanced**）*
-    2. 右键单击你的 **server icon** → **Copy Server ID**
-    3. 右键单击你自己的 **avatar** → **Copy User ID**
+    1. **用户设置**（齿轮图标）→ **开发者** → 打开 **开发者模式**
+       *（在移动端：**应用设置** → **高级**）*
+    2. 右键单击你的 **服务器图标** → **复制服务器 ID**
+    3. 右键单击你自己的 **头像** → **复制用户 ID**
 
-    将 Server ID 和 User ID 与你的 bot token 一起保存；下一步你会需要这三者。
+    将服务器 ID 和用户 ID 与你的机器人令牌一起保存；下一步你会需要这三者。
 
   </Step>
 
   <Step title="允许来自服务器成员的私信">
-    为了使配对工作，Discord 必须允许 bot 给你发送私信。右键单击你的 **server icon** → **Privacy Settings** → 打开 **Direct Messages**。
+    为了使配对工作，Discord 必须允许机器人给你发送私信。右键单击你的 **服务器图标** → **隐私设置** → 打开 **私信**。
 
-    如果你使用 Discord 私信和 OpenClaw，请保持开启。如果你只使用 guild 频道，配对完成后可以将其关闭。
+    如果你使用 Discord 私信和 OpenClaw，请保持开启。如果你只使用服务器频道，配对完成后可以将其关闭。
 
   </Step>
 
-  <Step title="安全设置你的 bot token（不要在聊天中发送）">
-    bot token 是机密信息。在向你的代理发送消息之前，先在运行 OpenClaw 的机器上设置它：
+  <Step title="安全设置你的机器人令牌（不要在聊天中发送）">
+    机器人令牌是机密信息。在向你的代理发送消息之前，先在运行 OpenClaw 的机器上设置它：
 
 ```bash
 export DISCORD_BOT_TOKEN="YOUR_BOT_TOKEN"
@@ -114,7 +114,7 @@ openclaw gateway
 
     如果 OpenClaw 已经作为后台服务运行，请通过 OpenClaw Mac 应用重启它，或者停止并重新启动 `openclaw gateway run` 进程。
     对于受管服务安装，请在设置了 `DISCORD_BOT_TOKEN` 的 shell 中运行 `openclaw gateway install`，或者将该变量存储在 `~/.openclaw/.env` 中，以便服务在重启后能够解析该 env SecretRef。
-    如果你的主机因 Discord 启动时的应用查询而被阻止或触发限流，请从 Developer Portal 设置 application/client ID，以便启动时跳过该 REST 调用：默认账户使用 `channels.discord.applicationId`，或按 bot 使用 `channels.discord.accounts.<accountId>.applicationId`。
+    如果你的主机因 Discord 启动时的应用查询而被阻止或触发限流，请从开发者门户设置应用程序/客户端 ID，以便启动时跳过该 REST 调用：默认账户使用 `channels.discord.applicationId`，或按机器人使用 `channels.discord.accounts.<accountId>.applicationId`。
 
   </Step>
 
@@ -122,9 +122,9 @@ openclaw gateway
 
     <Tabs>
       <Tab title="询问你的代理">
-        在现有频道（例如 Telegram）中与你的 OpenClaw 代理聊天并告知它。如果 Discord 是你的第一个频道，请改用 CLI / config 标签页。
+        在现有频道（例如 Telegram）中与你的 OpenClaw 代理聊天并告知它。如果 Discord 是你的第一个频道，请改用 CLI / 配置标签页。
 
-        > “我已经把 Discord bot token 设置到配置中了。请使用 User ID `<user_id>` 和 Server ID `<server_id>` 完成 Discord 设置。”
+        > “我已经把 Discord 机器人令牌设置到配置中了。请使用用户 ID `<user_id>` 和服务器 ID `<server_id>` 完成 Discord 设置。”
       </Tab>
       <Tab title="CLI / 配置">
         基于文件的配置：
@@ -152,7 +152,7 @@ DISCORD_BOT_TOKEN=...
 
         对于脚本化或远程设置，使用 `openclaw config patch --file ./discord.patch.json5 --dry-run` 写入相同的 JSON5 块，然后在不带 `--dry-run` 的情况下重新运行。纯文本 `token` 字符串也可以使用，并且 `channels.discord.token` 支持跨 env/file/exec 提供者的 SecretRef 值。参见 [机密管理](/gateway/secrets)。
 
-        对于多个 Discord bot，将每个 bot token 和 application ID 保持在各自的账户下。顶层的 `channels.discord.applicationId` 会被账户继承，因此只有当所有账户都使用相同的 application ID 时才应在这里设置。
+        对于多个 Discord 机器人，将每个机器人令牌和应用程序 ID 保持在各自的账户下。顶层的 `channels.discord.applicationId` 会被账户继承，因此只有当所有账户都使用相同的应用程序 ID 时才应在这里设置。
 
 ```json5
 {
@@ -179,8 +179,8 @@ DISCORD_BOT_TOKEN=...
 
   </Step>
 
-  <Step title="批准首次 DM 配对">
-    一旦网关运行起来，就在 Discord 中给你的 bot 发私信。它会回复一个配对码。
+  <Step title="批准首次私信配对">
+    一旦网关运行起来，就在 Discord 中给你的机器人发私信。它会回复一个配对码。
 
     <Tabs>
       <Tab title="询问你的代理">
@@ -203,13 +203,13 @@ openclaw pairing approve discord <CODE>
   </Step>
 </Steps>
 
-如果 Discord 无法授予 Message Content Intent，OpenClaw 仍然可以在私信中运行，也可以在用户明确提及 bot 的服务器频道中运行。将
-`channels.discord.intents.messageContent: false` 设置为 `false`，这样网关就不会请求不可用的特权 intent，并确保每个已配置的服务器频道都保留
+如果 Discord 无法授予消息内容意图，OpenClaw 仍然可以在私信中运行，也可以在用户明确提及机器人的服务器频道中运行。将
+`channels.discord.intents.messageContent: false` 设置为 `false`，这样网关就不会请求不可用的特权意图，并确保每个已配置的服务器频道都保留
 `requireMention: true`。在此模式下，Discord 不会提供其他服务器消息中由用户撰写的内容。
 
 <Note>
-Token 解析是按账户感知的。配置中的 token 值优先于 env 回退值，且 `DISCORD_BOT_TOKEN` 仅用于默认账户。
-如果两个已启用的 Discord 账户解析到同一个 bot token，OpenClaw 只会为该 token 启动一个网关监视器：来自配置的 token 优先于 env 回退值；否则第一个已启用的账户获胜，重复账户会被报告为已禁用，原因是 `duplicate bot token`。
+令牌解析是按账户感知的。配置中的令牌值优先于 env 回退值，且 `DISCORD_BOT_TOKEN` 仅用于默认账户。
+如果两个已启用的 Discord 账户解析到同一个机器人令牌，OpenClaw 只会为该令牌启动一个网关监视器：来自配置的令牌优先于 env 回退值；否则第一个已启用的账户获胜，重复账户会被报告为已禁用，原因是 `duplicate bot token`。
 对于高级出站调用（消息工具/频道操作），会为该次调用使用显式的逐次调用 `token`。这适用于发送以及 read/probe 类型的操作（read/search/fetch/thread/pins/permissions）。账户策略/重试设置仍来自活动运行快照中所选账户。
 </Note>
 
@@ -698,7 +698,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
   </Accordion>
 
   <Accordion title="实时流式预览">
-    OpenClaw 可以通过发送一条临时消息并在文本到达时编辑它来流式输出草稿回复。`channels.discord.streaming.mode` 取值为 `off` | `partial` | `block` | `progress`（当未设置 `streaming`/旧版 `streamMode` 键时的默认值）。`streamMode` 是旧版别名；运行 `openclaw doctor --fix` 可将持久化配置重写为规范的嵌套 `streaming` 结构。
+    OpenClaw 可以通过发送临时消息并在文本到达时进行编辑来流式传输草稿回复。Discord 预览流式传输默认为 `off`；将 `channels.discord.streaming.mode` 设为 `partial`、`block` 或 `progress` 即可启用。`streamMode` 是旧版别名；运行 `openclaw doctor --fix` 可将持久化配置重写为规范的嵌套 `streaming` 结构。
 
 ```json5
 {
@@ -720,12 +720,12 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
     - `off` 禁用 Discord 预览编辑。
     - `partial` 会在令牌到达时编辑单条预览消息。
-    - `block` 会发送草稿大小的分块；使用 `streaming.preview.chunk`（`minChars`、`maxChars`、`breakPreference`）调整大小和断点，并将其限制在 `textChunkLimit` 范围内。显式的非 `off` 预览模式会覆盖继承的 `agents.defaults.blockStreamingDefault: "on"`；显式的 `streaming.block.enabled: true` 会覆盖预览模式。如果某一轮无法使用预览，继承的分块投递仍会生效。
-    - `progress` 会持续使用一条可编辑的状态草稿，直到最终投递。它会将代理最新的前言或旁白显示为状态标题，并在下方显示紧凑的工具行，且不带生成标签。
+    - `block` 会输出草稿大小的分块；可通过 `streaming.preview.chunk`（`minChars`、`maxChars`、`breakPreference`）调整大小和断点，并受限于 `textChunkLimit`。显式的非 `off` 预览模式会覆盖继承的 `agents.defaults.blockStreamingDefault: "on"`；显式的 `streaming.block.enabled: true` 会覆盖预览设置。如果某轮无法使用预览，继承的分块投递仍会生效。
+    - `progress` 会持续维护一条可编辑的状态草稿，直到最终投递。它会将代理最新的前导语或叙述显示为状态标题，并在下方显示紧凑的工具行，不会生成标签。
     - 媒体、错误和显式回复的最终消息会取消待处理的预览编辑。
-    - `streaming.preview.toolProgress` 和 `streaming.progress.toolProgress` 在所有模式下的默认值均为 `true`。无需配置即可显示诸如 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"` 之类的工具行；将任一键设为 `false` 即可仅保留状态标题。
-    - `streaming.progress.commentary`（默认值为 `false`）可选择将原始助手旁白加入临时进度草稿。默认的前言/旁白状态行不受此选项影响。旁白会在显示前进行清理，保持临时状态，且不会改变最终答案的投递。
-    - `streaming.progress.maxLineChars` 控制每行进度预览的字符预算。普通文本会在单词边界处缩短；命令和路径详情会保留有用的后缀。
+    - 当预览流式传输处于活动状态时，`streaming.preview.toolProgress` 和 `streaming.progress.toolProgress` 默认都为 `true`。诸如 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"` 这样的工具行无需额外的进度配置；将任一键设为 `false` 即可仅保留状态标题。
+    - `streaming.progress.commentary`（默认 `false`）用于选择将原始助手评述加入临时进度草稿。默认的前导语/叙述状态行不受此选项影响。评述会在显示前清理，保持临时状态，并且不会改变最终答案的投递。
+    - `streaming.progress.maxLineChars` 控制每行进度预览的字符预算。普通文本会在单词边界处缩短；命令和路径细节会保留有用的后缀。
     - `streaming.preview.commandText` / `streaming.progress.commandText` 控制紧凑进度行中的命令/执行详情：`raw`（默认）或 `status`（仅工具标签）。
 
     隐藏原始命令/执行文本，同时保留紧凑进度行：
@@ -1166,26 +1166,9 @@ Discord 消息动作涵盖消息、频道管理、审核、状态和元数据。
 
 OpenClaw 使用 Discord 组件 v2 进行执行审批和跨上下文标记。Discord 消息动作也可以接受 `components` 来构建自定义 UI（高级用法；需要通过 discord 工具构造 component payload），而旧版 `embeds` 仍然可用，但不建议使用。
 
-- `channels.discord.ui.components.accentColor` 设置 Discord 组件容器使用的强调色（十六进制）。按账号：`channels.discord.accounts.<id>.ui.components.accentColor`。
-- `channels.discord.agentComponents.ttlMs` 控制已发送的 Discord 组件回调保持注册的时长（默认 `1800000`，最大 `86400000`）。按账号：`channels.discord.accounts.<id>.agentComponents.ttlMs`。
-- 当存在 components v2 时，`embeds` 会被忽略。
-- 默认会抑制普通 URL 预览。当某个出站链接应展开时，请在消息动作中设置 `suppressEmbeds: false`。
-
-示例：
-
-```json5
-{
-  channels: {
-    discord: {
-      ui: {
-        components: {
-          accentColor: "#5865F2",
-        },
-      },
-    },
-  },
-}
-```
+- `channels.discord.agentComponents.ttlMs` 控制已发送的 Discord 组件回调保持注册的时长（默认值为 `1800000`，最大值为 `86400000`）。按账户设置：`channels.discord.accounts.<id>.agentComponents.ttlMs`。
+- 存在组件 v2 时会忽略 `embeds`。
+- 默认会抑制纯 URL 预览。当单个外发链接需要展开时，请在消息动作中设置 `suppressEmbeds: false`。
 
 ## 语音
 
@@ -1712,8 +1695,7 @@ openclaw logs --follow
 - media: `mediaMaxMb`（限制向外发送的 Discord 上传文件大小，默认 `100`）
 - actions: `actions.*`
 - presence: `activity`, `status`, `activityType`, `activityUrl`, `autoPresence.*`
-- UI: `ui.components.accentColor`
-- features: `threadBindings`、顶层 `bindings[]`（`type: "acp"`）、`pluralkit`、`execApprovals`、`intents`、`agentComponents.enabled`、`agentComponents.ttlMs`、`activities`、`heartbeat`、`responsePrefix`
+- features: `threadBindings`, top-level `bindings[]` (`type: "acp"`), `pluralkit`, `execApprovals`, `intents`, `agentComponents.enabled`, `agentComponents.ttlMs`, `activities`, `heartbeatVisibility`, `responsePrefix`
 
 </Accordion>
 

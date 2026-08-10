@@ -188,7 +188,7 @@ openclaw automations run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 
 ### 快速模式
 
-隔离的自动化快速模式遵循已解析的实时模型选择。模型配置中的 `params.fastMode` 默认生效，但已存储的会话 `fastMode` 覆盖仍优先于配置。当已解析的模式为 `auto` 时，截止时间使用所选模型的 `params.fastAutoOnSeconds` 值，默认为 60 秒。
+隔离自动化快速模式遵循解析后的实时模型选择。它依次解析已存储会话的 `fastMode`、每个代理的 `agents.entries.*.fastModeDefault`、全局的 `agents.defaults.fastModeDefault`，然后解析所选模型的 `params.fastMode`。当解析后的模式为 `auto` 时，截止时间使用所选模型的 `params.fastAutoOnSeconds` 值，默认为 60 秒。
 
 ### 实时模型切换重试
 
@@ -210,14 +210,14 @@ openclaw automations run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 
 除非嵌入式运行同时提供结构化拒绝元数据，否则调度器不会将最终输出中的文字或看似批准的拒绝短语归类为拒绝，因此普通的助手文本不会被视为遭到阻止的命令。
 
-`automations list` 和运行历史会显示拒绝原因，而不是将被阻止的命令报告为 `ok`。
+`automations list` 和运行历史会显示拒绝原因，而不是将被阻止的命令报告为 `ok`】【。
 
 ## 保留
 
 保留行为：
 
-- `cron.sessionRetention`（默认为 `24h`，或设置为 `false` 以禁用）会清理已完成的隔离运行会话。
-- 运行历史记录会为每个任务保留最新的 2000 条终端记录。丢失的记录仍遵循标准的 24 小时丢失任务清理窗口。
+- `cron.sessionRetention`（默认值为 `24h`，或设为 `false` 以禁用；例如 `"0h"` 这样的零时长同样会禁用）会清理已完成的隔离运行会话。
+- 运行历史记录会为每个任务保留最新的 2000 条终止状态记录。丢失的记录仍遵循标准的 24 小时丢失任务清理窗口。
 
 ## 迁移旧作业
 

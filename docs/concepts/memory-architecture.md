@@ -268,14 +268,14 @@ flowchart LR
 内存架构大多是约定优于配置；以下是现有的这些
 可调项：
 
-| 关注点                         | 位置                                                            | 参考                                                         |
-| ------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 梦境启用、频率、模型           | `plugins.entries.memory-core.config.dreaming`                   | [梦境](/concepts/dreaming)                                   |
-| 搜索提供器、混合调优           | `memory.search`                                                 | [内存配置](/reference/memory-config)                        |
-| 升级通道模式、范围             | `plugins.entries.active-memory`                                 | [活动内存](/concepts/active-memory)                         |
-| 跨会话回忆                     | `agents.entries.<id>.memory.search.rememberAcrossConversations` | [活动内存](/concepts/active-memory)                         |
-| 刷新行为                       | `agents.defaults.compaction.memoryFlush`                        | [内存概览](/concepts/memory)                              |
-| 后端选择                       | plugin slots                                                    | [内置](/concepts/memory-builtin), [QMD](/concepts/memory-qmd) |
+| 关注点                         | 位置                                                           | 参考                                                |
+| ------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------- |
+| 启用梦境、频率、模型           | `plugins.entries.memory-core.config.dreaming`                   | [梦境](/concepts/dreaming)                           |
+| 搜索提供商、混合调优           | `memory.search`                                                 | [内存配置](/reference/memory-config)                |
+| 升级通道模式、范围             | `plugins.entries.active-memory`                                 | [主动内存](/concepts/active-memory)                 |
+| 跨对话召回                     | `agents.entries.<id>.memory.search.rememberAcrossConversations` | [主动内存](/concepts/active-memory)                 |
+| 刷新行为                       | `agents.defaults.compaction.memoryFlush`                        | [内存概览](/concepts/memory)                      |
+| 内存插件选择                   | `plugins.slots.memory`                                          | [内置功能](/concepts/memory-builtin)、[插件](/plugins) |
 
 ## 相关内容
 
@@ -285,4 +285,4 @@ flowchart LR
 - [用户模型](/concepts/user-model)
 - [待处理意图](/concepts/standing-intents)
 - [内存搜索](/concepts/memory-search)
-- [内存配置参考](/reference/memory-config)
+- [内存配置参考](/reference/memory-config)。

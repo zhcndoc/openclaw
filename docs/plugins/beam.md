@@ -1,27 +1,27 @@
 ---
-summary: "Publish redacted local coding sessions into a shared read-only OpenClaw catalog"
+summary: "将经过编辑的本地编码会话发布到共享的只读 OpenClaw 目录"
 read_when:
-  - Sharing a Claude Code or Codex session with trusted Gateway operators
-  - Configuring an authenticated session-ingest endpoint without connecting a node
-  - Auditing what Beam stores and exposes
-title: "Beam plugin"
+  - 与受信任的 Gateway 操作员共享 Claude Code 或 Codex 会话
+  - 配置经过身份验证的会话导入端点，而不连接节点
+  - 审计 Beam 存储和公开的内容
+title: "Beam 插件"
 ---
 
-The bundled `beam` plugin receives a sanitized coding-session snapshot over authenticated HTTP and presents it in the Control UI's existing external-session catalog. The source computer sends text out; OpenClaw never connects back to that computer and receives no filesystem, terminal, tool, or node capability.
+内置的 `beam` 插件通过经过身份验证的 HTTP 接收经过清理的编码会话快照，并将其呈现在控制界面现有的外部会话目录中。源计算机会向外发送文本；OpenClaw 不会反向连接该计算机，也不会获得文件系统、终端、工具或节点功能。
 
-Beam ships with OpenClaw but is disabled by default. When enabled, it registers:
+Beam 随 OpenClaw 一起提供，但默认处于禁用状态。启用后，它会注册：
 
 - `POST /api/v1/beam/sessions`
-- the read-only **Beam** session catalog in the Control UI sidebar
+- 控制界面侧边栏中的只读 **Beam** 会话目录
 
-## Enable
+## 启用
 
 ```bash
 openclaw plugins enable beam
 openclaw gateway restart
 ```
 
-Equivalent config:
+等效配置：
 
 ```json5
 {
@@ -33,22 +33,22 @@ Equivalent config:
 }
 ```
 
-Disable the plugin when the ingest route is not needed:
+不需要摄取路由时禁用插件：
 
 ```bash
 openclaw plugins disable beam
 openclaw gateway restart
 ```
 
-## Authentication
+## 身份验证
 
-The receiver uses normal Gateway HTTP authentication. It is not an anonymous upload endpoint.
+接收端使用标准的 Gateway HTTP 身份验证。它不是匿名上传端点。
 
-- With `gateway.auth.mode: "trusted-proxy"`, send requests through the configured identity-aware proxy. Beam relies on Gateway authentication but does not persist proxy identity headers as uploader attribution.
-- With token or password auth, send `Authorization: Bearer <gateway-token-or-password>`.
-- Do not enable Beam with `gateway.auth.mode: "none"` unless another private ingress fully authenticates every request.
+- 使用 `gateway.auth.mode: "trusted-proxy"` 时，请通过已配置的身份感知代理发送请求。Beam 依赖 Gateway 身份验证，但不会将代理身份标头持久化为上传者归属信息。
+- 使用令牌或密码身份验证时，请发送 `Authorization: Bearer <gateway-token-or-password>`。
+- 除非其他私有入口能够对每个请求进行完整身份验证，否则不要将 Beam 与 `gateway.auth.mode: "none"` 一起启用。
 
-A Cloudflare Access-protected deployment can authenticate a local CLI without exposing a GitHub token:
+受 Cloudflare Access 保护的部署可以在不暴露 GitHub 令牌的情况下对本地 CLI 进行身份验证：
 
 ```bash
 cloudflared access login https://gateway.example.com
@@ -57,9 +57,9 @@ cloudflared access curl https://gateway.example.com/api/v1/beam/sessions \
   --data-binary @sanitized-beam.json
 ```
 
-The `beam` skill in [openclaw/agent-skills](https://github.com/openclaw/agent-skills) handles local transcript discovery, redaction, Cloudflare Access login, and upload for Claude Code and Codex.
+[openclaw/agent-skills](https://github.com/openclaw/agent-skills) 中的 `beam` 技能可处理 Claude Code 和 Codex 的本地会话记录发现、脱敏、Cloudflare Access 登录和上传。
 
-## Request
+## 请求
 
 ```http
 POST /api/v1/beam/sessions
@@ -82,44 +82,44 @@ Content-Type: application/json
 }
 ```
 
-The schema is closed. Beam rejects unknown fields, invalid item types, empty text, more than 200 items, item text over 6,000 characters, non-JSON requests, and bodies over 56 KiB.
+该模式是封闭的。Beam 会拒绝未知字段、无效的项目类型、空文本、超过 200 个项目、超过 6,000 个字符的项目文本、非 JSON 请求以及超过 56 KiB 的请求体。
 
-A successful upload returns the stable Beam id and a relative Control UI URL:
+成功上传后会返回稳定的 Beam ID 和相对 Control UI URL：
 
 ```json
 {
   "ok": true,
   "beamId": "0123456789abcdef0123456789abcdef",
-  "url": "/chat?session=catalog%3Abeam%3Agateway%3A0123456789abcdef0123456789abcdef"
+  "url": "/chat/main?catalog=beam&host=gateway&thread=<beamId>"
 }
 ```
 
-Uploading the same `beamId` updates the existing catalog row. A completed upload sets the row status to `completed`; earlier updates display as `live`.
+上传相同的 `beamId` 会更新现有的目录行。完成状态的上传会将该行状态设置为 `completed`；较早的更新则显示为 `live`。
 
-## Storage and visibility
+## 存储与可见性
 
-Beam stores sanitized payloads in OpenClaw's shared SQLite-backed plugin state:
+Beam 将经过清理的载荷存储在 OpenClaw 共享的、由 SQLite 支持的插件状态中：
 
-- at most 500 sessions
-- seven-day retention refreshed by each update
-- oldest-entry eviction when the catalog reaches its bound
-- server receipt time controls catalog ordering; clients cannot move themselves ahead with a forged timestamp
+- 最多 500 个会话
+- 七天保留期，每次更新时刷新
+- 当目录达到上限时，淘汰最旧的条目
+- 服务器接收时间决定目录排序；客户端无法通过伪造时间戳将自己提前
 
-The catalog is intentionally shared across the Gateway operator domain. Every client with `operator.read` can view every beamed session, while uploads require `operator.write` or `operator.admin`. Uploader identity is not retained, and any write-authorized operator that knows a Beam id can update that row. OpenClaw operator scopes are not tenant isolation; use a separate Gateway when sessions must be isolated between teams or machines.
+该目录在 Gateway 操作者域内有意共享。拥有 `operator.read` 的每个客户端都可以查看每个 Beam 会话，而上传则需要 `operator.write` 或 `operator.admin`。系统不会保留上传者身份；任何知道 Beam ID 且拥有写入权限的操作者都可以更新该行。OpenClaw 操作者范围并不构成租户隔离；当会话必须在团队或机器之间隔离时，请使用独立的 Gateway。
 
-## Security boundary
+## 安全边界
 
-Beam is passive session publication, not remote control.
+Beam 是被动的会话发布功能，不是远程控制。
 
-- It has no `continueSession`, archive, terminal, tool, or node capability.
-- It accepts text-only normalized transcript items, not HTML, scripts, archives, attachments, or server-fetched URLs.
-- The official skill removes raw tool results, reasoning, prompts, local paths, credentials, cookies, and auth material before upload.
-- The receiver still treats every transcript as untrusted text. Copying a beamed transcript into a new agent session is a separate operator action.
-- Requests are rate-limited and concurrency-limited before the body is read.
+- 它不具备 `continueSession`、存档、终端、工具或节点能力。
+- 它只接受纯文本的规范化转录条目，不接受 HTML、脚本、存档、附件或由服务器获取的 URL。
+- 官方技能会在上传前移除原始工具结果、推理内容、提示词、本地路径、凭据、Cookie 和身份验证材料。
+- 接收方仍会将每份转录视为不受信任的文本。将 Beam 转录复制到新的智能体会话中，是操作员执行的独立操作。
+- 请求会在读取正文前进行速率限制和并发限制。
 
-## Mirroring
+## 镜像
 
-Beam can also act as the sender: an opt-in mirror that continuously publishes this machine's active local coding sessions (Claude Code, Codex, and other registered session catalogs) to a remote Beam receiver, such as a shared team Gateway. Teammates then watch near-live session transcripts in the remote Control UI without any access to the source machine.
+Beam 也可以作为发送方：通过选择性启用的镜像功能，持续将本机活跃的本地编码会话（Claude Code、Codex 以及其他已注册的会话目录）发布到远程 Beam 接收器，例如共享团队 Gateway。随后，团队成员无需访问源机器，即可在远程控制界面中近乎实时地查看会话记录。
 
 ```json5
 {
@@ -140,39 +140,39 @@ Beam can also act as the sender: an opt-in mirror that continuously publishes th
 }
 ```
 
-- `endpoint` (required): the remote receiver URL. HTTPS is enforced for non-loopback hosts; plaintext `http://` is accepted only for `localhost`/`127.0.0.1`/`::1` development.
-- `token`: Gateway credential for the remote receiver, sent as `Authorization: Bearer`. Accepts a plain string or a secret reference; a configured-but-unresolved token pauses mirroring instead of sending unauthenticated requests. Deployments fronted by an identity-aware proxy need an ingress that accepts this bearer credential.
-- `catalogs` (required): the session catalog ids to mirror, as explicit per-catalog consent — an omitted or empty list mirrors nothing. The local `beam` receiver catalog is always excluded so two mirrored Gateways cannot re-mirror each other's rows.
-- `pollSeconds` (default 30, minimum 10): how often the mirror scans local catalogs.
-- `activeWindowMinutes` (default 180): sessions with newer activity than this window count as live and stay mirrored; when a session goes idle past the window the mirror sends one final `completed` update.
+- `endpoint`（必需）：远程接收器 URL。对于非回环主机，强制使用 HTTPS；仅在 `localhost`/`127.0.0.1`/`::1` 开发环境中接受明文 `http://`。
+- `token`：远程接收器的 Gateway 凭据，以 `Authorization: Bearer` 形式发送。接受普通字符串或密钥引用；已配置但无法解析的令牌会暂停镜像，而不是发送未经身份验证的请求。由具备身份感知能力的代理置于前端的部署，需要一个能够接受此 bearer 凭据的入口。
+- `catalogs`（必需）：要镜像的会话目录 ID，作为针对每个目录的明确授权——省略或提供空列表时不会镜像任何内容。本地 `beam` 接收器目录始终会被排除，因此两个相互镜像的 Gateway 不会重复镜像对方的记录。
+- `pollSeconds`（默认值为 30，最小值为 10）：镜像扫描本地目录的频率。
+- `activeWindowMinutes`（默认值为 180）：在此时间窗口内有较新活动的会话会被视为正在进行，并持续镜像；当会话闲置时间超过该窗口后，镜像会发送一次最终的 `completed` 更新。
 
-The mirror applies the same redaction contract as the beam skill before anything leaves the machine: only user and agent message text is uploaded, while reasoning, tool calls, tool results, and raw payloads are replaced with compact counts. Snapshots are capped to the receiver limits (200 items, 56 KiB), dropping oldest entries first and marking the upload `truncated`. Sessions on paired nodes are not mirrored; the mirror shares only sessions from this Gateway's machine, newest 32 first.
+在任何内容离开本机之前，镜像都会应用与 beam 技能相同的脱敏规范：仅上传用户和代理的消息文本，而将推理、工具调用、工具结果和原始负载替换为简要计数。快照会限制在接收器的上限内（200 个项目、56 KiB），优先丢弃最早的条目，并将上传标记为 `truncated`。配对节点上的会话不会被镜像；镜像仅共享此 Gateway 所在机器上的会话，并优先处理最新的 32 个会话。
 
-## Troubleshooting
+## 故障排查
 
 `404 Not Found`
 
-: The Beam plugin is disabled, the Gateway has not restarted since enablement, or the request is reaching another Gateway.
+: Beam 插件已禁用、Gateway 在启用插件后尚未重启，或请求被发送到了另一个 Gateway。
 
 `401 Unauthorized`
 
-: The request did not satisfy Gateway HTTP auth. Check the bearer credential or trusted-proxy/Access session.
+: 请求未通过 Gateway HTTP 身份验证。请检查 bearer 凭据或受信任代理/Access 会话。
 
 `405 Method Not Allowed`
 
-: The receiver accepts only `POST`.
+: 接收端仅接受 `POST`。
 
 `413 Payload Too Large`
 
-: The serialized request exceeded 56 KiB. The official skill drops older sanitized messages until the snapshot fits.
+: 序列化后的请求超过了 56 KiB。官方 skill 会丢弃较早的已清理消息，直到快照符合大小限制。
 
 `429 Too Many Requests`
 
-: The authenticated client exceeded the bounded request or concurrency limit. Retry after the current minute window.
+: 已认证客户端超出了请求数或并发数限制。请在当前分钟窗口结束后重试。
 
-## Related
+## 相关
 
-- [Control UI](/web/control-ui)
-- [Operator scopes](/gateway/operator-scopes)
-- [Trusted proxy auth](/gateway/trusted-proxy-auth)
-- [Plugin management](/plugins/manage-plugins)
+- [控制界面](/web/control-ui)
+- [操作员权限范围](/gateway/operator-scopes)
+- [受信任代理身份验证](/gateway/trusted-proxy-auth)
+- [插件管理](/plugins/manage-plugins)

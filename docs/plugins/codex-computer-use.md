@@ -196,7 +196,8 @@ codex plugin marketplace add /Applications/ChatGPT.app/Contents/Resources/plugin
 
 ## 远程市场
 
-Codex 0.146.1 可以从已发现的远程市场读取并安装计算机使用插件。OpenClaw 会将 Codex 返回的不透明远程插件 ID 传递给
+远程市场支持在 Codex 0.146.1 中引入，并继续在 OpenClaw 固定使用的
+Codex 0.147.0 中提供。OpenClaw 会将 Codex 返回的不透明远程插件 ID 传递给
 `plugin/read` 和 `plugin/install`；人类可读的插件名称不能替代该 ID。
 
 `/codex computer-use install` 可以显式安装或重新启用已发现的远程插件。回合开始时的 `autoInstall` 也可以使用已发现的本地或远程市场。不带 `autoInstall` 的状态检查和回合不会安装插件或修改 Codex 配置。

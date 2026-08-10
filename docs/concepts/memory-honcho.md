@@ -20,24 +20,24 @@ read_when:
 - **多代理感知** - 父代理会自动跟踪生成的
   子代理，并将父代理作为观察者添加到子会话中。
 
-## Available Tools
+## 可用工具
 
-Honcho registers tools the agent can use during conversation:
+Honcho 注册了代理在对话期间可以使用的工具：
 
-**Data Retrieval (fast, no LLM call required):**
+**数据检索（快速，无需调用 LLM）：**
 
-| Tool                        | Description                                           |
-| --------------------------- | ------------------------------------------------------ |
-| `honcho_context`            | Full user representation across sessions               |
-| `honcho_search_conclusions` | Semantic search over stored conclusions                |
-| `honcho_search_messages`    | Search messages across sessions (filter by sender, date) |
-| `honcho_session`            | Current session history and summary                    |
+| 工具                        | 描述                                           |
+| --------------------------- | ---------------------------------------------- |
+| `honcho_context`            | 跨会话的完整用户画像                           |
+| `honcho_search_conclusions` | 对存储的结论进行语义搜索                       |
+| `honcho_search_messages`    | 跨会话搜索消息（可按发送者、日期筛选）         |
+| `honcho_session`            | 当前会话历史和摘要                             |
 
-**Q&A (LLM-powered):**
+**问答（由 LLM 提供支持）：**
 
-| Tool         | Description                                                              |
-| ------------ | ------------------------------------------------------------------------- |
-| `honcho_ask` | Ask questions about the user. `depth='quick'` for facts, `'thorough'` for synthesis |
+| 工具         | 描述                                                                   |
+| ------------ | ---------------------------------------------------------------------- |
+| `honcho_ask` | 向用户提问。对于事实使用 `depth='quick'`，对于综合分析使用 `'thorough'` |
 
 ## 开始使用
 
@@ -102,16 +102,16 @@ Honcho 可以完全在本地运行（自托管），也可以通过
 
 ## Honcho 与内置记忆
 
-|                   | 内置 / QMD                | Honcho                              |
-| ----------------- | ---------------------------- | ----------------------------------- |
-| **存储**       | 工作区 Markdown 文件     | 专用服务（本地或托管） |
-| **跨会话** | 通过记忆文件             | 自动内置                 |
-| **用户建模** | 手动（写入 MEMORY.md）  | 自动档案                  |
-| **搜索**        | 向量 + 关键词（混合）    | 对观察内容进行语义搜索          |
-| **多代理**   | 未跟踪                  | 父/子感知              |
-| **依赖**  | 无（内置）或 QMD 二进制文件 | 安装插件                      |
+|                   | 内置记忆                    | Honcho                              |
+| ----------------- | --------------------------- | ----------------------------------- |
+| **存储**          | 工作区 Markdown 文件        | 专用服务（本地或托管）              |
+| **跨会话**        | 通过记忆文件                | 自动内置                            |
+| **用户建模**      | 手动（写入 MEMORY.md）      | 自动生成用户画像                    |
+| **搜索**          | 向量 + 关键词（混合）       | 基于观测结果的语义搜索              |
+| **多智能体**      | 不跟踪                      | 具备父子关系感知                    |
+| **依赖项**        | 无                          | 安装插件                            |
 
-Honcho 和内置记忆系统可以协同工作。当配置了 QMD 时，会提供额外工具，用于在 Honcho 的跨会话记忆之外搜索本地 Markdown 文件。
+Honcho 与内置记忆系统可以协同工作。内置搜索会在 Honcho 的跨会话记忆旁保留本地 Markdown 的可用性。
 
 ## CLI 命令
 
@@ -130,7 +130,6 @@ openclaw honcho search <query> [-k N] [-d D] # 对记忆进行语义搜索
 
 ## 相关内容
 
-- [内存概览](/concepts/memory)
-- [内置内存引擎](/concepts/memory-builtin)
-- [QMD 内存引擎](/concepts/memory-qmd)
+- [记忆概览](/concepts/memory)
+- [内置记忆引擎](/concepts/memory-builtin)
 - [上下文引擎](/concepts/context-engine)

@@ -172,7 +172,24 @@ OpenClaw 会在选择已发布主机时自动使用 `gateway.tailscale.serviceNa
     常见误解：DM pairing 批准并不意味着“该发送者在任何地方都被授权”。pairing 只授予 DM 访问权限。如果当前还没有命令所有者，第一个被批准的 pairing 也会设置 `commands.ownerAllowFrom`，从而为仅所有者命令和 exec 批准提供一个明确的操作员账户。群组发送者授权仍然来自显式配置的 allowlist。
     要让同一个身份同时获得 DM 和群组命令授权：把你的数字 Telegram 用户 ID 放入 `channels.telegram.allowFrom`，并且对于仅所有者命令，确保 `commands.ownerAllowFrom` 包含 `telegram:<your user id>`。
 
-    ### 查找你的 Telegram 用户 ID
+    Use `channels.telegram.direct.<chatId>.tools` to set the built-in tool policy for one DM. `toolsBySender` selects a sender-specific policy by typed sender key such as `channel:telegram:<userId>` or `id:<userId>`:
+
+```json5
+{
+  channels: {
+    telegram: {
+      direct: {
+        "*": { tools: { deny: ["write", "edit"] } },
+        "603767951": { tools: {} },
+      },
+    },
+  },
+}
+```
+
+    A matching `toolsBySender` entry replaces `tools` for that DM. An exact chat entry replaces the whole `"*"` entry; it does not inherit wildcard fields. Account-level `direct` replaces the root `direct` map when present and inherits it only when omitted. The selected direct policy, global policy, per-agent policy, `tools.toolsBySender`, and `agents.<id>.tools.toolsBySender` apply as intersecting layers; a deny in any layer still blocks the tool. Codex uses policy-filtered OpenClaw tools for explicitly restricted turns and keeps its native tool surface for default profile narrowing. ACP-bound sessions reject a restrictive direct policy when their runtime cannot enforce it.
+
+    ### Finding your Telegram user ID
 
     更安全（无需第三方机器人）：给你的机器人发 DM，运行 `openclaw logs --follow`，读取 `from.id`。
 
@@ -197,10 +214,11 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     2. **群组中允许哪些发送者**（`channels.telegram.groupPolicy`）
        - `open` / `allowlist`（默认）/ `disabled`
 
-    `groupAllowFrom` 用于过滤群组发送者；如果未设置，Telegram 会回退到 `allowFrom`（不是 pairing store——群组发送者授权绝不会继承 DM pairing-store 批准，这是自 `2026.2.25` 起的安全边界）。
-    `groupAllowFrom` 条目应为数字 Telegram 用户 ID（`telegram:` / `tg:` 前缀会被规范化）；非数字条目会被忽略。不要把群组或超级群组 chat ID 放在这里——负数 chat ID 应放在 `channels.telegram.groups` 下。
-    单所有者机器人的实用模式：把你的用户 ID 设置到 `channels.telegram.allowFrom`，保持 `groupAllowFrom` 未设置，并在 `channels.telegram.groups` 下允许目标群组。
-    如果 `channels.telegram` 在配置中完全缺失，运行时默认采用 fail-closed 的 `groupPolicy="allowlist"`，除非显式设置了 `channels.defaults.groupPolicy`。
+    `groupAllowFrom` filters group senders; if unset, Telegram falls back to `allowFrom` (not the pairing store — group sender auth never inherits DM pairing-store approvals, a security boundary since `2026.2.25`).
+    `groupAllowFrom` entries should be numeric Telegram user IDs (`telegram:` / `tg:` prefixes are normalized); non-numeric entries are ignored. Do not put group or supergroup chat IDs here — negative chat IDs belong under `channels.telegram.groups`.
+    In multi-account configs, root `channels.telegram.groups` is the shared default for accounts that omit `groups`. An account-level `groups` map replaces the root map for that account; it is not deep-merged. An explicit empty account map (`groups: {}`) keeps that account isolated from the shared groups.
+    Practical pattern for one-owner bots: set your user ID in `channels.telegram.allowFrom`, leave `groupAllowFrom` unset, and allow the target groups under `channels.telegram.groups`.
+    If `channels.telegram` is entirely missing from config, runtime defaults to fail-closed `groupPolicy="allowlist"` unless `channels.defaults.groupPolicy` is explicitly set.
 
     仅所有者的群组设置：
 
@@ -447,7 +465,9 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     规则：名称会被规范化（去掉前导 `/`、转为小写）；有效模式为 `a-z`、`0-9`、`_`，长度 1-32；自定义命令不能覆盖原生命令；冲突/重复项会被跳过并记录日志。
 
-    自定义命令只是菜单项——不会自动实现行为。即使未显示在 Telegram 菜单中，插件/技能命令在被输入时仍可能生效。如果禁用了原生命令，则内置命令会被移除；如果已配置，自定义/插件命令仍可能注册。
+    When Telegram menu limits require trimming, configured custom commands come first unless omitted per-skill entries are replaced by a leading `/skill` fallback.
+
+    Custom commands are menu entries only — they do not auto-implement behavior. Plugin/skill commands can still work when typed even if not shown in the Telegram menu. If native commands are disabled, built-ins are removed; custom/plugin commands may still register if configured.
 
     常见设置失败：
 
@@ -729,7 +749,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     `own` 表示仅用户对 bot 发送消息的反应（通过已发送消息缓存尽力实现）。反应事件仍会遵守 Telegram 访问控制（`dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`）；未授权发送者会被丢弃。
 
-    Telegram does not provide thread IDs in reaction updates. Non-forum groups route to the group chat session. Forum groups recover the originating topic from OpenClaw's bounded message cache (keyed by account, chat, and message ID), so the reaction routes to that topic's session, including its topic agent and conversation bindings. When the reacted-to message is no longer cached the topic is unknown, so OpenClaw skips the reaction notification and logs a warning instead of attributing it to General (`:topic:1`).
+    Telegram does not provide topic metadata in reaction updates. Ordinary non-forum groups remain chat-scoped. Forum and channel Direct Messages reactions recover the originating topic from OpenClaw's bounded message cache (keyed by account, chat, and message ID), so topic config, topic agents, and conversation bindings still apply. If the cached topic is missing or belongs to the wrong scope, OpenClaw skips the reaction notification and logs a warning instead of falling back to General or the base chat.
 
     轮询/webhook 的 `allowed_updates` 会自动包含 `message_reaction`。
 
@@ -964,21 +984,21 @@ dig +short api.telegram.org AAAA
 
 <Accordion title="高信号 Telegram 字段">
 
-- 启动/身份验证：`enabled`、`botToken`、`tokenFile`（必须是普通文件；不接受符号链接）、`accounts.*`
-- 访问控制：`dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`、`groups`、`groups.*.topics.*`、顶层 `bindings[]`（`type: "acp"`）
-- 主题默认值：`groups.<chatId>.topics."*"` 适用于未匹配的论坛主题；精确的主题 ID 会覆盖它
-- 执行审批：`execApprovals`、`accounts.*.execApprovals`
-- 命令/菜单：`commands.native`、`commands.nativeSkills`、`customCommands`
-- 线程/回复：`replyToMode`、`threadBindings`
-- 流式传输：`streaming`（模式 `off | partial | block | progress`）、`streaming.preview.toolProgress`
-- 格式化/传递：`textChunkLimit`、`streaming.chunkMode`、`richMessages`、`markdown.tables`（`off | bullets | code | block`）、`linkPreview`、`responsePrefix`
-- 媒体/网络：`mediaMaxMb`、`network.autoSelectFamily`、`network.dangerouslyAllowPrivateNetwork`、`proxy`
-- 自定义 API 根路径：`apiRoot`（仅 Bot API 根路径；不要包含 `/bot<TOKEN>`）、`trustedLocalFileRoots`（自托管 Bot API 的绝对 `file_path` 根路径）
-- Webhook：`webhookUrl`、`webhookSecret`、`webhookPath`、`webhookHost`、`webhookPort`、`webhookCertPath`
-- 操作/功能：`capabilities.inlineButtons`、`actions.sendMessage|editMessage|deleteMessage|reactions|sticker|createForumTopic|editForumTopic`
-- 反应：`reactionNotifications`、`reactionLevel`
-- 错误：`errorPolicy`、`silentErrorReplies`
-- 写入/历史记录：`configWrites`、`historyLimit`、`dmHistoryLimit`、`dms.*.historyLimit`
+- startup/auth: `enabled`, `botToken`, `tokenFile` (must be a regular file; symlinks are rejected), `accounts.*`
+- access control: `dmPolicy`, `allowFrom`, `direct.*.tools`, `direct.*.toolsBySender`, `groupPolicy`, `groupAllowFrom`, `groups`, `groups.*.topics.*`, top-level `bindings[]` (`type: "acp"`)
+- topic defaults: `groups.<chatId>.topics."*"` applies to unmatched forum topics; exact topic IDs override it
+- exec approvals: `execApprovals`, `accounts.*.execApprovals`
+- command/menu: `commands.native`, `commands.nativeSkills`, `customCommands`
+- threading/replies: `replyToMode`, `threadBindings`
+- streaming: `streaming` (modes `off | partial | block | progress`), `streaming.preview.toolProgress`
+- formatting/delivery: `textChunkLimit`, `streaming.chunkMode`, `richMessages`, `markdown.tables` (`off | bullets | code | block`), `linkPreview`, `responsePrefix`
+- media/network: `mediaMaxMb`, `network.autoSelectFamily`, `network.dangerouslyAllowPrivateNetwork`, `proxy`
+- custom API root: `apiRoot` (Bot API root only; do not include `/bot<TOKEN>`), `trustedLocalFileRoots` (self-hosted Bot API absolute `file_path` roots)
+- webhook: `webhookUrl`, `webhookSecret`, `webhookPath`, `webhookHost`, `webhookPort`, `webhookCertPath`
+- actions/capabilities: `capabilities.inlineButtons`, `actions.sendMessage|editMessage|deleteMessage|reactions|sticker|createForumTopic|editForumTopic`
+- reactions: `reactionNotifications`, `reactionLevel`
+- errors: `errorPolicy`, `silentErrorReplies`
+- writes/history: `configWrites`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
 
 </Accordion>
 

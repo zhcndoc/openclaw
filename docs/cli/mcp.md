@@ -406,18 +406,18 @@ Codex app-server 也支持每个服务器上的可选 `codex` 块。这是仅针
 
 - `list` 会对服务器名称进行排序。
 - 不带名称的 `show` 会打印完整的已配置 MCP 服务器对象。
-- `status` 在不连接的情况下对已配置的传输进行分类。`--verbose` 会包含解析后的启动、超时、OAuth、过滤和并行调用详细信息，包括存储的 OAuth 令牌需要额外授权的情况。带凭据的 stdio 参数会在文本和 JSON 输出中被隐藏。
-- `doctor` 在不连接的情况下执行静态检查。若命令还应验证已启用服务器是否可连接，请添加 `--probe`。
-- `probe` 会连接并报告工具数量、resources/prompts 支持、列表变更支持以及诊断信息。
-- `add` 接受 stdio 标志，例如 `--command`、`--arg`、`--env` 和 `--cwd`，或 HTTP 标志，例如 `--url`、`--transport`、`--header`、`--auth oauth`、TLS、超时和工具选择标志。
-- `set` 期望在命令行中提供一个 JSON 对象值。
-- `configure` 会更新启用状态、工具过滤器、超时、OAuth、TLS 和并行工具调用提示，而不会替换整个服务器定义。添加 `--probe` 可在保存前验证更新后的服务器。
-- `tools` 会更新每个服务器的工具过滤器。include/exclude 条目是 MCP 工具名称和简单的 `*` 通配符。
-- `login` 会为配置了 `auth: "oauth"` 的 HTTP 服务器运行 OAuth 流程。首次运行会打印授权 URL；批准后使用 `--code` 重新运行。
-- `logout` 会清除指定服务器已存储的 OAuth 凭据，而不会移除已保存的服务器定义。
-- `reload` 仅会释放当前 CLI 进程中缓存的进程内 MCP 运行时。其他进程中的网关或代理进程仍然需要各自的 reload 或重启路径。
-- 对于可流式 HTTP MCP 服务器，请使用 `transport: "streamable-http"`。为了兼容，`openclaw mcp set` 也会将 CLI 原生的 `type: "http"` 规范化为相同的标准配置形状。
-- 如果指定名称的服务器不存在，`unset` 会失败。
+- `status` 会在不建立连接的情况下对已配置的传输方式进行分类。`--verbose` 会包含解析后的启动、超时、OAuth、筛选器和并行调用详细信息，包括已存储的 OAuth 令牌需要额外授权的情况。在文本和 JSON 输出中，包含凭据的 stdio 参数都会被隐藏。
+- `doctor` 会在不建立连接的情况下执行静态检查。当命令还应验证已启用服务器是否能够连接时，请添加 `--probe`。
+- `probe` 会建立连接，并报告工具数量、资源/提示支持情况、列表变更支持情况以及诊断信息。
+- `add` 接受 stdio 标志，例如 `--command`、`--arg`、`--env` 和 `--cwd`；也接受 HTTP 标志，例如 `--url`、`--transport`、`--header`、`--auth oauth`、TLS、超时和工具选择标志。
+- `set` 要求在命令行中提供一个 JSON 对象值。
+- `configure` 会更新启用状态、工具筛选器、超时、OAuth、TLS 以及并行工具调用提示，而不会替换整个服务器定义。添加 `--probe` 可在保存之前验证更新后的服务器。
+- `tools` 会更新每个服务器的工具筛选器。包含/排除条目是 MCP 工具名称和简单的 `*` 通配符。
+- `login` 会为配置了 `auth: "oauth"` 的 HTTP 服务器运行 OAuth 流程。对于环回重定向，OpenClaw 会监听浏览器回调并自动完成登录。打印出的 `--code` 命令仍可作为远程、无头或无法访问回调时的备用方案。
+- `logout` 会清除指定服务器的已存储 OAuth 凭据，但不会移除已保存的服务器定义。
+- `reload` 仅会释放当前 CLI 进程中缓存的进程内 MCP 运行时。其他进程中的网关或代理进程仍需要各自执行重新加载或重启。
+- 对于 Streamable HTTP MCP 服务器，请使用 `transport: "streamable-http"`。为兼容性起见，`openclaw mcp set` 还会将 CLI 原生的 `type: "http"` 规范化为相同的标准配置形式。
+- 如果指定名称的服务器不存在，`unset` 会执行失败。
 
 示例：
 
@@ -632,7 +632,7 @@ openclaw mcp unset context7
 
 ### Stdio 传输
 
-启动一个本地子进程，并通过 stdin/stdout 通信。
+启动一个本地子进程，并通过 stdin/stdout 进行通信。
 
 | 字段                       | 说明                          |
 | -------------------------- | ----------------------------- |
@@ -644,7 +644,7 @@ openclaw mcp unset context7
 <Warning>
 **Stdio 环境变量安全过滤器**
 
-OpenClaw 在启动 stdio MCP 服务器之前，会拒绝解释器启动、加载器劫持和 shell 初始化相关的环境变量键，即使它们出现在服务器的 `env` 块中也一样。其使用与其他由 OpenClaw 启动的进程相同的主机环境安全策略：会阻止已知的解释器启动钩子（例如 `NODE_OPTIONS`、`PYTHONSTARTUP`、`PERL5OPT`、`RUBYOPT`、`BASHOPTS`、`KSH_ENV`）、共享库和函数注入前缀（`DYLD_*`、`LD_*`、`BASH_FUNC_*`），以及类似的运行时控制变量。启动时会静默丢弃这些变量并记录警告，因此它们无法注入隐式前置内容、替换解释器、启用调试器，或针对 stdio 进程劫持动态链接器。显式允许列表保留了普通 MCP 凭据环境变量的可用性（`GITHUB_TOKEN`、`GH_TOKEN`、`GITLAB_TOKEN`、`NPM_TOKEN`、`NODE_AUTH_TOKEN`、`DATABASE_URL`、`MONGODB_URI`、`REDIS_URL`、`AMQP_URL`、`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET`），以及普通代理和特定服务器的环境变量（`HTTP_PROXY`、自定义 `*_API_KEY` 等）。其他 `AWS_*` 键，例如 `AWS_CONFIG_FILE` 和 `AWS_SHARED_CREDENTIALS_FILE`，仍然会被阻止，因为它们指向的是凭据文件，而不是直接携带凭据值。
+OpenClaw 在启动 stdio MCP 服务器之前，会拒绝解释器启动、加载器劫持和 Shell 初始化相关的环境变量键，即使它们出现在服务器的 `env` 块中也一样。其使用与其他由 OpenClaw 启动的进程相同的主机环境安全策略：会阻止已知的解释器启动钩子（例如 `NODE_OPTIONS`、`PYTHONSTARTUP`、`PERL5OPT`、`RUBYOPT`、`BASHOPTS`、`KSH_ENV`）、共享库和函数注入前缀（`DYLD_*`、`LD_*`、`BASH_FUNC_*`），以及类似的运行时控制变量。启动时会静默丢弃这些变量并记录警告，因此它们无法注入隐式前置内容、替换解释器、启用调试器，或针对 stdio 进程劫持动态链接器。显式允许列表保留了普通 MCP 凭据环境变量的可用性（`GITHUB_TOKEN`、`GH_TOKEN`、`GITLAB_TOKEN`、`NPM_TOKEN`、`NODE_AUTH_TOKEN`、`DATABASE_URL`、`MONGODB_URI`、`REDIS_URL`、`AMQP_URL`、`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET`），以及普通代理和特定服务器的环境变量（`HTTP_PROXY`、自定义 `*_API_KEY` 等）。其他 `AWS_*` 键，例如 `AWS_CONFIG_FILE` 和 `AWS_SHARED_CREDENTIALS_FILE`，仍然会被阻止，因为它们指向的是凭据文件，而不是直接携带凭据值。
 
 如果你的 MCP 服务器确实需要其中某个被阻止的变量，请将其设置在网关主机进程上，而不是放在 stdio 服务器的 `env` 下。
 </Warning>
@@ -721,11 +721,11 @@ OAuth 适用于声明了 MCP OAuth 流程的 HTTP MCP 服务器。当启用 `aut
     openclaw mcp login docs
     ```
 
-    OpenClaw 会打印授权 URL，并将临时 OAuth verifier 状态存储在共享 SQLite 中。
+    OpenClaw 会启动已注册的回环回调，打印授权 URL，并将临时 OAuth verifier 状态存储在共享 SQLite 中。在浏览器中批准请求，然后返回终端；回调到达后，令牌交换会自动完成。
 
   </Step>
-  <Step title="使用 code 完成">
-    在浏览器中批准后，将返回的 code 传回给 OpenClaw。
+  <Step title="必要时使用手动备用流程">
+    如果浏览器运行在另一台机器上，或者无法访问打印出的回环地址，请复制返回的代码并将其传回 OpenClaw。
 
     ```bash
     openclaw mcp login docs --code abc123
@@ -872,7 +872,7 @@ openclaw config set mcp.apps.enabled true --strict-json
 - 仅限 App 的工具（`_meta.ui.visibility: ["app"]`）不会出现在模型工具列表中。Apps 只能调用其所属服务器上对 app 可见的工具，并且这些工具还必须通过创建该视图的运行所对应的有效 OpenClaw 工具策略。
 - 基于源绑定的 App 权限（如摄像头、麦克风和地理位置）不会授予，因为内层 App 文档使用不透明源以实现跨 App 隔离。
 - App HTML、完整工具参数和原始结果保存在一个有界的十分钟内存视图租约中，不会写入磁盘，也不会复制到对话预览元数据中。转录仅存储一个有界的服务器/工具/资源描述符，并与原始工具调用 ID 绑定。Gateway 重启后，Control UI 可以根据经过认证的会话转录验证该描述符，并重新获取 `ui://` 资源；重建的视图在新的运行建立当前工具权限之前均为只读。
-- 在频道对话中，某一轮中最新成功的 App 视图会在最终的助手回复中增加一个 **Open App** 风格的动作。Telegram 私信使用原生 Mini App 按钮；Slack 和 Discord 将相同的可移植动作渲染为链接。其他频道则保留原始回复文本，并附加一个可理解的 HTTPS 链接。
+- 在频道对话中，某一轮中最新成功的 App 视图会在最终的助手回复中增加一个 **打开应用** 风格的动作。Telegram 私信使用原生 Mini App 按钮；Slack 和 Discord 将相同的可移植动作渲染为链接。其他频道则保留原始回复文本，并附加一个可理解的 HTTPS 链接。
 - 只有在 Gateway Tailscale 暴露已准备好一个已发布的 HTTPS 源时，才可获得频道启动链接。`gateway.tailscale.mode: "serve"` 只能从 tailnet 访问；`"funnel"` 可从公共互联网访问。由 `gateway.tailscale.preserveFunnel` 保留的外部管理 Funnel 也视为可从互联网访问。参见 [Tailscale](/gateway/tailscale)。
 - 启动票据是不透明的，仅在生成最终频道回复时铸造，并在最多两分钟后或底层视图租约到期时失效，以先发生者为准。URL 不包含 Gateway bearer 凭证、会话密钥、视图元数据、App HTML、工具输入或工具结果。
 - 如果没有可用的已发布源或票据容量，或者视图/票据已过期，或者传输无法渲染原生控件，则保留原始助手文本。Control UI 会保留其现有的内联 App 画布，并且不会收到重复的启动动作。

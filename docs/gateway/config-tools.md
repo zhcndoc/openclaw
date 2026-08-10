@@ -20,12 +20,12 @@ sidebarTitle: "工具与自定义提供方"
 本地入门在新建本地配置且未设置时，默认使用 `tools.profile: "coding"`（已存在的显式配置档案会保留）。
 </Note>
 
-| Profile     | Includes                                                                                                                                                                                                                                                |
+| Profile     | 包含内容                                                                                                                                                                                                                                                |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `minimal`   | `session_status` only                                                                                                                                                                                                                                   |
-| `coding`    | `group:fs`, `group:runtime`, `group:web`, `group:sessions`, `group:memory`, `cron`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `ask_user`, `skill_workshop`, `image`, `image_generate`, `music_generate`, `video_generate`                |
-| `messaging` | `group:messaging`, `sessions`, `sessions_list`, `sessions_history`, `sessions_search`, `conversations_list`, `conversations_send`, `conversations_turn`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`, `ask_user` |
-| `full`      | No restriction (same as unset)                                                                                                                                                                                                                          |
+| `minimal`   | 仅 `session_status`                                                                                                                                                                                                                                   |
+| `coding`    | `group:fs`、`group:runtime`、`group:web`、`group:sessions`、`group:memory`、`cron`、`get_goal`、`create_goal`、`update_goal`、`update_plan`、`ask_user`、`skill_workshop`、`image`、`image_generate`、`music_generate`、`video_generate`                |
+| `messaging` | `group:messaging`、`sessions`、`sessions_list`、`sessions_history`、`sessions_search`、`conversations_list`、`conversations_send`、`conversations_turn`、`sessions_send`、`sessions_spawn`、`sessions_yield`、`subagents`、`session_status`、`ask_user` |
+| `full`      | 不受限制（与未设置相同）                                                                                                                                                                                                                          |
 
 `coding` 和 `messaging` 还会隐式允许 `bundle-mcp`（已配置的 MCP 服务器）。
 
@@ -47,7 +47,7 @@ sidebarTitle: "工具与自定义提供方"
 | `group:openclaw`   | 除 `read`/`write`/`edit`/`apply_patch`/`exec`/`process`/`canvas` 之外的所有上述内置工具（不包括插件工具）                                                                                                                                             |
 | `group:plugins`    | 已加载插件拥有的工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                                                                                                                                                     |
 
-`spawn_task` 允许编码代理在不启动它的情况下，提出已确认的后续工作。Control UI 会将标题和摘要显示为可操作的芯片；基于 Gateway 的 TUI 会显示等效的交互式提示。接受任一项都会创建一个新的受管工作树会话，并将完整提示发送到那里，同时当前轮次继续。`dismiss_task` 会通过 `spawn_task` 返回的临时 `task_id` 撤回仍处于待处理状态的建议。
+`spawn_task` 允许编码代理提出已确认的后续工作，而无需立即启动。建议中的项目目录必须是一个 git 检出目录；无效的建议（包括非 git 目录或空白提示）会在工具记录它们时被拒绝。Control UI 会将标题和摘要显示为可执行的操作标签；基于 Gateway 的 TUI 则会显示等效的交互式提示。接受建议后，可以在新的受管工作树中启动任务（默认方式）、在建议的检出目录中通过新会话在本地启动任务、在配置了云端工作者配置文件时将任务发送给该配置文件，或将任务传递到源会话。OpenClaw 会将完整提示发送到选定的目标，同时当前回合继续进行。`dismiss_task` 会通过 `spawn_task` 返回的临时 `task_id` 撤回仍处于待处理状态的建议。
 
 只有当发起方的操作界面能够接收并处理 Gateway 任务建议事件时，才会提供这些工具。Channel 会话和本地/嵌入式 TUI 会话不会接收它们；channel 传输在安全地公开此流程之前，需要一个可移植的、类型化的任务操作。建议是进程本地的，并会在 Gateway 重启时消失。这两个工具仍然保留在 `coding` 配置和 `group:sessions` 中，因此当界面支持它们时，正常的 `tools.allow` 和 `tools.deny` 策略会自动对其进行配置。
 
@@ -585,7 +585,7 @@ sidebarTitle: "工具与自定义提供方"
 
 <AccordionGroup>
   <Accordion title="Cerebras（GLM 4.7 / GPT OSS）">
-    官方外部 `cerebras` 提供商插件可以通过 `openclaw onboard --auth-choice cerebras-api-key` 进行配置。只有在覆盖默认值时才使用显式 provider 配置。
+    官方外部 `cerebras` 提供商插件可以通过 `openclaw onboard --auth-choice cerebras-api-key` 进行配置。只有在覆盖默认值时才使用显式提供商配置。
 
     ```json5
     {
@@ -635,11 +635,11 @@ sidebarTitle: "工具与自定义提供方"
     }
     ```
 
-    兼容 Anthropic，内置 provider。快捷方式：`openclaw onboard --auth-choice kimi-code-api-key`。
+    兼容 Anthropic，内置提供商。快捷方式：`openclaw onboard --auth-choice kimi-code-api-key`。
 
   </Accordion>
   <Accordion title="本地模型（llama.cpp / llama-server）">
-    将一个**自定义** `openai-completions` provider 指向远程 `llama-server`（或其他兼容 OpenAI 的 llama.cpp 端点）。内置的 `llama-cpp`、`ollama` 和 `lmstudio` provider 会自动应用 llama.cpp 模式清理器；自定义端点则不会。对于 llama-server 聊天模板会将工具参数编译为 GBNF 的模型，请在每个模型上设置 `compat.toolSchemaProfile: "llamacpp"`。该配置会移除大于或等于 2000 的 `pattern` 和 `maxLength` 值，从而涵盖 `cron` 工具中 `trigger.script` 的 65536 限制。这是一种有针对性的缓解措施，并不意味着完全兼容每一种 JSON Schema 约束，也不包含 `minLength`。
+    将一个**自定义** `openai-completions` 提供商指向远程 `llama-server`（或其他兼容 OpenAI 的 llama.cpp 端点）。内置的 `llama-cpp`、`ollama` 和 `lmstudio` 提供商会自动应用 llama.cpp 模式清理器；自定义端点则不会。对于 llama-server 聊天模板会将工具参数编译为 GBNF 的模型，请在每个模型上设置 `compat.toolSchemaProfile: "llamacpp"`。该配置会移除大于或等于 2000 的 `pattern` 和 `maxLength` 值，从而涵盖 `cron` 工具中 `trigger.script` 的 65536 限制。这是一种有针对性的缓解措施，并不意味着完全兼容每一种 JSON Schema 约束，也不包含 `minLength`。
 
     ```json5
     {
@@ -714,7 +714,7 @@ sidebarTitle: "工具与自定义提供方"
     }
     ```
 
-    设置 `MINIMAX_API_KEY`。快捷方式：`openclaw onboard --auth-choice minimax-global-api` 或 `openclaw onboard --auth-choice minimax-cn-api`。模型目录默认包含 M3，也包含 M2.7 变体。在 Anthropic 兼容的流式路径上，OpenClaw 默认会禁用 MiniMax M2.x thinking，除非你显式设置了 `thinking`；MiniMax-M3（以及 M3.x）默认保持 provider 的省略/自适应 thinking 路径。`/fast on` 或 `params.fastMode: true` 会把 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
+    设置 `MINIMAX_API_KEY`。快捷方式：`openclaw onboard --auth-choice minimax-global-api` 或 `openclaw onboard --auth-choice minimax-cn-api`。模型目录默认包含 M3，也包含 M2.7 变体。在 Anthropic 兼容的流式路径上，OpenClaw 默认会禁用 MiniMax M2.x thinking，除非你显式设置了 `thinking`；MiniMax-M3（以及 M3.x）默认保持提供商的省略/自适应 thinking 路径。`/fast on` 或 `params.fastMode: true` 会把 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
 
   </Accordion>
   <Accordion title="Moonshot AI（Kimi）">
@@ -753,7 +753,7 @@ sidebarTitle: "工具与自定义提供方"
 
     中国区端点使用：`baseUrl: "https://api.moonshot.cn/v1"`，或使用 `openclaw onboard --auth-choice moonshot-api-key-cn`。
 
-    原生 Moonshot 端点在共享的 `openai-completions` 传输上支持流式 usage 兼容性，OpenClaw 会根据端点能力而不是仅根据内置 provider id 来判断。
+    原生 Moonshot 端点在共享的 `openai-completions` 传输上支持流式 usage 兼容性，OpenClaw 会根据端点能力而不是仅根据内置提供商 ID 来判断。
 
   </Accordion>
   <Accordion title="OpenCode">
@@ -820,12 +820,12 @@ sidebarTitle: "工具与自定义提供方"
     }
     ```
 
-    设置 `ZAI_API_KEY`。模型引用使用规范的 `zai/*` provider ID。快捷方式：`openclaw onboard --auth-choice zai-api-key`。
+    设置 `ZAI_API_KEY`。模型引用使用规范的 `zai/*` 提供商 ID。快捷方式：`openclaw onboard --auth-choice zai-api-key`。
 
     - 通用端点：`https://api.z.ai/api/paas/v4`
     - 编程端点：`https://api.z.ai/api/coding/paas/v4`
-    - 默认的 `zai-api-key` 认证选项会探测你的密钥，并自动检测它属于哪个端点（如果检测结果不明确，则回退到提示，并默认使用 Global）。也可使用专用的 CN 和 Coding-Plan 认证选项进行显式选择。
-    - 对于通用端点，请定义一个带有基础 URL 覆盖的自定义 provider。
+    - 默认的 `zai-api-key` 认证选项会探测你的密钥，并自动检测它属于哪个端点（如果检测结果不明确，则回退到提示，并默认使用全球端点）。也可使用专用的中国区和编程计划认证选项进行显式选择。
+    - 对于通用端点，请定义一个带有基础 URL 覆盖的自定义提供商。
 
   </Accordion>
 </AccordionGroup>

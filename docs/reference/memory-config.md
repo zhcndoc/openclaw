@@ -1,11 +1,10 @@
 ---
-summary: "内存搜索提供方、检索模式、QMD 和多模态索引"
+summary: "内置内存搜索提供商、检索模式和多模态索引"
 title: "内存配置参考"
 sidebarTitle: "内存配置"
 read_when:
-  - 你想配置内存搜索提供方或嵌入模型
-  - 你想设置 QMD 后端
-  - 你想启用混合搜索、MMR 或时间衰减
+  - 你想配置内存搜索提供商或嵌入模型
+  - 你想了解混合搜索、MMR 或时间衰减默认值
   - 你想启用多模态内存索引
 ---
 
@@ -18,11 +17,8 @@ read_when:
   <Card title="内置引擎" href="/concepts/memory-builtin">
     默认的 SQLite 后端。
   </Card>
-  <Card title="QMD 引擎" href="/concepts/memory-qmd">
-    本地优先的旁路进程。
-  </Card>
   <Card title="内存搜索" href="/concepts/memory-search">
-    搜索流程与调优。
+    搜索管道和调优。
   </Card>
   <Card title="活动内存" href="/concepts/active-memory">
     用于交互式会话的内存子代理。
@@ -66,9 +62,15 @@ read_when:
 }
 ```
 
-该值遵循正常的 `memory.search` 继承规则，并可按代理覆盖。未设置时，仅当全局 `session.dmScope` 未设置或为 `"main"`，且没有绑定项覆盖 `session.dmScope` 时，默认开启。任何已配置的 DM 隔离都会使其默认关闭。显式设置为 `true` 或 `false` 始终优先生效。启用它意味着会对会话转录进行索引，并将 `sessions` 添加到该代理解析后的记忆来源中。使用 QMD 时，它还会启用该代理的会话导出；在此模式下不需要单独设置 `memory.qmd.sessions.enabled`。
+该值遵循正常的 `memory.search` 继承规则，并支持按代理覆盖。未设置时，仅当全局
+`session.dmScope` 未设置或为 `"main"`，且没有任何绑定配置 `session.dmScope`
+覆盖时，才默认为开启。任何已配置的 DM 隔离都会使其默认为关闭。显式设置为 `true` 或
+`false` 始终优先。启用后会启用会话转录索引，并将 `sessions` 添加到该代理解析后的记忆源中。
 
-OpenClaw 的内置记忆提供程序通过 builtin 和 QMD 后端都支持这条受保护路径。其他记忆提供程序仍可继续使用它们自己的回忆钩子和高级 Active Memory 工具，但除非当前提供程序支持受保护的私密转录回忆，否则会跳过此设置。`openclaw doctor` 会报告不受支持的提供程序，或报告一个明确的 Active Memory `toolsAllow` 列表中省略了 `memory_search` 的情况。
+OpenClaw 的内置记忆提供商支持此受保护路径。其他记忆提供商可以继续使用自己的
+回忆钩子和高级 Active Memory 工具，但除非当前提供商支持受保护的私密转录回忆，否则会跳过此设置。
+`openclaw doctor` 会报告不受支持的提供商，或报告显式的 Active Memory `toolsAllow` 列表中未包含
+`memory_search` 的情况。
 
 检索边界比一般会话搜索更窄：
 
@@ -78,18 +80,19 @@ OpenClaw 的内置记忆提供程序通过 builtin 和 QMD 后端都支持这条
 - 未知的对话类型会失败并关闭
 - 沙箱化回忆不能使用特殊的跨会话授权
 
-该设置不会更改 `tools.sessions.visibility`、会话密钥、转录存储、传递路由，也不会更改 `sessions_list`、`sessions_history` 和 `sessions_send` 的权限。Active Memory 会执行一次有边界的只读检索；不可用或超时的检索不会阻塞回复。
+该设置不会更改 `tools.sessions.visibility`、会话密钥、转录存储、传递路由，也不会更改
+`sessions_list`、`sessions_history` 和 `sessions_send` 的权限。Active Memory 会执行一次有边界的只读检索；不可用或超时的检索不会阻塞回复。
 
 ---
 
 ## 提供方选择
 
-| Key        | Type      | Default          | Description                                                                                                                                                                                                                                                                                 |
-| ---------- | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`  | `boolean` | `true`           | 启用或禁用内存搜索                                                                                                                                                                                                                                                                           |
+| 键         | 类型      | 默认值           | 描述                                                                                                                                                                                                                                                                                     |
+| ---------- | --------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`  | `boolean` | `true`           | 启用或禁用内存搜索                                                                                                                                                                                                                                                                       |
 | `provider` | `string`  | `"openai"`       | 嵌入适配器 ID，例如 `bedrock`、`deepinfra`、`gemini`、`github-copilot`、`local`、`mistral`、`ollama`、`openai`、`openai-compatible` 或 `voyage`；也可以是已配置的 `models.providers.<id>`，其 `api` 指向内存嵌入适配器或 OpenAI 兼容模型 API |
-| `model`    | `string`  | provider 默认值 | 嵌入模型名称                                                                                                                                                                                                                                                                                |
-| `fallback` | `string`  | `"none"`         | 主提供方失败时的回退适配器 ID                                                                                                                                                                                                                                                                |
+| `model`    | `string`  | 提供方默认值     | 嵌入模型名称                                                                                                                                                                                                                                                                              |
+| `fallback` | `string`  | `"none"`         | 主提供方失败时的回退适配器 ID                                                                                                                                                                                                                                                             |
 
 当未设置 `provider` 时，OpenClaw 使用 OpenAI 嵌入。显式设置 `provider`
 以使用 Bedrock、DeepInfra、Gemini、GitHub Copilot、Mistral、Ollama、
@@ -148,12 +151,12 @@ Copilot、LM Studio、Mistral、Ollama、OpenAI、Voyage 或 OpenAI 兼容的
 
 | 提供方       | 环境变量                                             | 配置键                          |
 | -------------- | --------------------------------------------------- | ----------------------------------- |
-| Bedrock        | AWS credential chain, or `AWS_BEARER_TOKEN_BEDROCK` | 不需要 API 密钥                   |
+| Bedrock        | AWS 凭证链，或 `AWS_BEARER_TOKEN_BEDROCK`           | 不需要 API 密钥                   |
 | DeepInfra      | `DEEPINFRA_API_KEY`                                 | `models.providers.deepinfra.apiKey` |
 | Gemini         | `GEMINI_API_KEY`                                    | `models.providers.google.apiKey`    |
-| GitHub Copilot | `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`  | 通过设备登录进行身份验证       |
+| GitHub Copilot | `COPILOT_GITHUB_TOKEN`、`GH_TOKEN`、`GITHUB_TOKEN`  | 通过设备登录进行身份验证       |
 | Mistral        | `MISTRAL_API_KEY`                                   | `models.providers.mistral.apiKey`   |
-| Ollama         | `OLLAMA_API_KEY`（占位符）                      | --                                  |
+| Ollama         | `OLLAMA_API_KEY`（占位符）                          | --                                  |
 | OpenAI         | `OPENAI_API_KEY`                                    | `models.providers.openai.apiKey`    |
 | Voyage         | `VOYAGE_API_KEY`                                    | `models.providers.voyage.apiKey`    |
 
@@ -199,7 +202,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 <AccordionGroup>
   <Accordion title="Gemini">
-    | Key                    | Type     | Default                | Description                                |
+    | 键                    | 类型     | 默认值                | 描述                                |
     | ---------------------- | ---------------------- | ------------------------------------------- |
     | `model`                | `string` | `gemini-embedding-001` | 也支持 `gemini-embedding-2-preview` |
     | `outputDimensionality` | `number` | `3072`                 | 对于 Embedding 2：768、1536 或 3072        |
@@ -213,11 +216,11 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
   <Accordion title="OpenAI 兼容输入类型">
     OpenAI 兼容的嵌入端点可以选择启用提供方特定的 `input_type` 请求字段。这对于需要为查询和文档嵌入使用不同标签的非对称嵌入模型很有用。
 
-    | Key                 | Type     | Default | Description                                             |
+    | 键                 | 类型     | 默认值 | 描述                                             |
     | ------------------- | ------- | ------- | -------------------------------------------------------- |
-    | `inputType`         | `string` | unset   | 查询和文档嵌入共用的 `input_type`   |
-    | `queryInputType`    | `string` | unset   | 查询时的 `input_type`；会覆盖 `inputType`          |
-    | `documentInputType` | `string` | unset   | 索引/文档的 `input_type`；会覆盖 `inputType`      |
+    | `inputType`         | `string` | 未设置   | 查询和文档嵌入共用的 `input_type`   |
+    | `queryInputType`    | `string` | 未设置   | 查询时的 `input_type`；会覆盖 `inputType`          |
+    | `documentInputType` | `string` | 未设置   | 索引/文档的 `input_type`；会覆盖 `inputType`      |
 
     ```json5
     {
@@ -236,7 +239,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     }
     ```
 
-    更改这些值会影响提供方批量索引的嵌入缓存标识，当上游模型对这些标签的处理方式不同时时，应随后执行一次内存重建索引。
+    更改这些值会影响提供方批量索引的嵌入缓存标识；当上游模型对这些标签的处理方式不同时，应随后执行一次内存重建索引。
 
   </Accordion>
   <Accordion title="Bedrock">
@@ -255,7 +258,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     }
     ```
 
-    | Key                    | Type     | Default                        | Description                     |
+    | 键                    | 类型     | 默认值                        | 描述                     |
     | ---------------------- | ------------------ | -------------------------------- |
     | `model`                | `string` | `amazon.titan-embed-text-v2:0` | 任意 Bedrock 嵌入模型 ID  |
     | `outputDimensionality` | `number` | 模型默认值                  | 对于 Titan V2：256、512 或 1024 |
@@ -306,7 +309,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
   </Accordion>
   <Accordion title="本地（GGUF + llama.cpp）">
-    | Key                   | Type               | Default                | Description                                                                                                                                                                                                                                                                                                          |
+    | 键                   | 类型               | 默认值                | 描述                                                                                                                                                                                                                                                                                                          |
     | --------------------- | ------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
     | `local.modelPath`     | `string`           | 自动下载                | GGUF 模型文件路径                                                                                                                                                                                                                                                                                              |
     | `local.modelCacheDir` | `string`           | node-llama-cpp 默认值 | 已下载模型的缓存目录                                                                                                                                                                                                                                                                                      |
@@ -331,8 +334,8 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## 索引行为
 
-内存引擎负责同步、批处理、watch 以及压缩后
-索引启发式。OpenClaw 保持这些行为启用，并维持
+内存引擎负责同步、批处理、watch 以及压缩后  
+索引启发式。OpenClaw 保持这些行为启用，并维持  
 默认设置，而不是暴露按安装实例划分的时序开关。
 
 ## 混合搜索配置
@@ -344,11 +347,10 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 | `maxResults` | `number` | `6`    | 注入前返回的最大记忆命中数         |
 | `minScore`   | `number` | `0.35` | 纳入命中的最低相关性分数          |
 
-混合检索仍然启用。内置引擎始终对带日期的日记笔记应用固定的
-30 天时效半衰期，并在混合相关性之后应用固定的重要性
-乘数。`MEMORY.md`、`USER.md` 以及其他常青
-记忆文件不会衰减。可为空的重要性值视为中性，因此现有索引无需迁移或
-新增调优键。
+混合检索仍处于启用状态。内置引擎始终对带日期的每日笔记应用固定的
+30 天时效半衰期，并在混合相关性之后应用固定的重要性乘数，随后使用固定
+lambda 值 `0.7` 进行 MMR 多样性排序。`MEMORY.md`、`USER.md` 以及其他长期记忆文件
+不会衰减。可为空的重要性值按中性处理，因此现有索引无需迁移或新增调优键。
 
 对已提升、受信任条目的强触发匹配，可在符合条件的交互轮次中注入最多三条
 紧凑记忆。目前，根目录下的 `MEMORY.md` 和 `USER.md` 是精选的可注入层级。日记和转录内容绝不会
@@ -373,23 +375,23 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## 附加内存路径
 
-| 键          | 类型       | 描述                              |
-| ------------ | ---------- | ---------------------------------------- |
-| `extraPaths` | `string[]` | 要索引的额外目录或文件 |
+| 键           | 类型                                                | 描述                       |
+| ------------ | --------------------------------------------------- | -------------------------- |
+| `extraPaths` | `Array<string \| { path: string; pattern?: string }>` | 要索引的其他目录或文件 |
 
 ```json5
 {
   memory: {
     search: {
-      extraPaths: ["../team-docs", "/srv/shared-notes"],
+      extraPaths: ["../team-docs", { path: "/srv/shared-notes", pattern: "runbooks/**/*.md" }],
     },
   },
 }
 ```
 
-路径可以是绝对路径或相对于工作区的路径。目录会递归扫描 `.md` 文件。符号链接的处理取决于当前启用的后端：内置引擎会跳过符号链接，而 QMD 则遵循底层 QMD 扫描器的行为。
-
-对于代理作用域的跨代理转录搜索，请使用 `agents.entries.*.memory.search.qmd.extraCollections`，而不是 `memory.qmd.paths`。这些额外集合遵循相同的 `{ path, name, pattern? }` 结构，但会按代理合并，并且当路径指向当前工作区之外时，可以保留显式的共享名称。如果同一个解析后的路径同时出现在 `memory.qmd.paths` 和 `memory.search.qmd.extraCollections` 中，QMD 会保留第一条条目并跳过重复项。
+路径可以是绝对路径，也可以是相对于工作区的路径。目录会递归扫描其中受支持的
+文件。对象条目使用以 `/` 分隔、相对于根目录的 glob 来缩小目录范围；直接指定的
+文件条目则会被精确索引。内置引擎会跳过符号链接。
 
 ## 多模态记忆（Gemini）
 
@@ -463,51 +465,19 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 用于同代理从网关到 DM 的回忆：
 
-<Tabs>
-  <Tab title="内置后端">
-    ```json5
-    {
-      memory: {
-        search: {
-          experimental: { sessionMemory: true },
-          sources: ["memory", "sessions"],
-        },
-      },
-      tools: {
-        sessions: { visibility: "agent" },
-      },
-    }
-    ```
-  </Tab>
-  <Tab title="QMD 后端">
-    ```json5
-    {
-      memory: {
-        backend: "qmd",
-        search: {
-          experimental: { sessionMemory: true },
-          sources: ["memory", "sessions"],
-        },
-        qmd: {
-          sessions: { enabled: true },
-        },
-      },
-      tools: {
-        sessions: { visibility: "agent" },
-      },
-    }
-    ```
-  </Tab>
-</Tabs>
-
-使用 QMD 时，`sources: ["sessions"]` 本身并不会将转录导出到 QMD。还需要设置
-`memory.qmd.sessions.enabled: true`。更高层级的
-`rememberAcrossConversations: true` 设置是例外：它会为该代理隐含所需的 QMD 会话导出。隐含导出仍保持私有：
-它们始终使用默认的内部导出位置（配置的
-`sessions.exportDir` 仅适用于显式导出），它们只会在该代理的跨会话回忆期间被搜索，
-并且普通的 `memory_get`
-无法读取它们。显式的
-`memory.qmd.sessions.enabled: true` 保持其现有行为，并使导出的转录成为普通记忆语料库的一部分。
+```json5
+{
+  memory: {
+    search: {
+      experimental: { sessionMemory: true },
+      sources: ["memory", "sessions"],
+    },
+  },
+  tools: {
+    sessions: { visibility: "agent" },
+  },
+}
+```
 
 ---
 
@@ -516,7 +486,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 | 键                          | 类型      | 默认值 | 描述                       |
 | ---------------------------- | --------- | ------- | --------------------------------- |
 | `store.vector.enabled`       | `boolean` | `true`  | 使用 sqlite-vec 进行向量查询     |
-| `store.vector.extensionPath` | `string`  | bundled | 覆盖 sqlite-vec 路径              |
+| `store.vector.extensionPath` | `string`  | 内置    | 覆盖 sqlite-vec 路径              |
 
 当 sqlite-vec 不可用时，OpenClaw 会自动回退到进程内余弦相似度。
 
@@ -533,111 +503,33 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ---
 
-## QMD 后端配置
+## 引用
 
-设置 `memory.backend = "qmd"` 以启用。所有 QMD 设置都位于 `memory.qmd` 下：
+`memory.citations` 控制内置记忆结果的引用可见性：
 
-| 键                      | 类型      | 默认值  | 描述                                                                           |
-| ------------------------ | --------- | -------- | ------------------------------------------------------------------------------------- |
-| `command`                | `string`  | `qmd`    | QMD 可执行文件路径；当服务 `PATH` 与你的 shell 不同时，请设置绝对路径 |
-| `searchMode`             | `string`  | `search` | 搜索命令：`search`、`vsearch`、`query`                                          |
-| `rerank`                | `boolean` | --       | 与 `searchMode: "query"` 和 QMD 2.1+ 一起设置为 `false`，可跳过 QMD 重排序          |
-| `includeDefaultMemory`   | `boolean` | `true`   | 自动索引 `MEMORY.md` + `memory/**/*.md`                                             |
-| `paths[]`                | `array`   | --       | 额外路径：`{ name, path, pattern? }`                                               |
-| `sessions.enabled`       | `boolean` | `false`  | 将会话转录导出到 QMD                                                   |
-| `sessions.retentionDays` | `number`   | --       | 转录保留期限                                                                  |
-| `sessions.exportDir`     | `string`   | --       | 导出目录                                                                      |
-
-`searchMode: "search"` 仅支持词法/BM25。OpenClaw 不会为该模式运行语义向量就绪探测或 QMD 嵌入维护，包括在 `memory status --deep` 期间；`vsearch` 和 `query` 仍然需要 QMD 向量就绪和嵌入。
-
-`rerank: false` 仅会更改 QMD `query` 模式，并且需要 QMD 2.1 或更新版本。在直接 CLI 模式下，OpenClaw 传递 `--no-rerank`；在由 mcporter 支持的 MCP 模式下，它会将 `rerank: false` 传递给 QMD 的统一查询工具。保持其未设置即可使用 QMD 默认的查询重排序行为。
-
-OpenClaw 更倾向于使用当前的 QMD collection 和 MCP 查询形态，但在需要时也会通过尝试兼容的 collection 模式标志以及较旧的 MCP 工具名称来兼容旧版 QMD。当前 QMD 声明支持多个 collection 过滤器时，同源 collection 会由一个 QMD 进程一起搜索；较旧的 QMD 构建版本则保留按 collection 的兼容路径。同源是指持久化内存 collection（默认内存文件加自定义路径）会被分到一组，而会话转录 collection 会保持为单独一组，因此来源多样化仍然同时包含这两类输入。
-
-<Note>
-QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需要全局覆盖 QMD 的模型，请在网关运行时环境中设置 `QMD_EMBED_MODEL`、`QMD_RERANK_MODEL` 和 `QMD_GENERATE_MODEL` 等环境变量。
-</Note>
-
-<AccordionGroup>
-  <Accordion title="限制">
-    | 键                       | 类型     | 默认值 | 描述                |
-    | --------------------------- | -------- | ------- | ------------------------------ |
-    | `limits.maxResults`       | `number` | `4`     | 最多搜索结果         |
-    | `limits.maxSnippetChars`  | `number` | `450`   | 限制片段长度       |
-    | `limits.maxInjectedChars` | `number` | `2200`  | 限制注入总字符数 |
-    | `limits.timeoutMs`        | `number` | `4000`  | 基于 QMD 的搜索期间的 QMD 命令超时时间，包括 `memory_search`；设置、同步、内置回退和补充工作仍保持默认工具截止时间 |
-  </Accordion>
-  <Accordion title="作用域">
-    控制哪些会话可以接收 QMD 搜索结果。与 [`session.sendPolicy`](/gateway/config-agents#session) 具有相同的 schema：
-
-    ```json5
-    {
-      memory: {
-        qmd: {
-          scope: {
-            default: "deny",
-            rules: [{ action: "allow", match: { chatType: "direct" } }],
-          },
-        },
-      },
-    }
-    ```
-
-    随附的默认值是仅限 DM/direct，拒绝群组和其他频道类型。`match.keyPrefix` 匹配归一化后的会话键；`match.rawKeyPrefix` 匹配包含 `agent:<id>:` 的原始键。
-
-  </Accordion>
-  <Accordion title="引用">
-    `memory.citations` 适用于所有后端：
-
-    | 值               | 行为                                            |
-    | ------------------ | ------------------------------------------------------ |
-    | `auto` (默认) | 在片段中包含 `来源: <path#line>` 页脚    |
-    | `on`             | 始终包含页脚                               |
-    | `off`            | 省略页脚（路径仍会在内部传递给 agent） |
-
-  </Accordion>
-</AccordionGroup>
-
-QMD 在首次使用内存时才会延迟初始化；其适配器负责刷新和嵌入调度。
-
-### 完整 QMD 示例
-
-```json5
-{
-  memory: {
-    backend: "qmd",
-    citations: "auto",
-    qmd: {
-      includeDefaultMemory: true,
-      update: { interval: "5m", debounceMs: 15000 },
-      limits: { maxResults: 4, timeoutMs: 4000 },
-      scope: {
-        default: "deny",
-        rules: [{ action: "allow", match: { chatType: "direct" } }],
-      },
-      paths: [{ name: "docs", path: "~/notes", pattern: "**/*.md" }],
-    },
-  },
-}
-```
+| 值               | 行为                                               |
+| ---------------- | -------------------------------------------------- |
+| `auto`（默认）   | 在有用时包含 `来源：<path#line>`                    |
+| `on`             | 始终包含来源页脚                                   |
+| `off`            | 省略页脚；路径仍可在内部使用                       |
 
 ---
 
 ## 梦境
 
-Dreaming 配置在 `plugins.entries.memory-core.config.dreaming` 下，而不是在 `memory.search` 下。
+梦境配置在 `plugins.entries.memory-core.config.dreaming` 下，而不是在 `memory.search` 下。
 
-Dreaming 作为一次计划性扫描运行，并将内部的浅层/深层/REM 阶段作为实现细节。
+梦境作为一次计划性扫描运行，并将内部的浅层/深层/REM 阶段作为实现细节。
 
-有关概念性行为和斜杠命令，请参见 [Dreaming](/concepts/dreaming)。
+有关概念性行为和斜杠命令，请参见 [梦境](/concepts/dreaming)。
 
 ### 用户设置
 
 | 键                                      | 类型      | 默认值        | 描述                                                                                                                        |
 | --------------------------------------- | --------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`                               | `boolean` | `true`        | 完全启用或禁用 dreaming                                                                                                     |
-| `frequency`                             | `string`  | `0 3 * * *`   | 用于完整 dreaming 扫描的可选 cron 频率                                                                                      |
-| `model`                                 | `string`  | 默认模型      | 可选的 Dream Diary 子代理模型覆盖                                                                                          |
+| `enabled`                               | `boolean` | `true`        | 完全启用或禁用梦境                                                                                                          |
+| `frequency`                             | `string`  | `0 3 * * *`   | 用于完整梦境扫描的可选 cron 频率                                                                                             |
+| `model`                                 | `string`  | 默认模型      | 可选的梦境日记子代理模型覆盖                                                                                               |
 | `phases.deep.maxPromotedSnippetTokens`  | `number`  | `160`         | 从每个被提升到 `MEMORY.md` 的短期回忆片段中保留的最大估计 token 数；来源元数据仍然可见                                     |
 | `phases.deep.maxPriorEntryLossFraction` | `number`  | `0.25`        | 拒绝会移除超过此前条目该比例的合并重写                                                                                       |
 
@@ -666,12 +558,12 @@ Dreaming 作为一次计划性扫描运行，并将内部的浅层/深层/REM �
 ```
 
 <Note>
-- Dreaming 会将机器状态写入 `memory/.dreams/`。
-- Dreaming 会将人类可读的叙述输出写入 `DREAMS.md`（或已有的 `dreams.md`）。
+- 梦境会将机器状态写入 `memory/.dreams/`。
+- 梦境会将人类可读的叙述输出写入 `DREAMS.md`（或已有的 `dreams.md`）。
 - 深度整合会将之前的 `MEMORY.md` 存储在基于 SQLite 的插件状态中，并在 `DREAMS.md` 中记录重写次数和要点。
 - 在整合和持久化提升之前，不受信任和系统生成的候选项会在结构上被排除。
 - `dreaming.model` 使用现有的插件子代理信任门控；在启用它之前，请设置 `plugins.entries.memory-core.subagent.allowModelOverride: true`。
-- 当配置的模型不可用时，Dream Diary 会使用会话默认模型重试一次。信任或允许列表失败会被记录，不会被静默重试。
+- 当配置的模型不可用时，梦境日记会使用会话默认模型重试一次。信任或允许列表失败会被记录，不会被静默重试。
 - 浅层/深层/REM 阶段策略和阈值属于内部行为，不是面向用户的配置。
 
 </Note>

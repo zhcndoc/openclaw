@@ -104,11 +104,14 @@ Schema。该内置 Schema 子路径不应作为新插件的开发模式。
 | `api.registerWebSearchProvider(...)`             | 网页搜索                                                                                                                               |
 | `api.registerCompactionProvider(...)`            | 可插拔的转录压缩后端                                                                                                                   |
 
-Worker provider 还必须在 `contracts.workerProviders` 中声明其 id。  
-Core 会在 `provision(profile, operationId)` 之前持久化持久化意图。Provider 在外部分配之前验证设置，并在永久性拒绝 profile 时抛出 `WorkerProviderError`。当 operation id 重复时，`provision` 必须接管同一个租约。  
-Core 会将已验证的 profile 设置与租约一并持久化，并将该快照提供给 `destroy({ leaseId, profile })`，该方法必须是幂等的，以及 `inspect({ leaseId, profile })`，该方法返回 `active`、`destroyed` 或 `unknown`。这使 provider 能够在网关重启或命名 profile 被移除后路由生命周期调用。SSH 端点对 `keyRef` 使用 `SecretRef`，绝不内联密钥材料，并包含来自受信任 provisioning 输出的 `hostKey`，其格式必须恰好为 `algorithm base64`，不带主机名或注释。Core 会固定 `hostKey`，绝不信任首次连接中的密钥。能够铸造动态 `keyRef` 的 provider 可以实现 `resolveSshIdentity({ leaseId, profile, keyRef })`；当存在该解析器时，它具有权威性，而没有该解析器的 provider 则使用配置的通用密钥解析器。  
-具有可续租约的 provider 也可以实现 `renew(leaseId)`。  
-`inspect` 对瞬态或不确定性失败必须抛出错误；只有在权威性缺失时才返回 `unknown`。Core 会将活动的本地记录标记为孤儿记录，或者在已持久化的 destroy 请求之后，将缺失视为拆除完成。
+Worker provider 还必须在 `contracts.workerProviders` 中声明其 id。
+Core 会在 `provision(profile, operationId)` 之前持久化 durable intent。Provider 会在外部分配之前验证设置，并在永久拒绝 profile 时抛出 `WorkerProviderError`。当 operation id 重复时，`provision` 必须采用同一个租约。
+Core 会将经过验证的 profile 设置与租约一同持久化，并将该快照提供给 `destroy({ leaseId, profile })`；后者必须具备幂等性；同时也提供给 `inspect({ leaseId, profile })`，后者返回 `active`、`destroyed` 或 `unknown`。这样，provider 就能在 Gateway 重启或命名 profile 被移除后路由生命周期调用。SSH 端点的 `keyRef` 使用 `SecretRef`，绝不能内联密钥材料；同时包含来自可信 provisioning 输出的 `hostKey`，其格式必须严格为 `algorithm base64`，不得包含主机名或注释。Core 会固定 `hostKey`，绝不会信任首次连接中的密钥。Provider 还可以返回最多 10 个有序且唯一的 `fallbackPorts`（取值范围为 1 到 65535 的整数端口，且不包括主 `port`）；Core 会验证并持久化这些由 provider 广告的候选端口，用于幂等探测、内容寻址传输、受回执/锁保护的构件安装、收敛式托管工作树镜像以及隧道重连。含义不明确且未受保护的有状态命令会安全失败，不会在候选端口之间重放。当 SSH 账户还拥有无关进程时，租约可以设置 `sharedHost: true`；随后 Core 会在工作区协调期间避免冻结整个主机上的进程。省略该字段或设置为 `false` 表示使用专用工作器主机。活动检查会重复返回这一事实，以便 Core 能够为在该字段存在之前持久化的租约协调由 provider 所拥有的隔离机制；隧道启动会等待首次权威检查完成。生成动态 `keyRef` 的 provider 可以实现 `resolveSshIdentity({ leaseId, profile, keyRef })`；如果存在该方法，该解析器具有权威性；没有该方法的 provider 则使用配置的通用 secret resolver。
+`WorkerLease.desktop` 是可选的，其形状为 `{ protocol: "rfb"; port: number; passwordFilePath?: string }`；如果存在，`passwordFilePath` 必须是绝对路径。Provider 会从 `provision` 报告这一预热时能力；该能力不能追溯添加到已存在的活动租约中。Gateway 会在需要时通过 provider 的 SSH 端点读取密码文件，且绝不会持久化密码。
+
+具有可续期租约的 provider 还可以实现 `renew(leaseId)`。
+
+`inspect` 在发生暂时性或不确定的失败时必须抛出异常；只有在权威确认资源不存在时才返回 `unknown`。在已持久化销毁请求之后，Core 会将活动的本地记录标记为孤立，或将资源不存在视为拆除完成。
 
 通过 `api.registerEmbeddingProvider(...)` 注册的嵌入 provider 还必须在插件清单中的 `contracts.embeddingProviders` 里列出。这是用于可复用向量生成的通用嵌入接口。Memory search 可以消费这个通用 provider 接口。较旧的 `api.registerMemoryEmbeddingProvider(...)` 和 `contracts.memoryEmbeddingProviders` 接口现已弃用，作为兼容性保留，供现有的 memory 专用 provider 迁移。
 
@@ -116,18 +119,18 @@ Core 会将已验证的 profile 设置与租约一并持久化，并将该快照
 
 ### 工具和命令
 
-对于固定工具名称的简单仅工具插件，请使用 [`defineToolPlugin`](/plugins/tool-plugins)。
+对于固定工具名称的简单工具插件，请使用 [`defineToolPlugin`](/plugins/tool-plugins)。
 对于混合插件或完全动态的工具注册，请直接使用 `api.registerTool(...)`。
 
 | 方法                                 | 注册内容                                                                                                                        |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `api.registerTool(tool, opts?)`        | Agent 工具（必需，或 `{ optional: true }`）                                                                                            |
+| `api.registerTool(tool, opts?)`        | 代理工具（必需，或 `{ optional: true }`）                                                                                            |
 | `api.registerCommand(def)`             | 自定义命令（绕过 LLM）                                                                                                        |
-| `api.registerNodeHostCommand(command)` | 由 `openclaw node run` 处理的命令；可选的 `agentTool` 元数据可以在节点连接时将其作为 agent 可见的工具公开 |
+| `api.registerNodeHostCommand(command)` | 由 `openclaw node run` 处理的命令；可选的 `agentTool` 元数据可以在节点连接时将其作为代理可见的工具公开 |
 
-当 agent 需要一个简短的、由命令拥有的路由提示时，插件命令可以设置 `agentPromptGuidance`。该文本应仅与命令本身相关；不要将提供方或插件特定策略加入核心提示构建器中。
+当代理需要一个简短的、由命令拥有的路由提示时，插件命令可以设置 `agentPromptGuidance`。该文本应仅与命令本身相关；不要将提供方或插件特定策略加入核心提示构建器中。
 
-Guidance 条目可以是传统字符串，适用于每个提示界面，或者是
+指导条目可以是传统字符串，适用于每个提示界面，或者是
 结构化条目：
 
 ```ts
@@ -142,11 +145,11 @@ agentPromptGuidance: [
 `openclaw_main` 的弃用别名。若有意对所有界面生效，请省略 `surfaces`。
 不要传入空的 `surfaces` 数组；它会被拒绝，这样就不会因为意外的作用域丢失而变成全局提示文本。
 
-原生 Codex app-server 开发者指令比其他提示界面更严格：只有明确作用域为 `codex_app_server` 的 guidance 才会被提升到那个更高优先级的通道。传统字符串 guidance 和未指定作用域的结构化 guidance 仍然可用于非 Codex 提示界面以保持兼容性。
+原生 Codex app-server 开发者指令比其他提示界面更严格：只有明确作用域为 `codex_app_server` 的指导才会被提升到那个更高优先级的通道。传统字符串指导和未指定作用域的结构化指导仍然可用于非 Codex 提示界面，以保持兼容性。
 
 节点主机命令在已连接的节点主机上运行，而不是在 Gateway
 进程内部运行。如果存在 `agentTool`，节点会在成功连接 Gateway 后发布描述符；Gateway 仅在该节点已连接期间，且仅当描述符的
-`command` 位于节点已批准的命令范围内时，才会将其公开给 agent 运行。将 `agentTool.defaultPlatforms` 设置为将非危险命令加入默认节点命令允许列表；否则需要显式设置
+`command` 位于节点已批准的命令范围内时，才会将其公开给代理运行。将 `agentTool.defaultPlatforms` 设置为将非危险命令加入默认节点命令允许列表；否则需要显式设置
 `gateway.nodes.commands.allow` 或节点调用策略。`agentTool.name`
 必须符合提供方安全要求：以字母开头，只能使用字母、数字、下划线或连字符，且长度不得超过 64 个字符。基于 MCP 的节点工具可以设置 `agentTool.mcp` 元数据，以便目录和工具搜索界面显示远程 MCP 服务器/工具的身份信息，但执行仍会通过所公布的节点命令进行。
 
@@ -557,7 +560,7 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 | `api.description`        | `string?`                 | 插件描述（可选）                                                                       |
 | `api.source`             | `string`                  | 插件源路径                                                                              |
 | `api.rootDir`            | `string?`                 | 插件根目录（可选）                                                                     |
-| `api.config`             | `OpenClawConfig`          | 当前配置快照（可用时为活跃的内存运行时快照）                                             |
+| `api.config`              | `OpenClawConfig`          | 当前配置快照（可用时为活跃的内存运行时快照）                                             |
 | `api.pluginConfig`       | `Record<string, unknown>` | 来自 `plugins.entries.<id>.config` 的插件专属配置                                        |
 | `api.runtime`            | `PluginRuntime`           | [运行时辅助工具](/plugins/sdk-runtime)                                                  |
 | `api.logger`             | `PluginLogger`            | 作用域日志记录器（`debug`、`info`、`warn`、`error`）                                     |

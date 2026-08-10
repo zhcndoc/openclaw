@@ -123,7 +123,7 @@ pnpm qa:code-mode-models -- --model ollama/qwen3.5:9b
 - `--auth-env-only`: 仅使用环境中的提供商密钥；跳过已存储凭据、外部 CLI 凭据以及配置
 - `--no-auth-env-only`: 允许使用已存储凭据和外部 CLI 凭据（默认）
 - `--timeout <seconds>`: 以秒为单位的截止时间（默认 `600`；`0` 表示禁用）
-- `--json`: 输出稳定的 JSON 封装
+- `--json`: 输出稳定的 JSON 封装。
 
 ## 选项
 
@@ -162,16 +162,17 @@ openclaw agent --agent ops --message "在本地运行" --local
 
 ## 说明
 
-- `--message` 和 `--message-file` 必须且仅能使用一个。`--message-file` 会去除开头的 UTF-8 BOM，并保留多行内容；它会拒绝不是有效 UTF-8 的文件。大于 4 MiB 的文件会在分发前被拒绝。
-- Slash 命令（例如 `/compact`）不能通过 `--message` 运行。CLI 会拒绝它们，并指向对应的一级命令（压缩使用 `openclaw sessions compact <key>`）。
-- `--local` 运行是一次性的：为本次运行打包的 MCP loopback 资源，以及启动时预热的 Claude stdio 会话，会在回复后被回收，因此脚本化调用不会留下本地子进程继续运行。由 Gateway 支持的运行则会将 Gateway 拥有的 MCP loopback 资源保留在正在运行的 Gateway 进程中。
-- 使用 `--local` 的独立嵌入式执行在恢复重启时，如果已有主会话存在，则拒绝复用该会话。请通过健康的 Gateway 运行该轮次，或在那里使用 `/new` 或 `/reset` 重置；独立的嵌入式进程无法安全地与 Gateway 扫描器协调该恢复所有者。
-- 当 `--agent`、`--channel` 和 `--to` 一起使用时，会话路由遵循 channel 的规范收件人与 `session.dmScope`。具有稳定的仅出站收件人身份的 channel 会使用由 provider 拥有的会话，与 agent 的主会话隔离。`--reply-channel` 和 `--reply-account` 仅影响投递。
-- `--session-key` 用于选择显式会话键。以 agent 为前缀的键必须使用 `agent:<agent-id>:<session-key>` 形式，并且当同时提供 `--agent` 时，`--agent` 必须与该键的 agent id 匹配。不带哨兵的裸键在提供 `--agent` 时会限定到 `--agent`，否则限定到配置的默认 agent；例如 `--agent ops --session-key incident-42` 会路由到 `agent:ops:incident-42`。字面键 `global` 和 `unknown` 只有在未提供 `--agent` 时才保持不限定作用域。
-- `--json` 会为 JSON 响应保留 stdout；Gateway、插件以及 `--local` 的诊断信息会输出到 stderr，因此脚本可以直接解析 stdout。
-- 在瞬时握手重试耗尽后，Gateway 超时或连接关闭都会使命令失败；CLI 绝不会静默地以内嵌方式重新运行该轮次。传输丢失的情况是模糊的——Gateway 可能已经接受并且仍可能完成该轮次——因此 stderr 提示会建议你先检查 `openclaw gateway status` 和会话转录，再重试或使用 `--local` 重新运行，以避免重复执行该轮次。
-- `SIGTERM`/`SIGINT` 会中断正在等待的、由 Gateway 支持的请求；如果 Gateway 已经接受了该运行，CLI 还会在退出前针对该 run id 发送 `chat.abort`。`--local` 运行会接收相同的信号，但不会发送 `chat.abort`。如果启动器子进程因首次转发的 `SIGINT` 或 `SIGTERM` 终止，则分别以状态码 130 或 143 退出。如果内部运行去重键已经在该会话中有一个活动运行，响应会报告 `status: "in_flight"`，而非 JSON 的 CLI 会输出 stderr 诊断信息，而不是空回复。对于外部 cron/systemd 包装器，请保留一个强制终止的后备机制，例如 `timeout -k 60 600 openclaw agent ...`，以便在关闭无法排空时，监督器能够回收该进程。
-- 当此命令触发 `models.json` 重新生成时，SecretRef 管理的 provider 凭据会以非秘密标记形式持久化（例如环境变量名、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），绝不会解析为秘密明文。标记写入来自当前活动的源配置快照，而不是来自已解析的运行时秘密值。
+- 必须在 `--message` 和 `--message-file` 中恰好选择一个。`--message-file` 会去除开头的 UTF-8 BOM 并保留多行内容；对于不是有效 UTF-8 的文件会拒绝处理。大于 4 MiB 的文件会在分发前被拒绝。
+- 斜杠命令（例如 `/compact`）不能通过 `--message` 运行。CLI 会拒绝执行，并指引你使用对应的一级命令（用于压缩的命令为 `openclaw sessions compact <key>`）。
+- `--local` 运行是一次性的：为本次运行打开的捆绑 MCP 回环资源和 Claude stdio 热会话会在回复后被回收，因此脚本化调用不会遗留正在运行的本地子进程。由 Gateway 支持的运行则会将 Gateway 所有的 MCP 回环资源保留在运行中的 Gateway 进程内。
+- `--local` 要求对配置的状态目录拥有独占所有权。当 Gateway 或其他 `agent --local` 运行拥有该目录时，它会拒绝启动，并在整个嵌入式回合期间持有相同的状态锁。不使用 `--local` 以使用活动中的 Gateway，或先使用 `openclaw gateway stop` 停止它。
+- 使用 `--local` 进行独立嵌入式执行时，如果重启恢复处于待处理状态，则拒绝复用现有主会话。请通过运行正常的 Gateway 执行该回合，或在 Gateway 中使用 `/new` 或 `/reset` 重置；独立的嵌入式进程无法与 Gateway 扫描器安全地协调恢复所有者。
+- 同时使用 `--agent`、`--channel` 和 `--to` 时，会话路由遵循通道的规范接收者和 `session.dmScope`。具有稳定的仅出站接收者身份的通道会使用由提供商所有、且与代理主会话隔离的会话。`--reply-channel` 和 `--reply-account` 只影响消息投递。
+- `--session-key` 用于选择显式会话键。代理前缀形式的键必须使用 `agent:<agent-id>:<session-key>`，并且在同时提供 `--agent` 时，`--agent` 必须与键中的代理 ID 匹配。不带前缀且不是哨兵值的键，在提供 `--agent` 时归属于该代理，否则归属于配置的默认代理；例如，`--agent ops --session-key incident-42` 会路由到 `agent:ops:incident-42`。字面键 `global` 和 `unknown` 仅在未提供 `--agent` 时保持无作用域。
+- `--json` 会将 stdout 专用于 JSON 响应；Gateway、插件和 `--local` 的诊断信息会输出到 stderr，以便脚本直接解析 stdout。
+- 瞬时握手重试耗尽后，Gateway 超时或连接关闭会导致命令失败；CLI 绝不会静默地重新以内嵌方式运行该回合。传输中断状态不明确——Gateway 可能已经接受请求，也可能仍会完成该回合——因此 stderr 提示会建议检查 `openclaw gateway status` 和会话记录，然后再重试或使用 `--local` 重新运行，以避免执行该回合两次。
+- `SIGTERM`/`SIGINT` 会中断等待中的 Gateway 支持请求；如果 Gateway 已接受运行，CLI 还会在退出前为该运行 ID 发送 `chat.abort`。`--local` 运行会收到相同信号，但不会发送 `chat.abort`。如果启动器子进程因首次转发的 `SIGINT` 或 `SIGTERM` 而终止，则分别以状态码 130 或 143 退出。如果内部运行去重键已针对该会话存在活动运行，则响应会报告 `status: "in_flight"`，非 JSON CLI 会输出 stderr 诊断信息，而不是空回复。对于外部 cron/systemd 包装器，请保留一个强制终止兜底机制，例如 `timeout -k 60 600 openclaw agent ...`，这样当关闭流程无法排空时，监管程序仍能回收该进程。
+- 当此命令触发 `models.json` 重新生成时，由 SecretRef 管理的提供商凭据会以非秘密标记的形式持久化（例如环境变量名称、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），绝不会保存解析后的明文密钥。标记写入来自活动源配置快照，而不是解析后的运行时密钥值。
 
 ## JSON 投递状态
 

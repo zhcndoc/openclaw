@@ -218,7 +218,11 @@ Socket Mode 和 HTTP Request URLs 在消息、斜杠命令、App Home 和交互�
 
 启动时，OpenClaw 会通过 Slack 的 `auth.test` 验证 `enterpriseOrgInstall`。没有该标志的组织安装 token，或者带有该标志的工作区 token，都会导致启动失败。Slack 仍然是哪些工作区已授权该安装的唯一事实来源；随后 OpenClaw 会把配置的频道、用户、私信和提及策略应用到每个已投递事件上。Enterprise V1 会在分发前拒绝所有由 bot 发送的 `message` 和 `app_mention` 事件，不论 `allowBots` 如何，因为组织安装不会提供稳定、带工作区限定的 bot 身份用于防循环。
 
-企业支持刻意限制为直接 Socket 模式或 HTTP 模式下的 `message` 和 `app_mention` 事件及其即时回复。relay 模式、斜杠命令、交互、App Home、反应事件监听器、置顶、Slack 操作工具、Slack 原生审批、绑定、排队或计划投递，以及主动发送都不适用于企业账号。出站确认、输入状态和状态反应通过由监听器拥有的 Slack client 支持，并且需要 `reactions:write`；入站反应通知和反应操作工具仍不可用。
+企业支持直接使用 Socket Mode 或 HTTP 接收 `message` 和 `app_mention` 事件，以及发送带工作区限定的出站消息。对于企业账号，中继模式、斜杠命令、交互、App Home、反应事件监听器、置顶、Slack 原生审批和绑定仍不可用。除文件上传以及添加或移除表情反应外，Slack 操作工具仍不可用。支持出站确认、输入状态和状态反应，并且需要 `reactions:write`；入站反应通知仍不可用。
+
+OpenClaw 将 Enterprise Grid 目标记录为
+`team:<team-id>:channel:<channel-id>` 或 `team:<team-id>:user:<user-id>`。
+当前会话中的发送、上传和反应会继承该目标。分离式或主动调用必须提供带工作区限定的目标；裸频道 ID 和用户 ID 会安全失败，因为不同工作区可能会复用这些 ID。
 
 即时回复会复用标准 Slack 投递行为，支持分块、媒体、元数据、身份回退、展开和回执，但前提是已验证、由监听器拥有的 client 仍处于活动事件轮次中。内存中的发送队列和线程参与记录会按该事件的工作区进行分区；client 本身不会被序列化或持久化。
 
@@ -232,7 +236,7 @@ Socket Mode 和 HTTP Request URLs 在消息、斜杠命令、App Home 和交互�
 openclaw plugins install @openclaw/slack
 ```
 
-`plugins install` 会注册并启用该插件。在你配置好下面的 Slack 应用和频道设置之前，它不会执行任何操作。有关通用的插件安装规则，请参见 [Plugins](/tools/plugin)。
+`plugins install` 会注册并启用该插件。在你配置好下面的 Slack 应用和频道设置之前，它不会执行任何操作。有关通用的插件安装规则，请参见 [插件](/tools/plugin)。
 
 ## 快速设置
 
@@ -1151,7 +1155,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `dm.groupChannels`（可选的 MPIM 允许列表）
 
     <Note>
-    `dm.groupEnabled` 和 `dm.groupChannels` 只会过滤 Slack 已经投递给应用的群组 DM。它们不能让应用看到一个它从未加入过的群组 DM。请将群组 DM 转换为私有频道并邀请应用，或者让应用使用 `conversations.open` 打开一个新的 MPDM。参见 [Group DMs (MPDMs) and bots](/channels/slack#group-dms-mpdms-and-bots)。
+    `dm.groupEnabled` 和 `dm.groupChannels` 只会过滤 Slack 已经投递给应用的群组 DM。它们不能让应用看到一个它从未加入过的群组 DM。请将群组 DM 转换为私有频道并邀请应用，或者让应用使用 `conversations.open` 打开一个新的 MPDM。参见 [群组 DM（MPDM）与 bot](/channels/slack#group-dms-mpdms-and-bots)。
     </Note>
 
     多账号优先级：
@@ -1693,10 +1697,10 @@ Slack 可以作为原生审批客户端，通过交互式按钮和交互操作�
 ## 事件与运行行为
 
 - 消息编辑/删除会映射为系统事件。
-- 线程广播（“Also send to channel” 线程回复）会作为普通用户消息处理。
+- 线程广播（“也发送到频道”线程回复）会作为普通用户消息处理。
 - 反应添加/移除事件会映射为系统事件。
 - 成员加入/离开、频道创建/重命名，以及置顶添加/移除事件会映射为系统事件。
-- 可选的 presence 轮询可以将观察到的人工参与者从 `away` 到 `active` 的转换映射到该参与者最近活跃的符合条件的 Slack 会话中。默认关闭。
+- 可选的在线状态轮询可以将观察到的人工参与者从 `离开` 到 `在线` 的转换映射到该参与者最近活跃的符合条件的 Slack 会话中。默认关闭。
 - 启用 `configWrites` 时，`channel_id_changed` 可以迁移频道配置键。
 - 频道主题/用途元数据被视为不受信任的上下文，并且可以注入到路由上下文中。
 - Agent View `app_context` 实体会按照 Slack 相关性顺序进行验证，并且只作为结构化的不受信任上下文暴露；省略的上下文会清除该轮内容，而不是复用过期实体。
@@ -1704,15 +1708,15 @@ Slack 可以作为原生审批客户端，通过交互式按钮和交互操作�
 - 用于探测、作用域发现、会话分类和投递对账的专用 Web API 读取请求，每次请求尝试都有 30 秒截止时间。瞬态失败仍可能重试，因此完整操作可能耗时更长。共享的 Bolt 和具备 mutation 能力的客户端不使用这个默认截止时间，因为 Slack 可能会在迟到的响应到达 OpenClaw 之前就提交 mutation。
 - 块操作、快捷方式和 modal 交互会发出结构化的 `Slack interaction: ...` 系统事件，并带有丰富的负载字段：
   - 块操作：所选值、标签、选择器值和 `workflow_*` 元数据
-  - 全局快捷方式：回调和 actor 元数据，路由到 actor 的直接会话
-  - 消息快捷方式：回调、actor、频道、线程和所选消息上下文
+  - 全局快捷方式：回调和参与者元数据，路由到参与者的直接会话
+  - 消息快捷方式：回调、参与者、频道、线程和所选消息上下文
   - modal `view_submission` 和 `view_closed` 事件，带有路由后的频道元数据和表单输入
 
 在你的 Slack 应用配置中定义全局或消息快捷方式，并使用任意非空的 callback ID。OpenClaw 会确认匹配的快捷方式负载，应用与其他 Slack 交互相同的 DM/频道发送者策略，并将已清理的事件排队到所路由的 agent 会话。trigger IDs 和 response URLs 会从 agent 上下文中脱敏移除。
 
-### Presence 事件
+### 在线状态事件
 
-Slack 不会通过 Events API 或 Socket Mode 发送 presence 变化。OpenClaw 可以改为对其消息已通过正常 Slack 访问和路由检查的人工参与者轮询 [`users.getPresence`](https://docs.slack.dev/reference/methods/users.getPresence/)。
+Slack 不会通过 Events API 或 Socket Mode 发送在线状态变化。OpenClaw 可以改为对其消息已通过正常 Slack 访问和路由检查的人工参与者轮询 [`users.getPresence`](https://docs.slack.dev/reference/methods/users.getPresence/)。
 
 ```json5
 {
@@ -1728,13 +1732,13 @@ Slack 不会通过 Events API 或 Socket Mode 发送 presence 变化。OpenClaw 
 }
 ```
 
-- `off`（默认）：不启用 presence 计时器，也不调用 Slack API。
+- `off`（默认）：不启用在线状态计时器，也不调用 Slack API。
 - `auto`：监控最近 24 小时内活跃的 DM、MPIM 和 Slack 线程，最多 8 位被观察到的人类参与者。不包括顶层频道会话。
 - `on`：监控相同的会话，不设参与者上限，并包含顶层频道会话。可使用按频道覆盖来强制启用或抑制某个频道。
 
-OpenClaw 每个 Slack 账户每分钟最多轮询 45 个唯一用户，首次结果会被播种而不会唤醒 agent，并且只有在观察到从 `away` 到 `active` 的转换时才会唤醒。即使某个人参与了多个线程，每个 Slack 账户和用户也都会应用一个持久的 8 小时冷却期。该事件只路由到该人最近活跃的符合条件的会话，并提示 agent 在决定是否发送一句简短问候前先查阅 memory/wiki 和已知的时区上下文。agent 可以保持沉默。
+OpenClaw 每个 Slack 账户每分钟最多轮询 45 个唯一用户，首次结果会被播种而不会唤醒 agent，并且只有在观察到从 `离开` 到 `在线` 的转换时才会唤醒。即使某个人参与了多个线程，每个 Slack 账户和用户也都会应用一个持久的 8 小时冷却期。该事件只路由到该人最近活跃的符合条件的会话，并提示 agent 在决定是否发送一句简短问候前先查阅 memory/wiki 和已知的时区上下文。agent 可以保持沉默。
 
-bot token 需要 `users:read`，这已经包含在推荐的 manifest 中。Enterprise Grid 全组织安装不可用 presence 事件。
+bot token 需要 `users:read`，这已经包含在推荐的 manifest 中。Enterprise Grid 全组织安装不可用在线状态事件。
 
 ## 配置参考
 

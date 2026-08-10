@@ -19,7 +19,7 @@ title: "医生"
 相关内容：
 
 - 故障排查: [疑难解答](/gateway/troubleshooting)
-- 安全审计: [安全](/gateway/security)
+- 安全审计: [安全](/gateway/security)。
 
 ## 姿态
 
@@ -187,7 +187,6 @@ repair?(ctx, findings) -> HealthRepairResult
 ```bash
 openclaw doctor --lint --only core/doctor/gateway-config --json
 openclaw doctor --lint --skip core/doctor/skills-readiness
-openclaw doctor --lint --all --skip core/doctor/session-locks
 ```
 
 `--only` 和 `--skip` 接受完整的检查 ID，并且可以多次使用。如果 `--only` 中的某个 ID 未注册，那么该 ID 将不会运行任何检查；请使用输出中的 `checksRun`/`checksSkipped` 来确认你所针对的门禁是否选择了你期望的检查。

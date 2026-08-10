@@ -48,7 +48,8 @@ read_when:
 
 这不会合并转录、改变会话密钥或传递路由、扩大 `tools.sessions.visibility`，也不会授予更广泛的 `sessions_*` 工具访问权限。共享工作区记忆（`MEMORY.md` 和 `memory/*.md`）保持其现有行为。
 
-主动记忆必须保持启用。检索会为符合条件的回复增加一个受限的阻塞步骤；超时、搜索不可用以及空结果都会在没有回忆到的转录上下文的情况下继续回复。OpenClaw 内置的记忆提供程序支持这一受保护的转录回忆路径，适用于内置和 QMD 后端。其他记忆提供程序保留各自的回忆行为，但不会自动获得私有转录授权。`openclaw doctor` 会报告不受支持的提供程序或缺少 `memory_search` 工具。
+主动记忆必须保持启用。检索会为符合条件的回复增加一个有界的阻塞步骤；超时、搜索不可用以及结果为空时，都会在没有回忆的转录上下文的情况下继续回复。OpenClaw 的内置记忆提供程序支持这一受保护的转录回忆路径。其他记忆提供程序会保留各自的回忆行为，但不会自动获得私有转录授权。`openclaw doctor`
+会报告不受支持的提供程序或缺少 `memory_search` 工具。
 
 ## 高级 Active Memory 快速开始
 
@@ -104,7 +105,7 @@ openclaw gateway restart
 - `config.modelFallback` 仅在没有显式或继承模型可用时使用
 - `config.fastMode` 可选地为回忆覆盖快速模式，而不更改主 agent
 - `config.promptStyle: "balanced"` 是 `recent` 模式的默认值
-- active memory 仍然只会在符合条件的交互式持久聊天会话中运行（参见[运行时机](#when-it-runs)）
+- active memory 仍然只会在符合条件的交互式持久聊天会话中运行（参见[运行时机](#when-it-runs)）。
 
 ## 工作原理
 
@@ -155,7 +156,7 @@ Active Memory 有两个面向 deep-recall 通道的定位路径：
 | `always`   | 保留之前的行为，在每个符合条件的目标轮次都运行。                     |
 | `off`      | 在不卸载插件的情况下禁用 deep recall。                               |
 
-确定性的 trusted-trigger lane 在 `off` 模式下仍然可用。
+确定性的 trusted-trigger lane 在 `off` 模式下仍然可用。  
 `rememberAcrossConversations` 不变：它仍然控制 deep recall 是否可以搜索其他私密会话。
 
 ### 会话类型
@@ -173,7 +174,7 @@ allowedChatTypes: ["direct", "group"];
 allowedChatTypes: ["direct", "group", "channel"];
 ```
 
-如果要在某个允许的聊天类型内进行更小范围的灰度发布，可以添加
+如果要在某个允许的聊天类型内进行更小范围的灰度发布，可以添加  
 `config.allowedChatIds` 和 `config.deniedChatIds`：
 
 - `allowedChatIds` 是已解析会话 id 的允许名单。非空时，active memory 只会在会话 id 位于该列表中的会话上运行——这会一次性收窄**所有**允许的聊天类型，包括直接消息。若要保留所有直接消息，同时只收窄群组，请把直接对端 id 也加入 `allowedChatIds`，或者将 `allowedChatTypes` 仅限制在你正在测试的 group/channel 灰度范围内。
@@ -548,27 +549,26 @@ agents/<agent>/sessions/active-memory/<blocking-memory-sub-agent-session-id>.jso
 | Key                          | Type                                                                                                 | 含义                                                                                                                                                                                                                                           |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `enabled`                    | `boolean`                                                                                            | 启用插件本身                                                                                                                                                                                                                         |
-| `config.mode`                | `"escalate" \| "always" \| "off"`                                                                    | 控制阻塞式深度回忆子代理何时运行；默认 `"escalate"`                                                                                                                                                                       |
-| `config.agents`              | `string[]`                                                                                           | 可使用活跃记忆的代理 ID                                                                                                                                                                                                              |
-| `config.model`               | `string`                                                                                             | 可选的阻塞式子代理模型引用；未设置时，继承当前会话模型                                                                                                                                                             |
-| `config.allowedChatTypes`    | `("direct" \| "group" \| "channel" \| "explicit")[]`                                                 | 允许运行活跃记忆的会话类型；默认 `["direct"]`                                                                                                                                                                                |
-| `config.allowedChatIds`      | `string[]`                                                                                           | 应用于 `allowedChatTypes` 之后的可选会话级允许名单；非空列表将严格拒绝                                                                                                                                                 |
-| `config.deniedChatIds`       | `string[]`                                                                                           | 可选会话级拒绝名单，会覆盖允许的会话类型和允许的 ID                                                                                                                                                           |
-| `config.queryMode`           | `"message" \| "recent" \| "full"`                                                                    | 控制阻塞式子代理可见的对话内容量                                                                                                                                                                                        |
+| `config.mode`                | `"escalate" \| "always" \| "off"`                                                                    | 控制阻塞式深度回忆子代理何时运行；默认值为 `"escalate"`                                                                                                                                                                       |
+| `config.agents`              | `string[]`                                                                                           | 可以使用活跃记忆的代理 ID                                                                                                                                                                                                              |
+| `config.model`               | `string`                                                                                             | 可选的阻塞式子代理模型引用；未设置时继承当前会话模型                                                                                                                                                             |
+| `config.allowedChatTypes`    | `("direct" \| "group" \| "channel" \| "explicit")[]`                                                 | 允许运行活跃记忆的会话类型；默认为 `["direct"]`                                                                                                                                                                                |
+| `config.allowedChatIds`      | `string[]`                                                                                           | 可选的会话级允许列表，在 `allowedChatTypes` 之后应用；非空列表采用默认拒绝策略                                                                                                                                                 |
+| `config.deniedChatIds`       | `string[]`                                                                                           | 可选的会话级拒绝列表，优先于允许的会话类型和允许的 ID                                                                                                                                                           |
+| `config.queryMode`           | `"message" \| "recent" \| "full"`                                                                    | 控制阻塞式子代理可以看到多少对话内容                                                                                                                                                                                        |
 | `config.promptStyle`         | `"balanced" \| "strict" \| "contextual" \| "recall-heavy" \| "precision-heavy" \| "preference-only"` | 控制阻塞式子代理在决定是否返回记忆时的积极程度或严格程度                                                                                                                                                     |
-| `config.toolsAllow`          | `string[]`                                                                                           | 阻塞式子代理可调用的具体记忆工具名称；默认 `["memory_search", "memory_get"]`，或在 `plugins.slots.memory` 为 `memory-lancedb` 时默认 `["memory_recall"]`；通配符、`group:*` 条目以及核心代理工具都会被忽略 |
-| `config.thinking`            | `"off" \| "minimal" \| "low" \| "medium" \| "high" \| "xhigh" \| "adaptive" \| "max"`                | 阻塞式子代理的高级思考覆盖；为提高速度，默认 `off`                                                                                                                                                                    |
-| `config.fastMode`            | `boolean \| "auto"`                                                                                  | 阻塞式子代理的可选快速模式覆盖；未设置时，继承正常代理、会话和模型默认值                                                                                                                                  |
-| `config.promptOverride`      | `string`                                                                                             | 高级完整提示词替换；不建议在正常使用中使用                                                                                                                                                                                  |
-| `config.promptAppend`        | `string`                                                                                             | 附加到默认或被覆盖提示词后的高级额外说明                                                                                                                                                                          |
-| `config.timeoutMs`           | `number`                                                                                             | 阻塞式子代理的硬超时（范围 250-120000 ms；默认 15000）                                                                                                                                                                      |
-| `config.setupGraceTimeoutMs` | `number`                                                                                             | 在回忆超时到期前的高级额外初始化预算；范围 0-30000 ms，默认 0。有关 v2026.4.x 升级指南，请参见 [冷启动宽限](#cold-start-grace)                                                                              |
-| `config.maxSummaryChars`     | `number`                                                                                             | 活跃记忆摘要中的最大字符数（范围 40-1000；默认 220）                                                                                                                                                                      |
-| `config.logging`             | `boolean`                                                                                            | 在调优期间输出活跃记忆日志                                                                                                                                                                                                             |
-| `config.persistTranscripts`  | `boolean`                                                                                            | 在删除其临时 SQLite 会话行之前，将阻塞式子代理转录导出为 JSONL 工件                                                                                                                                     |
-| `config.transcriptDir`       | `string`                                                                                             | 位于代理会话文件夹下的相对转录工件目录（默认 `"active-memory"`）                                                                                                                                                |
-| `config.modelFallback`       | `string`                                                                                             | 仅在 [模型回退链](#model-fallback-policy) 最后一步使用的可选模型                                                                                                                                                   |
-| `config.qmd.searchMode`      | `"inherit" \| "search" \| "vsearch" \| "query"`                                                      | 覆盖阻塞式子代理使用的 QMD 搜索模式；默认 `"search"`（快速词法搜索）—— 使用 `"inherit"` 可与主记忆后端设置保持一致                                                                                 |
+| `config.toolsAllow`          | `string[]`                                                                                           | 阻塞式子代理可以调用的具体记忆工具名称；默认为 `["memory_search", "memory_get"]`；当 `plugins.slots.memory` 为 `memory-lancedb` 时，默认为 `["memory_recall"]`；通配符、`group:*` 条目和核心代理工具会被忽略 |
+| `config.thinking`            | `"off" \| "minimal" \| "low" \| "medium" \| "high" \| "xhigh" \| "adaptive" \| "max"`                | 阻塞式子代理的高级思考覆盖设置；默认为 `off` 以提升速度                                                                                                                                                                    |
+| `config.fastMode`            | `boolean \| "auto"`                                                                                  | 可选的阻塞式子代理快速模式覆盖设置；未设置时继承代理、会话和模型的常规默认值                                                                                                                                  |
+| `config.promptOverride`      | `string`                                                                                             | 高级完整提示词替换；不建议正常使用                                                                                                                                                                                  |
+| `config.promptAppend`        | `string`                                                                                             | 附加到默认提示词或替换后提示词末尾的高级额外指令                                                                                                                                                                          |
+| `config.timeoutMs`           | `number`                                                                                             | 阻塞式子代理的硬超时时间（范围为 250-120000 毫秒；默认值为 15000）                                                                                                                                                                      |
+| `config.setupGraceTimeoutMs` | `number`                                                                                             | 回忆超时前额外提供的高级初始化时间；范围为 0-30000 毫秒，默认值为 0。有关 v2026.4.x 的升级指导，请参阅[冷启动宽限时间](#cold-start-grace)                                                                                                                                              |
+| `config.maxSummaryChars`     | `number`                                                                                             | 活跃记忆摘要中的最大字符数（范围为 40-1000；默认值为 220）                                                                                                                                                                      |
+| `config.logging`             | `boolean`                                                                                            | 调优期间输出活跃记忆日志                                                                                                                                                                                                             |
+| `config.persistTranscripts`  | `boolean`                                                                                           | 将阻塞式子代理的会话记录导出为 JSONL 文件，然后删除其临时 SQLite 会话行                                                                                                                                     |
+| `config.transcriptDir`       | `string`                                                                                             | 代理会话文件夹下的相对会话记录文件目录（默认值为 `"active-memory"`）                                                                                                                                                |
+| `config.modelFallback`       | `string`                                                                                             | 仅在[模型回退链](#model-fallback-policy)的最后一步使用的可选模型                                                                                                                                                   |
 
 有用的调优字段：
 
@@ -645,7 +645,8 @@ agents/<agent>/sessions/active-memory/<blocking-memory-sub-agent-session-id>.jso
 2. 对于跨会话记忆，请确认代理的有效
    `memory.search.rememberAcrossConversations` 设置已启用，运行
    `openclaw doctor` 以验证当前记忆提供程序支持受保护的
-   转录回忆，并在显式配置时确认 `config.toolsAllow` 包含 `memory_search`。
+   转录回忆，并在显式配置时确认 `config.toolsAllow` 包含
+   `memory_search`。
    对于高级 Active Memory，请确认代理 ID
    已列在 `config.agents` 中。
 3. 确认你是在符合条件的交互式持久会话中进行测试。
@@ -658,16 +659,16 @@ agents/<agent>/sessions/active-memory/<blocking-memory-sub-agent-session-id>.jso
 
 ## 常见问题
 
-Advanced Active Memory 依赖于所配置的内存插件的 recall
-pipeline，因此大多数 recall 异常其实是 embedding 提供方的问题，而不是
+Advanced Active Memory 依赖于所配置的内存插件的召回
+流程，因此大多数召回异常其实是嵌入提供方的问题，而不是
 active-memory 的 bug。默认的 `memory-core` 路径使用 `memory_search` 和
 `memory_get`；`memory-lancedb` 插槽使用 `memory_recall`。如果你使用了其他
 内存插件，请确认 `config.toolsAllow` 中列出了该插件实际注册的工具。跨会话记忆
-的范围更窄：当前内存提供方必须支持 OpenClaw 的受保护同 agent/private-session recall
+的范围更窄：当前内存提供方必须支持 OpenClaw 的受保护同 agent/private-session 召回
 路径。
 
 <AccordionGroup>
-  <Accordion title="Embedding provider switched or stopped working">
+  <Accordion title="嵌入提供方已切换或停止工作">
     如果未设置 `memory.search.provider`，OpenClaw 会使用 OpenAI embeddings。请为
     Bedrock、DeepInfra、Gemini、GitHub Copilot、LM Studio、local、Mistral、Ollama、
     Voyage 或兼容 OpenAI 的 embeddings 显式设置 `memory.search.provider`。如果已配置的
@@ -675,11 +676,11 @@ active-memory 的 bug。默认的 `memory-core` 路径使用 `memory_search` 和
     运行时失败不会自动回退。
 
     仅当你需要一个明确的单一 fallback 时，才设置可选的 `memory.search.fallback`。
-    有关 providers 的完整列表和示例，请参见 [Memory Search](/concepts/memory-search)。
+    有关提供方的完整列表和示例，请参见 [记忆搜索](/concepts/memory-search)。
 
   </Accordion>
 
-  <Accordion title="Recall feels slow, empty, or inconsistent">
+  <Accordion title="召回速度慢、结果为空或不一致">
     - 打开 `/trace on`，以在会话中显示插件拥有的 Active Memory 调试
       摘要。
     - 打开 `/verbose on`，以便在每次回复后也能看到 `🧩 Active Memory: ...` 状态行。
@@ -691,9 +692,9 @@ active-memory 的 bug。默认的 `memory-core` 路径使用 `memory_search` 和
       （`ollama list`）。
   </Accordion>
 
-  <Accordion title="First recall after gateway restart returns `status=timeout`">
+  <Accordion title="gateway 重启后的第一次召回返回 `status=timeout`">
     在 v2026.5.2 及更高版本中，如果冷启动设置（model warm-up + embedding
-    index load）在第一次 recall 触发时尚未完成，运行可能会耗尽配置的
+    index load）在第一次召回触发时尚未完成，运行可能会耗尽配置的
     `timeoutMs` 预算，并返回 `status=timeout` 且输出为空。gateway 日志会在重启后
     第一个符合条件的回复附近显示 `active-memory timeout after Nms`。
 

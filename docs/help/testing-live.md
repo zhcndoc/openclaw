@@ -305,24 +305,34 @@ Docker 说明：
 - 非默认模型的 effort 断言：
   `OPENCLAW_LIVE_CODEX_HARNESS_EXPECTED_EFFORT=<level>`
 - 矩阵覆盖：`OPENCLAW_LIVE_CODEX_HARNESS_TARGETS=<model>=<thinking>,...`
-- 认证模式：`OPENCLAW_LIVE_CODEX_HARNESS_AUTH=codex-auth`（默认）使用复制的 Codex 登录信息；`api-key` 通过 Codex app-server 使用 `OPENAI_API_KEY`。
+- 认证模式：`OPENCLAW_LIVE_CODEX_HARNESS_AUTH=codex-auth`（默认）使用
+  复制的 Codex 登录信息；`api-key` 通过 Codex app-server 使用
+  `OPENAI_API_KEY`。
 - 可选图像探测：`OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1`
 - 可选 MCP/工具探测：`OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1`
 - 可选 Guardian 探测：`OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1`
-- 可选恢复压力测试：`OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS=1` 会添加四轮历史对话，然后关闭并重启 Gateway 和 Codex app-server 三次，同时要求使用相同的原生线程 ID 和对话历史。使用
+- 可选恢复压力测试：`OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS=1` 添加
+  四轮历史对话，然后关闭并重启网关和 Codex app-server
+  三次，同时要求使用相同的原生线程 ID 和对话历史。可通过
   `OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS_HISTORY_TURNS`（1-20）和
   `OPENCLAW_LIVE_CODEX_HARNESS_RESUME_STRESS_RESTARTS`（1-10）覆盖有界计数。
 - 可选扇出压力测试：设置 `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=1`
-  和 `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_COUNT`（1-12）。Harness 会并发启动所有子任务，等待每个终态运行完成，并验证每个子任务的唯一回复和原生线程身份。
+  和 `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_COUNT`（1-12）。Harness 会并发启动
+  每个子任务，等待每个终态运行完成，并验证每个子任务的唯一回复和原生线程身份。
 - 可选压缩压力测试：`OPENCLAW_LIVE_CODEX_HARNESS_COMPACTION_STRESS=1`
-  会生成有界的原生工具输出，要求出现自动压缩事件，验证持久化的压缩计数和隐藏标记召回，然后重启 Gateway 和物理 Codex app-server，再重复输出和压缩波次。使用
+  生成有界的原生工具输出，要求自动压缩事件，验证持久化的压缩计数和隐藏标记召回，
+  重启网关和物理 Codex app-server，然后重复输出和压缩阶段。可通过
   `OPENCLAW_LIVE_CODEX_HARNESS_COMPACTION_STRESS_TURNS`（1-8）和
   `OPENCLAW_LIVE_CODEX_HARNESS_LARGE_OUTPUT_BYTES`（100000-800000）调整有界工作量。
 - 完整直接 API 上下文：`OPENCLAW_LIVE_CODEX_HARNESS_FULL_CONTEXT=1` 应用
-  `922000` 的上下文限制和 `700000` 的总压缩限制，发送密集的有界用户对话，在每个波次运行两次显式原生压缩检查点，并在每个检查点之后继续发送后续对话。它要求
+  `922000` 上下文和 `700000` 总自动压缩限制，在不使用 `/compact` 或其他手动检查点的情况下，
+  发送密集且有界的用户对话，并要求之后的一轮简短对话触发原生自动压缩。它要求
   `OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key`，以及绝对路径形式的
-  `OPENCLAW_LIVE_CODEX_HARNESS_MODEL_CATALOG`。目录必须通过
-  `max_context_window: 922000` 暴露所选模型，以便 Codex 不会将覆盖值限制回其正常的目录窗口。上面的普通低阈值压力测试仍会保留更严格的自动压缩和隐藏标记保留断言。
+  `OPENCLAW_LIVE_CODEX_HARNESS_MODEL_CATALOG`。目录必须公开精确选中的模型，并包含
+  `context_window: 922000`、
+  `max_context_window: 922000` 和
+  `auto_compact_token_limit: 700000`，这样 Codex 就不会将覆盖值限制回其正常目录窗口。
+  上述普通的降低阈值压力测试会保留更严格的自动压缩和隐藏标记保留断言。
 - 可选循环中继退出探测：
   `OPENCLAW_LIVE_CODEX_HARNESS_DISABLE_LOOP_RELAY=1`
 - 请求的思考偏好可能会映射到 Codex 为该模型公布的最接近 effort。例如，Luna 会将 `minimal` 映射为 `low`。
@@ -373,11 +383,12 @@ OPENCLAW_LIVE_CODEX_HARNESS=1 \
   OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key \
   OPENCLAW_LIVE_CODEX_HARNESS_FULL_CONTEXT=1 \
   OPENCLAW_LIVE_CODEX_HARNESS_MODEL_CATALOG=/absolute/path/to/models-api-1m.json \
-  OPENCLAW_LIVE_CODEX_HARNESS_MODEL=openai/gpt-5.6-terra \
-  OPENCLAW_LIVE_CODEX_HARNESS_THINKING=medium \
+  OPENCLAW_LIVE_CODEX_HARNESS_MODEL=openai/gpt-5.6-sol \
+  OPENCLAW_LIVE_CODEX_HARNESS_THINKING=low \
   OPENCLAW_LIVE_CODEX_HARNESS_COMPACTION_STRESS_TURNS=8 \
   OPENCLAW_LIVE_CODEX_HARNESS_LARGE_OUTPUT_BYTES=800000 \
-  pnpm test:live -- src/gateway/gateway-codex-harness.live.test.ts
+  OPENCLAW_LIVE_CODEX_HARNESS_DEBUG=1 \
+  node --import tsx scripts/test-live.mts --quiet src/gateway/gateway-codex-harness.live.test.ts
 ```
 
 GPT-5.6 原生 Codex 矩阵：
@@ -388,36 +399,57 @@ OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key \
   pnpm test:docker:live-codex-harness
 ```
 
-## 实时：OpenAI 重复压缩
+## 实时：OpenAI 长上下文
 
-- 目标：通过至少两次真实的自动压缩，运行内嵌的 OpenClaw `openai-responses` 代理循环，然后验证持久化标记仍然存在。
-- 测试：`src/agents/sessions/agent-session.openai-compaction.live.test.ts`
-- 启用：`OPENCLAW_LIVE_OPENAI_COMPACTION=1`
-- 默认模型：`gpt-5.6-luna`
-- 模型覆盖：`OPENCLAW_LIVE_OPENAI_COMPACTION_MODEL=<model>`
-- 普通压力模式使用缩减后的客户端上下文预算，以有限的 API 开销到达相同的真实压缩路径。
-- 全上下文模式将客户端预算设置为 `922000`，将压缩预留设置为 `222000`，因此自动压缩从 `700000` 开始。此外，它还要求观测到的提供商输入数量超过 `272000` 的长上下文计费边界。
-
-有限实时测试配方：
-
-```bash
-OPENCLAW_LIVE_TEST=1 \
-  OPENCLAW_LIVE_OPENAI_COMPACTION=1 \
-  pnpm test:live -- src/agents/sessions/agent-session.openai-compaction.live.test.ts
-```
+- 目标：通过进程自有的隔离 Gateway，验证精确模型嵌入式 OpenClaw 执行，跨越长上下文定价边界，观察一等 OpenAI Responses 压缩项，并证明下一次请求中的不透明重放和前缀裁剪。
+- 测试：`src/gateway/gateway-openai-long-context.live.test.ts`
+- 启用：`OPENCLAW_LIVE_OPENAI_LONG_CONTEXT=1`
+- 配置文件：`OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_PROFILE=full` 选择精确的
+  `openai/gpt-5.6-sol`，总窗口为 `1050000`，安全活动输入为
+  `922000`，最大输出为 `128000`，压缩阈值为 `700000`。`reduced`
+  使用更小的预算，但经过相同的传输和持久化路径。
+- 指标：`OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_METRICS=1` 会输出阶段计时和
+  token 观测值。这些测量仅供参考，不是通过/失败的延迟目标。
+- 长输出：`OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_OUTPUT=1` 要求生成
+  4000 到 8000 个输出 token 之间的确定性响应。
+- 可选的原始读取工具压力测试：
+  `OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_TOOL_OUTPUT=1`。它不属于默认配方，
+  因为有效工具面可能使用 Code Mode，而不是暴露原始读取工具。
 
 完整 `922000` 输入预算配方：
 
 ```bash
-OPENCLAW_LIVE_TEST=1 \
-  OPENCLAW_LIVE_OPENAI_COMPACTION=1 \
-  OPENCLAW_LIVE_OPENAI_COMPACTION_FULL=1 \
-  OPENCLAW_LIVE_OPENAI_COMPACTION_MODEL=gpt-5.6-terra \
-  pnpm test:live -- src/agents/sessions/agent-session.openai-compaction.live.test.ts
+OPENCLAW_LIVE_OPENAI_LONG_CONTEXT=1 \
+  OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_PROFILE=full \
+  OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_METRICS=1 \
+  OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_OUTPUT=1 \
+  node --import tsx scripts/test-live.mts --quiet src/gateway/gateway-openai-long-context.live.test.ts
 ```
 
+Reduced-budget 配方：
+
+```bash
+OPENCLAW_LIVE_OPENAI_LONG_CONTEXT=1 \
+  OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_PROFILE=reduced \
+  OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_METRICS=1 \
+  OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_OUTPUT=1 \
+  node --import tsx scripts/test-live.mts --quiet src/gateway/gateway-openai-long-context.live.test.ts
+```
+
+### 长上下文硬性判定条件
+
+完整的嵌入式和原生配方是验证运行，而不是吞吐量基准测试。除非满足以下运行时契约，否则测试会失败：
+
+- 运行时和模型身份必须精确匹配：按请求使用嵌入式 OpenClaw 或原生 Codex，二者都使用 `openai/gpt-5.6-sol`。
+- 至少有一个提供商请求的输入超过 `272000` 个 token，并且每次调用都报告优先级服务。
+- 嵌入式 OpenClaw 接收并持久化一等加密 Responses `compaction` 项，在下一次请求中重放完全相同的不透明项，并裁剪较早的输入前缀。加密内容绝不能出现在显示内容或诊断信息中。
+- 原生 Codex 报告有效窗口为 `875900`，在没有手动压缩的情况下增长到超过 `700000` 的总范围阈值，并在下一轮自动压缩。
+- 每个运行时都会生成 4000 到 8000 个输出 token 之间的确定性长响应，并在压缩和 Gateway 重启后保留持久化标记。
+
+压缩耗时、重启延迟、回合延迟和套件总耗时仅作为信息性指标输出。
+
 <Warning>
-完整模式会有意跨越 OpenAI 的长上下文计费边界，并可能产生数次大型 API 调用。只有在明确获准承担相关费用时才使用。
+完整模式会有意跨越 OpenAI 的长上下文定价边界，并发起多次大型 API 调用。当输入 token 超过 `272000` 时，整个请求的输入/缓存价格为 2 倍，输出价格为 1.5 倍；Fast/Priority 会使该层级的价格再次翻倍。只有在获得明确的费用批准后，才可使用完整模式。
 </Warning>
 
 新鲜 OpenAI API 密钥默认配置：
@@ -589,7 +621,7 @@ Live 测试发现凭据的方式与 CLI 相同。实际影响：
 
 - 测试：`extensions/byteplus/live.test.ts`
 - 启用：`BYTEPLUS_API_KEY=... BYTEPLUS_LIVE_TEST=1 pnpm test:live extensions/byteplus/live.test.ts`
-- 可选模型覆盖：`BYTEPLUS_CODING_MODEL=ark-code-latest`
+- 可选模型覆盖：`BYTEPLUS_CODING_MODEL=ark-code-latest`。
 
 ## ComfyUI 工作流媒体实时测试
 
@@ -598,7 +630,7 @@ Live 测试发现凭据的方式与 CLI 相同。实际影响：
 - 范围：
   - 测试 comfy 图像、视频和 `music_generate` 路径
   - 除非配置了 `plugins.entries.comfy.config.<capability>`，否则跳过相应能力
-  - 适用于更改 comfy 工作流提交、轮询、下载或插件注册后进行验证
+  - 适用于更改 comfy 工作流提交、轮询、下载或插件注册后进行验证。
 
 ## 图像生成 live
 
@@ -663,7 +695,7 @@ openclaw infer image generate \
   - `OPENCLAW_LIVE_MUSIC_GENERATION_PROVIDERS="google,minimax"`
   - `OPENCLAW_LIVE_MUSIC_GENERATION_MODELS="google/lyria-3-clip-preview,minimax/music-2.6"`
 - 可选认证行为：
-  - `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以强制使用 profile 存储认证并忽略仅环境变量覆盖
+  - `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以强制使用 profile 存储认证并忽略仅环境变量覆盖。
 
 ## 视频生成 live
 

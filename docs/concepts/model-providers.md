@@ -29,11 +29,11 @@ sidebarTitle: "模型提供商"
   <Accordion title="OpenAI 提供商/运行时拆分">
     OpenAI 模型引用和代理运行时是分开的：
 
-    - `openai/<model>` 会选择规范的 OpenAI 提供商和模型。仅靠前缀不会选择 Codex。
-    - 当 provider/model 运行时策略未设置或为 `auto` 时，OpenAI 只有在完全匹配的官方 HTTPS Platform Responses 或 ChatGPT Responses 路由、且没有作者定义的请求覆盖时，才可能隐式选择 Codex。
-    - 已定义的 Completions 适配器、自定义端点，以及具有已定义请求行为的路由，都会保留在 OpenClaw 上。纯文本官方 HTTP 端点会被拒绝。
-    - 旧式 Codex 模型引用属于旧配置，doctor 会将其重写为 `openai/<model>`。
-    - Provider/model 的 `agentRuntime.id: "openclaw"` 会明确让原本符合条件的路由继续使用 OpenClaw。`agentRuntime.id: "codex"` 则要求使用 Codex，并且当实际路由与 Codex 不兼容时会关闭失败。
+    - `openai/<model>` 选择规范的 OpenAI 提供商和模型。仅此前缀本身绝不会选择 Codex。
+    - 当提供商/模型运行时策略未设置或设置为 `auto` 时，只有在确切匹配官方 HTTPS Platform Responses 或 ChatGPT Responses 路由，且没有手动指定的提供商请求覆盖时，OpenAI 才可能隐式选择 Codex。有效的模型范围快速模式控制不算作手动指定的请求参数。
+    - 手动指定的 Completions 适配器、自定义端点，以及带有手动指定请求行为的路由，都会继续使用 OpenClaw。纯文本官方 HTTP 端点会被拒绝。
+    - 旧版 Codex 模型引用属于旧版配置，doctor 会将其重写为 `openai/<model>`。
+    - 提供商/模型的 `agentRuntime.id: "openclaw"` 会明确让原本符合条件的路由继续使用 OpenClaw。`agentRuntime.id: "codex"` 要求使用 Codex；当生效路由不兼容 Codex 时会安全失败。
 
     参见 [OpenAI 隐式代理运行时](/providers/openai#implicit-agent-runtime) 和 [Codex 运行环境](/plugins/codex-harness)。如果 provider/runtime 的拆分令人困惑，请先阅读 [代理运行时](/concepts/agent-runtimes)。
 
@@ -63,14 +63,14 @@ sidebarTitle: "模型提供商"
 
 **Default models** 卡片用于管理主模型、按顺序的回退模型，以及来自已配置模型目录的实用模型。选择模型后，将它们一起保存到现有的 `agents.defaults.model` 和 `agents.defaults.utilityModel` 设置中。对于实用模型，**Automatic** 会保持该设置未定义，而 **Disabled** 会存储一个空字符串以关闭实用路由。
 
-## Provider 所有的行为
+## 提供商专属行为
 
 大多数特定于提供商的逻辑都位于提供商插件（`registerProvider(...)`）中，而 OpenClaw 则保留通用的推理循环。插件负责引导流程、模型目录、身份验证环境变量映射、传输/配置规范化、工具模式清理、故障转移分类、OAuth 刷新、使用情况报告、思考/推理配置文件等。
 
-有关提供商 SDK 钩子和捆绑插件示例的完整列表，请参阅[提供商插件](/plugins/sdk-provider-plugins)。需要完全自定义请求执行器的提供商属于更深层的扩展领域。
+有关提供商 SDK 钩子和捆绑插件示例的完整列表，请参阅[提供商插件](/plugins/sdk-provider-plugins)。需要完全自定义请求执行器的提供商属于更深层次的扩展领域。
 
 <Note>
-提供商所有的运行器行为位于显式的提供商钩子上，例如重放策略、工具模式规范化、流包装器以及传输/请求辅助函数。传统的 `ProviderPlugin.capabilities` 静态集合仅用于兼容性，共享运行器逻辑已不再读取它。
+提供商专属的运行器行为位于显式的提供商钩子上，例如重放策略、工具模式规范化、流包装器以及传输/请求辅助函数。传统的 `ProviderPlugin.capabilities` 静态集合仅用于兼容性，共享运行器逻辑已不再读取它。
 </Note>
 
 ## API 密钥轮换
@@ -108,14 +108,14 @@ sidebarTitle: "模型提供商"
 - 示例模型: `openai/gpt-5.6`、`openai/gpt-5.6-terra`、`openai/gpt-5.6-luna`、`openai/gpt-5.5`
 - 如果某个特定安装或 API key 的表现不同，请使用 `openclaw models list --provider openai` 验证账户/模型可用性。
 - CLI: `openclaw onboard --auth-choice openai-api-key`
-- 默认传输方式为 `auto`；OpenClaw 会将传输选择传递给共享模型运行时。
-- 可通过 `agents.defaults.models["openai/<model>"].params.transport` 按模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
-- 可通过 `agents.defaults.models["openai/<model>"].params.serviceTier` 启用 OpenAI 优先级处理
-- `/fast` 和 `params.fastMode` 会将直接的 `openai/*` Responses 请求映射为 `api.openai.com` 上的 `service_tier=priority`
-- 当你想要显式层级而不是共享的 `/fast` 开关时，请使用 `params.serviceTier`
-- 隐藏的 OpenClaw 归因头（`originator`、`version`、`User-Agent`）仅适用于发往 `api.openai.com` 的原生 OpenAI 流量，不适用于通用的 OpenAI 兼容代理
-- 原生 OpenAI 路由还会保留 Responses 的 `store`、提示缓存提示，以及 OpenAI reasoning-compat 载荷整形；代理路由不会保留这些
-- `openai/gpt-5.3-codex-spark` 仅可通过 ChatGPT/Codex OAuth 使用；直接的 OpenAI API key 和 Azure API key 路由会拒绝它
+- 默认传输方式为 `auto`；OpenClaw 会将传输方式选择传递给共享模型运行时。
+- 通过 `agents.defaults.models["openai/<model>"].params.transport` 按模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
+- 使用 `params.serviceTier` 或 `params.service_tier` 设置明确的 OpenAI API 服务层级；快速模式（原名为优先处理）使用 `service_tier=priority`。
+- 在原生公共 OpenAI 和 ChatGPT/Codex Responses 请求中，优先级依次为请求载荷/传输方式中的 `service_tier`、有效的显式模型参数，然后是快速模式默认值。
+- `/fast` 以及有效的 `params.fastMode` / `params.fast_mode` 值是共享的代理运行时控制项；对于直接嵌入式 `openai/*` Responses 请求，仅当不存在更高优先级的层级时，它们才会提供 `service_tier=priority`。
+- 隐藏的 OpenClaw 归属标头（`originator`、`version`、`User-Agent`）仅适用于发往 `api.openai.com` 的原生 OpenAI 流量，不适用于通用的 OpenAI 兼容代理
+- 原生 OpenAI 路由还会保留 Responses 的 `store`、提示缓存提示信息以及 OpenAI 推理兼容的请求载荷整形；代理路由不会保留这些内容
+- `openai/gpt-5.3-codex-spark` 仅可通过 ChatGPT/Codex OAuth 使用；直接 OpenAI API key 和 Azure API key 路由会拒绝该模型
 
 ```json5
 {
@@ -150,22 +150,24 @@ Claude CLI 复用（`claude -p`）是 OpenClaw 认可的集成路径。仍然支
 
 ### OpenAI ChatGPT/Codex OAuth
 
-- 提供方: `openai`
-- 认证方式: OAuth（ChatGPT）
-- 全新原生 Codex app-server harness 参考: `openai/gpt-5.6-sol`
-- 原生 Codex app-server harness 文档: [Codex harness](/plugins/codex-harness)
-- 旧版模型引用: `codex/gpt-*`, `openai-codex/gpt-*`
-- 插件边界: `openai/*` 加载 OpenAI 插件；由显式运行时策略或提供方拥有的有效路由决定是否选择原生 Codex app-server 插件。
-- CLI: `openclaw onboard --auth-choice openai` 或 `openclaw models auth login --provider openai`
-- OpenClaw 内置的 ChatGPT Responses 传输默认为 `auto`（优先 WebSocket，SSE 兜底）。
-- `agents.defaults.models["openai/<model>"].params.transport`、`params.serviceTier` 和 `params.fastMode` 是编写在内嵌请求中的设置。它们使 OpenClaw 保持隐式运行时选择；原生 Codex 负责其 app-server 传输和服务层级。
-- 隐藏的 OpenClaw 归因头（`originator`、`version`、`User-Agent`）仅附加在发往 `chatgpt.com/backend-api` 的原生 Codex 流量上，不会附加到通用的 OpenAI 兼容代理上
-- 共享的 `/fast` 开关仍可作为运行时控制使用；它与编写的模型参数不同。
-- 原生 Codex 目录可根据账户访问权限暴露精确的 `openai/gpt-5.6-sol`、`openai/gpt-5.6-terra` 和 `openai/gpt-5.6-luna` 引用。它不会在客户端侧应用直接 API 的裸 `gpt-5.6` 别名。
-- `openai/gpt-5.5` 使用 Codex 目录原生的 `contextWindow = 400000` 和默认运行时 `contextTokens = 272000`；可通过 `models.providers.openai.models[].contextTokens` 覆盖运行时上限
-- 使用 `openai` 认证登录，并使用 `openai/gpt-5.6-sol` 进行全新的订阅支持配置。如果该 Codex 工作区未暴露 GPT-5.6，则明确选择 `openai/gpt-5.5`。
-- 使用提供方/模型 `agentRuntime.id: "openclaw"` 可使原本符合条件的路由保持在内置运行时上。若运行时未设置或为 `auto`，只有一个精确的官方 HTTPS Responses/ChatGPT 兼容路由且没有编写的请求覆盖时，才可能隐式选择 Codex。
-- 旧版 Codex GPT 引用是旧状态，不是实时提供方路由。对于新的 agent 配置，请使用规范的 `openai/*` 引用，并运行 `openclaw doctor --fix` 迁移 `codex/*` 和 `openai-codex/*` 引用，同时通过模型作用域的 `agentRuntime.id: "codex"` 保留其原生 Codex 语义。现有显式的规范 `openai/gpt-5.5` 选择不会被升级。
+- 提供商：`openai`
+- 认证：OAuth（ChatGPT）
+- 全新的原生 Codex app-server harness ref：`openai/gpt-5.6-sol`
+- 原生 Codex app-server harness 文档：[Codex harness](/plugins/codex-harness)
+- 旧版模型引用：`codex/gpt-*`、`openai-codex/gpt-*`
+- 插件边界：`openai/*` 会加载 OpenAI 插件；是否选择原生 Codex app-server 插件，则由显式运行时策略或提供商所属的有效路由决定。
+- CLI：`openclaw onboard --auth-choice openai` 或 `openclaw models auth login --provider openai`
+- OpenClaw 内置的 ChatGPT Responses 传输方式默认为 `auto`（优先使用 WebSocket，失败后回退到 SSE）。
+- `agents.defaults.models["openai/<model>"].params.transport` 和 `params.serviceTier` 是由内置提供商编写的请求设置。它们会将隐式运行时选择保留在 OpenClaw 中；原生 Codex 负责其 app-server 的传输方式和服务层级。
+- 有效的模型级 `params.fastMode` / `params.fast_mode` 值以及有效的截断键，是可移植的、类型化的代理运行时控制项。它们不计入由用户编写的提供商请求参数，也不会选择运行时。当配方依赖某个运行时时，请固定 `agentRuntime.id: "openclaw"` 或 `agentRuntime.id: "codex"`。
+- 隐藏的 OpenClaw 归因请求头（`originator`、`version`、`User-Agent`）仅会附加到发往 `chatgpt.com/backend-api` 的原生 Codex 流量上，不会附加到通用的 OpenAI 兼容代理请求上。
+- 共享的 `/fast` 开关、配置的默认值以及有效的模型级 Fast 参数，都会通过统一的运行时控制策略进行解析。优先级请参阅[思考级别](/tools/thinking#fast-mode-fast)。
+- OpenAI API Fast 模式按高级价格计费，并且因模型而异。GPT-5.6 Sol 目前按标准令牌价格的 2 倍计费，长上下文倍率还会叠加。ChatGPT/Codex 积分的 Fast 模式是独立的：GPT-5.6 和 GPT-5.5 目前消耗标准积分的 2.5 倍，而使用 API 密钥运行 Codex 则按 API 令牌价格计费。请参阅 [Fast 模式](https://openai.com/api-priority-processing/)、[API 定价](https://developers.openai.com/api/docs/pricing) 和 [Codex 速度](https://learn.chatgpt.com/docs/agent-configuration/speed)。
+- 原生 Codex 目录可根据账户访问权限公开精确的 `openai/gpt-5.6-sol`、`openai/gpt-5.6-terra` 和 `openai/gpt-5.6-luna` 引用。它不会在客户端应用直接 API 的裸 `gpt-5.6` 别名。
+- `openai/gpt-5.5` 使用 Codex 目录中的原生 `contextWindow = 400000`，以及默认运行时 `contextTokens = 272000`；可通过 `models.providers.openai.models[].contextTokens` 覆盖运行时上限。
+- 使用 `openai` 认证登录，并使用 `openai/gpt-5.6-sol` 设置全新的订阅支持配置。如果该 Codex 工作区未提供 GPT-5.6，请显式选择 `openai/gpt-5.5`。
+- 使用提供商/模型的 `agentRuntime.id: "openclaw"`，可将其他方面符合条件的路由保留在内置运行时中。当运行时未设置或为 `auto` 时，只有在没有编写提供商请求覆盖项的情况下，精确的官方 HTTPS Responses/ChatGPT 兼容路由才可能隐式选择 Codex。
+- 旧版 Codex GPT 引用属于旧状态，而不是正在使用的提供商路由。新代理配置请使用规范的 `openai/*` 引用，并运行 `openclaw doctor --fix` 迁移 `codex/*` 和 `openai-codex/*` 引用，同时通过模型级 `agentRuntime.id: "codex"` 保留其原生 Codex 语义。现有的显式规范 `openai/gpt-5.5` 选择不会被升级。
 
 ```json5
 {
@@ -323,7 +325,7 @@ Gateway 的模型能力检查也会读取显式的 `models.providers.<id>.models
 
 ### Moonshot AI（Kimi）
 
-在 onboarding 之前安装 `@openclaw/moonshot-provider`。只有在你需要覆盖基础 URL 或模型元数据时，才添加显式的 `models.providers.moonshot` 条目：
+在引导流程之前安装 `@openclaw/moonshot-provider`。只有在你需要覆盖基础 URL 或模型元数据时，才添加显式的 `models.providers.moonshot` 条目：
 
 - 提供方：`moonshot`
 - 认证：`MOONSHOT_API_KEY`
@@ -396,7 +398,7 @@ Kimi K3 使用自适应思考。`--thinking minimal|low` 选择低强度，
 - 提供商：`volcengine`（编码：`volcengine-plan`）
 - 认证：`VOLCANO_ENGINE_API_KEY`
 - 示例模型：`volcengine-plan/ark-code-latest`
-- CLI：`openclaw onboard --auth-choice volcengine-api-key`
+- 命令行界面：`openclaw onboard --auth-choice volcengine-api-key`
 
 ```json5
 {
@@ -408,15 +410,15 @@ Kimi K3 使用自适应思考。`--thinking minimal|low` 选择低强度，
 
 注册时默认使用编码界面，但通用的 `volcengine/*` 目录会同时注册。
 
-在 onboarding/configure 模型选择器中，Volcengine 认证选项会优先显示 `volcengine/*` 和 `volcengine-plan/*` 两类条目。如果这些模型尚未加载，OpenClaw 会回退到未过滤的目录，而不是显示一个空的按提供商分组选择器。
+在引导配置模型选择器中，火山引擎认证选项会优先显示 `volcengine/*` 和 `volcengine-plan/*` 两类条目。如果这些模型尚未加载，OpenClaw 会回退到未过滤的目录，而不是显示一个空的按提供商分组选择器。
 
 <Tabs>
   <Tab title="标准模型">
     - `volcengine/doubao-seed-1-8-251228`（豆包 Seed 1.8）
     - `volcengine/doubao-seed-code-preview-251028`
-    - `volcengine/kimi-k2-5-260127` (Kimi K2.5)
-    - `volcengine/glm-4-7-251222` (GLM 4.7)
-    - `volcengine/deepseek-v3-2-251201` (DeepSeek V3.2)
+    - `volcengine/kimi-k2-5-260127`（Kimi K2.5）
+    - `volcengine/glm-4-7-251222`（GLM 4.7）
+    - `volcengine/deepseek-v3-2-251201`（DeepSeek V3.2）
 
   </Tab>
   <Tab title="编程模型（volcengine-plan）">
@@ -519,7 +521,7 @@ MiniMax 通过 `models.providers` 配置，因为它使用自定义端点：
 - 文本/聊天默认使用 `minimax/MiniMax-M3`
 - 图像生成使用 `minimax/image-01` 或 `minimax-portal/image-01`
 - 图像理解在两种 MiniMax 认证路径上都由插件拥有的 `MiniMax-VL-01` 提供
-- 网页搜索保持在提供商 ID `minimax`
+- 网页搜索保持在提供商 ID `minimax`。
 
 ### LM Studio
 

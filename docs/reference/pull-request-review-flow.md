@@ -1,14 +1,14 @@
 ---
-summary: "Barnacle 和 ClawSweeper 的反馈如何帮助 OpenClaw pull request 通过评审。"
+summary: "Barnacle 和 ClawSweeper 的反馈如何帮助 OpenClaw 拉取请求通过评审。"
 read_when:
   - 在 Barnacle 或 ClawSweeper 提供反馈后跟进
   - 请求 ClawSweeper 进行评审
-  - 排查 Barnacle、ClawSweeper、stale 标签或自动关闭问题
-title: "Pull request 评审流程"
+  - 排查 Barnacle、ClawSweeper、陈旧标签或自动关闭问题
+title: "拉取请求评审流程"
 sidebarTitle: "PR 评审流程"
 ---
 
-本页说明你在打开或更新 OpenClaw pull request 后的评审流程：Barnacle 和 ClawSweeper 会做什么，如何根据它们的反馈改进 PR，以及当自动化保持沉默时该检查什么。
+本页说明你在打开或更新 OpenClaw 拉取请求后的评审流程：Barnacle 和 ClawSweeper 会做什么，如何根据它们的反馈改进 PR，以及当自动化保持沉默时该检查什么。
 
 Barnacle 和 ClawSweeper 帮助维护者保持评审队列可用。它们不能取代维护者的判断。
 
@@ -39,7 +39,7 @@ ClawSweeper 是 OpenClaw 仓库的 AI 辅助审查和维护机器人。它可以
 
 ClawSweeper 的积极结果只是支持性证据，不代表维护者批准。维护者仍然决定 PR 是否以及何时准备好合并。
 
-ClawSweeper 采用队列机制。打开 PR、推送提交或添加审查请求后，不要期待立即收到响应。ClawSweeper 运行后的标签更新也可能需要一些时间。
+ClawSweeper 基于队列运行。当你打开一个非草稿 PR 或将草稿标记为准备审查时，它会立即发布一条简短的收据评论，但实际审查仍需等待队列空位。在打开 PR、推送提交或添加审查请求后，不要期待立即获得审查结果。ClawSweeper 运行后的标签更新也可能需要一些时间。
 
 新 PR 会进入 ClawSweeper 审查队列。维护者也可以通过标签或命令将审查、修复或自动合并流程加入队列。对于普通贡献者的更新，只有在你更新了分支、PR 描述、证明或代码之后，才应请求 ClawSweeper 再次审查。然后通过新的 PR 评论请求一次新的审查：
 
@@ -107,7 +107,7 @@ OpenClaw 还使用单独的 stale 自动化。未分配的 issue 和 PR 在 14 �
 希望获得类似审查自动化的项目可以研究或分叉 ClawSweeper：
 
 - [openclaw/clawsweeper](https://github.com/openclaw/clawsweeper)
-- [ClawSweeper 文档](https://clawsweeper.bot/)
+- [ClawSweeper 文档](https://clawsweeper.bot/)。
 
 ## 相关
 

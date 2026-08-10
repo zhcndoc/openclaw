@@ -35,12 +35,12 @@ Gateway 历史读取器会避免在表面层需要任意历史访问时才将整
 
 | Key                     | Default               | Notes                                                                                       |
 | ----------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
-| `mode`                  | `"enforce"`           | or `"warn"` (report only, no mutation)                                                      |
-| `pruneAfter`            | `"30d"`               | stale-entry age cutoff                                                                      |
-| `maxEntries`            | `500`                 | cap on session entries                                                                      |
-| `resetArchiveRetention` | keep (no age cutoff)  | age cutoff for `*.reset.*`/`*.deleted.*` transcript archives; a duration opts into deletion |
-| `maxDiskBytes`          | `10gb`                | per-agent sessions disk budget; `false`, `0`, or `"0"` disables                             |
-| `highWaterBytes`        | 80% of `maxDiskBytes` | target after budget cleanup                                                                 |
+| `mode`                  | `"enforce"`           | 或 `"warn"`（仅报告，不执行变更）                                                              |
+| `pruneAfter`            | `"30d"`               | 过期条目的年龄截止时间                                                                          |
+| `maxEntries`            | `500`                 | 会话条目上限                                                                                    |
+| `resetArchiveRetention` | 保留（无年龄截止时间）       | `*.reset.*`/`*.deleted.*` 转录归档的年龄截止时间；设置时长后会启用删除                                      |
+| `maxDiskBytes`          | `10gb`                | 每个 agent 的会话磁盘预算；`false`、`0` 或 `"0"` 可禁用                                           |
+| `highWaterBytes`        | `maxDiskBytes` 的 80% | 预算清理后的目标值                                                                                |
 
 Reset 会推进现有的 `sessionKey -> sessionId` 映射，但会保留之前的 SQLite 会话、转录、轨迹和搜索行。该历史仍可在相同 session key 下搜索；普通条目和会话列表只显示新的当前映射。保留的 reset 历史受磁盘预算限制，而不是受 `resetArchiveRetention` 限制，后者只会影响归档制品的过期时间。显式删除则不同：它会先写入并校验一个压缩的转录归档（如果可用 zstd，则为 `*.jsonl.deleted.<timestamp>.zst`），然后再删除被删除会话的行。
 
@@ -65,10 +65,9 @@ openclaw sessions cleanup --enforce
 
 OpenClaw 不再在 Gateway 写入期间自动创建 `sessions.json.bak.*` 轮转备份。当前 schema 会拒绝旧的 `session.maintenance.rotateBytes` 键，而 `openclaw doctor --fix` 会将其从旧配置中移除。
 
-转录修改会针对 SQLite 转录目标使用会话写入队列：
-
-会话写锁使用固定的生产默认值。相应的
-`OPENCLAW_SESSION_WRITE_LOCK_*` 环境变量仍可用于进程级诊断和紧急覆盖。
+转录变更会通过 session accessor 和 SQLite writer 队列进行。
+每次变更都会在其提交事务中验证活动运行的持久 writer 声明，
+因此被取代的运行无法写入转录。
 
 ### 在 SQLite 切换后降级
 
@@ -86,10 +85,10 @@ openclaw doctor --session-sqlite restore --session-sqlite-all-agents
 
 隔离的 cron 运行会创建它们自己的会话条目/转录，并具有专门的保留策略：
 
-- `cron.sessionRetention`（默认值为 `"24h"`）会从存储中清除较旧的隔离 cron 运行会话；设置为 `false` 可禁用。
-- 运行历史会为每个 cron 作业保留最新的 2000 个终端行。丢失的行仍保留其 24 小时的清理窗口。
+- `cron.sessionRetention`（默认值为 `"24h"`）会从存储中清理旧的隔离 cron 运行会话；设置为 `false` 或 `"0h"` 等零时长值可禁用此功能。
+- 运行历史记录会为每个 cron 任务保留最新的 2000 条终止状态记录。丢失的记录仍会保留 24 小时的清理窗口。
 
-当 cron 强制创建一个新的隔离运行会话时，它会在写入新行之前清理之前的 `cron:<jobId>` 会话条目：它会保留安全偏好（thinking/fast/verbose/reasoning 设置、标签、显示名称）以及用户显式选择的模型/认证覆盖，但会丢弃环境中的会话上下文（channel/group 路由、发送/排队策略、提权、来源、ACP 运行时绑定），这样一个新的隔离运行就不会从旧运行中继承过时的投递或运行时权限。
+当 cron 强制创建一个新的隔离运行会话时，它会在写入新行之前清理之前的 `cron:<jobId>` 会话条目：它会保留安全偏好（thinking/fast/verbose/reasoning 设置、标签、显示名称）以及用户显式选择的模型/认证覆盖，但会丢弃环境中的会话上下文（频道/群组路由、发送/排队策略、提权、来源、ACP 运行时绑定），这样新的隔离运行就不会从旧运行中继承过时的投递或运行时权限。
 
 ## 会话键（`sessionKey`）
 
@@ -286,4 +285,4 @@ OpenClaw 在扩展 API 中暴露了一个 `session_before_compact` 钩子，但�
 - [会话管理](/concepts/session)
 - [会话修剪](/concepts/session-pruning)
 - [上下文引擎](/concepts/context-engine)
-- [代理配置参考](/gateway/config-agents)
+- [代理配置参考](/gateway/config-agents)。

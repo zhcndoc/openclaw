@@ -6,7 +6,7 @@ read_when:
 title: "钩子"
 ---
 
-钩子是在代理事件触发时在网关内部运行的小脚本：像 `/new`、`/reset`、`/stop` 这样的命令、会话压缩、网关生命周期以及消息流。它们从目录中发现，并通过 `openclaw hooks` 管理。只有在你启用钩子，或者配置至少一个钩子条目、钩子包、旧版处理器或额外的钩子目录之后，网关才会加载内部钩子。
+钩子是一些小型脚本，当代理事件触发时，它们会在网关内部运行：例如 `/new`、`/reset`、`/stop` 等命令、会话压缩、网关生命周期以及消息流。钩子从目录中发现，并通过 `openclaw hooks` 进行管理。只有在启用钩子，或配置至少一个钩子条目、钩子包或额外钩子目录后，网关才会加载内部钩子。
 
 OpenClaw 中有两种钩子：
 
@@ -210,7 +210,7 @@ export default async function handler(event) {
 
 工作区钩子可以添加新的 hook 名称，但不能覆盖同名的捆绑、托管或插件提供的钩子。
 
-在内部钩子配置完成之前，Gateway 启动时会跳过内部钩子发现。使用 `openclaw hooks enable <name>` 启用捆绑或托管钩子，安装 hook 包，或设置 `hooks.internal.enabled=true` 以启用。启用一个已命名的钩子时，Gateway 只加载该钩子的处理器；`hooks.internal.enabled=true`、额外的 hook 目录以及旧式处理器会启用更广泛的发现。
+网关在内部钩子完成配置之前，会在启动时跳过内部钩子发现。使用 `openclaw hooks enable <name>` 启用捆绑钩子或托管钩子，安装钩子包，或设置 `hooks.internal.enabled=true` 以选择启用。即使主开关为 true，指定的条目仍然会作为允许列表。仅设置 `hooks.internal.enabled=true` 且不包含任何指定条目时，会启用广泛发现；不包含钩子名称声明的非空额外钩子目录和钩子包安装也会采用开放式发现。
 
 ### Hook 包
 
@@ -362,9 +362,9 @@ openclaw hooks enable <hook-name>
 }
 ```
 
-<Note>
-旧的 `hooks.internal.handlers` 数组配置格式仍然受支持，以便向后兼容，但新的钩子应使用基于发现的系统。
-</Note>
+<Warning>
+`hooks.internal.handlers` 已停用，正常的配置验证不再加载或接受该配置项。在运行 `openclaw doctor --fix` 之前，请将每个已注册的模块移入托管钩子目录或工作区钩子目录，并为其添加 `HOOK.md` 和处理器文件。Doctor 会移除已停用的注册项，但不会创建可执行的钩子文件。对于仅包含旧版配置且 `hooks.internal.enabled: true` 的配置，Doctor 还会移除 `enabled`，以避免启用其他已发现的钩子。规范条目、非空的额外目录以及显式设置为 `enabled: false` 的配置项都会保留。
+</Warning>
 
 ## CLI 参考
 

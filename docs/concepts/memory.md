@@ -23,8 +23,8 @@ OpenClaw 通过在你的代理工作区中写入普通的 Markdown 文件来记�
   包括有依据的历史回填条目。
 
 <Tip>
-如果你想让你的 agent 记住某件事，只需告诉它：“记住我
-偏好 TypeScript。”它会把这条笔记写入合适的文件。
+如果你想让你的 agent 记住某件事，只需告诉它：“记住我的
+偏好是 TypeScript。”它会把这条笔记写入合适的文件。
 </Tip>
 
 ## 放在哪里
@@ -135,14 +135,11 @@ Mistral、Bedrock、DeepInfra、本地 GGUF、Ollama、LM Studio、GitHub Copilo
 有关搜索如何工作、调优
 选项以及提供方设置，请参见 [Memory search](/concepts/memory-search)。
 
-## 记忆后端
+## 记忆引擎
 
 <CardGroup cols={3}>
 <Card title="内置（默认）" icon="database" href="/concepts/memory-builtin">
 基于 SQLite。开箱即用，支持关键词搜索、向量相似度和混合搜索。无需额外依赖。
-</Card>
-<Card title="QMD" icon="search" href="/concepts/memory-qmd">
-本地优先的伴随服务，支持重排序、查询扩展，以及索引工作区之外目录的能力。
 </Card>
 <Card title="Honcho" icon="brain" href="/concepts/memory-honcho">
 具备用户建模、语义搜索和多代理感知能力的 AI 原生跨会话记忆。通过插件安装。
@@ -252,15 +249,14 @@ openclaw memory index --force   # 强制重建索引
 
 ## 延伸阅读
 
-- [记忆搜索](/concepts/memory-search): 搜索管线、提供方和调优。
-- [内置记忆引擎](/concepts/memory-builtin): 默认 SQLite 后端。
-- [QMD 记忆引擎](/concepts/memory-qmd): 高级本地优先 sidecar。
-- [Honcho 记忆](/concepts/memory-honcho): AI 原生跨会话记忆。
-- [LanceDB 记忆](/plugins/memory-lancedb): 基于 LanceDB 的插件，支持与 OpenAI 兼容的嵌入。
-- [记忆 Wiki](/plugins/memory-wiki): 编译式知识库和原生 Wiki 工具。
-- [梦境](/concepts/dreaming): 将信息从短期回忆后台提升到长期记忆。
-- [记忆配置参考](/reference/memory-config): 所有配置项。
-- [压缩](/concepts/compaction): 压缩如何与记忆交互。
-- [主动记忆](/concepts/active-memory): 用于交互式聊天会话的子代理记忆。
-- [用户模型](/concepts/user-model): 基于指令的持久偏好和资料事实。
-- [持续意图](/concepts/standing-intents): 事件条件化的前瞻性记忆。
+- [记忆搜索](/concepts/memory-search)：搜索流程、提供程序和调优。
+- [内置记忆引擎](/concepts/memory-builtin)：默认的 SQLite 后端。
+- [Honcho 记忆](/concepts/memory-honcho)：AI 原生的跨会话记忆。
+- [Memory LanceDB](/plugins/memory-lancedb)：基于 LanceDB、使用兼容 OpenAI 的嵌入模型的插件。
+- [Memory Wiki](/plugins/memory-wiki)：编译型知识库和原生 Wiki 工具。
+- [梦境](/concepts/dreaming)：从短期回忆到长期记忆的后台提升过程。
+- [记忆配置参考](/reference/memory-config)：所有配置项。
+- [压缩](/concepts/compaction)：压缩与记忆的交互方式。
+- [主动记忆](/concepts/active-memory)：面向交互式聊天会话的子代理记忆。
+- [用户模型](/concepts/user-model)：基于指令的持久偏好和用户资料事实。
+- [常驻意图](/concepts/standing-intents)：事件条件触发的前瞻性记忆。

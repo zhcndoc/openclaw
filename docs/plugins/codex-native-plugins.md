@@ -19,17 +19,18 @@ Codex 插件转换为合成的 `codex_plugin_*` OpenClaw 动态工具。
 - 代理运行时必须是原生 Codex harness。
 - `plugins.entries.codex.enabled` 为 `true`。
 - `plugins.entries.codex.config.codexPlugins.enabled` 为 `true`。
-- Codex app-server 报告的版本必须严格为稳定版 `0.146.1`。官方插件提供
-  `@openai/codex` `0.146.1`；自定义、远程和由 macOS 桌面端管理的二进制文件
+- Codex app-server 必须准确报告稳定版本 `0.147.0`。官方插件提供
+  `@openai/codex` `0.147.0`；自定义、远程以及由 macOS 桌面端管理的二进制文件
   必须使用完全相同的版本。
 - 目标 Codex app-server 必须能够看到预期的 marketplace、插件和
   应用清单。
-- 迁移仅支持在源 Codex 主目录中观测到的、作为源安装的
-  `openai-curated` 插件。Codex 会在 API-key 和 Bedrock 账户下通过
-  `openai-api-curated` wire name 提供相同的目录；OpenClaw 将这两个名称视为同一个精选目录，
+- 迁移仅支持在源 Codex 主目录中观察到以源安装方式安装的
+  `openai-curated` 插件。Codex 会在 API 密钥账户和 Bedrock 账户下提供相同的目录，
+  其 wire 名称为 `openai-api-curated`；OpenClaw 将这两个名称视为同一个精选目录，
   因此已配置的 `openai-curated` 插件可以从任一名称解析。
-- 手动配置的 `workspace-directory` 插件必须已经以其准确的 marketplace 限定身份出现在
-  `plugin/installed` 中，并处于已安装且已启用状态。其所属应用必须能够被配置的 Codex 线程访问和调用。
+- 手动配置的 `workspace-directory` 插件必须已经以其准确的、限定 marketplace 的身份出现在
+  `plugin/installed` 中，并且处于已安装和已启用状态。对于已配置的 Codex 线程，
+  其所属应用必须可访问且可调用。
 
 `codexPlugins` 对 OpenClaw-provider 运行、ACP 会话
 绑定或其他运行环境没有影响，因为这些路径从不会使用原生 `apps` 配置

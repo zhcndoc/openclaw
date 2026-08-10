@@ -47,10 +47,14 @@ Operator RPC 方法需要 `operator` 角色；来自 node 的方法
 
 每个网关 RPC 都有一个最小权限方法作用域，用于决定请求是否会到达其处理程序。参数感知的方法会在分发前派生该作用域，因此授权失败会返回一个统一的结构化响应：
 
-- `agent` 在普通轮次中需要 `operator.write`，而对于 `/new` 或 `/reset` 会话生命周期命令，则需要 `operator.admin`。
-- `node.invoke` 在普通中继命令中需要 `operator.write`，而对于 `browser.proxy`、`browser.proxy.upload.v1`、`fs.listDir` 和 `terminal.upload`，则需要 `operator.admin`。
+- `agent` 在普通轮次中需要 `operator.write`，在 `/new` 或 `/reset` 会话生命周期命令中需要 `operator.admin`。
+- `node.invoke` 在普通中继命令中需要 `operator.write`，在 `browser.proxy`、`browser.proxy.upload.v1`、`fs.listDir` 和
+  `terminal.upload` 中需要 `operator.admin`。
 - `talk.config` 需要 `operator.read`；`includeSecrets: true` 还需要 `operator.talk.secrets`。
 - `talk.client.*`、`talk.session.*`、`talk.speak` 和 `talk.mode` 需要 `operator.talk`（或兼容的更宽泛作用域 `operator.write`）。
+- `sessions.patch` 对会话组织字段和按会话设置的 `model` 覆盖需要 `operator.write`。
+  其他运行时覆盖项，包括思考、快速、详细、跟踪和推理级别，都需要 `operator.admin`。
+  将所选模型持久化为配置的代理默认模型同样仅限管理员。
 
 一些处理程序随后会根据正在批准或修改的具体对象应用更严格的检查：
 

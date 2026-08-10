@@ -6,26 +6,23 @@ read_when:
 title: "OpenCode Go"
 ---
 
-OpenCode Go 是 [OpenCode](/providers/opencode) 中的 Go 目录。它与 Zen 目录共享
-`OPENCODE_API_KEY` 凭据，但保留自身的运行时提供商 ID（`opencode-go`），以便上游的
-按模型路由保持正确。OpenClaw 将其作为官方外部
-`@openclaw/opencode-go-provider` 插件提供。
+OpenCode Go 是 [OpenCode](/providers/opencode) 中的独立付费订阅。
+它与 Zen 使用相同的 `OPENCODE_API_KEY` 凭据基础设施，但 Zen
+密钥不会自动包含 Go 权益。Go 保留其自身的运行时提供商 ID
+（`opencode-go`），以确保上游的按模型路由保持正确。
+对于此版本，OpenCode Go 已内置于 OpenClaw 软件包中，因此完成引导和配置即可；无需单独安装插件。
 
 | 属性             | 值                                                 |
 | ---------------- | -------------------------------------------------- |
-| 运行时提供商     | `opencode-go`                                      |
-| 插件             | `@openclaw/opencode-go-provider`                   |
-| 身份验证         | `OPENCODE_API_KEY`（别名：`OPENCODE_ZEN_API_KEY`） |
-| 父级设置         | [OpenCode](/providers/opencode)                    |
+| Runtime provider | `opencode-go`                                      |
+| Plugin           | 已内置（`opencode-go`）                            |
+| Auth             | `OPENCODE_API_KEY`（别名：`OPENCODE_ZEN_API_KEY`） |
+| Parent setup     | [OpenCode](/providers/opencode)                    |
 
 ## 入门
 
-安装官方插件并重启 Gateway：
-
-```bash
-openclaw plugins install @openclaw/opencode-go-provider
-openclaw gateway restart
-```
+OpenCode Go 已包含在本版本的 OpenClaw 中。继续进行
+交互式引导，或直接传入共享的 OpenCode API 密钥。
 
 <Tabs>
   <Tab title="交互式">
@@ -37,7 +34,7 @@ openclaw gateway restart
       </Step>
       <Step title="将 Go 模型设为默认值">
         ```bash
-        openclaw config set agents.defaults.model.primary "opencode-go/kimi-k2.6"
+        openclaw config set agents.defaults.model.primary "opencode-go/kimi-k3"
         ```
       </Step>
       <Step title="验证模型是否可用">
@@ -68,36 +65,46 @@ openclaw gateway restart
 
 ```json5
 {
-  env: { OPENCODE_API_KEY: "YOUR_API_KEY_HERE" }, // 仅允许标记：机密
-  agents: { defaults: { model: { primary: "opencode-go/kimi-k2.6" } } },
+  env: { OPENCODE_API_KEY: "YOUR_API_KEY_HERE" }, // pragma: allowlist secret
+  agents: { defaults: { model: { primary: "opencode-go/kimi-k3" } } },
 }
 ```
 
 ## 目录
 
-运行 `openclaw models list --provider opencode-go` 获取当前模型列表。  
-当前条目：
+运行 `openclaw models list --provider opencode-go` 查看当前模型列表。
+当前启用的模型：
 
-| 模型引用                         | 名称              | 上下文   | 最大输出 | 图像输入 |
-| ------------------------------- | ----------------- | --------- | ---------- | ----------- |
-| `opencode-go/deepseek-v4-pro`   | DeepSeek V4 Pro   | 1M        | 384K       | 否          |
-| `opencode-go/deepseek-v4-flash` | DeepSeek V4 Flash | 1M        | 384K       | 否          |
-| `opencode-go/glm-5`             | GLM-5             | 202,752   | 32,768     | 否          |
-| `opencode-go/glm-5.1`           | GLM-5.1           | 202,752   | 32,768     | 否          |
-| `opencode-go/glm-5.2`           | GLM-5.2           | 1M        | 131,072    | 否          |
-| `opencode-go/hy3-preview`       | HY3 Preview       | 262,144   | 32,768     | 否          |
-| `opencode-go/kimi-k2.5`         | Kimi K2.5         | 262,144   | 65,536     | 是          |
-| `opencode-go/kimi-k2.6`         | Kimi K2.6         | 262,144   | 65,536     | 是          |
-| `opencode-go/kimi-k2.7-code`    | Kimi K2.7 Code    | 262,144   | 262,144    | 是          |
-| `opencode-go/mimo-v2.5`         | MiMo V2.5         | 1M        | 128,000    | 是          |
-| `opencode-go/mimo-v2.5-pro`     | MiMo V2.5 Pro     | 1,048,576 | 128,000    | 否          |
-| `opencode-go/minimax-m2.5`      | MiniMax M2.5      | 204,800   | 65,536     | 否          |
-| `opencode-go/minimax-m2.7`      | MiniMax M2.7      | 204,800   | 131,072    | 否          |
-| `opencode-go/minimax-m3`        | MiniMax M3        | 204,800   | 131,072    | 否          |
-| `opencode-go/qwen3.5-plus`      | Qwen3.5 Plus      | 262,144   | 65,536     | 是          |
-| `opencode-go/qwen3.6-plus`      | Qwen3.6 Plus      | 262,144   | 65,536     | 是          |
-| `opencode-go/qwen3.7-max`       | Qwen3.7 Max       | 1M        | 65,536     | 否          |
-| `opencode-go/qwen3.7-plus`      | Qwen3.7 Plus      | 1M        | 65,536     | 是          |
+| 模型引用                         | 上下文    | 最大输出   | 输入          | 传输方式 |
+| ------------------------------- | --------- | ---------- | ------------- | -------- |
+| `opencode-go/deepseek-v4-flash` | 1M        | 384K       | 文本          | Chat     |
+| `opencode-go/deepseek-v4-pro`   | 1M        | 384K       | 文本          | Chat     |
+| `opencode-go/glm-5.1`           | 202,752   | 32,768     | 文本          | Chat     |
+| `opencode-go/glm-5.2`           | 1M        | 131,072    | 文本          | Chat     |
+| `opencode-go/gpt-5.6-luna`      | 1.05M     | 128,000    | 文本、图像    | Responses |
+| `opencode-go/grok-4.5`          | 500,000   | 500,000    | 文本、图像    | Chat     |
+| `opencode-go/hy3`               | 256,000   | 64,000     | 文本          | Chat     |
+| `opencode-go/kimi-k2.6`         | 262,144   | 65,536     | 文本、图像    | Chat     |
+| `opencode-go/kimi-k2.7-code`    | 262,144   | 262,144    | 文本、图像    | Chat     |
+| `opencode-go/kimi-k3`           | 1,048,576 | 131,072    | 文本、图像    | Chat     |
+| `opencode-go/mimo-v2.5`         | 1M        | 128,000    | 文本、图像    | Chat     |
+| `opencode-go/mimo-v2.5-pro`     | 1,048,576 | 128,000    | 文本          | Chat     |
+| `opencode-go/minimax-m2.7`      | 204,800   | 131,072    | 文本          | Messages |
+| `opencode-go/minimax-m3`        | 1M        | 131,072    | 文本、图像    | Messages |
+| `opencode-go/qwen3.6-plus`      | 1M        | 65,536     | 文本、图像    | Messages |
+| `opencode-go/qwen3.7-max`       | 1M        | 65,536     | 文本          | Messages |
+| `opencode-go/qwen3.7-plus`      | 1M        | 65,536     | 文本、图像    | Messages |
+| `opencode-go/qwen3.8-max`       | 1M        | 131,072    | 文本、图像    | Messages |
+
+已弃用和预览版引用仍可解析，但仅适用于现有的显式配置。
+它们不属于静态或实时推荐范围。
+
+## 隐私
+
+OpenCode 当前的政策规定，任何活跃的 Go 路由都不会用于模型训练。Grok 4.5 和 GPT-5.6 Luna
+最多保留数据 30 天；其他活跃的 Go 路由均列明为零天保留。在使用模型前，请查看当前的
+[OpenCode Go 隐私表](https://opencode.ai/docs/go/#privacy)，因为提供商的政策可能独立于 OpenClaw
+发生变化。
 
 ## 高级配置
 
@@ -112,8 +119,8 @@ openclaw gateway restart
   </Accordion>
 
   <Accordion title="共享凭据">
-    一个 `OPENCODE_API_KEY` 同时适用于 Zen 和 Go 两个目录。在设置过程中输入该
-    密钥会为两个运行时提供方保存凭据。
+    同一个 `OPENCODE_API_KEY` 可以对两个运行时提供方进行身份验证，因此
+    设置时可以存储两个配置。Go 访问仍需要在 OpenCode 控制台中单独购买付费订阅。
   </Accordion>
 </AccordionGroup>
 

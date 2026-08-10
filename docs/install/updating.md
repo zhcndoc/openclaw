@@ -36,16 +36,9 @@ openclaw update --dry-run   # 不实际应用，仅预览
 或其版本低于最新稳定版发布，则会回退到 stable/latest。若想进行一次性的
 包更新并固定到原始 npm beta dist-tag，请改用 `--tag beta`。
 
-`--channel extended-stable` 仅适用于包，且安装仍然仅在前台进行。OpenClaw 读取公开的 npm `extended-stable` 选择器，
-验证所选的精确包，并安装该精确版本。缺失或不一致的注册表数据会直接失败；
-它绝不会回退到 `latest`。如果所选版本比已安装版本更旧，正常的降级确认仍然适用。
-CLI 会在核心更新成功后持久化该通道；直接执行 `npm install -g openclaw@extended-stable`
-不会更新 `update.channel`。
-在核心切换后，符合条件的官方 npm 插件如果使用裸/default 或 `latest` 意图，会收敛到该精确的核心版本。
-精确锁定和显式非 `latest` 标签、第三方插件以及非 npm 来源保持不变。
-当前 OpenClaw 版本创建的目录安装会保留该默认意图。包含仅精确版本的旧记录会保持锁定，
-因为 OpenClaw 无法安全地区分旧的自动锁定和用户锁定；请在 extended-stable 通道上运行
-`openclaw plugins update @openclaw/name` 一次，以让该插件重新回到精确核心跟踪。
+`--channel extended-stable` 仅适用于包，安装仍仅在前台进行。OpenClaw 会读取公开 npm 的 `extended-stable` 选择器，验证所选的确切包，并安装该确切版本。注册表数据缺失或不一致时将安全失败；它绝不会回退到 `latest`。如果所选版本低于已安装版本，仍会执行正常的降级确认。核心更新成功后，CLI 会持久化该通道；直接执行 `npm install -g openclaw@extended-stable` 不会更新 `update.channel`，但最终为 extended-stable 的包版本检查更新可用性时，仍只会检查经过验证的 `extended-stable` 选择器。
+
+核心替换完成后，符合条件且使用裸版本/默认意图或 `latest` 意图的官方 npm 插件会收敛到完全相同的核心版本。精确固定版本和显式指定的非 `latest` 标签、第三方插件以及非 npm 来源保持不变。当前 OpenClaw 版本创建的目录安装会保留该默认意图。仅包含确切版本的旧记录仍会保持固定，因为 OpenClaw 无法安全区分旧的自动固定版本和用户固定版本；请在 extended-stable 通道上运行一次 `openclaw plugins update @openclaw/name`，使该插件重新加入精确核心版本跟踪。
 
 `--channel dev` 提供一个持续更新的 GitHub `main` 检出。对于一次性的
 包更新，`--tag main` 会映射到 `github:openclaw/openclaw#main` 包规范，
@@ -217,31 +210,35 @@ bun add -g openclaw@latest
 }
 ```
 
-| 通道              | 行为                                                                                                                          |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `stable`          | 在内置延迟后应用更新，并使用确定性抖动进行分批发布。                                                                        |
-| `extended-stable` | 启用 `checkOnStart` 后，在启动时以及每 24 小时检查一次只读更新提示。绝不会自动应用更新。 |
-| `beta`            | 按内置间隔检查，并立即应用更新。                                                                                                |
-| `dev`             | 不自动应用更新。手动使用 `openclaw update`。                                                                                   |
+你也可以在控制界面的 **设置 → 更新**（`/settings/updates`）中选择更新频道并启用自动更新。
+对于 `dev` git 安装，打开此页面会刷新所跟踪的上游，并显示当前检出状态：是否为最新、领先、分叉、不可用，或落后具体数量的提交。它还会显示精确和相对的构建时间、验证安装时间以及最近提交时间。现有检出在下一次验证成功的更新之前，会显示未知的安装时间。
 
-网关还会在启动时记录更新提示（可通过
-`update.checkOnStart: false` 禁用）。已存储的 extended-stable 选择会使用这种
-只读提示路径和现有的 24 小时提示间隔，但绝不会触发
-自动安装、交接、重启、stable 延迟/抖动或 beta 轮询。
-对于降级或事故恢复，请在网关环境中设置 `OPENCLAW_NO_AUTO_UPDATE=1`，即使配置了
-`update.auto.enabled` 也会阻止自动应用。启动时的更新提示仍然可以运行，除非
-`update.checkOnStart` 也被禁用。
+| 频道              | 行为                                                                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stable`          | 在经过内置延迟和用于分批发布的确定性抖动后，宣布更新活动。                                                                                                        |
+| `extended-stable` | 在启用 `checkOnStart` 时，于启动时以及每 24 小时检查一次只读更新提示。永不自动应用更新。                                                                          |
+| `beta`            | 按内置间隔检查，并在有更新版本可用时立即宣布更新活动。                                                                                                             |
+| `dev`             | 启用 `auto.enabled` 后，git 安装每小时检查一次。当存在上游提交时，Gateway 会宣布一个固定到所宣布确切提交的更新活动。                                              |
+
+### 更新活动
+
+当自动更新到期时，活动会等待当前工作完成，然后开始一分钟倒计时。15 分钟的硬性期限会在仍有工作时也启动更新，并使用正常的重启排空和会话恢复路径。
+
+管理员可以使用一次 **暂停 1 小时** 来推迟活动并顺延其硬性期限，或者从侧边栏更新卡片或 **设置 → 更新** 中选择 **立即更新**。对于 `dev` git 安装，活动会安装其所宣布的确切提交。显示的列表会从该固定目标中预览最多五个提交；即使上游 `main` 在倒计时期间前进，该列表也不会移动。
+
+每次应用更新失败都会结束活动，以免界面停留在 **正在更新…**。受管服务交接开始后发生的失败也会记录在重启标记中，并在 Gateway 返回后显示；直接的、无人监管的失败则保留在运行中 Gateway 的日志里。
+
+`OPENCLAW_NO_AUTO_UPDATE=1` 和外部监管器模式会完全禁用自动应用更新。启动更新提示仍可运行，除非同时禁用 `update.checkOnStart`。
+
+Gateway 还会在启动时记录更新提示（使用 `update.checkOnStart: false` 禁用）。已保存的 extended-stable 选择会使用此只读提示路径和现有的 24 小时提示间隔，但永远不会调用自动安装、交接、重启、stable 延迟/抖动或 beta 轮询。
 
 通过实时 Gateway 控制平面（`update.run`）请求的包管理器更新，不会替换正在运行的 Gateway 进程内的包树。在受管服务安装中，Gateway 会启动一个分离的交接，退出，并让正常的 `openclaw update --yes --json` CLI 路径去停止服务、替换包、刷新服务元数据、重启、验证 Gateway 版本和可达性，并在可能时恢复已安装但未加载的 macOS LaunchAgent。如果 Gateway 无法安全地完成该交接，`update.run` 会返回一个安全的 shell 命令，而不是在进程内运行包管理器。
 
 Control UI 侧边栏更新卡片会在将直接启动此 `update.run` 流程时显示 **更新 Gateway**。这适用于浏览器托管的 Control UI、远程 Gateway 以及手动管理的本地 Gateway。
 
-在签名的 macOS 应用中，本地由应用拥有的 Gateway 会将该卡片更改为
-**更新 Mac 应用 + Gateway**。Sparkle 会先更新应用；重新启动后，
-应用运行 `openclaw update --tag <app-version> --json`，重启其 Gateway，
-并在类似设置流程的进度窗口中验证运行状况。仅当该受管 Gateway 需要更新、修复或安装时才会显示此窗口；仅应用更新会直接重新启动
-进入应用。失败详情会与重试、[更新指南](/install/updating) 和
-[Discord](https://discord.gg/clawd) 操作一起保持可见。应用绝不会对远程或外部管理的 Gateway 使用此协调流程，绝不会将较新的 Gateway 降级，也绝不会覆盖 `extended-stable` 通道固定设置。
+从 Control UI 启动的手动更新始终会先询问。首次点击侧边栏更新卡片或 **设置 → 更新 → 立即更新** 时，会打开确认对话框，其中会说明目标、已安装和可用版本（若已知）以及重启影响；只有在你选择 **更新并重启** 后才会发送请求。取消、按 Escape 键以及关闭对话框都会使 Gateway 保持不变。自动活动、CLI 和 `update.run` API 客户端不受影响。
+
+在签名的 macOS 应用中，本地应用自有的 Gateway 会将该卡片改为 **更新 Mac 应用 + Gateway**。Sparkle 会先更新应用；重新启动后，应用运行 `openclaw update --tag <app-version> --json`，重启其 Gateway，并在类似设置流程的进度窗口中验证健康状态。只有当受管 Gateway 需要更新、修复或安装时，才会显示该窗口；仅应用更新会直接重新启动进入应用。失败详情会保持可见，并提供重试、[更新指南](/install/updating) 和 [Discord](https://discord.gg/clawd) 操作。对于远程或外部管理的 Gateway，应用从不使用此协调路径；从不降级较新的 Gateway；也从不覆盖 `extended-stable` 频道固定设置。
 
 当更新成功时，应用会为最近一次具有真实用户/频道交互的顶层直接会话排队一个一次性的欢迎事件。Cron 运行、心跳以及仅后台的会话更新都不会改变该选择。在远程模式下，应用只会更新其本地 Mac 节点运行时，并且仅当已连接的远程 Gateway 至少与应用一样新时才发送该事件。
 

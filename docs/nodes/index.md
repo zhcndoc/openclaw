@@ -342,14 +342,14 @@ OpenCode 通过其官方 CLI JSON/export 接口读取。Pi 读取其
 openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"javaScript":"location.href"}'
 ```
 
-`nodes invoke` 会阻止 `system.run` 和 `system.run.prepare`；这些命令只能通过带有 `host=node` 的 `exec` 工具运行（见上文）。对于常见的“给代理一个 MEDIA 附件”工作流（画布、相机、屏幕、位置，见下文），也存在更高级的辅助工具。
+`nodes invoke` 会阻止 `system.run` 和 `system.run.prepare`；这些命令只能通过带有 `host=node` 的 `exec` 工具运行（见上文）。对于常见的“给代理一个媒体附件”工作流（画布、相机、屏幕、位置，见下文），也存在更高级的辅助工具。
 
 长时间运行的流式节点命令使用增量式的 `node.invoke.progress`
-事件。每个事件都包含 invoke ID、从零开始的序列号，以及一个
+事件。每个事件都包含调用 ID、从零开始的序列号，以及一个
 有界的 UTF-8 文本块；Gateway 会在将这些块交付给
 调用方之前先进行排序。现有的 `node.invoke.result` 仍然是唯一的终态
 响应。流式调用方可以设置一个非活动截止时间，它从
-第一个 progress 事件开始，并在后续 progress 到来时重置，同时在审批和执行期间保留该 invoke 的独立硬超时。结果、硬
+第一个 progress 事件开始，并在后续 progress 到来时重置，同时在审批和执行期间保留该调用的独立硬超时。结果、硬
 超时、非活动超时以及节点断开连接都会丢弃待处理的流状态。调用方取消会发出 `node.invoke.cancel`；随后节点主机将终止匹配的进程树。现有的请求/响应命令保持不变。
 
 ## 命令策略
@@ -366,7 +366,7 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
 | iOS      | `camera.list`, `location.get`, `device.info`, `device.status`, `contacts.search`, `calendar.events`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `system.notify`                                                                                                                                                              |
 | watchOS  | `device.info`, `device.status`, `system.notify`                                                                                                                                                                                                                                                                                                             |
 | Android  | `camera.list`, `location.get`, `notifications.list`, `notifications.actions`, `system.notify`, `device.info`, `device.status`, `device.permissions`, `device.health`, `device.apps`, `contacts.search`, `calendar.events`, `callLog.search`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `mobile.ui.observe`, `mobile.ui.act` |
-| macOS    | `camera.list`, `location.get`, `device.info`, `device.status`, `device.apps`, `contacts.search`, `calendar.events`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `system.notify`, `computer.act`                                                                                                                               |
+| macOS    | `camera.list`, `camera.ptz.status`, `location.get`, `device.info`, `device.status`, `device.apps`, `contacts.search`, `calendar.events`, `reminders.list`, `photos.latest`, `motion.activity`, `motion.pedometer`, `system.notify`, `computer.act`                                                                                                          |
 | Windows  | `camera.list`, `location.get`, `device.info`, `device.status`, `system.notify`, `computer.act`                                                                                                                                                                                                                                                              |
 | Linux    | `system.notify`, `computer.act`（像 `system.run` 这样的节点主机命令需要审批门控，见下文）                                                                                                                                                                                                                                                        |
 
@@ -378,11 +378,11 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
 
 桌面主机命令（`system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`browser.proxy.upload.v1`、`mcp.tools.call.v1`，以及 macOS/Windows/Linux 上的 `screen.snapshot`）不属于上述静态平台默认表的一部分。在操作员批准声明了这些命令的配对请求后，它们才会变为可用；此后，节点的已批准命令集会在重新连接时继续保留这些命令。
 
-危险或隐私敏感的命令需要通过 `gateway.nodes.commands.allow` 一次性持久同意，即使节点已声明它们也是如此：`camera.snap`、`camera.clip`、`screen.record`、`contacts.add`、`calendar.add`、`reminders.add`、`health.summary`、`sms.send`、`sms.search`。`gateway.nodes.commands.deny` 永远优先于默认值和额外允许列表条目。有关 iPhone 同意门控，请参阅 [HealthKit 摘要](/platforms/ios-healthkit)；有关桌面输入的本地启用、配对、能力和工具策略门控，请参阅 [计算机使用](/nodes/computer-use)。
+危险或高度涉及隐私的命令需要通过 `gateway.nodes.commands.allow` 进行一次性持久选择加入，即使节点声明了这些命令也是如此：`camera.snap`、`camera.clip`、`camera.ptz.control`、`screen.record`、`contacts.add`、`calendar.add`、`reminders.add`、`health.summary`、`sms.send`、`sms.search`。`gateway.nodes.commands.deny` 始终优先于默认值和额外的允许列表条目。有关 iPhone 同意门槛，请参阅 [HealthKit 摘要](/platforms/ios-healthkit)；有关桌面输入相关的本地启用、配对、能力和工具策略门槛，请参阅 [计算机使用](/nodes/computer-use)。
 
 插件拥有的节点命令可以添加网关节点调用策略。该策略会在允许列表检查之后、转发到节点之前执行，因此原始 `node.invoke`、CLI 帮助工具和专用代理工具共享相同的插件权限边界。危险的插件节点命令仍然需要显式的 `gateway.nodes.commands.allow` 同意。
 
-当节点更改其声明的命令列表后，必须拒绝旧的设备配对并批准新的请求，这样网关才会存储更新后的命令快照。
+节点更改其声明的命令列表后，请重新连接该节点，检查 `openclaw nodes pending`，并使用 `openclaw nodes approve <requestId>` 批准扩展后的命令范围，以便网关存储更新后的命令快照。
 
 ## 配置（`openclaw.json`）
 
@@ -490,8 +490,9 @@ openclaw nodes canvas a2ui reset --node <idOrNameOrIp>
 
 ```bash
 openclaw nodes camera list --node <idOrNameOrIp>
-openclaw nodes camera snap --node <idOrNameOrIp>            # 默认：同时捕获两个方向（2 行 MEDIA）
+openclaw nodes camera snap --node <idOrNameOrIp>            # 默认：一张由节点选择的照片
 openclaw nodes camera snap --node <idOrNameOrIp> --facing front
+openclaw nodes camera snap --node <idOrNameOrIp> --facing both # 先前置再后置（保存 2 个路径）
 openclaw nodes camera snap --node <idOrNameOrIp> --device-id <id> --max-width 1200 --quality 0.9 --delay-ms 2000
 ```
 

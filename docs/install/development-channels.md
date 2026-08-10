@@ -10,14 +10,10 @@ sidebarTitle: "发布通道"
 
 OpenClaw 提供四个更新通道：
 
-- **stable**: npm dist-tag `latest`。推荐大多数用户使用。
-- **extended-stable**: npm dist-tag `extended-stable`。一个全新的、后续
-  受支持月份的软件包通道。它仅限于软件包安装，并且仅在前台安装。已保存的选择在
-  启用 `update.checkOnStart` 时会收到只读更新提示，但不会自动应用。
-- **beta**: npm dist-tag `beta`。当 `beta` 缺失
-  或比当前稳定版更新时，回退到 `latest`。
-- **dev**: `main`（git）的移动头指针。发布时对应 npm dist-tag `dev`。`main`
-  用于实验和积极开发；它可能包含不完整的功能或破坏性更改。不要在生产网关上运行它。
+- **stable**：npm dist-tag `latest`。推荐大多数用户使用。
+- **extended-stable**：npm dist-tag `extended-stable`。这是一个全新的、滞后一个受支持月份的软件包通道。它仅适用于软件包，安装仅在前台进行。当启用 `update.checkOnStart` 时，它会接收只读的更新提示，包括直接安装最终的 extended-stable 软件包，但绝不会自动应用更新。
+- **beta**：npm dist-tag `beta`。当 `beta` 缺失或早于当前稳定版本时，会回退到 `latest`。
+- **dev**：`main`（git）的最新移动版本。发布时使用 npm dist-tag `dev`。`main` 用于实验和积极开发，可能包含未完成的功能或破坏性变更。不要在生产网关中运行它。
 
 稳定版构建通常会先发布到 **beta**，在那里经过验证，然后再在不更改版本号的情况下
 提升到 **latest**。维护者也可以直接发布到 `latest`。Dist-tag 是 npm 安装的事实来源。
@@ -34,16 +30,19 @@ openclaw update --channel dev
 `--channel` 会将选择持久化到配置中的 `update.channel`，并驱动这两种
 安装路径：
 
-| 通道              | npm/package 安装                                                                                                                                                                   | git 安装                                                                                                                                                       |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stable`         | dist-tag `latest`                                                                                                                                                                  | 最新稳定 git 标签（不包括 `-alpha.N`、`-beta.N`、`-rc.N`、`-dev.N`、`-next.N`、`-preview.N`、`-canary.N`、`-nightly.N` 以及其他命名的预发布后缀） |
+| 通道              | npm/包安装                                                                                                                                                                   | git 安装                                                                                                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stable`         | dist-tag `latest`                                                                                                                                                            | 最新稳定 git 标签（不包括 `-alpha.N`、`-beta.N`、`-rc.N`、`-dev.N`、`-next.N`、`-preview.N`、`-canary.N`、`-nightly.N` 以及其他命名的预发布后缀） |
 | `extended-stable` | 解析公开 npm `extended-stable` 选择器，验证所选中的确切包，并安装该精确版本。若无法解析则直接失败，不会回退到 `latest`、`beta` 或 `dev`。 | 不支持：OpenClaw 会保持检出状态不变，并要求你改用包安装方式                                                                     |
-| `beta`           | dist-tag `beta`，当 `beta` 缺失或更旧时回退到 `latest`                                                                                                                             | 最新 beta git 标签，当 beta 缺失或更旧时回退到最新稳定 git 标签                                                                       |
-| `dev`            | dist-tag `dev`（较少使用；大多数 dev 用户运行 git 安装）                                                                                                                                 | 拉取、将检出内容 rebase 到上游 `main` 分支、构建，并重新安装全局 CLI                                                                 |
+| `beta`            | dist-tag `beta`，当 `beta` 缺失或更旧时回退到 `latest`                                                                                                                        | 最新 beta git 标签，当 beta 缺失或更旧时回退到最新稳定 git 标签                                                                       |
+| `dev`             | dist-tag `dev`（较少使用；大多数 dev 用户运行 git 安装）                                                                                                                    | 拉取、将检出内容 rebase 到上游 `main` 分支、构建，并重新安装全局 CLI                                                                 |
 
-对于 `dev` 的 git 安装，默认检出目录是 `~/openclaw`（或者当
-设置了 `OPENCLAW_HOME` 时为 `$OPENCLAW_HOME/openclaw`）；可通过
+对于 `dev` git 安装，默认检出目录为 `~/openclaw`（或在设置了
+`OPENCLAW_HOME` 时为 `$OPENCLAW_HOME/openclaw`）；可通过
 `OPENCLAW_GIT_DIR` 覆盖。
+自动更新活动会固定其公布的上游提交，因此即使倒计时期间
+`main` 继续推进，显示的列表也会预览从实际目标安装版本开始的最多五个提交。手动执行
+`openclaw update --channel dev` 仍会以当前上游 `main` 为目标。
 
 <Tip>
 要让 stable 和 dev 并行使用，请使用两个独立的检出目录，并让各自的网关指向自己的目录。
@@ -118,7 +117,7 @@ openclaw update --dry-run --json
 openclaw update status
 ```
 
-显示当前激活的通道（以及决定该通道的来源：config、git tag、git branch、installed version 或 default）、安装类型（git 或 package）、当前版本，以及更新可用性。
+显示当前激活的通道（以及决定该通道的来源：配置、Git 标签、Git 分支、已安装版本或默认值）、安装类型（Git 或软件包）、当前版本，以及更新可用性。
 
 ## 标签最佳实践
 

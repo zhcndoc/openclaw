@@ -17,14 +17,14 @@ title: "macOS IPC"
 
 ## 工作原理
 
-### Gateway + node 传输
+### Gateway + 节点传输
 
-- 应用运行 Gateway（本地模式）并作为节点连接到它。
+- 应用运行 Gateway（本地模式），并作为节点连接到它。
 - Agent 操作通过 `node.invoke` 执行（例如 `system.run`、`system.notify`、`canvas.*`）。
-- 节点命令包括 `canvas.*`、`camera.snap`、`camera.clip`、`screen.snapshot`、`screen.record`、`computer.act`、`system.run` 和 `system.notify`。
-- 节点会报告一个 `permissions` 映射，以便 agent 了解是否可用屏幕、摄像头、麦克风、语音、自动化或辅助功能访问权限。
+- 节点命令包括 `canvas.*`、`camera.list`、`camera.snap`、`camera.clip`、`camera.ptz.status`、`camera.ptz.control`、`screen.snapshot`、`screen.record`、`computer.act`、`system.run` 和 `system.notify`。
+- 节点会报告一个 `permissions` 映射，以便 Agent 查看屏幕、摄像头、麦克风、语音、自动化或辅助功能访问权限是否可用。
 
-### Node 服务 + app IPC
+### Node 服务 + 应用 IPC
 
 - 一个无头的节点宿主服务连接到 Gateway WebSocket。
 - `system.run` 请求会通过本地 Unix 套接字（`ExecApprovalsSocket.swift`）转发到 macOS 应用。
@@ -41,7 +41,7 @@ Agent -> Gateway -> Node Service (WS)
 
 ### PeekabooBridge（UI 自动化）
 
-- 内置 agent 的 `computer` 工具**不**使用这个套接字。配对的 macOS 节点会在应用进程中借助嵌入式 Peekaboo 服务来实现 `computer.act`。
+- 内置 Agent 的 `computer` 工具**不**使用这个套接字。配对的 macOS 节点会在应用进程中借助嵌入式 Peekaboo 服务来实现 `computer.act`。
 - UI 自动化使用单独的 UNIX 套接字（`~/Library/Application Support/OpenClaw/<socket>`）以及 PeekabooBridge JSON 协议。
 - 主机优先级顺序（客户端侧）：Peekaboo.app -> Claude.app -> OpenClaw.app -> 本地执行。
 - 安全性：bridge 主机要求允许列表中的 TeamID（捆绑的 `PeekabooBridgeHostCoordinator` 会将固定团队以及应用自身的签名团队加入允许列表）；一个仅限 DEBUG 的同 UID 逃生通道由 `PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1` 保护（Peekaboo 约定）。
@@ -63,4 +63,4 @@ Agent -> Gateway -> Node Service (WS)
 ## 相关内容
 
 - [macOS 应用](/platforms/macos)
-- [macOS IPC 流程（Exec 审批）](/tools/exec-approvals-advanced#macos-ipc-flow)
+- [macOS IPC 流程（Exec 审批）](/tools/exec-approvals-advanced#macos-ipc-flow)。

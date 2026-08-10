@@ -38,7 +38,7 @@ title: "思考级别"
   - Google Gemini 将 `/think adaptive` 映射为 Gemini 的 provider-owned dynamic thinking。Gemini 3 请求会省略固定的 `thinkingLevel`，而 Gemini 2.5 请求会发送 `thinkingBudget: -1`；固定级别仍会映射到该模型家族中最接近的 Gemini `thinkingLevel` 或 budget。
   - MiniMax M2.x（`minimax/MiniMax-M2*`）在 Anthropic 兼容流式路径上，默认 `thinking: { type: "disabled" }`，除非你在模型参数或请求参数中显式设置 thinking。这样可以避免从 M2.x 非原生 Anthropic 流格式中泄漏出的 `reasoning_content` 增量。MiniMax-M3（以及 M3.x）不受此限制：M3 会发出正确的 Anthropic thinking blocks，并在 thinking 被禁用时返回空内容，因此 OpenClaw 会让 M3 走 provider 的省略/adaptive thinking 路径。
   - Z.AI（`zai/*`）对大多数 GLM 模型是二元（`on`/`off`）。GLM-5.2 是例外：它暴露 `/think off|low|high|max`，将 `low` 和 `high` 映射到 Z.AI `reasoning_effort: "high"`，并将 `max` 映射到 `reasoning_effort: "max"`。
-  - Moonshot API Kimi K3（`moonshot/kimi-k3`）始终以 `max` 思考，发送 `reasoning_effort: "max"`，省略 K2 的 `thinking` 字段和固定采样覆盖，并保留 K3 支持的工具选择。Kimi Code K3（`kimi/k3` 和 `kimi/k3-256k`）暴露完整的 `/think` 阶梯，默认值为 `high`：`off` 发送 `thinking.type: "disabled"`，`minimal`/`low` 映射为 low effort，`medium`/`high`/`adaptive` 映射为 high effort，而 `xhigh`/`max` 映射为 max effort。当前的 Kimi Code 引用还包括 `kimi/kimi-for-coding` 和 `kimi/kimi-for-coding-highspeed`。Kimi K2.7 Code（`moonshot/kimi-k2.7-code` 和 `moonshot/kimi-k2.7-code-highspeed`）始终思考，只暴露 `on`，并省略出站的 `thinking` 和 `reasoning_effort`。其他 `moonshot/*` 模型将 `/think off` 映射为 `thinking: { type: "disabled" }`，并将任何非 `off` 级别映射为 `thinking: { type: "enabled" }`。当启用 K2 thinking 时，Moonshot 仅接受 `tool_choice` `auto|none`；OpenClaw 会将不兼容的值标准化为 `auto`】【。
+  - Moonshot API Kimi K3（`moonshot/kimi-k3`）始终以 `max` 思考，发送 `reasoning_effort: "max"`，省略 K2 的 `thinking` 字段和固定采样覆盖，并保留 K3 支持的工具选择。Kimi Code K3（`kimi/k3` 和 `kimi/k3-256k`）暴露完整的 `/think` 阶梯，默认值为 `high`：`off` 发送 `thinking.type: "disabled"`，`minimal`/`low` 映射为 low effort，`medium`/`high`/`adaptive` 映射为 high effort，而 `xhigh`/`max` 映射为 max effort。当前的 Kimi Code 引用还包括 `kimi/kimi-for-coding` 和 `kimi/kimi-for-coding-highspeed`。Kimi K2.7 Code（`moonshot/kimi-k2.7-code` 和 `moonshot/kimi-k2.7-code-highspeed`）始终思考，只暴露 `on`，并省略出站的 `thinking` 和 `reasoning_effort`。其他 `moonshot/*` 模型将 `/think off` 映射为 `thinking: { type: "disabled" }`，并将任何非 `off` 级别映射为 `thinking: { type: "enabled" }`。当启用 K2 thinking 时，Moonshot 仅接受 `tool_choice` `auto|none`；OpenClaw 会将不兼容的值标准化为 `auto`。
 
 ## 解析顺序
 
@@ -64,21 +64,23 @@ title: "思考级别"
 ## 快速模式（/fast）
 
 - 级别：`auto|on|off|default`。
-- 仅指令消息会切换会话级快速模式覆盖，并回复 `Fast mode set to auto.`, `Fast mode enabled.`, 或 `Fast mode disabled.`。使用 `/fast default` 可清除此会话覆盖并继承已配置的默认值；别名包括 `inherit`, `clear`, `reset`, 和 `unpin`。
-- 发送不带模式的 `/fast`（或 `/fast status`）以查看当前生效的快速模式状态。
+- 仅包含指令的消息会切换会话快速模式覆盖设置，并回复 `Fast mode set to auto.`、`Fast mode enabled.` 或 `Fast mode disabled.`。使用 `/fast default` 可清除会话覆盖设置并继承已配置的默认值；别名包括 `inherit`、`clear`、`reset` 和 `unpin`。
+- 在不指定模式的情况下发送 `/fast`（或 `/fast status`），可查看当前生效的快速模式状态。
 - OpenClaw 按以下顺序解析快速模式：
-  1. 行内/仅指令的 `/fast auto|on|off` 覆盖（`/fast default` 清除此层）
-  2. 会话覆盖
-  3. 每个代理的默认值（`agents.entries.*.fastModeDefault`）
-  4. 每个模型的配置：`agents.defaults.models["<provider>/<model>"].params.fastMode`
-  5. 回退：`off`
-- `auto` 会保持会话/配置模式为 auto，但会独立解析每次新的模型调用。开始时间早于 auto 截止时间的调用会启用快速模式；之后的重试、回退、工具结果或续接调用会以关闭快速模式启动。截止时间默认是 60 秒；可在当前激活模型上设置 `agents.defaults.models["<provider>/<model>"].params.fastAutoOnSeconds` 来更改。
-- 对于 `openai/*`，快速模式通过在受支持的 Responses 请求中发送 `service_tier=priority` 映射为 OpenAI priority processing。
-- 对于基于 Codex 的 `openai/*` / `openai-codex/*` 模型，快速模式会在 Codex Responses 上发送相同的 `service_tier=priority` 标志。原生 Codex app-server 回合只会在 `turn/start` 或线程开始/恢复时接收该层级，因此 `auto` 不能将某个已经运行中的 app-server 回合重新分层；它会应用于 OpenClaw 发起的下一次模型回合。
-- 对于直接的公共 `anthropic/*` 请求，包括发送到 `api.anthropic.com` 的 OAuth 认证流量，快速模式会映射为 Anthropic service tiers：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
-- 对于 Anthropic 兼容路径上的 `minimax/*`，`/fast on`（或 `params.fastMode: true`）会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
-- 当同时设置时，显式的 Anthropic `serviceTier` / `service_tier` 模型参数会覆盖快速模式默认值。OpenClaw 对非 Anthropic 代理 base URL 仍会跳过 Anthropic service-tier 注入。
-- `/status` 在快速模式启用时显示 `Fast`，在配置模式为 auto 时显示 `Fast:auto`。
+  1. 当前消息中的内联 `/fast auto|on|off` 覆盖设置
+  2. 仅包含指令的消息中存储的会话覆盖设置（`/fast default` 会清除这一层）
+  3. Agent 级默认值（`agents.entries.*.fastModeDefault`）
+  4. 全局默认值（`agents.defaults.fastModeDefault`）
+  5. 按模型配置（`agents.defaults.models["<provider>/<model>"].params.fastMode`）
+  6. 回退值：`off`
+- 有效的模型范围 `params.fastMode` / `params.fast_mode` 值和有效的截止时间键属于类型化的 Agent 运行时控制项。它们不计入作者编写的 provider 请求参数，也不会自行选择 OpenClaw 或 Codex。当配方依赖某个运行时时，请固定设置 `agentRuntime.id: "openclaw"` 或 `agentRuntime.id: "codex"`。
+- `auto` 会将会话/配置模式保持为 auto，但会独立解析每次新的模型调用。在自动截止时间之前开始的调用会启用快速模式；之后的重试、回退、工具结果或续接调用则会在快速模式禁用的情况下开始。截止时间默认为 60 秒；在活动模型上设置 `agents.defaults.models["<provider>/<model>"].params.fastAutoOnSeconds` 可修改此值。
+- 对于 `openai/*`，快速模式映射到 OpenAI API 快速模式（原称 Priority processing）。OpenClaw 当前会在受支持的 Responses 请求中发送 `service_tier=priority`。
+- 在 Codex harness 回合中，共享运行时控制会优先于已配置的原生 app-server tier：快速模式开启时发送 `priority`，快速模式关闭时发送 `null` 以清除由 OpenClaw 所拥有的 tier，而 auto 则会为每次模型调用单独决定。仅当没有提供共享快速模式运行控制时，才会使用已配置的 Codex tier。请参阅 [Codex harness](/plugins/codex-harness#shared-fast-mode-and-codex-fast-mode)。
+- 对于直接的公开 `anthropic/*` 请求，包括发送至 `api.anthropic.com` 的 OAuth 身份验证流量，快速模式会映射到 Anthropic 服务 tier：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
+- 对于处于 Anthropic 兼容路径上的 `minimax/*`，`/fast on`（或 `params.fastMode: true`）会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
+- 当显式设置 Anthropic `serviceTier` / `service_tier` 模型参数时，其优先级高于快速模式默认值。对于非 Anthropic 代理基础 URL，OpenClaw 仍会跳过 Anthropic 服务 tier 注入。
+- `/status` 会报告已解析的 OpenClaw 策略（`on`、`off` 或 `auto`）以及所选运行时。它不会报告已完成请求实际采用或返回的上游服务 tier。有关 provider 详细信息，请参阅 [OpenAI 快速模式](/providers/openai#advanced-configuration)。
 
 ## 详细日志指令（/verbose 或 /v）
 

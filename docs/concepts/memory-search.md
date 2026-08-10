@@ -50,12 +50,12 @@ openclaw plugins install @openclaw/llama-cpp-provider
 | Gemini              | `gemini`            | 是           | 支持图片/音频索引                  |
 | GitHub Copilot      | `github-copilot`     | 否           | 使用你的 Copilot 订阅              |
 | 本地                | `local`             | 否           | GGUF 模型，约 0.6 GB 自动下载      |
-| LM Studio           | `lmstudio`          | 否           | 本地/自托管服务器                  |
+| LM Studio           | `lmstudio`           | 否           | 本地/自托管服务器                  |
 | Mistral             | `mistral`            | 是           |                                   |
-| Ollama              | `ollama`            | 否           | 本地/自托管服务器                  |
-| OpenAI              | `openai`            | 是           | 默认                               |
+| Ollama              | `ollama`             | 否           | 本地/自托管服务器                  |
+| OpenAI              | `openai`             | 是           | 默认                               |
 | OpenAI 兼容         | `openai-compatible`  | 通常需要      | 通用 `/v1/embeddings` 端点         |
-| Voyage              | `voyage`            | 是           |                                   |
+| Voyage              | `voyage`             | 是           |                                   |
 
 ## 搜索如何工作
 
@@ -69,7 +69,9 @@ flowchart LR
     T --> BM["BM25 搜索"]
     VS --> M["加权合并"]
     BM --> M
-    M --> R["前排结果"]
+    M --> D["Recency and importance"]
+    D --> R["MMR diversity"]
+    R --> O["Top results"]
 ```
 
 - **向量搜索** 匹配相似含义（“gateway host” 匹配 “the
@@ -88,11 +90,13 @@ hybrid relevance × recency decay × importance multiplier
 
 重要性只在条目被写入时评估一次，而写入该条目的记忆工作流中已经有模型参与。如果缺少重要性，则视为中性，因此现有索引会保留其之前的相关性信号。带日期的日记笔记会按照 30 天半衰期衰减；像 `MEMORY.md` 和 `USER.md` 这样的整理文件则始终有效。这沿用了 [生成式智能体（arXiv:2304.03442）](https://arxiv.org/abs/2304.03442) 中相关性、时效性和重要性的结果，但没有增加一次查询时的模型调用。
 
-## 确定性触发词召回
+MMR 随后会对评分后的混合候选集重新排序，以减少重复的片段。它不会更改分数或阈值资格，也不会再次调用提供商。
+
+## 确定性触发召回
 
 在符合条件的交互轮次中，内置引擎还会将传入消息与存储在已索引条目中的短触发短语进行比较。强匹配可以在回复前向隐藏上下文中添加最多三条精简条目。预过滤使用现有的关键词和向量检索路径，不会运行召回模型。
 
-自动注入的范围刻意比 `memory_search` 更窄：只有已提升、受信任的条目才符合条件。在可用索引来源信息之前，这意味着仅来自根目录 `MEMORY.md` 和 `USER.md` 的条目。日记、导入的转录文本以及会话转录文本仍可通过显式记忆工具或 Active Memory 升级来访问，但绝不会自动注入。
+自动注入的范围刻意比 `memory_search` 更窄：只有已提升、受信任的条目才符合条件。在可用索引来源信息之前，这意味着仅来自根目录 `MEMORY.md` 和 `USER.md` 的条目。日记、导入的转录文本以及会话转录文本仍可通过显式记忆工具或主动记忆升级来访问，但绝不会自动注入。
 
 **仅 FTS 模式。** 设置 `provider: "none"` 可有意禁用嵌入，仅使用关键词进行搜索。未设置 `provider` 或将其设置为 `"auto"` 时，如果嵌入设置失败或请求失败，则会回退到仅基于关键词的排序；`provider: "local"`（GGUF/llama.cpp 提供方）也是如此。创建时的回退仍会为关键词搜索建立文本索引，即使没有匹配项，`memory_search` 也会在 `debug.embeddingBootstrap` 中包含经过编辑的嵌入初始化原因。
 
@@ -100,7 +104,7 @@ hybrid relevance × recency decay × importance multiplier
 
 ## 提升搜索质量
 
-两个可选功能有助于处理大量笔记历史。
+默认情况下，混合搜索会启用两轮确定性的排序处理。
 
 ### 新近度衰减
 
@@ -110,10 +114,10 @@ hybrid relevance × recency decay × importance multiplier
 
 ### MMR（多样性）
 
-减少重复结果。如果有五条笔记都提到了同一个路由器配置，MMR 会确保顶部结果覆盖不同主题，而不是重复出现。
+减少重复结果。如果五条笔记都提到了相同的路由器配置，MMR 会优先选择一条相关性相近但内容不同的结果，而不是重复几乎相同的片段。固定的相关性偏置设置使用 lambda `0.7`，并基于片段标记计算 Jaccard 重叠度。其局部计算复杂度为 `O(k²)`：普通默认设置会为每个检索分支请求 24 个候选项，在计算重叠度之前，最多可得到 48 个互不完全相同的候选项；更广泛的项目和标识符搜索仍分别设有上限。
 
 <Tip>
-如果 `memory_search` 不断从不同的每日笔记中返回几乎重复的片段，就启用这个功能。
+无需进行任何配置。仅 FTS 和仅向量的回退路径不会运行混合 MMR 处理。
 </Tip>
 
 ## 多模态记忆
@@ -122,7 +126,7 @@ hybrid relevance × recency decay × importance multiplier
 Markdown 一起建立索引。这仅适用于 `memory.search.extraPaths` 下的文件；默认
 记忆根目录（`MEMORY.md`、`memory/*.md`）仍然仅支持 Markdown。搜索查询
 仍然是文本，但它们也会与视觉和音频内容进行匹配。有关
-设置，请参阅 [记忆配置参考](/reference/memory-config#multimodal-memory-gemini)。
+设置，请参阅 [记忆配置参考](/reference/memory-config#multimodal-memory)。
 
 ## 会话记忆搜索
 
@@ -141,12 +145,7 @@ Markdown 一起建立索引。这仅适用于 `memory.search.extraPaths` 下的�
 使用单独的 `dmScope`，或者将 visibility 设为 `"self"` 以退出环境式被监视会话读取。
 其他无关的同一代理会话仍然需要 `"agent"` 级可见性。
 
-使用 QMD 后端时，还需要设置 `memory.qmd.sessions.enabled: true`，这样
-转录内容才会导出到 QMD 集合；仅设置 `experimental.sessionMemory`
-和 `sources` 并不会将转录内容导出到 QMD。参见
-[配置参考](/reference/memory-config#session-memory-search-experimental)。
-
-## 故障排查
+## 故障排除
 
 **没有结果？** 运行 `openclaw memory status` 检查索引。如果为空，运行 `openclaw memory index --force`。
 

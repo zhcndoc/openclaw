@@ -36,19 +36,18 @@ title: "仪表盘架构"
 
 ## UX 流程
 
-- **升级：** 代理在任意聊天中调用 `show_widget` → 小组件以内联方式渲染  
-  在对话记录中，和现在一样 → 悬停显示 **固定到仪表盘** → 小组件  
-  出现在该会话的面板上。代理也可以传入 `pin: true` 来实现同样效果。
-- **面板视图：** 带有面板的会话会获得一个正反切换（聊天 / 仪表盘）。  
-  面板视图 = 标签栏（仅当 >1 个标签时）+ 流式网格 + 固定聊天面板。  
-  聊天停靠栏可调整大小、可移动（左 / 右 / 底部），并且像侧边栏一样可折叠。  
-  每个标签的停靠状态都会被记住。
-- **拖拽：** 用户拖动小组件；网格会自动紧凑排列（小组件向上浮动，相邻项重新流动）。  
-  通过把手调整大小会吸附到尺寸步进。没有像素级定位——对任何人都没有。
-- **重置警告：** 在带有面板的会话中执行 `/new` / `/reset` 时，会在网页界面中请求确认（“上下文会重置，仪表盘会保留”）并保留面板。
-- **侧边栏：** 已固定的会话在拥有面板时会渲染它们的正面视图。  
-  Home 会话的面板是默认的“代理仪表盘”。
-- **交互**（三个层级，见下文）：静默状态事件、可见的提示发送，以及自动化触发器。
+- **完成流程：** agent 在任意聊天中调用 `show_widget` → widget 以内联方式渲染在
+  transcript 中，与现在完全一致 → 悬停时显示 **固定到仪表板** → widget
+  出现在该会话的面板中。agent 也可以传入 `pin: true` 来执行相同操作。
+- **面板视图：**拥有面板的会话会获得视图切换选项（聊天 / 分栏 /
+  仪表板）。分栏视图 = 标签页栏（仅在标签页数 >1 时显示）+ 流式网格 + 停靠的聊天
+  窗格；仪表板视图则相同，但不包含聊天。聊天停靠窗格可调整大小，也可通过切换器的停靠位置选择器移动到（左侧 / 右侧 / 底部）。
+  每个标签页的停靠状态都会被记住。
+- **拖拽：**用户拖拽 widget；网格会自动紧凑排列（widget 向上浮动，邻近元素重新布局）。通过控制柄调整大小时会吸附到尺寸步长。不允许任何人进行像素级定位。
+- **重置警告：**在拥有面板的会话中执行 `/new` / `/reset` 时，Web UI 会请求确认（“上下文将被重置，仪表板会保留”），并保留面板。
+- **侧边栏：**已固定的会话在拥有面板时显示其面板缩略视图。
+  Home 会话的面板是默认的“agent 仪表板”。
+- **交互**（分为三个层级，见下文）：静默状态事件、可见的提示发送，以及自动化触发器。
 
 ## 交互层级
 
@@ -63,7 +62,7 @@ Widget 的 HTML/JS 由 agent 编写（通常通过 `show_widget`），包裹在�
 - **内联（transcript）widget** 保持当前的 canvas-document 管线：
   写入状态目录，由 gateway 提供服务，按作用域清理，无需审批（它们从构造上就是无能力的——prompt 发送由用户确认）。
 - **Board widget** 是会话状态：字节内容保存在所属 agent 的 SQLite
-  DB（`board_widgets`）中，由一个 core gateway 路由提供服务
+  DB（`board_widgets`）中，由一个核心 gateway 路由提供服务
   （`/__openclaw__/board/<agentId>/<sessionKey>/<name>/`），该路由读取 DB。
   将 transcript widget 固定会复制这些字节。容量上限：每个 widget 256 KB，
   每个 board 48 个 widget。
@@ -73,23 +72,23 @@ Widget 的 HTML/JS 由 agent 编写（通常通过 `show_widget`），包裹在�
   revision 声明的 manifest 是已授予 manifest 的子集时，才保留 `data`/`net`/`actions`
   授权；一旦 manifest 扩大，则会重新提示操作者。
 
-### Widget 承载内容；MCP app 只是内容的一种
+### Widget 承载内容；MCP 应用只是内容的一种
 
 **Widget 是 OpenClaw 的原语**：带名称、已固定、已设大小、会话归属的 board 单元，
 以及一条授权记录。其内部渲染的内容只是某一种内容类型：
 
 - `html` — 由 agent 通过 `show_widget` 编写，字节存放在 board 存储中。
-- `mcp-app` — 第三方 MCP app 视图（来自已配置服务器的 `ui://` 资源），托管在 widget 单元内部。
+- `mcp-app` — 第三方 MCP 应用视图（来自已配置服务器的 `ui://` 资源），托管在 widget 单元内部。
 
-MCP app 并没有定义 widget 模型；是 widget 获得了托管它们的能力。身份、位置、固定、授权，以及面向作者的 API 仍然属于 OpenClaw——因此 `show_widget` 代码可以像今天一样简短，也永远不需要知道 MCP Apps 规范的存在。
+MCP 应用并没有定义 widget 模型；是 widget 获得了托管它们的能力。身份、位置、固定、授权，以及面向作者的 API 仍然属于 OpenClaw——因此 `show_widget` 代码可以像今天一样简短，也永远不需要知道 MCP Apps 规范的存在。
 
 其下方共享的基础设施（简化就落在这里）：
 
-- **一个沙箱主机。** `html` widget 通过 MCP app 已经发布的同一套加固管线渲染
+- **一个沙箱主机。** `html` widget 通过 MCP 应用已经发布的同一套加固管线渲染
   （在专用沙箱 origin 上的双 iframe、每个 widget 声明的 CSP、以及失败即关闭的解码），
   而不是再造一套专门的 iframe 主机。代理按值接收 HTML，因此本地内容是自然场景。
 - **一个授权模型。** 无论 widget 类型如何，它的可达范围都是一份已授予的 allowlist：
-  对于 `html` widget，是主机工具；对于 `mcp-app` widget，是服务器对 app 可见的工具
+  对于 `html` widget，是主机工具；对于 `mcp-app` widget，是服务器对应用可见的工具
   （通过现有的 `allowedAppToolNames` 机制实现，并改为按 widget 持久化，而不是按一次 mint 运行持久化）。
 - **`html` widget 的主机工具**（通过 widget bridge 暴露，并按授权校验）：
   - `openclaw.prompt.send` — tier 2；通过可见的 composer 转发，除非已授权否则需要用户确认
@@ -110,7 +109,7 @@ MCP app 并没有定义 widget 模型；是 widget 获得了托管它们的能�
 
 已启用的插件可以通过 `openclaw.plugin.json` 中的 `dashboard.dataBindings` 和 `dashboard.actionVerbs` 扩展 widget 主机能力。插件本地 id 会变成以插件 id 为前缀的授权名称，例如 `workboard.cards.list` 和 `workboard.dispatch`；插件 id 段中的 `%` 和 `.` 会被转义，因此不同插件/local-id 的拆分不能继承同一条已持久化授权。插件注册期间，OpenClaw 会验证每个 binding 都指向同一插件注册的、带 `operator.read` 的 RPC，并且每个 action 都指向一个带 `operator.write` 的 RPC；无效声明会导致插件加载失败。经过验证的 registry 只会在插件生命周期变化时重建，而 widget 授权仍然是按 widget 粒度、并与字节和版本绑定的。
 
-### 建模残留：WebRTC data channel
+### 建模残留：WebRTC 数据通道
 
 沙箱 CSP 发出提议中的 `webrtc 'block'` 指令，但
 [Chromium 当前的 CSP 指令集合](https://chromium.googlesource.com/chromium/src/+/main/services/network/public/mojom/content_security_policy.mojom#95)
@@ -120,13 +119,13 @@ MCP app 并没有定义 widget 模型；是 widget 获得了托管它们的能�
 
 ### Transcript 展示：一个 widget 卡片
 
-内联展示统一到 widget 原语上。当某个工具结果携带 UI —— `show_widget` 输出或带 app resource 的 MCP 工具结果时，系统会生成一个**临时的、自动命名的 widget**（会话作用域、会被清理），并且 transcript 会渲染为一张单一的 widget 卡片，按内容类型分发处理。MCP app 的自动展示完全符合规范预期（零额外模型工作）；其底层本质上就是一个 widget。这样会删除聊天渲染中并行存在的 `mcpApp` 特殊分支（界面门控、单独去重），让所有内联 UI 都拥有相同的固定入口，并使 widget registry 成为主要的重新打开路径（transcript 扫描重建仍作为从未固定历史的备用方案）。只读的带票据独立主机与 boards 作为持久化重新打开表面存在重叠——这是一个可在 T6 评估的整合候选，而不是默认前提。
+内联展示统一到 widget 原语上。当某个工具结果携带 UI —— `show_widget` 输出或带 app resource 的 MCP 工具结果时，系统会生成一个**临时的、自动命名的 widget**（会话作用域、会被清理），并且 transcript 会渲染为一张单一的 widget 卡片，按内容类型分发处理。MCP 应用的自动展示完全符合规范预期（零额外模型工作）；其底层本质上就是一个 widget。这样会删除聊天渲染中并行存在的 `mcpApp` 特殊分支（界面门控、单独去重），让所有内联 UI 都拥有相同的固定入口，并使 widget registry 成为主要的重新打开路径（transcript 扫描重建仍作为从未固定历史的备用方案）。只读的带票据独立主机与 boards 作为持久化重新打开表面存在重叠——这是一个可在 T6 评估的整合候选，而不是默认前提。
 
-组合方式：v1 是网格相邻（agent chrome widget 与 app widget 在同一个 tab 中并排）。v2 增加**主机管理的 app 插槽**——agent widget 的 HTML 声明一个插槽区域，由主机将真实 app 视图作为相邻的沙箱进行合成。app 永远不会渲染在 agent 的 iframe 内：嵌套会破坏 bridge 身份，并可能对已授予的 app UI 进行覆盖/clickjacking，所以这个插槽是布局契约，而不是嵌入。
+组合方式：v1 是网格相邻（agent chrome widget 与 app widget 在同一个 tab 中并排）。v2 增加**主机管理的应用插槽**——agent widget 的 HTML 声明一个插槽区域，由主机将真实 app 视图作为相邻的沙箱进行合成。app 永远不会渲染在 agent 的 iframe 内：嵌套会破坏 bridge 身份，并可能对已授予的 app UI 进行覆盖/clickjacking，所以这个插槽是布局契约，而不是嵌入。
 
-### 服务端来源的 widget（固定的 MCP app）
+### 服务端来源的 widget（固定的 MCP 应用）
 
-在统一主机下，固定一个第三方 MCP app 只是一个内容来自服务端而不是存储中的 widget：`board_widgets` 保存的是描述符（`serverName`、`toolName`、`uiResourceUri`、来源 `toolCallId` + `sessionKey`），而不是 HTML 字节；board 会在聊天回合 10 分钟 TTL 之后重新 mint 该视图租约（在过期时重新抓取 `ui://` 资源）。聊天内联 MCP app 视图获得与 agent widget 相同的 **固定到 dashboard** 入口。重新打开的视图按设计今天就是只读；希望保持交互性的已固定 app，会获得对服务器 app 可见工具的持久授权（固定时会把明确的 allowlist 展示给操作者），并与 mint 运行解耦。未授权的固定项仍然只读——但对展示型 dashboard 仍然有用。v1 只固定到来源会话的 board；跨会话固定需要 lease broker，并需等待。请与 open PR #109807（`ui/message` composer 路由、主题/尺寸传播）协同。
+在统一主机下，固定一个第三方 MCP 应用只是一个内容来自服务端而不是存储中的 widget：`board_widgets` 保存的是描述符（`serverName`、`toolName`、`uiResourceUri`、来源 `toolCallId` + `sessionKey`），而不是 HTML 字节；board 会在聊天回合 10 分钟 TTL 之后重新 mint 该视图租约（在过期时重新抓取 `ui://` 资源）。聊天内联 MCP 应用视图获得与 agent widget 相同的 **固定到 dashboard** 入口。重新打开的视图按设计今天就是只读；希望保持交互性的已固定应用，会获得对服务器应用可见工具的持久授权（固定时会把明确的 allowlist 展示给操作者），并与 mint 运行解耦。未授权的固定项仍然只读——但对展示型 dashboard 仍然有用。v1 只固定到来源会话的 board；跨会话固定需要 lease broker，并需等待。请与 open PR #109807（`ui/message` composer 路由、主题/尺寸传播）协同。
 
 ### WorkBoard 集成
 
@@ -182,7 +181,7 @@ CREATE TABLE board_widgets (
 
 ## 协议表面
 
-RPC（核心方法表，`gateway-protocol` 中的 typebox schemas）：
+RPC（核心方法表，`gateway-protocol` 中的 TypeBox schemas）：
 
 - `board.get { sessionKey }` → 标签页 + 小部件元数据（不含字节）— `operator.read`
 - `board.update { sessionKey, ops[] }` — 标签页 CRUD/重排、小部件移动/调整大小/
@@ -226,11 +225,10 @@ capabilities? }` — 按名称创建/更新；`pin` 将其放置到面板上。
 
 ## 这替代了什么
 
-- **`extensions/workspaces` 已删除。** 实验性，`enabledByDefault:
-false`，从未进入稳定版本（最早出现在 2026.7.2 beta 版中）。无需迁移；如果存在，doctor 规则会移除过时的 `<stateDir>/workspaces/`。
+- **`extensions/workspaces` 已删除。** 该功能具有实验性，`enabledByDefault: false`，从未进入稳定版本（最早出现在 2026.7.2 beta 版中）。无需迁移；如果存在，doctor 规则会移除过时的 `<stateDir>/workspaces/`。
   吸收的想法：纯网格数学、桥接安全模型（端口引导、绑定门控、速率限制）、字节冻结审批。
-- **Widget 托管从 `extensions/canvas` 迁移到核心。** canvas 文档存储、文档包装器、HTTP 提供，以及 `show_widget` 工具都成为核心（`src/canvas/`）；插件保留 node-canvas 控制工具（`canvas`）和 A2UI。`pluginSurfaceUrls["canvas"]` 公告和
-  `/__openclaw__/canvas` 路径是 native-client 合同的一部分并保持稳定。Discord 会话继续保留 Discord 自有的 `show_widget` 变体。
+- **小部件托管从 `extensions/canvas` 迁移到核心。** canvas 文档存储、文档包装器、HTTP 提供，以及 `show_widget` 工具都成为核心（`src/canvas/`）；插件保留 node-canvas 控制工具（`canvas`）和 A2UI。`pluginSurfaceUrls["canvas"]` 公告和
+  `/__openclaw__/canvas` 路径是原生客户端合同的一部分并保持稳定。Discord 会话继续保留 Discord 自有的 `show_widget` 变体。
 
 ## 非目标（本项目）
 

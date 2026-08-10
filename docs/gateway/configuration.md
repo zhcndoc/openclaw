@@ -111,7 +111,7 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
     每个通道在 `channels.<provider>` 下都有自己的配置部分。请参阅对应的通道页面了解设置步骤：
 
     - [Discord](/channels/discord) - `channels.discord`
-    - [Feishu](/channels/feishu) - `channels.feishu`
+    - [飞书](/channels/feishu) - `channels.feishu`
     - [Google Chat](/channels/googlechat) - `channels.googlechat`
     - [iMessage](/channels/imessage) - `channels.imessage`
     - [Mattermost](/channels/mattermost) - `channels.mattermost`
@@ -310,9 +310,9 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
     }
     ```
 
-    先构建镜像 - 从源代码检出目录运行 `scripts/sandbox-setup.sh`，或在 npm 安装后查看 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中内联的 `docker build` 命令。
+    先构建镜像 - 从源代码检出目录运行 `scripts/sandbox-setup.sh`，或在 npm 安装后查看[沙箱 § 镜像和设置](/gateway/sandboxing#images-and-setup)中内联的 `docker build` 命令。
 
-    有关完整指南，请参阅 [沙箱](/gateway/sandboxing)；有关所有选项，请参阅[完整参考](/gateway/config-agents#agentsdefaultssandbox)。
+    有关完整指南，请参阅[沙箱](/gateway/sandboxing)；有关所有选项，请参阅[完整参考](/gateway/config-agents#agentsdefaultssandbox)。
 
   </Accordion>
 
@@ -370,7 +370,7 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
     - 自定义 Gateway 中继 URL 必须与 iOS 构建中内置的中继基础 URL 匹配；公共 App Store 发布渠道会拒绝自定义 iOS 中继 URL 覆盖。
     - `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true` 仍是仅限回环地址的开发逃生开关；不要在配置中持久化 HTTP 中继 URL。
 
-    有关端到端流程，请参阅 [iOS 应用](/platforms/ios#relay-backed-push-for-official-builds)；有关中继安全模型，请参阅 [认证与信任流程](/platforms/ios#authentication-and-trust-flow)。
+    有关端到端流程，请参阅[iOS 应用](/platforms/ios#relay-backed-push-for-official-builds)；有关中继安全模型，请参阅[认证与信任流程](/platforms/ios#authentication-and-trust-flow)。
 
   </Accordion>
 
@@ -405,9 +405,9 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
     }
     ```
 
-    - `sessionRetention`：从 SQLite 会话行中清理已完成的隔离运行会话（默认 `24h`；设为 `false` 可禁用）。
-    - 运行历史会自动保留每个作业最新的 2000 条终止状态记录；丢失的记录仍保留 24 小时的清理窗口。
-    - 请参阅 [Cron 作业](/automation/cron-jobs)了解功能概览和 CLI 示例。
+    - `sessionRetention`：从 SQLite 会话记录中清理已完成的隔离运行会话（默认值为 `24h`；设为 `false` 或 `"0h"` 等零时长可禁用）。
+    - 运行历史会自动为每个作业保留最新的 2000 条终止状态记录；丢失的记录仍会保留 24 小时的清理窗口。
+    - 请参阅[Cron 作业](/automation/cron-jobs)了解功能概览和 CLI 示例。
 
   </Accordion>
 
@@ -469,7 +469,7 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
     }
     ```
 
-    有关绑定规则和每个代理的访问配置文件，请参阅 [多代理](/concepts/multi-agent) 和[完整参考](/gateway/config-agents#multi-agent-routing)。
+    有关绑定规则和每个代理的访问配置文件，请参阅[多代理](/concepts/multi-agent)和[完整参考](/gateway/config-agents#multi-agent-routing)。
 
   </Accordion>
 
@@ -646,7 +646,7 @@ OpenClaw 会从父进程以及以下位置读取环境变量：
 
 </Accordion>
 
-<Accordion title="Secret 引用（env、file、exec）">
+<Accordion title="密钥引用（env、file、exec）">
   对于支持 SecretRef 对象的字段，你可以使用：
 
 ```json5

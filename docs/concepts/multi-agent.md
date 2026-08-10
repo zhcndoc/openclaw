@@ -158,44 +158,9 @@ Memory Wiki 默认使用一个全局保管库。为了将支持代理的
 过滤、迁移以及信任边界的详细信息，请参见
 [每个代理的 Memory Wiki 保管库](/plugins/memory-wiki#per-agent-vaults)。
 
-## 跨代理的 QMD 内存搜索
+## 跨代理记忆搜索
 
-要让一个代理搜索另一个代理的 QMD 会话转录，请在 `agents.entries.*.memory.search.qmd.extraCollections` 下添加额外集合。如果所有代理都应共享相同的集合，请使用 `memory.search.qmd.extraCollections`。
-
-```json5
-{
-  agents: {
-    defaults: {
-      workspace: "~/workspaces/main",
-    },
-    entries: {
-      main: {
-        default: true,
-        workspace: "~/workspaces/main",
-        memory: {
-          search: {
-            qmd: {
-              extraCollections: [{ path: "notes" }], // 在工作区内解析 -> 名为 "notes-main" 的集合
-            },
-          },
-        },
-      },
-      family: { workspace: "~/workspaces/family" },
-    },
-  },
-  memory: {
-    backend: "qmd",
-    search: {
-      qmd: {
-        extraCollections: [{ path: "~/agents/family/sessions", name: "family-sessions" }],
-      },
-    },
-    qmd: { includeDefaultMemory: false },
-  },
-}
-```
-
-额外集合的路径可以在多个代理之间共享，但当路径位于代理工作区之外时，其 `name` 仍需显式指定。工作区内的路径会保持代理作用域，因此每个代理都会保留自己的转录搜索集合。
+QMD 跨代理搜索路径已被移除。内置记忆不会搜索其他代理的对话记录语料库；每个代理只搜索其自身配置的记忆以及符合条件的同代理会话来源。当同一份参考资料应由多个代理建立索引时，请将有意共享的 Markdown 放入明确的共享 `memory.search.extraPaths` 目录中。
 
 ## 一个 WhatsApp 号码，多个人（DM 拆分）
 

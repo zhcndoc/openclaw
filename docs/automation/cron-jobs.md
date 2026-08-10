@@ -67,7 +67,7 @@ sidebarTitle: "自动化"
 
 ## 计划类型
 
-| Kind      | CLI flag           | Description                                                                                              |
+| 类型      | CLI 标志           | 描述                                                                                              |
 | --------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
 | `at`      | `--at`             | 一次性时间戳（ISO 8601，或类似 `20m` 的相对时间）                                                         |
 | `every`   | `--every`          | 固定间隔（`10m`、`1h`、`1d`）                                                                             |
@@ -140,7 +140,7 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月中
 {
   schedule: { kind: "every", everyMs: 30000 },
   trigger: {
-    // 仅当观察到的状态与上一次评估不同时时触发。
+    // 仅当观察到的状态与上一次评估不同时触发。
     script: "const res = await tools.call('exec', { command: 'gh pr checks 123 --json state -q \\'.[].state\\' | sort -u' }); const status = String(res?.result?.details?.aggregated ?? '').trim(); json({ fire: status !== trigger.state?.status, message: `PR 123 CI: ${trigger.state?.status ?? 'unknown'} -> ${status}`, state: { status } });",
     once: false,
   },
@@ -223,7 +223,7 @@ openclaw automations add \
 3. 用户选择的已存储自动化会话模型覆盖
 4. Agent/默认模型选择
 
-快速模式遵循解析后的实时选择。如果所选模型配置具有 `params.fastMode`，孤立自动化运行默认会使用该配置；已存储的会话 `fastMode` 覆盖（其次是 agent 的 `fastModeDefault`）在任一方向上都优先于模型配置。自动模式使用模型的 `params.fastAutoOnSeconds` 截止时间，默认为 60 秒。
+Fast 模式遵循解析后的实时选择。孤立自动化按以下顺序解析：已存储会话中的 `fastMode`、每个 agent 的 `agents.entries.*.fastModeDefault`、全局的 `agents.defaults.fastModeDefault`，然后是所选模型的 `params.fastMode`。自动模式使用模型的 `params.fastAutoOnSeconds` 截止时间，默认为 60 秒。
 
 如果运行遇到实时模型切换交接，调度器会使用切换后的提供方/模型重试，并为当前运行持久化该选择（以及任何新的身份验证配置）。重试次数受到限制：在初始尝试加上 2 次切换重试之后，调度器会中止运行，而不是继续循环。
 
@@ -777,7 +777,7 @@ openclaw logs --follow
 Webhook URL 不得包含嵌入式用户名/密码凭据；当接收方支持 bearer 身份验证时，请使用
 `webhookToken`。
 `webhookSsrfPolicy` 适用于每个出站自动化 webhook，省略时将采用严格策略。
-相比宽泛的 `dangerouslyAllowPrivateNetwork` opt-in，建议优先使用范围更窄的
+相比宽泛的 `dangerouslyAllowPrivateNetwork` 选择启用，建议优先使用范围更窄的
 `allowedHostnames` 条目。
 
 自动化作业、运行历史记录以及隔离的格式错误作业都存储在共享的 SQLite 状态数据库中。请使用 CLI 或 Gateway API 更改作业；`cron.store` 已弃用。
@@ -792,7 +792,7 @@ Webhook URL 不得包含嵌入式用户名/密码凭据；当接收方支持 bea
 
   </Accordion>
   <Accordion title="维护">
-    `cron.sessionRetention`（默认 `24h`，`false` 可禁用）会清理隔离的运行会话条目。运行历史会为每个作业保留最新的 2000 条终态记录；丢失的记录仍保留其 24 小时的清理窗口。
+    `cron.sessionRetention`（默认为 `24h`，设置为 `false` 或 `"0h"` 时禁用）会清理隔离运行会话条目。运行历史记录会为每个作业保留最新的 2000 条终止行；丢失的行仍会保留 24 小时的清理期限。
   </Accordion>
   <Accordion title="旧版存储迁移">
     升级时，运行 `openclaw doctor --fix`，将历史的 `~/.openclaw/cron/jobs.json`、`jobs-state.json`、`jobs-quarantine.json` 和 `runs/*.jsonl` 文件导入 SQLite，并为原文件添加 `.migrated` 后缀进行归档。格式错误的作业行仍可在 SQLite 中恢复，而有效作业会继续运行。
@@ -850,4 +850,4 @@ openclaw doctor
 - [自动化](/automation) — 一览所有自动化机制
 - [后台任务](/automation/tasks) — 自动化运行的任务记录
 - [心跳](/gateway/heartbeat) — 主会话的周期性轮次
-- [时区](/concepts/timezone) — 时区配置
+- [时区](/concepts/timezone) — 时区配置。

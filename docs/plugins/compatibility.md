@@ -14,22 +14,27 @@ OpenClaw 会在移除旧的插件契约之前，通过命名的兼容性适配�
 插件兼容性契约记录在核心注册表中，位于
 `src/plugins/compat/registry.ts`。每条记录包括：
 
-- a stable compatibility code
-- status: `active`, `deprecated`, `removal-pending`, or `removed`
-- owner: `sdk`, `config`, `setup`, `channel`, `provider`, `plugin-execution`,
-  `agent-runtime`, or `core`
-- introduction and deprecation dates when applicable
-- an exact removal date once the owning maintainer approves it; an omitted
-  `removeAfter` keeps a deprecated surface ineligible for removal
-- replacement guidance
-- docs, diagnostics, and tests that cover the old and new behavior
+- 稳定的兼容性代码
+- 状态：`active`、`deprecated`、`removal-pending` 或 `removed`
+- 所有者：`sdk`、`config`、`setup`、`channel`、`provider`、`plugin-execution`、
+  `agent-runtime` 或 `core`
+- 适用时的引入日期和弃用日期
+- 所有者维护者批准后的确切移除日期；省略
+  `removeAfter` 会使已弃用的接口无法被移除
+- 替代方案说明
+- 覆盖新旧行为的文档、诊断信息和测试
 
 该注册表是维护者规划以及未来插件检查器校验的依据。如果插件面向外部的行为发生变化，请在添加适配器的同一次变更中，添加或更新兼容性记录。
 
 Doctor 修复和迁移兼容性单独记录在
 `src/commands/doctor/shared/deprecation-compat.ts`。这些记录涵盖旧的配置形状、安装账本布局，以及在运行时兼容路径移除后可能仍需保留的修复 shim。
 
-发布清理应同时检查这两个注册表。不要仅仅因为匹配的运行时或配置兼容性记录已过期，就删除某个 doctor 迁移；应先确认是否仍然存在需要该修复的受支持升级路径。在发布规划期间也要重新验证每条替代方案注释，因为随着提供方和通道移出核心，插件所有权和配置范围可能会发生变化。
+每条 Doctor 兼容性记录都声明了 `introduced` 和 `removeAfter`。
+当某条记录在 `removeAfter` 当日或之后仍处于 `deprecated` 状态时，
+`pnpm check:doctor-deprecation-registry` 检查会失败；维护者必须在有受支持的升级证明后将其移除，或将其移至 `removal-pending` 并记录相应的阻塞因素。`removal-pending` 记录不会导致日期检查失败，但在满足升级条件之前，仍会保留在明确的审核队列中。
+
+发布检查应同时检查两个注册表。不要仅仅因为匹配的运行时或配置兼容性记录已过期，就删除 Doctor
+迁移；应先确认不存在仍需要该修复的受支持升级路径。在发布规划期间也要重新验证每条替代方案注释，因为随着提供方和渠道移出核心，插件所有权和配置覆盖范围可能会发生变化。
 
 ## 弃用政策
 
@@ -47,69 +52,65 @@ OpenClaw 不应在引入替代方案的同一版本中移除已文档化的插�
 
 ## 当前兼容性区域
 
-The July 2026 sweep removed the expired root SDK, manifest, provider, runtime,
-registry-flag, and plugin-owned web-config aliases. Doctor migrations remain
-separately tracked so supported upgrade paths can still repair old config.
+2026 年 7 月的清理移除了已过期的根 SDK、manifest、provider、runtime、
+registry-flag 和 plugin-owned web-config 别名。Doctor 迁移仍会单独跟踪，
+因此受支持的升级路径仍然可以修复旧配置。
 
-The remaining dated compatibility areas are:
+剩余的、带日期的兼容性区域包括：
 
-- the August and September SDK subpath windows listed in the migration guide
-- `api.on("deactivate", ...)` and `api.on("subagent_spawning", ...)` hook aliases
-- memory-specific embedding registration and the beta.5 session-store bridge
-- WhatsApp inbound callback aliases described below
-- explicit channel target parsing and `openclaw/plugin-sdk/messaging-targets`
-- embedded Pi agent aliases
-- the shipped agent-harness SDK aliases, whose removal is pending a new
-  externally documented migration decision
-- the October 2026 SDK annotation families listed below
+- 迁移指南中列出的 8 月和 9 月 SDK 子路径窗口
+- `api.on("deactivate", ...)` 和 `api.on("subagent_spawning", ...)` 钩子别名
+- 特定于 memory 的 embedding 注册以及 beta.5 session-store 桥接
+- 下文所述的 WhatsApp 入站回调别名
+- 显式 channel target 解析和 `openclaw/plugin-sdk/messaging-targets`
+- 嵌入式 Pi agent 别名
+- 已发布的 agent-harness SDK 别名；其移除正在等待新的、对外公开文档化的迁移决策
+- 下文所列的 2026 年 10 月 SDK 注解系列
 
-Active, undated registry records cover supported behavior rather than removal
-debt, including activation hints, plugin capture, bundled plugin enablement,
-and the generated channel-config fallback.
+活跃的、无日期的 registry 记录涵盖受支持的行为，而不是待移除债务，
+包括激活提示、插件捕获、捆绑插件启用以及生成的 channel-config 回退。
 
-The annotation-only compatibility audit added these dated records. Their
-`removeAfter` date is an earliest review date, not permission to remove a
-surface while its stated reader or migration condition remains unmet.
+仅注解的兼容性审计新增了以下带日期的记录。其
+`removeAfter` 日期表示最早的审查日期，而不是在其所述读取方或迁移条件
+仍未满足时移除相关接口的许可。
 
-| Compatibility code                        | Removal condition                                                                                       | `removeAfter` |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------- |
-| `plugin-sdk-channel-setup-input-fields`   | Repeat the published-plugin artifact sweep and remove only fields with no reader.                       | 2026-10-01    |
-| `plugin-sdk-broad-runtime-barrels`        | Move bundled and indexed external consumers to focused SDK subpaths.                                    | 2026-10-01    |
-| `plugin-sdk-provider-owned-helper-shims`  | Move each deprecated provider helper to its provider-local API and prove no published reader remains.   | 2026-10-01    |
-| `message-presentation-legacy-bridges`     | Move reply producers and official channel packages to `MessagePresentation`.                            | 2026-10-01    |
-| `plugin-sdk-focused-compat-aliases`       | Prove every enumerated alias has no bundled or published reader.                                        | 2026-10-01    |
-| `agent-harness-terminal-result-aliases`   | Move harnesses to `terminal` and `visibleReplies`, then prove the legacy result fields are unread.      | 2026-10-01    |
-| `official-plugin-export-aliases`          | Move users of Google Meet testing, channel presentation, and Discord timeout exports to canonical APIs. | 2026-10-01    |
-| `memory-host-compatibility-aliases`       | Use canonical memory tables and prepared runtime config everywhere.                                     | 2026-10-01    |
-| `plugin-runtime-api-compat-aliases`       | Move flat plugin registration/runtime calls to their namespaced or focused replacements.                | 2026-10-01    |
-| `plugin-provider-manifest-compat-aliases` | Move kind/setup/catalog ownership to manifests and model-catalog registration.                          | 2026-10-01    |
-| `deprecated-session-store-beta5-api`      | End the v2026.7.x whole-store upgrade window, including package-root aliases.                           | 2026-10-12    |
+| 兼容性代码                              | 移除条件                                                                                         | `removeAfter` |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
+| `plugin-sdk-channel-setup-input-fields` | 重复已发布插件的构件扫描，只移除不存在读取方的字段。                                               | 2026-10-01    |
+| `plugin-sdk-broad-runtime-barrels`      | 将捆绑的和已索引的外部使用方迁移到专用 SDK 子路径。                                                | 2026-10-01    |
+| `plugin-sdk-provider-owned-helper-shims` | 将每个已弃用的 provider helper 迁移到其 provider 本地 API，并证明不存在已发布的读取方。           | 2026-10-01    |
+| `message-presentation-legacy-bridges`   | 将回复生产方和官方 channel 包迁移到 `MessagePresentation`。                                      | 2026-10-01    |
+| `plugin-sdk-focused-compat-aliases`     | 证明每个列出的别名都不存在捆绑或已发布的读取方。                                                   | 2026-10-01    |
+| `agent-harness-terminal-result-aliases` | 将 harness 迁移到 `terminal` 和 `visibleReplies`，然后证明旧结果字段已无人读取。                 | 2026-10-01    |
+| `official-plugin-export-aliases`        | 将 Google Meet 测试、channel presentation 和 Discord timeout 导出的使用方迁移到规范 API。        | 2026-10-01    |
+| `memory-host-compatibility-aliases`     | 在所有地方使用规范的 memory 表和准备好的 runtime 配置。                                          | 2026-10-01    |
+| `plugin-runtime-api-compat-aliases`     | 将扁平的插件注册/runtime 调用迁移到其命名空间化或专用的替代接口。                                  | 2026-10-01    |
+| `plugin-provider-manifest-compat-aliases` | 将 kind/setup/catalog 的所有权迁移到 manifest 和 model-catalog 注册。                            | 2026-10-01    |
+| `deprecated-session-store-beta5-api`    | 结束 v2026.7.x 的 whole-store 升级窗口，包括 package-root 别名。                                   | 2026-10-12    |
 
-`pnpm plugins:boundary-report` reports `removal-pending` records separately
-from deprecated records. A due `removal-pending` record remains blocked until
-its reported migration condition is satisfied and its reader references are
-cleared; the existing `--fail-on-eligible-compat` gate continues to apply only
-to dated `deprecated` records. Reader references are surface-token matches for
-triage; use the published-artifact sweep before authorizing removal.
+`pnpm plugins:boundary-report` 会将 `removal-pending` 记录与 deprecated 记录分开报告。
+某个到期的 `removal-pending` 记录在其报告的迁移条件满足且其读取方引用被清除之前，
+仍会被阻止；现有的 `--fail-on-eligible-compat` gate 仍只适用于带日期的
+`deprecated` 记录。读取方引用是用于分流的 surface-token 匹配；在批准移除之前，
+请使用已发布构件扫描。
 
-### Channel prompt-context identifier aliases
+### Channel prompt-context identifier 别名
 
-New channel plugins should use `MsgContext.ChannelPromptContext`,
-`MsgContext.ChannelStructuredContext`, `ChannelStructuredContextEntry`, and
-`SupplementalContextFacts.channelStructuredContext`. The older
-`UntrustedContext`, `UntrustedStructuredContext`,
-`UntrustedStructuredContextEntry`, and supplemental `untrustedContext` names
-remain as deprecated SDK aliases until 2026-09-08 (registry record
-`sdk-untrusted-context-identifier-aliases`). Inbound finalization folds those
-deprecated fields into the channel-named fields and removes the old keys from
-runtime context.
+新的 channel 插件应使用 `MsgContext.ChannelPromptContext`、
+`MsgContext.ChannelStructuredContext`、`ChannelStructuredContextEntry` 和
+`SupplementalContextFacts.channelStructuredContext`。较旧的
+`UntrustedContext`、`UntrustedStructuredContext`、
+`UntrustedStructuredContextEntry` 以及 supplemental `untrustedContext` 名称
+仍作为已弃用的 SDK 别名保留至 2026-09-08（registry 记录
+`sdk-untrusted-context-identifier-aliases`）。入站最终化会将这些已弃用字段
+折叠到 channel 命名的字段中，并从 runtime context 中移除旧键。
 
-The security runtime similarly exports `buildChannelMetadata`; the deprecated
-`buildUntrustedChannelMetadata` alias remains available on the same schedule.
+安全 runtime 同样导出 `buildChannelMetadata`；已弃用的
+`buildUntrustedChannelMetadata` 别名按相同时间表保留。
 
 ### WhatsApp inbound callback 扁平别名
 
-WhatsApp 运行时回调会传递 `WebInboundMessage`：即规范的
+WhatsApp runtime 回调会传递 `WebInboundMessage`：即规范的
 嵌套 `event`、`payload`、`quote`、`group` 和 `platform` 上下文，以及
 已弃用的、针对已发布回调字段的扁平别名。新的回调代码应读取嵌套上下文。
 构造干净的嵌套回调消息的代码可以使用 `WebInboundCallbackMessage`；仍然注入
@@ -117,20 +118,18 @@ WhatsApp 运行时回调会传递 `WebInboundMessage`：即规范的
 `LegacyFlatWebInboundMessage` 或 `WebInboundMessageInput`。
 
 扁平别名会一直可用到 **2026-08-30**；该窗口仅适用于扁平别名访问，不适用于
-嵌套形态，后者才是规范的运行时契约。每个扁平别名的 TypeScript `@deprecated`
+嵌套形态，后者才是规范的 runtime 契约。每个扁平别名的 TypeScript `@deprecated`
 注解都会写明其精确的嵌套替代项。常见示例如下：
 
-- `id`, `timestamp`, and `isBatched` move under `event`.
-- `body`, `mediaPath`, `mediaType`, `mediaFileName`, `mediaUrl`, `location`,
-  and `channelStructuredContext` move under `payload`.
-- `to`, `chatId`, sender/self fields, `sendComposing`, `reply(...)`, and
-  `sendMedia(...)` move under `platform`.
-- `replyTo*` fields move under `quote`; group subject/participant/mention
-  fields move under `group`.
+- `id`、`timestamp` 和 `isBatched` 移到 `event` 下。
+- `body`、`mediaPath`、`mediaType`、`mediaFileName`、`mediaUrl`、`location`
+  和 `channelStructuredContext` 移到 `payload` 下。
+- `to`、`chatId`、sender/self 字段、`sendComposing`、`reply(...)` 和
+  `sendMedia(...)` 移到 `platform` 下。
+- `replyTo*` 字段移到 `quote` 下；群组主题/参与者/提及字段移到 `group` 下。
 
-`payload.channelStructuredContext` is extracted from inbound provider
-payloads. Plugins should inspect `label`, `source`, and `type` before
-treating its `payload` as authoritative.
+`payload.channelStructuredContext` 会从入站 provider payload 中提取。
+插件在将其 `payload` 视为权威数据之前，应检查 `label`、`source` 和 `type`。
 
 ### WhatsApp inbound admission 字段
 

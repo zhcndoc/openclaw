@@ -160,7 +160,20 @@ openclaw gateway restart --wait 30s
 - OpenClaw 自更新会被拒绝，以便由监督器停止 Gateway、替换并完成运行时，然后安全地重新启动它。
 - 从新进程发起的重启会在干净退出前写入一个有界的 SQLite 交接记录。若持久化失败，Gateway 会回退到进程内重启，而不是在没有可消费交接记录的情况下退出。
 
-`OPENCLAW_SERVICE_REPAIR_POLICY=external` 仍然是一个独立的 Doctor 修复策略。它并不声明运行时所有权；需要同时具备这两种行为的监督器应同时设置这两个变量。
+外部监督器还可以声明共享状态写入的持久所有权：
+
+```bash
+OPENCLAW_SUPERVISOR_MODE=external \
+  openclaw database ownership claim --manager gateway-supervisor --json
+```
+
+在声明所有权之前，请停止并验证每一个可能写入共享状态数据库的旧版 Gateway、CLI、Doctor、更新器和原生应用进程。契约建立前的进程不了解所有权记录，也无法事后进行隔离。只有在所有剩余写入者都使用支持所有权的代码，并携带 `OPENCLAW_SUPERVISOR_MODE=external` 后，才能进行声明。
+
+对于相同的稳定管理器标识符，该声明具有幂等性；如果管理器不同，则会拒绝声明。不存在自动声明或取消声明路径。一旦声明，未标记的可写共享状态打开操作会在权限检查、架构迁移、增量修复、压缩或其他变更之前失败。只读访问仍然可用。这是为了防止未标记的同用户写入者意外写入，而不是身份验证或租约协议。
+
+对于升级和回滚，请让监督器创建一个整合的、与 WAL 一致的副本快照，且不包含 SQLite 旁车文件；然后在激活前运行目标版本自身的 `openclaw database preflight <copied-state.sqlite> --json`。仅凭数字架构版本无法证明相同版本的增量结构具有兼容性。请参阅[数据库架构](/reference/database-schemas)。
+
+`OPENCLAW_SERVICE_REPAIR_POLICY=external` 仍然是独立的 Doctor 修复策略。它不会声明运行时所有权；需要同时使用这两种行为的监督器应同时设置这两个变量。
 
 外部监督器可以通过隐藏的机器契约协商并消费重启交接：
 
@@ -182,7 +195,7 @@ openclaw gateway restart-handoff consume --expected-pid <pid> --json
 - `pnpm build` 然后执行 `pnpm test:restart:gateway -- --case skipChannels --runs 1 --restarts 5`，在 macOS 或 Linux 上对进程内重启进行基准测试（Windows 不支持；重启需要 `SIGUSR1`）。它使用 `SIGUSR1`，在子进程中启用两种 trace，并记录下一次 `/healthz`、下一次 `/readyz`、停机时间、就绪时间、CPU、RSS 以及重启 trace 指标。
 - `/healthz` 表示存活状态；`/readyz` 表示可用就绪状态。请将 trace 行和基准输出视为归因信号，而不是从单次时间跨度或样本得出的完整性能结论。
 
-## 查询正在运行的 Gateway
+## 查询正在运行的网关
 
 所有查询命令都使用 WebSocket RPC。
 
@@ -194,11 +207,11 @@ openclaw gateway restart-handoff consume --expected-pid <pid> --json
 
   </Tab>
   <Tab title="共享选项">
-    - `--url <url>`: Gateway WebSocket URL。
-    - `--token <token>`: Gateway 令牌。
-    - `--password <password>`: Gateway 密码。
-    - `--timeout <ms>`: 超时时间/预算（默认值因命令而异；请参见下面的各个命令）。
-    - `--expect-final`: 等待“final”响应（agent 调用）。
+    - `--url <url>`：网关 WebSocket URL。
+    - `--token <token>`：网关令牌。
+    - `--password <password>`：网关密码。
+    - `--timeout <ms>`：超时时间/预算（默认值因命令而异；请参见下面的各个命令）。
+    - `--expect-final`：等待“final”响应（代理调用）。
 
   </Tab>
 </Tabs>

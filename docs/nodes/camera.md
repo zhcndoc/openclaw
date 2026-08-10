@@ -1,14 +1,17 @@
 ---
-summary: "用于照片和短视频片段的 iOS、Android、macOS 和 Linux 节点上的摄像头捕获"
+summary: "配对节点上的摄像头捕获和 macOS 物理 PTZ 控制"
 read_when:
-  - 添加或修改节点平台上的摄像头捕获
+  - 在节点平台上添加或修改摄像头捕获功能
+  - 在 macOS 上控制 USB 摄像头的物理平移、倾斜或变焦
   - 扩展代理可访问的 MEDIA 临时文件工作流
 title: "摄像头捕获"
 ---
 
 OpenClaw 支持在配对的 **iOS**、**Android**、**macOS** 和 **Linux** 节点上为代理工作流进行摄像头捕获：通过 Gateway `node.invoke` 捕获照片（`jpg`）或短视频片段（`mp4`，可选音频）。
 
-所有摄像头访问都受每个平台上由用户控制的设置保护。
+macOS 应用还可以对受支持的 USB UVC 摄像头进行物理平移、倾斜和变焦。PTZ 会移动摄像头硬件；它不会旋转、裁剪或以其他方式变换捕获的图像。
+
+所有摄像头访问都受每个平台上由用户控制的设置限制。
 
 ## iOS 节点
 
@@ -47,18 +50,19 @@ OpenClaw 支持在配对的 **iOS**、**Android**、**macOS** 和 **Linux** 节�
 
 与 `canvas.*` 一样，iOS 节点只允许在**前台**执行 `camera.*` 命令。后台调用会返回 `NODE_BACKGROUND_UNAVAILABLE`。
 
-### CLI helper
+### CLI 助手
 
-获取媒体文件的最简单方式是使用 CLI helper，它会将解码后的媒体写入临时文件并打印保存路径。
+获取媒体文件的最简单方式是使用 CLI 助手，它会将解码后的媒体写入临时文件并打印保存路径。
 
 ```bash
-openclaw nodes camera snap --node <id>                 # 默认：前后摄像头都拍摄（2 行 MEDIA）
+openclaw nodes camera snap --node <id>                 # 默认：一张由节点选择的照片
 openclaw nodes camera snap --node <id> --facing front
+openclaw nodes camera snap --node <id> --facing both   # 先前置后后置（保存 2 个路径）
 openclaw nodes camera clip --node <id> --duration 3000
 openclaw nodes camera clip --node <id> --no-audio
 ```
 
-`nodes camera snap` 默认使用 `--facing both`，同时捕获前后摄像头，以便让代理同时获得两个视角；当设置了 `--device-id` 时，必须传入单一明确的 facing（若设置了 `--device-id`，`both` 会被拒绝）。输出文件是临时文件（位于操作系统的临时目录中），除非你自己构建包装器。
+不使用 `--facing` 时，`nodes camera snap` 会使用节点的默认相机拍摄一张照片，并将保存的制品标记为 `unknown`。在非 Linux 节点上，`--facing both` 会先拍摄前置摄像头，再拍摄后置摄像头，并打印两个保存路径。`--device-id` 可以在不使用 `--facing` 的情况下使用；在非 Linux 节点上，它不能与 `--facing both` 组合使用。Linux 始终发送一个不带方向的请求，并将制品标记为 `unknown`，无论是否指定了 `--facing`。除非你构建自己的封装程序，否则输出文件都是临时文件（位于操作系统的临时目录中）。
 
 ## Android 节点
 
@@ -124,6 +128,42 @@ openclaw nodes camera clip --node <id> --no-audio
 - `camera.snap` 会在预热/曝光稳定后等待 `delayMs`（默认 2000ms，范围限制在 `[0, 10000]`）再进行拍摄。
 - 照片负载会重新压缩，以使 base64 保持在 5MB 以下。
 
+### macOS 物理 PTZ
+
+物理 PTZ 由 Mac 应用为配备标准 UVC 绝对平移/倾斜或变焦控制的 USB 摄像头实现。它与拍摄功能使用相同的 **Allow Camera** 设置。其他节点平台不会声明这些命令。
+
+始终传入由 `camera.list` 返回的明确 `deviceId`。OpenClaw 永远不会为物理移动选择默认摄像头。
+
+- `camera.ptz.status` 是一个安全的读取命令。请求：`{ "deviceId": "<camera-id>" }`。
+  - 响应中的 `axes` 仅包含可执行的 `pan`、`tilt` 和 `zoom` 轴。
+  - 平移和倾斜值的单位是度。变焦值的单位是百分比。
+  - 每个轴都会报告 `current`、`min`、`max`、`step`、`unit`、`canSet` 和 `canMove`。只有当摄像头成功报告设备默认值时才会出现 `default`。
+  - 仅当每个已公开的可执行轴都有设备实际声明的默认值时，`canHome` 才为 true，此时才能尝试完整的归位方案。
+- `camera.ptz.control` 会更改摄像头硬件。其限定操作包括：
+  - `{ "deviceId": "<camera-id>", "operation": "set", "target": { "panDegrees": 10, "tiltDegrees": -5, "zoomPercent": 40 } }`
+  - `{ "deviceId": "<camera-id>", "operation": "move", "delta": { "panDegrees": 2, "zoomPercent": -5 } }`
+  - `{ "deviceId": "<camera-id>", "operation": "home" }`
+
+`set` 和 `move` 至少需要一个有限的轴值。省略的轴保持不变，变焦的移动增量以百分点为单位。`home` 会恢复设备声明的默认值；当 `canHome` 为 false 时，它会返回 `CAMERA_PTZ_UNSUPPORTED`，且不会移动摄像头。Mac 应用会将请求的值限制并吸附到摄像头的范围和分辨率；响应会返回操作后的 `state`，并在 `adjusted` 中列出发生变化的请求字段。请求不受支持的轴会返回 `CAMERA_PTZ_AXIS_UNSUPPORTED`。
+
+平移/倾斜和变焦使用独立的硬件写入，因此无法实现原子操作。如果较早的控制组成功，但后续写入或最终状态读取失败，`CAMERA_PTZ_PARTIAL` 会列出已应用的组，在可读取时包含尽力获取的结果状态，并告知调用方在重试前运行 `camera.ptz.status`。
+
+`camera.ptz.control` 具有危险性，在操作员明确将其添加到 `gateway.nodes.commands.allow` 之前仍处于禁用状态：
+
+```json5
+{
+  gateway: {
+    nodes: {
+      commands: { allow: ["camera.ptz.control"] },
+    },
+  },
+}
+```
+
+仅添加 allow 条目不会扩大现有的节点审批范围。更新后的 Mac 重新连接并声明 PTZ 控制后，运行 `openclaw nodes pending`，然后使用 `openclaw nodes approve <requestId>` 批准扩展后的权限范围。
+
+在代理的 `nodes` 工具中，使用 `action: "camera_ptz"`、选定的 Mac 节点、`deviceId` 以及 `ptzOperation: "status" | "set" | "move" | "home"`。轴输入为 `panDegrees`、`tiltDegrees` 和 `zoomPercent`。
+
 ## Linux 节点主机
 
 捆绑的 Linux Node 插件为 CLI `openclaw node` 服务添加了摄像头采集功能。它可在无头主机上运行，不需要 Linux 桌面应用程序。
@@ -154,7 +194,7 @@ Linux 会从 `camera.list` 返回可捕获、可读取的 V4L2 设备路径；FF
 
 该插件使用 `libx264` 处理 MP4 视频，不会悄悄更改编解码器。若 FFmpeg 构建缺少所需输入或编码器，将返回 `CAMERA_UNAVAILABLE`。超过 25MB base64 载荷预算的照片和片段会失败，并返回 `PAYLOAD_TOO_LARGE`。
 
-`camera.snap` and `camera.clip` remain dangerous commands. Add them to `gateway.nodes.commands.allow` only when you intend to arm capture; enabling the plugin alone does not bypass Gateway policy.
+`camera.snap` 和 `camera.clip` 仍然是危险命令。只有在确实要启用采集功能时，才应将它们添加到 `gateway.nodes.commands.allow`；仅启用插件并不会绕过 Gateway 策略。
 
 ## 安全性 + 实际限制
 

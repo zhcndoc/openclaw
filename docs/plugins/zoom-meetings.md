@@ -2,7 +2,7 @@
 summary: "Zoom 会议插件：以 Chrome 浏览器访客身份加入会议"
 read_when:
   - 你希望 OpenClaw 代理加入 Zoom 会议
-  - 你正在为 Zoom 会议的双向通话配置 Chrome、BlackHole 或 SoX
+  - 你正在为 Zoom 会议中的双向语音配置 Chrome 或虚拟音频
 title: "Zoom 会议插件"
 ---
 
@@ -10,7 +10,7 @@ title: "Zoom 会议插件"
 
 ## 设置
 
-Talk-back 使用与 [Google Meet 插件](/plugins/google-meet) 相同的本地音频前置条件：macOS、`BlackHole 2ch` 虚拟音频设备和 SoX。
+Talk-back 使用共享的 [会议插件音频设置](/plugins/meeting-plugins#prepare-chrome-and-audio)：macOS 上使用 `BlackHole 2ch` 加 SoX，Linux 上使用 PipeWire-Pulse 加 `pactl`/`pacat`/`parec`。
 
 ```bash
 openclaw plugins install @openclaw/zoom-meetings
@@ -19,6 +19,13 @@ brew install blackhole-2ch sox
 sudo reboot
 system_profiler SPAudioDataType | grep -i BlackHole
 command -v sox
+```
+
+在 Linux 上，请改为验证桌面用户的 PipeWire-Pulse 会话：
+
+```bash
+pactl info
+command -v pactl pacat parec
 ```
 
 安装后默认启用该插件。只有在需要自定义时才添加配置项，然后检查设置：
@@ -45,7 +52,7 @@ openclaw zoommeetings setup
 openclaw zoommeetings join 'https://zoom.us/j/1234567890'
 ```
 
-使用 `chromeNode.node`，在已配对的 macOS 节点上运行 Chrome、BlackHole 和 SoX。该节点必须允许 `zoommeetings.chrome` 和 `browser.proxy`。
+使用 `chromeNode.node` 在已配对的 macOS 或 Linux 节点上运行 Chrome 及其原生虚拟音频后端。该节点必须允许 `zoommeetings.chrome` 和 `browser.proxy`；后端设置和生成的命令将在该节点上解析，而不是在 Gateway 主机上解析。
 
 ## 模式
 

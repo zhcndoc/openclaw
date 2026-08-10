@@ -7,16 +7,15 @@ title: "代理运行时"
 
 OpenClaw 提供一个**嵌入式代理运行时**：一个内置的代理循环、工具
 连接以及提示组装，与将轮次委派给外部
-harness 进程不同。每个已配置的代理（有关运行多个代理，请参见[多代理路由](/concepts/multi-agent)）
+主控进程不同。每个已配置的代理（有关运行多个代理，请参见[多代理路由](/concepts/multi-agent)）
 都有自己的工作区、引导文件和会话
 存储。本页介绍该运行时契约：工作区必须
 包含什么、会注入哪些文件，以及会话如何基于它进行引导。
 
 ## 工作区（必需）
 
-Each agent uses a single workspace directory (`agents.defaults.workspace`, or
-`agents.entries.*.workspace` per agent) as its **only** working directory (`cwd`)
-for tools and context.
+每个代理使用一个单独的工作区目录（`agents.defaults.workspace`，或按代理配置的
+`agents.entries.*.workspace`）作为工具和上下文的**唯一**工作目录（`cwd`）。
 
 建议：如果缺失，请使用 `openclaw setup` 创建 `~/.openclaw/openclaw.json` 并初始化工作区文件。
 
@@ -101,8 +100,11 @@ Transcript JSONL 文件仍可位于
 
 ## 流式处理中进行 steering
 
-运行中途到达的输入提示默认会被引导到当前运行中。
-Steering 会在当前助手轮次完成其工具调用之后、下一次 LLM 调用之前投递，并且不再跳过当前助手消息中的剩余工具调用。
+默认情况下，在运行中途到达的入站提示会被 steering 到当前运行中。
+OpenClaw 运行时会在尚未启动的工具调用之前以及下一次模型调用之前检查
+steering。正在运行的工具会继续执行；尚未启动的顺序调用会被跳过，
+而并行调用会在其批次越过启动检查点后继续执行。
+在模型看到 steering 之前，被跳过的调用会收到成对的模拟结果。
 
 `/queue steer` 是默认的 active-run 行为。`/queue followup` 和 `/queue collect` 会让消息等待后续轮次，而不是进行 steering。
 `/queue interrupt` 则会中止当前 active-run。有关队列和边界行为，请参见 [Queue](/concepts/queue)
@@ -134,7 +136,7 @@ Steering 会在当前助手轮次完成其工具调用之后、下一次 LLM 调
 至少设置：
 
 - `agents.defaults.workspace`
-- `channels.whatsapp.allowFrom`（强烈推荐）
+- `channels.whatsapp.allowFrom`（强烈推荐）。
 
 ## 相关内容
 
