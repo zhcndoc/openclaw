@@ -565,6 +565,14 @@ surfaces:
 - `openclaw/plugin-sdk/inbound-envelope` and
   `openclaw/plugin-sdk/channel-inbound` for inbound route/envelope and
   record-and-dispatch wiring
+- `readAgentRunTerminalOutcome(dispatchResult)` from
+  `openclaw/plugin-sdk/channel-inbound` when terminal reactions or status UI
+  must distinguish a completed core agent run from a recovered failed run. It
+  returns `"completed"` or `"failed"` only when a core run actually started,
+  and `undefined` for commands, dedupe, busy, pre-run abort, and custom dispatch
+  results. Delivery counts and visibility remain transport facts, including
+  successful delivery of an error payload; the process-local carrier is not
+  serialized to JSON.
 - `createInboundEventDeliveryCorrelation(...)` from
   `openclaw/plugin-sdk/inbound-event-delivery` when successful outbound sends must
   retire an active inbound-event marker; create one tracker per channel and
@@ -920,6 +928,33 @@ unrelated inbound runtime helpers.
     inbound metadata, persist it as channel state, or expose it as config. Add
     an adapter test that proves the mode skips a wildcard `toolsBySender` entry
     without dropping the matching base `tools` restriction.
+
+    ### Native plugin command ownership
+
+    Channel plugins that publish provider-native command catalogs should use
+    `openclaw/plugin-sdk/plugin-command-runtime`. Create one runtime while
+    planning the catalog, merge its candidates with built-in and skill entries,
+    and retain the winning candidate object in the registered handler closure.
+    Once the provider catalog is finalized, call
+    `retainNativeCatalog(provider)` when at least one plugin candidate remains;
+    if listener registration can fail synchronously, call it after those
+    listeners are installed. This records the current channel-account lifecycle
+    so a registry reload restarts only accounts whose handlers retain that
+    registry generation.
+    Call `prepareDispatch(rawArgs)` only on that winner and execute the returned
+    dispatch with `dispatch.execute(context)`. Carry an explicit
+    `{ kind: "non-plugin" }` decision for retained built-in and skill winners.
+    This keeps the advertised command and
+    its executable plugin registration on the same registry generation.
+
+    Candidates expose only immutable display/auth/progress metadata plus an
+    opaque process-local dispatch. They do not expose handlers, plugin roots,
+    or registry rows. Dispatches cannot cross runtime factories or channels,
+    and a registry replacement makes new executions return an unavailable
+    result instead of rematching command text against the replacement registry.
+    A command already admitted before retirement may finish on its captured
+    generation. Do not serialize candidates or dispatches; project only their
+    display fields into provider API payloads.
 
   </Step>
 
