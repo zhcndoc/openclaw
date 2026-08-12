@@ -20,7 +20,7 @@ Gateway artifact URL 内联显示，并可在更大的预览中打开；iOS 和 
 
 ## 下载
 
-从 [OpenClaw GitHub releases](https://github.com/openclaw/openclaw/releases) 获取 macOS 应用构建版本。
+从 [OpenClaw GitHub 发布页](https://github.com/openclaw/openclaw/releases) 获取 macOS 应用构建版本。
 当某个发布包含 macOS 应用资源时，请查找：
 
 - `OpenClaw-<version>.dmg`（首选）
@@ -89,7 +89,7 @@ beta 应用构建版本；`extended-stable` 只接受 extended-stable 应用版�
 | 本地   | 这台 Mac 应运行 Gateway，并由 launchd 保持其持续运行。                         | [macOS 上的 Gateway](/platforms/mac/bundled-gateway) |
 | 远程   | 另一台主机运行 Gateway；这台 Mac 通过 SSH、LAN 或 Tailnet 对其进行控制。      | [远程控制](/platforms/mac/remote)                  |
 
-两种模式都需要已安装的 `openclaw` CLI，因为应用会复用其 node-host
+两种模式都需要已安装 `openclaw` CLI，因为应用会复用其 node-host
 运行时。在全新的 Mac 上，应用会自动安装匹配的 CLI；本地
 模式随后会启动 Gateway 向导，而远程模式会连接到所选的
 Gateway，而不会再启动第二个本地 Gateway。
@@ -112,22 +112,22 @@ Gateway，而不会再启动第二个本地 Gateway。
 
 | 任务                                     | 阅读                                                                                        |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 安装或调试 CLI/Gateway 服务 | [macOS 上的 Gateway](/platforms/mac/bundled-gateway)                                          |
-| 将状态保留在非云同步文件夹中   | [macOS 上的 Gateway](/platforms/mac/bundled-gateway#state-directory-on-macos)                 |
-| 调试应用发现和连接性     | [macOS 上的 Gateway](/platforms/mac/bundled-gateway#debug-app-connectivity)                   |
-| 了解 launchd 行为              | [Gateway 生命周期](/platforms/mac/child-process)                                           |
-| 修复权限或签名/TCC 问题    | [macOS 权限](/platforms/mac/permissions)                                             |
-| 检测你最近使用的 Mac    | [活跃计算机存在](/nodes/presence)                                                 |
-| 连接到远程 Gateway              | [远程控制](/platforms/mac/remote)                                                     |
-| 读取菜单栏状态和健康检查   | [菜单栏](/platforms/mac/menu-bar), [健康检查](/platforms/mac/health)                 |
-| 使用内置聊天 UI                 | [WebChat](/platforms/mac/webchat)                                                           |
-| 使用语音唤醒或按键说话           | [语音唤醒](/platforms/mac/voicewake)                                                      |
-| 使用 Canvas 和 Canvas 深度链接         | [Canvas](/platforms/mac/canvas)                                                             |
-| 托管用于 UI 自动化的 PeekabooBridge    | [Peekaboo 桥接](/platforms/mac/peekaboo)                                                  |
-| 配置命令审批              | [执行审批](/tools/exec-approvals), [高级详情](/tools/exec-approvals-advanced) |
-| 检查 Mac 节点命令和应用 IPC    | [macOS IPC](/platforms/mac/xpc)                                                             |
-| 捕获日志                             | [macOS 日志记录](/platforms/mac/logging)                                                     |
-| 从源码构建                        | [macOS 开发设置](/platforms/mac/dev-setup)                                                 |
+| 安装或调试 CLI／Gateway 服务             | [Gateway on macOS](/platforms/mac/bundled-gateway)                                          |
+| 避免将状态存储在云同步文件夹中           | [Gateway on macOS](/platforms/mac/bundled-gateway#state-directory-on-macos)                 |
+| 调试应用发现和连接                       | [Gateway on macOS](/platforms/mac/bundled-gateway#debug-app-connectivity)                   |
+| 了解 launchd 行为                        | [Gateway on macOS](/platforms/mac/bundled-gateway)                                          |
+| 修复权限或签名／TCC 问题                 | [macOS permissions](/platforms/mac/permissions)                                             |
+| 检测你最近使用的 Mac                     | [Active computer presence](/nodes/presence)                                                 |
+| 连接到远程 Gateway                       | [Remote control](/platforms/mac/remote)                                                     |
+| 读取菜单栏状态和健康检查                 | [Menu bar](/platforms/mac/menu-bar)、[Health checks](/platforms/mac/health)                 |
+| 使用内嵌聊天 UI                          | [WebChat](/platforms/mac/webchat)                                                           |
+| 使用语音唤醒或按键通话                   | [Voice wake](/platforms/mac/voicewake)                                                      |
+| 使用 Canvas 和 Canvas 深层链接            | [Canvas](/platforms/mac/canvas)                                                             |
+| 为 UI 自动化托管 PeekabooBridge           | [Peekaboo bridge](/platforms/mac/peekaboo)                                                  |
+| 配置命令审批                             | [Exec approvals](/tools/exec-approvals)、[advanced details](/tools/exec-approvals-advanced) |
+| 检查 Mac 节点命令和应用 IPC              | [macOS IPC](/platforms/mac/xpc)                                                             |
+| 捕获日志                                 | [macOS logging](/platforms/mac/logging)                                                     |
+| 从源代码构建                             | [macOS dev setup](/platforms/mac/dev-setup)                                                 |
 
 ## 相关内容
 

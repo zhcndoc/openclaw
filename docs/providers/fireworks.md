@@ -7,19 +7,19 @@ read_when:
   - 你正在排查 Fireworks 上的 Kimi thinking-off 行为
 ---
 
-[Fireworks](https://fireworks.ai) exposes open-weight and routed models through an OpenAI-compatible API. Install the official Fireworks provider plugin to use the current Fire Pass GLM router, two pre-cataloged Kimi models, and any Fireworks model or router id at runtime.
+[Fireworks](https://fireworks.ai) 通过兼容 OpenAI 的 API 提供开放权重模型和路由模型。安装官方 Fireworks provider 插件，即可使用当前的 Fire Pass GLM router、两个预先编目的 Kimi 模型，以及运行时的任意 Fireworks 模型或 router id。
 
-| Property        | Value                                               |
-| --------------- | --------------------------------------------------- |
-| Provider id     | `fireworks` (alias: `fireworks-ai`)                 |
-| Package         | `@openclaw/fireworks-provider`                      |
-| Auth env var    | `FIREWORKS_API_KEY`                                 |
-| Onboarding flag | `--auth-choice fireworks-api-key`                   |
-| Direct CLI flag | `--fireworks-api-key <key>`                         |
-| API             | OpenAI-compatible (`openai-completions`)            |
-| Base URL        | `https://api.fireworks.ai/inference/v1`             |
-| Default model   | `fireworks/accounts/fireworks/routers/glm-5p2-fast` |
-| Default alias   | `GLM 5.2 Fast`                                      |
+| 属性           | 值                                                 |
+| -------------- | -------------------------------------------------- |
+| Provider id    | `fireworks`（别名：`fireworks-ai`）                |
+| Package        | `@openclaw/fireworks-provider`                     |
+| Auth env var   | `FIREWORKS_API_KEY`                                |
+| Onboarding flag | `--auth-choice fireworks-api-key`                  |
+| Direct CLI flag | `--fireworks-api-key <key>`                        |
+| API            | 兼容 OpenAI（`openai-completions`）               |
+| Base URL       | `https://api.fireworks.ai/inference/v1`            |
+| Default model  | `fireworks/accounts/fireworks/routers/glm-5p2-fast` |
+| Default alias  | `GLM 5.2 Fast`                                     |
 
 ## 入门
 
@@ -37,7 +37,7 @@ openclaw onboard --auth-choice fireworks-api-key
 ```
 
 ```bash Direct flag
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice fireworks-api-key \
   --fireworks-api-key "$FIREWORKS_API_KEY"
 ```
@@ -48,7 +48,7 @@ export FIREWORKS_API_KEY=fw-...
 
     </CodeGroup>
 
-    Onboarding stores the key against the `fireworks` provider in your auth profiles and sets Fireworks' current [Fire Pass](https://docs.fireworks.ai/firepass) GLM 5.2 Fast router as the default model.
+    Onboarding 会将密钥存储在 auth profiles 中的 `fireworks` provider 下，并将 Fireworks 当前的 [Fire Pass](https://docs.fireworks.ai/firepass) GLM 5.2 Fast router 设置为默认模型。
 
   </Step>
   <Step title="验证模型是否可用">
@@ -56,7 +56,7 @@ export FIREWORKS_API_KEY=fw-...
     openclaw models list --provider fireworks
     ```
 
-    The list should include `GLM 5.2 Fast`, `Kimi K2.6`, and `Kimi K2.6 Fast`. If `FIREWORKS_API_KEY` is unresolved, `openclaw models status --json` reports the missing credential under `auth.unusableProfiles`.
+    列表应包含 `GLM 5.2 Fast`、`Kimi K2.6` 和 `Kimi K2.6 Fast`。如果无法解析 `FIREWORKS_API_KEY`，`openclaw models status --json` 会在 `auth.unusableProfiles` 下报告缺失的凭据。
 
   </Step>
 </Steps>
@@ -76,19 +76,19 @@ openclaw onboard --non-interactive \
 
 ## 内置目录
 
-| Model ref                                              | Name           | Input        | Context | Max output | Thinking     |
+| 模型引用                                              | 名称           | 输入        | 上下文 | 最大输出   | 思考       |
 | ------------------------------------------------------ | -------------- | ------------ | ------- | ---------- | ------------ |
-| `fireworks/accounts/fireworks/routers/glm-5p2-fast`    | GLM 5.2 Fast   | text + image | 256,000 | 256,000    | On (default) |
-| `fireworks/accounts/fireworks/models/kimi-k2p6`        | Kimi K2.6      | text + image | 262,144 | 262,144    | Forced off   |
-| `fireworks/accounts/fireworks/routers/kimi-k2p6-turbo` | Kimi K2.6 Fast | text + image | 262,144 | 256,000    | Forced off   |
+| `fireworks/accounts/fireworks/routers/glm-5p2-fast`    | GLM 5.2 Fast   | 文本 + 图像 | 256,000 | 256,000    | 开启（默认） |
+| `fireworks/accounts/fireworks/models/kimi-k2p6`        | Kimi K2.6      | 文本 + 图像 | 262,144 | 262,144    | 强制关闭   |
+| `fireworks/accounts/fireworks/routers/kimi-k2p6-turbo` | Kimi K2.6 Fast | 文本 + 图像 | 262,144 | 256,000    | 强制关闭   |
 
 <Note>
-  OpenClaw 将所有 Fireworks Kimi 模型固定为 `thinking: off`，因为 Fireworks 上的 Kimi 可能会在可见回复中泄露链式思维，除非请求明确禁用 thinking。通过 [Moonshot](/providers/moonshot) 直接路由同一模型可保留 Kimi 的推理输出。有关在提供商之间切换，请参见 [thinking modes](/tools/thinking)。
+  OpenClaw 将所有 Fireworks Kimi 模型固定为 `thinking: off`，因为 Fireworks 上的 Kimi 可能会在可见回复中泄露思维链，除非请求明确禁用 thinking。通过 [Moonshot](/providers/moonshot) 直接路由同一模型可保留 Kimi 的推理输出。有关在提供商之间切换，请参见 [思考模式](/tools/thinking)。
 </Note>
 
 ## 自定义 Fireworks 模型 id
 
-OpenClaw accepts any Fireworks model or router id at runtime. Use the exact id shown by Fireworks and prefix it with `fireworks/`. Dynamic resolution clones the Fire Pass template (text + image input and the OpenAI-compatible API) and disables thinking automatically when the id matches the Kimi pattern. GLM dynamic ids are marked text-only unless you configure a custom model entry with image input.
+OpenClaw 在运行时接受任何 Fireworks 模型或路由 id。请使用 Fireworks 显示的准确 id，并在前面加上 `fireworks/`。动态解析会克隆 Fire Pass 模板（文本 + 图像输入和 OpenAI 兼容 API），并在 id 匹配 Kimi 模式时自动禁用 thinking。除非你配置了带图像输入的自定义模型条目，否则 GLM 动态 id 会被标记为仅文本。
 
 ```json5
 {
@@ -106,15 +106,15 @@ OpenClaw accepts any Fireworks model or router id at runtime. Use the exact id s
   <Accordion title="模型 id 前缀规则如何工作">
     OpenClaw 中的每个 Fireworks 模型引用都以 `fireworks/` 开头，后面跟着来自 Fireworks 平台的准确 id 或路由路径。例如：
 
-    - Router model: `fireworks/accounts/fireworks/routers/kimi-k2p6-turbo`
-    - Direct model: `fireworks/accounts/fireworks/models/<model-name>`
+    - 路由模型：`fireworks/accounts/fireworks/routers/kimi-k2p6-turbo`
+    - 直接模型：`fireworks/accounts/fireworks/models/<model-name>`
 
     OpenClaw 在构建 API 请求时会去掉 `fireworks/` 前缀，并将剩余路径作为 OpenAI 兼容的 `model` 字段发送到 Fireworks 端点。
 
   </Accordion>
 
   <Accordion title="为什么 Kimi 会强制关闭 thinking">
-    Fireworks 为 Kimi 提供服务时没有单独的推理通道，因此 chain-of-thought 可能会出现在可见的 `content` 流中。每次 Fireworks Kimi 请求时，OpenClaw 都会发送 `thinking: { type: "disabled" }`，并从负载中移除 `reasoning`、`reasoning_effort` 和 `reasoningEffort`（`extensions/fireworks/stream.ts`）。提供方策略（`extensions/fireworks/thinking-policy.ts`）仅为 Kimi 模型 id 宣告 `off` thinking 级别，因此手动 `/think` 切换和提供方策略界面会与运行时契约保持一致。
+    Fireworks 为 Kimi 提供服务时没有单独的推理通道，因此思维链可能会出现在可见的 `content` 流中。每次 Fireworks Kimi 请求时，OpenClaw 都会发送 `thinking: { type: "disabled" }`，并从负载中移除 `reasoning`、`reasoning_effort` 和 `reasoningEffort`（`extensions/fireworks/stream.ts`）。提供方策略（`extensions/fireworks/thinking-policy.ts`）仅为 Kimi 模型 id 宣告 `off` thinking 级别，因此手动 `/think` 切换和提供方策略界面会与运行时契约保持一致。
 
     若要端到端使用 Kimi 推理，请配置 [Moonshot 提供方](/providers/moonshot) 并通过它路由同一个模型。
 

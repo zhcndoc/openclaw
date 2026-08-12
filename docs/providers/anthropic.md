@@ -8,8 +8,8 @@ title: "Anthropic"
 
 Anthropic 构建了 **Claude** 模型家族。OpenClaw 支持两种认证方式：
 
-- **API 密钥** - 直接访问 Anthropic API，并按使用量计费（`anthropic/*` 模型）
-- **Claude CLI** - 在同一主机上复用现有的 Claude Code 登录。
+- **API 密钥**——直接访问 Anthropic API，并按使用量计费（`anthropic/*` 模型）
+- **Claude CLI**——在同一主机上复用现有的 Claude Code 登录。
 
 ## 使用与成本跟踪
 
@@ -78,7 +78,7 @@ OpenClaw 版本的情况下更改此行为：
 
     ```json5
     {
-      env: { ANTHROPIC_API_KEY: "example-anthropic-key-not-real" },
+      env: { vars: { ANTHROPIC_API_KEY: "example-anthropic-key-not-real" } },
       agents: { defaults: { model: { primary: "anthropic/claude-opus-5" } } },
     }
     ```
@@ -206,11 +206,11 @@ OpenClaw 版本的情况下更改此行为：
 
 发现过程不需要额外的 OpenClaw 配置。Anthropic 插件默认已捆绑并启用；当本地 `~/.claude/projects/` 目录存在时，原生 macOS 节点会公布只读的 Claude 会话命令。请在这些命令首次出现时批准节点配对升级。
 
-侧边栏按 Gateway 或配对节点主机对各行进行分组，并在每台计算机响应后立即显示该主机最新的受限页面。它会在主机连接状态发生变化时、页面重新获得焦点时，以及页面可见期间最多每 30 秒再次进行协调，因此在 OpenClaw 外部创建的 Claude 会话无需重新加载即可显示。目录发生变化时会更快地执行后续检查。使用目录分组下方的 **Load more sessions**，可为所有拥有更多历史记录的主机追加下一页；追加的行会继续显示，并在刷新时重新获取到相同的深度。目录客户端使用 `sessions.catalog.list`；打开某一行时使用 `sessions.catalog.read`。
+侧边栏按 Gateway 或配对节点主机对各行进行分组，并在每台计算机响应后立即显示该主机最新的受限页面。它会在主机连接状态发生变化时、页面重新获得焦点时，以及页面可见期间最多每 30 秒再次进行协调，因此在 OpenClaw 外部创建的 Claude 会话无需重新加载即可显示。目录发生变化时会更快地执行后续检查。使用目录分组下方的 **加载更多会话**，可为所有拥有更多历史记录的主机追加下一页；追加的行会继续显示，并在刷新时重新获取到相同的深度。目录客户端使用 `sessions.catalog.list`；打开某一行时使用 `sessions.catalog.read`。
 
-终端接管会先从所属主机用户的登录 shell `PATH` 中解析 `claude`，然后才使用服务/守护进程的 `PATH`。这样可以确保应用启动的会话与操作员在普通终端中使用的 Claude CLI 保持一致。
+终端接管会先从所属主机用户的登录 shell `PATH` 中解析 `claude`，然后才使用服务／守护进程的 `PATH`。这样可以确保应用启动的会话与操作员在普通终端中使用的 Claude CLI 保持一致。
 
-选择某一行时会先读取最新的转录页面。**加载更早的转录项** 会遵循一个不透明的字节游标，并从 JSONL 文件中读取另一个受限区段，而不是加载全部历史。普通的用户、助手、推理、工具调用和工具结果内容都会被保留。单个条目如果大于节点/Gateway 的安全上限，会被清楚地标记为已截断。
+选择某一行时会先读取最新的转录页面。**加载更早的转录项** 会遵循一个不透明的字节游标，并从 JSONL 文件中读取另一个受限区段，而不是加载全部历史。普通的用户、助手、推理、工具调用和工具结果内容都会被保留。单个条目如果大于节点／Gateway 的安全上限，会被清楚地标记为已截断。
 
 对于 Gateway 本地的 `claude-cli` 行，在普通撰写器中输入会调用 `sessions.catalog.continue`。OpenClaw 会重新解析本地目录记录，创建或复用一个模型锁定的原生会话，导入最多 200 个可见条目或 512 KiB，并为 Claude CLI 绑定播种。第一次回合会使用 `--fork-session` 继续；Claude 会为这个分叉分配一个新的会话 ID，因此后续回合会使用该分叉，而源会话保持不变。
 
@@ -259,8 +259,8 @@ Anthropic 不支持该模型的这些请求功能，OpenClaw 会省略 Opus 5 �
 `$2/$10` 输入/输出定价，持续至 2026 年 8 月 31 日；标准的 `$3/$15` 定价将于 2026 年 9 月 1 日开始。
 
 `anthropic/claude-fable-5` 始终使用自适应思考，并默认设为 `high`
-effort。Anthropic 不允许为该模型禁用思考，因此
-`/think off` 和 `/think minimal` 会映射为 `low` effort。OpenClaw 也会
+努力级别。Anthropic 不允许为该模型禁用思考，因此
+`/think off` 和 `/think minimal` 会映射为 `low` 努力级别。OpenClaw 也会
 省略 Fable 5 请求中的自定义温度值，因为 Anthropic 会拒绝对任何启用思考的请求进行温度覆盖。
 
 `anthropic/claude-mythos-5` 是一个限量开放访问模型，采用相同的始终开启
@@ -270,7 +270,7 @@ effort。Anthropic 不允许为该模型禁用思考，因此
 上限、图像输入能力，以及 `$10/$50` 输入/输出定价。
 
 Claude Opus 4.8 在 OpenClaw 中默认关闭思考。当你通过 `/think high|xhigh|max`
-显式启用自适应思考时，OpenClaw 会发送 Anthropic 的 Opus 4.8 effort 值；
+显式启用自适应思考时，OpenClaw 会发送 Anthropic 的 Opus 4.8 努力级别值；
 Claude 4.6 模型（Opus 4.6 和 Sonnet 4.6）默认使用 `adaptive`。
 
 可通过 `/think:<level>` 按消息覆盖，或在模型参数中设置：
@@ -379,10 +379,10 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
             },
           },
         },
-        list: [
-          { id: "research", default: true },
-          { id: "alerts", params: { cacheRetention: "none" } },
-        ],
+        entries: {
+          research: { default: true },
+          alerts: { params: { cacheRetention: "none" } },
+        },
       },
     }
     ```
@@ -495,7 +495,7 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 ## 故障排除
 
 <AccordionGroup>
-  <Accordion title="401 错误 / 令牌突然失效">
+  <Accordion title="401 错误／令牌突然失效">
     Anthropic token 认证会过期，也可能被撤销。对于新配置，建议改用 Anthropic API key。
   </Accordion>
 

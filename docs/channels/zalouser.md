@@ -22,7 +22,7 @@ openclaw plugins install @openclaw/zalouser
 
 - 固定版本：`openclaw plugins install @openclaw/zalouser@<version>`
 - 从源代码检出安装：`openclaw plugins install ./path/to/local/zalouser-plugin`
-- 详情：[插件](/tools/plugin)
+- 详情：[插件](/tools/plugin)。
 
 ## 快速设置
 
@@ -79,7 +79,7 @@ OpenClaw 会在处理每个原始 `zca-js` 消息回调之前先将其存储起�
 
 ## 访问控制（私信）
 
-`channels.zalouser.dmPolicy`: `pairing | allowlist | open | disabled`（默认：`pairing`）。
+`channels.zalouser.dmPolicy`：`pairing | allowlist | open | disabled`（默认：`pairing`）。
 
 `channels.zalouser.allowFrom` 应使用稳定的 Zalo 用户 ID。它也可以引用静态发送者访问组（`accessGroup:<name>`）。在交互式设置期间，输入的名称可以通过插件的进程内联系人查找解析为 ID。
 
@@ -159,9 +159,10 @@ OpenClaw 会在处理每个原始 `zca-js` 消息回调之前先将其存储起�
   channels: {
     zalouser: {
       enabled: true,
-      defaultAccount: "default",
+      groupPolicy: "allowlist",
+      defaultAccount: "work",
       accounts: {
-        work: { enabled: true, profile: "work" },
+        work: { enabled: true, profile: "work", groupPolicy: "allowlist" },
       },
     },
   },
@@ -215,4 +216,4 @@ Profile 名称用于选择 OpenClaw 状态中保存的 Zalo 登录凭据。解�
 - [配对](/channels/pairing) - DM 认证和配对流程
 - [群组](/channels/groups) - 群聊行为和提及门控
 - [渠道路由](/channels/channel-routing) - 消息的会话路由
-- [安全](/gateway/security) - 访问模型和加固
+- [安全](/gateway/security) - 访问模型和加固。

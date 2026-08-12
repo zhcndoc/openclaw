@@ -35,7 +35,7 @@ openclaw gateway restart
     openclaw onboard --auth-choice deepseek-api-key
     ```
 
-    Prompts for your API key and sets `deepseek/deepseek-v4-pro` as the default model.
+    提示输入你的 API 密钥，并将 `deepseek/deepseek-v4-pro` 设置为默认模型。
 
   </Step>
   <Step title="验证模型是否可用">
@@ -74,15 +74,14 @@ openclaw gateway restart
 
 ## 内置目录
 
-| Model ref                    | Name              | Input | Context   | Max output | Notes                            |
+| 模型引用                     | 名称              | 输入  | 上下文    | 最大输出   | 备注                             |
 | ---------------------------- | ----------------- | ----- | --------- | ---------- | -------------------------------- |
-| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | text  | 1,000,000 | 384,000    | Fast V4 thinking-capable surface |
-| `deepseek/deepseek-v4-pro`   | DeepSeek V4 Pro   | text  | 1,000,000 | 384,000    | Default; strongest V4 model      |
+| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | 文本  | 1,000,000 | 384,000    | 快速、支持 V4 思考能力的界面      |
+| `deepseek/deepseek-v4-pro`   | DeepSeek V4 Pro   | 文本  | 1,000,000 | 384,000    | 默认；最强大的 V4 模型            |
 
 <Warning>
-DeepSeek retired `deepseek-chat` and `deepseek-reasoner` on July 24, 2026 at
-15:59 UTC. Those model IDs are no longer accessible. Move configured model refs
-to `deepseek/deepseek-v4-flash` or `deepseek/deepseek-v4-pro`.
+DeepSeek 已于 2026 年 7 月 24 日 15：59 UTC 停用 `deepseek-chat` 和 `deepseek-reasoner`。这些模型 ID 已无法访问。请将已配置的模型引用迁移到
+`deepseek/deepseek-v4-flash` 或 `deepseek/deepseek-v4-pro`。
 </Warning>
 
 OpenClaw 的本地成本估算遵循 DeepSeek 公布的 cache-hit、cache-miss 和输出费率。DeepSeek 可能会更改这些费率；
@@ -108,9 +107,8 @@ OpenAI 兼容提供商（没有原生 `reasoning_content`）或普通的 assista
 `thinking: { type: "disabled" }`，并从外发历史记录中移除重放的 `reasoning_content`，
 使会话保持在非 thinking 的 DeepSeek 路径上。
 
-Fresh onboarding selects the stronger `deepseek/deepseek-v4-pro` model. Use
-`deepseek/deepseek-v4-flash` when lower cost or latency matters more than
-maximum capability.
+全新 onboarding 会选择更强大的 `deepseek/deepseek-v4-pro` 模型。当成本或延迟比
+最大能力更重要时，请使用 `deepseek/deepseek-v4-flash`。
 
 ## 在线测试
 
@@ -128,7 +126,7 @@ pnpm test:live src/agents/models.profiles.live.test.ts
 
 ```json5
 {
-  env: { DEEPSEEK_API_KEY: "sk-..." },
+  env: { vars: { DEEPSEEK_API_KEY: "sk-..." } },
   agents: {
     defaults: {
       model: { primary: "deepseek/deepseek-v4-pro" },

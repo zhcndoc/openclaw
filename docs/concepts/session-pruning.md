@@ -9,7 +9,7 @@ read_when:
 会话修剪会在每次 LLM 调用前，从上下文中修剪掉**旧的工具结果**。它可以减少因累积的工具输出（执行结果、文件读取、搜索结果）而导致的上下文膨胀，而不会重写正常的对话文本。
 
 <Info>
-修剪仅在内存中进行 -- 它不会修改磁盘上的会话记录。你的完整历史始终会被保留。
+修剪仅在内存中进行——它不会修改磁盘上的会话记录。你的完整历史始终会被保留。
 </Info>
 
 ## 为什么它很重要
@@ -22,13 +22,13 @@ read_when:
 
 Pruning 在 `cache-ttl` 模式下运行，同时受时间检查和上下文大小检查的约束：
 
-1. 等待缓存 TTL 过期（手动设置时默认 5 分钟；Anthropic 自动默认值见 [Smart defaults](#smart-defaults)）。在 TTL 到期之前，会完全跳过 pruning，以保留相邻轮次的 prompt-cache 复用。
-2. 一旦 TTL 过期，先根据模型的上下文窗口估算总上下文大小。如果比例低于 `softTrimRatio`（默认 0.3），则跳过 pruning，并继续保持 TTL 计时。
-3. 对高于该比例的超大工具结果进行 **soft-trim**：保留开头和结尾（默认各 1500 字符，总计上限 4000 字符），中间插入 `...`。
-4. 如果比例仍然大于等于 `hardClearRatio`（默认 0.5），并且仍然存在至少 `minPrunableToolChars`（默认 50,000）可清理的工具内容，则对这些结果进行 **hard-clear**：用占位符替换其内容（默认 `[Old tool result content cleared]`）。
-5. 只有在 pruning 实际改变了上下文时，才会重置 TTL 计时，这样后续请求就能复用新的缓存。
+1. 等待缓存 TTL 过期（手动设置时默认为 5 分钟；有关 Anthropic 的自动默认值，请参阅[智能默认值](#smart-defaults)）。在 TTL 结束前，将完全跳过清理，以保留相邻轮次的提示缓存复用。
+2. TTL 结束后，根据模型的上下文窗口估算总上下文大小。使用率低于约 30% 时，将跳过清理，并让 TTL 时钟继续运行。
+3. **软裁剪**过大的工具结果：超过 4,000 个字符的结果将保留开头和结尾各 1,500 个字符，并在中间添加 `...`。
+4. 如果上下文使用率仍处于约 50% 或更高，且至少还剩 50,000 个字符的可清理工具内容，则对这些结果执行**硬清除**：将其内容替换为占位符（默认为 `[Old tool result content cleared]`，可通过 `agents.defaults.contextPruning.hardClear.placeholder` 配置；设置 `hardClear.enabled: false` 可跳过此步骤）。
+5. 仅当清理实际改变了上下文时，才会重置 TTL 时钟，以便后续请求复用新鲜缓存。
 
-无论阈值如何，都适用两条安全规则：最近的 `keepLastAssistants` 条 assistant 轮次（默认 3）绝不会被清理，且会话中第一个用户消息之前的内容也绝不会被清理（用于保护诸如 `SOUL.md`/`USER.md` 之类的启动读取）。
+无论阈值如何，都适用两条安全规则：最近三轮 assistant 消息永远不会被清理，并且会话第一条用户消息之前的任何内容都不会被清理（用于保护 `SOUL.md`／`USER.md` 等引导读取）。上述大小阈值和裁剪窗口属于内置行为，而不是配置项；可配置的部分是 `agents.defaults.contextPruning`（`mode`、`ttl`、`tools`、`hardClear`）。
 
 只有 `toolResult` 消息符合条件；普通对话文本不会被处理。使用 `agents.defaults.contextPruning.tools.{allow,deny}` 来限定哪些工具名称可被清理。
 
@@ -82,7 +82,7 @@ OpenClaw 还会为那些在历史记录中保留原始图像块或提示水合�
 ## 延伸阅读
 
 - [压缩](/concepts/compaction)：基于摘要的上下文减少
-- [网关配置](/gateway/configuration)：所有修剪配置选项（`contextPruning.*`）
+- [网关配置](/gateway/configuration)：所有修剪配置选项（`contextPruning.*`）。
 
 ## 相关内容
 

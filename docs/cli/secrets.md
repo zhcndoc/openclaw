@@ -1,9 +1,10 @@
 ---
-summary: "openclaw secrets 的 CLI 参考（reload、audit、configure、apply）"
+summary: "`openclaw secrets` 的 CLI 参考（存储、重新加载、审计、配置、应用）"
 read_when:
-  - 运行时重新解析密钥引用
+  - 在运行时重新解析 SecretRefs
+  - 管理共享密钥存储中的团队范围值
   - 审计明文残留和未解析的引用
-  - 配置 SecretRefs 并应用一次性清理更改
+  - 配置 SecretRefs 并应用单向清理变更
 title: "密钥"
 ---
 
@@ -13,10 +14,11 @@ title: "密钥"
 
 | Command     | Role                                                                                                                                                                                         |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `reload`    | 网关 RPC（`secrets.reload`）：重新解析引用，并以原子方式发布具备所有者感知能力的运行时快照（不写入配置）；符合条件的所有者失败可作为冷启动或陈旧警告发布 |
-| `audit`    | 只读扫描配置、身份验证、生成模型存储和旧残留中的明文、未解析引用以及优先级漂移（除非使用 `--allow-exec`，否则会跳过 exec 引用）                      |
-| `configure` | 用于提供程序设置、目标映射和预检的交互式规划器（需要 TTY）                                                                                                       |
-| `apply`     | 执行已保存的计划（`--dry-run` 仅验证，并且默认跳过 exec 检查；写入模式会拒绝包含 exec 的计划，除非使用 `--allow-exec`），然后清理目标明文残留 |
+| `reload`    | Gateway RPC（`secrets.reload`）：重新解析引用，并以原子方式发布所有者感知的运行时快照（不写入配置）；符合条件的所有者失败可能会以冷启动或过时警告的形式发布 |
+| `store`     | 在本地共享状态 SQLite 数据库中管理团队范围的密钥和环境值                                                                                                  |
+| `audit`     | 以只读方式扫描配置、身份验证、生成模型存储和旧版残留，检查明文、未解析的引用和优先级漂移（除非使用 `--allow-exec`，否则会跳过 exec 引用）                      |
+| `configure` | 用于提供商设置、目标映射和预检的交互式规划器（需要 TTY）                                                                                                       |
+| `apply`     | 执行已保存的计划（默认情况下，`--dry-run` 仅进行验证并跳过 exec 检查；写入模式会拒绝包含 exec 的计划，除非使用 `--allow-exec`），然后清理目标明文残留 |
 
 推荐的操作循环：
 
@@ -31,12 +33,91 @@ openclaw secrets reload
 
 如果你的计划包含 `exec` SecretRefs/providers，请在 `apply` 命令的试运行和写入模式中都传入 `--allow-exec`。
 
-CI/门禁的退出码：
+CI／门禁的退出码：
 
 - `audit --check` 在发现问题时返回 `1`。
-- 未解析的引用返回 `2`（无论是否使用 `--check`）。
+- 未解析的引用返回 `2`（与是否使用 `--check` 无关）。
+- 存储验证和披露策略失败返回 `2`；当名称缺失时，`store get` 返回 `3`。
 
 相关链接：[密钥管理](/gateway/secrets) · [1Password 插件](/plugins/onepassword) · [SecretRef 凭据范围](/reference/secretref-credential-surface) · [安全性](/gateway/security)。
+
+## 共享密钥存储
+
+`openclaw secrets store` 直接写入本地共享状态数据库。该存储是 Gateway 范围且限定团队级别；此版本仅接受 `--scope team`。由于尚不支持身份范围，`--scope me` 会被拒绝。
+
+```bash
+openclaw secrets store list
+openclaw secrets store set <NAME>
+openclaw secrets store get <NAME>
+openclaw secrets store rm <NAME>...
+openclaw secrets store import [--from <file>]
+```
+
+名称必须匹配 `^[A-Z][A-Z0-9_]{0,127}$`。值限制为 64 KiB（65,536 个 UTF-8 字节）；无论超大值来自 stdin、`--value` 还是 `--value-file`，都会被拒绝并返回退出代码 2。`secret` 条目不得为空，因为空凭据之后无法诊断（`get` 会拒绝 `secret` 类型，列表会对其进行掩码）；`env` 条目可以为空。`--kind secret|env` 会覆盖自动类型检测；否则，以常见凭据后缀（例如 `_API_KEY`、`_TOKEN`、`_PASSWORD`、`_PRIVATE_KEY` 或 `_SECRET`）结尾的名称会成为 `secret`，其他名称会成为 `env`。
+
+### 安全地设置值
+
+仅当解析后的类型为 `env` 时，才接受 `--value`：
+
+```bash
+openclaw secrets store set LOG_LEVEL --kind env --value debug
+```
+
+对于 `secret` 值，由于命令行参数可能通过 shell 历史记录和进程列表泄露，`--value` 会被拒绝并返回退出代码 `2`。请使用以下三种安全输入方式之一：
+
+- 当 stdin 不是 TTY 时，通过管道传入 stdin。
+- 传入 `--value-file <path>`；`--value-file -` 表示 stdin。
+- 以交互方式运行，并在无回显提示中输入值。
+
+示例：
+
+```bash
+op read 'op://Engineering/OpenAI/apiKey' | \
+  openclaw secrets store set OPENAI_API_KEY --kind secret
+
+openclaw secrets store set TLS_PRIVATE_KEY \
+  --kind secret \
+  --value-file ./client-key.pem
+```
+
+`set` 具有幂等性，并会更新现有名称。添加 `--dry-run` 可在不写入的情况下验证并预览操作。写入成功后会提醒你运行 `openclaw secrets reload`，之后配置引用的值才能生效。
+
+### 读取值
+
+```bash
+openclaw secrets store list --json
+openclaw secrets store list --plain
+openclaw secrets store get LOG_LEVEL
+```
+
+密钥值不会出现在人类可读输出、`--json` 或 `--plain` 输出中。按照设计，`store get` 会将 `secret` 条目视为只写并拒绝访问，退出代码为 `2`；当名称不存在时，退出代码为 `3`。`env` 类型的值可以读取。
+
+团队范围的 `env` 条目也会进入 agent exec 环境。每次调用中显式指定的 env 优先于存储中的值，并且主机／sandbox 安全过滤器可能会拒绝受保护或呈现凭据特征的名称，同时发出警告。`secret` 条目绝不会作为子进程 env 暴露；请改用 `store` SecretRefs 访问它们。
+
+### 删除值
+
+```bash
+openclaw secrets store rm OLD_TOKEN
+openclaw secrets store rm OLD_TOKEN LEGACY_PASSWORD --yes
+openclaw secrets store rm OLD_TOKEN --dry-run
+```
+
+删除操作具有幂等性，因此缺少名称时也会静默成功。不使用 `--yes` 时，CLI 会请求确认。删除的行会被软删除，并在 30 天后清除。
+
+### 导入 dotenv 文件
+
+从常规文件或 stdin 导入 dotenv 格式的赋值：
+
+```bash
+openclaw secrets store import --from .env
+openclaw secrets store import --from .env --dry-run
+openclaw secrets store import --from .env --yes
+op read 'op://Engineering/service-account/dotenv' | openclaw secrets store import --yes
+```
+
+导入器支持带引号的值以及带引号的多行值，例如 PEM 密钥。使用 `--yes` 可跳过确认，使用 `--dry-run` 可在不写入的情况下检查导入内容。类型检测遵循与 `store set` 相同的基于名称的规则。
+
+存储 CLI 命令不接受 `--url` 或 `--token`，也不会通过 Gateway 路由。Control UI 改用管理员范围的 `secrets.store.*` RPC 方法；当发生更改的名称被活动配置引用时，这些方法会自动刷新运行时。
 
 ## 重新加载运行时快照
 
@@ -54,15 +135,16 @@ openclaw secrets reload --url ws://127.0.0.1:18789 --token <token>
 
 扫描 OpenClaw 状态以查找：
 
-- 明文密钥存储
-- 未解析引用
-- 优先级漂移（`auth-profiles.json` 中的凭据覆盖 `openclaw.json` 中的引用）
-- `agents/*/agent/models.json` 生成残留（提供者 `apiKey` 值和敏感提供者头）
-- 旧版残留（旧版 auth 存储条目、OAuth 提醒）
+- 明文存储的机密
+- 未解析的引用
+- 优先级漂移（`auth-profiles.json` 凭据遮蔽 `openclaw.json` 引用）
+- 存储残留（团队存储值在 `openclaw.json` 中重复以明文保存）
+- 生成的 `agents/*/agent/models.json` 残留（提供商 `apiKey` 值和敏感的提供商请求头）
+- 旧版残留（旧版认证存储条目、OAuth 提醒）
 
 `.env` 扫描会覆盖有效状态目录以及包含活动配置的目录。当两个路径指向同一个文件时，只扫描一次。
 
-敏感提供者头检测基于名称启发式：如果某个头名称匹配常见的 auth/credential 片段（`authorization`、`x-api-key`、`token`、`secret`、`password`、`credential`），则会标记该头。
+敏感提供商请求头检测基于名称启发式：如果某个请求头名称匹配常见的 auth/credential 片段（`authorization`、`x-api-key`、`token`、`secret`、`password`、`credential`），则会标记该请求头。
 
 ```bash
 openclaw secrets audit
@@ -75,8 +157,8 @@ openclaw secrets audit --allow-exec
 
 - `status`：`clean | findings | unresolved`
 - `resolution`：`refsChecked`、`skippedExecRefs`、`resolvabilityComplete`
-- `summary`：`plaintextCount`、`unresolvedRefCount`、`shadowedRefCount`、`legacyResidueCount`
-- 发现代码：`PLAINTEXT_FOUND`、`REF_UNRESOLVED`、`REF_SHADOWED`、`LEGACY_RESIDUE`
+- `summary`：`plaintextCount`、`unresolvedRefCount`、`shadowedRefCount`、`storeResidueCount`、`legacyResidueCount`
+- finding codes：`PLAINTEXT_FOUND`、`REF_UNRESOLVED`、`REF_SHADOWED`、`STORE_PLAINTEXT_RESIDUE`、`LEGACY_RESIDUE`
 
 ## 配置（交互式助手）
 

@@ -6,15 +6,15 @@ read_when:
 title: "vLLM"
 ---
 
-vLLM 通过 **OpenAI 兼容** 的 HTTP API 提供开源（以及一些自定义）模型。OpenClaw 使用 `openai-completions` API 进行连接，并且当你使用 `VLLM_API_KEY` 选择启用时，可以**自动发现**模型。
+vLLM 通过 **OpenAI 兼容** 的 HTTP API 提供开源（以及一些自定义）模型。OpenClaw 使用 `openai-completions` API 进行连接，并且当你选择使用 `VLLM_API_KEY` 启用时，可以**自动发现**模型。
 
-| Property         | Value                                      |
+| 属性             | 值                                         |
 | ---------------- | ------------------------------------------ |
 | Provider ID      | `vllm`                                     |
-| API              | `openai-completions` (OpenAI-compatible)   |
-| Auth             | `VLLM_API_KEY` environment variable        |
-| Default base URL | `http://127.0.0.1:8000/v1`                 |
-| Streaming usage  | Supported (`stream_options.include_usage`) |
+| API              | `openai-completions`（OpenAI 兼容）        |
+| Auth             | `VLLM_API_KEY` 环境变量                    |
+| 默认基础 URL     | `http://127.0.0.1:8000/v1`                |
+| 流式传输用量     | 支持（`stream_options.include_usage`）     |
 
 ## 入门
 
@@ -60,7 +60,7 @@ vLLM 通过 **OpenAI 兼容** 的 HTTP API 提供开源（以及一些自定义�
 对于非交互式设置（CI、脚本），直接传入基础 URL、密钥和模型：
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice vllm \
   --custom-base-url "http://127.0.0.1:8000/v1" \
@@ -125,7 +125,7 @@ openclaw onboard --non-interactive \
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Proxy-style behavior">
+  <Accordion title="代理式行为">
     vLLM 被视为一种代理式、兼容 OpenAI 的 `/v1` 后端，而不是原生 OpenAI 端点：
 
     | 行为                                    | 是否应用？                       |
@@ -139,7 +139,7 @@ openclaw onboard --non-interactive \
 
   </Accordion>
 
-  <Accordion title="Qwen thinking controls">
+  <Accordion title="Qwen 思考控制">
     对于 Qwen 模型，当服务器期望 Qwen chat-template kwargs 时，请在模型行上设置 `compat.thinkingFormat: "qwen-chat-template"`。这些模型提供一个二元 `/think` 配置文件（`off`、`on`），因为 Qwen chat-template 的 thinking 是一个开关，而不是 OpenAI 风格的 effort 级别。
 
     ```json5
@@ -176,7 +176,7 @@ openclaw onboard --non-interactive \
 
   </Accordion>
 
-  <Accordion title="Nemotron 3 thinking controls">
+  <Accordion title="Nemotron 3 思考控制">
     对于启用 thinking 的 `vllm/nemotron-3-*` 模型，当 thinking 关闭时，内置插件会发送：
 
     ```json
@@ -211,7 +211,7 @@ openclaw onboard --non-interactive \
 
   </Accordion>
 
-  <Accordion title="Qwen tool calls appear as text">
+  <Accordion title="Qwen 工具调用显示为文本">
     首先确认 vLLM 是否使用了与模型匹配的正确 tool-call 解析器和 chat template 启动。vLLM 文档中，Qwen2.5 模型使用 `hermes`，Qwen3-Coder 模型使用 `qwen3_xml`。
 
     症状：skills/tools 从不执行，assistant 输出原始 JSON/XML，例如 `{"name":"read","arguments":...}`，或者当 OpenClaw 发送 `tool_choice: "auto"` 时，vLLM 返回空的 `tool_calls` 数组。
@@ -280,7 +280,7 @@ openclaw onboard --non-interactive \
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="Slow first response or remote server timeout">
+  <Accordion title="首次响应缓慢或远程服务器超时">
     对于大型本地模型、远程局域网主机或 tailnet 链路，请设置提供方级别的请求超时：
 
     ```json5
@@ -327,7 +327,7 @@ openclaw onboard --non-interactive \
     自动发现需要设置 `VLLM_API_KEY`。如果你已经定义了 `models.providers.vllm`，除非 `agents.defaults.models` 包含 `"vllm/*": {}`，否则 OpenClaw 只会使用你声明的模型。
   </Accordion>
 
-  <Accordion title="Tools render as raw text">
+  <Accordion title="工具渲染为原始文本">
     如果某个 Qwen 模型输出 JSON/XML 工具语法而不是执行 skill：
 
     - 使用与该模型匹配的正确 parser/template 启动 vLLM。

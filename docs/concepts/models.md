@@ -97,12 +97,7 @@ openclaw onboard
 
 为常见提供商设置模型和认证，无需手动编辑配置，包括 OpenAI Codex 订阅 OAuth 和 Anthropic（API 密钥或 Claude CLI 复用）。
 
-如果未配置主模型，新的 OpenAI API 密钥设置会选择
-`openai/gpt-5.6`；直接使用 API 的裸 ID 会解析到 Sol 层级。新的
-ChatGPT/Codex OAuth 设置会选择精确的 `openai/gpt-5.6-sol` 目录引用。
-重新认证会保留现有的显式主模型，包括
-`openai/gpt-5.5`。如果该账户无法使用 GPT-5.6，请显式选择
-`openai/gpt-5.5`；OpenClaw 不会悄悄降级它。
+在未配置主模型时，全新的 OpenAI API 密钥和 ChatGPT/Codex OAuth 设置会选择确切的 `openai/gpt-5.6-sol` 目录引用。裸的直接 API `openai/gpt-5.6` 别名仍受支持，并会解析到 Sol 层级。重新认证会保留现有的显式主模型，包括 `openai/gpt-5.5`。如果账户无法使用 GPT-5.6，请明确选择 `openai/gpt-5.5`；OpenClaw 不会静默降级。
 
 ## “模型不被允许”（以及为什么回复会停止）
 
@@ -218,7 +213,7 @@ openclaw models auth list|add|login|paste-api-key|paste-token|setup-token|order
 
 ### 托管目录更新
 
-OpenClaw 可以在不等待新的 OpenClaw 版本发布的情况下，刷新已安装提供商插件所附带的模型元数据。网关会在启动时在后台进行一次 JSON `GET` 请求，然后最多每六小时检查一次。该请求不会发送任何提示词、凭据、模型使用情况或配置负载，只会携带常规的 HTTP user agent 和条件缓存头。
+OpenClaw 可以在不等待新的 OpenClaw 版本发布的情况下，刷新已安装提供商插件所附带的模型元数据。网关会在启动时在后台进行一次 JSON `GET` 请求，然后最多每六小时检查一次。该请求不会发送任何提示词、凭据、模型使用情况或配置负载，只会携带常规的 HTTP 用户代理和条件缓存头。
 
 下载的捆绑包会存储在共享的 SQLite 状态数据库中，并在下一次网关重启后变得可见。远程数据只能为已安装插件清单中声明的提供商更新或添加模型。它不能提供 API 基础 URL 或请求头，并且会忽略比已安装发布版本构建时间戳更旧的目录。
 
@@ -233,11 +228,11 @@ OpenClaw 可以在不等待新的 OpenClaw 版本发布的情况下，刷新已�
     对于匹配的提供商 ID：
 
     - 代理 `models.json` 中已存在的非空 `baseUrl` 优先。
-    - `models.json` 中非空的 `apiKey` 只有在当前配置/认证配置文件上下文中该提供商不是由 SecretRef 管理时才优先。
-    - 由 SecretRef 管理的 `apiKey` 值会从源标记刷新，而不是持久化已解析的密钥：环境变量引用使用 env 变量名，文件/exec 引用使用 `secretref-managed`。
-    - 由 SecretRef 管理的 header 值以相同方式刷新，环境变量引用使用 `secretref-env:ENV_VAR_NAME`。
-    - `models.json` 中空或缺失的 `apiKey`/`baseUrl` 会回退到配置中的 `models.providers`。
-    - 其他提供商字段会从配置和规范化后的目录数据中刷新。
+    - 仅当该提供商在当前配置／身份验证配置文件上下文中不是由 SecretRef 管理时，`models.json` 中的非空 `apiKey` 才优先。
+    - 由 SecretRef 管理的 `apiKey` 值会从源标记刷新，而不是持久化已解析的密钥：对于环境变量引用，使用环境变量名称；对于文件／exec／store 引用，使用 `secretref-managed`。
+    - 由 SecretRef 管理的请求头值也会以相同方式刷新；对于环境变量引用，使用 `secretref-env:ENV_VAR_NAME`。
+    - `models.json` 中为空或缺失的 `apiKey`／`baseUrl` 会回退到配置中的 `models.providers`。
+    - 其他提供商字段会从配置和规范化目录数据中刷新。
 
   </Accordion>
 </AccordionGroup>

@@ -173,11 +173,11 @@ openclaw automations add \
 
 每个作业都恰好携带一种载荷类型，由标志位决定：
 
-| Payload       | Flag                                           | Runs                                                       |
+| 载荷          | 标志                                           | 运行                                                       |
 | ------------- | ---------------------------------------------- | ---------------------------------------------------------- |
 | 系统事件      | `--system-event <text>`                        | 入队到主会话，本身不调用模型                                     |
 | 代理消息      | `--message <text>`                             | 一个由模型支持的代理轮次                                          |
-| 命令          | `--command <shell>` or `--command-argv <json>` | Gateway 主机上的 shell/process，不调用模型                         |
+| 命令          | `--command <shell>` 或 `--command-argv <json>` | Gateway 主机上的 shell/process，不调用模型                         |
 | 脚本          | `--script <file\|->`                           | 使用所属 agent 工具的无头代码模式脚本                              |
 
 另一种载荷类型 `heartbeat` 由系统拥有：Gateway 会为每个启用 heartbeat 的 agent 收敛出一个 heartbeat 监控作业（参见 [Heartbeat](/gateway/heartbeat)）。它会出现在 `automations list --all` 中，但无法通过 CLI 或 API 创建或编辑。Heartbeat 配置会在启动时、配置重新加载时，或通过 `openclaw doctor --fix` 写入持久化的监控计划。当自动化被禁用时，监控器不会触发，也不会运行任何备用 heartbeat 定时器。
@@ -185,7 +185,7 @@ openclaw automations add \
 ### 代理轮次选项
 
 <ParamField path="--message" type="string" required>
-  提示文本（孤立/当前/自定义会话作业必填）。
+  提示文本（孤立／当前／自定义会话作业必填）。
 </ParamField>
 <ParamField path="--model" type="string">
   模型覆盖；必须解析为允许的模型，否则运行将因校验错误而失败。
@@ -197,7 +197,7 @@ openclaw automations add \
   在 `automations edit` 中，移除每个作业的回退覆盖，使作业遵循已配置的回退优先级。不能与 `--fallbacks` 组合使用。
 </ParamField>
 <ParamField path="--clear-model" type="boolean">
-  在 `automations edit` 中，移除每个作业的模型覆盖，使作业遵循正常的自动化模型优先级（已存储的自动化会话覆盖，否则使用 agent/默认模型）。不能与 `--model` 组合使用。
+  在 `automations edit` 中，移除每个作业的模型覆盖，使作业遵循正常的自动化模型优先级（已存储的自动化会话覆盖，否则使用 agent／默认模型）。不能与 `--model` 组合使用。
 </ParamField>
 <ParamField path="--thinking" type="string">
   思考级别覆盖（`off|minimal|low|medium|high|xhigh|adaptive|max|ultra`）。可用级别仍取决于所选模型和 agent 运行时。
@@ -221,17 +221,17 @@ openclaw automations add \
 1. 每个作业载荷中的 `model`（显式配置；不允许的模型会使运行失败）
 2. Gmail hook 模型覆盖（仅当运行来自 Gmail 且该覆盖被允许时）
 3. 用户选择的已存储自动化会话模型覆盖
-4. Agent/默认模型选择
+4. Agent／默认模型选择
 
 Fast 模式遵循解析后的实时选择。孤立自动化按以下顺序解析：已存储会话中的 `fastMode`、每个 agent 的 `agents.entries.*.fastModeDefault`、全局的 `agents.defaults.fastModeDefault`，然后是所选模型的 `params.fastMode`。自动模式使用模型的 `params.fastAutoOnSeconds` 截止时间，默认为 60 秒。
 
-如果运行遇到实时模型切换交接，调度器会使用切换后的提供方/模型重试，并为当前运行持久化该选择（以及任何新的身份验证配置）。重试次数受到限制：在初始尝试加上 2 次切换重试之后，调度器会中止运行，而不是继续循环。
+如果运行遇到实时模型切换交接，调度器会使用切换后的提供方／模型重试，并为当前运行持久化该选择（以及任何新的身份验证配置）。重试次数受到限制：在初始尝试加上 2 次切换重试之后，调度器会中止运行，而不是继续循环。
 
-在孤立运行开始之前，OpenClaw 会检查配置了 `api: "ollama"` 和 `api: "openai-completions"` 且 `baseUrl` 为回环地址、私有网络或 `.local` 的提供方对应的可达本地端点。此预检会遍历作业已配置的回退链，只有在所有候选都不可达时才将运行标记为 `skipped`；`--fallbacks ""` 会让该遍历严格限定为仅主模型。某个端点宕机会将该运行记录为 `skipped` 并带有清晰的错误信息，而不是启动模型调用。该结果会按端点缓存 5 分钟（不是按作业或模型缓存），因此许多共享同一个失效本地 Ollama/vLLM/SGLang/LM Studio 服务器的到期作业，只需一次探测，而不会引发请求风暴。被跳过的预检运行不会增加执行错误退避；设置 `failureAlert.includeSkipped` 可选择接收重复的跳过告警。
+在孤立运行开始之前，OpenClaw 会检查配置了 `api: "ollama"` 和 `api: "openai-completions"` 且 `baseUrl` 为回环地址、私有网络或 `.local` 的提供方对应的可达本地端点。此预检会遍历作业已配置的回退链，只有在所有候选都不可达时才将运行标记为 `skipped`；`--fallbacks ""` 会让该遍历严格限定为仅主模型。某个端点宕机会将该运行记录为 `skipped` 并带有清晰的错误信息，而不是启动模型调用。该结果会按端点缓存 5 分钟（不是按作业或模型缓存），因此许多共享同一个失效本地 Ollama／vLLM／SGLang／LM Studio 服务器的到期作业，只需一次探测，而不会引发请求风暴。被跳过的预检运行不会增加执行错误退避；设置 `failureAlert.includeSkipped` 可选择接收重复的跳过告警。
 
 ### 命令载荷
 
-命令载荷会在 Gateway 调度器内执行确定性脚本，而不会启动由模型支持的轮次。它们在 Gateway 主机上执行，捕获 stdout/stderr，将运行记录到作业的运行历史中，并复用与代理轮次作业相同的 `announce`、`webhook` 和 `none` 投递模式。
+命令载荷会在 Gateway 调度器内执行确定性脚本，而不会启动由模型支持的轮次。它们在 Gateway 主机上执行，捕获 stdout／stderr，将运行记录到作业的运行历史中，并复用与代理轮次作业相同的 `announce`、`webhook` 和 `none` 投递模式。
 
 <Note>
 命令载荷是面向操作员管理员的 Gateway 自动化接口，而不是 agent 的 `tools.exec` 调用。创建、更新、移除或手动运行自动化作业都需要 `operator.admin`；之后按计划运行的命令会在 Gateway 进程内执行，并作为由该管理员创建的自动化运行。Agent 执行策略（`tools.exec.mode`、审批提示、每个 agent 的工具允许列表）约束的是模型可见的执行工具，而不是命令载荷。
@@ -249,7 +249,7 @@ openclaw automations create "*/15 * * * *" \
 
 `--command <shell>` 会存储为 `argv: ["sh", "-lc", <shell>]`。使用 `--command-argv '["node","scripts/report.mjs"]'` 可进行精确的 argv 执行，而无需 shell 解析。可选的 `--command-env KEY=VALUE`（可重复）、`--command-input`、`--timeout-seconds`（默认 10 分钟）、`--no-output-timeout-seconds` 和 `--output-max-bytes` 用于控制进程环境、stdin 和输出边界。
 
-投递的文本源自进程输出：非空 stdout 优先；如果 stdout 为空而 stderr 非空，则投递 stderr；如果两者都存在，调度器会发送一个简短的 `stdout:` / `stderr:` 区块。退出代码为 `0` 时，运行记录为 `ok`；非零退出、信号中断、超时或无输出超时会记录为 `error`，并可能触发失败告警。仅打印 `NO_REPLY` 的命令会使用常规自动化静默标记抑制机制，不会向聊天发送任何内容。
+投递的文本源自进程输出：非空 stdout 优先；如果 stdout 为空而 stderr 非空，则投递 stderr；如果两者都存在，调度器会发送一个简短的 `stdout:`／`stderr:` 区块。退出代码为 `0` 时，运行记录为 `ok`；非零退出、信号中断、超时或无输出超时会记录为 `error`，并可能触发失败告警。仅打印 `NO_REPLY` 的命令会使用常规自动化静默标记抑制机制，不会向聊天发送任何内容。
 
 ### 脚本载荷
 
@@ -269,14 +269,19 @@ openclaw automations create "0 * * * *" \
 
 脚本可以返回一个包含以下可选字段的对象：
 
-- `notify`: 通过作业的 `announce`、`webhook` 或 `none` 投递模式发送的文本。若省略，则不发送任何内容。对于 `main` 作业，该文本会变成一个系统事件。
-- `wake`: `"now"` 会在入队 `notify`（或一个紧凑的完成事件）后立即请求一次 heartbeat；`"next-heartbeat"` 会将事件安排到下一次 heartbeat。
-- `state`: JSON 状态，上限为 16 KB，且仅在成功运行后持久化。下一次运行会收到其冻结副本作为 `trigger.state`，与触发脚本一致。由于该命名空间只有一个持久化拥有者，因此脚本载荷不能与同一作业上的条件触发器组合使用。
-- `nextCheck`: 例如 `"15m"` 这样的持续时间。它仅对启用了 pacing 的作业有效，并使用与代理轮次提议相同的 pacing 限制。
+- `notify`：通过作业的 `announce`、`webhook` 或 `none` 投递模式发送的文本。若省略，则不发送任何内容。对于 `main` 作业，该文本会变成一个系统事件。
+- `wake`：`"now"` 会在入队 `notify`（或一个紧凑的完成事件）后立即请求一次 heartbeat；`"next-heartbeat"` 会将事件安排到下一次 heartbeat。
+- `state`：JSON 状态，上限为 16 KB，且仅在成功运行后持久化。下一次运行会收到其冻结副本作为 `trigger.state`，与触发脚本一致。由于该命名空间只有一个持久化拥有者，因此脚本载荷不能与同一作业上的条件触发器组合使用。
+- `nextCheck`：例如 `"15m"` 这样的持续时间。它仅对启用了 pacing 的作业有效，并使用与代理轮次提议相同的 pacing 限制。
 
 抛出异常、超时、工具预算耗尽、结果无效，以及未启用 pacing 却使用 `nextCheck`，都属于正常的自动化运行错误：它们会进入运行历史，触发退避和失败告警处理，但不会持久化返回的状态。
 
 ## 执行样式
+
+### 计划自动化中的 Codex apps
+
+由 Codex 创建的自动化可以保留经过身份验证的创建者线程可用的 app ID 和权限上限。在执行时，OpenClaw 要求使用相同的已准备 Codex 配置和账户，然后根据当前 app 策略进一步收窄已存储的上限。已撤销的 app、账户／运行时更改以及交互式批准要求都会以安全失败方式终止，并显示恢复消息；它们绝不会回退到更广泛或不同的凭据。没有捕获 app 封装的旧作业会继续执行其常规的非 app 行为；仅当需要 Codex app 访问权限时，才重新创建或重新授权作业。请参阅
+[Native Codex plugins](/plugins/codex-native-plugins#scheduled-automations)。
 
 | 样式           | `--session` 值   | 运行于                   | 最适合                        |
 | --------------- | ------------------- | ------------------------- | ------------------------------- |
@@ -289,13 +294,13 @@ openclaw automations create "0 * * * *" \
 
 <AccordionGroup>
   <Accordion title="主会话 vs 隔离会话 vs 自定义会话">
-    **主会话**作业会将系统事件加入调度器拥有的运行通道，并可选择唤醒心跳（`--wake now` 或 `--wake next-heartbeat`）。它们可以使用目标主会话最近一次投递的上下文来回复，但不会将例行自动化回合追加到人工聊天通道，也不会延长目标会话的每日/空闲重置新鲜度。**隔离会话**作业会使用全新的会话运行专用的 Agent 回合。**自定义会话**（`session:xxx`）会在多次运行之间持久化上下文，从而支持基于之前摘要构建每日站会等工作流。
+    **主会话**作业会将系统事件加入调度器拥有的运行通道，并可选择唤醒心跳（`--wake now` 或 `--wake next-heartbeat`）。它们可以使用目标主会话最近一次投递的上下文来回复，但不会将例行自动化回合追加到人工聊天通道，也不会延长目标会话的每日／空闲重置新鲜度。**隔离会话**作业会使用全新的会话运行专用的 Agent 回合。**自定义会话**（`session:xxx`）会在多次运行之间持久化上下文，从而支持基于之前摘要构建每日站会等工作流。
 
     主会话自动化事件是自包含的系统事件提醒。它们不会自动包含默认的心跳提示或心跳监视器草稿；如果提醒应参考这些上下文，请在自动化事件文本中明确说明。
 
   </Accordion>
   <Accordion title="隔离会话作业中“全新会话”的含义">
-    每次运行都会使用新的记录/会话 ID。OpenClaw 会携带安全的偏好设置（思考/快速/详细设置、标签、用户明确选择的模型/身份验证覆盖项），但不会从旧的自动化会话记录中继承环境对话上下文：频道/群组路由、发送或排队策略、提权、来源或 ACP 运行时绑定。如果重复性作业应有意基于相同的对话上下文构建，请使用 `current` 或 `session:<id>`。
+    每次运行都会使用新的记录／会话 ID。OpenClaw 会携带安全的偏好设置（思考／快速／详细设置、标签、用户明确选择的模型／身份验证覆盖项），但不会从旧的自动化会话记录中继承环境对话上下文：频道／群组路由、发送或排队策略、提权、来源或 ACP 运行时绑定。如果重复性作业应有意基于相同的对话上下文构建，请使用 `current` 或 `session:<id>`。
   </Accordion>
   <Accordion title="无人值守运行契约">
     隔离自动化和钩子 Agent 回合明确属于无人值守运行：没有人可以进行澄清或批准。最终回复必须是交付内容，而不是计划、确认或请求输入。如果没有任何需要处理的事项，Agent 应返回 `HEARTBEAT_OK`，并明确说明失败情况；重试和失败告警策略由调度器负责。
@@ -306,7 +311,7 @@ openclaw automations create "0 * * * *" \
   <Accordion title="子 Agent 和 Discord 投递">
     当隔离自动化运行编排子 Agent 时，投递会优先使用最终后代输出，而不是过时的父级中间文本。如果后代仍在运行，OpenClaw 会抑制该父级的部分更新，而不是发布它。
 
-    对于仅文本的 Discord 通知目标，OpenClaw 只发送一次规范化的最终助手文本，而不会同时回放流式/中间文本和最终答案。媒体和结构化 Discord 负载仍会单独交付，以确保附件和组件不会丢失。
+    对于仅文本的 Discord 通知目标，OpenClaw 只发送一次规范化的最终助手文本，而不会同时回放流式／中间文本和最终答案。媒体和结构化 Discord 负载仍会单独交付，以确保附件和组件不会丢失。
 
   </Accordion>
 </AccordionGroup>
@@ -364,9 +369,11 @@ openclaw automations create "0 * * * *" \
 - `failureAlert.includeSkipped: true` 会让作业或全局自动化提醒策略加入重复的跳过运行提醒。跳过的运行会使用单独的连续跳过计数器，因此不会影响执行错误退避。
 - `openclaw automations edit` 提供按作业设置提醒的选项：`--failure-alert`/`--no-failure-alert`、`--failure-alert-after <n>`、`--failure-alert-channel`、`--failure-alert-to`、`--failure-alert-cooldown`、`--failure-alert-include-skipped`/`--failure-alert-exclude-skipped`、`--failure-alert-mode` 以及 `--failure-alert-account-id`。
 
-聊天失败通知会使用代理配置的用户时区包含运行开始时间。Webhook 消息文本保持稳定；集成可以从结构化的 `runAtMs` 字段中读取同一时间点。
+聊天失败通知会包含代理配置的用户时区中的运行开始时间。Webhook 消息文本保持稳定；集成可以从结构化的 `runAtMs` 字段中读取同一时刻。
 
-失败提醒需要主动启用，但调度程序也提供无条件的安全兜底。基于时间的周期性作业在连续执行失败 10 次后会自动禁用；成功运行会重置该连续失败次数。重复的计划计算失败会在错误达到 3 次后自动禁用。作业会将 `state.autoDisabled.reason` 记录为 `consecutive-failures` 或 `schedule-errors`，并向所属代理发送包含最近一次错误和恢复命令的通知。修复原因后，运行 `openclaw automations enable <jobId>`；启用操作会清除记录的原因和失败计数。由于默认列表会隐藏已禁用的作业，请使用 `openclaw automations list --all` 检查它们。
+聊天通知会在可用时显示规范化的失败原因，并将原始命令、路径和提供方错误保留在自动化历史记录中。失败 webhook 会保留结构化的原始错误，以供诊断集成使用。
+
+失败提醒默认选择加入，但调度程序还提供无条件的安全后备机制。基于时间的重复作业在连续执行失败 10 次后会自动禁用；成功运行会重置该连续计数。重复的计划计算失败在发生 3 次错误后会自动禁用。作业会将 `state.autoDisabled.reason` 记录为 `consecutive-failures` 或 `schedule-errors`，并向所属代理发送包含安全原因和恢复命令的通知。原始错误会保留在自动化历史记录中。修复原因后，运行 `openclaw automations enable <jobId>`；启用操作会清除记录的原因和失败计数。由于默认列表会隐藏已禁用的作业，请使用 `openclaw automations list --all` 检查这些作业。
 
 ### 输出语言
 
@@ -824,16 +831,16 @@ openclaw doctor
   </Accordion>
   <Accordion title="任务已触发但未送达">
     - 送达模式为 `none` 表示不会预期由运行器进行回退发送。如果聊天路由可用，代理仍可以通过 `message` 工具直接发送。
-    - 缺少或无效的送达目标（`channel`/`to`）表示已跳过出站发送。
+    - 缺少或无效的送达目标（`channel`／`to`）表示已跳过出站发送。
     - 对于 Matrix，复制的任务或旧版任务如果将 `delivery.to` 中的房间 ID 转换为小写，可能会失败，因为 Matrix 房间 ID 区分大小写。请将任务编辑为 Matrix 中对应的准确 `!room:server` 或 `room:!room:server` 值。
     - 频道身份验证错误（`unauthorized`、`Forbidden`）表示凭据阻止了送达。
-    - 如果隔离运行仅返回静默令牌（`NO_REPLY` / `no_reply`），OpenClaw 会抑制直接出站送达和回退的排队摘要路径，因此不会向聊天中发回任何内容。
-    - 如果代理应自行向用户发送消息，请检查任务是否具有可用的路由（使用之前聊天中的 `channel: "last"`，或使用明确的频道/目标）。
+    - 如果隔离运行仅返回静默令牌（`NO_REPLY`／`no_reply`），OpenClaw 会抑制直接出站送达和回退的排队摘要路径，因此不会向聊天中发回任何内容。
+    - 如果代理应自行向用户发送消息，请检查任务是否具有可用的路由（使用之前聊天中的 `channel: "last"`，或使用明确的频道／目标）。
 
   </Accordion>
-  <Accordion title="自动化或心跳似乎阻止了 /new 风格的会话轮换">
+  <Accordion title="自动化或心跳似乎阻止了／new 风格的会话轮换">
     - 每日重置和空闲重置的新鲜度并非基于 `updatedAt`；请参阅[会话管理](/concepts/session#session-lifecycle)。
-    - 自动化唤醒、心跳运行、执行通知和网关记录操作可能会更新会话行以用于路由/状态，但不会延长 `sessionStartedAt` 或 `lastInteractionAt`。
+    - 自动化唤醒、心跳运行、执行通知和网关记录操作可能会更新会话行以用于路由／状态，但不会延长 `sessionStartedAt` 或 `lastInteractionAt`。
     - 对于在这些字段存在之前创建的旧版记录，如果转录 JSONL 会话头仍然可用，OpenClaw 可以从中恢复 `sessionStartedAt`。对于没有 `lastInteractionAt` 的旧版空闲记录，会使用恢复的启动时间作为其空闲基准。
 
   </Accordion>

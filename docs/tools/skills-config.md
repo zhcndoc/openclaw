@@ -65,7 +65,7 @@ read_when:
   监视 skill 文件夹，并在 `SKILL.md` 文件变更时刷新 skills 快照。覆盖分组 skill 根目录下的嵌套文件。
 </ParamField>
 
-## 安装 (`skills.install`)
+## 安装（`skills.install`）
 
 <ParamField path="skills.install.preferBrew" type="boolean" default="true">
   在 `brew` 可用时优先使用 Homebrew 安装器。
@@ -252,11 +252,11 @@ process.stdin.on("end", () => {
     defaults: {
       skills: ["github", "weather"], // 共享基线
     },
-    list: [
-      { id: "writer" }, // 继承 github、weather
-      { id: "docs", skills: ["docs-search"] }, // 完全替换默认值
-      { id: "locked-down", skills: [] }, // 无技能
-    ],
+    entries: {
+      writer: { default: true }, // inherits github, weather
+      docs: { skills: ["docs-search"] }, // replaces defaults entirely
+      "locked-down": { skills: [] }, // no skills
+    },
   },
 }
 ```
@@ -276,7 +276,7 @@ process.stdin.on("end", () => {
 ## 工作坊 (`skills.workshop`)
 
 <ParamField path="skills.workshop.autonomous.mode" type='"off" | "propose" | "auto"' default='"auto"'>
-  `off` 禁用自主捕获，但保留持久指令建议提示。`propose` 根据更正和已完成的重要工作创建待处理提案。`auto` 通过由扫描器控制的常规工作坊应用路径发送相同的捕获内容。用户提示的技能创建、`/learn` 和手动历史记录扫描在所有模式下均可继续使用。
+  `off` 会在保留持久指令建议提示的同时禁用自主捕获。`propose` 会根据更正内容和已完成的重要工作创建待处理提案。`auto` 会通过正常的扫描器门控 Workshop 应用路径发送相同的捕获内容，并运行每日收集清理，以重写或丢弃符合条件的可写技能。用户提示的技能创建、`/learn` 和手动历史扫描在所有模式下都能继续工作。
 </ParamField>
 
 请参见 [自学习](/tools/self-learning) 了解资格、隐私、成本、仅提案权限以及故障排除。

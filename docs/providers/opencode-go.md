@@ -14,10 +14,10 @@ OpenCode Go 是 [OpenCode](/providers/opencode) 中的独立付费订阅。
 
 | 属性             | 值                                                 |
 | ---------------- | -------------------------------------------------- |
-| Runtime provider | `opencode-go`                                      |
-| Plugin           | 已内置（`opencode-go`）                            |
-| Auth             | `OPENCODE_API_KEY`（别名：`OPENCODE_ZEN_API_KEY`） |
-| Parent setup     | [OpenCode](/providers/opencode)                    |
+| 运行时提供商     | `opencode-go`                                      |
+| 插件             | 已内置（`opencode-go`）                            |
+| 认证             | `OPENCODE_API_KEY`（别名：`OPENCODE_ZEN_API_KEY`） |
+| 父级设置         | [OpenCode](/providers/opencode)                    |
 
 ## 入门
 
@@ -65,7 +65,7 @@ OpenCode Go 已包含在本版本的 OpenClaw 中。继续进行
 
 ```json5
 {
-  env: { OPENCODE_API_KEY: "YOUR_API_KEY_HERE" }, // pragma: allowlist secret
+  env: { vars: { OPENCODE_API_KEY: "YOUR_API_KEY_HERE" } }, // pragma: allowlist secret
   agents: { defaults: { model: { primary: "opencode-go/kimi-k3" } } },
 }
 ```

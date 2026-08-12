@@ -102,18 +102,17 @@ const workspace = fs.mkdtempSync(prefix);
 当你需要 QA 实验室级别的真实性时，这些命令会与主测试套件并列使用。
 
 CI 会在专用工作流中运行 QA Lab。Agentic parity 嵌套在
-`QA-Lab - All Lanes` 和发布验证中，而不是作为独立的 PR 工作流。
+`QA-Lab - All Lanes` 和发布验证中，而不是作为独立的 PR 工作流运行。
 广泛验证应使用 `Full Release Validation`，并设置
-`rerun_group=qa-parity` 或发布检查的 QA 组。稳定/默认的发布检查会在
-`run_release_soak=true` 后才执行详尽的 live/Docker soak；`full` 配置会强制启用
-soak。`QA-Lab - All Lanes` 会在 `main` 上每夜运行，也会通过手动触发运行，其中
-mock parity lane、live Matrix lane、Convex 管理的 live Telegram lane 以及
-Convex 管理的 live Discord lane 作为并行作业运行。计划中的 QA 和发布检查会通过
-共享的 live adapter 运行从目录派生的 Matrix 选择。`OpenClaw Release Checks` 会在
-发布批准前运行 parity、可复用的 Matrix live-adapter lane 以及 Telegram lane。
-发布传输检查使用 `mock-openai/gpt-5.6-luna`，以保持确定性并避免正常的
-provider-plugin 启动。这些 live transport gateway
-会禁用记忆搜索；记忆行为仍由 QA parity 套件覆盖。
+`rerun_group=qa-parity` 或 release-checks QA 组。稳定/完整、启用 soak 的，以及明确的
+`qa`/`qa-live` 发布检查都包含 QA-live Matrix 和 Telegram 分片。不启用 soak 的有界 beta-publish
+`all` 会运行 parity，但会将这些 live 分片推迟到 postpublish-confidence。
+`QA-Lab - All Lanes` 会在 `main` 上每晚运行，也会通过手动调度运行，其中包含 mock parity 分片、
+live Matrix 分片、由 Convex 管理的 live Telegram 分片，以及由 Convex 管理的 live Discord 分片，
+这些都作为并行任务运行。计划中的 QA 和选定的发布检查会通过共享的 live adapter 运行从 catalog
+派生的 Matrix 选择。发布传输检查使用 `mock-openai/gpt-5.6-luna`，因此能够保持确定性，并避免
+正常的 provider-plugin 启动。这些 live transport gateway 会禁用 memory search；memory 行为仍由
+QA parity 套件覆盖。
 
 完整的发布 live media 分片使用
 `ghcr.io/openclaw/openclaw-live-media-runner:ubuntu-24.04`，其中已包含
@@ -233,7 +232,7 @@ gh workflow run package-acceptance.yml --ref main \
 - `pnpm openclaw qa matrix`
   - 针对一次性 Docker 支持的 Tuwunel homeserver 运行 Matrix live QA lane。仅支持源码检出——打包安装不包含 `qa-lab`。
   - 完整的 CLI、配置/场景目录、环境变量和 artifact 布局见：
-    [Matrix smoke lanes](/concepts/qa-e2e-automation#matrix-smoke-lanes)。
+    [Matrix smoke 分片](/concepts/qa-e2e-automation#matrix-smoke-lanes)。
 - `pnpm openclaw qa telegram`
   - 针对真实私有群组运行 Telegram live QA lane，使用环境变量中的 driver 和 SUT bot token。
   - 需要 `OPENCLAW_QA_TELEGRAM_GROUP_ID`、
@@ -271,8 +270,8 @@ Mantis agent 会读取 PR，决定哪些 Telegram 可见行为能够证明该变
     `telegram-desktop-builder.png` 和 `telegram-desktop-builder.mp4`
     写入输出目录。
 
-Live transport lane 共享一个标准契约，以避免新增 transport 发生偏差；各 lane 的覆盖矩阵位于
-[QA overview - Live transport coverage](/concepts/qa-e2e-automation#live-transport-coverage)。
+Live transport 分片共享一个标准契约，以避免新增 transport 发生偏差；各分片的覆盖矩阵位于
+[QA 概览 - Live transport 覆盖](/concepts/qa-e2e-automation#live-transport-coverage)。
 `qa-channel` 是广泛的 synthetic suite，不属于该矩阵。
 
 ### 通过 Convex 共享 Telegram 凭证（v1）
@@ -384,16 +383,16 @@ Slack 通道也可以从凭证池中获取租约，但 Slack payload 的校验�
 
 ### 单元 / 集成（默认）
 
-- Command: `pnpm test`
-- Config: 未指定目标的运行会使用 `vitest.full-*.config.ts` 分片集合，并可能将多项目分片展开为按项目划分的配置，以便并行调度
-- Files: 核心单元测试清单位于 `src/**/*.test.ts`、
+- 命令：`pnpm test`
+- 配置：未指定目标的运行会使用 `vitest.full-*.config.ts` 分片集合，并可能将多项目分片展开为按项目划分的配置，以便并行调度
+- 文件：核心单元测试清单位于 `src/**/*.test.ts`、
   `packages/**/*.test.ts` 和 `test/**/*.test.ts`；UI 单元测试在专用的
   `unit-ui` 分片中运行
-- Scope:
+- 范围：
   - 纯单元测试
   - 进程内集成测试（网关认证、路由、工具链、解析、配置）
   - 针对已知 bug 的确定性回归测试
-- Expectations:
+- 预期：
   - 在 CI 中运行
   - 不需要真实密钥
   - 应当快速且稳定
@@ -514,21 +513,21 @@ Slack 通道也可以从凭证池中获取租约，但 Slack payload 的校验�
 
 - 命令：`pnpm test:e2e:gateway`
 - 配置：`test/vitest/vitest.e2e.config.ts`
-- 文件：`src/**/*.e2e.test.ts`、`test/**/*.e2e.test.ts`，以及 `extensions/` 下的捆绑插件 E2E 测试
-- 运行时默认设置：
-  - 使用 Vitest `threads`，并设置 `isolate: false`，与仓库其余部分保持一致。
-  - 使用自适应工作线程（CI：最多 2 个，本地默认 1 个）。
+- 文件：`src/**/*.e2e.test.ts`、`test/**/*.e2e.test.ts` 以及 `extensions/` 下的捆绑插件 E2E 测试
+- 运行时默认值：
+  - 使用 Vitest `threads` 和 `isolate: false`，与仓库的其他部分一致。
+  - 默认使用一个 worker，以保持非隔离网关状态的确定性。
   - 默认以静默模式运行，以减少控制台 I/O 开销。
-- 有用的覆盖选项：
-  - `OPENCLAW_E2E_WORKERS=<n>` 强制设置工作线程数量（上限为 16）。
-  - `OPENCLAW_E2E_VERBOSE=1` 重新启用详细的控制台输出。
+- 有用的覆盖项：
+  - `OPENCLAW_E2E_WORKERS=<n>`：选择启用并行 worker（上限为 16）。
+  - `OPENCLAW_E2E_VERBOSE=1`：重新启用详细的控制台输出。
 - 范围：
   - 多实例网关端到端行为
-  - WebSocket/HTTP 接口、节点配对以及更繁重的网络操作
+  - WebSocket/HTTP 表面、节点配对以及更重型的网络功能
 - 预期：
-  - 在 CI 中运行（启用流水线时）
+  - 在 CI 中运行（管线启用时）
   - 不需要真实密钥
-  - 比单元测试涉及更多环节（可能运行得更慢）
+  - 比单元测试涉及更多活动部件（可能更慢）
 
 ### E2E（Control UI 模拟浏览器）
 
@@ -568,7 +567,7 @@ Slack 通道也可以从凭证池中获取租约，但 Slack payload 的校验�
 
 - 命令：`pnpm test:live`
 - 配置：`test/vitest/vitest.live.config.ts`
-- 文件：`src/**/*.live.test.ts`、`test/**/*.live.test.ts`，以及 `extensions/` 下的捆绑插件实时测试
+- 文件：`src/**/*.live.test.ts`、`test/**/*.live.test.ts` 以及 `extensions/` 下的捆绑插件实时测试
 - 默认：通过 `pnpm test:live` **启用**（设置 `OPENCLAW_LIVE_TEST=1`）
 - 范围：
   - “该提供方/模型今天使用真实凭据是否确实可用？”
@@ -710,8 +709,8 @@ OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local OPENCLAW_SKIP_DOC
 
 这些是没有真实提供方的“真实流水线”回归：
 
-- 网关工具调用（模拟 OpenAI，真实网关 + agent 循环）：`src/gateway/gateway.test.ts`（用例："通过网关 agent 循环端到端运行模拟 OpenAI 工具调用"）
-- 网关向导（WebSocket `wizard.start`/`wizard.next`，写入配置 + 强制认证）：`src/gateway/gateway.test.ts`（用例："通过 WebSocket 运行向导并写入 auth token 配置"）
+- 网关工具调用（模拟 OpenAI，真实网关 + agent 循环）：`src/gateway/gateway.test.ts`（用例：“通过网关 agent 循环端到端运行模拟 OpenAI 工具调用”）
+- 网关向导（WebSocket `wizard.start`/`wizard.next`，写入配置 + 强制认证）：`src/gateway/gateway.test.ts`（用例：“通过 WebSocket 运行向导并写入 auth token 配置”）
 
 ## Agent 可靠性评估（技能）
 

@@ -8,21 +8,21 @@ read_when:
 
 安装官方腾讯云提供商插件，即可通过两个端点访问腾讯 Hy3——TokenHub（`tencent-tokenhub`）和 TokenPlan（`tencent-tokenplan`）——并使用兼容 OpenAI 的 API。
 
-| Property                  | Value                                                 |
-| ------------------------- | ----------------------------------------------------- |
-| Provider ids              | `tencent-tokenhub`, `tencent-tokenplan`               |
-| Package                   | `@openclaw/tencent-provider`                          |
-| TokenHub auth env var     | `TOKENHUB_API_KEY`                                    |
-| TokenPlan auth env var    | `TOKENPLAN_API_KEY`                                   |
-| TokenHub onboarding flag  | `--auth-choice tokenhub-api-key`                      |
-| TokenPlan onboarding flag | `--auth-choice tokenplan-api-key`                     |
-| TokenHub direct CLI flag  | `--tokenhub-api-key <key>`                            |
-| TokenPlan direct CLI flag | `--tokenplan-api-key <key>`                           |
-| API                       | OpenAI-compatible (`openai-completions`)              |
-| TokenHub base URL         | `https://tokenhub.tencentmaas.com/v1`                 |
-| TokenHub global base URL  | `https://tokenhub-intl.tencentmaas.com/v1` (override) |
-| TokenPlan base URL        | `https://api.lkeap.cloud.tencent.com/plan/v3`         |
-| Default model             | `tencent-tokenhub/hy3`                                |
+| 属性                     | 值                                                     |
+| ------------------------ | ------------------------------------------------------ |
+| 提供商 ID                | `tencent-tokenhub`、`tencent-tokenplan`                |
+| 软件包                   | `@openclaw/tencent-provider`                           |
+| TokenHub 身份验证环境变量 | `TOKENHUB_API_KEY`                                     |
+| TokenPlan 身份验证环境变量 | `TOKENPLAN_API_KEY`                                    |
+| TokenHub 引导标志        | `--auth-choice tokenhub-api-key`                       |
+| TokenPlan 引导标志       | `--auth-choice tokenplan-api-key`                      |
+| TokenHub 直接 CLI 标志    | `--tokenhub-api-key <key>`                             |
+| TokenPlan 直接 CLI 标志   | `--tokenplan-api-key <key>`                            |
+| API                      | OpenAI 兼容（`openai-completions`）                   |
+| TokenHub 基础 URL         | `https://tokenhub.tencentmaas.com/v1`                  |
+| TokenHub 全局基础 URL     | `https://tokenhub-intl.tencentmaas.com/v1`（覆盖）    |
+| TokenPlan 基础 URL        | `https://api.lkeap.cloud.tencent.com/plan/v3`          |
+| 默认模型                 | `tencent-tokenhub/hy3`                                 |
 
 ## 快速开始
 
@@ -38,7 +38,7 @@ openclaw onboard --auth-choice tokenhub-api-key
 ```
 
 ```bash TokenHub direct flag
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice tokenhub-api-key \
   --tokenhub-api-key "$TOKENHUB_API_KEY"
 ```
@@ -48,7 +48,7 @@ openclaw onboard --auth-choice tokenplan-api-key
 ```
 
 ```bash TokenPlan direct flag
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice tokenplan-api-key \
   --tokenplan-api-key "$TOKENPLAN_API_KEY"
 ```
@@ -69,7 +69,7 @@ export TOKENPLAN_API_KEY=...
   </Step>
 </Steps>
 
-## Non-interactive setup
+## 非交互式设置
 
 ```bash
 # TokenHub
@@ -90,16 +90,16 @@ openclaw onboard --non-interactive \
 ```
 
 <Note>
-`--accept-risk` is required when used together with `--non-interactive`.
+与 `--non-interactive` 一起使用时，需要指定 `--accept-risk`。
 </Note>
 
 ## 内置目录
 
-| Model ref                      | Name                   | Input | Context | Max output | Notes                      |
-| ------------------------------ | ---------------------- | ----- | ------- | ---------- | -------------------------- |
-| `tencent-tokenhub/hy3-preview` | hy3 preview (TokenHub) | text  | 256,000 | 128,000    | deprecated; use `hy3`      |
-| `tencent-tokenhub/hy3`         | hy3 (TokenHub)         | text  | 256,000 | 128,000    | reasoning-enabled; current |
-| `tencent-tokenplan/hy3`        | hy3 (TokenPlan)        | text  | 256,000 | 128,000    | reasoning-enabled; current |
+| 模型引用                       | 名称                   | 输入 | 上下文  | 最大输出   | 备注                         |
+| ------------------------------ | ---------------------- | ----- | ------- | ---------- | ---------------------------- |
+| `tencent-tokenhub/hy3-preview` | hy3 preview（TokenHub） | text  | 256,000 | 128,000    | 已弃用；请使用 `hy3`          |
+| `tencent-tokenhub/hy3`         | hy3（TokenHub）         | text  | 256,000 | 128,000    | 支持推理；当前版本             |
+| `tencent-tokenplan/hy3`        | hy3（TokenPlan）        | text  | 256,000 | 128,000    | 支持推理；当前版本             |
 
 hy3 是腾讯混元用于推理、长上下文指令遵循、代码和代理工作流的大型 MoE 语言模型。腾讯的 OpenAI 兼容示例使用 `hy3` 作为模型 id，并支持标准的 chat-completions 工具调用以及 `reasoning_effort`。
 

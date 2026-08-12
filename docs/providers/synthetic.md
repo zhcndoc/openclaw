@@ -53,7 +53,7 @@ OpenClaw 的 Anthropic 客户端会自动在基础 URL 后追加 `/v1`，因此�
 
 ```json5
 {
-  env: { SYNTHETIC_API_KEY: "sk-..." },
+  env: { vars: { SYNTHETIC_API_KEY: "sk-..." } },
   agents: {
     defaults: {
       model: { primary: "synthetic/hf:MiniMaxAI/MiniMax-M3" },
@@ -86,16 +86,16 @@ OpenClaw 的 Anthropic 客户端会自动在基础 URL 后追加 `/v1`，因此�
 
 ## 内置目录
 
-所有 Synthetic 模型的费用均为 `0`（输入/输出/缓存）。有关服务可用性，请参阅 Synthetic 的
+所有 Synthetic 模型的费用均为 `0`（输入／输出／缓存）。有关服务可用性，请参阅 Synthetic 的
 [当前模型列表](https://dev.synthetic.new/docs/api/models)。
 
 | 模型 ID                                             | 上下文窗口     | 最大令牌数 | 推理      | 输入         |
 | --------------------------------------------------- | -------------- | ---------- | --------- | ------------ |
-| `hf:MiniMaxAI/MiniMax-M3`                           | 262,144        | 65,536     | 是        | 文本 + 图像  |
-| `hf:moonshotai/Kimi-K2.7-Code`                      | 262,144        | 8,192      | 是        | 文本 + 图像  |
+| `hf:MiniMaxAI/MiniMax-M3`                           | 262,144        | 65,536     | 是        | 文本 ＋ 图像  |
+| `hf:moonshotai/Kimi-K2.7-Code`                      | 262,144        | 8,192      | 是        | 文本 ＋ 图像  |
 | `hf:nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4` | 262,144        | 8,192      | 是        | 文本         |
 | `hf:openai/gpt-oss-120b`                            | 131,072        | 8,192      | 是        | 文本         |
-| `hf:Qwen/Qwen3.6-27B`                               | 262,144        | 81,920     | 是        | 文本 + 图像  |
+| `hf:Qwen/Qwen3.6-27B`                               | 262,144        | 81,920     | 是        | 文本 ＋ 图像  |
 | `hf:zai-org/GLM-4.7-Flash`                          | 196,608        | 131,072    | 是        | 文本         |
 | `hf:zai-org/GLM-5.2`                                | 524,288        | 131,072    | 是        | 文本         |
 

@@ -1,5 +1,5 @@
 ---
-summary: "Vercel AI Gateway 设置（认证 + 模型选择）"
+summary: "Vercel AI Gateway 设置（认证＋模型选择）"
 title: "Vercel AI gateway"
 read_when:
   - 你想将 Vercel AI Gateway 与 OpenClaw 一起使用
@@ -8,14 +8,14 @@ read_when:
 
 [Vercel AI Gateway](https://vercel.com/ai-gateway) 提供了一个统一的 API，可通过单一端点访问数百种模型。
 
-| Property      | Value                                  |
-| ------------- | -------------------------------------- |
-| Provider      | `vercel-ai-gateway`                    |
-| Package       | `@openclaw/vercel-ai-gateway-provider` |
-| Auth          | `AI_GATEWAY_API_KEY`                   |
-| API           | Anthropic Messages compatible          |
-| Base URL      | `https://ai-gateway.vercel.sh`         |
-| Model catalog | 通过 `/v1/models` 自动发现              |
+| 属性          | 值                                    |
+| ------------- | ------------------------------------- |
+| 提供商        | `vercel-ai-gateway`                   |
+| 软件包        | `@openclaw/vercel-ai-gateway-provider` |
+| 认证          | `AI_GATEWAY_API_KEY`                  |
+| API           | Anthropic Messages 兼容              |
+| 基础 URL      | `https://ai-gateway.vercel.sh`        |
+| 模型目录      | 通过 `/v1/models` 自动发现             |
 
 <Tip>
 OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
@@ -59,7 +59,7 @@ OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
 ## 非交互式示例
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice ai-gateway-api-key \
   --ai-gateway-api-key "$AI_GATEWAY_API_KEY"

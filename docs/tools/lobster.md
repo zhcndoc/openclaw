@@ -75,14 +75,14 @@ Lobster 是一个**可选**的插件工具，默认未启用。它是随套件�
 ```json
 {
   "agents": {
-    "list": [
-      {
-        "id": "main",
+    "entries": {
+      "main": {
+        "default": true,
         "tools": {
           "alsoAllow": ["lobster"]
         }
       }
-    ]
+    }
   }
 }
 ```
@@ -94,7 +94,8 @@ Lobster 是一个**可选**的插件工具，默认未启用。它是随套件�
 在沙箱化的工具上下文中，该工具会被完全禁用。
 
 如果你在开发或外部流水线中需要独立的 Lobster CLI（即不通过内置网关运行器），请从
-[Lobster 仓库](https://github.com/openclaw/lobster) 安装它，并将 `lobster` 放到 `PATH` 中。
+[Lobster 仓库](https://github.com/openclaw/lobster)安装它，并将
+`lobster` 放到 `PATH` 中。
 
 ## 模式：小型 CLI + JSON 管道 + 审批
 
@@ -145,12 +146,12 @@ gog.gmail.search --query 'newer_than:1d' \
     }
   },
   "agents": {
-    "list": [
-      {
-        "id": "main",
+    "entries": {
+      "main": {
+        "default": true,
         "tools": { "alsoAllow": ["llm-task"] }
       }
-    ]
+    }
   }
 }
 ```
@@ -158,7 +159,7 @@ gog.gmail.search --query 'newer_than:1d' \
 ### 重要限制：嵌入式 Lobster 与 `openclaw.invoke`
 
 捆绑的 Lobster 插件在网关内部以**进程内**方式运行工作流。
-在这种嵌入式模式下，`openclaw.invoke` 对于嵌套的 OpenClaw CLI 工具调用，不会**自动**继承网关 URL/认证上下文。
+在这种嵌入式模式下，`openclaw.invoke` 对于嵌套的 OpenClaw CLI 工具调用，不会**自动**继承网关 URL／认证上下文。
 
 这意味着以下模式在嵌入式运行器中**目前不可靠**：
 
@@ -166,7 +167,7 @@ gog.gmail.search --query 'newer_than:1d' \
 openclaw.invoke --tool llm-task --action json --args-json '{ ... }'
 ```
 
-仅在使用**独立的 Lobster CLI**，且你的环境中 `openclaw.invoke` 已正确配置了相应的网关/认证上下文时，才使用下面的示例。
+仅在使用**独立的 Lobster CLI**，且你的环境中 `openclaw.invoke` 已正确配置了相应的网关／认证上下文时，才使用下面的示例。
 
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{
@@ -334,12 +335,12 @@ OpenProse 与 Lobster 配合得很好：使用 `/prose` 来编排多智能体
 
 ## 故障排查
 
-| Error                                                         | Cause / fix                                                                      |
+| 错误                                                         | 原因／修复                                                                      |
 | ------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `lobster runtime timed out`                                   | Pipeline 超过了 `timeoutMs`。增大它，或者拆分该流水线。                |
-| `lobster stdout exceeded maxStdoutBytes` (or `stderr`)        | 捕获到的输出超过了上限。提高 `maxStdoutBytes`，或者减少输出。       |
+| `lobster stdout exceeded maxStdoutBytes`（或 `stderr`）        | 捕获到的输出超过了上限。提高 `maxStdoutBytes`，或者减少输出。       |
 | `run --args-json must be valid JSON`                          | `argsJson`（workflow-file 运行）解析失败。修正 JSON 字符串。            |
-| `lobster runtime failed` (or another `runtime_error` message) | 内嵌运行时返回了错误封装。请检查网关日志以获取详细信息。 |
+| `lobster runtime failed`（或其他 `runtime_error` 消息） | 内嵌运行时返回了错误封装。请检查网关日志以获取详细信息。 |
 
 ## 了解更多
 
@@ -356,9 +357,9 @@ Markdown vault（个人、伴侣、共享）。该 CLI 为统计信息、
 （分类），不可用时则回退到确定性规则。
 
 - 线程：[https://x.com/plattenschieber/status/2014508656335770033](https://x.com/plattenschieber/status/2014508656335770033)
-- 仓库：[https://github.com/bloomedai/brain-cli](https://github.com/bloomedai/brain-cli)
+- 仓库：[https://github.com/bloomedai/brain-cli](https://github.com/bloomedai/brain-cli)。
 
 ## 相关内容
 
 - [Automation](/automation) - 所有自动化机制
-- [Tools Overview](/tools) - 所有可用的代理工具
+- [Tools Overview](/tools) - 所有可用的代理工具。

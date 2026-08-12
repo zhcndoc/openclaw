@@ -100,7 +100,7 @@ read_when:
         primary: "anthropic/claude-opus-4-6",
         fallbacks: ["openai/gpt-5.4-mini"],
       },
-      pdfMaxBytesMb: 10,
+      pdfMaxMb: 10,
       pdfMaxPages: 20,
     },
   },
@@ -109,7 +109,7 @@ read_when:
 
 | 键                              | 默认值    | 含义                                                                                   |
 | ----------------------------- | ------- | ----------------------------------------------------------------------------------------- |
-| `agents.defaults.pdfModel`    | 未设置   | 显式指定主/备用 PDF 模型；若无则回退到 `imageModel`，再回退到会话模型。 |
+| `agents.defaults.pdfModel`    | 未设置   | 显式指定主／备用 PDF 模型；若无则回退到 `imageModel`，再回退到会话模型。 |
 | `agents.defaults.pdfMaxMb`    | `10`    | 单个 PDF 的大小上限（MB）。                                                                   |
 | `agents.defaults.pdfMaxPages` | `20`    | 每个 PDF 处理的最大页数。                                                              |
 
@@ -186,4 +186,4 @@ read_when:
 ## 相关内容
 
 - [工具概览](/tools) - 所有可用的代理工具
-- [配置参考](/gateway/config-agents#agent-defaults) - `pdfMaxBytesMb` 和 `pdfMaxPages` 配置
+- [配置参考](/gateway/config-agents#agent-defaults) - `pdfMaxMb` 和 `pdfMaxPages` 配置

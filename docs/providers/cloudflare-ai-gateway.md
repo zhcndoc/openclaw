@@ -1,5 +1,5 @@
 ---
-summary: "Cloudflare AI Gateway 设置（认证 + 模型选择）"
+summary: "Cloudflare AI Gateway 设置（认证 ＋ 模型选择）"
 title: "Cloudflare AI gateway"
 read_when:
   - 你想将 Cloudflare AI Gateway 与 OpenClaw 一起使用
@@ -8,13 +8,13 @@ read_when:
 
 [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) 位于提供方 API 之前，并添加分析、缓存和控制功能。对于 Anthropic，OpenClaw 会通过你的 Gateway 端点使用 Anthropic Messages API。
 
-| Property      | Value                                                                                    |
+| 属性          | 值                                                                                      |
 | ------------- | ---------------------------------------------------------------------------------------- |
-| Provider      | `cloudflare-ai-gateway`                                                                  |
-| Plugin        | official external package (`@openclaw/cloudflare-ai-gateway-provider`)                   |
-| Base URL      | `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/anthropic`               |
-| Default model | `cloudflare-ai-gateway/claude-sonnet-4-6`                                                |
-| API key       | `CLOUDFLARE_AI_GATEWAY_API_KEY`（你用于通过 Gateway 发起请求的提供方 API key） |
+| 提供方        | `cloudflare-ai-gateway`                                                                  |
+| 插件          | 官方外部包（`@openclaw/cloudflare-ai-gateway-provider`）                                 |
+| 基础 URL      | `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/anthropic`               |
+| 默认模型      | `cloudflare-ai-gateway/claude-sonnet-4-6`                                                |
+| API 密钥      | `CLOUDFLARE_AI_GATEWAY_API_KEY`（你用于通过 Gateway 发起请求的提供方 API key） |
 
 <Note>
 对于通过 Cloudflare AI Gateway 路由的 Anthropic 模型，请将你的 **Anthropic API key** 作为提供方密钥使用。
@@ -37,13 +37,13 @@ openclaw gateway restart
 
 <Steps>
   <Step title="设置提供方 API key 和 Gateway 详情">
-    运行 onboarding 并选择 Cloudflare AI Gateway 认证选项：
+    运行入门引导并选择 Cloudflare AI Gateway 认证选项：
 
     ```bash
     openclaw onboard --auth-choice cloudflare-ai-gateway-api-key
     ```
 
-    这会提示你输入 account ID、gateway ID 和 API key。
+    这会提示你输入账户 ID、网关 ID 和 API 密钥。
 
   </Step>
   <Step title="设置默认模型">
@@ -72,7 +72,7 @@ openclaw gateway restart
 对于脚本或 CI 环境，请在命令行中传入所有值：
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice cloudflare-ai-gateway-api-key \
   --cloudflare-ai-gateway-account-id "your-account-id" \

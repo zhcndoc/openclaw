@@ -456,7 +456,7 @@ generation provider 元数据字段描述的是与匹配的 `contracts.*Generati
 
 ## activation 参考
 
-当插件可以廉价地声明哪些控制平面事件应将其包含在激活/加载计划中时，请使用 `activation`。
+当插件可以廉价地声明哪些控制平面事件应将其包含在激活／加载计划中时，请使用 `activation`。
 
 这个块是规划器元数据，不是生命周期 API。它不会注册运行时行为，不会替代 `register(...)`，也不保证插件代码已经执行。激活规划器会使用这些字段来缩小候选插件范围，然后再回退到现有的 manifest 归属元数据，例如 `providers`、`channels`、`commandAliases`、`setup.providers`、`contracts.tools` 和 hooks。
 
@@ -481,12 +481,12 @@ generation provider 元数据字段描述的是与匹配的 `contracts.*Generati
 | 字段              | 必需 | 类型                                                 | 含义                                                                                                                                                                               |
 | ------------------ | ---------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `onStartup`        | 否       | `boolean`                                            | 显式的 Gateway 启动激活。每个插件都应设置此项。`true` 会在启动期间导入插件；`false` 会保持启动时惰性加载，除非其他匹配的触发器要求加载。 |
-| `onProviders`      | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 provider id。                                                                                                                      |
-| `onAgentHarnesses` | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的嵌入式 agent harness runtime id。CLI backend 别名请使用顶层 `cliBackends`。                                           |
-| `onCommands`       | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的命令 id。                                                                                                                       |
-| `onChannels`      | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 channel id。                                                                                                                       |
-| `onRoutes`         | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 route 类型。                                                                                                                       |
-| `onConfigPaths`    | 否       | `string[]`                                           | 当路径存在且未被显式禁用时，在 startup/load 计划中应包含此插件的根相对配置路径。                                                      |
+| `onProviders`      | 否       | `string[]`                                           | 在 activation／load 计划中应包含此插件的 provider id。                                                                                                                      |
+| `onAgentHarnesses` | 否       | `string[]`                                           | 在 activation／load 计划中应包含此插件的嵌入式 agent harness runtime id。CLI backend 别名请使用顶层 `cliBackends`。                                           |
+| `onCommands`       | 否       | `string[]`                                           | 在 activation／load 计划中应包含此插件的命令 id。                                                                                                                       |
+| `onChannels`      | 否       | `string[]`                                           | 在 activation／load 计划中应包含此插件的 channel id。                                                                                                                       |
+| `onRoutes`         | 否       | `string[]`                                           | 在 activation／load 计划中应包含此插件的 route 类型。                                                                                                                       |
+| `onConfigPaths`    | 否       | `string[]`                                           | 当路径存在且未被显式禁用时，在 startup／load 计划中应包含此插件的根相对配置路径。                                                      |
 | `onCapabilities`   | 否       | `Array<"provider" \| "channel" \| "tool" \| "hook">` | 控制平面激活规划使用的宽泛能力提示。尽可能优先使用更窄的字段。                                                                                     |
 
 当前实时使用方：
@@ -494,9 +494,9 @@ generation provider 元数据字段描述的是与匹配的 `contracts.*Generati
 - Gateway 启动规划使用 `activation.onStartup` 进行显式启动导入。
 - 命令触发的 CLI 规划会回退到旧版 `commandAliases[].cliCommand` 或 `commandAliases[].name`。
 - Agent runtime 启动规划对嵌入式 harness 使用 `activation.onAgentHarnesses`，对 CLI runtime 别名使用顶层 `cliBackends[]`。
-- Channel 触发的 setup/channel 规划在缺少显式 channel 激活元数据时，会回退到旧版 `channels[]` 归属。
+- Channel 触发的 setup／channel 规划在缺少显式 channel 激活元数据时，会回退到旧版 `channels[]` 归属。
 - 启动插件规划对非 channel 的根配置界面使用 `activation.onConfigPaths`，例如内置 browser 插件的 `browser` 块。
-- Provider 触发的 setup/runtime 规划在缺少显式 provider 激活元数据时，会回退到旧版 `providers[]` 和顶层 `cliBackends[]` 归属。
+- Provider 触发的 setup／runtime 规划在缺少显式 provider 激活元数据时，会回退到旧版 `providers[]` 和顶层 `cliBackends[]` 归属。
 
 规划器诊断可以区分显式激活提示与 manifest 归属回退。例如，`activation-command-hint` 表示匹配到了 `activation.onCommands`，而 `manifest-command-alias` 表示规划器改为使用 `commandAliases` 归属。这些原因标签仅用于宿主诊断和测试；插件作者应继续声明最能描述归属关系的元数据。
 
@@ -706,9 +706,9 @@ OpenClaw 会将 `setup.providers[].envVars` 纳入通用 provider 认证和环�
 
 通用嵌入提供方应为每个通过 `api.registerEmbeddingProvider(...)` 注册的适配器声明 `contracts.embeddingProviders`。将通用契约用于可复用的向量生成，包括内存搜索所消费的提供方。`contracts.memoryEmbeddingProviders` 是已弃用的内存专用兼容项，仅在现有提供方迁移到通用嵌入提供方接入点期间保留。
 
-Worker providers 必须在 `contracts.workerProviders` 中声明每个 `api.registerWorkerProvider(...)` ID。核心会在调用 `provision` 之前持久化长期意图；提供方会在外部分配之前验证其设置，并且使用相同操作 ID 的重复调用必须采用同一个租约。核心还会持久化经过验证的设置快照，并将其与 `leaseId` 一同传递给 `inspect({ leaseId, profile })` 和 `destroy({ leaseId, profile })`，即使命名配置文件已被更改或删除之后也是如此。销毁操作具有幂等性；检查会返回 `active` / `destroyed` / `unknown` 状态联合中的已关闭状态；SSH 私钥材料只能通过 `SecretRef` 引用。已配置的 SSH 端点还必须包含来自可信配置输出的公钥 `hostKey`，其格式必须严格为 `algorithm base64`，不得包含主机名或注释，以便核心在连接前固定主机密钥。它们可以包含最多 10 个有序且唯一的 `fallbackPorts`，但不得包含主 `port`；核心会持久化这些候选端口，并且仅在幂等探测、内容寻址传输、由回执/锁保护的工件安装、收敛式托管工作树镜像以及隧道重连期间在这些端口之间轮换。含糊不清且未受保护的有状态命令会安全失败，不会在候选端口之间重放。当 SSH 账户还拥有无关进程时，租约可以设置 `sharedHost: true`；此时核心会在工作区协调期间避免冻结整个主机上的进程。省略该字段或将其设为 `false` 表示使用专用工作器主机。活动检查会重复返回这一事实，以便核心能够协调在该字段存在之前持久化的租约所对应的提供方隔离状态；隧道启动会等待第一次权威检查完成。创建动态身份引用的提供方可以实现权威的 `resolveSshIdentity({ leaseId, profile, keyRef })`；未实现该方法的提供方则使用核心的通用机密解析器。权威的 `unknown` 状态会使本地活动记录成为孤立记录；在持久化销毁请求之后，该状态会确认拆除已完成。
+Worker 提供方必须在 `contracts.workerProviders` 中声明每个 `api.registerWorkerProvider(...)` ID。Core 会在调用 `provision` 之前持久化耐久意图；提供方会在外部分配之前验证其设置，并且使用相同操作 ID 的重复调用必须采用同一个租约。对于有界配置时间超过 Core 默认五分钟的提供方，可以实现 `resolveProvisionTimeoutMs(profile)`，并在返回的正毫秒预算中包含获取、提供方自有设置和清理的时间。Core 还会持久化经过验证的设置快照，并将其与 `leaseId` 一起传递给 `inspect({ leaseId, profile })` 和 `destroy({ leaseId, profile })`，包括在命名配置文件被更改或删除之后。销毁操作具有幂等性，检查会返回已关闭的 `active`／`destroyed`／`unknown` 状态联合，并且 SSH 私钥材料只能通过 `SecretRef` 引用。已配置的 SSH 端点还必须使用来自受信任配置输出的公共 `hostKey`，其格式必须严格为 `algorithm base64`，且不得包含主机名或注释，以便 Core 在连接前固定主机密钥。它们可以包含最多 10 个有序且唯一的 `fallbackPorts`，但不得包含主 `port`；Core 会持久化这些候选端口，并且仅在幂等探测、内容寻址传输、收据／锁保护的工件安装、收敛式托管工作树镜像和隧道重连期间在这些端口之间轮换。含义不明确且未受保护的有状态命令会安全失败，不会在候选端口之间重放。当 SSH 账户还拥有无关进程时，租约可以设置 `sharedHost: true`；这样 Core 在工作区协调期间会避免冻结整个主机上的进程。省略该字段或设置为 `false` 表示使用专用工作器主机。活动检查会重复这一事实，以便 Core 能够为在该字段存在之前持久化的租约协调由提供方拥有的隔离；隧道启动会等待首次权威检查完成。可选的桌面元数据可以公布最多八个唯一的已关闭应用：`browser` 应包含绝对路径的 `executablePath` 和 1 至 65535 之间的 CDP 端口，或者 `terminal` 应包含绝对路径的 `executablePath`。Core 会拒绝未知的应用 ID 和字段，并将经过验证的元数据与现有桌面记录一同持久化。生成动态身份引用的提供方可以实现权威的 `resolveSshIdentity({ leaseId, profile, keyRef })`；没有实现该方法的提供方则使用 Core 的通用密钥解析器。权威的 `unknown` 状态会使本地活动记录成为孤立记录；在持久化销毁请求之后，它会确认拆除完成。
 
-`contracts.gatewayMethodDispatch` 当前接受 `"authenticated-request"`。它是针对原生插件 HTTP 路由的 API 卫生门禁，这些路由会有意在进程内分发 Gateway 控制平面方法，而不是用来作为防御恶意原生插件的沙箱。仅将其用于已严格审查、且本身就需要 Gateway HTTP 认证的捆绑/运维面。只有当一个具备权限的路由同时声明 `auth: "gateway"` 和路由特定的 `gatewayRuntimeScopeSurface: "trusted-operator"` 时，它才会在 Gateway 根工作接入关闭时仍保持可达；同一插件中的普通兄弟路由仍会处于接入边界之后。这样可以在不赋予整个插件接入绕过权限的前提下，保持挂起状态和恢复操作的可达性。解析和响应整形应限制在分发之外；实质性工作或变更性工作必须通过 Gateway 方法分发完成，因为它负责接入和作用域强制执行。
+`contracts.gatewayMethodDispatch` 当前接受 `"authenticated-request"`。它是针对原生插件 HTTP 路由的 API 卫生门禁，这些路由会有意在进程内分发 Gateway 控制平面方法，而不是用来作为防御恶意原生插件的沙箱。仅将其用于已严格审查、且本身就需要 Gateway HTTP 认证的捆绑／运维面。只有当一个具备权限的路由同时声明 `auth: "gateway"` 和路由特定的 `gatewayRuntimeScopeSurface: "trusted-operator"` 时，它才会在 Gateway 根工作接入关闭时仍保持可达；同一插件中的普通兄弟路由仍会处于接入边界之后。这样可以在不赋予整个插件接入绕过权限的前提下，保持挂起状态和恢复操作的可达性。解析和响应整形应限制在分发之外；实质性工作或变更性工作必须通过 Gateway 方法分发完成，因为它负责接入和作用域强制执行。
 
 ## configContracts 参考
 
@@ -1003,7 +1003,7 @@ Model 字段：
 | `maxTokens`        | `number`                                                       | 已知时的最大输出 token 数。                                                          |
 | `thinkingLevelMap` | `Record<string, string \| null>`                               | 可选的、针对每个思考级别的模型 id 或参数覆盖值。                                     |
 | `cost`             | `object`                                                       | 可选的每百万 token 的美元定价，包括可选的 `tieredPricing`。                         |
-| `compat`            | `object`                                                       | 可选的兼容性标志，与 OpenClaw 模型配置兼容性相匹配。                                 |
+| `compat`           | `object`                                                       | 可选的兼容性标志，与 OpenClaw 模型配置兼容性相匹配。                                 |
 | `upstreamModel`    | `string`                                                       | 可选的 `provider/model` 引用，指向另一个捆绑 catalog 中同一上游模型。                 |
 | `mediaInput`       | `object`                                                       | 可选的按模态划分的输入配置，目前仅支持图像。                                        |
 | `status`           | `"available"` \| `"preview"` \| `"deprecated"` \| `"disabled"` | 列出状态。仅当该行完全不应出现时才进行抑制。                                         |
@@ -1172,7 +1172,7 @@ OpenClaw 会根据插件根目录，以及对于 `${node}` 预设根据当前 No
 
 | 字段         | 类型              | 含义                                                                                       |
 | ------------ | ----------------- | ------------------------------------------------------------------------------------------ |
-| `external`   | `boolean`         | 对于不应使用已发布外部定价的本地/自托管提供方，设置为 `false`。                              |
+| `external`   | `boolean`         | 对于不应使用已发布外部定价的本地／自托管提供方，设置为 `false`。                              |
 | `openRouter` | `false \| object` | OpenRouter 发布键映射。`false` 会禁用此提供方的 OpenRouter 匹配。                            |
 | `liteLLM`    | `false \| object` | LiteLLM 发布键映射。`false` 会禁用此提供方的 LiteLLM 匹配。                                 |
 
@@ -1181,7 +1181,7 @@ OpenClaw 会根据插件根目录，以及对于 `${node}` 预设根据当前 No
 | 字段                      | 类型               | 含义                                                                                                                |
 | -------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | `provider`                 | `string`           | 当外部目录提供方 id 与 OpenClaw 提供方 id 不同时使用，例如 `zai` 提供方对应 `z-ai`。                               |
-| `passthroughProviderModel` | `boolean`          | 将包含斜杠的 model id 视为嵌套的 provider/model 引用，对 OpenRouter 等代理提供方很有用。                             |
+| `passthroughProviderModel` | `boolean`          | 将包含斜杠的 model id 视为嵌套的 provider／model 引用，对 OpenRouter 等代理提供方很有用。                             |
 | `modelIdTransforms`        | `"version-dots"[]` | 额外的外部目录 model-id 变体。`version-dots` 会尝试带点的版本 id，例如 `claude-opus-4.6`。                         |
 
 ### OpenClaw 提供方索引

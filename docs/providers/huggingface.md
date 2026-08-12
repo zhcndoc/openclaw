@@ -6,15 +6,15 @@ read_when:
 title: "Hugging Face（推理）"
 ---
 
-[Hugging Face Inference Providers](https://huggingface.co/docs/inference-providers) 提供了一个与 OpenAI 兼容的聊天补全路由器，它使用一个 token 将多个托管模型（DeepSeek、Llama 等）统一接入。OpenClaw 只会与 **chat completions endpoint** 通信；对于文本生成图像、嵌入或语音，请直接使用 [HF inference clients](https://huggingface.co/docs/api-inference/quicktour)。
+[Hugging Face Inference Providers](https://huggingface.co/docs/inference-providers) 提供了一个与 OpenAI 兼容的聊天补全路由器，它使用一个 token 将多个托管模型（DeepSeek、Llama 等）统一接入。OpenClaw 只会与 **聊天补全端点** 通信；对于文本生成图像、嵌入或语音，请直接使用 [HF inference clients](https://huggingface.co/docs/api-inference/quicktour)。
 
-| Property     | Value                                                                                                                       |
+| 属性         | 值                                                                                                                          |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | Provider id  | `huggingface`                                                                                                               |
-| Plugin       | bundled (enabled by default, no install step)                                                                               |
-| Auth env var | `HUGGINGFACE_HUB_TOKEN` or `HF_TOKEN` (fine-grained token)                                                                  |
-| API          | OpenAI-compatible (`https://router.huggingface.co/v1`)                                                                      |
-| Billing      | Single HF token; [pricing](https://huggingface.co/docs/inference-providers/pricing) follows provider rates with a free tier |
+| 插件         | bundled（默认启用，无需安装）                                                                                                |
+| 认证环境变量 | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`（细粒度 token）                                                                       |
+| API          | OpenAI 兼容（`https://router.huggingface.co/v1`）                                                                           |
+| 计费         | 单个 HF token；[定价](https://huggingface.co/docs/inference-providers/pricing) 遵循提供商费率，并提供免费层级                          |
 
 ## 开始使用
 
@@ -28,7 +28,7 @@ title: "Hugging Face（推理）"
 
   </Step>
   <Step title="运行引导配置">
-    在 provider 下拉菜单中选择 **Hugging Face**，然后在提示时输入你的 API key：
+    在提供商下拉菜单中选择 **Hugging Face**，然后在提示时输入你的 API key：
 
     ```bash
     openclaw onboard --auth-choice huggingface-api-key
@@ -36,7 +36,7 @@ title: "Hugging Face（推理）"
 
   </Step>
   <Step title="选择默认模型">
-    在 **Default Hugging Face model** 下拉菜单中选择一个模型。只要你的 token 有效，列表就会从 Inference API 加载；否则 OpenClaw 会显示下面内置的目录。你的选择会保存为 `agents.defaults.model.primary`：
+    在 **默认 Hugging Face 模型** 下拉菜单中选择一个模型。只要你的 token 有效，列表就会从 Inference API 加载；否则 OpenClaw 会显示下面内置的目录。你的选择会保存为 `agents.defaults.model.primary`：
 
     ```json5
     {
@@ -59,7 +59,7 @@ title: "Hugging Face（推理）"
 ### 非交互式设置
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice huggingface-api-key \
   --huggingface-api-key "$HF_TOKEN"
@@ -71,14 +71,14 @@ openclaw onboard --non-interactive \
 
 模型引用使用 `huggingface/<org>/<model>` 形式（Hub 风格 ID）。OpenClaw 内置目录：
 
-| Model         | Ref (prefix with `huggingface/`) |
+| 模型         | 引用（以 `huggingface/` 为前缀） |
 | ------------- | -------------------------------- |
 | DeepSeek R1   | `deepseek-ai/DeepSeek-R1`        |
 | DeepSeek V3.1 | `deepseek-ai/DeepSeek-V3.1`      |
 | GPT-OSS 120B  | `openai/gpt-oss-120b`            |
 
 <Tip>
-When your token is valid, OpenClaw also discovers any other model from **GET** `https://router.huggingface.co/v1/models` at onboarding time and Gateway startup, so your catalog can include far more than the three models above. You can append `:fastest` or `:cheapest` to any model id; HF's router routes to the matching inference provider. Set your default provider order in [Inference Provider settings](https://hf.co/settings/inference-providers).
+当你的 token 有效时，OpenClaw 还会在入门流程和 Gateway 启动时，通过 **GET** `https://router.huggingface.co/v1/models` 发现其他模型，因此你的目录可以包含远超上述三个模型的模型。你可以将 `:fastest` 或 `:cheapest` 添加到任意模型 ID 后；HF 的 router 会将请求路由至匹配的推理提供商。在[推理提供商设置](https://hf.co/settings/inference-providers)中设置默认的提供商顺序。
 </Tip>
 
 ## 高级配置
@@ -135,7 +135,7 @@ When your token is valid, OpenClaw also discovers any other model from **GET** `
 
   </Accordion>
 
-  <Accordion title="Config: DeepSeek R1 with fallback">
+  <Accordion title="配置：DeepSeek R1，带回退">
     ```json5
     {
       agents: {
@@ -154,7 +154,7 @@ When your token is valid, OpenClaw also discovers any other model from **GET** `
     ```
   </Accordion>
 
-  <Accordion title="Config: DeepSeek with cheapest and fastest variants">
+  <Accordion title="配置：DeepSeek，包含最便宜和最快变体">
     ```json5
     {
       agents: {
@@ -171,7 +171,7 @@ When your token is valid, OpenClaw also discovers any other model from **GET** `
     ```
   </Accordion>
 
-  <Accordion title="Config: DeepSeek + GPT-OSS with aliases">
+  <Accordion title="配置：DeepSeek + GPT-OSS，带别名">
     ```json5
     {
       agents: {

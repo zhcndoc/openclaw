@@ -41,7 +41,7 @@ openclaw channels login --channel yuanbao
 
 ### 私信
 
-`channels.yuanbao.dm.policy`:
+`channels.yuanbao.dm.policy`：
 
 | Value            | 行为                                              |
 | ---------------- | ------------------------------------------------- |
@@ -156,7 +156,7 @@ Yuanbao 支持原生斜杠菜单；当网关启动时，命令会自动同步到
 **机器人发送空回复或回退回复：**
 
 1. 检查 AI 模型是否返回了有效内容
-2. 默认回退回复："暂时无法解答，你可以换个问题问问我哦"
+2. 默认回退回复：“暂时无法解答，你可以换个问题问问我哦”
 3. 通过 `channels.yuanbao.fallbackReply` 自定义
 
 **App Secret 泄露：**
@@ -196,9 +196,9 @@ Yuanbao 支持原生斜杠菜单；当网关启动时，命令会自动同步到
 
 ### 消息限制
 
-- `maxChars`: 单条消息最大字符数（默认 `3000`）
-- `mediaMaxMb`: 媒体上传/下载限制（默认 `20` MB）
-- `overflowPolicy`: 当消息超过限制时的处理方式，`"split"`（默认）或 `"stop"`
+- `maxChars`：单条消息最大字符数（默认 `3000`）
+- `mediaMaxMb`：媒体上传／下载限制（默认 `20` MB）
+- `overflowPolicy`：当消息超过限制时的处理方式，`"split"`（默认）或 `"stop"`
 
 ### 流式输出
 
@@ -250,7 +250,7 @@ Yuanbao 支持原生斜杠菜单；当网关启动时，命令会自动同步到
 
 ### Markdown 提示注入
 
-默认情况下，机器人会注入一条系统提示指令，以防止模型将整段回复包裹在 markdown 代码块中。
+默认情况下，机器人会注入一条系统提示指令，以防止模型将整段回复包裹在 Markdown 代码块中。
 
 ```json5
 {
@@ -283,11 +283,11 @@ Yuanbao 支持原生斜杠菜单；当网关启动时，命令会自动同步到
 ```json5
 {
   agents: {
-    list: [
-      { id: "main" },
-      { id: "agent-a", workspace: "/home/user/agent-a" },
-      { id: "agent-b", workspace: "/home/user/agent-b" },
-    ],
+    entries: {
+      main: { default: true },
+      "agent-a": { workspace: "/home/user/agent-a" },
+      "agent-b": { workspace: "/home/user/agent-b" },
+    },
   },
   bindings: [
     {
@@ -308,9 +308,9 @@ Yuanbao 支持原生斜杠菜单；当网关启动时，命令会自动同步到
 }
 ```
 
-- `match.channel`: `"yuanbao"`
-- `match.peer.kind`: `"direct"`（私信）或 `"group"`（群聊）
-- `match.peer.id`: 用户 ID 或群号
+- `match.channel`：`"yuanbao"`
+- `match.peer.kind`：`"direct"`（私信）或 `"group"`（群聊）
+- `match.peer.id`：用户 ID 或群号。
 
 ## 配置参考
 
@@ -343,7 +343,7 @@ Yuanbao 支持原生斜杠菜单；当网关启动时，命令会自动同步到
 
 ## 支持的消息类型
 
-**接收：**文本、图片、文件、音频/语音、视频、贴纸/自定义表情、自定义元素（链接卡片）。
+**接收：**文本、图片、文件、音频／语音、视频、贴纸／自定义表情、自定义元素（链接卡片）。
 
 **发送：**文本（markdown）、图片、文件、音频、视频、贴纸。
 
@@ -355,4 +355,4 @@ Yuanbao 支持原生斜杠菜单；当网关启动时，命令会自动同步到
 - [配对](/channels/pairing) - 私信认证和配对流程
 - [群组](/channels/groups) - 群聊行为和提及门控
 - [渠道路由](/channels/channel-routing) - 消息会话路由
-- [安全](/gateway/security) - 访问模型和加固
+- [安全](/gateway/security) - 访问模型和加固。

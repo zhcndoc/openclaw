@@ -6,18 +6,18 @@ read_when:
   - 你需要 LongCat API 密钥或模型限制
 ---
 
-[LongCat](https://longcat.ai) 为 LongCat-2.0 提供托管 API，LongCat-2.0 是一款专为编码和智能体工作负载打造的推理模型。OpenClaw 为 LongCat 的 OpenAI 兼容端点提供官方 `longcat` 插件。
+[LongCat](https://longcat.ai) 提供用于 LongCat-2.0 的托管 API，这是一款面向编程和智能体工作负载构建的推理模型。OpenClaw 提供了用于 LongCat 的 OpenAI 兼容端点的官方 LongCat 插件。
 
-| Property   | Value                              |
+| 属性       | 值                                |
 | ---------- | ---------------------------------- |
-| Provider   | `longcat`                          |
-| Auth       | `LONGCAT_API_KEY`                  |
-| API        | OpenAI-compatible Chat Completions |
-| Base URL   | `https://api.longcat.chat/openai`  |
-| Model      | `longcat/LongCat-2.0`              |
-| Context    | 1,048,576 tokens                   |
-| Max output | 131,072 tokens                     |
-| Input      | Text                               |
+| 提供商     | `longcat`                          |
+| 身份验证   | `LONGCAT_API_KEY`                  |
+| API        | OpenAI 兼容的 Chat Completions    |
+| 基础 URL   | `https://api.longcat.chat/openai`  |
+| 模型       | `longcat/LongCat-2.0`              |
+| 上下文     | 1,048,576 个令牌                  |
+| 最大输出   | 131,072 个令牌                    |
+| 输入       | 文本                               |
 
 ## 安装插件
 
@@ -53,7 +53,7 @@ onboarding 会添加托管目录，并在尚未配置主模型时选择 `longcat
 ### 非交互式设置
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice longcat-api-key \
   --longcat-api-key "$LONGCAT_API_KEY"
@@ -71,8 +71,8 @@ LongCat 会在 `reasoning_content` 中返回推理内容。OpenClaw 在重放 as
 
 ## 定价
 
-内置目录使用 LongCat 的按量付费价目表，价格以每百万 token 计美元：未缓存输入 $0.75、缓存输入 $0.015，以及输出 $2.95。LongCat 可能会提供临时折扣；[定价页面](https://longcat.chat/platform/docs/Pricing/LongCat-2.0.html)
-和您的账单记录为准。
+内置目录使用 LongCat 按需付费的公开价格，以每百万个 token 的美元价格计费：$0.75 未缓存输入、$0.015 缓存输入和 $2.95 输出。LongCat 可能会提供临时折扣；[定价页面](https://longcat.chat/platform/docs/pricing/long-cat-2.0)
+和您的账单记录是权威依据。
 
 ## 自托管 LongCat-2.0
 

@@ -217,14 +217,13 @@ return decision;
 {
   tools: { swarm: { enabled: true, defaultAgentId: "worker" } },
   agents: {
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
         default: true,
         subagents: { allowAgents: ["worker"] },
       },
-      { id: "worker", tools: { swarm: false } },
-    ],
+      worker: { tools: { swarm: false } },
+    },
   },
 }
 ```
@@ -383,4 +382,4 @@ Gateway 的子代理通道上运行；云端部署计划作为一个显式的创
 - [代码模式](/tools/code-mode) 用于 QuickJS 客户端运行时和激活规则
 - [子代理](/tools/subagents) 用于子策略、隔离和会话行为
 - [多代理沙盒工具](/tools/multi-agent-sandbox-tools) 用于每个代理的限制
-- [工具概览](/tools) 用于工具配置文件和策略路由
+- [工具概览](/tools) 用于工具配置文件和策略路由。

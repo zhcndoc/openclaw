@@ -104,34 +104,32 @@ Search、Perplexity、SearXNG 或 Tavily。其中一些需要 API 密钥；另�
 
 本地模式（默认）会按以下步骤进行：
 
-1. **模型/身份验证** - 选择提供商身份验证流程（API 密钥、OAuth 或提供商特定的手动身份验证），包括自定义提供商（兼容 OpenAI、兼容 OpenAI Responses、兼容 Anthropic 或未知自动检测）。选择默认模型。
-   全新的 OpenAI API 密钥设置默认使用 `openai/gpt-5.6`（裸的直接 API
-   ID 会解析为 Sol）；全新的 ChatGPT/Codex 设置默认使用
-   `openai/gpt-5.6-sol`。重新运行设置会保留现有的显式模型，包括
-   `openai/gpt-5.5`。如果账户不提供 GPT-5.6，请明确选择
+1. **Model/Auth** - 选择一种 provider 身份验证流程（API key、OAuth 或 provider-specific manual auth），包括 Custom Provider
+   （OpenAI-compatible、OpenAI Responses-compatible、Anthropic-compatible 或
+   Unknown 自动检测）。选择一个默认模型。
+   全新的 OpenAI API-key 和 ChatGPT/Codex 设置默认使用
+   `openai/gpt-5.6-sol`。裸的直接 API `openai/gpt-5.6` 别名仍受支持，并解析为 Sol。重新运行设置会保留现有的显式模型，包括
+   `openai/gpt-5.5`。如果账户不提供 GPT-5.6，请显式选择
    `openai/gpt-5.5`。
-   安全提示：如果此代理将运行工具或处理 webhook/hook
-   内容，请优先使用可用的最新一代最强模型，并保持严格的工具策略——较弱或较旧的层级更容易受到提示注入攻击。
-   对于非交互式运行，`--secret-input-mode ref` 会将新凭据存储为由环境变量支持的引用；添加凭据时请设置提供商环境变量。
-   现有可解析的命名配置及其 `env`、`file` 或 `exec` 引用会原样复用，不会写入新凭据，也不会额外设置提供商环境变量。之前存储的明文不会迁移；请参见
-   [密钥管理](/gateway/secrets)。交互式密钥引用模式可以指向环境变量或已配置的提供商引用（`file` 或
-   `exec`），并在保存前进行快速预检。完成模型/身份验证设置后，
-   向导会提供可选的实时完成测试；测试失败后可以返回模型/身份验证设置一次，也可以忽略失败而不阻塞经典向导的其余流程。忽略测试不会解锁 OpenClaw；对话式设置仍然需要通过推理检查。
-2. **工作区** - 代理文件所在的目录（默认：`~/.openclaw/workspace`）。会创建引导文件。
-3. **网关** - 端口、绑定地址、身份验证模式、Tailscale 暴露设置。在
-   交互式令牌模式下，可选择以明文存储令牌（默认），或选择使用 SecretRef。非交互式 SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
-4. **频道** - 内置和官方插件聊天频道，包括
-   Discord、飞书、Google Chat、iMessage、Mattermost、Microsoft Teams、
+   安全提示：如果此 agent 将运行工具或处理 webhook/hook
+   内容，请优先选择可用的最新一代最强模型，并保持工具策略严格——较弱或较旧的层级更容易受到提示注入。
+   对于非交互式运行，`--secret-input-mode ref` 会将新凭据存储为由环境变量支持的引用；添加凭据时设置 provider 环境变量。
+   现有可解析的命名配置文件及其 `env`、`file`、`exec` 或 `store` 引用会原样复用，不会写入新凭据，也不会额外设置 provider
+   环境变量。之前存储的明文不会迁移；请参见
+   [Secrets management](/gateway/secrets)。交互式 Secret 引用模式可以指向环境变量或已配置的 provider 引用（`file` 或
+   `exec`），保存前会进行快速预检。完成模型／身份验证设置后，向导会提供可选的实时补全测试；失败后可以返回模型／身份验证设置一次，也可以忽略失败而不阻塞经典向导的其余部分。忽略该测试不会解锁 OpenClaw；对话式设置仍需要通过推理检查。
+2. **Workspace** - agent 文件的目录（默认 `~/.openclaw/workspace`）。会生成引导文件。
+3. **Gateway** - 端口、绑定地址、身份验证模式、Tailscale 暴露方式。在
+   交互式令牌模式下，可以选择明文令牌存储（默认），或选择使用 SecretRef。非交互式 SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
+4. **Channels** - 内置和官方插件聊天频道，包括
+   Discord、Feishu、Google Chat、iMessage、Mattermost、Microsoft Teams、
    QQ Bot、Signal、Slack、Telegram、WhatsApp 等。
-5. **守护进程** - 安装 LaunchAgent（macOS）、systemd 用户单元
-   （Linux/WSL2），或原生 Windows 计划任务，并为每个用户提供
-   Startup 文件夹回退方案。
-   如果需要令牌身份验证，且 `gateway.auth.token` 由 SecretRef 管理，
-   守护进程安装会验证它，但不会将解析后的令牌持久化到监管服务环境元数据中；无法解析的 SecretRef 会阻止安装并提供相关指导。如果同时设置了
-   `gateway.auth.token` 和 `gateway.auth.password`，而
-   `gateway.auth.mode` 未设置，则必须先明确设置该模式，安装才会继续。
-6. **健康检查** - 启动网关并验证其可访问性。
-7. **技能** - 安装推荐的技能及其可选依赖项。
+5. **Daemon** - 安装 LaunchAgent（macOS）、systemd 用户单元
+   （Linux/WSL2），或原生 Windows 计划任务，并为每个用户提供 Startup 文件夹回退方案。
+   如果需要令牌身份验证，且 `gateway.auth.token` 由 SecretRef 管理，守护进程安装会验证它，但不会将解析后的令牌持久化到 supervisor 服务环境元数据中；未解析的 SecretRef 会阻止安装，并提供相关指导。如果同时设置了 `gateway.auth.token` 和
+   `gateway.auth.password`，但未设置 `gateway.auth.mode`，则必须显式设置该模式后才能继续安装。
+6. **Health check** - 启动 Gateway 并验证其可访问性。
+7. **Skills** - 安装推荐的 skills 及其可选依赖项。
 
 <Note>
 重新运行入门流程不会清除任何内容，除非你明确选择**重置**（或传入 `--reset`）。CLI 的 `--reset` 默认作用于配置、凭据和会话；使用 `--reset-scope full` 还会移除工作区。如果配置无效或包含旧版键，入门流程会要求你先运行 `openclaw doctor`。

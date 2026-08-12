@@ -79,7 +79,7 @@ ClawHub 将外部列表解析为其精确同步的 GitHub 提交；OpenClaw 不�
 **未经过 ClawHub 扫描**，并且该信任状态会在更新和验证过程中保留。已声明或经过 ClawHub 扫描的技能使用
 `@owner/<slug>`。`install git:owner/repo[@ref]` 会克隆一个未受管理的 Git 技能，而 `install
 ./path` 会复制一个本地技能目录。默认情况下，`install`、
-`update` 和 `verify` 目标都是当前工作区的 `skills/` 目录；使用 `--global` 时，它们会指向共享的受管技能目录。`list`/`info`/`check`
+`update` 和 `verify` 目标都是当前工作区的 `skills/` 目录；使用 `--global` 时，它们会指向共享的受管技能目录。`list`／`info`／`check`
 仍然会检查当前工作区和配置中可见的本地技能。
 基于工作区的命令会先通过 `--agent <id>` 解析目标工作区，然后在当前工作目录位于已配置的代理
 工作区内时使用当前工作目录，否则使用默认代理。
@@ -87,36 +87,36 @@ ClawHub 将外部列表解析为其精确同步的 GitHub 提交；OpenClaw 不�
 Git 和本地目录安装要求源根目录中存在 `SKILL.md`。安装 slug 会先取自
 `SKILL.md` frontmatter 中有效的 `name`，否则取源目录或仓库名；可使用
 `--as <slug>` 覆盖它。`--version` 仅适用于 ClawHub。技能安装不支持 npm 包规格
-或 zip/archive 路径，并且 `openclaw skills update` 只会更新由 ClawHub 跟踪的安装。
+或 zip／archive 路径，并且 `openclaw skills update` 只会更新由 ClawHub 跟踪的安装。
 
 由入门流程或 Skills 设置触发的 Gateway 支持的技能依赖安装，会改用单独的
 `skills.install` 请求路径。
 
 注意：
 
-| 标志/行为                       | 描述                                                                                                                                                                                                                                                                      |
+| 标志／行为                       | 描述                                                                                                                                                                                                                                                                      |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search [query...]`              | 可选查询；省略时浏览默认的 ClawHub 搜索源。                                                                                                                                                                                                                                      |
+| `search [query...]`              | 可选查询；省略它即可浏览默认的 ClawHub 搜索源。                                                                                                                                                                                                               |
 | `search --limit <n>`             | 限制返回的结果数量。                                                                                                                                                                                                                                                           |
-| `install git:owner/repo[@ref]`   | 安装 Git 技能。分支引用可以包含斜杠，例如 `git:owner/repo@feature/foo`。                                                                                                                                                                                                        |
-| `install ./path/to/skill`        | 安装根目录包含 `SKILL.md` 的本地目录。                                                                                                                                                                                                                                          |
-| `install --as <slug>`            | 覆盖 Git 和本地目录安装所推断出的 slug。                                                                                                                                                                                                                                        |
-| `install --version <version>`    | 适用于原生 ClawHub 技能引用，不适用于 `skills-sh:` 引用；镜像引用已经标识了精确同步的提交。                                                                                                                                                                                      |
-| `install --force`                | 覆盖现有工作区中相同 slug 的技能文件夹。                                                                                                                                                                                                                                        |
-| `install/update --force-install` | 在 ClawHub 扫描完成前安装待处理的、由 GitHub 支持的 ClawHub 技能。                                                                                                                                                                                                               |
-| `--global`                       | 指向共享的受管技能目录；不能与 `--agent <id>` 组合使用。                                                                                                                                                                                                                        |
-| `--agent <id>`                   | 指向一个已配置的代理工作区；覆盖当前工作目录推断结果。                                                                                                                                                                                                                          |
-| `update @owner/<slug>`           | 更新单个受跟踪的技能。添加 `--global` 可将目标改为共享的受管技能目录，而不是工作区。                                                                                                                                                                                           |
-| `update --all`                   | 更新所选工作区中受跟踪的 ClawHub 安装；使用 `--global` 时，更新共享的受管技能目录中的安装。                                                                                                                                                                                       |
-| `verify @owner/<slug>`           | 默认打印 ClawHub 的 `clawhub.skill.verify.v1` JSON 信封。`--json` 可作为明确的机器输出写法使用。为兼容性支持使用不带所有者的 slug（当技能已安装或引用明确时）；包含所有者的引用可避免发布者歧义。 |
-| `verify` 来源                     | 当 ClawHub 返回服务器解析的来源信息时，验证 JSON 还会包含固定提交的 `openclaw.verifiedSourceUrl`。不可用或自声明的来源 URL 只保留在原始来源信封中，不会被提升。                                          |
-| `verify` 版本选择器               | 对于已安装的 ClawHub 技能，`verify` 使用 `.clawhub/origin.json`，因此会根据其来源注册表验证已安装版本。`--version` 和 `--tag` 会覆盖版本选择器，但当存在来源元数据时仍使用已安装技能的注册表。                   |
+| `install git:owner/repo[@ref]`   | 安装一个 Git 技能。分支引用可以包含斜杠，例如 `git:owner/repo@feature/foo`。                                                                                                                                                                                     |
+| `install ./path/to/skill`        | 安装根目录包含 `SKILL.md` 的本地目录。                                                                                                                                                                                                                       |
+| `install --as <slug>`            | 覆盖 Git 和本地目录安装时推断出的 slug。                                                                                                                                                                                                                |
+| `install --version <version>`    | 适用于原生 ClawHub 技能引用，不适用于 `skills-sh:` 引用；镜像引用已经标识了精确同步的提交。                                                                                                                                            |
+| `install --force`                | 覆盖现有工作区中具有相同 slug 的技能文件夹。                                                                                                                                                                                                                 |
+| `install/update --force-install` | 在 ClawHub 扫描完成前，安装待处理的、由 GitHub 支持的 ClawHub 技能。                                                                                                                                                                                                  |
+| `--global`                       | 指向共享的受管技能目录；不能与 `--agent <id>` 组合使用。                                                                                                                                                                                                 |
+| `--agent <id>`                   | 指向一个已配置的代理工作区；覆盖当前工作目录推断结果。                                                                                                                                                                                           |
+| `update @owner/<slug>`           | 更新单个受跟踪的技能。添加 `--global` 可将目标设为共享的受管技能目录，而不是工作区。                                                                                                                                                           |
+| `update --all`                   | 更新所选工作区中受跟踪的 ClawHub 安装，或在使用 `--global` 时更新共享的受管技能目录。                                                                                                                                                              |
+| `verify @owner/<slug>`           | 默认打印 ClawHub 的 `clawhub.skill.verify.v1` JSON 信封。接受 `--json` 作为显式的机器输出写法。为了兼容性，在技能已安装或引用明确时接受不带所有者的 slug；带所有者的引用可避免发布者歧义。 |
+| `verify` provenance              | 当 ClawHub 返回服务器解析的源 provenance 时，验证 JSON 还会包含固定提交的 `openclaw.verifiedSourceUrl`。不可用或自行声明的源 URL 仅保留在原始 provenance 信封中，不会被提升。                                          |
+| `verify` version selector        | 对于已安装的 ClawHub 技能，`verify` 使用 `.clawhub/origin.json`，因此会根据技能来源的注册表验证已安装的版本。当存在 origin 元数据时，`--version` 和 `--tag` 会覆盖版本选择器，但仍使用该已安装注册表。                   |
 | `verify --card`                  | 打印生成的 Skill Card Markdown，而不是 JSON。当 ClawHub 返回 `ok: false` 或 `decision: "fail"` 时以非零状态退出；除非 ClawHub 策略发生变化，否则未签名的签名仅提供信息。                                                                            |
-| Skill Card 指纹                  | 已安装的 ClawHub 软件包可以包含生成的 `skill-card.md`。OpenClaw 将验证视为 ClawHub 服务器的决策，不会仅因生成的卡片改变了软件包指纹，就拒绝已安装的技能。                                             |
-| `check --agent <id>`             | 检查所选代理的工作区，并报告哪些就绪技能实际上对该代理的提示词或命令界面可见。                                                                                                                                             |
+| Skill Card fingerprint           | 已安装的 ClawHub 软件包可以包含生成的 `skill-card.md`。OpenClaw 将验证视为 ClawHub 服务器的决定，不会仅仅因为生成的卡片改变了软件包指纹就拒绝已安装的技能。                                             |
+| `check --agent <id>`             | 检查所选代理的工作区，并报告哪些已就绪技能实际上对该代理的提示词或命令界面可见。                                                                                                                                             |
 | `list`                           | 未提供子命令时的默认操作。                                                                                                                                                                                                                                   |
-| `list`/`info`/`check` 输出       | 渲染后的输出写入 stdout。使用 `--json` 时，机器可读的负载仍写入 stdout，以便管道和脚本使用。                                                                                                                                                               |
-| `curator status --json`          | 将当前策展器运行状态和技能生命周期状态作为一个 JSON 对象返回。                                                                                                                                                                                                   |
+| `list`／`info`／`check` output     | 渲染后的输出会发送到 stdout。使用 `--json` 时，机器可读的载荷会保留在 stdout 中，以供管道和脚本使用。                                                                                                                                                               |
+| `curator status --json`          | 返回由较早版本写入的基于存续时间的旧版生命周期状态。每日收集审查不使用此状态。                                                                                                                                                             |
 
 社区 ClawHub 技能的安装和更新会在下载前检查信任状态。
 带版本的社区归档发布会使用精确发布的信任元数据。

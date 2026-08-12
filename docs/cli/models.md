@@ -56,7 +56,9 @@ openclaw models scan
 
 探测结果行可能来自 auth profile、环境凭据或 `models.json`。探测状态桶：`ok`、`auth`、`rate_limit`、`billing`、`timeout`、`format`、`unknown`、`no_model`。
 
-当一次探测从未真正发起模型调用时，预期会看到以下探测详情/原因代码：
+直接运行 `models status --probe` 会在所选 agent 的规范数据库中创建临时内部会话，因此该命令要求对已配置状态目录拥有独占控制权。在探测前，请使用 `openclaw gateway stop` 停止正在运行的 Gateway；命令结束或被中断时，会删除其内部会话并释放状态锁。
+
+当探测从未到达模型调用时，可能出现以下探测详细信息/原因代码：
 
 - `excluded_by_auth_order`：存在已存储的 profile，但显式的 `auth.order.<provider>` 将其省略，因此探测会报告被排除，而不是尝试它。
 - `missing_credential`、`invalid_expires`、`expired`、`unresolved_ref`：profile 已存在，但不符合条件或无法解析。
@@ -193,7 +195,7 @@ openclaw models auth logout openai:manual --yes
 - `paste-token --expires-in <duration>` 会将相对时长（例如 `365d` 或 `12h`）保存为绝对 token 过期时间。
 - 对于 `openai`，OpenAI API key 和 ChatGPT/OAuth token 材料属于不同的认证形态。`sk-...` OpenAI API key 请使用 `paste-api-key`，而 `paste-token` 仅用于 token 认证材料。
 - Anthropic：`setup-token`/`paste-token` 是适用于 `anthropic` 的 OpenClaw 认证路径，但在主机上如果可用，OpenClaw 更倾向于复用 Claude CLI（`claude -p`）。
-- `auth order get/set/clear` 管理某个 provider 的按 agent 认证配置文件顺序覆盖，该信息存储在 `auth-state.json` 中（与 `auth.order.<provider>` 配置键分开）。`set` 按优先级顺序接收一个或多个 profile id；`clear` 则回退到配置/轮询排序。
+- `auth order get/set/clear` 管理某个 provider 的按 agent 认证配置文件顺序覆盖，该信息存储在 `auth-state.json` 中（与 `auth.order.<provider>` 配置键分开）。`set` 按优先级顺序接收一个或多个 profile id；`clear` 则回退到配置/轮询排序
 
 ## 相关
 

@@ -8,13 +8,13 @@ title: "Qianfan"
 
 Qianfan 是百度的 MaaS 平台：一个统一的、兼容 OpenAI 的 API，通过单一端点和 API 密钥将请求路由到许多模型。OpenClaw 将其作为官方外部插件 `@openclaw/qianfan-provider` 提供。
 
-| Property      | Value                                    |
+| 属性          | 值                                       |
 | ------------- | ---------------------------------------- |
-| Provider      | `qianfan`                                |
-| Auth          | `QIANFAN_API_KEY`                        |
-| API           | 兼容 OpenAI (`openai-completions`) |
-| Base URL      | `https://qianfan.baidubce.com/v2`        |
-| Default model | `qianfan/deepseek-v4-pro`                |
+| 服务商        | `qianfan`                                |
+| 认证          | `QIANFAN_API_KEY`                        |
+| API           | 兼容 OpenAI（`openai-completions`）      |
+| 基础 URL      | `https://qianfan.baidubce.com/v2`        |
+| 默认模型      | `qianfan/deepseek-v4-pro`                |
 
 ## 安装插件
 
@@ -39,10 +39,10 @@ openclaw gateway restart
     openclaw onboard --auth-choice qianfan-api-key
     ```
 
-    Non-interactive runs read the key from `--qianfan-api-key <key>` or
-    `QIANFAN_API_KEY`. Onboarding writes the provider config, adds the
-    `QIANFAN` alias for the default model, and sets `qianfan/deepseek-v4-pro`
-    as the default model when none is configured.
+    非交互式运行会从 `--qianfan-api-key <key>` 或
+    `QIANFAN_API_KEY` 读取密钥。引导流程会写入提供商配置，为默认模型添加
+    `QIANFAN` 别名，并在未配置默认模型时将
+    `qianfan/deepseek-v4-pro` 设置为默认模型。
 
   </Step>
   <Step title="验证模型是否可用">
@@ -54,13 +54,13 @@ openclaw gateway restart
 
 ## 内置目录
 
-| Model ref                            | Input       | Context   | Max output | Reasoning | Notes                                                                      |
-| ------------------------------------ | ----------- | --------- | ---------- | --------- | -------------------------------------------------------------------------- |
-| `qianfan/deepseek-v4-pro`            | text        | 1,000,000 | 393,216    | Yes       | Current DeepSeek flagship                                                  |
-| `qianfan/ernie-5.1`                  | text        | 128,000   | 65,536     | No        | Latest ERNIE text flagship                                                 |
-| `qianfan/ernie-5.0`                  | text, image | 128,000   | 65,536     | Yes       | Current multimodal and thinking model                                      |
-| `qianfan/deepseek-v3.2`              | text        | 128,000   | 32,768     | No        | Deprecated onboarding compatibility default; replaced by `deepseek-v4-pro` |
-| `qianfan/ernie-5.0-thinking-preview` | text, image | 128,000   | 65,536     | Yes       | Deprecated alias; replaced by `ernie-5.0`                                  |
+| 模型引用                           | 输入        | 上下文    | 最大输出   | 推理      | 备注                                                                       |
+| ---------------------------------- | ----------- | --------- | ---------- | --------- | -------------------------------------------------------------------------- |
+| `qianfan/deepseek-v4-pro`          | 文本        | 1,000,000 | 393,216    | 是        | 当前 DeepSeek 旗舰模型                                                     |
+| `qianfan/ernie-5.1`                | 文本        | 128,000   | 65,536     | 否        | 最新 ERNIE 文本旗舰模型                                                    |
+| `qianfan/ernie-5.0`                | 文本、图像  | 128,000   | 65,536     | 是        | 当前多模态和思考模型                                                        |
+| `qianfan/deepseek-v3.2`            | 文本        | 128,000   | 32,768     | 否        | 已弃用的接入兼容性默认模型；由 `deepseek-v4-pro` 替代                       |
+| `qianfan/ernie-5.0-thinking-preview` | 文本、图像  | 128,000   | 65,536     | 是        | 已弃用的别名；由 `ernie-5.0` 替代                                          |
 
 目录是静态的；没有实时模型发现。
 
@@ -70,11 +70,11 @@ openclaw gateway restart
 
 ## 配置示例
 
-This example explicitly selects the current DeepSeek flagship instead of the onboarding compatibility default.
+此示例明确选择当前的 DeepSeek 旗舰模型，而不是引导流程中的兼容性默认模型。
 
 ```json5
 {
-  env: { QIANFAN_API_KEY: "bce-v3/ALTAK-..." },
+  env: { vars: { QIANFAN_API_KEY: "bce-v3/ALTAK-..." } },
   agents: {
     defaults: {
       model: { primary: "qianfan/deepseek-v4-pro" },
@@ -111,7 +111,7 @@ This example explicitly selects the current DeepSeek flagship instead of the onb
 ```
 
 <Note>
-Model refs use the `qianfan/` prefix (for example `qianfan/deepseek-v4-pro`).
+模型引用使用 `qianfan/` 前缀（例如 `qianfan/deepseek-v4-pro`）。
 </Note>
 
 <AccordionGroup>

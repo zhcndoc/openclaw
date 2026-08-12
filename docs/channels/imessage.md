@@ -200,7 +200,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
 `imsg` 有两种运行模式。对于 OpenClaw，推荐使用私有 API 模式，因为它能为该通道提供用户期望的原生 iMessage 操作。基础模式仍然适用于低风险安装、初始验证，或无法禁用 SIP 的主机。
 
-- **基本模式**（默认，无需更改 SIP）：通过 `send` 发送文本和媒体、入站监控/历史记录、聊天列表。这就是你在全新安装 `brew install steipete/tap/imsg` 再加上上面的标准 macOS 权限后开箱即用所获得的能力。
+- **基本模式**（默认，无需更改 SIP）：通过 `send` 发送文本和媒体、入站监控／历史记录、聊天列表。这就是你在全新安装 `brew install steipete/tap/imsg` 再加上上面的标准 macOS 权限后开箱即用所获得的能力。
 - **私有 API 模式**：`imsg` 会向 `Messages.app` 注入一个 helper dylib，以调用内部 `IMCore` 函数。这将解锁 `react`、`edit`、`unsend`、`reply`（线程式）、`sendWithEffect`、`poll` 和 `poll-vote`（原生 Messages 投票）、`renameGroup`、`setGroupIcon`、`addParticipant`、`removeParticipant`、`leaveGroup`，以及输入指示和已读回执。
 
 本页推荐的操作面需要私有 API 模式。`imsg` README 对此要求写得很明确：
@@ -239,7 +239,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
    sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist DisableLibraryValidation -bool true
    ```
 
-   **macOS 26 (Tahoe)，已在 26.5.1 上验证：** 关闭 SIP **再加上**上面的 `DisableLibraryValidation` 命令，就足以在 26.0 到 26.5.x 之间注入 helper。**不需要 boot-args。** 该 plist 是决定性因素，也是 Tahoe 上注入失败时最常遗漏的一步：
+   **macOS 26（Tahoe），已在 26.5.1 上验证：** 关闭 SIP **再加上**上面的 `DisableLibraryValidation` 命令，就足以在 26.0 到 26.5.x 之间注入 helper。**不需要 boot-args。** 该 plist 是决定性因素，也是 Tahoe 上注入失败时最常遗漏的一步：
    - **有 plist：** `imsg launch` 会完成注入，并且 `imsg status` 会报告 `advanced_features: true`。
    - **没有 plist（即使 SIP 已关闭）：** `imsg launch` 会失败，并报出 `Failed to launch: Timeout waiting for Messages.app to initialize`。AMFI 在加载时拒绝了 adhoc helper，因此 bridge 永远无法就绪，启动最终超时。这个超时是大多数人在 Tahoe 上遇到的症状；修复方法就是上面的 plist，而不是采取更激进的手段。
 
@@ -267,8 +267,8 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
 如果根据你的威胁模型不能关闭 SIP：
 
-- `imsg` 会回退到基本模式——仅支持文本 + 媒体 + 接收。
-- OpenClaw 插件仍会展示文本/媒体发送和入站监控；它会根据按方法能力门控隐藏 `react`、`edit`、`unsend`、`reply`、`sendWithEffect` 和群组操作。
+- `imsg` 会回退到基本模式——仅支持文本＋媒体＋接收。
+- OpenClaw 插件仍会展示文本／媒体发送和入站监控；它会根据按方法能力门控隐藏 `react`、`edit`、`unsend`、`reply`、`sendWithEffect` 和群组操作。
 - 你可以使用一台独立的非 Apple Silicon Mac（或专用 bot Mac）在关闭 SIP 的情况下承担 iMessage 工作负载，同时在主设备上保持 SIP 启用。请参见下面的 [专用 bot macOS 用户（独立 iMessage 身份）](#deployment-patterns)。
 
 ## 访问控制和路由
@@ -411,15 +411,15 @@ iMessage 聊天可以绑定到 ACP 会话。
 ```json5
 {
   agents: {
-    list: [
-      {
-        id: "codex",
+    entries: {
+      codex: {
+        default: true,
         runtime: {
           type: "acp",
           acp: { agent: "codex", backend: "acpx", mode: "persistent" },
         },
       },
-    ],
+    },
   },
   bindings: [
     {

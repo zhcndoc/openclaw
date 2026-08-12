@@ -35,21 +35,21 @@ OpenClaw 有两个独立的流式层，并且当前**没有真正的
                    └─ 频道发送（区块回复）
 ```
 
-- `text_delta/events`: 模型流事件（对于非流式模型，可能是稀疏的）。
-- `chunker`: `EmbeddedBlockChunker`，应用最小/最大边界 + 中断偏好。
-- `channel send`: 实际的出站消息（区块回复）。
+- `text_delta/events`：模型流事件（对于非流式模型，可能是稀疏的）。
+- `chunker`：`EmbeddedBlockChunker`，应用最小／最大边界＋中断偏好。
+- `channel send`：实际的出站消息（区块回复）。
 
 **控制项**（除非另有说明，均位于 `agents.defaults` 下）：
 
 | Key                                                          | Values / shape                                                          | Default    |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------- | ---------- |
-| `blockStreamingDefault`                                      | `"on"` / `"off"`                                                        | `"off"`    |
-| `blockStreamingBreak`                                        | `"text_end"` / `"message_end"`                                          | -          |
+| `blockStreamingDefault`                                      | `"on"`／`"off"`                                                        | `"off"`    |
+| `blockStreamingBreak`                                        | `"text_end"`／`"message_end"`                                          | -          |
 | `blockStreamingChunk`                                        | `{ minChars, maxChars, breakPreference? }`                              | -          |
 | `blockStreamingCoalesce`                                     | `{ minChars?, maxChars?, idleMs? }`（发送前合并流式区块）              | -          |
-| `*.streaming.block.enabled`（频道覆盖）                     | `true` / `false`，按频道（以及按账户）强制启用区块流式传输              | -          |
+| `*.streaming.block.enabled`（频道覆盖）                     | `true`／`false`，按频道（以及按账户）强制启用区块流式传输              | -          |
 | `*.textChunkLimit`（例如 `channels.whatsapp.textChunkLimit`） | number，硬上限                                                      | 4000       |
-| `*.streaming.chunkMode`                                      | `"length"` / `"newline"`                                                | `"length"` |
+| `*.streaming.chunkMode`                                      | `"length"`／`"newline"`                                                | `"length"` |
 | `channels.discord.maxLinesPerMessage`                        | number，软行数上限，用于拆分过高的回复以避免 UI 裁剪                 | 17         |
 
 `streaming.chunkMode: "newline"` 会按空白行（段落边界）拆分，
@@ -57,7 +57,7 @@ OpenClaw 有两个独立的流式层，并且当前**没有真正的
 
 捆绑频道将这些覆盖项写作
 `channels.<id>.streaming.{chunkMode,block.enabled,block.coalesce}`。扁平形式的
-`*.chunkMode` / `*.blockStreaming` / `*.blockStreamingCoalesce` 在任何地方都会被拒绝。
+`*.chunkMode`／`*.blockStreaming`／`*.blockStreamingCoalesce` 在任何地方都会被拒绝。
 `openclaw doctor --fix` 会将旧版配置迁移为嵌套形式。
 
 **`blockStreamingBreak` 的边界语义**：
@@ -224,11 +224,11 @@ Discord 未设置 `streaming` 时默认为 `off`，Telegram 默认为
 
 支持的场景：
 
-- **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流处于活动状态时，默认会将工具进度和 Codex 前言更新流式传输到实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
-- Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用状态即可保留该已发布行为。
-- **Mattermost** 会在 `partial` 和 `progress` 模式下，将工具活动合并到一条预览消息中；在 `block` 模式下，则会在文本块之间发送一条工具活动消息（见上文）。
-- 工具进度编辑遵循当前激活的预览流模式；当预览流为 `off` 或分块流已接管消息时，会跳过这些更新。在 Telegram 上，`streaming.mode: "off"` 表示仅发送最终结果：通用进度提示也会被抑制，而不会作为独立状态消息发送；但审批提示、媒体载荷和错误仍会正常传递。
-- 若要保留预览流但隐藏工具进度行，请将该频道的 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，且在所有模式下都会生效）。若要在隐藏命令/执行文本的同时保留工具进度行可见，请将 `streaming.preview.commandText` 设置为 `"status"`，或将 `streaming.progress.commandText` 设置为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`。
+- **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流处于活动状态时，默认会将工具进度和 Codex 前言更新流式传入实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
+- 自 `v2026.4.22` 起，Telegram 已启用工具进度预览更新；保持启用状态即可保留该已发布行为。
+- **Mattermost** 会在 `partial` 和 `progress` 模式下将工具活动合并到一条预览帖子中，或在 `block` 模式下将其作为文本块之间的一条工具活动帖子（见上文）。
+- 工具进度编辑遵循当前生效的预览流模式；当预览流为 `off` 或消息已由块流接管时，会跳过这些编辑。在 Telegram 上，`streaming.mode: "off"` 仅发送最终内容：通用进度提示也会被抑制，而不会作为独立状态消息发送；但审批提示、媒体载荷和错误仍会正常路由。
+- 若要保留预览流但隐藏工具进度行，请针对相应频道将 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，并且在所有模式下都会生效）。若要在隐藏命令/执行文本的同时保留工具进度行，请将 `streaming.preview.commandText` 或 `streaming.progress.commandText` 设置为 `"status"`（默认值）。将任一选项设置为 `"raw"` 即可选择启用命令文本。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`。
 
 ## 进度草稿渲染
 

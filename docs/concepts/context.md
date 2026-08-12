@@ -7,7 +7,7 @@ read_when:
 title: "上下文"
 ---
 
-"Context" 是 **OpenClaw 在一次运行中发送给模型的所有内容**。它受模型的 **上下文窗口**（token 限制）约束。
+“Context” 是 **OpenClaw 在一次运行中发送给模型的所有内容**。它受模型的 **上下文窗口**（token 限制）约束。
 
 初学者心智模型：
 
@@ -123,7 +123,7 @@ Injected workspace files:
 
 大文件会基于每个文件使用 `agents.defaults.bootstrapMaxChars` 进行截断（默认 `20000` 个字符）。OpenClaw 还会对所有文件的总注入量使用 `agents.defaults.bootstrapTotalMaxChars` 设置上限（默认 `60000` 个字符）。`/context` 会显示**原始 vs 注入**大小以及是否发生了截断。
 
-当发生截断时，运行时可以在项目上下文下方注入一个上下文内警告块。可通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `always`）进行配置。
+发生截断时，运行时会在 Project Context 下方注入一条简洁的提示，说明部分引导文件已被截断；每个文件的名称和大小会保留在 `/context` 和其他诊断信息中。此提示为内置内容，无法配置。
 
 ## 技能：按需注入 vs 按需加载
 
@@ -148,7 +148,7 @@ Injected workspace files:
 - **指令**：`/think`、`/fast`、`/verbose`、`/trace`、`/reasoning`、`/elevated`、`/exec`、`/model`、`/queue` 会在模型看到消息之前被移除。
   - 仅包含指令的消息会持久化会话设置。
   - 普通消息中的内联指令会作为按消息生效的提示。
-- **内联快捷方式**（仅允许名单中的发送者）：普通消息中的某些 `/...` 标记可以立即运行（例如：“hey /status”），并会在模型看到剩余文本之前被移除。
+- **内联快捷方式**（仅允许名单中的发送者）：普通消息中的某些 `/...` 标记可以立即运行（例如：“嗨 /status”），并会在模型看到剩余文本之前被移除。
 
 详情：[斜杠命令](/tools/slash-commands)。
 

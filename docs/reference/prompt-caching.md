@@ -14,7 +14,7 @@ OpenClaw 会在上游 API 暴露这些计数器的地方，将提供方使用情
 提供方参考：
 
 - [Anthropic 提示缓存](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
-- [OpenAI 提示缓存](https://developers.openai.com/api/docs/guides/prompt-caching)
+- [OpenAI 提示缓存](https://developers.openai.com/api/docs/guides/prompt-caching)。
 
 ## 主要控制项
 
@@ -58,7 +58,7 @@ agents:
       ttl: "1h"
 ```
 
-完整行为请参见 [Session pruning](/concepts/session-pruning)。
+完整行为请参见 [会话修剪](/concepts/session-pruning)。
 
 ### 心跳保温
 
@@ -78,9 +78,9 @@ agents:
 - `cacheRetention` 支持 `anthropic` 和 `anthropic-vertex` 提供方，以及在 `cacheRetention` 明确设置时，支持 `amazon-bedrock` 上的 Claude 模型和自定义 `anthropic-messages` 兼容端点。
 - 当未设置时，OpenClaw 会为直接 Anthropic（仅 `anthropic` 和 `anthropic-vertex` 提供方）默认填充 `cacheRetention: "short"`；其他 Anthropic 系路由需要显式指定值。
 - 原生 Anthropic Messages 响应会暴露 `cache_read_input_tokens` 和 `cache_creation_input_tokens`，分别映射为 `cacheRead` 和 `cacheWrite`。
-- `cacheRetention: "short"` 映射到默认的 5 分钟临时缓存。`cacheRetention: "long"` 在显式设置时会请求 1 小时 TTL（`cache_control: { type: "ephemeral", ttl: "1h" }`）。隐式/由环境驱动的长保留（`OPENCLAW_CACHE_RETENTION=long` 且未显式设置 `cacheRetention`）仅在 `api.anthropic.com` 或 Vertex AI（`aiplatform.googleapis.com` / `*-aiplatform.googleapis.com`）主机上升级为 1 小时 TTL；其他主机仍保持 5 分钟缓存。
+- `cacheRetention: "short"` 映射到默认的 5 分钟临时缓存。`cacheRetention: "long"` 在显式设置时会请求 1 小时 TTL（`cache_control: { type: "ephemeral", ttl: "1h" }`）。隐式／由环境驱动的长保留（`OPENCLAW_CACHE_RETENTION=long` 且未显式设置 `cacheRetention`）仅在 `api.anthropic.com` 或 Vertex AI（`aiplatform.googleapis.com`／`*-aiplatform.googleapis.com`）主机上升级为 1 小时 TTL；其他主机仍保持 5 分钟缓存。
 
-来源: `packages/ai/src/transports/anthropic-payload-policy.ts`（`resolveAnthropicEphemeralCacheControl`, `isLongTtlEligibleEndpoint`）。
+来源：`packages/ai/src/transports/anthropic-payload-policy.ts`（`resolveAnthropicEphemeralCacheControl`、`isLongTtlEligibleEndpoint`）。
 
 ### OpenAI（直接 API）
 
@@ -93,13 +93,13 @@ agents:
 
 ### Amazon Bedrock
 
-- Anthropic Claude 模型引用（`amazon-bedrock/*anthropic.claude*`，以及 AWS 系统推理配置文件前缀 `us.`/`eu.`/`global.anthropic.claude*`）支持显式 `cacheRetention` 透传。
+- Anthropic Claude 模型引用（`amazon-bedrock/*anthropic.claude*`，以及 AWS 系统推理配置文件前缀 `us.`／`eu.`／`global.anthropic.claude*`）支持显式 `cacheRetention` 透传。
 - 非 Anthropic 的 Bedrock 模型（例如 `amazon.nova-*`）在运行时会解析为不保留缓存，无论配置了什么 `cacheRetention` 值。
 - 模糊的 Bedrock 应用推理配置文件 ARN（不包含 `claude` 的配置文件 ID）也会在未显式设置 `cacheRetention` 时解析为不保留缓存，因为仅凭 ARN 无法推断模型家族。
 
 ### OpenRouter
 
-对于 `openrouter/anthropic/*` 模型引用，OpenClaw 会在 system/developer 提示块上注入 Anthropic 的 `cache_control` 标记，但前提是请求仍然指向一个已验证的 OpenRouter 路由（默认端点上的 `openrouter`，或任何解析到 `openrouter.ai` 的 provider/base URL）。如果把模型改指向任意 OpenAI 兼容代理 URL，则会停止注入。
+对于 `openrouter/anthropic/*` 模型引用，OpenClaw 会在 system／developer 提示块上注入 Anthropic 的 `cache_control` 标记，但前提是请求仍然指向一个已验证的 OpenRouter 路由（默认端点上的 `openrouter`，或任何解析到 `openrouter.ai` 的 provider／base URL）。如果把模型改指向任意 OpenAI 兼容代理 URL，则会停止注入。
 
 `contextPruning.mode: "cache-ttl"` 允许用于 `openrouter/anthropic/*`、`openrouter/deepseek/*`、`openrouter/moonshot/*`、`openrouter/moonshotai/*` 和 `openrouter/zai/*` 模型引用，因为这些路由会在提供方侧处理提示缓存，而不需要 OpenClaw 注入标记。
 
@@ -110,16 +110,16 @@ OpenRouter 上的 DeepSeek 缓存构建尽力而为，可能需要几秒钟；�
 ### Google Gemini（直接 API）
 
 - 直接 Gemini 传输（`api: "google-generative-ai"`）通过上游 `cachedContentTokenCount` 报告缓存命中，并映射为 `cacheRead`。
-- 适用的模型家族：`gemini-2.5*` 和 `gemini-3*`（不包括该前缀匹配之外的 Live/preview 变体，例如 `gemini-live-2.5-flash-preview`）。
+- 适用的模型家族：`gemini-2.5*` 和 `gemini-3*`（不包括该前缀匹配之外的 Live／preview 变体，例如 `gemini-live-2.5-flash-preview`）。
 - 当在适用模型上设置了 `cacheRetention` 时，OpenClaw 会自动为 system prompt 创建、复用并刷新一个 `cachedContents` 资源——无需手动提供 cached-content 句柄。TTL 在 `cacheRetention: "short"` 时为 `300s`，在 `"long"` 时为 `3600s`。
 - 你仍然可以通过 `params.cachedContent`（或旧版 `params.cached_content`）传入一个已存在的 Gemini cached-content 句柄；显式句柄会完全跳过自动缓存管理路径。
-- 这与 Anthropic/OpenAI 的提示前缀缓存不同：OpenClaw 为 Gemini 管理的是提供方原生的 `cachedContents` 资源，而不是注入内联缓存标记。
+- 这与 Anthropic／OpenAI 的提示前缀缓存不同：OpenClaw 为 Gemini 管理的是提供方原生的 `cachedContents` 资源，而不是注入内联缓存标记。
 
 来源：`src/agents/embedded-agent-runner/google-prompt-cache.ts`。
 
 ### CLI-harness 提供方（Claude Code、Gemini CLI）
 
-输出 JSONL usage 事件的 CLI 后端（`jsonlDialect: "claude-stream-json"` 或 `"gemini-stream-json"`）会经过一个共享的 usage 解析器，该解析器识别多种字段名变体，包括一个普通的 `cached` 计数器并将其映射为 `cacheRead`。当 CLI 的 JSON 负载省略直接的输入 token 字段时，OpenClaw 会将其推导为 `input_tokens - cached`。这仅仅是 usage 规范化——不会为这些由 CLI 驱动的模型创建 Anthropic/OpenAI 风格的提示缓存标记。
+输出 JSONL usage 事件的 CLI 后端（`jsonlDialect: "claude-stream-json"` 或 `"gemini-stream-json"`）会经过一个共享的 usage 解析器，该解析器识别多种字段名变体，包括一个普通的 `cached` 计数器并将其映射为 `cacheRead`。当 CLI 的 JSON 负载省略直接的输入 token 字段时，OpenClaw 会将其推导为 `input_tokens - cached`。这仅仅是 usage 规范化——不会为这些由 CLI 驱动的模型创建 Anthropic／OpenAI 风格的提示缓存标记。
 
 来源：`src/agents/cli-output.ts`（`toCliUsage`）。
 
@@ -181,7 +181,7 @@ agents:
 OpenClaw 运行一个组合式实时缓存回归门，覆盖重复前缀、工具轮次、图像轮次、MCP 风格工具转写，以及一个 Anthropic 无缓存对照。
 
 - `src/agents/live-cache-regression.live.test.ts`
-- `src/agents/live-cache-regression-runner.ts`
+- `src/agents/test-helpers/live-cache-regression-runner.ts`
 - `src/agents/live-cache-regression-baseline.ts`
 
 使用以下命令运行：
@@ -221,20 +221,9 @@ OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_CACHE_TEST=1 pnpm test:live:cache
 diagnostics:
   cacheTrace:
     enabled: true
-    filePath: "~/.openclaw/logs/cache-trace.jsonl" # 可选
-    includeMessages: false # 默认 true
-    includePrompt: false # 默认 true
-    includeSystem: false # 默认 true
 ```
 
-默认值：
-
-| 键                | 默认值                                       |
-| ----------------- | -------------------------------------------- |
-| `filePath`        | `$OPENCLAW_STATE_DIR/logs/cache-trace.jsonl` |
-| `includeMessages` | `true`                                       |
-| `includePrompt`   | `true`                                       |
-| `includeSystem`    | `true`                                       |
+`enabled` 默认为 `false`。否则，缓存跟踪会写入 `$OPENCLAW_STATE_DIR/logs/cache-trace.jsonl`，并默认包含消息、提示词文本和系统提示词。输出路径和负载包含内容的覆盖设置仅可通过环境变量控制，用于一次性调试。
 
 ### 环境变量开关（一次性调试）
 
@@ -248,11 +237,11 @@ diagnostics:
 
 ### 需要检查什么
 
-- Cache trace 事件是 JSONL 格式，包含分阶段快照，例如 `session:loaded`、`prompt:before`、`stream:context` 和 `session:after`。
+- 缓存跟踪事件采用 JSONL 格式，包含分阶段快照，例如 `session:loaded`、`prompt:before`、`stream:context` 和 `session:after`。
 - 每轮的缓存 token 影响会在常规使用界面中显示：`cacheRead` 和 `cacheWrite` 会出现在 `/usage tokens`、`/status`、会话使用摘要以及自定义的 `messages.usageTemplate` 布局中。
 - 对于 Anthropic，在缓存启用时，预期会同时出现 `cacheRead` 和 `cacheWrite`。
 - 对于 OpenAI，在缓存命中时预期会出现 `cacheRead`；`cacheWrite` 仅会在包含它的 Responses API 负载中填充（见上方的 [OpenAI](#openai-direct-api)）。
-- OpenAI 还会返回诸如 `x-request-id`、`openai-processing-ms` 和 `x-ratelimit-*` 之类的跟踪与速率限制头；可使用它们进行请求跟踪，但缓存命中统计仍应来自 usage 负载，而不是来自头部。
+- OpenAI 还会返回诸如 `x-request-id`、`openai-processing-ms` 和 `x-ratelimit-*` 之类的跟踪与速率限制标头；可使用它们进行请求跟踪，但缓存命中统计仍应来自 usage 负载，而不是来自标头。
 
 ## 快速故障排查
 
@@ -267,7 +256,7 @@ diagnostics:
 - [Anthropic](/providers/anthropic)
 - [Token 使用与成本](/reference/token-use)
 - [会话修剪](/concepts/session-pruning)
-- [网关配置参考](/gateway/configuration-reference)
+- [网关配置参考](/gateway/configuration-reference)。
 
 ## 相关
 

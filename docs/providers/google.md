@@ -6,13 +6,13 @@ read_when:
   - 需要 Google AI Studio、Vertex AI 或 Gemini CLI 运行时指南
 ---
 
-Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时还提供图像生成、媒体理解（图像/音频/视频）、文本转语音，以及通过 Gemini Grounding 实现的网页搜索。
+Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时还提供图像生成、媒体理解（图像／音频／视频）、文本转语音，以及通过 Gemini Grounding 实现的网页搜索。
 
 - 提供商：`google`
 - 身份验证：`GEMINI_API_KEY` 或 `GOOGLE_API_KEY`
 - API：Google Gemini API
 - 托管云提供商：`google-vertex`，使用 Google Cloud 应用程序默认凭据
-- 可选运行时：`agentRuntime.id: "google-gemini-cli"` 通过本地 Gemini CLI 运行显式配置的模型
+- 可选运行时：`agentRuntime.id: "google-gemini-cli"` 通过本地 Gemini CLI 运行显式配置的模型。
 
 ## 开始使用
 
@@ -34,7 +34,7 @@ Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时�
         或直接传入密钥：
 
         ```bash
-        openclaw onboard --non-interactive \
+        openclaw onboard --non-interactive --accept-risk --skip-health \
           --mode local \
           --auth-choice gemini-api-key \
           --gemini-api-key "$GEMINI_API_KEY"
@@ -211,8 +211,10 @@ Gemini 2.5 Pro 仅在思考模式下工作，并且会拒绝显式的
 {
   agents: {
     defaults: {
-      imageGenerationModel: {
-        primary: "google/gemini-3.1-flash-image",
+      mediaModels: {
+        image: {
+          primary: "google/gemini-3.1-flash-image",
+        },
       },
     },
   },
@@ -228,7 +230,7 @@ Gemini 2.5 Pro 仅在思考模式下工作，并且会拒绝显式的
 内置的 `google` 插件还通过共享的
 `video_generate` 工具注册视频生成。
 
-- 默认视频模型: `google/veo-3.1-fast-generate-preview`
+- 默认视频模型：`google/veo-3.1-fast-generate-preview`
 - 模式：文本转视频、图像转视频，以及单视频参考流程
 - 支持 `aspectRatio`（`16:9`、`9:16`）和 `resolution`（`720P`、`1080P`）；Veo 目前不支持音频输出
 - 支持时长：**4、6 或 8 秒**（其他值会自动调整到最接近的允许值）
@@ -239,8 +241,10 @@ Gemini 2.5 Pro 仅在思考模式下工作，并且会拒绝显式的
 {
   agents: {
     defaults: {
-      videoGenerationModel: {
-        primary: "google/veo-3.1-fast-generate-preview",
+      mediaModels: {
+        video: {
+          primary: "google/veo-3.1-fast-generate-preview",
+        },
       },
     },
   },
@@ -269,8 +273,10 @@ Gemini 2.5 Pro 仅在思考模式下工作，并且会拒绝显式的
 {
   agents: {
     defaults: {
-      musicGenerationModel: {
-        primary: "google/lyria-3-clip-preview",
+      mediaModels: {
+        music: {
+          primary: "google/lyria-3-clip-preview",
+        },
       },
     },
   },

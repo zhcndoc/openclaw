@@ -34,8 +34,10 @@ OpenClaw 提供了一个内置的 `fal` 提供程序，用于托管图像、视�
     {
       agents: {
         defaults: {
-          imageGenerationModel: {
-            primary: "fal/fal-ai/flux/dev",
+          mediaModels: {
+            image: {
+              primary: "fal/fal-ai/flux/dev",
+            },
           },
         },
       },
@@ -49,40 +51,40 @@ OpenClaw 提供了一个内置的 `fal` 提供程序，用于托管图像、视�
 内置的 `fal` 图像生成提供程序默认使用
 `fal/fal-ai/flux/dev`。
 
-| Capability     | Value                                                              |
-| -------------- | ------------------------------------------------------------------ |
-| Max images     | 每次请求最多 4 张；Krea 2：每次请求 1 张                           |
-| Size overrides | `1024x1024`, `1024x1536`, `1536x1024`, `1024x1792`, `1792x1024`    |
-| Aspect ratio   | 除 Flux 图像到图像外，其他所有地方都支持                           |
-| Resolution     | `1K`、`2K`、`4K`（见下方各模型限制）                                 |
-| Output format  | `png`（默认）或 `jpeg`；Krea 2 会拒绝 `outputFormat` 覆盖项         |
+| 能力           | 值                                                                |
+| -------------- | ----------------------------------------------------------------- |
+| 最大图像数     | 每次请求最多 4 张；Krea 2：每次请求 1 张                          |
+| 尺寸覆盖项     | `1024x1024`、`1024x1536`、`1536x1024`、`1024x1792`、`1792x1024` |
+| 宽高比         | 除 Flux 图像到图像外，其他所有地方都支持                          |
+| 分辨率         | `1K`、`2K`、`4K`（见下方各模型限制）                              |
+| 输出格式       | `png`（默认）或 `jpeg`；Krea 2 会拒绝 `outputFormat` 覆盖项      |
 
 编辑请求（通过共享的 `image` / `images` 参数引用参考图像）
 会路由到每个模型各自的编辑端点，并遵循各模型的参考图像限制：
 
-| Model family              | Model ref after `fal/`                 | Edit endpoint     | Max reference images |
-| ------------------------- | -------------------------------------- | ----------------- | -------------------- |
-| Flux 和其他 fal 模型     | `fal-ai/flux/dev`（默认）               | `/image-to-image` | 1                    |
-| GPT Image                 | `openai/gpt-image-*`                   | `/edit`           | 10                   |
-| Grok Imagine              | `xai/grok-imagine-image`               | `/edit`           | 3                    |
-| Nano Banana（旧版）       | `fal-ai/nano-banana`                   | `/edit`           | 3                    |
-| Nano Banana 2             | `fal-ai/nano-banana-*`                 | `/edit`           | 14                   |
-| Nano Banana 2 Lite        | `google/nano-banana-2-lite`            | `/edit`           | 14                   |
-| Krea 2                    | `krea/v2/{medium,large}/text-to-image` | none（风格参考）  | 10 个风格参考          |
+| 模型系列                   | `fal/` 后的模型引用                  | 编辑端点          | 最大参考图像数       |
+| -------------------------- | ------------------------------------ | ----------------- | -------------------- |
+| Flux 和其他 fal 模型       | `fal-ai/flux/dev`（默认）            | `/image-to-image` | 1                    |
+| GPT Image                  | `openai/gpt-image-*`                 | `/edit`           | 10                   |
+| Grok Imagine               | `xai/grok-imagine-image`             | `/edit`           | 3                    |
+| Nano Banana（旧版）        | `fal-ai/nano-banana`                 | `/edit`           | 3                    |
+| Nano Banana 2              | `fal-ai/nano-banana-*`               | `/edit`           | 14                   |
+| Nano Banana 2 Lite         | `google/nano-banana-2-lite`          | `/edit`           | 14                   |
+| Krea 2                     | `krea/v2/{medium,large}/text-to-image` | 无（风格参考）    | 10 个风格参考        |
 
 <Warning>
 Flux 的图像到图像请求**不支持** `aspectRatio` 覆盖项。GPT
 Image 和 Nano Banana 2 的编辑请求使用 fal 的 `/edit` 端点，并接受
-宽高比提示。Nano Banana 2 还接受额外的原生超宽/超高比例，
+宽高比提示。Nano Banana 2 还接受额外的原生超宽／超高比例，
 例如 `4:1`、`1:4`、`8:1` 和 `1:8`；Krea 2 会验证其自身较小的
 宽高比子集。Grok Imagine 有自己的比例列表（包括 `2:1`、
-`20:9`、`19.5:9` 及其反向比例），并且只接受 `1K`/`2K` 分辨率；
+`20:9`、`19.5:9` 及其反向比例），并且只接受 `1K`／`2K` 分辨率；
 旧版 Nano Banana 和 Nano Banana 2 Lite 会拒绝 `resolution` 覆盖项。
 </Warning>
 
 Krea 2 模型使用 fal 的原生 Krea 负载架构。OpenClaw 发送
 `aspect_ratio`、`creativity` 和 `image_style_references`，而不是 Flux 使用的
-通用 `image_size` / 编辑端点负载。模型引用为：
+通用 `image_size`／编辑端点负载。模型引用为：
 
 - `fal/krea/v2/medium/text-to-image`
 - `fal/krea/v2/large/text-to-image`
@@ -107,8 +109,10 @@ OpenClaw 会拒绝 Krea 请求中的 `outputFormat` 覆盖项。
 {
   agents: {
     defaults: {
-      imageGenerationModel: {
-        primary: "fal/krea/v2/medium/text-to-image",
+      mediaModels: {
+        image: {
+          primary: "fal/krea/v2/medium/text-to-image",
+        },
       },
     },
   },
@@ -163,8 +167,10 @@ OpenClaw 会拒绝 Krea 请求中的 `outputFormat` 覆盖项。
     {
       agents: {
         defaults: {
-          videoGenerationModel: {
-            primary: "fal/bytedance/seedance-2.0/fast/text-to-video",
+          mediaModels: {
+            video: {
+              primary: "fal/bytedance/seedance-2.0/fast/text-to-video",
+            },
           },
         },
       },
@@ -177,8 +183,10 @@ OpenClaw 会拒绝 Krea 请求中的 `outputFormat` 覆盖项。
     {
       agents: {
         defaults: {
-          videoGenerationModel: {
-            primary: "fal/bytedance/seedance-2.0/fast/reference-to-video",
+          mediaModels: {
+            video: {
+              primary: "fal/bytedance/seedance-2.0/fast/reference-to-video",
+            },
           },
         },
       },
@@ -197,8 +205,10 @@ OpenClaw 会拒绝 Krea 请求中的 `outputFormat` 覆盖项。
     {
       agents: {
         defaults: {
-          videoGenerationModel: {
-            primary: "fal/fal-ai/heygen/v2/video-agent",
+          mediaModels: {
+            video: {
+              primary: "fal/fal-ai/heygen/v2/video-agent",
+            },
           },
         },
       },
@@ -211,12 +221,12 @@ OpenClaw 会拒绝 Krea 请求中的 `outputFormat` 覆盖项。
 
 内置的 `fal` 插件还为共享的 `music_generate` 工具注册了一个音乐生成提供程序。
 
-| Capability    | Value                                                                                                                    |
+| 能力          | 值                                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Default model | `fal/fal-ai/minimax-music/v2.6`                                                                                          |
-| Models        | `fal-ai/minimax-music/v2.6` (mp3), `fal-ai/ace-step/prompt-to-audio` (wav), `fal-ai/stable-audio-25/text-to-audio` (wav) |
-| Max duration  | 240 秒                                                                                                                   |
-| Runtime       | 同步请求加生成音频下载                                                                                                     |
+| 默认模型      | `fal/fal-ai/minimax-music/v2.6`                                                                                          |
+| 模型          | `fal-ai/minimax-music/v2.6`（mp3）、`fal-ai/ace-step/prompt-to-audio`（wav）、`fal-ai/stable-audio-25/text-to-audio`（wav） |
+| 最大时长      | 240 秒                                                                                                                   |
+| 运行时        | 同步请求加生成音频下载                                                                                                     |
 
 将 fal 设为默认音乐提供程序：
 
@@ -224,8 +234,10 @@ OpenClaw 会拒绝 Krea 请求中的 `outputFormat` 覆盖项。
 {
   agents: {
     defaults: {
-      musicGenerationModel: {
-        primary: "fal/fal-ai/minimax-music/v2.6",
+      mediaModels: {
+        music: {
+          primary: "fal/fal-ai/minimax-music/v2.6",
+        },
       },
     },
   },

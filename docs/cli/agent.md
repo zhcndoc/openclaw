@@ -28,7 +28,7 @@ cat task.md | openclaw agent exec --message-file - --json
 
 配置分三部分分层，且完全在内存中处理：exec 会组合运行配置，并将其作为当前进程的运行时配置发布，而不是将副本写入磁盘。只有在配置未设置某项时，exec 默认值才会生效：跳过工作区引导文件、关闭 agent 沙箱、选择 `coding` 工具配置、将文件系统工具限制在 `--cwd` 范围内，并在无头回合所需的完整执行策略下运行。配置中设置的任何内容都会覆盖这些默认值，因此已配置的沙箱、shell 环境或工具配置不会被降级；当配置启用沙箱时，exec 的主机路由仍由沙箱负责。调用本身始终拥有最后决定权：运行范围限定为 `--cwd`，且永远不会执行引导。
 
-使用 `--state-dir <dir>` 保留会话和其他运行状态。该目录必须已存在，命令不会创建或删除它。
+使用 `--state-dir <dir>` 保留会话和其他运行状态。该目录必须已经存在，且命令绝不会创建或删除它。保留的状态目录要求独占所有权：当 Gateway 或其他嵌入式写入器拥有该目录时，exec 会拒绝启动，然后在整个运行期间持有状态锁。省略 `--state-dir` 可使用隔离的临时状态，或者先使用 `openclaw gateway stop` 停止 Gateway。
 
 当 exec 使用环境配置或固定配置时，已安装插件仍会从操作员普通的插件根目录解析；而会话及其他运行状态则使用临时目录。在这些模式下，`--state-dir` 仅控制运行状态；对于由已安装插件提供的已配置提供商、频道或 harness，不要求设置该参数。
 
@@ -85,10 +85,10 @@ openclaw agent exec "Inspect this repository" \
 
 运行统计字段是可累加的，并且可能缺失：
 
-- `costUsd`: 根据运行累计使用量估算的美元成本，包括缓存读取/写入定价；模型没有成本数据时省略。
+- `costUsd`: 根据运行累计使用量估算的美元成本，包括缓存读取／写入定价；模型没有成本数据时省略。
 - `codeModeEngaged`: 仅当 [code mode](/tools/code-mode) 在本次运行中实际接管模型工具界面时才为 `true`。仅设置 `tools.codeMode.enabled=true` 并不能保证其启用；而由 harness 接管其原生工具界面的情况下，该值始终为 `false`，因为 OpenClaw code mode 不会接管这些工具。
-- `assistantTurns`: 本次运行中已完成的 assistant/provider 往返次数；没有完成任何往返时省略。
-- `bridgeCalls`: 内部工具搜索/Code Mode 桥接调用次数（`search`/`describe`/`call`）。这些调用对提供商不可见；外部工具调用会保留在完整运行元数据的 `meta.toolSummary.calls` 中。
+- `assistantTurns`: 本次运行中已完成的 assistant／provider 往返次数；没有完成任何往返时省略。
+- `bridgeCalls`: 内部工具搜索／Code Mode 桥接调用次数（`search`／`describe`／`call`）。这些调用对提供商不可见；外部工具调用会保留在完整运行元数据的 `meta.toolSummary.calls` 中。
 - `toolSummary`: 嵌入式运行中外部模型可见的工具调用次数、工具名称、失败次数以及工具总耗时。
 
 在 `openclaw agent --json` 响应中，agent 运行统计字段位于 `meta.agentMeta`；外部工具摘要仍位于 `meta.toolSummary`。
@@ -101,7 +101,7 @@ openclaw agent exec "Inspect this repository" \
 pnpm qa:code-mode-models -- --model ollama/qwen3.5:9b
 ```
 
-重复使用 `--model` 可比较多个模型；也可以使用 `--mode`、`--task` 和 `--repetitions` 缩小默认的 direct/automatic/forced Code Mode 矩阵。每个单元都会运行一个隔离的 `agent exec` 任务，并记录模型/提供商身份、耗时、结果状态、失败类别、外部工具调用、Code Mode 桥接调用以及经过验证的输出/效果。
+重复使用 `--model` 可比较多个模型；也可以使用 `--mode`、`--task` 和 `--repetitions` 缩小默认的 direct／automatic／forced Code Mode 矩阵。每个单元都会运行一个隔离的 `agent exec` 任务，并记录模型／提供商身份、耗时、结果状态、失败类别、外部工具调用、Code Mode 桥接调用以及经过验证的输出／效果。
 
 输出目录包含规范的 QA Lab `qa-evidence.json`。`summary.json` 和 `results.jsonl` 是用于支持汇总和逐单元结果的文件；`manifest.json` 记录请求的矩阵和源代码身份。
 
@@ -127,23 +127,23 @@ pnpm qa:code-mode-models -- --model ollama/qwen3.5:9b
 
 ## 选项
 
-- `-m, --message <text>`: 消息正文
-- `--message-file <path>`: 从 UTF-8 文件中读取消息正文
-- `-t, --to <dest>`: 用于推导会话密钥的收件人
-- `--session-key <key>`: 用于路由的显式会话密钥
-- `--session-id <id>`: 显式会话 ID
-- `--agent <id>`: 代理 ID；覆盖路由绑定
-- `--model <id>`: 本次运行的模型覆盖项（`provider/model` 或模型 ID）
-- `--thinking <level>`: 代理思考级别（`off`、`minimal`、`low`、`medium`、`high`，以及提供方支持的自定义级别，如 `xhigh`、`adaptive` 或 `max`）
-- `--verbose <on|off>`: 为该会话持久化详细日志级别
-- `--channel <channel>`: 传递通道；省略则使用主会话通道
-- `--reply-to <target>`: 传递目标覆盖项
-- `--reply-channel <channel>`: 传递通道覆盖项
-- `--reply-account <id>`: 传递账户覆盖项
-- `--local`: 直接运行嵌入式代理（在插件注册表预加载之后）
-- `--deliver`: 将回复发送回所选通道/目标
-- `--timeout <seconds>`: 覆盖此命令的代理轮次截止时间（默认 600 秒，或 `agents.defaults.timeoutSeconds`）；`0` 会禁用整体截止时间。600 秒的回退值属于此 CLI 命令，而不属于普通 Gateway 轮次，后者的默认值为 48 小时。
-- `--json`: 输出 JSON。
+- `-m, --message <text>`：消息正文
+- `--message-file <path>`：从 UTF-8 文件中读取消息正文
+- `-t, --to <dest>`：用于推导会话密钥的收件人
+- `--session-key <key>`：用于路由的显式会话密钥
+- `--session-id <id>`：显式会话 ID
+- `--agent <id>`：代理 ID；覆盖路由绑定
+- `--model <id>`：本次运行的模型覆盖项（`provider/model` 或模型 ID）
+- `--thinking <level>`：代理思考级别（`off`、`minimal`、`low`、`medium`、`high`，以及提供方支持的自定义级别，如 `xhigh`、`adaptive` 或 `max`）
+- `--verbose <on|off>`：为该会话持久化详细日志级别
+- `--channel <channel>`：传递通道；省略则使用主会话通道
+- `--reply-to <target>`：传递目标覆盖项
+- `--reply-channel <channel>`：传递通道覆盖项
+- `--reply-account <id>`：传递账户覆盖项
+- `--local`：直接运行嵌入式代理（在插件注册表预加载之后）
+- `--deliver`：将回复发送回所选通道/目标
+- `--timeout <seconds>`：覆盖此命令的代理轮次截止时间（默认 600 秒，或 `agents.defaults.timeoutSeconds`）；`0` 会禁用整体截止时间。600 秒的回退值属于此 CLI 命令，而不属于普通 Gateway 轮次，后者的默认值为 48 小时。
+- `--json`：输出 JSON。
 
 ## 示例
 

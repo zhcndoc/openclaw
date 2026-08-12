@@ -51,7 +51,7 @@ TTS 是 Talk 的 `stt-tts` 模式中语音输出的一半（`talk.speak` 调用�
 默认情况下，自动 TTS 是**关闭**的。当 `tts.provider` 未设置时，
 OpenClaw 会按注册表自动选择顺序选取第一个已配置的提供商。
 内置的 `tts` 代理工具仅支持显式意图：普通聊天仍然是
-文本，除非用户请求音频、使用 `/tts`，或启用自动 TTS/指令式
+文本，除非用户请求音频、使用 `/tts`，或启用自动 TTS／指令式
 语音。
 </Note>
 
@@ -520,16 +520,16 @@ Set-ExecutionPolicy -Scope Process Bypass
     },
   },
   agents: {
-    list: [
-      {
-        id: "reader",
+    entries: {
+      reader: {
+        default: true,
         tts: {
           providers: {
             elevenlabs: { speakerVoiceId: "EXAVITQu4vr4xnSDxMaL" },
           },
         },
       },
-    ],
+    },
   },
 }
 ```
@@ -712,13 +712,13 @@ Talk 会话提供商选择是会话范围内的。Talk 客户端应从 `talk.cat
 **完全禁用模型覆盖：**
 
 ```json5
-{ messages: { tts: { modelOverrides: { enabled: false } } } }
+{ tts: { modelOverrides: { enabled: false } } }
 ```
 
 **允许切换提供商，同时保持其他参数可配置：**
 
 ```json5
-{ messages: { tts: { modelOverrides: { enabled: true, allowProvider: true, allowSeed: false } } } }
+{ tts: { modelOverrides: { enabled: true, allowProvider: true, allowSeed: false } } }
 ```
 
 ## 斜杠命令
@@ -1062,7 +1062,7 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且 `pt
 - [Speech Swift](https://github.com/soniqo/speech-swift)
 - [火山引擎 TTS HTTP API](/providers/volcengine#text-to-speech)
 - [xAI 文本转语音](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
-- [小米 MiMo 语音合成](/providers/xiaomi#text-to-speech)
+- [小米 MiMo 语音合成](/providers/xiaomi#text-to-speech)。
 
 ## 相关内容
 

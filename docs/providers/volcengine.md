@@ -58,7 +58,7 @@ read_when:
 对于非交互式设置（CI、脚本），直接传入密钥：
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice volcengine-api-key \
   --volcengine-api-key "$VOLCANO_ENGINE_API_KEY"

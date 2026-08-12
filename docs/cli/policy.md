@@ -12,15 +12,15 @@ title: "策略"
 `openclaw policy` 由捆绑的 Policy 插件提供。它是现有 OpenClaw 设置之上的企业一致性层，而不是第二套配置系统。你在 `policy.jsonc` 中编写要求；OpenClaw 观察活动工作区作为证据；策略通过 `doctor --lint` 报告偏差。Policy 不会在请求时强制执行工具调用或重写运行时行为，也不会为诸如 `auth-profiles.json` 之类的每个代理凭据存储提供证明。
 
 策略检查已配置的通道、MCP 服务器、模型提供方、网络 SSRF
-防护态势、入口/通道访问、Gateway 暴露和节点命令态势、
+防护态势、入口／通道访问、Gateway 暴露和节点命令态势、
 作者消息路由探针、
 代理工作区访问、沙箱态势、数据处理态势、密钥
-提供方/auth profile 态势，以及受治理的工具元数据（`AGENTS.md` 中的 `## Tools` 部分）。当工作区需要一份持久、可检查的声明时使用它，例如“Telegram 不得
+提供方／auth profile 态势，以及受治理的工具元数据（`AGENTS.md` 中的 `## Tools` 部分）。当工作区需要一份持久、可检查的声明时使用它，例如“Telegram 不得
 启用”或“受治理的工具必须声明风险和所有者元数据”。如果你
 只需要没有证明或漂移检测的本地行为，普通配置就足够了。
 
-另外，[`openclaw agent exec`](/cli/agent#agent-exec) 会为每次运行应用一个隔离的
-隐式策略配置：代理沙箱关闭，Gateway 主机执行完全允许，并且文件系统工具仅限于 `--cwd`】【。。
+另外，[`openclaw agent exec`]（/cli/agent#agent-exec）会为每次运行应用一个隔离的
+隐式策略配置：代理沙箱关闭，Gateway 主机执行完全允许，并且文件系统工具仅限于 `--cwd`。
 
 ## 快速开始
 
@@ -32,7 +32,7 @@ openclaw plugins enable policy
 
 请手动编写 `policy.jsonc`；它不会根据当前设置自动生成。每个顶级 section 都是一个规则命名空间：只有在其中存在具体规则时，检查才会运行（不支持的 section 或键会以 `policy/policy-jsonc-invalid` 失败，而不是被静默忽略）。覆盖所有受支持 section 的最小示例如下：
 
-```jsonc
+```jsonc validate=false
 {
   "channels": {
     "denyRules": [
@@ -181,7 +181,7 @@ openclaw plugins enable policy
 - data-handling 证据是配置级别的姿态（telemetry 捕获开关、session maintenance 模式、transcript-indexing 设置）以及始终开启的日志脱敏不变量。它不会检查日志、telemetry 导出、转录内容或 memory 文件，而干净的结果也不能证明其中不存在个人数据或密钥。
 - routing probes 会复用 OpenClaw 的运行时 binding resolver。Routing 证据仅记录 probe id、解析出的代理、匹配类型以及经过脱敏的 binding 元数据。它绝不会记录 peer、account、guild、team 或 role 标识符。添加 routing section 会有意改变 policy 和 attestation 哈希；不包含 routing 的 policies 会保留其现有的证据形态。
 
-### Policy 规则参考
+### 策略规则参考
 
 下面的每条规则都是可选的；只有当规则存在时才会运行检查。已观察到的状态是现有的 OpenClaw 配置或工作区元数据。
 
@@ -260,7 +260,7 @@ openclaw plugins enable policy
 
 容器姿态规则（`sandbox.containers.*`）仅根据匹配代理的 sandbox 后端能够暴露的证据进行检查。Docker 和 Podman 后端会暴露相同的 `sandbox.docker.*` 容器姿态设置。如果某个后端无法观察到为其启用的规则，策略会报告 `policy/sandbox-container-posture-unobservable`，而不是判定通过；应将容器规则限定在使用能够暴露这些规则的后端的代理组中。
 
-后端授权使用已配置的身份。`backend: "docker"` 要求 `allowBackends: ["docker"]`，而 `backend: "podman"` 要求 `allowBackends: ["podman"]`。
+后端授权使用已配置的身份。后端为 `"docker"` 要求 `allowBackends: ["docker"]`，而后端为 `"podman"` 要求 `allowBackends: ["podman"]`。
 
 顶层的 `ingress.session.requireDmScope` 保持全局生效；`session.dmScope` 不是可归属于通道的证据，因此不能通过 `channelIds` 设置作用域。
 
@@ -268,34 +268,34 @@ openclaw plugins enable policy
 
 #### 通道
 
-| Policy 字段                           | 观察到的状态                         | 适用场景                                                   |
-| ------------------------------------ | ----------------------------------- | ---------------------------------------------------------- |
+| 策略字段                           | 观察到的状态                         | 适用场景                                                   |
+| ---------------------------------- | ----------------------------------- | ---------------------------------------------------------- |
 | `channels.denyRules[].when.provider` | `channels.*` provider 和启用状态     | 拒绝来自例如 `telegram` 之类 provider 的已配置 channels。 |
 | `channels.denyRules[].reason`        | 发现消息和修复提示上下文             | 解释为什么该 provider 被拒绝。                            |
 
 #### MCP 服务器
 
-| Policy 字段        | 观察到的状态      | 适用场景                                                   |
+| 策略字段        | 观察到的状态      | 适用场景                                                   |
 | ------------------- | ------------------- | ---------------------------------------------------------- |
 | `mcp.servers.allow` | `mcp.servers.*` ids | 要求每个已配置的 MCP server 都在允许列表中。               |
 | `mcp.servers.deny`  | `mcp.servers.*` ids | 拒绝特定的已配置 MCP server ids。                          |
 
 #### 模型提供方
 
-| Policy 字段             | 观察到的状态                                   | 适用场景                                                                    |
+| 策略字段             | 观察到的状态                                   | 适用场景                                                                    |
 | ------------------------ | ------------------------------------------------ | --------------------------------------------------------------------------- |
 | `models.providers.allow` | `models.providers.*` ids 和已选模型引用          | 要求已配置 provider 和已选模型引用使用已批准的 provider。                  |
 | `models.providers.deny`  | `models.providers.*` ids 和已选模型引用          | 按 provider id 拒绝已配置 provider 和已选模型引用。                        |
 
 #### 网络
 
-| Policy 字段                   | 观察到的状态                      | 适用场景                                                           |
+| 策略字段                   | 观察到的状态                      | 适用场景                                                           |
 | ------------------------------ | ----------------------------------- | ------------------------------------------------------------------ |
 | `network.privateNetwork.allow` | 私有网络 SSRF 逃逸通道              | 设置为 `false` 以要求私有网络访问保持禁用。                       |
 
 #### 消息路由
 
-| Policy 字段                        | 观察到的状态                                      | 适用场景                                                               |
+| 策略字段                        | 观察到的状态                                      | 适用场景                                                               |
 | ----------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
 | `routing.requireBindings`           | 通道路由绑定，不包括 ACP 绑定                      | 要求至少存在一个消息路由绑定。                                         |
 | `routing.requireConfiguredChannels` | 绑定通道 id 和已配置的 `channels.*` id             | 检测已失效或拼写错误的绑定通道 id。                                    |
@@ -309,7 +309,7 @@ openclaw plugins enable policy
 
 #### 入口和通道访问
 
-| Policy 字段                              | 观察到的状态                                                 | 适用场景                                                           |
+| 策略字段                              | 观察到的状态                                                 | 适用场景                                                           |
 | ----------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `ingress.session.requireDmScope`          | `session.dmScope`                                              | 要求经过审查的 direct-message 隔离范围。                           |
 | `ingress.channels.allowDmPolicies`        | `channels.*.dmPolicy` 和旧版通道 DM policy 字段                | 仅允许经过审查的 direct-message 通道策略。                         |
@@ -318,7 +318,7 @@ openclaw plugins enable policy
 
 #### 网关
 
-| Policy 字段                            | 观察到的状态                                | 适用场景                                                                             |
+| 策略字段                            | 观察到的状态                                | 适用场景                                                                             |
 | --------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `gateway.exposure.allowNonLoopbackBind` | `gateway.bind`                                | 设置为 `false` 以要求网关绑定到回环地址。                                            |
 | `gateway.exposure.allowTailscaleFunnel` | Tailscale serve/funnel 网关姿态               | 设置为 `false` 以拒绝 Tailscale Funnel 暴露。                                        |
@@ -336,14 +336,14 @@ openclaw plugins enable policy
 
 #### 代理工作区
 
-| Policy 字段                     | 观察到的状态                                                                           | 适用场景                                                                                 |
+| 策略字段                     | 观察到的状态                                                                           | 适用场景                                                                                 |
 | -------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `agents.workspace.allowedAccess` | `agents.defaults.sandbox.workspaceAccess` 和 `agents.entries.*.sandbox.workspaceAccess` | 仅允许 `none` 或 `ro` 等 sandbox 工作区访问值。                                         |
 | `agents.workspace.denyTools`     | 全局及按代理设置的工具拒绝配置                                                            | 要求拒绝变更工具（`exec`、`process`、`write`、`edit`、`apply_patch`）。                  |
 
 #### Sandbox 姿态
 
-| Policy 字段                                          | 观察到的状态                                          | 适用场景                                                           |
+| 策略字段                                          | 观察到的状态                                          | 适用场景                                                           |
 | ----------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------ |
 | `sandbox.requireMode`                                 | `agents.defaults.sandbox.mode` 和按代理设置的 mode       | 仅允许 `all` 或 `non-main` 等经过审查的 sandbox 模式。              |
 | `sandbox.allowBackends`                               | `agents.defaults.sandbox.backend` 和按代理设置的 backend | 仅允许 `docker` 或 `podman` 等经过审查的 sandbox 后端。             |
@@ -365,9 +365,9 @@ openclaw plugins enable policy
 | `dataHandling.retention.requireSessionMaintenance`  | `session.maintenance.mode`                                                                                      | 设置为 `true` 以要求有效的会话维护模式为 `enforce`。                   |
 | `dataHandling.memory.denySessionTranscriptIndexing` | `memory.search.experimental.sessionMemory`、`memory.search.rememberAcrossConversations` 和按代理设置的覆盖项 | 设置为 `true` 以拒绝将会话转录编入内存索引。                           |
 
-#### Secrets
+#### 密钥
 
-| Policy 字段                      | 观察到的状态                                           | 适用场景                                                                |
+| 策略字段                      | 观察到的状态                                           | 适用场景                                                                |
 | --------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `secrets.requireManagedProviders` | 已配置的 SecretRefs 和 `secrets.providers.*` 声明         | 设置为 `true` 以要求 SecretRefs 指向已声明的 provider。                 |
 | `secrets.denySources`             | secret provider 来源和 SecretRef 来源                    | 拒绝诸如 `exec`、`file` 或其他已配置来源名称。                           |
@@ -378,7 +378,7 @@ openclaw plugins enable policy
 Exec 审批检查默认读取运行时 `exec_approvals_config` 单例行，位置在 `~/.openclaw/state/openclaw.sqlite`；当设置了 `OPENCLAW_STATE_DIR` 时，则读取 `$OPENCLAW_STATE_DIR/state` 下的同一数据库。发现项会保留稳定的 `oc://exec-approvals.json/...` URI 方案；现在它表示该行中存储的权威 JSON 文档内的路径。
 `execApprovals.defaults.*` 或 `execApprovals.agents.*` 下的姿态规则需要可读的工件证据；缺失或无效的工件会被报告为不可观察证据，而不是尽力通过。一旦可读，省略字段会继承运行时默认值：缺失的 `defaults.security` 为 `full`，缺失的代理 security 也会继承该默认值。证据包括 `defaults`、`agents.*`、`agents.*.allowlist[].pattern`、可选的 `argPattern`、有效的 `autoAllowSkills` 姿态以及条目来源——绝不包括 socket 路径/token、`commandText`、`lastUsedCommand`、解析后的路径或时间戳。
 
-| Policy 字段                                | 观察到的状态                                                                         | 适用场景                                                                                |
+| 策略字段                                | 观察到的状态                                                                         | 适用场景                                                                                |
 | ------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `execApprovals.requireFile`                 | 活跃运行时的 `exec_approvals_config` 行                                                | 设置为 `true` 以要求 approvals 文档存在且可解析。                                        |
 | `execApprovals.defaults.allowSecurity`      | `defaults.security`，默认为 `full`                                                     | 仅允许经过批准的默认审批安全模式。                                                      |
@@ -426,20 +426,20 @@ Exec 审批检查默认读取运行时 `exec_approvals_config` 单例行，位�
 
 #### 身份验证配置
 
-| Policy 字段                    | 观察到的状态                               | 适用场景                                                                                   |
+| 策略字段                    | 观察到的状态                               | 适用场景                                                                                   |
 | ------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `auth.profiles.requireMetadata` | `auth.profiles.*` provider 和 mode 元数据    | 要求配置 auth profile 上存在诸如 `provider` 和 `mode` 之类的元数据键。                    |
 | `auth.profiles.allowModes`      | `auth.profiles.*.mode`                       | 仅允许受支持的 auth profile 模式，例如 `api_key`、`aws-sdk`、`oauth` 或 `token`。        |
 
 #### 工具元数据
 
-| Policy 字段            | 观察到的状态                         | 适用场景                                                                                   |
+| 策略字段            | 观察到的状态                         | 适用场景                                                                                   |
 | ----------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `tools.requireMetadata` | 受管控的 `AGENTS.md` 工具声明          | 要求受管控工具声明 `risk`、`sensitivity` 或 `owner` 等元数据键。                         |
 
 #### 工具姿态
 
-| Policy 字段                    | 观察到的状态                                              | 适用场景                                                                                                 |
+| 策略字段                    | 观察到的状态                                              | 适用场景                                                                                                 |
 | ------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `tools.profiles.allow`          | `tools.profile` 和 `agents.entries.*.tools.profile`        | 仅允许 `minimal`、`messaging` 或 `coding` 等工具配置文件 id。                                             |
 | `tools.fs.requireWorkspaceOnly` | `tools.fs.workspaceOnly` 和按代理设置的 `tools.fs` 覆盖项 | 设置为 `true` 以要求仅限工作区的文件系统工具姿态。                                                       |
@@ -679,7 +679,7 @@ openclaw policy compare --baseline official.policy.jsonc --policy policy.jsonc -
 `workspace.hash` 标识该证据负载。`findingsHash` 标识
 精确的发现集合。`checkedAt` 记录检查运行时间。
 `attestationHash` 标识稳定声明（策略哈希、证据哈希、
-发现哈希以及干净/脏状态），并刻意排除 `checkedAt`，
+发现哈希以及干净／脏状态），并刻意排除 `checkedAt`，
 因此相同的策略状态总会生成相同的 attestation hash。这四个值一起构成一次策略检查的审计元组。
 
 如果网关或监督器使用策略来阻止、批准或标注运行时操作，

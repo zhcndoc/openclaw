@@ -48,8 +48,10 @@ read_when:
     {
       agents: {
         defaults: {
-          videoGenerationModel: {
-            primary: "alibaba/wan2.6-t2v",
+          mediaModels: {
+            video: {
+              primary: "alibaba/wan2.6-t2v",
+            },
           },
         },
       },

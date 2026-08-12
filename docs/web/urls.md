@@ -54,7 +54,7 @@ agent 的主会话。其他形式通过两种方式之一编码一个不可变�
 
 - `/chat` 和 `/dashboard` 这两个命名空间词。
 - 短 ID URL 中的键 UUID 短 ID。
-- 上述的参数个数以及短/字面解析规则。
+- 上述的参数个数以及短／字面解析规则。
 
 在短 ID 形式中，agent 段只是装饰性的，slug 几乎也是装饰性的。二者都不能单独标识会话，并且都可能在没有通知的情况下更改。唯一的例外是平局：如果短 ID 匹配多个会话，并且其中恰好有一个仍在链接中带有 slug，那么就使用该会话，因此生成的链接即使在两个 ID 碰巧共享前缀时也能继续工作。若 slug 一个都不匹配或匹配了多个平局中的会话，则会忽略 slug，并显示消歧视图。解析完成后，Control UI 会将地址栏替换为当前 agent id 和当前显示名 slug，而不会添加浏览器历史记录项。
 
@@ -65,7 +65,11 @@ agent 的主会话。其他形式通过两种方式之一编码一个不可变�
 
 如果一个短 ID 匹配多个会话，且 slug 无法解决歧义，UI 不会进行猜测。它会显示一个简短的消歧视图，其中包含匹配的显示名称、agent 以及更长的 ID 前缀。使用更长的前缀来使 URL 唯一。当前 Gateways 最多返回十个最近的候选项；达到这一上限时，视图会将结果视为不完整，而不是进行猜测。对于早于短 ID 解析支持的旧版 Gateway，UI 会回退到之前的有界列表搜索，最多扫描五页结果。当该回退方式无法证明唯一性时，它同样会报告搜索结果不完整，而不是进行猜测。
 
-规范链接不使用 `?session=` 或 `?face=`。像 `/chat?session=<sessionKey>` 这样的已发布链接，仅在应用边界作为迁移辅助时被接受，并会立即被重写为规范路径，且不会添加浏览器历史记录。配套的已发布 `?face=dashboard` 会在该重写过程中选择 `/dashboard` 命名空间。加载器和页面代码从不读取查询形式的身份信息，新链接也不得发出这种形式。Sessions 列表保留其自己的 `?session=` 参数，因为该参数用于展开一行；它不是会话深链。一次性的 composer 值 `?draft=` 在聊天和仪表盘会话路径上仍然受支持。
+如需在终端中继续使用其中一个链接或附加编码 harness，请参阅
+[会话同步和附加](/concepts/session-attachment)。
+
+规范链接不使用 `?session=` 或 `?face=`。诸如
+`/chat?session=<sessionKey>` 这样的已发布链接，仅在应用边界处作为迁移辅助方式接受，并会立即重写为规范路径，且不会添加浏览器历史记录。已发布的 `?face=dashboard` 配套参数会在该重写过程中选择 `/dashboard` 命名空间。加载器和页面代码从不读取查询形式的身份信息，新链接不得输出该形式。Sessions 列表保留其自身的 `?session=` 参数，因为该参数会展开一行；它不是会话深层链接。一次性的编辑器值 `?draft=` 仍在聊天和仪表盘会话路径上受支持。
 
 ## 路由表
 
@@ -73,46 +77,47 @@ agent 的主会话。其他形式通过两种方式之一编码一个不可变�
 
 | 页面                | 规范路径                      | 别名                      | 参数或动态形式                                     |
 | ------------------- | --------------------------- | ------------------------- | ------------------------------------------------ |
-| 聊天                | `/chat`                     | -                         | 上述基于密钥的会话表单；`?draft=<text>`  |
-| 仪表板              | `/dashboard`                | -                         | 上述基于密钥的会话表单；`?draft=<text>`  |
-| 仪表板列表          | `/dashboards`               | -                         | -                                                |
+| 聊天                | `/chat`                     | -                         | 上述基于密钥的会话形式；`?draft=<text>`  |
+| 仪表板              | `/dashboard`                | -                         | 上述基于密钥的会话形式；`?draft=<text>`  |
+| 仪表板              | `/dashboards`               | -                         | -                                                |
 | 询问 OpenClaw       | `/custodian`                | -                         | `?intent=new-agent`、`?onboarding=1`             |
 | 新建会话            | `/new`                      | -                         | `?agent=<agentId>`、`?catalog=<catalogId>`       |
 | 活动                | `/activity`                 | -                         | -                                                |
 | 应用                | `/apps`                     | -                         | -                                                |
 | 代理                | `/settings/agents`          | `/agents`                 | `/settings/agents/<agentId>[/<panel>]`           |
-| 渠道                | `/settings/channels`        | `/channels`               | 以下共享的设置参数                 |
-| 连接                | `/settings/connection`      | -                         | 以下共享的设置参数                 |
-| 旧版常规            | `/settings/general`         | `/config`                 | 重定向至外观 → 语言               |
-| 个人资料            | `/settings/profile`         | `/profile`                | 以下共享的设置参数                 |
-| 通信                | `/settings/communications`  | `/communications`         | 以下共享的设置参数                 |
-| 外观                | `/settings/appearance`      | `/appearance`             | 以下共享的设置参数                 |
-| 通知                | `/settings/notifications`   | -                         | 以下共享的设置参数                 |
-| 安全                | `/settings/security`        | -                         | 以下共享的设置参数                 |
-| 高级                | `/settings/advanced`        | -                         | 以下共享的设置参数                 |
-| 审批                | `/settings/approvals`       | -                         | 以下共享的设置参数                 |
-| 自动化设置          | `/settings/automation`      | `/automation`             | 以下共享的设置参数                 |
-| MCP                 | `/settings/mcp`             | `/mcp`                    | 以下共享的设置参数                 |
+| 频道                | `/settings/channels`        | `/channels`               | 以下共享设置参数                                 |
+| 连接                | `/settings/connection`      | -                         | 以下共享设置参数                                 |
+| 旧版常规            | `/settings/general`         | `/config`                 | 重定向至外观 → 语言                              |
+| 个人资料            | `/settings/profile`         | `/profile`                | 以下共享设置参数                                 |
+| 通信                | `/settings/communications`  | `/communications`         | 以下共享设置参数                                 |
+| 外观                | `/settings/appearance`      | `/appearance`             | 以下共享设置参数                                 |
+| 通知                | `/settings/notifications`   | -                         | 以下共享设置参数                                 |
+| 安全                | `/settings/security`        | -                         | 以下共享设置参数                                 |
+| 密钥                | `/settings/secrets`         | -                         | 以下共享设置参数                                 |
+| 高级                | `/settings/advanced`        | -                         | 以下共享设置参数                                 |
+| 审批                | `/settings/approvals`       | -                         | 以下共享设置参数                                 |
+| 自动化设置          | `/settings/automation`      | `/automation`             | 以下共享设置参数                                 |
+| MCP                 | `/settings/mcp`             | `/mcp`                    | 以下共享设置参数                                 |
 | 记忆                | `/settings/memory`          | -                         | `/settings/memory/memories\|dreams\|settings`    |
-| 基础设施            | `/settings/infrastructure`  | `/infrastructure`         | 以下共享的设置参数                 |
-| 实验室              | `/settings/labs`            | -                         | 以下共享的设置参数                 |
-| 关于                | `/settings/about`           | -                         | 以下共享的设置参数                 |
-| AI 与代理           | `/settings/ai-agents`       | `/ai-agents`              | 以下共享的设置参数                 |
+| 基础设施            | `/settings/infrastructure`  | `/infrastructure`         | 以下共享设置参数                                 |
+| 实验室              | `/settings/labs`            | -                         | 以下共享设置参数                                 |
+| 关于                | `/settings/about`           | -                         | 以下共享设置参数                                 |
+| AI 与代理           | `/settings/ai-agents`       | `/ai-agents`              | 以下共享设置参数                                 |
 | 模型设置            | `/settings/model-setup`     | `/model-setup`            | `?firstRun=1`                                    |
-| 模型提供商          | `/settings/model-providers` | `/model-providers`        | 以下共享的设置参数                 |
+| 模型提供商          | `/settings/model-providers` | `/model-providers`        | 以下共享设置参数                                 |
 | 导入记忆            | `/memory-import`            | `/settings/memory-import` | -                                                |
 | 工作看板            | `/workboard`                | -                         | `/workboard/<boardId>`                           |
 | 工作树              | `/worktrees`                | `/settings/worktrees`     | -                                                |
 | 会话                | `/sessions`                 | `/settings/sessions`      | `?session=<sessionKey>`、`?status=archived\|all` |
-| 使用情况            | `/usage`                    | -                         | -                                                |
+| 用量                | `/usage`                    | -                         | -                                                |
 | 调试                | `/debug`                    | -                         | -                                                |
 | 日志                | `/logs`                     | -                         | -                                                |
-| 技能工坊            | `/skills/workshop`          | -                         | -                                                |
+| 技能工作坊          | `/skills/workshop`          | -                         | -                                                |
 | 技能                | `/skills`                   | -                         | -                                                |
 | 插件                | `/settings/plugins`         | -                         | `/settings/plugins/discover`                     |
 | 自动化              | `/cron`                     | -                         | -                                                |
 | 任务                | `/tasks`                    | -                         | -                                                |
-| 设备                | `/settings/devices`         | `/nodes`                  | 以下共享的设置参数                 |
+| 设备                | `/settings/devices`         | `/nodes`                  | 以下共享设置参数                                 |
 | 插件标签页宿主      | `/plugin`                   | -                         | `?plugin=<pluginId>&id=<tabId>`                  |
 
 使用基于 schema 的深链接的设置路由接受 `?section=<section>`、
@@ -137,9 +142,11 @@ agent 的主会话。其他形式通过两种方式之一编码一个不可变�
 
 这些由 Gateway 提供的文档位于应用路由表之外：
 
-- `/?onboarding=1` 打开首次运行引导展示。
-- `/?view=terminal` 打开供移动应用使用的全屏仅终端文档。可用性仍然需要 `gateway.terminal.enabled` 和 `operator.admin`。
-- `/approve/<approvalId>` 打开独立的审批文档。使用基础路径时，改用 `<basePath>/approve/<approvalId>`。该 id 用于标识一个审批，但绝不会授权它；仍然适用正常的 Gateway 身份验证。
+- `/?onboarding=1` 打开首次运行引导演示。
+- `/terminal` 打开面向用户的全屏终端。使用基础路径时，请使用
+  `<basePath>/terminal`。
+- `/?view=terminal` 在移动应用使用的 WebView/embed 形式中打开相同的仅终端文档。无论采用哪种形式，终端可用性仍需要 `gateway.terminal.enabled` 和 `operator.admin`。
+- `/approve/<approvalId>` 打开独立的审批文档。使用基础路径时，请使用 `<basePath>/approve/<approvalId>`。该 id 用于标识审批，但永远不会为其授权；正常的 Gateway 身份验证仍然适用。
 
 对于所有 HTTP 方法，审批命名空间都会在插件 HTTP 路由之前被保留。当禁用 Control UI 提供服务时，它会返回 `404`，而不是继续匹配到插件路由。
 

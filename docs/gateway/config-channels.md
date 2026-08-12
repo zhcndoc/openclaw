@@ -114,12 +114,10 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
 
 ```json5
 {
-  web: {
-    enabled: true,
-  },
   channels: {
     whatsapp: {
-      dmPolicy: "pairing", // 配对 | 允许列表 | 开放 | 禁用
+      enabled: true,
+      dmPolicy: "pairing", // pairing | allowlist | open | disabled
       allowFrom: ["+15555550123", "+447700900123"],
       textChunkLimit: 4000,
       streaming: { chunkMode: "length" }, // 按长度 | 按换行符
@@ -197,12 +195,6 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
       actions: { reactions: true, sendMessage: true },
       reactionNotifications: "own", // 关闭 | own | all
       mediaMaxMb: 100,
-      retry: {
-        attempts: 3,
-        minDelayMs: 400,
-        maxDelayMs: 30000,
-        jitter: 0.1,
-      },
       network: {
         autoSelectFamily: true,
         dnsResultOrder: "ipv4first",
@@ -219,13 +211,13 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
 ```
 
 - 机器人令牌：`channels.telegram.botToken` 或 `channels.telegram.tokenFile`（仅限普通文件；拒绝符号链接），默认账号可回退使用 `TELEGRAM_BOT_TOKEN`。
-- `apiRoot` 仅用于 Telegram Bot API 根地址。请使用 `https://api.telegram.org` 或你自托管/代理的根地址，不要使用 `https://api.telegram.org/bot<TOKEN>`；`openclaw doctor --fix` 会移除意外追加的 `/bot<TOKEN>` 后缀。
+- `apiRoot` 仅用于 Telegram Bot API 根地址。请使用 `https://api.telegram.org` 或你自托管／代理的根地址，不要使用 `https://api.telegram.org/bot<TOKEN>`；`openclaw doctor --fix` 会移除意外追加的 `/bot<TOKEN>` 后缀。
 - 对于 `--local` 模式下的自托管 Bot API 服务器，`trustedLocalFileRoots` 列出 OpenClaw 允许读取的主机路径。请将服务器数据卷挂载到 OpenClaw 主机，并配置其数据根目录或按令牌的目录；`/var/lib/telegram-bot-api` 下的容器路径会映射到这些根目录中。其他绝对路径仍会被拒绝。
 - 可选的 `channels.telegram.defaultAccount` 会在匹配到已配置账号 ID 时覆盖默认账号选择。
-- 在多账号设置（2+ 个账号 ID）中，请设置明确的默认值（`channels.telegram.defaultAccount` 或 `channels.telegram.accounts.default`），以避免回退路由；当缺失或无效时，`openclaw doctor` 会发出警告。
+- 在多账号设置（2＋ 个账号 ID）中，请设置明确的默认值（`channels.telegram.defaultAccount` 或 `channels.telegram.accounts.default`），以避免回退路由；当缺失或无效时，`openclaw doctor` 会发出警告。
 - `configWrites: false` 会阻止 Telegram 触发的配置写入（超级群组 ID 迁移、`/config set|unset`）。
 - 顶层的 `bindings[]` 条目若 `type: "acp"`，则为论坛主题配置持久化 ACP 绑定（在 `match.peer.id` 中使用规范的 `chatId:topic:topicId`）。字段语义详见 [ACP 代理](/tools/acp-agents#persistent-channel-bindings)。
-- Telegram 流式预览使用 `sendMessage` + `editMessageText`（适用于私聊和群聊）。
+- Telegram 流式预览使用 `sendMessage` ＋ `editMessageText`（适用于私聊和群聊）。
 - `network.dnsResultOrder` 默认值为 `"ipv4first"`，以避免常见的 IPv6 获取失败。
 - 重试策略：参见 [重试策略](/concepts/retry)。
 
@@ -470,32 +462,33 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
 }
 ```
 
-- **套接字模式**需要同时使用 `botToken` 和 `appToken`（对于默认账户环境变量回退，分别对应 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN`）。
-- **HTTP 模式**需要 `botToken` 以及 `signingSecret`（位于根级别或每个账户中）。
-- **用户身份**（`identity: "user"`）会以授权用户的身份发帖和读取消息。在套接字模式下，它需要 `userToken` 加 `appToken`；在 HTTP 模式下，则需要 `userToken` 加 `signingSecret`。不需要 bot token 或 bot 用户。有关用户权限范围和事件订阅，请参阅[用户身份](/channels/slack#user-identity-post-as-a-real-person)。
-- `enterpriseOrgInstall: true` 会将账户加入 Slack Enterprise Grid 的组织级事件路径。启动时会通过 `auth.test` 验证 bot token；当配置的模式与 Slack 的安装身份不匹配时，启动会失败。企业版私信必须禁用，或使用 `dmPolicy: "open"` 并将有效的 `allowFrom` 设置为 `["*"]`。频道和用户策略必须使用稳定的 Slack ID；可变名称和不受支持的频道前缀会导致启动失败。V1 仅处理直接套接字模式或 HTTP `message` 和 `app_mention` 事件，并立即回复；中继、命令、交互、App Home、reaction 事件监听器、置顶、操作工具、原生审批、绑定、延迟投递和主动发送均不可用。使用 `reactions:write` 时，仍可使用由监听器负责的确认、输入状态和状态 reaction。入站 reaction 通知和 reaction 操作工具不可用。有关最小权限清单、设置流程和完整限制，请参阅[企业版 Grid 组织级安装](/channels/slack#enterprise-grid-org-wide-installs)。
+- **Socket mode** 需要同时提供 `botToken` 和 `appToken`（对于默认账户环境变量回退，分别为 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN`）。
+- **HTTP mode** 需要提供 `botToken` 以及 `signingSecret`（位于根级别或每个账户中）。
+- **用户身份**（`identity: "user"`）会以授权用户的身份发帖和读取消息。在 Socket Mode 中，它需要 `userToken` 以及 `appToken`；在 HTTP mode 中，则需要 `userToken` 以及 `signingSecret`。不需要 bot token 或 bot 用户。有关用户权限范围和事件订阅，请参阅[用户身份](/channels/slack#user-identity-post-as-a-real-person)。
+- Slack 会通过 `auth.test` 自动检测 Enterprise Grid 组织范围的安装；不需要设置安装模式。Enterprise DMs 支持 `disabled`、`open`、`allowlist` 和工作区范围的 `pairing`。频道和用户策略必须使用稳定的 Slack ID；可变名称和不受支持的频道前缀会导致启动失败。基于提及模式的频道范围和静态路由绑定对等方使用带工作区限定的 Slack 目标。支持直接 Socket Mode 或 HTTP 消息、提及、带工作区限定的操作、延迟投递、主动发送、受支持的事件监听器和交互、静态路由绑定，以及来自带工作区限定回合的 Slack 原生审批。Relay、频道 ID 变更事件、App Home、Agent 和 Assistant 生命周期事件、已配置的 ACP 绑定，以及运行时当前会话绑定仍不可用。有关最小权限清单、设置工作流和完整限制，请参阅[Enterprise Grid 组织范围的安装](/channels/slack#enterprise-grid-org-wide-installs)。
+- 已弃用的 `enterpriseOrgInstall` 键会由 `openclaw doctor --fix` 在 Slack 根级别和账户级别移除。
 - `botToken`、`appToken`、`signingSecret` 和 `userToken` 接受明文字符串或 SecretRef 对象。
-- Slack 账户快照会公开每个凭据的来源/状态字段，例如 `botTokenSource`、`botTokenStatus`、`userTokenSource`、`userTokenStatus`、`appTokenStatus`，以及 HTTP 模式下的 `signingSecretStatus`。`configured_unavailable` 表示账户已通过 SecretRef 配置，但当前命令/运行时路径无法解析该密钥值。
+- Slack 账户快照会公开每个凭据的来源／状态字段，例如 `botTokenSource`、`botTokenStatus`、`userTokenSource`、`userTokenStatus`、`appTokenStatus`，以及 HTTP mode 中的 `signingSecretStatus`。`configured_unavailable` 表示账户通过 SecretRef 配置，但当前命令／运行时路径无法解析该密钥值。
 - `configWrites: false` 会阻止由 Slack 发起的配置写入。
-- 当 `channels.slack.defaultAccount` 与已配置的账户 ID 匹配时，它会覆盖默认账户选择。
-- `dm.groupEnabled` 和 `dm.groupChannels` 仅筛选应用已经加入的 Slack 群组私信（MPDM）。它们无法让应用看到一个从未加入的现有群组私信；请将群组私信转换为私有频道并邀请应用，或让应用通过 `conversations.open` 创建新的 MPDM。请参阅[群组私信（MPDM）和机器人](/channels/slack#group-dms-mpdms-and-bots)。
-- `channels.slack.streaming.mode` 是规范的 Slack 流模式键（默认值为 `"partial"`）。`channels.slack.streaming.nativeTransport` 控制 Slack 的原生流式传输（默认值为 `true`）。运行时不再读取旧版的 `streamMode`、布尔值 `streaming`、`chunkMode`、`blockStreaming`、`blockStreamingCoalesce` 和 `nativeStreaming`；请运行 `openclaw doctor --fix`，将持久化配置迁移至 `streaming.{mode,chunkMode,block.enabled,block.coalesce,nativeTransport}`。
-- `unfurlLinks` 和 `unfurlMedia` 会将 Slack `chat.postMessage` 的链接和媒体展开布尔值传递给机器人回复。`unfurlLinks` 默认为 `false`，因此除非启用，否则出站机器人链接不会内联展开；除非进行配置，否则不会传递 `unfurlMedia`。在 `channels.slack.accounts.<accountId>` 中设置任一值，可覆盖某个账户的顶层值。
+- 可选的 `channels.slack.defaultAccount` 会在其匹配已配置的账户 ID 时覆盖默认账户选择。
+- `dm.groupEnabled` 和 `dm.groupChannels` 只会过滤应用已经加入的 Slack 群组私信（MPDM）。它们无法让应用看到一个从未加入的现有群组私信；请将群组私信转换为私有频道并邀请应用，或者让应用通过 `conversations.open` 打开新的 MPDM。请参阅[群组私信（MPDM）和 bot](/channels/slack#group-dms-mpdms-and-bots)。
+- `channels.slack.streaming.mode` 是规范的 Slack 流模式键（默认值为 `"partial"`）。`channels.slack.streaming.nativeTransport` 控制 Slack 的原生流式传输（默认值为 `true`）。运行时不再读取旧版 `streamMode`、布尔值 `streaming`、`chunkMode`、`blockStreaming`、`blockStreamingCoalesce` 和 `nativeStreaming`；运行 `openclaw doctor --fix` 可将持久化配置迁移为 `streaming.{mode,chunkMode,block.enabled,block.coalesce,nativeTransport}`。
+- `unfurlLinks` 和 `unfurlMedia` 会将 Slack 的 `chat.postMessage` 链接和媒体展开布尔值透传给 bot 回复。`unfurlLinks` 默认为 `false`，因此除非启用，否则出站 bot 链接不会以内嵌方式展开；除非进行配置，否则不会提供 `unfurlMedia`。在 `channels.slack.accounts.<accountId>` 处设置任一值，可以覆盖某个账户的顶层值。
 - 使用 `user:<id>`（私信）或 `channel:<id>` 作为投递目标。
 
 **Reaction 通知模式：** `off`、`own`（默认）、`all`、`allowlist`（来自 `reactionAllowlist`）。
 
 **线程会话隔离：** `thread.historyScope` 可按线程隔离（默认）或跨频道共享。`thread.inheritParent` 会将父频道转录复制到新线程。`thread.initialHistoryLimit`（默认 `20`）限制新线程会话开始时拉取多少条已有线程消息；`0` 会禁用线程历史拉取。
 
-- Slack 原生流式以及 Slack 助手风格的“正在输入……”线程状态都需要一个回复线程目标。顶层 DM 默认保持非线程，因此它们仍可通过 Slack 草稿式的发送后编辑预览进行流式输出，而不会显示线程式的原生流/状态预览。
+- Slack 原生流式以及 Slack 助手风格的“正在输入……”线程状态都需要一个回复线程目标。顶层 DM 默认保持非线程，因此它们仍可通过 Slack 草稿式的发送后编辑预览进行流式输出，而不会显示线程式的原生流／状态预览。
 - `typingReaction` 会在回复运行期间为入站 Slack 消息添加一个临时 reaction，完成后再移除。请使用 Slack emoji 短码，例如 `"hourglass_flowing_sand"`。
-- `channels.slack.execApprovals`：Slack 原生 approval-client 的投递与 exec approver 授权。与 Discord 的 schema 相同：`enabled`（`true`/`false`/`"auto"`）、`approvers`（Slack user IDs）、`agentFilter`、`sessionFilter` 和 `target`（`"dm"`、`"channel"` 或 `"both"`）。当 Slack 插件 approvers 解析成功时，插件审批可以对 Slack 来源请求使用这一原生客户端路径；Slack 原生插件审批投递也可以通过 `approvals.plugin` 为 Slack 来源会话或 Slack 目标启用。插件审批使用来自 `allowFrom` 和默认路由的 Slack 插件 approvers，而不是 exec approvers。
+- `channels.slack.execApprovals`：Slack 原生 approval-client 的投递与 exec approver 授权。与 Discord 的 schema 相同：`enabled`（`true`／`false`／`"auto"`）、`approvers`（Slack user IDs）、`agentFilter`、`sessionFilter` 和 `target`（`"dm"`、`"channel"` 或 `"both"`）。当 Slack 插件 approvers 解析成功时，插件审批可以对 Slack 来源请求使用这一原生客户端路径；Slack 原生插件审批投递也可以通过 `approvals.plugin` 为 Slack 来源会话或 Slack 目标启用。插件审批使用来自 `allowFrom` 和默认路由的 Slack 插件 approvers，而不是 exec approvers。
 
 | 操作组       | 默认   | 说明                  |
 | ------------ | ---- | ---------------------- |
 | reactions    | 已启用 | 添加 reaction + 列出 reactions |
-| messages     | 已启用 | 读/发/编辑/删除  |
-| pins         | 已启用 | 置顶/取消置顶/列出         |
+| messages     | 已启用 | 读／发／编辑／删除  |
+| pins         | 已启用 | 置顶／取消置顶／列出         |
 | memberInfo   | 已启用 | 成员信息            |
 | emojiList    | 已启用 | 自定义 emoji 列表      |
 
@@ -680,7 +673,7 @@ Matrix 由插件支持，并在 `channels.matrix` 下配置。
 
 - 令牌认证使用 `accessToken`；密码认证使用 `userId` + `password`。
 - `channels.matrix.proxy` 会通过显式的 HTTP(S) 代理路由 Matrix 的 HTTP 流量。命名账户可以通过 `channels.matrix.accounts.<id>.proxy` 覆盖它。
-- `channels.matrix.network.dangerouslyAllowPrivateNetwork` 允许使用私有/内部主服务器。`proxy` 和此网络显式启用选项是相互独立的控制项。
+- `channels.matrix.network.dangerouslyAllowPrivateNetwork` 允许使用私有／内部主服务器。`proxy` 和此网络显式启用选项是相互独立的控制项。
 - `channels.matrix.defaultAccount` 在多账户配置中选择首选账户。
 - `channels.matrix.autoJoin` 默认是 `"off"`，因此受邀房间和新的 DM 风格邀请会被忽略，直到你设置 `autoJoin: "allowlist"` 并配合 `autoJoinAllowlist`，或者设置 `autoJoin: "always"`。
 - `channels.matrix.execApprovals`：Matrix 原生的 exec 审批传递和审批者授权。
@@ -739,7 +732,7 @@ IRC 由插件支持，并在 `channels.irc` 下进行配置。
 
 - 此处涵盖的核心键路径：`channels.irc`、`channels.irc.dmPolicy`、`channels.irc.configWrites`、`channels.irc.nickserv.*`。
 - 可选的 `channels.irc.defaultAccount` 在与已配置的账户 ID 匹配时，会覆盖默认账户选择。
-- 请参阅 [IRC](/channels/irc) 了解完整的 IRC 频道配置（主机/端口/TLS/频道/允许列表/提及限制）。
+- 请参阅 [IRC](/channels/irc) 了解完整的 IRC 频道配置（主机／端口／TLS／频道／允许列表／提及限制）。
 
 ### 多账户（所有渠道）
 
@@ -785,7 +778,7 @@ IRC 由插件支持，并在 `channels.irc` 下进行配置。
 
 仅工具策略适用于助手源回复和通用工具媒体。它不会抑制运行时拥有的终端输出，例如经授权的命令响应、持久完成通知，或所属 harness 明确归类为主机拥有的提供商原生产物。主机拥有的产物通过正常的频道分发路径交付，并且仍然遵守出站 `sendPolicy` 拒绝规则。即使运行时输出被标记为主机拥有，环境中的 `room_event` 轮次仍保持静默，除非它们是明确的命令。
 
-仅工具可见回复要求模型/运行时能够可靠调用工具，并建议用于最新一代模型上的共享环境房间，例如 GPT-5.6 Sol。某些较弱模型可以生成最终文本，但无法理解源可见输出必须通过 `message(action=send)` 发送。对于常见的“最终答案滞留”情况，OpenClaw 默认只会在以下条件下进行恢复：最终内容足够实质、源 turn 不是房间事件、发送策略没有拒绝交付、且没有已经发送的源回复。恢复最多只进行一次重试；它会抑制合成重试提示的持久化，并让该重试不进入 collect 批处理，因此不会与无关的排队提示合并。如果重试后仍然滞留或无法入队，OpenClaw 只会交付一条经过净化的诊断信息，例如 “我生成了一条回复，但无法将其发送到此聊天中。请重试。” 原始的私有最终文本绝不会被标记为自动源交付。对于持续出现回复滞留的模型，请使用 `"automatic"`，这样最终助手轮次就会走可见回复路径；或者切换到更强的工具调用模型；或者检查 gateway 详细日志中的被抑制载荷摘要；又或者设置 `messages.groupChat.visibleReplies: "automatic"`，让所有群组/频道请求都使用可见最终回复。
+仅工具可见回复要求模型／运行时能够可靠调用工具，并建议用于最新一代模型上的共享环境房间，例如 GPT-5.6 Sol。某些较弱模型可以生成最终文本，但无法理解源可见输出必须通过 `message(action=send)` 发送。对于常见的“最终答案滞留”情况，OpenClaw 默认只会在以下条件下进行恢复：最终内容足够实质、源 turn 不是房间事件、发送策略没有拒绝交付、且没有已经发送的源回复。恢复最多只进行一次重试；它会抑制合成重试提示的持久化，并让该重试不进入 collect 批处理，因此不会与无关的排队提示合并。如果重试后仍然滞留或无法入队，OpenClaw 只会交付一条经过净化的诊断信息，例如 “我生成了一条回复，但无法将其发送到此聊天中。请重试。” 原始的私有最终文本绝不会被标记为自动源交付。对于持续出现回复滞留的模型，请使用 `"automatic"`，这样最终助手轮次就会走可见回复路径；或者切换到更强的工具调用模型；或者检查 gateway 详细日志中的被抑制载荷摘要；又或者设置 `messages.groupChat.visibleReplies: "automatic"`，让所有群组／频道请求都使用可见最终回复。
 
 如果在当前工具策略下 message tool 不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。`openclaw doctor` 会对这种不匹配发出警告。
 
@@ -793,11 +786,11 @@ IRC 由插件支持，并在 `channels.irc` 下进行配置。
 
 **故障排查：群组 @mention 触发 typing 后沉默（无错误）**
 
-症状：在群组/频道中 @mention 后出现 typing 指示，gateway log 报告 `dispatch complete (queuedFinal=false, replies=0)`，但房间里没有消息落地。对同一 agent 的 DM 则正常回复。
+症状：在群组／频道中 @mention 后出现 typing 指示，gateway log 报告 `dispatch complete (queuedFinal=false, replies=0)`，但房间里没有消息落地。对同一 agent 的 DM 则正常回复。
 
-原因：群组/频道可见回复模式被解析为 `"message_tool"`，因此 OpenClaw 会运行该轮次，但除非代理调用 `message(action=send)`，否则会抑制最终助手文本。此模式下没有 `NO_REPLY` 合同；没有 message-tool 调用就意味着原始最终文本是私有的。对于实质性的源 turn，OpenClaw 现在会尝试一次受保护的恢复重试；简短备注、明确静默、房间事件、发送策略拒绝的轮次，以及已经交付的轮次都不会重试。普通群组和频道轮次默认是 `"automatic"`，因此只有当 `messages.groupChat.visibleReplies`（或全局 `messages.visibleReplies`）被显式设置为 `"message_tool"` 时才会出现这种症状。Harness 的 `defaultVisibleReplies` 在这里不适用——group/channel resolver 会忽略它；它只影响 direct/source chats（Codex harness 会以这种方式抑制 direct-chat 的最终回复）。
+原因：群组／频道可见回复模式被解析为 `"message_tool"`，因此 OpenClaw 会运行该轮次，但除非代理调用 `message(action=send)`，否则会抑制最终助手文本。此模式下没有 `NO_REPLY` 合同；没有 message-tool 调用就意味着原始最终文本是私有的。对于实质性的源 turn，OpenClaw 现在会尝试一次受保护的恢复重试；简短备注、明确静默、房间事件、发送策略拒绝的轮次，以及已经交付的轮次都不会重试。普通群组和频道轮次默认是 `"automatic"`，因此只有当 `messages.groupChat.visibleReplies`（或全局 `messages.visibleReplies`）被显式设置为 `"message_tool"` 时才会出现这种症状。Harness 的 `defaultVisibleReplies` 在这里不适用——group／channel resolver 会忽略它；它只影响 direct／source chats（Codex harness 会以这种方式抑制 direct-chat 的最终回复）。
 
-修复方法：要么选择更强的工具调用模型，要么移除显式的 `"message_tool"` 覆盖以回退到 `"automatic"` 默认值，或者设置 `messages.groupChat.visibleReplies: "automatic"`，以强制所有群组/频道请求都使用可见回复。实质性的滞留最终答案现在不应再以静默成功结束；它要么会通过一次 `message(action=send)` 重试恢复，要么会显示经过净化的交付失败诊断。gateway 会在文件保存后热重载 `messages` 配置；只有在部署中禁用了文件监视或配置重载时才需要重启 gateway。
+修复方法：要么选择更强的工具调用模型，要么移除显式的 `"message_tool"` 覆盖以回退到 `"automatic"` 默认值，或者设置 `messages.groupChat.visibleReplies: "automatic"`，以强制所有群组／频道请求都使用可见回复。实质性的滞留最终答案现在不应再以静默成功结束；它要么会通过一次 `message(action=send)` 重试恢复，要么会显示经过净化的交付失败诊断。gateway 会在文件保存后热重载 `messages` 配置；只有在部署中禁用了文件监视或配置重载时才需要重启 gateway。
 
 **提及类型：**
 
@@ -816,16 +809,21 @@ IRC 由插件支持，并在 `channels.irc` 下进行配置。
     },
   },
   agents: {
-    list: [{ id: "main", groupChat: { mentionPatterns: ["@openclaw", "openclaw"] } }],
+    entries: {
+      main: {
+        default: true,
+        groupChat: { mentionPatterns: ["@openclaw", "openclaw"] },
+      },
+    },
   },
 }
 ```
 
 `messages.groupChat.historyLimit` 设置全局默认值。频道可以通过 `channels.<channel>.historyLimit`（或每账号）覆盖。设为 `0` 可禁用。
 
-`messages.groupChat.unmentionedInbound: "room_event"` 会在受支持的频道上，把未提及的始终在线群组/频道消息作为静默房间上下文提交。被提及的消息、命令和直接消息仍然是用户请求。完整的 Discord、Slack 和 Telegram 示例见[环境中的房间事件](/channels/ambient-room-events)。
+`messages.groupChat.unmentionedInbound: "room_event"` 会在受支持的频道上，把未提及的始终在线群组／频道消息作为静默房间上下文提交。被提及的消息、命令和直接消息仍然是用户请求。完整的 Discord、Slack 和 Telegram 示例见[环境中的房间事件](/channels/ambient-room-events)。
 
-`messages.visibleReplies` 是全局 source-event 默认值；`messages.groupChat.visibleReplies` 会针对群组/频道 source events 覆盖它。当 `messages.visibleReplies` 未设置时，direct/source chats 会使用所选运行时或 harness 默认值，但内部 WebChat 直接轮次会为 Pi/Codex 提示词一致性使用自动最终交付。设置 `messages.visibleReplies: "message_tool"` 可有意要求可见输出必须通过 `message(action=send)` 发送。频道 allowlist 和提及门控仍然会决定某个事件是否被处理。
+`messages.visibleReplies` 是全局 source-event 默认值；`messages.groupChat.visibleReplies` 会针对群组／频道 source events 覆盖它。当 `messages.visibleReplies` 未设置时，direct／source chats 会使用所选运行时或 harness 默认值，但内部 WebChat 直接轮次会为 Pi／Codex 提示词一致性使用自动最终交付。设置 `messages.visibleReplies: "message_tool"` 可有意要求可见输出必须通过 `message(action=send)` 发送。频道 allowlist 和提及门控仍然会决定某个事件是否被处理。
 
 #### DM 历史记录限制
 
@@ -859,12 +857,12 @@ IRC 由插件支持，并在 `channels.irc` 下进行配置。
     },
   },
   agents: {
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
+        default: true,
         groupChat: { mentionPatterns: ["reisponde", "@openclaw"] },
       },
-    ],
+    },
   },
 }
 ```
@@ -885,45 +883,41 @@ IRC 由插件支持，并在 `channels.irc` 下进行配置。
     debug: false, // 允许 /debug
     restart: true, // 允许 /restart + 外部 SIGUSR1 重启请求
     ownerAllowFrom: ["discord:123456789012345678"],
-    ownerDisplay: "raw", // raw | hash
-    ownerDisplaySecret: "${OWNER_ID_HASH_SECRET}",
     allowFrom: {
       "*": ["user1"],
       discord: ["user:123"],
     },
-    useAccessGroups: true,
   },
 }
 ```
 
 <Accordion title="命令详情">
 
-- 此配置块用于配置命令入口。有关当前内置命令和捆绑命令目录，请参阅 [斜杠命令](/tools/slash-commands)。
-- 此页面是**配置键参考**，不是完整的命令目录。由频道或插件提供的命令，例如 QQ Bot 的 `/bot-ping`、`/bot-help`、`/bot-logs`，LINE 的 `/card`，设备配对的 `/pair`，记忆的 `/dreaming`，以及 Talk 的 `/voice`，请参阅其频道或插件页面以及[斜杠命令](/tools/slash-commands)。
-- 文本命令必须是以 `/` 开头的**独立**消息。
-- `native: "auto"` 为 Discord/Telegram 启用原生命令，同时保持 Slack 禁用。
-- `nativeSkills: "auto"` 为 Discord/Telegram 启用原生技能命令，同时保持 Slack 禁用。
-- 可按频道覆盖：`channels.discord.commands.native`（布尔值或 `"auto"`）。对于 Discord，`false` 会跳过启动期间的原生命令注册和清理。
-- 使用 `channels.<provider>.commands.nativeSkills` 按频道覆盖原生技能注册。
-- `channels.telegram.customCommands` 会添加额外的 Telegram 机器人菜单项。
-- `bash: true` 会启用用于主机 Shell 的 `! <cmd>`。需要启用 `tools.elevated.enabled`，且发送者必须位于 `tools.elevated.allowFrom.<channel>` 中。
-- `config: true` 会启用 `/config`（读取/写入 `openclaw.json`）。对于网关 `chat.send` 客户端，持久化的 `/config set|unset` 写入操作还需要 `operator.admin`；只读的 `/config show` 对具有普通写入范围的操作员客户端仍然可用。
-- `mcp: true` 会为 `mcp.servers` 下由 OpenClaw 管理的 MCP 服务器配置启用 `/mcp`。
-- `plugins: true` 会启用 `/plugins`，用于插件发现、安装以及启用/禁用控制。
-- `channels.<provider>.configWrites` 控制每个频道的配置修改权限（默认为 `true`）。
+- 此区块用于配置命令入口。有关当前内置命令和捆绑命令的目录，请参阅 [Slash Commands](/tools/slash-commands)。
+- 此页面是**配置键参考**，不是完整的命令目录。由频道或插件提供的命令，例如 QQ Bot 的 `/bot-ping`、`/bot-help`、`/bot-logs`，LINE 的 `/card`，设备配对的 `/pair`，memory 的 `/dreaming`，以及 Talk 的 `/voice`，记录在其频道或插件页面以及 [Slash Commands](/tools/slash-commands) 中。
+- 文本命令必须是带有前导 `/` 的**独立**消息。
+- `native: "auto"` 会为 Discord/Telegram 启用原生命令，但会关闭 Slack 的原生命令。
+- `nativeSkills: "auto"` 会为 Discord/Telegram 启用原生技能命令，但会关闭 Slack 的原生技能命令。
+- 可按频道覆盖：`channels.discord.commands.native`（布尔值或 `"auto"`）。对于 Discord，`false` 会在启动期间跳过原生命令的注册和清理。
+- 使用 `channels.<provider>.commands.nativeSkills` 可按频道覆盖原生技能注册。
+- `channels.telegram.customCommands` 会添加额外的 Telegram bot 菜单项。
+- `bash: true` 会为主机 shell 启用 `! <cmd>`。需要启用 `tools.elevated.enabled`，且发送者必须位于 `tools.elevated.allowFrom.<channel>` 中。
+- `config: true` 会启用 `/config`（读取或写入 `openclaw.json`）。对于 gateway `chat.send` 客户端，持久化的 `/config set|unset` 写入操作还需要 `operator.admin`；只读的 `/config show` 仍可供具有普通写入范围的 operator 客户端使用。
+- `mcp: true` 会为 OpenClaw 管理的、位于 `mcp.servers` 下的 MCP 服务器配置启用 `/mcp`。
+- `plugins: true` 会启用 `/plugins`，用于插件发现、安装以及启用／禁用控制。
+- `channels.<provider>.configWrites` 控制每个频道的配置变更（默认值：true）。
 - 对于多账户频道，`channels.<provider>.accounts.<id>.configWrites` 还会控制针对该账户的写入操作（例如 `/allowlist --config --account <id>` 或 `/config set channels.<provider>.accounts.<id>...`）。
 - `restart: false` 会禁用 `/restart` 和外部 `SIGUSR1` 重启请求。默认值为 `true`。
-- `ownerAllowFrom` 是针对仅限所有者的命令和受所有者权限控制的频道操作的明确所有者允许列表。它与 `allowFrom` 分开。
-- `ownerDisplay: "hash"` 会在系统提示中对所有者 ID 进行哈希处理。设置 `ownerDisplaySecret` 可控制哈希过程。
-- `allowFrom` 按提供方设置。设置后，它是**唯一**的授权来源（频道允许列表/配对和 `useAccessGroups` 都会被忽略）。
-- `useAccessGroups: false` 会在未设置 `allowFrom` 时允许命令绕过访问组策略。
+- `ownerAllowFrom` 是用于仅限所有者命令和由所有者控制的频道操作的显式所有者允许列表。它与 `allowFrom` 分开。
+- `allowFrom` 按提供方设置。设置后，它是命令和指令唯一的授权来源。
+- 未设置 `allowFrom` 时，命令授权遵循频道允许列表和配对状态。频道允许列表中的访问组条目会自动解析。
 - 命令文档映射：
-  - 内置命令和捆绑命令目录：[斜杠命令](/tools/slash-commands)
-  - 特定频道的命令入口：[频道](/channels)
+  - 内置命令和捆绑命令目录：[Slash Commands](/tools/slash-commands)
+  - 频道专属命令入口：[Channels](/channels)
   - QQ Bot 命令：[QQ Bot](/channels/qqbot)
-  - 配对命令：[配对](/channels/pairing)
+  - 配对命令：[Pairing](/channels/pairing)
   - LINE 卡片命令：[LINE](/channels/line)
-  - 记忆功能的梦境：[梦境](/concepts/dreaming)
+  - memory dreaming：[Dreaming](/concepts/dreaming)
 
 </Accordion>
 

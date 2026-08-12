@@ -11,16 +11,15 @@ read_when:
 提供方插件安装，并在运行时接受来自 Featherless 的精确
 模型 ID，同时保持内置目录较小。
 
-| Property        | Value                                    |
+| 提供方 ID       | 值                                       |
 | --------------- | ---------------------------------------- |
-| Provider id     | `featherless`                            |
-| Package         | `@openclaw/featherless-provider`         |
-| Auth env var    | `FEATHERLESS_API_KEY`                    |
-| Onboarding flag | `--auth-choice featherless-api-key`      |
-| Direct CLI flag | `--featherless-api-key <key>`            |
+| `featherless`   | `@openclaw/featherless-provider`         |
+| 认证环境变量    | `FEATHERLESS_API_KEY`                    |
+| 引导标志        | `--auth-choice featherless-api-key`      |
+| 直接 CLI 标志   | `--featherless-api-key <key>`            |
 | API             | 与 OpenAI 兼容（`openai-completions`）    |
-| Base URL        | `https://api.featherless.ai/v1`          |
-| Default model   | `featherless/Qwen/Qwen3-32B`             |
+| 基础 URL        | `https://api.featherless.ai/v1`          |
+| 默认模型        | `featherless/Qwen/Qwen3-32B`             |
 
 ## 设置
 
@@ -40,7 +39,7 @@ openclaw onboard --auth-choice featherless-api-key
 对于非交互式设置：
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice featherless-api-key \
   --featherless-api-key "$FEATHERLESS_API_KEY"
@@ -62,11 +61,7 @@ openclaw models list --provider featherless
 
 该插件使用 `Qwen/Qwen3-32B` 作为默认设置，因为 Featherless 为 Qwen 3 系列提供原生工具调用支持。OpenClaw 配置了其 32,768-token 的上下文窗口、保守的 4,096-token 输出上限，以及 Qwen 聊天模板的思考控制。
 
-The catalog cost fields use Featherless's published request-pricing rates of
-$0.102 per million input tokens and $0.493 per million output tokens. Fixed
-subscription plans remain flat-rate; the cache cost fields stay zero because
-Featherless does not publish separate cache-read or cache-write rates for this
-model.
+目录中的成本字段使用 Featherless 公布的请求定价费率，即每百万输入令牌 $0.102，以及每百万输出令牌 $0.493。固定订阅计划仍按固定费率计费；缓存成本字段保持为零，因为 Featherless 没有公布该模型单独的缓存读取或缓存写入费率。
 
 ## 其他 Featherless 模型
 

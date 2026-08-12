@@ -69,8 +69,10 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     {
       agents: {
         defaults: {
-          imageGenerationModel: {
-            primary: "vydra/grok-imagine",
+          mediaModels: {
+            image: {
+              primary: "vydra/grok-imagine",
+            },
           },
         },
       },
@@ -97,8 +99,10 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     {
       agents: {
         defaults: {
-          videoGenerationModel: {
-            primary: "vydra/veo3",
+          mediaModels: {
+            video: {
+              primary: "vydra/veo3",
+            },
           },
         },
       },

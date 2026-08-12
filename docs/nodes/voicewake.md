@@ -29,10 +29,9 @@ title: "语音唤醒"
 
 ### 路由（触发词到目标）
 
-| 方法                  | 参数                               | 结果                               |
-| ----------------------- | ------------------------------------ | ------------------------------------ |
-| `voicewake.routing.get` | 无                                   | `{ config: VoiceWakeRoutingConfig }` |
-| `voicewake.routing.set` | `{ config: VoiceWakeRoutingConfig }` | `{ config: VoiceWakeRoutingConfig }` |
+| 方法                  | 参数 | 结果                               |
+| ----------------------- | ------ | ------------------------------------ |
+| `voicewake.routing.get` | 无   | `{ config: VoiceWakeRoutingConfig }` |
 
 ```json
 {
@@ -60,11 +59,11 @@ title: "语音唤醒"
 
 两者都会广播给每个具有读取权限的 WebSocket 客户端（macOS 应用、WebChat 及类似客户端）以及每个已连接的节点。节点在连接后还会立即收到这两个事件作为初始快照推送。
 
-## Client Behavior
+## 客户端行为
 
-- **macOS**: 调用 `voicewake.set`/`voicewake.get` 并监听 `voicewake.changed`，以与其他客户端保持同步。
-- **iOS**: 调用 `voicewake.set`/`voicewake.get` 并监听 `voicewake.changed`，以保持本地唤醒词检测的响应性。
-- **Android**: 调用 `voicewake.set`/`voicewake.get`，监听 `voicewake.changed`，并在启用时公布 `voiceWake`。识别始终在设备上进行且仅在前台有效；当 Talk、手动听写、语音备忘录录制或消息语音占用音频时会暂停。
+- **macOS**：调用 `voicewake.set`/`voicewake.get` 并监听 `voicewake.changed`，以与其他客户端保持同步。
+- **iOS**：调用 `voicewake.set`/`voicewake.get` 并监听 `voicewake.changed`，以保持本地唤醒词检测的响应性。
+- **Android**：调用 `voicewake.set`/`voicewake.get`，监听 `voicewake.changed`，并在启用时公布 `voiceWake`。识别始终在设备上进行且仅在前台有效；当 Talk、手动听写、语音备忘录录制或消息语音占用音频时会暂停。
 
 ## 相关内容
 

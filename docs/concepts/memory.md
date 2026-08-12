@@ -96,17 +96,6 @@ API 迁移正在另一个会话中设计。在迁移方案落地之前，未来�
 
 使用 [scheduled tasks](/automation/cron-jobs) 进行精确提醒、定时检查和重复性工作。记忆仍可总结围绕该工作的持久上下文。
 
-## 已弃用的推断承诺
-
-有些未来的后续事项并不是持久的事实。如果某个未来事件应该触发
-一个动作，请使用 [持续意图](/concepts/standing-intents)。如果某个时钟时间
-应该触发它，请使用 [计划任务](/automation/cron-jobs)。
-
-推断承诺实验已弃用。OpenClaw 不再提取或
-交付这些后续事项。请使用 [计划任务](/automation/cron-jobs) 来处理
-未来动作；旧的 `openclaw commitments` 命令仍可用于
-查看或忽略现有已存储的记录。
-
 ## 记忆工具
 
 该代理有三个用于处理记忆的工具：

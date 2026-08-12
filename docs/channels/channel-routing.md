@@ -113,7 +113,7 @@ OpenClaw 可以更新现有会话的元数据和 `lastRoute`，但不会因为�
 
 ## 配置概览
 
-- `agents.entries`：命名的代理定义（workspace、model 等）。
+- `agents.entries`：命名的代理定义（工作区、模型等）。
 - `bindings`：将入站渠道/账号/对等方映射到代理。
 
 示例：
@@ -121,7 +121,13 @@ OpenClaw 可以更新现有会话的元数据和 `lastRoute`，但不会因为�
 ```json5
 {
   agents: {
-    list: [{ id: "support", name: "支持", workspace: "~/.openclaw/workspace-support" }],
+    entries: {
+      support: {
+        default: true,
+        name: "Support",
+        workspace: "~/.openclaw/workspace-support",
+      },
+    },
   },
   bindings: [
     { match: { channel: "slack", teamId: "T123" }, agentId: "support" },

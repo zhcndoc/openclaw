@@ -19,7 +19,7 @@ OpenClaw 是一个自托管网关，可将 Discord、Google Chat、iMessage、Ma
 ## 前提条件
 
 - 已安装并完成 OpenClaw 配置 - 如果你还没做过，请参见 [入门指南](/start/getting-started)
-- 一个用于助手的第二个电话号码（SIM/eSIM/预付费）
+- 一个用于助手的第二个电话号码（SIM/eSIM/预付费）。
 
 ## 双手机设置（推荐）
 
@@ -127,15 +127,14 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
       // 从 0 开始；稍后再启用。
       heartbeat: { every: "0m" },
     },
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
         default: true,
         groupChat: {
           mentionPatterns: ["@openclaw", "openclaw"],
         },
       },
-    ],
+    },
   },
   channels: {
     whatsapp: {
@@ -237,15 +236,15 @@ openclaw health --json   # 通过 WS 连接获取网关健康快照
 
 ## 下一步
 
-- WebChat: [WebChat](/web/webchat)
-- Gateway 运维: [Gateway 运行手册](/gateway)
-- Cron + 唤醒: [Cron 作业](/automation/cron-jobs)
-- macOS 菜单栏伴侣： [OpenClaw macOS 应用](/platforms/macos)
-- iOS 节点应用: [iOS 应用](/platforms/ios)
-- Android 节点应用: [Android 应用](/platforms/android)
-- Windows 中心: [Windows](/platforms/windows)
-- Linux 状态: [Linux 应用](/platforms/linux)
-- 安全: [安全](/gateway/security)
+- WebChat：[WebChat](/web/webchat)
+- Gateway 运维：[Gateway 运行手册](/gateway)
+- Cron + 唤醒：[Cron 作业](/automation/cron-jobs)
+- macOS 菜单栏伴侣：[OpenClaw macOS 应用](/platforms/macos)
+- iOS 节点应用：[iOS 应用](/platforms/ios)
+- Android 节点应用：[Android 应用](/platforms/android)
+- Windows 中心：[Windows](/platforms/windows)
+- Linux 状态：[Linux 应用](/platforms/linux)
+- 安全：[安全](/gateway/security)
 
 ## 相关
 

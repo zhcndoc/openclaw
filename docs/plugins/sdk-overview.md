@@ -69,7 +69,7 @@ Schema。该内置 Schema 子路径不应作为新插件的开发模式。
 `scripts/lib/plugin-sdk-private-local-only-subpaths.json` 中列出的内部子路径。该列表中的生产入口仍为单独发布的官方插件保留仅 JavaScript 的宿主运行时导出，而仅用于测试的入口则仍不导出。运行
 `pnpm plugin-sdk:surface` 可审计公共导出数量。对于已存在足够长时间且未被捆绑扩展生产代码使用的已弃用公共子路径，
 其记录位于 `scripts/lib/plugin-sdk-deprecated-public-subpaths.json`；范围较广的已弃用重新导出桶记录于
-`scripts/lib/plugin-sdk-deprecated-barrel-subpaths.json`。
+`scripts/lib/plugin-sdk-deprecated-barrel-subpaths.json`
 
 ## 注册 API
 
@@ -105,9 +105,11 @@ Schema。该内置 Schema 子路径不应作为新插件的开发模式。
 | `api.registerCompactionProvider(...)`            | 可插拔的转录压缩后端                                                                                                                   |
 
 Worker provider 还必须在 `contracts.workerProviders` 中声明其 id。
-Core 会在 `provision(profile, operationId)` 之前持久化 durable intent。Provider 会在外部分配之前验证设置，并在永久拒绝 profile 时抛出 `WorkerProviderError`。当 operation id 重复时，`provision` 必须采用同一个租约。
-Core 会将经过验证的 profile 设置与租约一同持久化，并将该快照提供给 `destroy({ leaseId, profile })`；后者必须具备幂等性；同时也提供给 `inspect({ leaseId, profile })`，后者返回 `active`、`destroyed` 或 `unknown`。这样，provider 就能在 Gateway 重启或命名 profile 被移除后路由生命周期调用。SSH 端点的 `keyRef` 使用 `SecretRef`，绝不能内联密钥材料；同时包含来自可信 provisioning 输出的 `hostKey`，其格式必须严格为 `algorithm base64`，不得包含主机名或注释。Core 会固定 `hostKey`，绝不会信任首次连接中的密钥。Provider 还可以返回最多 10 个有序且唯一的 `fallbackPorts`（取值范围为 1 到 65535 的整数端口，且不包括主 `port`）；Core 会验证并持久化这些由 provider 广告的候选端口，用于幂等探测、内容寻址传输、受回执/锁保护的构件安装、收敛式托管工作树镜像以及隧道重连。含义不明确且未受保护的有状态命令会安全失败，不会在候选端口之间重放。当 SSH 账户还拥有无关进程时，租约可以设置 `sharedHost: true`；随后 Core 会在工作区协调期间避免冻结整个主机上的进程。省略该字段或设置为 `false` 表示使用专用工作器主机。活动检查会重复返回这一事实，以便 Core 能够为在该字段存在之前持久化的租约协调由 provider 所拥有的隔离机制；隧道启动会等待首次权威检查完成。生成动态 `keyRef` 的 provider 可以实现 `resolveSshIdentity({ leaseId, profile, keyRef })`；如果存在该方法，该解析器具有权威性；没有该方法的 provider 则使用配置的通用 secret resolver。
-`WorkerLease.desktop` 是可选的，其形状为 `{ protocol: "rfb"; port: number; passwordFilePath?: string }`；如果存在，`passwordFilePath` 必须是绝对路径。Provider 会从 `provision` 报告这一预热时能力；该能力不能追溯添加到已存在的活动租约中。Gateway 会在需要时通过 provider 的 SSH 端点读取密码文件，且绝不会持久化密码。
+Core 会在 `provision(profile, operationId)` 之前持久化 durable intent。Provider 会在外部分配之前验证设置，并针对永久性的 profile 拒绝抛出 `WorkerProviderError`。当 operation id 重复时，`provision` 必须采用同一个 lease。其 provisioning 合理地可能超过 Core 五分钟默认值的 provider，可以从 `resolveProvisionTimeoutMs(profile)` 返回一个正的毫秒预算；获取、provider 所拥有的设置和清理都必须包含在该时限内。
+
+Core 会将经过验证的 profile 设置与 lease 一同持久化，并将该快照提供给 `destroy({ leaseId, profile })`，后者必须具备幂等性；还会将其提供给 `inspect({ leaseId, profile })`，后者返回 `active`、`destroyed` 或 `unknown`。这样，provider 就能在 Gateway 重启或命名 profile 被移除后路由生命周期调用。SSH endpoint 使用 `SecretRef` 作为 `keyRef`，绝不能内联密钥材料，并且包含来自可信 provisioning 输出的 `hostKey`，其格式必须严格为 `algorithm base64`，不能包含 hostname 或 comment。Core 会固定 `hostKey`，绝不信任首次连接中的密钥。Provider 还可以返回最多 10 个有序且唯一的 `fallbackPorts`（范围为 1 到 65535 的整数端口，不包括主 `port`）；Core 会验证并持久化这些所播报的候选端口，用于幂等探测、内容寻址传输、由回执/锁保护的 artifact 安装、收敛式 managed-worktree 镜像以及隧道重连。含义不明确且未受保护的有状态命令会安全失败，不会在候选端口之间重放。当 SSH 账户还拥有不相关的进程时，lease 可以设置 `sharedHost: true`；这样，Core 在 workspace reconciliation 期间就不会冻结整个主机的进程。省略该字段或设置为 `false` 表示使用专用 worker 主机。活动 inspection 会重复这一事实，使 Core 能够为在该字段存在之前持久化的 lease 协调 provider 所拥有的隔离；隧道启动会等待首次权威 inspection。生成动态 `keyRef` 的 provider 可以实现 `resolveSshIdentity({ leaseId, profile, keyRef })`；如果存在该方法，则该 resolver 具有权威性；没有该方法的 provider 则使用所配置的通用 secret resolver。
+
+`WorkerLease.desktop` 是可选的，其形式为 `{ protocol: "rfb"; port: number; passwordFilePath?: string; apps?: WorkerDesktopApp[] }`；如果存在，`passwordFilePath` 必须是绝对路径。Provider 会从 `provision` 报告这一 warm-time capability；它不能补充到已存活的 lease 上。Gateway 会在需要时通过 provider 的 SSH endpoint 读取密码文件，绝不持久化密码。`WorkerDesktopApp` 是一个封闭联合类型：`{ id: "browser"; executablePath: string; cdpPort: number }` 或 `{ id: "terminal"; executablePath: string }`。App id 必须唯一，可执行文件路径必须是绝对路径，browser CDP 端口必须是 1 到 65535 之间的整数，并且列表最多接受八个条目。Core 会拒绝未知的 id 和字段。
 
 具有可续期租约的 provider 还可以实现 `renew(leaseId)`。
 
@@ -151,7 +153,7 @@ agentPromptGuidance: [
 进程内部运行。如果存在 `agentTool`，节点会在成功连接 Gateway 后发布描述符；Gateway 仅在该节点已连接期间，且仅当描述符的
 `command` 位于节点已批准的命令范围内时，才会将其公开给代理运行。将 `agentTool.defaultPlatforms` 设置为将非危险命令加入默认节点命令允许列表；否则需要显式设置
 `gateway.nodes.commands.allow` 或节点调用策略。`agentTool.name`
-必须符合提供方安全要求：以字母开头，只能使用字母、数字、下划线或连字符，且长度不得超过 64 个字符。基于 MCP 的节点工具可以设置 `agentTool.mcp` 元数据，以便目录和工具搜索界面显示远程 MCP 服务器/工具的身份信息，但执行仍会通过所公布的节点命令进行。
+必须符合提供方安全要求：以字母开头，只能使用字母、数字、下划线或连字符，且长度不得超过 64 个字符。基于 MCP 的节点工具可以设置 `agentTool.mcp` 元数据，以便目录和工具搜索界面显示远程 MCP 服务器／工具的身份信息，但执行仍会通过所公布的节点命令进行。
 
 ### 基础设施
 
@@ -177,7 +179,7 @@ agentPromptGuidance: [
 | `api.registerAutoEnableProbe(probe)`            | 可自动启用此插件的配置探测器                          |
 | `api.registerReload(registration)`              | 重载处理的重启/热重载/无操作配置前缀策略              |
 | `api.registerNodeHostCommand(command)`          | 向配对节点公开的命令处理器                                |
-| `api.registerNodeInvokePolicy(policy)`          | 节点调用命令的允许列表/审批策略                    |
+| `api.registerNodeInvokePolicy(policy)`         | 节点调用命令的允许列表/审批策略                    |
 | `api.registerSecurityAuditCollector(collector)` | `openclaw security audit` 的发现项收集器                       |
 
 #### 确认后的 Webhook 工作
@@ -257,12 +259,12 @@ Telegram 交互处理器可以返回 `{ submitText }`，以便在处理器成功
 | `api.registerToolMetadata(...)`                                                      | 工具目录展示元数据，不改变工具实现                                                                                     |
 | `api.registerCommand(...)`                                                           | 作用域化的插件命令；命令结果可以设置 `continueAgent: true` 或 `suppressReply: true`；Discord 原生命令支持 `descriptionLocalizations` |
 | `api.session.controls.registerControlUiDescriptor(...)`                              | 面向会话、工具、运行、设置或标签页界面的 Control UI 贡献描述符                                                                      |
-| `api.lifecycle.registerRuntimeLifecycle(...)`                                        | 在重置/删除/重载路径上，为插件拥有的运行时资源提供清理回调                                                                          |
+| `api.lifecycle.registerRuntimeLifecycle(...)`                                        | 在重置／删除／重载路径上，为插件拥有的运行时资源提供清理回调                                                                          |
 | `api.agent.events.registerAgentEventSubscription(...)`                               | 用于工作流状态和监视器的已净化事件订阅                                                                                              |
-| `api.runContext.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)`  | 每次运行的插件临时状态，在终止性的运行生命周期上清除                                                                                             |
+| `api.runContext.setRunContext(...)` ／ `getRunContext(...)` ／ `clearRunContext(...)`  | 每次运行的插件临时状态，在终止性的运行生命周期上清除                                                                                             |
 | `api.session.workflow.registerSessionSchedulerJob(...)`                              | 插件拥有的调度器作业的清理元数据；不会调度工作或创建任务记录                                                            |
 | `api.session.workflow.sendSessionAttachment(...)`                                    | 仅限捆绑包的、由宿主中介的文件附件投递到活动的直接外发会话路由                                                            |
-| `api.session.workflow.scheduleSessionTurn(...)` / `unscheduleSessionTurnsByTag(...)` | 仅限捆绑包的、基于 Cron 的已调度会话回合，以及基于标签的清理                                                                                    |
+| `api.session.workflow.scheduleSessionTurn(...)` ／ `unscheduleSessionTurnsByTag(...)` | 仅限捆绑包的、基于 Cron 的已调度会话回合，以及基于标签的清理                                                                                    |
 | `api.session.controls.registerSessionAction(...)`                                    | 客户端可通过 Gateway 分发的类型化会话动作                                                                                             |
 
 `surface: "tab"` 描述符会向 Control UI 添加一个侧边栏标签页。活动
@@ -286,7 +288,7 @@ hello（`controlUiTabs`）中向 dashboard 客户端通告，因此该标签页�
 框架授权令牌只接受 `GET` 和 `HEAD`，并始终携带
 `operator.read`；`requiredScopes` 控制标签页可见性，但绝不会扩大 Cookie 授权范围。
 变更操作仍需通过明确的、经过 Gateway 身份验证的父页面或 bearer 界面执行。
-外部标签页要求使用 HTTPS/Tailscale Serve，或浏览器信任的回环源；
+外部标签页要求使用 HTTPS／Tailscale Serve，或浏览器信任的回环源；
 在局域网主机上使用普通 HTTP 时，会显示安全上下文错误，而不是挂载一个
 无法完成身份验证的面板。
 完全阻止第三方 Cookie 也会使受 Gateway 保护的标签页不可用。
@@ -320,7 +322,7 @@ api.session.controls.registerControlUiDescriptor({
 - `api.session.controls.registerControlUiDescriptor(...)`
 - `api.agent.events.registerAgentEventSubscription(...)`
 - `api.agent.events.emitAgentEvent(...)`
-- `api.runContext.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)`
+- `api.runContext.setRunContext(...)` ／ `getRunContext(...)` ／ `clearRunContext(...)`
 - `api.lifecycle.registerRuntimeLifecycle(...)`
 
 现有插件仍可使用等价的平面方法作为已弃用的兼容别名。不要添加新插件代码直接调用
@@ -355,8 +357,8 @@ Cron 调度器之上的会话作用域便捷封装。Cron 负责时序，并在�
 | 插件类型             | 使用的钩子                                                                                                                             |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 审批工作流            | 会话扩展、命令续接、下一回合注入、UI 描述符                                                            |
-| 预算/工作区策略门禁 | 受信任的工具策略、工具元数据、会话投影                                                                                 |
-| 后台生命周期监视器 | 运行时生命周期清理、agent 事件订阅、会话调度器所有权/清理、heartbeat 提示词贡献、UI 描述符 |
+| 预算／工作区策略门禁 | 受信任的工具策略、工具元数据、会话投影                                                                                 |
+| 后台生命周期监视器 | 运行时生命周期清理、agent 事件订阅、会话调度器所有权／清理、heartbeat 提示词贡献、UI 描述符 |
 | 安装或引导向导   | 会话扩展、作用域命令、Control UI 描述符                                                                              |
 
 <Note>
@@ -491,7 +493,7 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
 要参与持久化的已接纳回合，上下文引擎必须在 `info.transcriptSemantics` 下声明
 `currentTurnFence: "before-current-turn-entry-v1"` 和
-`turnAdvancementIdempotency: "atomic-idempotent-v1"`，然后将 `commitTurn(...)` 实现为一个以 `advancementKey` 为键的原子幂等写入。若不具备完整契约，OpenClaw 会在整个逻辑回合及其重试过程中使用旧版上下文路径，保持已配置的引擎不变，并在下一个逻辑回合再次尝试使用该引擎。
+`turnAdvancementIdempotency: "atomic-idempotent-v1"`，然后将 `commitTurn(...)` 实现为一个以 `advancementKey` 为键的原子幂等写入。OpenClaw 仅提供包含边界的已接受回合，从已接纳的用户条目开始，直到其终止条目为止；使用 `readSessionTranscriptVisibleMessageDelta(...)` 游标 API 引导或重建更早的历史记录。如果没有完整的契约，OpenClaw 会在整个逻辑回合及其重试过程中使用旧版上下文路径，保持配置的引擎不变，并在下一个逻辑回合再次尝试该引擎。
 
 ### 已弃用的内存嵌入适配器
 
@@ -522,7 +524,7 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 | `api.on(hookName, handler, opts?)`           | 类型化生命周期钩子          |
 | `api.onConversationBindingResolved(handler)` | 会话绑定回调 |
 
-示例、常见钩子名称和守卫
+示例、常见钩子名称和守卫  
 语义请参见 [插件钩子](/plugins/hooks)。
 
 ### 钩子决策语义
@@ -560,8 +562,8 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 | `api.description`        | `string?`                 | 插件描述（可选）                                                                       |
 | `api.source`             | `string`                  | 插件源路径                                                                              |
 | `api.rootDir`            | `string?`                 | 插件根目录（可选）                                                                     |
-| `api.config`              | `OpenClawConfig`          | 当前配置快照（可用时为活跃的内存运行时快照）                                             |
-| `api.pluginConfig`       | `Record<string, unknown>` | 来自 `plugins.entries.<id>.config` 的插件专属配置                                        |
+| `api.config`             | `OpenClawConfig`          | 当前配置快照（可用时为活跃的内存运行时快照）                                             |
+| `api.pluginConfig`        | `Record<string, unknown>` | 来自 `plugins.entries.<id>.config` 的插件专属配置                                        |
 | `api.runtime`            | `PluginRuntime`           | [运行时辅助工具](/plugins/sdk-runtime)                                                  |
 | `api.logger`             | `PluginLogger`            | 作用域日志记录器（`debug`、`info`、`warn`、`error`）                                     |
 | `api.registrationMode`   | `PluginRegistrationMode`  | 当前加载模式；`"setup-runtime"` 是可使用运行时的轻量级设置流程                          |

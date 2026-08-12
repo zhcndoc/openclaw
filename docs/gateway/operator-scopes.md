@@ -43,6 +43,33 @@ Operator RPC 方法需要 `operator` 角色；来自 node 的方法
 未知的未来 `operator.*` 作用域除非调用方
 已经持有 `operator.admin`，否则需要精确匹配。
 
+## 身份范围授权
+
+`gateway.auth.identityScopes` 向来自 trusted-proxy auth 或 Tailscale WhoIs 的已验证用户身份授予操作员范围：
+
+```json5
+{
+  gateway: {
+    auth: {
+      identityScopes: {
+        "admin@example.com": ["operator.admin"],
+        "operator@example.com": ["operator.read", "operator.write"],
+      },
+    },
+  },
+}
+```
+
+键是已验证的代理身份或 Tailscale WhoIs 登录名。电子邮件键不区分大小写；非电子邮件身份必须完全匹配。配置验证会拒绝上述固定集合之外的范围名称。
+
+连接权限按以下顺序解析：
+
+1. 对于 trusted-proxy Control UI 连接，`x-openclaw-scopes` 首先限制设备注册或升级请求。随后，设备授权建立持久范围；无设备会话不会贡献自行声明的范围。
+2. OpenClaw 将匹配的服务器端身份授权与这些范围合并。
+3. OpenClaw 将 `x-openclaw-scopes` 应用于最终合并结果，作为会话范围上限。缺少标头表示不设上限；存在但为空的标头表示没有范围。
+
+该结果同时用于 `hello.auth.scopes` 和 Gateway 方法授权。身份授权仅限于会话：不会创建或修改配对记录，也不会请求设备范围升级。Token、密码和无身份验证连接不携带已验证身份，因此不会获得授权。
+
 ## 方法作用域只是第一道关卡
 
 每个网关 RPC 都有一个最小权限方法作用域，用于决定请求是否会到达其处理程序。参数感知的方法会在分发前派生该作用域，因此授权失败会返回一个统一的结构化响应：

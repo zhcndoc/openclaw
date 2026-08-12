@@ -38,14 +38,14 @@ OpenAI 的 [API 使用情况仪表板](https://help.openai.com/en/articles/10478
 
 | 目标                                              | 使用                                                                | 备注                                                               |
 | ------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| ChatGPT/Codex 订阅，原生 Codex 运行时              | `openai/gpt-5.6-sol`                                               | 新订阅设置；使用 Codex 身份验证登录。                               |
-| 代理轮次的直接 API 密钥计费                      | `openai/gpt-5.6` 加上一个有序的 API 密钥身份验证配置文件              | 新的 API 密钥设置；裸的直接 API ID 会解析为 Sol。                  |
-| 选择一个确切的 GPT-5.6 层级                      | `openai/gpt-5.6-sol`、`-terra` 或 `-luna`                         | 检查 `models list` 以查看此账户可用的层级。                         |
-| 没有 GPT-5.6 访问权限的账户                      | `openai/gpt-5.5`                                                   | 明确的恢复选择；OpenClaw 不会静默降级。                             |
-| 直接 API 密钥计费，显式 OpenClaw 运行时           | `openai/gpt-5.6` 加上 provider/model `agentRuntime.id: "openclaw"` | 选择一个正常的 `openai` API 密钥配置文件。                           |
-| 最新 ChatGPT Instant 模型别名                     | `openai/chat-latest`                                               | 仅限直接 API 密钥；是会变化的别名，不是稳定默认值。                  |
-| 图像生成或编辑                                   | `openai/gpt-image-2`                                               | 可与 `OPENAI_API_KEY` 或 Codex OAuth 配合使用。                     |
-| 透明背景图像                                     | `openai/gpt-image-1.5`                                             | 将 `outputFormat` 设置为 `png` 或 `webp`，并设置 `background=transparent`。 |
+| ChatGPT/Codex 订阅，原生 Codex 运行时             | `openai/gpt-5.6-sol`                                               | 全新订阅设置；使用 Codex 身份验证登录。                              |
+| 为代理回合直接使用 API 密钥计费                   | `openai/gpt-5.6-sol` 加上一个按顺序排列的 API 密钥身份验证配置       | 全新 API 密钥设置使用明确的 Sol ID。                                  |
+| 选择确切的 GPT-5.6 层级                           | `openai/gpt-5.6-sol`、`-terra` 或 `-luna`                          | 使用 `models list` 检查此账户可用的层级。                             |
+| 无法访问 GPT-5.6 的账户                            | `openai/gpt-5.5`                                                   | 明确的恢复选项；OpenClaw 不会静默降级。                               |
+| 直接使用 API 密钥计费，明确指定 OpenClaw 运行时     | `openai/gpt-5.6` 加上提供商／模型 `agentRuntime.id: "openclaw"`    | 选择普通的 `openai` API 密钥配置。                                    |
+| 最新的 ChatGPT Instant 模型别名                    | `openai/chat-latest`                                               | 仅支持直接 API 密钥；动态别名，不是稳定的默认值。                      |
+| 图像生成或编辑                                     | `openai/gpt-image-2`                                               | 支持使用 `OPENAI_API_KEY` 或 Codex OAuth。                            |
+| 透明背景图像                                       | `openai/gpt-image-1.5`                                             | 将 `outputFormat` 设置为 `png` 或 `webp`，并将 `background=transparent`。 |
 
 ## 命名映射
 
@@ -100,7 +100,12 @@ OpenClaw 识别精确的 `openai/gpt-5.6-sol`、
 [GPT-5.6 发布公告](https://openai.com/index/previewing-gpt-5-6-sol/)
 和[访问指南](https://help.openai.com/en/articles/20001325-a-preview-of-gpt-5-6-sol-terra-and-luna)。
 
-使用直接的 OpenAI API key 认证时，裸的 `openai/gpt-5.6` id 是 Sol 的别名，并且是全新设置的默认值。原生 Codex 目录不会在客户端应用该直接 API 别名；根据工作区访问权限，它可以显示精确的 Sol、Terra 和 Luna id。因此，全新的 ChatGPT/Codex OAuth 设置使用 `openai/gpt-5.6-sol`。使用以下命令检查当前账号：
+OpenAI 的 [GPT-5.6 Sol model page](https://developers.openai.com/api/docs/models/gpt-5.6-sol)
+记录了裸 `openai/gpt-5.6` id 是 Sol 支持的别名。全新的
+API 密钥和 ChatGPT/Codex OAuth 设置使用规范的 `openai/gpt-5.6-sol`
+引用，因此模型选择器不会针对同一层级显示两个名称。运行
+`openclaw doctor --fix` 可将持久化的裸 OpenAI 引用重写为该规范身份。原生 Codex 目录可能会根据
+工作区访问权限显示确切的 Sol、Terra 和 Luna id。使用以下命令检查当前账户：
 
 ```bash
 openclaw models list --provider openai
@@ -235,29 +240,30 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
     ```json5
     {
-      env: { OPENAI_API_KEY: "example-openai-key-not-real" },
-      agents: { defaults: { model: { primary: "openai/gpt-5.6" } } },
+      env: { vars: { OPENAI_API_KEY: "example-openai-key-not-real" } },
+      agents: { defaults: { model: { primary: "openai/gpt-5.6-sol" } } },
     }
     ```
 
-    直接 API 的裸 `gpt-5.6` id 会解析为 Sol 等级。如果该 API
-    组织未公开 GPT-5.6，请明确将 primary 设为
-    `openai/gpt-5.5`。
+    直接 API 的裸 `gpt-5.6` 别名也受支持，并会解析为
+    Sol 层级。如果此 API 组织不公开 GPT-5.6，请明确将 primary
+    设置为 `openai/gpt-5.5`。
 
     若要从 OpenAI API 中尝试 ChatGPT 当前的即时模型，请将模型
     设为 `openai/chat-latest`：
 
     ```json5
     {
-      env: { OPENAI_API_KEY: "example-openai-key-not-real" },
+      env: { vars: { OPENAI_API_KEY: "example-openai-key-not-real" } },
       agents: { defaults: { model: { primary: "openai/chat-latest" } } },
     }
     ```
 
-    `chat-latest` 是一个会变化的别名。新的 OpenAI API-key 设置应改为使用
-    `openai/gpt-5.6`，其裸直接 API id 会解析为 Sol。现有的显式 primary（包括
-    `openai/gpt-5.5`）保持不变。`chat-latest` 别名只接受 `medium` 文本详细度；
-    OpenClaw 会将该模型请求的任何其他详细度强制为 `medium`。
+    `chat-latest` 是一个动态别名。新的 OpenAI API-key 设置应改用
+    `openai/gpt-5.6-sol`。裸的直接 API `openai/gpt-5.6` 别名仍受支持，
+    并会解析为 Sol。现有的显式 primary，包括 `openai/gpt-5.5`，保持不变。
+    `chat-latest` 别名仅接受 `medium` 文本详细程度；对于此模型，OpenClaw 会将
+    任何其他请求的详细程度强制设为 `medium`。
 
     <Warning>
     OpenClaw 在直接 OpenAI API 密钥路由上**不**提供 `gpt-5.3-codex-spark`。它
@@ -613,7 +619,7 @@ openclaw migrate apply codex --from <codex-home> --agent <agent-id> --include-se
 {
   agents: {
     defaults: {
-      imageGenerationModel: { primary: "openai/gpt-image-2" },
+      mediaModels: { image: { primary: "openai/gpt-image-2" } },
     },
   },
 }
@@ -683,7 +689,7 @@ OpenAI 图像生成视频请求使用 `POST /v1/videos`，并带有图像
 {
   agents: {
     defaults: {
-      videoGenerationModel: { primary: "openai/sora-2" },
+      mediaModels: { video: { primary: "openai/sora-2" } },
     },
   },
 }
@@ -702,7 +708,7 @@ OpenAI 提供方声明支持 `supportsSize`，但不支持 `supportsAspectRatio`
 
 ## GPT-5 提示词贡献
 
-OpenClaw 为 `openai` 提供方上的 GPT-5 系列模型添加了一个共享的 GPT-5 提示词贡献（包括会规范化为 `openai/*` 的旧版、修复前的 Codex 引用）。其他同样提供 GPT-5 系列模型 ID 的提供方，例如 OpenRouter 或 opencode 路由，不会收到此覆盖层；它受提供方 ID `openai` 约束，而不是仅由模型 ID 决定。更旧的 GPT-4.x 模型永远不会收到它。
+OpenClaw 会为匹配 GPT-5 系列的 OpenClaw 组装提示添加共享的 GPT-5 提示词贡献。下面的 OpenAI 插件设置控制 OpenAI 系列路由上的友好风格。较旧的 GPT-4.x 模型 ID 不匹配。
 
 原生 Codex 应用服务器运行框架不会通过开发者指令获得人格/工具纪律行为契约或友好交互风格覆盖层；原生 Codex 保留 Codex 自有的基础、模型和项目文档行为，而 OpenClaw 会为原生线程禁用 Codex 内置人格，使代理工作区人格文件保持权威。OpenClaw 仅向原生 Codex 线程贡献运行时上下文：通道传递、OpenClaw 动态工具、ACP 委派、工作区上下文以及 OpenClaw 技能。来自同一贡献中的心跳指导文本是唯一例外：原生 Codex 的心跳轮次确实会收到它，但它是作为专门的协作指令注入的，而不是通过共享提示词贡献钩子注入的。
 
@@ -718,10 +724,10 @@ GPT-5 提示词贡献会为匹配的 OpenClaw 组装提示添加一个带标签�
   <Tab title="配置">
     ```json5
     {
-      agents: {
-        defaults: {
-          promptOverlays: {
-            gpt5: { personality: "friendly" },
+      plugins: {
+        entries: {
+          openai: {
+            config: { personality: "friendly" },
           },
         },
       },
@@ -730,7 +736,7 @@ GPT-5 提示词贡献会为匹配的 OpenClaw 组装提示添加一个带标签�
   </Tab>
   <Tab title="命令行">
     ```bash
-    openclaw config set agents.defaults.promptOverlays.gpt5.personality off
+    openclaw config set plugins.entries.openai.config.personality off
     ```
   </Tab>
 </Tabs>
@@ -740,7 +746,7 @@ GPT-5 提示词贡献会为匹配的 OpenClaw 组装提示添加一个带标签�
 </Tip>
 
 <Note>
-当共享的 `agents.defaults.promptOverlays.gpt5.personality` 设置未配置时，仍会读取旧的 `plugins.entries.openai.config.personality` 作为兼容性回退。
+已弃用的 `agents.defaults.promptOverlays` 键不再读取；配置验证会拒绝该键，并且当 `plugins.entries.openai.config.personality` 未设置时，`openclaw doctor --fix` 会将其中的 personality 值迁移到该配置项。
 </Note>
 
 ## 语音与音频
@@ -799,14 +805,16 @@ GPT-5 提示词贡献会为匹配的 OpenClaw 组装提示添加一个带标签�
     {
       tools: {
         media: {
+          models: [
+            {
+              type: "provider",
+              provider: "openai",
+              model: "gpt-4o-transcribe",
+              capabilities: ["audio"],
+            },
+          ],
           audio: {
-            models: [
-              {
-                type: "provider",
-                provider: "openai",
-                model: "gpt-4o-transcribe",
-              },
-            ],
+            enabled: true,
           },
         },
       },

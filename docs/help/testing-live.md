@@ -39,7 +39,7 @@ pnpm openclaw voicecall setup --json
 pnpm openclaw voicecall smoke --to "+15555550123"
 ```
 
-`voicecall smoke` 默认是一次试运行，除非同时提供 `--yes`；仅当你打算发起真实通话时才使用 `--yes`。对于 Twilio、Telnyx 和 Plivo，成功的就绪检查需要一个公开的 webhook URL——本地/私有的 loopback URL 会被拒绝，因为这些提供商无法访问它们。
+`voicecall smoke` 默认是一次试运行，除非同时提供 `--yes`；仅当你打算发起真实通话时才使用 `--yes`。对于 Twilio、Telnyx 和 Plivo，成功的就绪检查需要一个公开的 webhook URL——本地／私有的 loopback URL 会被拒绝，因为这些提供商无法访问它们。
 
 ## 实时：Android 节点能力扫描
 
@@ -56,13 +56,13 @@ pnpm openclaw voicecall smoke --to "+15555550123"
 - 可选目标覆盖：
   - `OPENCLAW_ANDROID_NODE_ID` 或 `OPENCLAW_ANDROID_NODE_NAME`。
   - `OPENCLAW_ANDROID_GATEWAY_URL` / `OPENCLAW_ANDROID_GATEWAY_TOKEN` / `OPENCLAW_ANDROID_GATEWAY_PASSWORD`。
-- Android 完整设置详情：[Android 应用](/platforms/android)
+- Android 完整设置详情：[Android 应用](/platforms/android)。
 
 ## 实时：模型冒烟（配置文件密钥）
 
 实时模型测试分成两层，这样失败就能彼此隔离：
 
-- “直接模型”用于判断在给定密钥下，提供方/模型是否至少能够正常回答。
+- “直接模型”用于判断在给定密钥下，提供方／模型是否至少能够正常回答。
 - “网关冒烟”用于判断该模型的完整网关 + agent 流程是否可用（会话、历史记录、工具、沙箱策略等）。
 
 下面整理的模型列表位于 `src/agents/live-model-filter.ts`，并且
@@ -96,7 +96,7 @@ MiniMax M3 使用 `minimax/MiniMax-M3` 作为其默认 provider/model 引用。
   - 默认：配置文件存储和环境变量回退值
   - 设置 `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1`，强制仅使用**配置文件存储**中的密钥
 - 存在的原因：
-  - 将“提供方 API 故障 / 密钥无效”与“网关 agent 流程故障”区分开
+  - 将“提供方 API 故障／密钥无效”与“网关 agent 流程故障”区分开
   - 包含小型、隔离的回归测试（例如：OpenAI Responses/Codex Responses 的推理重放 + 工具调用流程）
 
 ### 第 2 层：网关 + 开发 agent 冒烟（即“@openclaw”实际执行的内容）
@@ -104,7 +104,7 @@ MiniMax M3 使用 `minimax/MiniMax-M3` 作为其默认 provider/model 引用。
 - 测试：`src/gateway/gateway-models.profiles.live.test.ts`
 - 目标：
   - 启动一个进程内网关
-  - 创建/修改一个 `agent:dev:*` 会话（每次运行覆盖模型）
+  - 创建／修改一个 `agent:dev:*` 会话（每次运行覆盖模型）
   - 遍历拥有密钥的模型，并断言：
     - “有意义的”响应（无工具）
     - 实际工具调用可用（读取探测）
@@ -154,8 +154,8 @@ openclaw models list --json
   - `pnpm test:live`（或在直接调用 Vitest 时使用 `OPENCLAW_LIVE_TEST=1`）
   - `OPENCLAW_LIVE_CLI_BACKEND=1`
 - 默认值：
-  - 默认提供商/模型：`claude-cli/claude-sonnet-4-6`
-  - 命令/参数/图像行为来自所属 CLI 后端插件元数据。
+  - 默认提供商／模型：`claude-cli/claude-sonnet-4-6`
+  - 命令／参数／图像行为来自所属 CLI 后端插件元数据。
 - 覆盖项（可选）：
   - `OPENCLAW_LIVE_CLI_BACKEND_MODEL="claude-cli/claude-sonnet-4-6"`
   - `OPENCLAW_LIVE_CLI_BACKEND_COMMAND="/full/path/to/claude"`
@@ -165,7 +165,7 @@ openclaw models list --json
   - `OPENCLAW_LIVE_CLI_BACKEND_IMAGE_MODE="repeat"`（或 `"list"`）用于在设置了 `IMAGE_ARG` 时控制图像参数的传递方式。
   - `OPENCLAW_LIVE_CLI_BACKEND_RESUME_PROBE=1` 用于发送第二轮并验证恢复流程。
   - `OPENCLAW_LIVE_CLI_BACKEND_MODEL_SWITCH_PROBE=1` 用于在所选模型支持切换目标时，启用 Claude Sonnet -> Opus 同会话连续性探测。默认关闭，包括 Docker 配方中。
-  - `OPENCLAW_LIVE_CLI_BACKEND_MCP_PROBE=1` 用于启用 MCP/工具回环探测。默认在 Docker 配方中关闭。
+  - `OPENCLAW_LIVE_CLI_BACKEND_MCP_PROBE=1` 用于启用 MCP／工具回环探测。默认在 Docker 配方中关闭。
 
 示例：
 
@@ -206,7 +206,7 @@ pnpm test:docker:live-cli-backend:gemini
 - 它以非 root 用户 `node` 的身份，在仓库 Docker 镜像内运行实时 CLI 后端冒烟测试。
 - 它从所属插件解析 CLI 冒烟元数据，然后将匹配的 Linux CLI 软件包（`@anthropic-ai/claude-code` 或 `@google/gemini-cli`）安装到 `OPENCLAW_DOCKER_CLI_TOOLS_DIR` 指定的可写缓存前缀中（默认：`~/.cache/openclaw/docker-cli-tools`）。
 - `codex-cli` 不再是捆绑的 CLI 后端；请改用带有 Codex app-server 运行时的 `openai/*`（参见[实时：Codex app-server harness 冒烟测试](#live-codex-app-server-harness-smoke)）。
-- `pnpm test:docker:live-cli-backend:claude-subscription` 需要通过以下任一方式提供可移植的 Claude Code 订阅 OAuth：使用包含 `claudeAiOauth.subscriptionType` 的 `~/.claude/.credentials.json`，或使用 `claude setup-token` 获取的 `CLAUDE_CODE_OAUTH_TOKEN`。它会先在 Docker 中验证直接运行 `claude -p`，然后在不保留 Anthropic API 密钥环境变量的情况下，运行两轮 Gateway CLI 后端调用。由于该订阅通道会消耗已登录订阅的使用限额，并且 Anthropic 可能在不发布 OpenClaw 新版本的情况下更改 Claude Agent SDK / `claude -p` 的计费和速率限制行为，因此默认禁用 Claude MCP/工具和图像探测。
+- `pnpm test:docker:live-cli-backend:claude-subscription` 需要通过以下任一方式提供可移植的 Claude Code 订阅 OAuth：使用包含 `claudeAiOauth.subscriptionType` 的 `~/.claude/.credentials.json`，或使用 `claude setup-token` 获取的 `CLAUDE_CODE_OAUTH_TOKEN`。它会先在 Docker 中验证直接运行 `claude -p`，然后在不保留 Anthropic API 密钥环境变量的情况下，运行两轮 Gateway CLI 后端调用。由于该订阅通道会消耗已登录订阅的使用限额，并且 Anthropic 可能在不发布 OpenClaw 新版本的情况下更改 Claude Agent SDK／`claude -p` 的计费和速率限制行为，因此默认禁用 Claude MCP／工具和图像探测。
 - Claude 和 Gemini 通过上述标志支持相同的探测集（文本调用、图像分类、MCP `automations` 工具调用、模型切换连续性），但默认不运行其中任何探测——如有需要，请按标志逐项启用。
 
 ## 实时：APNs HTTP/2 代理可达性
@@ -288,21 +288,21 @@ Docker 说明：
 
 ## 实时：Codex app-server harness 冒烟测试
 
-- 目标：通过正常的网关 `agent` 方法验证插件自有的 Codex harness：
-  - 加载内置的 `codex` 插件
+- 目标：通过正常的网关 `agent` 方法验证插件所有的 Codex harness
+  - 加载捆绑的 `codex` 插件
   - 通过 `/model <ref> --runtime codex` 选择 OpenAI 模型
   - 使用请求的思考级别发送第一轮网关 agent 对话
   - 向同一个 OpenClaw 会话发送第二轮对话，并验证 app-server 线程可以恢复
   - 通过相同的网关命令路径运行 `/codex status` 和 `/codex models`
-  - 可选地运行两个经过 Guardian 审查的升级 shell 探测：一个应获批准的良性命令，以及一个应被拒绝、从而让 agent 反问的伪造密钥上传操作
+  - 可选地运行两个经过 Guardian 审查的升级 shell 探测：一个应获批准的无害命令，以及一个应被拒绝、从而让 agent 反问的伪造密钥上传操作
 - 测试：`src/gateway/gateway-codex-harness.live.test.ts`
 - 启用：`OPENCLAW_LIVE_CODEX_HARNESS=1`
-- Harness 基线模型：`openai/gpt-5.6-luna`
-- 新鲜 OpenAI API 密钥选择默认值：`openai/gpt-5.6`
+- Harness 基准模型：`openai/gpt-5.6-luna`
+- 新鲜 OpenAI API 密钥选择默认值：`openai/gpt-5.6-sol`
 - 默认思考级别：`low`
 - 模型覆盖：`OPENCLAW_LIVE_CODEX_HARNESS_MODEL=openai/<model>`
 - 思考级别覆盖：`OPENCLAW_LIVE_CODEX_HARNESS_THINKING=<level>`
-- 非默认模型的 effort 断言：
+- 非默认模型 effort 断言：
   `OPENCLAW_LIVE_CODEX_HARNESS_EXPECTED_EFFORT=<level>`
 - 矩阵覆盖：`OPENCLAW_LIVE_CODEX_HARNESS_TARGETS=<model>=<thinking>,...`
 - 认证模式：`OPENCLAW_LIVE_CODEX_HARNESS_AUTH=codex-auth`（默认）使用
@@ -409,7 +409,7 @@ OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key \
   `922000`，最大输出为 `128000`，压缩阈值为 `700000`。`reduced`
   使用更小的预算，但经过相同的传输和持久化路径。
 - 指标：`OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_METRICS=1` 会输出阶段计时和
-  token 观测值。这些测量仅供参考，不是通过/失败的延迟目标。
+  token 观测值。这些测量仅供参考，不是通过／失败的延迟目标。
 - 长输出：`OPENCLAW_LIVE_OPENAI_LONG_CONTEXT_OUTPUT=1` 要求生成
   4000 到 8000 个输出 token 之间的确定性响应。
 - 可选的原始读取工具压力测试：
@@ -426,7 +426,7 @@ OPENCLAW_LIVE_OPENAI_LONG_CONTEXT=1 \
   node --import tsx scripts/test-live.mts --quiet src/gateway/gateway-openai-long-context.live.test.ts
 ```
 
-Reduced-budget 配方：
+精简预算配方：
 
 ```bash
 OPENCLAW_LIVE_OPENAI_LONG_CONTEXT=1 \
@@ -449,7 +449,7 @@ OPENCLAW_LIVE_OPENAI_LONG_CONTEXT=1 \
 压缩耗时、重启延迟、回合延迟和套件总耗时仅作为信息性指标输出。
 
 <Warning>
-完整模式会有意跨越 OpenAI 的长上下文定价边界，并发起多次大型 API 调用。当输入 token 超过 `272000` 时，整个请求的输入/缓存价格为 2 倍，输出价格为 1.5 倍；Fast/Priority 会使该层级的价格再次翻倍。只有在获得明确的费用批准后，才可使用完整模式。
+完整模式会有意跨越 OpenAI 的长上下文定价边界，并发起多次大型 API 调用。当输入 token 超过 `272000` 时，整个请求的输入／缓存价格为 2 倍，输出价格为 1.5 倍；Fast／Priority 会使该层级的价格再次翻倍。只有在获得明确的费用批准后，才可使用完整模式。
 </Warning>
 
 新鲜 OpenAI API 密钥默认配置：
@@ -461,7 +461,7 @@ OPENCLAW_LIVE_GATEWAY_OPENAI_API_DEFAULT=1 \
   pnpm test:live -- src/gateway/gateway-models.profiles.live.test.ts
 ```
 
-这个证明不设置 `OPENCLAW_LIVE_GATEWAY_MODELS`，通过新鲜的 onboarding inference-selection seam 解析模型，断言 `openai/gpt-5.6`，然后使用该解析出的模型运行一次真实的 gateway 回合。
+此验证将 `OPENCLAW_LIVE_GATEWAY_MODELS` 保持未设置，通过新鲜引导流程的推理选择接缝解析模型，断言为 `openai/gpt-5.6-sol`，然后使用已解析的模型运行一次真实的 Gateway 回合。
 
 GPT-5.6 内嵌 OpenClaw 矩阵：
 
@@ -476,7 +476,7 @@ Docker 说明：
 
 - Docker 运行器位于 `scripts/test-live-codex-harness-docker.sh`。
 - 它传递 `OPENAI_API_KEY`，在存在时复制 Codex CLI 认证文件，将 `@openai/codex` 安装到可写的挂载 npm 前缀中，准备源代码树，然后只运行 Codex-harness 实时测试。
-- Docker 默认启用图片、MCP/工具和 Guardian 探测。需要更窄的调试运行时，设置 `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0` 或 `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0` 或 `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0`。
+- Docker 默认启用图片、MCP／工具和 Guardian 探测。需要更窄的调试运行时，设置 `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0` 或 `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0` 或 `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0`。
 - Docker 使用相同的显式 Codex 运行时配置，因此旧别名或 OpenClaw 回退无法掩盖 Codex harness 回归。
 - 矩阵目标在一个容器中按顺序运行。Docker 脚本会按目标数量扩展其默认 35 分钟超时；任何外层 shell 或 CI 超时都必须允许相同的总时长。规范 CI 会把每个 GPT-5.6 目标放在独立 shard 中。
 
@@ -484,19 +484,19 @@ Docker 说明：
 
 范围窄、明确的 allowlist 最快，也最不容易出问题：
 
-- 单模型，直接方式（无 gateway）：
+- 单模型，直接方式（无 Gateway）：
   - `OPENCLAW_LIVE_MODELS="openai/gpt-5.6-luna" pnpm test:live src/agents/models.profiles.live.test.ts`
 
 - 小模型直接 profile：
   - `OPENCLAW_LIVE_MODELS=small pnpm test:live src/agents/models.profiles.live.test.ts`
 
-- 小模型 gateway profile：
+- 小模型 Gateway profile：
   - `OPENCLAW_LIVE_GATEWAY_MODELS=small pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 - Ollama Cloud API 冒烟：
   - `OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_OLLAMA=1 OPENCLAW_LIVE_OLLAMA_BASE_URL=https://ollama.com OPENCLAW_LIVE_OLLAMA_MODEL=glm-5.1:cloud OPENCLAW_LIVE_OLLAMA_WEB_SEARCH=0 pnpm test:live -- extensions/ollama/ollama.live.test.ts`
 
-- 单模型，gateway 冒烟：
+- 单模型，Gateway 冒烟：
   - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.6-luna" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 - 跨多个提供方的工具调用：
@@ -508,18 +508,18 @@ Docker 说明：
 - Google 重点测试：
   - Gemini（API 密钥）：`OPENCLAW_LIVE_GATEWAY_MODELS="google/gemini-3.5-flash" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
-- Google 自适应思考冒烟（来自私有 QA CLI 的 `qa manual` - 需要 `OPENCLAW_ENABLE_PRIVATE_QA_CLI=1` 和源码检出；见 [QA 概览](/concepts/qa-e2e-automation)）：
+- Google 自适应思考冒烟（来自私有 QA CLI 的 `qa manual`－需要 `OPENCLAW_ENABLE_PRIVATE_QA_CLI=1` 和源码检出；见 [QA 概览](/concepts/qa-e2e-automation)）：
   - Gemini 3 动态默认：`OPENCLAW_ENABLE_PRIVATE_QA_CLI=1 pnpm openclaw qa manual --provider-mode live-frontier --model google/gemini-3.1-pro-preview --alt-model google/gemini-3.1-pro-preview --message '/think adaptive Reply exactly: GEMINI_ADAPTIVE_OK' --timeout-ms 180000`
   - Gemini 2.5 动态预算：`OPENCLAW_ENABLE_PRIVATE_QA_CLI=1 pnpm openclaw qa manual --provider-mode live-frontier --model google/gemini-2.5-flash --alt-model google/gemini-2.5-flash --message '/think adaptive Reply exactly: GEMINI25_ADAPTIVE_OK' --timeout-ms 180000`
 
 说明：
 
-- `google/...` 使用 Gemini API（API 密钥）。
-- `google-gemini-cli/...` 使用你计算机上的本地 Gemini CLI（单独的身份验证和工具链特性）。
-- `google-antigravity/...` 不是已注册的提供商，也不是受支持的配置路径。不要将其添加到实时测试 allowlist 中。
+- `google／...` 使用 Gemini API（API 密钥）。
+- `google-gemini-cli／...` 使用你计算机上的本地 Gemini CLI（单独的身份验证和工具链特性）。
+- `google-antigravity／...` 不是已注册的提供商，也不是受支持的配置路径。不要将其添加到实时测试 allowlist 中。
 - Gemini API 与 Gemini CLI：
-  - API：OpenClaw 通过 HTTP 调用 Google 托管的 Gemini API（API 密钥/配置文件身份验证）；大多数用户所说的“Gemini”指的就是它。
-  - CLI：OpenClaw 调用本地的 `gemini` 二进制文件；它拥有独立的身份验证，并且行为可能有所不同（流式传输/工具支持/版本差异）。
+  - API：OpenClaw 通过 HTTP 调用 Google 托管的 Gemini API（API 密钥／配置文件身份验证）；大多数用户所说的“Gemini”指的就是它。
+  - CLI：OpenClaw 调用本地的 `gemini` 二进制文件；它拥有独立的身份验证，并且行为可能有所不同（流式传输／工具支持／版本差异）。
 
 ## Live：模型矩阵（我们覆盖的内容）
 
@@ -678,10 +678,10 @@ openclaw infer image generate \
 
 ## 音乐生成 live
 
-- 测试: `extensions/music-generation-providers.live.test.ts`
-- 启用: `OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/music-generation-providers.live.test.ts`
-- 运行器: `pnpm test:live:media music`
-- 范围:
+- 测试：`extensions/music-generation-providers.live.test.ts`
+- 启用：`OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/music-generation-providers.live.test.ts`
+- 运行器：`pnpm test:live:media music`
+- 范围：
   - 练习共享的打包音乐生成提供方路径
   - 目前覆盖 `fal`、`google`、`minimax` 和 `openrouter`
   - 在探测前使用已导出的提供方环境变量
@@ -695,7 +695,7 @@ openclaw infer image generate \
   - `OPENCLAW_LIVE_MUSIC_GENERATION_PROVIDERS="google,minimax"`
   - `OPENCLAW_LIVE_MUSIC_GENERATION_MODELS="google/lyria-3-clip-preview,minimax/music-2.6"`
 - 可选认证行为：
-  - `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以强制使用 profile 存储认证并忽略仅环境变量覆盖。
+  - `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以强制使用 profile 存储认证并忽略仅环境变量覆盖
 
 ## 视频生成 live
 

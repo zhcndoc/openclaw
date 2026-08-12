@@ -26,7 +26,7 @@ LM Studio 在本地运行 llama.cpp（GGUF）或 MLX 模型，可作为 GUI 应�
     ```
 
     如果使用桌面应用程序，请启用 JIT 以实现平滑的模型加载；请参阅
-    [LM Studio JIT and TTL guide](https://lmstudio.ai/docs/developer/core/ttl-and-auto-evict)。
+    [LM Studio JIT 和 TTL 指南](https://lmstudio.ai/docs/developer/core/ttl-and-auto-evict)。
 
   </Step>
   <Step title="如果启用了身份验证，请设置 API 密钥">
@@ -35,7 +35,7 @@ LM Studio 在本地运行 llama.cpp（GGUF）或 MLX 模型，可作为 GUI 应�
     ```
 
     如果已禁用 LM Studio 身份验证，则在设置过程中将 API 密钥留空。请参阅
-    [LM Studio Authentication](https://lmstudio.ai/docs/developer/core/authentication)。
+    [LM Studio 身份验证](https://lmstudio.ai/docs/developer/core/authentication)。
 
   </Step>
   <Step title="运行引导">
@@ -45,13 +45,11 @@ LM Studio 在本地运行 llama.cpp（GGUF）或 MLX 模型，可作为 GUI 应�
 
     选择 `LM Studio`，然后在 `Default model` 提示处选择一个模型。
 
-    On a fresh guided setup, OpenClaw first queries `/api/v1/models` on the
-    default or configured LM Studio host. An existing LLM is offered automatically
-    only when LM Studio reports tool training and at least 16K of effective
-    context. For loaded models, the loaded instance context takes precedence over
-    the larger advertised maximum. The same CLI/macOS setup ladder verifies the
-    route with a real completion before saving it. The automatic check never
-    downloads a model and ignores embedding-only catalog entries.
+    在全新引导设置中，OpenClaw 首先查询默认或已配置的 LM Studio 主机上的
+    `/api/v1/models`。只有当 LM Studio 报告模型经过工具训练且有效上下文至少为
+    16K 时，才会自动提供现有 LLM。对于已加载的模型，已加载实例的上下文优先于
+    广告中所声明的更大最大值。相同的 CLI/macOS 设置流程会在保存前通过实际补全
+    来验证该路由。自动检查不会下载模型，并且会忽略仅用于嵌入的目录条目。
 
   </Step>
 </Steps>
@@ -73,7 +71,7 @@ curl http://localhost:1234/api/v1/models
 ## 非交互式 onboarding
 
 ```bash
-openclaw onboard --non-interactive --accept-risk --auth-choice lmstudio
+openclaw onboard --non-interactive --accept-risk --skip-health --auth-choice lmstudio
 ```
 
 或者显式指定基础 URL、模型和 API key：
@@ -82,6 +80,7 @@ openclaw onboard --non-interactive --accept-risk --auth-choice lmstudio
 openclaw onboard \
   --non-interactive \
   --accept-risk \
+  --skip-health \
   --auth-choice lmstudio \
   --custom-base-url http://localhost:1234/v1 \
   --lmstudio-api-key "$LM_API_TOKEN" \

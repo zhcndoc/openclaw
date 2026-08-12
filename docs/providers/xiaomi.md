@@ -99,7 +99,7 @@ Onboarding 会验证密钥格式，并在将 `tp-...` 密钥输入按需付费�
 ## 推理模型
 
 `mimo-v2.5` 和 `mimo-v2.5-pro` 支持
-OpenClaw 的 [`/think 指令](/tools/thinking)，其级别包括 `off`、
+OpenClaw 的 [`/think 指令`](/tools/thinking)，其级别包括 `off`、
 `minimal`、`low`、`medium`、`high`、`xhigh` 和 `max`（默认 `high`）。
 
 ## 文本转语音
@@ -161,7 +161,7 @@ voicedesign 模型 `mimo-v2.5-tts-voicedesign` 会根据自然语言风格提示
 
 ```json5
 {
-  env: { XIAOMI_API_KEY: "your-key" },
+  env: { vars: { XIAOMI_API_KEY: "your-key" } },
   agents: { defaults: { model: { primary: "xiaomi/mimo-v2.5" } } },
   models: {
     mode: "merge",
@@ -200,7 +200,7 @@ Token Plan：
 
 ```json5
 {
-  env: { XIAOMI_TOKEN_PLAN_API_KEY: "tp-your-key" },
+  env: { vars: { XIAOMI_TOKEN_PLAN_API_KEY: "tp-your-key" } },
   agents: { defaults: { model: { primary: "xiaomi-token-plan/mimo-v2.5-pro" } } },
   models: {
     mode: "merge",

@@ -161,10 +161,10 @@ if (attachments) {
   `kind: "compaction"`，并且当匹配的检查点记录了这些指标时，可能会包含
   `tokensBefore` 和 `tokensAfter`。
 
-使用响应中的 `hasMore` 和 `nextOffset` 值向前翻页。数字偏移量描述的是当前转录投影，
-因此不要在重置或压缩后将其持久化为长期书签。请改为持久化 `__openclaw.id`。
-要在已知行附近恢复，请使用返回该行的 `sessionId` 和 `messageId` 调用 `chat.history`。
-Gateway 可以从重置归档历史中解析该锚点；带锚点的响应会有意省略数字分页元数据。
+会话重置边界使用 `kind: "reset"`。它没有检查点令牌指标。
+
+根据响应中的 `hasMore` 和 `nextOffset` 值向前翻页。数字偏移量描述的是当前转录投影，因此不要将其作为跨重置或压缩长期持久化的书签。请改为持久化 `__openclaw.id`。
+要在已知行附近恢复，请使用返回该行的 `sessionId`，并将 `messageId` 传递给 `chat.history`。Gateway 可以从重置归档历史记录中解析该锚点；带锚点的响应会有意省略数字分页元数据。
 
 ## 订阅而不是轮询用量
 
@@ -199,4 +199,4 @@ Gateway 可以从重置归档历史中解析该锚点；带锚点的响应会有
 - [网关协议](https://docs.openclaw.ai/gateway/protocol)
 - [嵌入 OpenClaw](https://docs.openclaw.ai/gateway/embedding)
 - [网关 RPC 参考](https://docs.openclaw.ai/reference/rpc)
-- [面向外部应用的网关集成](https://docs.openclaw.ai/gateway/external-apps)
+- [面向外部应用的网关集成](https://docs.openclaw.ai/gateway/external-apps)。

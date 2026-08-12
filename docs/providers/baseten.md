@@ -8,16 +8,16 @@ read_when:
 
 [Baseten 模型 API](https://docs.baseten.co/inference/model-apis/overview) 提供对前沿模型的托管式、OpenAI 兼容访问。官方外部插件使用经过身份验证的发现机制，因此 OpenClaw 会遵循你的 Baseten 账户启用的完整模型集。其离线回退列表包含构建此 OpenClaw 版本时可用的每个模型 API。
 
-| 属性            | 值                                                        |
-| --------------- | --------------------------------------------------------- |
-| 提供商 ID       | `baseten`                                                 |
-| 插件            | 官方外部软件包（`@openclaw/baseten-provider`）            |
-| 身份验证环境变量 | `BASETEN_API_KEY`                                        |
-| 引导标志        | `--auth-choice baseten-api-key`                           |
-| 直接 CLI 标志   | `--baseten-api-key <key>`                                 |
-| API             | OpenAI 兼容（`openai-completions`）                       |
-| 基础 URL        | `https://inference.baseten.co/v1`                         |
-| 默认模型        | `baseten/thinkingmachines/inkling`                        |
+| 属性             | 值                                                        |
+| ---------------- | --------------------------------------------------------- |
+| 提供商 ID        | `baseten`                                                 |
+| 插件             | 官方外部软件包（`@openclaw/baseten-provider`）            |
+| 身份验证环境变量 | `BASETEN_API_KEY`                                          |
+| 引导标志         | `--auth-choice baseten-api-key`                           |
+| 直接 CLI 标志    | `--baseten-api-key <key>`                                 |
+| API              | OpenAI 兼容（`openai-completions`）                       |
+| 基础 URL         | `https://inference.baseten.co/v1`                         |
+| 默认模型         | `baseten/thinkingmachines/inkling`                        |
 
 ## 安装插件
 
@@ -40,7 +40,7 @@ openclaw onboard --auth-choice baseten-api-key
 ```
 
 ```bash Direct flag
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice baseten-api-key \
   --baseten-api-key "$BASETEN_API_KEY"
 ```
@@ -110,7 +110,7 @@ Baseten 可以独立于 OpenClaw 的发布版本添加、移除或更改 Model A
 
 ```json5
 {
-  env: { BASETEN_API_KEY: "..." },
+  env: { vars: { BASETEN_API_KEY: "..." } },
   agents: {
     defaults: {
       model: { primary: "baseten/thinkingmachines/inkling" },

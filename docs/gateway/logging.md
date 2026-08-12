@@ -25,10 +25,10 @@ agent model: openai/gpt-5.6-sol (thinking=medium, fast=on)
 
 ## 基于文件的日志记录器
 
-- Default rolling log files are under `/tmp/openclaw/` (one file per day), dated by the gateway host's local timezone. The default profile uses `openclaw-YYYY-MM-DD.log`; named profiles use `openclaw-<profile>-YYYY-MM-DD.log` (for example, `openclaw-dev-YYYY-MM-DD.log`). If that directory is unsafe or unwritable (wrong owner, world-writable, a symlink), OpenClaw falls back to a user-scoped `os.tmpdir()/openclaw-<uid>` path instead; on Windows it always uses that OS-tmpdir fallback.
-- Active log files rotate at `logging.maxFileBytes` (default: 100 MB), keeping up to five numbered archives (`.1` through `.5`) and continuing to write a fresh active file.
-- Configure the log file path and level via `~/.openclaw/openclaw.json`: `logging.file`, `logging.level`.
-- The file format is one JSON object per line.
+- 默认的滚动日志文件位于 `/tmp/openclaw/` 下（每天一个文件），日期根据网关主机的本地时区确定。默认配置文件使用 `openclaw-YYYY-MM-DD.log`；命名配置文件使用 `openclaw-<profile>-YYYY-MM-DD.log`（例如，`openclaw-dev-YYYY-MM-DD.log`）。如果该目录不安全或不可写（所有者错误、全局可写或为符号链接），OpenClaw 会改用用户范围的 `os.tmpdir()/openclaw-<uid>` 路径；在 Windows 上始终使用该操作系统临时目录回退路径。
+- 活动日志文件达到 `logging.maxFileBytes` 时进行轮换（默认值：100 MB），最多保留五个带编号的归档文件（`.1` 至 `.5`），并继续写入新的活动文件。
+- 通过 `~/.openclaw/openclaw.json` 配置日志文件路径和级别：`logging.file`、`logging.level`。
+- 文件格式为每行一个 JSON 对象。
 
 通话、实时语音以及受管房间的代码路径会使用共享文件日志记录器，记录有限生命周期的内容，供运维调试和 OTLP 日志导出使用。转写文本、音频载荷、轮次 id、呼叫 id 和提供方 item id 都不会复制到日志记录中。
 
@@ -38,7 +38,7 @@ agent model: openai/gpt-5.6-sol (thinking=medium, fast=on)
 openclaw logs --follow
 ```
 
-### 详细输出 vs. 日志级别
+### 详细输出 vs．日志级别
 
 - **文件日志** 仅由 `logging.level` 控制。
 - `--verbose` 只影响 **控制台详细程度**（以及 WS 日志样式）——它**不会**提升文件日志级别。
@@ -51,36 +51,36 @@ CLI 会捕获 `console.log/info/warn/error/debug/trace`，将它们写入文件�
 
 可独立调整控制台详细程度：
 
-- `logging.consoleLevel` (default `info`)
-- `logging.consoleStyle` (`pretty` | `json`). When unset, output is `pretty` on a TTY and the automatic `compact` style otherwise. `compact` is no longer a settable value; `openclaw doctor --fix` maps a stored one to `pretty`.
+- `logging.consoleLevel`（默认值为 `info`）
+- `logging.consoleStyle`（`pretty` | `json`）。未设置时，在 TTY 上输出为 `pretty`，否则自动使用 `compact` 样式。`compact` 不再是可设置的值；`openclaw doctor --fix` 会将已存储的值映射为 `pretty`。
 
 ## 脱敏
 
 OpenClaw 会在日志或转录输出离开进程之前对敏感 token 进行脱敏。此脱敏策略适用于控制台、文件日志、OTLP 日志记录和会话转录文本 sink，因此在 JSONL 行或消息写入磁盘之前，匹配到的密钥值会被掩码处理。
 
-- Sensitive-value redaction is always enabled.
-- `logging.redactPatterns`: array of regex strings (overrides defaults)
-  - Use raw regex strings (auto `gi`), or `/pattern/flags` for custom flags.
-  - Matches are masked keeping the first 6 + last 4 chars (values >= 18 chars); shorter values become `***`.
-  - Defaults cover common key assignments, CLI flags, JSON fields, bearer headers, PEM blocks, popular vendor token prefixes, and payment credential field names (card number, CVC/CVV, shared payment token, payment credential).
+- 敏感值脱敏始终启用。
+- `logging.redactPatterns`：正则表达式字符串数组（覆盖默认值）
+  - 使用原始正则表达式字符串（自动应用 `gi`），或使用 `/pattern/flags` 自定义标志。
+  - 匹配项会保留前 6 个字符和后 4 个字符并进行掩码处理（值长度 ≥ 18 个字符）；较短的值会变为 `***`。
+  - 默认规则涵盖常见的密钥赋值、CLI 标志、JSON 字段、Bearer 标头、PEM 块、常见供应商 token 前缀，以及支付凭证字段名称（卡号、CVC/CVV、共享支付 token、支付凭证）。
 
-Safety boundaries such as Control UI tool-call events, `sessions_history` output, diagnostics exports, provider errors, exec approval display, and Gateway WebSocket logs always redact. `logging.redactPatterns` adds deployment-specific patterns.
+Control UI 工具调用事件、`sessions_history` 输出、诊断导出、供应商错误、exec 审批显示和 Gateway WebSocket 日志等安全边界始终会进行脱敏。`logging.redactPatterns` 可添加特定于部署的模式。
 
-## Gateway WebSocket Logs
+## Gateway WebSocket 日志
 
-The gateway prints WebSocket protocol logs in two modes:
+Gateway 以两种模式打印 WebSocket 协议日志：
 
-- **Normal mode (without `--verbose`)**: prints only “meaningful” RPC results — errors (`ok=false`), slow calls (default threshold: `>= 50ms`), and parse errors.
-- **Verbose mode (`--verbose`)**: prints all WS request/response traffic.
+- **普通模式（不使用 `--verbose`）**：仅打印“有意义的” RPC 结果——错误（`ok=false`）、耗时较长的调用（默认阈值：`>= 50ms`）和解析错误。
+- **详细模式（`--verbose`）**：打印所有 WS 请求／响应流量。
 
-### WS Log Styles
+### WS 日志样式
 
-`openclaw gateway` supports style switching by gateway:
+`openclaw gateway` 支持按 Gateway 切换样式：
 
-- `--ws-log auto` (default): uses optimized output in normal mode; uses compact output in verbose mode.
-- `--ws-log compact`: uses compact output in verbose mode (paired requests/responses).
-- `--ws-log full`: outputs full content per frame in verbose mode.
-- `--compact`: alias for `--ws-log compact`.
+- `--ws-log auto`（默认）：普通模式使用优化输出；详细模式使用紧凑输出。
+- `--ws-log compact`：在详细模式下使用紧凑输出（配对的请求／响应）。
+- `--ws-log full`：在详细模式下输出每个帧的完整内容。
+- `--compact`：`--ws-log compact` 的别名。
 
 ```bash
 # Optimized output (errors/slow calls only)
@@ -97,15 +97,15 @@ openclaw gateway --verbose --ws-log full
 
 控制台格式化器是**感知 TTY**的，并会打印一致的带前缀行。子系统日志记录器会让输出保持分组且便于浏览：
 
-- 每行都有**子系统前缀**（例如 `[gateway]`、`[canvas]`、`[tailscale]`）。
-- **子系统颜色**（每个子系统固定，基于名称哈希生成）以及级别着色。
-- 当输出是 TTY，或环境看起来像富终端（`TERM`/`COLORTERM`/`TERM_PROGRAM`）时启用颜色；会遵守 `NO_COLOR` 和 `FORCE_COLOR`。
-- **缩短后的子系统前缀**：去掉前导的 `gateway/`、`channels/` 或 `providers/` 段，然后最多保留剩余的最后 2 段（例如 `channels/turn/kernel` 显示为 `turn/kernel`）。已知的频道子系统（`telegram`、`whatsapp`、`slack` 等）始终折叠为仅频道名称。
-- **按子系统划分的子日志记录器**（自动前缀 + 结构化字段 `{ subsystem }`）。
+- 每一行都有**子系统前缀**（例如 `[gateway]`、`[canvas]`、`[tailscale]`）。
+- **子系统颜色**（每个子系统的颜色保持稳定，根据名称进行哈希）以及级别颜色。
+- 当输出为 TTY 或环境看起来像富终端（`TERM`／`COLORTERM`／`TERM_PROGRAM`）时启用颜色；遵循 `NO_COLOR` 和 `FORCE_COLOR`。
+- **缩短的子系统前缀**：删除开头的 `gateway/`、`channels/` 或 `providers/` 部分，然后最多保留剩余部分中的最后 2 个部分（例如 `channels/turn/execution` 显示为 `turn/execution`）。已知的频道子系统（`telegram`、`whatsapp`、`slack` 等）始终只折叠为频道名称。
+- **按子系统划分的子日志记录器**（自动添加前缀 + 结构化字段 `{ subsystem }`）。
 - 用于 QR/UX 输出的 **`logRaw()`**（无前缀、无格式化）。
 - **控制台样式**：`pretty` | `compact` | `json`。
-- **控制台日志级别**与文件日志级别分离（当 `logging.level` 为 `debug`/`trace` 时，文件保留完整细节）。
-- **WhatsApp 消息正文**以 `debug` 级别记录（使用 `--verbose` 可查看）。
+- **控制台日志级别**与文件日志级别分离（当 `logging.level` 为 `debug`／`trace` 时，文件会保留完整详细信息）。
+- WhatsApp 消息正文以 `debug` 级别记录（使用 `--verbose` 查看）。
 
 这使得文件日志保持稳定，同时让交互式输出更易于浏览。
 

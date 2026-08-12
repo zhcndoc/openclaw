@@ -19,7 +19,7 @@ read_when:
     对于针对远程代理的非交互式设置，请显式传入代理 URL：
 
     ```bash
-    openclaw onboard --non-interactive --accept-risk --auth-choice litellm-api-key \
+    openclaw onboard --non-interactive --accept-risk --skip-health --auth-choice litellm-api-key \
       --litellm-api-key "$LITELLM_API_KEY" --custom-base-url "https://litellm.example/v1"
     ```
 
@@ -86,9 +86,9 @@ read_when:
 
 ## 图像生成
 
-LiteLLM can back the `image_generate` tool through OpenAI-compatible `/images/generations` and
-`/images/edits` routes. Default image model is `gpt-image-2`; configure a different one under
-`agents.defaults.mediaModels.image`:
+LiteLLM 可以通过兼容 OpenAI 的 `/images/generations` 和
+`/images/edits` 路由支持 `image_generate` 工具。默认图像模型为 `gpt-image-2`；可在
+`agents.defaults.mediaModels.image` 下配置其他模型：
 
 ```json5
 {
@@ -102,9 +102,11 @@ LiteLLM can back the `image_generate` tool through OpenAI-compatible `/images/ge
   },
   agents: {
     defaults: {
-      imageGenerationModel: {
-        primary: "litellm/gpt-image-2",
-        timeoutMs: 180_000,
+      mediaModels: {
+        image: {
+          primary: "litellm/gpt-image-2",
+          timeoutMs: 180000,
+        },
       },
     },
   },
@@ -196,7 +198,7 @@ LiteLLM can back the `image_generate` tool through OpenAI-compatible `/images/ge
   <Card title="配置" href="/gateway/configuration" icon="gear">
     完整的配置参考。
   </Card>
-  <Card title="Models" href="/concepts/models" icon="brain">
+  <Card title="模型" href="/concepts/models" icon="brain">
     如何选择和配置模型。
   </Card>
 </CardGroup>

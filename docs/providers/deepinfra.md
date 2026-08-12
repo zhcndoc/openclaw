@@ -18,7 +18,7 @@ openclaw gateway restart
 ## 获取 API 密钥
 
 1. 在 [deepinfra.com](https://deepinfra.com/) 登录
-2. 前往 Dashboard / Keys 并生成一个密钥，或者使用自动创建的密钥
+2. 前往 Dashboard / Keys 并生成一个密钥，或者使用自动创建的密钥。
 
 ## CLI 设置
 
@@ -36,7 +36,7 @@ export DEEPINFRA_API_KEY="<your-deepinfra-api-key>" # pragma: allowlist secret
 
 ```json5
 {
-  env: { DEEPINFRA_API_KEY: "<your-deepinfra-api-key>" }, // pragma: allowlist secret
+  env: { vars: { DEEPINFRA_API_KEY: "<your-deepinfra-api-key>" } }, // pragma: allowlist secret
   agents: {
     defaults: {
       model: { primary: "deepinfra/deepseek-ai/DeepSeek-V4-Flash" },
@@ -47,22 +47,20 @@ export DEEPINFRA_API_KEY="<your-deepinfra-api-key>" # pragma: allowlist secret
 
 ## 支持的接入面
 
-Chat, image generation, and video generation refresh their model catalogs
-live from `https://api.deepinfra.com/v1/openai/models?sort_by=openclaw&filter=with_meta`
-once `DEEPINFRA_API_KEY` is configured. Live discovery expands the list of
-selectable models; the default model per surface stays the static value
-below. Other surfaces use static catalogs until they move onto the same
-live catalog.
+Chat、图像生成和视频生成会在配置 `DEEPINFRA_API_KEY` 后，实时从
+`https://api.deepinfra.com/v1/openai/models?sort_by=openclaw&filter=with_meta`
+刷新其模型目录。实时发现会扩展可选模型列表；每个接入面的默认模型仍为下方的静态值。
+其他接入面在迁移到相同的实时目录之前，会使用静态目录。
 
-| Surface                  | Default model                                                                  | OpenClaw config/tool                                  |
+| 接入面                   | 默认模型                                                                       | OpenClaw 配置/工具                                  |
 | ------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| Chat / model provider    | `deepseek-ai/DeepSeek-V4-Flash` (live catalog adds more chat models)           | `agents.defaults.model`                               |
-| Image generation/editing | `black-forest-labs/FLUX-1-schnell` (live catalog adds more `image-gen` models) | `image_generate`, `agents.defaults.mediaModels.image` |
-| Media understanding      | `moonshotai/Kimi-K2.5` for images                                              | inbound image understanding                           |
-| Speech-to-text           | `openai/whisper-large-v3-turbo`                                                | inbound audio transcription                           |
-| Text-to-speech           | `hexgrad/Kokoro-82M`                                                           | `tts.provider: "deepinfra"`                           |
-| Video generation         | `Pixverse/Pixverse-T2V` (live catalog adds more `video-gen` models)            | `video_generate`, `agents.defaults.mediaModels.video` |
-| Memory embeddings        | `BAAI/bge-m3`                                                                  | `memory.search.provider: "deepinfra"`                 |
+| Chat / 模型提供方        | `deepseek-ai/DeepSeek-V4-Flash`（实时目录会添加更多 Chat 模型）                 | `agents.defaults.model`                               |
+| 图像生成/编辑             | `black-forest-labs/FLUX-1-schnell`（实时目录会添加更多 `image-gen` 模型）       | `image_generate`、`agents.defaults.mediaModels.image` |
+| 媒体理解                 | 图像使用 `moonshotai/Kimi-K2.5`                                                  | 入站图像理解                                           |
+| 语音转文本               | `openai/whisper-large-v3-turbo`                                                | 入站音频转录                                           |
+| 文本转语音               | `hexgrad/Kokoro-82M`                                                           | `tts.provider: "deepinfra"`                           |
+| 视频生成                 | `Pixverse/Pixverse-T2V`（实时目录会添加更多 `video-gen` 模型）                  | `video_generate`、`agents.defaults.mediaModels.video` |
+| 记忆嵌入                 | `BAAI/bge-m3`                                                                  | `memory.search.provider: "deepinfra"`                 |
 
 DeepInfra 还提供重排序、分类、目标检测以及其他原生模型类型。OpenClaw 目前对这些类别还没有 provider 合约，因此这个插件不会注册它们。
 
@@ -89,10 +87,10 @@ deepinfra/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B
 
 ## 说明
 
-- Model refs are `deepinfra/<provider>/<model>` (for example `deepinfra/Qwen/Qwen3-Max`).
-- Default chat model: `deepinfra/deepseek-ai/DeepSeek-V4-Flash`
-- Base URL: `https://api.deepinfra.com/v1/openai`
-- Video generation uses the OpenAI-compatible async endpoint `https://api.deepinfra.com/v1/openai/videos` (submit, then poll). A configured `baseUrl` is honored. `openclaw doctor --fix` migrates legacy `nativeBaseUrl` or `/v1/inference` values on `api.deepinfra.com` to `baseUrl` automatically; custom native endpoints are retired with a doctor notice and need a manually configured OpenAI-compatible `baseUrl`. Video generation fails with an actionable error (before sending any request) while `baseUrl` still targets the retired `/v1/inference` surface.
+- 模型引用格式为 `deepinfra/<provider>/<model>`（例如 `deepinfra/Qwen/Qwen3-Max`）。
+- 默认聊天模型：`deepinfra/deepseek-ai/DeepSeek-V4-Flash`
+- 基础 URL：`https://api.deepinfra.com/v1/openai`
+- 视频生成使用 OpenAI 兼容的异步端点 `https://api.deepinfra.com/v1/openai/videos`（先提交，然后轮询）。系统会遵循已配置的 `baseUrl`。`openclaw doctor --fix` 会自动将 `api.deepinfra.com` 上旧版的 `nativeBaseUrl` 或 `/v1/inference` 值迁移到 `baseUrl`；自定义原生端点已弃用，doctor 会发出通知，并且需要手动配置 OpenAI 兼容的 `baseUrl`。当 `baseUrl` 仍指向已弃用的 `/v1/inference` 接口时，视频生成会在发送任何请求之前失败，并提供可执行的错误信息。
 
 ## 相关链接
 

@@ -49,14 +49,14 @@ openclaw gateway restart
 
 ## 默认模型和目录
 
-The default model is `kilocode/kilo-auto/balanced`, Kilo Gateway's balanced smart-routing tier.
-OpenClaw does not publish a task-to-upstream-model mapping for it; routing behind
-`kilo-auto/balanced` is owned by Kilo Gateway.
+默认模型是 `kilocode/kilo-auto/balanced`，即 Kilo Gateway 的平衡智能路由层。
+OpenClaw 不会发布任务到上游模型的映射；`kilo-auto/balanced` 背后的路由由
+Kilo Gateway 负责。
 
-At startup OpenClaw queries `GET https://api.kilo.ai/api/gateway/models` and merges discovered models
-ahead of a static fallback catalog. The static fallback contains only
-`kilocode/kilo-auto/balanced` (`Auto Balanced`, `input: ["text", "image"]`, `reasoning: true`,
-`contextWindow: 1000000`, `maxTokens: 65536`).
+在启动时，OpenClaw 会查询 `GET https://api.kilo.ai/api/gateway/models`，并将发现的模型
+置于静态备用目录之前进行合并。静态备用目录仅包含
+`kilocode/kilo-auto/balanced`（`Auto Balanced`、`input: ["text", "image"]`、`reasoning: true`、
+`contextWindow: 1000000`、`maxTokens: 65536`）。
 
 网关上的任何模型都可以通过 `kilocode/<upstream-id>` 访问（例如
 `kilocode/anthropic/claude-sonnet-4`、`kilocode/openai/gpt-5.5`）。运行 `/models kilocode` 或
@@ -66,7 +66,7 @@ ahead of a static fallback catalog. The static fallback contains only
 
 ```json5
 {
-  env: { KILOCODE_API_KEY: "<your-kilocode-api-key>" }, // pragma: allowlist secret
+  env: { vars: { KILOCODE_API_KEY: "<your-kilocode-api-key>" } }, // pragma: allowlist secret
   agents: {
     defaults: {
       model: { primary: "kilocode/kilo-auto/balanced" },
@@ -84,7 +84,7 @@ ahead of a static fallback catalog. The static fallback contains only
 
     - Gemini 支持的 Kilo 引用仍然走代理 Gemini 路径：OpenClaw 会在该路径中清理 Gemini thought
       签名，但不会启用原生 Gemini 回放验证或 bootstrap 重写。
-    - 请求使用由你的 API key 生成的 Bearer token。
+    - 请求使用由你的 API 密钥生成的 Bearer token。
 
   </Accordion>
 
@@ -93,16 +93,16 @@ ahead of a static fallback catalog. The static fallback contains only
     可通过 `KILOCODE_FEATURE` 环境变量覆盖），并为支持该功能的模型规范化 reasoning-effort 负载。
 
     <Warning>
-    `kilocode/kilo-auto/balanced` and `x-ai/*` refs skip reasoning-effort injection. Use a concrete
-    model ref such as `kilocode/anthropic/claude-sonnet-4` if you need reasoning support.
+    `kilocode/kilo-auto/balanced` 和 `x-ai/*` 引用会跳过 reasoning-effort 注入。如果你需要推理支持，请使用具体的
+    模型引用，例如 `kilocode/anthropic/claude-sonnet-4`。
     </Warning>
 
   </Accordion>
 
-  <Accordion title="Troubleshooting">
-    - If model discovery fails at startup, OpenClaw falls back to the static catalog containing `kilocode/kilo-auto/balanced`.
-    - Confirm your API key is valid and that your Kilo account has the desired models enabled.
-    - When Gateway runs as a daemon, ensure `KILOCODE_API_KEY` is available to that process (for example in `~/.openclaw/.env` or via `env.shellEnv`).
+  <Accordion title="故障排除">
+    - 如果模型发现过程在启动时失败，OpenClaw 将回退到包含 `kilocode/kilo-auto/balanced` 的静态目录。
+    - 确认你的 API 密钥有效，并且你的 Kilo 账户已启用所需的模型。
+    - 当 Gateway 作为守护进程运行时，确保该进程可以获取 `KILOCODE_API_KEY`（例如在 `~/.openclaw/.env` 中，或通过 `env.shellEnv`）。
 
   </Accordion>
 </AccordionGroup>

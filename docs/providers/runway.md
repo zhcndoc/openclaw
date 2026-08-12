@@ -37,29 +37,29 @@ OpenClaw 附带了一个用于托管视频生成的 `runway` 提供商，默认�
   </Step>
 </Steps>
 
-## Supported Modes and Models
+## 支持的模式和模型
 
-This provider exposes seven Runway models across three modes. The same model id can serve more than one mode (for example, `gen4.5` is available for both text-to-video and image-to-video).
+此提供商在三种模式下提供七个 Runway 模型。同一个模型 ID 可以服务于多个模式（例如，`gen4.5` 同时支持文本生成视频和图像生成视频）。
 
-| Mode             | Model                                                                  | Reference Input          |
-| ---------------- | --------------------------------------------------------------------- | ------------------------ |
-| Text to video    | `gen4.5` (default), `veo3.1`, `veo3.1_fast`, `veo3`                    | None                     |
-| Image to video   | `gen4.5`, `gen4_turbo`, `gen3a_turbo`, `veo3.1`, `veo3.1_fast`, `veo3` | 1 local or remote image  |
-| Video to video   | `gen4_aleph`                                                           | 1 local or remote video  |
+| 模式             | 模型                                                                  | 参考输入          |
+| ---------------- | --------------------------------------------------------------------- | ------------------ |
+| 文本生成视频    | `gen4.5`（默认）、`veo3.1`、`veo3.1_fast`、`veo3`                    | 无                     |
+| 图像生成视频   | `gen4.5`、`gen4_turbo`、`gen3a_turbo`、`veo3.1`、`veo3.1_fast`、`veo3` | 1 个本地或远程图像  |
+| 视频生成视频   | `gen4_aleph`                                                           | 1 个本地或远程视频  |
 
-Local images and videos can be referenced via data URI.
+本地图像和视频可以通过 data URI 进行引用。
 
-| Aspect Ratio          | Allowed Values                              |
+| 宽高比          | 允许的值                              |
 | --------------------- | ------------------------------------------- |
-| Text to video         | `16:9`, `9:16`                              |
-| Image and video edit  | `1:1`, `16:9`, `9:16`, `3:4`, `4:3`, `21:9` |
+| 文本生成视频         | `16:9`、`9:16`                              |
+| 图像和视频编辑  | `1:1`、`16:9`、`9:16`、`3:4`、`4:3`、`21:9` |
 
 <Warning>
-  Video to video currently requires `runway/gen4_aleph`. Other Runway model ids will reject video reference inputs.
+  视频生成视频目前要求使用 `runway/gen4_aleph`。其他 Runway 模型 ID 将拒绝视频参考输入。
 </Warning>
 
 <Note>
-  Choosing a Runway model id from the error column will produce a clear error before the API request leaves OpenClaw. This provider validates `model` in `extensions/runway/video-generation-provider.ts` according to the mode allowlists (`TEXT_ONLY_MODELS`, `IMAGE_MODELS`, `VIDEO_MODELS`).
+  从错误列中选择 Runway 模型 ID 将在 API 请求离开 OpenClaw 之前生成明确的错误。此提供商会根据模式允许列表（`TEXT_ONLY_MODELS`、`IMAGE_MODELS`、`VIDEO_MODELS`）在 `extensions/runway/video-generation-provider.ts` 中验证 `model`。
 </Note>
 
 ## 配置
@@ -68,8 +68,10 @@ Local images and videos can be referenced via data URI.
 {
   agents: {
     defaults: {
-      videoGenerationModel: {
-        primary: "runway/gen4.5",
+      mediaModels: {
+        video: {
+          primary: "runway/gen4.5",
+        },
       },
     },
   },
@@ -98,6 +100,6 @@ Local images and videos can be referenced via data URI.
     共享工具参数、提供商选择和异步行为。
   </Card>
   <Card title="配置参考" href="/gateway/config-agents#agent-defaults" icon="gear">
-    包括视频生成模型在内的代理默认设置。
+    Agent 默认设置，包括 `mediaModels.video`。
   </Card>
 </CardGroup>

@@ -210,7 +210,7 @@ openclaw automations run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 
 除非嵌入式运行同时提供结构化拒绝元数据，否则调度器不会将最终输出中的文字或看似批准的拒绝短语归类为拒绝，因此普通的助手文本不会被视为遭到阻止的命令。
 
-`automations list` 和运行历史会显示拒绝原因，而不是将被阻止的命令报告为 `ok`】【。
+`automations list` 和运行历史会显示拒绝原因，而不是将被阻止的命令报告为 `ok`
 
 ## 保留
 

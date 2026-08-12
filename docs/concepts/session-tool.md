@@ -26,7 +26,7 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 | `subagents`          | 列出或取消此会话树中的后台工作          |
 | `session_status`     | 显示一个类似 `/status` 的卡片，并可选择为每个会话设置模型覆盖     |
 
-这些工具仍然受当前工具配置文件和允许/拒绝策略约束。`tools.profile: "coding"` 包含完整的会话编排工具集。`tools.profile: "messaging"` 包含会话自助、发现、回溯、跨会话消息传递、外部会话工具，以及完整的创建子会话生命周期（`sessions_spawn`、`sessions_yield` 和 `subagents`）。仅用于 UI 的任务建议工具 `spawn_task` 和 `dismiss_task` 仍然是 coding 配置文件工具。
+这些工具仍受活动工具配置文件和允许／拒绝策略的约束，并允许使用会话编排工具集。`tools.profile: "coding"` 包括完整的会话编排工具集。`tools.profile: "messaging"` 包括会话自助服务、发现、召回、跨会话消息传递、外部会话工具，以及完整的生成生命周期（`sessions_spawn`、`sessions_yield` 和 `subagents`）。仅限 UI 的任务建议工具 `suggest_task` 和 `dismiss_task` 仍属于 coding 配置文件工具。
 
 组、提供方、沙箱以及每个代理的策略在配置文件阶段之后仍可能移除这些工具。请在受影响的会话中使用 `/tools` 来检查实际生效的工具列表。
 
@@ -60,10 +60,10 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 
 受所有者限制的 `sessions` 工具提供了有限的自助操作范围：
 
-- `action: "patch"` 默认修改当前会话，或者通过 `sessionKey` 选择另一个可见会话进行修改。它可以设置标签、侧边栏图标、置顶/归档状态、模型以及思考级别。
-- `action: "reset"` 会重置通过 `sessionKey` 选择的另一个可见会话。
-- `action: "delete"` 会先归档，再删除通过 `sessionKey` 选择的另一个可见会话中完全相同的一代。默认情况下，其对话记录会作为已删除归档保留；传入 `deleteTranscript: false` 可保持对话记录状态不变。重置或删除当前正在运行该工具的会话会被拒绝。
-- `group_list`、`group_set`、`group_rename` 和 `group_delete` 用于管理全局有序的会话分组目录。`group_set` 会替换有序名称列表，而不是对单个条目进行补丁更新。
+- `action: "patch"` 默认更改当前会话，或更改通过 `sessionKey` 选择的其他可见会话。它可以设置标签、固定／归档状态、模型和思考级别。
+- `action: "reset"` 重置通过 `sessionKey` 选择的其他可见会话。
+- `action: "delete"` 首先归档，然后删除通过 `sessionKey` 选择的其他可见会话的完全相同版本。默认情况下，其会话记录会作为已删除的归档保留；传入 `deleteTranscript: false` 可保持会话记录状态不变。重置或删除当前运行该工具的会话会被拒绝。
+- `group_list`、`group_set`、`group_rename` 和 `group_delete` 管理全局有序会话组目录。`group_set` 会替换有序名称列表，而不是修改其中一项。
 
 使用带有 `visible: true` 的 `sessions_spawn` 来创建一个持久化的仪表盘会话。这样会让会话创建保持在受控的 spawn 路径上，并强制执行父级的工具策略、沙箱、并发限制以及运行超时。
 
@@ -143,7 +143,7 @@ OpenClaw 会保留一份持久的信号日志，记录重要的会话状态变�
 | Level   | Scope                                                      |
 | ------- | ---------------------------------------------------------- |
 | `self`  | 仅当前会话                                   |
-| `tree`   | 当前 + 派生会话；读取包括被监视的同代理组 |
+| `tree`  | 当前 + 派生会话；读取包括被监视的同代理组 |
 | `agent` | 该代理的所有会话                                |
 | `all`   | 所有会话（如已配置，则跨代理）                   |
 
@@ -155,11 +155,11 @@ OpenClaw 会保留一份持久的信号日志，记录重要的会话状态变�
 
 ## 延伸阅读
 
-- [会话管理](/concepts/session): 路由、生命周期、维护
-- [子代理](/tools/subagents): 子会话生命周期与交付
-- [ACP 代理](/tools/acp-agents): 外部控制程序启动
-- [多代理](/concepts/multi-agent): 多代理架构
-- [网关配置](/gateway/configuration): 会话工具配置选项
+- [会话管理](/concepts/session)：路由、生命周期、维护
+- [子代理](/tools/subagents)：子会话生命周期与交付
+- [ACP 代理](/tools/acp-agents)：外部控制程序启动
+- [多代理](/concepts/multi-agent)：多代理架构
+- [网关配置](/gateway/configuration)：会话工具配置选项。
 
 ## 相关内容
 

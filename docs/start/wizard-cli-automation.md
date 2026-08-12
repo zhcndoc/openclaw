@@ -9,6 +9,8 @@ sidebarTitle: "CLI 自动化"
 
 使用 `openclaw onboard --non-interactive` 来脚本化设置。它需要 `--accept-risk`：非交互式设置可能会在没有确认提示的情况下写入凭据和守护进程配置，因此该标志用于明确确认风险。
 
+每个命令都必须使用 `--install-daemon` 安装一个受管理的 Gateway，使用 `--skip-health` 进行仅配置设置，或在已经运行的兼容 Gateway 上运行。
+
 <Note>
 `--json` 并不意味着非交互式模式。请在脚本中显式传入 `--non-interactive --accept-risk`。
 </Note>
@@ -30,12 +32,12 @@ openclaw onboard --non-interactive --accept-risk \
 
 如果需要机器可读的摘要，请添加 `--json`。
 
-- `--gateway-port` 默认为 `18789`；仅在需要覆盖默认值时传入。
-- `--skip-bootstrap` 会跳过创建默认工作区文件，适用于预先准备好自身工作区的自动化场景。
-- `--secret-input-mode ref` 会将新凭据存储为由环境变量支持的引用（`{ source: "env", provider: "default", id: "<ENV_VAR>" }`）；在添加凭据或传递内联密钥标志时，设置提供商环境变量。现有的可解析命名配置文件及其 `env`、`file` 或 `exec` 引用将原样复用，不会写入新凭据，也不会额外设置提供商环境变量。现有的明文凭据不会被迁移；请运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。参见[密钥管理](/gateway/secrets)。
+- `--gateway-port` 默认为 `18789`；只有需要覆盖默认值时才传入。
+- `--skip-bootstrap` 会跳过创建默认工作区文件，适用于预先为自身工作区准备文件的自动化流程。
+- `--secret-input-mode ref` 会将新凭据存储为由环境变量支持的引用（`{ source: "env", provider: "default", id: "<ENV_VAR>" }`）；在添加凭据或传递内联密钥标志时设置提供商环境变量。现有可解析的命名配置文件及其 `env`、`file`、`exec` 或 `store` 引用会原样复用，不会写入新凭据，也不会额外添加提供商环境变量。现有明文不会被迁移；请运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。请参阅[机密管理](/gateway/secrets)。
 
 ```bash
-openclaw onboard --non-interactive --accept-risk \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice openai-api-key \
   --secret-input-mode ref
@@ -46,7 +48,7 @@ openclaw onboard --non-interactive --accept-risk \
 <AccordionGroup>
   <Accordion title="Anthropic API key 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice apiKey \
       --anthropic-api-key "$ANTHROPIC_API_KEY" \
@@ -55,7 +57,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="Cloudflare AI Gateway 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice cloudflare-ai-gateway-api-key \
       --cloudflare-ai-gateway-account-id "your-account-id" \
@@ -66,7 +68,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="Gemini 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice gemini-api-key \
       --gemini-api-key "$GEMINI_API_KEY" \
@@ -75,7 +77,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="Mistral 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice mistral-api-key \
       --mistral-api-key "$MISTRAL_API_KEY" \
@@ -84,7 +86,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="Moonshot 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice moonshot-api-key \
       --moonshot-api-key "$MOONSHOT_API_KEY" \
@@ -93,7 +95,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="Ollama 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice ollama \
       --custom-model-id "qwen3.5:27b" \
@@ -102,7 +104,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="OpenCode 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice opencode-zen \
       --opencode-zen-api-key "$OPENCODE_API_KEY" \
@@ -112,7 +114,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="合成示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice synthetic-api-key \
       --synthetic-api-key "$SYNTHETIC_API_KEY" \
@@ -121,7 +123,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="Vercel AI Gateway 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice ai-gateway-api-key \
       --ai-gateway-api-key "$AI_GATEWAY_API_KEY" \
@@ -130,7 +132,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="Z.AI 示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice zai-api-key \
       --zai-api-key "$ZAI_API_KEY" \
@@ -139,7 +141,7 @@ openclaw onboard --non-interactive --accept-risk \
   </Accordion>
   <Accordion title="自定义提供商示例">
     ```bash
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice custom-api-key \
       --custom-base-url "https://llm.example.com/v1" \
@@ -159,7 +161,7 @@ openclaw onboard --non-interactive --accept-risk \
 
     ```bash
     export CUSTOM_API_KEY="your-key"
-    openclaw onboard --non-interactive --accept-risk \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice custom-api-key \
       --custom-base-url "https://llm.example.com/v1" \

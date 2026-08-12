@@ -1,11 +1,12 @@
 ---
-summary: "机密管理：SecretRef 合约、运行时快照行为，以及安全的单向清理"
+summary: "密钥管理：SecretRef 契约、共享密钥存储、运行时快照和安全的单向清理"
 read_when:
-  - 为提供方凭据和 `auth-profiles.json` 引用配置 SecretRef 时
-  - 在生产环境中安全地进行 secrets 重载、审计、配置和应用时
-  - 理解启动即失败、非活动表面过滤和最后已知良好行为时
-title: "机密管理"
-sidebarTitle: "机密管理"
+  - 为提供商凭据和 `auth-profiles.json` 引用配置 SecretRef
+  - 在共享 SQLite 存储中保存团队范围的密钥和环境值
+  - 在生产环境中安全地执行密钥重新加载、审计、配置和应用
+  - 了解启动快速失败、非活动表面过滤和最后已知良好状态
+title: "密钥管理"
+sidebarTitle: "密钥管理"
 ---
 
 OpenClaw 支持附加式 SecretRef，因此受支持的凭据不需要以明文形式存放在配置中。
@@ -87,10 +88,10 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 
 ## Gateway 认证表面诊断
 
-当在 `gateway.auth.token`、`gateway.auth.password`、`gateway.remote.token` 或 `gateway.remote.password` 上设置了 `SecretRef` 时，gateway 启动/重载会在代码 `SECRETS_GATEWAY_AUTH_SURFACE` 下记录表面状态：
+当在 `gateway.auth.token`、`gateway.auth.password`、`gateway.remote.token` 或 `gateway.remote.password` 上设置了 `SecretRef` 时，gateway 启动／重载会在代码 `SECRETS_GATEWAY_AUTH_SURFACE` 下记录表面状态：
 
 - `active`：该 SecretRef 是有效认证表面的一部分，且必须能够解析。
-- `inactive`：其他认证表面生效，或者远程认证被禁用/未激活。
+- `inactive`：其他认证表面生效，或者远程认证被禁用／未激活。
 
 日志条目包含所使用的 active-surface 策略原因。
 
@@ -98,9 +99,9 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 
 在交互式入门过程中，选择 SecretRef 存储会在保存前运行预检验证：
 
-- Env 引用：验证环境变量名，并确认在设置期间可见的值非空。
-- Provider 引用（`file` 或 `exec`）：验证提供者选择，解析 `id`，并检查解析后的值类型。
-- 快速开始流程：当 `gateway.auth.token` 已经是 SecretRef 时，入门会在探测/仪表盘引导之前先解析它（适用于 `env`、`file` 和 `exec` 引用），并使用相同的快速失败门控。
+- 环境变量引用：验证环境变量名称，并确认设置期间可见的值非空。
+- 提供商引用（`file`、`exec` 或 `store`）：验证提供商选择，解析 `id`，并检查解析后的值类型。
+- 快速入门流程：当 `gateway.auth.token` 已经是 SecretRef 时，入门流程会在探测／仪表板初始化之前，使用相同的快速失败门控机制解析它（适用于 `env`、`file`、`exec` 和 `store` 引用）。
 
 验证失败时会显示错误，并允许你重试。
 
@@ -109,7 +110,7 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 一个对象形状，处处通用：
 
 ```json5
-{ source: "env" | "file" | "exec", provider: "default", id: "..." }
+{ source: "env" | "file" | "exec" | "store", provider: "default", id: "..." }
 ```
 
 <Tabs>
@@ -155,6 +156,18 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
     - `id` 不能包含 `.` 或 `..` 作为由斜杠分隔的路径段（例如 `a/../b` 会被拒绝）
 
   </Tab>
+  <Tab title="store">
+    ```json5
+    { source: "store", provider: "default", id: "OPENAI_API_KEY" }
+    ```
+
+    校验：
+
+    - `provider` 必须匹配 `^[a-z][a-z0-9_-]{0,63}$`
+    - `id` 使用环境变量名称语法 `^[A-Z][A-Z0-9_]{0,127}$`
+    - 此版本仅解析 Gateway 范围的团队作用域
+
+  </Tab>
 </Tabs>
 
 ## Provider 配置
@@ -166,6 +179,7 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
   secrets: {
     providers: {
       default: { source: "env" },
+      teamstore: { source: "store" },
       filemain: {
         source: "file",
         path: "~/.openclaw/secrets.json",
@@ -190,14 +204,17 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
       env: "default",
       file: "filemain",
       exec: "vault",
+      store: "teamstore",
     },
   },
 }
 ```
 
-<Accordion title="环境 provider">
-- 可通过 `allowlist` 提供精确名称白名单。
-- 缺失或为空的环境变量值会导致解析失败。
+Provider 别名具有源特定性。匹配的显式 provider 条目优先；如果某个 `env` 或 `store` 默认别名也被另一个源的条目使用，则该源的内置 provider 优先。非默认别名以及 `file` 或 `exec` provider 必须解析为具有匹配源的显式条目。
+
+<Accordion title="Env provider">
+- 可通过 `allowlist` 指定可选的精确名称允许列表。
+- 缺失或为空的环境变量值将导致解析失败。
 
 </Accordion>
 
@@ -205,7 +222,7 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 - 读取 `path` 指定的本地文件。
 - `mode: "json"`（默认）要求载荷为 JSON 对象，并将 `id` 解析为 JSON 指针。
 - `mode: "singleValue"` 要求引用 id 为 `"value"`，并返回文件的原始内容（去除末尾换行符）。
-- 路径必须通过所有权/权限检查；`timeoutMs`（默认 5000）和 `maxBytes`（默认 1 MiB）限制读取操作。
+- 路径必须通过所有权／权限检查；`timeoutMs`（默认 5000）和 `maxBytes`（默认 1 MiB）限制读取操作。
 - Windows 故障关闭：如果无法验证路径的 ACL，解析将失败。请将密钥移至 OpenClaw 可以验证其 ACL 的路径；provider 级别不提供绕过机制。
 
 </Accordion>
@@ -213,10 +230,10 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 <Accordion title="Exec provider">
 - 直接运行配置的绝对二进制路径，不使用 shell。
 - `command` 必须是常规文件，不能是符号链接。对于包管理器 shim，请解析真实的二进制路径（例如使用 `realpath "$(command -v vault)"`），并配置该绝对路径。使用 `trustedDirs` 将可执行文件限制在已批准的目录中。
-- 支持 `timeoutMs`（默认 5000）、`noOutputTimeoutMs`（默认为 `timeoutMs`）、`maxOutputBytes`（默认 1 MiB）、`env`/`passEnv` 白名单以及 `trustedDirs`。
+- 支持 `timeoutMs`（默认 5000）、`noOutputTimeoutMs`（默认为 `timeoutMs`）、`maxOutputBytes`（默认 1 MiB）、`env`／`passEnv` 白名单以及 `trustedDirs`。
 - `jsonOnly` 默认为 `true`。当设置为 `jsonOnly: false` 且只请求一个 id 时，纯非 JSON 的 stdout 将被接受为该 id 的值。
 - Windows 故障关闭：如果无法验证命令路径的 ACL，解析将失败。请使用 OpenClaw 可以验证其 ACL 的命令路径；provider 级别不提供绕过机制。
-- 由插件管理的 exec provider 可以使用 `pluginIntegration`，而不是复制 `command`/`args`。OpenClaw 会在启动/重新加载期间从已安装的插件清单中解析当前命令详情；如果插件被禁用、移除、不受信任，或不再声明该集成，该 provider 上的活动 SecretRef 将故障关闭。
+- 由插件管理的 exec provider 可以使用 `pluginIntegration`，而不是复制 `command`／`args`。OpenClaw 会在启动／重新加载期间从已安装的插件清单中解析当前命令详情；如果插件被禁用、移除、不受信任，或不再声明该集成，该 provider 上的活动 SecretRef 将故障关闭。
 
 请求载荷（stdin）：
 
@@ -247,7 +264,47 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 
 </Accordion>
 
-## 基于文件的 API 密钥
+<Accordion title="Store provider">
+- 从 OpenClaw 的共享状态 SQLite 数据库中读取值。
+- 该 provider 不包含连接设置。`secrets.defaults.store` 选择其默认别名。
+- 此版本仅解析 team scope。Identity scope 为后续版本预留。
+
+</Accordion>
+
+## 共享密钥存储
+
+共享密钥存储是一个 Gateway 范围内、团队范围的密钥和环境值存放位置，使用同一个状态数据库的每个 Gateway 进程都应能访问这些密钥和环境值。可以在 Control UI 的 **Settings → Secrets** 中管理，也可以在本地使用 `openclaw secrets store` 管理。CLI 命令操作本地状态数据库，不接受 Gateway URL 或令牌选项。
+
+条目具有 `secret` 或 `env` 类型。类型控制 CLI 的披露行为，而不是 SecretRef 解析：
+
+- `secret` 值保存后仅可写入。Gateway 列表结果、Control UI 以及 CLI 的 list/get 输出都不会包含这些值；不存在 reveal RPC。
+- `env` 值会继续对管理员显示在 Control UI 中，并且可以通过 `store list` 和 `store get` 返回。团队范围的 `env` 条目还会添加到 agent exec 环境中，顺序位于继承的进程值之后、显式的单次调用 env 之前。受保护的主机键和沙箱阻止的凭据名称会被忽略，并显示可见警告。
+
+`secret` 条目永远不会注入子进程环境。它们只能通过 `store` SecretRef 使用，因为明文环境变量注入会绕过存储披露边界；安全的密钥注入需要未来的 egress 替换机制。
+
+名称使用与 env SecretRef 相同的大写语法，并且每个 UTF-8 值限制为 64 KiB（65,536 字节）。`secret` 条目必须携带值；空密钥会被拒绝，因为它们只会导致令人困惑的下游身份验证失败。`env` 条目可以为空。这支持 PEM 密钥和服务账户 JSON，而不受普通环境变量较小限制的影响。
+
+使用 `store` 源从 `openclaw.json` 引用条目：
+
+```json5
+{
+  models: {
+    providers: {
+      openai: {
+        apiKey: { source: "store", provider: "default", id: "OPENAI_API_KEY" },
+      },
+    },
+  },
+}
+```
+
+当更改的名称被活动源配置中的 `store` SecretRef 引用时，Control UI 的设置／删除操作会自动刷新活动密钥运行时。未被引用的名称会跳过该操作。直接使用 CLI 写入仍然是离线／本地路径；使用 CLI 更改配置引用的值后，运行 `openclaw secrets reload`，以便活动内存快照获取该值。
+
+<Warning>
+存储值不会在静态存储时加密。它们以未加密形式存储在共享状态 SQLite 数据库（`state/openclaw.sqlite`）中，并通过与该数据库中其他凭据相同的 `0600` 文件和 `0700` 目录权限进行保护。需要更强存储隔离的操作员应使用外部 exec provider，例如 [1Password plugin](/plugins/onepassword) 或 [Vault SecretRefs](/plugins/vault)。
+</Warning>
+
+## 文件支持的 API 密钥
 
 不要在配置的 `env` 块中放置 `file:...` 字符串。该块是字面量且不会被覆盖，因此这里的 `file:...` 永远不会被解析。
 
@@ -325,7 +382,7 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
 
   </Accordion>
   <Accordion title="Bitwarden Secrets Manager (`bws`)">
-    使用一个解析器包装器将 SecretRef ids 映射到 Bitwarden Secrets Manager item keys。仓库包含 `scripts/secrets/openclaw-bws-resolver.mjs`；请将其安装或复制到运行 Gateway 的主机上一个绝对可信路径。
+    使用一个解析器包装器将 SecretRef ID 映射到 Bitwarden Secrets Manager 条目 key。仓库包含 `scripts/secrets/openclaw-bws-resolver.mjs`；请将其安装或复制到运行 Gateway 的主机上的绝对可信路径。
 
     要求：
 
@@ -362,7 +419,7 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
     }
     ```
 
-    该解析器会批量处理请求的 ids，运行 `bws secret list`，并返回匹配 secret `key` 字段的值。请使用符合 exec SecretRef id 契约的 key，例如 `openclaw/providers/openai/apiKey`；在解析器运行前，带下划线的 env-var 风格 key 会被拒绝。如果多个可见的 Bitwarden secret 共享请求的 key，解析器会将该 id 判定为歧义并失败，而不是猜测。更新配置后，请验证解析器路径：
+    该解析器会批量处理请求的 ID，运行 `bws secret list`，并返回匹配 secret `key` 字段的值。请使用符合 exec SecretRef ID 契约的 key，例如 `openclaw/providers/openai/apiKey`；在解析器运行前，带下划线的环境变量风格 key 会被拒绝。如果多个可见的 Bitwarden secret 共享请求的 key，解析器会将该 ID 判定为歧义并失败，而不是猜测。更新配置后，请验证解析器路径：
 
     ```bash
     openclaw secrets audit --allow-exec
@@ -397,7 +454,7 @@ SecretRefs 仅在实际上处于活动状态的表面上进行验证：
     ```
   </Accordion>
   <Accordion title="password-store (`pass`)">
-    使用一个小型解析器包装器将 SecretRef ids 直接映射到 `pass` 条目。将其保存为位于绝对路径下、可通过你的 exec-provider 路径检查的可执行文件，例如 `/usr/local/bin/openclaw-pass-resolver`。`#!/usr/bin/env node` shebang 会从解析器进程的 `PATH` 中解析 `node`，因此请在 `passEnv` 中包含 `PATH`。如果 `pass` 不在该 `PATH` 上，请在父环境中设置 `PASS_BIN`，并同样将其包含在 `passEnv` 中：
+    使用一个小型解析器包装器将 SecretRef ID 直接映射到 `pass` 条目。将其保存为位于绝对路径下、可通过你的 exec-provider 路径检查的可执行文件，例如 `/usr/local/bin/openclaw-pass-resolver`。`#!/usr/bin/env node` shebang 会从解析器进程的 `PATH` 中解析 `node`，因此请在 `passEnv` 中包含 `PATH`。如果 `pass` 不在该 `PATH` 上，请在父环境中设置 `PASS_BIN`，并同样将其包含在 `passEnv` 中：
 
     ```js
     #!/usr/bin/env node
@@ -580,12 +637,13 @@ Canonical 支持和不支持的凭据列在 [SecretRef Credential Surface](/refe
 - 没有 ref 的字段：保持不变。
 - 带有 ref 的字段：在激活期间，对活动表面是必需的。
 - 如果同时存在明文和 ref，则在受支持的优先级路径上，ref 优先。
-- 脱敏哨兵 `__OPENCLAW_REDACTED__` 仅保留用于内部配置脱敏/恢复，并且作为字面提交的配置数据会被拒绝。
+- 脱敏哨兵 `__OPENCLAW_REDACTED__` 仅保留用于内部配置脱敏／恢复，并且作为字面提交的配置数据会被拒绝。
 
 警告和审计信号：
 
-- `SECRETS_REF_OVERRIDES_PLAINTEXT`（运行时警告）
-- `REF_SHADOWED`（当 SQLite 身份验证配置文件凭据优先于 `openclaw.json` 中的 ref 时的审计发现）
+- `SECRETS_REF_OVERRIDES_PLAINTEXT`（runtime warning）
+- `REF_SHADOWED`（audit finding when SQLite auth-profile credentials take precedence over `openclaw.json` refs）
+- `STORE_PLAINTEXT_RESIDUE`（audit finding when a stored name still has an equivalent plaintext config value）
 
 Google Chat 的 `serviceAccount` 接受内联 JSON 或 SecretRef。当该规范字段未设置时，Doctor 会将已弃用的同级字段 `serviceAccountRef` 移入此规范字段。
 
@@ -681,23 +739,24 @@ Google Chat 的 `serviceAccount` 接受内联 JSON 或 SecretRef。当该规范�
   <Accordion title="secrets 审计">
     发现项包括：
 
-    - 静态存储中的明文值（`openclaw.json`、SQLite 身份验证配置文件记录、`.env` 以及生成的 `agents/*/agent/models.json`）。
-    - 生成的 `models.json` 条目中的明文敏感提供方请求头残留。
+    - 静态存储中的明文值（`openclaw.json`、SQLite auth-profile 行、`.env` 以及生成的 `agents/*/agent/models.json`）。
+    - 生成的 `models.json` 条目中敏感提供方头部的明文残留。
     - 未解析的引用。
-    - 优先级遮蔽（SQLite 身份验证配置文件的优先级高于 `openclaw.json` 引用）。
+    - 优先级遮蔽（SQLite auth profiles 优先于 `openclaw.json` 引用）。
+    - 存储残留（存储的名称在配置中仍然存在等效的明文值）。
 
     执行说明：默认情况下，审计会跳过 exec SecretRef 可解析性检查，以避免命令副作用。使用 `openclaw secrets audit --allow-exec` 可在审计期间执行 exec provider。
 
-    头部残留说明：敏感提供方头部检测基于名称启发式规则（常见的认证/凭据头名称及其片段，例如 `authorization`、`x-api-key`、`token`、`secret`、`password` 和 `credential`）。
+    头部残留说明：敏感提供方头部检测基于名称启发式规则（常见的认证／凭据头名称及其片段，例如 `authorization`、`x-api-key`、`token`、`secret`、`password` 和 `credential`）。
 
   </Accordion>
   <Accordion title="secrets 配置">
     交互式助手，功能包括：
 
-    - 首先配置 `secrets.providers`（`env`/`file`/`exec`，添加/编辑/删除）。
-    - 允许你在 `openclaw.json` 以及某个代理作用域的 SQLite 身份验证配置文件存储中，选择受支持的包含密钥字段。
-    - 可以直接在目标选择器中创建新的身份验证配置文件映射。
-    - 记录 SecretRef 详细信息（`source`、`provider`、`id`）。
+    - 首先配置 `secrets.providers`（`env`／`file`／`exec`／`store`，添加／编辑／删除）。
+    - 允许你在 `openclaw.json` 中选择受支持的携带密钥字段，以及某个代理作用域的 SQLite auth-profile 存储。
+    - 可以直接在目标选择器中创建新的 auth-profile 映射。
+    - 采集 SecretRef 详细信息（`source`、`provider`、`id`）。
     - 执行预检解析，并可立即应用。
 
     执行说明：除非设置了 `--allow-exec`，否则预检会跳过 exec SecretRef 检查。如果你通过 `configure --apply` 直接应用，并且计划中包含 exec refs/providers，那么在应用步骤中也要保持设置 `--allow-exec`。
@@ -727,7 +786,7 @@ Google Chat 的 `serviceAccount` 接受内联 JSON 或 SecretRef。当该规范�
 
     执行说明：除非设置了 `--allow-exec`，否则 dry-run 会跳过 exec 检查；写入模式会拒绝包含 exec SecretRefs/providers 的计划，除非设置了 `--allow-exec`。
 
-    有关严格目标/路径契约详情和精确拒绝规则，请参见 [Secrets 应用计划契约](/gateway/secrets-plan-contract)。
+    有关严格目标／路径契约详情和精确拒绝规则，请参见 [Secrets 应用计划契约](/gateway/secrets-plan-contract)。
 
   </Accordion>
 </AccordionGroup>
@@ -752,9 +811,11 @@ OpenClaw 故意不会写入包含历史明文密钥值的回滚备份。
 - 发现旧的静态 `api_key` 条目时会将其清理。
 - 与 OAuth 相关的兼容行为仍然是独立的。
 
-## Web UI 说明
+## 控制 UI
 
-某些 SecretInput 联合类型在原始编辑器模式下比在表单模式下更容易配置。
+打开 **设置 → 密钥**，即可列出、添加、编辑、批量导入或软删除团队范围的条目。批量添加接受 dotenv `NAME=VALUE` 赋值，包括带引号的多行值。类似凭据的名称默认为 `secret`；取消选择 **自动检测密钥**，即可将所有条目作为可见的环境值导入。
+
+此存储页面仅管理值。通过其设置表单或原始编辑器，在受支持的字段上配置相应的 `store` SecretRef。身份范围的条目留待后续版本处理，本页面不会显示这些条目。
 
 ## 相关内容
 
@@ -764,4 +825,4 @@ OpenClaw 故意不会写入包含历史明文密钥值的回滚备份。
 - [环境变量](/help/environment) - 环境优先级
 - [SecretRef 凭据面](/reference/secretref-credential-surface) - 凭据面
 - [Secrets Apply Plan Contract](/gateway/secrets-plan-contract) - 计划契约详情
-- [安全](/gateway/security) - 安全态势
+- [安全](/gateway/security) - 安全态势。

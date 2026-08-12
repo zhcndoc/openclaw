@@ -11,27 +11,27 @@ title: "Microsoft Foundry 插件"
 
 ## 分发
 
-- Package: `@openclaw/microsoft-foundry`
-- Install route: 包含在 OpenClaw 中
+- 包：`@openclaw/microsoft-foundry`
+- 安装途径：包含在 OpenClaw 中
 
 ## 接口
 
-providers: `microsoft-foundry`; contracts: `imageGenerationProviders`
+providers：`microsoft-foundry`；contracts：`imageGenerationProviders`
 
-- 图像生成提供程序: `microsoft-foundry`
+- 图像生成提供程序：`microsoft-foundry`
 
 ## 要求
 
 - 需要一个带有部署的 Microsoft Foundry 或 Azure AI Foundry 资源。
 - 通过 `AZURE_OPENAI_API_KEY` 或已配置的提供程序 API 密钥进行 API 密钥认证。
 - 对于 Entra ID 认证，请先安装 Azure CLI 并在
-  onboarding 之前运行 `az login`。OpenClaw 通过
+  入门流程之前运行 `az login`。OpenClaw 通过
   `az account get-access-token` 刷新 Microsoft Foundry 运行时令牌。
 
 ## 聊天模型
 
 Microsoft Foundry 聊天部署使用提供程序模型引用
-`microsoft-foundry/<deployment-name>`。onboarding 会使用 Azure CLI 发现 Foundry 资源
+`microsoft-foundry/<deployment-name>`。引导流程会使用 Azure CLI 发现 Foundry 资源
 和部署，然后将所选部署名称写入
 模型配置。
 
@@ -72,9 +72,11 @@ Microsoft AI 图像模型：
 {
   agents: {
     defaults: {
-      imageGenerationModel: {
-        primary: "microsoft-foundry/<deployment-name>",
-        timeoutMs: 600000,
+      mediaModels: {
+        image: {
+          primary: "microsoft-foundry/<deployment-name>",
+          timeoutMs: 600000,
+        },
       },
     },
   },

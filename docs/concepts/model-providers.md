@@ -39,12 +39,7 @@ sidebarTitle: "模型提供商"
 
     插件自动启用遵循相同边界：隐式兼容 Codex 的实际路由可以启用 Codex 插件，而显式的 provider/model `agentRuntime.id: "codex"` 或旧式 `codex/<model>` 引用则需要它。仅有 `openai/*` 前缀本身并不会触发。
 
-    新的 OpenAI 配置使用与路由相关的 GPT-5.6 引用：API 密钥配置会选择
-    `openai/gpt-5.6`（裸的直接 API id 会解析为 Sol），而
-    ChatGPT/Codex OAuth 会为原生 Codex
-    目录选择精确的 `openai/gpt-5.6-sol`。现有的显式主模型，包括
-    `openai/gpt-5.5`，在添加或刷新 OpenAI 认证时会被保留。
-    对于没有 GPT-5.6 访问权限的账户，GPT-5.5 仍可通过任一运行时作为显式恢复选择。
+    全新的 OpenAI API-key 和 ChatGPT/Codex OAuth 设置会选择规范的 `openai/gpt-5.6-sol` 引用。裸的直接 API `openai/gpt-5.6` 别名仍受支持，并会解析为 Sol。添加或刷新 OpenAI 认证时，包括 `openai/gpt-5.5` 在内的现有显式主模型都会被保留。在无法访问 GPT-5.6 的账户中，GPT-5.5 仍可通过任一运行时作为显式恢复选项使用。
 
   </Accordion>
   <Accordion title="CLI 运行时">
@@ -65,12 +60,12 @@ sidebarTitle: "模型提供商"
 
 ## 提供商专属行为
 
-大多数特定于提供商的逻辑都位于提供商插件（`registerProvider(...)`）中，而 OpenClaw 则保留通用的推理循环。插件负责引导流程、模型目录、身份验证环境变量映射、传输/配置规范化、工具模式清理、故障转移分类、OAuth 刷新、使用情况报告、思考/推理配置文件等。
+大多数特定于提供商的逻辑都位于提供商插件（`registerProvider(...)`）中，而 OpenClaw 则保留通用的推理循环。插件负责引导流程、模型目录、身份验证环境变量映射、传输／配置规范化、工具模式清理、故障转移分类、OAuth 刷新、使用情况报告、思考／推理配置文件等。
 
 有关提供商 SDK 钩子和捆绑插件示例的完整列表，请参阅[提供商插件](/plugins/sdk-provider-plugins)。需要完全自定义请求执行器的提供商属于更深层次的扩展领域。
 
 <Note>
-提供商专属的运行器行为位于显式的提供商钩子上，例如重放策略、工具模式规范化、流包装器以及传输/请求辅助函数。传统的 `ProviderPlugin.capabilities` 静态集合仅用于兼容性，共享运行器逻辑已不再读取它。
+提供商专属的运行器行为位于显式的提供商钩子上，例如重放策略、工具模式规范化、流包装器以及传输／请求辅助函数。传统的 `ProviderPlugin.capabilities` 静态集合仅用于兼容性，共享运行器逻辑已不再读取它。
 </Note>
 
 ## API 密钥轮换
@@ -101,17 +96,17 @@ sidebarTitle: "模型提供商"
 
 ### OpenAI
 
-- 提供方: `openai`
-- 认证: `OPENAI_API_KEY`
-- 可选轮换: `OPENAI_API_KEYS`、`OPENAI_API_KEY_1`、`OPENAI_API_KEY_2`，以及 `OPENCLAW_LIVE_OPENAI_KEY`（单一覆盖）
-- 新安装默认值: `openai/gpt-5.6`；在直接 API 中，裸 ID 会解析为 Sol。
-- 示例模型: `openai/gpt-5.6`、`openai/gpt-5.6-terra`、`openai/gpt-5.6-luna`、`openai/gpt-5.5`
-- 如果某个特定安装或 API key 的表现不同，请使用 `openclaw models list --provider openai` 验证账户/模型可用性。
-- CLI: `openclaw onboard --auth-choice openai-api-key`
+- 提供商：`openai`
+- 身份验证：`OPENAI_API_KEY`
+- 可选轮换：`OPENAI_API_KEYS`、`OPENAI_API_KEY_1`、`OPENAI_API_KEY_2`，以及 `OPENCLAW_LIVE_OPENAI_KEY`（单个覆盖项）
+- 全新设置默认值：`openai/gpt-5.6-sol`。
+- 示例模型：`openai/gpt-5.6-sol`、`openai/gpt-5.6-terra`、`openai/gpt-5.6-luna`、`openai/gpt-5.5`；裸的直接 API `openai/gpt-5.6` 别名仍受支持。
+- 如果特定安装或 API key 的行为有所不同，请使用 `openclaw models list --provider openai` 验证账户／模型可用性。
+- CLI：`openclaw onboard --auth-choice openai-api-key`
 - 默认传输方式为 `auto`；OpenClaw 会将传输方式选择传递给共享模型运行时。
 - 通过 `agents.defaults.models["openai/<model>"].params.transport` 按模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
 - 使用 `params.serviceTier` 或 `params.service_tier` 设置明确的 OpenAI API 服务层级；快速模式（原名为优先处理）使用 `service_tier=priority`。
-- 在原生公共 OpenAI 和 ChatGPT/Codex Responses 请求中，优先级依次为请求载荷/传输方式中的 `service_tier`、有效的显式模型参数，然后是快速模式默认值。
+- 在原生公共 OpenAI 和 ChatGPT/Codex Responses 请求中，优先级依次为请求载荷／传输方式中的 `service_tier`、有效的显式模型参数，然后是快速模式默认值。
 - `/fast` 以及有效的 `params.fastMode` / `params.fast_mode` 值是共享的代理运行时控制项；对于直接嵌入式 `openai/*` Responses 请求，仅当不存在更高优先级的层级时，它们才会提供 `service_tier=priority`。
 - 隐藏的 OpenClaw 归属标头（`originator`、`version`、`User-Agent`）仅适用于发往 `api.openai.com` 的原生 OpenAI 流量，不适用于通用的 OpenAI 兼容代理
 - 原生 OpenAI 路由还会保留 Responses 的 `store`、提示缓存提示信息以及 OpenAI 推理兼容的请求载荷整形；代理路由不会保留这些内容
@@ -119,7 +114,7 @@ sidebarTitle: "模型提供商"
 
 ```json5
 {
-  agents: { defaults: { model: { primary: "openai/gpt-5.6" } } },
+  agents: { defaults: { model: { primary: "openai/gpt-5.6-sol" } } },
 }
 ```
 
@@ -201,7 +196,7 @@ Claude CLI 复用（`claude -p`）是 OpenClaw 认可的集成路径。仍然支
   <Card title="Qwen Cloud" href="/providers/qwen">
     Qwen Cloud 提供商界面，以及阿里巴巴 DashScope 和编程计划端点映射。
   </Card>
-  <Card title="Z.AI (GLM)" href="/providers/zai">
+  <Card title="Z.AI（GLM）" href="/providers/zai">
     Z.AI 编程计划或通用 API 端点。
   </Card>
 </CardGroup>
@@ -377,7 +372,7 @@ Kimi 编程使用 Moonshot AI 的 Anthropic 兼容端点：
 
 ```json5
 {
-  env: { KIMI_API_KEY: "sk-..." },
+  env: { vars: { KIMI_API_KEY: "sk-..." } },
   agents: {
     defaults: { model: { primary: "kimi/kimi-for-coding" } },
   },

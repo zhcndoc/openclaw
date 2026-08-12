@@ -69,7 +69,7 @@ ACP 必须已启用，dispatch 不能被禁用，当前会话不能被沙箱阻�
 
     在归咎于 OpenClaw 之前，请验证：
 
-    - `/acp doctor` 报告 backend 已启用且健康。
+    - `/acp doctor` 报告后端已启用且健康。
     - 当设置了 allowlist 时，目标 id 需要被 `acp.allowedAgents` 允许。
     - harness 命令可以在 Gateway 主机上启动。
     - 该 harness 已存在供应商认证（`claude`、`codex`、`gemini`、`opencode`、`droid` 等）。
@@ -210,11 +210,11 @@ harness。
 1. OpenClaw ACP 会话控制平面。
 2. 官方 `@openclaw/acpx` 运行时插件。
 3. Claude ACP 适配器。
-4. Claude 侧运行时/会话机制。
+4. Claude 侧运行时／会话机制。
 
-ACP Claude 是一个带有 ACP 控制、会话恢复、后台任务跟踪以及可选对话/线程绑定的 **harness 会话**。
+ACP Claude 是一个带有 ACP 控制、会话恢复、后台任务跟踪以及可选对话／线程绑定的 **harness 会话**。
 
-CLI 后端是独立的纯文本本地回退运行时 - 另见
+CLI 后端是独立的纯文本本地回退运行时——另见
 [CLI 后端](/gateway/cli-backends)。
 
 对于运维人员，实用规则是：
@@ -343,9 +343,9 @@ CLI 后端是独立的纯文本本地回退运行时 - 另见
 ```json5
 {
   agents: {
-    list: [
-      {
-        id: "codex",
+    entries: {
+      codex: {
+        default: true,
         runtime: {
           type: "acp",
           acp: {
@@ -356,14 +356,13 @@ CLI 后端是独立的纯文本本地回退运行时 - 另见
           },
         },
       },
-      {
-        id: "claude",
+      claude: {
         runtime: {
           type: "acp",
           acp: { agent: "claude", backend: "acpx", mode: "persistent" },
         },
       },
-    ],
+    },
   },
   bindings: [
     {
@@ -729,7 +728,7 @@ ACP 会话当前运行在主机运行时中，**不**运行在 OpenClaw 沙箱�
 
 ## acpx 运行器、插件设置和权限
 
-有关 acpx 运行器配置（Claude Code / Codex / Gemini CLI 别名）、
+有关 acpx 运行器配置（Claude Code／Codex／Gemini CLI 别名）、
 plugin-tools 和 OpenClaw-tools MCP 桥接，以及 ACP 权限模式，
 请参见 [ACP agents - 设置](/tools/acp-agents-setup)。
 
@@ -779,4 +778,4 @@ plugin-tools 和 OpenClaw-tools MCP 桥接，以及 ACP 权限模式，
 - [Codex 运行时运行环境](/plugins/codex-harness-runtime)
 - [多代理沙箱工具](/tools/multi-agent-sandbox-tools)
 - [`openclaw acp` (桥接模式)](/cli/acp)
-- [子代理](/tools/subagents)
+- [子代理](/tools/subagents)。

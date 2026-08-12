@@ -19,10 +19,10 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 并在 HTTP 端点可用之前重启 gateway。若不设置此变量，浏览器控制运行时仍可通过 CLI 和
 代理工具工作，但不会有任何服务监听回环控制端口。
 
-- 状态/启动/停止：`GET /`、`GET /doctor`、`POST /start`、`POST /stop`、`POST /reset-profile`
+- 状态／启动／停止：`GET /`、`GET /doctor`、`POST /start`、`POST /stop`、`POST /reset-profile`
 - 配置文件：`GET /profiles`、`POST /profiles/create`、`DELETE /profiles/:name`
 - 标签页：`GET /tabs`、`POST /tabs/open`、`POST /tabs/focus`、`DELETE /tabs/:targetId`、`POST /tabs/action`
-- 快照/截图：`GET /snapshot`、`POST /screenshot`
+- 快照／截图：`GET /snapshot`、`POST /screenshot`
 - 操作：`POST /navigate`、`POST /act`
 - 钩子：`POST /hooks/file-chooser`、`POST /hooks/dialog`
 - 下载：`POST /download`、`POST /wait/download`
@@ -79,7 +79,7 @@ target-id 前缀仍然可用，但它们是易变的诊断句柄。
 
 ### Playwright 要求
 
-某些功能（导航/操作/AI 快照/角色快照、元素截图、PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回明确的 501 错误。
+某些功能（导航／操作／AI 快照／角色快照、元素截图、PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回明确的 501 错误。
 
 不使用 Playwright 仍可用的功能：
 
@@ -89,7 +89,7 @@ target-id 前缀仍然可用，但它们是易变的诊断句柄。
   用于检查和 ref 发现的回退方案；Playwright 仍是主要的
   操作引擎。
 - 当每个标签页可用 CDP WebSocket 时，受管的 `openclaw` 浏览器的页面截图
-- `existing-session` / Chrome MCP 配置文件的页面截图
+- `existing-session`／Chrome MCP 配置文件的页面截图
 - 来自快照输出的 `existing-session` 基于 ref 的截图（`--ref`）
 
 仍然需要 Playwright 的功能：
@@ -424,8 +424,7 @@ JSON 中的 Role 快照包含 `refs`，以及一个小型 `stats` 块（lines/ch
   browser: {
     ssrfPolicy: {
       dangerouslyAllowPrivateNetwork: false,
-      hostnameAllowlist: ["*.example.com", "example.com"],
-      allowedHostnames: ["localhost"], // 可选的精确允许
+      allowedHostnames: ["*.example.com", "example.com", "localhost"],
     },
   },
 }

@@ -46,13 +46,13 @@ Client                    Gateway
 
 ## 模式定义所在位置
 
-- 源 barrel：`packages/gateway-protocol/src/schema-modules.ts` 维护规范的领域模块列表，而公共的 `schema.ts` 包装器也会导出 `ProtocolSchemas`。
-- 生成器注册表：按顺序排列的 `protocol-schema-fragment-*.ts` 文件将稳定名称映射到其所属模块中的规范 TypeBox 对象。`protocol-schemas.ts` 按固定顺序组合这些片段，并拒绝重复键。
-- 运行时校验器（AJV）：`packages/gateway-protocol/src/index.ts`
-- 对外声明的功能/发现注册表：`src/gateway/server-methods-list.ts`
-- 服务器握手和方法分发：`src/gateway/server.impl.ts`
+- 源聚合文件：`packages/gateway-protocol/src/schema-modules.ts` 负责维护规范的领域模块列表，而公共的 `schema.ts` 包装器也会暴露 `ProtocolSchemas`。
+- 生成器注册表：有序的 `protocol-schema-fragment-*.ts` 文件将稳定名称映射到其所属模块中的规范 TypeBox 对象。`protocol-schemas.ts` 按固定顺序组合这些片段，并拒绝重复键。
+- 运行时验证器（AJV）：`packages/gateway-protocol/src/index.ts`
+- 对外公布的功能／发现注册表：`src/gateway/server-methods-list.ts`
+- 服务器握手和方法分派：`src/gateway/server-core-runtime.ts`
 - Node 客户端：`src/gateway/client.ts`
-- 生成的 JSON Schema：`dist/protocol.schema.json`（构建产物，不提交）
+- 生成的 JSON Schema：`dist/protocol.schema.json`（构建输出，不纳入版本控制）
 - 生成的 Swift 模型：`apps/shared/OpenClawKit/Sources/OpenClawProtocol/GatewayModels.swift`
 
 ## 当前流水线
@@ -184,7 +184,7 @@ ws.on("message", (data) => {
 
 1. **模式（唯一真相来源）**
 
-添加到 `packages/gateway-protocol/src/schema/system.ts`（或最接近的功能模块）：
+添加到 `packages/gateway-protocol/src/schema/system-info.ts`（或最接近的匹配功能模块）：
 
 ```ts
 export const SystemEchoParamsSchema = Type.Object(
@@ -272,10 +272,10 @@ Swift 生成器会输出：
 ## Schema 模式和约定
 
 - 大多数对象使用 `additionalProperties: false` 来实现严格的负载。
-- `NonEmptyString`（`Type.String({ minLength: 1 })`）是 ID 以及方法/事件名称的默认类型。
+- `NonEmptyString`（`Type.String({ minLength: 1 })`）是 ID 以及方法／事件名称的默认类型。
 - 顶层的 `GatewayFrame` 在 `type` 上使用 **discriminator**。
 - 带有副作用的方法通常需要在 params 中提供 `idempotencyKey`（例如：`send`、`poll`、`agent`、`chat.send`）。
-- `agent` 接受可选的 `internalEvents`，用于运行时生成的编排上下文（例如子代理/cron 任务完成交接）；请将其视为内部 API 接口面。
+- `agent` 接受可选的 `internalEvents`，用于运行时生成的编排上下文（例如子代理／cron 任务完成交接）；请将其视为内部 API 接口面。
 
 ## 实时 schema JSON
 

@@ -11,9 +11,9 @@ title: "Memory Core 插件"
 
 ## 分发
 
-- Package: `@openclaw/memory-core`
-- Install route: included in OpenClaw
+- 软件包：`@openclaw/memory-core`
+- 安装路径：包含在 OpenClaw 中
 
 ## 表面
 
-contracts: `tools`
+commands：`/dreaming`；contracts：`tools`

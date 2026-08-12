@@ -43,30 +43,7 @@ title: "重试策略"
 
 ## 配置
 
-在 `~/.openclaw/openclaw.json` 中按提供方设置重试策略：
-
-```json5
-{
-  channels: {
-    telegram: {
-      retry: {
-        attempts: 3,
-        minDelayMs: 400,
-        maxDelayMs: 30000,
-        jitter: 0.1,
-      },
-    },
-    discord: {
-      retry: {
-        attempts: 3,
-        minDelayMs: 500,
-        maxDelayMs: 30000,
-        jitter: 0.1,
-      },
-    },
-  },
-}
-```
+Discord 和 Telegram 频道的重试时间是内置的，无法在 `openclaw.json` 中配置。
 
 ## 说明
 

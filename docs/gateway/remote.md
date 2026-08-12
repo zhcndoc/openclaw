@@ -10,7 +10,9 @@ OpenClaw 在一台主机上运行一个 Gateway（主节点），并将每个客
 - **操作员**（你，或 macOS 应用）：当 Gateway 可访问时，直接使用 LAN/Tailnet WebSocket 最简单；SSH 隧道是通用的备用方案。
 - **节点**（iOS/Android 和其他设备）：连接到 Gateway 的 **WebSocket**（LAN/tailnet 或 SSH 隧道）。
 
-## 核心思路
+远程客户端可以通过 URL 或简短引用继续同一 Gateway 所拥有的对话。请参阅[会话同步和附加](/concepts/session-attachment)。
+
+## 核心理念
 
 Gateway WebSocket 默认绑定到 **环回地址**，端口为 `18789`（`gateway.port`）。如需远程使用，可通过 Tailscale Serve / 受信任的 LAN-Tailnet 绑定对外暴露，或通过 SSH 将环回端口转发出来。
 
@@ -92,18 +94,19 @@ ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
 
 Gateway 凭据解析在调用 / 探测 / 状态路径以及 Discord exec-approval 监控中遵循同一共享契约。Node-host 使用相同契约，但有一个本地模式例外（它会忽略 `gateway.remote.*`）。
 
-- 显式凭据（`--token`、`--password` 或工具的 `gatewayToken`）在接受显式身份验证的调用路径上始终具有最高优先级。
+- 显式凭据（`--token`、`--password` 或工具的 `gatewayToken`）在接受显式身份验证的调用路径中始终优先。
 - URL 覆盖安全性：
-  - CLI `--url` 永远不会复用隐式配置或环境凭据。
-  - 环境变量 `OPENCLAW_GATEWAY_URL` 只能使用环境凭据（`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`）。
+  - CLI `--url` 不会重用隐式配置／环境凭据。
+  - 环境变量 `OPENCLAW_GATEWAY_URL` 只能使用环境凭据（`OPENCLAW_GATEWAY_TOKEN`／`OPENCLAW_GATEWAY_PASSWORD`）。
 - 本地模式默认值：
-  - token：`gateway.auth.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.remote.token`（仅当本地 token 未设置时才回退到远程值）
-  - password：`gateway.auth.password` -> `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password`（仅当本地 password 未设置时才回退到远程值）
+  - token：`gateway.auth.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.remote.token`（仅当本地 token 未设置时才使用远程回退）
+  - password：`gateway.auth.password` -> `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password`（仅当本地 password 未设置时才使用远程回退）
 - 远程模式默认值：
   - token：`gateway.remote.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token`
   - password：`OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` -> `gateway.auth.password`
-- Node-host 本地模式例外：环境凭据仍具有最高优先级，并且会忽略 `gateway.remote.token` / `gateway.remote.password`，因为 node 命令会连接到显式指定的主机和端口。
-- 远程探测/状态 token 检查默认是严格的：以远程模式为目标时，仅使用 `gateway.remote.token`（不回退到本地 token）。
+- Node-host 本地模式例外：环境凭据保持优先，并且会忽略 `gateway.remote.token`／`gateway.remote.password`，因为 node 命令会指向显式的主机和端口。
+- 支持 SecretRef 的远程启动／状态／向导探测会将配置的
+  `gateway.remote.token` 和 `gateway.remote.password` 视为配置目标的权威凭据。仅当远程凭据均未配置时，才会考虑环境凭据。如果配置的远程 SecretRef 无法解析，探测会发出警告，且不会回退到环境凭据；单独配置且成功解析的同级凭据仍可使用。
 - Gateway 环境变量覆盖仅使用 `OPENCLAW_GATEWAY_*`。
 
 ## Chat UI 远程访问

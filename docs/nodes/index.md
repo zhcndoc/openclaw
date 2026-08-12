@@ -245,7 +245,7 @@ openclaw config set tools.exec.node "<id-or-name>"
 /exec host=node security=allowlist node=<id-or-name>
 ```
 
-一旦设置，任何 `host=node` 的 `exec` 调用都会在 node 主机上运行（受 node 允许列表/批准限制）。
+一旦设置，任何 `host=node` 的 `exec` 调用都会在 node 主机上运行（受 node 允许列表／批准限制）。
 
 `host=auto` 不会自动选择 node，但可以从 `auto` 中发出明确的单次 `host=node` 请求。如果你希望 node exec 成为该会话的默认值，请显式设置 `tools.exec.host=node` 或 `/exec host=node ...`。
 
@@ -306,7 +306,7 @@ openclaw config set tools.exec.node "<id-or-name>"
 
 在节点上执行的轮次使用该节点的 Claude 默认配置。在 v1 中，它们不会接收 Gateway 回环 MCP 配置或 Gateway skills 插件，不能从 Gateway 转录重新播种，并且会拒绝附件和图像。Claude Desktop 行以及未声明运行命令的节点仍然只能查看。macOS 应用节点目前还不声明此命令，因此其行仍然是只读的。
 
-有关控制 UI 行为和存储来源，请参见 [Anthropic: 跨计算机的 Claude 会话](/providers/anthropic#claude-sessions-across-computers)。
+有关控制 UI 行为和存储来源，请参见 [Anthropic：跨计算机的 Claude 会话](/providers/anthropic#claude-sessions-across-computers)。
 
 ### OpenCode 和 Pi 会话
 
@@ -350,7 +350,7 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
 调用方之前先进行排序。现有的 `node.invoke.result` 仍然是唯一的终态
 响应。流式调用方可以设置一个非活动截止时间，它从
 第一个 progress 事件开始，并在后续 progress 到来时重置，同时在审批和执行期间保留该调用的独立硬超时。结果、硬
-超时、非活动超时以及节点断开连接都会丢弃待处理的流状态。调用方取消会发出 `node.invoke.cancel`；随后节点主机将终止匹配的进程树。现有的请求/响应命令保持不变。
+超时、非活动超时以及节点断开连接都会丢弃待处理的流状态。调用方取消会发出 `node.invoke.cancel`；随后节点主机将终止匹配的进程树。现有的请求／响应命令保持不变。
 
 ## 命令策略
 
@@ -433,12 +433,12 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
 ```json5
 {
   agents: {
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
+        default: true,
         tools: { exec: { node: "build-node" } },
       },
-    ],
+    },
   },
 }
 ```
@@ -579,16 +579,16 @@ iOS 和 Android 节点默认会公开若干只读数据命令（参见 [命令�
 
 可用族：
 
-- `device.status`, `device.info` — iOS, Android, Windows.
-- `device.permissions`, `device.health` — 仅 Android。
+- `device.status`、`device.info` — iOS、Android、Windows。
+- `device.permissions`、`device.health` — 仅 Android。
 - `device.apps` — Android、macOS 和无头 mac 节点。Android 需要在设置中启用已安装应用共享，并默认返回启动器可见的应用。TypeScript 节点宿主默认关闭共享，并接受 `query`、`limit` 和 `includeSystem`；macOS 结果包含 `label`、`bundleId`、`path` 和 `system`。
-- `notifications.list`, `notifications.actions` — 仅 Android。
-- `photos.latest` — iOS, Android.
+- `notifications.list`、`notifications.actions` — 仅 Android。
+- `photos.latest` — iOS、Android。
 - `contacts.search` — iOS、Android（默认只读）；`contacts.add` 是危险操作，需要 `gateway.nodes.commands.allow`。
 - `calendar.events` — iOS、Android（默认只读）；`calendar.add` 是危险操作，需要 `gateway.nodes.commands.allow`。
 - `reminders.list` — iOS、Android（默认只读）；`reminders.add` 是危险操作，需要 `gateway.nodes.commands.allow`。
 - `callLog.search` — 仅 Android。
-- `motion.activity`, `motion.pedometer` — iOS, Android；由可用传感器能力控制。
+- `motion.activity`、`motion.pedometer` — iOS、Android；由可用传感器能力控制。
 
 示例调用：
 
@@ -676,4 +676,4 @@ openclaw node run --host <gateway-host> --port 18789
 ## Mac 节点模式
 
 - macOS 菜单栏应用作为节点连接到 Gateway WS 服务器（因此 `openclaw nodes …` 可以作用于这台 Mac）。
-- 在远程模式下，应用会为 Gateway 端口打开 SSH 隧道并连接到 `localhost`。
+- 在远程模式下，应用会为 Gateway 端口打开 SSH 隧道并连接到 localhost。

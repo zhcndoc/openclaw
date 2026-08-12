@@ -36,8 +36,8 @@ openclaw resume <query>
 `resume` 使用与 [`openclaw tui`](/cli/tui) 相同的 Gateway URL、身份验证和 TLS
 解析方式。它绝不会自动启动 Gateway。如果配置的 Gateway 不可用，请启动或修复它，然后重新运行命令。
 
-`resume` 会在可能的情况下解析配置的 Gateway 身份验证 SecretRef，以用于令牌/密码身份验证
-（`env`/`file`/`exec` 提供程序）。
+`resume` 会在可能的情况下解析配置的 Gateway 身份验证 SecretRefs，以用于令牌／密码身份验证
+（`env`／`file`／`exec`／`store` 提供程序）。
 
 Gateway 目标的优先级依次为显式指定的 `--url`、`OPENCLAW_GATEWAY_URL`、
 当 `gateway.mode` 为 `remote` 时的 `gateway.remote.url`，以及本地

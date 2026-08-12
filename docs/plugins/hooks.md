@@ -61,7 +61,7 @@ export default definePluginEntry({
 | `timeoutMs`        | 每个钩子的等待预算。超时后，OpenClaw 会停止等待该处理器并继续执行。它不会取消处理器或其副作用。省略则使用运行器默认的每个钩子超时值。                                                      |
 | `eligibleTriggers` | 仅适用于 `before_agent_reply`，将宿主分发限制为 `cron`、`heartbeat` 或 `user` 中的一个或多个触发器。                                                                                                                                                  |
 
-触发器资格由宿主在调用处理器之前强制执行。因此，使用 `eligibleTriggers: ["heartbeat", "cron"]` 注册的钩子对用户回合处于非活动状态，并且不会阻塞被中断用户回合的恢复。省略、为空、格式错误或部分包含未知值的列表仍不受限制，从而使分发和恢复在失败时默认采取安全策略。其他钩子类型不接受此选项。
+触发器资格由宿主在调用处理器之前强制执行。因此，使用 `eligibleTriggers: ["heartbeat", "cron"]` 注册的钩子对于用户轮次处于非活动状态，包括恢复的用户轮次。省略、为空、格式错误或部分包含未知值的列表仍不受限制，因此钩子会在这些轮次中运行。其他钩子类型不接受此选项。
 
 运维人员可以在不修改插件代码的情况下设置钩子预算：
 
@@ -103,7 +103,7 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 **Agent 回合**
 
-| Hook                            | Purpose                                                                                  |
+| Hook                            | 用途                                                                                  |
 | ------------------------------- | ---------------------------------------------------------------------------------------- |
 | `before_model_resolve`          | 在加载会话消息之前覆盖提供方或模型                                  |
 | `agent_turn_prepare`            | 消费排队的插件回合注入内容，并在提示词钩子之前添加同一回合的上下文      |
@@ -116,7 +116,7 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 **对话观察**
 
-| Hook                                      | Purpose                                                                                                            |
+| Hook                                      | 用途                                                                                                            |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `model_call_started` / `model_call_ended` | 已清理的提供方/模型调用元数据：时间、结果、受限的请求 ID 哈希。不包含提示词或响应内容。 |
 | `llm_input`                               | 提供方输入：系统提示词、提示词、历史记录                                                                     |
@@ -124,7 +124,7 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 **工具**
 
-| Hook                       | Purpose                                                   |
+| Hook                       | 用途                                                   |
 | -------------------------- | --------------------------------------------------------- |
 | **`before_tool_call`**     | 重写工具参数、阻止执行或要求批准 |
 | `after_tool_call`          | 观察工具结果、错误和持续时间                |
@@ -134,7 +134,7 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 **消息与传递**
 
-| Hook                        | Purpose                                                                    |
+| Hook                        | 用途                                                                    |
 | --------------------------- | -------------------------------------------------------------------------- |
 | **`inbound_claim`**         | 为拥有该消息会话绑定的插件认领入站消息 |
 | `channel_pairing_requested` | 观察新创建的私信配对请求                                  |
@@ -149,7 +149,7 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 **会话与压缩**
 
-| Hook                                     | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Hook                                     | 用途                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `session_start` / `session_end`          | 跟踪会话生命周期边界。`reason` 取值为 `new`、`reset`、`idle`、`daily`、`compaction`、`deleted`、`shutdown`、`restart` 或 `unknown` 之一。`shutdown`/`restart` 会在 Gateway 关闭终结器中触发，当进程停止或在存在活跃会话时重启时，插件（内存、转录存储）可以完成幽灵行的收尾，而不是让它们在重启间保持未关闭状态。该终结器有上限，因此慢插件不会阻塞 SIGTERM/SIGINT。 |
 | `before_compaction` / `after_compaction` | 观察或注释压缩周期                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -169,7 +169,7 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 **生命周期**
 
-| Hook                             | Purpose                                                                                              |
+| Hook                             | 用途                                                                                              |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `gateway_start` / `gateway_stop` | 随 Gateway 启动或停止插件拥有的服务                                                 |
 | `deactivate`                     | `gateway_stop` 的弃用兼容性别名；新插件请使用 `gateway_stop`                 |
@@ -238,26 +238,20 @@ api.on("channel_pairing_requested", async (event) => {
 
 - `event.toolName`
 - `event.params`
-- optional `event.toolKind` and `event.toolInputKind`, host-authoritative
-  discriminators for tools that intentionally share names; for example, outer
-  code-mode `exec` calls use `toolKind: "code_mode_exec"` and include
-  `toolInputKind: "javascript" | "typescript"` when the input language is
-  known
-- optional `event.derivedPaths`, best-effort host-derived target path hints
-  for well-known tool envelopes such as `apply_patch`; these paths may be
-  incomplete or over-approximate what the tool will actually touch (for
-  example, with malformed or partial inputs)
-- optional `event.runId`
-- optional `event.toolCallId`
-- context fields such as `ctx.agentId`, `ctx.sessionKey`, `ctx.sessionId`,
-  `ctx.runId`, `ctx.toolKind`, `ctx.toolInputKind`, and diagnostic `ctx.trace`
-- optional `ctx.abortSignal`, which aborts when the owning tool call is
-  cancelled; handlers should pass it to cancellable I/O and remove any
-  listeners they register
-- optional `ctx.requester`, the host-derived requester that initiated the current
-  message run. It can include `channel`, `accountId`, `senderId`,
-  `senderIsOwner`, and provider-native `roleIds`. Missing fields are unproven,
-  not false assurances; fail closed when policy requires them.
+- 可选的 `event.toolKind` 和 `event.toolInputKind`，由宿主决定的
+  判别字段，用于有意共享名称的工具；例如，外层
+  code-mode `exec` 调用使用 `toolKind: "code_mode_exec"`，并在已知输入语言时包含
+  `toolInputKind: "javascript" | "typescript"`
+- 可选的 `event.derivedPaths`，由宿主尽力推导的目标路径提示，
+  适用于 `apply_patch` 等已知工具封装；这些路径可能不完整，或过度近似工具实际会修改的内容
+  （例如，对于格式错误或不完整的输入）
+- 可选的 `event.runId`
+- 可选的 `event.toolCallId`
+- 上下文字段，例如 `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId`、
+  `ctx.runId`、`ctx.toolKind`、`ctx.toolInputKind`，以及诊断用的 `ctx.trace`
+- 可选的 `ctx.abortSignal`，在所属工具调用被取消时触发；处理器应将其传递给可取消的 I/O，并移除其注册的任何监听器
+- 可选的 `ctx.requester`，由宿主推导、发起当前消息运行的请求方。它可以包含 `channel`、`accountId`、`senderId`、
+  `senderIsOwner` 以及提供方原生的 `roleIds`。缺失字段表示无法证实，而不是可以据此认定为否定；策略要求时应默认拒绝。
 
 它可以返回：
 
@@ -376,12 +370,12 @@ export default definePluginEntry({
 ```json5
 {
   agents: {
-    list: [
-      {
-        id: "maintenance-agent",
+    entries: {
+      "maintenance-agent": {
+        default: true,
         workspace: "~/.openclaw/workspace-maintenance",
       },
-    ],
+    },
   },
   bindings: [
     {
@@ -401,9 +395,9 @@ export default definePluginEntry({
 
 `AGENT_ID` 必须指向绑定到维护对话的代理。该绑定会为普通消息和 `/fix` 选择该代理；独立文件仍然是所有者与维护者工具策略的唯一控制方。
 
-`requireAuth: true` 会复用每个频道现有的发送者准入机制。对于 Discord，服务器或频道的 `users`/`roles` 允许列表可以为维护受众授予授权。其他频道可以使用稳定的发送者 ID。随后，钩子会在运行中的每次工具调用上应用更细粒度的逐工具决策，包括 Codex 原生的 `PreToolUse` 调用。它可以否决模型可见的工具，但不能添加宿主省略的工具。现有的沙箱、exec 审批、仅所有者可用的核心工具以及频道策略仍然适用；钩子无法越过这些策略授予权限。
+`requireAuth: true` 会复用每个频道现有的发送者准入机制。对于 Discord，服务器或频道的 `users`／`roles` 允许列表可以为维护受众授予授权。其他频道可以使用稳定的发送者 ID。随后，钩子会在运行中的每次工具调用上应用更细粒度的逐工具决策，包括 Codex 原生的 `PreToolUse` 调用。它可以否决模型可见的工具，但不能添加宿主省略的工具。现有的沙箱、exec 审批、仅所有者可用的核心工具以及频道策略仍然适用；钩子无法越过这些策略授予权限。
 
-如上所示，将发送者 ID 和角色 ID 限定在精确的频道/账户对中；二者都是提供方本地的命名空间。保持允许列表保守。仅当部署的沙箱和审批策略能够确保安全时，才添加写入或执行工具。对于自动化或系统运行，请明确决定缺少 `ctx.requester` 时是否应当放行；此示例会拒绝其作用域代理的此类请求。
+如上所示，将发送者 ID 和角色 ID 限定在精确的频道／账户对中；二者都是提供方本地的命名空间。保持允许列表保守。仅当部署的沙箱和审批策略能够确保安全时，才添加写入或执行工具。对于自动化或系统运行，请明确决定缺少 `ctx.requester` 时是否应当放行；此示例会拒绝其作用域代理的此类请求。
 
 参见[插件权限请求](/plugins/plugin-permission-requests)，了解审批路由、决策行为，以及何时应使用 `requireApproval` 而不是可选工具或 exec 审批。
 
@@ -430,7 +424,7 @@ export default definePluginEntry({
 依赖它）。无效键以及危险的宿主覆盖键，如 `LD_*`、
 `DYLD_*`、`NODE_OPTIONS`、代理变量（`HTTP_PROXY`、`HTTPS_PROXY`、
 `ALL_PROXY`、`NO_PROXY`）和 TLS 覆盖变量（`NODE_TLS_REJECT_UNAUTHORIZED`、
-`SSL_CERT_FILE` 及类似项）都会被丢弃。过滤后的插件环境会包含在 Gateway 审批/审计元数据中，并转发给 node-host 执行
+`SSL_CERT_FILE` 及类似项）都会被丢弃。过滤后的插件环境会包含在 Gateway 审批／审计元数据中，并转发给 node-host 执行
 请求。
 
 ### 工具结果持久化
@@ -593,21 +587,21 @@ OpenClaw 会在提示词钩子之前清空已排队的注入，丢弃过期注�
 将消息钩子用于通道级路由和投递策略：
 
 - `message_received`：观察入站内容、发送者、`threadId`、
-  `messageId`、`senderId`、可选的运行/会话关联信息、有序的
-  `media` 以及元数据。
+  `messageId`、`senderId`、可选的运行／会话关联、有序的
+  `media`、规范化的 `location`、通道提供时稳定的 `providerUpdate` 标识以及元数据。
 - `message_sending`：重写 `content` 或返回 `{ cancel: true }`。
 - `reply_payload_sending`：重写规范化的 `ReplyPayload` 对象
   （包括 `presentation`、`delivery`、媒体引用和文本），或返回
   `{ cancel: true }`。
-- `message_sent`：观察最终的成功或失败结果。
+- `message_sent`：观察最终的成功或失败。
 
-对于仅音频的 TTS 回复，即使通道负载中没有可见文本/标题，`content` 也可能包含隐藏的口语转写。
+对于仅音频的 TTS 回复，即使通道负载中没有可见文本／标题，`content` 也可能包含隐藏的口语转写。
 重写该 `content` 只会更新钩子可见的转写内容；它不会
 作为媒体标题进行渲染。
 
-`reply_payload_sending` 事件可能包含 `usageState`，这是对每次 turn 的模型/用量/上下文的尽力而为的实时快照。持久化投递、恢复回放以及没有精确运行关联的回复会省略它。
+`reply_payload_sending` 事件可能包含 `usageState`，这是对每次 turn 的模型／用量／上下文的尽力而为的实时快照。持久化投递、恢复回放以及没有精确运行关联的回复会省略它。
 
-当可用时，Message hook 上文会暴露稳定的关联字段：
+当可用时，消息钩子上文会暴露稳定的关联字段：
 `ctx.sessionKey`、`ctx.runId`、`ctx.messageId`、`ctx.senderId`、`ctx.trace`、
 `ctx.traceId`、`ctx.spanId`、`ctx.parentSpanId` 和 `ctx.callDepth`。入站
 和 `before_dispatch` 上下文在通道具有可见性过滤的引用消息数据时也会暴露回复元数据：`replyToId`、`replyToIdFull`、
@@ -624,7 +618,7 @@ PluginHookMediaFact[]` 暴露规范的附件 API。每个事实可以包含
 `media`，设置 `mediaStagingPending: true`，并由 `originalMedia` 包含提供方一侧的
 事实。在后续暂存事件提供 `media` 之前，不要将 `originalMedia.path` 视为本地可读路径。
 
-单数/复数形式的 `mediaPath`、`mediaUrl`、`mediaType`、`mediaPaths`、
+单数／复数形式的 `mediaPath`、`mediaUrl`、`mediaType`、`mediaPaths`、
 `mediaUrls`、`mediaTypes` 以及匹配的 `originalMedia*` 元数据属性都是
 已弃用的兼容性别名。新的钩子应使用顶层的类型化数组。
 
@@ -640,7 +634,9 @@ PluginHookMediaFact[]` 暴露规范的附件 API。每个事实可以包含
 - `reply_payload_sending` 负载不会暴露运行时信任标记，例如
   `trustedLocalMedia`；插件可以编辑负载形状，但不能授予本地
   媒体信任。
-- `message_sending` 可以在取消时返回 `cancelReason` 和受限的 `metadata`。新的消息生命周期 API 会将其作为被抑制的投递结果暴露，并给出原因 `cancelled_by_message_sending_hook`；为兼容性起见，旧版直接投递仍会返回空结果数组。
+- `message_sending` 可以在取消时返回 `cancelReason` 和受限的
+  `metadata`。新的消息生命周期 API 会将其作为被抑制的投递结果暴露，并给出原因
+  `cancelled_by_message_sending_hook`；为兼容性起见，旧版直接投递仍会返回空结果数组。
 - `message_sent` 仅用于观察。处理程序失败会被记录，但不会
   改变投递结果。
 
@@ -822,4 +818,4 @@ export function registerCronProjection(api: OpenClawPluginApi, host: ExternalWak
 - [插件 SDK 概览](/plugins/sdk-overview)
 - [插件入口点](/plugins/sdk-entrypoints)
 - [内部钩子](/automation/hooks)
-- [插件架构内部](/plugins/architecture-internals)
+- [插件架构内部](/plugins/architecture-internals)。

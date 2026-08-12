@@ -22,12 +22,12 @@ OpenClaw 可以使用 Bonjour（mDNS/DNS-SD）来发现一个活动的 gateway�
 
 ```json5
 {
-  gateway: { bind: "tailnet" }, // 仅限 tailnet（推荐）
-  discovery: { wideArea: { enabled: true, domain: "openclaw.internal" } },
+  gateway: { bind: "tailnet" }, // tailnet-only (recommended)
+  discovery: { wideArea: { domain: "openclaw.internal" } },
 }
 ```
 
-当 `discovery.wideArea.domain` 未设置时，也可以回退使用 `OPENCLAW_WIDE_AREA_DOMAIN` 环境变量。
+设置 `discovery.wideArea.domain` 会启用广域发现。未设置该配置项时，OpenClaw 也接受 `OPENCLAW_WIDE_AREA_DOMAIN` 环境变量作为后备项。
 
 ### 一次性 DNS 服务器设置（网关主机，仅 macOS）
 
@@ -53,8 +53,8 @@ dig @<TAILNET_IPV4> -p 53 _openclaw-gw._tcp.openclaw.internal PTR +short
 
 在 Tailscale 管理控制台中：
 
-- 添加一个指向网关 Tailnet IP 的 nameserver（UDP/TCP 53）。
-- 添加分流 DNS，使你的发现域使用该 nameserver。
+- 添加一个指向网关 Tailnet IP 的名称服务器（UDP/TCP 53）。
+- 添加分流 DNS，使你的发现域使用该名称服务器。
 
 一旦客户端接受 Tailnet DNS，iOS 节点和 CLI 发现就可以在你的发现域中浏览 `_openclaw-gw._tcp`，而无需组播。
 
@@ -119,7 +119,7 @@ dns-sd -L "<instance>" _openclaw-gw._tcp local.
 
 OpenClaw 会为每个 Bonjour 服务仅启动一次，并将探测、重试、名称冲突解决以及接口变更后的重新发布交给 mDNS 响应器处理。这样可以避免在正常网络波动期间出现重叠的发布尝试。重复的内部自探测消息会被抑制，因此不会淹没网关日志。
 
-当多个 OpenClaw 网关从同一主机进行广播时，Bonjour 可能会追加诸如 `(2)` 或 `(3)` 之类的后缀，以保持服务实例名称唯一。这些后缀属于正常的冲突解决行为，不表示存在重复的 OCM 监督。
+当多个 OpenClaw 网关从同一主机进行广播时，Bonjour 可能会追加诸如（2）或（3）之类的后缀，以保持服务实例名称唯一。这些后缀属于正常的冲突解决行为，不表示存在重复的 OCM 监督。
 
 当系统主机名是有效的 DNS 标签时，Bonjour 会使用它作为已广播的 `.local` 主机名。如果系统主机名包含空格、下划线或其他无效的 DNS 标签字符，OpenClaw 会回退到 `openclaw.local`。在需要显式主机标签时，请在启动网关之前设置 `OPENCLAW_MDNS_HOSTNAME=<name>`。
 
@@ -127,7 +127,7 @@ OpenClaw 会为每个 Bonjour 服务仅启动一次，并将探测、重试、�
 
 iOS 节点使用 `NWBrowser` 发现 `_openclaw-gw._tcp`。
 
-要捕获日志：Settings -> Gateway -> Advanced -> **发现调试日志**，然后 Settings -> Gateway -> Advanced -> **发现日志** -> 复现 -> **复制**。日志包括浏览器状态转换和结果集变化。
+要捕获日志：设置 → 网关 → 高级 → **发现调试日志**，然后 设置 → 网关 → 高级 → **发现日志** → 复现 → **复制**。日志包括浏览器状态转换和结果集变化。
 
 ## 何时启用 Bonjour
 
@@ -141,11 +141,11 @@ openclaw plugins enable bonjour
 
 启用后，Bonjour 会使用 `discovery.mdns.mode` 来决定要发布多少 TXT 元数据；同样的模式也会控制广域 DNS-SD 记录中的可选 TXT 提示。模式如下：
 
-| Mode                | Behavior                                                                                                                                 |
+| 模式                | 行为                                                                                                                                 |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `minimal` (default) | Core TXT keys only; omits `sshPort`, `cliPath`, `tailnetDns`.                                                                            |
-| `full`              | Adds `sshPort`, `cliPath`, `tailnetDns` — use when clients need those hints.                                                             |
-| `off`               | Suppresses LAN multicast without changing plugin enablement; wide-area DNS-SD can still publish when `discovery.wideArea.domain` is set. |
+| `minimal`（默认） | 仅包含核心 TXT 键；省略 `sshPort`、`cliPath`、`tailnetDns`。                                                                            |
+| `full`              | 添加 `sshPort`、`cliPath`、`tailnetDns`——在客户端需要这些提示时使用。                                                             |
+| `off`               | 在不改变插件启用状态的情况下，禁止局域网多播；当设置了 `discovery.wideArea.domain` 时，广域 DNS-SD 仍可发布。 |
 
 ## 何时禁用 Bonjour
 

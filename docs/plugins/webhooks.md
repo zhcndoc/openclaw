@@ -55,14 +55,12 @@ Webhooks 插件会添加经过身份验证的 HTTP 路由，使受信任的外�
 | `controllerId` | 否   | `webhooks/<routeId>`          | 用作默认的 `create_flow` 控制器。             |
 | `description`  | 否   | -                             | 仅供操作人员备注。                             |
 
-`secret` 可以接受纯字符串或 SecretRef：`{ source: "env" | "file" | "exec", provider: "default", id: "..." }`。
+`secret` 接受纯字符串或 SecretRef：`{ source: "env" | "file" | "exec" | "store", provider: "default", id: "..." }`。
 
-SecretRefs resolve into the Gateway's startup config snapshot. When one route's
-secret cannot resolve, the Gateway keeps running and that exact route stays
-registered but cold: requests receive a generic authentication failure (`401`).
-Other routes remain available. Fix the SecretRef source, then reload or restart
-the Gateway to activate the new snapshot. SecretRef values are never resolved
-on the public request path.
+SecretRefs 会解析到 Gateway 的启动配置快照中。当某个路由的
+secret 无法解析时，Gateway 会继续运行，而该路由会保持注册状态但处于冷状态：请求会收到通用的身份验证失败响应（`401`）。
+其他路由仍然可用。修复 SecretRef 源，然后重新加载或重启
+Gateway，以激活新的快照。SecretRef 值永远不会在公共请求路径上解析。
 
 ## 安全模型
 
@@ -77,8 +75,8 @@ on the public request path.
 - 只暴露你需要的特定 webhook 路径。
 
 每个路径的请求处理顺序为：先检查 HTTP 方法（仅 `POST`）和
-`Content-Type: application/json`，然后进行固定窗口限流（每个路径+客户端 IP 键在 60 秒窗口内最多 120
-个请求，最多跟踪 4,096 个键），再进行进行中请求限制（每个键最多 8 个并发请求，最多跟踪 4,096 个键），然后是共享密钥认证，最后是 256 KB /
+`Content-Type: application/json`，然后进行固定窗口限流（每个路径＋客户端 IP 键在 60 秒窗口内最多 120
+个请求，最多跟踪 4,096 个键），再进行进行中请求限制（每个键最多 8 个并发请求，最多跟踪 4,096 个键），然后是共享密钥认证，最后是 256 KB ／
 15 秒的 JSON 请求体读取。未通过前面检查的请求绝不会进入后面的步骤。
 
 ## 请求格式
@@ -170,7 +168,7 @@ Flow 和 task 视图绝不会包含 owner/session 元数据，因此响应不能
 
 ## 相关
 
-- [Hooks](/automation/hooks) - 内部事件驱动的 hooks vs. 此基于 HTTP 的 TaskFlow 桥接
+- [Hooks](/automation/hooks) - 内部事件驱动的 hooks 与此基于 HTTP 的 TaskFlow 桥接
 - [Gateway webhooks (`hooks.*` config)](/automation/cron-jobs#webhooks) - 独立的通用 Gateway HTTP 端点功能；与此插件的路由不同
 - [Plugin runtime SDK](/plugins/sdk-runtime)
-- [CLI webhooks](/cli/webhooks)
+- [CLI webhooks](/cli/webhooks)。

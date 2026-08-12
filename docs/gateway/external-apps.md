@@ -3,10 +3,10 @@ summary: "外部应用、脚本、仪表板、CI 作业和 IDE 扩展的当前�
 title: "面向外部应用的 Gateway 集成"
 sidebarTitle: "外部应用"
 read_when:
-  - You are building an external app, script, dashboard, CI job, or IDE extension that talks to OpenClaw
-  - You are choosing between Gateway RPC and the Plugin SDK
-  - You are integrating with Gateway agent runs, sessions, events, approvals, models, or tools
-  - You are pairing a hosting controller with an external wake scheduler
+  - 你正在构建与 OpenClaw 通信的外部应用、脚本、仪表板、CI 作业或 IDE 扩展
+  - 你正在 Gateway RPC 和 Plugin SDK 之间进行选择
+  - 你正在与 Gateway 的 agent 运行、会话、事件、审批、模型或工具集成
+  - 你正在将托管控制器与外部唤醒调度器配对
 ---
 
 外部应用通过 Gateway 协议与 OpenClaw 通信：WebSocket
@@ -15,13 +15,13 @@ read_when:
 结果、取消工作或检查 Gateway 资源时，请使用它。
 
 <Note>
-  For npm packages, device pairing, reconnect recovery, history, subscriptions,
-  and approvals, start with
-  [Building a Gateway client](https://docs.openclaw.ai/gateway/clients). If your
-  app supervises the Gateway as a child process, also read
-  [Embedding OpenClaw](https://docs.openclaw.ai/gateway/embedding). During the
-  initial package rollout, npm may return `E404` until the first package-bearing
-  OpenClaw release is published.
+  对于 npm 包、设备配对、重连恢复、历史记录、订阅
+  和审批，请从
+  [构建 Gateway 客户端](https://docs.openclaw.ai/gateway/clients) 开始。如果你的
+  应用将 Gateway 作为子进程进行监管，还请阅读
+  [嵌入 OpenClaw](https://docs.openclaw.ai/gateway/embedding)。在初始
+  包发布期间，首个包含 npm 包的 OpenClaw 版本发布之前，npm 可能会返回
+  `E404`。
 </Note>
 
 <Note>
@@ -30,14 +30,14 @@ read_when:
 
 ## 当前可用内容
 
-| Surface                                                          | Status        | Use it for                                                                                    |
-| ---------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------- |
-| [Gateway client guide](https://docs.openclaw.ai/gateway/clients) | Release train | npm packages, auth, reconnect, history, events, approvals, and version policy.                |
-| [Embedding guide](https://docs.openclaw.ai/gateway/embedding)    | Release train | Child-process environment, readiness, lifecycle, recovery, RPC ownership, and packaging.      |
-| [Gateway protocol](/gateway/protocol)                            | Ready         | WebSocket transport, connect handshake, auth scopes, protocol versioning, and events.         |
-| [Gateway RPC reference](/reference/rpc)                          | Ready         | Current Gateway methods for agents, sessions, tasks, models, tools, artifacts, and approvals. |
-| [`openclaw agent`](/cli/agent)                                   | Ready         | One-shot script integration when shelling out to the CLI is enough.                           |
-| [`openclaw message`](/cli/message)                               | Ready         | Sending messages or channel actions from scripts.                                             |
+| 接口                                                             | 状态          | 用途                                                                                       |
+| ---------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------ |
+| [Gateway 客户端指南](https://docs.openclaw.ai/gateway/clients)    | 发布序列      | npm 包、身份验证、重连、历史记录、事件、审批和版本策略。                                   |
+| [Embedding 指南](https://docs.openclaw.ai/gateway/embedding)     | 发布序列      | 子进程环境、就绪状态、生命周期、恢复、RPC 所有权和打包。                                   |
+| [Gateway 协议](/gateway/protocol)                               | 就绪          | WebSocket 传输、连接握手、身份验证范围、协议版本控制和事件。                              |
+| [Gateway RPC 参考](/reference/rpc)                              | 就绪          | 用于代理、会话、任务、模型、工具、工件和审批的当前 Gateway 方法。                         |
+| [`openclaw agent`](/cli/agent)                                  | 就绪          | 当通过 shell 调用 CLI 已足够时，用于一次性脚本集成。                                       |
+| [`openclaw message`](/cli/message)                              | 就绪          | 从脚本发送消息或执行频道操作。                                                             |
 
 ## 推荐路径
 
@@ -70,16 +70,20 @@ read_when:
 
 RPC 合约如下：
 
-- `gateway.suspend.prepare` — `operator.admin`; 参数
-  `{ "requestId": "stable-host-operation-id" }`
-- `gateway.suspend.status` — `operator.read`; 参数
+- `gateway.suspend.prepare` — `operator.admin`；参数
+  `{ "requestId": "stable-host-operation-id", "terminalPolicy": "preserve" }`
+- `gateway.suspend.status` — `operator.read`；参数
   `{ "suspensionId": "id-from-prepare" }`
-- `gateway.suspend.resume` — `operator.admin`; 参数
+- `gateway.suspend.resume` — `operator.admin`；参数
   `{ "suspensionId": "id-from-prepare" }`
 
-ID 会被去除首尾空白，必须包含至少一个非空白字符，且长度上限为
-128 个字符。busy 的 prepare 结果包含 `status: "busy"`、`reason`、
-`retryAfterMs`、`activeCount` 和 `blockers`。ready 结果的格式如下：
+`terminalPolicy` 为可选项，且仅接受 `"preserve"` 或 `"terminate"`。
+省略该项时默认为 `"preserve"`，因此打开的终端会话会阻止正常的主机挂起。准备执行将终止 Gateway 的更新的调用方可以显式使用
+`"terminate"`；这仅会忽略打开的进程本地终端会话。终端持久化活动以及所有其他被跟踪的工作仍会阻止准备。
+
+ID 会被去除首尾空白，必须包含非空白字符，且长度限制为
+128 个字符。忙碌的 prepare 结果具有 `status: "busy"`、`reason`、
+`retryAfterMs`、`activeCount` 和 `blockers`。就绪结果的结构如下：
 
 ```json
 {
@@ -122,7 +126,7 @@ ready 租约持续两分钟。使用相同的 `requestId` 重复调用 `prepare`
   参见 [安全的外部 cron 投射](/plugins/hooks#safe-external-cron-projection)。
 </Tip>
 
-## App code vs plugin code
+## 应用代码与插件代码
 
 当代码运行在 OpenClaw 之外时，请使用 Gateway RPC：
 
@@ -145,15 +149,15 @@ ready 租约持续两分钟。使用相同的 `requestId` 重复调用 `prepare`
 
 ## 相关内容
 
-- [Building a Gateway client](https://docs.openclaw.ai/gateway/clients)
-- [Embedding OpenClaw](https://docs.openclaw.ai/gateway/embedding)
-- [Gateway protocol](/gateway/protocol)
-- [Gateway RPC reference](/reference/rpc)
-- [CLI agent command](/cli/agent)
-- [CLI message command](/cli/message)
-- [Agent loop](/concepts/agent-loop)
-- [Agent runtimes](/concepts/agent-runtimes)
-- [Sessions](/concepts/session)
-- [Background tasks](/automation/tasks)
+- [构建 Gateway 客户端](https://docs.openclaw.ai/gateway/clients)
+- [嵌入 OpenClaw](https://docs.openclaw.ai/gateway/embedding)
+- [Gateway 协议](/gateway/protocol)
+- [Gateway RPC 参考](/reference/rpc)
+- [CLI agent 命令](/cli/agent)
+- [CLI message 命令](/cli/message)
+- [Agent 循环](/concepts/agent-loop)
+- [Agent 运行时](/concepts/agent-runtimes)
+- [会话](/concepts/session)
+- [后台任务](/automation/tasks)
 - [ACP agents](/tools/acp-agents)
-- [Plugin SDK overview](/plugins/sdk-overview)
+- [Plugin SDK 概览](/plugins/sdk-overview)

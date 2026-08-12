@@ -19,10 +19,9 @@ OpenClaw 会在移除旧的插件契约之前，通过命名的兼容性适配�
 - 所有者：`sdk`、`config`、`setup`、`channel`、`provider`、`plugin-execution`、
   `agent-runtime` 或 `core`
 - 适用时的引入日期和弃用日期
-- 所有者维护者批准后的确切移除日期；省略
-  `removeAfter` 会使已弃用的接口无法被移除
-- 替代方案说明
-- 覆盖新旧行为的文档、诊断信息和测试
+- 所有者维护者批准后，准确的 `removeAfter` 日期或命名的 `removalGate`；两者均没有的记录仍不符合移除条件
+- 替代方案指导
+- 覆盖旧行为和新行为的文档、诊断信息和测试
 
 该注册表是维护者规划以及未来插件检查器校验的依据。如果插件面向外部的行为发生变化，请在添加适配器的同一次变更中，添加或更新兼容性记录。
 
@@ -48,7 +47,7 @@ OpenClaw 不应在引入替代方案的同一版本中移除已文档化的插�
 6. 等待已宣布的迁移窗口结束。
 7. 仅在获得明确的破坏性变更发布批准后才移除。
 
-已弃用的记录必须包含警告开始日期、替代方案、文档链接，以及一个最终移除日期；该日期不得晚于警告开始后三个月。不要添加一个具有开放式移除窗口的已弃用兼容路径，除非维护者明确决定它是永久兼容性，并改为将其标记为 `active`。
+弃用记录必须包含警告开始日期、替代方案、文档链接，以及以下两者之一：不晚于警告开始后三个月的最终移除日期，或明确的版本边界，例如 `next-plugin-sdk-major`。除非维护者明确决定其为永久兼容性并将其标记为 `active`，否则不要添加具有无限期移除窗口的弃用兼容路径。
 
 ## 当前兼容性区域
 
@@ -94,7 +93,7 @@ registry-flag 和 plugin-owned web-config 别名。Doctor 迁移仍会单独跟�
 `deprecated` 记录。读取方引用是用于分流的 surface-token 匹配；在批准移除之前，
 请使用已发布构件扫描。
 
-### Channel prompt-context identifier 别名
+### Channel prompt-context 标识符别名
 
 新的 channel 插件应使用 `MsgContext.ChannelPromptContext`、
 `MsgContext.ChannelStructuredContext`、`ChannelStructuredContextEntry` 和
@@ -108,7 +107,7 @@ registry-flag 和 plugin-owned web-config 别名。Doctor 迁移仍会单独跟�
 安全 runtime 同样导出 `buildChannelMetadata`；已弃用的
 `buildUntrustedChannelMetadata` 别名按相同时间表保留。
 
-### WhatsApp inbound callback 扁平别名
+### WhatsApp 入站回调扁平别名
 
 WhatsApp runtime 回调会传递 `WebInboundMessage`：即规范的
 嵌套 `event`、`payload`、`quote`、`group` 和 `platform` 上下文，以及
@@ -131,7 +130,7 @@ WhatsApp runtime 回调会传递 `WebInboundMessage`：即规范的
 `payload.channelStructuredContext` 会从入站 provider payload 中提取。
 插件在将其 `payload` 视为权威数据之前，应检查 `label`、`source` 和 `type`。
 
-### WhatsApp inbound admission 字段
+### WhatsApp 入站 admission 字段
 
 被接受的 WhatsApp 回调消息会携带 `admission`，这是一个对外安全的信封，
 用于承载接纳该消息的访问控制决策。新的回调代码应从 `msg.admission`
@@ -148,13 +147,13 @@ WhatsApp runtime 回调会传递 `WebInboundMessage`：即规范的
 
 ## 插件检查器包
 
-插件检查器应位于核心 OpenClaw 仓库之外，作为一个独立的包/仓库存在，并依托版本化的兼容性与清单契约。第一天的 CLI 应为：
+插件检查器应位于核心 OpenClaw 仓库之外，作为一个独立的包／仓库存在，并依托版本化的兼容性与清单契约。第一天的 CLI 应为：
 
 ```sh
 openclaw-plugin-inspector ./my-plugin
 ```
 
-它应输出清单/Schema 验证、正在检查的契约兼容性版本、安装/源码元数据检查、冷路径导入检查，以及弃用/兼容性警告。使用 `--json` 以便在 CI 注释中获得稳定、可机器读取的输出。OpenClaw core 应公开检查器可以消费的契约和 fixtures，但不应从主 `openclaw` 包中发布检查器二进制。
+它应输出清单／Schema 验证、正在检查的契约兼容性版本、安装／源码元数据检查、冷路径导入检查，以及弃用／兼容性警告。使用 `--json` 以便在 CI 注释中获得稳定、可机器读取的输出。OpenClaw core 应公开检查器可以消费的契约和 fixtures，但不应从主 `openclaw` 包中发布检查器二进制。
 
 ### 维护者验收通道
 

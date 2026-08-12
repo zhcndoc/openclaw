@@ -39,19 +39,19 @@ title: "多界面操作员审批"
 
 此表记录了 #103505 打开时的实现状态。下面的 rollout 部分跟踪建立在该基线之上的持久化注册表、类型化动作、深链页面以及原生客户端增量。
 
-| 作用域            | 基线入口点和所有者                                                                                                                                          | 基线行为和差距                                                                                                                                                                              |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Agent exec        | `src/agents/bash-tools.exec-approval-request.ts`, `src/agents/bash-tools.exec-host-shared.ts`                                                             | 两阶段 `exec.approval.*` 注册避免了过早的 `/approve` 竞争，但超时仍可能通过 `askFallback` 变为允许。                                                                                           |
-| 插件工具门禁      | `src/agents/agent-tools.before-tool-call.ts`                                                                                                              | 请求 `plugin.approval.*`；`timeoutBehavior: "allow"` 可能会批准一个已超时的门禁。嵌入模式在 `src/infra/embedded-plugin-approval-broker.ts` 中有单独的进程本地权限。                          |
-| 插件节点门禁      | `src/gateway/node-invoke-plugin-policy.ts`                                                                                                              | 直接通过插件管理器创建并广播，复制了 server-method 生命周期的一部分。                                                                                                                       |
-| Gateway 权限      | `src/gateway/server-aux-handlers.ts`, `src/gateway/exec-approval-manager.ts`, `src/gateway/server-methods/approval-shared.ts`                           | 独立的 exec 和 plugin 管理器使用进程本地 map。终态条目会保留 15 秒。先到先得只在单个进程内成立。                                                                                               |
-| Gateway 协议      | `packages/gateway-protocol/src/schema/exec-approvals.ts`, `packages/gateway-protocol/src/schema/plugin-approvals.ts`, `src/gateway/methods/core-descriptors.ts` | Exec 只有 pending-only 的 `get`；plugin 没有 `get`；不存在可供深链使用的、不区分 kind 的终态查找。                                                                                             |
-| 交付              | `src/infra/exec-approval-channel-runtime.ts`, `src/infra/approval-native-runtime.ts`, `src/infra/approval-handler-runtime.ts`                           | 支持来源路由、审批者私信、pending 重放、原生处理器以及进程内终态清理。另一个后续改动会添加持久化终态协调。                                                                                     |
-| 可移植动作        | `src/interactive/payload.ts`, `src/plugin-sdk/interactive-runtime.ts`, `src/plugin-sdk/approval-reply-runtime.ts`                                       | 审批按钮是包含 `/approve ...` 的命令动作；URL 和 Web App 目标是未类型化的按钮字段。                                                                                                          |
-| Telegram          | `extensions/telegram/src/approval-handler.runtime.ts`, `extensions/telegram/src/button-types.ts`                                                        | 渲染器在生成私有回调数据之前，会先解析命令文本以识别审批语义。                                                                                                                               |
-| 控制 UI           | `ui/src/app/exec-approval.ts`, `ui/src/app/overlays.ts`, `ui/src/components/exec-approval.ts`                                                           | 审批 UI 是一个全局模态框。`ui/src/app-route-paths.ts` 和 `ui/src/app-routes.ts` 使用精确路由，并将未知路径重写为 Chat。                                                                        |
-| 会话所有权        | `src/agents/subagent-registry.types.ts`, `src/agents/subagent-registry-read.ts`, `src/config/sessions/types.ts`                                         | 存在 controller、requester、显式 parent 和 legacy spawn 所有权，但审批事件并未投射到这些会话流。                                                                                               |
-| 共享状态          | `src/state/openclaw-state-schema.sql`, `src/state/openclaw-state-db.ts`                                                                                   | 现有的即时事务和 Kysely 条件更新支持在 `state/openclaw.sqlite` 中进行持久化的 compare-and-set。                                                                                                |
+| Surface           | Baseline entry point and owner                                                                                                                                  | Baseline behavior and gap                                                                                                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agent 执行        | `src/agents/bash-tools.exec-approval-request.ts`、`src/agents/bash-tools.exec-host-shared.ts`                                                                   | 两阶段的 `exec.approval.*` 注册可防止过早的 `/approve` 竞态，但超时仍可能通过 `askFallback` 变为允许。                                                        |
+| Plugin 工具门控   | `src/agents/agent-tools.before-tool-call.ts`                                                                                                                    | 请求 `plugin.approval.*`；`timeoutBehavior: "allow"` 可能批准超时的门控。嵌入模式在 `src/infra/embedded-plugin-approval-broker.ts` 中拥有独立的进程本地权限。 |
+| Plugin 节点门控   | `src/gateway/node-invoke-plugin-policy.ts`                                                                                                                      | 通过 Plugin manager 直接创建并广播，重复了部分 server-method 生命周期。                                                                                 |
+| Gateway 权限      | `src/gateway/server-aux-handlers.ts`、`src/gateway/exec-approval-manager.ts`、`src/gateway/server-methods/approval-shared.ts`                                   | 独立的 exec 和 Plugin manager 使用进程本地映射。终端条目会保留 15 秒。首个回答获胜仅在单个进程内有效。                                          |
+| Gateway 协议      | `packages/gateway-protocol/src/schema/exec-approvals.ts`、`packages/gateway-protocol/src/schema/plugin-approvals.ts`、`src/gateway/methods/core-descriptors.ts` | Exec 只有仅限 pending 的 `get`；Plugin 没有 `get`；不存在面向 deep link 的不区分 kind 的终端查询。                                                                                   |
+| Delivery          | `src/infra/exec-approval-channel-runtime.ts`、`src/infra/approval-native-runtime.ts`、`src/infra/approval-handler-runtime.ts`                                   | 支持来源路由、审批者私信、pending 重放、原生处理器以及进程内终端清理。单独的后续改动会增加持久化终端协调。                          |
+| Portable actions  | `src/interactive/payload.ts`、`src/plugin-sdk/interactive-runtime.ts`、`src/plugin-sdk/approval-reply-runtime.ts`                                               | 审批按钮是包含 `/approve ...` 的命令动作；URL 和 Web App 目标是无类型的按钮字段。                                                                           |
+| Telegram          | `extensions/telegram/src/approval-handler.runtime.ts`、`extensions/telegram/src/button-types.ts`                                                                | 渲染器会解析命令文本，以便在生成私有 callback data 之前识别审批语义。                                                                |
+| Control UI        | `ui/src/app/exec-approval.ts`、`ui/src/app/overlays.ts`、`ui/src/components/exec-approval.ts`                                                                   | 审批 UI 是全局 modal。`ui/src/app-route-paths.ts` 和 `ui/src/app-routes.ts` 使用精确路由，并将未知路径重写到 Chat。                                                    |
+| Session 所有权    | `src/agents/subagents/registry/subagent-registry.types.ts`、`src/agents/subagents/registry/subagent-registry-read.ts`、`src/config/sessions/types.ts`           | Controller、requester、显式 parent 以及 legacy spawn 所有权均已存在，但审批事件不会投影到这些 session 流中。                                                    |
+| Shared state      | `src/state/openclaw-state-schema.sql`、`src/state/openclaw-state-db.ts`                                                                                         | 现有的即时事务和 Kysely 条件更新支持在 `state/openclaw.sqlite` 中执行持久化 compare-and-set。                                                                   |
 
 具有代表性的当前测试包括 `src/gateway/exec-approval-manager.test.ts`、`src/gateway/server-methods/approval-shared.test.ts`、`src/agents/bash-tools.exec-gateway-approval.e2e.test.ts`、`extensions/telegram/src/approval-handler.runtime.test.ts` 和 `ui/src/e2e/approval-flow.e2e.test.ts`。
 
@@ -104,7 +104,7 @@ Gateway 负责整个生命周期：
 | `presentation_json`                                | 已验证、带 kind 标签的审阅者投影。原始运行时请求、命令绑定和回调负载都保留在进程本地。               |
 | `source_agent_id`, `source_session_key`            | 源身份和会话投影锚点。会话密钥是持久的；轮换的会话 UUID 不是。                                          |
 | `audience_session_keys_json`                       | 由受限广度优先所有权遍历生成的、排序且去重后的 JSON 数组。请求事件和终态事件使用同一快照。 |
-| `requested_by_device_id`, `requested_by_client_id` | 持久化的请求方/审计元数据。连接 ID 保留在内存中，不是跨界面的主体标识。                                         |
+| `requested_by_device_id`, `requested_by_client_id` | 持久化的请求方／审计元数据。连接 ID 保留在内存中，不是跨界面的主体标识。                                         |
 | `reviewer_device_ids_json`                         | 仅由受信任的审批运行时提供的、可选的显式目标审阅者设备。                                                  |
 | `runtime_epoch`                                    | 拥有已挂起执行的进程纪元；用于在重启后取消孤立行。                                                     |
 | `created_at_ms`, `expires_at_ms`, `updated_at_ms`  | 权威时间。                                                                                                                         |
@@ -115,14 +115,14 @@ Gateway 负责整个生命周期：
 
 必需索引：
 
-| Index                                      | Purpose                                                                     |
+| 索引                                       | 目的                                                                     |
 | ------------------------------------------ | --------------------------------------------------------------------------- |
-| unique `(resolution_ref)`                  | 在插入期间拒绝 `approval_id`/`resolution_ref` 跨列歧义。 |
+| unique `(resolution_ref)`                  | 在插入期间拒绝 `approval_id`／`resolution_ref` 跨列歧义。 |
 | `(status, expires_at_ms)`                  | 查找待审批项并协调权威截止时间。               |
 | `(source_session_key, created_at_ms DESC)` | 为单个源会话重放最近的审批记录。                             |
 | `(resolved_at_ms)`                         | 根据固定保留策略清理保留的终态审批记录。  |
 
-Audience 数组较小且有界。会话过滤后的重放首先通过 Kysely 选择可见的 pending 行，然后在应用代码中解码并过滤有界的 audience 数组；它不使用字符串匹配或原始 SQL JSON 查询。
+受众数组较小且有界。会话过滤后的重放首先通过 Kysely 选择可见的 pending 行，然后在应用代码中解码并过滤有界的 audience 数组；它不使用字符串匹配或原始 SQL JSON 查询。
 
 将终态行保留 30 天，并与 `src/audit/audit-event-store.ts` 中的元数据审计保留策略保持一致。清理是固定的维护策略，不是新的配置项。数据库是私有的本地控制平面状态，但审阅者 API 绝不能暴露完整存储的请求或运行时绑定。
 
@@ -157,9 +157,9 @@ WHERE approval_id = ?
 
 `now == expires_at_ms` 视为已过期。网关时间具有权威性。
 
-`allow-once` 执行使用第二次 CAS，基于 `consumed_at_ms IS NULL`，并绑定到现有的精确命令/系统运行上下文。审批行在消费后仍保留为审计记录。
+`allow-once` 执行使用第二次 CAS，基于 `consumed_at_ms IS NULL`，并绑定到现有的精确命令／系统运行上下文。审批行在消费后仍保留为审计记录。
 
-无法认证或无法识别审批的格式错误 HTTP/RPC 输入会被拒绝且不发生变更，并且永远不能批准。对于已知审批，如果从受信任的 harness/waiter 收到格式错误的终局裁定，则会转换为 `denied`。
+无法认证或无法识别审批的格式错误 HTTP／RPC 输入会被拒绝且不发生变更，并且永远不能批准。对于已知审批，如果从受信任的 harness／waiter 收到格式错误的终局裁定，则会转换为 `denied`。
 
 ## Gateway API
 
@@ -187,7 +187,7 @@ type OperatorApproval = {
 };
 ```
 
-稳定路径是派生出来的，而不是持久化保存的。`approval.get` 返回 `urlPath`；知道已批准公共来源的表面也可能收到绝对 `url`。审核者快照省略 source 和 audience session keys。Gateway 将这些路由键保留在服务端，用于单独的 `session.approval` 投影。
+稳定路径是派生出来的，而不是持久化保存的。`approval.get` 返回 `urlPath`；知道已批准公共来源的表面也可能收到绝对 `url`。审核者快照省略 source 和 audience 会话密钥。Gateway 将这些路由键保留在服务端，用于单独的 `session.approval` 投影。
 
 ## 事件和可移植操作
 
@@ -203,7 +203,7 @@ PR 1 保留了已发布的事件名称、负载以及现有的记录级接收者
 新增一个 approval 范围内的 `session.approval` 投影事件。使用持久化的受众键仅发布一次规范事件；精确会话订阅者会针对每个匹配的键收到相同事件：
 
 - `sessionKey`：接收该投影的流。
-- `sourceSessionKey`：触发该门控的子会话/来源。
+- `sourceSessionKey`：触发该门控的子会话／来源。
 - `phase`：`pending \| terminal`，根据审批状态进行区分。
 - 一个安全的 `OperatorApproval` 投影。
 
@@ -229,30 +229,30 @@ type MessagePresentationAction =
 
 核心层会在可用且已批准的绝对 Control UI 源时构建带类型的决策操作和一个单独的 Review 链接。各通道会将审批操作编码为自己的回调格式，并将解析结果发送到规范服务。若适用，回调会使用完全一致的规范 ID；否则会使用该行唯一的完整摘要 `resolution_ref`。该引用仅是一个紧凑的查找键：正常的 Gateway 身份验证、记录授权、显式 kind、允许决策校验、截止时间协调以及 first-answer CAS 仍然适用。通道不得截断 ID、解析哈希前缀、解析 `/approve` 文本，或根据 ID 前缀推断 kind。
 
-将 `button.url`、`button.webApp` 以及由命令驱动的审批控件保留为已弃用的插件 SDK 兼容输入。在 SDK 边界对其进行规范化；并在同一个 PR 中迁移所有捆绑的内部调用方。`/approve {id} {decision}` 仍然是文本回退和 CLI/chat 命令，而不是按钮语义契约。
+将 `button.url`、`button.webApp` 以及由命令驱动的审批控件保留为已弃用的插件 SDK 兼容输入。在 SDK 边界对其进行规范化；并在同一个 PR 中迁移所有捆绑的内部调用方。`/approve {id} {decision}` 仍然是文本回退和 CLI／chat 命令，而不是按钮语义契约。
 
 ## Control UI
 
-The route is `${basePath}/approve/{approvalId}`. The ID is the unique path parameter; the source session identity comes from the record.
+路由为 `${basePath}/approve/{approvalId}`。ID 是唯一的路径参数；源会话身份来自记录。
 
-Because the current router has exact static routes and rewrites unknown paths to Chat, this deep link needs to be detected in `ui/src/app/bootstrap.ts` before normal route normalization. Reuse the normal Gateway/auth setup, but render a standalone approval page outside the sidebar shell and global modals.
+由于当前路由器包含精确的静态路由，并会将未知路径重写到 Chat，因此需要在常规路由规范化之前，于 `ui/src/app/bootstrap.ts` 中检测此深层链接。复用常规的 Gateway／auth 设置，但在侧边栏外壳和全局模态框之外渲染独立的审批页面。
 
-This document is owned by the Gateway whose URL it provides. Its initial connection ignores the app-wide persisted remote Gateway selection without changing or copying that selection’s settings; only authentication remains session-scoped to the Gateway serving the document. Trusted native authentication, or a separately confirmed `gatewayUrl` override, may redirect it. The core will prefer keeping the single-segment `/approve` namespace ahead of plugin HTTP routes and static extension detection, including IDs ending in `.json` or `.js`; when the Control UI service is disabled, that reserved route fails closed with `404`. Keep this page in the main Control UI bundle so a failed lazy-load chunk cannot leave a security decision stuck on a loading spinner.
+本文档由其提供 URL 的 Gateway 所有。其初始连接会忽略应用范围内持久化的远程 Gateway 选择，但不会更改或复制该选择的设置；只有身份验证仍限定于提供本文档的 Gateway。受信任的原生身份验证，或单独确认的 `gatewayUrl` 覆盖项，可能会将其重定向。核心将优先保留单段 `/approve` 命名空间，使其位于插件 HTTP 路由和静态扩展检测之前，包括以 `.json` 或 `.js` 结尾的 ID；当 Control UI 服务被禁用时，该保留路由会以 `404` 失败关闭。将此页面保留在主 Control UI 包中，以便延迟加载分块失败时，不会让安全决策卡在加载指示器上。
 
-Page states:
+页面状态：
 
-- Loading
-- Authentication required
-- Pending
-- Resolving
-- Approved or rejected here
-- Resolved elsewhere
-- Expired
-- Canceled
-- Forbidden / not found
-- Connection error, retryable
+- 加载中
+- 需要身份验证
+- 待处理
+- 处理中
+- 已在此处批准或拒绝
+- 已在其他位置解决
+- 已过期
+- 已取消
+- 禁止访问／未找到
+- 连接错误，可重试
 
-This page calls Gateway RPC, not a second unauthenticated REST API. A browser refresh re-reads persisted state. It never puts Gateway credentials in the URL, query parameters, or fragment.
+此页面调用 Gateway RPC，而不是第二个未经身份验证的 REST API。浏览器刷新会重新读取持久化状态。它绝不会将 Gateway 凭据放入 URL、查询参数或片段中。
 
 ## 授权与隐私
 
@@ -274,23 +274,23 @@ URL 是定位符，不是权限凭证。解析需要：
 
 `approval.get` 只暴露经过清理的审查者投影，并省略内部来源/受众路由键。PR 5 的 `session.approval` 事件在 Gateway 于服务器端应用持久化的受众快照后，会携带其唯一目标 `sessionKey` 以及 `sourceSessionKey`。现有的 exec/plugin 事件在消费者迁移之前，会保持其历史有效载荷和受限接收者不变。可执行请求、命令绑定和续传仍只保留在进程本地的等待器中。持久化行包含安全的展示内容以及生命周期、路由和审计元数据；它绝不会存储原始环境值、凭据、认证头或通道回调数据。
 
-## Audience Projection
+## 受众投影
 
-Before insertion, compute the audience once and persist the ordered snapshot. Ownership is a graph, not always a single parent chain: a child may simultaneously have the current controller and the original requester, and those owners can point to different roots.
+在插入之前，计算一次受众并持久化有序快照。所有权是一个图，而不总是单一的父级链：子级可能同时拥有当前控制器和原始请求者，而这些所有者可能指向不同的根。
 
-Use a deterministic breadth-first traversal:
+使用确定性的广度优先遍历：
 
-1. Initialize the queue with the source session key.
-2. For each dequeued key, read the latest subagent registry row and enqueue the two distinct ownership edges in a fixed order: `controllerSessionKey`, then `requesterSessionKey`.
-3. When a registry row is available, do not continue following session-entry ancestry that may have become stale after steering. Otherwise, enqueue the single current fallback edge `parentSessionKey ?? spawnedBy`.
-4. Normalize and deduplicate on enqueue so the first, shortest path wins.
-5. Stop when 64 unique keys are reached; this audience size cap also bounds traversal depth.
+1. 使用源会话键初始化队列。
+2. 对每个出队的键，读取最新的子代理注册表行，并按固定顺序将两个不同的所有权边加入队列：`controllerSessionKey`，然后是 `requesterSessionKey`。
+3. 当注册表行可用时，不要继续沿着会话条目祖先关系进行跟踪，因为 steering 之后该关系可能已经过时。否则，加入唯一的当前回退边 `parentSessionKey ?? spawnedBy`。
+4. 在加入队列时进行规范化和去重，以便最先找到的最短路径胜出。
+5. 当达到 64 个唯一键时停止；该受众大小上限也会限制遍历深度。
 
-The registry source is `src/agents/subagent-registry-read.ts`; ownership fields are defined in `src/agents/subagent-registry.types.ts`. Session fallback fields are defined in `src/config/sessions/types.ts`.
+注册表源文件是 `src/agents/subagents/registry/subagent-registry-read.ts`；所有权字段定义在 `src/agents/subagents/registry/subagent-registry.types.ts` 中。会话回退字段定义在 `src/config/sessions/types.ts` 中。
 
-Regardless of how focus/controller ownership changes while approval is pending, request and terminal projections use the same persisted audience. This guarantees that terminal cleanup will execute for every audience session stream that received the request projection. Resolution always targets the source approval ID; audience sessions never receive cloned approval state. Forwarded channel-message cleanup remains the separate delivery locator follow-up step below.
+无论审批待处理期间焦点／控制器所有权如何变化，请求投影和终端投影都使用同一个持久化受众。这保证了终端清理将针对每个接收到请求投影的受众会话流执行。解析始终以源审批 ID 为目标；受众会话不会接收克隆的审批状态。转发的频道消息清理仍然是下面单独的传递定位器后续步骤。
 
-Do not write transcript messages, inject system prompts, start owner turns, or emit `sessions.changed` just for approval.
+不要仅因审批而写入转录消息、注入系统提示、启动所有者回合或发出 `sessions.changed`。
 
 ## 已交付表面收敛
 
@@ -308,38 +308,34 @@ Do not write transcript messages, inject system prompts, start owner turns, or e
 
 这个传输生命周期是一个可选的交付适配器钩子，而不是渲染器或面向模型的消息操作。QQ C2C/群消息当前没有编辑、删除或键盘清除 API；该适配器仍然不受支持，并且在传输获得变更 API 之前，只能在后续点击后显示规范事实。
 
-## Restart, timeouts, and routing semantics
+## 重启、超时和路由语义
 
-SQLite persistence does not imply execution recovery. Command/tool bindings are retained in memory because they may contain security-sensitive runtime facts, and they are not a recoverable job contract.
+SQLite 持久化并不意味着执行恢复。命令／工具绑定会保留在内存中，因为其中可能包含敏感的安全运行时事实，并且它们不是可恢复的作业契约。
 
-At Gateway startup:
+Gateway 启动时：
 
-- Generate a new runtime epoch;
-- Atomically convert pending rows from earlier epochs to `cancelled` with reason `gateway-restart`;
-- Retain those rows so their URL explains what happened;
-- Never perform subsequent approval on missing runtime bindings.
+- 生成新的运行时 epoch；
+- 将早期 epoch 中处于待处理状态的行以原子方式转换为 `cancelled`，原因设为 `gateway-restart`；
+- 保留这些行，以便其 URL 解释发生了什么；
+- 绝不要对缺失的运行时绑定执行后续审批。
 
-Timers are only a wake-up optimization. Deadline authority lives in `expires_at_ms`; reads, waits, and parsing all perform expiration reconciliation.
+计时器仅用于优化唤醒。截止时间的权威来源是 `expires_at_ms`；读取、等待和解析都会执行过期协调。
 
-Final strict behavior:
+最终严格行为：
 
-- timeout -> `expired`, reject;
-- no route -> `denied`, reject;
-- runtime abort -> `cancelled`, reject;
-- trusted verdict malformed -> `denied`, reject;
-- only an explicit allow decision -> `allowed`.
+- 超时 -> `expired`，拒绝；
+- 无路由 -> `denied`，拒绝；
+- 运行时中止 -> `cancelled`，拒绝；
+- 受信任的 verdict 格式错误 -> `denied`，拒绝；
+- 只有明确的允许决定 -> `allowed`。
 
-Current published exec behavior still conflicts with this contract:
+当前已发布的 exec 行为仍与此契约冲突：
 
-- `src/agents/bash-tools.exec-host-shared.ts` may apply `askFallback`.
-- `docs/tools/exec-approvals.md` and `docs/cli/approvals.md` document that behavior surface.
+- `src/agents/bash-tools.exec-host-shared.ts` 可能应用 `askFallback`。
+- `docs/tools/exec-approvals.md` 和 `docs/cli/approvals.md` 记录了该行为范围。
 
-Plugin approvals now fail closed on timeout and malformed verdicts; the legacy
-`timeoutBehavior` field is still accepted, but ignored. Exec strict semantics
-follow-up work must update code, types, docs, tests, and changelog together, and
-be explicitly owner/security reviewed. `askFallback` may continue to describe a
-pre-gate strategy choice during migration, but it must never turn a timeout on
-an already-created pending record into approval.
+Plugin 审批现在会在超时和 verdict 格式错误时默认拒绝；遗留的
+`timeoutBehavior` 字段仍然接受，但会被忽略。Exec 严格语义的后续工作必须同时更新代码、类型、文档、测试和变更日志，并且必须经过明确的负责人／安全审查。在迁移期间，`askFallback` 可以继续描述门控前的策略选择，但绝不能将已创建的待处理记录上的超时转换为批准。
 
 ## 兼容性计划
 

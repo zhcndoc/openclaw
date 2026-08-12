@@ -13,7 +13,7 @@ title: "消息生命周期重构"
 
 ## 为什么进行了这次重构
 
-通道栈最初是由多个局部修补逐步演变而来：按成熟度级别拆分的入站辅助函数（简单适配器使用 `runtime.channel.inbound.run`，复杂适配器使用 `runtime.channel.inbound.runPreparedReply`）、遗留的回复分发辅助函数（`dispatchInboundReplyWithBase`、`recordInboundSessionAndDispatchReply`）、通道特定的预览流式传输，以及将最终投递的持久化逻辑硬塞到现有的回复载荷路径中。这种结构产生了过多的对外概念，也产生了太多可能导致投递语义漂移的地方。
+通道栈由多个局部修复逐步发展而来：针对不同成熟度级别分别使用入站辅助函数（简单适配器使用 `runtime.channel.inbound.run`，功能丰富的适配器使用 `runtime.channel.inbound.runPreparedReply`）、诸如 `dispatchInboundReplyWithBase` 之类的旧版回复分发辅助函数、特定通道的预览流式传输，以及在现有回复负载路径上附加的最终投递持久性。这种结构导致公开概念过多，也导致投递语义可能发生偏差的位置过多。
 
 促使这次重设计的可靠性缺口：
 
@@ -30,24 +30,24 @@ Telegram 轮询更新被 ack
 
 内部域位于 `src/channels/message/*`：
 
-| 文件                        | 负责内容                                                                                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `types.ts`                  | 适配器、发送上下文、回执和持久化意图类型契约                                                  |
-| `send.ts`                   | `withDurableMessageSendContext` / `sendDurableMessageBatch` — 持久化发送上下文                             |
-| `receive.ts`                | `createMessageReceiveContext` — 入站 ack 策略状态机                                                   |
-| `live.ts`                   | 预览态状态以及就地完成或回退逻辑                                                        |
-| `state.ts`                  | `classifyDurableSendRecoveryState` — 中断后的恢复分类                                    |
-| `receipt.ts`                | 将平台发送结果规范化为 `MessageReceipt`                                                             |
-| `capabilities.ts`           | 根据载荷推导所需的持久化最终态能力                                                         |
-| `contracts.ts`              | 已声明适配器能力的契约证明验证                                                      |
-| `adapter.ts`                | `defineChannelMessageAdapter`                                                                                      |
-| `outbound-bridge.ts`        | `createChannelMessageAdapterFromOutbound` — 封装旧版 `sendText`/`sendMedia`/`sendPayload`/`sendPoll` 函数 |
-| `ingress-queue.ts`          | `createChannelIngressQueue` — 持久化入站事件队列                                                          |
-| `durable-receive.ts`        | `createDurableInboundReceiveJournal` — 入站去重的 accept/pending/complete/release 日志                  |
-| `inbound-reply-dispatch.ts` | `dispatchChannelInboundReply` 以及旧名称包装器                                                            |
-| `reply-pipeline.ts`         | `createChannelReplyPipeline`、回复前缀和 typing-callback 辅助函数                                             |
+| 文件                   | 负责                                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `types.ts`             | 适配器、发送上下文、回执和持久化意图类型契约                                                  |
+| `send.ts`              | `withDurableMessageSendContext` / `sendDurableMessageBatch` —— 持久化发送上下文                             |
+| `receive.ts`           | `createMessageReceiveContext` —— 入站 ack 策略状态机                                                   |
+| `live.ts`              | 实时预览状态，以及就地完成或回退逻辑                                                        |
+| `state.ts`             | `classifyDurableSendRecoveryState` —— 中断后的恢复分类                                    |
+| `receipt.ts`           | 将平台发送结果规范化为 `MessageReceipt`                                                             |
+| `capabilities.ts`      | 从载荷推导所需的持久化最终能力                                                         |
+| `contracts.ts`         | 对声明的适配器能力进行契约证明验证                                                      |
+| `adapter.ts`           | `defineChannelMessageAdapter`                                                                                      |
+| `outbound-bridge.ts`   | `createChannelMessageAdapterFromOutbound` —— 包装旧版 `sendText`/`sendMedia`/`sendPayload`/`sendPoll` 函数 |
+| `ingress-queue.ts`     | `createChannelIngressQueue` —— 持久化入站事件队列                                                          |
+| `durable-receive.ts`   | `createDurableInboundReceiveJournal` —— 用于入站去重的 accept/pending/complete/release 日志                  |
+| `../turn/lifecycle.ts` | 规范化组装并路由频道回合分发（位于 `src/channels/turn/`）                               |
+| `reply-pipeline.ts`    | `createChannelReplyPipeline`、回复前缀和输入状态回调辅助函数                                             |
 
-公共接口：`openclaw/plugin-sdk/channel-outbound`（发送/回执/持久化/预览/回复管道
+公共接口：`openclaw/plugin-sdk/channel-outbound`（发送／回执／持久化／预览／回复管道
 辅助函数）和 `openclaw/plugin-sdk/channel-inbound`（入站上下文、`runChannelInboundEvent`、
 `dispatchChannelInboundReply`）。适配器示例、当前类型名称和迁移说明请参见这些页面——它们才是 API
 形状的事实来源，而不是下面这些草图。
@@ -56,8 +56,8 @@ Telegram 轮询更新被 ack
 
 `withDurableMessageSendContext` 为频道代码提供围绕一条出站
 消息的 `render`、`previewUpdate`、
-`send`、`edit`、`delete`、`commit` 和 `fail` 步骤。`sendDurableMessageBatch` 是常见情况的包装器：先 render，再 send，
-然后在 `sent`/`suppressed` 时 commit，或在出错时 fail。
+`send`、`edit`、`delete`、`commit` 和 `fail` 步骤。`sendDurableMessageBatch` 是常见情况的包装器：先渲染，再发送，
+然后在 `sent`／`suppressed` 时提交，或在出错时失败。
 
 `sendDurableMessageBatch` 返回一个带区分的结果：
 
@@ -89,7 +89,7 @@ Telegram 轮询更新被 ack
 
 | 策略                 | 何时确认                                                                                     |
 | ---------------------- | --------------------------------------------------------------------------------------------- |
-| `after_receive_record` | 核心已持久化足够的入站元数据，以对重投递进行去重/路由                           |
+| `after_receive_record` | 核心已持久化足够的入站元数据，以对重投递进行去重／路由                           |
 | `after_agent_dispatch` | 代理运行已被分发                                                             |
 | `after_durable_send`   | 本轮的持久化出站发送已提交                                             |
 | `manual`               | 调用方显式控制 ack 时机（未声明策略的适配器默认如此） |
@@ -103,7 +103,7 @@ OpenClaw 只会将持久化的重启水位推进到那些已完成分发的更�
 
 ### 预览态
 
-`src/channels/message/live.ts` 将预览/编辑/完成建模为一个生命周期：
+`src/channels/message/live.ts` 将预览／编辑／完成建模为一个生命周期：
 `createLiveMessageState`、`markLiveMessagePreviewUpdated`、
 `markLiveMessageFinalized`、`markLiveMessageCancelled`，以及
 `deliverFinalizableLivePreviewAdapter`（从草稿构建最终编辑、应用它，
@@ -195,7 +195,7 @@ manual`，并带有一个 webhook 超时原因字段；该结构并未实现。
 - 在配置变更之前，不要重试认证或权限失败。
 - 在未找到时，当通道声明该操作安全时，让实时完成
   从编辑回退到新的发送。
-- 在冲突时，使用回执/幂等状态来判断该消息是否
+- 在冲突时，使用回执／幂等状态来判断该消息是否
   已经存在。
 - 平台调用之后但在回执提交之前发生的任何错误都可能意味着调用已成功，
   但会变为 `unknown_after_send`，除非适配器证明平台
@@ -211,7 +211,7 @@ manual`，并带有一个 webhook 超时原因字段；该结构并未实现。
 - 在共享的 bot-enabled 房间中，网关失败的回声抑制是否需要
   最初计划的 origin-tagging 机制、更简单的按通道协议，或者是否超出范围。
 - 哪些通道原生支持用于跨 bot 回声抑制的 origin/metadata，
-  以及哪些通道需要一个持久化的 outbound registry.
+  以及哪些通道需要一个持久化的 outbound registry。
 
 ## 相关
 

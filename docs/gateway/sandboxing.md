@@ -307,9 +307,9 @@ Podman 注意事项：
         scope: "agent",
       },
     },
-    list: [
-      {
-        id: "research",
+    entries: {
+      research: {
+        default: true,
         workspace: "/srv/openclaw/research-workspace",
         sandbox: {
           workspaceAccess: "rw",
@@ -320,7 +320,7 @@ Podman 注意事项：
           },
         },
       },
-    ],
+    },
   },
 }
 ```
@@ -360,16 +360,16 @@ openclaw sandbox recreate --agent research
         },
       },
     },
-    list: [
-      {
-        id: "build",
+    entries: {
+      build: {
+        default: true,
         sandbox: {
           docker: {
             binds: ["/mnt/cache:/cache:rw"],
           },
         },
       },
-    ],
+    },
   },
 }
 ```

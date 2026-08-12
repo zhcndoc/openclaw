@@ -26,7 +26,7 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
 未设置时，所有传入渠道表面使用：
 
 - `mode: "steer"`
-- `debounceMs: 500`
+- 内置的 500ms 防抖，用于 steer、followup 和 collect 批处理
 - `cap: 20`
 - `drop: "summarize"`
 
@@ -38,7 +38,7 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
 
 - `steer`：将消息注入活跃运行时。OpenClaw 会让已在运行的工具完成，跳过尚未启动的顺序调用，并确保 steer 消息在下一次工具启动或模型决策前可见。并行调用会在其批次通过启动检查点后继续执行。Codex app-server 会接收一条批量的 `turn/steer`，并在下一个模型边界应用它。如果运行当前未处于主动流式传输状态，或 steer 不可用，OpenClaw 会等待活跃运行结束后再启动该提示。
 - `followup`：不进行 steer。将每条消息排队，待当前运行结束后再开启一次后续代理轮次。
-- `collect`：不进行 steer。将排队的消息合并为一次**单独的**后续轮次，并在静默窗口结束后执行。如果消息针对不同的渠道/线程，则会分别处理，以保留路由信息。
+- `collect`：不进行 steer。将排队的消息合并为一次**单独的**后续轮次，并在静默窗口结束后执行。如果消息针对不同的渠道／线程，则会分别处理，以保留路由信息。
 - `interrupt`：中止该会话的活跃运行，然后运行最新消息。
 
 有关运行时特定的时序和依赖行为，请参见 [Steering queue](/concepts/queue-steering)。关于显式的 `/steer <message>` 命令，请参见 [Steer](/tools/steer)。
@@ -50,10 +50,10 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
   messages: {
     queue: {
       mode: "steer",
-      debounceMs: 500,
       cap: 20,
       drop: "summarize",
       byChannel: { discord: "collect" },
+      debounceMsByChannel: { discord: 1000 },
     },
   },
 }
@@ -61,15 +61,15 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
 
 ## 队列选项
 
-这些选项适用于队列投递。`debounceMs` 还会在 `steer` 模式下设置 Codex 的静默窗口：
+每个会话的 `/queue` 选项适用于排队传送。`debounce` 选项还会设置 `steer` 模式下的 Codex 引导静默窗口：
 
-- `debounceMs`：在清空排队的后续消息或收集批次之前的静默窗口；在 Codex 的 `steer` 模式下，是发送批量 `turn/steer` 之前的静默窗口。裸数字表示毫秒；`/queue` 选项接受 `ms`、`s`、`m`、`h` 和 `d` 这些单位。
-- `cap`：每个会话中排队消息的最大数量。小于 `1` 的值会被忽略。
-- `drop: "summarize"`（默认）：根据需要丢弃最早的排队条目，保留简短摘要，并将其作为合成的后续提示注入。
+- `debounce`：在排空排队的后续消息或收集批次之前的静默窗口；在 Codex `steer` 模式下，是发送批量 `turn/steer` 之前的静默窗口。纯数字表示毫秒；接受的单位包括 `ms`、`s`、`m`、`h` 和 `d`。
+- `cap`：每个会话排队消息的最大数量。小于 `1` 的值会被忽略。
+- `drop: "summarize"`（默认）：根据需要丢弃最早的排队条目，保留简要摘要，并将其作为合成的后续提示注入。
 - `drop: "old"`：根据需要丢弃最早的排队条目，不保留摘要。
-- `drop: "new"`：当队列已满时拒绝最新消息。
+- `drop: "new"`：当队列已满时，拒绝最新消息。
 
-默认值：`debounceMs: 500`、`cap: 20`、`drop: summarize`。
+队列使用内置的 500ms 防抖。`cap` 默认为 `20`，`drop` 默认为 `summarize`。
 
 ## 引导与流式输出
 
@@ -90,7 +90,7 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
 3. `messages.queue.mode`。
 4. 默认 `steer`。
 
-对于选项，内联或已存储的 `/queue` 选项优先于配置。然后依次应用按频道区分的 debounce（`messages.queue.debounceMsByChannel`）、插件 debounce 默认值、全局 `messages.queue` 选项以及内置默认值。`cap` 和 `drop` 是全局/会话选项，不是按频道配置键。
+对于选项，内联或已存储的 `/queue` 选项优先于配置。然后依次应用按频道的防抖设置（`messages.queue.debounceMsByChannel`）、插件防抖默认值和内置默认值。`cap` 和 `drop` 是全局／会话选项，而不是按频道的配置键。
 
 ## 按会话覆盖
 
@@ -109,7 +109,7 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
 
 由 Gateway 支持的客户端（包括 `openclaw tui`）会转发运行中的提示，并让 Gateway 应用队列模式。Esc/`/stop` 使用会话范围的 abort，因此丢失本地句柄也不会让仍处于队列中的提示继续运行。
 
-`openclaw chat` 和 `openclaw tui --local` 在嵌入式运行时中应用相同的四种模式。Local `steer` 会在该运行时接受 steering 时注入到一个活动的嵌入式运行中，否则会变成 followup；`followup` 和 `collect` 仍然是本地待处理工作；`interrupt` 会在启动最新消息之前中止活动的本地运行。显式的 `/steer <message>` 命令不是本地模式命令。
+`openclaw chat` 和 `openclaw tui --local` 在嵌入式运行时中应用相同的四种模式。本地 `steer` 会在该运行时接受 steering 时注入到一个活动的嵌入式运行中，否则会变成 followup；`followup` 和 `collect` 仍然是本地待处理工作；`interrupt` 会在启动最新消息之前中止活动的本地运行。显式的 `/steer <message>` 命令不是本地模式命令。
 
 ## 范围与保证
 
@@ -125,8 +125,8 @@ OpenClaw 通过一个轻量级的进程内队列对传入的自动回复运行�
 - Codex app-server 运行在接受一个 turn 之后便停止输出进度时，会被 Codex adapter 中断，这样当前会话 lane 就能释放，而不是一直等待外层运行超时。
 - 当启用诊断时，对于那些在内置警告阈值之后仍停留在 `processing` 状态、且未观察到回复、工具、状态、阻塞或 ACP 进度的会话，会根据当前活动分类：
   - 有近期进度日志的活跃工作归类为 `session.long_running`。有所有权的静默模型调用也会保持为 `session.long_running`，直到内置中止阈值，因此不会过早将缓慢或非流式提供方报告为卡住。
-  - 没有近期进度日志的活跃工作归类为 `session.stalled`；有所有权的模型调用、被阻塞的工具调用以及卡住的嵌入式运行会在中止阈值处或之后切换为 `session.stalled`。无所有者的过期模型/工具活动只要尚未处于 long-running，就不会被隐藏。
-  - `session.stuck` 专用于可恢复的过期会话账本状态，包括处于空闲队列中的、且存在过期无所有者模型/工具活动的会话。
+  - 没有近期进度日志的活跃工作归类为 `session.stalled`；有所有权的模型调用、被阻塞的工具调用以及卡住的嵌入式运行会在中止阈值处或之后切换为 `session.stalled`。无所有者的过期模型／工具活动只要尚未处于 long-running，就不会被隐藏。
+  - `session.stuck` 专用于可恢复的过期会话账本状态，包括处于空闲队列中的、且存在过期无所有者模型／工具活动的会话。
   - `session.stuck` 总是会触发恢复，并可释放受影响的会话 lane。超过中止阈值的 `session.stalled` 分类（被阻塞的工具调用、卡住的模型调用或卡住的嵌入式运行）也可能触发主动中止恢复，因此这两种分类都能让队列恢复，而不只是 `session.stuck`。
   - 当会话保持不变时，重复出现的 `session.stuck` 和 `session.long_running` 警告日志行会指数退避；但无论该退避如何，恢复尝试仍会在每个 heartbeat tick 上运行。
 

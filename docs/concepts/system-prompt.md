@@ -24,7 +24,7 @@ OpenClaw 会为每次 agent 运行构建自己的系统提示词；运行时没�
 
 对于模型家族特定调优，请使用提供方拥有的贡献内容。将旧的 `before_prompt_build` 钩子保留用于兼容性或真正全局的提示词变更。
 
-捆绑的 OpenAI/Codex GPT-5 家族覆盖层（`resolveGpt5SystemPromptContribution`）使用了这一机制：一个 `stablePrefix` 行为契约（执行策略、工具纪律、输出契约、完成契约），再加上一个可选的 `interaction_style` 覆盖，以获得更友好的语气。它适用于通过 OpenAI 或 Codex 插件路由的任何 `gpt-5*` 模型 id，由 `agents.defaults.promptOverlays.gpt5.personality`（`"friendly"`/`"on"` 或 `"off"`）控制。
+内置的 GPT-5-family 提示词贡献（`resolveGpt5SystemPromptContribution`）使用此机制：一个 `stablePrefix` 行为契约（执行策略、工具规范、输出契约、完成契约），以及一个可选的 `interaction_style` 覆盖，用于提供更友好的语气。对于 OpenAI 系列路由，`plugins.entries.openai.config.personality` 控制该样式层：`"friendly"` 是默认值，`"on"` 是 `"friendly"` 的别名，而 `"off"` 仅移除友好语气覆盖；稳定的行为契约仍然保留。
 
 ## 结构
 
@@ -77,7 +77,7 @@ OpenClaw 会为子代理渲染更小的系统提示词。运行时会为每次�
 
 在 `promptMode=minimal` 下，额外注入的提示词会标记为 **子代理上下文**，而不是 **群聊上下文**。
 
-对于频道自动回复运行，当直接、群组或仅消息工具上下文已经拥有可见回复契约时，OpenClaw 会省略通用的 **静默回复** 部分。只有传统的自动群组/频道模式会显示 `NO_REPLY`；直接聊天和仅消息工具回复会跳过静默标记指引。
+对于频道自动回复运行，当直接、群组或仅消息工具上下文已经拥有可见回复契约时，OpenClaw 会省略通用的 **静默回复** 部分。只有传统的自动群组／频道模式会显示 `NO_REPLY`；直接聊天和仅消息工具回复会跳过静默标记指引。
 
 ## 提示词快照
 
@@ -112,21 +112,20 @@ Heartbeat 监控 scratch 不是启动文件。Heartbeat 运行器只会将其附
 
 大文件会被截断，并带有标记：
 
-| 限制                                         | 配置键                                              | 默认值   |
-| -------------------------------------------- | --------------------------------------------------- | -------- |
-| 每个文件最大字符数                            | `agents.defaults.bootstrapMaxChars`                | 20000    |
-| 所有文件合计最大字符数                        | `agents.defaults.bootstrapTotalMaxChars`           | 60000    |
-| 截断警告（`off`\|`once`\|`always`）           | `agents.defaults.bootstrapPromptTruncationWarning` | `always` |
+| 限制                   | 配置键                                   | 默认值 |
+| ---------------------- | ---------------------------------------- | ------ |
+| 每个文件的最大字符数   | `agents.defaults.bootstrapMaxChars`      | 20000  |
+| 所有文件的总字符数     | `agents.defaults.bootstrapTotalMaxChars` | 60000  |
 
-缺失文件会注入一条简短的缺失文件标记。详细的原始/注入计数会保留在诸如 `/context`、`/status`、doctor 和日志等诊断信息中。
+发生截断时，OpenClaw 始终会在系统提示中注入一条简洁通知，说明某些启动文件已被截断，并要求直接读取受影响的文件；此通知是内置的且不可配置，并且会有意省略每个文件的详细信息。缺失文件会注入一个简短的缺失文件标记。文件名以及原始／注入计数会保留在 `/context`、`/status`、doctor 和日志等诊断信息中。
 
 对于记忆文件，截断并不意味着数据丢失：文件仍会完整保留在磁盘上。在原生 Codex 中，当记忆工具可用时，`MEMORY.md` 会通过记忆工具按需读取，否则回退到有界提示。对于其他 harness，模型只会看到被缩短后的注入副本，直到它直接读取或搜索记忆。如果 `MEMORY.md` 反复被截断，应将其提炼为更短的持久摘要，把详细历史移入 `memory/*.md`，或者有意提高启动限制。
 
-Sub-agent 会话只注入 `AGENTS.md`（其他启动文件会被过滤，以保持子代理上下文较小）。
+子代理会话只注入 `AGENTS.md`（其他启动文件会被过滤，以保持子代理上下文较小）。
 
 内部钩子可以通过 `agent:bootstrap` 事件拦截此步骤，以修改或替换注入的启动文件（例如用替代人格替换 `SOUL.md`）。
 
-为了让语气不那么泛泛，请从 [SOUL.md Personality Guide](/concepts/soul) 开始。
+为了让语气不那么泛泛，请从 [SOUL.md 个性指南](/concepts/soul) 开始。
 
 要查看每个注入文件的贡献大小（原始值 vs 注入值、截断、工具架构开销），请使用 `/context list` 或 `/context detail`。参见 [Context](/concepts/context)。
 
@@ -150,7 +149,7 @@ Native Codex 回合会将此列表作为按回合作用域的协作开发者指�
 
 该位置可以指向嵌套技能，例如 `skills/personal/foo/SKILL.md`。嵌套仅用于组织；提示使用的是来自 `SKILL.md` frontmatter 的扁平技能名称。
 
-资格包括技能元数据门控、运行时环境/配置检查，以及当配置了 `agents.defaults.skills` 或 `agents.entries.*.skills` 时的有效代理技能允许列表。插件捆绑的技能仅在其所属插件启用时才具备资格，这使得工具插件能够暴露更深入的操作指南，而无需将所有这些指导都嵌入到每个工具描述中。
+资格包括技能元数据门控、运行时环境／配置检查，以及当配置了 `agents.defaults.skills` 或 `agents.entries.*.skills` 时的有效代理技能允许列表。插件捆绑的技能仅在其所属插件启用时才具备资格，这使得工具插件能够暴露更深入的操作指南，而无需将所有这些指导都嵌入到每个工具描述中。
 
 ```xml
 <available_skills>
@@ -163,7 +162,7 @@ Native Codex 回合会将此列表作为按回合作用域的协作开发者指�
 </available_skills>
 ```
 
-这在保持基础提示较小的同时，仍能支持有针对性的技能使用。大小控制由技能子系统负责，独立于通用运行时读取/注入大小控制：
+这在保持基础提示较小的同时，仍能支持有针对性的技能使用。大小控制由技能子系统负责，独立于通用运行时读取／注入大小控制：
 
 | 范围      | 技能提示预算                                          | 运行时摘录预算                     |
 | --------- | ----------------------------------------------------- | ---------------------------------- |

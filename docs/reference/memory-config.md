@@ -220,7 +220,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     | ------------------- | ------- | ------- | -------------------------------------------------------- |
     | `inputType`         | `string` | 未设置   | 查询和文档嵌入共用的 `input_type`   |
     | `queryInputType`    | `string` | 未设置   | 查询时的 `input_type`；会覆盖 `inputType`          |
-    | `documentInputType` | `string` | 未设置   | 索引/文档的 `input_type`；会覆盖 `inputType`      |
+    | `documentInputType` | `string` | 未设置   | 索引／文档的 `input_type`；会覆盖 `inputType`      |
 
     ```json5
     {
@@ -309,11 +309,9 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
   </Accordion>
   <Accordion title="本地（GGUF + llama.cpp）">
-    | 键                   | 类型               | 默认值                | 描述                                                                                                                                                                                                                                                                                                          |
-    | --------------------- | ------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-    | `local.modelPath`     | `string`           | 自动下载                | GGUF 模型文件路径                                                                                                                                                                                                                                                                                              |
-    | `local.modelCacheDir` | `string`           | node-llama-cpp 默认值 | 已下载模型的缓存目录                                                                                                                                                                                                                                                                                      |
-    | `local.contextSize`   | `number \| "auto"` | `4096`                 | 嵌入上下文的上下文窗口大小。4096 可覆盖典型分块（128-512 tokens），同时限制非权重 VRAM。受限主机上可降低到 1024-2048。`"auto"` 使用模型训练时的最大值——不建议用于 8B+ 模型（Qwen3-Embedding-8B：最多 40 960 tokens 可能会将 VRAM 推高到约 32 GB）。 |
+    | 键               | 类型     | 默认值         | 描述             |
+    | ----------------- | -------- | --------------- | ----------------------- |
+    | `local.modelPath` | `string` | 自动下载 | GGUF 模型文件的路径 |
 
     安装官方 llama.cpp 提供方：`openclaw plugins install @openclaw/llama-cpp-provider`。
     默认模型：`embeddinggemma-300m-qat-Q8_0.gguf`（约 0.6 GB，自动下载）。源码检出仍需要本地构建授权：`pnpm approve-builds` 然后 `pnpm rebuild node-llama-cpp`。
@@ -325,7 +323,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     openclaw memory index --force --agent main
     ```
 
-    数值型 `local.contextSize` 值也会影响 node-llama-cpp 的自动 GPU 层放置，因此模型权重和所请求的嵌入上下文会被一起适配。`openclaw memory status --deep` 会在运行时加载后报告上次已知的 llama.cpp 后端、设备、卸载、请求上下文以及带时间戳的内存信息；被动状态不会加载模型。
+    缓存位置和嵌入上下文大小由提供方管理。`openclaw memory status --deep` 会在运行时加载完成后报告已知的 llama.cpp 后端、设备、卸载、请求的上下文以及带时间戳的内存信息；被动状态检查不会加载模型。
 
     对本地 GGUF 嵌入显式设置 `provider: "local"`。明确的本地配置支持 `hf:` 和 HTTP(S) 模型引用（通过 node-llama-cpp 的模型解析），但这不会改变默认提供方。
 
@@ -436,7 +434,19 @@ lambda 值 `0.7` 进行 MMR 多样性排序。`MEMORY.md`、`USER.md` 以及其�
 
 ## 会话记忆搜索
 
-索引会话记录，并通过 `memory_search` 暴露它们：
+| Key                    | Type      | Default | Description                |
+| ---------------------- | --------- | ------- | -------------------------- |
+| `remote.batch.enabled` | `boolean` | `false` | 启用批量嵌入 API |
+
+适用于 `gemini`、`openai` 和 `voyage`。对于大型回填任务，OpenAI 批处理通常速度最快且成本最低。
+
+批处理启用是唯一的远程批处理设置。并发、轮询和超时行为由提供商负责。
+
+---
+
+## 会话记忆搜索
+
+索引会话转录内容，并通过 `memory_search` 呈现：
 
 | Key                           | Type       | Default                                                    | Description                              |
 | ----------------------------- | ---------- | ---------------------------------------------------------- | ---------------------------------------- |

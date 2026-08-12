@@ -8,7 +8,7 @@ title: "图像生成"
 sidebarTitle: "图像生成"
 ---
 
-`image_generate` 工具会通过你配置的提供方来创建和编辑图像。在聊天会话中，它以异步方式运行：OpenClaw 会记录一个后台任务，立即返回任务 ID，并在提供方完成时唤醒 agent。完成后的 agent 会遵循会话的正常可见回复模式：如果已配置，则自动发送最终回复；如果会话需要使用消息工具，则使用 `message(action="send")`。如果请求方会话处于非活动状态，或者其激活唤醒失败，OpenClaw 会发送一个幂等的直接回退结果，其中包含生成的图像，以免结果丢失。
+`image_generate` 工具通过你配置的提供方创建和编辑图像。在聊天会话中，它会异步运行：OpenClaw 记录一个后台任务，立即返回任务 ID，并在提供方完成任务后唤醒代理。任务记录会保持静默，而完成代理会遵循会话当前的可见回复约定，发送简短的面向用户的说明以及每个结构化的生成附件。如果生成失败，代理会改为返回简洁的可见失败消息。如果请求方会话处于非活动状态，或其活动唤醒失败，OpenClaw 会发送一条包含生成图像的幂等直接回退消息，以免结果丢失。
 
 <Note>
 该工具仅在至少有一个图像生成提供方可用时才会显示。如果你在 agent 的工具中看不到 `image_generate`，请配置 `agents.defaults.mediaModels.image`，设置提供方 API 密钥，或通过 OpenAI ChatGPT/Codex OAuth 登录。
@@ -26,9 +26,11 @@ sidebarTitle: "图像生成"
     {
       agents: {
         defaults: {
-          imageGenerationModel: {
-            primary: "openai/gpt-image-2",
-            timeoutMs: 180_000,
+          mediaModels: {
+            image: {
+              primary: "openai/gpt-image-2",
+              timeoutMs: 180000,
+            },
           },
         },
       },
@@ -42,10 +44,10 @@ sidebarTitle: "图像生成"
 
   </Step>
   <Step title="让 agent 执行">
-    _"生成一张友好机器人吉祥物的图片。"_
+    _“生成一张友好机器人吉祥物的图片。”_
 
-    agent 会自动调用 `image_generate`。无需工具白名单——当有可用提供方时，
-    它默认启用。该工具会返回一个后台任务 ID，然后 completion agent 会在准备就绪时通过 `message` 工具发送生成的附件。
+    agent 会自动调用 `image_generate`。无需配置工具允许列表——当提供方可用时，
+    该工具默认启用。该工具会返回一个后台任务 ID，然后完成 agent 会在准备就绪后回复每个生成的附件。
 
   </Step>
 </Steps>
@@ -67,8 +69,8 @@ sidebarTitle: "图像生成"
 | fal Krea 2 表达式/风格导向生成      | `fal/krea/v2/medium/text-to-image`                 | `FAL_KEY`                              |
 | OpenRouter 图像生成                          | `openrouter/google/gemini-3.1-flash-image-preview` | `OPENROUTER_API_KEY`                   |
 | LiteLLM 图像生成                             | `litellm/gpt-image-2`                              | `LITELLM_API_KEY`                      |
-| Microsoft Foundry MAI 图像生成               | `microsoft-foundry/<deployment-name>`              | `AZURE_OPENAI_API_KEY` or Entra ID     |
-| Google Gemini 图像生成                       | `google/gemini-3.1-flash-image`                    | `GEMINI_API_KEY` or `GOOGLE_API_KEY`   |
+| Microsoft Foundry MAI 图像生成               | `microsoft-foundry/<deployment-name>`              | `AZURE_OPENAI_API_KEY` 或 Entra ID     |
+| Google Gemini 图像生成                       | `google/gemini-3.1-flash-image`                    | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`   |
 
 同一个工具同时处理文本到图像和参考图像编辑。对单个参考图像使用 `image`，对多个参考图像使用 `images`。对于 fal 上的 Krea 2 模型，这些参考图像会作为风格参考发送，而不是作为编辑输入。  
 当可用时，诸如 `quality`、`outputFormat` 和 `background` 之类的提供方支持的输出提示会被转发；当某个提供方未声明支持时，则会报告为被忽略。内置的透明背景支持是 OpenAI 特有的；其他提供方如果其后端输出了 PNG alpha 通道，仍可能保留该通道。
@@ -177,14 +179,16 @@ OpenAI 通过直接的 Images API 或 Codex Responses 后端，支持文本到�
 {
   agents: {
     defaults: {
-      imageGenerationModel: {
-        primary: "openai/gpt-image-2",
-        timeoutMs: 180_000,
-        fallbacks: [
-          "openrouter/google/gemini-3.1-flash-image-preview",
-          "google/gemini-3.1-flash-image",
-          "fal/fal-ai/flux/dev",
-        ],
+      mediaModels: {
+        image: {
+          primary: "openai/gpt-image-2",
+          timeoutMs: 180000,
+          fallbacks: [
+            "openrouter/google/gemini-3.1-flash-image-preview",
+            "google/gemini-3.1-flash-image",
+            "fal/fal-ai/flux/dev",
+          ],
+        },
       },
     },
   },
@@ -195,12 +199,12 @@ OpenAI 通过直接的 Images API 或 Codex Responses 后端，支持文本到�
 
 OpenClaw 会按以下顺序尝试提供方：
 
-1. **`model` 参数**，来自工具调用（如果 agent 指定了）。
-2. 配置中的 **`imageGenerationModel.primary`**。
-3. 按顺序的 **`imageGenerationModel.fallbacks`**。
-4. **自动检测** - 仅基于认证的提供方默认值：
-   - 先使用当前默认提供方；
-   - 然后按 provider-id 顺序使用其余已注册的图像生成提供方。
+1. **`model` 参数**，来自工具调用（如果代理指定了该参数）。
+2. 来自配置的 **`agents.defaults.mediaModels.image.primary`**。
+3. 按顺序使用 **`agents.defaults.mediaModels.image.fallbacks`**。
+4. **自动检测**——仅限基于认证的提供方默认值：
+   - 首先使用当前默认提供方；
+   - 然后按提供方 ID 顺序使用其余已注册的图像生成提供方。
 
 如果某个提供方失败（认证错误、速率限制等），会自动尝试下一个已配置的候选项。如果全部失败，错误信息会包含每次尝试的详细信息。
 
@@ -297,9 +301,11 @@ OpenAI、OpenRouter 和 Google 通过 `images` 参数支持最多 5 张参考图
     {
       agents: {
         defaults: {
-          imageGenerationModel: {
-            primary: "microsoft-foundry/<deployment-name>",
-            timeoutMs: 600_000,
+          mediaModels: {
+            image: {
+              primary: "microsoft-foundry/<deployment-name>",
+              timeoutMs: 600000,
+            },
           },
         },
       },
@@ -336,8 +342,10 @@ OpenAI、OpenRouter 和 Google 通过 `images` 参数支持最多 5 张参考图
     {
       agents: {
         defaults: {
-          imageGenerationModel: {
-            primary: "openrouter/google/gemini-3.1-flash-image-preview",
+          mediaModels: {
+            image: {
+              primary: "openrouter/google/gemini-3.1-flash-image-preview",
+            },
           },
         },
       },
@@ -367,8 +375,10 @@ OpenAI、OpenRouter 和 Google 通过 `images` 参数支持最多 5 张参考图
     {
       agents: {
         defaults: {
-          imageGenerationModel: {
-            primary: "fal/krea/v2/medium/text-to-image",
+          mediaModels: {
+            image: {
+              primary: "fal/krea/v2/medium/text-to-image",
+            },
           },
         },
       },
@@ -499,5 +509,5 @@ ChatGPT/Codex OAuth Responses 后端都支持 moderation 提示。
 - [OpenAI](/providers/openai) - OpenAI Images 提供商设置
 - [Vydra](/providers/vydra) - Vydra 图像、视频和语音设置
 - [xAI](/providers/xai) - Grok 图像、视频、搜索、代码执行和 TTS 设置
-- [配置参考](/gateway/config-agents#agent-defaults) - `imageGenerationModel` 配置
-- [模型](/concepts/models) - 模型配置和故障转移。
+- [配置参考](/gateway/config-agents#agent-defaults) - `agents.defaults.mediaModels.image` 配置
+- [模型](/concepts/models) - 模型配置和故障转移

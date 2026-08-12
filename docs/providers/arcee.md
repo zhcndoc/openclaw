@@ -84,7 +84,7 @@ openclaw gateway restart
 <Tabs>
   <Tab title="直接方式（Arcee 平台）">
     ```bash
-    openclaw onboard --non-interactive \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice arceeai-api-key \
       --arceeai-api-key "$ARCEEAI_API_KEY"
@@ -93,7 +93,7 @@ openclaw gateway restart
 
   <Tab title="通过 OpenRouter">
     ```bash
-    openclaw onboard --non-interactive \
+    openclaw onboard --non-interactive --accept-risk --skip-health \
       --mode local \
       --auth-choice arceeai-openrouter \
       --openrouter-api-key "$OPENROUTER_API_KEY"
@@ -101,13 +101,13 @@ openclaw gateway restart
   </Tab>
 </Tabs>
 
-## Direct Arcee catalog
+## Direct Arcee 目录
 
-| Model ref                      | Name                   | Input | Context | Max output | Cost (in/out per 1M) | Tools | Notes                                     |
+| 模型引用                       | 名称                   | 输入 | 上下文  | 最大输出 | 成本（输入/输出，每 1M） | 工具 | 备注                                     |
 | ------------------------------ | ---------------------- | ----- | ------- | ---------- | -------------------- | ----- | ----------------------------------------- |
-| `arcee/trinity-large-thinking` | Trinity Large Thinking | text  | 256K    | 80K        | $0.25 / $0.90        | No    | 默认模型；扩展思考                        |
-| `arcee/trinity-large-preview`  | Trinity Large Preview  | text  | 128K    | 16K        | $0.25 / $1.00        | Yes   | 通用；400B 参数，13B 激活                 |
-| `arcee/trinity-mini`           | Trinity Mini 26B       | text  | 128K    | 80K        | $0.045 / $0.15       | Yes   | 快速且成本高效；函数调用                   |
+| `arcee/trinity-large-thinking` | Trinity Large Thinking | text  | 256K    | 80K        | $0.25 / $0.90        | 否    | 默认模型；扩展思考                        |
+| `arcee/trinity-large-preview`  | Trinity Large Preview  | text  | 128K    | 16K        | $0.25 / $1.00        | 是   | 通用；400B 参数，13B 激活                 |
+| `arcee/trinity-mini`           | Trinity Mini 26B       | text  | 128K    | 80K        | $0.045 / $0.15       | 是   | 快速且成本高效；函数调用                   |
 
 <Tip>
 引导预设会将 `arcee/trinity-large-thinking` 设置为默认模型。
@@ -115,9 +115,9 @@ openclaw gateway restart
 
 ## OpenRouter catalog
 
-OpenRouter onboarding exposes `arcee/trinity-large-preview` and `arcee/trinity-large-thinking`. OpenClaw keeps those provider-qualified model refs in config and sends OpenRouter's canonical `arcee-ai/*` runtime ids. Trinity Mini is no longer served by OpenRouter; use the direct Arcee API for that model.
+OpenRouter 接入流程会公开 `arcee/trinity-large-preview` 和 `arcee/trinity-large-thinking`。OpenClaw 会在配置中保留这些带 provider 限定的模型引用，并发送 OpenRouter 的规范 `arcee-ai/*` 运行时 ID。OpenRouter 不再提供 Trinity Mini；对于该模型，请直接使用 Arcee API。
 
-## Supported features
+## 支持的功能
 
 | 功能                                       | 支持情况                                    |
 | --------------------------------------------- | -------------------------------------------- |
@@ -133,12 +133,12 @@ OpenRouter onboarding exposes `arcee/trinity-large-preview` and `arcee/trinity-l
     `~/.openclaw/.env` 中，或通过 `env.shellEnv` 提供。
   </Accordion>
 
-  <Accordion title="OpenRouter routing">
-    OpenRouter uses the same `arcee/trinity-large-thinking` OpenClaw model ref.
-    OpenClaw routes it with the canonical `arcee-ai/trinity-large-thinking`
-    OpenRouter runtime id. See the
-    [OpenRouter provider docs](/providers/openrouter) for OpenRouter-specific
-    configuration details.
+  <Accordion title="OpenRouter 路由">
+    OpenRouter 使用相同的 `arcee/trinity-large-thinking` OpenClaw 模型引用。
+    OpenClaw 使用规范的 `arcee-ai/trinity-large-thinking`
+    OpenRouter 运行时 ID 对其进行路由。有关
+    OpenRouter 特定的配置详细信息，请参阅
+    [OpenRouter 提供商文档](/providers/openrouter)。
   </Accordion>
 </AccordionGroup>
 

@@ -8,12 +8,13 @@ title: "插件参考"
 
 # 插件参考
 
-此页面由 `extensions/*/package.json` 和
-`openclaw.plugin.json` 生成。使用以下命令重新生成：
+此页面根据顶层 `extensions/*/openclaw.plugin.json`
+清单生成。如果存在 `package.json`，软件包元数据会丰富条目。
+使用以下命令重新生成：
 
 ```bash
 pnpm plugins:inventory:gen
 ```
 
-使用[插件清单](/plugins/plugin-inventory)按分发方式、包和描述浏览全部 146 个
-生成的插件参考页面。
+使用[插件清单](/plugins/plugin-inventory)可按分发方式、软件包和描述浏览全部 149
+个生成的插件参考页面。

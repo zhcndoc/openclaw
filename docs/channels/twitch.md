@@ -27,7 +27,7 @@ Twitch 作为官方插件提供；它不属于核心安装的一部分。
 
 `plugins install` 会注册并启用该插件。在 `openclaw onboard` 或 `openclaw channels add` 期间选择 Twitch 会按需安装它。使用不带版本号的软件包名称可跟随当前发布版本；仅在需要可复现安装时才固定到精确版本。需要 OpenClaw 2026.4.10 或更新版本。
 
-详情：[插件](/tools/plugin)
+详情：[插件](/tools/plugin)。
 
 ## 快速设置
 
@@ -108,6 +108,10 @@ Twitch 聊天在客户端接受 `PRIVMSG` 后不会重放该消息。这可以�
 {
   channels: {
     twitch: {
+      username: "openclaw",
+      accessToken: "oauth:abc123...",
+      clientId: "xyz789...",
+      channel: "yourchannel",
       clientSecret: "your_client_secret",
       refreshToken: "your_refresh_token",
     },
@@ -164,6 +168,9 @@ Twitch 聊天在客户端接受 `PRIVMSG` 后不会重放该消息。这可以�
         twitch: {
           accounts: {
             default: {
+              username: "openclaw",
+              accessToken: "oauth:abc123...",
+              channel: "yourchannel",
               allowFrom: ["123456789", "987654321"],
             },
           },
@@ -179,6 +186,9 @@ Twitch 聊天在客户端接受 `PRIVMSG` 后不会重放该消息。这可以�
         twitch: {
           accounts: {
             default: {
+              username: "openclaw",
+              accessToken: "oauth:abc123...",
+              channel: "yourchannel",
               allowedRoles: ["moderator", "vip"],
             },
           },
@@ -196,6 +206,9 @@ Twitch 聊天在客户端接受 `PRIVMSG` 后不会重放该消息。这可以�
         twitch: {
           accounts: {
             default: {
+              username: "openclaw",
+              accessToken: "oauth:abc123...",
+              channel: "yourchannel",
               requireMention: false,
             },
           },
@@ -299,10 +312,10 @@ openclaw channels status --probe
 
 ### 提供者选项
 
-- `channels.twitch.enabled` - 启用/禁用频道启动
-- `channels.twitch.username` / `accessToken` / `clientId` / `channel` - 简化的单账户配置（隐式 `default` 账户；优先于 `accounts.default`）
-- `channels.twitch.accounts.<accountName>` - 多账户配置（包含以上所有账户字段）
-- `channels.twitch.defaultAccount` - 默认使用的账户名称
+- `channels.twitch.enabled` - 启用／禁用频道启动
+- `channels.twitch.username` / `accessToken` / `clientId` / `channel` - 使用隐式 `default` 账户的简化单账户配置
+- `channels.twitch.accounts.<accountName>` - 多账户配置（包含上述所有账户字段）；不要与顶层账户凭据结合使用
+- `channels.twitch.defaultAccount` - 默认账户的名称
 - `channels.twitch.markdown.tables` - Markdown 表格渲染模式（`off` | `bullets` | `code` | `block`）
 
 完整示例：
@@ -312,14 +325,17 @@ openclaw channels status --probe
   channels: {
     twitch: {
       enabled: true,
-      username: "openclaw",
-      accessToken: "oauth:abc123...",
-      clientId: "xyz789...",
-      channel: "yourchannel",
-      clientSecret: "secret123...",
-      refreshToken: "refresh456...",
-      allowFrom: ["123456789"],
+      defaultAccount: "default",
       accounts: {
+        default: {
+          username: "openclaw",
+          accessToken: "oauth:abc123...",
+          clientId: "xyz789...",
+          channel: "yourchannel",
+          clientSecret: "secret123...",
+          refreshToken: "refresh456...",
+          allowFrom: ["123456789"],
+        },
         second: {
           username: "mybot",
           accessToken: "oauth:def456...",
@@ -348,7 +364,7 @@ openclaw channels status --probe
 }
 ```
 
-`to` 是可选的，默认值为账户已配置的 `channel`。
+`to` 是可选的，默认值为账户已配置的 `channel`
 
 ## 安全与运维
 
@@ -371,4 +387,4 @@ openclaw channels status --probe
 - [频道概览](/channels) — 所有受支持的频道
 - [群组](/channels/groups) — 群聊行为与提及门控
 - [配对](/channels/pairing) — DM 身份验证与配对流程
-- [安全](/gateway/security) — 访问模型与加固
+- [安全](/gateway/security) — 访问模型与加固。

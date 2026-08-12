@@ -34,7 +34,7 @@ openclaw backup sqlite restore ~/Backups/openclaw-sqlite/<snapshot-id> --target 
 
 - 该归档内嵌一个 `manifest.json`，其中包含已解析的源路径和归档布局。
 - 默认输出是在当前工作目录中的带时间戳 `.tar.gz` 归档。带时间戳的文件名使用你机器的本地时区，并包含 UTC 偏移量。如果当前工作目录位于已备份的源树内部，OpenClaw 会回退到你的主目录作为默认归档位置。
-- 现有归档文件绝不会被覆盖。源状态/工作区树中的输出路径会被拒绝，以避免自包含。
+- 现有归档文件绝不会被覆盖。源状态／工作区树中的输出路径会被拒绝，以避免自包含。
 - `openclaw backup verify <archive>` 会检查归档是否恰好包含一个根 manifest，拒绝遍历式归档路径和 SQLite 侧车文件，确认每个 manifest 声明的负载都存在，验证每个 SQLite 快照的文件形态，并在标准 OpenClaw 数据库上运行完整的完整性与角色检查。专用插件 schema 仍然是透明的，因为它们可能需要所有者定义的 SQLite 能力。`openclaw backup create --verify` 会在写入归档后立即运行该验证。
 - `openclaw backup create --only-config` 仅备份当前活动的 JSON 配置文件。
 
@@ -96,13 +96,13 @@ OpenClaw 在构建归档前会规范化路径：如果配置、凭据目录或�
 
 | 状态相对范围                         | 跳过的文件后缀           |
 | ------------------------------------ | ------------------------ |
-| `sessions/**`                        | `.jsonl`, `.log`         |
-| `agents/<agentId>/sessions/**`       | `.jsonl`, `.log`         |
-| `cron/runs/**`                       | `.jsonl`, `.log`         |
-| `logs/**`                            | `.jsonl`, `.log`         |
-| `delivery-queue/**`                  | `.json`, `.delivered`, `.tmp` |
-| `session-delivery-queue/**`          | `.json`, `.delivered`, `.tmp` |
-| 状态备份目录下的任何路径             | `.sock`, `.pid`, `.tmp`   |
+| `sessions/**`                        | `.jsonl`、`.log`         |
+| `agents/<agentId>/sessions/**`       | `.jsonl`、`.log`         |
+| `cron/runs/**`                       | `.jsonl`、`.log`         |
+| `logs/**`                            | `.jsonl`、`.log`         |
+| `delivery-queue/**`                  | `.json`、`.delivered`、`.tmp` |
+| `session-delivery-queue/**`          | `.json`、`.delivered`、`.tmp` |
+| 状态备份目录下的任何路径             | `.sock`、`.pid`、`.tmp`   |
 
 这些规则不会过滤状态目录之外的工作区文件。它们也会省略与表中匹配的已完成转录和日志文件，因此在需要时请单独保留这些记录。JSON 结果中的 `skippedVolatileCount` 会报告有多少文件被有意省略。
 
@@ -110,7 +110,9 @@ OpenClaw 在构建归档前会规范化路径：如果配置、凭据目录或�
 
 状态目录中 `extensions/` 树下已安装插件的源文件和清单文件会被包含，但其嵌套的 `node_modules/` 依赖树会被跳过，因为这些属于可重新构建的安装产物。恢复归档后，如果某个已恢复的插件报告缺少依赖，请使用 `openclaw plugins update <id>`，或使用 `openclaw plugins install <spec> --force` 重新安装。
 
-状态目录下由安装器管理且可重建的运行时根目录也会被跳过：`dev/`、`git/`、`npm/`、旧版 `npm-runtime/` 和 `tools/`。这些目录包含受管理的检出内容、包树和下载的运行时，而不是权威的用户状态；恢复后请重新安装或更新相应的运行时或插件。若配置文件、凭据目录或工作区被显式配置在这些根目录之一中，则仍会包含在内。
+状态目录下由安装程序管理且可重新构建的运行时根目录也会被跳过：`dev/`、`git/`、`npm/`、旧版 `npm-runtime/`、`tmp/` 和 `tools/`。这些目录包含受管理的检出内容、软件包树、编译器缓存、临时文件和已下载的运行时，而不是权威的用户状态；恢复后请重新安装或更新相应的运行时或插件。明确配置在这些根目录中的配置文件、凭据目录或工作区仍会被包含。
+
+受管理的 `dev/` 检出内容中的本地修改属于开发者源代码，而不是 OpenClaw 产品状态，因此不会被包含。依赖状态备份之前，请提交并推送这些修改，或单独复制该检出内容。
 
 ## 无效配置行为
 
@@ -131,7 +133,7 @@ OpenClaw 不强制内置的最大备份大小或单个文件大小限制。若�
 
 如果在发布后进行的最终目录持久性确认失败，命令会报告失败，但会保留完整的最终条目，而不是冒险删除一个并发替换项。
 
-大型工作区通常是归档大小的主要驱动因素。使用 `--no-include-workspace` 可以获得更小/更快的备份，或者使用 `--only-config` 获得最小的归档。
+大型工作区通常是归档大小的主要驱动因素。使用 `--no-include-workspace` 可以获得更小／更快的备份，或者使用 `--only-config` 获得最小的归档。
 
 ## 相关
 

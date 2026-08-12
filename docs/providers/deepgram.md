@@ -34,9 +34,9 @@ WebSocket `listen` 端点转发实时 G.711 u-law 帧，并在 Deepgram 返回�
     {
       tools: {
         media: {
+          models: [{ provider: "deepgram", model: "nova-3", capabilities: ["audio"] }],
           audio: {
             enabled: true,
-            models: [{ provider: "deepgram", model: "nova-3" }],
           },
         },
       },
@@ -49,37 +49,40 @@ WebSocket `listen` 端点转发实时 G.711 u-law 帧，并在 Deepgram 返回�
   </Step>
 </Steps>
 
-## Configuration Options
+## 配置选项
 
-| Option     | Path                            | Description                           |
+| 选项       | 路径                            | 描述                                  |
 | ---------- | ------------------------------- | ------------------------------------- |
-| `model`    | `tools.media.models[].model`    | Deepgram model id (default: `nova-3`) |
-| `language` | `tools.media.models[].language` | Language hint (optional)              |
+| `model`    | `tools.media.models[].model`    | Deepgram 模型 ID（默认：`nova-3`） |
+| `language` | `tools.media.models[].language` | 语言提示（可选）              |
 
-`providerOptions.deepgram` will merge extra query parameters directly into
-the Deepgram `/listen` request, so any parameter name supported by Deepgram can be used
-(for example, `detect_language`, `punctuate`, `smart_format`):
+`providerOptions.deepgram` 会将额外的查询参数直接合并到
+Deepgram `/listen` 请求中，因此可以使用 Deepgram 支持的任何参数名称
+（例如 `detect_language`、`punctuate`、`smart_format`）：
 
 <Tabs>
-  <Tab title="Using Language Hints">
+  <Tab title="使用语言提示">
     ```json5
     {
       tools: {
         media: {
+          models: [
+            { provider: "deepgram", model: "nova-3", language: "en", capabilities: ["audio"] },
+          ],
           audio: {
             enabled: true,
-            models: [{ provider: "deepgram", model: "nova-3", language: "en" }],
           },
         },
       },
     }
     ```
   </Tab>
-  <Tab title="Using Deepgram Options">
+  <Tab title="使用 Deepgram 选项">
     ```json5
     {
       tools: {
         media: {
+          models: [{ provider: "deepgram", model: "nova-3", capabilities: ["audio"] }],
           audio: {
             enabled: true,
             providerOptions: {
@@ -89,7 +92,6 @@ the Deepgram `/listen` request, so any parameter name supported by Deepgram can 
                 smart_format: true,
               },
             },
-            models: [{ provider: "deepgram", model: "nova-3" }],
           },
         },
       },
@@ -104,7 +106,7 @@ the Deepgram `/listen` request, so any parameter name supported by Deepgram can 
 
 | 设置            | 配置路径                                                            | 默认值                                       |
 | --------------- | ------------------------------------------------------------------- | -------------------------------------------- |
-| API key         | `plugins.entries.voice-call.config.streaming.providers.deepgram.apiKey` | 回退到 `DEEPGRAM_API_KEY`                   |
+| API 密钥         | `plugins.entries.voice-call.config.streaming.providers.deepgram.apiKey` | 回退到 `DEEPGRAM_API_KEY`                   |
 | 基础 URL        | `...deepgram.baseUrl`                                               | `DEEPGRAM_BASE_URL` 或 Deepgram 的公共 API   |
 | 模型            | `...deepgram.model`                                                 | `nova-3`                                     |
 | 语言            | `...deepgram.language`                                              | （未设置）                                   |
@@ -157,8 +159,8 @@ Twilio 媒体帧可以直接转发。
     认证遵循标准的提供方认证顺序。`DEEPGRAM_API_KEY` 是
     最简单的方式。
   </Accordion>
-  <Accordion title="Proxy and custom endpoints">
-    Override endpoints or headers on the Deepgram `tools.media.models[]` entry when using a proxy.
+  <Accordion title="代理和自定义端点">
+    使用代理时，覆盖 Deepgram `tools.media.models[]` 条目中的端点或请求头。
   </Accordion>
   <Accordion title="输出行为">
     输出遵循与其他提供方相同的音频规则（大小限制、超时、

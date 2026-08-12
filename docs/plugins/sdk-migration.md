@@ -69,9 +69,10 @@ OpenClaw 不会在引入替代方案的同一变更中移除或重新解释已�
 
 频道插件应在
 `openclaw.plugin.json` 中声明 `doctorContract.stateMigrations: true`，并从其 doctor-contract
-构件中导出 `stateMigrations`。基于计划的迁移可以使用
-`openclaw/plugin-sdk/runtime-doctor` 中的
-`definePluginDoctorMigrationFromPlans(...)`，以保留现有的移动、复制、预览和插件状态导入行为。
+制品中导出 `stateMigrations`。基于计划的迁移可以使用
+`openclaw/plugin-sdk/runtime-doctor-migrations` 中的
+`definePluginDoctorMigrationFromPlans(...)`，以保留现有的移动、复制、预览
+和插件状态导入行为。
 
 设置入口的 `legacyStateMigrations` 选项和功能标志
 `setupFeatures.legacyStateMigrations`、
@@ -160,7 +161,14 @@ OpenClaw 不发布大版本。2026-07-22 的注册表扫描检查了 426 个已�
 | `--fail-on-eligible-compat`                             | 已弃用兼容性记录的 `removeAfter` 日期已过时以非零状态退出。                  |
 | `--fail-on-unclassified-unused-reserved`                | 存在未使用的保留 SDK shim 时以非零状态退出。                                 |
 
-`pnpm plugins:boundary-report:ci` 会启用全部三个失败标志。已弃用记录通常具有明确的 `removeAfter` 日期，而不是含糊的“下一个大版本”。如果记录所属者尚未批准日期，则 `removeAfter` 保持缺失，显示为 `no-date`，并且永远不符合删除条件。报告按日期对已弃用记录进行分组，统计本地代码/文档引用，列出带有阻塞项和表面令牌读取方引用的 `removal-pending` 日期，展示跨所有者保留 SDK 导入，并汇总私有 memory-host SDK 桥接。这些读取方引用是分流信号，并不能证明存在已发布制品。保留的 SDK 子路径必须具有已跟踪的所有者使用记录；未使用的保留导出应从公共 SDK 中移除。
+`pnpm plugins:boundary-report:ci` 使用全部三个失败标志运行。已弃用记录通常具有明确的
+`removeAfter` 日期。与版本边界关联的契约则声明 `removalGate`；
+`next-plugin-sdk-major` 是已批准的主要版本门槛，而不是待定的所有者决定，并且永远不具备
+日期资格。既没有日期字段也没有门槛字段的记录会显示为 `no-date`，在其所有者发布门槛之前仍然
+不具备资格。该报告会显示日期或命名门槛，统计本地代码/文档引用，列出带有阻塞项和表面令牌读取方引用的
+`removal-pending` 记录，显示跨所有者保留 SDK 导入，并汇总私有 memory-host SDK 桥接。
+这些读取方引用是分类处理信号，而不是已发布制品证明。保留的 SDK 子路径必须有已跟踪的所有者使用情况；
+未使用的保留导出应从公共 SDK 中移除。
 
 ### 媒体旧版投影
 
@@ -689,6 +697,20 @@ const ctx = finalizeInboundContext({ Body: caption, media });
 
   </Accordion>
 
+  <Accordion title="Agent harness 尝试参数 -> V2 宿主能力契约">
+    新建或更新的 harness 插件应实现 `AgentHarnessV2`，并使用
+    `AgentHarnessAttemptParamsV2`、`EmbeddedRunAttemptParamsV2` 或
+    `AgentHarnessSideQuestionParamsV2`。V2 参数类型要求包含
+    `hostCapabilities`，与核心在选定 harness 边界处提供的内容一致。采用这些 V2 契约的插件必须在其包清单中声明
+    `openclaw.compat.pluginApi: ">=2026.8.1"`（或更高的最低版本），以便旧版宿主在加载插件前拒绝该插件。
+
+    现有插件可以继续实现 `AgentHarness`，并在 2026-10-12 之前构造不含该字段的
+    `AgentHarnessAttemptParams`、`EmbeddedRunAttemptParams` 或
+    `AgentHarnessSideQuestionParams` 类型。这些契约仅为保持源码兼容性而使能力字段可选；它们不会创建无能力的运行时路径。迁移时，请更改导入的类型名称，并通过
+    `params.hostCapabilities` 绑定工具或原生操作接口。
+
+  </Accordion>
+
   <Accordion title="runtime.tasks.flow -> runtime.tasks.managedFlows">
     **旧**：`runtime.tasks.flow`（单数）返回实时任务流访问器。
 
@@ -793,56 +815,53 @@ await gateway.request("talk.client.steer", { sessionKey, text, mode: "steer" });
 
 供从旧版 `talk.realtime.*` / `talk.transcription.*` / `talk.handoff.*` 系列（现已全部移除）迁移的读者参考的方法映射：
 
-| 旧方法                           | 新方法                                                   |
-| -------------------------------- | -------------------------------------------------------- |
-| `talk.realtime.session`          | `talk.client.create`                                     |
-| `talk.realtime.toolCall`         | `talk.client.toolCall`                                   |
-| `talk.realtime.relayAudio`       | `talk.session.appendAudio`                               |
-| `talk.realtime.relayCancel`      | `talk.session.cancelOutput` 或 `talk.session.cancelTurn` |
-| `talk.realtime.relayToolResult`  | `talk.session.submitToolResult`                          |
-| `talk.realtime.relayStop`        | `talk.session.close`                                     |
-| `talk.transcription.session`     | `talk.session.create({ mode: "transcription" })`         |
-| `talk.transcription.relayAudio`  | `talk.session.appendAudio`                               |
-| `talk.transcription.relayCancel` | `talk.session.cancelTurn`                                |
-| `talk.transcription.relayStop`   | `talk.session.close`                                     |
-| `talk.handoff.create`            | `talk.session.create({ transport: "managed-room" })`     |
-| `talk.handoff.join`              | `talk.session.join`                                      |
-| `talk.handoff.revoke`            | `talk.session.close`                                     |
+| 旧版                              | 新版                                                  |
+| -------------------------------- | ---------------------------------------------------- |
+| `talk.realtime.session`          | `talk.client.create`                                 |
+| `talk.realtime.toolCall`         | `talk.client.toolCall`                               |
+| `talk.realtime.relayAudio`       | `talk.session.appendAudio`                           |
+| `talk.realtime.relayCancel`      | `talk.session.cancelOutput`                          |
+| `talk.realtime.relayToolResult`  | `talk.session.submitToolResult`                      |
+| `talk.realtime.relayStop`        | `talk.session.close`                                 |
+| `talk.transcription.session`     | `talk.session.create({ mode: "transcription" })`     |
+| `talk.transcription.relayAudio`  | `talk.session.appendAudio`                           |
+| `talk.transcription.relayCancel` | `talk.session.close`                                 |
+| `talk.transcription.relayStop`   | `talk.session.close`                                 |
+| `talk.handoff.create`            | `talk.session.create({ transport: "managed-room" })` |
+| `talk.handoff.revoke`            | `talk.session.close`                                 |
 
 统一的控制词汇同样刻意保持精简：
 
 | 方法                            | 适用范围                                                | 合约                                                                                                                                                                                                                      |
 | ------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `talk.session.appendAudio`      | `realtime/gateway-relay`、`transcription/gateway-relay` | 向由同一 Gateway 连接所有的提供商会话追加一个 base64 PCM 音频块。                                                                                                                                                          |
-| `talk.session.startTurn`        | `stt-tts/managed-room`                                  | 开始一个托管房间用户轮次。                                                                                                                                                                                                |
-| `talk.session.endTurn`          | `stt-tts/managed-room`                                  | 在完成过期轮次验证后结束活动轮次。                                                                                                                                                                                        |
-| `talk.session.cancelTurn`       | 所有 Gateway 所有的会话                                  | 取消某一轮次的活动采集/提供商/代理/TTS 工作。                                                                                                                                                                            |
-| `talk.session.cancelOutput`     | `realtime/gateway-relay`                                | 停止助手音频输出，但不一定结束用户轮次。                                                                                                                                                                                  |
-| `talk.session.submitToolResult` | `realtime/gateway-relay`                                | 在其桥接层暴露的任何异步完成操作之后完成提供商工具调用；对于中间输出传递 `options.willContinue`，或者在支持时传递 `options.suppressResponse` 以避免再次生成助手响应。 |
-| `talk.session.steer`            | 由代理支持的 Talk 会话                                  | 向从 Talk 会话解析出的活动嵌入式运行发送口述的 `status`、`steer`、`cancel` 或 `followup` 控制。                                                                                                                          |
-| `talk.session.close`             | 所有统一会话                                            | 停止中继会话或撤销托管房间状态，然后遗忘统一会话 ID。                                                                                                                                                                    |
+| `talk.session.appendAudio`      | `realtime/gateway-relay`、`transcription/gateway-relay` | 将一个 base64 PCM 音频块追加到由同一 Gateway 连接拥有的提供商会话中。                                                                                                                             |
+| `talk.session.cancelOutput`     | `realtime/gateway-relay`                                | 停止助手音频输出，但不一定结束用户轮次。                                                                                                                                                     |
+| `talk.session.submitToolResult` | `realtime/gateway-relay`                                | 在其桥接公开的任何异步完成之后完成提供商工具调用；传递 `options.willContinue` 以获取中间输出，或者在受支持时传递 `options.suppressResponse` 以避免另一个助手响应。 |
+| `talk.session.steer`            | 由代理支持的 Talk 会话                              | 向从 Talk 会话解析的活动嵌入式运行发送语音 `status`、`steer`、`cancel` 或 `followup` 控制。                                                                                                 |
+| `talk.session.close`            | 所有统一会话                                    | 停止中继会话或撤销托管房间状态，然后忘记统一会话 ID。                                                                                                                                     |
 
 不要为了实现此功能而在核心代码中引入提供商或平台特殊处理。核心代码负责 Talk 会话语义。提供商插件负责供应商会话设置。语音通话和 Google Meet 负责电话/会议适配器。浏览器和原生应用负责设备采集/播放体验。
 
 ## 移除时间线
 
-| 时间                                       | 发生的情况                                                                                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **现在**                                   | 支持警告的已弃用接口会发出运行时警告；仓库防护机制会拒绝核心模块和内置插件导入已弃用的 SDK。 |
-| **等待所有者决定**                         | 无日期记录会保持已弃用状态，在其所有者发布 `removeAfter` 日期之前，不符合移除条件。                          |
-| **每条兼容性记录的 `removeAfter` 日期**    | 对应的接口符合移除条件；日期过后，`pnpm plugins:boundary-report --fail-on-eligible-compat` 会使 CI 失败。    |
-| **下一个主要版本**                         | 只有在其 `removeAfter` 日期之后，带日期的接口才可以被移除；无日期记录仍需要所有者批准并发布日期。   |
+| 时间                                        | 发生的情况                                                                                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **现在**                                     | 支持警告的已弃用接口会发出运行时警告；仓库防护机制会拒绝从核心模块和内置插件导入已弃用的 SDK。 |
+| **等待所有者决定**                  | 没有 `removeAfter` 或 `removalGate` 的记录会继续处于已弃用状态，并且不具备移除资格，直到其所有者发布移除门槛。                       |
+| **每条兼容性记录的 `removeAfter` 日期** | 到达该日期的接口将具备移除资格；日期过后，`pnpm plugins:boundary-report --fail-on-eligible-compat` 会使 CI 失败。  |
+| **下一个 Plugin SDK 主要版本**                   | `inbound-reply-dispatch` 将达到其明确的 `next-plugin-sdk-major` 门槛；在该版本边界之前，它不具备基于日期的移除资格。         |
 
 以下剩余的公共 SDK 子路径均有注册表支持的移除窗口。
 7 月 30 日的条目已在早期获得维护者授权的清理中移除：
 未使用的子路径已删除，较早的兼容性别名已删除，
 仅随内置模块使用的模块已降级为私有本地构建映射。
 
-| `removeAfter` | 层级                             | SDK 子路径                                                                                                                                                                        |
-| ------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `2026-08-15`  | 较早的兼容性弃用                 | `agent-config-primitives`、`channel-logging`、`channel-secret-runtime`、`channel-streaming`、`group-access`、`inbound-reply-dispatch`、`matrix`、`text-runtime`、`zod`              |
-| `2026-09-01`  | 较早的兼容性弃用                 | `channel-lifecycle`、`channel-message`、`channel-reply-pipeline`、`config-runtime`、`infra-runtime`                                                                                 |
-| `2026-10-01`  | 媒体旧版投影                     | `agent-media-payload`，以及非子路径的 `MsgContext Media*` 字段、频道入站媒体负载构建器、`buildMediaPayload`、钩子媒体别名和 `{{Media*}}` 模板 |
+| 移除门槛            | 层级                               | SDK 子路径                                                                                                                                                                        |
+| ----------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `2026-08-15`            | 早期兼容性弃用 | `agent-config-primitives`、`channel-logging`、`channel-secret-runtime`、`channel-streaming`、`group-access`、`matrix`、`text-runtime`、`zod`                                        |
+| `2026-09-01`            | 早期兼容性弃用 | `channel-lifecycle`、`channel-message`、`channel-reply-pipeline`、`config-runtime`、`infra-runtime`                                                                                 |
+| `next-plugin-sdk-major` | 主要版本兼容性门槛   | `inbound-reply-dispatch`                                                                                                                                                            |
+| `2026-10-01`            | 媒体旧版投影            | `agent-media-payload`，以及非子路径的 `MsgContext Media*` 字段、频道入站媒体负载构建器、`buildMediaPayload`、钩子媒体别名和 `{{Media*}}` 模板 |
 
 所有核心插件都已完成迁移。外部插件应在下一个主要版本发布前完成迁移。运行
 `pnpm plugins:boundary-report`，即可查看你所使用接口中哪些兼容性记录最早到期。

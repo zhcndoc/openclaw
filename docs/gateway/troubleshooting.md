@@ -245,17 +245,17 @@ openclaw logs --follow
     - 对于本地 MLX/vLLM 风格服务器出现 `model_not_found`：请验证 `baseUrl` 是否包含 `/v1`，`api` 是否为 `"openai-completions"`（适用于 `/v1/chat/completions` 后端），以及 `models.providers.<provider>.models[].id` 是否为提供方本地的裸 id。首次选择时带上提供方前缀，例如 `mlx/mlx-community/Qwen3-30B-A3-B-6bit`；目录条目应保持为 `mlx-community/Qwen3-30B-A3-B-6bit`。
     - `messages[...].content: invalid type: sequence, expected a string`：后端拒绝结构化的 Chat Completions 内容分片。修复方法：设置 `models.providers.<provider>.models[].compat.requiresStringContent: true`。
     - `validation.keys` 或允许的消息键仅为 `["role","content"]`：后端拒绝 Chat Completions 消息中的 OpenAI 风格回放元数据。修复方法：设置 `models.providers.<provider>.models[].compat.strictMessageKeys: true`。
-    - `incomplete turn detected ... stopReason=stop payloads=0`：后端已完成 Chat Completions 请求，但该轮没有返回任何用户可见的助手文本。OpenClaw 会对可回放且为空的 OpenAI 兼容轮次重试一次；持续失败通常意味着后端在输出空/非文本内容，或抑制了最终答案文本。
-    - 直接的小型请求成功，但 OpenClaw 代理运行在后端/模型崩溃（例如某些 `inferrs` 构建上的 Gemma）时失败：OpenClaw 的传输层很可能已经正确；后端是在更大的代理运行时提示词形状下失败。
-    - 禁用工具后失败有所减少但并未消失：工具 schema 曾增加压力，但剩余问题仍然是上游模型/服务器容量或后端缺陷。
+    - `incomplete turn detected ... stopReason=stop payloads=0`：后端已完成 Chat Completions 请求，但该轮没有返回任何用户可见的助手文本。OpenClaw 会对可回放且为空的 OpenAI 兼容轮次重试一次；持续失败通常意味着后端在输出空／非文本内容，或抑制了最终答案文本。
+    - 直接的小型请求成功，但 OpenClaw 代理运行在后端／模型崩溃（例如某些 `inferrs` 构建上的 Gemma）时失败：OpenClaw 的传输层很可能已经正确；后端是在更大的代理运行时提示词形状下失败。
+    - 禁用工具后失败有所减少但并未消失：工具 schema 曾增加压力，但剩余问题仍然是上游模型／服务器容量或后端缺陷。
 
   </Accordion>
   <Accordion title="修复选项">
     1. 为仅接受字符串的 Chat Completions 后端设置 `compat.requiresStringContent: true`。
     2. 为只接受每条消息中 `role` 和 `content` 的严格 Chat Completions 后端设置 `compat.strictMessageKeys: true`。
-    3. 为无法稳定处理 OpenClaw 工具模式面的模型/后端设置 `compat.supportsTools: false`。
+    3. 为无法稳定处理 OpenClaw 工具模式面的模型／后端设置 `compat.supportsTools: false`。
     4. 尽可能降低提示词压力：更小的工作区启动内容、更短的会话历史、更轻量的本地模型，或使用更强的长上下文支持后端。
-    5. 如果小型直接请求持续通过，而 OpenClaw 代理轮次仍然在后端内部崩溃，则应将其视为上游服务器/模型限制，并用被接受的载荷形状向上游提交复现问题。
+    5. 如果小型直接请求持续通过，而 OpenClaw 代理轮次仍然在后端内部崩溃，则应将其视为上游服务器／模型限制，并用被接受的载荷形状向上游提交复现问题。
   </Accordion>
 </AccordionGroup>
 
@@ -408,16 +408,16 @@ openclaw gateway status --deep   # 也会扫描系统级服务
 
 - `Runtime: stopped` 并带有退出提示。
 - 服务配置不匹配（`Config (cli)` vs `Config (service)`）。
-- 端口/监听冲突。
+- 端口／监听冲突。
 - 使用 `--deep` 时额外的 launchd/systemd/schtasks 安装。
 - `Other gateway-like services detected (best effort)` 的清理提示。
 
 <AccordionGroup>
   <Accordion title="常见特征">
-    - `Gateway start blocked: set gateway.mode=local` 或 `existing config is missing gateway.mode` → 未启用本地 gateway 模式，或者配置文件被覆盖并丢失了 `gateway.mode`。修复方法：在配置中设置 `gateway.mode="local"`，或者重新运行 `openclaw onboard --mode local` / `openclaw setup` 以重新写入预期的本地模式配置。如果你通过 Podman 运行 OpenClaw，默认配置路径是 `~/.openclaw/openclaw.json`。
+    - `Gateway start blocked: set gateway.mode=local` 或 `existing config is missing gateway.mode` → 未启用本地 gateway 模式，或者配置文件被覆盖并丢失了 `gateway.mode`。修复方法：在配置中设置 `gateway.mode="local"`，或者重新运行 `openclaw onboard --mode local` ／ `openclaw setup` 以重新写入预期的本地模式配置。如果你通过 Podman 运行 OpenClaw，默认配置路径是 `~/.openclaw/openclaw.json`。
     - `refusing to bind gateway ... without auth` → 在没有有效 gateway 认证路径（token/password，或已配置的 trusted-proxy）的情况下进行非 loopback 绑定。
-    - `another gateway instance is already listening` / `EADDRINUSE` → 端口冲突。
-    - `Other gateway-like services detected (best effort)` → 存在陈旧或并行的 launchd/systemd/schtasks 单元。大多数部署应保持每台机器仅一个 gateway；如果确实需要多个，请隔离端口 + 配置/状态/工作区。参见 [/gateway#multiple-gateways-same-host](/gateway#multiple-gateways-same-host)。
+    - `another gateway instance is already listening` ／ `EADDRINUSE` → 端口冲突。
+    - `Other gateway-like services detected (best effort)` → 存在陈旧或并行的 launchd/systemd/schtasks 单元。大多数部署应保持每台机器仅一个 gateway；如果确实需要多个，请隔离端口＋配置／状态／工作区。参见 [/gateway#multiple-gateways-same-host](/gateway#multiple-gateways-same-host)。
     - 来自 doctor 的 `System-level OpenClaw gateway service detected` → 存在系统级 systemd 单元，而用户级服务缺失。请在允许 doctor 安装用户服务之前移除或禁用重复项，或者如果系统单元才是预期的监管者，则设置 `OPENCLAW_SERVICE_REPAIR_POLICY=external`。
     - `Gateway service port does not match current gateway config` → 已安装的监督进程仍然固定在旧的 `--port`。运行 `openclaw doctor --fix` 或 `openclaw gateway install --force`，然后重启 gateway 服务。
 
@@ -480,7 +480,7 @@ launchctl print gui/$UID/ai.openclaw.gateway | grep -E "state|last exit|runs"
 
 - [macOS 平台说明](/platforms/macos)
 - [日志](/logging)
-- [Doctor](/gateway/doctor)
+- [Doctor](/gateway/doctor)。
 
 ## macOS launchd 监督循环，重复的 gateway/node LaunchAgents
 
@@ -583,7 +583,7 @@ openclaw gateway diagnostics export
 - `critical memory pressure bundle written` 在重启前不久出现 → OpenClaw 捕获了 OOM 发生前的稳定性包。使用 `openclaw gateway stability --bundle latest` 检查它。
 - `memory pressure: level=critical` 出现在 gateway 日志中 → OpenClaw 检测到严重内存压力，并记录了进程内可用的内存信息。
 - `Largest session files:` 指向一个非常大的脱敏转录路径 → 减少保留的会话历史记录，检查会话增长情况，或在重启前将旧转录移出活动存储。
-- `V8 heap:` 的已使用字节数接近堆限制 → 首先降低提示词/会话压力，或减少并发工作。对于托管服务，检查 `openclaw gateway status` 中的 `Gateway heap:`；如果显示 `not set`，请使用 `openclaw gateway install --force` 重新生成旧的服务元数据。环境 shell 中的 `NODE_OPTIONS` 会被有意忽略。只有在确认持续工作负载后，才使用明确的 supervisor 级堆覆盖设置，并为原生内存留出足够余量。
+- `V8 heap:` 的已使用字节数接近堆限制 → 首先降低提示词／会话压力，或减少并发工作。对于托管服务，检查 `openclaw gateway status` 中的 `Gateway heap:`；如果显示 `not set`，请使用 `openclaw gateway install --force` 重新生成旧的服务元数据。环境 shell 中的 `NODE_OPTIONS` 会被有意忽略。只有在确认持续工作负载后，才使用明确的 supervisor 级堆覆盖设置，并为原生内存留出足够余量。
 - `Memory pressure: critical/rss_growth` → 内存在一个采样窗口内快速增长。检查最新日志中是否存在大规模导入、失控的工具输出、重复重试或一批排队的 agent 工作。
 - 日志中出现严重内存压力，但没有生成稳定性包 → 在事件发生后执行 `openclaw gateway diagnostics export`，以获取可用的运行证据。
 
@@ -718,7 +718,7 @@ openclaw config get channels
 - [通道故障排查](/channels/troubleshooting)
 - [Discord](/channels/discord)
 - [Telegram](/channels/telegram)
-- [WhatsApp](/channels/whatsapp)
+- [WhatsApp](/channels/whatsapp)。
 
 ## Cron 和 heartbeat 投递
 
@@ -742,10 +742,11 @@ openclaw logs --follow
   <Accordion title="常见特征">
     - `cron: scheduler disabled; jobs will not run automatically` → cron 已禁用。
     - `cron: timer tick failed` → 调度器计时器触发失败；检查文件、日志和运行时错误。
-    - `heartbeat skipped`，且 `reason=quiet-hours` → 当前处于活动时间窗口之外。
-    - `heartbeat skipped`，且 `reason=empty-heartbeat-file` → heartbeat 监控暂存文件仅包含空白、注释、标题、代码围栏或空检查清单脚手架，因此 OpenClaw 跳过模型调用。
+    - `heartbeat skipped` with `reason=quiet-hours` → 当前处于活跃时间窗口之外。
+    - `heartbeat skipped` with `reason=empty-heartbeat-file` → heartbeat 监视器临时文件只包含空白、注释、标头、围栏或空检查清单脚手架，因此 OpenClaw 跳过模型调用。
+    - `heartbeat skipped` with `reason=no-route` → 默认的 `owner` 目标在 `commands.ownerAllowFrom` 或频道 `allowFrom` 中没有具体所有者，所有者无法解析为 DM，或未配置任何频道。显式的 `last` 还需要会话对话路由。
     - `heartbeat: unknown accountId` → heartbeat 投递目标的账户 ID 无效。
-    - `heartbeat skipped`，且 `reason=dm-blocked` → heartbeat 目标解析为 DM 类型的目标，而 `agents.defaults.heartbeat.directPolicy`（或单个代理的覆盖设置）被设为 `block`。
+    - `heartbeat skipped` with `reason=dm-blocked` → heartbeat 目标解析为 DM 风格的目的地，而 `agents.defaults.heartbeat.directPolicy`（或每个 agent 的覆盖设置）被设为 `block`。
 
   </Accordion>
 </AccordionGroup>
@@ -754,7 +755,7 @@ openclaw logs --follow
 
 - [Heartbeat](/gateway/heartbeat)
 - [计划任务](/automation/cron-jobs)
-- [计划任务：故障排查](/automation/cron-jobs#troubleshooting)
+- [计划任务：故障排查](/automation/cron-jobs#troubleshooting)。
 
 ## 节点已配对，但工具失败
 
@@ -785,7 +786,7 @@ openclaw status
 
 - [执行批准](/tools/exec-approvals)
 - [节点故障排查](/nodes/troubleshooting)
-- [节点](/nodes/index)
+- [节点](/nodes/index)。
 
 ## 浏览器工具失败
 
@@ -877,13 +878,13 @@ openclaw doctor
 
     需要检查的内容：
 
-    - 非 loopback 绑定（`lan`、`tailnet`、`custom`）需要有效的 gateway 认证路径：共享令牌/密码认证，或者经过正确配置的非 loopback `trusted-proxy` 部署。
+    - 非 loopback 绑定（`lan`、`tailnet`、`custom`）需要有效的 gateway 认证路径：共享令牌／密码认证，或者经过正确配置的非 loopback `trusted-proxy` 部署。
     - 较旧的键，例如 `gateway.token`，不能替代 `gateway.auth.token`。
 
     常见特征：
 
     - `refusing to bind gateway ... without auth` → 非 loopback 绑定，但没有有效的 gateway 认证路径。
-    - `Connectivity probe: failed` 且运行时正在运行 → gateway 已启动，但在当前认证/URL 下不可达。
+    - `Connectivity probe: failed` 且运行时正在运行 → gateway 已启动，但在当前认证／URL 下不可达。
 
   </Accordion>
   <Accordion title="3. 配对和设备身份状态已更改">
@@ -896,18 +897,18 @@ openclaw doctor
 
     需要检查的内容：
 
-    - 仪表盘/节点是否有待处理的设备批准。
+    - 仪表盘／节点是否有待处理的设备批准。
     - 在策略或身份变更后，是否存在待处理的 DM 配对批准。
 
     常见特征：
 
     - `device identity required` → 设备认证不满足。
-    - `pairing required` → 发送方/设备必须先获得批准。
+    - `pairing required` → 发送方／设备必须先获得批准。
 
   </Accordion>
 </AccordionGroup>
 
-如果检查后，服务配置和运行时仍然不一致，请从同一个配置文件/状态目录重新安装服务元数据：
+如果检查后，服务配置和运行时仍然不一致，请从同一个配置文件／状态目录重新安装服务元数据：
 
 ```bash
 openclaw gateway install --force
@@ -916,9 +917,9 @@ openclaw gateway restart
 
 相关：
 
-- [Authentication](/gateway/authentication)
-- [Background exec and process tool](/gateway/background-process)
-- [Node pairing](/gateway/pairing)
+- [认证](/gateway/authentication)
+- [后台执行和进程工具](/gateway/background-process)
+- [节点配对](/gateway/pairing)
 
 ## 相关
 

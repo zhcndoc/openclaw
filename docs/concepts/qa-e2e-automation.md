@@ -14,10 +14,10 @@ title: "QA 概览"
 
 组成部分：
 
-- `extensions/qa-channel`: 带有 DM、频道、线程、反应、编辑和删除表面的合成消息通道。
-- `extensions/qa-lab`: 调试器 UI、QA 总线、场景运行器，以及用于观察对话记录、
+- `extensions/qa-channel`：带有 DM、频道、线程、反应、编辑和删除表面的合成消息通道。
+- `extensions/qa-lab`：调试器 UI、QA 总线、场景运行器，以及用于观察对话记录、
   注入入站消息和导出 Markdown 报告的实时传输适配器。
-- `qa/`: 用于启动任务和基线 QA
+- `qa/`：用于启动任务和基线 QA
   场景的基于仓库的种子资产。
 - [Mantis](/concepts/mantis)：针对需要真实传输、浏览器截图、虚拟机状态和 PR 证据的 bug，
   提供前后对比的实时验证。
@@ -253,7 +253,7 @@ Discord 也有仅供 Mantis 使用的按需场景，用于 bug 复现。使用
 `--scenario discord-thread-reply-filepath-attachment` 创建一个真实的 Discord thread，并验证 `message.thread-reply`
 保留了一个 `filePath` 附件。这些场景不会进入默认的实时 Discord 通道，因为它们是前后对比的复现探针，而不是广泛的烟雾测试覆盖。线程附件的 Mantis 工作流在
 `MANTIS_DISCORD_VIEWER_CHROME_PROFILE_DIR` 或
-`MANTIS_DISCORD_VIEWER_CHROME_PROFILE_TGZ_B64` 已在 QA 环境中配置时，还可以添加一个已登录的 Discord Web 见证视频。该 viewer profile 仅用于视觉捕获；通过/失败的决定仍然来自 Discord REST oracle。
+`MANTIS_DISCORD_VIEWER_CHROME_PROFILE_TGZ_B64` 已在 QA 环境中配置时，还可以添加一个已登录的 Discord Web 见证视频。该 viewer profile 仅用于视觉捕获；通过／失败的决定仍然来自 Discord REST oracle。
 
 对于其他真实传输的烟雾测试线路：
 
@@ -334,7 +334,7 @@ pnpm openclaw qa mantis visual-task \
 `mantis-visual-task-summary.json`、`mantis-visual-task-driver-result.json`，以及
 `mantis-visual-task-report.md`。当设置了 `--expect-text` 时，视觉提示会要求结构化 JSON 判定（`visible`、`evidence`、`reason`），且只有当模型报告 `visible: true`
 并提供引用预期文本的证据时才算通过；如果 `visible: false` 只是复述目标文本，也仍然会失败。使用 `--vision-mode metadata` 可进行无需模型的烟雾测试，以证明桌面、浏览器、截图和视频
-管道正常，而无需调用图像理解提供方。录制是 `visual-task` 的必需产物；如果 Crabbox 没有录到非空的 `visual-task.mp4`，即便视觉驱动通过了，该任务也会失败。在失败时，Mantis 会保留该租约以便通过 VNC 查看，除非任务已经通过且未设置 `--keep-lease`】【。
+管道正常，而无需调用图像理解提供方。录制是 `visual-task` 的必需产物；如果 Crabbox 没有录到非空的 `visual-task.mp4`，即便视觉驱动通过了，该任务也会失败。在失败时，Mantis 会保留该租约以便通过 VNC 查看，除非任务已经通过且未设置 `--keep-lease`
 
 ### 凭证池健康检查
 
@@ -435,8 +435,7 @@ pnpm openclaw qa telegram
 
 `release` 配置文件会选择由分类体系管理的 Telegram 场景，这些场景声明了
 频道、使用流程执行类型，并匹配所请求的提供商和模型通道。显式指定
-`--scenario` 的值会收窄同一选择范围，而不是绕过这些约束。使用
-`pnpm openclaw qa telegram --list-scenarios
+`--scenario` 的值会收窄同一选择范围，而不是绕过这些约束。使用 `pnpm openclaw qa telegram --list-scenarios
 --provider-mode mock-openai` 可打印当前选择及回归引用。提供 `--model` 时，
 列出和执行都会应用相同的模型约束。
 
@@ -477,7 +476,7 @@ pnpm test:docker:npm-telegram-live
 pnpm openclaw qa discord
 ```
 
-针对一个真实的私有 Discord 服务器频道，使用两个机器人：一个由 harness 控制的驱动机器人，以及一个通过捆绑的 Discord 插件由子 OpenClaw 网关启动的被测机器人（SUT bot）。验证频道提及处理、SUT bot 是否已向 Discord 注册原生的 `/help` 命令，以及可选的 Mantis 证据场景。
+针对一个真实的私有 Discord 服务器频道，使用两个机器人：一个由测试框架控制的驱动机器人，以及一个通过捆绑的 Discord 插件由子 OpenClaw 网关启动的被测机器人（SUT bot）。验证频道提及处理、SUT bot 是否已向 Discord 注册原生的 `/help` 命令，以及可选的 Mantis 证据场景。
 
 在 `--credential-source env` 时所需的环境变量：
 
@@ -490,7 +489,7 @@ pnpm openclaw qa discord
 
 可选项：
 
-- `OPENCLAW_QA_DISCORD_VOICE_CHANNEL_ID` 选择 `discord-voice-autojoin` 的语音/Stage 频道；如果不提供，场景会为 SUT bot 选择第一个可见的语音/Stage 频道。
+- `OPENCLAW_QA_DISCORD_VOICE_CHANNEL_ID` 选择 `discord-voice-autojoin` 的语音／Stage 频道；如果不提供，场景会为 SUT bot 选择第一个可见的语音／Stage 频道。
 
 Discord YAML 模块场景（`qa/scenarios/channels/discord-*.yaml`）：
 
@@ -499,11 +498,11 @@ Discord YAML 模块场景（`qa/scenarios/channels/discord-*.yaml`）：
 - `discord-native-help-command-registration`
 - `discord-voice-autojoin` - 可选的语音场景。它会单独运行，启用
   `channels.discord.voice.autoJoin`，并验证 SUT bot 当前的
-  Discord 语音状态是否为目标语音/Stage 频道。Convex Discord
+  Discord 语音状态是否为目标语音／Stage 频道。Convex Discord
   凭据可以包含可选的 `voiceChannelId`；否则 runner
-  适配器会在服务器中发现第一个可见的语音/Stage 频道。
+  适配器会在服务器中发现第一个可见的语音／Stage 频道。
 - `discord-status-reactions-tool-only` - 可选的 Mantis 场景。它会单独运行，因为它会将 SUT 切换为始终在线、仅工具的服务器回复，设置 `messages.statusReactions.enabled=true`，然后捕获 REST
-  反应时间线以及 HTML/PNG 可视化工件。Mantis 前后
+  反应时间线以及 HTML／PNG 可视化工件。Mantis 前后
   报告也会将场景提供的 MP4 工件分别保存为 `baseline.mp4`
   和 `candidate.mp4`。
 - `discord-thread-reply-filepath-attachment` - 可选的 Mantis 场景；请参见
@@ -566,20 +565,22 @@ Slack YAML 模块场景（`qa/scenarios/channels/slack-*.yaml`）：
 
 - `slack-canary`
 - `slack-mention-gating`
-- `slack-mpim-app-mention-dedupe` - 打开一个真实的 C 前缀群组私信，验证在消息/app-mention 双重投递后 SUT 恰好回复一次，确认原生线程后续消息能够找回该机器人回复，然后关闭 MPIM。
+- `slack-mpim-app-mention-dedupe` —— 打开一个真实的 C 前缀群组私信，验证在消息／app-mention 双重投递后 SUT 恰好回复一次，确认原生线程后续消息能够找回该机器人回复，然后关闭 MPIM。
 - `slack-allowlist-block`
-- `slack-channel-disabled-warning` - 可选的真实 Slack 探测，用于确认已配置的禁用频道会发出结构化警告而不会回复。
+- `slack-channel-disabled-warning` —— 可选的真实 Slack 探测，用于确认已配置的禁用频道会发出结构化警告而不会回复。
 - `slack-top-level-reply-shape`
 - `slack-restart-resume`
-- `slack-progress-commentary-true`、`slack-progress-commentary-false`、`slack-progress-commentary-omitted` 和 `slack-progress-commentary-verbose-dedupe` - 针对独立 commentary/tool-progress 控制、遗漏键的旧默认行为，以及在持久化 verbose progress 开启时单次投递行为的可选真实 Slack 探测。
-- `slack-reaction-glyph-native` - 可选的实时 message-tool reaction 场景。指示 agent 传递精确的 `✅` 符号，并确认 Slack 已为目标消息上的 SUT bot 存储了 `white_check_mark`。
-- `slack-chart-presentation-native` - 可选的可移植图表场景，用于验证原生 `data_visualization` block 和精确的可访问文本。
-- `slack-table-presentation-native` - 可选的可移植表格场景，用于验证原生 `data_table` block、精确行内容和可访问文本。
-- `slack-table-invalid-blocks-fallback` - 可选的直接传输场景，通过生产 Slack 发送路径发送一个结构上可读但超限的原始表格，包含 101 行数据以及其表头，证明 Slack 本身返回 `invalid_blocks`，并验证已存储的禁用格式回退是完整的且没有原生数据 block。场景细节仅保留安全的错误码、计数和布尔证据。
-- `slack-approval-exec-native` - 可选的原生 Slack exec approval 场景。通过 gateway 请求一次 exec approval，验证 Slack 消息具有原生批准按钮，完成批准，并验证已解决的 Slack 更新。
-- `slack-approval-plugin-native` - 可选的原生 Slack plugin approval 场景。将 exec 和 plugin approval 转发一起启用，以便 plugin 事件不会被 exec approval 路由抑制，然后验证相同的 pending/resolved 原生 Slack UI 路径。
-- `slack-codex-approval-exec-native` - 可选的 Codex Guardian command approval 场景。以 Guardian 模式启用 Codex plugin，通过 Codex app-server harness 将一个源自 Slack 的 Gateway agent turn 路由过去，等待 `openclaw-codex-app-server` 的原生 Slack plugin approval 提示，完成解决，并验证 Codex turn 以预期的 command-output 和 assistant markers 结束。
-- `slack-codex-approval-plugin-native` - 可选的 Codex Guardian file approval 场景。使用工作区外的 `apply_patch` 指令，以便 Codex 发出 app-server 文件更改审批路径，然后验证相同的原生 Slack pending/resolved approval 路径、最终 assistant marker，以及在清理前的精确文件内容。
+- `slack-progress-commentary-true`、`slack-progress-commentary-false`、
+  `slack-progress-commentary-omitted` 和
+  `slack-progress-commentary-verbose-dedupe` —— 用于验证独立的 commentary／工具进度控制、省略键时的传统默认值，以及启用持久化详细进度时的单次投递行为的可选真实 Slack 探测。
+- `slack-reaction-glyph-native` —— 可选的实时消息工具 reaction 场景。指示 agent 传递确切的 `✅` 字形，并确认 Slack 已为目标消息上的 SUT bot 存储 `white_check_mark`。
+- `slack-chart-presentation-native` —— 可选的可移植图表场景，用于验证原生 `data_visualization` 块和确切的可访问文本。
+- `slack-table-presentation-native` —— 可选的可移植表格场景，用于验证原生 `data_table` 块、确切的行和可访问文本。
+- `slack-table-invalid-blocks-fallback` —— 可选的直接传输场景，通过生产 Slack 发送路径发送一个结构上可读但超出限制的原始表格，其中包含 101 个数据行及其表头，证明 Slack 本身返回 `invalid_blocks`，并验证已存储的禁用格式回退内容完整且不含原生数据块。场景详情仅保留安全的错误代码、计数和布尔证据。
+- `slack-approval-exec-native` —— 可选的原生 Slack exec 批准场景。通过 gateway 请求 exec 批准，验证 Slack 消息包含原生批准按钮，解决该批准，并验证已解决的 Slack 更新。
+- `slack-approval-plugin-native` —— 可选的原生 Slack plugin 批准场景。同时启用 exec 和 plugin 批准转发，使 plugin 事件不会被 exec 批准路由抑制，然后验证相同的待处理／已解决原生 Slack UI 路径。
+- `slack-codex-approval-exec-native` —— 可选的 Codex Guardian 命令批准场景。以 Guardian 模式启用 Codex plugin，通过 Codex app-server harness 将源自 Slack 的 Gateway agent turn 路由出去，等待针对 `codex` 的原生 Slack plugin 批准提示，解决该批准，并验证 Codex turn 以预期的命令输出和 assistant 标记完成。
+- `slack-codex-approval-plugin-native` —— 可选的 Codex Guardian 文件批准场景。使用工作区外的 `apply_patch` 指令，使 Codex 发出 app-server 文件更改批准路由，然后验证相同的原生 Slack 待处理／已解决批准路径、最终 assistant 标记，以及清理前的确切文件内容。
 
 Codex approval 场景需要 `openai/*` 或 `codex/*` 的 `--model`、正常的 live model 凭据，以及被 Codex plugin 接受的 Codex auth 或 API-key auth。
 场景细节包括 Codex app-server 方法、所选 Codex model key、最终 Codex turn status，以及与已脱敏 Slack approval metadata 一起的 operation-marker 验证。
@@ -588,22 +589,22 @@ Codex approval 场景需要 `openai/*` 或 `codex/*` 的 `--model`、正常的 l
 
 - `qa-suite-report.md`
 - `qa-suite-summary.json`
-- `qa-evidence.json` - 实时传输检查的证据条目。
-- `approval-checkpoints/` - 仅当 Mantis 设置了 `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_DIR` 时；包含 checkpoint JSON、确认 JSON，以及 pending/resolved 截图。
+- `qa-evidence.json` —— 实时传输检查的证据条目。
+- `approval-checkpoints/` —— 仅当 Mantis 设置了 `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_DIR` 时；包含 checkpoint JSON、确认 JSON，以及 pending／resolved 截图。
 
 #### 设置 Slack 工作区
 
 该通道需要同一工作区中的两个不同 Slack 应用，以及一个两个机器人都加入的频道：
 
-- `channelId` - 两个机器人都已被邀请加入的频道的 `Cxxxxxxxxxx` id。请使用专用频道；该通道每次运行都会发消息。
-- `driverBotToken` - **Driver** 应用的 bot token（`xoxb-...`）。
-- `sutBotToken` - **SUT** 应用的 bot token（`xoxb-...`），它必须与 driver 是不同的 Slack 应用，这样它的 bot user id 才会不同。
-- `sutAppToken` - SUT 应用的 app-level token（`xapp-...`），带有 `connections:write`，由 Socket Mode 使用，使 SUT 应用能够接收事件。
+- `channelId` —— 两个机器人都已被邀请加入的频道的 `Cxxxxxxxxxx` id。请使用专用频道；该通道每次运行都会发消息。
+- `driverBotToken` —— **Driver** 应用的 bot token（`xoxb-...`）。
+- `sutBotToken` —— **SUT** 应用的 bot token（`xoxb-...`），它必须与 driver 是不同的 Slack 应用，这样它的 bot user id 才会不同。
+- `sutAppToken` —— SUT 应用的 app-level token（`xapp-...`），带有 `connections:write`，由 Socket Mode 使用，使 SUT 应用能够接收事件。
 
 优先使用专用于 QA 的 Slack 工作区，而不是复用生产工作区。
 
 下面的 SUT manifest 故意将捆绑的 Slack 插件生产安装（`extensions/slack/src/setup-shared.ts:12`）收窄为 live Slack QA 套件所覆盖的权限和事件。对于用户所见的生产频道设置，请参见
-[Slack 频道快速设置](/channels/slack#quick-setup)；QA Driver/SUT 对是故意分开的，因为该通道需要同一工作区中的两个不同 bot user id。
+[Slack 频道快速设置](/channels/slack#quick-setup)；QA Driver／SUT 对是故意分开的，因为该通道需要同一工作区中的两个不同 bot user id。
 
 **1. 创建 Driver 应用**
 
@@ -633,7 +634,7 @@ _From a manifest_ → 选择 QA 工作区，粘贴以下 manifest，然后 _Inst
 }
 ```
 
-复制 _Bot User OAuth Token_（`xoxb-...`）- 它将成为
+复制 _Bot User OAuth Token_（`xoxb-...`）—— 它将成为
 `driverBotToken`。driver 只需要发送消息并识别自己；不需要事件，也不需要 Socket Mode。
 
 **2. 创建 SUT 应用**
@@ -724,7 +725,7 @@ Slack 创建应用后，在其设置页面执行两件事：
 /invite @OpenClaw QA SUT
 ```
 
-从 _channel info → About → Channel ID_ 复制 `Cxxxxxxxxxx` id - 它将成为
+从 _channel info → About → Channel ID_ 复制 `Cxxxxxxxxxx` id —— 它将成为
 `channelId`。公开频道可以使用；如果你使用私有频道，两个应用已经拥有 `groups:history`，因此 harness 的历史读取仍然会成功。
 
 **4. 注册凭据**

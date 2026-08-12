@@ -11,11 +11,11 @@ read_when:
 OpenClaw 有两种协同工作的护栏，用于防止重复的工具调用模式，
 两者都在 `tools.loopDetection` 下配置：
 
-1. **循环检测** (`enabled`) - 默认禁用。监视滚动的
+1. **循环检测**（`enabled`）- 默认禁用。监视滚动的
    工具调用历史，查找重复模式和未知工具重试。
 2. **压缩后护栏** - 只要
    `enabled` 没有被显式设为 `false` 就会启用。每次压缩重试后都会武装，并在
-   代理在窗口内重复相同的 `(tool, args, result)` 三元组时中止运行。
+   代理在窗口内重复相同的（`tool`、`args`、`result`）三元组时中止运行。
 
 将 `tools.loopDetection.enabled: false` 设为静音两种护栏。
 
@@ -45,16 +45,16 @@ OpenClaw 有两种协同工作的护栏，用于防止重复的工具调用模�
 ```json5
 {
   agents: {
-    list: [
-      {
-        id: "safe-runner",
+    entries: {
+      "safe-runner": {
+        default: true,
         tools: {
           loopDetection: {
             enabled: true,
           },
         },
       },
-    ],
+    },
   },
 }
 ```

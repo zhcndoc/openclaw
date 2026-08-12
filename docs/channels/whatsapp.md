@@ -63,7 +63,7 @@ openclaw channels login --channel whatsapp
 openclaw channels login --channel whatsapp --account work
 ```
 
-    在登录前附加现有/自定义认证目录：
+    在登录前附加现有／自定义认证目录：
 
 ```bash
 openclaw channels add --channel whatsapp --account work --auth-dir /path/to/wa-auth
@@ -97,7 +97,7 @@ openclaw pairing approve whatsapp <CODE>
 </Steps>
 
 <Note>
-建议使用独立的 WhatsApp 号码（相关设置和元数据已针对其优化），但个人号码/自聊配置也完全受支持。
+建议使用独立的 WhatsApp 号码（相关设置和元数据已针对其优化），但个人号码／自聊配置也完全受支持。
 </Note>
 
 ## 部署模式
@@ -256,7 +256,7 @@ WhatsApp 审批反应要求在 `allowFrom` 中显式指定审批人（或使用 
 
 <Tabs>
   <Tab title="私信策略">
-    `channels.whatsapp.dmPolicy`:
+    `channels.whatsapp.dmPolicy`：
 
     | 值 | 行为 |
     | --- | --- |
@@ -458,23 +458,18 @@ WhatsApp 通过顶层的 `bindings[]` 支持持久化 ACP 绑定：
 
 ## 确认反应
 
-`channels.whatsapp.ackReaction` 会在收到入站消息时立即发送一个反应，并受 `reactionLevel` 控制（当为 `"off"` 时会被抑制）：
+`messages.ackReaction` 会在收到入站消息后立即发送反应，其受活跃 WhatsApp 账户的 `reactionLevel` 控制（当设置为 `"off"` 时会被抑制）。`messages.ackReactionScope` 用于选择私信、群组或两者：
 
 ```json5
 {
-  channels: {
-    whatsapp: {
-      ackReaction: {
-        emoji: "👀",
-        direct: true,
-        group: "提及", // 始终 | 提及 | 从不
-      },
-    },
+  messages: {
+    ackReaction: "👀",
+    ackReactionScope: "group-mentions", // all | direct | group-all | group-mentions | off
   },
 }
 ```
 
-注意：会在入站消息被接受后立即发送（在回复之前）；如果存在 `ackReaction` 但没有 `emoji`，WhatsApp 会使用被路由到的代理身份 emoji，并回退为 `"👀"`（如需不发送确认反应，请省略 `ackReaction` 或将 `emoji: ""`）；失败会被记录，但不会阻止回复投递；`group` 模式 `mentions` 仅对由提及触发的轮次生效，而 `group` 激活为 `always` 时会绕过该检查；WhatsApp 仅使用 `channels.whatsapp.ackReaction`（旧的 `messages.ackReaction` 不适用）。
+注意：反应会在接受入站消息后立即发送（回复前）；省略 `messages.ackReaction` 或将其设置为 `""` 可不发送确认反应。发送失败会被记录，但不会阻止回复传递。默认范围为 `"group-mentions"`；使用 `"all"` 可涵盖私信和所有符合条件的群组。
 
 ## 生命周期状态反应
 
@@ -490,7 +485,7 @@ WhatsApp 通过顶层的 `bindings[]` 支持持久化 ACP 绑定：
 }
 ```
 
-注意：`channels.whatsapp.ackReaction` 仍然控制直接消息和群组的可用性；queued 状态使用与普通 ack 反应相同的有效表情符号；WhatsApp 对每条消息只有一个机器人反应槽位，因此生命周期更新会就地替换当前反应，并在最终的 done/error 状态后恢复 ack。
+注意：`messages.ackReactionScope` 仍控制私聊和群组的适用性；queued 状态使用与普通确认反应相同的有效表情。WhatsApp 每条消息只有一个机器人反应槽，因此生命周期更新会原地替换当前反应，并在最终的 done/error 状态后恢复确认反应。
 
 ## 活跃回合中的输入状态
 
@@ -666,17 +661,18 @@ WhatsApp 通过 `groups` 和 `direct` 映射支持类似 Telegram 的群组与�
 
 ## 配置参考指针
 
-主要参考：[配置参考 - WhatsApp](/gateway/config-channels#whatsapp)
+主要参考： [配置参考 - WhatsApp](/gateway/config-channels#whatsapp)
 
 | 区域             | 字段                                                                                                         |
 | ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| 访问控制         | `dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`、`groups`                                             |
-| 消息投递         | `textChunkLimit`、`streaming.chunkMode`、`mediaMaxMb`、`sendReadReceipts`、`ackReaction`、`reactionLevel`      |
-| 多账户           | `accounts.<id>.enabled`、`accounts.<id>.authDir`，以及其他每个账户的覆盖设置                              |
-| 操作             | `configWrites`、`enabled`                                                                                      |
-| 入站批处理       | `messages.inbound.debounceMs`、`messages.inbound.byChannel.whatsapp`                                           |
-| 会话行为         | `session.dmScope`、`historyLimit`、`dmHistoryLimit`、`dms.<id>.historyLimit`                                   |
-| 提示词           | `groups.<id>.systemPrompt`、`groups["*"].systemPrompt`、`direct.<id>.systemPrompt`、`direct["*"].systemPrompt` |
+| 访问控制         | `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`                                             |
+| 消息传递         | `textChunkLimit`, `streaming.chunkMode`, `mediaMaxMb`, `sendReadReceipts`, `reactionLevel`                     |
+| 多账户           | `accounts.<id>.enabled`, `accounts.<id>.authDir`，以及其他按账户配置的覆盖项                                  |
+| 操作             | `configWrites`, `enabled`                                                                                      |
+| 入站批处理       | `messages.inbound.debounceMs`, `messages.inbound.byChannel.whatsapp`                                           |
+| 确认             | `messages.ackReaction`, `messages.ackReactionScope`                                                            |
+| 会话行为         | `session.dmScope`, `historyLimit`, `dmHistoryLimit`, `dms.<id>.historyLimit`                                   |
+| 提示词           | `groups.<id>.systemPrompt`, `groups["*"].systemPrompt`, `direct.<id>.systemPrompt`, `direct["*"].systemPrompt` |
 
 ## 相关内容
 

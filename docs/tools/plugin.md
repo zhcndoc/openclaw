@@ -109,7 +109,7 @@ doc-schema-version: 1
 
 ### 操作员安装策略
 
-在继续插件安装或更新之前，请将 `security.installPolicy` 配置为运行一个受信任的本地策略命令。该策略会接收元数据和暂存的源路径，并可允许或阻止安装。它适用于 CLI 和 Gateway 支持的安装/更新路径。插件的 `before_install` 钩子会在之后运行，并且只会在已加载插件钩子的 OpenClaw 进程中运行，因此请改用 `security.installPolicy` 来做由操作员拥有的安装决策。已弃用的 `--dangerously-force-unsafe-install` 标志仍为兼容性而被接受，但它不起作用：它既不会绕过安装策略，也不会绕过 OpenClaw 内置的插件依赖黑名单。
+配置 `security.installPolicy`，以便在插件安装或更新继续之前运行受信任的本地策略命令。该策略会接收元数据和暂存源路径，并可以允许或阻止安装。它同时涵盖 CLI 和由 Gateway 支持的安装／更新路径。插件 `before_install` hook 会稍后运行，并且只会在加载了插件 hook 的 OpenClaw 进程中运行，因此应使用 `security.installPolicy` 来执行由操作员负责的安装决策。已弃用的 `--dangerously-force-unsafe-install` 标志会为了兼容性而被接受，但不起作用：它不会绕过安装策略，也不会绕过 `before_install` hook 阻止。
 
 关于技能和插件共用的 `security.installPolicy` exec schema，请参见 [技能配置](/tools/skills-config#operator-install-policy-securityinstallpolicy)。
 
@@ -134,15 +134,15 @@ doc-schema-version: 1
 
 关键策略规则：
 
-- `plugins.enabled: false` 会禁用所有插件，并跳过发现/加载工作。在这种状态下，过期的插件引用会保持不活跃；如果你想移除过期的 id，请先重新启用插件再运行 doctor 清理。
+- `plugins.enabled: false` 会禁用所有插件，并跳过发现／加载工作。在这种状态下，过期的插件引用会保持不活跃；如果你想移除过期的 id，请先重新启用插件再运行 doctor 清理。
 - `plugins.deny` 的优先级高于 allow 和单个插件启用设置。
 - `plugins.allow` 是一个排他性的允许列表。允许列表之外的插件即使 `tools.allow` 包含 `"*"` 也仍然不可用。
 - `plugins.entries.<id>.enabled: false` 会禁用单个插件，同时保留其配置。
 - `plugins.load.paths` 会添加显式的本地插件文件或目录。受管理的 `plugins install` 本地路径必须是插件目录或归档文件；对于独立插件文件，请使用 `plugins.load.paths`。
 - 来自工作区的插件默认是禁用的；在使用本地工作区代码之前，请显式启用它们或将它们加入允许列表。
-- 捆绑插件会遵循其内置的默认启用/默认禁用元数据，除非配置明确覆盖它。
+- 捆绑插件会遵循其内置的默认启用／默认禁用元数据，除非配置明确覆盖它。
 - `plugins.slots.<slot>`（`memory` 或 `contextEngine`）为独占类别选择一个插件。槽位选择会计入显式激活，并会强制为该槽位启用所选插件，即使它在其他情况下需要显式启用。`plugins.deny` 和 `plugins.entries.<id>.enabled: false` 仍然会阻止它。
-- 捆绑的按需启用插件在配置命名了其拥有的任何表面时可以自动激活，例如 provider/model 引用、通道配置、CLI backend 或 agent harness runtime。
+- 捆绑的按需启用插件在配置命名了其拥有的任何表面时可以自动激活，例如 provider／model 引用、通道配置、CLI backend 或 agent harness runtime。
 - OpenAI 家族的 Codex 路由会将 provider 和 runtime 插件边界分开：旧版 Codex model 引用属于需要 doctor 修复的旧配置，而捆绑的 `codex` 插件拥有规范的 `openai/*` agent 引用、显式的 `agentRuntime.id: "codex"`，以及用于旧版 `codex/*` 引用的 Codex app-server runtime。
 
 当 `plugins.allow` 未设置且从工作区或全局插件根目录自动发现了一个非捆绑插件时，启动日志会显示
@@ -151,7 +151,7 @@ doc-schema-version: 1
 或 [`openclaw plugins inspect <id>`](/cli/plugins#inspect) 查看列出的插件 id。当诊断信息显示某个插件是
 `without install/load-path provenance` 加载的时，也适用相同的信任固定原则：先检查插件 id，然后将其固定到 `plugins.allow` 中，或从受信任的来源重新安装，以便 OpenClaw 记录安装来源。
 
-当配置验证报告过期的插件 id、allowlist/工具不匹配，或旧版捆绑插件路径时，请运行 `openclaw doctor` 或 `openclaw doctor --fix`。
+当配置验证报告过期的插件 id、allowlist／工具不匹配，或旧版捆绑插件路径时，请运行 `openclaw doctor` 或 `openclaw doctor --fix`。
 
 ## 了解插件格式
 
@@ -172,9 +172,9 @@ OpenClaw 识别两种插件格式：
 插件可以通过两种不同的 API 在运行时注册钩子：
 
 - `api.on(...)`：用于运行时生命周期事件的类型化钩子。这是中间件、策略、消息重写、提示词塑形以及工具控制的首选接口。
-- `api.registerHook(...)`：用于 [Hooks](/automation/hooks) 中描述的内部钩子系统。它主要用于较粗粒度的命令/生命周期副作用，以及与现有 HOOK 风格自动化的兼容。
+- `api.registerHook(...)`：用于 [Hooks](/automation/hooks) 中描述的内部钩子系统。它主要用于较粗粒度的命令／生命周期副作用，以及与现有 HOOK 风格自动化的兼容。
 
-快速规则：如果处理函数需要优先级、合并语义，或者阻止/取消行为，请使用类型化钩子。如果它只是响应 `command:new`、`command:reset`、`message:sent` 或类似的粗粒度事件，那么使用 `api.registerHook` 就可以了。
+快速规则：如果处理函数需要优先级、合并语义，或者阻止／取消行为，请使用类型化钩子。如果它只是响应 `command:new`、`command:reset`、`message:sent` 或类似的粗粒度事件，那么使用 `api.registerHook` 就可以了。
 
 由插件管理的内部钩子会在 `openclaw hooks list` 中以 `plugin:<id>` 的形式出现。你不能通过 `openclaw hooks` 启用或禁用它们；应改为启用或禁用该插件。
 

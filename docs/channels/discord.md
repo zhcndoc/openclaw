@@ -150,7 +150,7 @@ openclaw gateway
 DISCORD_BOT_TOKEN=...
 ```
 
-        对于脚本化或远程设置，使用 `openclaw config patch --file ./discord.patch.json5 --dry-run` 写入相同的 JSON5 块，然后在不带 `--dry-run` 的情况下重新运行。纯文本 `token` 字符串也可以使用，并且 `channels.discord.token` 支持跨 env/file/exec 提供者的 SecretRef 值。参见 [机密管理](/gateway/secrets)。
+        对于脚本化或远程设置，请使用 `openclaw config patch --file ./discord.patch.json5 --dry-run` 写入相同的 JSON5 代码块，然后不带 `--dry-run` 重新运行。纯文本 `token` 字符串同样有效，并且 `channels.discord.token` 支持 env/file/exec/store 提供程序中的 SecretRef 值。请参阅[密钥管理](/gateway/secrets)。
 
         对于多个 Discord 机器人，将每个机器人令牌和应用程序 ID 保持在各自的账户下。顶层的 `channels.discord.applicationId` 会被账户继承，因此只有当所有账户都使用相同的应用程序 ID 时才应在这里设置。
 
@@ -348,14 +348,14 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
 要限制谁可以点击按钮，请在该按钮上设置 `allowedUsers`（Discord 用户 ID、标签或 `*`）。未匹配的用户会收到一条临时拒绝提示。
 
-组件回调默认在 30 分钟后过期。设置 `channels.discord.agentComponents.ttlMs` 可更改默认账户的回调注册表生命周期，或设置 `channels.discord.accounts.<accountId>.agentComponents.ttlMs` 为每个账户单独配置。该值以毫秒为单位，必须是正整数，并且上限为 `86400000`（24 小时）。更长的 TTL 适合需要按钮在一段时间内保持可用的审核/审批工作流，但也会延长旧 Discord 消息仍可能触发操作的窗口。请优先选择最短且满足需求的 TTL，并在陈旧回调会令人意外时保留默认值。
+组件回调默认在 30 分钟后过期。设置 `channels.discord.agentComponents.ttlMs` 可更改默认账户的回调注册表生命周期，或设置 `channels.discord.accounts.<accountId>.agentComponents.ttlMs` 为每个账户单独配置。该值以毫秒为单位，必须是正整数，并且上限为 `86400000`（24 小时）。更长的 TTL 适合需要按钮在一段时间内保持可用的审核／审批工作流，但也会延长旧 Discord 消息仍可能触发操作的窗口。请优先选择最短且满足需求的 TTL，并在陈旧回调会令人意外时保留默认值。
 
 `/model` 和 `/models` 斜杠命令会打开一个交互式模型选择器，包含提供方、模型以及兼容运行时下拉菜单，并带有一个提交步骤。`/models add` 已弃用，它会返回弃用提示，而不是从聊天中注册模型。该选择器回复是临时消息，并且只有调用者本人可用。Discord 选择菜单最多限制 25 个选项，因此当你希望选择器仅显示针对特定提供方（如 `openai` 或 `vllm`）动态发现的模型时，请将 `provider/*` 条目添加到 `agents.defaults.modelPolicy.allow` 中。
 
 文件附件：
 
 - `file` 块必须指向一个附件引用（`attachment://<filename>`）
-- 通过 `media`/`path`/`filePath` 提供附件（单文件）；多个文件使用 `media-gallery`
+- 通过 `media`／`path`／`filePath` 提供附件（单文件）；多个文件使用 `media-gallery`
 - 当上传名称应与附件引用匹配时，使用 `filename` 覆盖上传名
 
 模态表单：
@@ -718,15 +718,15 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 }
 ```
 
-    - `off` 禁用 Discord 预览编辑。
+    - `off` 会禁用 Discord 预览编辑。
     - `partial` 会在令牌到达时编辑单条预览消息。
-    - `block` 会输出草稿大小的分块；可通过 `streaming.preview.chunk`（`minChars`、`maxChars`、`breakPreference`）调整大小和断点，并受限于 `textChunkLimit`。显式的非 `off` 预览模式会覆盖继承的 `agents.defaults.blockStreamingDefault: "on"`；显式的 `streaming.block.enabled: true` 会覆盖预览设置。如果某轮无法使用预览，继承的分块投递仍会生效。
-    - `progress` 会持续维护一条可编辑的状态草稿，直到最终投递。它会将代理最新的前导语或叙述显示为状态标题，并在下方显示紧凑的工具行，不会生成标签。
+    - `block` 会发出草稿大小的分块；使用 `streaming.preview.chunk`（`minChars`、`maxChars`、`breakPreference`）调整大小和断点，并限制在 `textChunkLimit` 以内。显式的非 `off` 预览模式会覆盖继承的 `agents.defaults.blockStreamingDefault: "on"`；显式的 `streaming.block.enabled: true` 会覆盖预览。如果某一轮无法使用预览，继承的分块发送仍然适用。
+    - `progress` 会一直保留一条可编辑的状态草稿，直到最终发送。它会将代理最新的前言或叙述显示为状态标题，并在下方显示紧凑的工具行，且不显示生成的标签。
     - 媒体、错误和显式回复的最终消息会取消待处理的预览编辑。
-    - 当预览流式传输处于活动状态时，`streaming.preview.toolProgress` 和 `streaming.progress.toolProgress` 默认都为 `true`。诸如 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"` 这样的工具行无需额外的进度配置；将任一键设为 `false` 即可仅保留状态标题。
-    - `streaming.progress.commentary`（默认 `false`）用于选择将原始助手评述加入临时进度草稿。默认的前导语/叙述状态行不受此选项影响。评述会在显示前清理，保持临时状态，并且不会改变最终答案的投递。
-    - `streaming.progress.maxLineChars` 控制每行进度预览的字符预算。普通文本会在单词边界处缩短；命令和路径细节会保留有用的后缀。
-    - `streaming.preview.commandText` / `streaming.progress.commandText` 控制紧凑进度行中的命令/执行详情：`raw`（默认）或 `status`（仅工具标签）。
+    - 当预览流式传输处于活动状态时，`streaming.preview.toolProgress` 和 `streaming.progress.toolProgress` 默认都为 `true`。诸如 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"` 之类的工具行无需额外的进度配置；将任一键设为 `false` 即可仅保留状态标题。
+    - `streaming.progress.commentary`（默认 `false`）用于选择在临时进度草稿中显示原始代理评论。默认的前言/叙述状态行不受此选项影响。评论会在显示前进行清理，保持为临时内容，并且不会改变最终答案的发送。
+    - `streaming.progress.maxLineChars` 控制每行进度预览的字符预算。普通文本会在单词边界处缩短；命令和路径详情会保留有用的后缀。
+    - `streaming.preview.commandText` / `streaming.progress.commandText` 控制紧凑进度行中的命令/执行详情：`status`（默认，仅显示工具标签）或 `raw`（显示明确的命令文本）。
 
     隐藏原始命令/执行文本，同时保留紧凑进度行：
 
@@ -1098,18 +1098,13 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
         enabled: true,
         intervalMs: 30000,
         minUpdateIntervalMs: 15000,
-        exhaustedText: "token exhausted",
       },
     },
   },
 }
 ```
 
-    自动状态会将运行时可用性映射为 Discord 状态：healthy => online，degraded 或 unknown => idle，exhausted 或 unavailable => dnd。默认值：`intervalMs` 30000，`minUpdateIntervalMs` 15000（必须小于或等于 `intervalMs`）。可选文本覆盖：
-
-    - `autoPresence.healthyText`
-    - `autoPresence.degradedText`
-    - `autoPresence.exhaustedText`（支持 `{reason}` 占位符）
+    自动状态会将运行时可用性映射为 Discord 状态：健康 ⇒ 在线，降级或未知 ⇒ 闲置，耗尽或不可用 ⇒ 请勿打扰。默认值：`intervalMs` 为 30000，`minUpdateIntervalMs` 为 15000（必须小于或等于 `intervalMs`）。
 
   </Accordion>
 
@@ -1239,7 +1234,7 @@ openclaw channels capabilities --channel discord --target channel:<voice-channel
 
 - 对于仅文本配置，Discord voice 默认是可选启用的；设置 `channels.discord.voice.enabled=true`（或保留现有的 `channels.discord.voice` 块）即可启用 `/vc` 命令、语音运行时以及 `GuildVoiceStates` 网关 intent。`channels.discord.intents.voiceStates` 可以显式覆盖 intent 订阅；若留空，则跟随实际生效的语音启用状态。
 - `voice.mode` 控制对话路径。默认值是 `agent-proxy`：一个实时语音前端负责处理轮次时机、中断和播放，通过 `openclaw_agent_consult` 将实质性工作委派给路由后的 OpenClaw agent，并将结果视为来自该说话者的 Discord 文字提示。`stt-tts` 保留旧的批处理 STT + TTS 流程。`bidi` 让实时模型直接对话，同时通过 `openclaw_agent_consult` 暴露 OpenClaw 大脑。
-- `voice.agentSession` 控制哪个 OpenClaw 会话接收语音轮次。保持未设置时使用语音频道自身的会话，或者设置 `{ mode: "target", target: "channel:<text-channel-id>" }`，让语音频道充当现有 Discord 文本频道会话（例如 `#maintainers`）的麦克风/扬声器扩展。
+- `voice.agentSession` 控制哪个 OpenClaw 会话接收语音轮次。保持未设置时使用语音频道自身的会话，或者设置 `{ mode: "target", target: "channel:<text-channel-id>" }`，让语音频道充当现有 Discord 文本频道会话（例如 `#maintainers`）的麦克风／扬声器扩展。
 - `voice.model` 会覆盖用于 Discord 语音回复和实时咨询的 OpenClaw agent 大脑。若留空，则继承所路由的 agent 模型。它与 `voice.realtime.model` 相互独立。
 - `voice.followUsers` 允许机器人跟随选定用户加入、移动和离开 Discord 语音。参见 [跟随语音中的用户](#follow-users-in-voice)。
 - `agent-proxy` 通过 `discord-voice` 路由语音，它会为说话者和目标会话保留正常的 owner/tool 授权，但会隐藏 agent 的 `tts` 工具，因为 Discord voice 自己负责播放。默认情况下，`agent-proxy` 会为 owner 说话者的 consult 提供完全等同 owner 的工具访问权限（`voice.realtime.toolPolicy: "owner"`），并强烈倾向于在给出实质性回答前先咨询 OpenClaw agent（`voice.realtime.consultPolicy: "always"`）。在默认的 `always` 模式下，实时层不会在 consult 回答前自动播放填充语音；它会捕获并转写语音，然后播放路由后的 OpenClaw 回答。如果多个强制 consult 回答在 Discord 仍在播放第一个回答时完成，后续的逐字回答会排队，直到播放空闲后再输出，而不是在句中替换语音。
@@ -1261,14 +1256,14 @@ openclaw channels capabilities --channel discord --target channel:<voice-channel
 - `voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时 `@discordjs/voice` 的初始 Ready 等待时间。默认值：`30000`。
 - `voice.reconnectGraceMs` 控制 OpenClaw 在销毁断开连接的语音会话前，会等待其开始重连的时长。默认值：`15000`。
 - 在 `stt-tts` 模式下，语音播放不会因为其他用户开始说话就停止。为了避免反馈回路，OpenClaw 会在 TTS 播放期间忽略新的语音捕获；请在播放结束后再说下一轮。
-- 在实时模式下，扬声器通过开放麦克风产生的回声可能看起来像 barge-in 并中断播放。对于回声较重的 Discord 房间，设置 `voice.realtime.providers.openai.interruptResponseOnInputAudio: false` 以防 OpenAI 在输入音频上自动中断。如果你仍希望 Discord 的说话开始事件中断当前播放，再添加 `voice.realtime.bargeIn: true`。OpenAI realtime bridge 会把短于 `voice.realtime.minBargeInAudioEndMs` 的播放截断视为可能的回声/噪声并忽略，而不是清除 Discord 播放。
+- 在实时模式下，扬声器通过开放麦克风产生的回声可能看起来像 barge-in 并中断播放。对于回声较重的 Discord 房间，设置 `voice.realtime.providers.openai.interruptResponseOnInputAudio: false` 以防 OpenAI 在输入音频上自动中断。如果你仍希望 Discord 的说话开始事件中断当前播放，再添加 `voice.realtime.bargeIn: true`。OpenAI realtime bridge 会把短于 `voice.realtime.minBargeInAudioEndMs` 的播放截断视为可能的回声／噪声并忽略，而不是清除 Discord 播放。
 - `voice.captureSilenceGraceMs` 控制 OpenClaw 在 Discord 报告说话者停止后，等待多久再为 STT 完成该音频片段。默认值：`2000`；如果 Discord 将正常停顿切分成碎片化的部分转录，可适当调高。
 - 当 ElevenLabs 是所选的 TTS provider 时，Discord 语音播放会使用流式 TTS，并从 provider 的响应流开始播放。不支持流式的 provider 会回退到合成的临时文件路径。
-- OpenClaw 会监视接收解密失败，并在短时间内多次失败后，通过离开/重新加入语音频道进行自动恢复。
+- OpenClaw 会监视接收解密失败，并在短时间内多次失败后，通过离开／重新加入语音频道进行自动恢复。
 - 如果接收日志在更新后持续出现 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。捆绑的 `@discordjs/voice` 版本包含 discord.js PR #11449 中的上游 padding 修复，该修复关闭了 discord.js issue #11419。
 - 出现 `The operation was aborted` 的接收事件是 OpenClaw 完成某个已捕获的说话者片段时的预期行为；它们是详细诊断信息，不是警告。
 - 详细的 Discord 语音日志会为每个被接受的说话者片段提供一个有边界的单行 STT 转录预览，因此调试时可以同时看到用户端和 agent 回复端，而不会倾倒无限制的转录文本。
-- 在 `agent-proxy` 模式下，强制 consult 回退会跳过可能不完整的转录片段，例如以 `...` 结尾的文本、以 "and" 之类的尾随连接词结尾的文本，以及明显不可操作的结尾语句如 "be right back" 或 "bye"。当这避免了一个过时的排队回答时，日志会显示 `forced agent consult skipped reason=...`。
+- 在 `agent-proxy` 模式下，强制 consult 回退会跳过可能不完整的转录片段，例如以 `...` 结尾的文本、以 “and” 之类的尾随连接词结尾的文本，以及明显不可操作的结尾语句如 “be right back” 或 “bye”。当这避免了一个过时的排队回答时，日志会显示 `forced agent consult skipped reason=...`。
 
 ### 在语音中跟随用户
 
@@ -1462,7 +1457,7 @@ STT 加 TTS 流水线：
 }
 ```
 
-当模型通过开放麦克风听到自己的 Discord 播放内容，但你仍然希望通过说话来打断它时，请使用这个配置。OpenClaw 会阻止 OpenAI 因原始输入音频而自动中断，同时 `bargeIn: true` 允许 Discord 说话开始事件以及已激活的说话者音频在下一段捕获的轮次到达 OpenAI 之前取消正在进行的 realtime 响应。非常早的 barge-in 信号如果 `audioEndMs` 低于 `minBargeInAudioEndMs`，会被视为可能的回声/噪音并忽略，这样模型就不会在第一帧播放时被截断。
+当模型通过开放麦克风听到自己的 Discord 播放内容，但你仍然希望通过说话来打断它时，请使用这个配置。OpenClaw 会阻止 OpenAI 因原始输入音频而自动中断，同时 `bargeIn: true` 允许 Discord 说话开始事件以及已激活的说话者音频在下一段捕获的轮次到达 OpenAI 之前取消正在进行的 realtime 响应。非常早的 barge-in 信号如果 `audioEndMs` 低于 `minBargeInAudioEndMs`，会被视为可能的回声／噪音并忽略，这样模型就不会在第一帧播放时被截断。
 
 预期的语音日志：
 
@@ -1471,13 +1466,13 @@ STT 加 TTS 流水线：
 - 有说话者音频时：`discord voice: realtime speaker turn opened ...`、`discord voice: realtime input audio started ... outputAudioMs=... outputActive=...`，以及 `discord voice: realtime speaker turn closed ... chunks=... discordBytes=... realtimeBytes=... interruptedPlayback=...`
 - 跳过陈旧语音时：`discord voice: realtime forced agent consult skipped reason=incomplete-transcript ...` 或 `reason=non-actionable-closing ...`
 - realtime 响应完成时：`discord voice: realtime audio playback finishing reason=response.done ... audioMs=... chunks=...`
-- 播放停止/重置时：`discord voice: realtime audio playback stopped reason=... audioMs=... elapsedMs=... chunks=...`
+- 播放停止／重置时：`discord voice: realtime audio playback stopped reason=... audioMs=... elapsedMs=... chunks=...`
 - realtime consult 时：`discord voice: realtime consult requested ... voiceSession=... supervisorSession=... question=...`
 - agent 答复时：`discord voice: agent turn answer ...`
 - 排队的精确语音时：`discord voice: realtime exact speech queued ... queued=... outputAudioMs=... outputActive=...`，随后是 `discord voice: realtime exact speech dequeued reason=player-idle ...`
 - 检测到 barge-in 时：`discord voice: realtime barge-in detected source=speaker-start ...` 或 `discord voice: realtime barge-in detected source=active-speaker-audio ...`，随后是 `discord voice: realtime barge-in requested reason=... outputAudioMs=... outputActive=...`
 - realtime 中断时：`discord voice: realtime model interrupt requested client:response.cancel reason=barge-in`，随后会出现 `discord voice: realtime model audio truncated client:conversation.item.truncate reason=barge-in audioEndMs=...` 或 `discord voice: realtime model interrupt confirmed server:response.done status=cancelled ...`
-- 忽略回声/噪音时：`discord voice: realtime model interrupt ignored client:conversation.item.truncate.skipped reason=barge-in audioEndMs=0 minAudioEndMs=250`
+- 忽略回声／噪音时：`discord voice: realtime model interrupt ignored client:conversation.item.truncate.skipped reason=barge-in audioEndMs=0 minAudioEndMs=250`
 - 禁用 barge-in 时：`discord voice: realtime capture ignored during playback (barge-in disabled) ...`
 - 空闲播放时：`discord voice: realtime barge-in ignored reason=... outputActive=false ... playbackChunks=0`
 
@@ -1509,7 +1504,7 @@ STT 加 TTS 流水线：
 - `capture ignored during playback (barge-in disabled)` 表示 OpenClaw 有意在 assistant 音频活跃时丢弃输入。如果你希望语音打断播放，请启用 `voice.realtime.bargeIn`。
 - `barge-in ignored ... outputActive=false` 表示 Discord 或 provider VAD 报告了语音，但 OpenClaw 没有可中断的活动播放。这不应导致音频被截断。
 
-凭据按组件分别解析：`voice.model` 使用 LLM 路由认证，`tools.media.audio` 使用 STT 认证，`tts`/`voice.tts` 使用 TTS 认证，而 `voice.realtime.providers` 或 provider 的常规认证配置则用于 realtime provider 认证。
+凭据按组件分别解析：`voice.model` 使用 LLM 路由认证，`tools.media.audio` 使用 STT 认证，`tts`／`voice.tts` 使用 TTS 认证，而 `voice.realtime.providers` 或 provider 的常规认证配置则用于 realtime provider 认证。
 
 ### 语音消息
 
@@ -1687,7 +1682,7 @@ openclaw logs --follow
 
 - startup/auth: `enabled`, `token`, `applicationId`, `accounts.*`, `allowBots`
 - policy: `groupPolicy`, `dmPolicy`, `allowFrom`, `dm.*`, `guilds.*`, `guilds.*.channels.*`
-- command: `commands.native`, `commands.useAccessGroups` (全局), `configWrites`, `slashCommand.ephemeral`
+- command: `commands.native`, `commands.allowFrom` (global), `configWrites`, `slashCommand.ephemeral`
 - gateway: `proxy`
 - reply/history: `replyToMode`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
 - delivery: `textChunkLimit`（默认 `2000`），`maxLinesPerMessage`（默认 `17`）

@@ -176,8 +176,8 @@ sidebarTitle: "CLI 参考"
   <Accordion title="OpenAI API key">
     如果存在则使用 `OPENAI_API_KEY`，否则提示输入 key，然后将凭证存储在 auth profiles 中。
 
-    在没有主模型的新设置中，会通过 Codex runtime 将 `agents.defaults.model` 设置为
-    `openai/gpt-5.6`；直接 API 的裸模型 id 会解析为 Sol 级别。
+    在没有主模型的新设置中，会将 `agents.defaults.model` 设置为
+    `openai/gpt-5.6-sol`。纯直接 API 的 `openai/gpt-5.6` 别名仍受支持，并解析到同一层级。
 
     添加或重新认证 OpenAI 时，会保留现有的显式主模型，包括 `openai/gpt-5.5`。如果该账户不提供 GPT-5.6，请显式选择 `openai/gpt-5.5`；OpenClaw 不会静默降级它。
 
@@ -277,27 +277,27 @@ sidebarTitle: "CLI 参考"
 
 凭证存储模式：
 
-- 默认 onboarding 行为会将 API key 以明文值的形式持久化到 auth profiles 中。
-- `--secret-input-mode ref` 会启用引用模式，而不是存储明文 key。
+- 默认的 onboarding 行为会将 API keys 作为明文值持久化到 auth profiles 中。
+- `--secret-input-mode ref` 会启用引用模式，而不是以明文形式存储 key。
   在交互式设置中，你可以选择：
   - 环境变量引用（例如 `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`）
   - 已配置的 provider 引用（`file` 或 `exec`），带有 provider 别名和 id
 - 交互式引用模式会在保存前运行快速预检验证。
-  - 环境变量引用：验证变量名，以及当前 onboarding 环境中的值是否非空。
-  - Provider 引用：验证 provider 配置，并解析请求的 id。
+  - Env refs：验证变量名称，以及当前 onboarding 环境中的值是否非空。
+  - Provider refs：验证 provider 配置并解析请求的 id。
   - 如果预检失败，onboarding 会显示错误并允许你重试。
 - 在非交互式模式下，`--secret-input-mode ref` 只会为新凭证创建基于环境变量的引用。
-  - 添加新凭证时，在 onboarding 进程的环境中设置 provider 环境变量。
-  - 内联 key 标志（例如 `--openai-api-key`）要求设置对应的环境变量；否则 onboarding 会快速失败。
-  - 现有的可解析命名 auth profiles 会原样复用，包括现有的 `env`、`file` 和 `exec` 引用；不会写入新的 `apiKey` 或 `keyRef`，也不要求额外的 provider 环境变量。
-  - 对于新的自定义 provider 凭证，非交互式 `ref` 模式会将 `models.providers.<id>.apiKey` 存储为 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`。
-  - 在该自定义 provider 场景中，`--custom-api-key` 要求设置 `CUSTOM_API_KEY`；否则 onboarding 会快速失败。
-  - 现有的明文 profile 凭证会保持不变；引用模式不会迁移它们。运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。参见[密钥管理](/gateway/secrets)。
-- Gateway 认证凭证在交互式设置中支持明文和 SecretRef 选项：
-  - Token 模式：**生成/存储明文 token**（默认）或**使用 SecretRef**。
+  - 添加新凭证时，在 onboarding 进程环境中设置 provider 环境变量。
+  - 内联 key 标志（例如 `--openai-api-key`）要求设置相应的环境变量；否则 onboarding 会快速失败。
+  - 现有的、可解析的命名 auth profiles 会保持不变地复用，包括现有的 `env`、`file`、`exec` 和 `store` 引用；不会写入新的 `apiKey` 或 `keyRef`，也不需要额外的 provider 环境变量。
+  - 对于新的 custom-provider 凭证，非交互式 `ref` 模式会将 `models.providers.<id>.apiKey` 存储为 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`。
+  - 对于该 custom-provider 场景，必须设置 `CUSTOM_API_KEY` 才能使用 `--custom-api-key`；否则 onboarding 会快速失败。
+  - 现有的明文 profile 凭证保持不变；引用模式不会迁移这些凭证。运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。请参阅 [Secrets management](/gateway/secrets)。
+- Gateway auth credentials 在交互式设置中支持明文和 SecretRef 选项：
+  - Token 模式：**生成／存储明文 token**（默认）或**使用 SecretRef**。
   - Password 模式：明文或 SecretRef。
 - 非交互式 token SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
-- 现有的明文设置将继续正常工作，不会发生变化。
+- 现有的明文设置继续正常工作，不会发生变化。
 
 <Note>
 无头和服务器提示：先在一台带浏览器的机器上完成 OAuth，然后将该 agent 的
@@ -351,7 +351,7 @@ WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
 `--non-interactive` 需要 `--accept-risk`（表示已知代理功能强大且拥有完整系统访问权限存在风险）：
 
 ```bash
-openclaw onboard --non-interactive --accept-risk \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice apiKey \
   --anthropic-api-key "$ANTHROPIC_API_KEY"
 ```

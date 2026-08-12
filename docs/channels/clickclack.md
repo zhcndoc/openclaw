@@ -93,28 +93,28 @@ openclaw gateway
 
 ### 账号配置键
 
-| 键                       | 默认值              | 说明                                                                                                                  |
-| ------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `baseUrl`                | 无（必需）          | 用于面向浏览器链接的公共 ClickClack URL。                                                                               |
-| `apiBaseUrl`             | `baseUrl`           | 可选的服务器到服务器端点，用于 REST 和实时 WebSocket 流量。                                                             |
-| `token`                  | 无                  | Bot 令牌，可以是纯字符串或机密引用（`source: "env" \| "file" \| "exec"`）。                                             |
-| `tokenFile`              | 无                  | Bot 令牌文件的路径；优先级高于 `token`。                                                                                |
-| `workspace`              | 无（必需）          | 工作区 id、slug 或名称。                                                                                                |
-| `replyMode`              | `"agent"`           | `"agent"` 运行完整的代理流程；`"model"` 发送简短的直接模型补全。                                                        |
-| `defaultTo`              | `"channel:general"` | 当出站路径未提供目标时使用的目标。                                                                                     |
-| `allowFrom`              | `["*"]`             | 入站私信和频道消息的用户 id 允许列表。                                                                                  |
-| `allowBots`              | `false`             | 接受由其他 ClickClack Bot 撰写的消息：对所有允许的 Bot 消息使用 `true`，或仅在群组中使用 `"mentions"`。                  |
-| `botLoopProtection`      | 内置默认值          | 应用于已接受 Bot 消息的滑动窗口 Bot 对循环保护机制。                                                                    |
-| `botUserId`              | 自动检测            | 启动时根据 Bot 令牌身份解析。                                                                                            |
-| `agentId`                | 路由默认值          | 将此账号的入站消息固定到一个代理。                                                                                        |
-| `toolsAllow`             | 无                  | 此账号代理回复的工具允许列表。                                                                                          |
-| `model`、`systemPrompt`  | 无                  | 用于 `replyMode: "model"` 补全。                                                                                       |
-| `commandMenu`            | `true`              | 将原生命令发布到 ClickClack 编辑器的自动补全中。                                                                        |
-| `reconnectMs`             | `1500`              | 实时重连延迟（100 到 60000）。                                                                                          |
-| `discussions`             | 已禁用              | 按会话管理的频道设置；参见[会话讨论](#session-discussions)。                                                             |
-| `requireMention`          | `false`             | 在分发群组消息前要求直接提及。参见[群组提及门控](#group-mention-gating)。                                                |
-| `mentionPatterns`         | `[]`                | 此账号在群组频道中的提及模式。参见[群组提及门控](#group-mention-gating)。                                                |
-| `groups`                  | `{}`                | 按 ClickClack 频道 ID 设置的每频道群组策略覆盖项。参见[群组提及门控](#group-mention-gating)。                            |
+| 键                      | 默认值              | 说明                                                                                                                  |
+| ----------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `baseUrl`               | 无（必需）          | 用于面向浏览器的链接的公共 ClickClack URL。                                                                           |
+| `apiBaseUrl`            | `baseUrl`           | 可选的服务器到服务器端点，用于 REST 和实时 WebSocket 流量。                                                            |
+| `token`                 | 无                  | 以纯字符串或机密引用形式提供的机器人令牌（`source: "env" \| "file" \| "exec" \| "store"`）。                           |
+| `tokenFile`             | 无                  | 机器人令牌文件的路径；优先于 `token`。                                                                                |
+| `workspace`             | 无（必需）          | 工作区 id、slug 或名称。                                                                                              |
+| `replyMode`             | `"agent"`           | `"agent"` 运行完整的代理流水线；`"model"` 发送简短的直接模型补全。                                                     |
+| `defaultTo`             | `"channel:general"` | 当出站路径未提供目标时使用的目标。                                                                                     |
+| `allowFrom`             | `["*"]`             | 入站私信和频道消息的用户 id 允许列表。                                                                                 |
+| `allowBots`             | `false`             | 接受由其他 ClickClack 机器人发送的消息：对所有允许的机器人消息使用 `true`，或仅在群组中使用 `"mentions"`。            |
+| `botLoopProtection`     | 内置默认值          | 应用于已接受机器人消息的滑动窗口机器人对循环保护。                                                                    |
+| `botUserId`             | 自动检测            | 启动时根据机器人令牌身份解析。                                                                                         |
+| `agentId`               | 路由默认值          | 将此账号的入站消息固定到一个代理。                                                                                     |
+| `toolsAllow`            | 无                  | 此账号代理回复的工具允许列表。                                                                                         |
+| `model`、`systemPrompt` | 无                  | 用于 `replyMode: "model"` 补全。                                                                                        |
+| `commandMenu`           | `true`              | 将原生命令发布到 ClickClack 编辑器的自动补全中。                                                                       |
+| `reconnectMs`           | `1500`              | 实时连接重连延迟（100 至 60000）。                                                                                      |
+| `discussions`           | 已禁用              | 按会话管理的频道设置；请参阅[会话讨论](#session-discussions)。                                                         |
+| `requireMention`        | `false`             | 要求直接提及后才分派群组消息。请参阅[群组提及门控](#group-mention-gating)。                                             |
+| `mentionPatterns`       | `[]`                | 此账号在群组频道中的提及模式。请参阅[群组提及门控](#group-mention-gating)。                                             |
+| `groups`                | `{}`                | 按 ClickClack 频道 id 设置的每频道群组策略覆盖项。请参阅[群组提及门控](#group-mention-gating)。                        |
 
 ### 保持一个受身份验证保护的公共主机名
 

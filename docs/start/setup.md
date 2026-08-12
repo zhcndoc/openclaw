@@ -23,7 +23,7 @@ title: "设置"
 
 - 推荐使用 Node 24.15+（仍支持 Node 22 LTS，目前为 `22.22.3+`）
 - 源码检出需要 `pnpm`。OpenClaw 在开发模式下会从 `extensions/*` pnpm workspace 包中加载捆绑插件，因此根目录下的 `npm install` 不会准备完整的源码树。
-- Docker（可选；仅用于容器化设置/e2e - 参见 [Docker](/install/docker)）
+- Docker（可选；仅用于容器化设置/e2e - 参见 [Docker](/install/docker)）。
 
 ## 定制化策略（让更新不会伤到你）
 
@@ -79,7 +79,7 @@ openclaw health
 
 目标：开发 TypeScript Gateway，获得热重载，同时保持 macOS 应用 UI 连接。
 
-### 0)（可选）也从源码运行 macOS 应用
+### 0）（可选）也从源码运行 macOS 应用
 
 如果你也想让 macOS 应用走前沿版本：
 
@@ -87,7 +87,7 @@ openclaw health
 ./scripts/restart-mac.sh
 ```
 
-### 1) 启动开发版 Gateway
+### 1）启动开发版 Gateway
 
 ```bash
 pnpm install
@@ -105,16 +105,16 @@ pnpm gateway:watch
 `OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0` 可禁用该仅用于开发的修复流程。
 `pnpm gateway:watch` 不会重建 `dist/control-ui`，因此在 `ui/` 变更后请重新运行 `pnpm ui:build`，或者在开发 Control UI 时使用 `pnpm ui:dev`。
 
-### 2) 将 macOS 应用指向你正在运行的 Gateway
+### 2）将 macOS 应用指向你正在运行的 Gateway
 
 在 **OpenClaw.app** 中：
 
-- Connection Mode: **本地**
+- 连接模式：**本地**
   应用将连接到已在配置端口上运行的 gateway。
 
-### 3) 验证
+### 3）验证
 
-- 应用内的 Gateway 状态应显示 **"使用现有 gateway …"**
+- 应用内的 Gateway 状态应显示 **“使用现有 gateway …”**
 - 或通过 CLI：
 
 ```bash
@@ -123,29 +123,29 @@ openclaw health
 
 ### 常见坑
 
-- **Wrong port:** Gateway WS 默认为 `ws://127.0.0.1:18789`；请让应用 + CLI 使用同一个端口。
-- **Where state lives:**
-  - Channel/provider state: `~/.openclaw/credentials/`
-  - Model auth profiles: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-  - Sessions and transcripts: `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
-  - Legacy/archive session artifacts: `~/.openclaw/agents/<agentId>/sessions/`
-  - Logs: `/tmp/openclaw/`
+- **端口错误：** Gateway WS 默认为 `ws://127.0.0.1:18789`；请让应用 + CLI 使用同一个端口。
+- **状态存储位置：**
+  - 频道/提供商状态：`~/.openclaw/credentials/`
+  - 模型身份验证配置文件：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+  - 会话和记录：`~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
+  - 旧版/归档会话工件：`~/.openclaw/agents/<agentId>/sessions/`
+  - 日志：`/tmp/openclaw/`
 
 ## 凭据存储映射
 
 调试认证或决定要备份哪些内容时可参考这里：
 
 - **WhatsApp**：`~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-- **Telegram bot token**：配置/env 或 `channels.telegram.tokenFile`（仅支持普通文件；拒绝符号链接）
-- **Discord bot token**：配置/env 或 SecretRef（env/file/exec 提供器）
-- **Slack tokens**：配置/env（`channels.slack.*`）
-- **配对允许名单：**
+- **Telegram 机器人令牌**：config/env 或 `channels.telegram.tokenFile`（仅限常规文件；拒绝符号链接）
+- **Discord 机器人令牌**：config/env 或 SecretRef（env/file/exec/store 提供程序）
+- **Slack 令牌**：config/env（`channels.slack.*`）
+- **配对允许列表**：
   - `~/.openclaw/credentials/<channel>-allowFrom.json`（默认账户）
   - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json`（非默认账户）
 - **模型认证配置文件**：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- **文件后备的密钥载荷（可选）**：`~/.openclaw/secrets.json`
+- **文件支持的 secrets 负载（可选）**：`~/.openclaw/secrets.json`
 - **旧版 OAuth 导入**：`~/.openclaw/credentials/oauth.json`
-  更多细节：[安全](/gateway/security#credential-storage-map)。
+  更多详情：[安全](/gateway/security#credential-storage-map)。
 
 ## 更新（不破坏你的设置）
 
@@ -154,7 +154,7 @@ openclaw health
 
 ## Linux（systemd 用户服务）
 
-Linux 安装使用 systemd **用户** 服务。默认情况下，systemd 会在注销/空闲时停止用户服务，这会杀死 Gateway。入门流程会尝试为你启用 lingering（可能会提示输入 sudo）。如果仍然未启用，请运行：
+Linux 安装使用 systemd **用户** 服务。默认情况下，systemd 会在注销／空闲时停止用户服务，这会杀死 Gateway。入门流程会尝试为你启用 lingering（可能会提示输入 sudo）。如果仍然未启用，请运行：
 
 ```bash
 sudo loginctl enable-linger $USER
@@ -169,4 +169,4 @@ sudo loginctl enable-linger $USER
 - [Gateway 配置](/gateway/configuration)（配置 schema + 示例）
 - [Discord](/channels/discord) 和 [Telegram](/channels/telegram)（回复标签 + replyToMode 设置）
 - [OpenClaw 助手设置](/start/openclaw)
-- [macOS 应用](/platforms/macos)（gateway 生命周期）
+- [macOS 应用](/platforms/macos)（gateway 生命周期）。

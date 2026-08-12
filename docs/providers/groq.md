@@ -9,15 +9,15 @@ read_when:
 
 [Groq](https://groq.com) 基于定制的 LPU 硬件，为开权重模型（Llama、Gemma、Kimi、Qwen、GPT OSS 等）提供超高速推理。Groq 插件同时注册了一个兼容 OpenAI 的聊天提供方和一个音频媒体理解提供方。
 
-| Property               | Value                                    |
+| 属性                   | 值                                       |
 | ---------------------- | ---------------------------------------- |
-| Provider id            | `groq`                                   |
-| Plugin                 | 官方外部包                               |
-| Auth env var           | `GROQ_API_KEY`                           |
+| 提供方 ID              | `groq`                                   |
+| 插件                   | 官方外部包                               |
+| 认证环境变量           | `GROQ_API_KEY`                           |
 | API                    | 兼容 OpenAI（`openai-completions`）       |
-| Base URL               | `https://api.groq.com/openai/v1`         |
-| Audio transcription    | `whisper-large-v3-turbo` (default)       |
-| Suggested chat default | `groq/openai/gpt-oss-120b`               |
+| 基础 URL               | `https://api.groq.com/openai/v1`         |
+| 音频转录               | `whisper-large-v3-turbo`（默认）         |
+| 建议的聊天默认模型     | `groq/openai/gpt-oss-120b`               |
 
 ## 安装插件
 
@@ -61,7 +61,7 @@ export GROQ_API_KEY=gsk_...
 
 ```json5
 {
-  env: { GROQ_API_KEY: "gsk_..." },
+  env: { vars: { GROQ_API_KEY: "gsk_..." } },
   agents: {
     defaults: {
       model: { primary: "groq/openai/gpt-oss-120b" },
@@ -74,16 +74,16 @@ export GROQ_API_KEY=gsk_...
 
 OpenClaw 会随附一个由清单支持的 Groq 目录，其中既包含推理模型，也包含非推理模型。运行 `openclaw models list --provider groq` 可查看你已安装版本的静态条目，或查看 [console.groq.com/docs/models](https://console.groq.com/docs/models) 获取 Groq 的权威列表。
 
-| Model ref                           | Name               | Reasoning | Input        | Context |
-| ----------------------------------- | ------------------ | --------- | ------------ | ------- |
-| `groq/openai/gpt-oss-120b`          | GPT OSS 120B       | yes       | text         | 131,072 |
-| `groq/openai/gpt-oss-20b`           | GPT OSS 20B        | yes       | text         | 131,072 |
-| `groq/openai/gpt-oss-safeguard-20b` | Safety GPT OSS 20B | yes       | text         | 131,072 |
-| `groq/qwen/qwen3.6-27b`             | Qwen 3.6 27B       | yes       | text + image | 131,072 |
-| `groq/groq/compound`                | Compound           | no        | text         | 131,072 |
-| `groq/groq/compound-mini`           | Compound Mini      | no        | text         | 131,072 |
+| 模型引用                            | 名称               | 推理      | 输入         | 上下文   |
+| ----------------------------------- | ------------------ | --------- | ------------ | -------- |
+| `groq/openai/gpt-oss-120b`          | GPT OSS 120B       | 是        | 文本         | 131,072  |
+| `groq/openai/gpt-oss-20b`           | GPT OSS 20B        | 是        | 文本         | 131,072  |
+| `groq/openai/gpt-oss-safeguard-20b` | Safety GPT OSS 20B | 是        | 文本         | 131,072  |
+| `groq/qwen/qwen3.6-27b`             | Qwen 3.6 27B       | 是        | 文本 + 图像  | 131,072  |
+| `groq/groq/compound`                | Compound           | 否        | 文本         | 131,072  |
+| `groq/groq/compound-mini`           | Compound Mini      | 否        | 文本         | 131,072  |
 
-The manifest also retains `groq/llama-3.1-8b-instant` and `groq/llama-3.3-70b-versatile` as hidden deprecated compatibility rows until Groq's August 16, 2026 shutdown. Use `groq/openai/gpt-oss-20b` and `groq/openai/gpt-oss-120b`, respectively, for new configurations.
+清单还会保留 `groq/llama-3.1-8b-instant` 和 `groq/llama-3.3-70b-versatile` 这两个隐藏的已弃用兼容条目，直到 Groq 于 2026 年 8 月 16 日关闭这些模型。对于新的配置，请分别使用 `groq/openai/gpt-oss-20b` 和 `groq/openai/gpt-oss-120b`。
 
 <Tip>
   目录会随着每个 OpenClaw 版本演进。`openclaw models list --provider groq` 会显示你已安装版本已知的条目；请与 [console.groq.com/docs/models](https://console.groq.com/docs/models) 交叉核对新添加或已弃用的模型。
@@ -99,13 +99,13 @@ Groq 推理模型（上表中的 `reasoning: true`）将 OpenClaw 共享的 `/th
 
 Groq 插件还会注册一个 **音频媒体理解提供方**，因此语音消息可以通过共享的 `tools.media.audio` 接口进行转录。
 
-| 属性             | 值                                        |
-| ---------------- | ----------------------------------------- |
-| 共享配置路径     | `tools.media.audio`                       |
-| 默认基础 URL     | `https://api.groq.com/openai/v1`          |
-| 默认模型         | `whisper-large-v3-turbo`                 |
-| 自动优先级       | 20                                        |
-| API 端点         | 兼容 OpenAI 的 `/audio/transcriptions`    |
+| 属性              | 值                                        |
+| ----------------- | ----------------------------------------- |
+| 共享模型路径      | `tools.media.models`                      |
+| 默认基础 URL      | `https://api.groq.com/openai/v1`          |
+| 默认模型          | `whisper-large-v3-turbo`                  |
+| 自动优先级        | 20                                        |
+| API 端点          | OpenAI 兼容的 `/audio/transcriptions`     |
 
 要将 Groq 设为默认音频后端：
 
@@ -113,9 +113,7 @@ Groq 插件还会注册一个 **音频媒体理解提供方**，因此语音消�
 {
   tools: {
     media: {
-      audio: {
-        models: [{ provider: "groq" }],
-      },
+      models: [{ provider: "groq", capabilities: ["audio"] }],
     },
   },
 }
@@ -123,7 +121,7 @@ Groq 插件还会注册一个 **音频媒体理解提供方**，因此语音消�
 
 <AccordionGroup>
   <Accordion title="守护进程的环境可用性">
-    如果 Gateway 作为受管服务运行（launchd、systemd、Docker），`GROQ_API_KEY` 必须对该进程可见——而不只是对你的交互式 shell 可见。
+    如果网关作为受管服务运行（launchd、systemd、Docker），`GROQ_API_KEY` 必须对该进程可见——而不只是对你的交互式 shell 可见。
 
     <Warning>
       仅在交互式 shell 中导出的密钥对 launchd 或 systemd 守护进程没有帮助，除非该环境也被导入到那里。将密钥设置在 `~/.openclaw/.env` 中或通过 `env.shellEnv` 设置，以便网关进程可以读取。

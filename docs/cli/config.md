@@ -58,7 +58,7 @@ openclaw config set 'agents.entries.work.tools.exec.node' "node-id-or-name"
 
 ### `config get`
 
-从脱敏后的配置快照中读取值（不会打印密钥）。`--json` 会将相同的脱敏值以 JSON 格式打印；否则字符串/数字/布尔值会直接打印，而对象/数组会以格式化后的 JSON 打印。
+从脱敏后的配置快照中读取值（不会打印密钥）。`--json` 会将相同的脱敏值以 JSON 格式打印；否则字符串／数字／布尔值会直接打印，而对象／数组会以格式化后的 JSON 打印。
 
 当路径缺失时，`--json` 会将 `{ "error": "Config path not found: <path>" }` 写入 stdout，并以状态码 1 退出。不使用 `--json` 时，诊断信息仍会输出到 stderr。
 
@@ -80,9 +80,9 @@ openclaw config get agents.defaults.model --json
 <AccordionGroup>
   <Accordion title="包含内容">
     - 当前根配置 schema，以及一个供编辑器工具使用的根 `$schema` 字符串字段。
-    - `title` / `description` 文档元数据，由 Control UI 使用。
-    - 当匹配到字段文档时，嵌套对象、通配符（`*`）和数组项（`[]`）节点会继承相同的 `title` / `description` 元数据。
-    - `anyOf` / `oneOf` / `allOf` 分支也会继承相同的文档元数据。
+    - `title` ／ `description` 文档元数据，由 Control UI 使用。
+    - 当匹配到字段文档时，嵌套对象、通配符（`*`）和数组项（`[]`）节点会继承相同的 `title` ／ `description` 元数据。
+    - `anyOf` ／ `oneOf` ／ `allOf` 分支也会继承相同的文档元数据。
     - 在运行时清单可加载时，尽力提供实时插件 + 通道 schema 元数据。
     - 即使当前配置无效，也会提供一个干净的回退 schema。
 
@@ -195,12 +195,12 @@ openclaw config set models.providers.ollama.models '[{"id":"llama3.2","name":"Ll
 </Tabs>
 
 <Warning>
-在不支持的运行时可变表面上会拒绝 SecretRef 赋值（例如 `hooks.token`、`commands.ownerDisplaySecret`、Discord 线程绑定 webhook token，以及 WhatsApp creds JSON）。参见 [SecretRef 凭据表面](/reference/secretref-credential-surface)。
+不支持在运行时修改的表面不接受 SecretRef 赋值（例如 `hooks.token`、Discord 线程绑定 Webhook Token 以及 WhatsApp 凭据 JSON）。请参阅 [SecretRef 凭据表面](/reference/secretref-credential-surface)。
 </Warning>
 
-批量解析始终使用批量负载（`--batch-json`/`--batch-file`）作为真实来源；`--strict-json` / `--json` 不会改变批量解析行为。
+批量解析始终使用批量负载（`--batch-json`／`--batch-file`）作为真实来源；`--strict-json`／`--json` 不会改变批量解析行为。
 
-JSON 路径/值模式也可直接用于 SecretRef 和 provider：
+JSON 路径／值模式也可直接用于 SecretRef 和 Provider：
 
 ```bash
 openclaw config set channels.discord.token \
@@ -217,22 +217,22 @@ openclaw config set secrets.providers.vaultfile \
 Provider 构建器目标必须使用 `secrets.providers.<alias>` 作为路径。
 
 <AccordionGroup>
-  <Accordion title="通用标志">
-    - `--provider-source <env|file|exec>`
+  <Accordion title="常用标志">
+    - `--provider-source <env|file|exec|store>`
     - `--provider-timeout-ms <ms>`（`file`、`exec`）
 
   </Accordion>
-  <Accordion title="环境变量 provider（--provider-source env）">
+  <Accordion title="环境变量 Provider（--provider-source env）">
     - `--provider-allowlist <ENV_VAR>`（可重复指定）
 
   </Accordion>
-  <Accordion title="文件 provider（--provider-source file）">
+  <Accordion title="文件 Provider（--provider-source file）">
     - `--provider-path <path>`（必需）
     - `--provider-mode <singleValue|json>`
     - `--provider-max-bytes <bytes>`
 
   </Accordion>
-  <Accordion title="执行 provider（--provider-source exec）">
+  <Accordion title="执行 Provider（--provider-source exec）">
     - `--provider-command <path>`（必需）
     - `--provider-arg <arg>`（可重复指定）
     - `--provider-no-output-timeout-ms <ms>`
@@ -245,7 +245,7 @@ Provider 构建器目标必须使用 `secrets.providers.<alias>` 作为路径。
   </Accordion>
 </AccordionGroup>
 
-强化版 exec provider 示例：
+强化版 exec Provider 示例：
 
 ```bash
 openclaw config set secrets.providers.vault \
@@ -434,12 +434,12 @@ openclaw config set channels.discord.token \
 
 <AccordionGroup>
   <Accordion title="如果试运行失败">
-    - `config schema validation failed`：更改后的配置结构无效；请修复路径/值或 provider/ref 对象结构。
-    - `Config policy validation failed: unsupported SecretRef usage`：请将该凭据改回明文/字符串输入；仅在受支持的字段上使用 SecretRef。
-    - `SecretRef assignment(s) could not be resolved`：所引用的 provider/ref 当前无法解析（缺少环境变量、文件指针无效、exec provider 失败，或 provider/source 不匹配）。
-    - `model reference validation failed`：更改后的文本模型主模型或备用模型未知；运行 `openclaw models list` 并选择一个可用模型。
-    - `Dry run note: skipped <n> exec SecretRef resolvability check(s)`：如果你需要 exec 可解析性验证，请使用 `--allow-exec` 重新运行。
-    - 对于批处理模式，请修复失败项后再次运行 `--dry-run`，然后再写入。
+    - `config schema validation failed`：更改后的配置结构无效；请修复路径／值或 provider／ref 对象结构。
+    - `Config policy validation failed: unsupported SecretRef usage`：将该凭据改回明文／字符串输入；仅在受支持的配置项上保留 SecretRef。
+    - `SecretRef assignment(s) could not be resolved`：当前无法解析所引用的 provider／ref（缺少环境变量／存储名称、文件指针无效、exec provider 失败，或 provider／source 不匹配）。
+    - `model reference validation failed`：更改后的文本模型主模型或回退模型未知；运行 `openclaw models list` 并选择可用模型。
+    - `Dry run note: skipped <n> exec SecretRef resolvability check(s)`：如果需要验证 exec 的可解析性，请使用 `--allow-exec` 重新运行。
+    - 对于批处理模式，请修复失败的条目，并在写入前重新运行 `--dry-run`。
 
   </Accordion>
 </AccordionGroup>

@@ -44,12 +44,12 @@ title: "ACP"
 
 ## 已知限制
 
-- `loadSession` 仅对由 bridge 创建的会话回放完整的 ACP 事件账本历史。较早的/无账本会话使用 transcript 回退方式，无法重建历史工具调用或系统通知。
+- `loadSession` 仅对由 bridge 创建的会话回放完整的 ACP 事件账本历史。较早的／无账本会话使用 transcript 回退方式，无法重建历史工具调用或系统通知。
 - 如果多个 ACP 客户端共享同一个 Gateway 会话密钥，事件和取消路由只能尽力而为，无法严格做到按客户端隔离。需要干净的编辑器本地轮次时，优先使用默认隔离的 `acp-bridge:<uuid>` 会话。
 - Gateway 的停止状态会转换为 ACP 停止原因，但这种映射不如完全原生的 ACP 运行时那样丰富。
 - 会话控制只暴露 Gateway 参数中的一个聚焦子集：思考级别、工具详细程度、推理、使用详情和提升操作。模型选择和 exec-host 控制不会作为 ACP 配置选项暴露出来。
 - `session_info_update` 和 `usage_update` 来源于 Gateway 会话快照，而不是实时的 ACP 原生运行时计量。用量是近似值，不包含成本数据，并且只有在 Gateway 标记总 token 数据为最新时才会发出。
-- 工具跟随数据属于尽力而为：bridge 会暴露在已知工具参数/结果中出现的文件路径，但不会发出 ACP 终端或结构化文件差异。
+- 工具跟随数据属于尽力而为：bridge 会暴露在已知工具参数／结果中出现的文件路径，但不会发出 ACP 终端或结构化文件差异。
 - exec 审批转发的作用范围仅限于当前活动的 ACP 提示轮次；来自其他 Gateway 会话的审批会被忽略。
 
 ## 使用方法
@@ -196,7 +196,7 @@ acpx openclaw -s codex-bridge --cwd /path/to/repo \
 
 如果你希望 `acpx openclaw` 每次都指向特定的 Gateway 和会话键，可以在 `~/.acpx/config.json` 中覆盖 `openclaw` 代理命令：
 
-```json
+```json validate=false
 {
   "agents": {
     "openclaw": {
@@ -280,18 +280,18 @@ env OPENCLAW_HIDE_BANNER=1 OPENCLAW_SUPPRESS_NOTES=1 node openclaw.mjs acp ...
 
 ## 选项
 
-- `--url <url>`: Gateway WebSocket URL（未配置时默认为 `gateway.remote.url`）。
-- `--token <token>`: Gateway 认证令牌。
-- `--token-file <path>`: 从文件中读取 Gateway 认证令牌。
-- `--password <password>`: Gateway 认证密码。
-- `--password-file <path>`: 从文件中读取 Gateway 认证密码。
-- `--session <key>`: 默认会话键。
-- `--session-label <label>`: 要解析的默认会话标签。
-- `--require-existing`: 如果会话键/标签不存在则失败。
-- `--reset-session`: 在首次使用前重置会话键。
-- `--no-prefix-cwd`: 不要在提示中添加工作目录前缀。
-- `--provenance <off|meta|meta+receipt>`: 包含 ACP provenance 元数据或收据。
-- `--verbose, -v`: 将详细日志输出到 stderr。
+- `--url <url>`：Gateway WebSocket URL（未配置时默认为 `gateway.remote.url`）。
+- `--token <token>`：Gateway 认证令牌。
+- `--token-file <path>`：从文件中读取 Gateway 认证令牌。
+- `--password <password>`：Gateway 认证密码。
+- `--password-file <path>`：从文件中读取 Gateway 认证密码。
+- `--session <key>`：默认会话键。
+- `--session-label <label>`：要解析的默认会话标签。
+- `--require-existing`：如果会话键/标签不存在则失败。
+- `--reset-session`：在首次使用前重置会话键。
+- `--no-prefix-cwd`：不要在提示中添加工作目录前缀。
+- `--provenance <off|meta|meta+receipt>`：包含 ACP provenance 元数据或收据。
+- `--verbose, -v`：将详细日志输出到 stderr。
 
 安全提示：
 
@@ -303,11 +303,11 @@ env OPENCLAW_HIDE_BANNER=1 OPENCLAW_SUPPRESS_NOTES=1 node openclaw.mjs acp ...
 
 ### `acp client` 选项
 
-- `--cwd <dir>`: ACP 会话的工作目录。
-- `--server <command>`: ACP 服务器命令（默认：`openclaw`）。
-- `--server-args <args...>`: 传递给 ACP 服务器的额外参数。
-- `--server-verbose`: 启用 ACP 服务器上的详细日志。
-- `--verbose, -v`: 详细的客户端日志。
+- `--cwd <dir>`：ACP 会话的工作目录。
+- `--server <command>`：ACP 服务器命令（默认：`openclaw`）。
+- `--server-args <args...>`：传递给 ACP 服务器的额外参数。
+- `--server-verbose`：启用 ACP 服务器上的详细日志。
+- `--verbose, -v`：详细的客户端日志。
 - `openclaw acp client` 会在启动的桥接进程上设置 `OPENCLAW_SHELL=acp-client`，可用于特定上下文的 shell/profile 规则。
 
 ## 相关内容

@@ -184,10 +184,10 @@ openclaw directory groups members \
 ```json5
 {
   agents: {
-    list: [
-      { id: "support", workspace: "~/.openclaw/workspace-support" },
-      { id: "engineering", workspace: "~/.openclaw/workspace-engineering" },
-    ],
+    entries: {
+      support: { default: true, workspace: "~/.openclaw/workspace-support" },
+      engineering: { workspace: "~/.openclaw/workspace-engineering" },
+    },
   },
   bindings: [
     {
@@ -208,7 +208,7 @@ openclaw directory groups members \
 }
 ```
 
-如果没有特定于房间的绑定，正常的 OpenClaw 路由会选择默认 agent。有关匹配优先级，请参见 [Channel routing](/channels/channel-routing)。
+如果没有特定于房间的绑定，正常的 OpenClaw 路由会选择默认 agent。有关匹配优先级，请参见 [渠道路由](/channels/channel-routing)。
 
 ## 访问控制
 

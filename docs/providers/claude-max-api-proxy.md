@@ -36,7 +36,7 @@ Anthropic 的 Claude Code 文档将 `claude -p` 描述为 Agent SDK/程序化使
 ## 开始使用
 
 <Steps>
-  <Step title="Install the proxy">
+  <Step title="安装代理">
     需要 Node.js 20+ 以及已通过身份验证的 Claude Code CLI。
 
     ```bash
@@ -74,8 +74,10 @@ Anthropic 的 Claude Code 文档将 `claude -p` 描述为 Agent SDK/程序化使
     ```json5
     {
       env: {
-        OPENAI_API_KEY: "not-needed",
-        OPENAI_BASE_URL: "http://localhost:3456/v1",
+        vars: {
+          OPENAI_API_KEY: "not-needed",
+          OPENAI_BASE_URL: "http://localhost:3456/v1",
+        },
       },
       agents: {
         defaults: {
@@ -95,8 +97,8 @@ Anthropic 的 Claude Code 文档将 `claude -p` 描述为 Agent SDK/程序化使
 在依赖某个特定映射之前，请先查看该代理当前的 README。
 </Note>
 
-| Model ID          | CLI alias | Current mapping |
-| ----------------- | --------- | --------------- |
+| 模型 ID          | CLI 别名 | 当前映射        |
+| ---------------- | -------- | --------------- |
 | `claude-opus-4`   | `opus`    | Claude Opus 4.5 |
 | `claude-sonnet-4` | `sonnet`  | Claude Sonnet 4 |
 | `claude-haiku-4`  | `haiku`   | Claude Haiku 4  |
@@ -104,20 +106,20 @@ Anthropic 的 Claude Code 文档将 `claude -p` 描述为 Agent SDK/程序化使
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Proxy-style OpenAI-compatible notes">
+  <Accordion title="代理式 OpenAI 兼容说明">
     这使用的是 OpenClaw 的通用自定义 `/v1` OpenAI 兼容路由，与任何其他自托管的 OpenAI 兼容后端使用的是相同路径：
 
     - 原生 OpenAI 专属的请求形状调整不适用。
     - `/fast` 和 `service_tier` 仅适用于直接发送到 `api.anthropic.com`
       的流量；代理路由会保持 `service_tier` 不变（参见
-      [Anthropic provider fast mode](/providers/anthropic#advanced-configuration)）。
+      [Anthropic provider 快速模式](/providers/anthropic#advanced-configuration)）。
     - 不包含 Responses 的 `store`、prompt-cache 提示，或 OpenAI reasoning 兼容负载形状调整。
     - OpenClaw 的 OpenAI/Codex 归属头（`originator`、`version`、
       `User-Agent`）仅在原生 `api.openai.com` OAuth 流量中发送，不会在像此代理这样的自定义 `OPENAI_BASE_URL` 目标上发送。
 
   </Accordion>
 
-  <Accordion title="Auto-start on macOS with LaunchAgent">
+  <Accordion title="在 macOS 上使用 LaunchAgent 自动启动">
     ```bash
     cat > ~/Library/LaunchAgents/com.claude-max-api.plist << 'EOF'
     <?xml version="1.0" encoding="UTF-8"?>

@@ -20,13 +20,13 @@ Windows 11 的原生 WinUI 配套应用。它无需管理员权限即可安装�
 和 ARM64 安装程序，发布在其自己的发布页面上。
 
 Windows Hub 的发布与 OpenClaw CLI 和 Gateway 独立。请从
-[Windows Hub releases page](https://github.com/openclaw/openclaw-windows-node/releases/latest)
+[Windows Hub 发布页面](https://github.com/openclaw/openclaw-windows-node/releases/latest)
 下载最新的稳定版 Hub 安装程序，或者直接通过 `releases/latest/download` 下载：
 
 - [OpenClawCompanion-Setup-x64.exe](https://github.com/openclaw/openclaw-windows-node/releases/latest/download/OpenClawCompanion-Setup-x64.exe)
 - [OpenClawCompanion-Setup-arm64.exe](https://github.com/openclaw/openclaw-windows-node/releases/latest/download/OpenClawCompanion-Setup-arm64.exe)
 
-如果上面的链接返回 404，请访问 [Windows Hub releases page](https://github.com/openclaw/openclaw-windows-node/releases)
+如果上面的链接返回 404，请访问 [Windows Hub 发布页面](https://github.com/openclaw/openclaw-windows-node/releases)
 并打开最新的稳定版 Windows Hub 发布。常规的 OpenClaw 稳定版发布
 也会镜像一个固定的、经过发布验证的 Windows Hub 构建；该镜像可能会晚于
 更新的独立 Hub 发布。
@@ -39,7 +39,7 @@ Check for Updates 和卸载的快捷方式。
 
 - 系统托盘状态和登录时启动。
 - 首次运行时为本地、由应用拥有的 WSL Gateway 进行设置。
-- 针对本地、远程和通过 SSH 隧道连接的 Gateways 的连接设置。
+- 针对本地、远程和通过 SSH 隧道连接的 Gateway 的连接设置。
 - 原生聊天窗口，以及访问浏览器 Control UI 的入口。
 - Command Center 提供会话、使用情况、通道、节点、配对以及修复命令的诊断功能。
 - Windows 节点模式，用于由代理控制的画布、屏幕、摄像头、
@@ -90,20 +90,19 @@ openclaw devices approve <requestId>
 openclaw nodes status
 ```
 
-The Gateway only forwards commands the node declares and server policy
-allows. Privacy-sensitive commands such as `screen.record`, `camera.snap`,
-and `camera.clip` need explicit `gateway.nodes.commands.allow` opt-in.
+Gateway 只会转发节点声明且服务器策略允许的命令。诸如 `screen.record`、`camera.snap` 和
+`camera.clip` 等涉及隐私的命令需要在 `gateway.nodes.commands.allow` 中显式选择加入。
 
 ## 本地 MCP 模式
 
 Windows Hub 可以通过回环地址（loopback）将相同的 Windows 原生能力注册表作为本地
 MCP 服务器暴露出来，因此本地 MCP 客户端无需运行 OpenClaw Gateway 也能驱动 Windows 能力。
 
-请在 Windows Hub 设置中的开发者/高级部分启用它。启用服务器后，应用会显示回环端点和 bearer token。
+请在 Windows Hub 设置中的开发者／高级部分启用它。启用服务器后，应用会显示回环端点和 bearer token。
 
 模式矩阵：
 
-| Node mode | MCP server | 行为                               |
+| 节点模式 | MCP 服务器 | 行为                               |
 | --------- | ---------- | ---------------------------------- |
 | off       | off        | 仅供操作者使用的桌面应用          |
 | on        | off        | 连接到 Gateway 的 Windows 节点     |
@@ -138,7 +137,7 @@ openclaw gateway status --json
 仅使用 CLI、而不使用受管 Gateway 服务：
 
 ```powershell
-openclaw onboard --non-interactive --skip-health
+openclaw onboard --non-interactive --accept-risk --skip-health
 openclaw gateway run
 ```
 
@@ -217,11 +216,11 @@ systemctl --user is-enabled openclaw-gateway.service
 systemctl --user status openclaw-gateway.service --no-pager
 ```
 
-## Exponer servicios de WSL a través de LAN
+## 通过 LAN 暴露 WSL 服务
 
-WSL tiene su propia red virtual. Si otra máquina necesita acceder a un servicio dentro de WSL, reenvía el puerto de Windows a la IP actual de WSL. La IP de WSL puede cambiar después de reiniciar, así que actualiza las reglas de reenvío cuando sea necesario.
+WSL 拥有自己的虚拟网络。如果另一台机器需要访问 WSL 内的服务，请将 Windows 的端口转发到 WSL 的当前 IP。WSL 的 IP 可能会在重启后发生变化，因此请在必要时更新端口转发规则。
 
-Ejemplo de PowerShell como administrador:
+以管理员身份运行的 PowerShell 示例：
 
 ```powershell
 $Distro = "Ubuntu-24.04"
@@ -238,11 +237,11 @@ New-NetFirewallRule -DisplayName "WSL SSH $ListenPort" -Direction Inbound `
   -Protocol TCP -LocalPort $ListenPort -Action Allow
 ```
 
-Nota:
+注意：
 
-- El destino SSH desde otra máquina debe ser la IP del host de Windows, por ejemplo `ssh user@windows-host -p 2222`.
-- El nodo remoto debe apuntar a una URL de Gateway accesible, no a `127.0.0.1`.
-- El acceso por LAN usa `listenaddress=0.0.0.0`; el acceso solo local usa `127.0.0.1`.
+- 从另一台机器发起的 SSH 目标必须是 Windows 主机的 IP，例如 `ssh user@windows-host -p 2222`。
+- 远程节点必须指向可访问的 Gateway URL，而不是 `127.0.0.1`。
+- 通过 LAN 访问时使用 `listenaddress=0.0.0.0`；仅本地访问时使用 `127.0.0.1`。
 
 ## 故障排查
 

@@ -13,7 +13,7 @@ title: "DNS"
 相关：
 
 - 网关发现：[Discovery](/gateway/discovery)
-- 广域发现配置：[Configuration](/gateway/configuration)
+- 广域发现配置：[Configuration](/gateway/configuration)。
 
 ## `dns setup`
 
@@ -28,9 +28,9 @@ openclaw dns setup --apply
 | 选项                | 作用                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------ |
 | `--domain <domain>` | 广域发现域（例如 `openclaw.internal`）。                                                |
-| `--apply`           | 安装/更新 CoreDNS 配置并（重新）启动服务。需要 sudo，仅限 macOS。                       |
+| `--apply`           | 安装／更新 CoreDNS 配置并（重新）启动服务。需要 sudo，仅限 macOS。                       |
 
-如果不指定 `--domain`，OpenClaw 会使用配置中的 `discovery.wideArea.domain`。
+如果不指定 `--domain`，OpenClaw 使用配置中的 `discovery.wideArea.domain`。设置该域后即可启用广域发现。
 
 如果不指定 `--apply`，命令只会输出：
 

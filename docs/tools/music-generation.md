@@ -29,8 +29,10 @@ sidebarTitle: "音乐生成"
         {
           agents: {
             defaults: {
-              musicGenerationModel: {
-                primary: "google/lyria-3-clip-preview",
+              mediaModels: {
+                music: {
+                  primary: "google/lyria-3-clip-preview",
+                },
               },
             },
           },
@@ -92,11 +94,11 @@ sidebarTitle: "音乐生成"
 
 | 提供方      | 默认模型                     | 参考输入       | 支持的控制项                                       | 认证                                   |
 | ---------- | ---------------------------- | -------------- | -------------------------------------------------- | -------------------------------------- |
-| ComfyUI    | `workflow`                   | 最多 1 张图片  | 工作流定义的音乐或音频                             | `COMFY_API_KEY`, `COMFY_CLOUD_API_KEY` |
-| fal        | `fal-ai/minimax-music/v2.6`  | 无             | `lyrics`, `instrumental`, `durationSeconds`, `format` | `FAL_KEY` or `FAL_API_KEY`             |
-| Google     | `lyria-3-clip-preview`       | 最多 10 张图片  | `lyrics`, `instrumental`, `format`                    | `GEMINI_API_KEY`, `GOOGLE_API_KEY`     |
-| MiniMax    | `music-2.6`                  | 无             | `lyrics`, `instrumental`, `format`（仅 mp3）          | `MINIMAX_API_KEY` or MiniMax OAuth     |
-| OpenRouter | `google/lyria-3-pro-preview` | 最多 1 张图片  | `lyrics`, `instrumental`, `durationSeconds`, `format` | `OPENROUTER_API_KEY`                   |
+| ComfyUI    | `workflow`                   | 最多 1 张图片  | 工作流定义的音乐或音频                             | `COMFY_API_KEY`、`COMFY_CLOUD_API_KEY` |
+| fal        | `fal-ai/minimax-music/v2.6`  | 无             | `lyrics`、`instrumental`、`durationSeconds`、`format` | `FAL_KEY` 或 `FAL_API_KEY`             |
+| Google     | `lyria-3-clip-preview`       | 最多 10 张图片  | `lyrics`、`instrumental`、`format`                    | `GEMINI_API_KEY`、`GOOGLE_API_KEY`     |
+| MiniMax    | `music-2.6`                  | 无             | `lyrics`、`instrumental`、`format`（仅 mp3）          | `MINIMAX_API_KEY` 或 MiniMax OAuth     |
+| OpenRouter | `google/lyria-3-pro-preview` | 最多 1 张图片  | `lyrics`、`instrumental`、`durationSeconds`、`format` | `OPENROUTER_API_KEY`                   |
 
 MiniMax 注册了两个共享同一模型的提供方 id：用于 API 密钥认证的 `minimax`，以及用于 OAuth 的 `minimax-portal`。模型引用遵循认证路径（`minimax/music-2.6` vs `minimax-portal/music-2.6`）；参见
 [MiniMax](/providers/minimax#music-generation)。
@@ -112,9 +114,9 @@ fal 还在其默认的基于 MiniMax 的模型之外，提供 `fal-ai/ace-step/p
 | ---------- | :--------: | :----: | ---------- | ------------------------------------------------------------------- |
 | ComfyUI    |     ✓      |   ✓    | 1 张图片   | 不在共享 sweep 中；由 `extensions/comfy/comfy.live.test.ts` 覆盖     |
 | fal        |     ✓      |   —    | 无         | `generate`                                                          |
-| Google     |     ✓      |   ✓    | 10 张图片  | `generate`, `edit`                                                  |
+| Google     |     ✓      |   ✓    | 10 张图片  | `generate`、`edit`                                                  |
 | MiniMax    |     ✓      |   —    | 无         | `generate`                                                          |
-| OpenRouter |     ✓      |   ✓    | 1 张图片   | `generate`, `edit`                                                  |
+| OpenRouter |     ✓      |   ✓    | 1 张图片   | `generate`、`edit`                                                  |
 
 ## 工具参数
 
@@ -195,9 +197,11 @@ openclaw tasks cancel <taskId>
 {
   agents: {
     defaults: {
-      musicGenerationModel: {
-        primary: "google/lyria-3-clip-preview",
-        fallbacks: ["fal/fal-ai/minimax-music/v2.6", "minimax/music-2.6"],
+      mediaModels: {
+        music: {
+          primary: "google/lyria-3-clip-preview",
+          fallbacks: ["fal/fal-ai/minimax-music/v2.6", "minimax/music-2.6"],
+        },
       },
     },
   },
@@ -208,12 +212,12 @@ openclaw tasks cancel <taskId>
 
 OpenClaw 按以下顺序尝试提供方：
 
-1. `model` 参数来自工具调用（如果代理指定了一个）。
-2. 来自配置的 `musicGenerationModel.primary`。
-3. 按顺序使用 `musicGenerationModel.fallbacks`。
-4. 仅使用带有认证支持的提供方默认值进行自动检测：
-   - 如果当前默认文本模型提供方也提供音乐生成，则优先使用；
-   - 其余已注册的音乐生成提供方，按提供方 id 的字母顺序排列。
+1. 工具调用中的 `model` 参数（如果代理指定了该参数）。
+2. 配置中的 `agents.defaults.mediaModels.music.primary`。
+3. 按顺序使用 `agents.defaults.mediaModels.music.fallbacks`。
+4. 仅使用基于认证的提供方默认值进行自动检测：
+   - 首先使用当前默认的文本模型提供方，前提是该提供方也提供音乐生成；
+   - 然后按提供方 ID 的字母顺序使用其余已注册的音乐生成提供方。
 
 如果某个提供方失败，会自动尝试下一个候选项。如果全部失败，错误信息会包含每次尝试的详细信息。
 
@@ -231,7 +235,7 @@ OpenClaw 按以下顺序尝试提供方：
   <Accordion title="fal">
     通过共享的提供方授权路径使用 fal 模型端点。捆绑的提供方默认使用 `fal-ai/minimax-music/v2.6`，并且还为 prompt-to-audio 请求提供 `fal-ai/ace-step/prompt-to-audio` 和 `fal-ai/stable-audio-25/text-to-audio`。歌词和纯器乐模式仅适用于 MiniMax 模型；另外两个模型仅支持 prompt。
   </Accordion>
-  <Accordion title="Google (Lyria 3)">
+  <Accordion title="Google（Lyria 3）">
     使用 Lyria 3 批量生成。当前捆绑的流程支持 prompt、可选的歌词文本以及可选的参考图像。默认的 `lyria-3-clip-preview` 模型仅输出 mp3；`lyria-3-pro-preview` 模型也支持 wav。
   </Accordion>
   <Accordion title="MiniMax">
@@ -244,12 +248,12 @@ OpenClaw 按以下顺序尝试提供方：
 
 ## 选择合适的路径
 
-- **基于共享提供方**：当你需要模型选择、提供方故障切换以及内置的异步任务/状态流程时。
+- **基于共享提供方**：当你需要模型选择、提供方故障切换以及内置的异步任务／状态流程时。
 - **插件路径（ComfyUI）**：当你需要自定义工作流图，或者需要不属于共享打包音乐能力一部分的提供方时。
 
 如果你正在调试 ComfyUI 特定行为，请参阅
 [ComfyUI](/providers/comfy)。如果你正在调试共享提供方
-行为，请从 [fal](/providers/fal)、[Google (Gemini)](/providers/google)、
+行为，请从 [fal](/providers/fal)、[Google（Gemini）](/providers/google)、
 [MiniMax](/providers/minimax) 或 [OpenRouter](/providers/openrouter) 开始。
 
 ## 提供商能力模式
@@ -277,9 +281,9 @@ capabilities: {
 }
 ```
 
-诸如 `maxInputImages`、`supportsLyrics` 和
-`supportsFormat` 之类的旧式扁平字段，**不足以** 声明对编辑的支持。提供商
-应显式声明 `generate` 和 `edit`，以便实时测试、契约
+诸如 `maxInputImages`、`supportsLyrics` 和  
+`supportsFormat` 之类的旧式扁平字段，**不足以** 声明对编辑的支持。提供商  
+应显式声明 `generate` 和 `edit`，以便实时测试、契约  
 测试以及共享的 `music_generate` 工具能够确定性地验证模式支持。
 
 ## 实时测试
@@ -317,7 +321,7 @@ OPENCLAW_LIVE_TEST=1 COMFY_LIVE_TEST=1 pnpm test:live -- extensions/comfy/comfy.
 
 - [后台任务](/automation/tasks) — 用于分离的 `music_generate` 运行的任务跟踪
 - [ComfyUI](/providers/comfy)
-- [配置参考](/gateway/config-agents#agent-defaults) — `musicGenerationModel` 配置
+- [配置参考](/gateway/config-agents#agent-defaults) — `agents.defaults.mediaModels.music` 配置
 - [Google (Gemini)](/providers/google)
 - [MiniMax](/providers/minimax)
 - [模型](/concepts/models) — 模型配置和故障切换

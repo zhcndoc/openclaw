@@ -31,25 +31,25 @@ sidebarTitle: "工具与自定义提供方"
 
 ### 工具组
 
-| 分组               | 工具                                                                                                                                                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `group:runtime`    | `exec`、`process`、`code_execution`（`bash` 可作为 `exec` 的别名）                                                                                                                                                                                       |
-| `group:fs`         | `read`、`write`、`edit`、`apply_patch`                                                                                                                                                                                                                 |
-| `group:sessions`   | `sessions`、`sessions_list`、`sessions_history`、`sessions_search`、`conversations_list`、`conversations_send`、`conversations_turn`、`sessions_send`、`sessions_spawn`、`sessions_yield`、`subagents`、`session_status`、`spawn_task`、`dismiss_task` |
-| `group:memory`     | `memory_search`、`memory_get`                                                                                                                                                                                                                          |
-| `group:web`        | `web_search`、`x_search`、`web_fetch`                                                                                                                                                                                                                  |
-| `group:ui`         | `browser`、`screen`、`terminal`、`canvas`、`show_widget`                                                                                                                                                                                               |
-| `group:automation` | `heartbeat_respond`、`cron`、`gateway`                                                                                                                                                                                                                 |
-| `group:messaging`  | `message`                                                                                                                                                                                                                                              |
-| `group:nodes`      | `nodes`、`computer`                                                                                                                                                                                                                                    |
-| `group:agents`     | `agents_list`、`get_goal`、`create_goal`、`update_goal`、`update_plan`、`ask_user`、`skill_workshop`                                                                                                                                                   |
-| `group:media`      | `image`、`image_generate`、`music_generate`、`video_generate`、`tts`                                                                                                                                                                                   |
-| `group:openclaw`   | 除 `read`/`write`/`edit`/`apply_patch`/`exec`/`process`/`canvas` 之外的所有上述内置工具（不包括插件工具）                                                                                                                                             |
-| `group:plugins`    | 已加载插件拥有的工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                                                                                                                                                     |
+| 组                 | 工具                                                                                                                                                                                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `group:runtime`    | `exec`、`process`、`code_execution`（`bash` 可作为 `exec` 的别名）                                                                                                                                                                                        |
+| `group:fs`         | `read`、`write`、`edit`、`apply_patch`                                                                                                                                                                                                                   |
+| `group:sessions`   | `sessions`、`sessions_list`、`sessions_history`、`sessions_search`、`conversations_list`、`conversations_send`、`conversations_turn`、`sessions_send`、`sessions_spawn`、`sessions_yield`、`subagents`、`session_status`、`suggest_task`、`dismiss_task` |
+| `group:memory`     | `memory_search`、`memory_get`                                                                                                                                                                                                                            |
+| `group:web`        | `web_search`、`x_search`、`web_fetch`                                                                                                                                                                                                                    |
+| `group:ui`         | `browser`、`screen`、`terminal`、`canvas`、`show_widget`                                                                                                                                                                                                 |
+| `group:automation` | `heartbeat_respond`、`cron`、`gateway`                                                                                                                                                                                                                   |
+| `group:messaging`  | `message`                                                                                                                                                                                                                                                |
+| `group:nodes`      | `nodes`、`computer`                                                                                                                                                                                                                                      |
+| `group:agents`     | `agents_list`、`get_goal`、`create_goal`、`update_goal`、`update_plan`、`ask_user`、`skill_workshop`                                                                                                                                                     |
+| `group:media`      | `image`、`image_generate`、`music_generate`、`video_generate`、`tts`                                                                                                                                                                                     |
+| `group:openclaw`   | 上述所有内置工具，但不包括 `read`／`write`／`edit`／`apply_patch`／`exec`／`process`／`canvas`（不包括插件工具）                                                                                                                                          |
+| `group:plugins`    | 已加载插件所拥有的工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                                                                                                                                                     |
 
-`spawn_task` 允许编码代理提出已确认的后续工作，而无需立即启动。建议中的项目目录必须是一个 git 检出目录；无效的建议（包括非 git 目录或空白提示）会在工具记录它们时被拒绝。Control UI 会将标题和摘要显示为可执行的操作标签；基于 Gateway 的 TUI 则会显示等效的交互式提示。接受建议后，可以在新的受管工作树中启动任务（默认方式）、在建议的检出目录中通过新会话在本地启动任务、在配置了云端工作者配置文件时将任务发送给该配置文件，或将任务传递到源会话。OpenClaw 会将完整提示发送到选定的目标，同时当前回合继续进行。`dismiss_task` 会通过 `spawn_task` 返回的临时 `task_id` 撤回仍处于待处理状态的建议。
+`suggest_task` 允许编码代理在不启动任务的情况下提出已确认的后续工作。建议所使用的项目目录必须是 git checkout；无效的建议，包括非 git 目录或空白提示词，会在工具记录时被拒绝。Control UI 会将标题和摘要显示为可操作的提示框；Gateway 支持的 TUI 会显示等效的交互式提示。接受建议后，可以在新的受管理工作树中启动任务（默认行为）、在建议的 checkout 中本地启动新会话、在配置了云端工作器配置文件时将任务发送给该配置文件，或将任务交付给源会话。OpenClaw 会将完整提示词发送到所选目标，同时当前轮次继续进行。`dismiss_task` 会通过 `suggest_task` 返回的临时 `task_id` 撤回仍处于待处理状态的建议。
 
-只有当发起方的操作界面能够接收并处理 Gateway 任务建议事件时，才会提供这些工具。Channel 会话和本地/嵌入式 TUI 会话不会接收它们；channel 传输在安全地公开此流程之前，需要一个可移植的、类型化的任务操作。建议是进程本地的，并会在 Gateway 重启时消失。这两个工具仍然保留在 `coding` 配置和 `group:sessions` 中，因此当界面支持它们时，正常的 `tools.allow` 和 `tools.deny` 策略会自动对其进行配置。
+只有当发起方的操作界面能够接收并处理 Gateway 任务建议事件时，才会提供这些工具。Channel 会话和本地／嵌入式 TUI 会话不会接收它们；channel 传输在安全地公开此流程之前，需要一个可移植的、类型化的任务操作。建议是进程本地的，并会在 Gateway 重启时消失。这两个工具仍然保留在 `coding` 配置和 `group:sessions` 中，因此当界面支持它们时，正常的 `tools.allow` 和 `tools.deny` 策略会自动对其进行配置。
 
 ### 沙箱工具策略中的 MCP 与插件工具
 
@@ -114,7 +114,7 @@ sidebarTitle: "工具与自定义提供方"
 
 ### `tools.allow` / `tools.deny`
 
-全局工具允许/拒绝策略（拒绝优先）。大小写不敏感，支持 `*` 通配符。即使 Docker 沙箱关闭也会应用。
+全局工具允许／拒绝策略（拒绝优先）。大小写不敏感，支持 `*` 通配符。即使 Docker 沙箱关闭也会应用。
 
 ```json5
 {
@@ -199,7 +199,7 @@ sidebarTitle: "工具与自定义提供方"
   tools: {
     exec: {
       backgroundMs: 10000,
-      timeoutSec: 1800,
+      timeoutSeconds: 1800,
       cleanupMs: 1800000,
       approvalRunningNoticeMs: 10000,
       notifyOnExit: true,
@@ -214,7 +214,7 @@ sidebarTitle: "工具与自定义提供方"
 }
 ```
 
-所示数值均为默认值，唯独 `applyPatch.allowModels` 例外（默认为空/未设置，表示任何兼容模型都可以使用 `apply_patch`）。`approvalRunningNoticeMs` 会在需要审批的 exec 运行时间过长时发出运行通知；`0` 表示禁用。
+所示数值均为默认值，唯独 `applyPatch.allowModels` 例外（默认为空／未设置，表示任何兼容模型都可以使用 `apply_patch`）。`approvalRunningNoticeMs` 会在需要审批的 exec 运行时间过长时发出运行通知；`0` 表示禁用。
 
 ### `tools.loopDetection`
 
@@ -264,7 +264,7 @@ sidebarTitle: "工具与自定义提供方"
 
 ### `tools.media`
 
-配置入站媒体理解（图像/音频/视频）：
+配置入站媒体理解（图像／音频／视频）：
 
 ```json5
 {
@@ -296,14 +296,14 @@ sidebarTitle: "工具与自定义提供方"
   <Accordion title="媒体模型条目字段">
     **提供方条目**（`type: "provider"` 或省略）：
 
-    - `provider`：API 提供方 id（`openai`、`anthropic`、`google`/`gemini`、`groq` 等）
+    - `provider`：API 提供方 id（`openai`、`anthropic`、`google`／`gemini`、`groq` 等）
     - `model`：模型 id 覆盖
-    - `profile` / `preferredProfile`：`auth-profiles.json` 配置档案选择
+    - `profile`／`preferredProfile`：`auth-profiles.json` 配置档案选择
 
     **CLI 条目**（`type: "cli"`）：
 
-    - `command`: 要运行的可执行文件
-    - `args`: 模板化参数（支持 `{{AttachmentPath}}`、`{{AttachmentUrl}}`、`{{AttachmentContentType}}`、`{{AttachmentDir}}`、`{{AttachmentIndex}}`、`{{Prompt}}`、`{{MaxChars}}` 等；`openclaw doctor --fix` 会将已弃用的 `{input}` 占位符迁移为 `{{AttachmentPath}}`）。较旧的 `{{MediaPath}}`、`{{MediaUrl}}`、`{{MediaType}}` 和 `{{MediaDir}}` 别名在兼容期内仍可用，但已弃用。
+    - `command`：要运行的可执行文件
+    - `args`：模板化参数（支持 `{{AttachmentPath}}`、`{{AttachmentUrl}}`、`{{AttachmentContentType}}`、`{{AttachmentDir}}`、`{{AttachmentIndex}}`、`{{Prompt}}`、`{{MaxChars}}` 等；`openclaw doctor --fix` 会将已弃用的 `{input}` 占位符迁移为 `{{AttachmentPath}}`）。较旧的 `{{MediaPath}}`、`{{MediaUrl}}`、`{{MediaType}}` 和 `{{MediaDir}}` 别名在兼容期内仍可用，但已弃用。
 
     **通用字段：**
 
@@ -477,20 +477,20 @@ sidebarTitle: "工具与自定义提供方"
 ```
 
 <AccordionGroup>
-  <Accordion title="认证和合并优先级">
-    - 使用 `authHeader: true` + `headers` 以满足自定义认证需求。
+  <Accordion title="身份验证和合并优先级">
+    - 使用 `authHeader: true` + `headers` 满足自定义身份验证需求。
     - 使用 `OPENCLAW_AGENT_DIR` 覆盖 agent 配置根目录。
-    - 匹配到提供商 ID 时的合并优先级：
-      - 非空的 agent `models.json` 中的 `baseUrl` 值优先。
-      - 非空的 agent `apiKey` 值仅在当前 config/auth-profile 上下文中该提供商不是由 SecretRef 管理时才优先。
-      - 由 SecretRef 管理的提供商 `apiKey` 值会从源标记刷新（环境变量引用使用 `ENV_VAR_NAME`，文件/exec 引用使用 `secretref-managed`），而不是持久化解析后的密钥。
-      - 由 SecretRef 管理的提供商 header 值会从源标记刷新（环境变量引用使用 `secretref-env:ENV_VAR_NAME`，文件/exec 引用使用 `secretref-managed`）。
-      - 空的或缺失的 agent `apiKey`/`baseUrl` 会回退到配置中的 `models.providers`。
-      - 匹配的模型 `contextWindow`/`maxTokens`：当显式配置值存在且有效（正的有限数字）时，显式配置值优先；否则使用隐式/生成的目录值。
-      - 匹配的模型 `contextTokens` 采用相同的“显式优先，否则隐式”规则；可用它来限制有效上下文，而不改变原生模型元数据。
-      - 提供商插件目录作为由插件生成且归插件拥有的目录分片，存储在 agent 的插件状态中。
-      - 当你希望配置完全重写 `models.json` 并跳过合并插件拥有的目录分片时，请使用 `models.mode: "replace"`。
-      - 标记持久化以源为准：标记会从当前有效的源配置快照（解析前）写入，而不是从运行时解析后的密钥值写入。
+    - 对匹配提供商 ID 的合并优先级：
+      - 非空的 agent `models.json` `baseUrl` 值优先。
+      - 仅当该提供商在当前配置／auth-profile 上下文中不是由 SecretRef 管理时，非空的 agent `apiKey` 值才优先。
+      - 由 SecretRef 管理的提供商 `apiKey` 值会根据源标记刷新（环境变量引用使用 `ENV_VAR_NAME`，文件／exec／store 引用使用 `secretref-managed`），而不是持久化已解析的密钥。
+      - 由 SecretRef 管理的提供商标头值会根据源标记刷新（环境变量引用使用 `secretref-env:ENV_VAR_NAME`，文件／exec／store 引用使用 `secretref-managed`）。
+      - 空值或缺失的 agent `apiKey`／`baseUrl` 会回退到配置中的 `models.providers`。
+      - 匹配模型的 `contextWindow`／`maxTokens`：存在明确配置值且该值有效（正的有限数值）时，明确配置值优先；否则使用隐式／生成的目录值。
+      - 匹配模型的 `contextTokens` 遵循相同的“明确值优先，否则使用隐式值”规则；使用它可以限制有效上下文，而不改变原生模型元数据。
+      - 提供商插件目录会作为由插件拥有的生成目录分片存储在 agent 的插件状态下。
+      - 当你希望配置完全重写 `models.json` 并跳过合并由插件拥有的目录分片时，使用 `models.mode: "replace"`。
+      - 标记持久化以源为准：标记会根据活动源配置快照（解析前）写入，而不是根据已解析的运行时密钥值写入。
 
   </Accordion>
 </AccordionGroup>
@@ -589,7 +589,7 @@ sidebarTitle: "工具与自定义提供方"
 
     ```json5
     {
-      env: { CEREBRAS_API_KEY: "sk-..." },
+      env: { vars: { CEREBRAS_API_KEY: "sk-..." } },
       agents: {
         defaults: {
           model: {
@@ -625,7 +625,7 @@ sidebarTitle: "工具与自定义提供方"
   <Accordion title="Kimi Coding">
     ```json5
     {
-      env: { KIMI_API_KEY: "sk-..." },
+      env: { vars: { KIMI_API_KEY: "sk-..." } },
       agents: {
         defaults: {
           model: { primary: "kimi/kimi-for-coding" },
@@ -720,7 +720,7 @@ sidebarTitle: "工具与自定义提供方"
   <Accordion title="Moonshot AI（Kimi）">
     ```json5
     {
-      env: { MOONSHOT_API_KEY: "sk-..." },
+      env: { vars: { MOONSHOT_API_KEY: "sk-..." } },
       agents: {
         defaults: {
           model: { primary: "moonshot/kimi-k2.6" },
@@ -774,7 +774,7 @@ sidebarTitle: "工具与自定义提供方"
   <Accordion title="Synthetic（Anthropic 兼容）">
     ```json5
     {
-      env: { SYNTHETIC_API_KEY: "sk-..." },
+      env: { vars: { SYNTHETIC_API_KEY: "sk-..." } },
       agents: {
         defaults: {
           model: { primary: "synthetic/hf:MiniMaxAI/MiniMax-M3" },

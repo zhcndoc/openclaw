@@ -8,15 +8,21 @@ title: "Talk 模式"
 
 Talk 模式涵盖五种运行形态：
 
-- **原生 macOS/iOS/Android Talk**：原生语音识别、Gateway 聊天和 `talk.speak` TTS。macOS/iOS 上的 Apple 语音识别可能使用网络服务；Android 的行为取决于已安装的语音服务。节点会播报 `talk` 能力，并声明其支持哪些 `talk.*` 命令。
-- **iOS Talk（实时）**：对于选择 `webrtc` 传输方式或省略传输方式的 OpenAI realtime 配置，使用由客户端持有的 WebRTC，包括有帧和无帧的转录/音频事件。显式指定 `gateway-relay`、`provider-websocket` 以及非 OpenAI realtime 配置的会话仍使用由 Gateway 持有的中继；非 realtime 配置使用原生语音循环。
-- **浏览器 Talk**：客户端持有的 `webrtc`/`provider-websocket` 会话使用 `talk.client.create`，由 Gateway 持有的 `gateway-relay` 会话使用 `talk.session.create`。`managed-room` 仅用于 Gateway 移交和对讲机房间。
-- **Android Talk（实时）**：当 `talk.catalog` 报告 realtime 组已就绪且配置的模型通过 Android 客户端门槛时，Android 使用由 Gateway 持有的中继 realtime；它绝不会打开由客户端持有的 WebRTC 会话。Gateway 现在支持 `gpt-live-*` 中继会话，但 Android 会有意让这些模型继续使用原生语音识别、Gateway 聊天和 `talk.speak`，直到在 Android 设备上验证中继路径确实可用。
-- **仅转录客户端**：`talk.session.create({ mode: "transcription", transport: "gateway-relay", brain: "none" })`，然后使用 `talk.session.appendAudio`、`talk.session.cancelTurn` 和 `talk.session.close`，即可在没有助手语音回复的情况下生成字幕/听写。一次性上传的语音备注仍使用[媒体理解](/nodes/media-understanding)音频路径。
+- **Native macOS/iOS/Android Talk**：原生语音识别、Gateway 聊天以及 `talk.speak` TTS。macOS/iOS 上的 Apple Speech recognition 可能会使用网络服务；Android 的行为取决于已安装的语音服务。节点会公布 `talk` 能力，并声明它们支持哪些 `talk.*` 命令。
+- **iOS Talk（realtime）**：对于选择 `webrtc` 传输方式或省略传输方式的 OpenAI realtime 配置，使用由客户端拥有的 WebRTC，包括带帧和无帧的转录／音频事件。显式指定 `gateway-relay`、`provider-websocket` 的 realtime 配置以及非 OpenAI realtime 配置会继续使用由 Gateway 拥有的中继；非 realtime 配置使用原生语音循环。
+- **Browser Talk**：对于由客户端拥有的 `webrtc`／`provider-websocket` 会话，使用 `talk.client.create`；对于由 Gateway 拥有的 `gateway-relay` 会话，使用 `talk.session.create`。`managed-room` 保留用于 Gateway 移交和对讲机房间。
+- **Android Talk（realtime）**：当 `talk.catalog` 报告 realtime 组已就绪且配置的模型通过 Android 客户端门槛时，Android 会使用由 Gateway 拥有的中继 realtime；它绝不会打开由客户端拥有的 WebRTC 会话。Gateway 现在支持 `gpt-live-*` 中继会话，但 Android 会有意让这些模型继续使用原生语音识别、Gateway 聊天和 `talk.speak`，直到从 Android 设备验证中继路径可以正常运行。
+- **仅转录客户端**：`talk.session.create({ mode: "transcription", transport: "gateway-relay", brain: "none" })`，然后使用 `talk.session.appendAudio` 和 `talk.session.close`，即可在没有助手语音响应的情况下进行字幕／听写。一次性上传的语音备忘录仍使用[媒体理解](/nodes/media-understanding)音频路径。
 
 原生 Talk 是一个连续循环：监听语音，将转录结果通过活动会话发送到模型，等待回复，然后通过已配置的 Talk 提供方（`talk.speak`）进行朗读。
 
-客户端持有的 realtime Talk 通常通过 `talk.client.toolCall` 转发提供方工具调用，而不是直接调用 `chat.send`。GPT-Live WebRTC 会话在 Gateway 持有的 sideband 上进行委托，Gateway 会将每个委托绑定到持有该委托的浏览器或 Gateway 中继 Talk 会话。后端 WebSocket 桥接使用正常的中继咨询路径。在 realtime 咨询处于活动状态时，客户端可以调用 `talk.client.steer` 或 `talk.session.steer`，将语音输入分类为 `status`、`steer`、`cancel` 或 `followup`；这也包括 GPT-Live 委托。接受的引导会排入当前活动的嵌入式运行；被拒绝的引导会返回诸如 `no_active_run`、`not_streaming` 或 `compacting` 之类的原因。较新的 GPT-Live 语音任务也会取代正在运行的委托。
+## 从聊天中选择 Talk 语音
+
+设置 `talk.provider` 和匹配的 `talk.providers.<provider>` 配置后，使用 `/voice status` 查看活动的提供方和语音，使用 `/voice list [limit]` 列出其可用语音，并使用 `/voice set <voiceId|name>` 保存限定于提供方的选择。Discord 原生提供相同的命令 `/talkvoice`。
+
+状态和列表为只读。设置语音需要消息频道所有者或具有 `operator.admin` 权限的 Gateway 客户端。配置、提供方查找、未知语音和权限失败都会在聊天中明确返回。`/voice status` 中的掩码 API 密钥值仅描述配置，不会验证凭据是否可用。
+
+客户端持有的实时 Talk 通常会通过 `talk.client.toolCall` 转发提供方工具调用，而不是直接调用 `chat.send`。GPT-Live WebRTC 会话会通过 Gateway 所有的 sideband 进行委托，并且 Gateway 会将每个委托绑定到拥有该委托的浏览器或 Gateway 中继 Talk 会话。后端 WebSocket 桥接使用正常的中继咨询路径。实时咨询处于活动状态时，客户端可以调用 `talk.client.steer` 或 `talk.session.steer`，将语音输入分类为 `status`、`steer`、`cancel` 或 `followup`；这也包括 GPT-Live 委托。接受的引导请求会排队进入活动的嵌入式运行；被拒绝的引导请求会返回诸如 `no_active_run`、`not_streaming` 或 `compacting` 的原因。较新的 GPT-Live 语音任务也会取代正在运行的委托。
 
 轻量音频客户端可以在 `talk.client.create.capabilities` 中请求 `gateway-control-v1`。OpenAI GA Realtime 仅在使用 Platform API 密钥时支持此模式。成功后会返回 `clientControl: { owner: "gateway" }`、一个有效期 60 秒且只能使用一次的 `clientSecret`，以及相对 offer URL `/plugins/openai/realtime/calls`。客户端会向该 Gateway 路由发起仅包含音频的 SDP offer，并且不会打开提供方数据通道。Gateway 会连接官方 OpenAI 服务端 sideband，并负责工具、转录、引导、取消和通话清理，而媒体仍直接在客户端与 OpenAI 之间传输。仅支持 OAuth 的配置会明确失败，而不会回退到客户端持有的控制模式。现有浏览器客户端不会声明此能力，并继续使用当前的临时令牌和 WebRTC 数据通道流程。
 
@@ -171,8 +177,8 @@ iOS 客户端所有的 WebRTC、语音通话、GA Gateway 中继、provider WebS
 ## macOS 界面
 
 - 菜单栏切换：**Talk**
-- 配置标签页：**Talk Mode** 组（voice id + interrupt toggle）
-- 覆盖层：该球体渲染通用的 talk 波形（与 iOS、watchOS 和 Android 共用）。Listening 跟随实时麦克风音量，Speaking 跟随实际的 TTS 播放包络，Thinking 轻柔呼吸。点击球体可暂停/恢复，双击可停止说话，点击 X 可退出 Talk 模式。
+- 配置标签页：**Talk Mode** 组（voice id ＋ interrupt toggle）
+- 覆盖层：该球体渲染通用的 talk 波形（与 iOS、watchOS 和 Android 共用）。Listening 跟随实时麦克风音量，Speaking 跟随实际的 TTS 播放包络，Thinking 轻柔呼吸。点击球体可暂停／恢复，双击可停止说话，点击 X 可退出 Talk 模式。
 
 ## Android 界面
 

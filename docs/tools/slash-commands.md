@@ -57,13 +57,10 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
     debug: false,
     restart: true,
     ownerAllowFrom: ["discord:123456789012345678"],
-    ownerDisplay: "raw",
-    ownerDisplaySecret: "${OWNER_ID_HASH_SECRET}",
     allowFrom: {
       "*": ["user1"],
       discord: ["user:123"],
     },
-    useAccessGroups: true,
   },
 }
 ```
@@ -116,27 +113,22 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
   每个频道：要求所有者身份才能执行仅限所有者的命令。为 `true` 时，发送者必须匹配 `commands.ownerAllowFrom` 或拥有内部 `operator.admin` 范围。通配符 `allowFrom` 条目**不足以满足要求**。
 </ParamField>
 
-<ParamField path="commands.ownerDisplay" type='"raw" | "hash"'>
-  控制所有者 ID 在系统提示词中的显示方式。
-</ParamField>
-
-<ParamField path="commands.ownerDisplaySecret" type="string">
-  当 `commands.ownerDisplay: "hash"` 时使用的 HMAC secret。
-</ParamField>
-
 <ParamField path="commands.allowFrom" type="object">
   按提供方划分的命令授权允许列表。配置后，它是命令和指令的**唯一**授权来源。使用 `"*"` 作为全局默认值；特定提供方的键会覆盖它。
 </ParamField>
+
+当未配置 `commands.allowFrom` 时，命令授权遵循频道的允许列表和配对状态。
+频道允许列表中引用的访问组条目会自动解析；不存在命令级访问组开关。
 
 ## 命令列表
 
 命令来自三个来源：
 
 - **核心内置：** `src/auto-reply/commands-registry.shared.ts`
-- **生成的 dock 命令：** `src/auto-reply/commands-registry.data.ts`
+- **生成的 Dock 命令：** `src/auto-reply/commands-registry.data.ts`
 - **插件命令：** 插件的 `registerCommand()` 调用
 
-可用性取决于配置标志、频道界面，以及已安装/已启用的
+可用性取决于配置标志、频道界面，以及已安装／已启用的
 插件。
 
 ### 核心命令
@@ -177,33 +169,33 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
     | `/reasoning [on\|off\|stream]` | 切换推理可见性。别名：`/reason` |
     | `/elevated [on\|off\|ask\|full]` | 切换提升模式。别名：`/elev` |
     | `/exec host=<auto\|sandbox\|gateway\|node> security=<deny\|allowlist\|full> ask=<off\|on-miss\|always> node=<id>` | 显示或设置 exec 默认值 |
-    | `/login [codex\|openai\|openai-codex]` | 从私聊或 Web UI 会话配对 Codex/OpenAI 登录。仅限 owner/管理员 |
-    | `/model [name\|#\|status] [-s\|--session]` | 显示或选择模型。owner/管理员的直接选择会请求更新已配置的默认值；`-s` 仅更改当前会话 |
+    | `/login [codex\|openai\|openai-codex]` | 从私聊或 Web UI 会话配对 Codex/OpenAI 登录。仅限 owner／管理员 |
+    | `/model [name\|#\|status] [-s\|--session]` | 显示或选择模型。owner／管理员的直接选择会请求更新已配置的默认值；`-s` 仅更改当前会话 |
     | `/models [provider] [page] [limit=<n>\|all]` | 列出已配置或通过身份验证可用的提供方或模型 |
     | `/queue <mode>` | 管理活动运行的队列行为。参见 [Queue](/concepts/queue) 和 [Queue steering](/concepts/queue-steering) |
     | `/steer <message>` | 向活动运行注入指导。别名：`/tell`。参见 [Steer](/tools/steer) |
 
     <AccordionGroup>
-      <Accordion title="verbose / trace / fast / reasoning 的安全性">
+      <Accordion title="verbose／trace／fast／reasoning 的安全性">
         - `/verbose` 用于调试——正常使用时请保持**关闭**。
-        - `/trace` 只会显示插件拥有的跟踪/调试行；普通的 verbose 输出仍保持关闭。
+        - `/trace` 只会显示插件拥有的跟踪／调试行；普通的 verbose 输出仍保持关闭。
         - `/fast auto|on|off` 会持久化会话覆盖；使用 Sessions UI 的 `inherit` 选项可清除它。
-        - `/fast` 具有提供方特定行为：OpenAI/Codex 将其映射为 `service_tier=priority`；直接 Anthropic 请求映射为 `service_tier=auto` 或 `standard_only`。
+        - `/fast` 具有提供方特定行为：OpenAI／Codex 将其映射为 `service_tier=priority`；直接 Anthropic 请求映射为 `service_tier=auto` 或 `standard_only`。
         - `/reasoning`、`/verbose` 和 `/trace` 在群组场景中存在风险——它们可能泄露内部推理或插件诊断信息。请在群聊中保持关闭。
 
       </Accordion>
       <Accordion title="模型切换详情">
-        **一句话说明范围：** owner/管理员直接执行 `/model <model>` 会更改会话，并请求尽力更新已配置的默认值；`-s` 仅更改当前会话。当代理继承 `agents.defaults.model` 时，更新目标是该共享的全局回退值。
+        **一句话说明范围：** owner／管理员直接执行 `/model <model>` 会更改会话，并请求尽力更新已配置的默认值；`-s` 仅更改当前会话。当代理继承 `agents.defaults.model` 时，更新目标是该共享的全局回退值。
 
         已配置的 `/<alias>` 简写接受与 `/model <alias>` 相同的末尾 `--runtime`、`-s` 和 `--session` 选项。
 
         | 目标 | 命令 | 效果 |
         | --- | --- | --- |
-        | 请求更改已配置的默认值 | 作为 owner/管理员执行 `/model <model>` | 更改此会话，并开始尽力更新代理的有效已配置默认值。如果代理没有显式主模型，目标就是共享的 `agents.defaults.model` 回退值 |
+        | 请求更改已配置的默认值 | 作为 owner／管理员执行 `/model <model>` | 更改此会话，并开始尽力更新代理的有效已配置默认值。如果代理没有显式主模型，目标就是共享的 `agents.defaults.model` 回退值 |
         | 仅更改此会话 | `/model <model> -s`（或 `--session`） | 更改此会话；已配置的默认值保持不变 |
         | 再次使用已配置的默认值 | `/model default`（带或不带 `-s`） | 清除当前会话的模型选择，使其继承当前已配置的默认值；兼容的身份验证固定设置会保留，不兼容的固定设置会被清除 |
 
-        非 owner 执行的 `/model <model>` 选择同样只对当前会话有效，因为其无法写入已配置的默认值。不可变配置保持不变，异步写入失败会被记录，但不会回退会话选择。明确的用户模型/配置文件固定设置会跨越 `/new`、`/reset`、会话轮换、压缩和冷却窗口而保留；自动配置文件固定设置可能会轮换或清除。使用 `/model default -s` 重置会清除会话模型选择，保留兼容的身份验证固定设置，并清除不兼容的固定设置。它不会恢复先前由 owner/管理员选择替换的已配置默认值。
+        非 owner 执行的 `/model <model>` 选择同样只对当前会话有效，因为其无法写入已配置的默认值。不可变配置保持不变，异步写入失败会被记录，但不会回退会话选择。明确的用户模型／配置文件固定设置会跨越 `/new`、`/reset`、会话轮换、压缩和冷却窗口而保留；自动配置文件固定设置可能会轮换或清除。使用 `/model default -s` 重置会清除会话模型选择，保留兼容的身份验证固定设置，并清除不兼容的固定设置。它不会恢复先前由 owner／管理员选择替换的已配置默认值。
 
         - 如果代理处于空闲状态，下一次运行会立即使用它。
         - 如果当前有运行正在进行，切换会被标记为待处理，并在下一个干净的重试点应用。
@@ -219,15 +211,15 @@ OpenClaw 命令处理程序，而当该界面启用命令处理时，`/status` �
     | `/help` | 显示简短帮助摘要 |
     | `/commands` | 显示生成的命令目录 |
     | `/tools [compact\|verbose]` | 显示当前代理此刻可用的工具 |
-    | `/status` | 显示执行/运行时状态、Gateway 和系统运行时间、插件健康状况，以及提供方用量/配额 |
+    | `/status` | 显示执行／运行时状态、Gateway 和系统运行时间、插件健康状况，以及提供方用量／配额 |
     | `/status plugins` | 显示详细的插件健康状况：加载错误、隔离、频道插件失败、依赖问题、兼容性提示。需要 `commands.plugins: true` |
     | `/goal [status\|start\|edit\|pause\|resume\|complete\|block\|clear] ...` | 管理当前会话的持久化 [goal](/tools/goal) |
     | `/diagnostics [note]` | 仅 owner 可用的支持报告流程。每次都会请求 exec 批准 |
     | `/openclaw <request>` | 从 owner 私聊运行 OpenClaw 的安装与修复助手 |
-    | `/tasks` | 列出当前会话中活跃/最近的后台任务 |
+    | `/tasks` | 列出当前会话中活跃／最近的后台任务 |
     | `/context [list\|detail\|map\|json]` | 解释上下文是如何组装的 |
     | `/whoami` | 显示你的发送者 ID。别名：`/id` |
-    | `/usage off\|tokens\|full\|reset\|cost` | 控制每次回复的用量页脚（`reset`/`inherit`/`clear`/`default` 会清除会话覆盖以重新继承已配置的默认值），或打印本地成本摘要 |
+    | `/usage off\|tokens\|full\|reset\|cost` | 控制每次回复的用量页脚（`reset`／`inherit`／`clear`／`default` 会清除会话覆盖以重新继承已配置的默认值），或打印本地成本摘要 |
   </Accordion>
 
   <Accordion title="技能、允许列表、批准">
@@ -292,13 +284,13 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 ### 内置插件命令
 
-| 命令                                                 | 描述                                                                                                                                                                                    |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dreaming [on\|off\|status\|help]`                     | 切换记忆梦境（owner 或 Gateway 管理员）。参见 [Dreaming](/concepts/dreaming)                                                                                                            |
-| `/pair [qr\|status\|pending\|approve\|cleanup\|notify]` | 管理设备配对。参见 [Pairing](/channels/pairing)                                                                                                                                        |
-| `/voice status\|list\|set <voiceId>`                    | 管理 Talk 语音配置。Discord 原生命令名：`/talkvoice`                                                                                                                                    |
-| `/card ...`                                             | 发送 LINE 富卡片预设。参见 [LINE](/channels/line)                                                                                                                                        |
-| `/codex <action> ...`                                   | 绑定、指引和检查 Codex 应用服务器脚手架（status、threads、resume、model、fast、permissions、compact、review、mcp、skills 等）。参见 [Codex harness](/plugins/codex-harness) |
+| 命令                                                                               | 描述                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dreaming [on\|off\|status\|help]`                                                 | 切换 memory dreaming（owner 或 Gateway 管理员）。参见 [Dreaming](/concepts/dreaming)                                                                                                          |
+| `/pair [qr\|status\|pending\|approve\|cleanup\|notify]`                             | 管理设备配对。参见 [Pairing](/channels/pairing)                                                                                                                                                |
+| [`/voice`](/nodes/talk#choose-a-talk-voice-from-chat) `status\|list\|set <voiceId>` | 管理 Talk 语音配置。Discord 原生命令名称：`/talkvoice`                                                                                                                                        |
+| `/card ...`                                                                         | 发送 LINE rich card 预设。参见 [LINE](/channels/line)                                                                                                                                           |
+| `/codex <action> ...`                                                               | 绑定、引导和检查 Codex app-server harness（状态、线程、恢复、模型、快速模式、权限、压缩、审查、mcp、技能等）。参见 [Codex harness](/plugins/codex-harness) |
 
 仅 QQBot：`/bot-ping`、`/bot-version`、`/bot-help`、`/bot-upgrade`、`/bot-logs`。
 
@@ -341,7 +333,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 `/loop` 仅限所有者使用，因为它使用 cron 控制平面工具。`/loop 5m check deploy status` 会要求代理在当前对话中创建一个固定频率的 cron 作业。没有间隔时，`/loop watch for new issues` 会创建一个自适应循环，在活跃时更频繁地检查，并在安静时逐步退避到 1 小时。`/loop status` 会列出该对话的循环作业；`/loop stop [name]` 会将其移除。
 
-## `/model`: 模型选择
+## `/model`：模型选择
 
 直接所有者/管理员的 `/model <model>` 请求使用**默认作用域**：它会更改当前会话，并开始尽力更新已配置的默认值。添加 `-s` 使用**会话作用域**：仅更改当前会话。对于未显式指定主模型的代理，更新目标是共享的全局 `agents.defaults.model` 回退值。
 
@@ -496,11 +488,11 @@ git、archive、`npm-pack:` 和本地路径来源会显示来源警告，并且�
 
 ## 提供者使用情况和状态
 
-- **提供者使用量/配额**（例如，“Claude 还剩 80%”）会在启用使用情况跟踪时显示在当前模型提供者的 `/status` 中。
-- `/status` 中的 **token/缓存行** 在实时会话快照较少时，可能会回退到最新的转录使用条目。
+- **提供者使用量／配额**（例如，“Claude 还剩 80%”）会在启用使用情况跟踪时显示在当前模型提供者的 `/status` 中。
+- `/status` 中的 **token／缓存行** 在实时会话快照较少时，可能会回退到最新的转录使用条目。
 - **执行 vs 运行时：** `/status` 会报告 `Execution`，以指示实际的沙箱路径；并报告 `Runtime`，以指示当前正在运行会话的是谁：`OpenClaw Default`、`OpenAI Codex`、CLI backend 或 ACP backend。
-- **每次响应的 token/成本：** 由 `/usage off|tokens|full` 控制。
-- `/model status` 重点关注模型/认证/端点，而不是使用情况。
+- **每次响应的 token／成本：** 由 `/usage off|tokens|full` 控制。
+- `/model status` 重点关注模型／认证／端点，而不是使用情况。
 
 ## 相关内容
 

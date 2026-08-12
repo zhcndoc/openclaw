@@ -74,7 +74,7 @@ title: "常见问题"
   </Accordion>
 
   <Accordion title="价值主张">
-    OpenClaw 不是“只是一个 Claude 包装器”。它是一个 **local-first 控制平面**，在 **你自己的硬件** 上运行一个能力强大的助手，可从你已经在使用的聊天应用中访问，具备有状态会话、记忆和工具能力 - 而不必把你的工作流交给托管式 SaaS。
+    OpenClaw 不是“只是一个 Claude 包装器”。它是一个 **local-first 控制平面**，在 **你自己的硬件** 上运行一个能力强大的助手，可从你已经在使用的聊天应用中访问，具备有状态会话、记忆和工具能力－而不必把你的工作流交给托管式 SaaS。
 
     - **你的设备，你的数据**：可在任何你想要的地方运行 Gateway（Mac、Linux、VPS），并将工作区和会话历史保留在本地。
     - **真实渠道，而不是网页沙盒**：Discord/iMessage/Signal/Slack/Telegram/WhatsApp 等，以及在受支持平台上的移动端语音和 Canvas。
@@ -150,20 +150,19 @@ title: "常见问题"
     ```json5
     {
       agents: {
-        list: [
-          {
-            id: "coder",
+        entries: {
+          coder: {
+            default: true,
             model: "xiaomi/mimo-v2.5-pro",
             thinkingDefault: "high",
             params: { temperature: 0.1 },
           },
-          {
-            id: "chat",
+          chat: {
             model: "xiaomi/mimo-v2.5-pro",
             thinkingDefault: "off",
             params: { temperature: 0.8 },
           },
-        ],
+        },
       },
     }
     ```
@@ -519,7 +518,7 @@ title: "常见问题"
   <Accordion title="OpenClaw 将数据存储在哪里？">
     所有内容都位于 `$OPENCLAW_STATE_DIR` 下（默认：`~/.openclaw`）：
 
-    | Path                                                               | Purpose                                                            |
+    | 路径                                                               | 用途                                                               |
     | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
     | `$OPENCLAW_STATE_DIR/openclaw.json`                                 | 主配置（JSON5）                                                     |
     | `$OPENCLAW_STATE_DIR/credentials/oauth.json`                        | 旧版 OAuth 导入（首次使用时复制到 auth profiles 中）                |
@@ -797,7 +796,7 @@ title: "常见问题"
   <Accordion title="如果 Gateway 托管在远程，agent 如何访问我的电脑？">
     将你的电脑配对为一个 **node**。Gateway 运行在别处，但可以通过 Gateway WebSocket 在你的本地机器上调用 `node.*` 工具（屏幕、摄像头、系统）。
 
-    1. 在始终在线的主机（VPS/家用服务器）上运行 Gateway。
+    1. 在始终在线的主机（VPS／家用服务器）上运行 Gateway。
     2. 将 Gateway 主机和你的电脑放在同一个 tailnet 中。
     3. 确保 Gateway WS 可达（tailnet 绑定或 SSH 隧道）。
     4. 在本地打开 macOS 应用，并以 **通过 SSH 远程** 模式连接（或直接 tailnet 连接），这样它就会注册为 node。
@@ -811,7 +810,7 @@ title: "常见问题"
 
     安全提示：配对一个 macOS node 会允许在那台机器上执行 `system.run`。只配对你信任的设备；请查看 [安全](/gateway/security)。
 
-    文档：[Nodes](/nodes), [Gateway 协议](/gateway/protocol), [macOS 远程模式](/platforms/mac/remote), [安全](/gateway/security)。
+    文档：[Nodes](/nodes)、[Gateway 协议](/gateway/protocol)、[macOS 远程模式](/platforms/mac/remote)、[安全](/gateway/security)。
 
   </Accordion>
 
@@ -824,18 +823,18 @@ title: "常见问题"
     openclaw channels status
     ```
 
-    然后验证认证和路由：如果你使用 Tailscale Serve，确认 `gateway.auth.allowTailscale` 已正确设置；如果你通过 SSH 隧道连接，确认隧道已启动并指向正确的端口；确认你的 DM/群组 allowlist 包含你的账号。
+    然后验证认证和路由：如果你使用 Tailscale Serve，确认 `gateway.auth.allowTailscale` 已正确设置；如果你通过 SSH 隧道连接，确认隧道已启动并指向正确的端口；确认你的 DM／群组 allowlist 包含你的账号。
 
-    文档：[Tailscale](/gateway/tailscale), [远程访问](/gateway/remote), [Channels](/channels)。
+    文档：[Tailscale](/gateway/tailscale)、[远程访问](/gateway/remote)、[Channels](/channels)。
 
   </Accordion>
 
   <Accordion title="两个 OpenClaw 实例可以互相通信吗（本地 + VPS）？">
     可以，不过没有内置的 bot-to-bot 桥接。
 
-    **最简单**：使用两个 bot 都能访问的普通聊天频道（Slack/Telegram/WhatsApp）。让 Bot A 给 Bot B 发消息，然后让 Bot B 按常规回复。
+    **最简单**：使用两个 bot 都能访问的普通聊天频道（Slack／Telegram／WhatsApp）。让 Bot A 给 Bot B 发消息，然后让 Bot B 按常规回复。
 
-    **CLI bridge（通用）**：运行一个脚本，使用 `openclaw agent --message ... --deliver` 调用另一个 Gateway，并把目标指向另一个 bot 监听的聊天。若其中一个 bot 在远程 VPS 上，通过 SSH/Tailscale 将你的 CLI 指向那个远程 Gateway（见 [远程访问](/gateway/remote)）：
+    **CLI bridge（通用）**：运行一个脚本，使用 `openclaw agent --message ... --deliver` 调用另一个 Gateway，并把目标指向另一个 bot 监听的聊天。若其中一个 bot 在远程 VPS 上，通过 SSH／Tailscale 将你的 CLI 指向那个远程 Gateway（见 [远程访问](/gateway/remote)）：
 
     ```bash
     openclaw agent --message "Hello from local bot" --deliver --channel telegram --reply-to <chat-id>
@@ -843,7 +842,7 @@ title: "常见问题"
 
     加一个保护措施，防止两个 bot 无限制地循环（仅提及、channel allowlist，或“不要回复 bot 消息”的规则）。
 
-    文档：[远程访问](/gateway/remote), [Agent CLI](/cli/agent), [Agent send](/tools/agent-send)。
+    文档：[远程访问](/gateway/remote)、[Agent CLI](/cli/agent)、[Agent send](/tools/agent-send)。
 
   </Accordion>
 
@@ -852,34 +851,34 @@ title: "常见问题"
   </Accordion>
 
   <Accordion title="在个人笔记本上使用 node，相比从 VPS 通过 SSH 连接有什么好处？">
-    有：node 是从远程 Gateway 访问你的笔记本的首选方式，而且解锁的不只是 shell 访问。Gateway 运行在 macOS/Linux（Windows 通过 WSL2）上，且非常轻量（小型 VPS 或树莓派级别设备即可；4 GB RAM 就足够），因此常见架构是一个始终在线的主机加上你的笔记本作为 node。
+    有：node 是从远程 Gateway 访问你的笔记本的首选方式，而且解锁的不只是 shell 访问。Gateway 运行在 macOS／Linux（Windows 通过 WSL2）上，且非常轻量（小型 VPS 或树莓派级别设备即可；4 GB RAM 就足够），因此常见架构是一个始终在线的主机加上你的笔记本作为 node。
 
     - **不需要入站 SSH** - nodes 通过设备配对主动连接到 Gateway WebSocket。
-    - **更安全的执行控制** - `system.run` 受该笔记本上的 node allowlist/审批控制。
+    - **更安全的执行控制** - `system.run` 受该笔记本上的 node allowlist／审批控制。
     - **更多设备工具** - 除了 `system.run`，nodes 还提供 `canvas`、`camera` 和 `screen`。
     - **本地浏览器自动化** - 保持 Gateway 在 VPS 上运行，但通过 node 主机在本地运行 Chrome，或者通过 Chrome MCP 连接本地 Chrome。
 
     SSH 适合临时的 shell 访问；nodes 更适合持续性的 agent 工作流和设备自动化。
 
-    文档：[Nodes](/nodes), [Nodes CLI](/cli/nodes), [Browser](/tools/browser)。
+    文档：[Nodes](/nodes)、[Nodes CLI](/cli/nodes)、[Browser](/tools/browser)。
 
   </Accordion>
 
   <Accordion title="node 会运行 gateway 服务吗？">
-    不会。除非你有意运行隔离的配置文件（见 [多个 gateways](/gateway/multiple-gateways)），否则每台主机上只应运行 **一个 gateway**。Nodes 是连接到 gateway 的外设（iOS/Android nodes，或 menubar 应用中的 macOS“node 模式”）。对于无头 node 主机和 CLI 控制，请参见 [Node 主机 CLI](/cli/node)。
+    不会。除非你有意运行隔离的配置文件（见 [多个 gateways](/gateway/multiple-gateways)），否则每台主机上只应运行 **一个 gateway**。Nodes 是连接到 gateway 的外设（iOS／Android nodes，或 menubar 应用中的 macOS“node 模式”）。对于无头 node 主机和 CLI 控制，请参见 [Node 主机 CLI](/cli/node)。
 
     对 `gateway`、`discovery` 和托管插件表面的更改需要完整重启。
 
   </Accordion>
 
-  <Accordion title="有没有通过 API / RPC 应用配置的方式？">
+  <Accordion title="有没有通过 API／RPC 应用配置的方式？">
     有：
 
     - `config.schema.lookup`：在写入前，查看一个配置子树及其浅层 schema 节点、匹配的 UI 提示和直接子项摘要。
     - `config.get`：获取当前快照及其 hash。
     - `config.patch`：安全的局部更新（对大多数 RPC 编辑推荐使用）；在可能时热重载，必要时重启。
     - `config.apply`：验证并替换完整配置；在可能时热重载，必要时重启。
-    - 面向 agent 的 `gateway` 运行时工具仍然拒绝重写 `tools.exec.ask` / `tools.exec.security`；旧的 `tools.bash.*` 别名会归一化到同一受保护路径。
+    - 面向 agent 的 `gateway` 运行时工具仍然拒绝重写 `tools.exec.ask`／`tools.exec.security`；旧的 `tools.bash.*` 别名会归一化到同一受保护路径。
 
   </Accordion>
 
@@ -903,7 +902,7 @@ title: "常见问题"
        ```
     2. **在你的 Mac 上安装并登录**，使用 Tailscale 应用，并确保在同一个 tailnet 中。
     3. **在 Tailscale 管理控制台启用 MagicDNS**，这样 VPS 就会有一个稳定名称。
-    4. **使用 tailnet 主机名**：SSH `ssh user@your-vps.tailnet-xxxx.ts.net`; Gateway WS `ws://your-vps.tailnet-xxxx.ts.net:18789`。
+    4. **使用 tailnet 主机名**：SSH `ssh user@your-vps.tailnet-xxxx.ts.net`；Gateway WS `ws://your-vps.tailnet-xxxx.ts.net:18789`。
 
     如果不使用 SSH，而要访问 Control UI，请在 VPS 上使用 Tailscale Serve：
 
@@ -926,14 +925,14 @@ title: "常见问题"
        openclaw devices approve <requestId>
        ```
 
-    文档：[Gateway 协议](/gateway/protocol), [Discovery](/gateway/discovery), [macOS 远程模式](/platforms/mac/remote)。
+    文档：[Gateway 协议](/gateway/protocol)、[Discovery](/gateway/discovery)、[macOS 远程模式](/platforms/mac/remote)。
 
   </Accordion>
 
   <Accordion title="我应该安装在第二台笔记本上，还是只添加一个 node？">
-    如果第二台笔记本上只需要 **本地工具**（screen/camera/exec），那就把它添加为 **node**——一个 Gateway，不需要重复配置。目前本地 node 工具仅支持 macOS。只有在需要 **硬隔离** 或两个完全独立的 bot 时，才安装第二个 Gateway。
+    如果第二台笔记本上只需要 **本地工具**（screen／camera／exec），那就把它添加为 **node**——一个 Gateway，不需要重复配置。目前本地 node 工具仅支持 macOS。只有在需要 **硬隔离** 或两个完全独立的 bot 时，才安装第二个 Gateway。
 
-    文档：[Nodes](/nodes), [Nodes CLI](/cli/nodes), [多个 gateways](/gateway/multiple-gateways)。
+    文档：[Nodes](/nodes)、[Nodes CLI](/cli/nodes)、[多个 gateways](/gateway/multiple-gateways)。
 
   </Accordion>
 </AccordionGroup>
@@ -947,15 +946,17 @@ title: "常见问题"
     - 来自当前工作目录的 `.env`。
     - 来自 `~/.openclaw/.env`（`$OPENCLAW_STATE_DIR/.env`）的全局兜底 `.env`。
 
-    通常，这两个 `.env` 文件都不会覆盖已有的环境变量。对于通过 OpenClaw 安装的 systemd 服务，全局 `.env` 只能替换 OpenClaw 记录为托管的服务值；操作员自行设置的服务值仍然优先。对于工作区 `.env`，提供商凭据和端点路由键是例外：`GEMINI_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY` 或任何以 `_ENDPOINT` 结尾的键（以及其他内置提供商的身份验证或端点环境变量）会被忽略，这些变量应放在进程环境、`~/.openclaw/.env` 或配置中的 `env` 内。
+    通常，两个 `.env` 文件都不会覆盖现有的环境变量。对于 OpenClaw 安装的 systemd service，全局 `.env` 可能只会替换 OpenClaw 记录为受管理的 service 值；由操作员拥有的 service 值仍然具有优先权。对于 workspace `.env`，Provider 凭据和 endpoint 路由键是例外：`GEMINI_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY` 或任何以 `_ENDPOINT` 结尾的键（以及其他内置 provider 的认证或 endpoint 环境变量）会被忽略，这些键应放在进程环境、`~/.openclaw/.env` 或配置中的 `env.vars` 中。
 
     配置中的内联环境变量仅在进程环境中缺失时才会生效：
 
     ```json5
     {
       env: {
-        OPENROUTER_API_KEY: "sk-or-...",
-        vars: { GROQ_API_KEY: "gsk-..." },
+        vars: {
+          OPENROUTER_API_KEY: "sk-or-...",
+          GROQ_API_KEY: "gsk-...",
+        },
       },
     }
     ```
@@ -1180,7 +1181,7 @@ title: "常见问题"
 
 ## 模型、故障转移和认证配置文件
 
-模型问答 - 默认值、选择、别名、切换、故障转移、认证配置文件 - 详见 [模型常见问题](/help/faq-models)。
+模型问答——默认值、选择、别名、切换、故障转移、认证配置文件——详见 [模型常见问题](/help/faq-models)。
 
 ## 网关：端口、“已在运行”和远程模式
 
@@ -1338,9 +1339,9 @@ title: "常见问题"
   <Accordion title="我在 Windows 上关闭了终端 - 如何重启 OpenClaw？">
     三种 Windows 安装模式：
 
-    **1) Windows Hub 本地设置**：原生应用管理一个本地、应用所有的 WSL Gateway。请从开始菜单或托盘打开 **OpenClaw Companion**，然后使用 **Gateway Setup** 或 Connections 选项卡。
+    **1）Windows Hub 本地设置**：原生应用管理一个本地、应用所有的 WSL Gateway。请从开始菜单或托盘打开 **OpenClaw Companion**，然后使用 **Gateway Setup** 或 **Connections** 选项卡。
 
-    **2) 手动 WSL2 Gateway**：Gateway 在 Linux 内运行。
+    **2）手动 WSL2 Gateway**：Gateway 在 Linux 内运行。
     ```powershell
     wsl
     openclaw gateway status
@@ -1348,14 +1349,14 @@ title: "常见问题"
     ```
     如果你从未安装过服务，请在前台启动：`openclaw gateway run`。
 
-    **3) 原生 Windows CLI/Gateway**：直接在 Windows 中运行。
+    **3）原生 Windows CLI/Gateway**：直接在 Windows 中运行。
     ```powershell
     openclaw gateway status
     openclaw gateway restart
     ```
     如果你手动运行它（没有服务）：`openclaw gateway run`。
 
-    文档：[Windows](/platforms/windows), [Gateway service runbook](/gateway)。
+    文档：[Windows](/platforms/windows)、[Gateway 服务运行手册](/gateway)。
 
   </Accordion>
 
@@ -1371,11 +1372,11 @@ title: "常见问题"
 
     常见原因：模型认证未在 **gateway 主机** 上加载（检查 `models status`），频道配对/允许列表阻止了回复（检查频道配置和日志），或者 WebChat/Dashboard 打开时没有正确的 token。如果是远程连接，请确认隧道/Tailscale 连接已建立，并且 Gateway WebSocket 可达。
 
-    文档：[频道](/channels), [故障排除](/gateway/troubleshooting), [远程访问](/gateway/remote)。
+    文档：[频道](/channels)、[故障排除](/gateway/troubleshooting)、[远程访问](/gateway/remote)。
 
   </Accordion>
 
-  <Accordion title='"已与 gateway 断开连接：无原因" - 现在怎么办？'>
+  <Accordion title='“已与 gateway 断开连接：无原因” - 现在怎么办？'>
     通常意味着 UI 丢失了 WebSocket 连接。请检查：Gateway 是否正在运行（`openclaw gateway status`）？它是否健康（`openclaw status`）？UI 是否有正确的 token（`openclaw dashboard`）？如果是远程连接，隧道/Tailscale 链接是否已建立？
 
     然后尾随日志：
@@ -1384,7 +1385,7 @@ title: "常见问题"
     openclaw logs --follow
     ```
 
-    文档：[Dashboard](/web/dashboard), [远程访问](/gateway/remote), [故障排除](/gateway/troubleshooting)。
+    文档：[Dashboard](/web/dashboard)、[远程访问](/gateway/remote)、[故障排除](/gateway/troubleshooting)。
 
   </Accordion>
 
@@ -1401,7 +1402,7 @@ title: "常见问题"
 
     如果 Gateway 是远程的，请检查 Gateway 主机上的日志。
 
-    文档：[Telegram](/channels/telegram), [频道故障排除](/channels/troubleshooting)。
+    文档：[Telegram](/channels/telegram)、[频道故障排除](/channels/troubleshooting)。
 
   </Accordion>
 
@@ -1414,7 +1415,7 @@ title: "常见问题"
 
     在 TUI 中，使用 `/status` 查看当前状态。如果你期望在聊天频道中收到回复，请确认已启用投递（`/deliver on`）。
 
-    文档：[TUI](/web/tui), [斜杠命令](/tools/slash-commands)。
+    文档：[TUI](/web/tui)、[斜杠命令](/tools/slash-commands)。
 
   </Accordion>
 

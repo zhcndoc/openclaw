@@ -32,8 +32,8 @@ title: "Exec 工具"
 立即将命令置于后台，而不是等待 `yieldMs`。
 </ParamField>
 
-<ParamField path="timeout" type="number" default="tools.exec.timeoutSeconds">
-覆盖此调用中已配置的 exec 超时时间，单位为秒。适用于前台、后台、`yieldMs`、gateway、sandbox，以及 node `system.run` 执行。`timeout: 0` 会为该调用禁用 exec 进程超时。
+<ParamField path="timeoutSeconds" type="number" default="tools.exec.timeoutSeconds">
+覆盖此调用配置的 exec 超时时间，单位为**秒**。请注意，同级的 `yieldMs` 使用毫秒，而 `process` 工具中名称相同的 `timeout` 也使用毫秒——请传递 `timeoutSeconds`，以便在调用位置明确单位。适用于前台、后台、`yieldMs`、gateway、sandbox 以及 node `system.run` 执行。`timeoutSeconds: 0` 会为该调用禁用 exec 进程超时。
 </ParamField>
 
 <ParamField path="pty" type="boolean" default="false">
@@ -86,22 +86,22 @@ title: "Exec 工具"
 
 | Key                                  | Default                  | Notes                                                                                                                                                   |
 | ------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tools.exec.timeoutSeconds`          | `1800`                   | 默认的每个命令 exec 超时时间，单位为秒。单次调用的 `timeout` 会覆盖它；单次调用的 `timeout: 0` 会禁用 exec 进程超时。                                    |
-| `tools.exec.host`                    | `auto`                   | 当沙盒运行时处于激活状态时解析为 `sandbox`，否则解析为 `gateway`。                                                                                      |
-| `tools.exec.mode`                    | host-derived             | 规范化的策略开关。见下方 [模式](#modes)。                                                                                                               |
-| `tools.exec.reviewer.model`          | configured agent primary | `mode=auto` 审查的可选 provider/model 覆盖配置。                                                                                                         |
-| `tools.exec.reviewer.timeoutMs`      | `30000`                  | 审查者模型准备与完成的分阶段超时时间，超过后回退到人工。                                                                                                |
+| `tools.exec.timeoutSeconds`          | `1800`                   | 每条命令的默认 exec 超时时间，单位为秒。每次调用的 `timeoutSeconds` 会覆盖该值；每次调用的 `timeoutSeconds: 0` 会禁用 exec 进程超时。    |
+| `tools.exec.host`                    | `auto`                   | 沙盒运行时处于活动状态时解析为 `sandbox`，否则解析为 `gateway`。                                                                            |
+| `tools.exec.mode`                    | host-derived             | 规范化策略开关。请参见下方的[模式](#modes)。                                                                                                       |
+| `tools.exec.reviewer.model`          | configured agent primary | `mode=auto` 审查时可选的 provider/model 覆盖项。                                                                                                |
+| `tools.exec.reviewer.timeoutMs`      | `30000`                  | 在回退到人工审批之前，审查者模型准备和完成阶段的超时时间。                                                                  |
 | `tools.exec.node`                    | unset                    |                                                                                                                                                         |
 | `tools.exec.notifyOnExit`            | `true`                   | 为 true 时，后台 exec 会话在退出时会入队一个系统事件并请求一次 heartbeat。                                                                              |
 | `tools.exec.approvalRunningNoticeMs` | `10000`                  | 当受审批约束的 exec 运行时间超过此值时，发送一次“running”提示（`0` 表示禁用）。                                                                         |
-| `tools.exec.strictInlineEval`        | `false`                  | 见 [内联求值](#inline-eval-strictinlineeval)。                                                                                                           |
+| `tools.exec.strictInlineEval`        | `false`                  | 见[内联求值](#inline-eval-strictinlineeval)。                                                                                                           |
 | `tools.exec.commandHighlighting`     | `false`                  | 为 true 时，审批提示可以在命令文本中高亮由解析器推导出的命令片段。可全局或按 agent 设置；不会改变审批策略。                                             |
 | `tools.exec.pathPrepend`             | unset                    | 在 exec 运行时预先追加到 `PATH` 的目录列表（仅 gateway + sandbox）。                                                                                   |
-| `tools.exec.safeBins`                | unset                    | 仅允许 stdin 的安全二进制文件，可在没有显式 allowlist 条目的情况下运行。见 [安全二进制文件](/tools/exec-approvals-advanced#safe-bins-stdin-only)。       |
-| `tools.exec.safeBinTrustedDirs`      | `/bin`, `/usr/bin`       | 用于 `safeBins` 路径检查的额外显式受信目录。`PATH` 条目不会被自动信任。                                                                                 |
+| `tools.exec.safeBins`                | unset                    | 仅允许 stdin 的安全二进制文件，可在没有显式 allowlist 条目的情况下运行。见[安全二进制文件](/tools/exec-approvals-advanced#safe-bins-stdin-only)。       |
+| `tools.exec.safeBinTrustedDirs`      | `/bin`、`/usr/bin`       | 用于 `safeBins` 路径检查的额外显式受信目录。`PATH` 条目不会被自动信任。                                                                                 |
 | `tools.exec.safeBinProfiles`         | unset                    | 按安全二进制文件配置可选的自定义 argv 策略（`minPositional`、`maxPositional`、`allowedValueFlags`、`deniedFlags`）。                                   |
 
-对于 gateway 和 node，默认使用无需审批的 host exec（`mode=full`）——这来自 host-policy 默认值，而不是 `host=auto`。如果你想要审批/allowlist 行为，请设置 `tools.exec.mode` 并收紧 host approvals 文件；见 [Exec approvals](/tools/exec-approvals#yolo-mode-no-approval)。如果想无论沙盒状态如何都强制使用 gateway 或 node 路由，请设置 `tools.exec.host` 或使用 `/exec host=...`。
+对于 gateway 和 node，默认使用无需审批的 host exec（`mode=full`）——这来自 host-policy 默认值，而不是 `host=auto`。如果你想要审批／allowlist 行为，请设置 `tools.exec.mode` 并收紧 host approvals 文件；见[Exec approvals](/tools/exec-approvals#yolo-mode-no-approval)。如果想无论沙盒状态如何都强制使用 gateway 或 node 路由，请设置 `tools.exec.host` 或使用 `/exec host=...`。
 
 示例：
 
@@ -122,9 +122,9 @@ title: "Exec 工具"
 | 模式        | security    | ask       | 行为                                                                                                                         |
 | ----------- | ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `deny`      | `deny`      | `off`     | 禁止 exec。                                                                                                                  |
-| `allowlist` | `allowlist` | `off`     | 仅允许 allowlist/safe-bin 中的命令运行；其他命令都不会询问。                                                                  |
+| `allowlist` | `allowlist` | `off`     | 仅允许 allowlist／safe-bin 中的命令运行；其他命令都不会询问。                                                                  |
 | `ask`       | `allowlist` | `on-miss` | allowlist 匹配的命令直接运行；其他所有命令都向人工询问。                                                                     |
-| `auto`      | `allowlist` | `on-miss` | allowlist/safe-bin 匹配的命令直接运行；其他所有命令先经 OpenClaw 的原生自动审查，再向人工询问。                               |
+| `auto`      | `allowlist` | `on-miss` | allowlist／safe-bin 匹配的命令直接运行；其他所有命令先经 OpenClaw 的原生自动审查，再向人工询问。                               |
 | `full`      | `full`      | `off`     | 没有审批关卡。                                                                                                               |
 
 每个会话的 `/exec ask=always` 仍然会每次都询问人工，无论持久化模式为何。
@@ -135,16 +135,16 @@ title: "Exec 工具"
 
 ### 内联求值（`strictInlineEval`）
 
-当 `tools.exec.strictInlineEval` 为 `true` 时，内联解释器求值形式需要审查者或显式审批：`python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e`、`osascript -e`，以及其他受支持解释器和命令载体中的类似形式（如 `awk`、`find -exec`、`make`、`sed`、`xargs` 等更多形式）。在 `mode=auto` 下，常规 exec 审批路径可能会让原生自动审查者放行一个明显低风险的一次性命令；但直接的 node-host `system.run` 调用仍需要显式审批，因为它们无法把命令交给人工审批路线。如果审查者提出要求，请求会转给人工。`allow-always` 仍然可以为良性的解释器/脚本调用持久化规则，但内联 eval 形式不会变成持久化的允许规则。
+当 `tools.exec.strictInlineEval` 为 `true` 时，内联解释器求值形式需要审查者或显式审批：`python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e`，以及其他受支持解释器和命令载体中的类似形式（如 `awk`、`find -exec`、`make`、`sed`、`xargs` 等更多形式）。在 `mode=auto` 下，常规 exec 审批路径可能会让原生自动审查者放行一个明显低风险的一次性命令；但直接的 node-host `system.run` 调用仍需要显式审批，因为它们无法把命令交给人工审批路线。如果审查者提出要求，请求会转给人工。`allow-always` 仍然可以为良性的解释器／脚本调用持久化规则，但内联 eval 形式不会变成持久化的允许规则。
 
 ### PATH 处理
 
 - `host=gateway`：将你的登录 shell `PATH` 合并到 exec 环境中。`env.PATH` 覆盖会被拒绝用于 host 执行。daemon 本身仍使用最小 `PATH` 运行：
-  - macOS: `/opt/homebrew/bin`、`/usr/local/bin`、`/usr/bin`、`/bin`
-  - Linux: `/usr/local/bin`、`/usr/bin`、`/bin`
+  - macOS：`/opt/homebrew/bin`、`/usr/local/bin`、`/usr/bin`、`/bin`
+  - Linux：`/usr/local/bin`、`/usr/bin`、`/bin`
   - 为防止用户 shell 配置（如 `~/.zshenv` 或 `/etc/zshenv`）在启动期间覆盖优先路径，`tools.exec.pathPrepend` 条目会在执行前，安全地预先追加到 shell 命令内最终的 `PATH` 前面。
 - `host=sandbox`：在容器内运行 `sh -lc`（登录 shell），因此 `/etc/profile` 可能会重置 `PATH`。OpenClaw 会在 profile 加载后，通过内部环境变量（不做 shell 插值）把 `env.PATH` 预先追加进去；`tools.exec.pathPrepend` 在这里同样生效。
-- `host=node`：只会发送你传入的、未被阻止的 env 覆盖项。`env.PATH` 覆盖会被拒绝用于 host 执行，并被 node hosts 忽略。如果你需要在 node 上增加 PATH 条目，请配置 node host service 环境（systemd/launchd）或将工具安装到标准位置。
+- `host=node`：只会发送你传入的、未被阻止的 env 覆盖项。`env.PATH` 覆盖会被拒绝用于 host 执行，并被 node hosts 忽略。如果你需要在 node 上增加 PATH 条目，请配置 node host service 环境（systemd／launchd）或将工具安装到标准位置。
 
 按 agent 绑定 node（在配置中使用带键的 agent ID）：
 
@@ -169,13 +169,13 @@ openclaw config set 'agents.entries.main.tools.exec.node' "node-id-or-name"
 
 要完全禁用 exec，请通过工具策略拒绝它（`tools.deny: ["exec"]` 或按代理设置）。除非你显式设置 `security=full` 且 `ask=off`，否则仍然适用 host 审批。
 
-## Exec 批准（伴侣应用 / node 主机）
+## Exec 批准（伴侣应用／node 主机）
 
 沙盒化代理在网关或 node 主机上运行 `exec` 之前，可能需要按请求进行批准。有关策略、允许列表和 UI 流程，请参见 [Exec 批准](/tools/exec-approvals)。
 
-当需要人工批准时，node 主机和非原生网关流程会立即返回 `status: "approval-pending"` 以及一个批准 ID。原生聊天和 Web UI 网关流程则可以改为在行内等待，并在批准后返回最终的命令结果。`approval-pending` 结果表示命令尚未开始，因此只有当已批准的命令实际以内联方式运行时，前台回退警告才会出现。已批准的异步运行会发出命令进度和完成系统事件（`Exec running` / `Exec finished`）；被拒绝或超时的批准是终态，不会用拒绝系统事件唤醒代理会话。
+当需要人工批准时，node 主机和非原生网关流程会立即返回 `status: "approval-pending"` 以及一个批准 ID。原生聊天和 Web UI 网关流程则可以改为在行内等待，并在批准后返回最终的命令结果。`approval-pending` 结果表示命令尚未开始，因此只有当已批准的命令实际以内联方式运行时，前台回退警告才会出现。已批准的异步运行会发出命令进度和完成系统事件（`Exec running`／`Exec finished`）；被拒绝或超时的批准是终态，不会用拒绝系统事件唤醒代理会话。
 
-在具有原生批准卡片/按钮的渠道中，代理应首先依赖该原生 UI，只有在工具结果明确说明聊天批准不可用，或手动批准是唯一途径时，才应包含手动 `/approve` 命令。
+在具有原生批准卡片／按钮的渠道中，代理应首先依赖该原生 UI，只有在工具结果明确说明聊天批准不可用，或手动批准是唯一途径时，才应包含手动 `/approve` 命令。
 
 ## 允许列表 + 安全 bin
 
@@ -255,7 +255,7 @@ openclaw config set 'agents.entries.main.tools.exec.node' "node-id-or-name"
 - `deny: ["write"]` 不会拒绝 `apply_patch`；如果也要阻止补丁写入，请显式拒绝 `apply_patch`，或者在应同时阻止补丁写入时使用 `deny: ["group:fs"]`。
 - 配置位于 `tools.exec.applyPatch` 下。
 - `tools.exec.applyPatch.enabled` 的默认值是 `true`；将其设为 `false` 可禁用该工具。
-- `tools.exec.applyPatch.workspaceOnly` 的默认值是 `true`（仅限工作区内）。只有在你有意让 `apply_patch` 在工作区目录之外进行写入/删除时，才将其设为 `false`。
+- `tools.exec.applyPatch.workspaceOnly` 的默认值是 `true`（仅限工作区内）。只有在你有意让 `apply_patch` 在工作区目录之外进行写入／删除时，才将其设为 `false`。
 - `tools.exec.applyPatch.allowModels` 是一个可选的模型 id 白名单（原始格式，如 `gpt-5.4`，或完整格式，如 `openai/gpt-5.4`）。设置后，只有匹配的模型才能使用该工具；未设置时，所有模型都可使用。
 
 ## 相关内容

@@ -38,7 +38,7 @@ OpenClaw 的默认模式是**个人助理**——一个人，一个代理。委�
 
 ## 能力层级
 
-从满足需求的最低层级开始；只有在用例需要时才升级。
+从满足需求的最低层级开始；只有在用例需要时升级。
 
 ### 层级 1：只读 + 草稿
 
@@ -127,9 +127,9 @@ OpenClaw 的默认模式是**个人助理**——一个人，一个代理。委�
 
 在委派者处理任何真实数据之前，先配置日志记录：
 
-- Cron run history: OpenClaw's shared SQLite state database.
-- Session transcripts: `~/.openclaw/agents/delegate/sessions`.
-- Identity provider audit logs (Exchange, Google Workspace).
+- Cron 运行历史：OpenClaw 的共享 SQLite 状态数据库。
+- 会话记录：`~/.openclaw/agents/delegate/sessions`。
+- 身份提供方审计日志（Exchange、Google Workspace）。
 
 所有委派者操作都会通过 OpenClaw 的会话存储流转。为满足合规要求，请保留并审查这些日志。
 
@@ -209,16 +209,15 @@ https://www.googleapis.com/auth/calendar           # 2 级
 ```json5
 {
   agents: {
-    list: [
-      { id: "main", workspace: "~/.openclaw/workspace" },
-      {
-        id: "delegate",
+    entries: {
+      main: { default: true, workspace: "~/.openclaw/workspace" },
+      delegate: {
         workspace: "~/.openclaw/workspace-delegate",
         tools: {
           deny: ["browser", "canvas"],
         },
       },
-    ],
+    },
   },
   bindings: [
     // 将特定频道账户路由到委派者
@@ -255,11 +254,10 @@ https://www.googleapis.com/auth/calendar           # 2 级
 ```json5
 {
   agents: {
-    list: [
-      { id: "main", default: true, workspace: "~/.openclaw/workspace" },
-      {
-        id: "org-assistant",
-        name: "[组织] 助手",
+    entries: {
+      main: { default: true, workspace: "~/.openclaw/workspace" },
+      "org-assistant": {
+        name: "[Organization] Assistant",
         workspace: "~/.openclaw/workspace-org",
         agentDir: "~/.openclaw/agents/org-assistant/agent",
         identity: { name: "[组织] 助手" },
@@ -268,7 +266,7 @@ https://www.googleapis.com/auth/calendar           # 2 级
           deny: ["write", "edit", "apply_patch", "browser", "canvas"],
         },
       },
-    ],
+    },
   },
   bindings: [
     {
@@ -284,7 +282,7 @@ https://www.googleapis.com/auth/calendar           # 2 级
 
 委派的 `AGENTS.md` 定义了它的自主权限——它可以在不询问的情况下做什么、哪些需要批准、以及哪些是被禁止的。[Cron Jobs](/automation/cron-jobs) 驱动它的每日计划。
 
-如果你授予 `sessions_history`，它提供的是一个有边界、经过安全过滤的回忆视图，而不是原始转录内容的完整导出。OpenClaw 会从助手回忆中去除凭据/令牌样式的文本，截断过长内容，并移除内部脚手架（思考块签名、`<relevant-memories>` 脚手架标签、工具调用 XML 标签如 `<tool_call>`/`<function_calls>`，以及类似泄露的提供方控制令牌）。过大的行可能会被替换为 `[sessions_history omitted: message too large]`，而不是返回原始内容。若存在 `nextOffset`，请使用它向后分页查看更早的转录窗口。
+如果你授予 `sessions_history`，它提供的是一个有边界、经过安全过滤的回忆视图，而不是原始转录内容的完整导出。OpenClaw 会从助手回忆中去除凭据／令牌样式的文本，截断过长内容，并移除内部脚手架（思考块签名、`<relevant-memories>` 脚手架标签、工具调用 XML 标签如 `<tool_call>`／`<function_calls>`，以及类似泄露的提供方控制令牌）。过大的行可能会被替换为 `[sessions_history omitted: message too large]`，而不是返回原始内容。若存在 `nextOffset`，请使用它向后分页查看更早的转录窗口。
 
 ## 扩展模式
 

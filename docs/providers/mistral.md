@@ -52,7 +52,7 @@ title: "Mistral"
   <Step title="设置默认模型">
     ```json5
     {
-      env: { MISTRAL_API_KEY: "sk-..." },
+      env: { vars: { MISTRAL_API_KEY: "sk-..." } },
       agents: { defaults: { model: { primary: "mistral/mistral-large-latest" } } },
     }
     ```
@@ -99,9 +99,9 @@ openclaw infer model run --local \
 {
   tools: {
     media: {
+      models: [{ provider: "mistral", model: "voxtral-mini-latest", capabilities: ["audio"] }],
       audio: {
         enabled: true,
-        models: [{ provider: "mistral", model: "voxtral-mini-latest" }],
       },
     },
   },

@@ -51,7 +51,7 @@ read_when:
 这对拥有大量已启用工具目录的代理，或者模型需要在回答前搜索、
 组合并调用多个工具的工作流尤其有用。
 
-对于工具目录较小，或者模型不能稳定编写简短程序的情况，请保留直接工具暴露。当你想要一个紧凑的目录，但更倾向于使用结构化的搜索/描述/调用控制，而不是 QuickJS-WASI guest 时，请使用 [工具搜索](/tools/tool-search)。
+对于工具目录较小，或者模型不能稳定编写简短程序的情况，请保留直接工具暴露。当你想要一个紧凑的目录，但更倾向于使用结构化的搜索／描述／调用控制，而不是 QuickJS-WASI guest 时，请使用 [工具搜索](/tools/tool-search)。
 
 ## 快速开始
 
@@ -176,15 +176,15 @@ Code mode 拥有已准备运行的面向模型的编排形态。它
 
 ## 术语
 
-- **Code mode**: OpenClaw 运行时模式，会隐藏与目录兼容的模型
+- **Code mode**：OpenClaw 运行时模式，会隐藏与目录兼容的模型
   工具，并暴露 `exec`、`wait`，以及必需的仅直接使用工具。
-- **Guest runtime**: 执行模型代码的 QuickJS-WASI JavaScript VM。
-- **Host bridge**: 从 guest 代码返回到 OpenClaw 的狭窄、兼容 JSON 的回调接口。
-- **Catalog**: 在常规工具
+- **Guest runtime**：执行模型代码的 QuickJS-WASI JavaScript VM。
+- **Host bridge**：从 guest 代码返回到 OpenClaw 的狭窄、兼容 JSON 的回调接口。
+- **Catalog**：在常规工具
   策略、插件、MCP 和客户端工具解析之后，按运行范围确定的有效工具列表。
-- **Nested tool call**: 通过主机
+- **Nested tool call**：通过主机
   桥从 guest 代码发起的工具调用。
-- **Snapshot**: 保存的 QuickJS-WASI VM 序列化状态，使 `wait` 能够继续一个已挂起的 code-mode 运行。
+- **Snapshot**：保存的 QuickJS-WASI VM 序列化状态，使 `wait` 能够继续一个已挂起的 code-mode 运行。
 
 ## 配置
 
@@ -235,15 +235,15 @@ Code mode 拥有已准备运行的面向模型的编排形态。它
 
 | 提供方    | 模型                                                                                                                                       |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| anthropic | `claude-fable-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-mythos-5`, `claude-opus-4-8`, `claude-haiku-4-5`                               |
-| deepseek  | `deepseek-v4-pro`, `deepseek-v4-flash`                                                                                                       |
-| google    | `gemini-3-flash-preview`, `gemini-3.1-pro-preview`, `gemini-3.1-flash-lite`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.6-flash` |
-| kimi      | `k3`, `k3-256k`                                                                                                                              |
+| anthropic | `claude-fable-5`、`claude-opus-5`、`claude-sonnet-5`、`claude-mythos-5`、`claude-opus-4-8`、`claude-haiku-4-5`                               |
+| deepseek  | `deepseek-v4-pro`、`deepseek-v4-flash`                                                                                                       |
+| google    | `gemini-3-flash-preview`、`gemini-3.1-pro-preview`、`gemini-3.1-flash-lite`、`gemini-3.5-flash`、`gemini-3.5-flash-lite`、`gemini-3.6-flash` |
+| kimi      | `k3`、`k3-256k`                                                                                                                              |
 | minimax   | `MiniMax-M3`                                                                                                                                 |
 | moonshot  | `kimi-k3`                                                                                                                                    |
-| openai    | `gpt-5.6`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro`                                                          |
+| openai    | `gpt-5.6`、`gpt-5.6-sol`、`gpt-5.6-terra`、`gpt-5.6-luna`、`gpt-5.5`、`gpt-5.5-pro`                                                          |
 | xiaomi    | `mimo-v2.5`                                                                                                                                  |
-| zai       | `glm-5.2`, `glm-5.1`                                                                                                                         |
+| zai       | `glm-5.2`、`glm-5.1`                                                                                                                         |
 
 其余所有模型，包括所有由 Ollama 提供的本地模型，都会保持未标记状态，并在 `"auto"` 下保持普通工具暴露方式。
 
@@ -498,7 +498,13 @@ export default defineToolPlugin({
 
 对于 `api.registerTool(...)` 或工厂工具，请将相同的 `outputSchema` 属性放到返回的 `AnyAgentTool` 对象上。
 
-当前内置契约包括 `agents_list`、`apply_patch`、`conversations_list`、`conversations_send`、`conversations_turn`、`edit`、`openclaw`、`read`、`screen`、`sessions_history`、`sessions_list`、`sessions_search`、`sessions_send`、`session_status`、`spawn_task`、`terminal`、`web_fetch` 和 `web_search`。精确透传可以直接重用其所属协议的 schema，而不是复制一个仅限模型的契约。例如，对话工具暴露了与 `conversations.list`、`conversations.send` 和 `conversations.turn` 相同的 Gateway 结果 schemas；`web_fetch` 拥有一个工具本地 schema，其提示暴露稳定元数据、文本、缓存状态和嵌套溢出元数据；`web_search` 将其精确的规范化结果/答案/错误/原始值联合类型声明为完整的快速索引提示。文件系统契约返回结构化的读取文本、图像、截断以及可选的未找到结果；显式编辑返回变更状态以及 diff/patch 数据；`apply-patch` 返回路径摘要。当快速索引声明了这些字段时，一个单元就可以同时完成发现和交付，而无需单独的检查轮次：
+当前内置契约包括 `agents_list`、`apply_patch`、
+`conversations_list`、`conversations_send`、`conversations_turn`、`edit`、
+`openclaw`、`read`、`screen`、
+`sessions_history`、`sessions_list`、`sessions_search`、`sessions_send`、
+`session_status`、`suggest_task`、`terminal`、`web_fetch` 和 `web_search`。
+精确的直通工具可以复用其所属协议的 schema，而不必重复定义仅供模型使用的契约。例如，会话工具暴露的 Gateway 结果 schema 与
+`conversations.list`、`conversations.send` 和 `conversations.turn` 使用的结果 schema 相同；`web_fetch` 拥有一个工具本地 schema，其提示包含稳定的元数据、文本、缓存状态和嵌套的溢出元数据；`web_search` 将其精确的规范化结果／答案／错误／原始数据联合类型声明为完整的快速索引提示。文件系统契约会返回结构化的读取文本、图像、截断和可选的未找到结果；显式的编辑变更状态以及 diff／patch 数据；还有应用补丁后的路径摘要。当快速索引声明了这些字段时，单元格可以在无需额外检查回合的情况下组合发现和交付：
 
 ```javascript
 const listed = await tools.conversations_list({ query: "build bot" });
@@ -572,7 +578,7 @@ declare namespace MCP.github {
 }
 ```
 
-声明文件是虚拟的，不会写入 workspace 或 state 目录。对于每次代码模式的 `exec` 调用，OpenClaw 会构建运行范围的工具目录，保留可见的 MCP 条目，渲染 `mcp/index.d.ts` 以及每个可见服务器对应的一个 `mcp/<server>.d.ts`，并将这个小型只读表注入 QuickJS worker。Guest 代码只能看到 `API` 对象：`API.list(prefix?)` 返回文件元数据，`API.read(path)` 返回所选声明内容。未知路径以及 `.`/`..` 段都会被拒绝。
+声明文件是虚拟的，不会写入 workspace 或 state 目录。对于每次代码模式的 `exec` 调用，OpenClaw 会构建运行范围的工具目录，保留可见的 MCP 条目，渲染 `mcp/index.d.ts` 以及每个可见服务器对应的一个 `mcp/<server>.d.ts`，并将这个小型只读表注入 QuickJS worker。Guest 代码只能看到 `API` 对象：`API.list(prefix?)` 返回文件元数据，`API.read(path)` 返回所选声明内容。未知路径以及 `.`／`..` 段都会被拒绝。
 
 这可以将大型 MCP schema 排除在模型提示之外：代理先从 `exec` 工具描述中得知虚拟 API 的存在，再仅读取所需的声明文件，然后使用一个对象参数调用 `MCP.<server>.<tool>()`。`MCP.<server>.$api()` 仍可作为程序内单个工具 schema 响应的内联回退方案。
 
@@ -692,7 +698,7 @@ runs.`。
 OpenClaw 在拥有该包的依赖中将 `quickjs-wasi` 作为直接依赖加载；它
 不会依赖为无关依赖安装的传递性副本。
 
-运行时职责：编译/加载 QuickJS-WASI WebAssembly 模块；
+运行时职责：编译／加载 QuickJS-WASI WebAssembly 模块；
 为每次代码模式运行或恢复创建一个隔离的 VM；通过稳定名称注册宿主回调；
 设置内存和中断限制；执行 JavaScript；清空
 待处理任务；快照挂起的 VM 状态；为 `wait`
@@ -784,12 +790,12 @@ openclaw gateway
 
 - 配置契约：`tools.codeMode`
 - 目录构建器：有效工具，用于压缩条目和 id 映射
-- 模型表面适配器：用控制/直接工具替换可见工具
+- 模型表面适配器：用控制／直接工具替换可见工具
 - QuickJS-WASI 运行时适配器：加载、求值、快照、恢复、释放
 - 工作线程监管器：超时、终止、崩溃隔离
 - 桥接适配器：JSON 安全的宿主回调和结果传递
 - TypeScript 转换适配器
-- 快照存储：TTL、大小上限、运行/会话作用域
+- 快照存储：TTL、大小上限、运行／会话作用域
 - 嵌套工具调用的轨迹投影
 - 遥测计数器和诊断
 

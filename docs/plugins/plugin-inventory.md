@@ -9,8 +9,9 @@ title: "插件清单"
 
 # 插件清单
 
-此页面由 `extensions/*/package.json`、`openclaw.plugin.json`
-以及根 npm 包的 `files` 排除项生成。可使用以下命令重新生成：
+此页面根据顶层 `extensions/*/openclaw.plugin.json`
+清单和根目录 npm 包的 `files` 排除项生成。可选的 `package.json`
+元数据会补充包和分发详细信息。使用以下命令重新生成：
 
 ```bash
 pnpm plugins:inventory:gen
@@ -47,7 +48,9 @@ openclaw plugins inspect discord --runtime --json
 
 ## 核心 npm 包
 
-55 个插件
+58 plugins
+
+- **[active-memory](/plugins/reference/active-memory)** (`openclaw`) - 包含在 OpenClaw 中。在回复前执行有界的记忆检索，并为符合条件的私有对话实现跨对话的每个 agent 的 Remember。
 
 - **[admin-http-rpc](/plugins/reference/admin-http-rpc)** (`@openclaw/admin-http-rpc`) - 包含在 OpenClaw 中。OpenClaw 管理 HTTP RPC 端点。
 
@@ -75,7 +78,9 @@ openclaw plugins inspect discord --runtime --json
 
 - **[deepgram](/plugins/reference/deepgram)** (`@openclaw/deepgram-provider`) - 包含在 OpenClaw 中。添加媒体理解提供方支持。添加实时转录提供方支持。
 
-- **[document-extract](/plugins/reference/document-extract)** (`@openclaw/document-extract-plugin`) - 包含在 OpenClaw 中。从本地文档附件中提取文本和备用页图像。
+- **[device-pair](/plugins/reference/device-pair)** (`openclaw`) - 包含在 OpenClaw 中。生成设置代码并批准设备配对请求。
+
+- **[document-extract](/plugins/reference/document-extract)** (`@openclaw/document-extract-plugin`) - 包含在 OpenClaw 中。从本地文档附件中提取文本和备用页面图像。
 
 - **[elevenlabs](/plugins/reference/elevenlabs)** (`@openclaw/elevenlabs-speech`) - 包含在 OpenClaw 中。添加媒体理解提供方支持。添加实时转录提供方支持。添加文本转语音提供方支持。
 
@@ -141,6 +146,8 @@ openclaw plugins inspect discord --runtime --json
 
 - **[sglang](/plugins/reference/sglang)** (`@openclaw/sglang-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 SGLang 模型提供方支持。
 
+- **[talk-voice](/plugins/reference/talk-voice)** (`openclaw`) - 包含在 OpenClaw 中。管理 Talk 语音选择（列出／设置）。
+
 - **[telegram](/plugins/reference/telegram)** (`@openclaw/telegram`) - 包含在 OpenClaw 中。添加 Telegram 频道界面，用于发送和接收 OpenClaw 消息。
 
 - **[together](/plugins/reference/together)** (`@openclaw/together-provider`) - 包含在 OpenClaw 中。向 OpenClaw 添加 Together 模型提供方支持。
@@ -161,7 +168,7 @@ openclaw plugins inspect discord --runtime --json
 
 ## 官方外部包
 
-90 plugins
+90 个插件
 
 - **[acpx](/plugins/reference/acpx)** (`@openclaw/acpx`) - npm；ClawHub。OpenClaw ACP 运行时后端，提供由插件拥有的会话和传输管理。
 

@@ -154,7 +154,7 @@ OpenAI 配置文件，OpenClaw 也不会向此应用服务器注入 OpenClaw 身
 | 启用原生 Codex 插件应用                     | `plugins.entries.codex.config.codexPlugins.*`                                                             | Codex 插件配置                |
 | 启用 Codex Computer Use                           | `plugins.entries.codex.config.computerUse.*`                                                              | Codex 插件配置                |
 
-优先使用 `auth.order.openai` 来实现“订阅优先 / API key 备份”的排序。  
+优先使用 `auth.order.openai` 来实现“订阅优先／API key 备份”的排序。  
 现有的旧版 Codex auth 配置文件 id 和旧版 Codex auth 顺序  
 仅用于 doctor 的旧状态；不要写入新的旧版 Codex GPT 引用。
 
@@ -405,18 +405,16 @@ Codex GPT 引用重写为 `openai/gpt-*`。
     defaults: {
       model: "anthropic/claude-opus-4-6",
     },
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
         default: true,
         model: "anthropic/claude-opus-4-6",
       },
-      {
-        id: "codex",
+      codex: {
         name: "Codex",
         model: "openai/gpt-5.6-sol",
       },
-    ],
+    },
   },
 }
 ```

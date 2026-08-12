@@ -80,8 +80,8 @@ OpenClaw 只接受完全符合架构的配置。未知键、格式错误的类�
 
 `openclaw config schema` 会打印 Control UI 和校验所使用的规范 JSON Schema。
 `config.schema.lookup` 会为下钻工具获取单个路径作用域节点以及子项摘要。
-字段 `title`/`description` 文档元数据会贯穿嵌套对象、通配符（`*`）、数组项（`[]`）以及 `anyOf`/
-`oneOf`/`allOf` 分支。运行时插件和通道架构会在清单注册表加载后合并进来。
+字段 `title`／`description` 文档元数据会贯穿嵌套对象、通配符（`*`）、数组项（`[]`）以及 `anyOf`／
+`oneOf`／`allOf` 分支。运行时插件和通道架构会在清单注册表加载后合并进来。
 
 每个配置叶节点在 `uiHints` 中都有通用或高级展示层级。
 `advanced: false` 表示常用设置，`advanced: true` 表示高级设置。
@@ -194,14 +194,14 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
         },
       },
       agents: {
-        list: [
-          {
-            id: "main",
+        entries: {
+          main: {
+            default: true,
             groupChat: {
               mentionPatterns: ["@openclaw", "openclaw"],
             },
           },
-        ],
+        },
       },
       channels: {
         whatsapp: {
@@ -227,11 +227,11 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
         defaults: {
           skills: ["github", "weather"],
         },
-        list: [
-          { id: "writer" }, // 继承 github, weather
-          { id: "docs", skills: ["docs-search"] }, // 替换默认值
-          { id: "locked-down", skills: [] }, // 无技能
-        ],
+        entries: {
+          writer: { default: true }, // inherits github, weather
+          docs: { skills: ["docs-search"] }, // replaces defaults
+          "locked-down": { skills: [] }, // no skills
+        },
       },
     }
     ```
@@ -381,7 +381,7 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
         defaults: {
           heartbeat: {
             every: "30m",
-            target: "last",
+            target: "owner",
           },
         },
       },
@@ -389,8 +389,8 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
     ```
 
     - `every`：时长字符串（`30m`、`2h`）。设为 `0m` 可禁用。默认值：`30m`。
-    - `target`：`last` | `none` | `<channel-id>`（例如 `discord`、`matrix`、`telegram` 或 `whatsapp`）
-    - `directPolicy`：对于 DM 样式的心跳目标，使用 `allow`（默认）或 `block`
+    - `target`：`owner`（默认操作员 DM）| `last`（最新对话，包括群组）| `none`（仅内部）| `<channel-id>`
+    - `directPolicy`：对于 DM 样式的心跳目标，可设为 `allow`（默认值）或 `block`
     - 请参阅[心跳](/gateway/heartbeat)了解完整指南。
 
   </Accordion>
@@ -457,10 +457,10 @@ Gateway 会阻止看起来像意外覆盖的写入——例如删除 `gateway.mo
     ```json5
     {
       agents: {
-        list: [
-          { id: "home", default: true, workspace: "~/.openclaw/workspace-home" },
-          { id: "work", workspace: "~/.openclaw/workspace-work" },
-        ],
+        entries: {
+          home: { default: true, workspace: "~/.openclaw/workspace-home" },
+          work: { workspace: "~/.openclaw/workspace-work" },
+        },
       },
       bindings: [
         { agentId: "home", match: { channel: "whatsapp", accountId: "personal" } },
@@ -606,8 +606,10 @@ OpenClaw 会从父进程以及以下位置读取环境变量：
 ```json5
 {
   env: {
-    OPENROUTER_API_KEY: "sk-or-...",
-    vars: { GROQ_API_KEY: "gsk-..." },
+    vars: {
+      OPENROUTER_API_KEY: "sk-or-...",
+      GROQ_API_KEY: "gsk-...",
+    },
   },
 }
 ```
@@ -639,14 +641,14 @@ OpenClaw 会从父进程以及以下位置读取环境变量：
 规则：
 
 - 仅匹配大写名称：`[A-Z_][A-Z0-9_]*`
-- 缺失/为空的变量会在加载时抛出错误
+- 缺失／为空的变量会在加载时抛出错误
 - 使用 `$${VAR}` 转义以输出字面值
 - 可在 `$include` 文件中使用
 - 内联替换：`"${BASE}/v1"` → `"https://api.example.com/v1"`
 
 </Accordion>
 
-<Accordion title="密钥引用（env、file、exec）">
+<Accordion title="SecretRef（env、file、exec、store）">
   对于支持 SecretRef 对象的字段，你可以使用：
 
 ```json5
@@ -679,8 +681,8 @@ OpenClaw 会从父进程以及以下位置读取环境变量：
 }
 ```
 
-SecretRef 详情（包括用于 `env`/`file`/`exec` 的 `secrets.providers`）见 [密钥管理](/gateway/secrets)。
-支持的凭据路径列在 [SecretRef 凭据范围](/reference/secretref-credential-surface)。
+SecretRef 详情（包括用于 `env`／`file`／`exec`／`store` 的 `secrets.providers`）请参见 [Secrets Management](/gateway/secrets)。
+支持的凭据路径列于 [SecretRef Credential Surface](/reference/secretref-credential-surface)。
 </Accordion>
 
 完整优先级和来源请参见 [环境](/help/environment)。
@@ -691,7 +693,7 @@ SecretRef 详情（包括用于 `env`/`file`/`exec` 的 `secrets.providers`）�
 
 ---
 
-_相关：[配置示例](/gateway/configuration-examples) · [配置参考](/gateway/configuration-reference) · [诊断工具](/gateway/doctor)_
+_相关：[配置示例](/gateway/configuration-examples) · [配置参考](/gateway/configuration-reference) · [诊断工具](/gateway/doctor)_。
 
 ## 相关内容
 

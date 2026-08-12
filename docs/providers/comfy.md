@@ -78,8 +78,10 @@ openclaw gateway restart
         {
           agents: {
             defaults: {
-              imageGenerationModel: {
-                primary: "comfy/workflow",
+              mediaModels: {
+                image: {
+                  primary: "comfy/workflow",
+                },
               },
             },
           },
@@ -153,8 +155,10 @@ openclaw gateway restart
         {
           agents: {
             defaults: {
-              imageGenerationModel: {
-                primary: "comfy/workflow",
+              mediaModels: {
+                image: {
+                  primary: "comfy/workflow",
+                },
               },
             },
           },
@@ -212,10 +216,10 @@ Comfy 支持共享的顶层连接设置以及按能力划分的工作流部分�
 | `mode`                  | `"local"` 或 `"cloud"` | 连接模式。默认为 `"local"`。                                                           |
 | `baseUrl`               | 字符串                 | 本地模式默认值为 `http://127.0.0.1:8188`，云模式默认值为 `https://cloud.comfy.org`。 |
 | `apiKey`                | 字符串                 | 可选的内联密钥，可替代 `COMFY_API_KEY` / `COMFY_CLOUD_API_KEY` 环境变量。             |
-| `allowPrivateNetwork`   | 布尔值                 | 在云模式下允许使用私有/LAN `baseUrl`，或本地私有 DNS FQDN。                            |
+| `allowPrivateNetwork`   | 布尔值                 | 在云模式下允许使用私有／LAN `baseUrl`，或本地私有 DNS FQDN。                            |
 
 <Note>
-在 `local` 模式下，回环/私有 IP 字面量以及诸如 `http://comfyui:8188` 这样的单标签服务名都可以在不使用 `allowPrivateNetwork` 的情况下工作。像 `https://comfy.local.example.com` 这样的外观上属于公网域名的私有 DNS FQDN 需要设置 `allowPrivateNetwork: true`。私有来源信任仍然仅限于已配置的协议、主机名和端口；本地重定向不能离开已配置的主机名，而指向公共 CDN 的云端重定向会按默认 SSRF 策略进行检查。
+在 `local` 模式下，回环／私有 IP 字面量以及诸如 `http://comfyui:8188` 这样的单标签服务名都可以在不使用 `allowPrivateNetwork` 的情况下工作。像 `https://comfy.local.example.com` 这样的外观上属于公网域名的私有 DNS FQDN 需要设置 `allowPrivateNetwork: true`。私有来源信任仍然仅限于已配置的协议、主机名和端口；本地重定向不能离开已配置的主机名，而指向公共 CDN 的云端重定向会按默认 SSRF 策略进行检查。
 </Note>
 
 ### 按能力划分的键
@@ -250,8 +254,10 @@ Comfy 支持共享的顶层连接设置以及按能力划分的工作流部分�
     {
       agents: {
         defaults: {
-          imageGenerationModel: {
-            primary: "comfy/workflow",
+          mediaModels: {
+            image: {
+              primary: "comfy/workflow",
+            },
           },
         },
       },
@@ -291,8 +297,10 @@ Comfy 支持共享的顶层连接设置以及按能力划分的工作流部分�
     {
       agents: {
         defaults: {
-          videoGenerationModel: {
-            primary: "comfy/workflow",
+          mediaModels: {
+            video: {
+              primary: "comfy/workflow",
+            },
           },
         },
       },

@@ -10,11 +10,11 @@ title: "认证"
 本页涵盖**模型提供方**认证（API 密钥、OAuth、Claude CLI 复用、Anthropic setup-token）。关于**网关连接**认证（令牌、密码、受信任代理），请参见 [配置](/gateway/configuration) 和 [受信任代理认证](/gateway/trusted-proxy-auth)。
 </Note>
 
-OpenClaw 支持模型提供方的 OAuth 和 API 密钥。对于始终在线的网关主机，API 密钥是最可预测的选项；当订阅/OAuth 流程与您的提供方账号模型匹配时，它们也同样适用。
+OpenClaw 支持模型提供方的 OAuth 和 API 密钥。对于始终在线的网关主机，API 密钥是最可预测的选项；当订阅／OAuth 流程与您的提供方账号模型匹配时，它们也同样适用。
 
-- 完整的 OAuth 流程和存储布局：[/concepts/oauth](/concepts/oauth)
-- 基于 SecretRef 的认证（`env`/`file`/`exec` 提供方）：[密钥管理](/gateway/secrets)
-- `models status --probe` 使用的凭据可用性/原因代码：[认证凭据语义](/auth-credential-semantics)。
+- 完整 OAuth 流程和存储布局：[/concepts/oauth](/concepts/oauth)
+- 基于 SecretRef 的认证（`env`／`file`／`exec`／`store` 提供方）：[密钥管理](/gateway/secrets)
+- `models status --probe` 使用的凭据资格／原因代码：[认证凭据语义](/auth-credential-semantics)
 
 ## 推荐设置：API 密钥（任意提供商）
 

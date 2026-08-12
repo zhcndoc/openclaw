@@ -257,10 +257,10 @@ Seedance 会用它根据输入图像尺寸自动检测比例）。
 
 OpenClaw 按以下顺序解析模型：
 
-1. **`model` 工具参数** - 如果代理在调用中指定了该参数。
-2. 配置中的 **`videoGenerationModel.primary`**。
-3. 按顺序使用 **`videoGenerationModel.fallbacks`**。
-4. **自动检测** - 具有有效身份验证的提供商，从当前默认提供商开始，然后按字母顺序处理其余提供商。
+1. **`model` 工具参数** — 如果代理在调用中指定了该参数。
+2. 配置中的 **`agents.defaults.mediaModels.video.primary`**。
+3. 按顺序使用 **`agents.defaults.mediaModels.video.fallbacks`**。
+4. **自动检测** — 具有有效身份验证的提供商，从当前默认提供商开始，然后按字母顺序排列其余提供商。
 
 如果某个提供商失败，则会自动尝试下一个候选项。如果所有
 候选项都失败，错误信息将包含每次尝试的详细信息。
@@ -272,10 +272,12 @@ OpenClaw 按以下顺序解析模型：
 {
   agents: {
     defaults: {
-      videoGenerationModel: {
-        primary: "google/veo-3.1-fast-generate-preview",
-        fallbacks: ["runway/gen4.5", "qwen/wan2.6-t2v"],
-        timeoutMs: 180000, // 可选的每个工具提供商请求超时覆盖值
+      mediaModels: {
+        video: {
+          primary: "google/veo-3.1-fast-generate-preview",
+          fallbacks: ["runway/gen4.5", "qwen/wan2.6-t2v"],
+          timeoutMs: 180000, // optional per-tool provider request timeout override
+        },
       },
     },
   },
@@ -484,9 +486,11 @@ pnpm test:live:media video --video-providers fal
 {
   agents: {
     defaults: {
-      videoGenerationModel: {
-        primary: "qwen/wan2.6-t2v",
-        fallbacks: ["qwen/wan2.6-r2v-flash"],
+      mediaModels: {
+        video: {
+          primary: "qwen/wan2.6-t2v",
+          fallbacks: ["qwen/wan2.6-r2v-flash"],
+        },
       },
     },
   },

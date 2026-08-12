@@ -28,8 +28,8 @@ sidebarTitle: "后台任务"
 - ACP、子代理、所有自动化作业和 CLI 操作都会创建任务。心跳轮次不会。
 - 每个任务都会经历 `queued → running → terminal`（succeeded、failed、timed_out、cancelled 或 lost）。
 - 当自动化运行时仍拥有该作业时，自动化任务会保持活动状态；如果内存中的运行时状态消失，任务维护会先检查持久化的自动化运行历史，然后再将任务标记为 lost。
-- 完成通知由推送驱动：分离运行的工作完成时可以直接发送通知，或唤醒请求方会话/心跳，因此状态轮询循环通常不是正确的实现方式。
-- 隔离的自动化运行和子代理完成时，会尽力在最终清理记录前，为其子会话清理已跟踪的浏览器标签页/进程。
+- 完成通知由推送驱动：分离运行的工作完成时可以直接发送通知，或唤醒请求方会话／心跳，因此状态轮询循环通常不是正确的实现方式。
+- 隔离的自动化运行和子代理完成时，会尽力在最终清理记录前，为其子会话清理已跟踪的浏览器标签页／进程。
 - 隔离的自动化交付会在后代子代理工作仍在处理时，抑制过时的中间父级回复；如果后代输出在交付前到达，则优先使用最终的后代输出。
 - 完成通知会直接发送到某个频道，或排队等待下一次心跳。
 - `openclaw tasks list` 显示所有任务；`openclaw tasks audit` 显示相关问题。
@@ -108,11 +108,11 @@ sidebarTitle: "后台任务"
   <Accordion title="自动化和媒体的通知默认设置">
     自动化任务（主会话和隔离会话）使用 `silent` 通知策略——它们会创建记录用于跟踪，但不会自行生成任务通知；调度器负责其投递路径。
 
-    基于会话的 `image_generate`、`music_generate` 和 `video_generate` 运行也使用 `silent` 通知策略。它们仍然会创建任务记录，但完成会作为一次内部唤醒交回原始代理会话，以便代理可以写出后续消息并自行附加已完成的媒体内容。请求者代理遵循其正常的可见回复约定：在配置时自动发送最终回复，或者在会话要求使用消息工具回复时使用 `message(action="send")` 加 `NO_REPLY`。如果请求者会话不再活跃，或者其活动唤醒失败，并且完成代理遗漏了部分或全部生成的媒体，OpenClaw 会向原始通道目标发送一次幂等的直接回退，仅包含缺失的媒体。
+    基于会话的 `image_generate`、`music_generate` 和 `video_generate` 运行也使用 `silent` 通知策略。它们仍会创建任务记录，但完成结果会作为内部唤醒交还给原始代理会话。请求代理会遵循其当前的可见回复约定：成功完成时，会包含一段简短的面向用户的说明以及完成事件中的每个结构化生成附件；失败时，则会生成简洁的可见失败提示。内部任务和会话详情会保持私密。如果请求会话不再处于活动状态或其活动唤醒失败，并且完成代理遗漏了部分或全部生成的媒体，OpenClaw 会向原始频道目标发送幂等的直接回退消息，其中仅包含遗漏的媒体。
 
   </Accordion>
   <Accordion title="并发媒体生成保护机制">
-    当一个基于会话的媒体生成任务仍在进行中时，`image_generate`、`music_generate` 和 `video_generate` 会防止意外重试：对同一提示/请求重复调用会返回匹配的活动任务状态，而不会启动重复任务；而不同的提示可以启动各自的任务。当你希望从代理侧显式查询进度/状态时，请使用 `action: "status"`。
+    当一个基于会话的媒体生成任务仍在进行中时，`image_generate`、`music_generate` 和 `video_generate` 会防止意外重试：对同一提示／请求重复调用会返回匹配的活动任务状态，而不会启动重复任务；而不同的提示可以启动各自的任务。当你希望从代理侧显式查询进度／状态时，请使用 `action: "status"`。
   </Accordion>
   <Accordion title="哪些情况不会创建任务">
     - 心跳回合——主会话；请参阅 [Heartbeat](/gateway/heartbeat)
@@ -170,7 +170,7 @@ agent 运行完成状态是活动任务记录的权威依据。成功的分离�
 
 当任务到达终态时，OpenClaw 会通知你。投递路径有两种：
 
-**直接投递** - 如果任务具有一个频道目标（`requesterOrigin`），完成消息会直接发送到该频道（Discord、Slack、Telegram 等）。对于组和频道任务的完成结果，则会改为通过请求者会话路由，这样父代理就可以写入可见回复。对于子代理完成，OpenClaw 还会在可用时保留绑定的线程/主题路由，并且在放弃直接投递之前，可以从请求者会话存储的路由（`lastChannel` / `lastTo` / `lastAccountId`）中补全缺失的 `to` / account。
+**直接投递** - 如果任务具有一个频道目标（`requesterOrigin`），完成消息会直接发送到该频道（Discord、Slack、Telegram 等）。对于组和频道任务的完成结果，则会改为通过请求者会话路由，这样父代理就可以写入可见回复。对于子代理完成，OpenClaw 还会在可用时保留绑定的线程／主题路由，并且在放弃直接投递之前，可以从请求者会话存储的路由（`lastChannel` ／ `lastTo` ／ `lastAccountId`）中补全缺失的 `to` ／ account。
 
 **会话排队投递**——如果直接投递失败或未设置来源，该更新会作为系统事件排入请求者会话，并在下一次 heartbeat 时显示。
 
@@ -186,11 +186,11 @@ agent 运行完成状态是活动任务记录的权威依据。成功的分离�
 
 控制你从每个任务中接收到多少信息：
 
-| Policy                | What is delivered                                             |
-| --------------------- | ------------------------------------------------------------- |
-| `done_only` (default) | Only terminal state (succeeded, failed, etc.)                 |
-| `state_changes`       | Every state transition and progress update                    |
-| `silent`              | Nothing at all (default for automation, CLI, and media tasks) |
+| 策略                  | 交付内容                                                     |
+| --------------------- | ------------------------------------------------------------ |
+| `done_only`（默认）  | 仅终态状态（已成功、失败等）                                 |
+| `state_changes`       | 每次状态转换和进度更新                                       |
+| `silent`              | 完全不发送任何内容（自动化、CLI 和媒体任务的默认设置）      |
 
 在任务运行期间更改通知策略：
 
@@ -408,4 +408,4 @@ Tasks    2 active · 1 queued · 1 running · 1 issue · audit clean · 6 tracke
 - [CLI：任务](/cli/tasks) - CLI 命令参考
 - [心跳](/gateway/heartbeat) - 主会话的周期性轮次
 - [自动化任务](/automation/cron-jobs) - 安排后台工作
-- [任务流](/automation/taskflow) - 位于任务之上的流程编排
+- [任务流](/automation/taskflow) - 位于任务之上的流程编排。

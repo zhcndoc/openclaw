@@ -38,31 +38,51 @@ npm install -g openclaw@<version>
 Plist 位置（每用户）：`~/Library/LaunchAgents/ai.openclaw.gateway.plist`
 （或 `ai.openclaw.<profile>.plist`）。
 
-在本地模式下，macOS 应用负责默认配置文件的 LaunchAgent 安装/更新。
+在本地模式下，macOS 应用负责默认配置文件的 LaunchAgent 安装／更新。
 CLI 也可以直接安装：`openclaw gateway install`
 （命名配置文件通过 `OPENCLAW_PROFILE` 环境变量选择）。
 
 行为：
 
-- “OpenClaw 活动” 启用/禁用 LaunchAgent。
+- “OpenClaw 活动” 启用／禁用 LaunchAgent。
 - 退出应用不会**停止** Gateway（launchd 会保持它存活）。
 - 如果配置端口上已经有一个 Gateway 在运行，应用会连接到它，
   而不是启动一个新的。
 
+使用 CLI 进行生命周期检查和恢复：
+
+```bash
+openclaw gateway status --deep
+openclaw gateway restart
+```
+
+Launchd 提供登录时自动启动、崩溃重启，以及一个可预测的日志位置，
+而不会将 Gateway 的生命周期绑定到应用进程。
+
+### 仅附加开发
+
+当另一个进程已经占用本地 Gateway 时，运行开发应用，而不安装或更改其 LaunchAgent：
+
+```bash
+scripts/restart-mac.sh --attach-only
+```
+
+直接使用 `--attach-only` 或 `--no-launchd` 启动应用会产生相同的效果。此覆盖设置会持久化到 `~/.openclaw/disable-launchagent`；删除该文件即可恢复由应用管理的 launchd 行为。
+
 日志：
 
-- launchd stdout: `~/Library/Logs/openclaw/gateway.log`（配置文件使用
+- launchd stdout：`~/Library/Logs/openclaw/gateway.log`（配置文件使用
   `gateway-<profile>.log`）
-- launchd stderr: 已抑制
+- launchd stderr：已抑制
 - 如果主机因重复的 `EADDRINUSE` 或快速重启而陷入循环，请检查是否存在重复的
-  `ai.openclaw.gateway` / `ai.openclaw.node` LaunchAgents，以及
-  [Gateway troubleshooting](/gateway/troubleshooting#macos-launchd-supervisor-loop-with-duplicate-gatewaynode-launchagents) 中的
+  `ai.openclaw.gateway`／`ai.openclaw.node` LaunchAgents，以及
+  [Gateway 故障排除](/gateway/troubleshooting#macos-launchd-supervisor-loop-with-duplicate-gatewaynode-launchagents) 中的
   launchd-marker 变通方案。
 
 ## 版本兼容性
 
-macOS 应用会将 Gateway 版本与自身版本进行检查。引导
-在现有 CLI 缺失或
+macOS 应用会将 Gateway 版本与自身版本进行检查。引导  
+在现有 CLI 缺失或  
 不兼容时会自动运行受管设置。使用 **重试设置** 可重复安装，或在修复外部 CLI 后使用 **再次检查**。
 
 ## macOS 上的状态目录

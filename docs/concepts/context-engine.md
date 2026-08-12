@@ -166,13 +166,12 @@ export default function register(api) {
       return { ok: true, compacted: true };
     },
 
-    async commitTurn({ advancementKey, messages, prePromptMessageCount }) {
-      // 原子地存储已接受的轮次和 advancementKey。当该确切键已由之前的重试提交时，返回
-      // "duplicate"。
+    async commitTurn({ advancementKey, messages }) {
+      // Atomically store the accepted turn and advancementKey. Return
+      // "duplicate" when that exact key was committed by an earlier retry.
       return await commitAcceptedTurn({
         advancementKey,
         messages,
-        prePromptMessageCount,
       });
     },
   }));
@@ -209,7 +208,7 @@ export default function register(api) {
 | `info`             | 属性     | 引擎 id、名称、版本、接受的宿主参数，以及是否拥有压缩控制权                         |
 | `ingest(params)`   | 方法     | 存储单条消息                                                                       |
 | `assemble(params)` | 方法     | 为模型运行构建上下文（返回 `AssembleResult`）                                     |
-| `compact(params)`  | 方法     | 总结/缩减上下文                                                                    |
+| `compact(params)`  | 方法     | 总结／缩减上下文                                                                    |
 
 设置 `info.acceptedHostParams`，以声明引擎接受的由宿主添加的生命周期字段。
 当前的键包括 `sessionKey`、`prompt`、`runtimeSettings`、
@@ -223,15 +222,13 @@ export default function register(api) {
 - `currentTurnFence: "before-current-turn-entry-v1"`
 - `turnAdvancementIdempotency: "atomic-idempotent-v1"`
 
-并将 `commitTurn(...)` 实现为一个以 `advancementKey` 为键的原子幂等写入。
-首次写入时返回 `{ status: "committed" }`；当宿主重试提交一个已提交的键时，
-返回 `{ status: "duplicate" }`。这样，在引导、维护、组装和重试期间进行的
-轮次前转录读取，就能看到已接纳用户消息之前的确切转录前缀。宿主仅会为
-已接受且成功的轮次调用 `commitTurn`；失败或中止的轮次不会推进上下文引擎状态。
+并将 `commitTurn(...)` 实现为一个以 `advancementKey` 为键的原子幂等写入操作。首次写入时返回 `{ status: "committed" }`，当宿主重试提交一个已写入的键时返回 `{ status: "duplicate" }`。
+`messages` 负载仅包含从已接纳的用户条目到已接受的终止条目之间的闭区间。需要在引导或重建期间读取更早转录内容的引擎，应通过转录游标 API
+`readSessionTranscriptVisibleMessageDelta(...)` 读取。
+引导、维护、组装和重试期间的轮次前转录读取，随后会看到已接纳用户消息之前的精确转录前缀。宿主仅会为已接受的成功轮次调用 `commitTurn`；失败或中止的轮次不会推进上下文引擎状态。
 
 如果缺少完整的声明和方法，OpenClaw 会在整个逻辑轮次（包括重试）中使用
-legacy 上下文路径。配置的上下文引擎槽位不会改变，OpenClaw 会在下一个逻辑
-轮次再次尝试配置的引擎。如果声明了轮次栅栏，但由于确切的已接纳消息缺失、
+legacy 上下文路径。配置的上下文引擎槽位不会改变，OpenClaw 会在下一个逻辑轮次再次尝试配置的引擎。如果声明了轮次栅栏，但由于确切的已接纳消息缺失、
 被重写，或已被转录游标越过而无法遵守，同一轮次也会发生相同的局部降级。
 
 `assemble` 返回一个 `AssembleResult`，其中包含：
@@ -272,11 +269,11 @@ legacy 上下文路径。配置的上下文引擎槽位不会改变，OpenClaw �
 ### 运行时设置
 
 在 OpenClaw 内部运行的生命周期钩子会接收一个可选的 `runtimeSettings`
-对象。它是一个带版本的、只读的内部生产者/消费者 API 接口：OpenClaw 为所选上下文引擎生成它，而上下文引擎在生命周期钩子中消费它。它不会直接呈现给用户，也不会创建专用的报告界面。
+对象。它是一个带版本的、只读的内部生产者／消费者 API 接口：OpenClaw 为所选上下文引擎生成它，而上下文引擎在生命周期钩子中消费它。它不会直接呈现给用户，也不会创建专用的报告界面。
 
 - `schemaVersion`：当前为 `1`
 - `runtime`：OpenClaw 主机、运行时模式（`normal`、`fallback` 或
-  `degraded`），以及可选的 harness/运行时 id
+  `degraded`），以及可选的 harness／运行时 id
 - `contextEngineSelection`：所选上下文引擎 id 和选择来源
 - `executionHost`：调用该钩子的表面对应的主机 id 和标签
 - `model`：请求的模型、已解析的模型、提供方，以及可选的模型家族
@@ -378,7 +375,7 @@ OpenClaw 将所选插件引擎与核心回复路径隔离。如果一个非 lega
     压缩是上下文引擎的一项职责。legacy 引擎会委托给 OpenClaw 内置的摘要功能。插件引擎可以实现任何压缩策略（DAG 摘要、向量检索等）。
   </Accordion>
   <Accordion title="记忆插件">
-    记忆插件（`plugins.slots.memory`）与上下文引擎是分开的。记忆插件提供搜索/检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎在组装过程中可能会使用记忆插件数据。希望使用活动记忆提示路径的插件引擎，应使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将主机预先准备好的记忆提示部分转换为可直接前置的 `systemPromptAddition`，而不会暴露记忆插件的布局。
+    记忆插件（`plugins.slots.memory`）与上下文引擎是分开的。记忆插件提供搜索／检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎在组装过程中可能会使用记忆插件数据。希望使用活动记忆提示路径的插件引擎，应使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将主机预先准备好的记忆提示部分转换为可直接前置的 `systemPromptAddition`，而不会暴露记忆插件的布局。
   </Accordion>
   <Accordion title="会话裁剪">
     无论当前激活的是哪个上下文引擎，内存中对旧工具结果的裁剪都会继续运行。

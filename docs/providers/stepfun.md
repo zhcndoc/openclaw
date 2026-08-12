@@ -24,12 +24,12 @@ openclaw gateway restart
 
 ## 区域和端点概览
 
-| Endpoint  | China (`.com`)                         | Global (`.ai`)                        |
+| 端点  | 中国（`.com`）                         | 全球（`.ai`）                        |
 | --------- | -------------------------------------- | ------------------------------------- |
-| Standard  | `https://api.stepfun.com/v1`           | `https://api.stepfun.ai/v1`           |
+| 标准  | `https://api.stepfun.com/v1`           | `https://api.stepfun.ai/v1`           |
 | Step Plan | `https://api.stepfun.com/step_plan/v1` | `https://api.stepfun.ai/step_plan/v1` |
 
-认证环境变量：`STEPFUN_API_KEY`
+认证环境变量：`STEPFUN_API_KEY`。
 
 ## 内置目录
 
@@ -56,10 +56,10 @@ Step Plan（`stepfun-plan`）：
 
     <Steps>
       <Step title="选择你的端点区域">
-        | Auth choice                    | Endpoint                     | Region        |
+        | 认证选项                    | 端点                         | 区域        |
         | -------------------------------- | ----------------------------- | -------------- |
-        | `stepfun-standard-api-key-intl` | `https://api.stepfun.ai/v1`  | International |
-        | `stepfun-standard-api-key-cn`   | `https://api.stepfun.com/v1` | China          |
+        | `stepfun-standard-api-key-intl` | `https://api.stepfun.ai/v1`  | 国际 |
+        | `stepfun-standard-api-key-cn`   | `https://api.stepfun.com/v1` | 中国          |
       </Step>
       <Step title="运行初始化">
         ```bash
@@ -85,8 +85,8 @@ Step Plan（`stepfun-plan`）：
       </Step>
     </Steps>
 
-    Default model: `stepfun/step-3.5-flash`
-    Alternate model: `stepfun/step-3.7-flash`
+    默认模型：`stepfun/step-3.5-flash`
+    备用模型：`stepfun/step-3.7-flash`
 
   </Tab>
 
@@ -95,10 +95,10 @@ Step Plan（`stepfun-plan`）：
 
     <Steps>
       <Step title="选择你的端点区域">
-        | Auth choice                 | Endpoint                                | Region        |
+        | 认证选项                 | 端点                                | 区域        |
         | ------------------------------ | ------------------------------------------ | -------------- |
-        | `stepfun-plan-api-key-intl` | `https://api.stepfun.ai/step_plan/v1`  | International |
-        | `stepfun-plan-api-key-cn`   | `https://api.stepfun.com/step_plan/v1` | China          |
+        | `stepfun-plan-api-key-intl` | `https://api.stepfun.ai/step_plan/v1`  | 国际 |
+        | `stepfun-plan-api-key-cn`   | `https://api.stepfun.com/step_plan/v1` | 中国          |
       </Step>
       <Step title="运行初始化">
         ```bash
@@ -124,8 +124,8 @@ Step Plan（`stepfun-plan`）：
       </Step>
     </Steps>
 
-    Default model: `stepfun-plan/step-3.5-flash`
-    Alternate models: `stepfun-plan/step-3.7-flash`, `stepfun-plan/step-3.5-flash-2603`
+    默认模型：`stepfun-plan/step-3.5-flash`
+    备用模型：`stepfun-plan/step-3.7-flash`、`stepfun-plan/step-3.5-flash-2603`
 
   </Tab>
 </Tabs>
@@ -138,7 +138,7 @@ Step Plan（`stepfun-plan`）：
   <Accordion title="完整配置：标准提供方">
     ```json5
     {
-      env: { STEPFUN_API_KEY: "your-key" },
+      env: { vars: { STEPFUN_API_KEY: "your-key" } },
       agents: { defaults: { model: { primary: "stepfun/step-3.5-flash" } } },
       models: {
         mode: "merge",
@@ -178,7 +178,7 @@ Step Plan（`stepfun-plan`）：
   <Accordion title="完整配置：Step Plan 提供方">
     ```json5
     {
-      env: { STEPFUN_API_KEY: "your-key" },
+      env: { vars: { STEPFUN_API_KEY: "your-key" } },
       agents: { defaults: { model: { primary: "stepfun-plan/step-3.5-flash" } } },
       models: {
         mode: "merge",

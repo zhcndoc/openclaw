@@ -192,16 +192,17 @@ OpenClaw 为进度草稿和 `/verbose` 使用相同的格式化器：
 }
 ```
 
-`"explain"` 是默认值，会使用简洁标签保持草稿稳定。`"raw"` 会在可用时附加底层命令，这在调试时很有用，但在聊天中会更嘈杂。例如，`node --check /tmp/app.js` 调用在不同模式下的渲染方式如下：
+`"explain"` 是默认值，并通过简洁的标签保持草稿稳定。  
+`"raw"` 会在可用时附加底层工具详细信息。命令文本还需要在下方显式选择加入 `streaming.progress.commandText: "raw"`。启用该选项后，`node --check /tmp/app.js` 调用在不同模式下的渲染如下：
 
 | 模式        | 进度行                                                         |
 | ----------- | -------------------------------------------------------------- |
 | `explain`   | `🛠️ check js syntax for /tmp/app.js`                          |
 | `raw`       | `🛠️ check js syntax for /tmp/app.js · node --check /tmp/app.js` |
 
-### 命令/exec 文本
+### 命令／exec 文本
 
-`streaming.progress.commandText`（默认 `"raw"`）控制 exec/bash 进度行旁显示多少命令细节，与上面的细节模式无关。将其设为 `"status"` 可在保留工具进度行可见的同时，完全隐藏命令文本：
+`streaming.progress.commandText`（默认 `"status"`）控制 exec/bash 进度行旁显示多少命令详细信息，与上述详细模式相互独立。将其设置为 `"raw"` 可选择显示命令文本；保持为 `"status"` 则仅显示工具进度状态：
 
 ```json5
 {
@@ -210,7 +211,7 @@ OpenClaw 为进度草稿和 `/verbose` 使用相同的格式化器：
       streaming: {
         mode: "progress",
         progress: {
-          commandText: "status",
+          commandText: "raw",
         },
       },
     },
@@ -220,7 +221,7 @@ OpenClaw 为进度草稿和 `/verbose` 使用相同的格式化器：
 
 ### 评论通道
 
-`streaming.progress.commentary`（默认 `false`）会将模型的工具前评论/前导叙述（💬，例如“我会先检查……然后……”）与草稿中的工具行交错显示。有关跨通道共享的配置形状，请参见
+`streaming.progress.commentary`（默认 `false`）会将模型的工具前评论／前导叙述（💬，例如“我会先检查……然后……”）与草稿中的工具行交错显示。有关跨通道共享的配置形状，请参见
 [流式传输与分块](/concepts/streaming#commentary-progress-lane)。
 
 启用评论通道后，前导语只会渲染为这些交错的
@@ -330,7 +331,7 @@ Slack 可以将进度行渲染为结构化的 Block Kit 字段，而不是纯文
 
 富渲染始终会在 Block Kit 字段旁同时发送相同的纯文本正文，因此无法渲染更丰富结构的客户端仍会显示精简的进度文本。
 
-### 隐藏工具/任务行
+### 隐藏工具／任务行
 
 保留单一进度草稿，但隐藏工具和任务行：
 
@@ -370,9 +371,9 @@ Slack 可以将进度行渲染为结构化的 Block Kit 字段，而不是纯文
 
 - 在 Discord 的 `progress` 模式下，最终答案会作为一条新的消息发送，并在末尾附加一个很小的 `-#` 活动回执（例如
   `-# 🧠 2 thoughts · 🛠️ 5 tool calls · ⏱️ 12s`），并且在该答案送达后会删除状态草稿。繁忙的频道不会在回复上方留下孤立的工具日志；出错的最终结果会保留草稿，作为失败轮次的可见记录。
-- 如果草稿可以安全地直接成为最终答案（`partial`/`block` 模式），OpenClaw 会就地编辑它。
+- 如果草稿可以安全地直接成为最终答案（`partial`／`block` 模式），OpenClaw 会就地编辑它。
 - 如果频道使用原生进度流，OpenClaw 会在原生传输接受最终文本时结束该流。
-- 否则（媒体、审批提示、显式回复目标、分块过多，或编辑/发送失败），OpenClaw 会通过正常的频道投递路径发送最终答案，而不是覆盖草稿。
+- 否则（媒体、审批提示、显式回复目标、分块过多，或编辑／发送失败），OpenClaw 会通过正常的频道投递路径发送最终答案，而不是覆盖草稿。
 
 这种回退是有意为之：发送一份新的最终答案，比丢失文本、错线程回复，或用通道无法安全表示的载荷覆盖草稿要好。
 
@@ -412,4 +413,4 @@ Microsoft Teams 在个人聊天中使用原生流，而不是通用的发送并�
 - [Microsoft Teams](/channels/msteams)
 - [Slack](/channels/slack)
 - [Telegram](/channels/telegram)
-- [Mattermost](/channels/mattermost)
+- [Mattermost](/channels/mattermost)。

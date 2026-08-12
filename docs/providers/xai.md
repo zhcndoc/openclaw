@@ -106,7 +106,7 @@ URL 和短代码；在任意本地浏览器中完成登录，同时远程
 Grok 4、Grok 4 Fast、Grok 4.1 Fast 和 Grok Code 的 id；
 参见 [旧版兼容性和迁移别名](#legacy-compatibility-and-moving-aliases)。
 
-| Family         | Model ids                                                    |
+| 系列           | 模型 id                                                     |
 | -------------- | ------------------------------------------------------------ |
 | Grok 4.5       | `grok-4.5`（别名：`grok-4.5-latest`、`grok-build-latest`） |
 | Grok Build 0.1 | `grok-build-0.1`                                             |
@@ -256,8 +256,10 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
     {
       agents: {
         defaults: {
-          videoGenerationModel: {
-            primary: "xai/grok-imagine-video",
+          mediaModels: {
+            video: {
+              primary: "xai/grok-imagine-video",
+            },
           },
         },
       },
@@ -295,8 +297,10 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
     {
       agents: {
         defaults: {
-          imageGenerationModel: {
-            primary: "xai/grok-imagine-image",
+          mediaModels: {
+            image: {
+              primary: "xai/grok-imagine-image",
+            },
           },
         },
       },
@@ -372,13 +376,15 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
     {
       tools: {
         media: {
+          models: [
+            {
+              type: "provider",
+              provider: "xai",
+              capabilities: ["audio"],
+            },
+          ],
           audio: {
-            models: [
-              {
-                type: "provider",
-                provider: "xai",
-              },
-            ],
+            enabled: true,
           },
         },
       },
@@ -472,7 +478,7 @@ xAI 已退役以下精确 id。OpenClaw 将它们作为隐藏的兼容
           },
         },
       },
-      env: { XAI_API_KEY: "xai-..." },
+      env: { vars: { XAI_API_KEY: "xai-..." } },
     }
     ```
 

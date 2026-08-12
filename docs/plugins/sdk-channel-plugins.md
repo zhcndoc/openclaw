@@ -65,10 +65,10 @@ read_when:
 `synthesisTarget: "voice-note"`。仅当出站语音操作接受可见的最终文本，并执行其传输层的说明文字和溢出规则时，才设置
 `captionedFinalText: true`。对于该操作，core 随后会暂存最终模式下的流式文本，并在语音负载被证明未发送时回退到文本。
 
-诸如 `dispatchInboundReplyWithBase` 和
-`recordInboundSessionAndDispatchReply` 之类的旧版回复辅助函数仍可供兼容性分发器使用。
-不要在新的渠道代码中使用它们；应从
-`openclaw/plugin-sdk/channel-outbound` 上的 `message` 适配器、收据以及接收/发送生命周期辅助函数开始。
+旧版 `dispatchInboundReplyWithBase` 辅助函数仍可通过已弃用的
+`openclaw/plugin-sdk/inbound-reply-dispatch` 兼容性 shim 使用。
+不要将其用于新的渠道代码；请改为从 `message` 适配器、收据以及
+`openclaw/plugin-sdk/channel-outbound` 上的接收/发送生命周期辅助函数开始。
 
 ### 入站入口（实验性）
 
@@ -205,8 +205,8 @@ read_when:
 
 大多数通道插件不需要审批专用代码。Core 负责同聊天室的
 `/approve`、共享的审批按钮载荷以及通用的回退投递。
-`ChannelPlugin.approvals` 已被移除；请改为将审批投递/原生/渲染/认证
-相关事实放到一个 `approvalCapability` 对象上。`plugin.auth` 仅用于登录/登出——
+`ChannelPlugin.approvals` 已被移除；请改为将审批投递／原生／渲染／认证
+相关事实放到一个 `approvalCapability` 对象上。`plugin.auth` 仅用于登录／登出——
 core 不再从该对象读取审批认证钩子。
 
 仅在需要原生审批路由或抑制回退时使用 `approvalCapability.delivery`，
@@ -220,10 +220,10 @@ core 不再从该对象读取审批认证钩子。
   审批认证接口。
 - 使用 `getActionAvailabilityState` 来获取同聊天室审批认证可用性。
   即使原生投递被禁用，也要让已配置的审批人在 `/approve` 中保持可用；
-  交由原生启动面状态用于投递/设置指引。
+  交由原生启动面状态用于投递／设置指引。
 - 如果你的通道暴露原生 exec 审批，在原生客户端状态与同聊天室
   审批认证不同时，使用 `approvalCapability.getExecInitiatingSurfaceState`
-  作为启动面/原生客户端状态。Core 会使用这个 exec 专用钩子来区分
+  作为启动面／原生客户端状态。Core 会使用这个 exec 专用钩子来区分
   `enabled` 与 `disabled`，判断启动通道是否支持原生 exec 审批，并将该通道
   纳入原生客户端回退指引中。
   `createApproverRestrictedNativeApprovalCapability(...)` 已为常见情况补足此项。
@@ -256,7 +256,7 @@ core 不再从该对象读取审批认证钩子。
 
 ### 原生审批投递
 
-如果一个通道需要原生审批投递，请让通道代码聚焦于目标规范化以及传输/呈现事实。
+如果一个通道需要原生审批投递，请让通道代码聚焦于目标规范化以及传输／呈现事实。
 使用 `openclaw/plugin-sdk/approval-runtime` 中的
 `createChannelExecApprovalProfile`、`createChannelNativeOriginTargetResolver`、
 `createChannelApproverDmTargetResolver` 和
@@ -269,8 +269,8 @@ core 不再从该对象读取审批认证钩子。
 `nativeRuntime` 被拆分为几个更小的接口：
 
 - `availability` - 账户是否已配置，以及请求是否应被处理
-- `presentation` - 将共享审批视图模型映射为 pending/resolved/expired 原生载荷或最终动作
-- `transport` - 准备目标并发送/更新/删除原生审批消息
+- `presentation` - 将共享审批视图模型映射为 pending／resolved／expired 原生载荷或最终动作
+- `transport` - 准备目标并发送／更新／删除原生审批消息
 - `interactions` - 可选的原生按钮或 reaction 的 bind/unbind/clear-action 钩子，以及可选的 `cancelDelivered` 钩子。若 `deliverPending` 会注册进程内或持久化状态（例如 reaction 目标存储），请实现 `cancelDelivered`，以便在处理器停止且在 `bindPending` 执行前取消投递时，或者当 `bindPending` 返回空句柄时能够释放这些状态
 - `observe` - 可选的投递诊断钩子
 
@@ -279,7 +279,7 @@ core 不再从该对象读取审批认证钩子。
 - 当一个通道同时支持会话来源的原生投递和显式审批转发目标时，请使用
   `openclaw/plugin-sdk/approval-native-runtime` 中的
   `createNativeApprovalChannelRouteGates`。该帮助器集中处理审批配置选择、`mode`
-  处理、代理/会话过滤、账户绑定、会话目标匹配和目标列表匹配，同时调用方仍负责通道 ID、默认转发模式、账户查找、传输启用检查、目标规范化和轮次来源目标解析。不要使用它来创建由 core 所有的通道策略默认值；请显式传入通道文档规定的默认模式。
+  处理、代理／会话过滤、账户绑定、会话目标匹配和目标列表匹配，同时调用方仍负责通道 ID、默认转发模式、账户查找、传输启用检查、目标规范化和轮次来源目标解析。不要使用它来创建由 core 所有的通道策略默认值；请显式传入通道文档规定的默认模式。
 - `createNativeApprovalMessagingTargetResolvers` 集中处理消息传输中的通道匹配以及 `{ to, accountId, threadId }` 规范化，这些传输的原生审批目标是通道自有的规范化目的地。
   请将群组授权、审批人映射和其他传输策略保留在通道插件中。
 - `createChannelNativeOriginTargetResolver` 默认使用共享的通道路由匹配器来处理 `{ to, accountId, threadId }` 目标。只有当通道具有提供商特定的等价规则（例如 Slack 时间戳前缀匹配）时，才传入 `targetsMatch`。当通道需要在默认路由匹配器或自定义 `targetsMatch` 回调运行之前规范化提供商 ID 时，请传入 `normalizeTargetForMatch`，同时保留原始目标用于投递。只有当解析出的投递目标本身应被规范化时，才使用 `normalizeTarget`。
@@ -289,10 +289,11 @@ core 不再从该对象读取审批认证钩子。
   `createChannelApprovalHandler` 或
   `createChannelNativeApprovalRuntime`。
 - 原生审批通道必须通过这些帮助器传递 `accountId` 和 `approvalKind`。`accountId` 确保多账户审批策略限定在正确的机器人账户范围内，而 `approvalKind` 则使通道能够处理 exec 与插件审批行为，无需在 core 中使用硬编码分支。
-- Core 也负责审批重新路由通知。通道插件不应从 `createChannelNativeApprovalRuntime` 发送自己的“审批已转到私信/另一个通道”后续消息；相反，应通过共享审批能力帮助器准确暴露来源 + 审批人私信路由，并让 core 在向发起审批的聊天发布任何通知之前，汇总实际投递结果。
+- Core 也负责审批重新路由通知。通道插件不应从 `createChannelNativeApprovalRuntime` 发送自己的“审批已转到私信／另一个通道”后续消息；相反，应通过共享审批能力帮助器准确暴露来源 + 审批人私信路由，并让 core 在向发起审批的聊天发布任何通知之前，汇总实际投递结果。
 - 端到端保留已投递审批 ID 的类型。原生客户端不应根据通道本地状态猜测或重写 exec 与插件审批的路由。
-- 将显式的 `approvalKind` 传递给 `resolveApprovalOverGateway`。这会使用规范的 `approval.resolve` 服务，并在另一个界面先作出响应时返回已记录的获胜者。较旧的显式 `resolveMethod` 输入仍用于基于命令的控制；新的原生操作不得使用它，也不得从 ID 推断类型。
-- 不同的审批类型可以有意暴露不同的原生界面。目前打包的示例包括：Matrix 对 exec 和插件审批保持相同的原生私信/频道路由和 reaction 用户体验，同时仍允许按审批类型区分授权；Slack 则同时为 exec ID 和插件 ID 提供原生审批路由。
+- 将显式的 `approvalKind` 传递给 `resolveApprovalOverGateway`。这会使用规范的
+  `approval.resolve` 服务，并在另一个界面先作出响应时返回已记录的获胜者。较旧的显式 `resolveMethod` 输入仍用于基于命令的控制；新的原生操作不得使用它，也不得从 ID 推断类型。
+- 不同的审批类型可以有意暴露不同的原生界面。目前打包的示例包括：Matrix 对 exec 和插件审批保持相同的原生私信／频道路由和 reaction 用户体验，同时仍允许按审批类型区分授权；Slack 则同时为 exec ID 和插件 ID 提供原生审批路由。
 - `createApproverRestrictedNativeApprovalAdapter` 仍作为兼容性包装器存在，但新代码应优先使用能力构建器，并在插件上暴露 `approvalCapability`。
 
 ### 更窄的审批运行时子路径
@@ -332,7 +333,7 @@ core 不再从该对象读取审批认证钩子。
   `openclaw/plugin-sdk/setup` 接口。
 
 如果你的通道只想在设置界面中提示“请先安装此插件”，优先使用
-`createOptionalChannelSetupSurface(...)`。生成的 adapter/wizard 会在配置写入和最终化时
+`createOptionalChannelSetupSurface(...)`。生成的 adapter／wizard 会在配置写入和最终化时
 闭合失败，并且它们会在校验、finalize 和 docs-link 文案中复用同一条“需要安装”的消息。
 
 如果你的通道支持由环境变量驱动的设置或身份验证，请通过通道配置 schema 和设置描述符公开这些能力。将通道运行时的 `envVars` 或本地常量仅用于面向操作员的文案。
@@ -350,23 +351,24 @@ core 不再从该对象读取审批认证钩子。
   `openclaw/plugin-sdk/account-helpers`，用于多账户配置和
   默认账户回退
 - `openclaw/plugin-sdk/inbound-envelope` 和
-  `openclaw/plugin-sdk/channel-inbound`，用于入站路由/信封以及
-  记录并分发的接线
-- 当成功的出站发送必须停用一个活动的入站事件标记时，使用
-  `createInboundEventDeliveryCorrelation(...)`（来自
-  `openclaw/plugin-sdk/inbound-event-delivery`）；每个通道创建一个跟踪器，
-  并将目标匹配保留在通道插件中
+  `openclaw/plugin-sdk/channel-inbound`，用于入站路由／信封以及
+  记录并分发的衔接
+- 当终端 reaction 或状态 UI 必须区分已完成的 core agent 运行和恢复后的失败运行时，使用
+  `openclaw/plugin-sdk/channel-inbound` 中的
+  `readAgentRunTerminalOutcome(dispatchResult)`。它仅在 core 运行确实启动时返回
+  `"completed"` 或 `"failed"`，对于命令、去重、繁忙、运行前中止和自定义分发结果则返回
+  `undefined`。投递计数和可见性仍属于传输事实，包括错误载荷的成功投递；进程本地载体不会序列化为 JSON。
+- 当成功的出站发送必须停用活动的入站事件标记时，使用
+  `openclaw/plugin-sdk/inbound-event-delivery` 中的
+  `createInboundEventDeliveryCorrelation(...)`；每个通道创建一个跟踪器，并将目标匹配保留在通道插件中
 - `openclaw/plugin-sdk/channel-targets`，用于目标解析帮助器
-- `openclaw/plugin-sdk/channel-outbound`，用于出站身份/发送委托
-  以及类型化载荷规划
-- 当出站路由应保留显式的 `replyToId`/`threadId`，或在基础会话键仍然匹配时恢复当前的 `:thread:`
-  会话，请使用来自 `openclaw/plugin-sdk/channel-core` 的
-  `buildThreadAwareOutboundSessionRoute(...)`。当平台具有原生线程投递语义时，提供商插件可以
-  覆盖优先级、后缀行为和线程 ID 规范化。
-- `openclaw/plugin-sdk/thread-bindings-runtime`，用于线程绑定生命周期
-  和适配器注册
+- `openclaw/plugin-sdk/channel-outbound`，用于出站身份／发送委托和类型化载荷规划
+- 当出站路由应保留显式的 `replyToId`／`threadId`，或在基础会话键仍匹配后恢复当前的 `:thread:` 会话时，使用
+  `openclaw/plugin-sdk/channel-core` 中的
+  `buildThreadAwareOutboundSessionRoute(...)`。当提供商平台具有原生线程投递语义时，提供商插件可以覆盖优先级、后缀行为和线程 ID 规范化。
+- `openclaw/plugin-sdk/thread-bindings-runtime`，用于线程绑定生命周期和适配器注册
 
-仅认证的通道通常可以停留在默认路径：core 处理审批，而插件只暴露 outbound/auth 能力。像 Matrix、Slack、Telegram 以及自定义聊天传输这样的原生审批通道，应使用共享的原生 helper，而不是自己重新实现审批生命周期。
+仅认证的通道通常可以停留在默认路径：core 处理审批，而插件只暴露 outbound／auth 能力。像 Matrix、Slack、Telegram 以及自定义聊天传输这样的原生审批通道，应使用共享的原生 helper，而不是自己重新实现审批生命周期。
 
 ## 传入提及策略
 
@@ -642,8 +644,10 @@ if (decision.shouldSkip) return;
 
     对于同时接受规范的顶层 DM 键和旧式嵌套键的频道，请使用 `plugin-sdk/channel-config-helpers` 中的辅助函数：`resolveChannelDmAccess`、`resolveChannelDmPolicy`、`resolveChannelDmAllowFrom` 和 `normalizeChannelDmPolicy` 可以优先使用账户本地值，而不是继承的根值。通过 `normalizeLegacyDmAliases` 将同一个解析器用于 doctor 修复，以便运行时和迁移读取同一份契约。
 
-    <Accordion title="createChatChannelPlugin 会为你做什么">
-      你无需手动实现底层适配器接口，只需传入声明式选项，构建器会将它们组合起来：
+    如果某个频道有意采用比全局配置更严格的 DM 会话路由，应通过 `security.dmRouting` 暴露此行为，以便 Doctor 和安全审计解析出与运行时相同的会话所有者。可选的 `resolveDmScope` 回调会在核心路由解析之前运行；其上下文包括 `cfg`、`accountId`、已解析的 `account`，以及用于有限允许列表条目的 `principalId`。`resolveDmRoute` 会接收这些字段以及已解析的核心 `route`；它可以返回 `{ sessionKey }` 以使用共享的最终存储桶，返回 `{ kind: "isolated" }` 以表示未知对端，或返回 `{ kind: "core" }` 以保留核心 `dmScope` 命名空间分析。对于通配符／开放策略，`principalId` 不存在，未定义的结果会被报告为未经验证。诊断绝不会臆造对端 ID。两个回调都应保持纯函数特性并且可安全导入，因为只读诊断会在没有频道运行时的情况下运行。
+
+    <Accordion title="What createChatChannelPlugin does for you">
+      无需手动实现底层适配器接口，只需传入声明式选项，构建器就会为你组合这些适配器：
 
       | 选项 | 作用 |
       | --- | --- |
@@ -668,6 +672,19 @@ if (decision.shouldSkip) return;
 
     OpenClaw 仅会为受信任的非入口执行设置此模式，此类执行的发送者权限已记录在服务器拥有的信封中，例如
     明确设置了上限的计划运行。插件不得从传入元数据推导此模式，不得将其持久化为频道状态，也不得将其暴露为配置项。添加一个适配器测试，证明该模式会跳过通配符 `toolsBySender` 条目，同时不会丢弃匹配的基础 `tools` 限制。
+
+    ### 原生插件命令所有权
+
+    发布提供商原生命令目录的频道插件应使用
+    `openclaw/plugin-sdk/plugin-command-runtime`。规划目录时创建一个运行时，将其候选项与内置条目和技能条目合并，并在已注册的处理程序闭包中保留获胜的候选对象。
+    提供商目录确定后，只要至少保留一个插件候选项，就调用
+    `retainNativeCatalog(provider)`；如果监听器注册可能同步失败，则在这些监听器安装完成后调用它。此操作会记录当前的频道账户生命周期，以便注册表重新加载时，仅重启其处理程序保留了该注册表代次的账户。
+    只对该获胜者调用 `prepareDispatch(rawArgs)`，并使用 `dispatch.execute(context)` 执行返回的分发。对于保留的内置条目和技能获胜者，携带明确的
+    `{ kind: "non-plugin" }` 决策。
+    这样可以确保公布的命令及其可执行的插件注册属于同一个注册表代次。
+
+    候选项只会暴露不可变的显示／身份验证／进度元数据，以及不透明的进程本地分发。它们不会暴露处理程序、插件根目录或注册表行。分发不能跨越运行时工厂或频道，并且注册表替换后，新的执行会返回不可用结果，而不是针对替换后的注册表重新匹配命令文本。
+    已在退役前获准执行的命令可以在其捕获的代次上完成。不要序列化候选项或分发；只将其显示字段投影到提供商 API 负载中。
 
   </Step>
 
@@ -834,13 +851,13 @@ if (decision.shouldSkip) return;
     describeMessageTool 和动作发现
   </Card>
   <Card title="目标解析" icon="crosshair" href="/plugins/architecture-internals#channel-target-resolution">
-    inferTargetChatType, looksLikeId, reservedLiterals, resolveTarget
+    inferTargetChatType、looksLikeId、reservedLiterals、resolveTarget
   </Card>
   <Card title="运行时辅助" icon="settings" href="/plugins/sdk-runtime">
     通过 api.runtime 提供 TTS、STT、媒体、subagent
   </Card>
   <Card title="频道入站 API" icon="bolt" href="/plugins/sdk-channel-inbound">
-    共享入站事件生命周期：ingest, resolve, record, dispatch, finalize
+    共享入站事件生命周期：ingest、resolve、record、dispatch、finalize
   </Card>
 </CardGroup>
 

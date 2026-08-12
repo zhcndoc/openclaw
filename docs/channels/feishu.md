@@ -205,7 +205,7 @@ openclaw pairing list feishu
 | `/model`  | 显示或切换 AI 模型   |
 
 <Note>
-飞书/Lark 不支持原生斜杠命令菜单，因此请将这些内容作为纯文本消息发送。
+飞书／Lark 不支持原生斜杠命令菜单，因此请将这些内容作为纯文本消息发送。
 </Note>
 
 ## 故障排查
@@ -316,11 +316,11 @@ openclaw pairing list feishu
 
 - `textChunkLimit` - 出站文本分块大小（默认：`4000` 字符）
 - `streaming.chunkMode` - `"length"`（默认）在限制处拆分；`"newline"` 优先按换行边界拆分
-- `mediaMaxMb` - 媒体上传/下载限制（默认：`30` MB）
+- `mediaMaxMb` - 媒体上传／下载限制（默认：`30` MB）
 
 ### 流式输出
 
-Feishu/Lark 支持通过交互式卡片进行流式回复（Card Kit streaming API）。启用后，机器人在生成文本时会实时更新卡片。
+Feishu／Lark 支持通过交互式卡片进行流式回复（Card Kit streaming API）。启用后，机器人在生成文本时会实时更新卡片。
 
 ```json5
 {
@@ -335,11 +335,11 @@ Feishu/Lark 支持通过交互式卡片进行流式回复（Card Kit streaming A
 }
 ```
 
-将 `streaming.mode: "off"` 设为在一条消息中发送完整回复；`renderMode: "raw"`（纯文本而非卡片）也会禁用流式卡片。`streaming.block.enabled` 默认关闭；仅在需要将已完成的 assistant 块在最终回复前刷新时启用它。旧的布尔值 `streaming` 以及扁平的 `blockStreaming` / `blockStreamingCoalesce` / `chunkMode` 键会通过 `openclaw doctor --fix` 迁移为这种嵌套结构。
+将 `streaming.mode: "off"` 设为在一条消息中发送完整回复；`renderMode: "raw"`（纯文本而非卡片）也会禁用流式卡片。`streaming.block.enabled` 默认关闭；仅在需要将已完成的助手块在最终回复前刷新时启用它。旧的布尔值 `streaming` 以及扁平的 `blockStreaming`／`blockStreamingCoalesce`／`chunkMode` 键会通过 `openclaw doctor --fix` 迁移为这种嵌套结构。
 
 ### 配额优化
 
-通过两个可选标志减少飞书/Lark API 调用次数：
+通过两个可选标志减少飞书／Lark API 调用次数：
 
 - `typingIndicator`（默认 `true`）：设为 `false` 可跳过输入中反应调用
 - `resolveSenderNames`（默认 `true`）：设为 `false` 可跳过发送者资料查询
@@ -366,7 +366,7 @@ Feishu/Lark 支持通过交互式卡片进行流式回复（Card Kit streaming A
 | `"group_topic"`      | 每个话题线程一个会话；回退到群组会话                             |
 | `"group_topic_sender"` | 每个（话题 + 发送者）一个会话；回退到（群组 + 发送者）会话 |
 
-对于话题范围，原生飞书/Lark 话题群会使用事件 `thread_id`（`omt_*`）作为规范的话题会话键。如果原生话题起始事件省略了 `thread_id`，OpenClaw 会在路由轮次之前从飞书补全它。OpenClaw 将普通群回复转换为线程时，会继续使用回复根消息 ID（`om_*`），因此首次轮次和后续轮次会保留在同一个会话中。
+对于话题范围，原生飞书／Lark 话题群会使用事件 `thread_id`（`omt_*`）作为规范的话题会话键。如果原生话题起始事件省略了 `thread_id`，OpenClaw 会在路由轮次之前从飞书补全它。OpenClaw 将普通群回复转换为线程时，会继续使用回复根消息 ID（`om_*`），因此首次轮次和后续轮次会保留在同一个会话中。
 
 将 `replyInThread: "enabled"`（顶层或按群组）设为启用，可让机器人回复创建或继续一个飞书话题线程，而不是在原处回复。`topicSessionMode` 是 `groupSessionScope` 的已弃用前身；请优先使用 `groupSessionScope`。
 
@@ -382,7 +382,7 @@ Feishu/Lark 支持通过交互式卡片进行流式回复（Card Kit streaming A
 | `tools.drive`   | `feishu_drive` 云存储                         | `true`              |
 | `tools.perm`    | `feishu_perm` 权限管理                        | `false`（敏感）      |
 | `tools.scopes`  | `feishu_app_scopes` 应用权限范围诊断          | `true`              |
-| `tools.bitable` | `feishu_bitable_*` Bitable/Base 操作          | `true`              |
+| `tools.bitable` | `feishu_bitable_*` Bitable／Base 操作          | `true`              |
 
 按账户设置的开关位于 `accounts.<id>.tools` 下。
 
@@ -395,16 +395,16 @@ Feishu/Lark 支持通过交互式卡片进行流式回复（Card Kit streaming A
 
 ### ACP 会话
 
-Feishu/Lark 支持用于私信和群组线程消息的 ACP。Feishu/Lark ACP 采用文本命令驱动——没有原生斜杠菜单，因此请直接在对话中使用 `/acp ...` 消息。
+Feishu／Lark 支持用于私信和群组线程消息的 ACP。Feishu／Lark ACP 采用文本命令驱动——没有原生斜杠菜单，因此请直接在对话中使用 `/acp ...` 消息。
 
 #### 持久化 ACP 绑定
 
 ```json5
 {
   agents: {
-    list: [
-      {
-        id: "codex",
+    entries: {
+      codex: {
+        default: true,
         runtime: {
           type: "acp",
           acp: {
@@ -415,7 +415,7 @@ Feishu/Lark 支持用于私信和群组线程消息的 ACP。Feishu/Lark ACP 采
           },
         },
       },
-    ],
+    },
   },
   bindings: [
     {
@@ -443,26 +443,26 @@ Feishu/Lark 支持用于私信和群组线程消息的 ACP。Feishu/Lark ACP 采
 
 #### 从聊天中启动 ACP
 
-在飞书/Lark 私信或线程中：
+在飞书／Lark 私信或线程中：
 
 ```text
 /acp spawn codex --thread here
 ```
 
-`--thread here` 适用于私信和飞书/Lark 线程消息。绑定会话中的后续消息会直接路由到该 ACP 会话。
+`--thread here` 适用于私信和飞书／Lark 线程消息。绑定会话中的后续消息会直接路由到该 ACP 会话。
 
 ### 多智能体路由
 
-使用 `bindings` 将飞书/Lark 私信或群组路由到不同的智能体。
+使用 `bindings` 将飞书／Lark 私信或群组路由到不同的智能体。
 
 ```json5
 {
   agents: {
-    list: [
-      { id: "main" },
-      { id: "agent-a", workspace: "/home/user/agent-a" },
-      { id: "agent-b", workspace: "/home/user/agent-b" },
-    ],
+    entries: {
+      main: { default: true },
+      "agent-a": { workspace: "/home/user/agent-a" },
+      "agent-b": { workspace: "/home/user/agent-b" },
+    },
   },
   bindings: [
     {
@@ -485,11 +485,11 @@ Feishu/Lark 支持用于私信和群组线程消息的 ACP。Feishu/Lark ACP 采
 
 路由字段：
 
-- `match.channel`: `"feishu"`
-- `match.peer.kind`: `"direct"`（私信）或 `"group"`（群聊）
-- `match.peer.id`: 用户 Open ID（`ou_xxx`）或群组 ID（`oc_xxx`）
+- `match.channel`：`"feishu"`
+- `match.peer.kind`：`"direct"`（私信）或 `"group"`（群聊）
+- `match.peer.id`：用户 Open ID（`ou_xxx`）或群组 ID（`oc_xxx`）
 
-查找提示请参见 [获取群组/用户 ID](#get-groupuser-ids)。
+查找提示请参见 [获取群组／用户 ID](#get-groupuser-ids)。
 
 ## 按用户隔离智能体（动态智能体创建）
 

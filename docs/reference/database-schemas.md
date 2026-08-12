@@ -41,7 +41,7 @@ OpenClaw 将控制平面状态存储在一个全局 SQLite 数据库中，并将
 openclaw database preflight <copied-state.sqlite> --json
 ```
 
-该命令不会读取默认状态目录，也不会修改所提供的文件。它会以不可变/只读方式打开所提供的整合文件，比较目标版本自身的架构契约，并报告以下一种状态：
+该命令不会读取默认状态目录，也不会修改所提供的文件。它会以不可变／只读方式打开所提供的整合文件，比较目标版本自身的架构契约，并报告以下一种状态：
 
 - `exact`：复制的数据库与目标版本的运行时架构匹配。那些在首次使用前有意缺失的功能本地表不需要修复。
 - `startup-repairable`：数值版本匹配，但仍存在由运行时负责的增量差异；启动时需要写入以使结构趋于一致。
@@ -55,28 +55,36 @@ JSON 输出通过 `schema: "openclaw.state-schema-preflight.v1"` 进行标识。
 
 ## Agent 架构历史
 
-| 版本 | 变更                                                                                                                                                                                                                                                         | 首次发布                                   |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| 1       | 初始的每个代理存储 ([#88349](https://github.com/openclaw/openclaw/pull/88349))                                                                                                                                                                            | `v2026.5.30-beta.1`, 稳定版直到 `v2026.7.1` |
-| 2       | 内存索引标识 ([#104449](https://github.com/openclaw/openclaw/pull/104449))                                                                                                                                                                            | `v2026.7.2-beta.1`                              |
-| 4       | 会话和转录移入 SQLite ([#98236](https://github.com/openclaw/openclaw/pull/98236))                                                                                                                                                         | `v2026.7.2-beta.1`                              |
-| 5-6     | 终端新鲜度和状态生命周期 ([#104859](https://github.com/openclaw/openclaw/pull/104859))                                                                                                                                                           | `v2026.7.2-beta.1`                              |
-| 7       | 按条目生命周期状态投影 ([#106151](https://github.com/openclaw/openclaw/pull/106151))                                                                                                                                                            | `v2026.7.2-beta.1`                              |
-| 8       | 按转录会话溯源 ([#106766](https://github.com/openclaw/openclaw/pull/106766))                                                                                                                                                                | `v2026.7.2-beta.2`                              |
-| 9       | `STRICT` 表 ([#108663](https://github.com/openclaw/openclaw/pull/108663))                                                                                                                                                                                  | `v2026.7.2-beta.2`                              |
-| 10      | 物化的活动转录路径 ([#108851](https://github.com/openclaw/openclaw/pull/108851))                                                                                                                                                             | 未发布                                      |
-| 11      | 租约、持久交付、会话地址和心跳结果 ([#109636](https://github.com/openclaw/openclaw/pull/109636), [#95838](https://github.com/openclaw/openclaw/pull/95838), [#109999](https://github.com/openclaw/openclaw/pull/109999)) | 未发布                                      |
+| 版本 | 变更                                                                                                                                                                                                                                                 | 首次发布                                   |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| 1       | 初始的每个 Agent 存储（[#88349](https://github.com/openclaw/openclaw/pull/88349)）                                                                                                                                                                    | `v2026.5.30-beta.1`，稳定版本至 `v2026.7.1` |
+| 2       | 内存索引标识（[#104449](https://github.com/openclaw/openclaw/pull/104449)）                                                                                                                                                                    | `v2026.7.2-beta.1`                              |
+| 4       | 会话和转录内容移入 SQLite（[#98236](https://github.com/openclaw/openclaw/pull/98236)）                                                                                                                                                 | `v2026.7.2-beta.1`                              |
+| 5-6     | 终端新鲜度和状态生命周期（[#104859](https://github.com/openclaw/openclaw/pull/104859)）                                                                                                                                                   | `v2026.7.2-beta.1`                              |
+| 7       | 每个条目的生命周期状态投影（[#106151](https://github.com/openclaw/openclaw/pull/106151)）                                                                                                                                                    | `v2026.7.2-beta.1`                              |
+| 8       | 每个转录会话的来源信息（[#106766](https://github.com/openclaw/openclaw/pull/106766)）                                                                                                                                                        | `v2026.7.2-beta.2`                              |
+| 9       | `STRICT` 表（[#108663](https://github.com/openclaw/openclaw/pull/108663)）                                                                                                                                                                          | `v2026.7.2-beta.2`                              |
+| 10      | 物化的活动转录路径（[#108851](https://github.com/openclaw/openclaw/pull/108851)）                                                                                                                                                     | 未发布                                      |
+| 11      | 持久化投递、对话地址和心跳结果（[#109636](https://github.com/openclaw/openclaw/pull/109636)， [#95838](https://github.com/openclaw/openclaw/pull/95838)， [#109999](https://github.com/openclaw/openclaw/pull/109999)） | 未发布                                      |
+| 12      | 会话拥有的 ACP 父流事件                                                                                                                                                                                                                 | 未发布                                      |
+| 13      | 持久化转录重写水印                                                                                                                                                                                                                  | 未发布                                      |
+| 14      | 逻辑会话节点、生成窗口和节点拥有的工件外键                                                                                                                                                                        | 未发布                                      |
+| 15      | Board 和会话共享表                                                                                                                                                                                                                       | 未发布                                      |
+| 16      | 废弃旧版顶层转录媒体字段                                                                                                                                                                                                       | 未发布                                      |
+| 17      | 在移除最后一个写入方和路由臂之后，废弃无租户的每个 Agent 租约表（[#121113](https://github.com/openclaw/openclaw/pull/121113)， [#121615](https://github.com/openclaw/openclaw/pull/121615)）                                | 未发布                                      |
 
 版本 3 是一个未发布的开发步骤，已并入版本 4。
 
 ## 状态 schema 历史
 
-| 版本 | 变更                                                                                                   | 首次发布            |
-| ------- | -------------------------------------------------------------------------------------------------------- | ------------------- |
-| 1       | 初始共享状态数据库                                                                            | `v2026.5.30-beta.1` |
-| 2       | 仅元数据的消息审计事件 ([#103903](https://github.com/openclaw/openclaw/pull/103903))         | `v2026.7.2-beta.1`  |
-| 3       | `STRICT` 表和 schema 漂移加固 ([#108663](https://github.com/openclaw/openclaw/pull/108663)) | `v2026.7.2-beta.2`  |
-| 4       | 会话监视来源取代编码哨兵行                                                  | 未发布          |
+| 版本 | 变更                                                                                                                                                                                                                                           | 首次发布       |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| 1       | 初始共享状态数据库                                                                                                                                                                                                                    | `v2026.5.30-beta.1` |
+| 2       | 仅元数据的消息审计事件（[#103903](https://github.com/openclaw/openclaw/pull/103903)）                                                                                                                                                 | `v2026.7.2-beta.1`  |
+| 3       | `STRICT` 表和 schema 漂移强化（[#108663](https://github.com/openclaw/openclaw/pull/108663)）                                                                                                                                         | `v2026.7.2-beta.2`  |
+| 4       | 会话监视来源信息取代编码的哨兵行                                                                                                                                                                                          | 未发布          |
+| 5       | 持久化云工作器结果引用，用于待处理的工作区栅栏（[`7a7d6bb`](https://github.com/openclaw/openclaw/commit/7a7d6bb51f42bd896de2b8a4df2ee66f3dce0a21)、[#110952](https://github.com/openclaw/openclaw/pull/110952)）              | `v2026.7.2-beta.4`  |
+| 6       | 每个已提交的共享状态表都成为规范运行时 schema 的一部分（[`509a5f0`](https://github.com/openclaw/openclaw/commit/509a5f03737642fec4a940e6d605887f7957ddc8)、[#113473](https://github.com/openclaw/openclaw/pull/113473)） | `v2026.7.2-beta.5`  |
 
 ## 完整性检查
 
@@ -125,12 +133,9 @@ Gateway 启动前置检查仅读取模式标头。`openclaw database preflight` 
 
 一般流程是：
 
-1. 读取目标版本的 schema 和迁移。
-2. 在一个事务中，删除目标版本之后引入的每一张表、索引、触发器和列。
-3. 将 `PRAGMA user_version` 和 `schema_meta.schema_version` 设置为目标版本。
-4. 在启动 Gateway 之前，运行目标版本的完整数据库验证。
+### 示例：agent schema 17 到 16
 
-### 示例：将 agent schema 从 11 降级到 9
+Schema 17 移除了不含租户的 per-agent 租约表。Schema 16 构建版本仍然要求该规范表，因此手动降级必须在降低版本之前重新创建其确切 schema。
 
 Schema 10 添加了活动转录投影。Schema 11 添加了租约、持久化传递、会话地址状态和心跳结果。
 
@@ -139,22 +144,32 @@ Schema 10 添加了活动转录投影。Schema 11 添加了租约、持久化传
 ```sql
 BEGIN IMMEDIATE;
 
-DROP TABLE IF EXISTS heartbeat_outcomes;
-DROP TABLE IF EXISTS conversation_deliveries;
-DROP TABLE IF EXISTS state_leases;
-DROP TABLE IF EXISTS session_transcript_active_events;
+CREATE TABLE state_leases (
+  scope TEXT NOT NULL,
+  lease_key TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  expires_at INTEGER,
+  heartbeat_at INTEGER,
+  payload_json TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (scope, lease_key)
+) STRICT;
 
-ALTER TABLE session_transcript_index_state DROP COLUMN active_event_count;
-ALTER TABLE session_transcript_index_state DROP COLUMN active_message_count;
-ALTER TABLE conversations DROP COLUMN delivery_target;
+CREATE INDEX idx_agent_state_leases_expiry
+  ON state_leases(expires_at, scope, lease_key)
+  WHERE expires_at IS NOT NULL;
 
-PRAGMA user_version = 9;
+CREATE INDEX idx_agent_state_leases_owner
+  ON state_leases(owner, updated_at DESC);
+
+PRAGMA user_version = 16;
 UPDATE schema_meta
-SET schema_version = 9,
+SET schema_version = 16,
     updated_at = unixepoch('now') * 1000
 WHERE meta_key = 'primary';
 
 COMMIT;
 ```
 
-这会丢弃 10-11 版本的状态，包括进行中的传递操作、租约、心跳结果，以及派生出来的活动转录投影。降级失败意味着必须从已验证的备份中恢复。
+重新创建的表为空，因为 Schema 17 没有需要保留的 agent-DB 租约租户。拙劣的降级意味着从已验证的备份中恢复。

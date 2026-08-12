@@ -64,26 +64,24 @@ sidebarTitle: "广播组"
 ```json
 {
   "agents": {
-    "list": [
-      {
-        "id": "code-reviewer",
-        "name": "代码审查员",
+    "entries": {
+      "code-reviewer": {
+        "default": true,
+        "name": "Code Reviewer",
         "workspace": "/path/to/code-reviewer",
         "sandbox": { "mode": "all" }
       },
-      {
-        "id": "security-auditor",
-        "name": "安全审计员",
+      "security-auditor": {
+        "name": "Security Auditor",
         "workspace": "/path/to/security-auditor",
         "sandbox": { "mode": "all" }
       },
-      {
-        "id": "docs-generator",
-        "name": "文档生成器",
+      "docs-generator": {
+        "name": "Documentation Generator",
         "workspace": "/path/to/docs-generator",
         "sandbox": { "mode": "all" }
       }
-    ]
+    }
   },
   "broadcast": {
     "strategy": "parallel",
@@ -121,18 +119,18 @@ sidebarTitle: "广播组"
 </Steps>
 
 <Note>
-广播组不会绕过渠道白名单或群组激活规则（提及/命令等）。它们只会改变当消息符合处理条件时，_哪些代理_ 会运行。
+广播组不会绕过渠道白名单或群组激活规则（提及／命令等）。它们只会改变当消息符合处理条件时，_哪些代理_ 会运行。
 </Note>
 
 ### 会话隔离
 
 广播组中的每个代理都会完全独立地维护以下内容：
 
-- **会话密钥** (`agent:alfred:whatsapp:group:120363...` vs `agent:baerbel:whatsapp:group:120363...`)
+- **会话密钥** （`agent:alfred:whatsapp:group:120363...` vs `agent:baerbel:whatsapp:group:120363...`）
 - **对话历史**（一个代理看不到其他代理的回复）
 - **工作区**（如果已配置，则为独立沙箱）
-- **工具访问权限**（不同的允许/拒绝列表）
-- **记忆/上下文**（独立的 `IDENTITY.md`、`SOUL.md` 等）
+- **工具访问权限**（不同的允许／拒绝列表）
+- **记忆／上下文**（独立的 `IDENTITY.md`、`SOUL.md` 等）
 
 有一个例外是刻意共享的：**群组上下文缓冲区**（用于上下文的最近群消息）按对端共享，因此所有广播代理在被触发时都会看到相同的上下文。广播完成后它会被清空一次。
 
@@ -178,11 +176,11 @@ sidebarTitle: "广播组"
     ```json
     {
       "agents": {
-        "list": [
-          { "id": "security-scanner", "name": "安全扫描器" },
-          { "id": "code-formatter", "name": "代码格式化器" },
-          { "id": "test-generator", "name": "测试生成器" }
-        ]
+        "entries": {
+          "security-scanner": { "default": true, "name": "Security Scanner" },
+          "code-formatter": { "name": "Code Formatter" },
+          "test-generator": { "name": "Test Generator" }
+        }
       }
     }
     ```
@@ -191,10 +189,13 @@ sidebarTitle: "广播组"
     ```json
     {
       "agents": {
-        "list": [
-          { "id": "reviewer", "tools": { "allow": ["read", "exec"] } },
-          { "id": "fixer", "tools": { "allow": ["read", "write", "edit", "exec"] } }
-        ]
+        "entries": {
+          "reviewer": {
+            "default": true,
+            "tools": { "allow": ["read", "exec"] }
+          },
+          "fixer": { "tools": { "allow": ["read", "write", "edit", "exec"] } }
+        }
       }
     }
     ```
@@ -287,24 +288,22 @@ sidebarTitle: "广播组"
         ]
       },
       "agents": {
-        "list": [
-          {
-            "id": "code-formatter",
+        "entries": {
+          "code-formatter": {
+            "default": true,
             "workspace": "~/agents/formatter",
             "tools": { "allow": ["read", "write"] }
           },
-          {
-            "id": "security-scanner",
+          "security-scanner": {
             "workspace": "~/agents/security",
             "tools": { "allow": ["read", "exec"] }
           },
-          {
-            "id": "test-coverage",
+          "test-coverage": {
             "workspace": "~/agents/testing",
             "tools": { "allow": ["read", "exec"] }
           },
-          { "id": "docs-checker", "workspace": "~/agents/docs", "tools": { "allow": ["read"] } }
-        ]
+          "docs-checker": { "workspace": "~/agents/docs", "tools": { "allow": ["read"] } }
+        }
       }
     }
     ```
@@ -320,11 +319,11 @@ sidebarTitle: "广播组"
         "+15555550123": ["detect-language", "translator-en", "translator-de"]
       },
       "agents": {
-        "list": [
-          { "id": "detect-language", "workspace": "~/agents/lang-detect" },
-          { "id": "translator-en", "workspace": "~/agents/translate-en" },
-          { "id": "translator-de", "workspace": "~/agents/translate-de" }
-        ]
+        "entries": {
+          "detect-language": { "default": true, "workspace": "~/agents/lang-detect" },
+          "translator-en": { "workspace": "~/agents/translate-en" },
+          "translator-de": { "workspace": "~/agents/translate-de" }
+        }
       }
     }
     ```

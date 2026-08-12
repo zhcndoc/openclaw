@@ -47,39 +47,39 @@ OpenClaw 将其打包为 `together` 提供方。
 ### 非交互式示例
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice together-api-key \
   --together-api-key "$TOGETHER_API_KEY"
 ```
 
 <Note>
-Onboarding sets Together's recommended chat model,
-`together/moonshotai/Kimi-K2.6`, as the default.
+引导会将 Together 推荐的聊天模型
+`together/moonshotai/Kimi-K2.6` 设置为默认模型。
 </Note>
 
 ## 内置目录
 
 每百万 tokens 的费用以美元计。
 
-| Model ref                                          | Name                         | Input       | Context | Max output | Cost (in/out) | Notes           |
+| 模型引用                                           | 名称                         | 输入       | 上下文  | 最大输出   | 费用（输入／输出） | 备注           |
 | -------------------------------------------------- | ---------------------------- | ----------- | ------- | ---------- | ------------- | --------------- |
-| `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` | Llama 3.3 70B Instruct Turbo | text        | 131,072 | 8,192      | 1.04 / 1.04   | General model   |
-| `together/moonshotai/Kimi-K2.6`                    | Kimi K2.6 FP4                | text, image | 262,144 | 32,768     | 1.20 / 4.50   | Default model   |
-| `together/deepseek-ai/DeepSeek-V4-Pro`             | DeepSeek V4 Pro              | text        | 512,000 | 384,000    | 1.74 / 3.48   | Reasoning model |
-| `together/zai-org/GLM-5.2`                         | GLM 5.2 FP4                  | text        | 262,144 | 131,072    | 1.40 / 4.40   | Reasoning model |
+| `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` | Llama 3.3 70B Instruct Turbo | 文本        | 131,072 | 8,192      | 1.04 / 1.04   | 通用模型   |
+| `together/moonshotai/Kimi-K2.6`                    | Kimi K2.6 FP4                | 文本、图像 | 262,144 | 32,768     | 1.20 / 4.50   | 默认模型   |
+| `together/deepseek-ai/DeepSeek-V4-Pro`             | DeepSeek V4 Pro              | 文本        | 512,000 | 384,000    | 1.74 / 3.48   | 推理模型 |
+| `together/zai-org/GLM-5.2`                         | GLM 5.2 FP4                  | 文本        | 262,144 | 131,072    | 1.40 / 4.40   | 推理模型 |
 
 ## 视频生成
 
 捆绑的 `together` 插件还通过共享的 `video_generate` 工具注册了视频生成。
 
-| Property             | Value                                                                                     |
+| 属性                 | 值                                                                                     |
 | -------------------- | ----------------------------------------------------------------------------------------- |
-| Default video model  | `Wan-AI/Wan2.2-T2V-A14B`                                                                  |
-| Other models         | `Wan-AI/Wan2.2-I2V-A14B`, `minimax/hailuo-02`, `kwaivgI/kling-2.1-master`                 |
-| Modes                | text-to-video; image-to-video only with `Wan-AI/Wan2.2-I2V-A14B` (single reference image) |
-| Duration             | 1-10 seconds                                                                              |
-| Supported parameters | `size` (parsed as `<width>x<height>`); `aspectRatio`/`resolution` are not read            |
+| 默认视频模型         | `Wan-AI/Wan2.2-T2V-A14B`                                                                  |
+| 其他模型             | `Wan-AI/Wan2.2-I2V-A14B`、`minimax/hailuo-02`、`kwaivgI/kling-2.1-master`                 |
+| 模式                 | 文本转视频；仅 `Wan-AI/Wan2.2-I2V-A14B` 支持图像转视频（单张参考图像） |
+| 时长                 | 1-10 秒                                                                              |
+| 支持的参数           | `size`（解析为 `<width>x<height>`）；不读取 `aspectRatio`／`resolution`            |
 
 要将 Together 用作默认视频提供方：
 
@@ -87,8 +87,10 @@ Onboarding sets Together's recommended chat model,
 {
   agents: {
     defaults: {
-      videoGenerationModel: {
-        primary: "together/Wan-AI/Wan2.2-T2V-A14B",
+      mediaModels: {
+        video: {
+          primary: "together/Wan-AI/Wan2.2-T2V-A14B",
+        },
       },
     },
   },

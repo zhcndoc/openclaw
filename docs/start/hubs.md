@@ -61,7 +61,7 @@ title: "文档中心"
 - [群组](/channels/groups)
 - [群组消息](/channels/group-messages)
 - [模型故障转移](/concepts/model-failover)
-- [OAuth](/concepts/oauth)
+- [OAuth](/concepts/oauth)。
 
 ## 提供者 + 接入
 
@@ -147,14 +147,13 @@ title: "文档中心"
 - [macOS 语音覆盖层](/platforms/mac/voice-overlay)
 - [macOS WebChat](/platforms/mac/webchat)
 - [macOS Canvas](/platforms/mac/canvas)
-- [macOS 子进程](/platforms/mac/child-process)
+- [macOS 网关（launchd）](/platforms/mac/bundled-gateway)
 - [macOS 健康状态](/platforms/mac/health)
 - [macOS 图标](/platforms/mac/icon)
 - [macOS 日志记录](/platforms/mac/logging)
 - [macOS 权限](/platforms/mac/permissions)
 - [macOS 远程](/platforms/mac/remote)
 - [macOS 签名](/platforms/mac/signing)
-- [macOS gateway（launchd）](/platforms/mac/bundled-gateway)
 - [macOS XPC](/platforms/mac/xpc)
 - [macOS 技能](/platforms/mac/skills)
 - [macOS Peekaboo](/platforms/mac/peekaboo)

@@ -80,7 +80,7 @@ frontmatter 字段匹配。
 | -------------- | ---------------------------- | ------------------------------ |
 | 每个代理        | `<workspace>/skills`         | 仅该代理                        |
 | 项目代理        | `<workspace>/.agents/skills` | 仅该工作区的代理                |
-| 个人代理        | `~/.agents/skills`           | 使用默认状态的代理              |
+| 个人代理        | `~/.agents/skills`            | 使用默认状态的代理              |
 | 共享托管        | `<state-dir>/skills`         | 使用该状态的所有代理            |
 | 额外目录        | `skills.load.extraDirs`      | 使用该配置的所有代理            |
 
@@ -96,11 +96,11 @@ frontmatter 字段匹配。
     defaults: {
       skills: ["github", "weather"], // 共享基线
     },
-    list: [
-      { id: "writer" }, // 继承 github, weather
-      { id: "docs", skills: ["docs-search"] }, // 完全替换 defaults
-      { id: "locked-down", skills: [] }, // 没有技能
-    ],
+    entries: {
+      writer: { default: true }, // inherits github, weather
+      docs: { skills: ["docs-search"] }, // replaces defaults entirely
+      "locked-down": { skills: [] }, // no skills
+    },
   },
 }
 ```
@@ -300,7 +300,7 @@ metadata:
       {
         "requires": { "bins": ["uv"], "env": ["GEMINI_API_KEY"], "config": ["browser.enabled"] },
         "primaryEnv": "GEMINI_API_KEY",
-      },
+      }
   }
 ---
 ```
@@ -373,7 +373,7 @@ metadata:
               "label": "安装 Gemini CLI（brew）",
             },
           ],
-      },
+      }
   }
 ---
 ```

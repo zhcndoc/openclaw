@@ -32,7 +32,7 @@ openclaw channels add
 openclaw configure --section channels
 ```
 
-该向导会询问 homeserver URL、认证方式（token 或 password）、user ID（仅限密码认证）、可选的设备名称、是否启用 E2EE，以及房间访问/自动加入设置。如果匹配的 `MATRIX_*` 环境变量已经存在且该账户没有保存的认证信息，向导会提供一个使用环境变量的快捷方式。使用 `openclaw channels resolve --channel matrix "项目房间"` 在保存 allowlist 之前解析房间名称。启用向导中的 E2EE 会执行与 [`openclaw matrix encryption setup`](#encryption-and-verification) 相同的初始化流程。
+该向导会询问 homeserver URL、认证方式（token 或 password）、user ID（仅限密码认证）、可选的设备名称、是否启用 E2EE，以及房间访问／自动加入设置。如果匹配的 `MATRIX_*` 环境变量已经存在且该账户没有保存的认证信息，向导会提供一个使用环境变量的快捷方式。使用 `openclaw channels resolve --channel matrix "项目房间"` 在保存 allowlist 之前解析房间名称。启用向导中的 E2EE 会执行与 [`openclaw matrix encryption setup`](#encryption-and-verification) 相同的初始化流程。
 
 ### 最小配置
 
@@ -118,7 +118,7 @@ Matrix 会将账户凭据缓存在共享的 `state/openclaw.sqlite` 插件状态
 | `MATRIX_DEVICE_ID`    | `MATRIX_<ID>_DEVICE_ID`             |
 | `MATRIX_DEVICE_NAME`  | `MATRIX_<ID>_DEVICE_NAME`           |
 
-对于账户 `ops`，名称会变为 `MATRIX_OPS_HOMESERVER`、`MATRIX_OPS_ACCESS_TOKEN` 等。`MATRIX_HOMESERVER`（以及任何 `*_HOMESERVER` 作用域变体）不能从 workspace `.env` 中设置；见[Workspace `.env` files](/gateway/security)。
+对于账户 `ops`，名称会变为 `MATRIX_OPS_HOMESERVER`、`MATRIX_OPS_ACCESS_TOKEN` 等。`MATRIX_HOMESERVER`（以及任何 `*_HOMESERVER` 作用域变体）不能从 workspace `.env` 中设置；见[Workspace `.env` 文件](/gateway/security)。
 
 <Note>
 恢复密钥不是基于配置键的环境变量：OpenClaw 本身不会从环境中读取它。CLI 指引文本建议将其通过名为 `MATRIX_RECOVERY_KEY` 的 shell 变量传递给默认账户，或者对命名账户使用 `MATRIX_RECOVERY_KEY_<ID>`（仅大写账户 ID，不进行十六进制转义）——见[使用恢复密钥验证此设备](#verify-this-device-with-a-recovery-key)。
@@ -253,9 +253,9 @@ Matrix 使用位于 `tools.media.audio` 下的共享音频媒体提供商，例�
 
 ## 审批元数据
 
-Matrix 原生审批提示是普通的 `m.room.message` 事件，其下的 OpenClaw 专用内容位于 `com.openclaw.approval` 键中。原生客户端仍会渲染文本正文；支持 OpenClaw 的客户端可以读取结构化的审批 id、类型、状态、决策，以及执行/插件详情。
+Matrix 原生审批提示是普通的 `m.room.message` 事件，其下的 OpenClaw 专用内容位于 `com.openclaw.approval` 键中。原生客户端仍会渲染文本正文；支持 OpenClaw 的客户端可以读取结构化的审批 id、类型、状态、决策，以及执行／插件详情。
 
-当提示内容对于单个 Matrix 事件来说过长时，OpenClaw 会将可见文本分块，并且只将 `com.openclaw.approval` 附加到第一块。允许/拒绝反应会绑定到该第一条事件，因此长提示会保持与单事件提示相同的审批目标。
+当提示内容对于单个 Matrix 事件来说过长时，OpenClaw 会将可见文本分块，并且只将 `com.openclaw.approval` 附加到第一块。允许／拒绝反应会绑定到该第一条事件，因此长提示会保持与单事件提示相同的审批目标。
 
 ### 用于静默最终化预览的自托管推送规则
 
@@ -379,7 +379,7 @@ openclaw matrix verify self
 openclaw matrix verify bootstrap
 ```
 
-这是加密账户的修复/初始化命令。按顺序会执行：
+这是加密账户的修复／初始化命令。按顺序会执行：
 
 - 初始化 secret 存储，尽可能复用现有恢复密钥
 - 初始化交叉签名并上传缺失的公钥
@@ -423,7 +423,7 @@ openclaw matrix verify request --own-user
 openclaw matrix verify request --user-id @ops:example.org --device-id ABCDEF
 ```
 
-发送来自此账户的验证请求。`--own-user` 请求自我验证（在同一用户的另一个 Matrix 客户端中接受提示）；`--user-id`/`--device-id`/`--room-id` 用于指定其他目标。`--own-user` 不能与其他目标标志同时使用。
+发送来自此账户的验证请求。`--own-user` 请求自我验证（在同一用户的另一个 Matrix 客户端中接受提示）；`--user-id`／`--device-id`／`--room-id` 用于指定其他目标。`--own-user` 不能与其他目标标志同时使用。
 
 对于更低层级的生命周期处理——通常是在从另一个客户端影子跟踪传入请求时——这些命令会作用于某个特定请求 `<id>`（由 `verify list` 和 `verify request` 打印）：
 
@@ -453,7 +453,7 @@ openclaw matrix verify request --user-id @ops:example.org --device-id ABCDEF
   </Accordion>
 
   <Accordion title="验证通知">
-    Matrix 会将验证生命周期通知以 `m.notice` 消息发布到严格的 DM 验证房间中：请求、就绪（带有“通过表情符号验证”的提示）、开始/完成，以及可用时的 SAS（表情符号/数字）详情。
+    Matrix 会将验证生命周期通知以 `m.notice` 消息发布到严格的 DM 验证房间中：请求、就绪（带有“通过表情符号验证”的提示）、开始／完成，以及可用时的 SAS（表情符号／数字）详情。
 
     来自另一个 Matrix 客户端的传入请求会被跟踪并自动接受。对于自我验证，OpenClaw 会自动开始 SAS 流程，并在表情符号验证可用后自动确认自己这一侧——你仍然需要在你的 Matrix 客户端中比较并确认“两者一致”。
 
@@ -570,7 +570,7 @@ Matrix 会继承来自 `session.threadBindings` 的全局默认值，并支持�
 - `threadBindings.enabled`
 - `threadBindings.idleHours`
 - `threadBindings.maxAgeHours`
-- `threadBindings.spawnSessions`: 同时限制子代理和 ACP 线程的创建。
+- `threadBindings.spawnSessions`：同时限制子代理和 ACP 线程的创建。
 - 已弃用的 `threadBindings.spawnSubagentSessions` / `threadBindings.spawnAcpSessions` 键会由 `openclaw doctor --fix` 迁移为 `spawnSessions`。
 - `threadBindings.defaultSpawnContext`
 
@@ -605,15 +605,15 @@ Matrix 支持外发反应、入站反应通知和确认反应。
 - 当前触发消息不包含在 `InboundHistory` 中；它仍保留在该轮的主入站正文中。
 - 同一 Matrix 事件的重试会复用原始历史快照，而不是随着新的房间消息继续向前漂移。
 
-## Context Visibility
+## 上下文可见性
 
-Matrix supports a shared `contextVisibility` control for additional room context, such as fetched reply text, thread root messages, and pending history.
+Matrix 支持通过共享的 `contextVisibility` 控制来管理额外的房间上下文，例如获取的回复文本、线程根消息和待处理历史记录。
 
-- `contextVisibility: "all"` is the default. Attached context is preserved as received.
-- `contextVisibility: "allowlist"` filters attached context so that it is visible only to senders permitted by the current room/user allowlist check.
-- `contextVisibility: "allowlist_quote"` behaves like `allowlist`, but still preserves a clearly quoted reply.
+- `contextVisibility: "all"` 是默认值。附加上下文会按接收时的内容保留。
+- `contextVisibility: "allowlist"` 会过滤附加上下文，使其仅对当前房间／用户允许列表检查所允许的发送者可见。
+- `contextVisibility: "allowlist_quote"` 的行为类似于 `allowlist`，但仍会保留明确引用的回复。
 
-This only affects the visibility of supplemental context, and does not affect whether the incoming message itself can trigger a reply. Trigger authorization still comes from `groupPolicy`, `groups`, `groupAllowFrom`, and DM policy settings.
+这只会影响补充上下文的可见性，不会影响传入消息本身是否可以触发回复。触发授权仍来自 `groupPolicy`、`groups`、`groupAllowFrom` 和 DM 策略设置。
 
 ## DM 和房间策略
 
@@ -689,10 +689,10 @@ openclaw matrix direct repair --user-id @alice:example.org
 
 Matrix 可以作为原生批准客户端使用。请在 `channels.matrix.execApprovals` 下配置（或者为每个账户在 `channels.matrix.accounts.<account>.execApprovals` 下覆盖）：
 
-- `enabled`: 通过 Matrix 原生提示传递批准。未设置或设为 `"auto"` 时，一旦至少能解析出一个批准者就会自动启用；设为 `false` 可显式禁用。
-- `approvers`: 允许批准 exec 请求的 Matrix 用户 ID（`@owner:example.org`）。回退到 `channels.matrix.dm.allowFrom`。
-- `target`: 提示发送到哪里。`"dm"`（默认）发送到批准者的私信；`"channel"` 发送到发起的房间或私信；`"both"` 同时发送到两者。
-- `agentFilter` / `sessionFilter`: 可选的允许列表，用于指定哪些 agent/session 触发 Matrix 投递。
+- `enabled`：通过 Matrix 原生提示传递批准。未设置或设为 `"auto"` 时，一旦至少能解析出一个批准者就会自动启用；设为 `false` 可显式禁用。
+- `approvers`：允许批准 exec 请求的 Matrix 用户 ID（`@owner:example.org`）。回退到 `channels.matrix.dm.allowFrom`。
+- `target`：提示发送到哪里。`"dm"`（默认）发送到批准者的私信；`"channel"` 发送到发起的房间或私信；`"both"` 同时发送到两者。
+- `agentFilter` / `sessionFilter`：可选的允许列表，用于指定哪些 agent/session 触发 Matrix 投递。
 
 不同批准类型的授权略有差异：
 
@@ -707,7 +707,7 @@ Matrix 可以作为原生批准客户端使用。请在 `channels.matrix.execApp
 
 备用斜杠命令：`/approve <id> allow-once`、`/approve <id> allow-always`、`/approve <id> deny`。
 
-只有已解析出的批准者才能批准或拒绝。用于 exec 批准的频道投递会包含命令文本 - 仅在受信任的房间中启用 `channel` 或 `both`。
+只有已解析出的批准者才能批准或拒绝。用于 exec 批准的频道投递会包含命令文本——仅在受信任的房间中启用 `channel` 或 `both`。
 
 相关：[Exec 批准](/tools/exec-approvals)。
 
@@ -715,7 +715,7 @@ Matrix 可以作为原生批准客户端使用。请在 `channels.matrix.execApp
 
 斜杠命令（`/new`、`/reset`、`/model`、`/focus`、`/unfocus`、`/agents`、`/session`、`/acp`、`/approve` 等）可直接在私信中使用。在房间中，OpenClaw 也会识别以前缀为机器人自身 Matrix 提及的命令，因此 `@bot:server /new` 会触发命令路径，而无需自定义提及正则表达式——这使机器人能够对房间风格的 `@mention /command` 消息保持响应；当用户在输入命令前通过 Tab 补全机器人时，Element 及类似客户端会发出这类消息。
 
-授权规则仍然适用：命令发送者必须满足与普通消息相同的私信或房间白名单/所有者策略。
+授权规则仍然适用：命令发送者必须满足与普通消息相同的私信或房间白名单／所有者策略。
 
 ## 多账户
 
@@ -841,17 +841,17 @@ Matrix 房间 ID 区分大小写。配置显式投递目标、cron 作业、绑�
 
 - `enabled`：启用或禁用该通道。
 - `name`：账户的可选显示标签。
-- `defaultAccount`：当配置了多个 Matrix 账户时首选的账户 ID。
-- `accounts`：按账户名覆盖的配置。顶层 `channels.matrix` 的值会作为默认值继承。
+- `defaultAccount`：配置了多个 Matrix 账户时的首选账户 ID。
+- `accounts`：按账户命名的覆盖配置。顶层 `channels.matrix` 值会作为默认值被继承。
 - `homeserver`：homeserver URL，例如 `https://matrix.example.org`。
 - `network.dangerouslyAllowPrivateNetwork`：允许此账户连接到 `localhost`、LAN/Tailscale IP 或内部主机名。
-- `proxy`：Matrix 流量可选的 HTTP(S) 代理 URL。支持按账户覆盖。
+- `proxy`：用于 Matrix 流量的可选 HTTP(S) 代理 URL。支持按账户覆盖。
 - `userId`：完整的 Matrix 用户 ID（`@bot:example.org`）。
-- `accessToken`：基于 token 的认证所用访问令牌。环境/文件/exec 提供器支持明文和 SecretRef 值（[Secrets Management](/gateway/secrets)）。
-- `password`：基于密码登录所用密码。支持明文和 SecretRef 值。
-- `deviceId`：显式 Matrix 设备 ID。
-- `deviceName`：密码登录时使用的设备显示名称。
-- `avatarUrl`：用于配置同步和 `profile set` 更新的已存储自头像 URL。
+- `accessToken`：基于令牌的身份验证所需的访问令牌。env/file/exec/store 提供程序均支持明文值和 SecretRef 值（[Secrets Management](/gateway/secrets)）。
+- `password`：基于密码登录所需的密码。支持明文值和 SecretRef 值。
+- `deviceId`：显式的 Matrix 设备 ID。
+- `deviceName`：使用密码登录时的设备显示名称。
+- `avatarUrl`：用于个人资料同步和 `profile set` 更新的已存储自身头像 URL。
 - `initialSyncLimit`：启动同步期间获取的最大事件数。
 
 ### 加密
@@ -862,34 +862,34 @@ Matrix 房间 ID 区分大小写。配置显式投递目标、cron 作业、绑�
 
 ### 访问与策略
 
-- `groupPolicy`: `"open"`, `"allowlist"`, or `"disabled"`. Default: `"allowlist"`.
-- `groupAllowFrom`: allowlist of user IDs for room traffic.
-- `mentionPatterns`: scoped regex patterns for room mentions. Object with `{ mode: "allow"|"deny", allowIn: [roomId, ...], denyIn: [roomId, ...] }`. Controls whether configured `agents.entries.*.groupChat.mentionPatterns` apply per-room.
-- `dm.enabled`: when `false`, ignore all DMs. Default: `true`.
-- `dm.policy`: `"pairing"` (default), `"allowlist"`, `"open"`, or `"disabled"`. Applies after the bot has joined and classified the room as a DM; it does not affect invite handling.
-- `dm.allowFrom`: allowlist of user IDs for DM traffic.
-- `dm.sessionScope`: `"per-user"` (default) or `"per-room"`.
-- `dm.threadReplies`: DM-only override for reply threading (`"off"`, `"inbound"`, `"always"`).
-- `allowBots`: accept messages from other configured Matrix bot accounts (`true` or `"mentions"`).
-- `allowlistOnly`: when `true`, forces all active DM policies (except `"disabled"`) and `"open"` group policies to `"allowlist"`. Does not change `"disabled"` policies.
-- `dangerouslyAllowNameMatching`: when `true`, allows Matrix display-name directory lookup for user allowlist entries and joined-room name lookup for room allowlist keys. Prefer full `@user:server` IDs and room IDs or aliases.
-- `autoJoin`: `"always"`, `"allowlist"`, or `"off"`. Default: `"off"`. Applies to every Matrix invite, including DM-style invites.
-- `autoJoinAllowlist`: rooms/aliases allowed when `autoJoin` is `"allowlist"`. Alias entries resolve against the homeserver, not against state claimed by the invited room.
-- `contextVisibility`: supplemental context visibility (`"all"` default, `"allowlist"`, `"allowlist_quote"`).
+- `groupPolicy`：`"open"`、`"allowlist"` 或 `"disabled"`。默认值：`"allowlist"`。
+- `groupAllowFrom`：用于房间流量的用户 ID 允许名单。
+- `mentionPatterns`：用于房间提及的作用域正则表达式模式。包含 `{ mode: "allow"|"deny", allowIn: [roomId, ...], denyIn: [roomId, ...] }` 的对象。控制已配置的 `agents.entries.*.groupChat.mentionPatterns` 是否按房间应用。
+- `dm.enabled`：为 `false` 时，忽略所有私信。默认值：`true`。
+- `dm.policy`：`"pairing"`（默认）、`"allowlist"`、`"open"` 或 `"disabled"`。在机器人加入并将房间分类为私信后应用；不影响邀请处理。
+- `dm.allowFrom`：用于私信流量的用户 ID 允许名单。
+- `dm.sessionScope`：`"per-user"`（默认）或 `"per-room"`。
+- `dm.threadReplies`：仅用于私信的回复线程覆盖（`"off"`、`"inbound"`、`"always"`）。
+- `allowBots`：接受来自其他已配置 Matrix 机器人账户的消息（`true` 或 `"mentions"`）。
+- `allowlistOnly`：为 `true` 时，强制将所有启用的私信策略（`"disabled"` 除外）以及 `"open"` 群组策略设为 `"allowlist"`。不会更改 `"disabled"` 策略。
+- `dangerouslyAllowNameMatching`：为 `true` 时，允许通过 Matrix 显示名称目录查找用户允许名单条目，并查找已加入房间的名称以解析房间允许名单键。优先使用完整的 `@user:server` ID 以及房间 ID 或别名。
+- `autoJoin`：`"always"`、`"allowlist"` 或 `"off"`。默认值：`"off"`。适用于所有 Matrix 邀请，包括私信形式的邀请。
+- `autoJoinAllowlist`：当 `autoJoin` 为 `"allowlist"` 时允许加入的房间/别名。别名会根据 homeserver 进行解析，而不是根据受邀房间声明的状态进行解析。
+- `contextVisibility`：补充上下文可见性（默认值为 `"all"`，也可以是 `"allowlist"`、`"allowlist_quote"`）。
 
 ### 回复行为
 
-- `replyToMode`: `"off"` (default), `"first"`, `"all"`, or `"batched"`.
-- `threadReplies`: `"off"` (top-level default resolves to `"inbound"` unless explicitly set), `"inbound"`, or `"always"`.
-- `threadBindings`: per-channel overrides for thread-bound session routing and lifecycle.
-- `streaming`: nested object `{ mode, chunkMode, block: { enabled, coalesce }, preview: { toolProgress }, progress: { label, labels, maxLines, maxLineChars, toolProgress } }`. `mode` is `"off"` (default), `"partial"`, `"quiet"`, or `"progress"`. Legacy scalar/boolean spellings migrate via `openclaw doctor --fix`.
-- `streaming.block.enabled`: when `true`, completed assistant blocks are kept as separate progress messages. Default: `false`.
-- `markdown`: optional Markdown rendering config for outbound text.
-- `responsePrefix`: optional string prepended to outbound replies.
-- `textChunkLimit`: outbound chunk size in characters when `streaming.chunkMode: "length"`. Default: `4000`.
-- `streaming.chunkMode`: `"length"` (default, splits by character count) or `"newline"` (splits at line boundaries).
-- `historyLimit`: number of recent room messages included as `InboundHistory` when a room message triggers the agent. Falls back to `messages.groupChat.historyLimit`; effective default `0` (disabled).
-- `mediaMaxMb`: media size cap in MB for outbound sends and inbound processing. Default: `20`.
+- `replyToMode`：`"off"`（默认）、`"first"`、`"all"` 或 `"batched"`。
+- `threadReplies`：`"off"`（顶层默认值会解析为 `"inbound"`，除非显式设置）、`"inbound"` 或 `"always"`。
+- `threadBindings`：用于线程绑定会话路由和生命周期的按通道覆盖配置。
+- `streaming`：嵌套对象 `{ mode, chunkMode, block: { enabled, coalesce }, preview: { toolProgress }, progress: { label, labels, maxLines, maxLineChars, toolProgress } }`。`mode` 可以是 `"off"`（默认）、`"partial"`、`"quiet"` 或 `"progress"`。旧版标量/布尔写法会通过 `openclaw doctor --fix` 迁移。
+- `streaming.block.enabled`：为 `true` 时，已完成的助手区块会作为独立的进度消息保留。默认值：`false`。
+- `markdown`：用于出站文本的可选 Markdown 渲染配置。
+- `responsePrefix`：添加到出站回复前的可选字符串。
+- `textChunkLimit`：当 `streaming.chunkMode: "length"` 时，以字符数计的出站分块大小。默认值：`4000`。
+- `streaming.chunkMode`：`"length"`（默认，按字符数拆分）或 `"newline"`（在行边界处拆分）。
+- `historyLimit`：当房间消息触发代理时，作为 `InboundHistory` 包含的最近房间消息数量。回退到 `messages.groupChat.historyLimit`。有效默认值为 `0`（禁用）。
+- `mediaMaxMb`：出站发送和入站处理的媒体大小上限，单位为 MB。默认值：`20`。
 
 ### 反应设置
 
@@ -925,4 +925,4 @@ Matrix 房间 ID 区分大小写。配置显式投递目标、cron 作业、绑�
 - [配对](/channels/pairing) - DM 认证与配对流程
 - [群组](/channels/groups) - 群聊行为与提及门控
 - [通道路由](/channels/channel-routing) - 消息的会话路由
-- [安全性](/gateway/security) - 访问模型与加固
+- [安全性](/gateway/security) - 访问模型与加固。

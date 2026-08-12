@@ -182,15 +182,15 @@ Telegram 群组 ID 通常是负数，例如 `-1001234567890`。可通过 `opencl
     },
   },
   agents: {
-    list: [
-      {
-        id: "main",
+    entries: {
+      main: {
+        default: true,
         groupChat: {
           unmentionedInbound: "room_event",
           mentionPatterns: ["@openclaw", "openclaw"],
         },
       },
-    ],
+    },
   },
 }
 ```

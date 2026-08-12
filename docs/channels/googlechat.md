@@ -121,7 +121,7 @@ your-domain.com {
 配置隧道的 ingress 规则，仅路由 Webhook 路径：
 
 - **路径**：`/googlechat` -> `http://localhost:18789/googlechat`
-- **默认规则**：HTTP 404（未找到）
+- **默认规则**：HTTP 404（未找到）。
 
 ## 工作原理
 
@@ -192,16 +192,16 @@ your-domain.com {
 
 说明：
 
-- 服务账号凭据：`serviceAccountFile`（路径）或 `serviceAccount`（内联 JSON 字符串、对象，或 env/file/exec SecretRef）。环境变量 `GOOGLE_CHAT_SERVICE_ACCOUNT`（内联 JSON）和 `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`（路径）仅适用于默认账号。多账号配置使用 `channels.googlechat.accounts.<id>`，并使用相同的键，包括每个账号的 `serviceAccount` SecretRef。
-- 当未设置 `webhookPath` 时，默认 Webhook 路径为 `/googlechat`；也可以通过 `webhookUrl` 提供路径。
-- 群组键必须是稳定的空间 ID（`spaces/<spaceId>`）。显示名称键已弃用，日志中也会标记这一点。
-- `dangerouslyAllowNameMatching` 会重新启用用于允许列表的可变电子邮件主体匹配（紧急兼容模式）；doctor 会针对电子邮件条目发出警告。
-- Google Chat 的反应操作不会公开。该插件使用服务账号身份验证，而 Google Chat 的反应端点要求用户身份验证。请使用 `openclaw doctor --fix` 移除不受支持的旧版反应设置。
-- 原生审批卡片使用 Google Chat 的 `cardsV2` 按钮点击，而不是反应事件。审批人来自 `allowFrom` 或 `defaultTo`，并且必须是稳定的数字型 `users/<id>` 值。
-- 消息操作仅公开文本 `send`。Google Chat 的附件上传要求用户身份验证，而此插件使用服务账号身份验证，因此不公开出站文件上传功能。
-- `typingIndicator`：`message`（默认）会发布一个 `_<Bot> is typing..._` 占位消息，并在第一条回复时将其编辑为回复内容；`none` 会禁用该功能；`reaction` 需要用户 OAuth，目前在服务账号身份验证下会回退到 `message`，并记录错误日志。
-- 入站附件（每条消息的第一个附件）会通过 Chat API 下载到媒体处理管线中，并受 `mediaMaxMb` 限制（默认为 20）。
-- 默认会忽略由机器人撰写的消息。设置 `allowBots: true` 后，接受的机器人消息会使用共享的[机器人循环保护](/channels/bot-loop-protection)：配置 `channels.defaults.botLoopProtection`，然后使用 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 覆盖。
+- Service account 凭据：`serviceAccountFile`（路径）或 `serviceAccount`（内联 JSON 字符串、对象或 env/file/exec/store SecretRef）。环境变量 `GOOGLE_CHAT_SERVICE_ACCOUNT`（内联 JSON）和 `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`（路径）仅适用于默认账户。多账户配置使用 `channels.googlechat.accounts.<id>`，并使用相同的键，包括每个账户的 `serviceAccount` SecretRef。
+- 当未设置 `webhookPath` 时，默认 webhook 路径为 `/googlechat`；也可以通过 `webhookUrl` 提供路径。
+- 群组键必须是稳定的空间 ID（`spaces/<spaceId>`）。显示名称键已弃用，并会记录相关日志。
+- `dangerouslyAllowNameMatching` 会重新启用允许列表的可变电子邮件主体匹配（紧急兼容模式）；doctor 会针对电子邮件条目发出警告。
+- Google Chat 不会公开 reaction 操作。该插件使用服务账户身份验证，而 Google Chat reaction 端点要求用户身份验证。请使用 `openclaw doctor --fix` 移除不受支持的旧版 reaction 设置。
+- 原生审批卡片使用 Google Chat `cardsV2` 按钮点击，而不是 reaction 事件。审批者来自 `allowFrom` 或 `defaultTo`，并且必须是稳定的数字型 `users/<id>` 值。
+- 消息操作仅公开文本 `send`。Google Chat 附件上传要求用户身份验证，而此插件使用服务账户身份验证，因此不会公开出站文件上传功能。
+- `typingIndicator`：`message`（默认）会发布一个 `_<Bot> is typing..._` 占位符，并在第一条回复中将其编辑掉；`none` 会禁用该功能；`reaction` 要求用户 OAuth，在服务账户身份验证下当前会回退到 `message`，并记录错误。
+- 入站附件（每条消息中的第一个附件）会通过 Chat API 下载到媒体处理管线中，并受 `mediaMaxMb` 限制（默认为 20）。
+- 默认情况下会忽略机器人发送的消息。启用 `allowBots: true` 后，接受的机器人消息会使用共享的[机器人循环保护](/channels/bot-loop-protection)：配置 `channels.defaults.botLoopProtection`，然后使用 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 覆盖。
 
 密钥引用详情：[密钥管理](/gateway/secrets)。
 
@@ -260,4 +260,4 @@ openclaw channels status
 - [网关配置](/gateway/configuration)
 - [群组](/channels/groups) — 群聊行为和提及门控
 - [配对](/channels/pairing) — 私信身份验证和配对流程
-- [安全性](/gateway/security) — 访问模型和加固
+- [安全性](/gateway/security) — 访问模型和加固。

@@ -89,7 +89,7 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 
 ```json5
 {
-  env: { OPENCODE_API_KEY: "sk-..." },
+  env: { vars: { OPENCODE_API_KEY: "sk-..." } },
   agents: { defaults: { model: { primary: "opencode/gpt-5.6-sol" } } },
 }
 ```

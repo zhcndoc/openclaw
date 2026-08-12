@@ -24,9 +24,9 @@ openclaw sandbox explain --json
 
 它会打印：
 
-- 生效的 sandbox 模式/范围/工作区访问
+- 生效的 sandbox 模式／范围／工作区访问
 - 当前会话是否处于 sandbox 中（main vs non-main）
-- 生效的 sandbox 工具允许/拒绝情况（以及它来自 agent/global/default 的哪一层）
+- 生效的 sandbox 工具允许／拒绝情况（以及它来自 agent／global／default 的哪一层）
 - elevated 门控以及修复所需的键路径。
 
 ## Sandbox：工具在哪里运行
@@ -91,21 +91,21 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 可用的组：
 
-| Group              | Tools                                                                                                                                                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `group:runtime`    | `exec`, `process`, `code_execution`（`bash` 可作为 `exec` 的别名）                                                                                                                                                                        |
-| `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                                                                                                                                                                                 |
-| `group:sessions`   | `sessions`, `sessions_list`, `sessions_history`, `sessions_search`, `conversations_list`, `conversations_send`, `conversations_turn`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`, `spawn_task`, `dismiss_task` |
-| `group:memory`     | `memory_search`, `memory_get`                                                                                                                                                                                                                          |
-| `group:web`        | `web_search`, `x_search`, `web_fetch`                                                                                                                                                                                                                  |
-| `group:ui`          | `browser`, `screen`, `terminal`, `canvas`, `show_widget`                                                                                                                                                                                               |
-| `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                                                                                                                                                 |
-| `group:messaging`  | `message`                                                                                                                                                                                                                                              |
-| `group:nodes`      | `nodes`, `computer`                                                                                                                                                                                                                                    |
-| `group:agents`     | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `ask_user`, `skill_workshop`                                                                                                                                                   |
-| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                                                                                                                                                   |
-| `group:openclaw`   | 大多数内置 OpenClaw 工具（不包括 `read`/`write`/`edit`/`apply_patch`/`exec`/`process` 文件系统和运行时原语、`canvas` 以及提供商插件）                                                                                             |
-| `group:plugins`    | 所有已加载的插件自有工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                                                                                                                           |
+| 组                 | 工具                                                                                                                                                                                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `group:runtime`    | `exec`, `process`, `code_execution`（`bash` is accepted as an alias for `exec`）                                                                                                                                                                        |
+| `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                                                                                                                                                                                   |
+| `group:sessions`   | `sessions`, `sessions_list`, `sessions_history`, `sessions_search`, `conversations_list`, `conversations_send`, `conversations_turn`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`, `suggest_task`, `dismiss_task` |
+| `group:memory`     | `memory_search`, `memory_get`                                                                                                                                                                                                                            |
+| `group:web`        | `web_search`, `x_search`, `web_fetch`                                                                                                                                                                                                                    |
+| `group:ui`         | `browser`, `screen`, `terminal`, `canvas`, `show_widget`                                                                                                                                                                                                 |
+| `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                                                                                                                                                   |
+| `group:messaging`  | `message`                                                                                                                                                                                                                                                |
+| `group:nodes`      | `nodes`, `computer`                                                                                                                                                                                                                                      |
+| `group:agents`     | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `ask_user`, `skill_workshop`                                                                                                                                                     |
+| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                                                                                                                                                     |
+| `group:openclaw`   | 大多数内置 OpenClaw 工具（不包括 `read`/`write`/`edit`/`apply_patch`/`exec`/`process` 文件系统和运行时原语、`canvas` 以及提供商插件）                                                                                                                  |
+| `group:plugins`    | 所有已加载的插件自有工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                                                                                                                                                   |
 
 对于只读 agent，除非沙箱文件系统策略或单独的主机边界强制执行只读约束，否则也要拒绝 `group:runtime` 以及所有会修改文件系统的工具。
 

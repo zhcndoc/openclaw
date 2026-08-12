@@ -207,7 +207,7 @@ Plan 配置会省略那些仅适用于 Standard 端点的模型。
 | --------------------------- | ----------- | --------- | -------------------- |
 | `qwen/qwen3.5-plus`         | 文本、图像  | 1,000,000 | 默认模型             |
 | `qwen/qwen3.6-flash`        | 文本、图像  | 1,000,000 | 仅 Standard 端点     |
-| `qwen/qwen3.6-plus`        | 文本、图像  | 1,000,000 | Coding Plan + Standard  |
+| `qwen/qwen3.6-plus`         | 文本、图像  | 1,000,000 | Coding Plan + Standard  |
 | `qwen/qwen3.7-max`          | 文本        | 1,000,000 | 仅 Standard 端点     |
 | `qwen/qwen3.7-plus`         | 文本、图像  | 1,000,000 | Coding Plan + Standard  |
 | `qwen/qwen3-max-2026-01-23` | 文本        | 262,144   | Qwen Max 系列        |
@@ -267,7 +267,7 @@ Token Plan 模型也被标记为具备推理能力。`kimi-k2.7-code` 和
 {
   agents: {
     defaults: {
-      videoGenerationModel: { primary: "qwen/wan2.6-t2v" },
+      mediaModels: { video: { primary: "qwen/wan2.6-t2v" } },
     },
   },
 }

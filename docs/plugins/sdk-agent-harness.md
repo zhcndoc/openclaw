@@ -29,7 +29,7 @@ read_when:
 - provider 和 model
 - 运行时认证状态，除非该 harness 声明它拥有认证引导
 - thinking level 和 context budget
-- OpenClaw 转录/会话文件
+- OpenClaw 转录／会话文件
 - workspace、sandbox 和工具策略
 - 通道回复回调和流式回调
 - 模型回退和实时模型切换策略
@@ -53,7 +53,7 @@ read_when:
 能够为首次运行设置提供推理的本地 harness，必须证明完成探测的实现。当 `params.captureRuntimeArtifact` 为 true 时，返回一个不透明的 `result.runtimeArtifact`，其中包含稳定的 id 和内容指纹。注册一个匹配的 `runtimeArtifact.validate(...)` 能力，以在不加载其他 harness 或扫描无关插件的情况下重新检查该绑定。
 
 已验证的 OpenClaw 续接也会传入 `params.expectedRuntimeArtifact`。  
-harness 必须将其与所获取的精确原生进程进行比较，并在启动或恢复原生线程之前，如果二者不同则失败。普通的 agent turn 会省略这两个字段，因此内容哈希不会进入正常请求的热路径。远程/WebSocket harness 在参与之前需要一个服务器证明契约；仅有版本字符串并不能作为工件身份。
+harness 必须将其与所获取的精确原生进程进行比较，并在启动或恢复原生线程之前，如果二者不同则失败。普通的 agent turn 会省略这两个字段，因此内容哈希不会进入正常请求的热路径。远程／WebSocket harness 在参与之前需要一个服务器证明契约；仅有版本字符串并不能作为工件身份。
 
 准备好的尝试还包含 `params.runtimePlan`，这是一个由 OpenClaw 拥有的运行时决策策略包，必须在 OpenClaw 与原生 harness 之间保持共享：
 
@@ -61,16 +61,16 @@ harness 必须将其与所获取的精确原生进程进行比较，并在启动
 - `runtimePlan.transcript.resolvePolicy(...)` 用于转录清理和工具调用修复策略
 - `runtimePlan.delivery.isSilentPayload(...)` 用于共享 `NO_REPLY` 和媒体传递抑制
 - `runtimePlan.outcome.classifyRunResult(...)` 用于模型回退分类
-- `runtimePlan.observability` 用于已解析的 provider/model/harness 元数据
+- `runtimePlan.observability` 用于已解析的 provider／model／harness 元数据
 
-harness 可以使用该计划来做出需要与 OpenClaw 行为一致的决策，但应将其视为宿主拥有的尝试状态：不要修改它，也不要在一次 turn 中使用它来切换 provider/model。
+harness 可以使用该计划来做出需要与 OpenClaw 行为一致的决策，但应将其视为宿主拥有的尝试状态：不要修改它，也不要在一次 turn 中使用它来切换 provider／model。
 
 ### 请求传输契约
 
 `supports(ctx)` 接收 `ctx.modelProvider` 中已解析的模型传输。两个无密钥、由 provider 拥有的事实描述了所选路由：
 
 - `runtimePolicy.compatibleIds` 列出了 provider 声明与该具体路由兼容的 runtime id。缺少该 policy 表示 provider 没有声明路由级兼容性；这并不代表可以假定支持。
-- `requestTransportOverrides: "none"` 表示没有必须被复现的已编写 provider/model 请求覆盖。`"present"` 表示存在已编写的 headers、auth transport、proxy、TLS、local-service、private-network 行为或请求参数。该事实不会暴露这些值。
+- `requestTransportOverrides: "none"` 表示没有必须被复现的已编写 provider／model 请求覆盖。`"present"` 表示存在已编写的 headers、auth transport、proxy、TLS、local-service、private-network 行为或请求参数。该事实不会暴露这些值。
 
 当 harness 无法复现准备好的传输时，返回 `{ supported: false, reason }`。不要在选择后通过读取原始配置来推断支持性。当认证准备产生多个重试路由时，必须有一个 harness 支持所有路由后才能分发。如果没有插件可以拥有完整集合，则使用 OpenClaw 进行隐式选择；显式或持久化的插件选择会在闭合状态下失败。
 
@@ -79,10 +79,10 @@ harness 可以使用该计划来做出需要与 OpenClaw 行为一致的决策�
 **导入：** `openclaw/plugin-sdk/agent-harness`
 
 ```typescript
-import type { AgentHarness } from "openclaw/plugin-sdk/agent-harness";
+import type { AgentHarnessV2 } from "openclaw/plugin-sdk/agent-harness";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 
-const myHarness: AgentHarness = {
+const myHarness: AgentHarnessV2 = {
   id: "my-harness",
   label: "我的原生 agent harness",
 
@@ -123,7 +123,7 @@ export default definePluginEntry({
 provider、模型 id、系统提示词、用户提示词、超时时间、中止信号和流式参数。harness 不得
 重新解析凭据、切换路由、复用原生线程、附加工具、调用 agent 生命周期钩子或交付输出。
 
-返回 `{ assistant: AssistantMessage }`。核心只接受带有 `stop` 或 `length` 停止原因的终止文本/
+返回 `{ assistant: AssistantMessage }`。核心只接受带有 `stop` 或 `length` 停止原因的终止文本／
 思考内容；工具调用、失败的停止原因和空输出都会被拒绝。如果 harness 无法证明符合这些语义，
 请省略此能力。随后，需要隔离式完成的调用方会在调用该 harness 前直接失败；OpenClaw 不会
 通过其他运行时重放请求。
@@ -223,7 +223,37 @@ Codex 插件会强制执行 [Codex Harness](/plugins/codex-harness) 中记录的
 
 公开 runtime 级用户输入请求的原生 harness 应使用 `openclaw/plugin-sdk/agent-harness-runtime` 中的用户输入辅助函数来格式化提示，通过 OpenClaw 的阻塞回复路径传递，并将选择/自由形式答案规范化回该 runtime 的原生响应形状。该辅助函数会保持通道/TUI 展现一致，而每个 harness 仍保留自己的协议解析和待处理请求生命周期。
 
-需要类似 PI 的紧凑工具路由的原生 harness 应使用 `openclaw/plugin-sdk/agent-harness-tool-runtime` 中的 `createAgentHarnessToolSurfaceRuntime(...)`。它负责工具搜索/代码模式控制选择、本地模型精简默认值、与运行时兼容的 schema 过滤、隐藏目录执行、目录 hydration 以及目录清理。harness 仍然负责其 SDK 特定的工具转换和原生执行回调。
+每个已准备的尝试还会接收一个版本化的 `params.hostCapabilities`
+对象。在公开插件构建的 OpenClaw 工具之前，使用
+`bindToolSurface(...)`，并对原生操作使用其策略和审批操作。工作目录与尝试不同的原生操作可以将
+`nativeOperation: { cwd }` 传递给 `runBeforeToolCall(...)`；主机会在保持身份和策略权限由闭包绑定的同时，规范化这一有界操作事实。该闭包会绑定主机解析出的运行、沙箱、请求方、路由和审批身份；插件不得重新构造这些字段，也不得在尝试返回后保留该能力。尝试完成后发起的调用会安全失败。
+
+新的 harness 应实现 `AgentHarnessV2`，并将已准备的尝试类型化为
+`AgentHarnessAttemptParamsV2`、`EmbeddedRunAttemptParamsV2` 和
+`AgentHarnessSideQuestionParamsV2`；这些契约要求提供
+`hostCapabilities`。采用 V2 的软件包必须声明
+`openclaw.compat.pluginApi: ">=2026.8.1"`（或更新的最低版本），以便旧主机在加载前拒绝它们。请从 runtime 子路径导入参数类型：
+
+```typescript
+import type {
+  AgentHarnessAttemptParamsV2,
+  AgentHarnessSideQuestionParamsV2,
+  EmbeddedRunAttemptParamsV2,
+} from "openclaw/plugin-sdk/agent-harness-runtime";
+```
+
+较旧的 `AgentHarness`、
+`AgentHarnessAttemptParams` 和 `EmbeddedRunAttemptParams` 名称仍与现有插件保持
+源码兼容，因此在 2026-10-12 之前，这些已弃用参数类型中的 capability 字段是可选的。公开的
+`AgentHarnessSideQuestionParams` 契约具有相同的兼容窗口和可选字段。Core 仍会在每个选定的尝试上提供
+该 capability。兼容性仅存在于类型层面：当前 harness 代码不得添加在没有主机 capability 的情况下运行的 runtime 路径。
+
+需要类似 PI 的紧凑工具路由的原生 harness 应使用
+`openclaw/plugin-sdk/agent-harness-tool-runtime` 中的
+`createAgentHarnessToolSurfaceRuntime(...)`。它负责
+工具搜索/代码模式控制选择、本地模型精简默认值、
+runtime 兼容的 schema 过滤、隐藏目录执行、目录 hydration
+以及目录清理。Harness 仍负责其 SDK 特定的工具转换和原生执行回调。
 
 ### 原生 MCP 清单
 
@@ -307,9 +337,9 @@ runtime 会将其保留在原始工具界面上，而不会启用代码模式或
 ```json
 {
   "agents": {
-    "list": [
-      {
-        "id": "codex-only",
+    "entries": {
+      "codex-only": {
+        "default": true,
         "model": "openai/gpt-5.6-sol",
         "models": {
           "openai/gpt-5.6-sol": {
@@ -317,14 +347,14 @@ runtime 会将其保留在原始工具界面上，而不会启用代码模式或
           }
         }
       }
-    ]
+    }
   }
 }
 ```
 
 如下这类旧的按整个 agent 设定运行时示例会被忽略：
 
-```json
+```json validate=false
 {
   "agents": {
     "defaults": {
@@ -342,7 +372,7 @@ runtime 会将其保留在原始工具界面上，而不会启用代码模式或
 
 ## 原生会话和转录镜像
 
-执行框架可能会保留原生会话 ID、线程 ID 或守护进程端的恢复令牌。将该绑定显式地与 OpenClaw 会话关联起来，并持续将用户可见的助手/工具输出镜像到 OpenClaw 转录中。
+执行框架可能会保留原生会话 ID、线程 ID 或守护进程端的恢复令牌。将该绑定显式地与 OpenClaw 会话关联起来，并持续将用户可见的助手／工具输出镜像到 OpenClaw 转录中。
 
 OpenClaw 转录仍然是以下功能的兼容层：
 

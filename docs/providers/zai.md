@@ -17,8 +17,7 @@ Z.AI 是 **GLM** 模型的 API 平台。它为 GLM 提供 REST API，并使用 A
 
 ## GLM 模型
 
-GLM is a model family, not a standalone provider. In OpenClaw, GLM models use
-references like `zai/glm-5.2`: provider `zai`, model id `glm-5.2`.
+GLM 是一个模型系列，而不是独立的提供商。在 OpenClaw 中，GLM 模型使用类似 `zai/glm-5.2` 的引用：提供商为 `zai`，模型 ID 为 `glm-5.2`。
 
 ## 入门
 
@@ -78,7 +77,7 @@ openclaw plugins install @openclaw/zai-provider
 
 ### 端点
 
-| Onboarding choice   | Base URL                                      | Default model |
+| 初始化选项          | 基础 URL                                       | 默认模型      |
 | ------------------- | --------------------------------------------- | ------------- |
 | `zai-global`        | `https://api.z.ai/api/paas/v4`                | `glm-5.2`     |
 | `zai-cn`            | `https://open.bigmodel.cn/api/paas/v4`        | `glm-5.2`     |
@@ -131,7 +130,7 @@ Coding Plan 密钥应使用 Coding Plan 端点，例如
 
 ```json5
 {
-  env: { ZAI_API_KEY: "sk-..." },
+  env: { vars: { ZAI_API_KEY: "sk-..." } },
   models: {
     providers: {
       zai: {
@@ -155,8 +154,8 @@ openclaw models list --all --provider zai
 
 当前由清单支持的目录包括：
 
-| Model ref          | Notes                                             |
-| ------------------ | ------------------------------------------------- |
+| 模型引用           | 备注                                               |
+| ------------------ | -------------------------------------------------- |
 | `zai/glm-5.2`      | 默认；1M 上下文                                     |
 | `zai/glm-5-turbo`  | OpenClaw 优化的文本模型；200K 上下文              |
 | `zai/glm-5v-turbo` | 多模态编码模型；200K 上下文                        |

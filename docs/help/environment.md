@@ -12,7 +12,7 @@ OpenClaw 从多个来源加载环境变量。通常的规则是**绝不覆盖现
 
 ## 优先级（从高到低）
 
-1. **进程环境**（Gateway 进程已经从父 shell/守护进程获得的环境）。
+1. **进程环境**（Gateway 进程已经从父 shell／守护进程获得的环境）。
 2. **当前工作目录中的 `.env`**（dotenv 默认行为；不会覆盖现有值；提供商凭据和受保护的运行时控制项会被忽略）。
 3. **全局 `.env`**，位于 `~/.openclaw/.env`（即 `$OPENCLAW_STATE_DIR/.env`；推荐用于提供商 API 密钥；除已记录的 OpenClaw 管理的 systemd 服务值外，不会覆盖现有值）。
 4. **`~/.openclaw/openclaw.json` 中的配置 `env` 块**（仅在变量缺失时应用）。
@@ -101,20 +101,22 @@ OpenClaw 从多个来源加载环境变量。通常的规则是**绝不覆盖现
 
 ## 配置 `env` 块
 
-设置内联环境变量有两种等效方式（两者都不会覆盖现有值）：
+在 `env.vars` 下设置内联 env 变量（值不会覆盖现有值）：
 
 ```json5
 {
   env: {
-    OPENROUTER_API_KEY: "sk-or-...",
     vars: {
+      OPENROUTER_API_KEY: "sk-or-...",
       GROQ_API_KEY: "gsk-...",
     },
   },
 }
 ```
 
-配置中的 `env` 块仅接受字面字符串值。它不会展开 `file:...` 值；例如，`XAI_API_KEY: "file:secrets/xai-api-key.txt"` 将以该字符串原样传递给提供商。
+配置中的 `env.vars` 块仅接受字面量字符串值。它不会展开
+`file:...` 值；例如，`XAI_API_KEY: "file:secrets/xai-api-key.txt"`
+会将该确切字符串传递给提供商。
 
 对于由文件提供的提供商密钥，请在支持该功能的凭据字段上使用 `SecretRef`：
 

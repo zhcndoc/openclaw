@@ -19,7 +19,7 @@ sidebarTitle: "心跳"
 
 定时心跳需要自动化功能。当 `cron.enabled` 为 `false` 或 `OPENCLAW_SKIP_CRON=1` 时，网关会记录启动警告，并且不会运行定时心跳；手动唤醒和事件驱动的心跳唤醒仍然可用。不存在单独的心跳备用计时器。
 
-故障排查：[自动化](/automation/cron-jobs#troubleshooting)
+故障排查：[自动化](/automation/cron-jobs#troubleshooting)。
 
 ## 快速开始（新手）
 
@@ -30,8 +30,8 @@ sidebarTitle: "心跳"
   <Step title="添加监控暂存内容（可选）">
     使用 `openclaw cron scratch <jobId> --set "..."` 在 heartbeat 监控器的暂存区中存储一个简短的检查清单。
   </Step>
-  <Step title="决定 heartbeat 消息发送到哪里">
-    `target: "none"` 是默认值；设置 `target: "last"` 可路由到最后一个联系人。
+  <Step title="决定 heartbeat 消息应发送到哪里">
+    Heartbeat 提醒默认发送到操作员的私信。设置 `commands.ownerAllowFrom` 或具体频道的 `allowFrom`；仅包含通配符的允许列表无法识别所有者。
   </Step>
   <Step title="可选调优">
     - 如果 heartbeat 运行只需要监控器暂存内容，请使用轻量级引导上下文。
@@ -45,14 +45,17 @@ sidebarTitle: "心跳"
 
 ```json5
 {
+  commands: {
+    ownerAllowFrom: ["telegram:123456789"],
+  },
   agents: {
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 明确发送到最后一个联系人（默认为 "none"）
-        directPolicy: "allow", // 默认：允许直接/私信目标；设置为 "block" 可禁止
-        lightContext: true, // 可选：heartbeat 运行时跳过工作区引导文件
-        isolatedSession: true, // 可选：每次运行使用全新会话（无对话历史）
+        target: "owner", // default: operator DM from ownerAllowFrom or channel allowFrom
+        directPolicy: "allow", // default: allow direct/DM targets; set "block" to suppress
+        lightContext: true, // optional: skip workspace bootstrap files for heartbeat runs
+        isolatedSession: true, // optional: fresh session each run (no conversation history)
         // activeHours: { start: "08:00", end: "24:00" },
       },
     },
@@ -62,14 +65,15 @@ sidebarTitle: "心跳"
 
 ## 默认值
 
-- 间隔：`30m`。应用 Anthropic 提供商默认值后，当解析出的身份验证模式为 OAuth/token（包括复用 Claude CLI）时，会将其提升为 `1h`，但仅当未设置 `heartbeat.every` 时生效。设置 `agents.defaults.heartbeat.every` 或按代理设置 `agents.entries.*.heartbeat.every`；使用 `0m` 可禁用。
-- 提示词正文（可通过 `agents.defaults.heartbeat.prompt` 配置）：`Follow the heartbeat monitor scratch context when provided. Recurring tasks are automations; create or change their schedules with the automations tool, not heartbeat scratch. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
-- 超时：未设置超时的心跳轮次会在设置了 `agents.defaults.timeoutSeconds` 时使用该值。否则，将使用心跳间隔，但上限为 600 秒。若需要更长的心跳任务，请设置 `agents.defaults.heartbeat.timeoutSeconds` 或按代理设置 `agents.entries.*.heartbeat.timeoutSeconds`。
-- 心跳提示词会**原样**作为用户消息发送。当为默认代理启用心跳间隔时，系统提示词会自动包含“心跳”部分；该指导没有单独的心跳开关。
-- 使用 `0m` 禁用心跳后，监控自动化任务仍会保留，但会被禁用；其暂存内容也会保留，以便重新启用该间隔时使用。
-- 当自动化功能完全禁用时，即使心跳间隔仍处于启用状态，计划心跳也不会运行。
-- 活动时段（`heartbeat.activeHours`）会根据配置的时区进行检查。在时间窗口之外，心跳会被跳过，直到下一个处于时间窗口内的时刻。
-- 当主队列或自动化任务正在运行或排队、同一代理的任何回复或嵌入式运行正在进行，或解析出的目标会话存在正在运行或排队的任务时，计划心跳会延后。立即唤醒和手动唤醒会绕过对同一代理活动运行的广泛检查，但仍会遵守主队列、自动化任务和目标会话繁忙检查。同级代理之间不会相互暂停。
+- 间隔：`30m`。应用 Anthropic provider 默认值后，当解析出的身份验证模式为 OAuth/token（包括复用 Claude CLI）时，会将其提升为 `1h`，但仅在未设置 `heartbeat.every` 时生效。设置 `agents.defaults.heartbeat.every` 或单个代理的 `agents.entries.*.heartbeat.every`；使用 `0m` 可禁用。
+- 传递目标：`owner`。OpenClaw 使用第一个具体的 `commands.ownerAllowFrom` 条目，然后使用频道的 `allowFrom`，并且绝不会将此路由发送到群组。如果没有可解析的所有者私信，环境轮询会以 `reason=no-route` 跳过。设置 `target: "last"` 可跟随最近的会话，包括群组；设置 `target: "none"` 则仅运行内部任务。
+- 提示正文（可通过 `agents.defaults.heartbeat.prompt` 配置）：`Follow the heartbeat monitor scratch context when provided. Recurring tasks are automations; create or change their schedules with the automations tool, not heartbeat scratch. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
+- 超时：未设置的心跳轮次会在设置了 `agents.defaults.timeoutSeconds` 时使用该值。否则，会使用心跳间隔，但上限为 600 秒。设置 `agents.defaults.heartbeat.timeoutSeconds` 或单个代理的 `agents.entries.*.heartbeat.timeoutSeconds` 可允许更长的心跳任务。
+- 心跳提示会以**原样**作为用户消息发送。当为默认代理启用间隔时，系统提示会自动包含一个“Heartbeats”部分；该指导没有单独的心跳开关。
+- 使用 `0m` 禁用心跳时，监控自动化任务仍会保留但处于禁用状态，其暂存内容也会保留，以便重新启用间隔时使用。
+- 完全禁用自动化后，即使心跳间隔仍处于启用状态，计划心跳也不会运行。
+- 活跃时段（`heartbeat.activeHours`）会根据配置的时区进行检查。在时间窗口之外，心跳会被跳过，直到下一个位于时间窗口内的时间点。
+- 当主队列或自动化任务处于活动状态或排队中、同一代理的任何回复或嵌入式运行处于活动状态，以及解析出的目标会话存在活动或排队任务时，计划心跳会延迟执行。立即唤醒和手动唤醒会绕过宽泛的同一代理活动运行检查，但仍会遵守主队列、自动化任务和目标会话繁忙防护。同级代理之间不会相互暂停。
 
 ## heartbeat 提示的用途
 
@@ -108,11 +112,10 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
       heartbeat: {
         every: "30m", // 默认：30m（0m 会禁用）
         model: "anthropic/claude-opus-4-6",
-        lightContext: false, // 默认：false；true 会在 heartbeat 运行时跳过工作区引导文件
-        isolatedSession: false, // 默认：false；true 会在全新会话中运行每个 heartbeat（无对话历史）
-        target: "last", // 默认：none | 选项：last | none | <channel id>（核心或插件，例如 "imessage"）
-        to: "+15551234567", // 可选的特定 channel 覆盖
-        accountId: "ops-bot", // 可选的多账户 channel id
+        lightContext: false, // default: false; true skips workspace bootstrap files for heartbeat runs
+        isolatedSession: false, // default: false; true runs each heartbeat in a fresh session (no conversation history)
+        target: "owner", // default | options: last | none | <channel id>
+        accountId: "ops-bot", // optional multi-account channel id
         prompt: "Follow the heartbeat monitor scratch context when provided. Recurring tasks are automations; create or change their schedules with the automations tool, not heartbeat scratch. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
       },
     },
@@ -140,7 +143,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 明确发送给最后一个联系人（默认是 "none"）
+        target: "owner", // default: operator DM
       },
     },
     entries: {
@@ -169,7 +172,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 明确发送给最后一个联系人（默认是 "none"）
+        target: "owner", // default: operator DM
         activeHours: {
           start: "09:00",
           end: "22:00",
@@ -246,9 +249,10 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 
 </ParamField>
 <ParamField path="target" type="string">
-- `last`：发送到最后使用的外部 channel。
-- 显式 channel：任何已配置的 channel 或插件 id，例如 `discord`、`matrix`、`telegram` 或 `whatsapp`。
-- `none`（默认）：运行 heartbeat，但**不进行**外部发送。
+- `owner`（default）：发送到 `commands.ownerAllowFrom` 中第一个可解析的 operator DM，然后发送到 channel `allowFrom`。此路由不会解析到群组或 channel。
+- `last`：明确遵循上次使用的外部会话，包括群组和 channel。
+- 显式 channel：任何已配置的 channel 或 plugin id，例如 `discord`、`matrix`、`telegram` 或 `whatsapp`。
+- `none`：仅为内部状态运行 heartbeat；**不要**向外部发送。
 
 </ParamField>
 <ParamField path="directPolicy" type='"allow" | "block"' default="allow">
@@ -256,7 +260,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 
 </ParamField>
 <ParamField path="to" type="string">
-  可选的接收者覆盖（按 channel 的 id，例如 WhatsApp 的 E.164 或 Telegram 的 chat id）。对于 Telegram topics/threads，使用 `<chatId>:topic:<messageThreadId>`。
+  显式 channel 目标的收件人（例如 WhatsApp 的 E.164 或 Telegram chat id）。`owner` 和未设置的 target 会忽略 `to`。对于 Telegram topic/thread，请使用 `<chatId>:topic:<messageThreadId>`。
 
 </ParamField>
 <ParamField path="accountId" type="string">
@@ -290,12 +294,15 @@ Heartbeat 配置是严格的：只接受上面列出的字段。确认消息抑�
 
 <AccordionGroup>
   <Accordion title="会话和目标路由">
-    - 默认情况下，心跳在代理的主会话（`agent:<id>:<mainKey>`）中运行；当 `session.scope = "global"` 时，则在 `global` 中运行。将 `session` 设置为特定的频道会话（Discord/WhatsApp 等）可覆盖此行为。
+    - 默认情况下，心跳在代理的主会话（`agent:<id>:<mainKey>`）中运行；当 `session.scope = "global"` 时则在 `global` 中运行。将 `session` 设置为特定的频道会话（Discord／WhatsApp 等）可覆盖此行为。
     - `session` 只影响运行上下文；投递由 `target` 和 `to` 控制。
-    - 若要投递到特定频道/接收者，请设置 `target` + `to`。当 `target: "last"` 时，投递会使用该会话的上一个外部频道。
-    - 默认情况下，心跳投递允许直接目标/私信目标。设置 `directPolicy: "block"` 可禁止向直接目标发送消息，同时仍运行心跳轮次。
-    - 当主队列或自动化任务繁忙、同一代理的任何回复或嵌入式运行处于活动状态，或解析出的目标会话存在活动中或排队中的任务时，计划心跳会被跳过并稍后重试。立即唤醒和手动唤醒仅绕过广泛的同一代理活动运行预检查。
-    - 如果 `target` 未解析出任何外部目的地，运行仍会执行，但不会发送外发消息。
+    - 默认的 `owner` 目标会选择一个明确配置的所有者身份。仅当会话的上一次路由是发往该所有者的直接聊天时，它才会复用完全相同的账户／线程。
+    - 携带频道和收件人的唤醒会在发现所有者之前使用指定的来源。由于这是明确指定的，事件目的地可以是群组，而不是推断得出。
+    - 若要投递到特定频道／收件人，请设置频道 `target` 以及 `to`。`target: "last"` 是一个明确的选择加入项，用于发送到上一次外部对话，包括群组。
+    - 默认情况下，心跳投递允许直接／DM 目标。设置 `directPolicy: "block"` 可在仍运行心跳轮次的同时，禁止发送到直接目标。
+    - 当主队列或自动化工作繁忙、同一代理存在活动中的回复或嵌入式运行，或者已解析的目标会话存在活动中或排队中的工作时，计划心跳会被跳过并稍后重试。立即唤醒和手动唤醒只会绕过广泛的同一代理活动运行预检查。
+    - 如果 `owner` 没有具体的、支持 DM 的所有者或已配置的频道，则轮询会在代理运行前因 `reason=no-route` 而被跳过。当会话没有外部路由时，明确的 `last` 也会被跳过。
+    - 由隐式 `owner` 默认设置投递的第一条告警会说明定期检查以及如何选择 `target: "none"`。后续告警会省略该行。
 
   </Accordion>
   <Accordion title="可见性和跳过行为">
@@ -305,8 +312,8 @@ Heartbeat 配置是严格的：只接受上面列出的字段。确认消息抑�
 
   </Accordion>
   <Accordion title="会话生命周期和审计">
-    - 仅包含心跳的回复**不会**保持会话存活。心跳元数据可能会更新会话行，但空闲过期使用的是最后一次真实用户/频道消息的 `lastInteractionAt`，而每日过期使用 `sessionStartedAt`。
-    - 控制界面和 WebChat 历史会隐藏心跳提示和仅 OK 确认。底层会话转录仍可能包含这些轮次以用于审计/回放。
+    - 仅包含心跳的回复**不会**保持会话存活。心跳元数据可能会更新会话行，但空闲过期使用的是最后一次真实用户／频道消息的 `lastInteractionAt`，而每日过期使用 `sessionStartedAt`。
+    - 控制界面和 WebChat 历史会隐藏心跳提示和仅 OK 确认。底层会话转录仍可能包含这些轮次以用于审计／回放。
     - 分离的[后台任务](/automation/tasks)可以在主会话需要快速注意到某事时排队一个系统事件并唤醒心跳。该唤醒不会使心跳变成后台任务。
 
   </Accordion>
@@ -432,9 +439,9 @@ Doctor 创建的心跳任务会保留心跳的活跃时段、冷却时间、防�
 openclaw system event --text "检查紧急跟进事项" --mode now
 ```
 
-| Flag                         | Description                                                                                      |
-| ---------------------------- | ------------------------------------------------------------------------------------------------ |
-| `--text <text>`              | 系统事件文本（必填）。                                                                    |
+| 标志                        | 描述                                                                                         |
+| --------------------------- | -------------------------------------------------------------------------------------------- |
+| `--text <text>`              | 系统事件文本（必填）。                                                                       |
 | `--mode <mode>`              | `now` 立即运行一次心跳；`next-heartbeat`（默认）等待下一个计划时刻。 |
 | `--session-key <sessionKey>` | 为该事件指定特定会话；默认使用代理的主会话。                   |
 | `--json`                     | 输出 JSON。                                                                                     |
@@ -453,11 +460,11 @@ openclaw system heartbeat disable  # 禁用心跳
 
 心跳会运行完整的代理轮次。间隔越短，消耗的 token 越多。为了降低成本：
 
-- 使用 `isolatedSession: true`，避免发送完整的对话历史记录（每次运行约从 10 万个 token 降至 2,000–5,000 个 token）。
-- 使用 `lightContext: true`，跳过心跳运行所需的工作区引导文件。
+- 使用 `isolatedSession: true`，避免发送完整的对话历史（每次运行约从 100K 个 token 降至约 2-5K 个 token）。
+- 使用 `lightContext: true`，跳过心跳运行的工作区引导文件。
 - 设置更便宜的 `model`（例如 `ollama/llama3.2:1b`）。
-- 保持监控临时记录简洁。
-- 如果只想更新内部状态，请使用 `target: "none"`。
+- 保持监控暂存区较小。
+- 如果只想更新内部状态，请明确设置 `target: "none"`。
 
 ## 心跳后的上下文溢出
 

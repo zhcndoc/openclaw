@@ -1,9 +1,11 @@
 ---
+doc-schema-version: 1
 summary: "默认的基于 SQLite 的内存后端，支持关键词、向量和混合搜索"
 title: "内置内存引擎"
 read_when:
-  - 你想了解默认的内存后端
-  - 你想配置 embedding 提供商或混合搜索
+  - "你想了解默认的内存后端"
+  - "你想配置嵌入提供商或混合搜索"
+  - "你正在从已移除的 QMD 内存后端迁移"
 ---
 
 内置引擎是默认的内存后端。它将你的记忆索引存储在每个 agent 对应的 SQLite 数据库中，并且无需额外依赖即可开始使用。
@@ -98,6 +100,34 @@ OpenClaw 会将 `MEMORY.md`、现有的根目录 `USER.md` 以及 `memory/*.md` 
 你也可以通过 `memory.search.extraPaths` 索引工作区之外的 Markdown 文件。参见
 [配置参考](/reference/memory-config#additional-memory-paths)。
 </Info>
+
+## 从 QMD 迁移
+
+QMD 已被移除；builtin 是唯一的记忆引擎。升级后，运行：
+
+```bash
+openclaw doctor --fix
+```
+
+Doctor 会移除已废弃的 `memory.backend`、`memory.qmd` 和
+`memory.search.qmd` 设置，包括针对 agent 的 `memory.search.qmd`
+形式。它会将 QMD 路径和额外集合保留为对应的
+`memory.search.extraPaths` 条目，包括 `{ path, pattern }` glob。当
+Memory Core 在 `~/.openclaw/agents/<agentId>/qmd/` 下找到已废弃的按 agent 划分的 QMD 工作区时，Doctor 还会提供删除其派生索引、模型下载、集合元数据和会话导出的选项。
+
+规范记忆仍保存在 `MEMORY.md`、`USER.md`、`memory/*.md` 以及已迁移的
+额外路径中。Builtin 会在下一次同步时为这些相同的 Markdown 源建立索引。此次切换从设计上保证无损：不会复制或删除任何规范记忆内容；只会重建派生状态。
+
+Builtin 现在通过以下功能覆盖了大多数 QMD 使用场景：
+
+- 默认使用混合 BM25 和向量检索，随后依次应用时间衰减、重要性和项目亲和度，最后进行 MMR 多样性处理；
+- 针对对话式搜索的有界词法查询扩展；
+- `memory.search.extraPaths` 中的字符串或 `{ path, pattern }` 条目；以及
+- 仅在 `extraPaths` 下可选的图像和音频索引。
+
+QMD 查询模式的学习型 cross-encoder 重排序和 HyDE 生成不属于 builtin 记忆。MMR 可以减少重复结果，但不是学习型相关性重排序器。要替代 QMD 的进程内、零密钥 GGUF 嵌入，请安装
+[llama.cpp provider](/plugins/llama-cpp) 并设置
+`memory.search.provider: "local"`；如果没有嵌入提供程序，builtin 只会使用 BM25 关键词搜索。
 
 ## 何时使用
 

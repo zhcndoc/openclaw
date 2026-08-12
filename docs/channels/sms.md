@@ -51,7 +51,7 @@ OpenClaw 通过 Twilio 电话号码或消息服务接收和发送 SMS/MMS。Gate
 
 请以 Twilio 作为当前要求的权威来源：[A2P 10DLC 概览](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc)、[注册快速入门](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/quickstart)以及[所需的企业和活动信息](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/collect-business-info)。本节提供的是设置指导，不构成法律建议。
 
-如果 Twilio 在注册审核期间拒绝品牌或活动，请先在 Twilio 中解决该问题，然后再将发送方用于 OpenClaw。[`30909`](https://www.twilio.com/docs/api/errors/30909) 表示消息流程或行动号召不完整或无法验证。[`30923`](https://www.twilio.com/docs/api/errors/30923) 表示消息同意是服务、账户创建或购买的必要条件，或与服务条款捆绑在一起。[`30893`](https://www.twilio.com/docs/api/errors/30893) 表示示例消息与声明的使用场景不匹配。
+如果 Twilio 在注册审核期间拒绝品牌或活动，请先在 Twilio 中解决该问题，然后再将发送方用于 OpenClaw。[`30909`](https://www.twilio.com/docs/api/errors/30909) 表示消息流程或行动号召不完整或无法验证。[`30923`](https://www.twilio.com/docs/api/errors/30923) 表示消息同意是服务、账户创建或购买的必要条件，或与服务条款捆绑在一起。[`30893`](https://www.twilio.com/docs/api/errors/30893) 表示示例消息与声明的使用场景不匹配
 
 ## 快速设置
 
@@ -218,7 +218,7 @@ export SMS_PUBLIC_WEBHOOK_URL="https://gateway.example.com/webhooks/sms"
 
 ### SecretRef 身份验证令牌
 
-`authToken` 可以是 SecretRef（`source: "env" | "file" | "exec"`）。当 Gateway 应该从 OpenClaw secrets runtime 解析 Twilio Auth Token，而不是存储明文配置时，请使用此方式：
+`authToken` 可以是 SecretRef（`source: "env" | "file" | "exec" | "store"`）。当 Gateway 应从 OpenClaw secrets runtime 中解析 Twilio Auth Token，而不是存储明文配置时，请使用此方式：
 
 ```json5
 {
@@ -348,7 +348,7 @@ OpenClaw 的出站投递会附加一个媒体项。OpenClaw 将 JPEG、JPG、PNG
 
 每次成功的出站发送后，如果响应中包含 Twilio API 状态，OpenClaw 都会存储初始的 Twilio API 状态。当 `publicWebhookUrl` 有效时，每条出站消息还会向 Twilio 提供一个派生的 `StatusCallback` URL，该 URL 会保留其基础 URL 和连接覆盖设置，同时添加所需的投递回调重试设置。无效或过长的派生 URL 将被省略。
 
-后续的投递回调会更新同一条插件专用的 SQLite 记录。语义重试会被去重，较旧的状态转换无法使终态回退，冲突的终态观察结果会报告为 `conflicted`，而不是选择一个错误的胜者。记录包含消息 SID、状态/错误元数据和时间戳，但不包含消息正文或电话号码地址。每条记录会在最近一次观察结果后的最多 30 天内保留，同时受插件范围内 5,000 条消息的上限和最早记录淘汰机制约束。
+后续的投递回调会更新同一条插件专用的 SQLite 记录。语义重试会被去重，较旧的状态转换无法使终态回退，冲突的终态观察结果会报告为 `conflicted`，而不是选择一个错误的胜者。记录包含消息 SID、状态／错误元数据和时间戳，但不包含消息正文或电话号码地址。每条记录会在最近一次观察结果后的最多 30 天内保留，同时受插件范围内 5,000 条消息的上限和最早记录淘汰机制约束。
 
 ## 验证设置
 

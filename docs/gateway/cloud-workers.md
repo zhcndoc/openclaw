@@ -38,13 +38,15 @@ doc-schema-version: 1
 
 在托管模式下，Crabbox 协调器拥有云 provider 凭据，并代表 Gateway 用户配置 AWS。无需本地 AWS 密钥。进行交互式身份验证，然后验证已存储的协调器和 provider 状态：
 
-在配置资源之前，确定 Gateway 主机的出站 IPv4：
+Crabbox 通常会在请求租约时发现 Gateway 主机的出站 IPv4，并将该地址的 `/32` 作为有效的 SSH 入站策略发送。此发现值的作用域限定于请求，因此 `crabbox config show --json` 继续显示空的 `aws.sshCIDRs` 列表是完全正常的。
+
+如需固定的入站策略，请自行确定出站 IPv4：
 
 ```bash
 curl -fsS https://checkip.amazonaws.com
 ```
 
-将该地址以 `/32` 的形式添加到 Crabbox 自身的配置中。例如，如果命令输出 `203.0.113.10`：
+然后将该地址作为 `/32` 添加到 Crabbox 自身的配置中。例如，如果命令输出 `203.0.113.10`：
 
 ```yaml
 aws:
@@ -52,7 +54,7 @@ aws:
     - 203.0.113.10/32
 ```
 
-直接 SSH 连接源自 Gateway 主机，而协调器 API 可能会看到反向代理地址或请求源地址。显式固定可以避免后续 Crabbox 安全组协调将实际的 SSH 调用方替换为面向 API 的地址。
+直接 SSH 连接源自 Gateway 主机，而协调器 API 可能会看到反向代理地址或请求源地址。当出站检测不可用或需要固定策略时，显式固定地址会很有用。
 
 ```bash
 crabbox login --url <coordinator-url> --provider aws
@@ -61,7 +63,7 @@ crabbox whoami --json
 crabbox doctor --provider aws --json
 ```
 
-在配置资源之前，确认 `crabbox config show --json` 在 `aws.sshCIDRs` 下报告了预期的 `/32`，然后检查 `crabbox doctor --provider aws --json`，了解 provider 就绪性故障。`doctor` 不会修改任何内容：它会检查协调器、broker 身份、本地工具和 AWS provider 就绪状态，而不会创建或更改租约。受信任的自动化可以通过 stdin 传入已批准的协调器令牌，而不是将其放在命令行中：
+在配置资源之前，请查看 `crabbox doctor --provider aws --json`，了解 provider 就绪检查失败的原因。如果显式配置了 `aws.sshCIDRs`，还要确认 `crabbox config show --json` 报告了预期的 `/32`；使用请求时发现时，列表为空是有效的。`doctor` 不会修改任何内容：它会检查协调器、broker 身份、本地工具以及只读的 AWS 控制平面访问权限，而不会创建或更改租约。它无法证明会修改资源的 IAM 权限，例如导入密钥对、启动实例、添加标签或终止实例；包含 `mutation=false` 的 direct-provider 报告并不能证明具有写入权限。受信任的自动化可以通过 stdin 传递已批准的协调器令牌，而不是将其放在命令行中：
 
 ```bash
 printf '%s' "$CRABBOX_COORDINATOR_TOKEN" | crabbox login \
@@ -100,18 +102,17 @@ printf '%s' "$CRABBOX_COORDINATOR_TOKEN" | crabbox login \
 
 | Key        | Meaning                                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider` | 由插件注册的 Worker 提供商 ID（内置插件使用 `crabbox`）。                                                                                                                                                                                                                     |
-| `install`  | `bundle`（默认）会附带正在运行的 Gateway 构建版本；`npm` 会使用固定完整性校验安装确切发布版本的 Gateway。`npm` 要求 Gateway 从打包后的发布版本运行。                                                                                                                       |
-| `settings` | 由提供商拥有的 JSON 配置。对于 crabbox：`provider`（后端）、`class`（机器类别）、`ttl`、`idleTimeout`（Go 时长）、可选的 `setup`、可选的 `desktop`（布尔值）以及绝对路径的 `binary`。OpenClaw 会为这些租约强制启用公共 SSH，并禁用托管 Tailscale。 |
-| `lifetime` | 可选的持久化策略（`idleTimeoutMinutes`、`maxLifetimeMinutes`）。                                                                                                                                                                                                              |
+| `provider` | 由插件注册的 Worker provider id（捆绑插件使用 `crabbox`）。                                                                                                                                                                                                                   |
+| `install`  | `bundle`（默认）会附带正在运行的 Gateway 构建版本；`npm` 会使用固定的完整性校验安装完全一致的已发布 Gateway 版本。`npm` 要求 Gateway 从打包的发布版本运行。                                                                                     |
+| `settings` | 由 provider 所有的 JSON。对于 crabbox：`provider`（后端）、`class`（机器类别）、`ttl`、`idleTimeout`（Go durations）、可选的 `setup`、可选的 `desktop`（布尔值）以及绝对路径形式的 `binary`。OpenClaw 会强制这些租约使用公共 SSH，并禁用托管 Tailscale。 |
 
-Crabbox inspect 会报告一个主要 SSH 端口，并可能公布按顺序排列的备用端口。OpenClaw 会在 Gateway 重启期间持久化该顺序。其共享的固定 SSH 传输仅会针对可安全重放的操作轮换候选端口：幂等探测、内容寻址传输、由回执/锁保护的构件安装、收敛式托管工作树镜像以及隧道重连。存在歧义且未受保护的有状态命令会在当前候选端口上安全失败，不会在另一个端口上重放。OpenClaw 绝不会自行生成未公布的端口。如果你的网络策略固定了 SSH 入站访问，请至少允许一个已公布的 Crabbox 候选端口。
+Crabbox inspect 会报告一个主要 SSH 端口，并可能公布按顺序排列的备用端口。OpenClaw 会在 Gateway 重启期间持久化该顺序。其共享的固定 SSH 传输仅会针对可安全重放的操作轮换候选端口：幂等探测、内容寻址传输、由回执／锁保护的构件安装、收敛式托管工作树镜像以及隧道重连。存在歧义且未受保护的有状态命令会在当前候选端口上安全失败，不会在另一个端口上重放。OpenClaw 绝不会自行生成未公布的端口。如果你的网络策略固定了 SSH 入站访问，请至少允许一个已公布的 Crabbox 候选端口。
 
 OpenClaw 会从持久化的 provision 操作中派生唯一规范的 `cbx_...` 租约 ID，并将其传递给 `crabbox warmup --lease-id`；确定性 slug 仅作为显示元数据使用。如果 warmup 已提交但其响应丢失，Gateway 协调过程会使用相同的固定 ID 重复执行该操作，而 Crabbox 只会返回或接管经过完全验证、且 ID 完全匹配的租约。意图漂移、终端 ID 重用以及无法明确验证的资源都会安全失败，不会分配替代资源。在 OpenClaw 记录租约 ID 之前就中断的旧版 dispatch 无法安全识别，并且会明确失败，而不是回退到通过 slug 接管。
 
 ### setup 命令
 
-`settings.setup` 会在租用的机器已准备好 SSH 后、安装 OpenClaw 之前运行。setup 成功后，OpenClaw 会重新执行一次 Crabbox inspect，并再次等待 SSH 就绪后再进行引导，因为 setup 可能会重启 SSH。它会在**每次** provision 尝试中运行（包括中断的 dispatch 重放），因此必须具备幂等性——应像示例中一样，使用 `command -v`/`test -x` 检查来避免重复安装。如果 setup 失败，提供商会停止该租约，并使 dispatch 安全失败；不会留下正在运行的半配置机器。
+`settings.setup` 会在租用的机器已准备好 SSH 后、安装 OpenClaw 之前运行。setup 成功后，OpenClaw 会重新执行一次 Crabbox inspect，并再次等待 SSH 就绪后再进行引导，因为 setup 可能会重启 SSH。它会在**每次** provision 尝试中运行（包括中断的 dispatch 重放），因此必须具备幂等性——应像示例中一样，使用 `command -v`／`test -x` 检查来避免重复安装。如果 setup 失败，提供商会停止该租约，并使 dispatch 安全失败；不会留下正在运行的半配置机器。
 
 ### 安装通道
 
@@ -163,11 +164,11 @@ openclaw gateway call sessions.dispatch \
   --params '{"key":"agent:main:big-refactor","profileId":"aws"}'
 ```
 
-`sessions.dispatch` 会关闭本地回合接纳、清空活跃工作、配置租约、运行设置、引导 OpenClaw、同步工作区，并在放置状态达到 `active` 工作者所有权后返回。首次调度请预留几分钟；在提供商支持的情况下，租约和安装会被缓存。之后，像平常一样与会话交互即可——回合会自动路由到该工作者。
+`sessions.dispatch` 会关闭本地回合接入，排空活动工作，验证符合条件的 Git 工作区清单，配置租约，运行设置，启动 OpenClaw，同步工作区，并在位置达到 `active` 工作者所有权后返回。清单验证发生在提供商分配之前；如果工作区无法调度，则会报告包含可操作大小或条目限制的无效请求。首次调度请预留几分钟；在提供商支持的情况下，租约和安装会被缓存。之后，像往常一样与会话交互——回合会自动路由到工作者。
 
-已完成的工作者回合会在释放回合声明之前，将符合条件且大小受限的工作区文件同步回会话的托管工作树。终端工作者事件会在确认之前创建一个持久化的待处理结果栅栏。随后，Gateway 会先将完整的云端结果暂存为 `refs/openclaw/worker-results/` 下的 Git 引用，然后再应用它，因此即使 Gateway 在应用过程中停止，云端版本仍可恢复。工作区结果使用 Git 文件语义：普通文件、可执行位、符号链接、新增、修改和删除都会被保留，而空目录及其他目录模式不会保留。生成的文件更改会留在托管工作树中，以便正常审查和提交。
+已完成的工作者回合会在回合声明释放之前，将符合条件且大小受限的工作区文件同步回会话的托管工作树。终端工作者事件会在确认之前创建一个持久化的待处理结果栅栏。在应用结果之前，Gateway 会将完整的、经过身份验证的基准／当前清单，以及每个发生更改的结果 Blob 作为 Git 引用暂存到 `refs/openclaw/worker-results/` 下；删除会由清单表示，无需 Blob。这样，即使 Gateway 在应用过程中停止，云端差异仍可恢复，同时不会复制未更改的基线内容。工作区结果使用 Git 文件语义：普通文件、可执行位、符号链接、添加项、更改项和删除项都会被保留，而空目录和其他目录模式不会保留。生成的文件更改会留在托管工作树中，以便正常审查和提交。
 
-应用操作使用调度时的清单作为合并基准。仅云端发生的更改会被应用，仅本地发生的更改保持不变，双方都更改的路径则采用三方保留本地策略。有冲突的回合仍会完成：会话记录会报告受限的路径摘要和暂存结果引用，位置会将相同冲突暴露给控制界面，并且不冲突的云端更改仍会被应用。通知中包含用于检查当前云端文件的 `git show <ref>:<path>`，以及可从任意工作区目录获取该文件的顶层字面路径规范 `git checkout <ref> -- <path>` 命令。请在 Bash 或 zsh 中运行这些命令（Windows 上使用 Git Bash）。如果检查显示路径不存在，说明云端结果删除了该路径；请验证后手动删除保留的本地路径。如果 checkout 报告文件/目录阻塞，请移动或删除造成阻塞的本地路径，然后重试。如果暂存引用本身已不存在，则将该通知视为过期，不要修改本地路径。有冲突的暂存引用在正常回合栅栏释放后仍然可用；后续的干净结果会清除通知并废弃旧引用，而显式移除栅栏则是最终清理边界。
+应用操作使用调度时的清单作为合并基准。仅云端发生的更改会被应用，仅本地发生的更改保持不变，双方都更改的路径则采用三方保留本地策略。有冲突的回合仍会完成：会话记录会报告受限的路径摘要和暂存结果引用，位置会将相同冲突暴露给控制界面，并且不冲突的云端更改仍会被应用。通知中包含用于检查当前云端文件的 `git show <ref>:<path>`，以及可从任意工作区目录获取该文件的顶层字面路径规范 `git checkout <ref> -- <path>` 命令。请在 Bash 或 zsh 中运行这些命令（Windows 上使用 Git Bash）。如果检查显示路径不存在，说明云端结果删除了该路径；请验证后手动删除保留的本地路径。如果 checkout 报告文件／目录阻塞，请移动或删除造成阻塞的本地路径，然后重试。如果暂存引用本身已不存在，则将该通知视为过期，不要修改本地路径。有冲突的暂存引用在正常回合栅栏释放后仍然可用；后续的干净结果会清除通知并废弃旧引用，而显式移除栅栏则是最终清理边界。
 
 当带栅栏的结果仍在同步时，新回合会等待最多 15 秒，以便前一个声明释放。如果仍处于忙碌状态，回合会失败，并显示可采取操作的“上一云端回合的工作区结果仍在同步”消息，稍后可以重试。重启时，恢复流程会在清理过期声明之前发现待处理和已暂存的结果，完成或重试其本地应用，并且只有在保留结果后才回收失效环境。受限的 SQLite 回滚日志使中断的文件系统应用过程能够恢复，而无需重放已经接受的变更。
 
@@ -191,13 +192,15 @@ openclaw gateway call sessions.reclaim \
 
 Cloud Worker Desktop 是一项实验性的 Labs 功能，默认关闭。请在 **设置 → Agents & Tools → Labs** 中启用 **Cloud Worker Desktop**，或设置 `cloudWorkers.desktop: true`，然后重启 Gateway，桌面面板才会显示。
 
-在 crabbox 配置的 `settings` 中设置 `"desktop": true`，即可租用带有交互式桌面的工作器盒（盒子的环回接口上运行 TigerVNC，并使用每次租用专属的密码）。Labs 开关会启用观察界面和面板；配置文件设置则会赋予新租用的工作器桌面能力。桌面是一项启动时能力：无法添加到已经完成配置的环境中，因此请在派发任务前在配置文件中启用它。
+在 crabbox 配置文件的 `settings` 中设置 `"desktop": true`，即可租用带有品牌化 XFCE 桌面、Browser 和 Terminal 的 worker box。Crabbox 会在 box 的回环接口上配置 TigerVNC，并为每个租约设置独立密码，同时向 Gateway 报告已安装应用的完整集合。Labs 门控会启用桌面 RPC 和面板；配置文件设置则会为新租用的 worker 启用桌面能力。桌面是一项预热时能力：无法添加到已经配置好的环境中，因此请在调度之前为配置文件启用该功能。
 
-拥有 `operator.admin` 访问权限的操作员可以通过控制界面的 **桌面** 面板（命令面板中也提供）查看和控制桌面。该面板会列出 `environments.list` 返回的具备桌面能力的环境，并通过 Gateway 进行连接；Gateway 会通过与工作器流量使用的同一固定 SSH 传输，转发盒子环回接口上的 VNC——桌面绝不会暴露在盒子的网络上，并且 VNC 密码只会在经过身份验证的 `worker.desktop.observe` RPC 结果中传递，绝不会存储在 Gateway 中。
+拥有 `operator.admin` 访问权限的操作员可以通过 Control UI 的 **Desktop** 面板（命令面板中也有该面板）查看并控制桌面。该面板会列出 `environments.list` 中具备桌面能力的环境，只显示提供方公布的应用，并通过 `worker.desktop.launch` 启动这些应用。它通过 Gateway 进行连接；Gateway 会使用与 worker 流量相同的固定 SSH 传输转发 box 的回环 VNC——桌面永远不会暴露在 box 的网络上，并且 VNC 密码只会出现在经过身份验证的 `worker.desktop.observe` RPC 结果中，绝不会存储在 Gateway 中。
 
 连接以仅查看模式启动。**获取控制权**会请求建立可输入的连接；同一时间只能有一个控制者，获取控制权会断开之前的控制者（之前的控制者会降级为仅查看模式）。最多可有 8 名观察者查看同一环境。桌面转发会在首次观察时启动，并在最后一名观察者断开连接约一分钟后关闭；停止或回收环境会立即将其拆除。
 
-当 Gateway 自身运行在 Windows 上时，不支持桌面观察。
+Browser 启动器会在 worker 显示器上启动一个可见的 Chrome 或 Chromium 进程，其原始 CDP 绑定到 `127.0.0.1`，并使用一个全新的、作用域为当前租约的用户数据目录。它不会导入 Cookie、连接 Chrome 扩展中继，也不会使用 Chrome MCP。操作员工具栏和 cloud-worker agent 共享此进程。只有在租约公布了 Browser、内置 Browser 插件处于活动状态，并且正常的工具策略允许使用 `browser` 时，worker 才会收到常规的 `browser` 工具；不具备该能力的 worker 会继续使用现有的 coding-tool 目录。通用桌面 `computer` 控制不属于此 Labs 功能范围。
+
+当 Gateway 自身运行在 Windows 上时，不支持桌面观察和应用启动。
 
 ## 安全模型
 
@@ -211,21 +214,22 @@ Cloud Worker Desktop 是一项实验性的 Labs 功能，默认关闭。请在 *
 
 ## 故障排查
 
-- **未公布云配置文件** — 以管理员身份运行 `openclaw gateway call environments.list --params '{}'`。如果响应中没有 `profiles`，请验证 `cloudWorkers.profiles`，检查提供商插件，并重启 Gateway。这是配置或提供商激活问题，而不是授权结果。
-- **云目标被隐藏或 RPC 被拒绝** — 已连接的操作员缺少 `operator.admin`。请使用管理员作用域重新连接；配置配置文件不会授予该作用域。
-- **“云工作器回合需要 OpenClaw 运行时”** — 请选择一个配置的运行时为 OpenClaw 的直接模型。映射到外部 Codex 或 Claude CLI 运行时的模型不支持工作器推理。
-- **“工作器引导需要租用主机上的 Node.js”** — 在 `settings.setup` 中添加 Node 安装配置（见上文）。
-- **AWS 实例角色证明失败** — 清除 `aws.instanceProfile`（以及已设置的 `CRABBOX_AWS_INSTANCE_PROFILE`）。安装 Crabbox 0.41.1 或更高版本；较旧的二进制文件不满足 AWS 准入所需的固定 ID 以及权威的 `providerMetadata.instanceProfileAttached` 契约。
-- **调度因提供商或引导错误失败** — `environments.list` 会有意省略内部的 `lastError`。请使用 `sessions.describe` 检查会话；失败的放置可能会公开一个受限的 `recoveryError`。需要更深入诊断时，Gateway 主机上的操作员可以只读检查持久化的工作器状态。不要编辑状态数据库来绕过生命周期隔离。
-- **没有可连接的 SSH 候选项** — 将 Gateway 主机当前的出站 IPv4 与 `crabbox config show --json` 中 Crabbox 生效的 `aws.sshCIDRs` 进行比较。如果匹配的 `/32` 不存在，请修正 Crabbox 配置，并在重试前运行 `crabbox doctor --provider aws --json`；协调器的反向代理地址或请求源地址不一定是 Gateway 直接使用的 SSH 源地址。然后确保 Gateway 的出站路由和工作器入口策略至少允许一个已公布的候选项。OpenClaw 仅针对幂等探测、内容寻址传输、受回执/锁保护的工件安装、收敛式托管工作树镜像以及隧道重连，使用相同身份和固定主机密钥轮换有序端口。含义不明确且未受保护的有状态命令会安全失败，不会在下一个端口上重放。
-- **调度时客户端超时** — `openclaw gateway call` 默认为 10 秒超时；请适当传入 `--timeout`（无论如何调度都会在服务器端继续运行，并且在配置期间重试会被拒绝，提示 `session cannot dispatch from placement provisioning`）。
-- **从 2026.7.2 beta 升级后工作器被回收** — 这些 beta 版本使用了较旧的工作器启动契约。重启时，OpenClaw 会销毁空闲的不兼容工作器，保留会话和工作区，将放置标记为已回收，并在下一次调度或回合时配置当前工作器。在仍处于启动阶段时被中断的 beta 工作器会在清理后标记为失败；请重试调度，以使用当前契约配置工作器。
-- **云工作区冲突通知** — 回合已完成，并保留了所列每个路径的本地版本。使用通知中的暂存引用命令检查或获取云端版本；对于无冲突的更改无需重试，这些更改已经应用。
-- **“上一次云回合的工作区结果仍在协调中”** — Gateway 短暂等待了上一个结果的持久化隔离，但无法获取会话声明。请等待协调完成，然后重试该回合；重启 Gateway 是安全的，因为恢复过程会在回收失效工作器之前保留暂存结果。
-- **租约维护** — `crabbox list --provider <backend> --json` 是只读清单。`crabbox stop --provider <backend> --id <lease>` 和 `crabbox release --provider <backend> --id <lease>` 具有破坏性，会手动释放租约。空闲租约会在配置文件的 `idleTimeout` 到期。
+- **未公布云配置文件**——以管理员身份运行 `openclaw gateway call environments.list --params '{}'`。如果响应中没有 `profiles`，请验证 `cloudWorkers.profiles`，检查 provider 插件，然后重启 Gateway。这是配置或 provider 激活问题，而不是授权结果。
+- **云目标被隐藏或 RPC 被拒绝**——已连接的操作员缺少 `operator.admin`。请使用管理员范围重新连接；配置配置文件不会授予该范围。
+- **“云 worker 轮次需要 OpenClaw runtime”**——请选择配置的 runtime 为 OpenClaw 的直接模型。映射到外部 Codex 或 Claude CLI runtime 的模型不支持 worker 推理。
+- **“Worker 引导需要租用主机上的 Node.js”**——将 Node 安装添加到 `settings.setup` 中（见上文）。
+- **AWS 实例角色证明失败**——清除 `aws.instanceProfile`（以及已设置的 `CRABBOX_AWS_INSTANCE_PROFILE`）。安装 Crabbox 0.41.1 或更高版本；旧版二进制不满足 AWS 准入所需的固定 ID 和权威 `providerMetadata.instanceProfileAttached` 契约。
+- **调度或工作区恢复失败**——检查 `environments.list` 和 `sessions.describe`。失败的环境会公开其有界环境错误。失败的放置会公开 `recoveryError` 以及其持久化的每会话 `terminalReason`；选定的 Control UI 聊天会在编辑框上方显示该终止原因。如有必要进行更深入的诊断，Gateway 主机上的操作员可以只读方式检查持久化的 worker 状态。不要编辑状态数据库来绕过生命周期围栏。
+- **无法连接任何 SSH 候选项**——将 Gateway 主机当前的出站 IPv4 与 `crabbox config show --json` 中显式配置的 `aws.sshCIDRs` 策略进行比较。如果匹配的 `/32` 不存在，请修正 Crabbox 的配置，并在重试前运行 `crabbox doctor --provider aws --json`。配置列表为空是有效的，因为 Crabbox 通常会在请求租约时发现并注入调用方的 `/32`；如果仍然无法连接，请显式固定该 `/32`。然后确保 Gateway 的出站路由和 worker 入站策略至少允许一个已公布的候选项。OpenClaw 仅会针对幂等探测、内容寻址传输、由收据／锁保护的构件安装、收敛式 managed-worktree 镜像以及隧道重连，使用相同身份和固定主机密钥轮换有序端口。含糊且未受保护的有状态命令会安全失败，不会在下一个端口上重放。
+- **调度时客户端超时**——`openclaw gateway call` 默认超时时间为 10 秒；请传入足够大的 `--timeout`。无论结果如何，调度都会继续在服务器端运行，并且在同一 Gateway 上进行相同重试时，会加入正在进行的操作，而不是再配置一个 worker。使用不同配置文件或会话身份进行的重试会被拒绝。
+- **通过 `doctor` 后直接 AWS 授权仍然失败**——`doctor` 证明的是只读 AWS 访问权限，而不是完整的变更策略。检查被拒绝的操作名称，只授予 Crabbox 所需的配置／清理操作，或改为配置由协调器支持的 Crabbox。新的直接 AWS 租约通常需要在 `RunInstances` 之前导入密钥对；此处的授权失败不会创建实例。
+- **从 2026.7.2 beta 升级后 worker 被回收**——这些 beta 版本使用了较旧的 worker 启动契约。重启时，OpenClaw 会销毁空闲的不兼容 worker，保留会话和工作区，将放置标记为已回收，并在下一次调度或轮次时配置当前版本的 worker。在仍处于启动阶段时被中断的 beta worker 会在清理后被标记为失败；请重试调度，以使用当前契约配置它。
+- **云工作区冲突通知**——该轮次已完成，并保留了所列每个路径的本地版本。使用通知中的 staged-ref 命令检查或获取云端版本；对于非冲突变更无需重试，因为这些变更已经应用。
+- **“上一个云轮次的工作区结果仍在协调中”**——Gateway 曾短暂等待上一个结果的持久化围栏，但无法获取会话声明。请等待协调完成，然后重试该轮次；重启 Gateway 是安全的，因为恢复过程会在回收失效 worker 前保留暂存结果。
+- **租约维护**——`crabbox list --provider <backend> --json` 是只读清单。`crabbox stop --provider <backend> --id <lease>` 和 `crabbox release --provider <backend> --id <lease>` 具有破坏性，会手动释放租约。空闲租约会在配置文件的 `idleTimeout` 时间到达后过期。
 
 ## 相关
 
 - [沙箱化](/gateway/sandboxing) — 减少本地工具执行的影响范围
 - [Sessions CLI](/cli/sessions) — 检查已存储的会话
-- [配置参考](/gateway/configuration-reference)
+- [配置参考](/gateway/configuration-reference)。

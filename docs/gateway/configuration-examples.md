@@ -65,8 +65,8 @@ title: "配置示例"
 {
   // 环境 + shell
   env: {
-    OPENROUTER_API_KEY: "sk-or-...",
     vars: {
+      OPENROUTER_API_KEY: "sk-or-...",
       GROQ_API_KEY: "gsk-...",
     },
     shellEnv: {
@@ -251,8 +251,8 @@ title: "配置示例"
       heartbeat: {
         every: "30m",
         model: "anthropic/claude-sonnet-4-6",
-        target: "last",
-        directPolicy: "allow", // allow（默认）| block
+        target: "whatsapp",
+        directPolicy: "allow", // allow (default) | block
         to: "+15555550123",
         prompt: "HEARTBEAT",
       },
@@ -531,9 +531,9 @@ title: "配置示例"
 }
 ```
 
-当未设置时，此功能保持关闭。它仅适用于没有请求范围的全新 `role: node` 配对。操作员/浏览器客户端以及角色、范围、元数据或公钥升级仍然需要手动批准。
+当未设置时，此功能保持关闭。它仅适用于没有请求范围的全新 `role: node` 配对。操作员／浏览器客户端以及角色、范围、元数据或公钥升级仍然需要手动批准。
 
-### 安全 DM 模式（共享收件箱 / 多用户 DM）
+### 安全 DM 模式（共享收件箱／多用户 DM）
 
 如果有多于一人可以向你的机器人发送 DM（`allowFrom` 中有多个条目、针对多人的配对批准，或 `dmPolicy: "open"`），请启用 **安全 DM 模式**，这样不同发送者的 DM 默认不会共享同一个上下文：
 
@@ -559,8 +559,8 @@ title: "配置示例"
 }
 ```
 
-对于 Discord/Google Chat/IRC/Mattermost/Microsoft Teams/Slack，默认情况下发送者授权以 ID 优先。
-只有在你明确接受该风险时，才为每个频道启用 `dangerouslyAllowNameMatching: true`，以允许直接基于可变的名称/邮箱/nick 进行匹配。
+对于 Discord／Google Chat／IRC／Mattermost／Microsoft Teams／Slack，默认情况下发送者授权以 ID 优先。
+只有在你明确接受该风险时，才为每个频道启用 `dangerouslyAllowNameMatching: true`，以允许直接基于可变的名称／邮箱／nick 进行匹配。
 
 ### Anthropic API 密钥 + MiniMax 回退
 
@@ -673,4 +673,4 @@ title: "配置示例"
 ## 相关内容
 
 - [配置参考](/gateway/configuration-reference)
-- [配置](/gateway/configuration)
+- [配置](/gateway/configuration)。

@@ -98,11 +98,9 @@ openclaw wiki okf import ./bundles/ga4
 - 每个导入的概念都要求有一个非空的 `type` frontmatter 字段；缺失 `type` 会产生 `missing-type` 警告并跳过该文件
 - 未知的 `type` 值会作为通用概念被接受
 - `index.md` 和 `log.md` 是保留文件，绝不会作为概念导入
-- 损坏的或外部的 markdown 链接会保持不变
+- 损坏的或外部的 Markdown 链接会保持不变
 
-导入的页面会在 `concepts/` 下扁平化，因此现有的 compile、search、get 和
-dashboard 流程无需第二个 wiki 树也能看到它们。每个页面都会保留原始的 OKF 概念 ID、
-源路径、`type`、`resource`、`tags`、时间戳，以及完整的 producer frontmatter。内部 OKF 链接会重写为生成的 wiki 概念页面，并同时发出结构化的 `relationships` 条目，`kind: okf-link`。
+导入的页面会在 `concepts/` 下扁平化，因此现有的 compile、search、get 和 dashboard 流程无需第二个 wiki 树也能看到它们。每个页面都会保留原始的 OKF 概念 ID、源路径、`type`、`resource`、`tags`、时间戳，以及完整的 producer frontmatter。内部 OKF 链接会重写为生成的 wiki 概念页面，并同时发出结构化的 `relationships` 条目，`kind: okf-link`。
 
 ## 结构化声明和证据
 
@@ -180,7 +178,7 @@ claims:
 ## 编译管线
 
 编译器读取 wiki 页面，规范化摘要，并将面向机器的快照持久化到 OpenClaw 的共享 SQLite 插件状态中。运行时代码使用由生命周期负责的所有者快照，在异步提示准备期间加载 SQLite；同步提示组装不会抓取 Markdown 或读取缓存文件。
-编译后的输出还用于搜索/获取的首轮 wiki 索引、将 claim-id 查回所属页面、紧凑提示补充内容以及报告生成。
+编译后的输出还用于搜索／获取的首轮 wiki 索引、将 claim-id 查回所属页面、紧凑提示补充内容以及报告生成。
 
 源文件编辑和 vault 恢复只有在下一次编译后才会对机器可见。重启或刷新插件生命周期时，会将 vault 中因果链式关联的编译发布与 SQLite 进行比较，并拒绝来自更新但已回滚状态的快照。在回滚之前启动的编译器无法基于已恢复的前置状态发布。提示准备不会轮询 vault，也不会安装文件监视器。
 回滚隔离后，运行中的进程执行编译会立即清除所有者；独立的编译器进程则需要刷新插件生命周期，以便守护进程确认新的持久化发布。
@@ -342,7 +340,10 @@ ChatGPT 导入回滚会在编译前记录导入后的编辑，并将其恢复路
 ```json5
 {
   agents: {
-    list: [{ id: "support" }, { id: "marketing" }],
+    entries: {
+      support: { default: true },
+      marketing: {},
+    },
   },
   plugins: {
     entries: {
@@ -486,6 +487,6 @@ Obsidian vault。请改用 wiki 工具和 CLI 操作，
 ## 相关文档
 
 - [Memory 概览](/concepts/memory)
-- [CLI: memory](/cli/memory)
-- [CLI: wiki](/cli/wiki)
+- [CLI：memory](/cli/memory)
+- [CLI：wiki](/cli/wiki)
 - [插件 SDK 概览](/plugins/sdk-overview)

@@ -40,22 +40,17 @@ target change -> stale
 
 只有 `pending` 提案可以被修订、应用、拒绝或隔离。
 
-## 生命周期管理
+## 集合审查
 
-Gateway 会在共享状态数据库中跟踪聚合的技能使用情况。每天一次，它会审查通过 agent autocapture 创建的已应用技能。超过 30 天未使用的技能会变为 `stale`；超过 90 天后会变为 `archived`，并从新的 agent 技能快照中排除。已归档的技能文件在磁盘上保持不变。由操作员创建的技能，包括通过 CLI 或 Gateway/Control UI 创建的提案，都被视为手动技能，且不会被整理。
+在 `auto` 模式下，Gateway 每天会为每个可写代理工作区启动一个隔离的集合审查会话。该会话只能读取技能并提交一次完整的集合协调结果。它会保留各不相同且有用的技能，重写薄弱技能，合并重叠内容，并删除无用或过时的片段。
+有意选择 `auto` 即表示授权执行这些重写和删除操作，无需再次批准；`propose` 和 `off` 不会运行集合审查。
 
-置顶技能会绕过生命周期转换。陈旧的技能在被使用后，会在下一次扫描运行时恢复为 `active`。已归档的技能只能通过显式恢复来返回：
+每个符合条件的可写技能都必须被读取，并且恰好接收一个 `keep`、`write` 或 `drop` 决策。已禁用的技能和经过代理筛选的技能保持不变。共享工作区仅在提供商、模型和解析后的身份验证身份匹配时，才会使用每个代理获准技能的并集。协调后必须确保每个共享代理至少有一个可见技能。
+OpenClaw 会在更改工作区前验证并扫描每次写入，通过工作区租约串行化集合编辑，并在状态目录下保留一份备份。更改后的集合会出现在新代理运行中；正在运行的会话会保留其现有的技能快照。
 
-生命周期转换和恢复适用于新会话；正在运行的会话会保留其当前的技能快照。
+要撤销上次完成的清理，请让代理恢复技能集合。它会在同一个工作区锁下使用 `skill_workshop` 操作 `restore_collection`。如果任何受影响的技能在清理后发生过更改，恢复操作将拒绝执行。
 
-```bash
-openclaw skills curator status
-openclaw skills curator pin <skill>
-openclaw skills curator unpin <skill>
-openclaw skills curator restore <skill>
-```
-
-所有 curator 命令都接受 `--json`。Status 还会仅作为建议报告确定性的重叠候选项；它绝不会合并技能或调用模型。
+每日边界会按工作区持久化，因此 Gateway 重启不会重复成功完成的审查。只有技能数量不超过 200 个且 `SKILL.md` 总字节数不超过 240，000 的集合才会被允许审查。更大的集合保持不变。协调后的结果必须保持在相同的字节限制以内。
 
 ## 聊天
 
@@ -64,19 +59,14 @@ openclaw skills curator restore <skill>
 
 ### 从最近的工作中学习
 
-使用 `/learn` 将当前对话或命名来源转换为一个
-遵循标准的技能提案：
+使用 `/learn` 将当前对话或指定来源路由到最匹配的待处理提案或现有技能，仅在需要时创建技能：
 
 ```text
 /learn
 /learn docs/runbook.md 和 https://example.com/guide；重点关注恢复
 ```
 
-在没有请求时，`/learn` 会让代理从
-当前对话中提炼可复用的工作流。有请求时，代理会将路径、URL、粘贴的
-笔记和对话引用视为来源，同时遵守重点、范围和
-命名要求。它会使用现有工具收集这些来源，然后调用
-带有 `action: "create"` 的 `skill_workshop`。
+不带请求时，`/learn` 会要求代理从当前对话中提炼可复用的工作流程。带请求时，代理会将路径、URL、粘贴的笔记和对话引用作为来源，同时遵循重点、范围和命名要求。它会使用现有工具收集来源，然后调用 `skill_workshop` 来修订匹配的待处理提案、更新匹配的现有技能，或在两者都不存在时创建提案。
 
 生成的提案将保持 `pending`；`/learn` 从不应用它。通过常规审批流程或使用 `openclaw skills workshop` 来审查并
 应用它。
@@ -93,7 +83,9 @@ openclaw skills curator restore <skill>
 更新 trip-planning，使其在预订前也检查座位图。
 ```
 
-对待处理提案进行迭代：
+如果当前轮次中使用的某项技能被证明存在错误或不完整，代理会读取现有技能并创建针对性的补丁提案。运行时回执会将此流程限制为本次运行中使用的技能。自治模式 `off` 会禁用修复，`propose` 会将补丁保持为待处理状态，直到明确应用；`auto` 会立即扫描并应用补丁。修复后的技能会由新会话加载；正在运行的会话会保留其原始技能快照。
+
+迭代处理待处理提案：
 
 ```text
 显示 morning-catchup 提案。
@@ -101,9 +93,8 @@ openclaw skills curator restore <skill>
 应用 morning-catchup 提案。
 ```
 
-Agent 触发的 `apply`、`reject` 和 `quarantine` 默认情况下在没有额外
-审批提示的情况下运行。将 `skills.workshop.approvalPolicy` 设置为 `"pending"`
-可在这些操作之前要求操作员批准。
+代理触发的 `apply`、`reject` 和 `quarantine` 默认情况下会在没有额外审批提示的情况下运行。将
+`skills.workshop.approvalPolicy` 设置为 `"pending"` 可在这些操作之前要求操作员批准。
 
 当需要批准时，提示会标识提案 ID 和目标技能，并显示提案描述、支持文件数量和正文大小。
 批准请求的执行时间受限，必须在代理工具看门狗超时前完成。如果在提示过期前没有
@@ -195,23 +186,24 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 
 ## 代理工具
 
-模型使用带有一个必需 `action` 的 `skill_workshop`：
-`create | update | revise | list | inspect | evaluate | apply | reject | quarantine`。
+模型使用 `skill_workshop`，并需要一个 `action`：
+`create | read | patch | update | revise | list | inspect | evaluate | apply | reject | quarantine`。
 其他参数根据操作而定：
 
 | 参数                       | 使用于                                                         | 备注                                                               |
 | -------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `name`                     | `create`、`inspect`、`revise`                                    | `create` 必需；否则按名称解析待处理提案                                |
+| `name`                     | `create`、`inspect`、`revise`                                    | `create` 必需；否则按名称解析待处理的提案                           |
 | `description`              | `create`、`update`、`revise`                                     | 最多 160 字节                                                        |
-| `skill_name`               | `update`                                                         | 现有技能名称或键                                                    |
-| `proposal_content`         | `create`、`update`、`revise`                                     | `create`/`update` 必需；`revise` 时省略以保留正文                     |
-| `support_files`            | `create`、`update`、`revise`                                     | `{ path, content }` 数组                                             |
+| `skill_name`               | `read`、`patch`、`update`                                        | 现有技能名称或键                                                    |
+| `old_string`、`new_string` | `patch`                                                          | 精确的当前文本及其替换内容；请先读取技能                            |
+| `proposal_content`         | `create`、`update`、`revise`                                     | `create`／`update` 必需；`revise` 时省略以保留正文                  |
+| `support_files`            | `create`、`update`、`revise`                                     | `{ path, content }` 数组                                            |
 | `goal`、`evidence`         | `create`、`update`、`revise`                                     | 自由文本上下文                                                       |
 | `proposal_id`              | `inspect`、`revise`、`evaluate`、`apply`、`reject`、`quarantine` | 目标提案                                                             |
 | `expected_revision_hash`   | `evaluate`、`apply`、`reject`、`quarantine`                      | 拒绝过时的编排步骤                                                   |
 | `correlation_id`           | `evaluate`、`revise`、`apply`、`reject`、`quarantine`            | 外部运行或实验关联标识                                               |
 | `reason`                   | `apply`、`reject`、`quarantine`                                  | 可选                                                                 |
-| `query`、`status`、`limit` | `list`                                                           | 筛选/分页；`limit` 最大为 50，默认为 20                              |
+| `query`、`status`、`limit` | `list`                                                           | 筛选／分页；`limit` 最大为 50，默认为 20                            |
 
 代理必须使用 `skill_workshop` 来处理生成的技能，不得直接创建或
 修改技能或提案文件。此规则属于建议性规则，并通过提示词强制执行。目前在工具策略接口处
@@ -239,7 +231,7 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 
 即使 `skills.workshop.autonomous.mode` 为 `off`，历史审查仍需手动执行。每次点击都会启动一次模型运行，因此提供商定价和数据处理条款均适用。游标和覆盖计数存储在共享的 OpenClaw 状态数据库中；转录内容不会复制到扫描状态中。
 
-在 `propose` 和 `auto` 模式下，OpenClaw 还可以在成功完成大量工作后，以及整个代理系统进入空闲状态后，执行一次保守审查。该隔离审查最多可以起草一个待处理提案——新技能、现有工作区技能的补丁、完整正文更新，或对待处理提案的修订。它绝不会直接写入正在运行的技能，也不能应用、拒绝或隔离提案。补丁提案会引用要更改的确切现有文本；工具会根据当前技能组合出完整正文。在 `auto` 模式下，编排捕获流水线随后会通过常规的扫描器门控服务应用新技能和补丁结果；完整正文更新提案始终保持待处理状态，供操作员审查。
+在 `propose` 和 `auto` 模式下，OpenClaw 还可以在成功完成大量工作后，以及整个代理系统变为空闲状态后，执行一次保守审查。审查会接收一份权威的技能回执，其中列出前台运行实际使用的技能。它最多可以起草一份待处理提案：新技能、对现有工作区技能的补丁或完整正文重写，或对待处理提案的修订。现有技能必须先读取，然后才能采用上述任一更新形式，并且提案会绑定到该确切内容哈希。审查器绝不会直接写入正在运行的技能，也无法应用、拒绝或隔离提案。在 `auto` 模式下，编排管道会在之后通过常规的扫描器门控服务应用每个自主结果，无需操作员审查。
 
 有关启用方式、资格、隐私和成本详情、提案阈值以及故障排除，请参阅 [自学习](/tools/self-learning)。
 
@@ -261,15 +253,15 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 }
 ```
 
-| 设置                       | 默认值   | 作用                                                                                                                                                              |
-| -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `autonomous.mode`          | `"auto"` | `"off"` 禁用自主捕获，`"propose"` 创建待处理捕获，`"auto"` 通过常规 Workshop 扫描和应用路径应用捕获。        |
-| `allowSymlinkTargetWrites` | `false`  | 允许应用操作写入工作区技能符号链接的真实目标，前提是该目标已列入 `skills.load.allowSymlinkTargets`。                                                 |
-| `approvalPolicy`           | `"auto"` | `"auto"` 跳过代理发起的 `apply`、`reject` 或 `quarantine` 操作的额外提示（代理仍必须调用该操作）。`"pending"` 则需要批准。 |
-| `maxPending`               | `50`     | 限制每个工作区中待处理和已隔离提案的数量（1-200）。                                                                                                       |
-| `maxSkillBytes`            | `40000`  | 限制提案正文的字节数（1024-200000）。                                                                                                                     |
+| Setting                    | Default  | Effect                                                                                                                                                                             |
+| -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `autonomous.mode`          | `"auto"` | `"off"` 禁用自主捕获，`"propose"` 创建待处理捕获，而 `"auto"` 应用捕获并运行每日清理，清理可以重写或删除符合条件的可写技能。 |
+| `allowSymlinkTargetWrites` | `false`  | 允许 apply 通过工作区技能符号链接进行写入，但其实际目标必须列在 `skills.load.allowSymlinkTargets` 中。                                                                |
+| `approvalPolicy`           | `"auto"` | `"auto"` 跳过代理发起的 `apply`、`reject` 或 `quarantine` 的额外提示（代理仍必须调用相应操作）。“`pending`”需要批准。                |
+| `maxPending`               | `50`     | 限制每个工作区中的待处理和隔离提案数量（1-200）。                                                                                                                      |
+| `maxSkillBytes`            | `40000`  | 限制提案正文的字节数（1024-200000）。                                                                                                                                    |
 
-在 `propose` 和 `auto` 模式下，所选模型的隔离运行实例会决定已完成的轨迹是否达到以证据为门槛的提案标准。前台模型在回复前不会收到学习提示。后台审阅器会将前台运行保留为提案溯源信息，无法访问通用代理工具，也不能做出生命周期决策。在 `auto` 模式下，捕获管道仅会在隔离运行完成后应用由此产生的新技能和补丁提案；完整正文更新提案始终保持待处理状态，供操作员审阅，因为审阅器创建这些提案时没有机械式保留保证。只有当前台运行时报告其已解析的模型，并确认 `skill_workshop` 确实可用时，审阅才会开始。因此，受限或未知的工具策略会以故障关闭方式处理，不会创建提案。
+在 `propose` 和 `auto` 模式下，所选模型的隔离运行会决定已完成的轨迹是否达到以证据为门槛的提案标准。前台模型在回复前不会收到学习提示。后台审阅器会保留前台运行作为提案来源，无法访问通用代理工具，也不能做出生命周期决策。在 `auto` 模式下，捕获管道仅会在隔离运行完成后应用每个自主提案。现有技能的更改必须先拥有完整的读取回执和内容哈希绑定，之后才有资格进入该应用步骤。审阅仅会在前台运行时报告其已解析的模型，并确认 `skill_workshop` 确实可用后开始。因此，限制性或未知的工具策略会以故障安全方式失败，并且不会创建提案。
 
 有关完整的自主审阅行为和安全模型，请参阅 [自学习](/tools/self-learning)。
 
@@ -282,7 +274,7 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 | `skills.proposals.list`            | `operator.read`  |
 | `skills.proposals.inspect`         | `operator.read`  |
 | `skills.proposals.historyStatus`   | `operator.read`  |
-| `skills.proposals.historyScan`     | `operator.admin` |
+| `skills.proposals.historyScan`    | `operator.admin` |
 | `skills.proposals.create`          | `operator.admin` |
 | `skills.proposals.update`          | `operator.admin` |
 | `skills.proposals.revise`          | `operator.admin` |
@@ -295,7 +287,9 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 | `skills.curator.unpin`             | `operator.admin` |
 | `skills.curator.restore`           | `operator.admin` |
 
-`requestRevision` 仅限 Gateway（没有对应的 CLI 或 agent-tool）：它会将自由文本的修订说明转发到所属 agent 的聊天会话中，而不是直接替换 `PROPOSAL.md`，适用于那些要求 agent 修改而不是提交字面新内容的 UI。
+`skills.curator.*` 方法仍用于较早版本写入的生命周期状态。日常集合审查不使用年龄、pin 或 overlap 状态。
+
+`requestRevision` 是 Gateway 专用方法（没有 CLI 或 agent-tool 等效项）：它会将自由文本修订指令转发到所属 agent 的聊天会话，而不是直接替换 `PROPOSAL.md`，适用于要求 agent 进行修订而不是提交字面新内容的 UI。
 
 `historyStatus` 和 `historyScan` 是 Control UI 支持方法。`historyScan`
 接受 `direction: "older" | "newer"`；它始终会将结果保留为待处理
@@ -365,4 +359,4 @@ Workshop 会扫描、哈希并将它们与提案一同存储，然后仅在应�
 - [创建技能](/tools/creating-skills)：用于手写 `SKILL.md`
   基础
 - [技能配置](/tools/skills-config)：用于完整的 `skills.workshop` 模式
-- [技能 CLI](/cli/skills)：用于 `openclaw skills` 命令
+- [技能 CLI](/cli/skills)：用于 `openclaw skills` 命令。

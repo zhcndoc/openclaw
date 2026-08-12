@@ -51,13 +51,13 @@ openclaw onboard recommendations refresh
 openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 ```
 
-`openclaw onboard recommendations` 会读取在引导过程中存储的待处理应用推荐匹配项。添加 `--json` 可输出供首次启动引导使用的机器可读列表。该命令不会重新扫描已安装的应用，也不会调用模型。其输出仅包含已验证的安装 ID、来源和等级；它会刻意省略不受信任的市场文案、模型原因以及本地应用标签。推荐提议被答复后，该命令会返回空列表，后续的 onboarding 运行将完全跳过这一步。
-`openclaw onboard recommendations refresh` 会清除已存储的提议，因此下一次 onboarding 运行会重新扫描已安装的应用并生成新的提议。
+`openclaw onboard recommendations` 会读取在引导过程中存储的待处理应用推荐匹配项。添加 `--json` 可输出供首次启动引导使用的机器可读列表。该命令不会重新扫描已安装的应用，也不会调用模型。其输出仅包含已验证的安装 ID、来源和等级；它会刻意省略不受信任的市场文案、模型原因以及本地应用标签。推荐提议被答复后，该命令会返回空列表，后续的引导运行将完全跳过这一步。
+`openclaw onboard recommendations refresh` 会清除已存储的提议，因此下一次引导运行会重新扫描已安装的应用并生成新的提议。
 
 新的工作区会将推荐选择延后到引导对话中。
 在该对话处理完用户选择后，
 `openclaw onboard recommendations acknowledge` 会将已存储的提议标记为已答复。
-该确认操作是幂等的。如果所选安装失败，请将每个失败的透明 ID 与 `--retry <id...>` 一起传入；成功和已拒绝的匹配会被消耗，而失败的匹配会保留待以后一次 onboarding 运行处理。未知 ID 会失败且不会更改已存储的提议。在一次中断的 ClawHub 技能安装之后，现有目标仅在
+该确认操作是幂等的。如果所选安装失败，请将每个失败的透明 ID 与 `--retry <id...>` 一起传入；成功和已拒绝的匹配会被消耗，而失败的匹配会保留待以后一次引导运行处理。未知 ID 会失败且不会更改已存储的提议。在一次中断的 ClawHub 技能安装之后，现有目标仅在
 `openclaw skills verify "@owner/slug"` 对相同的
 带发布者限定的推荐 ID 成功，并且其 JSON 输出报告
 `openclaw.resolution.source: "installed"` 时，才算成功。仅有注册表验证并不能证明本地安装。否则请使用 `--retry` 保留该 ID 为待处理状态，不要覆盖现有技能。
@@ -65,7 +65,7 @@ openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 - `--classic`：打开完整的逐步向导。它不能与 `--non-interactive` 组合使用；自动化设置时请省略 `--classic`。
 - `--flow quickstart`：打开带最少提示的经典向导，默认使用令牌认证，并在没有已存储或显式凭据适用时生成令牌。显式的本地 Gateway 标志，例如 `--gateway-port`、`--gateway-bind`、`--gateway-auth` 和 `--tailscale`，会覆盖相应的已存储或默认 quickstart 值；省略的选项将保留其当前值。
 - `--flow manual`（别名 `advanced`）：打开具有端口、绑定和认证完整提示的经典向导。
-- `--flow import`：在全新设置上运行检测到的迁移提供程序（例如通过 `--import-from hermes` 使用 Hermes）。确认后，引导会将配置、凭据、工作区文件、内存和技能阶段性放入私有临时目标；导入后的推理必须先通过一次实时完成，工作区和代理状态才会提升并提交配置。如果在提升之前失败或取消，则不会触及当前实时目标。无法回滚的外部激活步骤（例如 Codex 插件安装）会在之后运行，并可在迁移报告中重试。如果已存在任何内容，请先重置配置、凭据、会话和工作区状态。使用 [`openclaw migrate`](/cli/migrate) 可进行 dry-run 计划、覆盖模式、已验证备份、报告以及精确映射。
+- `--flow import`：在全新设置上运行检测到的迁移提供程序（例如通过 `--import-from hermes` 使用 Hermes）。确认后，引导会将配置、凭据、工作区文件、内存和技能阶段性放入私有临时目标；导入后的推理必须先通过一次实时完成，工作区和代理状态才会提升并提交配置。如果在提升之前失败或取消，则不会触及当前实时目标。无法回滚的外部激活步骤（例如 Codex 插件安装）会在之后运行，并可在迁移报告中重试。如果已存在任何内容，请先重置配置、凭据、会话和工作区状态。使用 [`openclaw migrate`](/cli/migrate) 可进行试运行计划、覆盖模式、已验证备份、报告以及精确映射。
 - `--remote-url` 和 `--remote-token`：预填经典远程 Gateway 步骤并覆盖本次运行的已存储远程值。更改 URL 不会复用已存储凭据，除非你同时传入令牌。令牌在提示中保持遮罩，并遵循向导现有的明文或 SecretRef 存储选择。
 - `--tailscale-reset-on-exit` 和 `--no-tailscale-reset-on-exit`：显式控制 Gateway 退出时是否重置 Tailscale Serve 或 Funnel 配置。两者都不提供时，在非交互式重复运行期间会保留当前设置。
 - `--modern` 是 OpenClaw 对话式设置助手的兼容别名。它使用与 `openclaw setup` 相同的实时推理门控，并且仅接受 `--workspace`、`--accept-risk`、`--non-interactive` 和 `--json`。其他设置标志会被拒绝，而不会被静默忽略。
@@ -179,7 +179,7 @@ OPENCLAW_LOCALE=en openclaw onboard # 明确覆盖为英文
 `--non-interactive` 需要 `--accept-risk`（表示理解代理功能非常强大，且拥有完整系统访问权限存在风险）。`--mode` 默认为 `local`。
 
 ```bash
-openclaw onboard --non-interactive --accept-risk \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice custom-api-key \
   --custom-base-url "https://llm.example.com/v1" \
   --custom-model-id "foo-large" \
@@ -194,22 +194,20 @@ openclaw onboard --non-interactive --accept-risk \
 LM Studio 还提供了一个供应商特定的密钥标志：
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice lmstudio \
   --custom-base-url "http://localhost:1234/v1" \
   --custom-model-id "qwen/qwen3.5-9b" \
-  --lmstudio-api-key "$LM_API_TOKEN" \
-  --accept-risk
+  --lmstudio-api-key "$LM_API_TOKEN"
 ```
 
 非交互式 Ollama：
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice ollama \
   --custom-base-url "http://ollama-host:11434" \
-  --custom-model-id "qwen3.5:27b" \
-  --accept-risk
+  --custom-model-id "qwen3.5:27b"
 ```
 
 `--custom-base-url` 的默认值为 `http://127.0.0.1:11434`。`--custom-model-id` 是可选的；如果省略，引导会使用 Ollama 建议的默认值。像 `kimi-k2.5:cloud` 这样的云端模型 ID 在这里也适用。
@@ -217,13 +215,12 @@ openclaw onboard --non-interactive \
 将提供方密钥存储为引用而不是明文：
 
 ```bash
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice openai-api-key \
-  --secret-input-mode ref \
-  --accept-risk
+  --secret-input-mode ref
 ```
 
-使用 `--secret-input-mode ref` 时，引导会将新凭据存储为由环境变量支持的引用，而不是明文：认证配置文件使用 `keyRef: { source: "env", provider: "default", id: <envVar> }`，自定义提供方使用 `models.providers.<id>.apiKey`（例如 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`）。添加新凭据时设置提供方环境变量；如果没有与内联密钥标志匹配的环境变量，操作会立即失败。现有的、可解析的命名认证配置文件及其 `env`、`file` 或 `exec` 引用会原样复用，不会写入新的 `apiKey` 或 `keyRef`，也不会添加额外的提供方环境变量。现有的明文配置文件凭据不会被迁移；请运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。请参阅[密钥管理](/gateway/secrets)。
+使用 `--secret-input-mode ref` 时，引导会将新凭据存储为由环境变量支持的引用，而不是明文：认证配置文件使用 `keyRef: { source: "env", provider: "default", id: <envVar> }`，自定义提供方使用 `models.providers.<id>.apiKey`（例如 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`）。添加新凭据时设置提供方环境变量；没有对应环境变量的内联密钥标志会立即失败。现有的、可解析的命名认证配置文件及其 `env`、`file`、`exec` 或 `store` 引用会原样复用，不会写入新的 `apiKey` 或 `keyRef`，也不会添加额外的提供方环境变量。现有的明文配置文件凭据不会被迁移；请运行 `openclaw secrets configure --apply`，然后运行 `openclaw secrets audit --check`。请参阅[密钥管理](/gateway/secrets)。
 
 ### 网关认证（非交互式）
 
@@ -238,13 +235,12 @@ openclaw onboard --non-interactive \
 ```bash
 export OPENAI_API_KEY="your-provider-key"
 export OPENCLAW_GATEWAY_TOKEN="your-token"
-openclaw onboard --non-interactive \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --mode local \
   --auth-choice openai-api-key \
   --secret-input-mode ref \
   --gateway-auth token \
-  --gateway-token-ref-env OPENCLAW_GATEWAY_TOKEN \
-  --accept-risk
+  --gateway-token-ref-env OPENCLAW_GATEWAY_TOKEN
 ```
 
 ### 本地网关健康检查
@@ -267,8 +263,8 @@ openclaw onboard --non-interactive \
 </Note>
 
 ```bash
-# 无提示端点选择
-openclaw onboard --non-interactive --accept-risk \
+# Promptless endpoint selection
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice zai-coding-global \
   --zai-api-key "$ZAI_API_KEY"
 
@@ -278,7 +274,7 @@ openclaw onboard --non-interactive --accept-risk \
 Mistral：
 
 ```bash
-openclaw onboard --non-interactive --accept-risk \
+openclaw onboard --non-interactive --accept-risk --skip-health \
   --auth-choice mistral-api-key \
   --mistral-api-key "$MISTRAL_API_KEY"
 ```
@@ -312,14 +308,14 @@ Daemon 安装控制：`--no-install-daemon` / `--skip-daemon`（别名；跳过�
 
 ## 提供方预筛选
 
-当某个认证选择意味着一个首选提供方时，引导流程会将默认模型和允许列表选择器预筛选为该提供方的模型。该筛选也会匹配同一插件拥有的其他提供方，这涵盖了诸如 `volcengine`/`volcengine-plan` 和 `byteplus`/`byteplus-plan` 这样的编程计划变体。如果首选提供方筛选未能找到任何已加载模型，引导流程会回退到未筛选的目录，而不是让选择器保持空白。
+当某个认证选择意味着一个首选提供方时，引导流程会将默认模型和允许列表选择器预筛选为该提供方的模型。该筛选也会匹配同一插件拥有的其他提供方，这涵盖了诸如 `volcengine`／`volcengine-plan` 和 `byteplus`／`byteplus-plan` 这样的编程计划变体。如果首选提供方筛选未能找到任何已加载模型，引导流程会回退到未筛选的目录，而不是让选择器保持空白。
 
 ## Web-search 后续步骤
 
-某些 web-search 提供商会在 onboarding 过程中触发提供商特定的后续提示：
+某些 Web-search 提供商会在入门流程中触发提供商特定的后续提示：
 
 - **Grok** 可以提供可选的 `x_search` 设置，使用相同的 xAI 认证以及 `x_search` 模型选择。
-- **Kimi** 可以询问 Moonshot API 区域（`api.moonshot.ai` vs `api.moonshot.cn`）以及默认的 Kimi web-search 模型。
+- **Kimi** 可以询问 Moonshot API 区域（`api.moonshot.ai` 与 `api.moonshot.cn`）以及默认的 Kimi web-search 模型。
 
 ## 其他行为
 

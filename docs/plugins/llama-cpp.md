@@ -94,16 +94,9 @@ Gemma 4 E4B IT Q4_K_M 文件约为 5.0 GB。OpenClaw 仅会在内存至少为 16
 }
 ```
 
-`local.modelPath` 默认使用上面显示的 `hf:` URI（`embeddinggemma-300m-qat-Q8_0.gguf`）。
-将其指向另一个 `hf:` URI 或本地 `.gguf` 文件，即可使用其他
-模型。`local.modelCacheDir` 用于覆盖已下载模型的缓存位置
-（默认值：`~/.node-llama-cpp/models`），`local.contextSize` 接受一个
-整数或 `"auto"`。
-
-当 `local.contextSize` 为数值时，提供程序也会将该需求传递给
-node-llama-cpp 的自动 GPU 层放置。这样 node-llama-cpp 就可以在
-保留其内存安全检查的同时，将模型和嵌入上下文一起装入内存。
-而使用 `"auto"` 时，node-llama-cpp 会保持其正常的自动放置行为。
+`local.modelPath` 默认使用上方所示的 `hf:` URI（`embeddinggemma-300m-qat-Q8_0.gguf`）。
+将其指向不同的 `hf:` URI 或本地 `.gguf` 文件，即可使用其他模型。缓存位置和嵌入上下文大小由
+llama.cpp 提供程序管理；`memory.search.local` 仅公开 `modelPath`。
 
 ## 原生运行时
 
@@ -131,7 +124,7 @@ pnpm rebuild node-llama-cpp
 如果 `node-llama-cpp` 缺失或加载失败，OpenClaw 会按如下方式报告该失败信息：
 
 1. 安装插件：`openclaw plugins install @openclaw/llama-cpp-provider`。
-2. 在本地安装/更新时使用 Node 24。
+2. 在本地安装／更新时使用 Node 24。
 3. 如果是从 pnpm 源码检出：先运行 `pnpm approve-builds`，然后运行 `pnpm rebuild node-llama-cpp`。
 
 如需在没有进程内原生依赖的情况下进行本地推理，请改用 Ollama 或

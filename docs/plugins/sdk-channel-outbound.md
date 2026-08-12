@@ -113,7 +113,7 @@ Markdown 风格使用 `**bold**` 和 `~~strikethrough~~`；斜体和行内代码
 
 `MessageReceipt` 记录由通道适配器返回的结果。具体的平台消息标识符表明平台发送路径已接受该消息；它们并不能证明收件人的设备已经显示或读取了该消息。不带平台消息标识符的收据仅是本地收据元数据。对于具有已读回执或设备投递状态的通道，应通过单独的、通道特定的路径来跟踪这些事实。
 
-如果某个通道适配器能够证明，重试失败不会导致收件人可见的发送重复，并且尚未开始任何具备最终化能力的调用，则应从 `openclaw/plugin-sdk/error-runtime` 抛出 `new PlatformMessageNotDispatchedError("...", { cause: error })`。这样 Core 就可以清除过时的发送尝试证据，并安全地重试队列中的意图。只有拥有最终分发边界的适配器才能做出该断言。切勿在最终化/发送调用开始后或返回歧义结果后使用该标记；错误标记会导致消息重复。
+如果某个通道适配器能够证明，重试失败不会导致收件人可见的发送重复，并且尚未开始任何具备最终化能力的调用，则应从 `openclaw/plugin-sdk/error-runtime` 抛出 `new PlatformMessageNotDispatchedError("...", { cause: error })`。这样 Core 就可以清除过时的发送尝试证据，并安全地重试队列中的意图。只有拥有最终分发边界的适配器才能做出该断言。切勿在最终化／发送调用开始后或返回歧义结果后使用该标记；错误标记会导致消息重复。
 
 ## 现有的出站适配器
 
@@ -153,6 +153,8 @@ export const messageAdapter = createChannelMessageAdapterFromOutbound({
 | `failed`         | 未产生任何平台回执                                                                      |
 
 当一个批次混合了已发送、已抑制和失败的有效载荷时，请使用 `payloadOutcomes`。不要根据空的旧版直接投递结果推断 hook 被取消。
+
+当传输在首次成功发送期间创建线程时，出站适配器可以实现 `adoptTargetFromDelivery(...)`。从平台回执中返回类型化的线程 ID，Core 会将其传递到该持久化批次中的后续有效载荷、固定项和投递后 hook。Core 永远不会替换调用方明确指定的线程，也不会在适配器未选择加入的情况下，根据 `receipt.threadId` 推断是否采用线程。
 
 ### 自动未知发送协调
 

@@ -202,7 +202,7 @@ sidebarTitle: "模型常见问题"
 
     ```json5
     {
-      env: { MINIMAX_API_KEY: "sk-...", OPENAI_API_KEY: "sk-..." },
+      env: { vars: { MINIMAX_API_KEY: "sk-...", OPENAI_API_KEY: "sk-..." } },
       agents: {
         defaults: {
           model: { primary: "minimax/MiniMax-M3" },
@@ -276,7 +276,7 @@ sidebarTitle: "模型常见问题"
           models: { "openrouter/anthropic/claude-sonnet-4-6": {} },
         },
       },
-      env: { OPENROUTER_API_KEY: "sk-or-..." },
+      env: { vars: { OPENROUTER_API_KEY: "sk-or-..." } },
     }
     ```
 
@@ -290,7 +290,7 @@ sidebarTitle: "模型常见问题"
           models: { "zai/glm-5.1": {} },
         },
       },
-      env: { ZAI_API_KEY: "..." },
+      env: { vars: { ZAI_API_KEY: "..." } },
     }
     ```
 
@@ -476,4 +476,4 @@ sidebarTitle: "模型常见问题"
 - [FAQ](/help/faq) — 主 FAQ
 - [FAQ — 快速开始与首次运行设置](/help/faq-first-run)
 - [模型选择](/concepts/model-providers)
-- [模型故障转移](/concepts/model-failover)
+- [模型故障转移](/concepts/model-failover)。

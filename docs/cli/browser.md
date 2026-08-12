@@ -24,7 +24,7 @@ title: "浏览器"
   请将其放在子命令之前，以获得明确无歧义的形式，例如
   `openclaw browser --json status`。尾随位置例如
   `openclaw browser status --json` 也可行，前提是所选子命令没有
-  定义自己的 `--json`。
+  定义自己的 `--json`
 
 ## 快速开始（本地）
 
@@ -119,20 +119,30 @@ openclaw browser delete-profile --name work
 
 ```bash
 openclaw browser extension path
+openclaw browser extension install
+openclaw browser extension install --json --wait-ms 60000
+openclaw browser extension status
+openclaw browser extension status --json
+openclaw browser extension uninstall-host
 openclaw browser extension pair
 openclaw browser extension pair --gateway-url wss://gateway.example.com
 openclaw browser extension cdp
 openclaw browser extension cdp --json
 ```
 
-- `extension path` 输出解压后的扩展目录，用于 Chrome 的**加载已解压的扩展程序**流程。
-- `extension pair` 在需要时创建主机本地中继密钥，并输出配对字符串。`--gateway-url` 创建直接连接远程网关的配对 URL；非回环 URL 必须使用 `wss://`。
-- `extension cdp` 输出非机密的浏览器中继身份验证 v2 元数据：回环浏览器/CDP 端点、协议版本、密钥 ID 以及固定的质询/完成绑定。默认情况下不会输出中继密钥或授权标头。
+- `extension install` 将捆绑的运行时复制到稳定的状态目录路径中，并在现有的 Chrome 系列用户数据根目录中预注册其确定性、源锁定的原生引导主机。启动 Chrome，运行此命令，并且仅在它打印出稳定路径后使用 **Load unpacked**。该命令会等待 Chrome 记录这一确切路径，然后根据 Chromium 的路径派生 ID 验证已记录的 ID。**Load unpacked** 是常规设置中唯一的手动操作。
+- `extension status` 报告已安装的副本、检测到的 ID／配置文件、所属注册状态，以及是否需要手动设置。JSON 输出绝不会包含配对字符串或中继密钥。
+- `extension uninstall-host` 仅移除已验证的、由 OpenClaw 所有的原生主机清单和启动器。它不会从 Chrome 中移除扩展。
+- `extension path` 为只读操作。存在稳定的已安装副本时，它会打印该副本；否则打印捆绑的源目录。
+- `extension pair` 仍然是高级手动流程。`--gateway-url` 会创建直接连接远程 Gateway 的配对 URL；非回环 URL 必须使用 `wss://`。
+- `extension cdp` 会打印非机密的 Browser Relay Authentication v2 元数据：回环浏览器／CDP 端点、协议版本、密钥 ID，以及固定的 challenge／complete 绑定。默认情况下，它绝不会打印中继密钥或授权标头。
 
 `extension cdp --legacy-bearer` 是临时的迁移备用方案。仅当
 `browser.extensionRelay.allowLegacyAuth=true` 时，它才会在发出警告的同时输出旧版 Bearer 标头；否则会报错退出，且不会输出凭据。使用 `--json` 获取机器可读输出；警告仍会输出到 stderr，因此 stdout 保持有效的 JSON。
 
 设置、安全模型和迁移步骤：[Chrome 扩展](/tools/chrome-extension)。
+
+如果扩展已经在原生主机存在之前尝试过自动设置，Chromium 会在正在运行的浏览器进程中保留此次未命中的结果。重启 Chrome 一次，然后重复按顺序执行安装流程；仅重试弹出窗口无法恢复该现有进程。
 
 ## 标签页
 
@@ -149,9 +159,9 @@ openclaw browser close t1
 
 `tabs` 会首先返回 `suggestedTargetId`，然后是稳定的 `tabId`（例如 `t1`）、可选标签以及原始 `targetId`。将 `suggestedTargetId` 传回给 `focus`、`close`、快照和各种操作。可以使用 `open --label`、`tab new --label` 或 `tab label` 来分配标签；标签、tab id、原始 target id 以及唯一的 target-id 前缀都可以接受。请求字段仍然命名为 `targetId` 以保持兼容性，但它接受这些标签页引用中的任意一种。
 
-原始 target id 是易变的诊断句柄，不是持久的代理记忆：当 Chromium 在导航或表单提交期间替换底层原始 target 时，如果 OpenClaw 能够证明匹配关系，它会将稳定的 `tabId`/标签保留并附加到替换后的标签页上。优先使用 `suggestedTargetId`。
+原始 target id 是易变的诊断句柄，不是持久的代理记忆：当 Chromium 在导航或表单提交期间替换底层原始 target 时，如果 OpenClaw 能够证明匹配关系，它会将稳定的 `tabId`／标签保留并附加到替换后的标签页上。优先使用 `suggestedTargetId`。
 
-## 快照 / 截图 / 操作
+## 快照 ／ 截图 ／ 操作
 
 快照：
 
@@ -170,12 +180,12 @@ openclaw browser screenshot --labels
 ```
 
 - `--full-page` 仅用于整页截图；它不能与 `--ref` 或 `--element` 组合使用。
-- `existing-session` / `user` 配置文件支持整页截图，以及来自快照输出的 `--ref` 截图，但不支持 CSS `--element` 截图。
-- `--labels` 会在截图上叠加当前快照中的 ref。对于基于 Playwright 的配置文件，它可与 `--full-page`（整页叠加）、`--ref`（按 ARIA ref 的元素裁剪叠加）以及 `--element`（按 CSS 选择器的元素裁剪叠加）一起使用；在元素裁剪模式下，标签会相对于元素进行投影。响应中还会包含一个 `annotations` 数组（为空时省略），其中包含每个 ref 的边界框：`ref`、`number`、`role`、可选的 `name`，以及 `box: {x, y, width, height}`，坐标空间为所截取图像的坐标系（视口 / 整页 / 元素相对）。  
+- `existing-session` ／ `user` 配置文件支持整页截图，以及来自快照输出的 `--ref` 截图，但不支持 CSS `--element` 截图。
+- `--labels` 会在截图上叠加当前快照中的 ref。对于基于 Playwright 的配置文件，它可与 `--full-page`（整页叠加）、`--ref`（按 ARIA ref 的元素裁剪叠加）以及 `--element`（按 CSS 选择器的元素裁剪叠加）一起使用；在元素裁剪模式下，标签会相对于元素进行投影。响应中还会包含一个 `annotations` 数组（为空时省略），其中包含每个 ref 的边界框：`ref`、`number`、`role`、可选的 `name`，以及 `box: {x, y, width, height}`，坐标空间为所截取图像的坐标系（视口 ／ 整页 ／ 元素相对）。  
   `existing-session` 配置文件会在整页截图上渲染 chrome-mcp 覆盖层，但不会使用 Playwright 投影辅助，也不包含 `annotations`；那里不支持 CSS `--element` 截图。若没有 Playwright 或 chrome-mcp，则无法生成带标签的截图。
 - `snapshot --urls` 会把发现的链接目标附加到 AI 快照中，这样代理就可以直接选择导航目标，而不必仅凭链接文本猜测。
 
-导航/点击/输入（基于 ref 的 UI 自动化）：
+导航／点击／输入（基于 ref 的 UI 自动化）：
 
 ```bash
 openclaw browser navigate https://example.com
@@ -196,9 +206,9 @@ openclaw browser evaluate --timeout-ms 30000 --fn 'async () => { await window.re
 
 `evaluate --fn` 接受函数源代码、表达式或语句体。语句体会被包装为 async 函数，因此如果要返回值，请使用 `return`。当页面端函数可能需要比默认 evaluate 超时时间更长时，请使用 `--timeout-ms`。`browser.evaluateEnabled=false`（默认：`true`）会同时禁用 `evaluate` 和 `wait --fn`。
 
-当 OpenClaw 能够证明发生了替换标签页时，动作响应会在动作触发页面替换后返回当前原始 `targetId`。脚本仍应在长生命周期工作流中存储并传递 `suggestedTargetId`/标签。
+当 OpenClaw 能够证明发生了替换标签页时，动作响应会在动作触发页面替换后返回当前原始 `targetId`。脚本仍应在长生命周期工作流中存储并传递 `suggestedTargetId`／标签。
 
-文件 + 对话框辅助：
+文件 ＋ 对话框辅助：
 
 ```bash
 openclaw browser upload /tmp/openclaw/uploads/file.pdf --ref <ref>
@@ -221,7 +231,7 @@ openclaw browser batch --actions-file plan.json
 openclaw browser batch --actions-file - --continue
 ```
 
-`openclaw browser batch` 会发送一个 `kind="batch"` 的 `/act` 请求，包含嵌套的 `BrowserActRequest` 操作（`wait`、`click`、`type`、`evaluate`、...）——而不是 `open`/`navigate`/`snapshot`/`screenshot`，这些是 CLI 子命令，不是 `/act` 的 kind。`--continue` 会设置 `stopOnError=false`（默认在第一个错误处停止）；`--target-id` 将整个批处理限定到一个标签页。任一嵌套操作失败都会使命令以非零状态退出；使用 `--json` 可保留有序的 `results` 响应。请参阅 [浏览器批量 CLI](/tools/browser-control#browser-batch-cli) 了解完整约定（ref 生命周期、target id 冲突、错误摘要）。`batch` 不支持 `profile="user"` / existing-session 配置文件。
+`openclaw browser batch` 会发送一个 `kind="batch"` 的 `/act` 请求，包含嵌套的 `BrowserActRequest` 操作（`wait`、`click`、`type`、`evaluate`、...）——而不是 `open`／`navigate`／`snapshot`／`screenshot`，这些是 CLI 子命令，不是 `/act` 的 kind。`--continue` 会设置 `stopOnError=false`（默认在第一个错误处停止）；`--target-id` 将整个批处理限定到一个标签页。任一嵌套操作失败都会使命令以非零状态退出；使用 `--json` 可保留有序的 `results` 响应。请参阅 [浏览器批量 CLI](/tools/browser-control#browser-batch-cli) 了解完整约定（ref 生命周期、target id 冲突、错误摘要）。`batch` 不支持 `profile="user"` ／ existing-session 配置文件。
 
 ## 状态和存储
 

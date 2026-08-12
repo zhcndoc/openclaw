@@ -106,6 +106,7 @@ OpenClaw 管理的 MCP 服务器定义位于 `mcp.servers` 下，并被嵌入式
         },
         auth: "oauth",
         oauth: {
+          identity: "per-requester", // shared | per-requester; default: shared
           scope: "docs.read",
         },
         sslVerify: true,
@@ -126,37 +127,41 @@ OpenClaw 管理的 MCP 服务器定义位于 `mcp.servers` 下，并被嵌入式
 }
 ```
 
-- `mcp.servers`：面向公开已配置 MCP 工具的运行时的命名 stdio 或远程 MCP 服务器定义。
+- `mcp.servers`：为公开已配置 MCP 工具的运行时定义的具名 stdio 或远程 MCP 服务器。
   远程条目使用 `transport: "streamable-http"` 或 `transport: "sse"`；
   `type: "http"` 是 CLI 原生别名，`openclaw mcp set` 和
-  `openclaw doctor --fix` 会将其规范化为标准的 `transport` 字段。
-- `mcp.servers.<name>.enabled`：设置为 `false` 可保留已保存的服务器定义，
-  同时将其排除在嵌入式 OpenClaw MCP 发现和工具投影之外。
+  `openclaw doctor --fix` 会将其规范化为规范的 `transport` 字段。
+- `mcp.servers.<name>.enabled`：设置为 `false`，可在保留已保存服务器定义的同时，
+  将其排除在嵌入式 OpenClaw MCP 发现和工具投影之外。
 - `mcp.servers.<name>.requestTimeoutMs`：每个服务器的 MCP 请求超时时间，单位为毫秒。
 - `mcp.servers.<name>.connectionTimeoutMs`：每个服务器的连接超时时间，单位为毫秒。
-- `mcp.servers.<name>.supportsParallelToolCalls`：可选的并发提示，供能够决定是否并行发起 MCP 工具调用的适配器使用。
+- `mcp.servers.<name>.supportsParallelToolCalls`：可选的并发提示，用于可以选择是否发起并行 MCP 工具调用的适配器。
 - `mcp.servers.<name>.auth`：对于需要 OAuth 的 HTTP MCP 服务器，设置为 `"oauth"`。
   运行 `openclaw mcp login <name>` 可将令牌存储在 OpenClaw 状态目录下。
 - `mcp.servers.<name>.oauth`：可选的 OAuth 作用域、重定向 URL 和客户端元数据 URL 覆盖项。
+- `mcp.servers.<name>.oauth.identity`：凭据所有权。省略该项或设置为
+  `"shared"` 表示由操作员管理凭据；设置为 `"per-requester"` 则为每个经过身份验证的发送方隔离凭据。
+  每个请求方的 OAuth 需要 HTTP 服务器 URL，不能使用 `oauth.authProfileId`，并且回调需要
+  `gateway.publicOrigin`。
 - `mcp.servers.<name>.sslVerify`、`clientCert`、`clientKey`：用于私有端点和双向 TLS 的 HTTP TLS 控制项。
-- `mcp.servers.<name>.toolFilter`：可选的每个服务器的工具选择配置。`include`
-  会将发现到的 MCP 工具限制为匹配的名称；`exclude` 会隐藏匹配的名称。条目可以是精确的 MCP 工具名称或简单的 `*` 通配符。
-  带有资源或提示的服务器还会生成实用工具名称（`resources_list`、
-  `resources_read`、`prompts_list`、`prompts_get`），这些名称也使用相同的筛选规则。
+- `mcp.servers.<name>.toolFilter`：可选的每服务器工具选择配置。`include`
+  将发现的 MCP 工具限制为匹配的名称；`exclude` 隐藏匹配的名称。条目可以是精确的 MCP 工具名称或简单的 `*` 通配模式。
+  提供资源或提示的服务器还会生成实用工具名称（`resources_list`、
+  `resources_read`、`prompts_list`、`prompts_get`），这些名称使用相同的筛选器。
 - `mcp.servers.<name>.codex`：可选的 Codex app-server 投影控制项。
-  此块是仅供 Codex app-server 线程使用的 OpenClaw 元数据；不会影响 ACP 会话、通用 Codex harness 配置或其他运行时适配器。
+  此块是仅针对 Codex app-server 线程的 OpenClaw 元数据；不会影响 ACP 会话、通用 Codex harness 配置或其他运行时适配器。
   非空的 `codex.agents` 会将服务器限制为列出的 OpenClaw agent id。
-  空、空白或无效的作用域 agent 列表会被配置验证拒绝，并在运行时投影路径中被省略，而不会变成全局配置。
+  空、空白或无效的作用域 agent 列表会被配置验证拒绝，并在运行时投影路径中被省略，而不会变为全局配置。
   `codex.defaultToolsApprovalMode` 会为该服务器输出 Codex 原生的
-  `default_tools_approval_mode`。OpenClaw 会在将原生的 `mcp_servers` 配置传递给 Codex 前移除 `codex` 块。
-  省略此块可使服务器投影到每个 Codex app-server agent，并使用 Codex 默认的 MCP 审批行为。
-- 以会话为作用域的捆绑 MCP 运行时使用内置的 10 分钟空闲 TTL。
-  一次性嵌入式运行会请求在运行结束时清理；对于长生命周期会话和未来调用方，TTL 是兜底机制。
+  `default_tools_approval_mode`。OpenClaw 会在将原生 `mcp_servers` 配置传递给 Codex 前移除
+  `codex` 块。省略该块可使服务器投影到每个 Codex app-server agent，并使用 Codex 的默认 MCP 审批行为。
+- 会话作用域的捆绑 MCP 运行时使用内置的 10 分钟空闲 TTL。
+  一次性嵌入式运行会请求在运行结束时清理；对于长时间运行的会话和未来的调用方，TTL 是后备机制。
 - `mcp.*` 下的更改会通过释放缓存的会话 MCP 运行时来热应用。
-  下一次工具发现或使用时会根据新配置重新创建它们，因此被移除的 `mcp.servers` 条目会立即被回收，而无需等待空闲 TTL。
-- 运行时发现还会遵循 MCP 工具列表变更通知，并丢弃该会话的缓存目录。
-  声明资源或提示的服务器会获得用于列出/读取资源以及列出/获取提示的实用工具。
-  重复的工具调用失败会使受影响的服务器暂停一小段时间，然后再尝试下一次调用。
+  下一次工具发现或使用会根据新配置重新创建它们，因此已移除的 `mcp.servers` 条目会立即被回收，而无需等待空闲 TTL。
+- 运行时发现还会遵循 MCP 工具列表变更通知，丢弃该会话的缓存目录。
+  发布资源或提示的服务器会获得用于列出／读取资源以及列出／获取提示的实用工具。
+  重复的工具调用失败会使受影响的服务器短暂停止，然后再尝试下一次调用。
 
 有关运行时行为，请参见 [MCP](/cli/mcp#openclaw-as-an-mcp-client-registry) 和
 [CLI 后端](/gateway/cli-backends#bundle-mcp-overlays)。
@@ -354,10 +359,9 @@ OpenClaw 管理的 MCP 服务器定义位于 `mcp.servers` 下，并被嵌入式
     evaluateEnabled: true,
     defaultProfile: "user",
     ssrfPolicy: {
-      // dangerouslyAllowPrivateNetwork: true, // 仅在受信任的私有网络访问场景中启用
-      // allowPrivateNetwork: true, // 旧版别名
-      // hostnameAllowlist: ["*.example.com", "example.com"],
-      // allowedHostnames: ["localhost"],
+      // dangerouslyAllowPrivateNetwork: true, // opt in only for trusted private-network access
+      // allowPrivateNetwork: true, // legacy alias
+      // allowedHostnames: ["*.example.com", "example.com", "localhost"],
     },
     tabCleanup: {
       enabled: true,
@@ -390,57 +394,28 @@ OpenClaw 管理的 MCP 服务器定义位于 `mcp.servers` 下，并被嵌入式
 ```
 
 - `evaluateEnabled: false` 会禁用 `act:evaluate` 和 `wait --fn`。
-- 在一次 Browser Relay 身份验证迁移窗口期间，`extensionRelay.allowLegacyAuth` 默认为
-  `true`。它允许旧版扩展以及使用 Bearer、Basic 和令牌子协议的外部 CDP
-  客户端。待所有中继客户端都使用身份验证 v2 后，将其设置为 `false`
- ；v2 客户端永远不会降级。
-- `tabCleanup` 控制对已跟踪的主代理标签页进行尽力而为的定期清理，触发时机为
-  空闲时间达到阈值或会话超过其上限。跟踪仅适用于由浏览器工具通过
-  `action: "open"` 创建的标签页；用户打开的标签页或所有权未知的标签页永远不会被接管。
-  禁用 `tabCleanup` 不会禁用显式的会话生命周期清理。
-- 具有稳定原生 CDP 目标和浏览器身份的主机本地打开项会存储在共享 SQLite 状态中，并且在
-  Gateway 重启后仍有资格参与 `/new` 和会话生命周期清理。面向原生工具的 CDP 目标在重启后
-  也仍有资格参与空闲和上限清理。Chrome MCP 使用进程本地目标句柄，因此冷启动时已有的会话记录
-  会等待生命周期清理，而不会冒险对重启后无法归属的活动执行空闲扫描。OpenClaw 会在关闭前验证
-  配置文件和浏览器实例。Chrome MCP 自动连接、缺失 `/json/version` 浏览器身份以及未解析的原生
-  目标都完全保持在进程本地，因此重启后不会被自动关闭。较旧的未跟踪标签页需要手动关闭。
-  临时故障会保持待处理状态，以便稍后重试。参见
-  [标签页清理所有权](/tools/browser#tab-cleanup-ownership)。
+- `extensionRelay.allowLegacyAuth` 在一个 Browser Relay Authentication 迁移窗口期间默认为 `true`。它允许旧版扩展以及外部 CDP Bearer、Basic 和 token-subprotocol 客户端。所有中继客户端都使用 auth v2 后，将其设置为 `false`；v2 客户端永远不会降级。
+- `tabCleanup` 控制对已跟踪的主代理标签页进行尽力而为的定期清理，这些标签页会在空闲时间过后或会话超过其上限时被清理。跟踪仅适用于由浏览器工具使用 `action: "open"` 创建的标签页；用户打开的标签页或所有权未知的标签页永远不会被接管。禁用 `tabCleanup` 不会禁用显式的会话生命周期清理。
+- 具有稳定原生 CDP 目标和浏览器身份的主机本地打开操作会存储在共享 SQLite 状态中，并且在 Gateway 重启后仍有资格参与 `/new` 和会话生命周期清理。面向原生工具的 CDP 目标在重启后也仍有资格参与空闲和上限清理。Chrome MCP 使用进程本地目标句柄，因此冷启动的现有会话记录会等待生命周期清理，而不会冒险针对无法归属的重启后活动进行空闲扫描。OpenClaw 会在关闭前验证配置文件和浏览器实例。Chrome MCP 自动连接、缺少 `/json/version` 浏览器身份以及无法解析的原生目标会完全保留在进程本地，因此重启后不会自动关闭。较旧的未跟踪标签页需要手动关闭。临时故障会保持待处理状态，以便稍后重试。请参阅[标签页清理所有权](/tools/browser#tab-cleanup-ownership)。
 - 未设置时，`ssrfPolicy.dangerouslyAllowPrivateNetwork` 处于禁用状态，因此浏览器导航默认保持严格模式。
-- 仅当你明确信任私有网络浏览器导航时，才将
-  `ssrfPolicy.dangerouslyAllowPrivateNetwork: true` 设置为启用。
-- 在严格模式下，远程 CDP 配置文件端点（`profiles.*.cdpUrl`）在可达性/发现检查期间也会受到相同的私有网络阻止规则约束。
+- 仅当你有意信任私有网络浏览器导航时，才设置 `ssrfPolicy.dangerouslyAllowPrivateNetwork: true`。
+- 在严格模式下，远程 CDP 配置文件端点（`profiles.*.cdpUrl`）在可达性／发现检查期间也受相同的私有网络阻止规则约束。
 - `ssrfPolicy.allowPrivateNetwork` 仍作为旧版别名受到支持。
-- 在严格模式下，使用 `ssrfPolicy.hostnameAllowlist` 和 `ssrfPolicy.allowedHostnames` 来设置明确的例外。
-- 远程配置文件为仅附加模式（禁用启动/停止/重置）。
-- `profiles.*.cdpUrl` 接受 `http://`、`https://`、`ws://` 和 `wss://`。
-  如果希望 OpenClaw 发现 `/json/version`，请使用 HTTP(S)；如果服务提供商为你提供了直接的
-  DevTools WebSocket URL，请使用 WS(S)。
-- 如果外部管理的 CDP 服务可通过回环地址访问，请将该配置文件的
-  `attachOnly: true` 设置为启用；否则 OpenClaw 会将回环端口视为本地托管浏览器配置文件，
-  并可能报告本地端口所有权错误。
-- `existing-session` 配置文件使用 Chrome MCP 而非 CDP，并且可以连接到选定的主机或通过已连接的浏览器节点连接。
-- `extension` 配置文件使用经过身份验证的 OpenClaw Chrome 扩展中继。
-  中继拥有自己的回环端点，因此这些配置文件不接受 `cdpUrl`。参见 [Chrome 扩展](/tools/chrome-extension)。
+- 在严格模式下，使用支持通配符的 `ssrfPolicy.allowedHostnames` 来设置精确主机和模式例外。
+- 远程配置文件为仅附加模式（启动／停止／重置已禁用）。
+- `profiles.*.cdpUrl` 接受 `http://`、`https://`、`ws://` 和 `wss://`。当你希望 OpenClaw 发现 `/json/version` 时使用 HTTP(S)；当提供商向你提供直接的 DevTools WebSocket URL 时使用 WS(S)。
+- 如果外部管理的 CDP 服务可通过回环地址访问，请将该配置文件的 `attachOnly: true` 设置为 `true`；否则 OpenClaw 会将回环端口视为本地托管浏览器配置文件，并可能报告本地端口所有权错误。
+- `existing-session` 配置文件使用 Chrome MCP 而不是 CDP，并且可以在选定的主机上或通过已连接的浏览器节点进行附加。
+- `extension` 配置文件使用经过身份验证的 OpenClaw Chrome 扩展中继。中继拥有其回环端点，因此这些配置文件不接受 `cdpUrl`。请参阅 [Chrome extension](/tools/chrome-extension)。
 - `existing-session` 配置文件可以设置 `userDataDir`，以定位特定的基于 Chromium 的浏览器配置文件，例如 Brave 或 Edge。
-- 当 Chrome 已在 DevTools HTTP(S) 发现端点或直接 WS(S) 端点后运行时，
-  `existing-session` 配置文件可以设置 `cdpUrl`。在此模式下，OpenClaw 会将该端点传递给 Chrome MCP，
-  而不是使用自动连接；对于 Chrome MCP 的启动参数，`userDataDir` 会被忽略。
-- `existing-session` 配置文件保留当前的 Chrome MCP 路由限制：
-  使用基于快照/引用驱动的操作，而不是以 CSS 选择器为目标；支持单文件上传钩子；
-  不支持对话框超时覆盖、不支持 `wait --load networkidle`，也不支持
-  `responsebody`、PDF 导出、下载拦截或批量操作。
-- 本地托管的 `openclaw` 配置文件会自动分配 `cdpPort` 和 `cdpUrl`；仅在远程 CDP 配置文件或
-  existing-session 端点连接时显式设置 `cdpUrl`。
-- 本地托管的配置文件可以设置 `executablePath`，以覆盖该配置文件的全局
-  `browser.executablePath`。使用此设置可以让一个配置文件运行 Chrome，另一个运行 Brave。
+- `existing-session` 配置文件可以在 Chrome 已经通过 DevTools HTTP(S) 发现端点或直接 WS(S) 端点运行时设置 `cdpUrl`。在该模式下，OpenClaw 会将端点传递给 Chrome MCP，而不是使用自动连接；`userDataDir` 会被 Chrome MCP 启动参数忽略。
+- `existing-session` 配置文件保留当前的 Chrome MCP 路由限制：使用快照／引用驱动的操作，而不是 CSS 选择器定位；单文件上传钩子；不支持对话框超时覆盖；不支持 `wait --load networkidle`；也不支持 `responsebody`、PDF 导出、下载拦截或批量操作。
+- 本地托管的 `openclaw` 配置文件会自动分配 `cdpPort` 和 `cdpUrl`；仅对远程 CDP 配置文件或现有会话端点附加显式设置 `cdpUrl`。
+- 本地托管配置文件可以设置 `executablePath`，以覆盖该配置文件的全局 `browser.executablePath`。使用此设置可让一个配置文件运行 Chrome，另一个运行 Brave。
 - 自动检测顺序：默认浏览器（如果基于 Chromium）→ Chrome → Brave → Edge → Chromium → Chrome Canary。
-- `browser.executablePath` 和 `browser.profiles.<name>.executablePath` 都会在启动 Chromium 前，
-  接受针对操作系统主目录的 `~` 和 `~/...`。`existing-session` 配置文件中的按配置文件设置的
-  `userDataDir` 也会进行波浪号展开。
-- 控制服务：仅限回环地址（端口派生自 `gateway.port`，默认为 `18791`）。
-- `extraArgs` 会向本地 Chromium 启动追加额外的启动标志（例如
-  `--disable-gpu`、窗口大小设置或调试标志）。
+- `browser.executablePath` 和 `browser.profiles.<name>.executablePath` 都支持在 Chromium 启动前使用 `~` 和 `~/...` 指代操作系统主目录。`existing-session` 配置文件中的每配置文件 `userDataDir` 也会进行波浪号展开。
+- 控制服务：仅限回环地址（端口由 `gateway.port` 推导，默认为 `18791`）。
+- `extraArgs` 会将额外的启动标志追加到本地 Chromium 启动命令中（例如 `--disable-gpu`、窗口大小设置或调试标志）。
 
 ---
 
@@ -485,12 +460,16 @@ OpenClaw 管理的 MCP 服务器定义位于 `mcp.servers` 下，并被嵌入式
     mode: "local", // 本地 | 远程
     port: 18789,
     bind: "loopback",
+    publicOrigin: "https://gateway.example.com",
     auth: {
       mode: "token", // 无 | 令牌 | 密码 | 可信代理
       token: "your-token",
       // password: "your-password", // 或 OPENCLAW_GATEWAY_PASSWORD
       // trustedProxy: { userHeader: "x-forwarded-user" }, // 适用于 mode=trusted-proxy；见 /gateway/trusted-proxy-auth
       allowTailscale: true,
+      identityScopes: {
+        "admin@example.com": ["operator.admin"],
+      },
       rateLimit: {
         maxAttempts: 10,
         windowMs: 60000,
@@ -569,53 +548,55 @@ OpenClaw 管理的 MCP 服务器定义位于 `mcp.servers` 下，并被嵌入式
 
 - `mode`：`local`（运行网关）或 `remote`（连接到远程网关）。除非为 `local`，否则网关拒绝启动。
 - `port`：用于 WS + HTTP 的单个多路复用端口。优先级：`--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > `18789`。
-- `bind`：`auto`、`loopback`（默认）、`lan`（`0.0.0.0`）、`tailnet`（如果可用则使用 Tailscale IPv4，否则使用回环地址）或 `custom`（单个 IPv4 地址）。已解析的 `tailnet` 地址，以及除 `127.0.0.1` 或 `0.0.0.0` 之外的任何 `custom` 地址，都要求同一端口上存在 `127.0.0.1`，供同主机客户端使用；如果任一监听器无法绑定，启动将失败。非回环暴露仍仅限于所选接口。
-- **旧版 bind 别名**：请在 `gateway.bind` 中使用绑定模式值（`auto`、`loopback`、`lan`、`tailnet`、`custom`），不要使用主机别名（`0.0.0.0`、`127.0.0.1`、`localhost`、`::`、`::1`）。
-- **Docker 注意事项**：默认的 `loopback` 绑定会监听容器内的 `127.0.0.1`。使用 Docker bridge 网络（`-p 18789:18789`）时，流量会从 `eth0` 到达，因此网关将无法访问。请使用 `--network host`，或将 `bind` 设置为 `"lan"`（或将 `bind` 设置为 `"custom"` 并使用 `customBindHost: "0.0.0.0"`），以监听所有接口。
-- **身份验证**：默认必需。非回环绑定需要网关身份验证。实际上，这意味着使用共享令牌/密码，或使用身份感知型反向代理，并将 `gateway.auth.mode` 设置为 `"trusted-proxy"`。引导向导默认会生成令牌。
-- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`（包括 SecretRef），请将 `gateway.auth.mode` 明确设置为 `token` 或 `password`。当两者都已配置但未设置模式时，启动以及服务安装/修复流程都会失败。
-- `gateway.auth.mode: "none"`：明确禁用身份验证。仅可用于受信任的本地回环设置；引导提示中有意不提供此选项。
-- `gateway.auth.mode: "trusted-proxy"`：将浏览器/用户身份验证委托给身份感知型反向代理，并信任来自 `gateway.trustedProxies` 的身份标头（参见[可信代理身份验证](/gateway/trusted-proxy-auth)）。默认情况下，此模式要求代理来源为**非回环地址**；同主机回环反向代理必须显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。内部同主机调用方可以使用 `gateway.auth.password` 作为本地直接回退方式；`gateway.auth.token` 与可信代理模式互斥。
-- `gateway.auth.allowTailscale`：当设置为 `true` 时，Tailscale Serve 身份标头可以满足 Control UI/WebSocket 身份验证（通过 `tailscale whois` 验证）。HTTP API 端点不使用该 Tailscale 标头身份验证；它们仍遵循网关的常规 HTTP 身份验证模式。此无令牌流程假设网关主机是受信任的。当 `tailscale.mode = "serve"` 时，默认值为 `true`。
-- `gateway.auth.rateLimit`：可选的失败身份验证限制器。按客户端 IP 和身份验证范围分别应用（共享密钥和设备令牌独立跟踪）。被阻止的尝试会返回 `429` + `Retry-After`。
-  - 在异步 Tailscale Serve Control UI 路径上，同一 `{scope, clientIp}` 的失败尝试会在写入失败结果之前进行串行化。因此，来自同一客户端的并发错误尝试可能会在第二个请求时触发限制器，而不是像普通不匹配那样同时竞争通过。
-  - `gateway.auth.rateLimit.exemptLoopback` 默认为 `true`；当你有意希望 localhost 流量也受到速率限制时（例如测试设置或严格的代理部署），请设置为 `false`。
-- 浏览器来源的 WS 身份验证尝试始终会受到限制，并禁用回环豁免（纵深防御浏览器发起的本地主机暴力破解）。
-- 在回环地址上，这些浏览器来源的锁定会按规范化的 `Origin` 值隔离，因此来自某一本地主机来源的重复失败不会自动锁定另一个来源。
-- `tailscale.mode`：`serve`（仅 tailnet，回环绑定）或 `funnel`（公开访问，需要身份验证）。
-- `tailscale.serviceName`：Serve 模式下可选的 Tailscale Service 名称，例如 `svc:openclaw`。设置后，OpenClaw 会将其传递给 `tailscale serve --service`，使 Control UI 可以通过命名 Service 暴露，而不是使用设备主机名。该值必须采用 Tailscale 的 `svc:<dns-label>` Service 名称格式；启动时会报告派生出的 Service URL。
-- `tailscale.preserveFunnel`：当设置为 `true` 且 `tailscale.mode = "serve"` 时，OpenClaw 会在启动时重新应用 Serve 之前检查 `tailscale funnel status`；如果已有外部配置的 Funnel 路由覆盖网关端口，则跳过重新应用。默认值为 `false`。
-- `controlUi.allowedOrigins`：用于网关 WebSocket 连接的显式浏览器来源允许列表。对于公开的非回环浏览器来源，这是必需的。来自回环地址、RFC1918/链路本地地址、`.local`、`.ts.net` 或 Tailscale CGNAT 主机的私有同源 LAN/Tailnet UI 加载无需启用 Host 标头回退即可接受。
-- `controlUi.toolTitles`：选择启用 Control UI 聊天中工具调用的 AI 生成用途标题。默认值：`false`（工具渲染保持完全确定性，不进行后台模型调用）。启用后，`chat.toolTitles` 方法会通过标准实用模型路由为复杂调用添加标签——使用代理的 `utilityModel`（这是一个操作员决策，可能会像每个实用任务一样，将有界的工具参数发送给所选提供商），或使用会话提供商声明的小模型默认值（OpenAI → `gpt-5.6-luna`，Anthropic → `claude-haiku-4-5`）——并将结果缓存到每个代理的状态数据库中，因此重复查看不会重复计费。像其他实用任务一样，`utilityModel: \"\"` 会禁用标题；标题永远不会回退到主模型。
+- `publicOrigin`：可选的、外部可访问的网关 HTTPS 来源，不含路径、查询参数或凭据。在本地开发期间，仅对字面值为回环主机的主机（`localhost`、`127.0.0.1` 或 `[::1]`）接受 HTTP。请求方专用的 MCP OAuth 需要此值，并使用 `<publicOrigin>/oauth/mcp/callback` 作为回调 URL。
+- `bind`：`auto`、`loopback`（默认）、`lan`（`0.0.0.0`）、`tailnet`（可用时使用 Tailscale IPv4，否则使用回环）或 `custom`（单个 IPv4 地址）。解析出的 `tailnet` 地址以及除 `127.0.0.1` 或 `0.0.0.0` 之外的任何 `custom` 地址，都要求同一端口上的 `127.0.0.1` 供同主机客户端使用；如果任一监听器无法绑定，启动将失败。非回环暴露仍仅限于所选接口。
+- **旧版 bind 别名**：请在 `gateway.bind` 中使用绑定模式值（`auto`、`loopback`、`lan`、`tailnet`、`custom`），而不是主机别名（`0.0.0.0`、`127.0.0.1`、`localhost`、`::`、`::1`）。
+- **Docker 说明**：默认的 `loopback` 绑定会在容器内监听 `127.0.0.1`。使用 Docker 桥接网络（`-p 18789:18789`）时，流量会从 `eth0` 到达，因此网关无法访问。请使用 `--network host`，或将 `bind` 设置为 `"lan"`（或将 `bind` 设置为 `"custom"` 并将 `customBindHost` 设置为 `"0.0.0.0"`），以监听所有接口。
+- **身份验证**：默认情况下为必需。非回环绑定需要网关身份验证。实际上，这意味着共享令牌／密码，或使用身份感知的反向代理并将 `gateway.auth.mode` 设置为 `"trusted-proxy"`。引导向导默认会生成令牌。
+- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`（包括 SecretRefs），请将 `gateway.auth.mode` 明确设置为 `token` 或 `password`。当两者均已配置但未设置模式时，启动以及服务安装／修复流程都会失败。
+- `gateway.auth.mode: "none"`：明确的无身份验证模式。仅用于受信任的本地回环设置；引导提示不会主动提供此选项。
+- `gateway.auth.mode: "trusted-proxy"`：将浏览器／用户身份验证委托给身份感知的反向代理，并信任来自 `gateway.trustedProxies` 的身份标头（参见[可信代理身份验证](/gateway/trusted-proxy-auth)）。默认情况下，此模式要求代理源为**非回环**；同主机回环反向代理必须显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。内部同主机调用方可以使用 `gateway.auth.password` 作为本地直接回退；`gateway.auth.token` 与可信代理模式仍然互斥。
+- `gateway.auth.allowTailscale`：为 `true` 时，Tailscale Serve 身份标头可以满足 Control UI／WebSocket 身份验证（通过 `tailscale whois` 验证）。HTTP API 端点不使用该 Tailscale 标头身份验证；它们改为遵循网关正常的 HTTP 身份验证模式。此无令牌流程假定网关主机是受信任的。当 `tailscale.mode = "serve"` 时，默认为 `true`。
+- `gateway.auth.identityScopes`：将经过验证的可信代理用户或 Tailscale WhoIs 登录映射到仅限连接的操作员作用域。电子邮件键不区分大小写；其他身份必须完全匹配。对于可信代理 Control UI 连接，`x-openclaw-scopes` 会限制设备注册或升级请求，以及最终的设备加身份会话作用域。授予权限不会创建或修改配对记录。令牌、密码和无身份验证连接没有经过验证的身份，也不会获得授予的权限。
+- `gateway.auth.rateLimit`：可选的失败身份验证限制器。按客户端 IP 和身份验证作用域应用（共享密钥和设备令牌分别跟踪）。被阻止的尝试会返回 `429` + `Retry-After`。
+  - 在异步 Tailscale Serve Control UI 路径上，相同 `{scope, clientIp}` 的失败尝试会在写入失败结果之前串行处理。因此，来自同一客户端的并发错误尝试可能会在第二个请求时触发限制器，而不是让两者都以普通不匹配的方式竞争通过。
+  - `gateway.auth.rateLimit.exemptLoopback` 默认为 `true`；当你有意希望对本地主机流量也进行速率限制时，请设置为 `false`（用于测试设置或严格的代理部署）。
+- 浏览器来源的 WS 身份验证尝试始终会受到限制，并禁用回环豁免（用于防御基于浏览器的本地主机暴力破解）。
+- 在回环上，这些浏览器来源的锁定会按规范化的 `Origin` 值隔离，因此来自一个本地主机来源的重复失败不会自动锁定另一个来源。
+- `tailscale.mode`：`serve`（仅 tailnet，回环绑定）或 `funnel`（公开，需要身份验证）。
+- `tailscale.serviceName`：可选的 Serve 模式 Tailscale Service 名称，例如 `svc:openclaw`。设置后，OpenClaw 会将其传递给 `tailscale serve --service`，使 Control UI 可以通过命名 Service 暴露，而不是使用设备主机名。该值必须使用 Tailscale 的 `svc:<dns-label>` Service 名称格式；启动时会报告派生出的 Service URL。
+- `tailscale.preserveFunnel`：当该值为 `true` 且 `tailscale.mode = "serve"` 时，OpenClaw 会在启动时重新应用 Serve 之前检查 `tailscale funnel status`；如果已有外部配置的 Funnel 路由覆盖网关端口，则跳过重新应用。默认值为 `false`。
+- `controlUi.allowedOrigins`：网关 WebSocket 连接的显式浏览器来源允许列表。对于公开的非回环浏览器来源，这是必需的。来自回环、RFC1918／链路本地、`.local`、`.ts.net` 或 Tailscale CGNAT 主机的私有同源 LAN／Tailnet UI 加载会被接受，无需启用 Host 标头回退。
+- `controlUi.toolTitles`：选择启用 Control UI 聊天中工具调用的 AI 生成用途标题。默认值：`false`（工具渲染保持完全确定，不进行后台模型调用）。启用后，`chat.toolTitles` 方法会通过标准实用模型路由为复杂调用添加标签——使用代理的 `utilityModel`（这是一项操作员决策，可能会像每个实用任务一样将有限的工具参数发送给选定提供商），或会话提供商声明的小模型默认值（OpenAI → `gpt-5.6-luna`、Anthropic → `claude-haiku-4-5`）——并将结果缓存到每个代理的状态数据库中，因此重复查看不会再次计费。`utilityModel: ""` 会像其他实用任务一样禁用标题；标题永远不会回退到主模型。
 - `controlUi.dangerouslyAllowHostHeaderOriginFallback`：危险模式，为有意依赖 Host 标头来源策略的部署启用 Host 标头来源回退。
-- `cliAgents.enabled`：选择启用 Control UI 新会话模型选择器中的实验性 **CLI 代理**组。默认值：`false`。仅当网关发布 `sessions.catalog.list` 时，该组才会显示，并且只包含支持创建会话的目录提供商。选择其中一项会打开与侧边栏目录操作所使用的相同目录目标新会话流程。
+- `cliAgents.enabled`：选择启用 Control UI 新会话模型选择器中的实验性 **CLI agents** 分组。默认值：`false`。仅当网关公布 `sessions.catalog.list` 时才会显示该分组，并且只包含支持创建会话的目录提供商。选择其中一项会打开与侧边栏目录操作所使用的相同目录目标新会话流程。
 
   目录提供商也可以声明基于终端的会话创建能力。只有在 Labs `cliAgents.enabled` 已启用、网关终端可用且所选提供商公开了该能力时，该方法才可用。调用方需要提供 `cwd`；如有需要，请先使用 `worktrees.create` 创建新的 worktree，因为终端启动不会提供 worktree。
 
 - `terminal.enabled`：管理员范围的操作员终端。默认值：`true`；设置为 `false` 可选择禁用。终端会在所选代理工作区中启动主机 PTY，并继承网关进程环境；对于 `sandbox.mode: "all"` 的代理会拒绝启动。在不应向管理员操作员提供主机 shell 的部署中，请禁用它；更改该设置会重启网关并更新 Control UI 内容安全策略。
 - `terminal.shell`：可选的 shell 可执行文件。未设置时，OpenClaw 在 Unix 上使用 `$SHELL`，在 Windows 上使用 `%ComSpec%`。
 - `terminal.detachedSessionTimeoutSeconds`：终端连接断开后会话继续存在的时长（例如页面重新加载、笔记本电脑休眠），在此期间仍可通过 `terminal.attach` 重新连接，并重放最近的输出。默认值：`300`。设置为 `0` 可在连接断开时立即终止会话。分离的会话会继续运行其命令，因此在共享主机或暴露的主机上应缩短此时长。
-- `remote.transport`：`ssh`（默认）或 `direct`（ws/wss）。对于 `direct`，公共主机必须使用 `wss://`；明文 `ws://` 仅在回环、LAN、链路本地、`.local`、`.ts.net` 和 Tailscale CGNAT 主机上接受。
+- `remote.transport`：`ssh`（默认）或 `direct`（ws／wss）。对于 `direct`，公共主机必须使用 `wss://`；明文 `ws://` 仅在回环、LAN、链路本地、`.local`、`.ts.net` 和 Tailscale CGNAT 主机上接受。
 - `remote.remotePort`：远程 SSH 主机上的网关端口。默认为 `18789`；当本地隧道端口与远程网关端口不同时使用此配置。
-- `remote.tlsFingerprint`：远程 `wss://` 网关的预期 SHA-256 证书指纹。macOS 应用会将其应用于操作员/控制连接和伴随节点连接。如果未显式设置，macOS 仅会在正常系统信任验证成功后记录首次使用的固定指纹。
+- `remote.tlsFingerprint`：远程 `wss://` 网关的预期 SHA-256 证书指纹。macOS 应用会将其应用于操作员／控制连接和伴随节点连接。如果未显式设置，macOS 仅会在正常系统信任验证成功后记录首次使用的固定指纹。
 - `remote.sshHostKeyPolicy`：macOS SSH 隧道主机密钥策略。默认值 `strict` 要求密钥已受信任。`openssh` 是对托管别名使用有效 OpenSSH 配置的显式选择；使用前请检查匹配的用户级和系统级 SSH 设置。更改目标时，macOS 应用和 `configure-remote` 会将此策略重置为 `strict`，除非再次显式选择启用。
-- `gateway.remote.token` / `.password` 是远程客户端凭据字段。它们本身不会配置网关身份验证。
-- `gateway.push.apns.relay.baseUrl`：外部 APNs 中继使用的基础 HTTPS URL；中继支持的 iOS 构建版本向网关发布注册信息后会使用该 URL。公开 App Store 构建版本使用托管的 OpenClaw 中继。自定义中继 URL 必须匹配有意分离的 iOS 构建/部署路径，且该路径的中继 URL 指向该中继。
+- `gateway.remote.token`／`.password` 是远程客户端凭据字段。它们本身不会配置网关身份验证。
+- `gateway.push.apns.relay.baseUrl`：外部 APNs 中继使用的基础 HTTPS URL；中继支持的 iOS 构建版本向网关发布注册信息后会使用该 URL。公开 App Store 构建版本使用托管的 OpenClaw 中继。自定义中继 URL 必须匹配有意分离的 iOS 构建／部署路径，且该路径的中继 URL 指向该中继。
 - `gateway.push.apns.relay.timeoutMs`：网关向中继发送请求的超时时间，单位为毫秒。默认为 `10000`。
 - 中继支持的注册信息会委托给特定的网关身份。配对的 iOS 应用会获取 `gateway.identity.get`，将该身份包含在中继注册信息中，并将注册范围的发送授权转发给网关。其他网关无法重复使用该存储的注册信息。
-- `OPENCLAW_APNS_RELAY_BASE_URL` / `OPENCLAW_APNS_RELAY_TIMEOUT_MS`：用于临时覆盖上述中继配置的环境变量。
+- `OPENCLAW_APNS_RELAY_BASE_URL`／`OPENCLAW_APNS_RELAY_TIMEOUT_MS`：用于临时覆盖上述中继配置的环境变量。
 - `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true`：仅用于开发环境的例外开关，允许使用回环 HTTP 中继 URL。生产环境的中继 URL 应保持使用 HTTPS。
 - `OPENCLAW_HANDSHAKE_TIMEOUT_MS`：可选的环境变量，用于覆盖内置的预身份验证网关 WebSocket 握手超时时间。
 - `channels.<provider>.healthMonitor.enabled`：针对单个频道选择退出健康监视器重启，同时保持全局监视器启用。
 - `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`：多账户频道的账户级覆盖设置。设置后，其优先级高于频道级覆盖设置。
 - 本地网关调用路径仅在 `gateway.auth.*` 未设置时，才可将 `gateway.remote.*` 作为回退配置。
-- 如果通过 SecretRef 显式配置了 `gateway.auth.token` / `gateway.auth.password` 且无法解析，则解析会以关闭失败（fail-closed）方式处理，不会使用远程回退配置进行掩盖。
-- `trustedProxies`：终止 TLS 或注入转发客户端标头的反向代理 IP。仅列出你控制的代理。回环地址条目对于同主机代理/本地检测设置仍然有效（例如 Tailscale Serve 或本地反向代理），但不会使回环请求符合 `gateway.auth.mode: "trusted-proxy"` 的条件。
+- 如果通过 SecretRef 显式配置了 `gateway.auth.token`／`gateway.auth.password` 且无法解析，则解析会以关闭失败（fail-closed）方式处理，不会使用远程回退配置进行掩盖。
+- `trustedProxies`：终止 TLS 或注入转发客户端标头的反向代理 IP。仅列出你控制的代理。回环地址条目对于同主机代理／本地检测设置仍然有效（例如 Tailscale Serve 或本地反向代理），但不会使回环请求符合 `gateway.auth.mode: "trusted-proxy"` 的条件。
 - `allowRealIpFallback`：当 `X-Forwarded-For` 缺失时，设置为 `true` 可让网关接受 `X-Real-IP`。为实现失败关闭（fail-closed）行为，默认值为 `false`。
 - `gateway.nodes.pairing.autoApproveLocal`：静默批准来自受信任本地连接的配对、角色升级和作用域升级（默认值：`true`）。设置为 `false` 可要求明确批准每台设备；仅元数据的重新连接刷新仍会自动进行。
-- `gateway.nodes.pairing.autoApproveCidrs`：可选的 CIDR/IP 允许列表，用于在首次节点设备配对且未请求任何作用域时自动批准。未设置时禁用。该配置不会自动批准操作员/浏览器/Control UI/WebChat 配对，也不会自动批准角色、作用域、元数据或公钥升级。
-- `gateway.nodes.pairing.sshVerify`：首次节点设备配对时基于 SSH 验证的自动批准（默认：启用）。网关会通过 SSH 返回配对主机（BatchMode、严格主机密钥），仅当 `openclaw node identity` 的设备密钥完全匹配时才批准。其资格门槛与 `autoApproveCidrs` 相同；除非 `cidrs` 覆盖，否则探测仅限于私有/CGNAT 源地址。设置为 `false` 可禁用，或使用 `{ user, identity, timeoutMs, cidrs }` 进行调整。参见[节点配对](/gateway/pairing#ssh-verified-device-auto-approval-default)。
-- `gateway.nodes.commands.allow` / `gateway.nodes.commands.deny`：在配对和平台允许列表评估之后，对已声明节点命令进行全局允许/拒绝控制。`commands.allow` 是对 `camera.snap`、`camera.clip`、`screen.record`、`health.summary`、`sms.search` 和 `sms.send` 等分类命令的一次性持久启用；即使平台默认设置或显式允许列表本应包含某个命令，`commands.deny` 也会将其移除。计算机和移动端 UI 控制则依赖默认关闭的节点本地启用设置以及配对。iOS 健康权限、Android 短信权限和网关命令授权彼此独立。节点更改其声明的命令列表后，请拒绝并重新批准该设备配对，以便网关存储更新后的命令快照。
+- `gateway.nodes.pairing.autoApproveCidrs`：可选的 CIDR／IP 允许列表，用于在首次节点设备配对且未请求任何作用域时自动批准。未设置时禁用。该配置不会自动批准操作员／浏览器／Control UI／WebChat 配对，也不会自动批准角色、作用域、元数据或公钥升级。
+- `gateway.nodes.pairing.sshVerify`：首次节点设备配对时基于 SSH 验证的自动批准（默认：启用）。网关会通过 SSH 返回配对主机（BatchMode、严格主机密钥），仅当 `openclaw node identity` 的设备密钥完全匹配时才批准。其资格门槛与 `autoApproveCidrs` 相同；除非 `cidrs` 覆盖，否则探测仅限于私有／CGNAT 源地址。设置为 `false` 可禁用，或使用 `{ user, identity, timeoutMs, cidrs }` 进行调整。参见[节点配对](/gateway/pairing#ssh-verified-device-auto-approval-default)。
+- `gateway.nodes.commands.allow`／`gateway.nodes.commands.deny`：在配对和平台允许列表评估之后，对已声明节点命令进行全局允许／拒绝控制。`commands.allow` 是对 `camera.snap`、`camera.clip`、`screen.record`、`health.summary`、`sms.search` 和 `sms.send` 等分类命令的一次性持久启用；即使平台默认设置或显式允许列表本应包含某个命令，`commands.deny` 也会将其移除。计算机和移动端 UI 控制则依赖默认关闭的节点本地启用设置以及配对。iOS 健康权限、Android 短信权限和网关命令授权彼此独立。节点更改其声明的命令列表后，请拒绝并重新批准该设备配对，以便网关存储更新后的命令快照。
 - `gateway.tools.deny`：针对 HTTP `POST /tools/invoke` 的额外工具名称阻止列表（扩展默认拒绝列表）。
 - `gateway.tools.allow`：从默认 HTTP 拒绝列表中移除工具名称，适用于 owner/admin 调用者。该配置不会将携带身份的 `operator.write` 调用者提升为 owner/admin 权限；即使列入允许列表，`cron`、`gateway` 和 `nodes` 仍不可供非 owner 调用者使用。
 
@@ -695,7 +676,7 @@ openclaw gateway --port 19001
 
 ## 云工作器环境
 
-Cloud workers are opt-in. If `cloudWorkers` is absent, or `profiles` is empty, OpenClaw accepts no new worker creation and does not advertise `sessions.dispatch` or a Cloud destination. The config schema and read-only `environments.list` and `environments.status` methods remain available. Durable records created earlier still reconcile and remain visible; the existing gateway/node projection is unchanged.
+云工作器需选择启用。如果缺少 `cloudWorkers`，或 `profiles` 为空，OpenClaw 将不接受新的工作器创建，也不会公布 `sessions.dispatch` 或 Cloud 目标。配置架构以及只读的 `environments.list` 和 `environments.status` 方法仍然可用。此前创建的持久化记录仍会进行协调并保持可见；现有的网关／节点投影保持不变。
 
 每个工作器提供商都必须从受信任的配置输出中返回 SSH `hostKey`，其格式必须严格为 `algorithm base64`，不得包含主机名或注释。引导程序会将该密钥写入隔离的 `known_hosts` 文件，使用 `StrictHostKeyChecking=yes`，并在提供商未提供该密钥时于建立连接前失败。不提供首次使用时信任（trust-on-first-use）回退机制。
 
@@ -737,7 +718,7 @@ Cloud workers are opt-in. If `cloudWorkers` is absent, or `profiles` is empty, O
 
 对于由协调器支持的 AWS，Crabbox 自身的 `aws.sshCIDRs` 应包含 Gateway 主机的出站 IPv4，并指定为 `/32`。在置备前，使用 `crabbox config show --json` 和 `crabbox doctor --provider aws --json` 进行验证；不要将此提供商入口设置放入 OpenClaw 的 `settings` 中。参见[由协调器支持的 Crabbox](/gateway/cloud-workers#coordinator-backed-crabbox)。
 
-Crabbox inspect 除主要的 `sshPort` 外，还可能公开按顺序排列的 `sshFallbackPorts`。OpenClaw 会在 Gateway 重启期间持久化所公布的顺序。共享的固定 SSH 传输仅会针对可安全重放的操作轮换候选端口：幂等探测、内容寻址传输、受回执/锁保护的工件安装、收敛式托管工作树镜像以及隧道重连。存在歧义且未受保护的有状态命令会在当前候选端口上安全失败，不会在其他端口上重放。网络策略必须至少允许一个公布的候选端口。
+Crabbox inspect 除主要的 `sshPort` 外，还可能公开按顺序排列的 `sshFallbackPorts`。OpenClaw 会在 Gateway 重启期间持久化所公布的顺序。共享的固定 SSH 传输仅会针对可安全重放的操作轮换候选端口：幂等探测、内容寻址传输、受回执／锁保护的工件安装、收敛式托管工作树镜像以及隧道重连。存在歧义且未受保护的有状态命令会在当前候选端口上安全失败，不会在其他端口上重放。网络策略必须至少允许一个公布的候选端口。
 
 <Note>
   OpenClaw 通过提供商拥有的机密解析器解析 Crabbox 租约本地的 `sshKey` 路径，并固定由 `crabbox inspect --json` 返回的权威 `sshHostKey`。AWS 准入还要求 `providerMetadata.instanceProfileAttached`。请安装 Crabbox 0.41.1 或更高版本，以获得固定 ID 重放和封闭式 inspect 契约。
@@ -966,12 +947,12 @@ Gateway 会安装并验证所选的 OpenClaw 构建版本，启动自包含的�
 ```json5
 {
   discovery: {
-    wideArea: { enabled: true },
+    wideArea: { domain: "openclaw.internal" },
   },
 }
 ```
 
-在 `~/.openclaw/dns/` 下写入单播 DNS-SD 区域。要实现跨网络发现，请配合 DNS 服务器（推荐 CoreDNS）+ Tailscale split DNS。
+设置 `discovery.wideArea.domain` 可启用广域发现，并在 `~/.openclaw/dns/` 下写入单播 DNS-SD 区域。要进行跨网络发现，请搭配 DNS 服务器（推荐使用 CoreDNS）和 Tailscale split DNS。
 
 设置：`openclaw dns setup --apply`。
 
@@ -984,8 +965,8 @@ Gateway 会安装并验证所选的 OpenClaw 构建版本，启动自包含的�
 ```json5
 {
   env: {
-    OPENROUTER_API_KEY: "sk-or-...",
     vars: {
+      OPENROUTER_API_KEY: "sk-or-...",
       GROQ_API_KEY: "gsk-...",
     },
     shellEnv: {
@@ -1029,7 +1010,7 @@ Gateway 会安装并验证所选的 OpenClaw 构建版本，启动自包含的�
 使用一种对象形状：
 
 ```json5
-{ source: "env" | "file" | "exec", provider: "default", id: "..." }
+{ source: "env" | "file" | "exec" | "store", provider: "default", id: "..." }
 ```
 
 验证：
@@ -1351,7 +1332,7 @@ CLI 引导式设置流程（`onboard`、`configure`、`doctor`）的行为和元
 - `sessionRetention`：在清理 SQLite 会话行之前，保留已完成的隔离自动化运行会话的时长。也控制已归档的已删除自动化记录的清理。默认值：`24h`；设置为 `false` 或 `"0h"` 等零时长可禁用（负时长无效）。
 - 运行历史记录会自动为每个任务保留最新的 2000 条终止状态记录。丢失的记录仍会保留其 24 小时的清理窗口。
 - `webhookToken`：用于自动化 webhook POST 投递（`delivery.mode = "webhook"`）的 bearer 令牌；如果省略，则不会发送身份验证标头。
-- `webhookSsrfPolicy`：适用于主要 webhook、完成 webhook、失败目标 webhook 和失败告警 webhook 的共享出站 SSRF 策略。省略时会阻止私有/内部目标。优先使用精确的 `allowedHostnames`；仅对受信任的私有网络接收方使用 `dangerouslyAllowPrivateNetwork: true`。针对特定虚假 IP 范围的代理标志为 `allowRfc2544BenchmarkRange` 和 `allowIpv6UniqueLocalRange`。
+- `webhookSsrfPolicy`：适用于主要 webhook、完成 webhook、失败目标 webhook 和失败告警 webhook 的共享出站 SSRF 策略。省略时会阻止私有／内部目标。优先使用精确的 `allowedHostnames`；仅对受信任的私有网络接收方使用 `dangerouslyAllowPrivateNetwork: true`。针对特定虚假 IP 范围的代理标志为 `allowRfc2544BenchmarkRange` 和 `allowIpv6UniqueLocalRange`。
 
 `cron` 块是严格的；`cron.enabled`、`cron.triggers`、`cron.webhookToken`、
 `cron.webhookSsrfPolicy`、`cron.sessionRetention` 和 `cron.failureAlert` 是唯一接受的键。已弃用的

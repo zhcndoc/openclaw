@@ -9,7 +9,11 @@ title: "会话管理"
 
 OpenClaw 会根据每条入站消息的来源将其路由到一个 **会话**：私信、群聊、定时任务等。所有会话状态都由 **gateway** 持有；UI 客户端会向 gateway 查询会话数据。
 
-关于 personal-agent 默认设置——即一个由你所有 DM 渠道共享的滚动会话，群组活动和后台工作都流入其中——请参阅
+要在 Control UI、终端或
+编程工具中继续使用同一个由 Gateway 持有的会话，请参阅[会话同步与附加](/concepts/session-attachment)。
+
+如需了解个人代理的默认设置——所有
+DM 频道共享一个持续滚动的会话，群组活动和后台工作也会流入其中——请参阅
 [主会话](/concepts/main-session)。
 
 ## 消息如何路由
@@ -94,7 +98,7 @@ Lossless Claw 这样的上下文引擎仍然相互独立，并且可以与其并
 - **不自动重置**（默认 `mode: "none"`）——会话保持相同的
   `sessionId`；随着对话增长，压缩机制会管理活跃上下文。
 - **每日重置**（`mode: "daily"`）——在网关主机配置的本地时间
-  (`session.reset.atHour`，默认为 `4`，范围为 0-23) 到达时启用新会话。
+  （`session.reset.atHour`，默认为 `4`，范围为 0-23）到达时启用新会话。
   每日新鲜度取决于当前 `sessionId` 的启动时间，而不是之后的元数据写入时间。
 - **空闲重置**（`mode: "idle"`）——在 `session.reset.idleMinutes`
   分钟无活动后启用新会话。空闲新鲜度取决于上一次真实的用户/频道交互，因此 heartbeat、cron
@@ -166,7 +170,7 @@ OpenClaw 通过 `session.maintenance` 按时间对会话存储进行约束，默
 
 对于生产规模的 `maxEntries` 限制，Gateway 运行时写入会先使用一个较小的高水位缓冲区，并在批处理中清理回配置的上限。会话存储读取在 Gateway 启动期间不会修剪或限制条目，因此启动和独立的 cron 会话不会承担完整存储清理的成本。`openclaw sessions cleanup --enforce` 会立即应用该上限。
 
-Gateway 的 model-run 探测会话默认是短生命周期。匹配 `agent:*:explicit:model-run-<uuid>` 的行使用固定的 `24h` 保留期，但清理是受压力门控的：只有在达到会话条目维护/容量压力时才移除过期的探测行，并且会在更宽泛的过期条目年龄截止和条目上限之前运行。普通的 direct、group、thread、cron、hook、heartbeat、ACP 和 sub-agent 会话不会继承这项 24h 保留期。
+Gateway 的 model-run 探测会话默认是短生命周期。匹配 `agent:*:explicit:model-run-<uuid>` 的行使用固定的 `24h` 保留期，但清理是受压力门控的：只有在达到会话条目维护／容量压力时才移除过期的探测行，并且会在更宽泛的过期条目年龄截止和条目上限之前运行。普通的 direct、group、thread、cron、hook、heartbeat、ACP 和 sub-agent 会话不会继承这项 24h 保留期。
 
 维护会保留持久的外部会话指针，包括群组会话和线程范围的聊天会话，同时仍允许合成的 cron、hook、heartbeat、ACP 和子代理条目过期。
 
@@ -195,7 +199,7 @@ Gateway 的 model-run 探测会话默认是短生命周期。匹配 `agent:*:exp
   存储模式、对话记录、发送策略、来源元数据和高级配置
 - [多代理](/concepts/multi-agent) - 在代理之间进行路由和会话隔离
 - [后台任务](/automation/tasks) - 分离出的工作如何创建带有会话引用的任务记录
-- [通道路由](/channels/channel-routing) - 入站消息如何路由到会话
+- [通道路由](/channels/channel-routing) - 入站消息如何路由到会话。
 
 ## 相关内容
 

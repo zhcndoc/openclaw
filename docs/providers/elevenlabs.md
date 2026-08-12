@@ -9,11 +9,11 @@ title: "ElevenLabs"
 
 OpenClaw 使用 ElevenLabs 提供文本转语音、使用 Scribe v2 进行批量语音转文本，并使用 Scribe v2 Realtime 进行流式 STT。该插件已打包并默认启用；无需执行 `plugins install` 步骤。
 
-| Capability               | OpenClaw surface                                                     | Default                  |
+| 能力                     | OpenClaw 接口                                                        | 默认                     |
 | ------------------------ | -------------------------------------------------------------------- | ------------------------ |
-| Text-to-speech           | `tts` / `talk`                                                       | `eleven_multilingual_v2` |
-| Batch speech-to-text     | `tools.media.audio`                                                  | `scribe_v2`              |
-| Streaming speech-to-text | Voice Call streaming or Google Meet `realtime.transcriptionProvider` | `scribe_v2_realtime`     |
+| 文本转语音               | `tts` / `talk`                                                       | `eleven_multilingual_v2` |
+| 批量语音转文本           | `tools.media.audio`                                                  | `scribe_v2`              |
+| 流式语音转文本           | Voice Call streaming 或 Google Meet `realtime.transcriptionProvider` | `scribe_v2_realtime`     |
 
 ## 认证
 
@@ -42,12 +42,10 @@ export ELEVENLABS_API_KEY="..."
 将 `modelId` 设置为 `eleven_v3` 可使用 ElevenLabs v3 TTS。OpenClaw 会为现有安装保留
 `eleven_multilingual_v2` 作为默认值。
 
-Discord voice channels use ElevenLabs' streaming TTS endpoint when ElevenLabs
-is the selected `voice.tts`/`tts` provider: playback starts from the
-returned audio stream instead of waiting for OpenClaw to download the whole
-audio file first. `latencyTier` maps to ElevenLabs' `optimize_streaming_latency`
-query parameter for models that accept it; OpenClaw omits that parameter for
-`eleven_v3`, which rejects it.
+Discord 语音频道在 ElevenLabs 是选定的 `voice.tts`/`tts` 提供商时，会使用 ElevenLabs 的流式 TTS
+端点：播放会从返回的音频流开始，而不是等待 OpenClaw 先下载整个音频文件。
+`latencyTier` 会映射到接受该参数的模型所使用的 ElevenLabs `optimize_streaming_latency` 查询参数；对于
+`eleven_v3`，OpenClaw 会省略该参数，因为该模型会拒绝此参数。
 
 ## 语音转文本
 
@@ -57,9 +55,9 @@ query parameter for models that accept it; OpenClaw omits that parameter for
 {
   tools: {
     media: {
+      models: [{ provider: "elevenlabs", model: "scribe_v2", capabilities: ["audio"] }],
       audio: {
         enabled: true,
-        models: [{ provider: "elevenlabs", model: "scribe_v2" }],
       },
     },
   },
@@ -75,12 +73,12 @@ OpenClaw 将多部分音频发送到 ElevenLabs 的 `/v1/speech-to-text`，并�
 
 | 设置           | 配置路径                                                               | 默认值                                    |
 | -------------- | --------------------------------------------------------------------------- | ------------------------------------------ |
-| API key        | `plugins.entries.voice-call.config.streaming.providers.elevenlabs.apiKey` | 回退到 `ELEVENLABS_API_KEY` / `XI_API_KEY` |
-| Model          | `...elevenlabs.modelId`                                                | `scribe_v2_realtime`                       |
-| Audio format   | `...elevenlabs.audioFormat`                                            | `ulaw_8000`                                |
-| Sample rate    | `...elevenlabs.sampleRate`                                             | `8000`                                     |
-| Commit strategy | `...elevenlabs.commitStrategy`                                         | `vad`                                      |
-| Language       | `...elevenlabs.languageCode`                                           | （未设置）                                 |
+| API 密钥       | `plugins.entries.voice-call.config.streaming.providers.elevenlabs.apiKey` | 回退到 `ELEVENLABS_API_KEY` / `XI_API_KEY` |
+| 模型           | `...elevenlabs.modelId`                                                | `scribe_v2_realtime`                       |
+| 音频格式       | `...elevenlabs.audioFormat`                                            | `ulaw_8000`                                |
+| 采样率         | `...elevenlabs.sampleRate`                                             | `8000`                                     |
+| 提交策略       | `...elevenlabs.commitStrategy`                                         | `vad`                                      |
+| 语言           | `...elevenlabs.languageCode`                                           | （未设置）                                 |
 
 ```json5
 {

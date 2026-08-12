@@ -10,17 +10,18 @@ title: "测试"
 
 ## Agent 默认
 
-Agent 会话仅在本地针对受信任源码、且现有依赖安装已准备就绪时，运行一个/少量聚焦测试和廉价静态检查。切勿在本地执行不受信任的仓库工具。更大的测试套件、包含 typecheck/lint 分流的变更门禁、构建、Docker、包流水线、E2E、线上验证以及跨平台验证，均通过 Crabbox 远程运行。受信任维护者的重型验证默认使用 Blacksmith Testbox。已配置的 Testbox 工作流会填充凭据，因此不受信任的贡献者或 fork 代码必须使用无密钥的 fork CI，或经过净化的直接 AWS Crabbox。
+Agent 会话仅在本地针对受信任源码、且现有依赖安装已准备就绪时，运行一个／少量聚焦测试和廉价静态检查。切勿在本地执行不受信任的仓库工具。更大的测试套件、包含 typecheck／lint 分流的变更门禁、构建、Docker、包流水线、E2E、线上验证以及跨平台验证，均通过 Crabbox 远程运行。受信任维护者的重型验证默认使用 Blacksmith Testbox。已配置的 Testbox 工作流会填充凭据，因此不受信任的贡献者或 fork 代码必须使用无密钥的 fork CI，或经过净化的直接 AWS Crabbox。
 
 不要为预期的工作预热。等第一个重型命令就绪时再惰性获取后端，在后续重型命令中复用返回的 `tbx_...` id，每次运行都同步当前检出，并在交接前停止它。
 
-第一次成功复用后，包装器会将该租约的 base、dependency 和 Testbox workflow fingerprint 记录到 `.crabbox/testbox-leases/` 下。仅有源码修改时会继续复用已预热的 box。若 merge base、lockfile、package-manager 输入、wrapper 或 Testbox workflow 发生变化，则会失败并要求新的租约。每次运行仍会同步当前检出。
+第一次成功复用后，包装器会将该租约的 base、dependency 和 Testbox workflow fingerprint 记录到 `.crabbox/testbox-leases/` 下。仅有源码修改时会继续复用已预热的 box。若 merge base、lockfile、package-manager 输入、wrapper 或 Testbox workflow 发生变化，则会失败并要求新的租约。每次运行仍会同步当前检出。  
 `OPENCLAW_TESTBOX_ALLOW_STALE=1` 仅用于有意进行诊断，不用于发布验证。
 
 下面的本地测试命令仅适用于人工工作流和受限的 agent 验证。若远程提供方不可用，必须上报；这不意味着可以在本地静默运行更宽泛的门禁。
 
-对于不受信任的重型验证，使用 `--provider aws` 惰性预热。每次运行都必须设置 `CRABBOX_ENV_ALLOW=CI`，传入 `--provider aws --no-hydrate`，并在安装依赖或运行测试前使用一个新的临时远程 `HOME`。为该不受信任源码使用一个新预热的专用租约；绝不要复用受信任或已预填充的租约。先从一个干净、受信任的 `main` 检出中启动已安装的受信任 Crabbox 二进制，并且只用 `--fresh-pr` 获取远程 PR；绝不要在本地执行不受信任检出的 wrapper 或配置。取消设置 `CRABBOX_AWS_INSTANCE_PROFILE`，并在未解析到空的 `aws.instanceProfile` 时失败关闭。在任何安装/测试之前，使用受信任的绝对路径工具要求 IMDSv2 token，证明 IAM 凭据端点返回 404，并验证远程 `git rev-parse HEAD` 等于完整审阅过的 PR head SHA。将该租约绑定到该 SHA，并在 head 变更时停止/重新预热。与 `--fresh-pr` 一起上传来自干净 `main` 的受信任 `scripts/crabbox-untrusted-bootstrap.sh`；它会安装固定版本的 Node/pnpm，验证 SHA 和 package-manager pin，隔离 `HOME`，安装依赖，然后执行所请求的测试。如果 broker 不能证明不存在 role 或不存在远程 PR，则使用无密钥的 fork CI。不要使用 `hydrate-github`、`--no-sync`，或带凭据填充的 Testbox 工作流。
-取消设置所有 `CRABBOX_TAILSCALE*` 覆盖项，强制使用 `--network public --tailscale=false`，清除 exit-node/LAN 标志，并要求 `crabbox inspect` 在上传任何脚本之前报告公共网络且没有 Tailscale 状态。
+对于不受信任的重型验证，使用 `--provider aws` 惰性预热。每次运行都必须设置 `CRABBOX_ENV_ALLOW=CI`，传入 `--provider aws --no-hydrate`，并在安装依赖或运行测试前使用一个新的临时远程 `HOME`。为该不受信任源码使用一个新预热的专用租约；绝不要复用受信任或已预填充的租约。先从一个干净、受信任的 `main` 检出中启动已安装的受信任 Crabbox 二进制，并且只用 `--fresh-pr` 获取远程 PR；绝不要在本地执行不受信任检出的 wrapper 或配置。取消设置 `CRABBOX_AWS_INSTANCE_PROFILE`，并在未解析到空的 `aws.instanceProfile` 时失败关闭。在任何安装／测试之前，使用受信任的绝对路径工具要求 IMDSv2 token，证明 IAM 凭据端点返回 404，并验证远程 `git rev-parse HEAD` 等于完整审阅过的 PR head SHA。将该租约绑定到该 SHA，并在 head 变更时停止／重新预热。与 `--fresh-pr` 一起上传来自干净 `main` 的受信任 `scripts/crabbox-untrusted-bootstrap.sh`；它会安装固定版本的 Node／pnpm，验证 SHA 和 package-manager pin，隔离 `HOME`，安装依赖，然后执行所请求的测试。如果 broker 不能证明不存在 role 或不存在远程 PR，则使用无密钥的 fork CI。不要使用 `hydrate-github`、`--no-sync`，或带凭据填充的 Testbox 工作流。
+
+取消设置所有 `CRABBOX_TAILSCALE*` 覆盖项，强制使用 `--network public --tailscale=false`，清除 exit-node／LAN 标志，并要求 `crabbox inspect` 在上传任何脚本之前报告公共网络且没有 Tailscale 状态。
 
 ## 常规本地顺序
 
@@ -29,7 +30,7 @@ Agent 会话仅在本地针对受信任源码、且现有依赖安装已准备�
 3. 仅当你有意需要完整的本地 Vitest 测试套件时，才使用 `pnpm test`。
 
 - 有依赖已就绪时的有界聚焦证明：
-  `node scripts/run-vitest.mjs <path-or-filter>`.
+  `node scripts/run-vitest.mjs <path-or-filter>`。
 - 先分类的变更检查：`node scripts/check-changed.mjs`；仅文档、
   无变更和小型元数据计划在依赖已就绪时保持本地执行，而重型或缺少依赖的计划则委派给 Testbox。
 - 显式保留租约的广泛证明：`node scripts/crabbox-wrapper.mjs run --provider blacksmith-testbox ... -- env OPENCLAW_CHECK_CHANGED_REMOTE_CHILD=1 OPENCLAW_CHANGED_LANES_RAW_SYNC=1 corepack pnpm check:changed`，这样 pnpm 会在 Testbox 内运行。
@@ -64,22 +65,22 @@ Agent 会话仅在本地针对受信任源码、且现有依赖安装已准备�
 
 ## 控制 UI、TUI 和扩展通道
 
-- **控制 UI 模拟 E2E：** `pnpm test:ui:e2e` 运行 Vitest + Playwright 测试流程，启动 Vite 控制 UI，并针对模拟的 Gateway WebSocket 驱动真实的 Chromium 页面。测试位于 `ui/src/**/*.e2e.test.ts`；共享模拟和控制逻辑位于 `ui/src/test-helpers/control-ui-e2e.ts`。`pnpm test:e2e` 包含此测试流程。Agent 运行默认使用 Testbox/Crabbox，包括定向验证；仅在明确需要本地回退时使用 `node scripts/run-vitest.mjs run --config test/vitest/vitest.ui-e2e.config.ts --configLoader runner ui/src/ui/e2e/chat-flow.e2e.test.ts`。
-- **TUI PTY 测试：** `node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts` 运行快速的模拟后端 PTY 测试流程。`OPENCLAW_TUI_PTY_INCLUDE_LOCAL=1` 或 `pnpm tui:pty:test:watch --mode local` 运行较慢的 `tui --local` 冒烟测试，该测试只模拟外部模型端点。CI 还会在构建 `dist/` 后设置 `OPENCLAW_TUI_PTY_USE_BUILT_CLI=1`；仅当精确匹配当前提交的构建产物已经存在时使用此标志。断言稳定的可见文本或 fixture 调用，而不是原始 ANSI 快照。
-- `pnpm test:extensions` 和 `pnpm test extensions` 运行所有扩展/插件分片。重量级通道插件、浏览器插件和 OpenAI 作为专用分片运行；其他插件组保持批量运行。`pnpm test extensions/<id>` 运行单个打包插件测试流程。
-- 带有同级测试的源文件会优先映射到对应的同级测试，然后才回退到更宽泛的目录 glob。`src/channels/plugins/contracts/test-helpers`、`src/plugin-sdk/test-helpers` 和 `src/plugins/contracts` 下的辅助文件修改会使用本地导入图来运行导入它们的测试，而不是在依赖路径明确时对每个分片进行广泛运行。
-- 合约目录目标会分发到对应的合约测试流程：`pnpm test src/channels/plugins/contracts` 运行四个通道合约配置，`pnpm test src/plugins/contracts` 运行插件合约配置，因为通用的 `channels`/`plugins` 项目会排除 `contracts/**`。
-- `auto-reply` 拆分为三个专用配置（`core`、`top-level`、`reply`），这样回复测试框架不会占用较轻量的顶层状态/令牌/辅助测试的大部分资源。
-- 选定的 `plugin-sdk` 和 `commands` 测试文件会通过专用的轻量测试流程运行，该流程仅保留 `test/setup.ts`，而运行时开销较大的测试仍使用其原有测试流程。
+- **Control UI mocked E2E：**`pnpm test:ui:e2e` 运行 Vitest + Playwright 流程，该流程启动 Vite Control UI，并通过模拟的 Gateway WebSocket 驱动真实的 Chromium 页面。测试位于 `ui/src/**/*.e2e.test.ts`；共享模拟和控制逻辑位于 `ui/src/test-helpers/control-ui-e2e.ts`。`pnpm test:e2e` 包含此流程。Agent 运行默认使用 Testbox/Crabbox，包括针对性验证；只有在明确需要本地回退时，才使用 `node scripts/run-vitest.mjs run --config test/vitest/vitest.ui-e2e.config.ts --configLoader runner ui/src/e2e/chat-flow.messaging.e2e.test.ts`。
+- **TUI PTY 测试：**`node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts` 运行快速的假后端 PTY 流程。`OPENCLAW_TUI_PTY_INCLUDE_LOCAL=1` 或 `pnpm tui:pty:test:watch --mode local` 运行较慢的 `tui --local` 冒烟测试，该测试仅模拟外部模型端点。CI 还会在构建 `dist/` 后设置 `OPENCLAW_TUI_PTY_USE_BUILT_CLI=1`；只有在精确匹配当前 HEAD 的构建产物已经存在时才使用该标志。断言稳定的可见文本或固定装置调用，不要断言原始 ANSI 快照。
+- `pnpm test:extensions` 和 `pnpm test extensions` 运行所有扩展／插件分片。重量级通道插件、浏览器插件和 OpenAI 作为专用分片运行；其他插件组保持批量运行。`pnpm test extensions/<id>` 运行单个捆绑插件流程。
+- 带有同级测试的源文件会优先映射到该同级测试，然后才回退到更宽泛的目录 glob。`src/channels/plugins/contracts/test-helpers`、`src/plugin-sdk/test-helpers` 和 `src/plugins/contracts` 下的辅助文件编辑会使用本地导入图来运行导入它们的测试；当依赖路径明确时，不会对所有分片进行宽泛运行。
+- 合约目录目标会分发到对应的合约流程：`pnpm test src/channels/plugins/contracts` 运行四个通道合约配置，`pnpm test src/plugins/contracts` 运行插件合约配置，因为通用的 `channels`／`plugins` 项目会排除 `contracts/**`。
+- `auto-reply` 拆分为三个专用配置（`core`、`top-level`、`reply`），这样回复测试框架不会占用较轻量的顶层状态／令牌／辅助测试的大部分资源。
+- 选定的 `plugin-sdk` 和 `commands` 测试文件会通过专用的轻量流程运行，该流程仅保留 `test/setup.ts`；运行时开销较大的用例仍使用其现有流程。
 - 基础 Vitest 配置默认使用 `pool: "threads"` 和 `isolate: false`，并在整个仓库的配置中启用共享的非隔离运行器。
 - `pnpm test:channels` 运行 `vitest.channels.config.ts`。
 
 ## 网关和 E2E
 
-- 网关测试包含在未指定目标的 `pnpm test` 完整测试套件中；单独运行请使用 `pnpm test:gateway`。
+- 网关测试包含在未指定目标的 `pnpm test` 完整测试套件中；使用 `pnpm test:gateway` 单独运行。
 - `pnpm test:e2e`：仓库 E2E 聚合测试 = `pnpm test:e2e:gateway && pnpm test:ui:e2e`。
-- `pnpm test:e2e:gateway`：网关端到端冒烟测试（多实例 WS/HTTP/节点配对）。在 `vitest.e2e.config.ts` 中默认使用 `threads` + `isolate: false`，并启用自适应工作进程；可通过 `OPENCLAW_E2E_WORKERS=<n>` 调整，通过 `OPENCLAW_E2E_VERBOSE=1` 输出详细日志。
-- `pnpm test:live`：提供商实时测试（Claude/Minimax/DeepSeek/z.ai 等，由 `*.live.test.ts` 控制）。需要 API 密钥，并设置 `LIVE=1`（或 `OPENCLAW_LIVE_TEST=1`）以取消跳过；通过 `OPENCLAW_LIVE_TEST_QUIET=0` 输出详细信息。
+- `pnpm test:e2e:gateway`：网关端到端冒烟测试（多实例 WS/HTTP/节点配对）。在 `vitest.e2e.config.ts` 中默认使用 `threads` + `isolate: false`，并启用一个 worker；使用 `OPENCLAW_E2E_WORKERS=<n>` 可启用并行执行（上限为 16），使用 `OPENCLAW_E2E_VERBOSE=1` 可启用详细日志。
+- `pnpm test:live`：提供商实时测试（Claude/Minimax/DeepSeek/z.ai 等，由 `*.live.test.ts` 控制）。需要 API 密钥，并设置 `LIVE=1`（或 `OPENCLAW_LIVE_TEST=1`）以取消跳过；使用 `OPENCLAW_LIVE_TEST_QUIET=0` 输出详细信息。
 
 ## 完整 Docker 套件（`pnpm test:docker:all`）
 
@@ -133,7 +134,7 @@ Agent 会话仅在本地针对受信任源码、且现有依赖安装已准备�
 
 | 命令                                      | 验证内容                                                                                                                                                           |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm test:e2e:openshell`                    | 真实的 OpenShell 网关、自定义镜像构建、受管沙箱生命周期、SSH 执行、远程文件系统桥接、预置工作区，以及拒绝/允许网络策略。 |
+| `pnpm test:e2e:openshell`                    | 真实的 OpenShell 网关、自定义镜像构建、受管沙箱生命周期、SSH 执行、远程文件系统桥接、预置工作区，以及拒绝／允许网络策略。 |
 | `pnpm test:docker:package-install`           | 将打包后的 OpenClaw npm 制品安装到干净的全局前缀中，然后从已安装包启动 CLI 版本和帮助信息。                                |
 | `pnpm test:docker:openai-web-search-minimal` | 带有私有测试 CA 的模拟 TLS 端点、隔离的网关启动，以及通过配置的证书信任路径处理 web-search 请求。               |
 | `pnpm test:docker:browser-cdp-snapshot`      | Chromium 启动、原始 CDP 连通性、隔离的网关浏览器命令、doctor 输出，以及无障碍快照角色。                                        |

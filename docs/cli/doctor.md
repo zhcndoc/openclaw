@@ -189,7 +189,7 @@ openclaw doctor --lint --only core/doctor/gateway-config --json
 openclaw doctor --lint --skip core/doctor/skills-readiness
 ```
 
-`--only` 和 `--skip` 接受完整的检查 ID，并且可以多次使用。如果 `--only` 中的某个 ID 未注册，那么该 ID 将不会运行任何检查；请使用输出中的 `checksRun`/`checksSkipped` 来确认你所针对的门禁是否选择了你期望的检查。
+`--only` 和 `--skip` 接受完整的检查 ID，并且可以多次使用。如果 `--only` 中的某个 ID 未注册，那么该 ID 将不会运行任何检查；请使用输出中的 `checksRun`／`checksSkipped` 来确认你所针对的门禁是否选择了你期望的检查。
 
 ## 升级后模式
 
@@ -201,7 +201,9 @@ openclaw doctor --lint --skip core/doctor/skills-readiness
 
 `openclaw doctor --fix` 是持久化文件到 SQLite 迁移的唯一负责者。它会验证并接管每个已识别的源，写入并校验规范化行，记录迁移回执，然后移除已退役的源。运行时代码不会执行惰性导入或回退读取。
 
-这包括 `<state-dir>/mcp-oauth/*.json` 下已退役的 MCP OAuth 文件。修复前请停止 Gateway。Doctor 会将有效凭证导入到 `<state-dir>/state/openclaw.sqlite`，在两个存储都存在时保留现有的规范 SQLite 会话，删除已废弃的持久化 OAuth `state` 值，并使用其回执防止重新创建的过期文件复活已注销的凭证。已退役的 `.lock` 旁车文件会安全失败关闭：如果 Doctor 报告存在过期所有者，请确认没有更旧的 OpenClaw 进程在运行，移除该旁车文件，然后重新运行 Doctor。
+有关已退役的 QMD memory backend，包括配置重写和派生 workspace 清理，请参阅 [从 QMD 迁移](/concepts/memory-builtin#migrating-from-qmd)。
+
+其中包括 `<state-dir>/mcp-oauth/*.json` 下已退役的 MCP OAuth 文件。修复前请停止 Gateway。Doctor 会将有效凭据导入 `<state-dir>/state/openclaw.sqlite`，当两个存储都存在时保留现有的规范 SQLite 会话，删除已废弃的持久化 OAuth `state` 值，并使用其回执防止重新创建的过期文件使已注销的凭据复活。已退役的 `.lock` sidecar 会以安全失败方式终止：如果 Doctor 报告存在过期所有者，请确认没有更早启动的 OpenClaw 进程正在运行，删除该 sidecar，然后重新运行 Doctor。
 
 ## 共享状态 SQLite 压缩
 
