@@ -74,7 +74,7 @@ title: "常见问题"
   </Accordion>
 
   <Accordion title="价值主张">
-    OpenClaw 不是“只是一个 Claude 包装器”。它是一个 **local-first 控制平面**，在 **你自己的硬件** 上运行一个能力强大的助手，可从你已经在使用的聊天应用中访问，具备有状态会话、记忆和工具能力－而不必把你的工作流交给托管式 SaaS。
+    OpenClaw 不是“只是一个 Claude 包装器”。它是一个 **本地优先控制平面**，在 **你自己的硬件** 上运行一个能力强大的助手，可从你已经在使用的聊天应用中访问，具备有状态会话、记忆和工具能力－而不必把你的工作流交给托管式 SaaS。
 
     - **你的设备，你的数据**：可在任何你想要的地方运行 Gateway（Mac、Linux、VPS），并将工作区和会话历史保留在本地。
     - **真实渠道，而不是网页沙盒**：Discord/iMessage/Signal/Slack/Telegram/WhatsApp 等，以及在受支持平台上的移动端语音和 Canvas。
@@ -150,9 +150,9 @@ title: "常见问题"
     ```json5
     {
       agents: {
+        ownership: "explicit",
         entries: {
           coder: {
-            default: true,
             model: "xiaomi/mimo-v2.5-pro",
             thinkingDefault: "high",
             params: { temperature: 0.1 },
@@ -370,7 +370,7 @@ title: "常见问题"
     - 上传钩子需要 `ref` 或 `inputRef`，一次只能传一个文件，不能使用 CSS `element`。
     - `responsebody`、PDF 导出、下载拦截和批量操作仍然需要托管浏览器路径。
 
-    完整对比请参见 [Browser](/tools/browser#existing-session-via-chrome-devtools-mcp)。
+    完整对比请参见 [浏览器](/tools/browser#existing-session-via-chrome-devtools-mcp)。
   </Accordion>
 </AccordionGroup>
 
@@ -1183,7 +1183,7 @@ title: "常见问题"
 
 模型问答——默认值、选择、别名、切换、故障转移、认证配置文件——详见 [模型常见问题](/help/faq-models)。
 
-## 网关：端口、“已在运行”和远程模式
+## 网关：端口、“已在运行”和远程模式。
 
 <AccordionGroup>
   <Accordion title="网关使用哪个端口？">

@@ -46,7 +46,7 @@ openclaw gateway --port 18789 --tailscale serve
 。默认的 loopback 绑定无法被手机访问。如果 Gateway 还没有完成配置，请先运行 `openclaw onboard`，这样在创建 setup-code 时会有 token 或 password 认证路径。
 
 2. 打开 [Control UI](/web/control-ui)，选择 **Nodes**，然后在 **Devices** 页面点击
-   **Pair mobile device**。建议使用 Full access，且默认已选中；只有当你想省略管理性的 Gateway 控制时，才选择 Limited access，然后点击 **Create setup code**。
+   **Pair device**。默认已选择并建议使用完整访问权限；只有当你希望省略管理 Gateway 控制项时，才选择 Limited access，然后点击 **Create setup code**。
 
 3. 在 iOS 应用中，打开 **Settings** -> **Gateway**，扫描二维码（或粘贴
    setup code），然后连接。
@@ -202,8 +202,8 @@ relay 的存在是为了强制执行两个约束，这是直接在网关上使�
 
 1. `iOS app -> gateway`: 应用通过正常的 Gateway 认证流程与网关配对，从而获得一个已认证的 node session 以及一个已认证的 operator session。operator session 调用 `gateway.identity.get`。
 2. `iOS app -> relay`: 应用通过 HTTPS 调用 relay 注册端点，并附带 App Attest 证明以及 StoreKit app transaction JWS。relay 会验证 bundle ID、App Attest 证明和 Apple 分发证明，并且要求使用官方/生产分发路径——这就是阻止本地 Xcode/dev 构建使用托管 relay 的原因，因为本地构建无法满足官方 Apple 分发证明。
-3. `gateway identity delegation`: 在 relay 注册之前，应用从 `gateway.identity.get` 获取已配对的网关身份，并将其包含在 relay 注册负载中。relay 返回一个 relay handle，以及一个按注册范围授予、委托给该网关身份的 send grant。
-4. `gateway -> relay`: 网关将 `push.apns.register` 中返回的 relay handle 和 send grant 存储起来。在 `push.test`、reconnect wakes 和 wake nudges 场景下，网关使用自己的设备身份对发送请求签名；relay 会根据注册时委托的网关身份，验证存储的 send grant 和网关签名。即使另一台网关设法获取了该 handle，也不能重用这条已存储的注册。
+3. `网关身份委托`: 在 relay 注册之前，应用从 `gateway.identity.get` 获取已配对的网关身份，并将其包含在 relay 注册负载中。relay 返回一个 relay handle，以及一个按注册范围授予、委托给该网关身份的 send grant。
+4. `gateway -> relay`: 网关将 `push.apns.register` 中返回的 relay handle 和 send grant 存储起来。在 `push.test`、重新连接唤醒和唤醒提醒场景下，网关使用自己的设备身份对发送请求签名；relay 会根据注册时委托的网关身份，验证存储的 send grant 和网关签名。即使另一台网关设法获取了该 handle，也不能重用这条已存储的注册。
 5. `relay -> APNs`: relay 持有生产环境 APNs 凭据以及官方构建对应的原始 APNs token。网关不会为基于 relay 的官方构建存储原始 APNs token；relay 代表已配对的网关将最终推送发送到 APNs。
 
 创建此设计的原因：将生产 APNs 凭据保留在用户网关之外，避免在网关上存储官方构建的原始 APNs token，只允许官方 OpenClaw iOS 构建使用托管 relay，并防止某个网关向属于另一网关的 iOS 设备发送唤醒推送。

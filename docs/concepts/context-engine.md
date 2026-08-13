@@ -210,12 +210,7 @@ export default function register(api) {
 | `assemble(params)` | 方法     | 为模型运行构建上下文（返回 `AssembleResult`）                                     |
 | `compact(params)`  | 方法     | 总结／缩减上下文                                                                    |
 
-设置 `info.acceptedHostParams`，以声明引擎接受的由宿主添加的生命周期字段。
-当前的键包括 `sessionKey`、`prompt`、`runtimeSettings`、
-`sessionTarget` 和 `runtimeContext`。OpenClaw 会将该声明与每个生命周期方法
-可用的字段取交集，因此不会注入未声明或未知的键。没有此声明的引擎会在
-2026-08-12 之前通过预先添加宿主字段的 legacy 参数集接收参数；在该日期之后，
-未声明的引擎会接收当前所有宿主字段。
+将 `info.acceptedHostParams` 设为限制引擎接收的宿主添加生命周期字段。当前的键包括 `sessionKey`、`prompt`、`runtimeSettings`、`sessionTarget` 和 `runtimeContext`。OpenClaw 会将该声明与每个生命周期方法可用的字段取交集，因此不会注入未声明或未知的键。未声明此字段的引擎会接收当前所有宿主字段；当引擎验证更窄的输入形状时，请声明一个明确的列表，包括 `[]`。
 
 对于持久化的已接纳轮次，请声明以下两种转录语义：
 
@@ -280,9 +275,9 @@ legacy 上下文路径。配置的上下文引擎槽位不会改变，OpenClaw �
 - `limits`：已知时的提示词令牌预算和最大输出令牌数
 - `diagnostics`：已知时的关闭式回退和降级原因代码
 
-可能未知的字段以 `null` 表示；运行时模式和选择来源等判别字段
-仍不可为 null。在兼容窗口期间，接受 `runtimeSettings` 的引擎必须在
-`info.acceptedHostParams` 中包含它。
+可为未知的字段以 `null` 表示；运行时模式和选择来源等判别字段仍不可为
+`null`。限制宿主参数且接受 `runtimeSettings` 的引擎必须将其包含在
+`info.acceptedHostParams` 中。
 
 ### 主机要求
 

@@ -79,6 +79,10 @@ openclaw config set browser.defaultProfile chrome
 
 新的自动配对使用 **All tabs**。现有的有效配对不会被覆盖，较旧的配对会保留其存储的访问模式。
 
+对于本地设置，原生引导会通过本地 Gateway 的确切 `/browser/extension` 路由连接扩展程序。第一次经过身份验证的连接会唤醒延迟加载的浏览器控制服务，并启动该配置文件的回环中继；随后 OpenClaw 和 mcporter 等本地客户端会使用该配置文件的中继端口。请保持 `openclaw gateway run` 或受管理的 Gateway 服务运行。不需要单独的浏览器请求或预热步骤。
+
+浏览器节点设置仍然不同：扩展程序会连接到浏览器节点主机上的中继，而节点使用其配置的远程 Gateway。使用明确的 `--gateway-url` 进行配对时，会直接连接到该远程 Gateway，并且仍然只能手动完成。
+
 ### 选择标签页访问权限
 
 - **All tabs** 会公开该 Chrome 配置文件中所有符合条件的普通标签页，但当前浏览器会话中已暂停的标签页除外。在弹出窗口中使用 **Pause on this tab** 和 **Allow on this tab**。
@@ -97,7 +101,9 @@ openclaw config set browser.defaultProfile chrome
 - **使用本地 OpenClaw**会清除退出选择并重试原生主机。
 - 保存明确的手动配对也会清除退出选择。
 
-### 从已停用的标签页 copilot 升级
+在本地 Gateway 唤醒路由之前完成配对的预发布开发安装会保留其现有配对不变。在设置中，使用**断开连接并禁用自动设置**，然后使用**本地 OpenClaw**来创建新的本地配对。发布版本不需要此恢复步骤。
+
+### 从已停用的标签页副驾驶升级
 
 如果设置显示自动化已暂停，以保护升级前的 copilot 会话，请确认旧的运行任务已完成。然后点击**断开连接并禁用自动设置**以丢弃已停用的恢复状态，随后点击**使用本地 OpenClaw**重新连接。在明确断开连接成功之前，扩展会保留已停用状态，并阻止中继连接、原生设置、手动配对、标签页访问权限更改和调试器附加。
 
@@ -133,7 +139,9 @@ openclaw browser extension pair
 
 手动配对在 Windows 上以及恢复场景中仍然很有用。将完整的配对字符串视为密码。
 
-对于一台安装了 Chrome 但未运行 OpenClaw 或浏览器节点的笔记本电脑，可直接配对到远程 Gateway：
+不带 `--gateway-url` 时，此命令会为独立手动配对保留主机本地的 `/extension` 中继。它不会唤醒浏览器控制；所选配置文件的中继必须已经运行，扩展程序才能连接。
+
+对于安装了 Chrome 但不运行 OpenClaw 或浏览器节点的笔记本电脑，请直接配对到远程 Gateway：
 
 ```bash
 openclaw browser extension pair \
@@ -198,12 +206,12 @@ openclaw browser doctor --browser-profile chrome
 openclaw doctor
 ```
 
-- **未检测到扩展 ID：** 保持 Chrome 运行，重新运行 `extension install`，并且仅在命令提示原生引导已准备就绪并输出稳定路径后，使用 **Load unpacked**。
-- **原生设置之前已加载扩展：** 重启 Chrome 一次，以清除其缓存的原生主机缺失状态，然后重新运行有序安装流程。
-- **正在等待本地 OpenClaw：** 运行 `extension status`；安装或修复归属的原生主机。
-- **已禁用自动设置：** 在 Settings 中启用，或点击 **Use local OpenClaw**。
-- **需要手动设置：** 使用 Settings 进行高级配对流程。在 Windows 和仅扩展的远程 Gateway 设置中，这是预期行为。
-- **中继不可用：** 确认 Gateway 或浏览器节点正在运行，然后运行 browser doctor。
+- **未检测到扩展程序 ID：**保持 Chrome 运行，重新运行 `extension install`，并仅在命令显示原生引导已准备就绪且打印出稳定路径后，使用 **Load unpacked**。
+- **原生设置之前已加载扩展程序：**重启一次 Chrome，以清除其缓存的原生主机未找到结果，然后重新运行有序安装流程。
+- **正在等待本地 OpenClaw：**运行 `extension status`；安装或修复由 OpenClaw 所有的原生主机。
+- **自动设置已禁用：**在设置中启用它，或点击**使用本地 OpenClaw**。
+- **需要手动设置：**使用设置完成高级配对流程。在 Windows 和仅直接扩展远程 Gateway 设置中，这是预期行为。
+- **中继不可用：**确认本地设置中的 `openclaw gateway run` 或受管理的 Gateway 服务正在运行，或者确认浏览器节点设置中的浏览器节点正在运行。然后运行 browser doctor。不应需要单独的浏览器预热。
 
 请参阅 [Browser](/tools/browser)，了解完整的配置文件模型，以及托管的
 `openclaw` 和 Chrome MCP `user` 配置文件。

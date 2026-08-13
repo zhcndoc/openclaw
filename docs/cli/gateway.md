@@ -516,6 +516,31 @@ openclaw gateway call logs.tail --params '{"limit": 200}'
 `--params` 必须是有效的 JSON，并且每个方法都会验证其自身的参数结构（多余字段或字段名错误会被拒绝）。对于自定义端口的本地 Gateway，请使用 `--port`；显式指定的 `--url` 仍然需要显式凭据。
 </Note>
 
+### `gateway suspend`
+
+为协作式主机冻结或快照准备处于空闲状态的 Gateway。不带
+`--wait` 时，活跃工作会返回非零退出码以及阻塞项详细信息。带有
+`--wait` 时，CLI 会使用一个稳定的请求 ID 重试，直到有界期限到达。
+
+```bash
+openclaw gateway suspend
+openclaw gateway suspend --request-id snapshot-2026-08-11 --wait 30
+openclaw gateway suspend --port 18999 --json
+```
+
+就绪输出包括暂停 ID、租约到期时间以及匹配的恢复命令。支持常见的 RPC 选项，例如 `--url`、`--token`、`--password`、`--timeout`、`--json` 和 `--port`。
+
+### `gateway resume <suspensionId>`
+
+在解冻后，或主机操作被放弃时，释放已准备好的暂停。
+
+```bash
+openclaw gateway resume <suspensionId>
+openclaw gateway resume <suspensionId> --port 18999 --json
+```
+
+已经过期或已恢复的租约会成功执行但不产生任何操作。不同的活动暂停 ID 会被拒绝。
+
 ## 管理 Gateway 服务
 
 ```bash
@@ -558,11 +583,11 @@ openclaw gateway restart
 
 <AccordionGroup>
   <Accordion title="命令选项">
-    - `gateway status`: `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json`
-    - `gateway install`: `--port`, `--runtime <node>` (默认: `node`), `--token`, `--wrapper <path>`, `--force`, `--json`
-    - `gateway restart`: `--safe`, `--skip-deferral`, `--force`, `--wait <duration>`, `--json`
+    - `gateway status`: `--url`、`--token`、`--password`、`--timeout`、`--no-probe`、`--require-rpc`、`--deep`、`--json`
+    - `gateway install`: `--port`、`--runtime <node>`（默认：`node`）、`--token`、`--wrapper <path>`、`--force`、`--json`
+    - `gateway restart`: `--safe`、`--skip-deferral`、`--force`、`--wait <duration>`、`--json`
     - `gateway uninstall|start`: `--json`
-    - `gateway stop`: `--disable`, `--force`, `--json`
+    - `gateway stop`: `--disable`、`--force`、`--json`
 
   </Accordion>
   <Accordion title="生命周期行为">
@@ -597,7 +622,7 @@ openclaw gateway restart
 
 `gateway discover` 扫描 Gateway 信标（`_openclaw-gw._tcp`）。
 
-- 多播 DNS-SD: `local.`
+- 多播 DNS-SD：`local.`
 - 单播 DNS-SD（广域 Bonjour）：选择一个域（例如 `openclaw.internal.`），并设置分割 DNS + DNS 服务器；参见 [Bonjour](/gateway/bonjour)。
 
 只有启用了 Bonjour 发现的 gateway（默认）才会广播该信标。

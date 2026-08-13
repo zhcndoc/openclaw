@@ -27,7 +27,7 @@ services:
     name: openclaw
     runtime: docker
     plan: starter
-    healthCheckPath: /health
+    healthCheckPath: /startupz
     envVars:
       - key: OPENCLAW_GATEWAY_PORT
         value: "8080"
@@ -43,12 +43,12 @@ services:
       sizeGB: 1
 ```
 
-| 功能                  | 作用                                                       |
-| --------------------- | ---------------------------------------------------------- |
-| `runtime: docker`     | 从仓库的 Dockerfile 构建                                   |
-| `healthCheckPath`     | Render 监控 `/health` 并重启不健康的实例                   |
-| `generateValue: true` | 自动生成一个加密安全的值                                     |
-| `disk`                | 可在重新部署后仍然保留的持久化存储                          |
+| 功能                  | 用途                                                               |
+| --------------------- | ------------------------------------------------------------------ |
+| `runtime: docker`     | 从仓库的 Dockerfile 构建                                             |
+| `healthCheckPath`     | `/startupz` 报告启动完成后，Render 才会接收流量                         |
+| `generateValue: true` | 自动生成一个经过加密安全处理的值                                       |
+| `disk`                | 在重新部署后仍然保留的持久化存储                                       |
 
 ## 选择套餐
 
@@ -123,7 +123,7 @@ openclaw backup create
 
 ### 健康检查失败
 
-如果构建成功但部署失败，服务可能启动时间过长，或者 `/health` 可能无法访问。请检查：
+如果构建成功但部署失败，则服务可能需要较长时间才能启动，或者可能无法访问 `/startupz`。请检查：
 
 - 构建日志中是否有错误
 - 容器是否可在本地使用 `docker build && docker run` 正常运行

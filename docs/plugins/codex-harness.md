@@ -339,17 +339,19 @@ Runtime: OpenAI Codex
 
 | 用户意图                                                | 使用                                                                                                   |
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| 附加当前聊天                                                | `/codex bind [thread-id] [--cwd <path>] [--model <model>] [--provider <provider>]`                    |
-| 恢复现有的 Codex 线程                            | `/codex resume <thread-id>`                                                                           |
+| 附加当前聊天                                    | `/codex bind [thread-id] [--cwd <path>] [--model <model>] [--provider <provider>]`                    |
+| 恢复现有 Codex 线程                            | `/codex resume <thread-id>`                                                                           |
 | 列出或筛选 Codex 线程                               | `/codex threads [filter]`                                                                             |
-| 读取或更新已绑定线程的原生目标              | `/codex goal [status\|set <objective>\|pause\|resume\|block\|complete\|clear]`                        |
+| 读取或更新绑定线程的原生目标              | `/codex goal [status\|set <objective>\|pause\|resume\|block\|complete\|clear]`                        |
 | 列出原生 Codex 插件                                  | `/codex plugins list`                                                                                 |
+| 发现可用的原生 Codex 市场插件        | `/codex plugins available`                                                                            |
+| 安装并授权一个原生 Codex 插件              | `/codex plugins install <plugin>@<marketplace>`                                                       |
 | 启用或禁用已配置的原生 Codex 插件         | `/codex plugins enable <name>`、`/codex plugins disable <name>`                                       |
-| 将存储的 Codex CLI 会话恢复为配对节点轮次    | `/codex sessions --host <node> [filter]`，然后执行 `/codex resume <session-id> --host <node> --bind here` |
-| 查看计算机之间未归档的 Codex 会话          | 启用 Codex 监管并打开 **Codex 会话**                                                  |
-| 更改已绑定线程的模型、快速模式或权限 | `/codex model <model>`、`/codex fast [on\|off\|status]`、`/codex permissions [default\|yolo\|status]` |
-| 停止或引导当前轮次                              | `/codex stop`、`/codex steer <text>`                                                                  |
-| 分离当前绑定                                 | `/codex detach`（别名 `/codex unbind`）                                                               |
+| 将已存储的 Codex CLI 会话作为配对节点轮次恢复    | `/codex sessions --host <node> [filter]`，然后运行 `/codex resume <session-id> --host <node> --bind here` |
+| 查看各计算机上的未归档 Codex 会话          | 启用 Codex 监督并打开 **Codex Sessions**                                                  |
+| 更改绑定线程的模型、快速模式或权限 | `/codex model <model>`、`/codex fast [on\|off\|status]`、`/codex permissions [default\|yolo\|status]` |
+| 停止或引导活动轮次                              | `/codex stop`、`/codex steer <text>`                                                                  |
+| 解除当前绑定                                 | `/codex detach`（别名 `/codex unbind`）                                                               |
 | 仅发送 Codex 反馈                                   | `/codex diagnostics [note]`                                                                           |
 | 启动 ACP/acpx 任务                                     | ACP/acpx 会话命令，而不是 `/codex`                                                               |
 
@@ -390,7 +392,7 @@ Codex GPT 引用重写为 `openai/gpt-*`。
 
 ### 混合提供商部署
 
-保留 Claude 作为默认代理，并添加一个名为 Codex 的代理：
+配置一个 Claude `main` agent，并添加一个命名的 Codex agent：
 
 ```json5
 {
@@ -402,12 +404,12 @@ Codex GPT 引用重写为 `openai/gpt-*`。
     },
   },
   agents: {
+    ownership: "explicit",
     defaults: {
       model: "anthropic/claude-opus-4-6",
     },
     entries: {
       main: {
-        default: true,
         model: "anthropic/claude-opus-4-6",
       },
       codex: {
@@ -419,7 +421,7 @@ Codex GPT 引用重写为 `openai/gpt-*`。
 }
 ```
 
-`main` 代理使用其正常的提供商路径。`codex` 代理在其有效的 OpenAI 路由仍兼容时使用 Codex app-server；需要故障关闭要求时，添加显式模型范围 `agentRuntime.id: "codex"`。
+此显式 fleet 没有默认 agent；通过会话、`--agent` 或绑定将目标设为 `main` 或 `codex`。`main` agent 使用其正常的提供方路径。只要其有效的 OpenAI 路由保持兼容，`codex` agent 就会使用 Codex app-server；当这应当成为失败即关闭要求时，添加显式的模型级 `agentRuntime.id: "codex"`。
 
 ### 故障关闭的 Codex 部署
 
@@ -530,19 +532,23 @@ Codex 姿态，请使用 `tools.exec.mode: "full"`。旧版
   附加当前聊天。
 - `/codex detach`（或 `/codex unbind`）解除当前绑定。
 - `/codex binding` 描述当前绑定。
-- `/codex stop` 停止当前活动轮次；`/codex steer <text>` 引导它。
-- `/codex model <model>`、`/codex fast [on|off|status]`，以及
-  `/codex permissions [default|yolo|status]` 更改每次会话的状态。
-- `/codex compact` 请求 Codex 应用服务器压缩已附加的线程。
-- `/codex review` 为已附加线程启动 Codex 原生审查。
-- `/codex diagnostics [note]` 在发送针对已附加线程的 Codex 反馈前请求确认。
+- `/codex stop` 停止活动轮次；`/codex steer <text>` 引导该轮次。
+- `/codex model <model>`、`/codex fast [on|off|status]` 和
+  `/codex permissions [default|yolo|status]` 更改每次对话的状态。
+- `/codex compact` 请求 Codex app-server 压缩已附加的线程。
+- `/codex review` 为已附加的线程启动 Codex 原生审查。
+- `/codex diagnostics [note]` 在发送已附加线程的 Codex 反馈前请求确认。
 - `/codex account` 显示账户和速率限制状态。
-- `/codex mcp` 列出 Codex 应用服务器 MCP 服务器状态。
-- `/codex skills` 列出 Codex 应用服务器技能。
-- `/codex plugins list`、`/codex plugins enable <name>`，以及
-  `/codex plugins disable <name>` 管理已配置的原生 Codex 插件。
+- `/codex mcp` 列出 Codex app-server MCP 服务器状态。
+- `/codex skills` 列出 Codex app-server 技能。
+- `/codex plugins list` 显示已配置的原生插件；`/codex plugins
+available` 在绑定的工作区中发现 Codex 市场插件。
+- `/codex plugins install <plugin>@<marketplace>` 安装并授权一个已发现的
+  插件。`/codex plugins enable <name>` 和 `/codex plugins
+disable <name>` 更新其持久化策略。修改需要所有者或
+  `operator.admin` 网关客户端。
 - `/codex computer-use [status|install]` 管理 Codex Computer Use。
-- `/codex help` 列出完整命令树。
+- `/codex help` 列出完整的命令树。
 
 ### 共享快速模式和 Codex 快速模式
 
@@ -604,10 +610,11 @@ API key 回退；请使用显式认证配置文件或远程 app-server 自身的
 当重置时间过去后，该订阅配置文件会再次具备资格，而无需更改所选的
 `openai/gpt-*` 模型或 Codex 运行时。
 
-当配置了原生 Codex 插件时，OpenClaw 会读取并缓存一个按运行时和工作区范围限定的
-`plugin/installed` 快照。这个快照同时涵盖精选插件和工作区插件，包括已禁用插件的
-归属信息。`plugin/read` 仅解析显式配置的插件详情；`plugin/list` 仅用于查找或修复
-显式启用但缺失的精选插件。OpenClaw 绝不会安装、启用或验证工作区插件。
+配置原生 Codex 插件后，OpenClaw 会读取并缓存一份按运行时和工作区范围限定的
+`plugin/installed` 快照。该快照涵盖从 Codex 发现的市场中配置的插件，包括已禁用插件的归属信息。
+`plugin/read` 只解析明确配置的插件详情。`/codex plugins available` 会使用绑定的工作区查询
+`plugin/list`，而 `/codex plugins install <plugin>@<marketplace>` 是由所有者或管理员授权的安装路径。
+常规线程设置会保留现有的明确配置精选插件恢复机制。
 
 `app/installed` 提供已安装应用的运行时快照，而 `app/read` 以每批最多 100 个应用 ID
 的方式提供经过认证的应用元数据。OpenClaw 会强制刷新一次冷快照，并将成功的精选
@@ -628,9 +635,8 @@ API key 回退；请使用显式认证配置文件或远程 app-server 自身的
 只读取完全匹配的已配置插件的详情，以继续拒绝其应用访问。此检查绝不会安装、启用或
 验证该插件。
 
-OpenClaw 不会安装未知应用；它只会通过 `plugin/install` 激活显式配置的市场插件，并
-刷新其已安装清单。缺失的清单方法、认证错误、传输失败以及连接器刷新失败都会
-保持故障关闭。
+OpenClaw 不会安装未知应用，也不会让模型授权新的插件安装。所有者批准的插件安装会刷新目标运行时清单。
+缺失的清单方法、身份验证错误、传输失败和连接器刷新失败都会以故障安全方式关闭。
 
 ### 环境隔离
 
@@ -732,7 +738,7 @@ Heartbeat 协作说明会告知 Codex：当 `heartbeat_respond` 尚未加载时�
 支持的 `appServer` 字段：
 
 | 字段                                         | 默认值                                                | 含义                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| --------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `transport`                                   | `"stdio"`                                              | `"stdio"` 会启动 Codex；显式设置为 `"unix"` 时连接到本地控制套接字；设置为 `"websocket"` 时连接到 `url`。                                                                                                                                                                                                                                                                                                                   |
 | `homeScope`                                   | `"agent"`                                              | `"agent"` 会按 OpenClaw 代理隔离普通工具链状态。`"user"` 是显式选择加入的设置，会共享原生 `$CODEX_HOME` 或 `~/.codex`，使用原生身份验证，并启用仅限所有者的线程管理。用户范围支持本地 stdio 或 Unix 传输。对于单独的监督连接，未设置时，stdio 或 Unix 会解析为 `"user"`，WebSocket 会解析为 `"agent"`。                                        |
 | `command`                                     | 受管理的 Codex 二进制文件                                   | stdio 传输使用的可执行文件。留空以使用受管理的二进制文件；仅在需要显式覆盖时设置。                                                                                                                                                                                                                                                                                                                       |

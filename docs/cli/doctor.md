@@ -27,19 +27,20 @@ Doctor 有五种姿态：
 
 | 姿态                      | 命令                                      | 行为                                                                        |
 | ------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
-| 检查                      | `openclaw doctor`                         | 面向人工的检查和引导式提示。                                                   |
-| 修复                      | `openclaw doctor --fix`                   | 应用受支持的修复；除非非交互式修复是安全的，否则会使用提示。                  |
-| Lint                      | `openclaw doctor --lint`                  | 供 CI、预检和审查门使用的只读结构化结果。                                      |
-| 共享 SQLite 维护          | `openclaw doctor --state-sqlite compact`  | 显式执行检查点、压缩并验证规范的共享状态数据库。                               |
-| 会话 SQLite 迁移          | `openclaw doctor --session-sqlite <mode>` | 检查、导入、验证、压缩、恢复或还原会话状态。                                   |
+| 检查                      | `openclaw doctor`                         | 面向人的检查和引导式提示。                                       |
+| 修复                      | `openclaw doctor --fix`                   | 应用支持的修复；除非安全地进行非交互式修复，否则使用提示。 |
+| 语法检查                  | `openclaw doctor --json`                  | 用于部署预检和 CI 门禁的只读 JSON 发现结果。                  |
+| 共享 SQLite 维护          | `openclaw doctor --state-sqlite compact`  | 显式地对规范共享状态数据库执行 checkpoint、压缩和验证。   |
+| Session SQLite 迁移       | `openclaw doctor --session-sqlite <mode>` | 检查、导入、验证、压缩、恢复或还原 Session 状态。    |
 
-当自动化需要稳定结果时，优先使用 `--lint`。当人工操作员希望 doctor 编辑配置或状态时，优先使用 `--fix`。
+将 `openclaw doctor --json` 用作机器可读的部署预检。它运行与 `openclaw doctor --lint --json` 相同的只读检查、JSON 输出和退出码。人工操作员希望 doctor 编辑配置或状态时，优先使用 `--fix`。
 
 ## 示例
 
 ```bash
 openclaw doctor
 openclaw doctor --lint
+openclaw doctor --json
 openclaw doctor --lint --json
 openclaw doctor --lint --severity-min warning
 openclaw doctor --lint --all
@@ -72,37 +73,38 @@ openclaw channels status --probe
 
 ## 选项
 
-| 选项                              | 作用                                                                                                                                                                                   |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--no-workspace-suggestions`      | 禁用工作区内存/搜索建议。                                                                                                                                                               |
-| `--yes`                           | 不提示直接接受默认值。                                                                                                                                                                       |
-| `--repair` / `--fix`             | 应用推荐的非服务修复，无需提示（`--fix` 是别名）。网关服务的安装/重写仍需要交互式确认或显式的 `gateway` 命令。                                                                                 |
-| `--force`                         | 应用激进修复，包括覆盖自定义服务配置。                                                                                                                                                        |
-| `--non-interactive`               | 以无提示方式运行；仅执行安全迁移和非服务修复。                                                                                                                                                  |
-| `--generate-gateway-token`        | 生成并配置网关令牌。                                                                                                                                                                          |
-| `--allow-exec`                    | 在验证密钥时，允许 doctor 执行已配置的 `exec` SecretRefs。                                                                                                                                    |
-| `--deep`                          | 扫描系统服务以发现额外的网关安装；报告最近的 Gateway supervisor 重启交接。                                                                                                                       |
-| `--lint`                          | 以只读模式运行现代化健康检查并输出诊断结果。                                                                                                                                                      |
-| `--post-upgrade`                  | 运行升级后插件兼容性探测；结果输出到 stdout；如果存在任何错误级别的结果，则退出码为 1。                                                                                                            |
-| `--state-sqlite <mode>`           | 运行显式的共享状态 SQLite 维护。唯一可用模式是 `compact`。                                                                                                                                    |
-| `--session-sqlite <mode>`         | 运行指定的 session SQLite 迁移模式：`inspect`、`dry-run`、`import`、`validate`、`compact`、`recover` 或 `restore`。                                                                              |
-| `--session-sqlite-store <path>`    | 配合 `--session-sqlite`：选择一个旧的 `sessions.json` 存储路径。                                                                                                                                |
-| `--session-sqlite-agent <id>`      | 配合 `--session-sqlite`：选择一个已配置的代理。                                                                                                                                                 |
-| `--session-sqlite-all-agents`      | 配合 `--session-sqlite`：选择已配置和已发现的代理存储。                                                                                                                                            |
-| `--github-issue`                  | 配合 `--session-sqlite recover`：准备一份经过清理的 openclaw/openclaw issue 报告；在 `--yes` 或交互式确认后，doctor 会使用 `gh` 创建它。                                                   |
-| `--json`                          | 配合 `--lint`：输出 JSON 结果。配合 `--post-upgrade`：输出 `{ probesRun, findings }`。配合 `--state-sqlite` 或 `--session-sqlite`：以 JSON 形式输出维护报告。                                   |
-| `--severity-min <level>`          | 配合 `--lint`：过滤掉低于 `info`、`warning` 或 `error` 的结果。                                                                                                                                    |
-| `--all`                           | 配合 `--lint`：运行所有已注册检查，包括默认集合中排除的可选检查。                                                                                                                                    |
-| `--skip <id>`                     | 配合 `--lint`：跳过一个检查 id。可重复。                                                                                                                                                         |
-| `--only <id>`                     | 配合 `--lint`：仅运行指定的检查 id。可重复。                                                                                                                                                       |
+| 选项                            | 效果                                                                                                                                                                                  |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--no-workspace-suggestions`    | 禁用工作区记忆/搜索建议。                                                                                                                                            |
+| `--yes`                         | 不提示，直接接受默认值。                                                                                                                                                      |
+| `--repair` / `--fix`            | 不提示，应用建议的非服务修复（`--fix` 是别名）。Gateway 服务安装/重写仍需要交互式确认或显式的 `gateway` 命令。 |
+| `--force`                       | 应用激进修复，包括覆盖自定义服务配置。                                                                                                                  |
+| `--non-interactive`             | 在不显示提示的情况下运行；仅执行安全迁移和非服务修复。                                                                                                                      |
+| `--generate-gateway-token`      | 生成并配置 Gateway 令牌。                                                                                                                                                 |
+| `--allow-exec`                  | 验证密钥时，允许 doctor 执行已配置的 `exec` SecretRef。                                                                                                           |
+| `--deep`                        | 扫描系统服务中的额外 Gateway 安装；报告最近的 Gateway supervisor 重启交接。                                                                                     |
+| `--lint`                        | 以只读模式运行现代化健康检查并输出诊断发现结果。                                                                                                            |
+| `--post-upgrade`                | 运行升级后的插件兼容性探测；发现结果输出到 stdout；如果存在任何错误级别的发现结果，退出码为 1。                                                                 |
+| `--state-sqlite <mode>`         | 运行显式的共享状态 SQLite 维护。唯一的模式是 `compact`。                                                                                                               |
+| `--session-sqlite <mode>`       | 运行目标 Session SQLite 迁移模式：`inspect`、`dry-run`、`import`、`validate`、`compact`、`recover` 或 `restore`。                                                         |
+| `--session-sqlite-store <path>` | 与 `--session-sqlite` 一起使用：选择一个旧版 `sessions.json` 存储路径。                                                                                                                  |
+| `--session-sqlite-agent <id>`   | 与 `--session-sqlite` 一起使用：选择一个已配置的代理。                                                                                                                                   |
+| `--session-sqlite-all-agents`   | 与 `--session-sqlite` 一起使用：选择已配置和已发现的代理存储。                                                                                                                 |
+| `--github-issue`                | 与 `--session-sqlite recover` 一起使用：准备一份经过脱敏的 openclaw/openclaw issue 报告；在 `--yes` 或交互式确认后，doctor 会使用 `gh` 创建该报告。                             |
+| `--json`                        | 以只读模式运行语法检查并输出 JSON。与其他机器模式一起使用时，输出该模式现有的 JSON 报告。                                                                      |
+| `--severity-min <level>`        | 与 `--lint` 一起使用：丢弃低于 `info`、`warning` 或 `error` 的发现结果。                                                                                                                       |
+| `--all`                         | 与 `--lint` 一起使用：运行所有已注册的检查，包括默认集合中排除的选择性检查。                                                                                        |
+| `--skip <id>`                   | 与 `--lint` 一起使用：跳过一个检查 id。可重复指定。                                                                                                                                             |
+| `--only <id>`                   | 与 `--lint` 一起使用：仅运行给定的检查 id。可重复指定。                                                                                                                              |
 
-`--severity-min`、`--all`、`--only` 和 `--skip` 仅在与 `--lint` 一起使用时才被接受；`--json` 可与 `--lint`、`--post-upgrade`、`--state-sqlite` 和 `--session-sqlite` 一起使用。
+`--severity-min`、`--all`、`--only` 和 `--skip` 只能与 `--lint` 一起使用。单独使用 `--json` 会隐含 lint 模式。除非其他机器模式接管命令，否则它不能与 `--repair`、`--fix` 或 `--force` 结合使用。
 
 ## 语法检查模式
 
-`openclaw doctor --lint` 是只读的：无提示、无修复、无配置/状态重写。
+`openclaw doctor --json` 是 lint 模式的部署预检形式。它是只读且非交互式的：不会显示提示、执行修复或重写配置/状态。`openclaw doctor --lint --json` 仍然是等效的显式写法。
 
 ```bash
+openclaw doctor --json
 openclaw doctor --lint
 openclaw doctor --lint --severity-min warning
 openclaw doctor --lint --json
@@ -141,7 +143,7 @@ JSON 输出是脚本接口：
 
 退出码：
 
-| Code | 含义                                                       |
+| 代码 | 含义                                                       |
 | ---- | ------------------------------------------------------------- |
 | `0`  | 在所选严重级别阈值及以上没有发现问题。      |
 | `1`  | 至少有一个发现满足所选阈值。            |
@@ -280,13 +282,7 @@ openclaw doctor --session-sqlite recover --github-issue
 
 恢复会选择最近一次失败迁移的清单，只恢复该清单中的归档工件，验证受影响的目标，刷新经过清理的 `.failure.md` 和 `.failure.json` 报告，并准备一个避免包含转录内容、原始环境、密钥和无限制配置的 GitHub issue 正文。当不存在失败的迁移清单，但所选代理的 SQLite 数据库已损坏、不是数据库，或在没有主数据库的情况下存在 journal 附属文件时，恢复会把完整文件集复制到一个临时检查目录。SQLite 可以在该一次性副本中回滚有效的 hot journal，然后再运行 `quick_check`、`integrity_check` 和 `foreign_key_check`，而原始取证文件保持不变。失败的完整性检查或孤立的附属文件会通过为整个发现的文件集统一追加 `.corrupt-<timestamp>` 后缀，来保留 DB、WAL、SHM 和 rollback-journal 文件。如果捕获到重命名失败，已移动的文件会在报告失败前回滚，因此可恢复的文件集不会被静默拆分。恢复前请停止 Gateway；复制或重命名一个正在变化的 SQLite 文件集是不安全的，而且在不同操作系统上的行为也不同。使用 `--github-issue --yes` 时，doctor 会使用 GitHub CLI 在 `openclaw/openclaw` 中创建 issue；未确认时，它会写入本地支持报告并打印一个已预填的 issue URL。
 
-`restore` 仍然是较低层级的撤销操作。它使用清单中的
-`sourcePath -> archivePath` 记录，仅当原始路径不存在时才将归档工件移回，
-当两个路径都存在时报告冲突，并保留 SQLite 数据库不变。当多个清单记录了同一个
-原始路径时，restore 会先规划所有候选项，然后再移动其中任何一个。内容相同的归档
-属于安全的重复项；一个非空的旧版 `sessions.json` 可以取代由旧版写入器创建的空副本。
-不同的非空索引、不同的转录归档、无效归档，以及在没有记录先前恢复的情况下缺失的归档，
-都会使操作安全失败，从而确保 restore 不会悄无声息地替换或隐藏可恢复的数据。
+`restore` 仍然是较低层级的撤销操作。它使用清单中的 `sourcePath -> archivePath` 记录，仅当原始路径不存在时才将归档工件移回，当两个路径都存在时报告冲突，并保留 SQLite 数据库不变。当多个清单记录了同一个原始路径时，restore 会先规划所有候选项，然后再移动其中任何一个。内容相同的归档属于安全的重复项；一个非空的旧版 `sessions.json` 可以取代由旧版写入器创建的空副本。不同的非空索引、不同的转录归档、无效归档，以及在没有记录先前恢复的情况下缺失的归档，都会使操作安全失败，从而确保 restore 不会悄无声息地替换或隐藏可恢复的数据。
 
 ### 在 Session SQLite 迁移之后降级
 

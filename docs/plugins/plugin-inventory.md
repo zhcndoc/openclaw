@@ -294,7 +294,7 @@ openclaw plugins inspect discord --runtime --json
 
 - **[qianfan](/plugins/reference/qianfan)** (`@openclaw/qianfan-provider`) - npm；ClawHub：`clawhub:@openclaw/qianfan-provider`。为 OpenClaw 添加 Qianfan 模型提供方支持。
 
-- **[qqbot](/plugins/reference/qqbot)** (`@openclaw/qqbot`) - npm；ClawHub。OpenClaw QQ Bot 频道插件，用于群组和直接消息工作流。
+- **[qqbot](/plugins/reference/qqbot)** (`@tencent-connect/openclaw-qqbot`) - npm。OpenClaw QQ Bot 频道插件，用于群组和直接消息工作流。
 
 - **[qwen](/plugins/reference/qwen)** (`@openclaw/qwen-provider`) - npm；ClawHub：`clawhub:@openclaw/qwen-provider`。为 OpenClaw 添加 Qwen、Qwen Cloud、Model Studio、DashScope、Qwen Token Plan、Bailian Token Plan 模型提供方支持。
 

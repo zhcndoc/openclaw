@@ -125,12 +125,12 @@ read_when:
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="Validation and limits">
-    - `before`/`after`: 每个最大 512 KiB。
-    - `patch`: 最大 2 MiB。
-    - `path`: 最大 2048 字节。
-    - `lang`: 最大 128 字节。
-    - `title`: 最大 1024 字节。
+  <Accordion title="验证和限制">
+    - `before`/`after`：每个最大 512 KiB。
+    - `patch`：最大 2 MiB。
+    - `path`：最大 2048 字节。
+    - `lang`：最大 128 字节。
+    - `title`：最大 1024 字节。
     - 补丁复杂度上限：最多 128 个文件和 120000 行总数。
     - `patch` 与 `before`/`after` 同时提供将被拒绝。
     - 渲染文件安全限制（PNG 和 PDF）：
@@ -306,7 +306,7 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
 
 查看器文档会相对于 viewer URL 解析这些资源，因此可选的 `baseUrl` 路径前缀也会传递到资源请求中。
 
-URL 解析顺序：tool-call `baseUrl`（经过严格校验后）-> 插件 `viewerBaseUrl` -> 回环地址 `127.0.0.1` 默认值。如果 gateway 绑定模式为 `custom` 且设置了 `gateway.customBindHost`，则使用该主机而不是回环地址。
+URL 解析顺序：工具调用的 `baseUrl`（严格验证后）-> 插件的 `viewerBaseUrl` -> `gateway.publicOrigin` -> 现有的绑定感知 Gateway 后备值。
 
 `baseUrl` 规则：必须是 `http://` 或 `https://`；会拒绝 query 和 hash；允许 origin 加可选的基础路径。
 
@@ -316,7 +316,7 @@ URL 解析顺序：tool-call `baseUrl`（经过严格校验后）-> 插件 `view
   <Accordion title="查看器加固">
     - 默认仅允许回环访问。
     - 带令牌的查看器路径，并对 ID 和令牌模式进行严格验证。
-    - 查看器响应的 CSP：`default-src 'none'`; 脚本/资源仅允许来自自身；不允许任何外部 `connect-src`。
+    - 查看器响应的 CSP：`default-src 'none'`；脚本/资源仅允许来自自身；不允许任何外部 `connect-src`。
     - 启用远程访问时的远程未命中限流：60 秒内 40 次失败将触发 60 秒锁定（`429 Too Many Requests`）。
 
   </Accordion>
@@ -363,11 +363,11 @@ URL 解析顺序：tool-call `baseUrl`（经过严格校验后）-> 插件 `view
 
   </Accordion>
   <Accordion title="查看器可访问性">
-    - Viewer URL resolves to `127.0.0.1` by default.
-    - For remote access, either set plugin `viewerBaseUrl`, pass `baseUrl` per call, or use `gateway.bind=custom` with `gateway.customBindHost`.
-    - If `gateway.trustedProxies` includes loopback for a same-host proxy (for example Tailscale Serve), raw loopback viewer requests without forwarded client-IP headers fail closed by design.
-    - For that proxy topology, prefer `mode: "file"`/`"both"` for an attachment, or intentionally enable `security.allowRemoteViewer` plus plugin `viewerBaseUrl`/a proxy `baseUrl` for a shareable viewer link.
-    - Enable `security.allowRemoteViewer` only when external viewer access is intended.
+    - 默认情况下，Viewer URL 解析为 `127.0.0.1`。
+    - 如需远程访问，请设置 `gateway.publicOrigin`、设置插件的 `viewerBaseUrl`，或按次调用传入 `baseUrl`。
+    - 如果 `gateway.trustedProxies` 为同主机代理（例如 Tailscale Serve）包含回环地址，则没有转发客户端 IP 标头的原始回环查看器请求会按设计安全失败。
+    - 对于该代理拓扑，优先使用 `mode: "file"`/`"both"` 生成附件，或有意启用 `security.allowRemoteViewer`，并配合插件的 `viewerBaseUrl`/代理的 `baseUrl` 生成可共享的查看器链接。
+    - 仅当确实需要外部查看器访问时，才启用 `security.allowRemoteViewer`。
 
   </Accordion>
   <Accordion title="未修改行没有展开按钮">

@@ -9,6 +9,8 @@ title: "配置 — 代理"
 
 位于 `agents.*`、`multiAgent.*`、`session.*`、`messages.*` 和 `talk.*` 下的代理作用域配置键。关于通道、工具、网关运行时以及其他顶级键，请参见 [配置参考](/gateway/configuration-reference)。
 
+创建多代理集群时，OpenClaw 会写入 `agents.ownership: "explicit"`。此类集群没有默认代理：通道和环境服务需要绑定，或需要使用特定界面的 `agentId` 目标。升级期间，Doctor 会具体化旧版所有者；单代理配置无需此标记。
+
 ## 代理默认值
 
 ### `agents.defaults.workspace`
@@ -21,8 +23,7 @@ title: "配置 — 代理"
 }
 ```
 
-显式设置的 `agents.defaults.workspace` 值优先于
-`OPENCLAW_WORKSPACE_DIR`。当你不想把该路径写入配置时，可使用环境变量将默认代理指向已挂载的工作区。
+显式设置的 `agents.defaults.workspace` 值优先于 `OPENCLAW_WORKSPACE_DIR`。单代理会直接使用此路径。在多代理集群中，没有单独设置 `workspace` 的代理会使用代理 ID 子目录，因此不会有隐式所有者声明共享根目录的所有权。
 
 ### `agents.defaults.repoRoot`
 
@@ -42,11 +43,12 @@ title: "配置 — 代理"
 ```json5
 {
   agents: {
+    ownership: "explicit",
     defaults: { skills: ["github", "weather"] },
     entries: {
-      writer: { default: true }, // 继承 github、weather
-      docs: { skills: ["docs-search"] }, // 替换默认值
-      "locked-down": { skills: [] }, // 无技能
+      writer: {}, // inherits github, weather
+      docs: { skills: ["docs-search"] }, // replaces defaults
+      "locked-down": { skills: [] }, // no skills
     },
   },
 }
@@ -138,7 +140,6 @@ title: "配置 — 代理"
     },
     entries: {
       "strict-worker": {
-        default: true,
         contextInjection: "always",
         bootstrapMaxChars: 50000,
         bootstrapTotalMaxChars: 300000,
@@ -230,7 +231,6 @@ OpenClaw 具有多个高容量的提示词／上下文预算，它们被有意�
     },
     entries: {
       "tiny-local": {
-        default: true,
         contextLimits: {
           memoryGetMaxChars: 6000,
         },
@@ -258,7 +258,7 @@ OpenClaw 具有多个高容量的提示词／上下文预算，它们被有意�
 {
   agents: {
     entries: {
-      "tiny-local": { default: true, skillsLimits: { maxSkillsPromptChars: 6000 } },
+      "tiny-local": { skillsLimits: { maxSkillsPromptChars: 6000 } },
     },
   },
 }
@@ -524,20 +524,20 @@ CLI 适配器机制由插件注册，而不是在代理默认设置下配置。�
 }
 ```
 
-- `every`：时长字符串（ms/s/m/h）。默认值：`30m`（API-key 认证）或 `1h`（OAuth 认证）。设置为 `0m` 可禁用。
-- `agentId`：当不存在 `agents.entries.*.heartbeat` 配置块时，用于环境心跳运行的显式所有者。不包含 `agentId` 的共享心跳配置块会保留现有的全代理注册行为。
-- 运行频率会写入系统所有的 cron 监控记录。运行 `openclaw doctor --fix` 可创建缺失或过时的记录。如果 cron 已禁用，计划心跳不会运行，并且 gateway 会记录启动警告。
-- heartbeat 对象采用严格模式。支持的字段为 `every`、`activeHours`、`model`、`session`、`target`、`directPolicy`、`to`、`accountId`、`prompt`、`timeoutSeconds`、`lightContext` 和 `isolatedSession`。
-- `timeoutSeconds`：心跳代理单次运行在被中止前允许的最长时间，单位为秒。未设置时，如果已设置 `agents.defaults.timeoutSeconds`，则使用该值；否则使用上限为 600 秒的心跳频率。
-- `directPolicy`：直接消息／DM 发送策略。`allow`（默认值）允许发送到直接目标。`block` 会抑制发送到直接目标的消息，并发出 `reason=dm-blocked`。
-- `target`：`owner`（默认值）仅发送到来自 `commands.ownerAllowFrom` 或频道 `allowFrom` 的直接消息身份。`last` 明确跟随最新对话，包括群组。`none` 会将结果保留在内部。
-- `to`：仅与显式频道目标一起使用。`owner` 和未设置的目标会忽略此字段。
-- `lightContext`：为 true 时，心跳运行使用轻量级引导上下文，并跳过工作区引导文件。无论该设置如何，监控临时上下文都会由心跳运行器注入。
-- `isolatedSession`：为 true 时，每次心跳都会在没有既往对话历史的新会话中运行。隔离模式与 cron 的 `sessionTarget: "isolated"` 相同。每次心跳的令牌成本会从约 100K 降低到约 2-5K 个令牌。
-- 忙碌延期会自动执行：计划心跳会等待主活动／cron 活动、同一代理的活动运行以及目标会话中的工作。即时唤醒和手动唤醒仅绕过范围更广的同一代理活动运行预检查。
-- 默认代理的 Heartbeats 系统提示词部分会在其运行频率启用时自动包含。确认抑制使用固定的 300 字符剩余预算，推理负载会保留在内部，工具错误警告仍保持启用。
-- 按代理配置：设置 `agents.entries.*.heartbeat`。当任一代理定义了 `heartbeat` 时，**只有这些代理**会运行心跳。
-- 心跳会运行完整的代理回合——间隔越短，消耗的令牌越多。
+- `every`：时长字符串（ms/s/m/h）。默认值：`30m`（API 密钥身份验证）或 `1h`（OAuth 身份验证）。设置为 `0m` 可禁用。
+- `agentId`：当不存在 `agents.entries.*.heartbeat` 块时，用于环境心跳运行的显式所有者。没有 `agentId` 的共享心跳块会保留现有的全代理注册行为。
+- 调度周期会写入系统拥有的 cron 监控行。运行 `openclaw doctor --fix` 可具体化缺失或过时的行。如果 cron 被禁用，计划心跳不会运行，网关会记录启动警告。
+- 心跳对象是严格的。其支持的字段包括 `every`、`activeHours`、`model`、`session`、`target`、`directPolicy`、`to`、`accountId`、`prompt`、`timeoutSeconds`、`lightContext` 和 `isolatedSession`。
+- `timeoutSeconds`：心跳代理回合在中止前允许的最长秒数。留空时，如果已设置，则使用 `agents.defaults.timeoutSeconds`；否则使用上限为 600 秒的心跳周期。
+- `directPolicy`：直接消息／私聊投递策略。`allow`（默认值）允许直接目标投递。`block` 会抑制直接目标投递，并发出 `reason=dm-blocked`。
+- `target`：`owner`（默认值）仅发送到来自 `commands.ownerAllowFrom` 或通道 `allowFrom` 的直接消息身份。`last` 显式跟随最新对话，包括群组。`none` 保持结果为内部结果。
+- `to`：仅与显式通道目标一起使用。`owner` 和未设置的目标会忽略它。
+- `lightContext`：为 true 时，心跳运行使用轻量级引导上下文并跳过工作区引导文件。无论如何，监控临时文件都会由心跳运行器注入。
+- `isolatedSession`：为 true 时，每次心跳都会在没有此前对话历史的新会话中运行。其隔离模式与 cron 的 `sessionTarget: "isolated"` 相同。每次心跳的 token 成本会从约 100K 降低至约 2-5K。
+- 忙碌延迟会自动执行：计划心跳会等待主任务／cron 活动、同一代理的活动运行以及目标会话工作完成；即时和手动唤醒仅会绕过广义的同一代理活动运行预检查。
+- 只要某个已注册代理的周期启用，该代理的 Heartbeats 系统提示词部分就会自动包含在内。确认抑制使用固定的 300 字符剩余预算，推理负载仍保持内部状态，工具错误警告仍保持启用。
+- 按代理设置：设置 `agents.entries.*.heartbeat`。只要有任意代理定义了 `heartbeat`，就**只有这些代理**运行心跳。
+- 心跳会运行完整的代理回合——更短的间隔会消耗更多 token。
 
 ### `agents.defaults.systemAgent`
 
@@ -553,7 +553,7 @@ CLI 适配器机制由插件注册，而不是在代理默认设置下配置。�
 }
 ```
 
-由请求代理发起的委托咨询仍将该请求代理作为其所有者。当未提供 `agentId` 时，OpenClaw 会保留已配置的默认路由。
+委托咨询会将发起请求的代理保留为其所有者。当缺少 `agentId` 时，单个已配置代理会被隐式解析；在多代理集群中，环境咨询会失败并返回可执行的错误。仅用于升级的所有权位于 `agents.defaults.authInheritance.agentId`（用于继承的凭据）以及 `agents.defaults.sessionStore.agentId`（用于固定的 `session.store` 中未限定范围的行）。
 
 ### `agents.defaults.compaction`
 
@@ -934,8 +934,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
   agents: {
     entries: {
       main: {
-        default: true,
-        name: "主代理",
+        name: "Main Agent",
         workspace: "~/.openclaw/workspace",
         agentDir: "~/.openclaw/agents/main/agent",
         model: "anthropic/claude-opus-4-6", // 或 { primary, fallbacks }
@@ -980,27 +979,27 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 }
 ```
 
-- `agents.entries` 中的每个键都是稳定的代理 ID。
-- `default`：必须且只能有一个代理条目设置 `default: true`。
-- `model`：字符串形式会为代理设置严格的专用主模型，且没有模型回退；对象形式 `{ primary }` 同样是严格模式，除非添加 `fallbacks`。使用 `{ primary, fallbacks: [...] }` 可为该代理启用回退，或使用 `{ primary, fallbacks: [] }` 明确指定严格行为。仅覆盖 `primary` 的 Cron 任务仍会继承默认回退模型，除非设置 `fallbacks: []`。
-- `utilityModel`：可选的每个代理覆盖项，用于生成会话标题和线程标题等简短内部任务。若未设置，则回退到 `agents.defaults.utilityModel`，再回退到当前有效会话提供商声明的小模型默认值。仪表板标题会使用有效的常规会话模型再重试一次。空字符串会跳过该代理的备用 utility 路由，但不会禁用仪表板标题生成。
-- `params`：每个代理的流参数，会合并到 `agents.defaults.models` 中所选模型条目的参数之上。可使用此项设置代理专用覆盖项，例如 `cacheRetention`、`temperature` 或 `maxTokens`，而无需复制整个模型目录。
-- `tts`：可选的每个代理文本转语音覆盖项。该配置块会深度合并到 `tts` 之上，因此应将共享的提供商凭据和回退策略保留在 `tts` 中，而这里只设置提供商、语音、模型、风格或自动模式等角色专属值。
-- `skills`：可选的每个代理技能允许列表。若省略，则代理会在设置时继承 `agents.defaults.skills`；显式列表会替换默认值，而不是进行合并；`[]` 表示不使用任何技能。
-- `thinkingDefault`：可选的每个代理默认思考级别（`off | minimal | low | medium | high | xhigh | adaptive | max`）。当未设置每条消息或会话级覆盖时，会覆盖该代理的 `agents.defaults.thinkingDefault`。有效值由所选提供商/模型配置决定；对于 Google Gemini，`adaptive` 会保留提供商控制的动态思考（Gemini 3/3.1 不设置 `thinkingLevel`，Gemini 2.5 设置 `thinkingBudget: -1`）。
-- `reasoningDefault`：可选的每个代理默认推理可见性（`on | off | stream`）。当未设置每条消息或会话级推理覆盖时，会覆盖该代理的 `agents.defaults.reasoningDefault`。
-- `fastModeDefault`：可选的每个代理快速模式默认值（`"auto" | true | false`）。当未设置每条消息或会话级快速模式覆盖时，会覆盖该代理的 `agents.defaults.fastModeDefault`。
-- `models`：可选的每个代理模型目录/运行时覆盖项，以完整的 `provider/model` ID 为键。使用 `models["provider/model"].agentRuntime` 可设置每个代理的运行时例外。
-- `runtime`：可选的每个代理运行时描述符。当代理应默认使用 ACP harness 会话时，使用 `type: "acp"`，并通过 `runtime.acp` 设置默认值（`agent`、`backend`、`mode`、`cwd`）。
+- `agents.entries` 对象键是稳定的代理 ID。
+- `default` 已废弃。只有一个已配置的代理时，该代理会被隐式解析；多代理操作需要绑定、明确的 `agentId` 目标、作用域化的会话/存储所有者，或显式的 `--agent`/请求字段。
+- `model`：字符串形式会为代理设置严格的主模型，不使用模型回退；对象形式的 `{ primary }` 同样严格，除非添加 `fallbacks`。使用 `{ primary, fallbacks: [...] }` 可让该代理启用回退，或使用 `{ primary, fallbacks: [] }` 明确指定严格行为。只覆盖 `primary` 的 Cron 作业仍会继承默认回退，除非设置 `fallbacks: []`。
+- `utilityModel`：可选的代理级覆盖项，用于生成会话标题和线程标题等简短内部任务。会回退到 `agents.defaults.utilityModel`，然后回退到当前有效会话提供程序声明的小模型默认值。控制面板标题会使用当前有效的常规会话模型重试一次。空字符串会跳过该代理的备用实用模型路径，但不会禁用控制面板标题生成。
+- `params`：合并到 `agents.defaults.models` 中所选模型条目之上的代理级流参数。可使用它设置代理专用的覆盖项，例如 `cacheRetention`、`temperature` 或 `maxTokens`，而无需复制整个模型目录。
+- `tts`：可选的代理级文本转语音覆盖项。该配置块会与 `tts` 深度合并，因此应将共享的提供程序凭据和回退策略保留在 `tts` 中，并仅在此处设置角色专用的值，例如提供程序、语音、模型、风格或自动模式。
+- `skills`：可选的代理级技能允许列表。如果省略，代理会在设置时继承 `agents.defaults.skills`；显式列表会替换默认值而不是合并，`[]` 表示不使用任何技能。
+- `thinkingDefault`：可选的代理级默认思考级别（`off | minimal | low | medium | high | xhigh | adaptive | max`）。当未设置每条消息或会话级覆盖时，会覆盖该代理的 `agents.defaults.thinkingDefault`。所选提供程序/模型配置决定哪些值有效；对于 Google Gemini，`adaptive` 会保留提供程序自有的动态思考（Gemini 3/3.1 中省略 `thinkingLevel`，Gemini 2.5 中使用 `thinkingBudget: -1`）。
+- `reasoningDefault`：可选的代理级默认 reasoning 可见性（`on | off | stream`）。当未设置每条消息或会话级 reasoning 覆盖时，会覆盖该代理的 `agents.defaults.reasoningDefault`。
+- `fastModeDefault`：可选的代理级快速模式默认值（`"auto" | true | false`）。当未设置每条消息或会话级快速模式覆盖时，会覆盖该代理的 `agents.defaults.fastModeDefault`。
+- `models`：可选的代理级模型目录/运行时覆盖项，以完整的 `provider/model` ID 为键。使用 `models["provider/model"].agentRuntime` 设置代理级运行时例外。
+- `runtime`：可选的代理级运行时描述符。当代理应默认使用 ACP harness 会话时，使用 `type: "acp"` 以及 `runtime.acp` 默认值（`agent`、`backend`、`mode`、`cwd`）。
 - `identity.avatar`：相对于工作区的路径、`http(s)` URL 或 `data:` URI。
-- 本地相对于工作区的 `identity.avatar` 图片文件大小上限为 2 MB。`http(s)` URL 和 `data:` URI 不受本地文件大小限制检查。
-- `identity` 会推导默认值：从 `emoji` 推导 `ackReaction`，从 `name`/`emoji` 推导 `mentionPatterns`。
-- `subagents.allowAgents`：为显式的 `sessions_spawn.agentId` 目标设置已配置代理 ID 的允许列表（`["*"]` = 任意已配置目标；默认值：仅当前代理）。如果允许使用以自身为目标的 `agentId` 调用，请包含请求方 ID。配置已被删除的代理所对应的过期条目会被 `sessions_spawn` 拒绝，并从 `agents_list` 中省略；运行 `openclaw doctor --fix` 清理它们，或者添加一个最小的 `agents.entries.*` 条目，以便该目标在继承默认值的同时仍可生成。
-- 沙箱继承保护：如果请求方会话处于沙箱中，`sessions_spawn` 会拒绝运行时不处于沙箱中的目标。
+- 本地相对于工作区的 `identity.avatar` 图像文件大小限制为 2 MB。`http(s)` URL 和 `data:` URI 不受本地文件大小限制检查。
+- `identity` 会派生默认值：从 `emoji` 派生 `ackReaction`，从 `name`/`emoji` 派生 `mentionPatterns`。
+- `subagents.allowAgents`：允许显式 `sessions_spawn.agentId` 目标使用的已配置代理 ID 列表（`["*"]` = 任意已配置目标；默认值：仅当前代理）。如果允许以自身为目标的 `agentId` 调用，请包含请求方 ID。配置已删除代理的过期条目会被 `sessions_spawn` 拒绝，并从 `agents_list` 中省略；运行 `openclaw doctor --fix` 清理这些条目，或者添加一个最小的 `agents.entries.*` 条目，使该目标在继承默认值的同时仍可生成。
+- 沙箱继承保护：如果请求方会话处于沙箱中，`sessions_spawn` 会拒绝将以未沙箱方式运行的目标。
 - `subagents.requireAgentId`：为 `true` 时，阻止省略 `agentId` 的 `sessions_spawn` 调用（强制显式选择配置；默认值：`false`）。
 - `subagents.maxConcurrent`：子代理执行期间允许的最大并发子代理运行数。默认值：`8`。
-- `subagents.maxChildrenPerAgent`：单个代理会话可生成的最大活动子代理数。默认值：`5`。
-- `subagents.maxSpawnDepth`：子代理生成的最大嵌套深度（`1`-`5`）。默认值：`1`（不允许嵌套）。
+- `subagents.maxChildrenPerAgent`：单个代理会话可以生成的最大活动子代理数。默认值：`5`。
+- `subagents.maxSpawnDepth`：子代理生成的最大嵌套深度（`1`-`5`）。默认值：`1`（不嵌套）。
 - `subagents.archiveAfterMinutes`：已完成子代理状态被归档前的存留时间。默认值：`60`。
 
 ## 多代理路由
@@ -1010,8 +1009,10 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 ```json5
 {
   agents: {
+    ownership: "explicit",
+    defaults: { heartbeat: { agentId: "home" }, systemAgent: { agentId: "home" } },
     entries: {
-      home: { default: true, workspace: "~/.openclaw/workspace-home" },
+      home: { workspace: "~/.openclaw/workspace-home" },
       work: { workspace: "~/.openclaw/workspace-work" },
     },
   },
@@ -1019,6 +1020,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
     { agentId: "home", match: { channel: "whatsapp", accountId: "personal" } },
     { agentId: "work", match: { channel: "whatsapp", accountId: "biz" } },
   ],
+  talk: { agentId: "home" },
 }
 ```
 
@@ -1037,8 +1039,8 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 2. `match.guildId`
 3. `match.teamId`
 4. `match.accountId`（精确匹配，不含 peer/guild/team）
-5. `match.accountId: "*"`（覆盖整个渠道）
-6. 默认代理
+5. `match.accountId: "*"`（频道范围）
+6. 仅代理回退（仅当恰好配置了一个代理时；没有匹配绑定的显式多代理集群将拒绝访问）
 
 在每个层级内，最先匹配的 `bindings` 条目获胜。
 
@@ -1053,7 +1055,6 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
   agents: {
     entries: {
       personal: {
-        default: true,
         workspace: "~/.openclaw/workspace-personal",
         sandbox: { mode: "off" },
       },
@@ -1071,7 +1072,6 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
   agents: {
     entries: {
       family: {
-        default: true,
         workspace: "~/.openclaw/workspace-family",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "ro" },
         tools: {
@@ -1100,7 +1100,6 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
   agents: {
     entries: {
       public: {
-        default: true,
         workspace: "~/.openclaw/workspace-public",
         sandbox: { mode: "all", scope: "agent", workspaceAccess: "none" },
         tools: {

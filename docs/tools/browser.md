@@ -246,16 +246,18 @@ Chrome MCP `--autoConnect`、其 `/json/version` 响应缺少稳定浏览器身�
 
 <Accordion title="SSRF 策略">
 
-- 浏览器导航和打开标签页请求会经过预检。在操作期间以及有界的操作后宽限期内，受保护的 Playwright 交互（点击、坐标点击、悬停、拖动、滚动、选择、按键、输入、表单填充和 evaluate）会在 HTTP 请求字节发出之前，拦截策略拒绝的顶层文档和子框架文档加载，然后尽力重新检查最终的 `http(s)` URL。
-- 在每次新的 OpenClaw 管理的 Chrome 启动之前，OpenClaw 会尽力禁用网络预测，抑制 Chromium 针对这些被拒绝加载所观察到的推测性预连接。这是纵深防御，而不是策略边界：跨控制服务重启后复用的浏览器以及其他浏览器后端可能不会共享此加固措施。Playwright 路由仍然不是网络防火墙，也不会拦截重定向跳转、弹窗的首次请求、Service Worker 流量、有界保护窗口之后运行的页面代码，或所有后台／子资源路径。完整的出站隔离需要由所有者一侧进行隔离，或使用执行策略的代理。
-- 在严格 SSRF 模式下，远程 CDP 端点发现和 `/json/version` 探测（`cdpUrl`）也会受到检查。
+- 浏览器导航和打开标签页请求会进行预检。在操作期间以及有界的操作后宽限期内，受保护的 Playwright 交互（点击、坐标点击、悬停、拖拽、滚动、选择、按键、输入、表单填充和 evaluate）会在 HTTP 请求字节发出前拦截策略拒绝的顶层和子框架文档加载，然后尽力重新检查最终的 `http(s)` URL。
+- 在每次新的 OpenClaw 管理的 Chrome 启动之前，OpenClaw 会尽力禁用网络预测，抑制 Chromium 针对这些被拒绝加载所观察到的推测性预连接。这是纵深防御，而不是策略边界：跨控制服务重启复用的浏览器和其他浏览器后端可能不会共享这些强化措施。Playwright 路由仍然不是网络防火墙，也不会拦截重定向跳转、弹出窗口的首次请求、Service Worker 流量、有界保护窗口之后运行的页面代码，或每一条后台／子资源路径。完整的出口隔离需要所有者一侧的隔离措施或强制执行策略的代理。
+- 在严格 SSRF 模式下，远程 CDP 端点发现和 `/json/version` 探测（`cdpUrl`）也会进行检查。
+- 当所选驱动程序无法让批准的端点绑定到实际套接字时，受保护的远程 CDP 连接现在会默认拒绝。对于 Browserless、Browserbase、Notte 或其他受保护的远程 CDP 提供商，请使用常规的 `openclaw` 驱动程序。带有显式 `cdpUrl` 或 `--browserUrl`／`--wsEndpoint` MCP 参数的 `existing-session`／Chrome MCP 配置文件，会在默认严格 Browser 策略下被拒绝，因为 Chrome MCP 无法跨越其子进程边界传递 OpenClaw 固定的 DNS 查询或受保护的发现结果。只有在明确信任私有网络 Browser 访问时，它们才会继续受支持。否则，请省略显式端点，并将 Chrome MCP 附加到主机本地的 Chrome 配置文件，或者将配置文件切换为用于受保护 CDP 的常规驱动程序。
+- 除非当前策略明确允许更改授权机构，否则不支持将 CDP 发现重定向到不同的授权机构。重新验证返回的主机名还不够；WebSocket 传输必须使用通过策略验证的端点。
 - Gateway／提供方的 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY` 环境变量不会自动代理 OpenClaw 管理的浏览器。受管 Chrome 默认直接连接，因此提供方代理设置不会削弱浏览器 SSRF 检查。
-- OpenClaw 管理的本地 CDP 就绪探测和 DevTools WebSocket 连接会绕过受管网络代理，仅连接到确切启动的回环端点，因此当操作员代理阻止回环出站连接时，`openclaw browser start` 仍然可以正常工作。
-- 若要代理受管浏览器本身，请通过 `browser.extraArgs` 传递显式的 Chrome 代理标志，例如 `--proxy-server=...` 或 `--proxy-pac-url=...`。除非有意启用私有网络浏览器访问，否则严格 SSRF 模式会阻止显式的浏览器代理路由。
-- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 默认关闭；仅在有意信任私有网络浏览器访问时启用。
-- `browser.ssrfPolicy.allowedHostnames` 会授予精确主机访问权限，同时继续阻止其余私有网络。
-- `browser.ssrfPolicy.allowRfc2544BenchmarkRange` 和 `browser.ssrfPolicy.allowIpv6UniqueLocalRange` 会狭义地允许受信任的伪 IP 代理范围。
-- `browser.ssrfPolicy.allowPrivateNetwork` 仍作为旧版别名受到支持。
+- OpenClaw 管理的本地 CDP 就绪探测和 DevTools WebSocket 连接，会绕过管理的网络代理，直接访问确切启动的回环端点，因此即使操作员代理阻止回环出口，`openclaw browser start` 仍然可以工作。
+- 要代理受管浏览器本身，请通过 `browser.extraArgs` 传递显式 Chrome 代理标志，例如 `--proxy-server=...` 或 `--proxy-pac-url=...`。严格 SSRF 模式会阻止显式的浏览器代理路由，除非有意启用私有网络浏览器访问。
+- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 默认关闭；只有在有意信任私有网络浏览器访问时才启用。
+- `browser.ssrfPolicy.allowedHostnames` 允许精确主机，同时仍阻止私有网络的其他部分。
+- `browser.ssrfPolicy.allowRfc2544BenchmarkRange` 和 `browser.ssrfPolicy.allowIpv6UniqueLocalRange` 会有限度地允许受信任的伪 IP 代理范围。
+- `browser.ssrfPolicy.allowPrivateNetwork` 仍作为旧版别名受支持。
 
 </Accordion>
 
@@ -451,7 +453,7 @@ CDP URL 形式，并会自动选择正确的连接策略：
 - **裸 WebSocket 根路径** - `ws://host[:port]` 或 `wss://host[:port]`，没有
   `/devtools/...` 路径（例如 [Browserless](https://browserless.io)，
   [Browserbase](https://www.browserbase.com)）。OpenClaw 会先尝试 HTTP
-  `/json/version` 发现（将 scheme 规范化为 `http`/`https`）；
+  `/json/version` 发现（将 scheme 规范化为 `http`／`https`）；
   如果发现返回了 `webSocketDebuggerUrl`，则使用它，否则 OpenClaw
   会回退到在裸根路径上的直接 WebSocket 握手。如果广告的
   WebSocket 端点拒绝了 CDP 握手，但配置的裸根路径
@@ -540,7 +542,7 @@ CDP URL 形式，并会自动选择正确的连接策略：
 - 尽量优先使用加密端点（HTTPS 或 WSS）和短期令牌。
 - 避免在配置文件中直接嵌入长期有效的令牌。
 - 将 Gateway 和任何节点主机放在私有网络（Tailscale）中；避免公开暴露。
-- 将远程 CDP URL/令牌视为机密；优先使用环境变量或密钥管理器。
+- 将远程 CDP URL／令牌视为机密；优先使用环境变量或密钥管理器。
 
 ## 配置文件（多浏览器）
 

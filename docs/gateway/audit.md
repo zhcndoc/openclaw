@@ -1,5 +1,5 @@
 ---
-summary: "代理运行、工具操作以及可选消息生命周期的元数据审计历史"
+summary: "仅包含元数据的活动历史，以及持久的运行身份和决策回执"
 read_when:
   - 你需要一份关于 Gateway 所做事情的持久记录，但不存储内容
   - 你正在决定是否启用消息生命周期审计
@@ -14,6 +14,8 @@ Gateway 会在共享的 OpenClaw 状态数据库中保留一个有界的、仅�
 该账本存储标识、顺序、来源、操作、状态以及规范化的结果代码。它绝不会存储提示词、消息正文、工具参数、工具结果、附件、文件名、URL、命令输出或原始错误文本。
 
 Gateway 还会为新接纳的代理运行保留一个相邻的执行身份上下文。该上下文对于其中包含的身份事实具有权威性；但它不会使活动账本变得无损，也不会将审计记录转变为授权证据。
+
+终端操作员审批是一个独立的权威来源。运行检查会直接将其现有的“首个回答获胜”行转换为决策回执；它不会将审批复制到审计账本或通用决策事实表中。
 
 ## 运行身份检查
 
@@ -48,16 +50,39 @@ openclaw gateway restart
 基础设施会在权威生产方记录直接本地 CLI 入口和 Gateway 启动系统入口。当其边界无法证明更具体的来源时，通用公共入口仍会明确标记为未知；OpenClaw 绝不会根据会话密钥推断入口或调用方身份。直接本地执行属于 `unattributed`：其中存在 Gateway 单元、本地 CLI 入口、已配置的代理和运行时绑定，但此边界未提供持久化的调用方主体。只有当权威入口提供调用方事实时，运行才会变为
 `attribution-only`。这两种状态都不意味着身份影响了允许或拒绝决策。
 
-当前，每个存在的上下文都会投影一份运行准入收据。其结果为
-`not-applicable`，其策略和授权引用为空，其原因说明未证明进行过任何基于身份的策略或授权评估。这是对准入证据的解释，而不是执行声明。
+经过身份验证的 Gateway attach 记录会一次性写入不可变的审计事实。会话创建会单独读取实时规范的持久配置文件 ID，因此在 attach 之后执行的配置文件链接不会使会话所有权失效。普通会话来源只保留该 ID；不会保留配置文件显示标签。显式启用执行身份记录后，其审计上下文还可能在机密信息删减和 128 个字符的限制之后保留准备好的显示标签。已解析的持久配置文件（包括通过已验证的可信代理或 Tailscale 身份建立的配置文件）会提供经过伪名化的人类调用方。配对设备会增加设备保证，但绝不会成为人类。共享令牌、密码、无认证连接和其他无配置文件客户端仍属于未归属状态。如果经过身份验证的用户证据承诺存在持久配置文件，但配置文件解析失败，则调用方为 `unknown`，而不是从标头、设备 ID、连接 ID 或凭据中猜测。
+
+每个现有上下文都会生成一份运行准入回执。其结果为 `not-applicable`，策略和授权引用为空，原因说明未证明进行过任何身份感知的策略或授权评估。这是对准入证据的解释，而不是执行声明。
+
+当同一个 `runId` 在 `operator_approvals` 中存在一行保留的终态记录时，检查器还会读取其所有者本地的 `operator_approval_execution_identities` 绑定。只有精确的上下文、执行和运行元组才会将该审批投影为已执行。回执会列出持久所有者和记录引用、精确的稳定原因代码、首个回答和终态策略引用、允许决策创建的任何授权、使用的精确上下文字段，以及有界的后续步骤。它绝不会包含命令、参数、路径、环境、审查者设备 ID、解析器 ID 或审批展示文本。
+
+审批结果映射到稳定的回执原因：
+
+| Recorded approval result       | Receipt reason code                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------- |
+| Allow once / allow always      | `operator_approval_allowed_once` / `operator_approval_allowed_always`                     |
+| Reviewer denial                | `operator_approval_denied_by_reviewer`                                                    |
+| Deadline expiry                | `operator_approval_expired`                                                               |
+| Run abort / Gateway restart    | `operator_approval_cancelled_run_aborted` / `operator_approval_cancelled_gateway_restart` |
+| No approval delivery route     | `operator_approval_denied_no_route`                                                       |
+| Malformed approval verdict     | `operator_approval_denied_malformed_verdict`                                              |
+| Fail-closed storage state      | `operator_approval_denied_storage_corrupt`                                                |
+| Unreadable or inconsistent row | `operator_approval_record_corrupt`                                                        |
+| Missing execution binding      | `operator_approval_execution_link_missing`                                                |
+| Malformed execution binding    | `operator_approval_execution_link_malformed`                                              |
+| Mismatched execution binding   | `operator_approval_execution_link_mismatch`                                               |
+
+允许、拒绝、过期和取消的行属于 `enforced`，因为记录的人类决策或故障安全的所有者策略改变了操作是否能够继续。无路由拒绝仅在审批所有者将 `no-route` 记录为返回不执行结果之前的获胜终态原因时，才属于 `enforced`。不可读的行属于 `unknown`，绝不会被重建。如果保留的审批指明了某个运行，但其预期的执行上下文缺失，则运行检查会返回覆盖范围为 `unknown` 的 `decision_context_link_missing`，并且不会编造回执上下文。
+
+由于 `runId` 是关联标识而不是执行身份，因此它绝不会替代所有者本地绑定。缺失、格式错误或不匹配的绑定行会投影为没有授权引用且带有明确绑定修复措施的 `unknown`，即使该运行只保留了一个执行上下文也是如此。检查器绝不会根据会话元数据、时间戳或保留的上下文数量推断绑定。
 
 运行检查会返回成功的类型化诊断，而不是编造事实：
 
-- `unknown`：所选运行或执行未知，或者预期上下文已损坏或无法读取；
-- `unsupported`：尽力而为的活动显示该运行存在，但没有可用上下文，例如功能启用前、功能禁用时或上下文写入失败时。刚刚超出保留期限的上下文在其有界清理待处理期间也会使用此状态，并明确说明过期补救措施；
-- `ambiguous`：某个 `runId` 对应多个保留的执行；请先选择候选 `executionId`，然后再检查身份或决策；
+- `unknown`：所选运行或执行未知，或者预期上下文损坏或不可读；这也涵盖保留的决策缺少其预期上下文链接的情况；
+- `unsupported`：尽力而为的活动记录显示该运行存在，但没有可用上下文，例如功能启用前、功能禁用或上下文写入失败的情况。刚刚超出保留期的上下文也会在有界清理待处理期间使用此状态，并附带明确的过期修复措施；
+- `ambiguous`：某个 `runId` 有多个保留的执行；请先选择候选 `executionId`，再检查身份或决策；
 - `unattributed`：受支持的运行没有可用的调用方主体；
-- `attribution-only`：存在调用方归因，但未针对授权进行评估。
+- `attribution-only`：调用方归属存在，但尚未针对授权进行评估。
 
 该方法要求 `operator.read`。请求是封闭的，并且会恰好选择一个
 `executionId` 或 `runId`。决策页面最多包含 100 份收据；
@@ -160,13 +185,16 @@ schema（或通过 `openclaw doctor --fix`）；现有
 每次写入或维护周期最多移除 1,024 行身份上下文记录。禁用收集时，维护仍会继续运行。
 较早版本的构建会忽略此表。
 
-过期后立即进行检查时，如果过期行仍然仅能证明其身份上下文已不可用，
-检查可能会将该运行报告为 `unsupported`；不会返回任何过期字段或决策。
-在有界清理完成后，如果没有单独保留的尽力而为活动记录，
-同一次查询可能会变为 `unknown`。这一转变并不能证明该运行未发生。
-这些限制使检查器成为运维诊断界面，而不是合规归档。
+终端审批会在其所有者原生的 `operator_approvals` 表中保留 30 天。即使尚未执行物理清理，检查也会应用这一截止时间。附加的 `execution_decision_facts` 表用于未来没有所有者原生持久记录的操作边界。该表会在首次写入通用事实时延迟创建，事实保留 30 天，表最多限制为 250,000 行，并且每次写入或维护周期最多清理 1,024 行。审批路径绝不会写入此表。对于所记录的决策，其中的事实和审批行都是权威的。写入通用表会使用有界审计工作线程，在持久化前仍采取尽力而为的方式；审批所有者的写入不依赖该队列。活动账本在任一来源丢失后都无法重建它们。
+
+每次通用决策事实写入都会重新读取不可变的执行上下文，并要求完整的上下文、执行和运行元组。投影会再次验证同一个元组；不匹配时状态为 `unknown`，不会仅根据上下文或运行关联重新分配。
 
 ## 查询
+
+- CLI：[`openclaw audit`](/cli/audit)，支持按代理、会话、运行、类型、状态、方向、频道、时间范围和游标分页进行筛选。
+- Gateway RPC：`audit.activity.list`（需要 `operator.read`）返回带版本的 V1 活动事件联合类型；已发布的 `audit.list` RPC 保持不变，以兼容旧版运行/工具客户端。请参阅
+  [Gateway 协议](/gateway/protocol#audit-ledger-rpc)。
+- 身份 RPC：`audit.run.inspect`（需要 `operator.read`）接受一个 `executionId` 进行精确检查，或接受一个 `runId` 进行有界发现。对于精确匹配，它返回不可变的 V1 上下文以及分页的准入、审批和未来通用决策回执；当某个运行包含多个执行时，则返回带类型的歧义候选页面。
 
 - CLI：[`openclaw audit`](/cli/audit)，支持按代理、会话、运行、类型、状态、方向、频道、时间范围和游标分页进行筛选。
 - 网关 RPC：`audit.activity.list`（需要 `operator.read`）返回带版本的 V1 活动事件联合类型；已发布的 `audit.list` RPC 保持不变，以兼容旧版运行/工具客户端。请参阅

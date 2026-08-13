@@ -32,7 +32,7 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 
 ## 列出和读取会话
 
-`sessions_list` 返回聚焦的发现行：会话键、代理、类型、通道、标签/标题/预览字段、父子关系、最后更新时间、归档/置顶状态、状态版本、模型、上下文/总 token 数、运行状态，以及上一次运行是否中止。可通过 `kinds`（数组；可接受值：`main`、`group`、`cron`、`hook`、`node`、`other`）、精确 `label`、精确 `agentId`、`search` 文本，或按最近活跃时间（`activeMinutes`）进行过滤。默认返回活跃会话；如需查看已归档会话，请传入 `archived: true`。当你需要类似邮箱式的初筛时，可设置 `includeDerivedTitles`、`includeLastMessage` 或 `messageLimit`（上限为 20）：分别用于显示受可见性范围限制的派生标题、最后一条消息的预览片段，或每行受限数量的最近消息。传递路径、内部会话 ID、每次运行的耗时/设置、成本估算和转录路径均有意省略；这些仅针对所有者的细节请使用 `session_status`、会话工具和 `sessions_history`。派生标题和预览仅会为调用者在当前配置的会话工具可见性策略下已经能够看到的会话生成，因此无关会话仍会保持隐藏。当可见性受限时，`sessions_list` 会返回可选的 `visibility` 元数据，显示实际生效的模式以及结果可能受作用域限制的警告。
+`sessions_list` 返回专注于发现的行：会话键、持久会话 ID、代理、类型、频道、标签／标题／预览字段、父子关系、最后更新时间、归档／固定状态、状态版本、模型、上下文／总 token 数、运行状态，以及上次运行是否中止。可按 `kinds`（数组；接受的值：`main`、`group`、`cron`、`hook`、`node`、`other`）、精确的 `label`、精确的 `agentId`、`search` 文本或最近活动时间（`activeMinutes`）进行筛选。默认返回活动会话；传入 `archived: true` 可改为检查已归档会话。当你需要类似邮箱的分流视图时，可设置 `includeDerivedTitles`、`includeLastMessage` 或 `messageLimit`（上限为 20）：分别获取受可见性范围限制的派生标题、最后一条消息的预览片段，或每行中数量受限的近期消息。使用返回的 `sessionId` 作为 `sessions` 工具在归档、恢复或删除其他会话时的 `expectedSessionId`；这样可以防止过时的键指向替代会话。投递路由、其他内部 ID、每次运行的计时／设置、成本估算和转录路径仍会被省略；如需这些会话所有者专属的详细信息，请使用 `session_status`、对话工具和 `sessions_history`。派生标题和预览只会针对调用方根据已配置的会话工具可见性策略本来就能看到的会话生成，因此无关会话仍会保持隐藏。当可见性受限时，`sessions_list` 会返回可选的 `visibility` 元数据，其中显示有效模式以及结果可能受范围限制的警告。
 
 `sessions_history` 获取特定会话的对话记录。默认情况下会排除工具结果；传入 `includeTools: true` 可查看它们。使用 `limit` 获取最新的受限尾部内容。需要分页元数据时传入 `offset: 0`，然后使用返回的 `nextOffset` 值，沿着更早的 OpenClaw 转录窗口向后翻页，而无需读取原始转录文件。显式 offset 分页不会合并外部 CLI 回退导入；当你需要那种合并后的显示历史时，请使用默认的最新尾部视图（不传 `offset`）。
 
@@ -42,15 +42,15 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
   - 会移除 thinking 标签
   - 会移除 `<relevant-memories>` / `<relevant_memories>` 的脚手架块
   - 会移除纯文本工具调用 XML 负载块，例如 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>` 和 `<function_calls>...</function_calls>`，包括那些未能完整闭合的截断负载
-  - 会移除降级后的工具调用/结果脚手架，例如 `[Tool Call: ...]`、`[Tool Result ...]` 和 `[Historical context ...]`
+  - 会移除降级后的工具调用／结果脚手架，例如 `[Tool Call: ...]`、`[Tool Result ...]` 和 `[Historical context ...]`
   - 会移除泄漏的模型控制 token，例如 `<|assistant|>`、其他 ASCII `<|...|>` token，以及全角 `<｜...｜>` 变体
   - 会移除格式错误的 MiniMax 工具调用 XML，例如 `<invoke ...>` / `</minimax:tool_call>`
-- 在返回前会对凭据/token 类文本进行脱敏
+- 在返回前会对凭据／token 类文本进行脱敏
 - 长文本块会被截断
 - 超大历史可能会丢弃较早的行，或将过大的行替换为 `[sessions_history omitted: message too large]`
 - 工具会报告诸如 `truncated`、`droppedMessages`、`contentTruncated`、`contentRedacted`、`bytes` 以及分页元数据等摘要标志
 
-使用返回的**会话键**（例如 `"main"`）与 `sessions_history`、`sessions_send` 和 `session_status` 配合使用。这些目标工具也可以解析已知的会话 ID，但 `sessions_list` 不会暴露内部 ID。
+使用返回的 **session key**（例如 `"main"`）调用 `sessions_history`、`sessions_send` 和 `session_status`。仅将持久的 `sessionId` 用作上述生命周期身份。
 
 如果你需要精确的原始转录，请检查作用域限定的 SQLite 转录行，而不是将 `sessions_history` 视为未过滤的转储。
 
@@ -60,10 +60,10 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 
 受所有者限制的 `sessions` 工具提供了有限的自助操作范围：
 
-- `action: "patch"` 默认更改当前会话，或更改通过 `sessionKey` 选择的其他可见会话。它可以设置标签、固定／归档状态、模型和思考级别。
-- `action: "reset"` 重置通过 `sessionKey` 选择的其他可见会话。
-- `action: "delete"` 首先归档，然后删除通过 `sessionKey` 选择的其他可见会话的完全相同版本。默认情况下，其会话记录会作为已删除的归档保留；传入 `deleteTranscript: false` 可保持会话记录状态不变。重置或删除当前运行该工具的会话会被拒绝。
-- `group_list`、`group_set`、`group_rename` 和 `group_delete` 管理全局有序会话组目录。`group_set` 会替换有序名称列表，而不是修改其中一项。
+- `action: "patch"` 默认更改当前会话，或更改由 `sessionKey` 选择的其他可见会话。它可以设置标签、固定／归档状态、模型和思考级别。归档或恢复其他会话需要将其 `sessions_list` 的 `sessionId` 作为 `expectedSessionId`。
+- `action: "reset"` 重置由 `sessionKey` 选择的其他可见会话。
+- `action: "delete"` 首先归档，然后删除由 `sessionKey` 选择的其他可见会话的完全相同版本。默认情况下，其转录会作为已删除的归档保留；传入 `deleteTranscript: false` 可保持转录状态不变。重置或删除当前正在运行此工具的会话会被拒绝。
+- `group_list`、`group_set`、`group_rename` 和 `group_delete` 管理全局有序会话组目录。`group_set` 会替换有序名称列表，而不是修补单个条目。
 
 使用带有 `visible: true` 的 `sessions_spawn` 来创建一个持久化的仪表盘会话。这样会让会话创建保持在受控的 spawn 路径上，并强制执行父级的工具策略、沙箱、并发限制以及运行超时。
 
@@ -90,13 +90,13 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 
 消息和 A2A 后续回复会在接收方提示词中标记为跨会话数据（`[Inter-session message ... isUser=false]`），并体现在转录来源中。接收方智能体应将其视为工具路由数据，而不是直接由最终用户编写的指令。
 
-在目标响应之后，OpenClaw 可以运行一个 **reply-back loop**，让智能体交替发送消息，直到达到内置上限。目标智能体可以回复 `REPLY_SKIP` 以提前停止。
+在目标响应之后，OpenClaw 可以运行一个 **回复回传循环**，让智能体交替发送消息，直到达到内置上限。目标智能体可以回复 `REPLY_SKIP` 以提前停止。
 
 传递 `watch: true` 以同时将发送方注册为目标的状态变更观察者：当其他参与者之后向目标发送直接人类消息或更改其目标时，发送方会收到一条系统通知，指向 `session_status` 的 `changesSince`。注册会在成功分发后进行，目标是实际接收到消息的会话，并从其当前状态版本开始，因此只有后续更改才会产生通知。结果会在注册成功时报告 `watched: true`。另请参阅[会话状态感知](/concepts/session-state)。
 
 ## 状态与编排助手
 
-`session_status` 是当前或另一个可见会话的轻量级 `/status` 等价工具。它会报告用量、时间、模型/运行时状态，以及在存在时关联的后台任务上下文。与 `/status` 一样，它可以根据最新的转录用量条目回填稀疏的 token/cache 计数器，并且 `model=default` 会清除每个会话的覆盖设置。对调用方的当前会话使用 `sessionKey="current"`；像 `openclaw-tui` 这样的可见客户端标签不是 session key。
+`session_status` 是当前或另一个可见会话的轻量级 `/status` 等价工具。它会报告用量、时间、模型／运行时状态，以及在存在时关联的后台任务上下文。与 `/status` 一样，它可以根据最新的转录用量条目回填稀疏的 token/cache 计数器，并且 `model=default` 会清除每个会话的覆盖设置。对调用方的当前会话使用 `sessionKey="current"`；像 `openclaw-tui` 这样的可见客户端标签不是 session key。
 
 当路由元数据可用时，`session_status` 还会包含一个可见的 `Route context` JSON 块以及匹配的结构化 `details` 字段。这些字段用于区分会话 key 与当前正在处理实时运行的路由：
 
@@ -108,13 +108,13 @@ OpenClaw 提供代理工具，用于跨会话工作、检查状态并编排子�
 
 OpenClaw 会保留一份持久的信号日志，记录重要的会话状态变更（发给受监视会话的直接人工消息、子运行结果、目标变更、压缩）。`sessions_list` 行和 `session_status` 会公开该会话的 `stateVersion`，并且 `session_status` 接受 `changesSince: <version>`，以返回该版本之后的类型化事件；当请求的版本早于保留历史时，会精确通过 `historyGap` 发出信号。监视者——由父级自动生成，或通过 `sessions_send watch: true` 显式设置——在其他参与者更改受监视会话时，会收到一条合并后的过期状态通知。
 
-状态变更事件会省略重复的会话/代理 ID，并且只暴露对模型有用的负载字段（`outcome`、`channel` 或 `turns`）。事件摘要以及执行者/运行标识符仍然可用于对账。
+状态变更事件会省略重复的会话／代理 ID，并且只暴露对模型有用的负载字段（`outcome`、`channel` 或 `turns`）。事件摘要以及执行者／运行标识符仍然可用于对账。
 
 完整模型请参见 [会话状态感知](/concepts/session-state)：事件类型、监视者注册、反垃圾通知协议、对账流程以及当前限制。
 
 `sessions_yield` 会有意结束当前回合，以便下一条消息可以成为你正在等待的后续事件。当你在生成子代理后，希望完成结果作为下一条消息到达，而不是构建轮询循环时，请使用它。
 
-`subagents` 是围绕原生子代理运行和共享后台任务账本的会话树视图。`action: "list"` 会报告活动/最近的子代理，以及作用域内的 ACP、CLI/媒体和 cron 任务。`action: "cancel"` 接受返回的 `taskId`，并且只能停止调用者受控会话树内的工作；叶子子代理不能取消其他会话的任务。
+`subagents` 是围绕原生子代理运行和共享后台任务账本的会话树视图。`action: "list"` 会报告活动／最近的子代理，以及作用域内的 ACP、CLI／媒体和 cron 任务。`action: "cancel"` 接受返回的 `taskId`，并且只能停止调用者受控会话树内的工作；叶子子代理不能取消其他会话的任务。
 
 ## 生成子代理
 
@@ -122,17 +122,17 @@ OpenClaw 会保留一份持久的信号日志，记录重要的会话状态变�
 
 关键选项：
 
-- `runtime: "subagent"` (默认) 或 `"acp"` 用于外部宿主代理。
+- `runtime: "subagent"` （默认）或 `"acp"` 用于外部宿主代理。
 - `model` 和 `thinking` 可覆盖子会话配置。
 - `runTimeoutSeconds` 用于覆盖已配置的子运行超时时间；`0` 表示禁用。
 - `thread: true` 用于将 spawn 绑定到聊天线程（Discord、Slack 等）。
 - `sandbox: "require"` 用于强制对子代理进行沙箱化。
 - `context: "fork"` 用于原生子代理，当子代理需要当前请求者的转录内容时使用；若不需要则省略，或使用 `context: "isolated"` 以获得一个干净的子会话。`context: "fork"` 仅在 `runtime: "subagent"` 时有效。绑定线程的原生子代理默认使用 `context: "fork"`，除非 `threadBindings.defaultSpawnContext` 另有说明。
-- `visible: true` 用于创建一个持久的仪表板会话，而不是隐藏的子代理会话。可见 spawn 支持显式模型、工作目录、同代理转录分叉，以及可选的 [managed worktree](/concepts/managed-worktrees)；关于确切的兼容性限制，请参见 [Sub-agents](/tools/subagents#tool-parameters)。
+- `visible: true` 用于创建一个持久的仪表盘会话，而不是隐藏的子代理会话。可见 spawn 支持显式模型、工作目录、同代理转录分叉，以及可选的 [托管工作树](/concepts/managed-worktrees)；关于确切的兼容性限制，请参见 [Sub-agents](/tools/subagents#tool-parameters)。
 
 默认的叶子子代理不会获得会话工具。当 `maxSpawnDepth >= 2` 时，深度为 1 的编排子代理还会额外获得 `sessions_spawn`、`subagents`、`sessions_list` 和 `sessions_history`，以便它们管理自己的子代理。叶子运行仍然不会获得递归编排工具。
 
-完成后，会有一个 announce 步骤将结果发布到请求者的频道。完成投递会在可用时保留绑定的线程/主题路由；如果完成来源只标识了一个频道，OpenClaw 仍然可以复用请求者会话中存储的路由（`lastChannel` / `lastTo`）进行直接投递。
+完成后，会有一个 announce 步骤将结果发布到请求者的频道。完成投递会在可用时保留绑定的线程／主题路由；如果完成来源只标识了一个频道，OpenClaw 仍然可以复用请求者会话中存储的路由（`lastChannel` / `lastTo`）进行直接投递。
 
 关于 ACP 的特定行为，请参见 [ACP Agents](/tools/acp-agents)。
 

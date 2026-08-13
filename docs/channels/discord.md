@@ -114,7 +114,7 @@ openclaw gateway
 
     如果 OpenClaw 已经作为后台服务运行，请通过 OpenClaw Mac 应用重启它，或者停止并重新启动 `openclaw gateway run` 进程。
     对于受管服务安装，请在设置了 `DISCORD_BOT_TOKEN` 的 shell 中运行 `openclaw gateway install`，或者将该变量存储在 `~/.openclaw/.env` 中，以便服务在重启后能够解析该 env SecretRef。
-    如果你的主机因 Discord 启动时的应用查询而被阻止或触发限流，请从开发者门户设置应用程序/客户端 ID，以便启动时跳过该 REST 调用：默认账户使用 `channels.discord.applicationId`，或按机器人使用 `channels.discord.accounts.<accountId>.applicationId`。
+    如果你的主机因 Discord 启动时的应用查询而被阻止或触发限流，请从开发者门户设置应用程序／客户端 ID，以便启动时跳过该 REST 调用：默认账户使用 `channels.discord.applicationId`，或按机器人使用 `channels.discord.accounts.<accountId>.applicationId`。
 
   </Step>
 
@@ -122,11 +122,11 @@ openclaw gateway
 
     <Tabs>
       <Tab title="询问你的代理">
-        在现有频道（例如 Telegram）中与你的 OpenClaw 代理聊天并告知它。如果 Discord 是你的第一个频道，请改用 CLI / 配置标签页。
+        在现有频道（例如 Telegram）中与你的 OpenClaw 代理聊天并告知它。如果 Discord 是你的第一个频道，请改用 CLI／配置标签页。
 
         > “我已经把 Discord 机器人令牌设置到配置中了。请使用用户 ID `<user_id>` 和服务器 ID `<server_id>` 完成 Discord 设置。”
       </Tab>
-      <Tab title="CLI / 配置">
+      <Tab title="CLI／配置">
         基于文件的配置：
 
 ```json5
@@ -150,7 +150,7 @@ openclaw gateway
 DISCORD_BOT_TOKEN=...
 ```
 
-        对于脚本化或远程设置，请使用 `openclaw config patch --file ./discord.patch.json5 --dry-run` 写入相同的 JSON5 代码块，然后不带 `--dry-run` 重新运行。纯文本 `token` 字符串同样有效，并且 `channels.discord.token` 支持 env/file/exec/store 提供程序中的 SecretRef 值。请参阅[密钥管理](/gateway/secrets)。
+        对于脚本化或远程设置，请使用 `openclaw config patch --file ./discord.patch.json5 --dry-run` 写入相同的 JSON5 代码块，然后不带 `--dry-run` 重新运行。纯文本 `token` 字符串同样有效，并且 `channels.discord.token` 支持 env／file／exec／store 提供程序中的 SecretRef 值。请参阅[密钥管理](/gateway/secrets)。
 
         对于多个 Discord 机器人，将每个机器人令牌和应用程序 ID 保持在各自的账户下。顶层的 `channels.discord.applicationId` 会被账户继承，因此只有当所有账户都使用相同的应用程序 ID 时才应在这里设置。
 
@@ -210,7 +210,7 @@ openclaw pairing approve discord <CODE>
 <Note>
 令牌解析是按账户感知的。配置中的令牌值优先于 env 回退值，且 `DISCORD_BOT_TOKEN` 仅用于默认账户。
 如果两个已启用的 Discord 账户解析到同一个机器人令牌，OpenClaw 只会为该令牌启动一个网关监视器：来自配置的令牌优先于 env 回退值；否则第一个已启用的账户获胜，重复账户会被报告为已禁用，原因是 `duplicate bot token`。
-对于高级出站调用（消息工具/频道操作），会为该次调用使用显式的逐次调用 `token`。这适用于发送以及 read/probe 类型的操作（read/search/fetch/thread/pins/permissions）。账户策略/重试设置仍来自活动运行快照中所选账户。
+对于高级出站调用（消息工具／频道操作），会为该次调用使用显式的逐次调用 `token`。这适用于发送以及 read／probe 类型的操作（read／search／fetch／thread／pins／permissions）。账户策略／重试设置仍来自活动运行快照中所选账户。
 </Note>
 
 ## 推荐：设置 guild 工作区
@@ -276,7 +276,7 @@ openclaw pairing approve discord <CODE>
 }
 ```
 
-        若要要求消息工具发送可见的群组/频道回复，请设置 `messages.groupChat.visibleReplies: "message_tool"`。
+        若要要求消息工具发送可见的群组／频道回复，请设置 `messages.groupChat.visibleReplies: "message_tool"`。
 
       </Tab>
     </Tabs>
@@ -304,12 +304,12 @@ openclaw pairing approve discord <CODE>
 
 - Gateway 拥有 Discord 连接。
 - 回复路由是确定性的：Discord 的入站回复会回到 Discord。
-- Discord 的 guild/channel 元数据作为不可信上下文添加到模型提示中，而不是作为用户可见的回复前缀。如果模型将该封装复制回去，OpenClaw 会从出站回复以及未来的回放上下文中剥离复制的元数据。
+- Discord 的 guild／channel 元数据作为不可信上下文添加到模型提示中，而不是作为用户可见的回复前缀。如果模型将该封装复制回去，OpenClaw 会从出站回复以及未来的回放上下文中剥离复制的元数据。
 - 默认情况下（`session.dmScope=main`），直接聊天共享代理主会话（`agent:main:main`）。
 - Guild 频道使用隔离的会话键（`agent:<agentId>:discord:channel:<channelId>`）。
 - 群聊 DM 默认被忽略（`channels.discord.dm.groupEnabled=false`）。
 - 原生斜杠命令在隔离的命令会话中运行（`agent:<agentId>:discord:slash:<userId>`），同时仍然携带 `CommandTargetSessionKey` 到路由后的对话会话。
-- 仅文本的 cron/heartbeat 宣告投递到 Discord 时会折叠为最终的、对助手可见的答案，并只发送一次。媒体和结构化组件负载在代理生成多个可投递负载时仍保持多条消息。
+- 仅文本的 cron／heartbeat 宣告投递到 Discord 时会折叠为最终的、对助手可见的答案，并只发送一次。媒体和结构化组件负载在代理生成多个可投递负载时仍保持多条消息。
 
 ## 论坛频道
 
@@ -424,9 +424,9 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
   <Tab title="DM 策略">
     `channels.discord.dmPolicy` 控制 DM 访问。`channels.discord.allowFrom` 是 DM 允许名单的规范配置。
 
-    - `pairing` (默认)
-    - `allowlist` (需要至少一个 `allowFrom` 发送者)
-    - `open` (需要 `channels.discord.allowFrom` 包含 `"*"`)
+    - `pairing`（默认）
+    - `allowlist`（需要至少一个 `allowFrom` 发送者）
+    - `open`（需要 `channels.discord.allowFrom` 包含 `"*"`）
     - `disabled`
 
     如果 DM 策略不是 open，则未知用户会被阻止（或在 `pairing` 模式下被提示配对）。
@@ -537,8 +537,8 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
     - guild 必须匹配 `channels.discord.guilds`（优先使用 `id`，也接受 slug）
     - 可选发送者允许名单：`users`（推荐使用稳定 ID）和 `roles`（仅限 role ID）；如果任意一个已配置，当发送者匹配 `users` 或 `roles` 时即被允许
-    - 默认禁用直接按名称/标签匹配；仅在紧急兼容模式下启用 `channels.discord.dangerouslyAllowNameMatching: true`
-    - `users` 支持名称/标签，但 ID 更安全；`openclaw security audit` 在使用名称/标签条目时会发出警告
+    - 默认禁用直接按名称／标签匹配；仅在紧急兼容模式下启用 `channels.discord.dangerouslyAllowNameMatching: true`
+    - `users` 支持名称／标签，但 ID 更安全；`openclaw security audit` 在使用名称／标签条目时会发出警告
     - 如果某个 guild 配置了 `channels`，未列出的频道会被拒绝
     - 如果某个 guild 没有 `channels` 块，则该 allowlist guild 中的所有频道都被允许
 
@@ -583,8 +583,8 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
     编写出站 Discord 消息时，请使用规范提及语法：用户用 `<@USER_ID>`，频道用 `<#CHANNEL_ID>`，角色用 `<@&ROLE_ID>`。不要使用旧的 `<@!USER_ID>` 昵称提及形式。
 
-    `requireMention` 按 guild/频道分别配置（`channels.discord.guilds...`）。
-    `ignoreOtherMentions` 可选地会丢弃那些提及了其他用户/角色但没有提及 bot 的消息（`@everyone`/`@here` 除外）。
+    `requireMention` 按 guild／频道分别配置（`channels.discord.guilds...`）。
+    `ignoreOtherMentions` 可选地会丢弃那些提及了其他用户／角色但没有提及 bot 的消息（`@everyone`／`@here` 除外）。
 
     群组 DM：
 
@@ -654,7 +654,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 - `commands.native` 默认为 `"auto"`，并且对 Discord 已启用。
 - 按频道覆盖：`channels.discord.commands.native`。
 - `commands.native=false` 会在启动期间跳过 Discord slash 命令注册和清理。之前注册的命令可能仍会在 Discord 中可见，直到你将它们从 Discord 应用中移除。
-- 原生命令授权使用与普通消息处理相同的 Discord 允许列表/策略。
+- 原生命令授权使用与普通消息处理相同的 Discord 允许列表／策略。
 - 对于未授权用户，命令在 Discord UI 中仍可能可见；执行时会强制进行 OpenClaw 授权并回复“未授权”。
 - 默认 slash 命令设置：`ephemeral: true`（`channels.discord.slashCommand.ephemeral`）。
 
@@ -823,7 +823,6 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
   agents: {
     entries: {
       codex: {
-        default: true,
         runtime: {
           type: "acp",
           acp: {
@@ -1711,7 +1710,7 @@ openclaw logs --follow
 
 <CardGroup cols={2}>
   <Card title="Discord 活动" icon="window" href="/channels/discord-activities">
-    在 Discord 内启动交互式 HTML 小部件。
+    在 Discord 内启动交互式 HTML 小组件。
   </Card>
   <Card title="配对" icon="link" href="/channels/pairing">
     将 Discord 用户与网关配对。

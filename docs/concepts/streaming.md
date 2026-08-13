@@ -143,23 +143,22 @@ Microsoft Teams 是个例外：它没有草稿预览块传输，因此 `streamin
 
 ### 频道映射
 
-Discord 未设置 `streaming` 时默认为 `off`，Telegram 默认为
-`progress`，而 Slack、Mattermost 和 MS Teams 默认为 `partial`。
+当未设置 `streaming` 时，Discord 默认为 `off`，Telegram 和 Slack 默认为 `progress`，Mattermost 和 MS Teams 默认为 `partial`。
 
 | 频道      | `off`         | `partial` | `block` | `progress`                        |
 | ---------- | ------------- | --------- | ------- | --------------------------------- |
 | Telegram   | 是           | 是       | 是     | 可编辑的进度草稿（默认） |
 | Discord    | 是（默认） | 是       | 是     | 可编辑的进度草稿（选择启用）  |
-| Slack      | 是           | 是       | 是     | 是                               |
+| Slack      | 是           | 是       | 是     | Block Kit 会话卡片（默认）  |
 | Mattermost | 是           | 是       | 是     | 是                               |
-| MS Teams   | 是           | 是       | 是     | 原生进度流                       |
+| MS Teams   | 是           | 是       | 是     | 原生进度流            |
 
 预览分块配置（`streaming.preview.chunk.*`，例如在 `channels.discord.streaming` 或 `channels.telegram.streaming` 下）默认值为 `minChars: 200`、`maxChars: 800`（会限制在频道的 `textChunkLimit` 之内），以及 `breakPreference: "paragraph"`。
 
 仅限 Slack：
 
-- 当 `channels.slack.streaming.mode="partial"` 时，`channels.slack.streaming.nativeTransport` 会切换 Slack 原生流式 API 调用（`chat.startStream`/`chat.appendStream`/`chat.stopStream`）（默认：`true`）。
-- Slack 原生流式传输和 Slack 助手线程状态都需要一个回复线程目标。顶层 DM 不会显示那种线程样式的预览，但仍然可以使用 Slack 草稿预览帖子和编辑。
+- `channels.slack.streaming.nativeTransport` 控制当 `channels.slack.streaming.mode="partial"` 时是否调用 Slack 原生流式 API（`chat.startStream`/`chat.appendStream`/`chat.stopStream`）（`nativeTransport` 默认为 `true`）。
+- Slack 原生流式传输和 Slack 助手线程状态需要回复线程目标。顶层私信不会显示这种线程式预览，但仍可以使用 Slack 草稿预览帖和编辑。
 
 ### 旧键迁移
 
@@ -196,12 +195,14 @@ Discord 未设置 `streaming` 时默认为 `off`，Telegram 默认为
 
 ### Slack
 
-- `partial` 在可用时可以使用 Slack 原生流式传输（`chat.startStream`/`append`/`stop`）。
+- 在可用时，`partial` 可以使用 Slack 原生流式传输（`chat.startStream`/`append`/`stop`）。
 - `block` 使用追加式草稿预览。
-- `progress` 先使用状态预览文本，然后发送最终答案。
-- 不带回复线程的顶层私信会使用草稿预览发布和编辑，而不是 Slack 原生流式传输。
-- 原生和草稿预览流式传输会抑制该轮的 block 回复，因此 Slack 回复只会通过一种投递路径进行流式传输。
-- 最终媒体/错误载荷以及 progress 最终结果不会创建一次性的草稿消息；只有能够编辑预览的文本/block 最终结果才会刷新待处理的草稿文本。
+- `progress` 会维护一张实时 Block Kit 会话卡片，将其最终状态设为成功或错误，并始终将助手的最终文本作为单独消息发布。
+- 当设置了 `gateway.publicOrigin` 时，终端卡片会包含**在 OpenClaw 中打开**。
+  Slack 原生计划/任务流仍需通过 `streaming.progress.nativeTaskCards: true` 选择启用。
+- 没有回复线程的顶层私信会使用草稿预览帖和编辑，而不是 Slack 原生流式传输。
+- 原生预览流式传输和草稿预览流式传输会抑制该轮的区块回复，因此 Slack 回复只通过一种投递路径进行流式传输。
+- 成功且没有可见回复的轮次仍会删除其草稿卡片。失败且没有回复的轮次会保留处于错误状态的卡片。
 
 ### Mattermost
 
@@ -224,11 +225,11 @@ Discord 未设置 `streaming` 时默认为 `off`，Telegram 默认为
 
 支持的场景：
 
-- **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流处于活动状态时，默认会将工具进度和 Codex 前言更新流式传入实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
-- 自 `v2026.4.22` 起，Telegram 已启用工具进度预览更新；保持启用状态即可保留该已发布行为。
-- **Mattermost** 会在 `partial` 和 `progress` 模式下将工具活动合并到一条预览帖子中，或在 `block` 模式下将其作为文本块之间的一条工具活动帖子（见上文）。
-- 工具进度编辑遵循当前生效的预览流模式；当预览流为 `off` 或消息已由块流接管时，会跳过这些编辑。在 Telegram 上，`streaming.mode: "off"` 仅发送最终内容：通用进度提示也会被抑制，而不会作为独立状态消息发送；但审批提示、媒体载荷和错误仍会正常路由。
-- 若要保留预览流但隐藏工具进度行，请针对相应频道将 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，并且在所有模式下都会生效）。若要在隐藏命令/执行文本的同时保留工具进度行，请将 `streaming.preview.commandText` 或 `streaming.progress.commandText` 设置为 `"status"`（默认值）。将任一选项设置为 `"raw"` 即可选择启用命令文本。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`。
+- **Discord**、**Slack**、**Telegram** 和 **Matrix** 会在预览流式传输处于活动状态时，默认将工具进度和 Codex 前言更新流式传输到实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
+- Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用状态即可保留该已发布行为。
+- **Mattermost** 会在 `partial` 和 `progress` 模式下将工具活动合并到一个预览帖子中，或在 `block` 模式下将其放在文本块之间的一个工具活动帖子中（见上文）。
+- 工具进度编辑遵循当前的预览流式模式；当预览流式传输为 `off`，或区块流式传输已接管消息时，会跳过这些编辑。在 Telegram 中，`streaming.mode: "off"` 表示仅最终投递：通用进度提示也会被抑制，而不会作为独立状态消息投递；但审批提示、媒体载荷和错误仍会正常路由。
+- 若要保留预览流式传输但隐藏工具进度行，请为该频道将 `streaming.preview.toolProgress` 或 `streaming.progress.toolProgress` 设置为 `false`（两者默认均为 `true`，并且在所有模式下都会生效）。若要保留工具进度行，同时隐藏命令/执行文本，请将 `streaming.preview.commandText` 或 `streaming.progress.commandText` 设置为 `"status"`（默认值）。将任一选项设置为 `"raw"` 可选择启用命令文本。此策略由使用 OpenClaw 紧凑进度渲染器的草稿/进度频道共享，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 会话卡片和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设置为 `off`。
 
 ## 进度草稿渲染
 
@@ -241,6 +242,8 @@ Discord 未设置 `streaming` 时默认为 `off`，Telegram 默认为
 | `streaming.progress.maxLineChars` | `120`          | 每行紧凑内容在截断前允许的最多字符数（按单词感知）             |
 | `streaming.progress.label`       | `"auto"`       | 草稿标题；可自定义字符串，或设为 `false` 以隐藏它             |
 | `streaming.progress.labels`      | 内置池         | 当 `label: "auto"` 时使用的候选标签                            |
+
+Slack 始终将进度模式渲染为固定的会话卡片布局；这些限制仍会约束该卡片中的活动行和计划文本。
 
 ### 评论进度通道
 

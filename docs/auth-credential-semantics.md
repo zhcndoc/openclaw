@@ -23,7 +23,7 @@ read_when:
 | `missing_credential`     | 未配置内联凭据或 SecretRef。                                                 |
 | `expired`                | Token 的 `expires` 时间早于当前时间。                                        |
 | `invalid_expires`        | `expires` 不是一个有效的正 Unix 毫秒时间戳。                                 |
-| `unresolved_ref`         | 配置的 SecretRef 无法解析。                                                 |
+| `unresolved_ref`         | 配置的 SecretRef 无法解析。                                                  |
 | `ineligible_profile`     | 配置文件与提供者配置不兼容（包括格式错误的密钥输入）。                       |
 | `no_model`               | 凭据存在，但未解析出任何可探测的模型候选项。                                 |
 
@@ -67,8 +67,9 @@ Agent auth 继承采用读透式。当某个 agent 没有本地配置文件时�
 
 ## 显式 auth 顺序过滤
 
-- 当为某个 provider 设置了 `auth.order.<provider>` 或 auth-store 顺序覆盖时，`models status --probe` 只会探测该 provider 解析后的 auth 顺序中仍保留的 profile id。存储的覆盖项优先于 `auth.order` 配置。
-- 对于该 provider，若某个已存储的 profile 未包含在显式顺序中，则不会在后续被静默尝试。探测输出会以 `reasonCode: excluded_by_auth_order` 报告它，并附带详细信息 `Excluded by auth.order for this provider.`
+- 当为某个提供方设置了 `auth.order.<provider>` 或 auth-store 顺序覆盖时，`models status --probe` 只会探测该提供方解析后的 auth 顺序中仍保留的配置文件 id。已存储的覆盖优先于 `auth.order` 配置。
+- 该提供方已存储但未包含在显式顺序中的配置文件不会在之后被静默尝试。探测输出会以 `reasonCode: excluded_by_auth_order` 报告该配置文件，详细信息为 `Excluded by auth.order for this provider.`
+- 有效的会话用户固定配置是一个明确的每会话例外：即使该配置文件未包含在提供方顺序中，OpenClaw 也会先尝试该配置文件，然后使用按顺序排列的同提供方配置文件作为重试候选项。冷却或禁用窗口只适用于受影响的配置文件；不会抑制其符合资格的同级配置文件。
 
 ## 探测目标解析
 

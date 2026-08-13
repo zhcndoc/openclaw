@@ -15,7 +15,7 @@ C2C 私聊和群聊中的 `@` 提及是主要聊天类型，支持富媒体（�
 ## 安装
 
 ```bash
-openclaw plugins install @openclaw/qqbot
+openclaw plugins install @tencent-connect/openclaw-qqbot
 ```
 
 ## 设置
@@ -264,7 +264,9 @@ STT 和 TTS 支持两级配置，并按优先级回退：
 
 将任一项设为 `enabled: false` 可禁用。账号级 TTS 覆盖的结构与 `tts` 相同，并会在频道／全局 TTS 配置之上进行深度合并。
 
-STT 请求默认在 60 秒后超时。插件专用 STT 使用所选 `models.providers.<id>.timeoutSeconds` 覆盖值。框架音频 STT 使用所选支持音频的 `tools.media.models[]` 条目的 `timeoutSeconds`，然后再使用所选提供方覆盖值。
+STT 请求默认在 60 秒后超时。插件专用 STT 使用所选
+`models.providers.<id>.timeoutSeconds` 覆盖值。框架音频 STT 使用所选支持音频的
+`tools.media.models[]` 条目的 `timeoutSeconds`，然后再使用所选提供方覆盖值。
 
 进入的 QQ 语音附件会作为音频媒体元数据暴露给代理，
 同时不会将原始语音文件放入通用的 `MediaPaths` 中。`[[audio_as_voice]]`

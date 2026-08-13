@@ -75,50 +75,50 @@ agent 的主会话。其他形式通过两种方式之一编码一个不可变�
 
 此表列出了每个 Control UI 应用路由。破折号表示该路由没有特定于路由的 URL 参数。
 
-| 页面                | 规范路径                      | 别名                      | 参数或动态形式                                     |
-| ------------------- | --------------------------- | ------------------------- | ------------------------------------------------ |
-| 聊天                | `/chat`                     | -                         | 上述基于密钥的会话形式；`?draft=<text>`  |
-| 仪表板              | `/dashboard`                | -                         | 上述基于密钥的会话形式；`?draft=<text>`  |
-| 仪表板              | `/dashboards`               | -                         | -                                                |
-| 询问 OpenClaw       | `/custodian`                | -                         | `?intent=new-agent`、`?onboarding=1`             |
-| 新建会话            | `/new`                      | -                         | `?agent=<agentId>`、`?catalog=<catalogId>`       |
-| 活动                | `/activity`                 | -                         | -                                                |
-| 应用                | `/apps`                     | -                         | -                                                |
-| 代理                | `/settings/agents`          | `/agents`                 | `/settings/agents/<agentId>[/<panel>]`           |
-| 频道                | `/settings/channels`        | `/channels`               | 以下共享设置参数                                 |
-| 连接                | `/settings/connection`      | -                         | 以下共享设置参数                                 |
-| 旧版常规            | `/settings/general`         | `/config`                 | 重定向至外观 → 语言                              |
-| 个人资料            | `/settings/profile`         | `/profile`                | 以下共享设置参数                                 |
-| 通信                | `/settings/communications`  | `/communications`         | 以下共享设置参数                                 |
-| 外观                | `/settings/appearance`      | `/appearance`             | 以下共享设置参数                                 |
-| 通知                | `/settings/notifications`   | -                         | 以下共享设置参数                                 |
-| 安全                | `/settings/security`        | -                         | 以下共享设置参数                                 |
-| 密钥                | `/settings/secrets`         | -                         | 以下共享设置参数                                 |
-| 高级                | `/settings/advanced`        | -                         | 以下共享设置参数                                 |
-| 审批                | `/settings/approvals`       | -                         | 以下共享设置参数                                 |
-| 自动化设置          | `/settings/automation`      | `/automation`             | 以下共享设置参数                                 |
-| MCP                 | `/settings/mcp`             | `/mcp`                    | 以下共享设置参数                                 |
-| 记忆                | `/settings/memory`          | -                         | `/settings/memory/memories\|dreams\|settings`    |
-| 基础设施            | `/settings/infrastructure`  | `/infrastructure`         | 以下共享设置参数                                 |
-| 实验室              | `/settings/labs`            | -                         | 以下共享设置参数                                 |
-| 关于                | `/settings/about`           | -                         | 以下共享设置参数                                 |
-| AI 与代理           | `/settings/ai-agents`       | `/ai-agents`              | 以下共享设置参数                                 |
-| 模型设置            | `/settings/model-setup`     | `/model-setup`            | `?firstRun=1`                                    |
-| 模型提供商          | `/settings/model-providers` | `/model-providers`        | 以下共享设置参数                                 |
-| 导入记忆            | `/memory-import`            | `/settings/memory-import` | -                                                |
-| 工作看板            | `/workboard`                | -                         | `/workboard/<boardId>`                           |
-| 工作树              | `/worktrees`                | `/settings/worktrees`     | -                                                |
-| 会话                | `/sessions`                 | `/settings/sessions`      | `?session=<sessionKey>`、`?status=archived\|all` |
-| 用量                | `/usage`                    | -                         | -                                                |
-| 调试                | `/debug`                    | -                         | -                                                |
-| 日志                | `/logs`                     | -                         | -                                                |
-| 技能工作坊          | `/skills/workshop`          | -                         | -                                                |
-| 技能                | `/skills`                   | -                         | -                                                |
-| 插件                | `/settings/plugins`         | -                         | `/settings/plugins/discover`                     |
-| 自动化              | `/cron`                     | -                         | -                                                |
-| 任务                | `/tasks`                    | -                         | -                                                |
-| 设备                | `/settings/devices`         | `/nodes`                  | 以下共享设置参数                                 |
-| 插件标签页宿主      | `/plugin`                   | -                         | `?plugin=<pluginId>&id=<tabId>`                  |
+| 页面                | 规范路径                    | 别名                      | 参数或动态形式                                               |
+| ------------------- | --------------------------- | ------------------------- | -------------------------------------------------------------- |
+| 聊天                | `/chat`                     | -                         | 上述基于键的会话形式；`?draft=<text>`                         |
+| 仪表盘              | `/dashboard`                | -                         | 上述基于键的会话形式；`?draft=<text>`                         |
+| 仪表盘列表          | `/dashboards`               | -                         | -                                                              |
+| 询问 OpenClaw       | `/custodian`                | -                         | `?intent=new-agent`、`?onboarding=1`                           |
+| 新会话              | `/new`                      | -                         | `?agent=<agentId>`、`?catalog=<catalogId>`                     |
+| 活动                | `/activity`                 | -                         | `?view=run&run=<run-id>`、`?view=run&execution=<execution-id>` |
+| 应用                | `/apps`                     | -                         | -                                                              |
+| Agents              | `/settings/agents`          | `/agents`                 | `/settings/agents/<agentId>[/<panel>]`                         |
+| Channels            | `/settings/channels`        | `/channels`               | 下面的共享设置参数                                           |
+| 连接                | `/settings/connection`      | -                         | 下面的共享设置参数                                           |
+| 旧版常规设置        | `/settings/general`         | `/config`                 | 重定向到外观 → 语言                                           |
+| 个人资料            | `/settings/profile`         | `/profile`                | 下面的共享设置参数                                           |
+| 通信                | `/settings/communications`  | `/communications`         | 下面的共享设置参数                                           |
+| 外观                | `/settings/appearance`      | `/appearance`             | 下面的共享设置参数                                           |
+| 通知                | `/settings/notifications`   | -                         | 下面的共享设置参数                                           |
+| 安全                | `/settings/security`        | -                         | 下面的共享设置参数                                           |
+| 密钥                | `/settings/secrets`         | -                         | 下面的共享设置参数                                           |
+| 高级                | `/settings/advanced`        | -                         | 下面的共享设置参数                                           |
+| 批准                | `/settings/approvals`       | -                         | 下面的共享设置参数                                           |
+| 自动化设置          | `/settings/automation`      | `/automation`             | 下面的共享设置参数                                           |
+| MCP                 | `/settings/mcp`             | `/mcp`                    | 下面的共享设置参数                                           |
+| 记忆                | `/settings/memory`          | -                         | `/settings/memory/memories\|dreams\|settings`                  |
+| 基础设施            | `/settings/infrastructure`  | `/infrastructure`         | 下面的共享设置参数                                           |
+| 实验室              | `/settings/labs`            | -                         | 下面的共享设置参数                                           |
+| 关于                | `/settings/about`           | -                         | 下面的共享设置参数                                           |
+| AI 和 Agents        | `/settings/ai-agents`       | `/ai-agents`              | 下面的共享设置参数                                           |
+| 模型设置            | `/settings/model-setup`     | `/model-setup`            | `?firstRun=1`                                                  |
+| 模型提供商          | `/settings/model-providers` | `/model-providers`        | 下面的共享设置参数                                           |
+| 导入记忆            | `/memory-import`            | `/settings/memory-import` | -                                                              |
+| 工作看板            | `/workboard`                | -                         | `/workboard/<boardId>`                                         |
+| 工作树              | `/worktrees`                | `/settings/worktrees`     | -                                                              |
+| 会话                | `/sessions`                 | `/settings/sessions`      | `?session=<sessionKey>`、`?status=archived\|all`               |
+| 用量                | `/usage`                    | -                         | -                                                              |
+| 调试                | `/debug`                    | -                         | -                                                              |
+| 日志                | `/logs`                     | -                         | -                                                              |
+| Skill Workshop      | `/skills/workshop`          | -                         | -                                                              |
+| Skills              | `/skills`                   | -                         | -                                                              |
+| 插件                | `/settings/plugins`         | -                         | `/settings/plugins/discover`                                   |
+| 自动化              | `/cron`                     | -                         | -                                                              |
+| 任务                | `/tasks`                    | -                         | -                                                              |
+| 设备                | `/settings/devices`         | `/nodes`                  | 下面的共享设置参数                                           |
+| 插件标签页宿主      | `/plugin`                   | -                         | `?plugin=<pluginId>&id=<tabId>`                                |
 
 使用基于 schema 的深链接的设置路由接受 `?section=<section>`、
 `?advanced=1` 和 `#<setting-id>`。这些值用于选择页面内的内容；

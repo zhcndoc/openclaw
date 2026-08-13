@@ -343,9 +343,9 @@ CLI 后端是独立的纯文本本地回退运行时——另见
 ```json5
 {
   agents: {
+    ownership: "explicit",
     entries: {
       codex: {
-        default: true,
         runtime: {
           type: "acp",
           acp: {

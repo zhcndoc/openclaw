@@ -486,10 +486,10 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
 ### 独占槽位
 
-| 方法                                       | 注册内容                                                                                                                                                                                                                       |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api.registerContextEngine(id, factory)`   | 上下文引擎（一次只能激活一个）。通过 `info.acceptedHostParams` 声明接受的宿主添加的生命周期字段；未声明的引擎在 2026-08-12 之前接收旧版字段集合，之后接收所有当前宿主字段。 |
-| `api.registerMemoryCapability(capability)` | 统一内存能力                                                                                                                                                                                                                   |
+| 方法                                     | 注册内容                                                                                                                                                          |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.registerContextEngine(id, factory)`   | 上下文引擎（一次只能激活一个）。使用 `info.acceptedHostParams` 限制接受的宿主添加的生命周期字段；未声明的引擎会接收所有当前宿主字段。 |
+| `api.registerMemoryCapability(capability)` | 统一内存能力                                                                                                                                                  |
 
 要参与持久化的已接纳回合，上下文引擎必须在 `info.transcriptSemantics` 下声明
 `currentTurnFence: "before-current-turn-entry-v1"` 和
@@ -598,9 +598,9 @@ my-plugin/
 - **Anthropic**: `api.ts` / `contract-api.ts` 接口用于 Claude，
   适用于 beta-header 和 `service_tier` 流式处理 helper。
 - **`@openclaw/openai-provider`**: `api.ts` 导出 provider 构建器、
-  默认模型 helper，以及 live provider 构建器。
+  默认模型 helper，以及实时 provider 构建器。
 - **`@openclaw/openrouter-provider`**: `api.ts` 导出 provider 构建器
-  以及 bootstrap/配置 helper。
+  以及引导/配置 helper。
 
 <Warning>
   扩展的生产代码也应避免 `openclaw/plugin-sdk/<other-plugin>`

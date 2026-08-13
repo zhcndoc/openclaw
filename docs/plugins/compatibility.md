@@ -57,14 +57,14 @@ registry-flag 和 plugin-owned web-config 别名。Doctor 迁移仍会单独跟�
 
 剩余的、带日期的兼容性区域包括：
 
-- 迁移指南中列出的 8 月和 9 月 SDK 子路径窗口
-- `api.on("deactivate", ...)` 和 `api.on("subagent_spawning", ...)` 钩子别名
-- 特定于 memory 的 embedding 注册以及 beta.5 session-store 桥接
+- 迁移指南中列出的 9 月 SDK 子路径窗口
+- `api.on("subagent_spawning", ...)` hook 别名
+- 特定于 memory 的 embedding 注册和 beta.5 session-store bridge
 - 下文所述的 WhatsApp 入站回调别名
 - 显式 channel target 解析和 `openclaw/plugin-sdk/messaging-targets`
 - 嵌入式 Pi agent 别名
-- 已发布的 agent-harness SDK 别名；其移除正在等待新的、对外公开文档化的迁移决策
-- 下文所列的 2026 年 10 月 SDK 注解系列
+- 已随附的 agent-harness SDK 别名，其移除需等待新的、对外文档化的迁移决定
+- 下文列出的 2026 年 10 月 SDK 注解族
 
 活跃的、无日期的 registry 记录涵盖受支持的行为，而不是待移除债务，
 包括激活提示、插件捕获、捆绑插件启用以及生成的 channel-config 回退。

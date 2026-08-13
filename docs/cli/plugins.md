@@ -398,9 +398,11 @@ openclaw plugins uninstall <id> --keep-files
 openclaw plugins uninstall <id> --force
 ```
 
-`uninstall` 会从 `plugins.entries`、持久化插件索引、插件允许/拒绝列表条目，以及任何解析后与记录的安装路径完全一致的 `plugins.load.paths` 条目中移除插件记录。对于链接路径安装，还会移除与其记录的源路径完全一致的条目。父目录、子路径、前缀匹配项和无关的加载路径都会保留。除非设置了 `--keep-files`，否则 `uninstall` 还会移除受跟踪的托管安装目录，但仅当该目录解析后位于 OpenClaw 的插件扩展根目录内时才会执行。如果插件当前占用 `memory` 或 `contextEngine` 槽位，则该槽位会重置为其默认值（`memory` 对应 `memory-core`，上下文引擎对应 `legacy`）。
+`uninstall` 会从 `plugins.entries`、持久化插件索引、插件允许/拒绝列表条目，以及任何与记录安装路径完全匹配的 `plugins.load.paths` 条目中移除插件记录。对于包含多个子条目的包，任何子 id 都会解析到包所有者；卸载会移除每个同级条目的策略和槽位/通道引用、该包的一条安装记录，并一次性删除受管目录。链接路径安装还会移除其记录源路径对应的精确条目。父目录、子路径、前缀匹配项和无关的加载路径都会保留。除非设置了 `--keep-files`，否则卸载还会移除受跟踪的受管安装目录，但仅当该目录解析到 OpenClaw 插件扩展根目录内部时才会执行。如果该插件当前拥有 `memory` 或 `contextEngine` 槽位，则该槽位会重置为默认值（memory 使用 `memory-core`，上下文引擎使用 `legacy`）。
 
-`uninstall` 会先打印将被移除内容的预览，然后在进行更改前提示 `卸载插件 "<id>"？`。传入 `--force` 可跳过确认提示（适用于脚本和非交互式运行）；不使用该选项时，卸载需要交互式 TTY。`--dry-run` 会打印相同的预览并退出，不会提示或更改任何内容。
+`uninstall` 会打印将要移除内容的预览。多条目包会在提示前列出包所有者和所有受影响的子条目。传入 `--force` 可跳过确认提示（适用于脚本和非交互式运行）；不传入时，卸载要求交互式 TTY。`--dry-run` 会打印相同的预览，并在不提示或更改任何内容的情况下退出。
+
+如果 OpenClaw 无法证明存在唯一的包所有者和完整的子条目列表，生命周期变更会以失败关闭，并且不会更改包文件、配置或已安装索引。请运行 `openclaw plugins registry --refresh`，检查 `openclaw plugins doctor`，并使用 `openclaw doctor --fix` 修复可修复的旧版索引状态。如果所有权仍然存在歧义，请重新安装该包，然后重试更新或卸载。
 
 <Note>
 `--keep-config` 作为已弃用的 `--keep-files` 别名仍受支持。
@@ -421,8 +423,8 @@ openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-ins
 更新会应用于托管插件索引中已跟踪的插件安装，以及共享 SQLite 状态中已跟踪的 hook-pack 安装。它们会复用用户在安装插件时已经选择的源，因此不需要第二次来源确认。
 
 <AccordionGroup>
-  <Accordion title="解析 plugin id 与 npm spec 的区别">
-    当你传入插件 id 时，OpenClaw 会复用该插件记录中的安装 spec。这意味着之前存储的 dist-tag（如 `@beta`）和精确锁定版本会继续在后续的 `update <id>` 运行中使用。
+  <Accordion title="解析插件 id 与 npm spec">
+    当你传入插件 id 时，OpenClaw 会复用该插件记录的安装 spec。对于多条目包，子 id 会解析到其包所有者，并一起更新所有同级条目。如果新包版本移除或重命名了子条目，OpenClaw 会移除已废弃子条目的条目、允许/拒绝策略、精确的子条目加载路径、通道配置，以及 memory/context 槽位选择，同时保留仍存在的新条目和无关插件。之前存储的 dist-tags（例如 `@beta`）和精确固定版本会继续用于后续的 `update <id>` 运行。
 
     唯一的狭义例外是：受信任的官方包正在完成目录声明的插件 id 替换。此更新会从目录中的包选择器开始，因此重命名后的清单可以替换旧版 id。
 
@@ -506,7 +508,7 @@ openclaw plugins registry --refresh
 openclaw plugins registry --json
 ```
 
-本地插件注册表是 OpenClaw 为已安装插件的身份、启用状态、源元数据和贡献所有权维护的持久冷读取模型。常规启动、提供者 owner 查找、通道设置分类以及插件清单都可以在不导入插件运行时模块的情况下读取它。
+本地插件注册表是 OpenClaw 为已安装插件的身份、启用状态、源元数据和贡献所有权维护的持久冷读取模型。常规启动、提供者所有者查找、通道设置分类以及插件清单都可以在不导入插件运行时模块的情况下读取它。
 
 使用 `plugins registry` 来检查持久化注册表是否存在、是否最新或是否过期。使用 `--refresh` 可根据持久化插件索引、配置策略以及 manifest/package 元数据重建它。这是一条修复路径，不是运行时激活路径。
 

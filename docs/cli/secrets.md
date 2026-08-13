@@ -92,7 +92,11 @@ openclaw secrets store get LOG_LEVEL
 
 密钥值不会出现在人类可读输出、`--json` 或 `--plain` 输出中。按照设计，`store get` 会将 `secret` 条目视为只写并拒绝访问，退出代码为 `2`；当名称不存在时，退出代码为 `3`。`env` 类型的值可以读取。
 
-团队范围的 `env` 条目也会进入 agent exec 环境。每次调用中显式指定的 env 优先于存储中的值，并且主机／sandbox 安全过滤器可能会拒绝受保护或呈现凭据特征的名称，同时发出警告。`secret` 条目绝不会作为子进程 env 暴露；请改用 `store` SecretRefs 访问它们。
+团队范围的 `env` 条目也会传递到由 OpenClaw 自有 exec 工具运行的命令中，包括 Code Mode、沙箱 exec 和由 `node` 托管的 exec。每次调用显式指定的 env 优先于存储值，而主机／沙箱安全过滤器可能会拒绝受保护或形似凭据的名称，并发出警告。`secret` 条目绝不会作为子进程环境变量公开；请改用 `store` SecretRefs 访问它们。
+
+<Warning>
+存储条目不会传递到外部 agent harness 中运行的命令。Codex app-server 及其 sandbox exec-server，以及 Claude Code 等 ACP 子进程会构建自己的子进程环境，绝不会经过 OpenClaw 的 exec 准备流程。如果将 agent 运行委托给其中某个 harness，请在该 harness 自己的配置中设置变量。
+</Warning>
 
 ### 删除值
 

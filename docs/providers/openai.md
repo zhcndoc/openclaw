@@ -1134,20 +1134,19 @@ OpenClaw 的隐藏归因请求头 - 请参见
 下面的 `transport` 和 `serviceTier` 示例是由作者编写的嵌入式提供程序请求设置，因此，原本符合条件的 `auto` 路由会保持使用 OpenClaw，而不会隐式选择 Codex。有效的 `fastMode` / `fast_mode` 值以及有效的截止时间键属于类型化的 agent-runtime 控制项，不会选择运行时。因此，特定于运行时的示例会显式固定 `agentRuntime.id`。原生 Codex app-server harness 管理自身的传输和请求设置；当有效路由未声明为兼容 Codex 时，显式设置 `agentRuntime.id: "codex"` 会安全失败。
 
 <AccordionGroup>
-  <Accordion title="传输（WebSocket vs SSE）">
-    OpenClaw 对 `openai/*` 默认采用 WebSocket 优先，并在失败时回退到 SSE（`"auto"`）。
+  <Accordion title="传输（WebSocket 与 SSE）">
+    直接的 API 密钥请求默认使用 SSE。如果你希望在符合条件的官方 OpenAI 端点上使用 Responses WebSocket 模式，请设置 `params.transport`。
 
-    在 `"auto"` 模式下，OpenClaw：
-    - 在回退到 SSE 之前，会对首次较早的 WebSocket 失败重试一次
-    - 发生失败后，会将 WebSocket 标记为降级 60 秒，并在冷却期间使用 SSE
-    - 为重试和重新连接附加稳定的会话与轮次身份标头
-    - 在不同传输变体之间规范化用量计数器（`input_tokens` / `prompt_tokens`）
+    | 值                     | 行为 |
+    | ---------------------- | ---- |
+    | `"sse"`（默认）        | 通过 SSE 流式传输每个请求 |
+    | `"auto"`               | 优先使用会话缓存的 WebSocket，并在请求分发前回退到 SSE |
+    | `"websocket-cached"`   | 显式使用会话缓存的 WebSocket 路径，并在请求分发前以相同方式回退到 SSE |
+    | `"websocket"`          | 为请求使用临时 WebSocket，并在请求分发前回退到 SSE |
 
-    | 值                   | 行为                               |
-    | ---------------------- | ------------------------------------ |
-    | `"auto"`（默认）      | 优先使用 WebSocket，失败时回退到 SSE |
-    | `"sse"`               | 仅强制使用 SSE                       |
-    | `"websocket"`         | 仅强制使用 WebSocket                 |
+    缓存模式会为每个会话保留一个符合条件的连接。当之前的请求和响应仍与当前历史记录匹配时，OpenClaw 只发送新的输入，并通过 `previous_response_id` 引用之前的响应。否则，它会在不包含该引用的情况下发送完整历史记录。
+
+    请求分发前的设置或握手失败会回退到 SSE；不会先重试或重新连接。分发之后发生的未知结果失败仍然不适合重放，并会安全失败。明确的服务器拒绝 `previous_response_not_found` 和 `websocket_connection_limit_reached` 是安全例外：OpenClaw 会关闭失败的 socket，并通过 SSE 使用完整历史记录和被拒绝的 `previous_response_id` 重试这一轮。
 
     ```json5
     {
@@ -1164,8 +1163,8 @@ OpenClaw 的隐藏归因请求头 - 请参见
     }
     ```
 
-    相关 OpenAI 文档：
-    - [使用 WebSocket 的 Realtime API](https://platform.openai.com/docs/guides/realtime-websocket)
+    相关的 OpenAI 文档：
+    - [Responses API WebSocket 模式](https://developers.openai.com/api/docs/guides/websocket-mode)
     - [流式 API 响应（SSE）](https://platform.openai.com/docs/guides/streaming-responses)
 
   </Accordion>

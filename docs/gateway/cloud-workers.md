@@ -9,7 +9,7 @@ doc-schema-version: 1
 
 云工作器允许会话在一次性云机器上运行其代理循环，而会话的其他一切仍保留在原处：在侧边栏中可见、实时流式传输，并且转录内容由 Gateway 持有。Gateway 会租用一台机器，在其上安装固定版本的 OpenClaw，将会话的工作区同步过去，并将轮转循环交给一个受限制的 `openclaw worker` 进程。模型调用会通过 Gateway 代理返回，因此提供方凭据不会离开你的机器，而且由于提供方看到的是一条连续的流，提示缓存仍然有效。
 
-当工作完成时（或者机器宕机时），这台机器就会被丢弃。持久状态——转录、工作区提交、放置记录——都保留在 Gateway 中。
+工作完成后（或机器发生故障时），该机器会被丢弃。持久状态——转录内容、上次协调的工作区文件以及位置记录——与 Gateway 一起保存。
 
 <Note>
 云工作器默认不启用。配置文件之前，客户端会隐藏“云”目标，Gateway 也不会公布 `sessions.dispatch`。`cloudWorkers` 配置架构以及只读的 `environments.list` 和 `environments.status` 方法仍可用于配置和环境发现。
@@ -17,13 +17,13 @@ doc-schema-version: 1
 
 ## 运行位置说明
 
-| 关注点                                                 | 位置                                                                             |
-| ------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Agent 循环 + 工具（`exec`、`read`、`write`、`edit`、…） | 云端 worker 盒子                                                                  |
-| 模型推理和提供方凭据                                     | Gateway（由 `{provider, model}` 引用代理）                                        |
-| 转录内容（持久化，会话存储）                               | Gateway                                                                          |
-| 实时流式推送到侧边栏                                       | Gateway 分发，由 worker 的可回放事件流提供数据                                     |
-| 工作区 git 历史                                           | 在盒子上无凭据地创建；Gateway 接管提交并负责 push/PR                                |
+| 关注事项                                               | 位置                                                                              |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Agent loop + tools (`exec`, `read`, `write`, `edit`, …) | Cloud worker box                                                                  |
+| Model inference and provider credentials                | Gateway（通过 `{provider, model}` 引用代理）                                      |
+| Transcript（durable, session store）                    | Gateway                                                                           |
+| Live streaming into the sidebar                         | Gateway fanout，由 worker 的可重放事件流提供                                     |
+| Workspace file state                                    | 在 box 上无凭据地更改；Gateway 协调文件并负责推送／PR                           |
 
 该盒子除了 `sshd` 之外不需要任何入站端口：Gateway 通过固定的 SSH 连接发起外连，反向隧道将 worker 的 WebSocket 回传。捆绑的 Crabbox provider 强制使用公共 SSH 路由，并禁用托管的 Tailscale 注册。出站互联网访问由 provider 策略决定；默认的 AWS 配置文件可以访问互联网，除非你限制其网络或安全组。
 
@@ -187,6 +187,14 @@ openclaw gateway call sessions.reclaim \
 ```
 
 位置会经过一个持久化状态机（`local → requested → provisioning → syncing → starting → active`），因此 Gateway 在调度过程中重启时会执行同步，而不是遗留机器。模型回合失败时，活跃位置仍可用于重试。工作区路径冲突会保留本地版本，应用云端结果的其余部分，并保留暂存的云端引用以供检查；其他同步或生命周期故障会保留其持久化恢复栅栏和诊断尾部，直到可以安全地重试恢复或回收环境。
+
+## 机器故障后仍保留的内容
+
+Gateway 会在 worker 的会话写入完成之前，将每条完整的用户、assistant 和工具结果消息提交到规范会话转录中。提交会按照顺序进行，并针对确切的转录叶节点保持幂等。如果机器在消息处理中消失，持久历史会截至最后一条已提交的消息。实时流已经显示的部分文本或工具进度可能会消失；失败的回合仍然可见，并且失败的位置会在编辑框上方记录一个有界的终止原因。
+
+工作区状态的丢失窗口更大。已完成的回合会在释放其声明之前协调 worker 文件，而 **停止云端工作者……** 会在销毁机器前执行一次最终协调。两次协调之间所做的更改只存在于 worker 上，可能会丢失。删除会话不会同步正在运行的 worker：必须先停止或归档活跃位置。随后，删除操作会在移除托管工作树之前，将已经协调的托管工作树快照保存到 `refs/openclaw/snapshots/` 下。
+
+位置失败后，请重新调度会话并重试该回合。已回收的位置会在下一回合自动重新调度。新的 worker 会根据 Gateway 转录重建其推理上下文，因此会从跨过持久化边界的消息继续运行。
 
 ## 桌面（交互式）
 

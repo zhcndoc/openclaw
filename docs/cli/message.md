@@ -63,8 +63,8 @@ openclaw message <subcommand> [flags]
 
 | 操作             | 支持渠道                                                                                                        | 必需项                                                       | 备注                                                                                                                                                                                                                                                                                                  |
 | ---------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `send`          | Discord, Google Chat, iMessage, Matrix, Mattermost (plugin), Microsoft Teams, Signal, Slack, Telegram, WhatsApp | `--target`，以及 `--message`/`--media`/`--presentation` 之一 | 参见下方 [Send](#send)。                                                                                                                                                                                                                                                                               |
-| `poll`          | Discord, Matrix, Microsoft Teams, Telegram, WhatsApp                                                            | `--target`、`--poll-question`、`--poll-option`（可重复）        | 参见下方 [Poll](#poll)。                                                                                                                                                                                                                                                                               |
+| `send`          | Discord, Google Chat, iMessage, Matrix, Mattermost (plugin), Microsoft Teams, Signal, Slack, Telegram, WhatsApp | `--target`，以及 `--message`/`--media`/`--presentation` 之一 | 参见下方 [发送](#send)。                                                                                                                                                                                                                                                                               |
+| `poll`          | Discord, Matrix, Microsoft Teams, Telegram, WhatsApp                                                            | `--target`、`--poll-question`、`--poll-option`（可重复）        | 参见下方 [投票](#poll)。                                                                                                                                                                                                                                                                               |
 | `react`         | Discord, Matrix, Nextcloud Talk, Signal, Slack, Telegram, WhatsApp                                              | `--message-id`、`--target`                                     | `--emoji`、`--remove`（需要 `--emoji`；若要清除自己在受支持平台上的反应，可省略它，参见 [Reactions](/tools/reactions)）。WhatsApp：`--participant`、`--from-me`。Signal 群组反应需要 `--target-author` 或 `--target-author-uuid`。Nextcloud Talk 只会添加反应；`--remove` 会报错。 |
 | `reactions`     | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--message-id`、`--target`                                     | `--limit`。                                                                                                                                                                                                                                                                                             |
 | `read`          | Discord, Matrix, Microsoft Teams, Slack                                                                         | `--target`                                                     | `--limit`、`--message-id`、`--before`、`--after`。Discord：`--around`、`--include-thread`。Slack：`--message-id` 读取特定时间戳，结合 `--thread-id` 可精确读取某条线程回复。                                                                                                     |
@@ -83,19 +83,18 @@ openclaw message send --channel discord \
   --target channel:123 --message "hi" --reply-to 456
 ```
 
-- `--media <path-or-url>`：附加图片/音频/视频/文档（本地路径或
+- `--media <path-or-url>`：附加图像/音频/视频/文档（本地路径或
   URL）。
-- `--presentation <json>`：共享负载，包含 `text`、`context`、`divider`、
-  `chart`、`table`、`buttons` 和 `select` 块，并根据频道
-  能力进行渲染。参见 [消息展示](/plugins/message-presentation)。
-- `--delivery <json>`：通用投递偏好，例如 `{"pin":
-true}`。当频道支持时，`--pin` 是置顶投递的简写。
+- `--presentation <json>`：包含 `text`、`context`、`divider`、
+  `chart`、`table`、`buttons` 和 `select` 块的共享负载，根据各频道的功能进行渲染。参见 [消息呈现](/plugins/message-presentation)。
+- `--delivery <json>`：通用传递偏好设置，例如 `{"pin":
+true}`。当频道支持置顶传递时，`--pin` 是其简写形式。
 - `--reply-to <id>`、`--thread-id <id>`（Telegram 论坛主题；Slack 线程
-  时间戳，与 `--reply-to` 使用同一字段）。
-- `--force-document`（Telegram、WhatsApp）：将图片/GIF/视频作为
-  文档发送，以避免频道压缩。
-- `--silent`（Telegram、Discord）：发送时不产生通知。
-- `--gif-playback`（仅 WhatsApp）：将视频媒体按 GIF 播放处理。
+  时间戳，与 `--reply-to` 使用相同字段）。
+- `--force-document`：在 Slack 上保留原始图像字节，或在 Telegram 和 WhatsApp 上将
+  图像/GIF/视频作为文档发送，以避免频道压缩。
+- `--silent`（Telegram、Discord）：发送时不发出通知。
+- `--gif-playback`（仅限 WhatsApp）：将视频媒体作为 GIF 播放处理。
 
 ```bash
 openclaw message send --channel discord \
@@ -227,4 +226,4 @@ openclaw message broadcast --targets <target...> [--channel all] [--message <tex
 
 - [CLI 参考](/cli)
 - [Agent 发送](/tools/agent-send)
-- [消息呈现](/plugins/message-presentation)
+- [消息呈现](/plugins/message-presentation)。

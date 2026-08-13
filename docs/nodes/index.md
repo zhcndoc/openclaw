@@ -86,7 +86,15 @@ N-1 节点在升级期间仍然可见且可管理；Gateway
 openclaw node run --host <gateway-host> --port 18789 --display-name "Build Node"
 ```
 
-`node run` 还接受 `--context-path`（Gateway WS 上下文路径）、`--tls`、`--tls-fingerprint <sha256>` 和 `--node-id`（覆盖旧版客户端实例 ID；这不会重置配对）。在 macOS 上，传入 `--share-installed-apps` 以发布 `device.apps`；默认情况下共享是关闭的。使用 `--no-share-installed-apps` 可禁用先前保存的可选共享设置。
+要进行一次粘贴式设置，请从 Control UI 的 Devices 页面创建一个 **Node host** 设置链接，然后在节点机器上运行其中可复制的命令：
+
+```bash
+openclaw node run --pair "oc-pair://<setup-code>"
+```
+
+该链接只能使用一次，并会在 10 分钟后过期。它会提供端点、引导令牌、TLS 模式，以及在可用时提供证书固定值。显式的 gateway 标志会覆盖相应的 `--pair` 值。配对不会预先批准命令执行；第一次 `system.run` 请求仍会遵循正常的待处理批准或 SSH 验证路径。参见[节点配对](/gateway/pairing#one-paste-node-pairing)。
+
+`node run` 还接受 `--pair`、`--context-path`（Gateway WS 上下文路径）、`--tls`、`--tls-fingerprint <sha256>` 和 `--node-id`（覆盖旧版客户端实例 ID；不会重置配对）。在 macOS 上，传递 `--share-installed-apps` 可公布 `device.apps`；默认不共享。使用 `--no-share-installed-apps` 可禁用之前保存的选择加入设置。
 
 ### 通过 SSH 隧道连接远程 gateway（回环绑定）
 
@@ -378,7 +386,7 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
 
 桌面主机命令（`system.run`、`system.run.prepare`、`system.which`、`browser.proxy`、`browser.proxy.upload.v1`、`mcp.tools.call.v1`，以及 macOS/Windows/Linux 上的 `screen.snapshot`）不属于上述静态平台默认表的一部分。在操作员批准声明了这些命令的配对请求后，它们才会变为可用；此后，节点的已批准命令集会在重新连接时继续保留这些命令。
 
-危险或高度涉及隐私的命令需要通过 `gateway.nodes.commands.allow` 进行一次性持久选择加入，即使节点声明了这些命令也是如此：`camera.snap`、`camera.clip`、`camera.ptz.control`、`screen.record`、`contacts.add`、`calendar.add`、`reminders.add`、`health.summary`、`sms.send`、`sms.search`。`gateway.nodes.commands.deny` 始终优先于默认值和额外的允许列表条目。有关 iPhone 同意门槛，请参阅 [HealthKit 摘要](/platforms/ios-healthkit)；有关桌面输入相关的本地启用、配对、能力和工具策略门槛，请参阅 [计算机使用](/nodes/computer-use)。
+即使节点声明了以下命令，危险或高度涉及隐私的命令仍需要通过 `gateway.nodes.commands.allow` 进行一次性持久选择加入：`camera.snap`、`camera.clip`、`camera.ptz.control`、`desktop.stream`、`screen.record`、`contacts.add`、`calendar.add`、`reminders.add`、`health.summary`、`sms.send`、`sms.search`。`gateway.nodes.commands.deny` 始终优先于默认值和额外的允许列表条目。有关桌面访问的本地启用、配对、能力和工具策略门控，请参见[已配对节点桌面](/gateway/configuration-reference#paired-node-desktops)、[HealthKit 摘要](/platforms/ios-healthkit)和[计算机使用](/nodes/computer-use)。
 
 插件拥有的节点命令可以添加网关节点调用策略。该策略会在允许列表检查之后、转发到节点之前执行，因此原始 `node.invoke`、CLI 帮助工具和专用代理工具共享相同的插件权限边界。危险的插件节点命令仍然需要显式的 `gateway.nodes.commands.allow` 同意。
 
@@ -405,10 +413,10 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
       pluginTools: {
         enabled: true,
       },
-      // 持久化启用高风险/隐私敏感的节点命令（camera.snap 等）。
+      // 持久启用危险／高度涉及隐私的节点命令。
       commands: {
-        allow: ["camera.snap", "screen.record"],
-        // 即使默认配置或 commands.allow 中包含，也会阻止精确命令名。
+        allow: ["camera.snap", "desktop.stream", "screen.record"],
+        // 即使默认值或 commands.allow 包含精确命令名称，也会阻止它们。
         deny: ["camera.clip"],
       },
     },

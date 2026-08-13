@@ -152,23 +152,23 @@ OpenClaw 不发布大版本。2026-07-22 的注册表扫描检查了 426 个已�
 
 使用 `pnpm plugins:boundary-report` 审查当前迁移队列：
 
-| 标志                                                    | 作用                                                                         |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `--summary`（或 `pnpm plugins:boundary-report:summary`） | 输出精简计数，而不是完整详情。                                             |
-| `--json`                                                | 输出机器可读报告。                                                           |
-| `--owner <id>`                                          | 筛选单个插件或兼容性所有者。                                                 |
-| `--fail-on-cross-owner`                                 | 存在跨所有者保留 SDK 导入时以非零状态退出。                                  |
-| `--fail-on-eligible-compat`                             | 已弃用兼容性记录的 `removeAfter` 日期已过时以非零状态退出。                  |
-| `--fail-on-unclassified-unused-reserved`                | 存在未使用的保留 SDK shim 时以非零状态退出。                                 |
+| Flag                                                    | Effect                                                                     |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `--summary` (or `pnpm plugins:boundary-report:summary`) | Compact counts instead of full detail.                                     |
+| `--json`                                                | Machine-readable report.                                                   |
+| `--owner <id>`                                          | Filter to one compatibility owner.                                         |
+| `--fail-on-eligible-compat`                             | Exit non-zero on or after a deprecated compat record's `removeAfter` date. |
 
-`pnpm plugins:boundary-report:ci` 使用全部三个失败标志运行。已弃用记录通常具有明确的
-`removeAfter` 日期。与版本边界关联的契约则声明 `removalGate`；
-`next-plugin-sdk-major` 是已批准的主要版本门槛，而不是待定的所有者决定，并且永远不具备
-日期资格。既没有日期字段也没有门槛字段的记录会显示为 `no-date`，在其所有者发布门槛之前仍然
-不具备资格。该报告会显示日期或命名门槛，统计本地代码/文档引用，列出带有阻塞项和表面令牌读取方引用的
-`removal-pending` 记录，显示跨所有者保留 SDK 导入，并汇总私有 memory-host SDK 桥接。
-这些读取方引用是分类处理信号，而不是已发布制品证明。保留的 SDK 子路径必须有已跟踪的所有者使用情况；
-未使用的保留导出应从公共 SDK 中移除。
+`pnpm plugins:boundary-report:ci` runs with the compatibility fail flag.
+Deprecated records normally have an explicit `removeAfter` date. A contract
+tied to a version boundary instead declares a `removalGate`;
+`next-plugin-sdk-major` is an approved major-version gate, not a pending owner
+decision, and is never date-eligible. A record with neither field appears as
+`no-date` and remains ineligible until its owner publishes a gate. The report
+displays either the date or named gate, counts local code/doc references, lists
+`removal-pending` records with their blockers and surface-token reader
+references, and summarizes the private memory-host SDK bridge. Those reader
+references are triage signals, not published-artifact proof.
 
 ### 媒体旧版投影
 
@@ -460,6 +460,22 @@ const ctx = finalizeInboundContext({ Body: caption, media });
 提供者插件应通过 `api.registerProvider(...)` 注册文本推理提供者。构造
 `ApiRegistry` 的宿主代码和测试应直接在该注册表上进行注册，以便提供者的所有权和清理范围保持在已准备好的运行时内。
 
+### deactivate 钩子别名
+
+`api.on("deactivate", handler)` 兼容性别名已移除。请使用 `gateway_stop` 注册相同的关闭清理逻辑：
+
+```typescript
+// Before
+api.on("deactivate", async (event, ctx) => {
+  await stopPluginService(ctx);
+});
+
+// After
+api.on("gateway_stop", async (event, ctx) => {
+  await stopPluginService(ctx);
+});
+```
+
 ### 私有测试 barrel
 
 `openclaw/plugin-sdk/testing` 仅限仓库本地使用，并且被排除在已发布的软件包构件之外，因此在其 2026-07-28 的 `removeAfter` 日期之前被移除。仓库测试使用诸如
@@ -528,29 +544,8 @@ const ctx = finalizeInboundContext({ Body: caption, media });
 
   </Accordion>
 
-  <Accordion title="deactivate 钩子 -> gateway_stop">
-    **旧**：`api.on("deactivate", handler)`。
-
-    **新**：`api.on("gateway_stop", handler)`。关闭清理契约相同；仅钩子名称发生变化。
-
-    ```typescript
-    // 之前
-    api.on("deactivate", async (event, ctx) => {
-      await stopPluginService(ctx);
-    });
-
-    // 之后
-    api.on("gateway_stop", async (event, ctx) => {
-      await stopPluginService(ctx);
-    });
-    ```
-
-    在 2026-08-16 之后移除前，`deactivate` 仍作为已弃用的兼容性别名保留并接入。
-
-  </Accordion>
-
-  <Accordion title="subagent_spawning 钩子 -> 核心线程绑定">
-    **旧**：`api.on("subagent_spawning", handler)`，返回
+  <Accordion title="subagent_spawning hook -> core thread binding">
+    **旧**：`api.on("subagent_spawning", handler)` 返回
     `threadBindingReady` 或 `deliveryOrigin`。
 
     **新**：让核心通过通道会话绑定适配器准备 `thread: true` 的子 agent 绑定。仅使用 `api.on("subagent_spawned", handler)` 进行启动后的观察。
@@ -846,22 +841,26 @@ await gateway.request("talk.client.steer", { sessionKey, text, mode: "steer" });
 
 | 时间                                        | 发生的情况                                                                                                                              |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **现在**                                     | 支持警告的已弃用接口会发出运行时警告；仓库防护机制会拒绝从核心模块和内置插件导入已弃用的 SDK。 |
-| **等待所有者决定**                  | 没有 `removeAfter` 或 `removalGate` 的记录会继续处于已弃用状态，并且不具备移除资格，直到其所有者发布移除门槛。                       |
-| **每条兼容性记录的 `removeAfter` 日期** | 到达该日期的接口将具备移除资格；日期过后，`pnpm plugins:boundary-report --fail-on-eligible-compat` 会使 CI 失败。  |
-| **下一个 Plugin SDK 主要版本**                   | `inbound-reply-dispatch` 将达到其明确的 `next-plugin-sdk-major` 门槛；在该版本边界之前，它不具备基于日期的移除资格。         |
+| **现在**                                     | 可发出警告的已弃用接口会发出运行时警告；仓库防护措施会拒绝核心和捆绑插件导入已弃用的 SDK 接口 |
+| **等待所有者决策**                  | 没有 `removeAfter` 或 `removalGate` 的记录仍保持已弃用状态，在其所有者发布门控之前不具备移除资格 |
+| **每条兼容性记录的 `removeAfter` 日期** | 该日期对应的接口具备移除资格；在该日期当天或之后，`pnpm plugins:boundary-report --fail-on-eligible-compat` 会使 CI 失败 |
+| **下一个 Plugin SDK 主版本**                   | `inbound-reply-dispatch` 将达到其明确的 `next-plugin-sdk-major` 门控；在该版本边界之前，它不具备按日期移除的资格 |
 
 以下剩余的公共 SDK 子路径均有注册表支持的移除窗口。
 7 月 30 日的条目已在早期获得维护者授权的清理中移除：
 未使用的子路径已删除，较早的兼容性别名已删除，
 仅随内置模块使用的模块已降级为私有本地构建映射。
 
-| 移除门槛            | 层级                               | SDK 子路径                                                                                                                                                                        |
+8 月 15 日的兼容性子路径 `agent-config-primitives`、
+`channel-logging`、`channel-secret-runtime`、`channel-streaming`、
+`group-access`、`matrix`、`text-runtime` 和 `zod` 已于 2026 年 8 月在
+SDK 所有者明确批准下提前停用。请使用[Plugin SDK 子路径目录](/plugins/sdk-subpaths)中的专用替代项，并直接从 `zod` 包导入 `zod`。`inbound-reply-dispatch` 将继续可用，直到下一个 Plugin SDK 主版本。
+
+| 移除门控            | 层级                               | SDK 子路径                                                                                                                                                                        |
 | ----------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `2026-08-15`            | 早期兼容性弃用 | `agent-config-primitives`、`channel-logging`、`channel-secret-runtime`、`channel-streaming`、`group-access`、`matrix`、`text-runtime`、`zod`                                        |
-| `2026-09-01`            | 早期兼容性弃用 | `channel-lifecycle`、`channel-message`、`channel-reply-pipeline`、`config-runtime`、`infra-runtime`                                                                                 |
-| `next-plugin-sdk-major` | 主要版本兼容性门槛   | `inbound-reply-dispatch`                                                                                                                                                            |
-| `2026-10-01`            | 媒体旧版投影            | `agent-media-payload`，以及非子路径的 `MsgContext Media*` 字段、频道入站媒体负载构建器、`buildMediaPayload`、钩子媒体别名和 `{{Media*}}` 模板 |
+| `2026-09-01`            | 较早的兼容性弃用 | `channel-lifecycle`、`channel-message`、`channel-reply-pipeline`、`config-runtime`、`infra-runtime`                                                                                 |
+| `next-plugin-sdk-major` | 主版本兼容性门控   | `inbound-reply-dispatch`                                                                                                                                                            |
+| `2026-10-01`            | 媒体旧版投影            | `agent-media-payload`，以及非子路径的 `MsgContext Media*` 字段、通道入站媒体负载构建器、`buildMediaPayload`、钩子媒体别名和 `{{Media*}}` 模板 |
 
 所有核心插件都已完成迁移。外部插件应在下一个主要版本发布前完成迁移。运行
 `pnpm plugins:boundary-report`，即可查看你所使用接口中哪些兼容性记录最早到期。
@@ -873,4 +872,4 @@ await gateway.request("talk.client.steer", { sessionKey, text, mode: "steer" });
 - [频道插件](/plugins/sdk-channel-plugins) - 构建频道插件
 - [提供商插件](/plugins/sdk-provider-plugins) - 构建提供商插件
 - [插件内部机制](/plugins/architecture) - 架构深度解析
-- [插件清单](/plugins/manifest) - 清单模式参考。
+- [插件清单](/plugins/manifest) - 清单模式参考

@@ -65,30 +65,45 @@ Gateway 运维人员可以通过以下配置禁用发布功能：
 
 ## 运行（前台）
 
+如需一键完成引导，请使用 [`openclaw connect`](/cli/connect)。它接受一次性加入 URL
+或与 `--pair` 相同的设置代码形式，然后运行此节点主机运行时。
+
 ```bash
 openclaw node run --host <gateway-host> --port 18789
 ```
 
+或者，从控制界面的设备页面粘贴一个短期有效的节点设置链接：
+
+```bash
+openclaw node run --pair "oc-pair://<setup-code>"
+```
+
 选项：
 
-- `--host <host>`: Gateway WebSocket 主机（默认：`127.0.0.1`）
-- `--port <port>`: Gateway WebSocket 端口（默认：`18789`）
-- `--context-path <path>`: Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。会追加到 WebSocket URL。
-- `--tls`: 为网关连接使用 TLS
-- `--no-tls`: 即使本地 Gateway 配置启用了 TLS，也强制使用明文 Gateway 连接
-- `--tls-fingerprint <sha256>`: 期望的 TLS 证书指纹（sha256）
-- `--node-id <id>`: 覆盖存储在共享 SQLite 状态中的客户端实例 ID（不会重置配对）
-- `--display-name <name>`: 覆盖节点显示名称。
+- `--host <host>`：Gateway WebSocket 主机（默认：`127.0.0.1`）
+- `--pair <code-or-url>`：从设置代码或 `oc-pair://` URL 读取 Gateway 端点、引导令牌、TLS 模式以及可选的证书固定值。显式的 Gateway 标志会覆盖 `--pair` 中的值。
+- `--port <port>`：Gateway WebSocket 端口（默认：`18789`）
+- `--context-path <path>`：Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。会附加到 WebSocket URL。
+- `--tls`：为 Gateway 连接使用 TLS
+- `--no-tls`：即使本地 Gateway 配置启用了 TLS，也强制使用明文 Gateway 连接
+- `--tls-fingerprint <sha256>`：期望的 TLS 证书指纹（sha256）
+- `--node-id <id>`：覆盖存储在共享 SQLite 状态中的客户端实例 ID（不会重置配对）
+- `--display-name <name>`：覆盖节点显示名称
 
 ## 节点主机的 Gateway 认证
 
-`openclaw node run` 和 `openclaw node install` 会从配置/环境中解析 gateway 认证（节点命令上没有 `--token`/`--password` 标志）：
+`--pair` 使用一个有效期为 10 分钟且只能使用一次的引导令牌进行首次连接。
+配对后，重新连接会使用持久设备凭据。设置链接不会预先批准 `system.run`；
+正常的节点批准和 SSH 验证仍然有效。`node install --pair` 特意不可用，因为短期有效的
+Bearer 设置链接不得持久化到服务参数中。
 
-- 先检查 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。
-- 然后回退到本地配置：`gateway.auth.token` / `gateway.auth.password`。
-- 在本地模式下，节点主机不会故意继承 `gateway.remote.token` / `gateway.remote.password`。
-- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置但未解析，节点认证解析将失败并关闭（不会用远程回退掩盖）。
-- 在 `gateway.mode=remote` 中，远程客户端字段（`gateway.remote.token` / `gateway.remote.password`）也会根据远程优先级规则具备资格。
+`openclaw node run` 和 `openclaw node install` 从配置／环境中解析 Gateway 认证（节点命令没有 `--token`／`--password` 标志）：
+
+- 首先检查 `OPENCLAW_GATEWAY_TOKEN`／`OPENCLAW_GATEWAY_PASSWORD`。
+- 然后回退到本地配置：`gateway.auth.token`／`gateway.auth.password`。
+- 在本地模式下，节点主机不会故意继承 `gateway.remote.token`／`gateway.remote.password`。
+- 如果 `gateway.auth.token`／`gateway.auth.password` 通过 SecretRef 显式配置但未解析，节点认证解析将失败并关闭（不会用远程回退掩盖）。
+- 在 `gateway.mode=remote` 中，远程客户端字段（`gateway.remote.token`／`gateway.remote.password`）也会根据远程优先级规则具备资格。
 - 节点主机认证解析仅接受 `OPENCLAW_GATEWAY_*` 环境变量。
 
 对于连接到明文 `ws://` Gateway 的节点，允许使用回环地址、私有 IP
@@ -102,7 +117,7 @@ Tailscale。这是一个进程环境的显式启用选项，不是 `openclaw.jso
 
 ## 服务（后台）
 
-将无头 node 主机作为用户服务安装（macOS 上使用 launchd，Linux 上使用 systemd，Windows 上使用 Windows 任务计划程序）。
+将无头节点主机作为用户服务安装（macOS 上使用 launchd，Linux 上使用 systemd，Windows 上使用 Windows 任务计划程序）。
 
 ```bash
 openclaw node install --host <gateway-host> --port 18789
@@ -110,19 +125,19 @@ openclaw node install --host <gateway-host> --port 18789
 
 选项：
 
-- `--host <host>`: Gateway WebSocket 主机（默认：`127.0.0.1`）
-- `--port <port>`: Gateway WebSocket 端口（默认：`18789`）
-- `--context-path <path>`: Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。会附加到 WebSocket URL。
-- `--tls`: 为 gateway 连接使用 TLS
-- `--tls-fingerprint <sha256>`: 期望的 TLS 证书指纹（sha256）
-- `--node-id <id>`: 覆盖存储在共享 SQLite 状态中的客户端实例 ID（不会重置配对）
-- `--display-name <name>`: 覆盖 node 显示名称
-- `--runtime <runtime>`: 服务运行时（`node`）
-- `--force`: 如果已安装，则重新安装/覆盖
+- `--host <host>`：Gateway WebSocket 主机（默认：`127.0.0.1`）
+- `--port <port>`：Gateway WebSocket 端口（默认：`18789`）
+- `--context-path <path>`：Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。会附加到 WebSocket URL。
+- `--tls`：为 gateway 连接使用 TLS
+- `--tls-fingerprint <sha256>`：期望的 TLS 证书指纹（sha256）
+- `--node-id <id>`：覆盖存储在共享 SQLite 状态中的客户端实例 ID（不会重置配对）
+- `--display-name <name>`：覆盖节点显示名称
+- `--runtime <runtime>`：服务运行时（`node`）
+- `--force`：如果已安装，则重新安装／覆盖
 
 > **Linux（systemd 用户服务）：** 安装后运行
 > `sudo loginctl enable-linger <user>`。如果不启用 linger，
-> `systemd --user` 会在最后一个 SSH 会话结束时拆除 node 服务，因此 node
+> `systemd --user` 会在最后一个 SSH 会话结束时拆除节点服务，因此节点
 > 会在注销后无提示地离线。
 > 当检测到 linger 已禁用时，`openclaw node install` 会打印此警告。
 
@@ -136,11 +151,11 @@ openclaw node restart
 openclaw node uninstall
 ```
 
-前台 node 主机请使用 `openclaw node run`（不使用服务）。
+前台节点主机请使用 `openclaw node run`（不使用服务）。
 
 服务命令接受 `--json` 以输出机器可读格式。
 
-Node 主机会在进程内重试 Gateway 重启和网络关闭。如果 Gateway 报告终止性的 token/password/bootstrap auth 暂停，node 主机会记录关闭详情并以非零状态退出，以便 launchd/systemd/Windows 任务计划程序使用新的配置和凭据重新启动它。需要配对的暂停会保留在前台流程中，以便可以批准待处理的请求。
+节点主机会在进程内重试 Gateway 重启和网络关闭。如果 Gateway 报告终止性的 token/password/bootstrap auth 暂停，节点主机会记录关闭详情并以非零状态退出，以便 launchd/systemd/Windows 任务计划程序使用新的配置和凭据重新启动它。需要配对的暂停会保留在前台流程中，以便可以批准待处理的请求。
 
 ## 配对
 
@@ -187,11 +202,11 @@ openclaw node identity --json
 
 无头节点将其客户端实例 ID 与 Gateway 用于配对和路由的已签名设备身份分开管理。这些状态保存在 OpenClaw 状态目录中（默认是 `~/.openclaw`，或者在设置了 `$OPENCLAW_STATE_DIR` 时使用该目录）：
 
-| State                                                    | Purpose                                                                                                                          |
+| 状态                                                     | 用途                                                                                                                               |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `state/openclaw.sqlite` (`node_host_config`)             | 客户端实例 ID、显示名称以及 Gateway 连接元数据。客户端将此 ID 作为 `instanceId` 发送。                                             |
-| `state/openclaw.sqlite` (`device_identities`, `primary`) | 已签名的 Ed25519 密钥对和派生的设备 ID。对于已签名连接，此设备 ID 即为路由中的节点 ID 和配对身份。                                     |
-| `state/openclaw.sqlite` (`device_auth_tokens`)           | 已配对的设备令牌，按加密设备 ID 和角色键入。                                                                                         |
+| `state/openclaw.sqlite`（`node_host_config`）             | 客户端实例 ID、显示名称以及 Gateway 连接元数据。客户端将此 ID 作为 `instanceId` 发送。                                             |
+| `state/openclaw.sqlite`（`device_identities`，`primary`） | 已签名的 Ed25519 密钥对和派生的设备 ID。对于已签名连接，此设备 ID 即为路由中的节点 ID 和配对身份。                                     |
+| `state/openclaw.sqlite`（`device_auth_tokens`）           | 已配对的设备令牌，按加密设备 ID 和角色键入。                                                                                         |
 
 `--node-id` 只会更改共享 SQLite 状态中的客户端实例 ID。它不会更改加密设备 ID，也不会清除配对认证。使用 `openclaw doctor --fix` 迁移已退役的 `node.json` 同样不会重置配对。要撤销并重新配对某个节点：
 
@@ -221,4 +236,5 @@ openclaw node identity --json
 ## 相关
 
 - [CLI 参考](/cli)
+- [连接机器](/cli/connect)
 - [节点](/nodes)

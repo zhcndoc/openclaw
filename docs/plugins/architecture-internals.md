@@ -70,7 +70,7 @@ title: "插件架构内部"
 
 请求时的运行时预加载如果请求的是宽泛的 `all` 范围，仍会从配置、启动规划、已配置通道、slots 和自动启用规则中推导出一个显式的有效插件 id 集合（`src/plugins/effective-plugin-ids.ts` 中的 `resolveEffectivePluginIds`）。如果推导出的集合为空，OpenClaw 会保持该范围为空，而不是扩大到所有可发现的插件。
 
-设置发现会优先使用描述符拥有的 ids，例如 `setup.providers` 和 `setup.cliBackends`，先缩小候选插件范围，然后才回退到 `setup-api`，以处理那些仍然需要设置时运行时钩子的插件。提供者设置列表会使用清单 `providerAuthChoices`、描述符派生的设置选项以及安装目录元数据，而无需加载提供者运行时。显式的 `setup.requiresRuntime: false` 是一个仅描述符级别的截止条件；省略 `requiresRuntime` 会保留旧版的 `setup-api` 回退，以兼容旧行为。如果有多个发现的插件声称拥有同一个规范化后的设置提供者或 CLI backend id，设置查找会拒绝这个有歧义的所有者，而不是依赖发现顺序。当设置运行时确实执行时，注册表诊断会报告 `setup.providers` / `setup.cliBackends` 与实际由 `setup-api` 注册的 providers 或 CLI backends 之间的漂移，但不会阻止旧插件。
+设置发现会优先使用描述符拥有的 ids，例如 `setup.providers` 和 `setup.cliBackends`，先缩小候选插件范围，然后才回退到 `setup-api`，以处理那些仍然需要设置时运行时钩子的插件。提供者设置列表会使用清单 `providerAuthChoices`、描述符派生的设置选项以及安装目录元数据，而无需加载提供者运行时。显式的 `setup.requiresRuntime: false` 是一个仅描述符级别的截止条件；省略 `requiresRuntime` 会保留旧版的 `setup-api` 回退，以兼容旧行为。如果有多个发现的插件声称拥有同一个规范化后的设置提供者或 CLI 后端 id，设置查找会拒绝这个有歧义的所有者，而不是依赖发现顺序。当设置运行时确实执行时，注册表诊断会报告 `setup.providers` / `setup.cliBackends` 与实际由 `setup-api` 注册的 providers 或 CLI backends 之间的漂移，但不会阻止旧插件。
 
 ### 插件缓存边界
 
@@ -586,12 +586,12 @@ api.registerHttpRoute({
 `approvalCapability` 契约上，而不是分散在互不相关的插件字段中。请参见
 [通道插件](/plugins/sdk-channel-plugins)。
 
-运行时和配置辅助工具位于对应的聚焦 `*-runtime` 子路径下
+Runtime 和配置辅助工具位于对应的聚焦 `*-runtime` 子路径下
 （`approval-runtime`、`agent-runtime`、`lazy-runtime`、`directory-runtime`、
-`text-runtime`、`runtime-store`、`system-event-runtime`、`heartbeat-runtime`、
-`channel-activity-runtime` 等）。优先使用 `config-contracts`、
+`text-utility-runtime`、`runtime-store`、`system-event-runtime`、`heartbeat-runtime`、
+`channel-activity-runtime` 等）。请优先使用 `config-contracts`、
 `plugin-config-runtime`、`runtime-config-snapshot` 和 `config-mutation`，
-而不是宽泛的 `config-runtime` 兼容聚合入口。
+而不是宽泛的 `config-runtime` 兼容性聚合入口。
 
 <Info>
 `openclaw/plugin-sdk/channel-lifecycle`、小型通道辅助工具门面、

@@ -1,249 +1,366 @@
 ---
-summary: 会话的一种放置模型——网关、配对设备和云端主机都是运行器；客户端连接到会话，而不是运行器。
-title: 运行器方案
+summary: 一切都是节点——一种统一的放置模型，其中配对机器和云端盒子通过 worker admission path 承载会话；客户端连接到会话，而不是 runner
+title: Runners 计划
 read_when:
-  - 设计或审查会话运行位置（网关、设备、云端）
-  - 更改“运行位置”选择器、设备配对或工作器调度界面
-  - 为会话、设备或放置相关内容命名
+  - 设计或审查会话运行的位置（gateway、device、cloud）
+  - 更改 Where 选择器、设备配对、节点接入或 worker dispatch 界面
+  - 为会话、设备、节点或放置相关的任何内容命名
 ---
 
 ## 状态
 
-提案，第 1 次修订。实施进行中（自主构建已于
-2026-08-08 启动；本节跟踪实时状态——每个推进里程碑的 PR 都必须更新本节）。
+Proposal，第 2 次修订。在原位取代第 1 次修订（2026-08-11，operator
+decision）。Implementation 进行中；每个推进里程碑的 PR 都必须更新此表。
 
-| #   | 里程碑                                             | 状态       | PR     |
-| --- | -------------------------------------------------- | ---------- | ------ |
-| 0   | 本计划                                             | 已合并     | —      |
-| 1a  | 命名：恢复会话副本                                 | 已合并     | #120667 |
-| 1b  | 命名：设备整合                                     | 已合并     | #120689 |
-| 1c  | 清理：合并 node-pairing → device-pairing           | 尚未开始   | —      |
-| 2   | `openclaw resume` + 网页端在终端中继续             | 进行中     | #120664 |
-| 3   | `oc-pair://` 一键粘贴配对                          | 尚未开始   | —      |
-| 4   | 选择器 + 信息补充 + 项目读取模型                   | 尚未开始   | —      |
-| 5   | 设备运行器                                         | 尚未开始   | —      |
-| 6   | 停止并继续移动                                     | 尚未开始   | —      |
-| 7   | 删除项（ssh 沙箱、openshell、exec-host 克隆）      | 尚未开始   | —      |
+| #   | Milestone                                                  | Status      | PRs                                |
+| --- | ---------------------------------------------------------- | ----------- | ---------------------------------- |
+| 0   | 此计划（第 2 次修订）                                     | 已落地      | #122454                            |
+| 1a  | 命名：恢复 session 文案                                    | 已落地      | #120667                            |
+| 1b  | 命名：设备整合                                            | 已落地      | #120689                            |
+| 1c  | 清理：合并 node-pairing → device-pairing                  | 已落地      | #120726                            |
+| 2   | `openclaw resume` + Web Continue in terminal               | 进行中      | #120664                            |
+| 3   | `openclaw connect` 单次粘贴接入 + `/j/` 加入路由          | 进行中      | #120768, #122499                   |
+| 4   | 选择器：分组、放置、存活状态、信息补充                    | 进行中      | #120804, #122531, #122635, #122774 |
+| F   | Real-wire session boundary harness                         | 已落地      | #121212                            |
+| 5   | 公共 worker ingress path                                  | 已落地      | #122578, #122643                   |
+| 6   | Node worker provider（device runners）                    | 进行中      | #122683, #122829                   |
+| 7   | Bundle push consent + runner updates                       | 未开始      | —                                  |
+| 8   | Stop-and-continue moves                                    | 未开始      | —                                  |
+| 9   | 删除（ssh sandbox、openshell、exec-host 克隆等）           | 未开始      | —                                  |
+| 10  | Cloud convergence（provisioners 运行 `openclaw connect`）  | 未开始      | —                                  |
 
-提案历史：经过对 worker、exec 和 node 技术栈的三次深入阅读、行业调研（Amp runners/orbs、Cursor 3 位置选择器、Claude Code teleport、Codex 云端、VS Code tunnels、Tailscale auth keys），以及三次对抗性评审后，于 2026-08-08 就方向达成一致；评审中否决的结论已作为明确的非目标纳入下文。本提案直接基于已发布的云工作器架构（`docs/plan/cloud-workers.md`、`docs/gateway/cloud-workers.md`）构建，并不取代该架构。
+修订历史：第 1 次修订（2026-08-08）在代码证据调查和三次对抗性审查之后，确立了
+session/runner 词汇、命名裁定和里程碑骨架。第 2 次修订
+（2026-08-11）基于第二轮深度代码阅读（worker admission、
+tunnel、sync、node channel、scope model）、行业调研（GitHub/GitLab/
+Buildkite/CircleCI runners、Tailscale、VS Code tunnels、Coder、Gitpod Flex、
+Amp、Cursor/Claude/Codex cloud）、对 Amp runner transport 的静态拆解，以及对本次修订的新一轮对抗性审查。改变计划的 operator 决策如下：
+
+- **节点承载会话。** 第 1 次修订中“node 角色不运行 turn loop”
+  的非目标在结论层面被推翻，但其中的事实仍然成立：node
+  _connection_ 仍不是权威边界，因此承载会话的权威位于 dispatch 层
+  （worker admission、每次 dispatch 的凭据、turn claims、owner epochs）——是迁移，而非移除。
+- **`openclaw worker` 成为由节点监管的子进程。** 只有一种机器概念：
+  配对节点可以运行云端 worker 当前运行的一切内容。
+- **SSH 不是设备传输方式。** gateway 从不拨号连接设备；设备始终主动向外拨号。
+  第 1 次修订中设备 runner“先部署 sshd”的方案已删除——它无法连接位于 NAT
+  后的机器，而且调研的产品都没有使用 SSH 作为控制传输。SSH 只保留为传统云租约
+  传输方式，直到里程碑 10 将其淘汰。
 
 ## 问题
 
-OpenClaw 对“工作在哪里运行”有三个互不连通的答案：
+实质上与第 1 次修订不变：OpenClaw 对“工作在哪里运行”给出了彼此割裂的答案。
+节点只接收转发的 `exec host=node` 调用；用户长期在线的工作站作为会话主机，
+能力反而不如一次性云租约。云端 worker 通过持久化的放置状态机承载完整会话，
+但只能使用通过 SSH 配置的临时租约。ssh sandbox backend 是第三条远程执行路径。
+放置只从混合不同本体的扁平列表中选择一次，之后便不可见；接入新机器需要 flags、
+环境变量和两次人工批准。
 
-- **节点**只接收转发的 `exec host=node` 调用；整个轮次循环始终不会离开网关。用户的常驻 Mac Studio 作为会话主机，能力反而不如一次性的 AWS 租约。
-- **云工作者**承载完整会话，并拥有持久化的放置状态机，但目前只能使用临时的提供商租约。
-- **ssh 沙箱后端**是第三条远程执行路径（由网关持有 SSH 凭据，按工具进行远程调用），其形态重复了云工作者已经取代的功能。
-
-UI 也反映了这种碎片化：放置位置在新建会话弹出框中只选择一次，选项是混合了三种本体（网关、执行节点、云配置）的扁平列表，之后便不可见且无法修改。放置配置分散在 `tools.exec.*`、`agents.entries.*.tools.exec.node`、`agents.defaults.sandbox.*`、`gateway.nodes.*` 和 `cloudWorkers.profiles` 中。术语也逐渐发生偏移：控制 UI 使用“线程”（2026 年 7 月的文案重命名，PR 110933/110973），而 CLI、协议、存储和文档使用“会话”；配对硬件在路由/i18n 中称为“节点”，在路径/标签中则称为“设备”。
+产品层面的标准是：管理员在 Web 选择器中点击“Connect a machine…”，在任意机器上粘贴一条命令，
+几秒之后该机器就会在整个团队的选择器中可见，并可以承载完整的 agent 会话。
 
 ## 模型与词汇
 
 ```
-会话      由网关拥有：转录、身份、放置、受管工作树。
-          客户端（Web、TUI、macOS 应用、频道）附加到会话，
-          从不附加到运行器。全程统一使用一个术语：会话。
-运行器    任何能够承载会话轮次循环的对象：
-            - 网关本身（免费提供的运行器）
-            - 已配对设备（通过基于节点的工作器提供方；见下文）
-            - 云主机（现有的 crabbox 工作器提供方）
-隔离      是运行器的属性，而不是位置的属性：
-            云主机       -> 机器就是边界
-            网关/设备   -> 无 | docker | podman（现有沙箱）
-设备      已配对的硬件（如今称为“节点”）。设备作为外设提供
-          能力（摄像头、画布、执行）；设备只有通过工作器准入路径
-          才会成为运行器。
-项目      仓库身份：规范化的 remote.origin.url；如果没有远程仓库，
-          则使用现有的 16 字符仓库指纹作为回退值。派生而来，
-          从不注册。
-检出      项目 × 运行器 = { runnerId, path } —— 项目在何处
-          实际存在。云运行器没有检出；它们会为每个会话
-          物化一个全新的检出。
-文件夹    非 Git 场景的逃生通道：某个运行器上的普通路径
-          （如今的浏览流程，保持不变）。
-轮次      会话内一次从提示到响应的工作尝试
-          （与 ACP 和工作器协议一致）。
+Session   gateway-owned: transcript, identity, placement, managed worktree.
+          Clients (web, TUI, macOS app, channels) attach to sessions,
+          never to runners. One noun, everywhere: session.
+Node      a paired machine holding an outbound connection to the gateway
+          (Ed25519 device identity). Protocol/internal vocabulary; user-facing
+          copy says "device". EVERY remote machine is a node — personal
+          workstations, servers, cloud leases. Phones are nodes that never
+          advertise session hosting.
+Runner    anything that can host a session's turn loop: the gateway itself,
+          or a session-capable node. "Runner" is internal/docs vocabulary;
+          UI copy says "Runs on …".
+Worker    the per-turn child process (`openclaw worker`) that hosts a
+          session's loop under worker admission. On cloud leases it is
+          launched over SSH today; on nodes it is a supervised child of the
+          node host. Same admission, same protocol, either way.
+Isolation a property OF the runner (none | docker | podman), not a place.
+Project   repo identity: normalized remote.origin.url, with the existing
+          16-char repo fingerprint as the no-remote fallback. Derived,
+          never registered.
+Checkout  project × runner = { runnerId, path }.
+Turn      one prompt-to-response work attempt inside a session.
 ```
 
-命名裁定（操作方于 2026-08-08 决定）：
+命名裁定（由 operator 决定，沿用自第 1 次修订）：**session** 是对话唯一的产品名词；
+**devices** 是面向用户的配对硬件称呼；新的 CLI 体验采用**动词**
+（`openclaw resume`、`openclaw connect`）；“runner” 永远不会出现在 UI 文案中。
+里程碑 1c（nodes → devices 路由/i18n 整合）将在任何新的 placement 文案发布之前落地。
 
-- **会话**是对话唯一的产品术语。Control-UI 中的“线程”文案已恢复为原样（包括 i18n 和测试字面量；技术标识符从未更改）。行业中，智能体产品对 session 与 thread 的采用比例为 9–2；ACP 使用 session；而“线程”会与 Discord/Slack/Telegram 的子线程传输概念冲突。
-- **设备**是面向用户的已配对硬件称谓；“节点”仅保留为协议/内部词汇。路由/i18n 遗留项（`nodes` 路由 ID、`/settings/devices` 路径、`nodes.*` i18n 键）统一迁移到 devices。
-- 新的 CLI 易用性设计以**动词**形式发布（`openclaw resume`），绝不在 `openclaw sessions` 旁新增第二个名词命令。
-- “运行器”是内部/文档概念；UI 文案使用“运行于……”。
+## 架构
 
-VISION.md 增加一段：网关是协调器，也是默认运行器；其他任何机器——无论是你的机器还是租用的机器——都可以成为运行器；客户端附加到会话，因此会话运行在哪里，永远不会改变你与它交流的方式。
+### 双连接形态
 
-## 对抗性评审否决的内容（现阶段非目标）
+所有调研过的生产系统（GitHub Actions runners、GitLab、Buildkite、
+CircleCI、Tailscale、VS Code tunnels、Coder、Gitpod、Amp）都使用机器到控制平面的仅出站连接，
+而其中成熟的系统会将持久化的 presence/control channel 与每个 job 的 work channel 分开。
+OpenClaw 已经具备这两部分；本计划将它们连接起来：
 
-- **不设 Places 注册表。** `environments.list`
-  (`src/gateway/server-methods/environments.ts:143-157`) 已经返回合并后的读模型：网关条目、节点目录（已配对 + 实时在线状态）、worker 环境、云配置。持久化注册表会重复记录在线状态事实；重命名 RPC 只是增加第二条路径。我们改为以增量方式丰富 `EnvironmentSummary`。
-- **节点角色不承载回合循环。** 节点协议此前已被否决作为循环传输机制（cloud-workers.md §4）：已连接节点可以发出任意节点事件，因此其能力上限并不是入口边界。Worker 入口仍采用封闭的三方法允许列表
-  (`packages/gateway-protocol/src/schema/worker-admission.ts:32-34`)，使用每次派发签发的凭据以及精确的 bundle-hash 准入
-  (`src/gateway/worker-environments/admission.ts:80-104`)。设备只有在该准入机制下运行 `openclaw worker`，才能成为 runner。
-- **不向正在使用的 checkout 派发任务。** 工作区同步要求远程目录由单一方独占（每次同步都会清空，
-  `workspace-sync-setup-script.ts:29`）；reconcile 会将偏离基础 manifest 的内容视为 worker 输出。设备 runner 使用 `$HOME/.openclaw-worker/` 下相同的、按会话隔离的私有目录，这正是 qa-lab static-ssh provider 当前已证明可行的方式。
-- **不合并 `exec host=node`。** 逐调用的 exec 路由约有 5k 行四层故障安全审批机制（网关 TOCTOU 重新检查、节点策略下限、在节点上重新校验的 `systemRunPlan` 哈希绑定、节点本地重新评估）。它服务于不同的产品（在不同策略域中执行一条命令），因此保持不变。
-- **不将 sandbox 作为地点行。** Sandbox 是按 agent 配置的隔离机制，没有按会话覆盖的操作界面；对于未配置 sandbox 的 agent，选择器中的一行会悄无声息地不起作用。
-- **不使用虚假的迁移动词。** `sessions.dispatch` 只接受 `local|reclaimed` 部署位置和云配置
-  (`sessions-dispatch.ts:166-176`)；不存在暂停，也不存在机器到机器的迁移。UI 只展示后端实际支持的功能：当前支持显示 + reclaim；设备 runner 发布后，再支持停止并继续式迁移。
-- **配对链接不预先批准 exec。** 单次粘贴流程可以预先批准仅限在线状态的权限范围；`system.run` 和文件夹同步始终经过现有的待审批或 SSH 验证门控
-  (`src/gateway/node-pairing-ssh-verify.ts`)。
-- **不支持实时迁移、不支持多网关联邦、不支持将手机作为 runner。**
+1. **Node connection**（已存在）：出站 gateway WebSocket。承载 identity、presence、
+   capability manifest，以及有界命令调用（`node.invoke`）。这是控制通道：
+   registration、liveness，以及 workspace 操作的传输方式。
+2. **Worker connection**（已存在）：每次 dispatch 对应的 WebSocket，使用封闭的 worker protocol
+   （heartbeat、transcript CAS commits、可恢复的 live events、gateway-proxied inference、
+   gateway-side session tools）。Admission 由 store 支持且与传输无关：每次 dispatch 使用 32 字节凭据
+   （10 分钟 TTL，静态存储时哈希）、environment binding、owner epochs、精确 bundle hash，
+   以及每次 RPC 的 identity revalidation。在 node runner 上，worker 子进程直接拨号连接 gateway 的
+   公共 TLS endpoint——已连接的节点证明出站路径存在。
 
-## 组件
+有意不作为传输方式的是：把 `node.invoke` 当作 worker connection 的字节管道。测得的限制
+（16 KiB 字符串块、每个块都需要一次等待中的 RPC 往返、没有幂等去重、重连会终止进行中的 invoke、
+每个 nodeId 仅允许一个 session 且会驱逐旧连接、50 MB 缓冲区达到上限后强制关闭）使其不适合数小时的流。
+它保持原本的定位：有界命令通道。
 
-### 1. 会话续接体验（独立交付，优先发布）
+### 公共 endpoint 上的 Worker ingress（里程碑 5）
 
-这在设计上已经实现：会话记录和部署位置都位于网关上，无论采用何种部署方式，推理都源自网关，并且 TUI 是完整的网关客户端（`openclaw tui --session <key>`、Ctrl+P 选择器、恢复上次会话——`src/tui/tui-last-session.ts`）。在云端运行的 Web 上启动会话；TUI 会连接该会话，并将路由转交给工作节点。
+目前 worker ingress 是一个只能通过 loopback 访问、经由 `ssh -R` 到达的专用 listener；
+main ingress 会拒绝 worker frames。对于 node runners，相同的 admission 会通过公共 TLS endpoint
+上的路径标记 upgrade route 暴露（由 route 强制设置 `connectionKind = "worker"`，而不是由 listener 设置）。
+loopback listener 会继续为通过 SSH 配置的云端 worker 保留，直到里程碑 10。
 
-变更仅涉及体验：
+随暴露一起发布的加固措施，而不是事后补上：
 
-- `openclaw resume [query]` — 按名称/键在各个代理的最近会话中进行模糊匹配；不提供查询时打开选择器；解析为 `tui --session <key>`。
-- Web UI 会话行中的“在终端中继续”：显示准确的命令（`openclaw resume <key>`），与 Codex/Claude 会话目录已有的终端恢复入口保持一致。
-- 不新增协议接口；`sessions.list` 已经包含解析器所需的信息。
+- Admission failures 统一折叠为一个不透明原因。目前
+  `invalid-credential` 与 `environment-mismatch` 的区别会形成 environment-id 枚举 oracle，
+  不得在公共环境中被观察到。
+- Worker path 共享 gateway 的 preauth budgets 和 rate limits；
+  pre-credential connection 会得到与其他未认证客户端相同的廉价拒绝。
+- 凭据强度已经足够（32 个随机字节、constant-time hashed compare、10 分钟 TTL、单一 environment binding）。
 
-后续事项：边界级恢复测试（网关 → 会话列表 → 连接）需要一个轻量级的 CLI 侧网关测试工具；现有辅助工具在 CLI vitest 配置下耗时约 370 秒。
+### Node worker provider（里程碑 6）
 
-### 2. 一键设备配对（独立）
+`WorkerLease` 扩展为一个 union：`{ ssh: … } | { node: { deviceId } }`。
+Admission/placement machinery（environment store、credential broker、placement state machine、
+turn claims、transcript/live-event/inference protocols）原样复用——这是来之不易的部分。
+新增内容如下，诚实地说明（第 1 次修订对此有所低估）：
 
-复用已交付的设置码流程：`PairingSetupPayload = { url, urls?,
-bootstrapToken }` base64url blob（`src/pairing/setup-code.ts:40-44,406-410`）、
-10 分钟有效且只能使用一次的 bootstrap token、`bootstrapProfile: "node"`
-（`src/shared/device-bootstrap-profile.ts:61-94`），以及生成 token 的 RPC
-`device.pair.setupCode`（`src/gateway/server-methods/device-pair-setup.ts`）。
+- **Node tunnel handle。** 第二个 `WorkerTunnelHandle` 实现：
+  `runWorkspaceCommand` 映射到有界 node command（argv + stdin → SpawnResult；
+  远端 sync/manifest/quiesce scripts 已在 bundle 中发布，且与传输方式无关）。
+  `remoteSocketPath` 被替换为携带 gateway worker URL 的 descriptor。
+- **持久化启动。** 在 SSH 流程中，launch exec stream _就是_ worker 的生命周期，
+  它的终止会销毁 environment。在 node 上，launch 是由 node-host command 监管的：
+  node host 生成与 invoke 生命周期解耦的 worker 子进程，持久化单行结果，gateway
+  以幂等方式重新收集结果。Node WS 短暂中断不得终止 turn。
+- **凭据传递。** launch descriptor（包括每次 turn 的凭据）通过经过认证的 node channel
+  传递，而不是 SSH stdin。两者属于同一信任域：无论哪种方式，node host 都是机器侧 agent。
+- **无需 rsync 的 Workspace sync。** 通过经过认证的 HTTPS，基于 manifest 的 delta blob transfer
+  连接 gateway（manifest machinery 已经计算出精确的 changed-blob 列表；rsync 只是传输载体），
+  如果 project 有 origin，则使用 git-mode 从 origin 获取基础内容。现有边界
+  （inventory entries、manifest bytes、reconcile caps）继续沿用。对于已通告本地 checkout 的节点，
+  完全跳过 gateway push（Amp 模型：runner identity = host + workdir + repo）。
+- **持久化机器生命周期。** `destroy` = 逻辑上的 lease release。
+  Provider `inspect` 根据 pairing + presence 返回三态结果：_present_、
+  _dormant_（已配对但离线，且在休眠期限内——不得被 reconcile sweep
+  驱动为 `orphaned`）、_gone_（未配对或超过期限 → 正常 orphan/reap 路径）。
+  以 unpair/dormancy 为依据、而不是以 provider teardown proof 为依据的 device-environment reaper
+  会清理 rows、credentials 和 staged refs。设备端对每个 session 的 workspace dirs 以及过时 bundle
+  进行 GC 是里程碑退出门槛，而不是留待决定的问题：否则持久化机器会泄漏用户自己的磁盘空间。
+- **Placement `runner-offline`。** Heartbeat/presence 丢失会用记录的、对 operator 可见的原因标记 placement；
+  staged results 由现有 fence machinery 保留；session 提供“continue on gateway”（reclaim）
+  或“wait for device”。绝不会静默地没有结果。
+- **Dispatch target union。** `sessions.dispatch` 接受 `{ profileId } | { deviceId }`；
+  device → environment 的映射在服务端解析。设备不会通过合成的
+  `cloudWorkers.profiles` 条目偷偷传入。
+- **并发槽位。** 节点声明 session-slot 数量（默认较小）；选择器显示忙碌状态；
+  如果没有存活的 runner 可以满足 dispatch，则在有界等待后以可见方式失败，而不是无限排队。
+- **多 gateway 安全性。** 节点上的 worker install/workspace root 按 gateway identity 命名空间隔离，
+  因此两个配对同一机器的 gateway 不会破坏彼此的状态。
 
-需要补齐的部分：
+Node runners 上的 Isolation：可选的 worker-in-docker/podman，与 gateway-local sessions 使用相同的 sandbox 轴。
+云端租约保持 box 内的完整权限（机器本身就是边界）。
 
-- `oc-pair://<setupCode>` scheme wrapper（payload 保持不变）。
-- `openclaw node run --pair <code|url>` 兑换路径：解码 blob，配置
-  host/port/token，建立连接（目前仅存在 `--host/--port/--tls-fingerprint`
-  参数，`src/node-host/runner.ts:27-37`）。
-- 将 TLS fingerprint 添加到 `PairingSetupPayload`（node host 已经接受
-  pin；但 blob 无法携带它）。
-- 在 Control UI 配对对话框中暴露 `node` bootstrap profile
-  （目前仅支持 RPC，`ui/src/lib/device-pair-setup.ts`）。
-- 采用 Tailscale 风格的密钥拆分，并在文档中说明：配对 token 的有效期很短且只能使用一次；
-  生成的设备凭据长期有效；撤销其中一个不会撤销另一个。
+### 信任模型（operator 决定，v1）
 
-执行/权限范围升级保持不变：首次 `system.run` 请求会进入待审批状态，或通过 SSH-verify 自动批准。
+Cloud workers 使用完整权限，因为其 box 是一次性的且不包含凭据。配对的个人机器则不是。
+v1 的解决方案如下：
 
-### 3. 设备运行器（核心）
+- **只有管理员可以配对节点**（已经实施：`role: node` device approval 要求 `operator.admin`；
+  join-code mint 也受 admin 作用域限制）。配对节点意味着管理员声明它是**共享团队基础设施**
+  ——服务器、构建机或专用工作站。这就是“gateway 上的所有人都可以 dispatch 到此设备，
+  且会话内容会落到此设备上”的同意边界。
+- **个人设备 runner 不在 v1 范围内。** 它们会与每个人的 node ownership
+  （基于记录的 owner 设置 visibility + dispatch policy）一同加入，而不是提前加入。
+  从第一天起就会在配对时记录 approver identity，作为**来源信息，而非授权信息**
+  （新增可为空的列），以便未来的 policy 有数据可依。
+- **手机和低信任设备永远不会通告 session hosting。**
+  这是 capability gating，而不是 ontology：选择器不会提供这些设备。
+- 非交互式批准旁路（trusted-CIDR、SSH-verify、trusted-proxy browser auto-approve）
+  仍然限定在当前的 presence-level grants 范围内，并针对 hosted-gateway 类别进行审查；
+  任何旁路都不得在没有管理员参与的情况下创建具备 session 能力的节点。
+- Inference 仍由 gateway 代理；provider keys 永远不会到达节点。如果节点未来需要直接从 origin
+  获取 private repos，gateway 会为每次 dispatch 签发短期、限定作用域的 git credentials；
+  节点上不保存长期 PAT。
 
-设备运行器是指连接到一台持久化机器的现有工作器栈。  
-表明该栈已准备就绪的证据：
+### 接入（里程碑 3）
 
-- 提供商契约非常精简且与 SSH 通用
-  (`src/plugins/capability-provider.types.ts:97-114`)：`provision → {leaseId,
-ssh}`、`inspect`、`destroy`。qa-lab 静态 SSH 提供商
-  (`extensions/qa-lab/src/static-ssh-worker-provider.ts:70-91`) 已经通过无操作的 destroy
-  封装了一个持久化主机；由于远程工作区是每个会话独享的私有镜像，同步/协调工作无需修改即可运行。
-- 准入、放置状态机、SQLite 存储、transcript CAS、
-  推理代理以及 `openclaw worker` 运行时基本无需更改；准入基于凭据，而非传输方式。
-- 连接点是 `WorkerTunnelHandle`
-  (`src/gateway/worker-environments/tunnel-contract.ts:74`，85 行)：
-  在一个句柄之后封装工作区命令执行、同步和静默处理，目前仅支持 SSH
-  (`worker-turn-launcher.ts:337-344`、`workspace-sync-scripts.ts`)。
+复制行业标准的拆分方式（短期 enrollment secret → 长期 device identity；
+GitLab 已弃用可复用 registration tokens 以实现这一点，Tailscale 的 key/device revocation split
+是有文档记录的模型）：
 
-工作项：
+- 管理员从选择器的“Connect a machine…”入口或 `openclaw devices` CLI
+  mint 一个**单次使用、约 10 分钟有效的 join code**（熵 ≥128 位）。
+  现有的 `device.pair.setupCode` RPC 和 `node` bootstrap profile 是基础设施；
+  该 code 只会预批准 node 角色，不包含任何 operator scopes。
+- 粘贴的一行命令是 `npx openclaw connect <url-or-code>`（顶层动词；
+  `openclaw node run` 仍作为底层 plumbing command）。它接受完整的 `oc-pair://` payload
+  （离线形式，携带 gateway URL + bootstrap token + 可选的自签名 gateway TLS pin），
+  或者接受 `https://<gateway-host>/j/<shortcode>` URL，通过 TLS 获取其 payload。
+  `--service` 会安装 OS service，而不是以前台方式运行。
+  公共网站上的 curl installer wrapper 会安装 CLI 并执行相同的 verb；公共网站永远不会看到 tokens。
+- Gateway 提供 `/j/<shortcode>`（Control UI routing 中的保留前缀，单次使用后销毁，严格按 IP 限流）。
+- 撤销拆分已有文档说明：撤销 join code 永远不会解除节点配对；
+  移除/封禁节点是 devices 页面上的一等操作，同时会对进行中的 placements 设置 fence。
+  节点在长时间失联后的自动清理遵循 runner 行业实践。
 
-- **`device` 工作器提供商**：`provision` 将配置文件映射到一个现有的
-  已配对且已连接的设备；`destroy` 释放逻辑租约。配置：
-  `cloudWorkers.profiles.<id> = { provider: "device", settings: { device:
-"<id-or-name>" } }`（命名待定：将配置块重命名为
-  `runners.profiles`，并通过 doctor 迁移——在评审时决定）。
-- **隧道变体**：可以选择 (a) 像连接任何工作器一样通过 SSH 连接设备（设备
-  运行 sshd；最简单，并可复用全部现有机制），或者 (b) 实现一个
-  `WorkerTunnelHandle`，通过设备现有的网关连接复用工作区命令和工作器套接字。先交付 (a)；(b) 作为优化方案，由评审决定。
-- **经用户同意的固定版本运行时**：网关将其内容哈希后的
-  bundle（现有 bootstrap，`bootstrap.ts:26-104`）推送到设备上的
-  `$HOME/.openclaw-worker/`。在个人机器上安装运行时需要每台设备一次性的操作员批准，并在配对/批准界面中展示。继续执行精确版本准入；版本偏差通过重新安装 bundle 解决，绝不放宽检查。
-- **离线/排空语义**（唯一真正新增的子系统）：个人机器会休眠且无法被销毁。针对
-  `runner-offline` 新增放置处理：心跳丢失会将放置标记为离线，并记录一个对操作员可见的原因（产品原则：不得静默地产生非结果）；暂存结果会被保留（沿用现有的 fence 机制）；会话提供“在网关上继续”（回收）或“等待设备”选项。在设备具有唤醒通道的情况下，复用唤醒提示子系统
-  (`src/gateway/node-wake-state.ts`)。
-- **设备运行器上的隔离**：可选在设备上通过 Docker 运行工作器，与网关本地会话使用相同的沙箱维度。云运行器在容器内保留完整权限（机器本身就是边界）。
+### Bundle 和更新（里程碑 7）
 
-### 3b. 项目（派生的读取模型）
+Exact-hash admission 保持不变。固定且内容哈希化的 bundle 通过已经过认证的 paired channel
+推送到节点。Consent 被拆分，使其不会演变成审批疲劳或无声意外：
 
-OpenClaw 已经在没有命名的情况下计算项目身份两次：工作树服务派生出
-`originUrl` 和一个 16 字符的仓库指纹
-（`src/agents/worktrees/service.ts:199-205`），而会话目录则按项目文件夹对
-Codex/Claude 行进行分组，将 `.claude/worktrees/<name>` 归并到其源仓库中。该组件将其提升为一等读取模型——
-派生而来、从不注册，与 `environments.list` 使用相同的模式：
+- **成为 runner 的 consent**：每台设备一次，在配对/启用时完成。
+- **运行 build 的 consent**：由 channel 满足——bundle 只会来自此管理员配对的 gateway，
+  dispatch 时的更新属于正常的 managed-runner 行为（GitHub runners 也以相同方式自更新）。
+  devices 页面显示已安装的 runner version；gateway 会拒绝向过时节点 dispatch，
+  并给出 doctor 风格的提示，而不是静默失败。
 
-- **`projects.list` 读取模型**（按需计算，不新增存储）：按仓库指纹对已知检出进行分组 → `{ name, originUrl, checkouts:
-[{runnerId, path}], lastUsedAt }`。来源包括：会话行
-  （`execCwd`/`execNode`）、受管理工作树注册表，以及设备公布的工作目录（如下）。所谓“GitHub 属性”仅指将 originUrl 的主机作为副标题显示；要对其建模无需集成代码托管平台。
-- **设备检出公布**：由于网关无法获知设备检出的来源，因此目前无法跨运行器对检出进行分组。设备运行器启用功能（组件 3）会将 `{path, originUrl}` 对添加到设备握手信息中——这正是 Amp 的主机+工作目录理念应落地的位置。改动小、具有增量性，并且只会发送操作员启用的路径。
-- **选择器流程**：先选择项目（芯片 ⌃J），然后由 Where 芯片缩小范围，显示“该项目存在于何处”——将检出路径作为行副标题；没有检出的运行器如实列出（“无检出 · 首次会话时从源仓库克隆”）；云端始终符合条件（进行全新克隆）。最近使用项按项目分组，而不是对原始的 `(folder, node)` 对去重
-  （`ui/src/pages/new-session/recent-places.ts`）。“无项目”继续保留现有的按运行器浏览文件夹功能，作为备用入口。
-- **代码托管平台集成是后续且可分离的阶段**：来自 GitHub 的仓库列表、克隆从未接触过的仓库、会话行上的 PR 状态。派生模型完全不需要这些功能；明确拒绝采用注册式项目创建（仅云端产品的模式）——项目之所以出现，是因为你曾在其中工作过。
+### Projects read model（里程碑 4 基础）
 
-### 4. UI 收敛
+OpenClaw 已经在没有命名的情况下计算了两次 project identity：
+worktree service 派生 `originUrl` + 16 字符 repo fingerprint
+（`src/agents/worktrees/service.ts:199-205`），sessions catalog 按 project folder
+对 Codex/Claude rows 分组，并将 `.claude/worktrees/<name>` 折叠到其 origin repo 中。
+该组件会将其提升为一等 observed read model，与 `projects.list` 已返回的 registered projects
+并列，并遵循与 `environments.list` 相同的 computed 模式：
 
-设计规则（操作员决定，2026-08-08）：**正常状态保持静默；只有异常才发声。** 不显示在线圆点，不显示持久/临时/外围标签，不显示状态胶囊——已经列在选择器中就意味着可用，操作员也知道哪些是自己的设备。状态文本仅在异常情况下出现（“离线 · 2 小时”、运行器离线横幅），或用于展示操作员无法推断的事实（配置时间、“在 docker 中运行”）。能力标签保留：它们是结构化事实，而不是状态。运行中的会话仅以安静文本显示位置（“在 aws 上”），而不是带徽章的小组件——活动加载指示器已经体现了运行状态。
+- **`projects.list.observedProjects` read model**（为具备写入能力的调用方计算，
+  不新增 store）：按 repo fingerprint 对已知 checkout 分组 → `{ name, originUrl, checkouts:
+  [{runnerId, path}], lastUsedAt }`。来源：session rows
+  （`execCwd`/`execNode`）和 managed-worktree registry。observed paths 和经过清理的 origins
+  只返回给 `operator.write` 调用方；只读调用方继续使用 registered project catalog 和 project-only recents。
+  设备通告的 checkout 仍属于里程碑 6 的工作。
 
-- **以增量方式丰富 `EnvironmentSummary`**（协议层面，无需迁移）：
-  `trust: "persistent" | "disposable"`、`sessionHost: boolean`、`platform`，以及对于配置文件，由提供方提供的 `class` 标签。在提供方实际提供价格之前，不加入任何价格字段。
-- **重新组织选择器**（`ui/src/pages/new-session/place-picker.ts`）：
-  分为“此网关”/“你的设备”（仅显示支持会话且已连接的设备——通过门控机制隐藏手机和离线设备）/“云端”。文件夹和目标保持正交。文案：“在 {place} 上运行”。
-- **会话标题中的位置标签**：显示当前的位置和状态；对于今天的云端位置，菜单仅提供回收操作（“带回本地”），设备运行器发布后再加入停止并继续的迁移操作。复用侧边栏徽章已经使用的位置订阅。
-- **设备页面**：将每台设备的实时会话整合到现有的 `ui/src/pages/nodes/` 页面中（端到端重命名为 devices）。不新增顶级导航项；选择器中的“连接设备……”链接指向此处。
-- **命名调整**（一个 PR，尽早完成，在新增文案落地之前）：将 Control UI 文案中的 thread 恢复为 session；在路由 id、i18n 键和标签中统一将 nodes 改为 devices。按照 UI 现有的别名机制添加路由别名。
+### UI（里程碑 4）
 
-### 5. 删除与去重（每项删除都以其替代方案为前提）
+第 1 次修订的设计规则仍然成立：正常状态保持安静；只有异常情况才发声。新增内容：
 
-| 目标                                                                                                                                                                                                    | 大小       | 前提                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------ |
-| SSH 沙箱后端 + 远程文件系统桥接（`src/agents/sandbox/ssh*.ts`）                                                                                                                                     | 约 2.35k 行代码 | 设备运行器覆盖“我服务器上的工具”这一使用场景                 |
-| openshell 重叠部分（`extensions/openshell`）                                                                                                                                                                | 约 3.4k 行代码  | 先确认实际使用情况；采用相同的 SSH 传输结构                  |
-| exec-host 结构性克隆（`bash-tools.exec-host-gateway.ts` 与 `exec-host-node*.ts`：允许列表评估、自动审查、超时回退、后续交付；node host 将该分析再次克隆了一遍） | 约 5k 行中的 3k 行 | 提取一个共享的审批状态机；node 计划绑定保留 |
-| `node-pairing.ts` 作为 `device-pairing.ts` 的外观层 + 迁移垫片                                                                                                                                       | 中等     | 完成合并；统一术语                                   |
-| UI 放置监视器（`cloud-recovery-state.ts` + sessions 页面协调循环）                                                                                                                                        | 中等     | 使用一个放置监视控制器                                  |
+- **使用现有的 environment type discriminant** 进行选择器分组：
+  本地 gateway、已连接且具备执行能力的节点、worker environments，以及单独的 cloud profiles 列表。
+  `sessionHost` 推迟到里程碑 6，在 device runners 引入所需的 capability fact 时再处理。
+- **重新组织 Where 选择器**（`ui/src/pages/new-session/place-picker.ts`）：
+  分区为“This gateway”/“Devices”/“Cloud”。设备行将 environment catalog
+  与已连接且具备执行能力的节点求交集；cloud profiles 仍保留在其独立列表中。
+  Folder 和 destination 保持正交。
+- **Session header 上的 placement chip**：显示安静的当前 placement；
+  active cloud placements 通过 `sessions.reclaim` 使用“Bring home”进行 reclaim。
+  Stop-and-continue moves 将在里程碑 8 到来。
+- **里程碑剩余工作**：live presence 和 pairing subscriptions、受 admin 控制的
+  “Connect a machine…”入口、忙碌和从未连接状态，以及新增的 `EnvironmentSummary`
+  platform、session-host、trust 和 runner version facts。随后，`runner-offline`
+  会显示包含记录原因及其恢复动词的 banner。
 
-整个计划的生产代码净行数目标为负数：组件 1–2 只是少量新增；组件 3 主要是一个提供商插件 + 一个基于复用机制的隧道变体；组件 5 删除的内容多于新增的内容。
+### Cloud convergence（里程碑 10）
+
+Cloud provider 的工作归结为：启动 box，在 setup 中运行
+`openclaw connect <one-shot code> --ephemeral`。Ephemeral enrollment
+（行业实践：GitHub `--ephemeral`/JIT、Buildkite `--acquire-job`、Tailscale
+ephemeral keys）会在运行结束后自动取消注册，并在节点离线时自动清除 node record。
+`destroy` = release lease。经过 soak 后，SSH reverse-tunnel stack、
+`PreparedWorkerSsh` 和 rsync transport 将被删除；cloud leases 和 paired machines
+会成为具有不同生命周期的同一种 runner。
+
+## 对抗性审查否定或重塑的内容
+
+从第 1 次修订沿用的内容（仍然成立）：没有 Places registry
+（`environments.list` 继续作为 read model，并以 additive 方式增强）；不向没有独占所有权的 live checkout
+进行 dispatch；`exec host=node` 保持不变（不同产品、不同 policy domain）；没有 sandbox-as-a-place
+picker row；没有虚假的 mobility verbs；没有 live migration；没有 multi-gateway federation；
+没有将手机作为 runners。
+
+第 2 次修订中修改或新增的内容：
+
+- 第 1 次修订中“device runners 基本上是现有 worker stack，无需实质改变”的说法被**夸大了**：
+  admission、placement、claims、stores 和 worker protocols 会复用；transport、credential delivery、
+  sync carrier 和 launch durability 是全新的。里程碑 6 的范围据此调整。
+- 第 1 次修订中“先部署 sshd”的 transport 已**删除**（目标机器不可达；偏离行业实践）。
+- “所有人都能 dispatch”受上述信任模型**限制**——在每个人的 ownership 机制发布之前，
+  仅限共享基础设施。
+- `node.invoke` 字节管道方案（本次修订第一稿中的方案）被测得的 protocol constraints 否定；
+  direct-dial worker connection 取代了它。
 
 ## 既有方案（我们复制什么，跳过什么）
 
-- **Amp agents-anywhere**：将运行器作为选择器中的一等选项；身份标识 =
-  主机 + 工作目录，并可选使用固定名称 → 我们以设备 ID 为键，并公布工作目录。Amp 对离线运行器行为未作说明；我们记录的
-  `runner-offline` 状态是有意做出的改进。
-- **Tailscale 身份验证密钥**：一次性短期配对密钥与长期设备凭据分离，并单独支持撤销 → 在组件 2 中采用。
-- **Claude Code teleport**：由于其云端会话位于其他地方，继续操作时需要重新生成状态；OpenClaw 的网关拥有会话，因此继续操作只需附加——更简单，也无需移动状态。他们关于分叉而非移动的语义，为我们停止并继续的表述提供了参考。
-- **Cursor 3 位置选择器**：在一个下拉菜单中提供 Local/Worktree/Cloud/SSH，验证了单一选择器的用户体验；他们推出的实时云端交接存在缺陷——我们不尝试实时移动。
-- **devcontainer.json**：如果/当面向工作器配置文件的仓库自有环境设置功能落地时，采用该规范，而不是另创格式（Cursor 专有的 environment.json 已积累了技术负债；Gitpod 已迁移到该规范）。
+- **Amp**（通过静态 CLI 拆解 + 手动验证）：仅通过 actor framework 使用 outbound WSS；
+  每用户 control channel 承载 registration、heartbeat、presence 和 heartbeat responses 中的 dispatch intents；
+  每 thread 使用 WS 处理 live sessions；agent loop 在 runner 的既有 checkout 中本地运行
+  （无 file sync；identity = host + workdir + repo URL）；inference 在服务端集中处理；
+  每个 workdir 的 PID claim 防止重复服务。我们复制双通道形态、通过 control channel 进行 dispatch
+  以及 checkout advertisement；保留由 gateway 代理的 inference（其集中化是计费选择，而不是架构选择）；
+  enrollment 的限制比其单一长期 API key 更严格。
+- **GitHub Actions runners**：registration token → device keypair；JIT/
+  ephemeral single-job runners；带 staleness ceiling 和 dispatch refusal 的 self-update；
+  关于持久化 runners 运行不受信任代码的直白安全文档。以上精神均已复制。
+- **Tailscale**：auth-key 与 node-key 的拆分，以及 revocation split 警告。
+  已复制并记录。
+- **VS Code tunnels**：黄金标准的 enrollment UX（运行一条命令，浏览器确认）；
+  device-code 风格的确认方式可以在之后作为粘贴 code 的替代方案。其每个账号 10 个 tunnel
+  的上限验证了每个 gateway 的节点数量应受限制。
+- **Coder / Gitpod Flex**：控制面/数据面拆分，由客户侧执行、控制面仅负责编排——
+  这是“inference 在 gateway、execution 在 node”最接近的类比，验证了它作为一致的 residency story。
+  如果 presence 需要更严格，Gitpod 约 30 秒的 registration renewal 可作为 liveness-lease 参考。
+- **Cursor / Claude Code / Codex cloud**：仅使用 managed-VM 执行，并通过 git 进行交接；
+  Claude Code 的 proxy-minted scoped git credentials 为上述 scoped-git-token 规则提供参考；
+  teleport 风格的 continuation 验证了 attach-only sessions（这是 OpenClaw 免费获得的能力）。
 
 ## 里程碑
 
-可独立合并的 PR 系列，大致按顺序进行；1–3 可交错进行。
+可独立合并的 PR 系列；1c 之后，3–5 可以交错进行。
 
-1. **命名阶段**：会话文案回退 + 设备整合（仅 UI/i18n/测试；
-   不修改协议或 CLI）。
-2. **续接体验优化**：`openclaw resume`，Web“在终端中继续”。
-3. **配对**：`oc-pair://`、`node run --pair`、载荷中的 TLS 固定，
-   配对 UI 中的节点配置。
-4. **选择器 + 信息补充**：新增 `EnvironmentSummary` 字段、重新分组
-   Where 选择器、位置标签（显示 + 回收）、`projects.list` 读取模型 +
-   以项目优先的选择器流程（在第 5 项加入设备播报前，仅支持网关侧检出）。
-5. **设备运行器**：设备工作器提供方（先实现 SSH 传输）、经固定版本的
-   bundle 安装并按设备征得同意、检出播报
-   （在启用握手中使用 `{path, originUrl}`）、带记录原因的
-   `runner-offline` 位置语义、可选的 docker 内工作器隔离。
-   故障注入测试（设备在回合中途休眠、设备离线时网关重启、凭据过期）
-   作为退出门槛——标准与云工作器设定的标准相同。
-6. **停止并继续移动**（标签动词“移动到…”）：排空 + 回收 +
-   重新分派到其他运行器，复用迁移屏障。
-7. **删除**：SSH 沙箱后端、openshell 重叠部分、exec-host 克隆提取、
-   节点/设备配对合并——每项都在独立 PR 中完成，并证明替代方案已覆盖
-   原有功能。
+1. **1c 命名清理**：完成 route ids、i18n keys、labels 中从 nodes → devices 的转换；
+   合并 `node-pairing.ts` facade。在任何新的 placement 文案之前完成。
+2. **Continuation ergonomics**（进行中）：`openclaw resume`、Web
+   “Continue in terminal”。
+3. **`openclaw connect`**：verb + `oc-pair://` decoder + payload 中的 TLS pin +
+   `/j/<shortcode>` join route（保留前缀、单次使用、限流）+
+   shortcode mint + 公共网站上的 curl wrapper。退出条件：一台新机器可以通过一条粘贴的命令和一次管理员点击，
+   与远程 gateway 完成配对，不再需要手动批准步骤。
+4. **Picker**（进行中）：重新组织分区、安静的 placement + reclaim，以及 observed projects read model
+   优先落地；live presence subscription、受 admin 控制的“Connect a machine…”入口、
+   新增的 `EnvironmentSummary` 信息，以及从未连接与已丢失状态完成后，该里程碑结束。
+5. **Public worker ingress**：主 TLS endpoint 上带路径标记的 worker upgrade；
+   不透明的 admission failure；共享 preauth budgets。退出条件：任意互联网主机上的 worker process
+   使用有效 dispatch credential 完成 admission；无效尝试成本低且无法枚举。
+6. **Node worker provider**：lease union、dispatch target union、node tunnel handle、
+   持久化的 supervised launch、HTTPS delta sync + origin fetch、tri-state inspect + reaper + GC、
+   concurrency slots、`runner-offline` placement semantics、以 gateway 命名空间隔离的 install root、
+   approver-provenance column。故障注入测试作为退出门槛：设备在 turn 中休眠、turn 中 node WS
+   短暂中断（turn 存活）、设备离线时 gateway 重启、credential expiry、slot saturation、
+   没有存活 runner 时的 dispatch timeout。
+7. **Bundle push + updates**：consent split、通过 paired channel 推送、版本展示、拒绝向过时节点 dispatch。
+8. **Stop-and-continue moves**：drain + reclaim + 重新 dispatch 到另一个 runner，复用 migration barrier。
+9. **删除**：ssh sandbox backend + remote-fs bridge（约 2.35k LOC）、
+   openshell overlap（约 3.4k LOC，先确认使用情况）、exec-host structural clones
+   （约 5k LOC 中约 3k LOC）、一次性 `agent.cli.claude.run` node path
+   （由完整 session hosting 取代）、node/device pairing 合并剩余部分。
+   每项都必须以替代方案为前提，每项单独建立 PR 并提供证明。
+10. **Cloud convergence**：`--ephemeral` enrollment、provisioners 运行
+    `openclaw connect`，随后删除 SSH tunnel/rsync transport stack。
+
+整个计划的生产 LOC 目标是净减少：里程碑 3–5 是少量新增，6–7 主要是针对复用 machinery
+增加一个 provider 和一个 transport implementation，而 9–10 删除的内容多于此前所有里程碑新增的内容。
 
 ## 待解决问题
 
-- 配置命名：保留 `cloudWorkers.profiles`（兼容性）还是在里程碑 5 中通过 doctor 迁移到
-  `runners.profiles`？
-- 设备运行器传输方式：（a）sshd，还是（b）多路复用网关连接：
-  先发布（a）；（b）是否值得引入额外的协议层面？
-- 当无法连接到网关时，`openclaw resume` 是否也应在本地模式下启动网关/TUI，还是在提供指导后失败？
-- 工作器配置文件的仓库自有设置契约（devcontainer.json）：纳入此计划，还是后续处理？
-- Forge 集成（GitHub 仓库列表、随处克隆、会话行上的 PR 状态）：明确排除在此计划之外；待派生项目模型投入使用后再后续处理。
-- 项目命名冲突：`openclaw fleet` 和多租户文档有些地方宽泛地使用“project”一词——在命名调整阶段进行全面检查，确保“project”专指仓库身份。
+- Dormancy ceiling 默认值（休眠设备在其 environments 被清理之前保持 `dormant` 多久）——
+  提案：14 天，无需配置，根据使用情况重新评估。
+- Node runners 的 slot count 默认值——提案：交互式设备为 2，服务器类设备更高；
+  需要 capability signal 或 connect flag。
+- Device-code 风格的浏览器确认（VS Code 模型）作为粘贴 code 的替代方案——
+  待 `/j/` 存在后再处理。
+- Worker profiles 的 repo-owned environment setup（devcontainer.json）——
+  与第 1 次修订保持不变：如果该规范落地则采用，另行制定计划。
+- Forge integration（repo 列表、任意位置 clone、PR 状态）——明确不在范围内；
+  待派生的 project model 被使用后再跟进。

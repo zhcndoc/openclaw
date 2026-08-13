@@ -90,7 +90,9 @@ Namespace: openclaw (可通过 OPENCLAW_NAMESPACE 配置)
 └── Secret/openclaw-secrets    # 网关 token + API 密钥
 ```
 
-## 自定义
+Deployment 对启动探针和流量就绪探针都使用 `/startupz`，并提供五分钟的启动时限。频道故障不会将健康的 Gateway 或 Control UI 从 Service 端点中移除。`/healthz` 仍然是存活探针；当监控应包含频道账户健康状态时，请单独使用 `/readyz`。
+
+## 定制
 
 ### Agent 指令
 
@@ -103,6 +105,15 @@ Namespace: openclaw (可通过 OPENCLAW_NAMESPACE 配置)
 ### Gateway 配置
 
 编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `openclaw.json`。完整参考请查看 [Gateway 配置](/gateway/configuration)。
+
+init 容器仅在 PVC 中缺少 `openclaw.json` 和工作区 `AGENTS.md` 时，才会分别为其写入初始内容。首次启动后，持久化副本就是事实来源：通过 OpenClaw（`onboard`、`channels add`、`doctor --fix`、Control UI）所做的更改会在 Pod 重启后保留，而更新 ConfigMap 不会覆盖现有的 PVC 副本。若要根据更新后的 ConfigMap 有意重新写入某个文件，请删除持久化副本并重启：
+
+```bash
+kubectl exec -n openclaw deploy/openclaw -- rm /home/node/.openclaw/openclaw.json
+kubectl rollout restart -n openclaw deploy/openclaw
+```
+
+根据之前模板创建的 Deployment 会在每次 Pod 启动时应用 ConfigMap 编辑内容（并丢弃通过 OpenClaw 所做的任何配置更改）。如果你依赖这种流程，请在编辑 ConfigMap 后使用上述重新写入命令。
 
 ### 添加提供商
 
@@ -136,7 +147,8 @@ OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh
 编辑 `scripts/k8s/manifests/deployment.yaml` 中的 `image` 字段：
 
 ```yaml
-image: ghcr.io/openclaw/openclaw:slim # 主镜像；官方 Docker Hub 镜像：openclaw/openclaw
+# Bump this immutable versioned tag when upgrading OpenClaw.
+image: ghcr.io/openclaw/openclaw:2026.7.1-2-slim
 ```
 
 ### 超出 port-forward 的暴露方式

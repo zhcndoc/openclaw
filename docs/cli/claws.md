@@ -72,8 +72,7 @@ OpenClaw 会自动发现可选的 `profiles/openclaw.yml` 文件。
 schemaVersion: 1
 agent:
   tools:
-    profile: coding
-    alsoAllow: [cron]
+    allow: [read, write, cron]
     deny: [exec]
     fs:
       workspaceOnly: true
@@ -88,14 +87,11 @@ agent:
 
 相同的严格版本 1 schema 仍然接受分组 JSON manifest。分组 JSON 会发现相同的常规配置文件，而不是嵌入一份 OpenClaw 设置副本。本页面其余的 schema 片段使用 JSON；`CLAW.md` frontmatter 中提供了等效的键。
 
-OpenClaw 包配置可以选择运行中的 OpenClaw 版本所注册的任何内置工具配置文件，然后使用
-`alsoAllow`、`deny` 和 `tools.fs.workspaceOnly: true` 对其进行细化。Claw 不能将该字段设置为
-`false`，从而削弱主机文件系统隔离。`tools.allow` 仍可作为显式 allowlist 使用，但不能与
-`alsoAllow` 结合使用。Claw 还可以设置 `memory.search.enabled`，选择可移植的
-`memory` 和 `sessions` 源，并通过 `rememberAcrossConversations` 选择启用跨会话记忆。
-声明 `sessions` 源要求同时启用该选项。
-主机策略仍会限制这些设置，并且 Claw 不携带自定义配置文件定义、提供商、凭据、绑定或本地记忆路径。
-常规配置文件大小限制为 256 KiB，必须是兼容 JSON 的 YAML，不得使用别名、锚点、标签或合并键，并且必须是包内的常规、非符号链接、非硬链接文件。
+OpenClaw 软件包配置文件可以使用显式的 `tools.allow` 列表，也可以选择运行中的 OpenClaw 版本所注册的任何内置工具配置。`coding` 和 `messaging` 配置包含动态的 `bundle-mcp` 选择器，因此选择任一配置的 Claw 还必须提供一个有界的 `tools.allow` 交集。将任何 MCP 授权命名为具体生成的工具名称，例如 `github__list_issues`；软件包不能冻结 `bundle-mcp` 本身。
+
+配置还可以通过 `alsoAllow`、`deny` 和 `tools.fs.workspaceOnly: true` 进行细化。`tools.allow` 不能与 `alsoAllow` 结合使用；当软件包需要其所选配置之外的工具时，应像上面那样使用独立的允许列表。Claw 不能将 `workspaceOnly` 设置为 `false`，也不能削弱宿主文件系统隔离。Claw 还可以设置 `memory.search.enabled`，选择可移植的 `memory` 和 `sessions` 源，并通过 `rememberAcrossConversations` 选择启用跨对话记忆。声明 `sessions` 源需要启用该选项。
+
+宿主策略仍会限制这些设置，而 Claw 不携带自定义配置定义、提供商、凭据、绑定或本地记忆路径。常规配置文件大小限制为 256 KiB，必须是兼容 JSON 的 YAML，不得使用别名、锚点、标签或合并键，并且必须是包内的常规文件，不能是符号链接或硬链接。
 
 OpenClaw 配置文件还可以声明特定于 harness 的扩展要求：
 

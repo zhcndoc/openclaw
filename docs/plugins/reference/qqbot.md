@@ -11,8 +11,8 @@ OpenClaw QQ Bot 用于群聊和私信工作流的频道插件。
 
 ## 分发
 
-- 包：`@openclaw/qqbot`
-- 安装路径：npm; ClawHub
+- Package: `@tencent-connect/openclaw-qqbot`
+- Install route: npm
 
 ## 表面
 

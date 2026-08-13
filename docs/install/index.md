@@ -183,12 +183,12 @@ openclaw gateway status # 验证 Gateway 正在运行
 
 ## 托管与部署
 
-在云服务器或 VPS 上部署 OpenClaw。完整的
-提供商选择器请参见 [Linux 服务器](/vps)（DigitalOcean、Hetzner、Hostinger、Fly.io、GCP、Azure、Railway、
-Northflank、Oracle Cloud、Raspberry Pi 等），或者在
-[Render](/install/render) 上进行声明式部署。
+在云服务器或 VPS 上部署 OpenClaw。请参阅 [Linux server](/vps) 获取完整的提供商选择列表（DigitalOcean、Hetzner、Hostinger、Fly.io、GCP、Azure、Railway、Northflank、Oracle Cloud、Raspberry Pi 等），在 [Render](/install/render) 上进行声明式部署，或尝试实验性的 [Cloudflare Containers](/install/cloudflare) 模板。
 
 <CardGroup cols={3}>
+  <Card title="Cloudflare" href="/install/cloudflare">
+    实验性的 Worker + Container 部署。
+  </Card>
   <Card title="VPS" href="/vps">
     选择一个提供商。
   </Card>

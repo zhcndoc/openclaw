@@ -20,12 +20,12 @@ WhatsApp 渠道运行在 Baileys Web 上。本页面涵盖发送、网关和代�
 
 `openclaw message send --target <dest> --media <path-or-url> [--message <caption>]`
 
-- `--media <path-or-url>` — 附加媒体（图片/音频/视频/文档）；可接受本地路径或 URL。可选；对于仅发送媒体的消息，caption 可以为空。
-- `--gif-playback` — 将视频媒体按 GIF 播放处理（仅限 WhatsApp）。
-- `--force-document` — 将媒体作为文档发送，以避免频道压缩（Telegram、WhatsApp）；适用于图片、GIF 和视频。
-- `--reply-to <id>`, `--thread-id <id>`, `--pin`, `--silent` — 与仅文本发送共享的投递/线程选项。
-- `--dry-run` — 打印解析后的 payload 并跳过发送。
-- `--json` — 以 JSON 形式打印结果：`{ action, channel, dryRun, handledBy, messageId?, payload }`（`payload` 包含频道特定的发送结果，包括任何媒体引用）。
+- `--media <path-or-url>` — 附加媒体（图片/音频/视频/文档）；接受本地路径或 URL。可选；仅发送媒体时标题可以为空。
+- `--gif-playback` — 将视频媒体作为 GIF 播放处理（仅限 WhatsApp）。
+- `--force-document` — 在 Slack 上保留原始图片字节，或在 Telegram 和 WhatsApp 上将图片、GIF 和视频作为文档发送，以避免渠道压缩。
+- `--reply-to <id>`、`--thread-id <id>`、`--pin`、`--silent` — 与仅文本发送共享的投递/线程选项。
+- `--dry-run` — 打印解析后的负载并跳过发送。
+- `--json` — 将结果打印为 JSON：`{ action, channel, dryRun, handledBy, messageId?, payload }`（`payload` 携带特定渠道的发送结果，包括任何媒体引用）。
 
 ## WhatsApp Web 频道行为
 

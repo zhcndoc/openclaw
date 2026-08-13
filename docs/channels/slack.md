@@ -251,14 +251,16 @@ Socket Mode 和 HTTP Request URLs 在消息、斜杠命令、App Home 和交互�
       allowFrom: ["*"],
       groupPolicy: "allowlist",
       channels: {
-        C0123456789: { requireMention: true },
+        "team:T0123456789:channel:C0123456789": { requireMention: true },
       },
     },
   },
 }
 ```
 
-启动时，OpenClaw 使用 Slack `auth.test` 检测 token 属于工作区安装还是 Enterprise Grid 组织级安装。无需设置安装模式。Slack 仍然是确认哪些工作区已授予该安装权限的事实来源；随后，OpenClaw 会将配置的频道、用户、私信和提及策略应用于每个已投递的事件。Enterprise 安装默认拒绝由 bot 编写的 `message` 和 `app_mention` 事件。在账号或频道上设置 `allowBots`，即可依据工作区安装所使用的相同循环防护规则接收这些事件。OpenClaw 会保留组织安装的 `auth.test` `user_id` 和 `bot_id`，用于执行该检查。
+对于每个选定的工作区，在 Slack 的 Web 应用中打开它，并从 `https://app.slack.com/client/T.../...` 复制 `T...` 工作区 ID。将该工作区 ID 与频道的 `C...` ID 一起用于每个限定范围的策略键，如上所示。
+
+启动时，OpenClaw 使用 Slack `auth.test` 来检测令牌属于工作区安装还是 Enterprise Grid 组织范围安装。不需要设置安装模式。Slack 仍然是确定哪些工作区已授予安装权限的事实来源；然后 OpenClaw 将配置的频道、用户、私信和提及策略应用于每个已投递的事件。默认情况下，Enterprise 安装会拒绝机器人撰写的 `message` 和 `app_mention` 事件。请在账号或频道上设置 `allowBots`，以便在与工作区安装相同的循环防护规则下允许这些事件。OpenClaw 会保留组织安装的 `auth.test` `user_id` 和 `bot_id`，用于该检查。
 
 Enterprise 支持直接 Socket 模式或 HTTP 消息、提及、成员关系、反应、置顶、频道创建、频道重命名、Block Kit 操作、模态框，以及已配置的快捷方式和斜杠命令负载，还支持限定工作区的出站消息和在线状态轮询。将任何快捷方式添加到应用清单的 `features.shortcuts` 列表中；OpenClaw 会通过相同的交互路径接收其回调 ID。清单示例注册了单个 `/openclaw` 命令；原生命令模式仍然需要下文所述的由管理员管理的命令条目。中继模式、频道 ID 变更事件、App Home、Agent 和 Assistant 生命周期事件、已配置的 ACP 绑定，以及运行时当前对话绑定，对于企业账号仍不可用。当不带 peer 指定的绑定指定 `match.teamId`，或者 peer ID 使用 `team:<team-id>:channel:<channel-id>` 或 `team:<team-id>:user:<user-id>` 时，支持静态 agent 路由绑定。
 
@@ -266,11 +268,11 @@ Enterprise 支持直接 Socket 模式或 HTTP 消息、提及、成员关系、�
 
 OpenClaw 将 Enterprise Grid 目标记录为 `team:<team-id>:channel:<channel-id>` 或 `team:<team-id>:user:<user-id>`。当前对话 Slack 工具操作会继承其工作区。分离式或主动式调用必须提供限定工作区的目标；裸频道 ID 和用户 ID 会安全失败，因为不同工作区可能重复使用这些 ID。不带目标参数的操作（例如 `member-info` 和 `emoji-list`）需要可信的当前 Slack 对话上下文。
 
-即时回复会复用标准 Slack 投递行为，支持分块、媒体、元数据、身份回退、展开和回执，但前提是已验证、由监听器拥有的 client 仍处于活动事件轮次中。内存中的发送队列和线程参与记录会按该事件的工作区进行分区；client 本身不会被序列化或持久化。
+Enterprise 频道策略键必须使用 `team:<team-id>:channel:<channel-id>` 或 `"*"` 通配符。`dm.groupChannels` 需要使用限定工作区的形式，不接受 `"*"`。已投递的 Enterprise 事件绝不会从其限定工作区和频道身份回退到裸频道 ID。工作区安装保留原始稳定频道 ID 和 `channel:<id>` 兼容性。频道前缀 `slack:`、`group:` 和 `mpim:` 会导致启动失败。
 
-频道策略键接受原始稳定 Slack 频道 ID、`channel:<id>` 或 `"*"` 通配符。`dm.groupChannels` 接受原始稳定频道 ID 或 `channel:<id>`，但不接受 `"*"`。OpenClaw 会将这些 ID 形式规范化为原始频道 ID，以便运行时匹配；频道前缀 `slack:`、`group:` 和 `mpim:` 会导致启动失败。
+Enterprise 用户策略条目中的 `allowFrom`、`reactionAllowlist` 和每频道 `users` 必须使用 `team:<team-id>:user:<user-id>` 或 `"*"`。限定工作区的发送者永远不会匹配裸用户 ID。工作区安装保留原始稳定用户 ID、`slack:<user-id>` 和 `user:<user-id>` 兼容性。Enterprise `toolsBySender` 键接受原始稳定用户 ID、`id:<user-id>`、`channel:slack:<user-id>` 或 `"*"`。名称、slug、显示名称和电子邮件地址会导致启动失败。ID 必须使用 Slack 的规范大写前缀和主体（例如 `C0123456789` 或 `U0123456789`）；小写和过短的相似字符串会导致启动失败。Enterprise 账号不能启用 `dangerouslyAllowNameMatching`。Enterprise 账号可以设置全局 `mentionPatterns.mode`。Enterprise `mentionPatterns.allowIn` 和 `mentionPatterns.denyIn` 条目使用 `team:<team-id>:channel:<channel-id>`；裸频道 ID 会导致启动失败，因为它们可能在不同工作区中重复使用。工作区安装保留现有的裸频道限定提及模式行为。即使 Slack ID 重叠，每个已接受的工作区也会获得独立的路由、会话、记录、去重、历史和缓存身份。在 `message` 流中，普通用户消息和用户撰写的 `file_share` 事件受支持；其他消息子类型会在授权或系统事件处理之前被拒绝。
 
-`allowFrom`、`reactionAllowlist` 和每个频道的 `users` 中的用户策略条目接受原始稳定 Slack 用户 ID、`slack:<user-id>`、`user:<user-id>` 或 `"*"`。Enterprise `toolsBySender` 键接受原始稳定用户 ID、`id:<user-id>`、`channel:slack:<user-id>` 或 `"*"`。名称、slug、显示名称和电子邮件地址会导致启动失败。ID 必须使用 Slack 的规范大写前缀和主体（例如 `C0123456789` 或 `U0123456789`）；小写形式和较短的相似字符串会导致启动失败。企业账号无法启用 `dangerouslyAllowNameMatching`。企业账号可以设置全局 `mentionPatterns.mode`。Enterprise `mentionPatterns.allowIn` 和 `mentionPatterns.denyIn` 条目使用 `team:<team-id>:channel:<channel-id>`；裸频道 ID 会导致启动失败，因为它们可能在不同工作区中重复使用。工作区安装保留现有的裸频道限定提及模式行为。每个已接受的工作区都会获得独立的路由、会话、记录、去重、历史和缓存身份，即使 Slack ID 发生重叠也是如此。在 `message` 流中，支持普通用户消息和用户编写的 `file_share` 事件；其他消息子类型会在授权或系统事件处理之前被拒绝。
+Enterprise 私信支持与工作区安装相同的 `disabled`、`open`、`allowlist` 和 `pairing` 策略。配对审批会存储为 `team:<team-id>:user:<user-id>`，并且仅应用于来自该工作区的事件。账号级显式 `allowFrom` 条目使用相同的限定形式，并且仅应用于该工作区；频道和发送者策略继续应用于频道消息。
 
 Enterprise 私信支持与工作区安装相同的 `disabled`、`open`、`allowlist` 和 `pairing` 策略。配对审批会存储为 `team:<team-id>:user:<user-id>`，并且仅应用于来自该工作区的事件。账号级显式 `allowFrom` 条目仍然在组织范围内生效；频道和发送者策略继续应用于频道消息。
 
@@ -1221,7 +1223,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `allowlist`
     - `disabled`
 
-    频道允许列表位于 `channels.slack.channels` 下，并且 **必须使用稳定的 Slack 频道 ID**（例如 `C12345678`）作为配置键。
+    频道允许列表位于 `channels.slack.channels` 下，并且**必须使用稳定的 Slack 频道 ID**（例如 `C12345678`）作为配置键。Enterprise Grid 组织安装需要使用 `team:<team-id>:channel:<channel-id>`，这样策略就不会跨越工作区边界。
 
     运行时说明：如果 `channels.slack` 完全缺失（仅环境变量配置），运行时会回退到 `groupPolicy="allowlist"` 并记录警告（即使 `channels.defaults.groupPolicy` 已设置）。
 
@@ -1400,12 +1402,12 @@ Slack 提供方从 `messages.ackReactionScope` 读取范围（默认 `"group-men
 
 `channels.slack.streaming` 控制实时预览行为：
 
-- `off`：禁用实时预览流式传输。
-- `partial`（默认）：用最新的部分输出替换预览文本。
-- `block`：追加分块预览更新。
-- `progress`：生成期间显示进度状态文本，然后发送最终文本。
-- `streaming.preview.toolProgress`：当草稿预览处于活动状态时，将工具/进度更新路由到同一条已编辑的预览消息中（默认：`true`）。设为 `false` 可保留单独的工具/进度消息。
-- `streaming.preview.commandText` / `streaming.progress.commandText`：`status` 保持紧凑的工具进度行，同时隐藏原始 command/exec 文本（默认）；设为 `raw` 以启用 command 文本。
+- `off`：禁用实时预览流式传输
+- `partial`：使用最新的部分输出替换预览文本。设置此值可恢复之前的默认行为
+- `block`：追加分块的预览更新
+- `progress`（默认）：在任务运行期间，在 thread 中维护一张实时 Block Kit 会话卡片，在原位置完成该卡片，并将助手的最终文本作为单独的消息发送
+- `streaming.preview.toolProgress`：当草稿预览处于活动状态时，将工具/进度更新路由到同一条已编辑的预览消息中（默认：`true`）。设置为 `false` 可保留单独的工具/进度消息
+- `streaming.preview.commandText` / `streaming.progress.commandText`：`status` 会保留紧凑的工具进度行，同时隐藏原始 command/exec 文本（默认）；设置为 `raw` 可选择显示命令文本
 
 隐藏原始 command/exec 文本，同时保留紧凑的进度行：
 
@@ -1427,15 +1429,17 @@ Slack 提供方从 `messages.ackReactionScope` 读取范围（默认 `"group-men
 
 当 `channels.slack.streaming.mode` 为 `partial` 时，`channels.slack.streaming.nativeTransport` 控制 Slack 原生文本流式传输（默认：`true`）。
 
-Slack 原生进度任务卡片在 progress 模式下为可选启用。将 `channels.slack.streaming.progress.nativeTaskCards` 设为 `true`，并将 `channels.slack.streaming.mode` 设为 `"progress"`，即可在工作进行时发送 Slack 原生计划/任务卡片，然后在完成时更新同一张任务卡片。不启用该标志时，progress 模式会保留可移植的草稿预览行为。
+默认会话卡片显示当前标题、可选的旁白、计划检查清单、最近活动、工具/文件总数以及已用时间。完成后，卡片标题会变为成功或错误，同时保留最后的计划和活动。当配置了 `gateway.publicOrigin` 时，终端卡片会包含一个链接到该会话的 **在 OpenClaw 中打开** 按钮。如果 Control UI 位于路径前缀下提供服务，还需要设置 `gateway.controlUi.basePath`。
 
-- 回复线程必须可用，原生文本流式传输和 Slack 助手线程状态才会显示。线程选择仍遵循 `replyToMode`。
-- 当原生流式传输不可用或不存在回复线程时，频道、群聊和顶层 DM 根仍可使用普通草稿预览。
-- 顶层 Slack DM 默认保持不在线程中，因此不会显示 Slack 的线程式原生流/状态预览；OpenClaw 会在 DM 中发布并编辑草稿预览。
-- 自定义出站用户名/图标设置会保留可移植预览。OpenClaw 会让预览保持由应用发送，以便在单独自定义的最终消息发送前移除 partial/block 预览；progress 模式则可能将应用发送的草稿折叠为一条收据。Slack 不允许删除冒充身份的消息。
-- 媒体和非文本负载会回退到普通投递。
-- 媒体/错误最终消息会取消待处理的预览编辑；符合条件的文本/block 最终消息只有在可以就地编辑预览时才会刷新发送。
-- 如果流式传输在回复过程中失败，OpenClaw 会对剩余负载回退到普通投递。
+Slack 原生进度任务卡片仍是单独选择启用的路径。将 `channels.slack.streaming.progress.nativeTaskCards` 设置为 `true`，并将 `channels.slack.streaming.mode="progress"`，即可使用 Slack 原生计划/任务流，而不是 Block Kit 会话卡片。此设置保持不变。
+
+- 必须存在回复 thread，原生文本流式传输和 Slack assistant thread 状态才能显示。thread 的选择仍遵循 `replyToMode`
+- 当原生流式传输不可用或不存在回复 thread 时，频道、群聊和顶层 DM 根消息仍可使用普通草稿预览
+- 顶层 Slack DM 默认不在线程中，因此不会显示 Slack 线程式的原生流/状态预览；OpenClaw 会改为在 DM 中发布并编辑草稿预览
+- 自定义出站用户名/图标设置会保持可移植预览启用。OpenClaw 会让预览或会话卡片由应用撰写，并单独发送自定义的最终消息。Slack 不允许删除冒充其他身份发送的消息
+- 媒体和非文本负载会回退到普通投递
+- 媒体/错误最终消息会取消待处理的预览编辑；符合条件的文本/区块最终消息只有在可以原地编辑预览时才会刷新
+- 如果流式传输在回复过程中途失败，OpenClaw 会对剩余负载回退到普通投递
 
 使用草稿预览而不是 Slack 原生文本流式传输：
 
@@ -1462,7 +1466,6 @@ Slack 原生进度任务卡片在 progress 模式下为可选启用。将 `chann
         mode: "progress",
         progress: {
           nativeTaskCards: true,
-          render: "rich",
         },
       },
     },
@@ -1618,11 +1621,11 @@ Home、模态窗口或 Canvas 内容。
 
 ## 原生表格
 
-Slack 当前的 [`data_table` Block Kit block](https://docs.slack.dev/reference/block-kit/blocks/data-table-block/)  
+Slack 当前的 [`data_table` Block Kit 区块](https://docs.slack.dev/reference/block-kit/blocks/data-table-block/)  
 可在消息中渲染结构化的行和列。OpenClaw 会将显式的、可移植的  
 `presentation` `table` 块映射为 `data_table`；它不使用 Slack 旧版的  
-[`table` block](https://docs.slack.dev/reference/block-kit/blocks/table-block/)。  
-除了正常的 `chat:write` 消息访问权限之外，不需要额外的 OAuth scope 或 Slack 配置。
+[`table` 区块](https://docs.slack.dev/reference/block-kit/blocks/table-block/)。  
+除了正常的 `chat:write` 消息访问权限之外，不需要额外的 OAuth 作用域或 Slack 配置。
 
 ```json
 {
@@ -1655,8 +1658,8 @@ Slack 公布的 `data_table` 限制会在原生渲染前强制执行：
 当消息仍然处于总字符限制内时，多个有效的表格块可以原生渲染。无法在原生限制范围内渲染的表格会变成完整、确定性的文本，而不是丢失行或单元格。若该文本超过一条 Slack 消息，则发送和斜杠命令响应会使用有序的文本分块。表格编辑会明确报大小错误，而不是静默地从现有消息中截断行。
 
 从可移植 presentation 生成的每个原生表格还会附带一个顶层  
-文本表示，供屏幕阅读器、通知、会话镜像以及无法渲染该块的客户端使用。原始图表和表格值在回退内容中保持字面形式，因此诸如 `<@U123>` 这样的单元格数据不会变成 Slack 提及。  
-如果 Slack 因 `invalid_blocks` 拒绝原生图表或表格块，OpenClaw 会在一次有界恢复步骤中移除所有原生数据块，保留诸如按钮和选择器之类的有效兄弟块，并在禁用 Slack 格式化的情况下发送完整可见的图表和表格文本。斜杠命令传递会跟踪 Slack 在该命令中的五次调用 `response_url` 预算。在每一批回复之前，它都会选择一个能适配剩余调用次数的完整计划，否则会在发送该批次之前失败。
+文本表示，供屏幕阅读器、通知、会话镜像以及无法渲染该区块的客户端使用。原始图表和表格值在回退内容中保持字面形式，因此诸如 `<@U123>` 这样的单元格数据不会变成 Slack 提及。  
+如果 Slack 因 `invalid_blocks` 拒绝原生图表或表格区块，OpenClaw 会在一次有界恢复步骤中移除所有原生数据区块，保留诸如按钮和选择器之类的有效同级区块，并在禁用 Slack 格式化的情况下发送完整可见的图表和表格文本。斜杠命令传递会跟踪 Slack 在该命令中的五次调用 `response_url` 预算。在每一批回复之前，它都会选择一个能适配剩余调用次数的完整计划，否则会在发送该批次之前失败。
 
 只有显式的 `presentation` 表格块才会被提升为原生表格。Markdown 管道表格仍然作为作者文本；OpenClaw 不会猜测表格结构或单元格类型。现有受信任的 Slack 原生生产者可以继续通过 `channelData.slack.blocks` 传递原始块；OpenClaw 会从有效的原始 `data_table` 单元格推导回退文本，而格式错误的自定义块可能会降级为其 caption 或通用的 Block Kit 回退。可移植 agent、CLI 和插件输出应使用 `presentation`。
 
@@ -1809,9 +1812,9 @@ OpenClaw 每分钟、每个 Slack 账户最多轮询 45 个唯一的工作区-�
     按以下顺序检查：
 
     - `groupPolicy`
-    - 频道 allowlist（`channels.slack.channels`）— **键必须是频道 ID**（`C12345678`），而不是名称（`#channel-name`）。基于名称的键在 `groupPolicy: "allowlist"` 下会静默失败，因为频道路由默认按 ID 优先。查找 ID：在 Slack 中右键点击频道 → **复制链接** — URL 末尾的 `C...` 值就是频道 ID。
+    - 频道允许列表（`channels.slack.channels`）——**键必须是频道 ID**（`C12345678`）或工作区限定的频道目标（`team:<team-id>:channel:<channel-id>`），不能是名称（`#channel-name`）。在 `groupPolicy: "allowlist"` 下，基于名称的键会静默失败，因为默认情况下频道路由优先使用 ID。要查找 ID：在 Slack 中右键点击频道 → **复制链接**——URL 末尾的 `C...` 值就是频道 ID。
     - `requireMention`
-    - per-channel `users` allowlist
+    - 每个频道的 `users` 允许列表
     - `messages.groupChat.visibleReplies`：普通 group/channel 请求默认是 `"automatic"`。如果你选择了 `"message_tool"`，并且日志显示有 assistant 文本但没有 `message(action=send)` 调用，则说明模型没有走到可见的 message-tool 路径。在这种模式下，最终文本会保持私密；请检查 gateway 的详细日志以查看被抑制的 payload 元数据，或者如果你希望每个普通 assistant 最终回复都通过旧路径发布，请将其设置为 `"automatic"`。
     - `messages.groupChat.unmentionedInbound`：如果它是 `"room_event"`，那么允许的频道内未提及聊天会作为环境上下文存在，并且保持静默，除非 agent 调用 `message` 工具。参见 [环境房间事件](/channels/ambient-room-events)。
 
@@ -1893,7 +1896,7 @@ openclaw pairing list slack
     - 或单一 slash 命令模式（`channels.slack.slashCommand.enabled: true`）
 
     另外检查 `commands.allowFrom`（如果已配置）、DM 授权、
-    频道 allowlist 以及 per-channel `users` allowlist。频道 allowlist 中的 access-group
+    频道 allowlist 以及每个频道的 `users` 允许列表。频道 allowlist 中的 access-group
     条目会自动解析。对于被阻止的 slash 命令发送者，Slack 会返回以下临时错误：
 
     - `此频道不被允许。`

@@ -490,7 +490,7 @@ openclaw automations create "0 6 * * *" "Check ops queue" --name "Ops sweep" --s
 openclaw automations edit <jobId> --clear-agent
 ```
 
-归档会话（通过控制 UI，或由操作员管理员调用方执行 `sessions.patch { archived: true }`）会禁用绑定到该会话的所有已启用自动化作业：其隔离的 `cron:<jobId>` 会话、`session:<key>` 目标，或投递/唤醒 `sessionKey` 通道。恢复会话不会重新启用这些作业；请使用 `openclaw automations enable <jobId>`。在控制 UI 侧边栏中，具有已启用绑定作业的会话会显示时钟徽标。
+归档会话（通过 Control UI，或使用 `sessions.list` 中的持久 ID 调用 `sessions.patch { key, archived: true, expectedSessionId }`）会禁用绑定到该会话的每个已启用自动化作业：其隔离的 `cron:<jobId>` 会话、`session:<key>` 目标，或投递／唤醒 `sessionKey` 通道。恢复会话需要使用相同的已观察身份，并且不会重新启用这些作业；请使用 `openclaw automations enable <jobId>`。在 Control UI 侧边栏中，拥有已启用绑定作业的会话会显示时钟徽章。
 
 `openclaw automations run <jobId>` 在手动运行入队后返回。对于关闭钩子、维护脚本或其他必须阻塞直到排队运行完成的自动化，请使用 `--wait`；该选项会轮询返回的 `runId`（默认超时为 `10m`，轮询间隔为 `2s`），状态为 `ok` 时退出码为 `0`，状态为 `error`、`skipped` 或等待超时时退出码为非零值。
 
@@ -538,13 +538,13 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
 
 <AccordionGroup>
   <Accordion title="POST /hooks/wake">
-    为主会话入队一个系统事件：
+    为选定 agent 的主会话将系统事件加入队列：
 
     ```bash
     curl -X POST http://127.0.0.1:18789/hooks/wake \
       -H 'Authorization: Bearer SECRET' \
       -H 'Content-Type: application/json' \
-      -d '{"text":"Received a new email","mode":"now"}'
+      -d '{"text":"New email received","mode":"now","agentId":"main"}'
     ```
 
     <ParamField path="text" type="string" required>
@@ -552,6 +552,9 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
     </ParamField>
     <ParamField path="mode" type="string" default="now">
       `now` 或 `next-heartbeat`。
+    </ParamField>
+    <ParamField path="agentId" type="string">
+      目标 agent。当已配置的 agent fleet 没有隐式或保留的旧版所有者时为必需。
     </ParamField>
 
   </Accordion>
@@ -587,7 +590,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
 
   </Accordion>
   <Accordion title="映射 hook（POST /hooks/<name>）">
-    自定义 hook 名称通过配置中的 `hooks.mappings` 解析。映射可以使用模板或代码转换，将任意载荷转换为 `wake` 或 `agent` 操作。映射的 `agent` 操作使用与 `POST /hooks/agent` 相同的 15 秒接收机制以及 `200`/`400`/`409`/`502`/`503` 响应契约。
+    自定义 hook 名称通过配置中的 `hooks.mappings` 解析。映射可以使用模板或代码转换，将任意载荷转换为 `wake` 或 `agent` 操作。映射的 `agent` 操作使用与 `POST /hooks/agent` 相同的 15 秒接收机制以及 `200`／`400`／`409`／`502`／`503` 响应契约。
 
     持久化映射 hook 需要稳定的映射 `sessionKey` 或 `hooks.defaultSessionKey`。由模板派生的键仍遵循上述请求键选择加入机制和前缀策略。
 
@@ -616,15 +619,16 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
 
 ### 配置受限的 Gmail 阅读器（推荐）
 
-在连接 Gmail 传输之前，将专用阅读器和 hook 策略合并到现有配置中。保留现有默认 agent 上的实际设置；下面的 `main` 条目仅展示所需的 roster 结构。
+连接 Gmail transport 之前，请将专用的 reader 和 hook 策略合并到现有配置中。保留现有 agent 上的真实设置；下面的 `main` 条目仅展示所需的 roster 形状。
+
+<Warning>添加 `mail_reader` 会创建一个显式 fleet。保留现有绑定，并为每个启用且仍由 `main` 所有的 channel 添加一个全 channel 绑定；不存在跨 channel 通配符。</Warning>
 
 ```json5
 {
   agents: {
+    ownership: "explicit",
     entries: {
-      main: {
-        default: true,
-      },
+      main: {},
       mail_reader: {
         workspace: "~/.openclaw/workspace-mail-reader",
         model: "openai/gpt-5.6-sol",
@@ -641,6 +645,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
       },
     },
   },
+  bindings: [{ agentId: "main", match: { channel: "<channel-id>", accountId: "*" } }],
   hooks: {
     defaultSessionKey: "hook:gmail:ingress",
     allowRequestSessionKey: true,
@@ -663,13 +668,16 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
 }
 ```
 
+重启前，运行 `openclaw agents list --bindings`；替换每个占位符并验证每个 channel owner。
+
 这种结构更安全的原因：
 
-- `agentId: "mail_reader"` 可确保 Gmail 不会连接到默认 agent。
-- `allowedAgentIds` 可防止此 hook 端点选择其他 agent。如果 Gateway 还提供其他 hook 工作流，也只应加入它们预期使用的 agent id。
-- `scope: "session"` 为每条 Gmail 消息提供独立的沙箱；`workspaceAccess: "none"` 可使主机 agent 的工作区不会出现在该沙箱中。
-- `allow: ["session_status"]` 是针对每个 agent 的绝对限制，因此全局 `tools.alsoAllow` 添加的工具不会泄露给阅读器。最小配置文件和明确的拒绝列表使预期边界可审计。
-- `deliver: false` 可使完成结果保留在 hook 流程中。验证阅读器后，如需向外部发布摘要，请设置 `deliver: true`，并添加明确的 `channel` 和 `to`。除非你有意公开确切的协调工具，并将其与范围狭窄的 [`tools.agentToAgent`](/gateway/config-tools#toolsagenttoagent) 策略配合使用，否则请保持 agent 间交接处于禁用状态。
+- 显式的 `main` 绑定会保留现有 channel 所有权，而不会让非 Gmail 流量处于无所有者状态。当只有一个账户属于 `main` 时，请使用具体的 `accountId`，而不是 `"*"`。
+- `agentId: "mail_reader"` 可使 Gmail 避开 `main` agent。
+- `allowedAgentIds` 会阻止此 hook 端点选择其他 agent。如果 Gateway 还提供其他 hook 工作流，也只能加入它们预期使用的 agent id。
+- `scope: "session"` 会为每封 Gmail 邮件提供独立的沙箱；`workspaceAccess: "none"` 会使主机 agent 工作区无法进入该沙箱。
+- `allow: ["session_status"]` 是每个 agent 的绝对限制，因此全局 `tools.alsoAllow` 添加项无法泄漏到 reader 中。最小配置文件和显式 deny 列表使预期边界可审计。
+- `deliver: false` 会使完成结果保留在 hook 流程内。在验证 reader 后，如需向外部公告摘要，请设置 `deliver: true` 并添加明确的 `channel` 和 `to`。除非你有意公开确切的协调工具，并将其与范围狭窄的 [`tools.agentToAgent`](/gateway/config-tools#toolsagenttoagent) 策略配套，否则请保持 agent-to-agent 交接处于禁用状态。
 
 全局、提供商、agent 和沙箱规则合并后，工具策略只能变得更加严格。如果更早的策略移除了 `session_status`，则每个 agent 的允许列表无法将其恢复。请确保继承的策略保留 `session_status`；有效工具集为空时，流程会在模型看到邮件之前中止。
 
@@ -677,7 +685,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
 
 ### 验证阅读器模型身份验证
 
-每个 agent 都有自己的身份验证存储。请为 `mail_reader` 所选的提供商完成身份验证，或确保它能够使用受支持的共享环境/配置凭据，然后在连接 Gmail 之前验证实际生效的路由：
+每个 agent 都有自己的身份验证存储。请为 `mail_reader` 所选的提供商完成身份验证，或确保它能够使用受支持的共享环境／配置凭据，然后在连接 Gmail 之前验证实际生效的路由：
 
 ```bash
 openclaw models auth --agent mail_reader login --provider openai

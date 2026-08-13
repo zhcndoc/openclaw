@@ -237,14 +237,18 @@ Gateway 使用 `hello-ok` 响应：
 
 ### Worker 角色与封闭协议
 
-Cloud worker 通过 Gateway 所有、并固定主机密钥的 SSH 隧道，使用专用的回环入口。
-该入口只接受 worker 身份，绝不调度通用认证、节点事件、operator RPC 或插件方法。
-严格的 `connect` 会验证一个静态存储哈希、与环境绑定的短期凭据、bundle 哈希、
-owner epoch、RPC-set 版本、过期时间以及一个可为空的会话；同时还会单独检查当前版本
-和功能集。成功后返回最小化的 `worker-hello-ok`；功能协商独立于通用协议版本。
-除协商后的 `worker.inference.start` 帧可达到 25 MiB 外，其他帧均保持在 64 KiB 以下。
-封闭的允许列表包含 `worker.heartbeat`、`worker.transcript.commit`、
-`worker.live-event`、`worker.inference.start` 和 `worker.inference.cancel`。
+Workers 通过主 TLS 端点上的公共
+`/__openclaw__/worker` WebSocket 路径，或通过由 Gateway 所有并固定主机密钥的 SSH 隧道到达的专用
+回环入口，使用封闭协议。该路由会在读取帧之前选择 worker 模式，因此绝不会分派
+常规身份验证、节点事件、operator RPC 或插件方法。公共接入共享每客户端预认证预算和身份验证速率限制器；
+其线路错误会将凭据和环境详情合并为
+`admission-rejected`，而受信任的 Gateway 诊断会保留内部原因。严格的
+`connect` 会验证一个在静态存储时经过哈希处理的短期凭据，该凭据绑定到环境、bundle 哈希、所有者纪元、
+RPC 集版本、过期时间以及一个可为空的会话；它还会单独检查当前版本和功能集。
+成功后返回最小化的 `worker-hello-ok`；功能协商独立于常规协议版本。帧大小保持在 64 KiB 以下，
+但经协商的 `worker.inference.start` 帧最大可达 25 MiB。封闭允许列表包含
+`worker.heartbeat`、`worker.transcript.commit`、`worker.live-event`、
+`worker.inference.start` 和 `worker.inference.cancel`。
 
 Transcript 提交使用 owner-epoch fencing、Gateway 所有的会话绑定、base-leaf
 compare-and-swap 以及持久化序列重放；Gateway 通过常规会话写入器生成 transcript
@@ -441,22 +445,22 @@ Gateway 将这些视为**声明**，并在服务器端强制执行允许列表�
 `hello-ok.features.methods` 是一个保守的发现列表，由
 `src/gateway/server-methods-list.ts` 以及已加载的插件／频道方法
 导出构成——它不是所有方法的生成式转储，并且某些方法（例如
-`push.test`、`web.login.start`、`web.login.wait`、`sessions.usage`）
+`push.test`、`web.login.start`、`web.login.wait`、` sessions.usage`）
 即使是真实且可调用的方法，也会被有意排除在发现列表之外。请将其视为功能发现列表，而不是对
 `src/gateway/server-methods/*.ts` 的完整枚举。
 
 <AccordionGroup>
   <Accordion title="系统与身份">
-    - `health` 返回缓存的或最近探测的网关健康状态快照。
-    - `diagnostics.stability` 返回近期有界诊断稳定性记录器的数据：事件名称、计数、字节大小、内存读数、队列／会话状态、频道／插件名称、会话 ID。不包含聊天文本、webhook 正文、工具输出、原始请求／响应正文、令牌、Cookie 或机密信息。需要 `operator.read`。
-    - `status` 返回类似 `/status` 的网关摘要；敏感字段仅对管理员范围的操作员客户端提供。
+    - `health` 返回缓存的或刚刚探测的网关健康状态快照。
+    - `diagnostics.stability` 返回近期有界诊断稳定性记录器：事件名称、计数、字节大小、内存读数、队列／会话状态、频道／插件名称、会话 ID。不包含聊天文本、Webhook 正文、工具输出、原始请求／响应正文、令牌、Cookie 或机密信息。需要 `operator.read`。
+    - `status` 返回 `/status` 风格的网关摘要；敏感字段仅对管理员范围的操作员客户端返回。
     - `gateway.identity.get` 返回中继和配对流程使用的网关设备身份。
-    - `system-presence` 返回已连接操作员／节点设备的当前状态快照。
-    - `system-event` 添加系统事件，并可以更新／广播状态上下文。
-    - `last-heartbeat` 返回最近持久化的心跳事件。
+    - `system-presence` 返回已连接操作员／节点设备的当前在线状态快照。
+    - `system-event` 追加系统事件，并可以更新／广播在线状态上下文。
+    - `last-heartbeat` 返回最新持久化的心跳事件。
     - `set-heartbeats` 切换网关上的心跳处理。
-    - `gateway.restart.preflight` 是已弃用的、只读的重启专用活动工作兼容性预览。它不会关闭接入、创建挂起租约，也不提供 `gateway.suspend.prepare` 的原子完整工作屏障；新的重启流程应调用 `gateway.restart.request`。
-    - `gateway.suspend.prepare` 仅在受跟踪的网关工作处于空闲状态时创建短期协作挂起租约。`gateway.suspend.status` 检查该租约，`gateway.suspend.resume` 则在解冻或主机操作中止后释放它。
+    - `gateway.restart.preflight` 是已弃用的、只读的重启专用活动工作兼容性预览。它不会关闭接入、创建暂停租约，也不会提供 `gateway.suspend.prepare` 的原子完整工作围栏；新的重启流程应调用 `gateway.restart.request`。
+    - `gateway.suspend.prepare` 仅在跟踪的 Gateway 工作处于空闲状态时创建一个短期协作暂停租约。准备期间，经过身份验证的 WebSocket 连接仍可用，但除 `gateway.suspend.*` 外的每个方法都会受到围栏限制。`gateway.suspend.status` 检查租约，`gateway.suspend.resume` 则在解冻或主机操作中止后释放租约。
 
   </Accordion>
 
@@ -570,25 +574,25 @@ Gateway 将这些视为**声明**，并在服务器端强制执行允许列表�
   </Accordion>
 
   <Accordion title="会话控制">
-    - `sessions.list` 返回当前会话索引，包括配置代理运行时后每行的 `agentRuntime` 元数据。当启用云工作者放置或存在持久恢复状态时，会话行还包括封闭的 `placement` 状态（`local`、`requested`、`provisioning`、`syncing`、`starting`、`active`、`draining`、`reconciling`、`reclaimed` 或 `failed`），以及特定状态的环境、所有者纪元、工作区、捆绑包、ACK 游标或恢复字段。
+    - `sessions.list` 返回当前会话索引；当配置了代理运行时后端时，还会包含每行的 `agentRuntime` 元数据。当启用云工作者放置或存在持久恢复状态时，会话行还会包含一个封闭的 `placement` 状态（`local`、`requested`、`provisioning`、`syncing`、`starting`、`active`、`draining`、`reconciling`、`reclaimed` 或 `failed`），以及特定于状态的环境、所有者纪元、工作区、捆绑包、ACK 游标或恢复字段。
     - `sessions.subscribe` 为当前 WebSocket 客户端启用会话变更事件。该客户端断开连接时订阅结束。
-    - `sessions.messages.subscribe` 和 `sessions.messages.unsubscribe` 切换单个会话的转录／消息事件订阅。传入 `includeApprovals: true` 后，还会接收经过清理的 `session.approval` 生命周期事件，但仅限于持久化受众包含该确切会话且审核者绑定授权订阅客户端的审批。订阅响应随后会包含有界的待处理 `approvalReplay`；当 `truncated` 为 false 时，它具有权威性。该选择按每次订阅调用生效，而不是持久生效：在不传入 `includeApprovals: true` 的情况下重新订阅同一会话，会移除现有的审批订阅。除普通会话读取权限外，此选择还需要 `operator.admin`，或配对设备上的 `operator.approvals`。
-    - `sessions.preview` 返回指定会话密钥的有界转录预览。
-    - `sessions.describe` 返回确切会话密钥对应的一行网关会话记录。
-    - `sessions.resolve` 通过密钥、原始会话 ID、标签或 Control UI 短 ID 解析或规范化会话目标。短 ID 有歧义时，会作为成功的 RPC 结果返回有界候选列表。
-    - `sessions.create` 创建新的会话条目。可选的 `model` 和 `thinkingLevel` 值会以原子方式持久化初始模型和推理覆盖设置。`worktree: true` 会配置受管理的工作树；可选的 `worktreeBaseRef`／`worktreeName` 选择基础引用和分支名称，`execNode`（`operator.admin`）将会话执行绑定到节点主机。不提供 `worktreeName` 时，OpenClaw 会根据会话标签或生成的首条消息标题派生可读名称，随后回退到甲壳类主题名称。已被其他所有者、本地分支或非受管理路径占用的名称会获得数字后缀。创建的工作树会在结果中回显，并持久化到会话行（`worktree: { id, branch, repoRoot }`）。当条目已创建但其嵌套的初始 `chat.send` 被拒绝时，成功结果会包含 `runStarted: false` 和 `runError`；客户端可以保留提示，并对返回的会话密钥重试。传入 `parentSessionKey` 且 `emitCommandHooks: true` 的调用方还应声明不同子会话的生命周期处置：`succeedsParent: true` 会以 `session_end` 结束父会话，而 `false` 会保持父会话活动状态，并仅发出子会话的 `session_start`。省略 `succeedsParent` 会为现有客户端保留传统的父会话轮换行为。该处置要求同时具备父会话关联和命令钩子；分叉不能成功结束其父会话。主会话原地重置行为不变，因为不会创建不同的子会话。新行会在受信任的创建接缝处写入一次性创建来源（`createdVia`、`createdActor`、`createdAt`）；采用已有密钥不会重新写入这些字段。对于人类配置文件操作者，`createdActor.label` 会在投影行时根据当前用户配置文件解析，且永远不会存储在会话条目中，因此配置文件重命名不会导致其漂移。会话行还携带 `parentSessionKey`（导航父会话，持久化）、`controlOwnerSessionKey`（活动时的运行时控制器）、`forkSource`（分叉的确切来源密钥及转录代次）以及 `previousSessionId`（同一密钥下的上一转录代次）。
-    - `sessions.dispatch`（`operator.admin`）将已有的本地 OpenClaw 会话迁移到已配置的云工作者配置文件，但该会话必须拥有活动的、由注册表管理的会话受管理工作树。传入 `{ key, profileId, agentId? }`。未配置工作者配置文件时，网关不会公布该方法。Dispatch 会先关闭本地轮次接入，再排空活动工作，并仅在放置达到活动工作者所有权后返回。任意普通目录都无法调度；接入后，如果受管理工作树的 Git 元数据变得不可用，工作区传输可以使用清单镜像。SSH 回退候选项仅针对幂等探测、内容寻址传输、收据／锁保护的工件安装、收敛式受管理工作树镜像和隧道重连进行轮换。含义不明确且未受保护的有状态命令会安全失败，不会重放。Dispatch 是单向的；从工作者拉回本地不属于此 RPC。
-    - `sessions.groups.list`、`sessions.groups.put`、`sessions.groups.rename` 和 `sessions.groups.delete` 管理由网关拥有的自定义会话组目录（名称和显示顺序）。成员关系保留在每个会话的 `category` 字段中；重命名和删除会在服务端更新成员会话。
-    - `sessions.send` 向已有会话发送消息。
-    - `sessions.steer` 是活动会话的中断并控制变体。
-    - `sessions.abort` 中止会话的活动工作。传入 `key` 以及可选的 `runId`，或仅传入 `runId`，用于网关可以解析到会话的活动运行。提供 `runId` 会使取消操作限定在该运行范围内。对于仅提供密钥的非全局请求，设置 `clearQueued: true` 还会丢弃该会话拥有的后续队列和通道队列。省略 `clearQueued` 的现有调用方会保留这些队列。字面值为 `global` 的密钥保留现有的、按代理限定的 `chat.abort` 所有权规则，并且不会执行非全局后续队列或通道队列清理。
-    - `sessions.patch` 更新会话元数据／覆盖设置，并报告解析后的规范模型以及生效的 `agentRuntime`。会话组织字段和每会话 `model` 覆盖需要 `operator.write`；思考、快速、详细、跟踪、推理及其他特权覆盖需要 `operator.admin`。只有管理员的模型选择才能持久化为已配置的代理默认值。设置 `archived: true` 时，网关会保护代理主会话（包括配置了全局范围时的 `global`）和 `unknown` 哨兵；对于其他所有真实会话，它会先阻止新的接入，取消确切会话的活动、待处理、排队、回复、嵌入和工作者工作，并等待接入及运行时终止持久化排空，然后才提交 `archivedAt`。取消、排空或持久化失败会返回可重试的 `UNAVAILABLE`，并使会话保持未归档状态。`sessions.patchMany` 会在同一批处理生命周期屏障内按输入顺序准备归档目标，并返回按目标排序的结果。生成谱系（`spawnedBy`、`spawnedWorkspaceDir`、`spawnedCwd`、`spawnDepth`、`subagentRole`、`subagentControlScope`）不再可公开修补；这些事实由受信任的创建路径一次性写入，仍发送这些字段的请求会被拒绝。
+    - `sessions.messages.subscribe` 和 `sessions.messages.unsubscribe` 切换某个会话的转录／消息事件订阅。传入 `includeApprovals: true` 后，还会接收经过清理的 `session.approval` 生命周期事件，前提是这些审批的持久化受众包含该确切会话，且其审核者绑定授权订阅客户端。订阅响应随后会包含有界的待处理 `approvalReplay`；当 `truncated` 为 false 时，它具有权威性。该选择加入项按每次订阅调用生效，不会持久保持：重新订阅同一会话时不传入 `includeApprovals: true`，会移除现有的审批订阅。除正常的会话读取权限外，该选择加入项还需要 `operator.admin`，或配对设备上的 `operator.approvals`。
+    - `sessions.preview` 返回特定会话密钥的有界转录预览。
+    - `sessions.describe` 返回精确会话密钥对应的一行网关会话记录。
+    - `sessions.resolve` 根据密钥、原始会话 ID、标签或 Control UI 短 ID 解析或规范化会话目标。含糊的短 ID 会作为成功的 RPC 结果返回有界候选列表。
+    - `sessions.create` 创建新的会话条目。可选的 `model` 和 `thinkingLevel` 值会以原子方式持久化初始模型和推理覆盖项。`worktree: true` 会配置受管理的工作树；可选的 `worktreeBaseRef`／`worktreeName` 选择基础引用和分支名称，而 `execNode`（`operator.admin`）将会话执行绑定到节点主机。不传入 `worktreeName` 时，OpenClaw 会根据会话标签或生成的首条消息标题派生可读名称，之后回退到甲壳类主题名称；已被其他所有者、本地分支或非受管理路径占用的名称会获得数字后缀。创建的工作树会在结果中回显，并持久化到会话行（`worktree: { id, branch, repoRoot }`）。当条目已创建但其嵌套的初始 `chat.send` 被拒绝时，成功结果会包含 `runStarted: false` 和 `runError`；客户端可以保留提示，并针对返回的会话密钥重试。传入 `parentSessionKey` 且 `emitCommandHooks: true` 的调用方还应声明独立子会话的生命周期处置：`succeedsParent: true` 会以 `session_end` 结束父会话，而 `false` 会保持父会话活动状态并仅发出子会话的 `session_start`。省略 `succeedsParent` 会为现有客户端保留旧的父会话轮换行为。该处置要求同时具备父会话关联和命令钩子；分叉不能成功结束其父会话。主会话原地重置行为不变，因为不会创建独立子会话。新行会从受信任的创建入口写入一次性创建来源（`createdVia`、`createdActor`、`createdAt`）；采用现有密钥时不会重新写入。对于人类配置文件操作员，投影行时会根据当前用户配置文件解析 `createdActor.label`，不会将其存储在会话条目中，因此配置文件重命名不会产生漂移。会话行还携带 `parentSessionKey`（导航父项，持久化）、`controlOwnerSessionKey`（运行时控制器，处于活动状态时）、`forkSource`（分叉的精确源密钥及转录生成版本）以及 `previousSessionId`（相同密钥下的先前转录生成版本）。
+    - `sessions.dispatch`（`operator.admin`）将一个现有的本地 OpenClaw 会话（该会话具有活动的、由注册表拥有的会话受管理工作树）迁移到已配置的云工作者配置文件。传入 `{ key, profileId, agentId? }`。未配置工作者配置文件时，Gateway 不会公布该方法。Dispatch 会在排空活动工作前关闭本地轮次接入，并仅在放置达到活动工作者所有权后返回。任意普通目录不可进行 dispatch；接入后，如果受管理工作树的 Git 元数据变得不可用，工作区传输可以使用清单镜像。SSH 回退候选项仅针对幂等探测、内容寻址传输、受回执／锁保护的工件安装、收敛式受管理工作树镜像和隧道重连进行轮换。含糊且未受保护的有状态命令会安全失败，不会重放。Dispatch 是单向的；工作者到本地的拉回不属于此 RPC。
+    - `sessions.groups.list`、`sessions.groups.put`、`sessions.groups.rename` 和 `sessions.groups.delete` 管理由网关拥有的自定义会话组目录（名称及显示顺序）。成员关系保留在每个会话的 `category` 字段中；重命名和删除会在服务端更新成员会话。
+    - `sessions.send` 向现有会话发送消息。
+    - `sessions.steer` 是活动会话的中断并引导变体。
+    - `sessions.abort` 中止会话的活动工作。传入 `key` 以及可选的 `runId`，或仅传入 `runId` 以处理网关可以解析到会话的活动运行。提供 `runId` 会使取消范围限定在该运行。对仅按密钥且非全局的请求设置 `clearQueued: true`，还会丢弃由该会话拥有的后续队列和通道队列。省略 `clearQueued` 的现有调用方会保留这些队列。字面值为 `global` 的密钥保留现有的、按代理限定的 `chat.abort` 所有权规则，不会执行非全局后续队列或通道队列清理。
+    - `sessions.patch` 更新会话元数据／覆盖项，并报告解析后的规范模型以及生效的 `agentRuntime`。会话组织字段和每会话 `model` 覆盖项需要 `operator.write`；思考、快速、详细、跟踪、推理和其他特权覆盖项需要 `operator.admin`。只有管理员进行的模型选择才能持久化为已配置的代理默认值。归档和恢复补丁要求调用方将从 `sessions.list` 或 `sessions.describe` 观察到的会话 `sessionId` 作为 `expectedSessionId`；缺失或已更改的目标会在不实例化或修改替代项的情况下失败。设置 `archived: true` 时，Gateway 会保护代理主会话（包括配置了全局范围时的 `global`）和 `unknown` 哨兵；对于其他每个真实会话，它会先围栏限制新的接入，取消精确会话的活动、待处理、排队、回复、嵌入式和工作者工作，并等待接入和运行时终止持久化排空后再提交 `archivedAt`。取消、排空或持久化失败会返回可重试的 `UNAVAILABLE`，并使会话保持未归档状态。`sessions.patchMany` 为每个目标携带 `expectedSessionId`，在同一批次生命周期围栏内按输入顺序准备归档目标，并返回按目标排序的结果。生成谱系（`spawnedBy`、`spawnedWorkspaceDir`、`spawnedCwd`、`spawnDepth`、`subagentRole`、`subagentControlScope`）不再可公开修改；这些事实由受信任的创建路径一次性写入，仍发送这些字段的请求会被拒绝。
     - `sessions.reset`、`sessions.delete` 和 `sessions.compact` 执行会话维护。
     - `sessions.get` 返回完整的已存储会话行。
-    - 聊天执行仍使用 `chat.history`、`chat.send`、`chat.abort` 和 `chat.inject`。对于 UI 客户端，`chat.history` 会进行显示规范化：从可见文本中移除内联指令标签，移除纯文本工具调用 XML 负载（`<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块）和泄露的 ASCII／全角模型控制令牌，省略纯静默令牌助手行（精确匹配 `NO_REPLY`／`no_reply`），并可将过大的行替换为占位符。
-    - `chat.message.get` 是针对单个可见转录条目的附加有界完整消息读取器。传入 `sessionKey`、在会话选择按代理限定时可选的 `agentId`，以及之前通过 `chat.history` 展示过的转录 `messageId`；当已存储条目仍可用且未过大时，网关会返回相同的显示规范化投影，但不受轻量级历史截断上限限制。
-    - `chat.toolTitles` 返回在 Control UI 中渲染工具调用的简短用途标题（批量处理，最多 24 项，输入有界）。该功能通过 `gateway.controlUi.toolTitles` 选择启用（默认关闭）；禁用的网关会返回 `{ titles: {}, disabled: true }`，不进行模型调用，以便客户端停止请求。启用后，标题使用标准实用模型路由：优先使用明确配置的 `utilityModel`（与所有实用任务一样，这一操作员决策可能会将有界任务内容发送给所选提供商），否则使用会话提供商声明的小模型默认值，因此不会隐式出现新的出站目标；空的 `utilityModel` 会完全禁用标题。标题永远不会回退到主模型。结果会缓存在每个代理的状态数据库中，以工具名称和输入为键，因此重复查看不会对相同调用重复计费。
-    - `chat.send` 接受单轮 `fastMode: "auto"`，对自动截止时间之前启动的模型调用使用快速模式，然后启动后续重试、回退、工具结果或继续调用时不使用快速模式。截止时间默认为 60 秒（`DEFAULT_FAST_MODE_AUTO_ON_SECONDS`），并可通过 `agents.defaults.models["<provider>/<model>"].params.fastAutoOnSeconds` 按模型配置。`chat.send` 调用方可以传入单轮 `fastAutoOnSeconds`，覆盖该请求的截止时间。传入 `queueMode`（`steer`、`followup`、`collect` 或 `interrupt`）可仅为本次请求覆盖已存储的队列模式；明确的 Control UI 控制操作使用 `queueMode: "steer"`。现代客户端，尤其是会持久化或重试控制操作的客户端，还应传入活动的 `expectedRunId`；网关会将其绑定到一个确切运行，从而使重试无法触及后继运行。较旧的无目标 `queueMode: "steer"` 请求仍仅作为叶节点绑定的兼容路径被接受：它们必须传入活动操作不可变的 `expectedLeafEntryId`（或在权威空转录情况下有意传入 `null`），并且当无法证明叶节点、所有者、新鲜度或注入能力时，可能以 `details.reason: "active-leaf-changed"` 拒绝。其他交互式发送可以传入 `expectedLeafEntryId`，以便在另一个客户端先切换转录分支时拒绝。
+    - 聊天执行仍使用 `chat.history`、`chat.send`、`chat.abort` 和 `chat.inject`。对于 UI 客户端，`chat.history` 会进行显示规范化：从可见文本中移除内联指令标签，移除纯文本工具调用 XML 负载（`<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块）和泄露的 ASCII／全角模型控制令牌，省略纯静默令牌的助手行（准确的 `NO_REPLY`／`no_reply`），并可将过大的行替换为占位符。
+    - `chat.message.get` 是针对单个可见转录条目的附加有界完整消息读取器。传入 `sessionKey`，如果会话选择按代理限定，则可选传入 `agentId`，以及此前通过 `chat.history` 返回的转录 `messageId`；当存储条目仍可用且未过大时，网关会返回相同的显示规范化投影，但不受轻量级历史记录截断上限限制。
+    - `chat.toolTitles` 返回在 Control UI 中呈现的工具调用的简短用途标题（批量处理，最多 24 项，输入有界）。该功能通过 `gateway.controlUi.toolTitles` 选择启用（默认关闭）；禁用的网关会返回 `{ titles: {}, disabled: true }`，不会调用模型，以便客户端停止请求。启用后，标题使用标准实用模型路由：优先使用明确配置的 `utilityModel`（该操作员决定与所有实用任务一样，可能会将有界任务内容发送给所选提供商），否则使用会话提供商声明的小模型默认值，因此不会隐式产生新的数据流出目的地；空的 `utilityModel` 会完全禁用标题。标题永远不会回退到主模型。结果会缓存在每个代理的状态数据库中，以工具名称和输入为键，因此重复查看不会对相同调用重复计费。
+    - `chat.send` 接受单轮 `fastMode: "auto"`，以便对自动截止时间之前启动的模型调用使用快速模式，而之后启动的重试、回退、工具结果或继续调用不使用快速模式。截止时间默认为 60 秒（`DEFAULT_FAST_MODE_AUTO_ON_SECONDS`），并可通过 `agents.defaults.models["<provider>/<model>"].params.fastAutoOnSeconds` 按模型配置。`chat.send` 调用方可以传入单轮 `fastAutoOnSeconds`，以覆盖该请求的截止时间。传入 `queueMode`（`steer`、`followup`、`collect` 或 `interrupt`）可以仅为本次请求覆盖已存储的队列模式；明确的 Control UI 引导操作使用 `queueMode: "steer"`。现代客户端，尤其是会持久化或重试引导操作的客户端，还应传入当前的 `expectedRunId`；Gateway 会将其绑定到一个确切运行，使重试无法触达后继运行。旧式无目标的 `queueMode: "steer"` 请求仍仅作为绑定叶节点的兼容路径被接受：它们必须传入活动操作不可变的 `expectedLeafEntryId`（或者为权威空转录传入特意设置的 `null`），并且在无法证明叶节点、所有者、新鲜度或注入能力时可能以 `details.reason: "active-leaf-changed"` 拒绝。其他交互式发送可以传入 `expectedLeafEntryId`，以便在其他客户端先切换转录分支时拒绝。
 
   </Accordion>
 
@@ -683,7 +687,7 @@ Gateway 将这些视为**声明**，并在服务器端强制执行允许列表�
 
 节点可以调用 `skills.bins`，以获取当前技能可执行文件列表，用于自动允许检查。
 
-## Audit ledger RPC
+## 审计账本 RPC
 
 `audit.activity.list` 为 operator 客户端提供 agent 运行、工具操作和选择加入的消息生命周期元数据的稳定最新优先视图。它要求
 `operator.read`。查询会排除早于 30 天的记录，共享 SQLite ledger 的上限为 100,000 条记录。过期行会在 Gateway
@@ -695,12 +699,12 @@ Gateway 将这些视为**声明**，并在服务器端强制执行允许列表�
   （`"started"`、`"succeeded"`、`"failed"`、`"cancelled"`、`"timed_out"`、
   `"blocked"` 或 `"unknown"`）；可选的消息 `direction`（`"inbound"` 或
   `"outbound"`）和精确 `channel`；可选的包含边界的 Unix 毫秒时间范围
-  `after` / `before`；可选的从 `1` 到 `500` 的 `limit`；以及可选的来自前一页的
+  `after`／`before`；可选的从 `1` 到 `500` 的 `limit`；以及可选的来自前一页的
   字符串 `cursor`。
 - 结果：`{ "events": AuditActivityEventV1[], "nextCursor"?: string }`。
 
-命名的 V1 结果联合类型具有独立的 agent-run、tool-action、inbound-message
-和 outbound-message 架构。`eventType` 判别字段分别为
+命名的 V1 结果联合类型具有独立的代理运行、工具操作、入站消息
+和出站消息架构。`eventType` 判别字段分别为
 `agent_run`、`tool_action`、`inbound_message` 或 `outbound_message`；`kind` 和消息
 `direction` 仍可用于筛选和显示。每个事件都有整数
 `schemaVersion: 1`。消息身份引用使用精确的
@@ -716,7 +720,7 @@ id 使用相同格式。
 | `agent_run`        | `agentId`、`runId`；`kind: "agent_run"`                         | `sessionKey`、`sessionId`、`errorCode`                                                                                          |
 | `tool_action`      | `agentId`、`runId`；`kind: "tool_action"`                       | `sessionKey`、`sessionId`、`toolCallId`、`toolName`、`errorCode`                                                                |
 | `inbound_message`  | `direction: "inbound"`、`channel`、`conversationKind`、`outcome`  | `agentId`、`runId`、`durationMs`、`resultCount`、身份引用、`reasonCode`、`errorCode`                                 |
-| `outbound_message` | `direction: "outbound"`、`channel`、`conversationKind`、`outcome` | `agentId`、`runId`、`durationMs`、`resultCount`、身份引用、`reasonCode`、`deliveryKind`、`failureStage`、`errorCode` |
+| `outbound_message` | `direction: "outbound"`、`channel`、`conversationKind`、`outcome` | `agentId`、`runId`、`durationMs`、`resultCount`、身份引用、`reasonCode`、`deliveryKind`、`failureStage`、`errorCode`        |
 
 封闭的消息枚举如下：
 
@@ -1003,7 +1007,7 @@ agent-run 和 tool-action 记录。当 Gateway 宣布支持 `audit.activity.list
 | 消息                        | details.code                     | details.reason           | 含义                                               |
 | --------------------------- | -------------------------------- | ------------------------ | -------------------------------------------------- |
 | `device nonce required`     | `DEVICE_AUTH_NONCE_REQUIRED`     | `device-nonce-missing`   | 客户端省略了 `device.nonce`（或传入空值）。          |
-| `device nonce mismatch`     | `DEVICE_AUTH_NONCE_MISMATCH`    | `device-nonce-mismatch`  | 客户端使用了过期/错误的 nonce 进行签名。            |
+| `device nonce mismatch`    | `DEVICE_AUTH_NONCE_MISMATCH`    | `device-nonce-mismatch`  | 客户端使用了过期/错误的 nonce 进行签名。            |
 | `device signature invalid`  | `DEVICE_AUTH_SIGNATURE_INVALID` | `device-signature`       | 签名负载与 v2 负载不匹配。                          |
 | `device signature expired`  | `DEVICE_AUTH_SIGNATURE_EXPIRED` | `device-signature-stale` | 签名时间戳超出了允许的时钟偏差。                    |
 | `device identity mismatch`  | `DEVICE_AUTH_DEVICE_ID_MISMATCH` | `device-id-mismatch`     | `device.id` 与公钥指纹不匹配。                     |
@@ -1035,4 +1039,4 @@ agent-run 和 tool-action 记录。当 Gateway 宣布支持 `audit.activity.list
 - [构建 Gateway 客户端](https://docs.openclaw.ai/gateway/clients)
 - [嵌入 OpenClaw](https://docs.openclaw.ai/gateway/embedding)
 - [Bridge 协议](/gateway/bridge-protocol)
-- [Gateway 运行手册](/gateway)
+- [Gateway 运行手册](/gateway)。

@@ -17,7 +17,7 @@ title: "受管 worktree"
 <openclaw-state-dir>/worktrees/<repo-fingerprint>/<name>
 ```
 
-仓库指纹是基于规范化的 git 公共目录和 origin URL 计算出的 SHA-256 哈希的前 16 个十六进制字符。提供的名称必须匹配 `[a-z0-9][a-z0-9-]{0,63}`。如果不提供名称，OpenClaw 会生成一个可读的、以甲壳类动物为主题的名称，例如 `brisk-lobster`。已被其他所有者、本地分支或未受管理路径占用的推断名称，会追加数字后缀，例如 `brisk-lobster-2`。
+仓库指纹是对规范化 git 公共目录和 origin URL 进行 SHA-256 哈希后得到的前 16 个十六进制字符。提供的名称必须匹配 `[a-z0-9][a-z0-9-]{0,63}`。如果未提供名称，OpenClaw 会生成一个易读的、以甲壳类动物为主题的名称，例如 `brisk-lobster`。如果推断出的名称已被任何已注册的 worktree（包括调用方自己已移除的检出）、本地分支或非受管路径占用，则会添加数字后缀，例如 `brisk-lobster-2`；只有提供的名称才会复用或恢复调用方已有的记录。
 
 OpenClaw 会在请求的基础引用处创建分支 `openclaw/<name>`。如果没有基础引用，它会 fetch `origin`，在可用时使用远程默认分支；如果仓库离线或没有可用的远程，则回退到本地 `HEAD`。
 

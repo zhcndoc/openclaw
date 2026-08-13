@@ -29,7 +29,23 @@ title: "节点配对"
 
 待处理请求会在**节点最后一次重试后 5 分钟**自动过期——一个持续重连的节点会让其这一个待处理请求保持有效，而不是每次尝试都生成新的请求（以及批准提示）。
 
-## CLI 工作流（适用于无头环境）
+## 一键粘贴节点配对
+
+在 Control UI 的 Devices 页面中打开配对对话框，选择 **Node host**，
+然后将生成的命令复制到设备上：
+
+```bash
+openclaw node run --pair "oc-pair://<setup-code>"
+```
+
+设置链接包含 Gateway 端点、短期有效的一次性引导令牌，以及当 Gateway 直接提供可固定的叶证书时使用的 TLS 证书固定值。引导令牌会在 10 分钟后过期。显式的
+`--host`、`--port`、`--context-path`、`--tls`/`--no-tls` 和
+`--tls-fingerprint` 标志会覆盖 `--pair` 中的值。
+
+引导令牌和最终的设备凭据彼此独立，就像短期有效的 Tailscale 身份验证密钥与它允许加入的持久设备身份一样。撤销或使设置链接过期不会撤销已配对设备；如有需要，请单独移除设备。该链接绝不会预先批准 `system.run` 或文件夹同步。这些操作仍然使用待处理审批或
+[SSH 验证的设备自动批准](#ssh-verified-device-auto-approval-default)。
+
+## CLI 工作流（适合无界面环境）
 
 ```bash
 openclaw nodes pending

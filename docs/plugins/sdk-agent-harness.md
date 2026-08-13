@@ -40,7 +40,9 @@ read_when:
 
 仅当 `runAttempt` 对原生工具和内置工具、OpenClaw 工具、请求方和已配置的 MCP 服务器、应用、委派以及恢复的线程，强制执行每一层显式的 OpenClaw 工具策略时，才将 `conversationToolPolicySupport: "exact"` 设置为 `"exact"`。Core 会将 `params.pluginHarnessToolPolicyRestricted` 作为已准备好的决策传入，指示原生界面必须被隔离。默认的工具配置文件收窄不会设置此标志。
 
-当任何原生能力可以绕过这些层时，请省略该声明。OpenClaw 随后会在调用 harness 之前，明确拒绝显式受限的 turn。操作员可以将会话切换到嵌入式运行时，或升级 harness。带有限制性直接策略的通道 `/btw` 侧边问题会被 core 拒绝，不受此声明涵盖。
+拥有独立管理的原生界面的 Harness 还可以使用规范的 OpenClaw 工具名称声明 `conversationToolPolicySafeDenyTools`。只有当每个展开后的拒绝项都是该经过审计的安全列表中的已知核心工具时，Core 才会保留原生界面。有限的允许列表、未声明或未知的工具名称、通配符，以及包含任何未声明名称的组，仍然会限制原生界面。省略此列表会保留保守行为，即每个显式限制都会隔离原生界面。由于省略项会默认安全拒绝，新工具无法在不知情的情况下放宽策略边界。
+
+当任何原生能力都可以绕过这些层级时，请省略该声明。OpenClaw 随后会在调用 harness 之前，明确拒绝显式受限的回合。操作员可以将会话切换到嵌入式运行时，或升级 harness。带有限制性直接策略的通道 `/btw` 侧问题会被 core 拒绝，不在此声明的覆盖范围内。
 
 ### Harness 拥有的认证引导
 
@@ -118,19 +120,21 @@ export default definePluginEntry({
 
 ### 隔离式完成
 
-可选的 `runIsolatedCompletion(params)` 能力用于需要一次全新的、仅提示词推理调用的产品路径，
-并且模型可调用的工具表面必须是字面意义上的空。核心会传入准确准备好的 `model`、`auth`、
-provider、模型 id、系统提示词、用户提示词、超时时间、中止信号和流式参数。harness 不得
-重新解析凭据、切换路由、复用原生线程、附加工具、调用 agent 生命周期钩子或交付输出。
+可选的 `runIsolatedCompletionV2(params)` 能力服务于这样的产品路径：它们需要一次全新的、仅提示词的推理调用，并使用字面意义上的空模型可调用工具界面。Core 会传入 provider 和 model id、提示词、截止时间控制，以及一个已准备好的 `authorization`：
+
+- `owner: "host"` 包含精确的传输 `model` 和已解析的 `auth`
+- `owner: "harness"` 包含准备好的运行时认证计划，以及限制为该调用所选单个 profile 的凭据快照。Core 负责自动回退顺序，并针对每个候选项分别调用 harness
+
+由宿主授权的调用必须使用所提供的 model 和凭据，不得替换。由 harness 授权的调用只能解析所提供的已准备路由和作用域 profile；如果该计划将认证交由 harness 负责，也可以解析 harness 的原生账户。harness 不得切换路由、复用原生线程、附加工具、调用 agent 生命周期钩子或传递输出。
 
 返回 `{ assistant: AssistantMessage }`。核心只接受带有 `stop` 或 `length` 停止原因的终止文本／
 思考内容；工具调用、失败的停止原因和空输出都会被拒绝。如果 harness 无法证明符合这些语义，
 请省略此能力。随后，需要隔离式完成的调用方会在调用该 harness 前直接失败；OpenClaw 不会
 通过其他运行时重放请求。
 
-插件调用方通过
-`api.runtime.llm.complete({ execution: { mode: "isolated-agent-runtime" } })`
-选择此行为；harness 回调是 provider 侧的强制执行 SPI，而不是第二个调用方 API。
+旧版仅支持宿主认证的 `runIsolatedCompletion(params)` 能力已弃用，但在 2026-10-12 之前仍可供外部插件使用。对于由 harness 负责或原生认证的场景，请实现 V2；当只有旧版能力存在时，OpenClaw 永远不会凭空创建宿主凭据。
+
+即使 OpenClaw 发送空工具列表，原生 agent 服务器通常也会自带环境工具。请在本次全新的 turn 中禁用并证明这些原生能力已被禁用，使用能够序列化真正零工具请求的独立传输，或者不要支持此能力。
 
 即使 OpenClaw 发送空工具列表，原生 agent 服务器通常也会自带环境工具。在这种情况下，请使用
 能够序列化真正零工具请求的独立 provider 传输，或者不要支持此能力。
@@ -455,4 +459,4 @@ OpenClaw 会在普通 attempt 和重试循环之外，将该回调作为终端�
 - [运行时辅助工具](/plugins/sdk-runtime)
 - [提供方插件](/plugins/sdk-provider-plugins)
 - [Codex Harness](/plugins/codex-harness)
-- [模型提供方](/concepts/model-providers)
+- [模型提供方](/concepts/model-providers)。

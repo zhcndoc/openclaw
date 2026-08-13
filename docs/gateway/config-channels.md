@@ -462,18 +462,18 @@ WhatsApp 通过网关的 Web 渠道（Baileys Web）运行。只要存在已链�
 }
 ```
 
-- **Socket mode** 需要同时提供 `botToken` 和 `appToken`（对于默认账户环境变量回退，分别为 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN`）。
-- **HTTP mode** 需要提供 `botToken` 以及 `signingSecret`（位于根级别或每个账户中）。
-- **用户身份**（`identity: "user"`）会以授权用户的身份发帖和读取消息。在 Socket Mode 中，它需要 `userToken` 以及 `appToken`；在 HTTP mode 中，则需要 `userToken` 以及 `signingSecret`。不需要 bot token 或 bot 用户。有关用户权限范围和事件订阅，请参阅[用户身份](/channels/slack#user-identity-post-as-a-real-person)。
-- Slack 会通过 `auth.test` 自动检测 Enterprise Grid 组织范围的安装；不需要设置安装模式。Enterprise DMs 支持 `disabled`、`open`、`allowlist` 和工作区范围的 `pairing`。频道和用户策略必须使用稳定的 Slack ID；可变名称和不受支持的频道前缀会导致启动失败。基于提及模式的频道范围和静态路由绑定对等方使用带工作区限定的 Slack 目标。支持直接 Socket Mode 或 HTTP 消息、提及、带工作区限定的操作、延迟投递、主动发送、受支持的事件监听器和交互、静态路由绑定，以及来自带工作区限定回合的 Slack 原生审批。Relay、频道 ID 变更事件、App Home、Agent 和 Assistant 生命周期事件、已配置的 ACP 绑定，以及运行时当前会话绑定仍不可用。有关最小权限清单、设置工作流和完整限制，请参阅[Enterprise Grid 组织范围的安装](/channels/slack#enterprise-grid-org-wide-installs)。
-- 已弃用的 `enterpriseOrgInstall` 键会由 `openclaw doctor --fix` 在 Slack 根级别和账户级别移除。
+- **Socket 模式**要求同时提供 `botToken` 和 `appToken`（默认账号环境变量回退使用 `SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN`）。
+- **HTTP 模式**要求提供 `botToken` 以及 `signingSecret`（在根级别或每个账号中）。
+- **用户身份**（`identity: "user"`）会以授权用户的身份发帖和读取消息。Socket 模式要求 `userToken` 加 `appToken`，HTTP 模式要求 `userToken` 加 `signingSecret`。不需要 bot token 或机器人用户。有关用户权限范围和事件订阅，请参阅[用户身份](/channels/slack#user-identity-post-as-a-real-person)。
+- Slack 会通过 `auth.test` 自动检测 Enterprise Grid 的组织级安装；无需设置安装模式。Enterprise 私信支持 `disabled`、`open`、`allowlist` 和工作区范围的 `pairing`。频道和用户策略必须使用 `team:<team-id>:channel:<channel-id>` 或 `team:<team-id>:user:<user-id>`；纯 ID、可变名称以及不支持的频道前缀会导致启动失败。提及模式的频道范围和静态路由绑定对等方必须使用带工作区限定的 Slack 目标。系统支持直接 Socket 模式或 HTTP 消息、提及、工作区限定的操作、延迟投递、主动发送、受支持的事件监听器和交互、静态路由绑定，以及来自工作区限定会话的 Slack 原生审批。Relay、频道 ID 变更事件、App Home、Agent 和 Assistant 生命周期事件、已配置的 ACP 绑定以及运行时当前对话绑定仍不可用。有关最小权限清单、设置流程和完整限制，请参阅 [Enterprise Grid 组织级安装](/channels/slack#enterprise-grid-org-wide-installs)。
+- 已废弃的 `enterpriseOrgInstall` 键会由 `openclaw doctor --fix` 在 Slack 根级别和账号级别移除。
 - `botToken`、`appToken`、`signingSecret` 和 `userToken` 接受明文字符串或 SecretRef 对象。
-- Slack 账户快照会公开每个凭据的来源／状态字段，例如 `botTokenSource`、`botTokenStatus`、`userTokenSource`、`userTokenStatus`、`appTokenStatus`，以及 HTTP mode 中的 `signingSecretStatus`。`configured_unavailable` 表示账户通过 SecretRef 配置，但当前命令／运行时路径无法解析该密钥值。
-- `configWrites: false` 会阻止由 Slack 发起的配置写入。
-- 可选的 `channels.slack.defaultAccount` 会在其匹配已配置的账户 ID 时覆盖默认账户选择。
-- `dm.groupEnabled` 和 `dm.groupChannels` 只会过滤应用已经加入的 Slack 群组私信（MPDM）。它们无法让应用看到一个从未加入的现有群组私信；请将群组私信转换为私有频道并邀请应用，或者让应用通过 `conversations.open` 打开新的 MPDM。请参阅[群组私信（MPDM）和 bot](/channels/slack#group-dms-mpdms-and-bots)。
-- `channels.slack.streaming.mode` 是规范的 Slack 流模式键（默认值为 `"partial"`）。`channels.slack.streaming.nativeTransport` 控制 Slack 的原生流式传输（默认值为 `true`）。运行时不再读取旧版 `streamMode`、布尔值 `streaming`、`chunkMode`、`blockStreaming`、`blockStreamingCoalesce` 和 `nativeStreaming`；运行 `openclaw doctor --fix` 可将持久化配置迁移为 `streaming.{mode,chunkMode,block.enabled,block.coalesce,nativeTransport}`。
-- `unfurlLinks` 和 `unfurlMedia` 会将 Slack 的 `chat.postMessage` 链接和媒体展开布尔值透传给 bot 回复。`unfurlLinks` 默认为 `false`，因此除非启用，否则出站 bot 链接不会以内嵌方式展开；除非进行配置，否则不会提供 `unfurlMedia`。在 `channels.slack.accounts.<accountId>` 处设置任一值，可以覆盖某个账户的顶层值。
+- Slack 账号快照会公开每个凭据的来源/状态字段，例如 `botTokenSource`、`botTokenStatus`、`userTokenSource`、`userTokenStatus`、`appTokenStatus`，以及 HTTP 模式下的 `signingSecretStatus`。`configured_unavailable` 表示账号通过 SecretRef 配置，但当前命令/运行时路径无法解析该密钥值。
+- `configWrites: false` 会阻止 Slack 发起的配置写入。
+- 可选的 `channels.slack.defaultAccount` 会在匹配已配置账号 id 时覆盖默认账号选择。
+- `dm.groupEnabled` 和 `dm.groupChannels` 只会过滤应用已经加入的 Slack 群组私信（MPDM）。它们无法让应用看到一个从未加入的现有群组私信；请将群组私信转换为私有频道并邀请应用，或让应用通过 `conversations.open` 开启新的 MPDM。请参阅[群组私信（MPDM）和机器人](/channels/slack#group-dms-mpdms-and-bots)。
+- `channels.slack.streaming.mode` 是规范的 Slack 流模式键（默认值为 `"partial"`）。`channels.slack.streaming.nativeTransport` 控制 Slack 的原生流式传输（默认值为 `true`）。旧版 `streamMode`、布尔值 `streaming`、`chunkMode`、`blockStreaming`、`blockStreamingCoalesce` 和 `nativeStreaming` 值在运行时不再读取；请运行 `openclaw doctor --fix`，将持久化配置迁移到 `streaming.{mode,chunkMode,block.enabled,block.coalesce,nativeTransport}`。
+- `unfurlLinks` 和 `unfurlMedia` 会将 Slack `chat.postMessage` 的链接和媒体展开布尔值传递给机器人回复。`unfurlLinks` 默认为 `false`，因此出站机器人链接不会展开显示，除非启用；除非进行配置，否则不会设置 `unfurlMedia`。在 `channels.slack.accounts.<accountId>` 设置任一值，即可覆盖某个账号的顶层值。
 - 使用 `user:<id>`（私信）或 `channel:<id>` 作为投递目标。
 
 **Reaction 通知模式：** `off`、`own`（默认）、`all`、`allowlist`（来自 `reactionAllowlist`）。

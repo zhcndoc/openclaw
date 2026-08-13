@@ -97,20 +97,20 @@ sidebarTitle: "模型提供商"
 ### OpenAI
 
 - 提供商：`openai`
-- 身份验证：`OPENAI_API_KEY`
-- 可选轮换：`OPENAI_API_KEYS`、`OPENAI_API_KEY_1`、`OPENAI_API_KEY_2`，以及 `OPENCLAW_LIVE_OPENAI_KEY`（单个覆盖项）
+- 认证：`OPENAI_API_KEY`
+- 可选轮换：`OPENAI_API_KEYS`、`OPENAI_API_KEY_1`、`OPENAI_API_KEY_2`，以及 `OPENCLAW_LIVE_OPENAI_KEY`（单一覆盖）
 - 全新设置默认值：`openai/gpt-5.6-sol`。
 - 示例模型：`openai/gpt-5.6-sol`、`openai/gpt-5.6-terra`、`openai/gpt-5.6-luna`、`openai/gpt-5.5`；裸的直接 API `openai/gpt-5.6` 别名仍受支持。
-- 如果特定安装或 API key 的行为有所不同，请使用 `openclaw models list --provider openai` 验证账户／模型可用性。
+- 如果特定安装或 API 密钥的行为有所不同，请使用 `openclaw models list --provider openai` 验证账户／模型可用性。
 - CLI：`openclaw onboard --auth-choice openai-api-key`
-- 默认传输方式为 `auto`；OpenClaw 会将传输方式选择传递给共享模型运行时。
-- 通过 `agents.defaults.models["openai/<model>"].params.transport` 按模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
-- 使用 `params.serviceTier` 或 `params.service_tier` 设置明确的 OpenAI API 服务层级；快速模式（原名为优先处理）使用 `service_tier=priority`。
-- 在原生公共 OpenAI 和 ChatGPT/Codex Responses 请求中，优先级依次为请求载荷／传输方式中的 `service_tier`、有效的显式模型参数，然后是快速模式默认值。
-- `/fast` 以及有效的 `params.fastMode` / `params.fast_mode` 值是共享的代理运行时控制项；对于直接嵌入式 `openai/*` Responses 请求，仅当不存在更高优先级的层级时，它们才会提供 `service_tier=priority`。
-- 隐藏的 OpenClaw 归属标头（`originator`、`version`、`User-Agent`）仅适用于发往 `api.openai.com` 的原生 OpenAI 流量，不适用于通用的 OpenAI 兼容代理
-- 原生 OpenAI 路由还会保留 Responses 的 `store`、提示缓存提示信息以及 OpenAI 推理兼容的请求载荷整形；代理路由不会保留这些内容
-- `openai/gpt-5.3-codex-spark` 仅可通过 ChatGPT/Codex OAuth 使用；直接 OpenAI API key 和 Azure API key 路由会拒绝该模型
+- 直接 OpenAI API-key Responses 请求默认为 `"sse"`。
+- 通过 `agents.defaults.models["openai/<model>"].params.transport` 按模型覆盖（`"sse"`、`"websocket"`、`"websocket-cached"` 或 `"auto"`）。缓存 WebSocket 会复用会话连接，并在历史记录仍然匹配时仅发送带有 `previous_response_id` 的新输入。
+- 使用 `params.serviceTier` 或 `params.service_tier` 设置明确的 OpenAI API 服务层级；快速模式（以前称为 Priority processing）使用 `service_tier=priority`。
+- 在原生公开 OpenAI 和 ChatGPT/Codex Responses 请求中，优先级为 payload／传输层的 `service_tier`，然后是有效的显式模型参数，最后是快速模式默认值。
+- `/fast` 和有效的 `params.fastMode`／`params.fast_mode` 值是共享的代理运行时控制项；对于直接嵌入的 `openai/*` Responses 请求，仅当不存在更高优先级的层级时，它们才会提供 `service_tier=priority`。
+- 隐藏的 OpenClaw 归因请求头（`originator`、`version`、`User-Agent`）仅适用于发往 `api.openai.com` 的原生 OpenAI 流量，不适用于通用的 OpenAI 兼容代理
+- 原生 OpenAI 路由还会保留 Responses `store`、提示缓存提示和 OpenAI reasoning-compat 负载整形；代理路由不会
+- `openai/gpt-5.3-codex-spark` 仅可通过 ChatGPT/Codex OAuth 使用；直接 OpenAI API-key 和 Azure API-key 路由会拒绝它
 
 ```json5
 {
@@ -130,7 +130,7 @@ sidebarTitle: "模型提供商"
 - 可选轮换：`ANTHROPIC_API_KEYS`、`ANTHROPIC_API_KEY_1`、`ANTHROPIC_API_KEY_2`，以及 `OPENCLAW_LIVE_ANTHROPIC_KEY`（单一覆盖）
 - 示例模型：`anthropic/claude-opus-5`
 - CLI：`openclaw onboard --auth-choice apiKey`
-- 直接的公开 Anthropic 请求支持共享的 `/fast` 开关和 `params.fastMode`，包括发送到 `api.anthropic.com` 的 API 密钥和 OAuth 认证流量；OpenClaw 会将其映射为 Anthropic 的 `service_tier`（`auto` vs `standard_only`）
+- 直接的公开 Anthropic 请求支持共享的 `/fast` 开关和 `params.fastMode`，包括发送到 `api.anthropic.com` 的 API 密钥和 OAuth 认证流量；OpenClaw 会将其映射为 Anthropic 的 `service_tier`（`auto` 与 `standard_only`）
 - 首选的 Claude CLI 配置会保持模型引用规范化，并单独选择 CLI 后端：`anthropic/claude-opus-5`，并设置模型范围的 `agentRuntime.id: "claude-cli"`。旧版 `claude-cli/claude-opus-4-7` 引用仍可用于兼容性。
 
 <Note>
@@ -268,7 +268,7 @@ Gemini CLI 默认使用 `stream-json`。OpenClaw 会读取 assistant 流消息�
 | Featherless AI                          | `featherless`                    | `FEATHERLESS_API_KEY`                                | `featherless/Qwen/Qwen3-32B`                           |
 | GitHub Copilot                          | `github-copilot`                 | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` | -                                                      |
 | GMI Cloud                               | `gmi`                            | `GMI_API_KEY`                                        | `gmi/google/gemini-3.1-flash-lite`                     |
-| Groq                                    | `groq`                           | `GROQ_API_KEY`                                       | `groq/llama-3.3-70b-versatile`                         |
+| Groq                                    | `groq`                            | `GROQ_API_KEY`                                       | `groq/llama-3.3-70b-versatile`                         |
 | Hugging Face Inference                  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`                | `huggingface/deepseek-ai/DeepSeek-R1`                  |
 | MiniMax                                 | `minimax` / `minimax-portal`     | `MINIMAX_API_KEY` / `MINIMAX_OAUTH_TOKEN`            | `minimax/MiniMax-M3`                                   |
 | Mistral                                 | `mistral`                        | `MISTRAL_API_KEY`                                    | `mistral/mistral-large-latest`                         |
@@ -364,11 +364,11 @@ Kimi 模型 ID：
 
 Kimi 编程使用 Moonshot AI 的 Anthropic 兼容端点：
 
-- Provider: `kimi`
-- Auth: `KIMI_API_KEY`
-- Kimi K3: `kimi/k3`（最高 1M，按层级开放）或 `kimi/k3-256k`（256K，较低配额使用）
-- Kimi Code: `kimi/kimi-for-coding`
-- Kimi Code HighSpeed: `kimi/kimi-for-coding-highspeed`
+- 提供商：`kimi`
+- 认证：`KIMI_API_KEY`
+- Kimi K3：`kimi/k3`（最高 1M，按层级开放）或 `kimi/k3-256k`（256K，较低配额使用）
+- Kimi Code：`kimi/kimi-for-coding`
+- Kimi Code HighSpeed：`kimi/kimi-for-coding-highspeed`
 
 ```json5
 {
@@ -508,15 +508,15 @@ MiniMax 通过 `models.providers` 配置，因为它使用自定义端点：
 请参见 [/providers/minimax](/providers/minimax) 获取设置详情、模型选项和配置片段。
 
 <Note>
-在 MiniMax 的 Anthropic 兼容流式路径上，OpenClaw 默认会为 M2.x 系列关闭思考，除非你显式设置；MiniMax-M3（以及 M3.x）默认保持提供商省略/自适应思考路径。`/fast on` 会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
+在 MiniMax 的 Anthropic 兼容流式路径上，OpenClaw 默认会为 M2.x 系列关闭思考，除非你显式设置；MiniMax-M3（以及 M3.x）默认保持提供商省略／自适应思考路径。`/fast on` 会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
 </Note>
 
 插件拥有的能力划分：
 
-- 文本/聊天默认使用 `minimax/MiniMax-M3`
+- 文本／聊天默认使用 `minimax/MiniMax-M3`
 - 图像生成使用 `minimax/image-01` 或 `minimax-portal/image-01`
 - 图像理解在两种 MiniMax 认证路径上都由插件拥有的 `MiniMax-VL-01` 提供
-- 网页搜索保持在提供商 ID `minimax`。
+- 网页搜索保持在提供商 ID `minimax`
 
 ### LM Studio
 
@@ -560,11 +560,11 @@ ollama pull llama3.3
 }
 ```
 
-当你通过 `OLLAMA_API_KEY` 选择启用时，Ollama 会在本地 `http://127.0.0.1:11434` 被检测到，内置提供商插件会将 Ollama 直接加入 `openclaw onboard` 和模型选择器。请参见 [/providers/ollama](/providers/ollama) 获取 onboarding、云端/本地模式和自定义配置说明。
+当你通过 `OLLAMA_API_KEY` 选择启用时，Ollama 会在本地 `http://127.0.0.1:11434` 被检测到，内置提供商插件会将 Ollama 直接加入 `openclaw onboard` 和模型选择器。请参见 [/providers/ollama](/providers/ollama) 获取 onboarding、云端／本地模式和自定义配置说明。
 
 ### vLLM
 
-vLLM 作为一个内置提供商插件发布，用于本地/自托管的 OpenAI 兼容服务器：
+vLLM 作为一个内置提供商插件发布，用于本地／自托管的 OpenAI 兼容服务器：
 
 - 提供商：`vllm`
 - 认证：可选（取决于你的服务器）

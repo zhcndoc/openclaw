@@ -124,15 +124,15 @@ WhatsApp 的登录二维码会将一个 WhatsApp 账号链接到 OpenClaw。DM �
 
 使用一个已经连接且具有 `operator.admin` 访问权限的 Control UI 会话：
 
-1. 打开 Control UI 并进入 **Settings → Devices**。
-2. 在 **Devices** 页面，点击 **Pair mobile device**。
-3. 保持 **Full access (recommended)**，或选择 **Limited access** 以省略
-   管理性 Gateway 控制。
-4. 点击 **Create setup code**。
-5. 在你的手机上，打开 OpenClaw 应用 → **Settings** → **Gateway**。
+1. 打开 Control UI 并前往 **设置 → 设备**。
+2. 在 **设备**页面，点击 **配对设备**。
+3. 保持选择**完整访问权限（推荐）**，或选择**受限访问权限**以省略
+   管理员 Gateway 控制。
+4. 点击 **创建设置码**。
+5. 在手机上打开 OpenClaw 应用 → **设置** → **网关**。
 6. 扫描二维码或粘贴设置码，然后连接。
 
-当它们的设置码元数据匹配时，官方 OpenClaw iOS 和 Android 应用会自动批准。如果 **Pending approval** 显示一个请求（例如，对于非官方客户端或元数据不匹配），在批准之前请检查其角色和作用域。
+当它们的设置码元数据匹配时，官方 OpenClaw iOS 和 Android 应用会自动批准。如果 **待批准** 显示一个请求（例如，对于非官方客户端或元数据不匹配），在批准之前请检查其角色和作用域。
 
 当当前 Control UI 会话没有管理员访问权限时，该按钮会被禁用。在这种情况下，请使用下面来自 Gateway 主机的 CLI 批准流程。
 
@@ -142,7 +142,7 @@ WhatsApp 的登录二维码会将一个 WhatsApp 账号链接到 OpenClaw。DM �
 
 1. 在 Telegram 中，给你的机器人发送消息：`/pair`
 2. 机器人会回复两条消息：一条说明消息，以及一条单独的 **设置码** 消息（在 Telegram 中很容易复制/粘贴）。
-3. 在你的手机上，打开 OpenClaw iOS 应用 → Settings → Gateway。
+3. 在你的手机上，打开 OpenClaw iOS 应用 → 设置 → 网关。
 4. 扫描二维码（`/pair qr`）或粘贴设置码并连接。
 5. 官方移动端应用会自动连接。如果 `/pair pending` 显示一个请求，在批准前请检查其角色和作用域。
 
@@ -162,7 +162,7 @@ WhatsApp 的登录二维码会将一个 WhatsApp 账号链接到 OpenClaw。DM �
 - 默认传递出去的 `operator` 令牌包括 `operator.admin`、
   `operator.approvals`、`operator.read`、`operator.talk.secrets`，以及
   `operator.write`
-- Control UI **Limited access** 和 `openclaw qr --limited` 会省略
+- Control UI **受限访问**和 `openclaw qr --limited` 会省略
   `operator.admin`，同时保留其他 operator 作用域
 - 明文 LAN `ws://` 设置会自动使用相同的受限配置；请配置
   `wss://` 或 Tailscale Serve，并生成一个新的代码以获得完整访问权限
@@ -171,7 +171,7 @@ WhatsApp 的登录二维码会将一个 WhatsApp 账号链接到 OpenClaw。DM �
 
 在设置码有效期间，请将其视为密码。
 
-iOS 和 Android 的 **Settings → Gateway** 页面会显示 **Full** 或 **Limited**
+iOS 和 Android 的 **设置 → 网关**页面会显示**完整**或**受限**
 访问权限。要将受限手机升级，请先配置安全的 `wss://` 或
 Tailscale Serve 路由，然后生成一个新的完整访问权限设置码，在该设置页面中扫描或粘贴它，并重新连接。
 
@@ -237,7 +237,7 @@ Control UI/浏览器配对，而无需手动编辑配对存储。Gateway 仍会�
 ### 说明
 
 - `node.pair.*` API（CLI：`openclaw nodes pending|approve|reject|remove|rename`）管理
-  存储在同一已配对设备记录上的节点能力批准。WS 节点仍然需要设备配对；参见 [Node pairing](/gateway/pairing)。
+  存储在同一已配对设备记录上的节点能力批准。WS 节点仍然需要设备配对；参见 [节点配对](/gateway/pairing)。
 - 配对记录是已批准角色的持久事实来源。活动设备令牌始终受限于该已批准的角色集合；已批准角色之外的孤立令牌条目不会创建新的访问权限。
 
 ## 相关文档

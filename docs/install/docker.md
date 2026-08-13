@@ -102,6 +102,37 @@ Docker 是**可选的**。当你需要一个隔离的、一次性使用的网关
   </Step>
 </Steps>
 
+### 无头引导
+
+对于无人值守的容器主机，请将提供方、Gateway 和通道凭据放入 Compose `.env` 文件中，这样一次性引导容器和长期运行的 Gateway 都能接收相同的值：
+
+```bash
+OPENAI_API_KEY=<provider-key>
+OPENCLAW_GATEWAY_TOKEN=<gateway-token>
+TELEGRAM_BOT_TOKEN=<bot-token>
+```
+
+在没有伪 TTY 的情况下运行引导和通道配置，然后启动 Gateway：
+
+```bash
+docker compose run -T --rm --no-deps --entrypoint node openclaw-gateway \
+  dist/index.js onboard --non-interactive --accept-risk --skip-health \
+  --mode local \
+  --auth-choice openai-api-key \
+  --secret-input-mode ref \
+  --gateway-auth token \
+  --gateway-token-ref-env OPENCLAW_GATEWAY_TOKEN \
+  --skip-channels \
+  --no-install-daemon
+docker compose run -T --rm --no-deps --entrypoint node openclaw-gateway \
+  dist/index.js channels add --channel telegram --use-env
+docker compose up -d openclaw-gateway
+```
+
+如果插件声明的环境变量缺失，通道命令会在更改配置前失败。引导后请将 `TELEGRAM_BOT_TOKEN` 保留在 `.env` 中：`--use-env` 会将凭据查找留给环境，而不会将令牌复制到 `openclaw.json` 中，运行中的 Gateway 也需要相同的变量。启动后通道配置发生变化时，Gateway 的配置监视器会自动热重载受影响的通道。
+
+请参阅 [`openclaw channels`](/cli/channels)，了解凭据标志替代方案和其他通道插件。
+
 ### 手动流程
 
 ```bash
@@ -257,10 +288,11 @@ http://<gateway-host>:18789/api/diagnostics/prometheus
 
 ```bash
 curl -fsS http://127.0.0.1:18789/healthz   # 存活
-curl -fsS http://127.0.0.1:18789/readyz     # 就绪
+curl -fsS http://127.0.0.1:18789/startupz  # 启动和流量接入
+curl -fsS http://127.0.0.1:18789/readyz    # 深度、通道感知的就绪状态
 ```
 
-镜像内置的 `HEALTHCHECK` 会 ping `/healthz`；若连续失败，会将容器标记为 `unhealthy`，以便编排器重启或替换它。
+镜像内置的 `HEALTHCHECK` 会请求 `/healthz`；重复失败会将容器标记为 `unhealthy`，以便编排器重启或替换容器。使用 `/startupz` 作为编排器的启动或就绪探针，这样通道账户失败不会使原本健康的 Gateway 和控制界面从服务中移除。使用 `/readyz` 进行监控时，会有意将严重的通道故障视为未就绪。有关响应详情，请参阅[健康检查](/gateway/health#http-probes)。
 
 已认证的深度健康快照：
 

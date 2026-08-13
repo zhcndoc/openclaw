@@ -28,7 +28,7 @@ OpenClaw 支持附加式 SecretRef，因此受支持的凭据不需要以明文�
 - 运行时请求只读取当前活动的内存快照。模型提供商的 SecretRef 凭据会在到达外部传输之前，通过身份验证存储和流选项以进程本地哨兵值的形式传递。出站传送路径（Discord 回复/线程传送、Telegram 操作发送）也会读取该快照，不会在每次发送时重新解析引用。
 - 只读渠道能力发现会独立评估各个账户。已配置但不可用的账户不会隐藏健康的同级账户的消息操作，但通过不可用账户直接发送仍会失败即关闭。
 
-这可以让 secret-provider 故障不影响热点请求路径。
+这可以让密钥提供商故障不影响热点请求路径。
 
 Gateway 入口保护、结构无效的配置或解析值、策略违规以及未知所有权仍会失败即关闭。被隔离的所有者绝不会回退到优先级较低的凭据来源。
 
@@ -277,8 +277,10 @@ Provider 别名具有源特定性。匹配的显式 provider 条目优先；如�
 
 条目具有 `secret` 或 `env` 类型。类型控制 CLI 的披露行为，而不是 SecretRef 解析：
 
-- `secret` 值保存后仅可写入。Gateway 列表结果、Control UI 以及 CLI 的 list/get 输出都不会包含这些值；不存在 reveal RPC。
-- `env` 值会继续对管理员显示在 Control UI 中，并且可以通过 `store list` 和 `store get` 返回。团队范围的 `env` 条目还会添加到 agent exec 环境中，顺序位于继承的进程值之后、显式的单次调用 env 之前。受保护的主机键和沙箱阻止的凭据名称会被忽略，并显示可见警告。
+- `secret` 值在保存后为只写。Gateway 列表结果、Control UI 以及 CLI 的 list/get 输出都不会包含这些值；不存在 reveal RPC。
+- `env` 值在 Control UI 中对管理员保持可见，并且可以通过 `store list` 和 `store get` 返回。团队作用域的 `env` 条目还会被添加到 OpenClaw 自有 exec 工具所运行命令的环境中，顺序位于继承的进程值之后、显式的每次调用环境变量之前。受保护的主机密钥和被沙箱阻止的凭据名称会被忽略，并发出可见警告。这涵盖直接工具调用、Code Mode（其来宾通过同一个 `openclaw:core:exec` 工具访问 shell）、沙箱 exec，以及由 `node` 承载的 exec。
+
+它不涵盖在提供商原生运行环境中执行的命令——Codex app-server 及其沙箱 exec-server，或 Claude Code 等 ACP 子进程。这些运行环境会自行组装其子进程环境，并且不会经过 OpenClaw 的 exec 准备流程，因此其中不存在存储条目。存储快照也会在每次代理运行时只读取一次，因此运行中途添加的条目要到下一次运行才会生效。
 
 `secret` 条目永远不会注入子进程环境。它们只能通过 `store` SecretRef 使用，因为明文环境变量注入会绕过存储披露边界；安全的密钥注入需要未来的 egress 替换机制。
 
@@ -641,9 +643,9 @@ Canonical 支持和不支持的凭据列在 [SecretRef Credential Surface](/refe
 
 警告和审计信号：
 
-- `SECRETS_REF_OVERRIDES_PLAINTEXT`（runtime warning）
-- `REF_SHADOWED`（audit finding when SQLite auth-profile credentials take precedence over `openclaw.json` refs）
-- `STORE_PLAINTEXT_RESIDUE`（audit finding when a stored name still has an equivalent plaintext config value）
+- `SECRETS_REF_OVERRIDES_PLAINTEXT`（运行时警告）
+- `REF_SHADOWED`（当 SQLite 身份验证配置文件凭据优先于 `openclaw.json` 引用时的审计发现）
+- `STORE_PLAINTEXT_RESIDUE`（当存储名称仍具有等效明文配置值时的审计发现）
 
 Google Chat 的 `serviceAccount` 接受内联 JSON 或 SecretRef。当该规范字段未设置时，Doctor 会将已弃用的同级字段 `serviceAccountRef` 移入此规范字段。
 
@@ -824,5 +826,5 @@ OpenClaw 故意不会写入包含历史明文密钥值的回滚备份。
 - [Vault SecretRefs](/plugins/vault) - HashiCorp Vault 提供程序设置
 - [环境变量](/help/environment) - 环境优先级
 - [SecretRef 凭据面](/reference/secretref-credential-surface) - 凭据面
-- [Secrets Apply Plan Contract](/gateway/secrets-plan-contract) - 计划契约详情
+- [Secrets 应用计划契约](/gateway/secrets-plan-contract) - 计划契约详情
 - [安全](/gateway/security) - 安全态势。

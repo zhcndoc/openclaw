@@ -171,13 +171,12 @@ Hooks 按其扩展的界面进行分组。**加粗**名称接受决策结果（�
 
 | Hook                             | 用途                                                                                              |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `gateway_start` / `gateway_stop` | 随 Gateway 启动或停止插件拥有的服务                                                 |
-| `deactivate`                     | `gateway_stop` 的弃用兼容性别名；新插件请使用 `gateway_stop`                 |
-| `cron_reconciled`                | 启动或重新加载后，根据完整的 Gateway cron 状态进行协调                            |
-| `cron_changed`                   | 观察 Gateway 管理的 cron 生命周期变化（添加、更新、移除、启动、完成、计划） |
+| `gateway_start` / `gateway_stop` | 与 Gateway 一同启动或停止插件拥有的服务                                                 |
+| `cron_reconciled`                | 在启动或重新加载后与完整的 Gateway cron 状态进行协调                            |
+| `cron_changed`                   | 观察 Gateway 拥有的 cron 生命周期变化（添加、更新、移除、启动、完成、计划） |
 | **`before_install`**             | 从已加载的插件运行时检查暂存的技能或插件安装材料                         |
-| **`skill_proposal_evaluate`**    | 评估一份确切的 Skill Workshop 草案，并返回归属明确的发现、指标或决策       |
-| `skill_proposal_changed`         | 观察持久化的 Skill Workshop 提案在提交后的生命周期事件                           |
+| **`skill_proposal_evaluate`**    | 评估一个确切的 Skill Workshop 草稿，并返回归属明确的发现、指标或决策       |
+| `skill_proposal_changed`         | 观察提交后的持久化 Skill Workshop 提案生命周期事件                           |
 | `skill_changed`                  | 观察已提交的实时技能创建、更新和移除事件                                      |
 
 ### 技能生命周期与评估
@@ -652,7 +651,12 @@ PluginHookMediaFact[]` 暴露规范的附件 API。每个事实可以包含
 
 使用 `gateway_start` 来启动通用插件服务，并使用 `gateway_stop` 来清理长期运行的资源。cron 调度器在 `gateway_start` 运行时仍可能处于加载中，因此不要把它作为外部 cron 投影的基线信号。
 
-不要依赖内部的 `gateway:startup` 钩子来实现插件拥有的运行时服务。
+旧版的 `api.on("deactivate", ...)` 别名已于 2026 年 8 月移除。使用
+`gateway_stop` 进行清理；请参见
+[迁移说明](/plugins/sdk-migration#deactivate-hook-alias)。
+
+不要依赖内部的 `gateway:startup` 钩子来运行插件拥有的运行时
+服务。
 
 `cron_reconciled` 会在 Gateway 的 cron 调度器及其退出时监听器完成有状态协调后触发。它既会在初始启动时触发，也会在配置重载时调度器替换后触发。该事件会报告 `reason`（`startup` 或 `reload`）以及实际生效的 `enabled` 状态。即使 cron 被禁用，也会以 `enabled: false` 触发，从而允许外部投影清除过期的唤醒。使用 `ctx.getCron?.()` 获取完成协调的精确调度器实例；之后的重载不会重新指向该回调。`ctx.abortSignal` 持有同一份调度器快照。Gateway 会在有更新的调度器被启用或关闭开始时立刻中止它。请将它传递给每一个持久化副作用，并且在它中止后不要再接受该快照。
 这是一个调度器生命周期信号，不是插件激活信号：仅插件热重载不会再次触发它。新启用的消费者会在下一次调度器替换或 Gateway 启动时收到它的第一个基线信号。
@@ -803,11 +807,15 @@ export function registerCronProjection(api: OpenClawPluginApi, host: ExternalWak
 
 有少数与钩子相邻的接口已弃用，但仍受支持。请在下一次重大版本发布前迁移：
 
-- `inbound_claim` 和 `message_received` 处理程序中的**纯文本频道信封**。请读取 `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。请参阅[纯文本频道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
-- **`subagent_spawning`** 仍为兼容旧版插件而保留，但新插件不应再从中返回线程路由。核心会在 `subagent_spawned` 触发前，通过频道会话绑定适配器准备好 `thread: true` 子代理绑定。
-- **`deactivate`** 仍作为已弃用的清理兼容别名保留，直到 2026-08-16 之后。新插件应使用 `gateway_stop`。
-- **`before_tool_call` 中的 `onResolution`** 现在使用类型化的 `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` / `timeout` / `cancelled`），而不是自由格式的 `string`。
-- **`api.registerSessionExtension` / `api.enqueueNextTurnInjection`** 仍作为顶层兼容别名保留。新插件应使用 `api.session.state.registerSessionExtension(...)` 和 `api.session.workflow.enqueueNextTurnInjection(...)`。
+- **`inbound_claim` 和 `message_received` 处理程序中的纯文本通道信封**。读取 `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。请参见
+  [纯文本通道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
+- **`subagent_spawning`** 仍为与旧版插件的兼容性而保留，但新插件不应从中返回线程路由。Core 会在 `subagent_spawned` 触发前，通过通道会话绑定适配器准备好带有 `thread: true` 的子代理绑定。
+- **`before_tool_call` 中的 `onResolution`** 现在使用类型化的
+  `PluginApprovalResolution` 联合（`allow-once` / `allow-always` / `deny` /
+  `timeout` / `cancelled`），而不是自由格式的 `string`。
+- **`api.registerSessionExtension` / `api.enqueueNextTurnInjection`** 仍作为顶层兼容性别名保留。新插件应使用
+  `api.session.state.registerSessionExtension(...)` 和
+  `api.session.workflow.enqueueNextTurnInjection(...)`。
 
 有关完整列表——内存能力注册、提供方思维配置文件、外部认证提供方、提供方发现类型、任务运行时访问器，以及 `command-auth` → `command-status` 重命名——请参见[插件 SDK 迁移 → 活跃弃用项](/plugins/sdk-migration#active-deprecations)。
 

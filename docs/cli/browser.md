@@ -137,10 +137,15 @@ openclaw browser extension cdp --json
 - `extension pair` 仍然是高级手动流程。`--gateway-url` 会创建直接连接远程 Gateway 的配对 URL；非回环 URL 必须使用 `wss://`。
 - `extension cdp` 会打印非机密的 Browser Relay Authentication v2 元数据：回环浏览器／CDP 端点、协议版本、密钥 ID，以及固定的 challenge／complete 绑定。默认情况下，它绝不会打印中继密钥或授权标头。
 
-`extension cdp --legacy-bearer` 是临时的迁移备用方案。仅当
-`browser.extensionRelay.allowLegacyAuth=true` 时，它才会在发出警告的同时输出旧版 Bearer 标头；否则会报错退出，且不会输出凭据。使用 `--json` 获取机器可读输出；警告仍会输出到 stderr，因此 stdout 保持有效的 JSON。
+自动本地引导会通过本地 Gateway 的精确
+`/browser/extension` 路由进行连接，因此第一个经过身份验证的扩展连接会启动延迟加载的浏览器控制服务。请保持 `openclaw gateway run` 或受管 Gateway 服务运行；不需要单独的浏览器请求或预热。唤醒后，本地 OpenClaw 和 mcporter 调用仍会使用 `extension pair` 或 `extension cdp` 报告的配置文件中继端口。浏览器节点配对会继续使用浏览器节点主机上的中继，而显式的 `--gateway-url` 配对仍然是直接远程且仅限手动的。
 
-设置、安全模型和迁移步骤：[Chrome 扩展](/tools/chrome-extension)。
+不带 `--gateway-url` 的高级手动 `extension pair` 命令会保留主机本地的 `/extension` 中继 URL。它不会唤醒 Browser 控制，因此所选配置文件中继必须已在扩展连接之前运行。
+
+`extension cdp --legacy-bearer` 是临时的迁移逃生通道。只有在
+`browser.extensionRelay.allowLegacyAuth=true` 时，它才会在发出警告的同时打印旧版 Bearer 标头；否则会报错退出，且不会打印凭据。使用 `--json` 获取机器输出；警告仍会输出到 stderr，因此 stdout 保持有效的 JSON。
+
+设置、安全模型和恢复步骤：[Chrome extension](/tools/chrome-extension)。
 
 如果扩展已经在原生主机存在之前尝试过自动设置，Chromium 会在正在运行的浏览器进程中保留此次未命中的结果。重启 Chrome 一次，然后重复按顺序执行安装流程；仅重试弹出窗口无法恢复该现有进程。
 

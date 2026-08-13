@@ -66,6 +66,13 @@ read_when:
       min_machines_running = 1
       processes = ["app"]
 
+    [[http_service.checks]]
+      grace_period = "2m"
+      interval = "15s"
+      method = "GET"
+      timeout = "5s"
+      path = "/startupz"
+
     [[vm]]
       size = "shared-cpu-2x"
       memory = "2048mb"
@@ -81,11 +88,12 @@ read_when:
 
     | 设置                           | 原因                                                                        |
     | ------------------------------ | --------------------------------------------------------------------------- |
-    | `--bind lan`                   | 绑定到 `0.0.0.0`，这样 Fly 的代理才能访问 gateway                         |
-    | `--allow-unconfigured`         | 无需配置文件即可启动（之后你再创建）                                        |
+    | `--bind lan`                   | 绑定到 `0.0.0.0`，以便 Fly 的代理能够访问 gateway                     |
+    | `--allow-unconfigured`         | 在没有配置文件的情况下启动（之后创建配置文件）                        |
     | `internal_port = 3000`         | 必须与 `--port 3000`（或 `OPENCLAW_GATEWAY_PORT`）匹配，供 Fly 健康检查使用 |
-    | `memory = "2048mb"`            | 512MB 太小；推荐 2GB                                                        |
-    | `OPENCLAW_STATE_DIR = "/data"` | 将状态持久化到卷中                                                          |
+    | `path = "/startupz"`          | Gateway 启动完成后允许流量进入，与频道健康状况无关          |
+    | `memory = "2048mb"`            | 512MB 太小；推荐 2GB                                         |
+    | `OPENCLAW_STATE_DIR = "/data"` | 在卷上持久化状态                                                |
 
   </Step>
 
@@ -123,7 +131,7 @@ read_when:
     fly logs
     ```
 
-    当 HTTP/WebSocket 监听器启动后，gateway 会输出 `gateway ready`。Fly 自身的健康检查会按照 `fly.toml` 监视 `internal_port = 3000`；镜像的 Docker `HEALTHCHECK` 指令还会轮询默认端口 18789 上的 `/healthz`，但由于此部署将 gateway 覆盖为 `--port 3000`，该端口在这里未被使用。
+    当 HTTP/WebSocket 监听器启动后，Gateway 启动日志会记录 `gateway ready`。Fly 会在 `internal_port = 3000` 上检查 `/startupz`，并在启动工作完成后允许流量进入。镜像的 Docker `HEALTHCHECK` 会解析活动的 Gateway 锁端口，因此其 `/healthz` 存活检查也会遵循本次部署的 `--port 3000` 覆盖值。
 
   </Step>
 
@@ -247,9 +255,9 @@ gateway 绑定到了 `127.0.0.1`，而不是 `0.0.0.0`。
 
 ### 健康检查失败 / connection refused
 
-Fly 无法通过配置的端口访问 gateway。
+Fly 无法通过配置的端口访问 gateway，或者 `/startupz` 仍在报告启动工作。
 
-**修复：** 确保 `internal_port` 与 gateway 端口一致（`--port 3000` 或 `OPENCLAW_GATEWAY_PORT=3000`）。
+**修复：** 确保 `internal_port` 与 gateway 端口（`--port 3000` 或 `OPENCLAW_GATEWAY_PORT=3000`）匹配，然后检查 `fly logs` 以了解待处理的启动步骤。
 
 ### OOM / 内存问题
 

@@ -42,8 +42,8 @@ read_when:
 ## 推荐路径
 
 1. 运行或发现一个 Gateway。
-2. 通过 [Gateway protocol](/gateway/protocol) 连接。
-3. 调用 [Gateway RPC reference](/reference/rpc) 中记录的 RPC 方法。
+2. 通过 [Gateway 协议](/gateway/protocol) 连接。
+3. 调用 [Gateway RPC 参考](/reference/rpc) 中记录的 RPC 方法。
 4. 固定你所测试的 OpenClaw 版本。
 5. 升级 OpenClaw 时重新检查 RPC 参考文档。
 
@@ -56,17 +56,15 @@ read_when:
 
 1. 停止接收由宿主控制的外部入口流量。
 2. 使用稳定且唯一的 `requestId` 调用 `gateway.suspend.prepare`。
-3. 如果响应是 `busy`，则保持进程运行，并稍后重试。
-4. 如果是 `ready`，保存返回的 `suspensionId`，然后在 `expiresAtMs` 之前冻结或快照
-   该进程。
-5. 恢复后，或者如果放弃挂起，则通过现有的 WebSocket 或 Admin HTTP 控制
-   路径调用 `gateway.suspend.resume`，并传入该 `suspensionId`。
+3. 如果响应为 `busy`，则保持进程运行并稍后重试。
+4. 如果响应为 `ready`，则保存返回的 `suspensionId`，然后在
+   `expiresAtMs` 之前冻结或快照进程。
+5. 解冻后，或放弃挂起时，通过现有或新认证的
+   WebSocket 使用该 `suspensionId` 调用 `gateway.suspend.resume`。对应的 CLI 命令为 `openclaw gateway suspend` 和
+   `openclaw gateway resume <suspensionId>`。
 
-已准备好的 Gateway 会拒绝新的 WebSocket 握手。WebSocket 控制器
-在宿主操作期间必须保持其已认证连接处于打开状态。如果无法保证这一点，
-请在准备之前启用并使用
-[Admin HTTP RPC 插件](/plugins/admin-http-rpc)。如果
-控制路径丢失，请等待两分钟租约过期后再重新连接；过期会自动重新开放接入。
+已准备好的 Gateway 会接受经过身份验证的 WebSocket 连接，但会阻止除
+`gateway.suspend.*` 之外的所有方法。控制器可以在解冻后重新连接并调用 resume。[Admin HTTP RPC 插件](/plugins/admin-http-rpc) 仍可供完全无法使用 WebSocket 的宿主使用。如果所有控制路径都丢失，两分钟的租约到期后会自动重新开放接入。
 
 RPC 合约如下：
 

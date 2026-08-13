@@ -97,7 +97,9 @@ openclaw plugins install --link ./my-plugin
 
 如果新安装的插件需要尚未存在的配置，OpenClaw 会记录安装信息，但会保持插件禁用状态。配置 `plugins.entries.<id>.config`，然后运行 `openclaw plugins enable <id>`。如果已有配置条目但无效，安装将失败，且不会重写该配置。
 
-## 重启并检查
+一个插件包可以公开多个子条目。安装会跟踪该包一次，启用每个已就绪的子条目，并保留你明确禁用的任何子条目。运行时策略仍可通过 `plugins.entries.<child-id>`、允许/拒绝列表、channel 配置、精确的子条目加载路径以及 `memory` 和 `contextEngine` 槽位来针对子条目进行控制。
+
+## Restart and inspect
 
 启用了配置重载的正在运行的托管 Gateway 在安装、更新或卸载插件代码后会自动重启。  
 如果 Gateway 是非托管的，或者已禁用重载，请在检查在线运行时表面之前手动重启它：
@@ -118,9 +120,9 @@ openclaw plugins update --all
 openclaw plugins update <plugin-id> --dry-run
 ```
 
-传入插件 ID 会复用其已跟踪的安装规格：已保存的 dist-tag
-（`@beta`）和精确锁定的版本都会沿用到后续的 `update <plugin-id>`
-运行中。
+传入插件 ID 会复用其已跟踪的安装规格：存储的 dist-tags（`@beta`）和精确固定的版本会沿用到之后的 `update <plugin-id>` 运行中。对于多条目包，任何子条目 ID 都会解析到同一个已跟踪的包安装，因此所有同级条目会一起更新。已移除或重命名的子条目会在新的包/索引状态提交之前，协调其过时的条目、允许/拒绝策略、精确加载路径、channel 配置以及 memory/context 槽位选择；保留的/新的子条目和无关插件则会被保留。
+
+如果 OpenClaw 无法准确证明唯一的包所有者和完整的子条目列表，更新和卸载会安全失败，不会更改包文件、配置或已安装索引。运行 `openclaw plugins registry --refresh`，检查 `openclaw plugins doctor`，并使用 `openclaw doctor --fix` 修复可修复的旧版索引状态。如果歧义仍然存在，请先重新安装该包，再重试。
 
 `openclaw plugins update --all` 是批量维护路径。它仍然遵循普通的已跟踪安装规格，但受信任的官方 OpenClaw 插件记录会同步到当前官方目录目标，而不是继续固定在过时的官方精确软件包上。规范的渠道解析器会同时使用 `update.channel` 和已安装的核心版本，因此在未配置渠道的情况下，已安装 beta 核心的官方插件会继续使用 beta 发布线。使用定向的 `update <plugin-id>` 可保持精确或带标签的官方规格不变。
 
@@ -144,10 +146,7 @@ openclaw plugins uninstall <plugin-id>
 openclaw plugins uninstall <plugin-id> --keep-files
 ```
 
-卸载会移除插件的配置项、持久化的插件索引记录、
-允许/拒绝列表条目，以及在适用时关联的 `plugins.load.paths` 条目。
-除非你传入 `--keep-files`，否则会删除受管理的安装目录。
-当卸载更改了插件源时，正在运行的受管理 Gateway 会自动重启。
+卸载会移除该包持久化的安装记录，以及插件配置、允许/拒绝列表、memory/context 槽位、精确链接的 `plugins.load.paths` 和适用时的 channel 配置条目中由该包拥有的每个子条目。你可以使用任意子条目 ID 来指定多条目包；预览会列出包所有者以及将被移除的所有同级条目。除非传入 `--keep-files`，否则受管理的安装目录只会被移除一次。当卸载改变插件源时，正在运行的托管 Gateway 会自动重启。
 
 在 Nix 模式（`OPENCLAW_NIX_MODE=1`）下，插件的安装、更新、卸载、
 启用和禁用都将被禁用；请改为在 Nix 源中管理这些安装选项。

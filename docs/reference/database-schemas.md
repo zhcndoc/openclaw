@@ -80,11 +80,12 @@ JSON 输出通过 `schema: "openclaw.state-schema-preflight.v1"` 进行标识。
 | 版本 | 变更                                                                                                                                                                                                                                           | 首次发布       |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
 | 1       | 初始共享状态数据库                                                                                                                                                                                                                    | `v2026.5.30-beta.1` |
-| 2       | 仅元数据的消息审计事件（[#103903](https://github.com/openclaw/openclaw/pull/103903)）                                                                                                                                                 | `v2026.7.2-beta.1`  |
-| 3       | `STRICT` 表和 schema 漂移强化（[#108663](https://github.com/openclaw/openclaw/pull/108663)）                                                                                                                                         | `v2026.7.2-beta.2`  |
+| 2       | 仅包含元数据的消息审计事件（[#103903](https://github.com/openclaw/openclaw/pull/103903)）                                                                                                                                                 | `v2026.7.2-beta.1`  |
+| 3       | `STRICT` 表和 schema 漂移加固（[#108663](https://github.com/openclaw/openclaw/pull/108663)）                                                                                                                                         | `v2026.7.2-beta.2`  |
 | 4       | 会话监视来源信息取代编码的哨兵行                                                                                                                                                                                          | 未发布          |
-| 5       | 持久化云工作器结果引用，用于待处理的工作区栅栏（[`7a7d6bb`](https://github.com/openclaw/openclaw/commit/7a7d6bb51f42bd896de2b8a4df2ee66f3dce0a21)、[#110952](https://github.com/openclaw/openclaw/pull/110952)）              | `v2026.7.2-beta.4`  |
-| 6       | 每个已提交的共享状态表都成为规范运行时 schema 的一部分（[`509a5f0`](https://github.com/openclaw/openclaw/commit/509a5f03737642fec4a940e6d605887f7957ddc8)、[#113473](https://github.com/openclaw/openclaw/pull/113473)） | `v2026.7.2-beta.5`  |
+| 5       | 待处理工作区栅栏上的持久化云工作器结果引用（[`7a7d6bb`](https://github.com/openclaw/openclaw/commit/7a7d6bb51f42bd896de2b8a4df2ee66f3dce0a21)， [#110952](https://github.com/openclaw/openclaw/pull/110952)）              | `v2026.7.2-beta.4`  |
+| 6       | 每个已提交的共享状态表都成为规范运行时 schema 的一部分（[`509a5f0`](https://github.com/openclaw/openclaw/commit/509a5f03737642fec4a940e6d605887f7957ddc8)， [#113473](https://github.com/openclaw/openclaw/pull/113473)） | `v2026.7.2-beta.5`  |
+| 7       | 移除已废弃的推断式承诺存储                                                                                                                                                                                                      | 未发布          |
 
 ## 完整性检查
 
@@ -132,6 +133,74 @@ Gateway 启动前置检查仅读取模式标头。`openclaw database preflight` 
 手动降级 schema 仅适用于愿意承担风险的代理和操作人员。在编辑任何数据库之前，请先[创建并验证备份](/cli/backup)。停止 Gateway 以及所有可能打开该数据库的进程。
 
 一般流程是：
+
+### 示例：state schema 7 到 6
+
+Schema 7 移除了已废弃的共享 commitments 表。Schema 6 构建版本仍然要求该规范表，因此手动降级必须在降低版本之前重新创建其确切的空表结构。
+
+在检查写入它的确切 schema 后，对全局状态数据库运行等效 SQL：
+
+```sql
+BEGIN IMMEDIATE;
+
+CREATE TABLE commitments (
+  id TEXT NOT NULL PRIMARY KEY,
+  agent_id TEXT NOT NULL,
+  session_key TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  account_id TEXT,
+  recipient_id TEXT,
+  thread_id TEXT,
+  sender_id TEXT,
+  kind TEXT NOT NULL,
+  sensitivity TEXT NOT NULL,
+  source TEXT NOT NULL,
+  status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  suggested_text TEXT NOT NULL,
+  dedupe_key TEXT NOT NULL,
+  confidence REAL NOT NULL,
+  due_earliest_ms INTEGER NOT NULL,
+  due_latest_ms INTEGER NOT NULL,
+  due_timezone TEXT NOT NULL,
+  source_message_id TEXT,
+  source_run_id TEXT,
+  created_at_ms INTEGER NOT NULL,
+  updated_at_ms INTEGER NOT NULL,
+  attempts INTEGER NOT NULL,
+  last_attempt_at_ms INTEGER,
+  sent_at_ms INTEGER,
+  dismissed_at_ms INTEGER,
+  snoozed_until_ms INTEGER,
+  expired_at_ms INTEGER,
+  record_json TEXT NOT NULL
+) STRICT;
+
+CREATE INDEX idx_commitments_scope_due
+  ON commitments(agent_id, session_key, status, due_earliest_ms, due_latest_ms);
+
+CREATE INDEX idx_commitments_status_due
+  ON commitments(status, due_earliest_ms, due_latest_ms);
+
+CREATE INDEX idx_commitments_scope_dedupe
+  ON commitments(agent_id, session_key, channel, dedupe_key, status);
+
+CREATE INDEX idx_commitments_agent_due
+  ON commitments(agent_id, status, due_earliest_ms, due_latest_ms, session_key);
+
+CREATE INDEX idx_commitments_agent_sent
+  ON commitments(agent_id, status, sent_at_ms, session_key);
+
+PRAGMA user_version = 6;
+UPDATE schema_meta
+SET schema_version = 6,
+    updated_at = unixepoch('now') * 1000
+WHERE meta_key = 'primary';
+
+COMMIT;
+```
+
+重新创建的表为空，因为 Schema 7 丢弃了已废弃的行。拙劣的降级意味着从已验证的备份中恢复。
 
 ### 示例：agent schema 17 到 16
 

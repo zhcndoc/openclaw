@@ -45,8 +45,7 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
 - 清理/修复应用：`sanitizeSessionHistory` 在
   `src/agents/embedded-agent-runner/replay-history.ts` 中
 
-Legacy JSONL validation and import belong to `openclaw doctor --fix`; the
-embedded runner does not repair or reopen file-backed runtime transcripts。
+Legacy JSONL 验证和导入属于 `openclaw doctor --fix`；嵌入式运行器不会修复或重新打开基于文件的运行时转录。
 
 ---
 
@@ -56,15 +55,13 @@ embedded runner does not repair or reopen file-backed runtime transcripts。
 
 实现：
 
-- `sanitizeSessionMessagesImages` 在
-  `src/agents/embedded-agent-helpers/images.ts` 中
-- `sanitizeContentBlocksImages` 在 `src/agents/tool-images.ts` 中
-- 最大图像边长可通过 `agents.defaults.imageMaxDimensionPx`
-  配置（默认：`1200`）
-- 在此遍历回放内容时，会移除空白文本块。
-  变为空的 assistant 回合会从回放副本中删除；变为空的 user
-  和 tool-result 回合会收到一个非空的
-  omitted-content 占位符。
+- `sanitizeSessionMessagesImages` 位于
+  `src/agents/embedded-agent-helpers/images.ts`
+- `sanitizeContentBlocksImages` 位于 `src/agents/tool-images.ts`
+- 最大图像边长可通过 `agents.defaults.imageMaxDimensionPx` 配置
+  （默认值：`1200`）
+- 此过程遍历回放内容时会移除空白文本块。
+  变为空的 assistant 轮次会被丢弃，除非它们拥有不透明的提供商回放状态；变为空的 user 和 tool-result 轮次会收到非空的省略内容占位符。
 
 ## 全局规则：格式错误的工具调用
 
@@ -74,7 +71,7 @@ embedded runner does not repair or reopen file-backed runtime transcripts。
 
 - `src/agents/session-transcript-repair.ts` 中的 `sanitizeToolCallInputs`
 - 在 `sanitizeSessionHistory` 中应用
-  (`src/agents/embedded-agent-runner/replay-history.ts`)
+  （`src/agents/embedded-agent-runner/replay-history.ts`）
 
 ---
 
@@ -128,9 +125,9 @@ OpenClaw 还会在路由后的提示文本之前，添加同一轮的 `[Inter-se
 - 工具结果配对修复可能会移动真实的匹配输出，并为缺失的工具调用合成 Codex 风格的 `aborted` 输出。
 - 不进行轮次验证或重排序；不剥离思维签名。
 
-**OpenAI-compatible Chat Completions**
+**OpenAI 兼容的 Chat Completions**
 
-- 历史上的助手思考/推理块在重放前会被剥离，因此本地和代理风格的 OpenAI-compatible 服务器不会收到上一轮推理字段，例如 `reasoning` 或 `reasoning_content`。
+- 历史上的助手思考/推理块在重放前会被剥离，因此本地和代理风格的 OpenAI 兼容服务器不会收到上一轮推理字段，例如 `reasoning` 或 `reasoning_content`。
 - 当前同轮次的工具调用续接会让助手推理块附加在工具调用上，直到工具结果已被重放。
 - 自定义/自托管模型条目若带有 `reasoning: true`，会保留重放的推理元数据。
 - 由提供商拥有的例外情况可以选择不遵循此规则，当其 wire protocol 需要重放推理元数据时除外。
@@ -172,7 +169,7 @@ OpenClaw 还会在路由后的提示文本之前，添加同一轮的 `[Inter-se
 
 **OpenRouter Anthropic**
 
-- 当启用 reasoning 时，已验证的 OpenRouter OpenAI-compatible Anthropic 模型有效载荷中的末尾 assistant prefill 轮次会被剥离，这与直接 Anthropic 和 Cloudflare Anthropic 的重放行为一致。
+- 当启用 reasoning 时，已验证的 OpenRouter OpenAI 兼容 Anthropic 模型有效载荷中的末尾 assistant prefill 轮次会被剥离，这与直接 Anthropic 和 Cloudflare Anthropic 的重放行为一致。
 
 **其他所有情况**
 
@@ -195,4 +192,4 @@ OpenClaw 还会在路由后的提示文本之前，添加同一轮的 `[Inter-se
 ## 相关内容
 
 - [会话管理](/concepts/session)
-- [会话裁剪](/concepts/session-pruning)
+- [会话裁剪](/concepts/session-pruning)。

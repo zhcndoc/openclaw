@@ -257,18 +257,19 @@ OpenClaw 可以在回复流程运行之前对入站媒体（图像/音频/视频
 
 ### 文件附件提取
 
-- 每个传入的文档附件都会以模型可见的文件块结尾。路由到图像、音频或视频理解的附件不在此契约范围内；这些阶段负责处理它们的结果。
-- 提取的文件文本会在附加到媒体提示词之前，被包装为不受信任的外部内容，并使用类似 `<<<EXTERNAL_UNTRUSTED_CONTENT id="...">>>` / `<<<END_EXTERNAL_UNTRUSTED_CONTENT id="...">>>` 的边界标记，以及一行 `Source: External` 元数据。
+- 每个传入的文档附件最终都会出现在模型可见的文件块中。被路由到图像、音频或视频理解的附件不受此约定约束；这些阶段负责处理各自的结果。
+- 提取的文件文本会在追加到媒体提示词之前，被包装为不受信任的外部内容，并使用类似 `<<<EXTERNAL_UNTRUSTED_CONTENT id="...">>>` / `<<<END_EXTERNAL_UNTRUSTED_CONTENT id="...">>>` 的边界标记，以及一行 `Source: External` 元数据。
 - 此路径会有意省略较长的 `SECURITY NOTICE:` 横幅，以缩短媒体提示词；边界标记和元数据仍然适用。
-- 不支持的文件会获得 `[Unsupported document format: <mime>. PDF and plain-text attachments can be read.]`。如果 MIME 类型未知，则标记中会省略该类型。
+- 仅当回复运行时确认能够读取主机本地路径时（目前为非沙箱嵌入式会话），保存在本地磁盘上的不受支持文件才会获得自助处理指导。路径会作为不受信任的外部元数据加以围栏；受信任的指导会告知代理使用自身工具提取文件，现代 Office 文件还会获得解压提示。通用 ACP 后端、仅 URL 附件和沙箱会话会保留普通的 `[Unsupported document format: <mime>. PDF and plain-text attachments can be read.]` 标记。
+- 被操作员配置的允许列表拒绝的文件绝不会包含自助处理路径；策略拒绝不得引导代理绕过操作员的决定。
 - 被操作员配置的 `allowedMimes` 列表拒绝的文件会改为获得 `[Attachment type not allowed: <mime>]`，这样提示词就不会声称支持当前配置所禁用的类型。
 - 读取失败会获得 `[Attachment could not be read]`。
 - 当 URL 文件源被禁用时，URL 附件会获得 `[Attachment skipped: URL file sources are disabled]`。
 - 没有可提取文本的文件会获得 `[No extractable text]`。
-- 每条消息最多渲染五个跳过标记；更多被跳过的附件会合并为一个不带原因的 `[<n> more attachments skipped]` 摘要，因此垃圾附件不会无限制地扩大提示词。文件标记与图像、音频或视频标记共用这五个标记的额度。
-- 如果 PDF 回退为渲染的页面图像，OpenClaw 会将这些图像转发给具备视觉能力的回复模型，并在文件块中保留占位符 `[PDF content rendered to images]`。
+- 每条消息最多渲染五个跳过标记；后续被跳过的附件会合并为一个与原因无关的 `[<n> more attachments skipped]` 摘要，从而避免垃圾附件无限增加提示词。文件标记以及图像、音频或视频标记共享这五个标记的额度。
+- 如果 PDF 回退为渲染后的页面图像，OpenClaw 会将这些图像转发给具备视觉能力的回复模型，并在文件块中保留占位符 `[PDF content rendered to images]`。
 - 图像、音频和视频决策会为每个附件候选记录一个已关闭的处置结果：已处理、已交给原生视觉、达到附件限制后未选中、已禁用、缺少模型、被聊天范围拒绝或失败。
-- 未处理的媒体会获得一个有界的模型可见标记。交给原生视觉的图像，以及由其他 harness 负责的媒体轮次，不会添加标记。
+- 未处理的媒体会获得一个有界的模型可见标记。交给原生视觉的图像，以及由其他 harness 负责的媒体回合，不会添加标记。
 
 ## 配置示例
 

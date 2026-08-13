@@ -33,10 +33,10 @@ openclaw channels dead-letters list --channel telegram --account default
 
 ## 状态 / 能力 / 解析 / 日志
 
-- `channels status`: `--channel <name>`, `--probe`, `--timeout <ms>` (默认 `10000`), `--json`
-- `channels capabilities`: `--channel <name>`, `--account <id>` (需要 `--channel`), `--target <dest>` (需要 `--channel`), `--timeout <ms>` (默认 `10000`，上限 `30000`), `--json`
-- `channels resolve <entries...>`: `--channel <name>`, `--account <id>`, `--kind <auto|user|group>` (默认 `auto`), `--json`
-- `channels logs`: `--channel <name|all>` (默认 `all`), `--lines <n>` (默认 `200`), `--json`
+- `channels status`: `--channel <name>`、`--probe`、`--timeout <ms>`（默认 `10000`）、`--json`
+- `channels capabilities`: `--channel <name>`、`--account <id>`（需要 `--channel`）、`--target <dest>`（需要 `--channel`）、`--timeout <ms>`（默认 `10000`，上限 `30000`）、`--json`
+- `channels resolve <entries...>`: `--channel <name>`、`--account <id>`、`--kind <auto|user|group>`（默认 `auto`）、`--json`
+- `channels logs`: `--channel <name|all>`（默认 `all`）、`--lines <n>`（默认 `200`）、`--json`
 
 `channels status --probe` 是实时路径：在可达的 gateway 上，它会对每个账户运行
 `probeAccount` 和可选的 `auditAccount` 检查，因此输出可能包含传输
@@ -78,9 +78,28 @@ openclaw channels add --channel nostr --private-key "$NOSTR_PRIVATE_KEY"
 openclaw channels remove --channel telegram --delete
 ```
 
-<Tip>
+对于无头主机，请先完成非交互式引导，然后使用明确的凭据标志或基于环境变量的设置选项添加每个频道：
+
+```bash
+export OPENAI_API_KEY="<provider-key>"
+export TELEGRAM_BOT_TOKEN="<bot-token>"
+
+openclaw onboard --non-interactive --accept-risk --skip-health \
+  --mode local \
+  --auth-choice openai-api-key \
+  --secret-input-mode ref \
+  --skip-channels \
+  --no-install-daemon
+openclaw channels add --channel telegram --use-env
+```
+
+`--use-env` 会在写入配置前验证所选频道插件声明的环境变量。对于 Telegram，该命令需要 `TELEGRAM_BOT_TOKEN`；其他插件会在错误信息中列出缺失的变量。Gateway 服务必须接收与引导 shell 相同的环境变量。如果 Gateway 已经以启用配置重新加载的方式运行，它会监视配置写入，并自动重启受影响的频道。
+
+参见 [CLI 自动化](/start/wizard-cli-automation)，了解其他非交互式提供方和 Gateway 选项。容器部署还应遵循 [Docker 无头引导](/install/docker#headless-bootstrap)中的环境配置说明。
+
+<提示>
 `openclaw channels add telegram --help` 或 `openclaw channels add --channel telegram --help` 只会显示 Telegram 的设置标志。`openclaw channels add --help` 只会显示共享的命令外壳。
-</Tip>
+</提示>
 
 `channels remove` 仅对已安装/已配置的频道插件生效。对于可安装的目录频道，请先使用 `channels add`。如果不带 `--delete`，它会询问是否禁用该账户并保留其配置；`--delete` 则会在不提示的情况下移除配置项。
 对于运行时支持的频道插件，`channels remove` 还会先请求正在运行的 Gateway 在更新配置之前停止所选账户，因此禁用或删除账户不会让旧监听器一直保持活动状态直到重启。
@@ -91,28 +110,30 @@ openclaw channels remove --channel telegram --delete
 
 频道专有标志的示例包括：
 
-| Channel     | Flags                                                                                                |
-| ----------- | ---------------------------------------------------------------------------------------------------- |
-| Google Chat | `--webhook-path`, `--webhook-url`, `--audience-type`, `--audience`                                   |
-| iMessage    | `--cli-path`, `--db-path`, `--service`, `--region`                                                   |
-| Matrix      | `--homeserver`, `--user-id`, `--access-token`, `--password`, `--device-name`, `--initial-sync-limit` |
-| Nostr       | `--private-key`, `--relay-urls`                                                                      |
-| Signal      | `--signal-number`, `--signal-transport`, `--cli-path`, `--http-url`, `--http-host`, `--http-port`    |
-| Tlon        | `--ship`, `--url`, `--code`, `--group-channels`, `--dm-allowlist`, `--auto-discover-channels`        |
-| WhatsApp    | `--auth-dir`                                                                                         |
+| 频道        | 标志                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------------ |
+| Google Chat | `--webhook-path`、`--webhook-url`、`--audience-type`、`--audience`                                      |
+| iMessage    | `--cli-path`、`--db-path`、`--service`、`--region`                                                     |
+| Matrix      | `--homeserver`、`--user-id`、`--access-token`、`--password`、`--device-name`、`--initial-sync-limit` |
+| Nostr       | `--private-key`、`--relay-urls`                                                                        |
+| Signal      | `--signal-number`、`--signal-transport`、`--cli-path`、`--http-url`、`--http-host`、`--http-port`    |
+| Tlon        | `--ship`、`--url`、`--code`、`--group-channels`、`--dm-allowlist`、`--auto-discover-channels`        |
+| WhatsApp    | `--auth-dir`                                                                                           |
 
 如果频道插件需要在基于标志的添加命令期间安装，OpenClaw 会使用该频道的默认安装来源，而不会打开交互式插件安装提示。
 
 引导式设置和基于标志的设置都会经过所选频道的解析器、验证器、账户解析、配置写入器以及写入后的钩子。未支持的标志会以所属频道的设置错误失败，而不会作为全局输入袋被接受。
 
-当你运行不带直接账户、凭据或频道配置标志的 `openclaw channels add` 时，交互式向导可以进行提示。位置参数中的频道 id 和 `--channel <id>` 都会立即打开该频道的引导式设置。Back 会返回到完整的频道选择器：
+当你运行不带直接账户、凭据或频道配置标志的 `openclaw channels add` 时，交互式向导可以进行提示。位置参数中的频道 id 和 `--channel <id>` 都会立即打开该频道的引导式设置。返回会回到完整的频道选择器：
 
 ```bash
 openclaw channels add telegram
 openclaw channels add --channel telegram
 ```
 
-向导可以提示填写：
+引导式设置需要交互式终端。在非 TTY shell 中，OpenClaw 会立即退出，而不是等待输入；请使用 `openclaw channels add --channel <id> --use-env`，或传入所选插件的凭据标志。
+
+向导可能会提示：
 
 - 所选频道的账户 ID
 - 这些账户的可选显示名称

@@ -27,10 +27,11 @@ OpenClaw Linux 伴侣是一个用于本地 Gateway 的 Tauri 桌面应用。它�
 - 为并置的 CLI 节点主机渲染由 agent 驱动的 Canvas 和捆绑的 A2UI 内容
 - 当窗口关闭时，仍可从系统托盘访问
 
-伴侣内嵌 WebView 中的实时语音 Talk 尚未经过验证：
-shell 不会向 WebKitGTK WebView 授予麦克风捕获权限，因此
-`getUserMedia` 预期会在那里失败。在此功能落地之前，请在普通浏览器中打开 Gateway 的
-Control UI 以使用 [Talk 模式](/nodes/talk)。
+### 主机休眠
+
+在使用 systemd-logind 的系统上，伴侣会在主机休眠前为其本地 Gateway 准备挂起租约。唤醒后，它会重新连接并恢复 Gateway；远程 Gateway 路由保持不变。如果 logind 或系统总线不可用，休眠挂钩会自行禁用，应用继续正常运行。
+
+伴侣嵌入式 WebView 中的实时语音 Talk 未经过验证：外壳不会向 WebKitGTK WebView 授予麦克风捕获权限，因此预计 `getUserMedia` 会在那里失败。在该功能实现之前，请在普通浏览器中打开 Gateway 的 Control UI，以使用 [Talk mode](/nodes/talk)。
 
 从 `main` 构建的稳定版会在
 [GitHub release](https://github.com/openclaw/openclaw/releases) 中将 `.deb` 和 AppImage 捆绑包作为该标签的资产发布，
@@ -155,7 +156,7 @@ openclaw nodes approve <requestId>
 
 摄像头设备必须允许服务用户读取，通常通过 `video` 组实现。当 `includeAudio` 为 true 时，摄像头短片会使用默认的 PulseAudio 或 PipeWire 音源；麦克风音频只会作为该短片轨道存在，而不是作为独立命令。位置功能要求主机的 GeoClue 策略允许 node-service 用户访问。
 
-`camera.snap` 和 `camera.clip` 也需要通过 `gateway.nodes.commands.allow` 显式启用。有关负载、限制和错误，请参见 [Camera capture](/nodes/camera) 和 [Location command](/nodes/location-command)。
+`camera.snap` 和 `camera.clip` 也需要通过 `gateway.nodes.commands.allow` 显式启用。有关负载、限制和错误，请参见 [摄像头采集](/nodes/camera) 和 [位置命令](/nodes/location-command)。
 
 ## 安装
 

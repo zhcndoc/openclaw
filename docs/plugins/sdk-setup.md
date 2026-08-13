@@ -160,9 +160,11 @@ export const setupContract = defineChannelSetupContract({
 }
 ```
 
-支持的字段类型包括 `string`、`boolean`、`integer`、`string-list` 和 `choice`。凭据请使用 `sensitive: true`。每个字段键必须等于其长 CLI 标志的驼峰式属性名称，包括任何否定形式，例如 `--api-token` 对应 `apiToken`。当同时需要正向形式和 `--no-*` 形式时，布尔字段可以添加 `cli.negatedFlags`。`channel`、`account` 以及账户显示名称 `name` 仍属于共享控制信封。
+支持的字段类型包括 `string`、`boolean`、`integer`、`string-list` 和 `choice`。凭据请使用 `sensitive: true`。每个字段键必须等于其长 CLI 标志的驼峰式属性名称，包括任何否定形式，例如 `--api-token` 对应 `apiToken`。当同时需要正向形式和 `--no-*` 形式时，布尔字段可以添加 `cli.negatedFlags`。
 
-已发布的 `setup`/`ChannelSetupInput` 适配器仍可供现有外部插件使用。新插件应公开 `setupContract`；当两者同时存在时，OpenClaw 始终优先使用它。
+对于布尔型 `useEnv` 字段，请将 `envVars` 设置为插件运行时所需的静态环境变量名称。随后，非交互式频道设置会在写入配置前，当任何已声明的变量为空时拒绝 `--use-env`。当列表中的任意一个变量均可满足要求时，请设置 `envVarMode: "any"`，例如内联凭据或文件路径替代项。省略 `envVars` 会保留插件现有的验证行为。
+
+已发布的 `setup`/`ChannelSetupInput` 适配器仍可供现有外部插件使用。新插件应公开 `setupContract`；当二者同时存在时，OpenClaw 始终优先使用它。
 
 | 字段                                  | 类型       | 含义                                                                         |
 | ------------------------------------- | ---------- | ---------------------------------------------------------------------------- |
@@ -375,10 +377,10 @@ export default defineSetupPluginEntry(myChannelPlugin);
 
 对于热路径的仅设置场景，当你只需要设置面的部分能力时，优先使用更细粒度的 setup 辅助接口，而不是更宽泛的 `plugin-sdk/setup` 总入口：
 
-| Import path                | Use it for                                                     | Key exports                                                                                                                                                                                                                                                                                                           |
-| -------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `plugin-sdk/setup-runtime` | setup-time runtime helpers that stay available in `setupEntry` | `createSetupTranslator`, `createPatchedAccountSetupAdapter`, `createEnvPatchedAccountSetupAdapter`, `createSetupInputPresenceValidator`, `noteChannelLookupFailure`, `noteChannelLookupSummary`, `promptResolvedAllowFrom`, `splitSetupEntries`, `createAllowlistSetupWizardProxy`, `createDelegatedSetupWizardProxy` |
-| `plugin-sdk/setup-tools`   | setup/install CLI/archive/docs helpers                         | `formatCliCommand`, `detectBinary`, `extractArchive`, `resolveBrewExecutable`, `formatDocsLink`, `CONFIG_DIR`                                                                                                                                                                                                         |
+| 导入路径                   | 用途                                                         | 主要导出                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plugin-sdk/setup-runtime` | 设置时可在 `setupEntry` 中继续使用的运行时辅助接口             | `createSetupTranslator`、`createPatchedAccountSetupAdapter`、`createEnvPatchedAccountSetupAdapter`、`createSetupInputPresenceValidator`、`noteChannelLookupFailure`、`noteChannelLookupSummary`、`promptResolvedAllowFrom`、`splitSetupEntries`、`createAllowlistSetupWizardProxy`、`createDelegatedSetupWizardProxy` |
+| `plugin-sdk/setup-tools`   | 设置/安装 CLI、归档和文档辅助接口                              | `formatCliCommand`、`detectBinary`、`extractArchive`、`resolveBrewExecutable`、`formatDocsLink`、`CONFIG_DIR`                                                                                                                                                                                                         |
 
 当你想要完整的共享设置工具箱时，请使用更宽泛的 `plugin-sdk/setup` 接口，包括诸如 `moveSingleAccountChannelSectionToDefaultAccount(...)` 之类的配置补丁辅助工具。
 
