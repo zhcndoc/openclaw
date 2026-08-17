@@ -43,7 +43,7 @@ commands are rejected before the QuickJS worker starts with actionable
 ## What it does
 
 - The model-visible tool list becomes `exec`, `wait`, plus any direct-only tool
-  such as `computer` or the native-vision `image` loader whose image result
+  such as `computer` or the native-vision `view_image` loader whose image result
   cannot survive the guest bridge.
 - `exec` evaluates model-generated JavaScript or TypeScript in an isolated
   QuickJS-WASI worker thread.
@@ -532,10 +532,18 @@ declare const tools: ToolCatalog;
 declare const MCP: Record<string, unknown>;
 declare const namespaces: Record<string, unknown>;
 
+declare function setTimeout(
+  callback: (...args: unknown[]) => void,
+  delay?: number,
+  ...args: unknown[]
+): number;
+declare function clearTimeout(id: number): void;
 declare function text(value: unknown): void;
 declare function json(value: unknown): void;
 declare function yield_control(reason?: string): Promise<void>;
 ```
+
+Guest timers are bridged through the host, so they survive QuickJS snapshot/resume and remain bounded by the Code Mode execution and snapshot limits.
 
 `ALL_TOOLS` is compact metadata for the run-scoped catalog; it does not contain
 full schemas by default. The model-visible `exec` description also includes a
