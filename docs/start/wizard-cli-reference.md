@@ -38,9 +38,16 @@ not install or modify anything on the remote host.
     - With a configured default model, **Keep existing model config** appears
       first and becomes the default, followed by **QuickStart (recommended)**
       and **Manual setup**.
-    - Each detected migration source adds an **Import from &lt;source&gt;** choice
-      after those setup choices. Explicit import flags dispatch the import
-      directly and skip this menu.
+      An explicit non-`skip` `--auth-choice` still configures that provider
+      without changing the existing default model, unless the provider requires
+      you to select a model.
+    - When a migration provider is available, **Import from another agent**
+      appears after those setup choices. Selecting it opens a provider list
+      with entries such as **Import from Claude**, **Import from Codex**, and
+      **Import from Hermes**. Detected sources appear first with their paths;
+      other available providers ask for a source path. Explicit import flags
+      dispatch the import directly and skip this menu. Use Back from the
+      provider list to return to **Setup mode** before an import begins.
     - Re-running the wizard does not wipe anything unless you pass `--reset`.
       Reset is a command flag, not a setup-mode choice.
     - `--reset-scope` accepts `config` (config only),
