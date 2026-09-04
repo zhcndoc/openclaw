@@ -59,7 +59,9 @@ See [Cloud Workers](/gateway/cloud-workers) for profiles, requirements, dispatch
 
 ## Viewing the session desktop
 
-Open **Desktop** from a session to view its execution machine. Cloud sessions select their worker desktop; sessions on paired devices select that device. The pop-out window keeps the session in its link. Both viewers follow placement changes and disconnect from the previous machine when the session moves or stops. A stopped cloud session does not switch either viewer to the Gateway desktop.
+Open **Desktop** from a session to view its execution machine. Cloud sessions select their worker desktop; sessions on paired devices select that device. By default, the pop-out window keeps the session in its link, so both viewers follow placement changes and disconnect from the previous machine when the session moves or stops. A stopped cloud session does not switch either viewer to the Gateway desktop.
+
+If you choose a source in the Desktop picker, the panel keeps that choice when the session's placement changes. **Open desktop in new window** opens that source and requests the panel's current view-only or control mode. Desktop links contain no credentials and do not grant control; the new viewer still performs its normal authentication and permission checks.
 
 The machine must already support desktop viewing. For cloud workers, enable the [Cloud Worker Desktop lab and desktop profile setting](/gateway/cloud-workers#desktop-interactive). Opening Desktop starts in view-only mode and does not change the machine's permissions or the agent's tool policy. The global Desktop command in the command palette still opens the machine picker, including on chat pages.
 
@@ -94,7 +96,7 @@ Suspension never interrupts work: sessions with an active turn, queued messages,
 
 ## What stays with the Gateway
 
-Placement is disposable; the session is not. The transcript, the last-reconciled workspace files, placement history, and every provider credential live with the Gateway in all placements. After a clean reclaim or idle suspension, the next message provisions a replacement — warm when an image exists, cold otherwise. Failed placements keep their diagnostic visible; resolve pending cleanup, then redispatch and retry. An offline paired device is different by design: the placement stays active and waits for the device to reconnect, and **Continue on Gateway…** is an explicit action that can lose unsynced device files. Workspace changes made after the last reconciliation are the only loss window, and clean stops (including auto-suspension) reconcile before releasing the machine.
+Placement is disposable; the session is not. The transcript, the last-reconciled workspace files, placement history, and every provider credential live with the Gateway in all placements. After a clean reclaim or idle suspension, the next message provisions a replacement — warm when an image exists, cold otherwise. Failed placements keep their diagnostic visible; resolve pending cleanup, then redispatch and retry. An offline paired device is different by design: the placement stays active and waits for the device to reconnect, and **Continue on Gateway…** works while the device is offline, resuming from the last Gateway-synced workspace and discarding unsynced device changes. Workspace changes made after the last reconciliation are the only loss window, and clean stops (including auto-suspension) reconcile before releasing the machine.
 
 ## Related
 
