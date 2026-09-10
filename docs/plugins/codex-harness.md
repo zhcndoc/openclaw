@@ -304,7 +304,10 @@ nine child pages below. The anchors from the single-page version still resolve h
 - [OpenAI provider](/providers/openai)
 - [OpenAI Codex help](https://help.openai.com/en/collections/14937394-codex)
 - [Agent harness plugins](/plugins/sdk-agent-harness)
+- [Copilot SDK harness](/plugins/copilot)
 - [Plugin hooks](/plugins/hooks)
 - [Diagnostics export](/gateway/diagnostics)
 - [Status](/cli/status)
 - [Testing](/help/testing-live#live-codex-app-server-harness-smoke)
+- [ACP agents](/tools/acp-agents) — how ACP agents are configured and bound
+- [ACP agents — setup](/tools/acp-agents-setup) — configuring this harness as an ACP agent
