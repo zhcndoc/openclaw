@@ -31,6 +31,50 @@ on the supplied `node:sqlite` connection. Calling Kysely's asynchronous
 dialect can identify syntax coupling, but does not prove driver behavior,
 isolation, or database compatibility.
 
+Task and flow stores keep row codecs and SQLite operations in connection-bound
+kernels. Their existing facades retain global connection acquisition, cache and
+close behavior, and write transaction admission. Compound subagent and cron
+operations call the kernels on their already-admitted connection. Task status
+classification stays with the pure record types, so decoding does not load
+provider or plugin runtime ownership. Kernels and their transaction callbacks
+remain synchronous. The asynchronous task and flow read facade runs these read
+kernels in the shared-state worker.
+
+The host captures the database path, state environment, and current admission
+before awaited work. The shared worker owns its canonical connection and schema
+opening, with Gateway schema authority delegated by its live coordinator owner.
+Classified database errors survive transport, and canonical close joins worker
+operations and native cleanup. Cold registry restoration and runtime-configuration
+preparation still retain their existing main-thread behavior.
+
+The optional `tasks.async.managedFlows` creation and revision mutations use the
+same row kernels in the shared worker, with fresh owner, managed-mode, and
+revision checks inside write admission. The admitted operation retains its actor
+through the durable result and worker-backed projection reconciliation, including
+during orderly shutdown. Delayed results cannot overwrite newer synchronous
+writes or refreshes. Reconciliation failures leave the flow projection dirty and
+preserve the durable mutation result without replaying the write.
+
+Synchronous callers keep their existing transaction behavior. Native cancellation,
+child-task linkage, and compound task/subagent completion retain their existing
+owners until their complete persistence and lifecycle boundaries move together.
+
+SQLite worker transport preserves complete result values. Results within the
+64 MiB inline reply budget keep their existing reply path; larger results are
+serialized once and transferred in 8 MiB frames. The original operation retains
+its worker until the complete result and cleanup are acknowledged, including
+during shutdown. Framing does not paginate or repeat the database query, truncate
+results, or change request and queue budgets. Callers still materialize their
+complete result in memory.
+
+Worker execute inputs also use bounded frames when necessary. Queued commands
+retain their full serialized-byte charge, up to the existing 64 MiB aggregate
+budget. Larger commands require immediate admission to an idle worker and reserve
+a 32 MiB transport window through settlement. Otherwise, admission returns the
+existing overload error without queuing the value or executing any part of it.
+Only complete validated input reaches the backend. The transport queue remains
+bounded; an active complete input or result still requires its materialized memory.
+
 Acquire a connection once for an operation and pass that exact connection
 through its transactional helpers. SQLite write callbacks remain synchronous:
 finish asynchronous planning first, then reread authoritative rows after write
@@ -50,6 +94,14 @@ store, with existing revision, grant, and transaction semantics.
 MCP App pinning retains its existing source-interaction checks. A delayed adapter must
 revalidate that source authority at its actual write admission; checking view registration
 alone cannot replace the supported asynchronous interaction policy.
+
+Backup outcome recording and freshness reads expose asynchronous operations from
+the shared-state owner. Archive, SQLite snapshot, and Git backup commands await
+recording before reporting completion; a recording failure remains a warning and
+does not change the backup result. Status and Doctor await freshness before
+formatting it. These operations still execute synchronous SQLite internally;
+they retain the existing insertion-and-pruning transaction, 200-row limit, and
+non-creating freshness reads.
 
 Explicit session deletion, lifecycle-artifact cleanup, and history disk-budget
 eviction prepare their plans inside the session writer queue. When the parent database handle is cold, its
@@ -172,18 +224,30 @@ the review checkpoint below.
 
 ## Review checkpoint for material changes
 
-Before implementing a material SQLite or persistent-store change, open or link a maintainer discussion and record acceptance of the design. A schema-version bump is always material, but a change can be material even when the numeric version stays the same.
+An explicit maintainer repair-and-land request covers internal scheduling,
+database admission, and lifecycle implementation decisions. The implementer
+owns design selection, risk assessment, and verification. Describe the design
+and its evidence in the PR; do not require a separate approval for each
+implementation decision within that scope.
 
-Treat a change as material when it introduces or materially changes any of these:
+Before changing public contracts, schemas, durability, retention, or permissions,
+open or link a maintainer discussion and record acceptance of the design. A
+schema-version bump always needs acceptance, but keeping the numeric version
+unchanged does not exempt a change to these contracts:
 
-- a table, dedicated database, durable projection, cache, index, or other persisted representation
+- a table, dedicated database, durable projection, persisted cache, index, or other schema representation
 - which data is canonical, derived, reconstructible, retained, deleted, exported, or visible after restart
 - user-visible persistence semantics, including a second interpretation of existing durable data
-- migration, backfill, repair, downgrade, rollback, retention, compaction, or corruption recovery
-- transaction boundaries, writer ownership, concurrency, locking, publication fencing, or reader consistency
-- read, write, disk, startup, or maintenance cost enough to affect the store's operating model
+- upgrade, downgrade, rollback, retention, compaction, or corruption-recovery contracts
+- durability, reader consistency, or permission boundaries
 
-The discussion should identify the owning store and lifecycle, the problem being solved, alternatives that avoid new persistence, canonical versus derived data, schema and upgrade/downgrade behavior, retention and deletion behavior, concurrency and recovery invariants, performance/storage impact, rollback plan, and validation limits. The implementing PR must link the accepted decision.
+Internal transaction boundaries, writer admission, locking, and lifecycle
+mechanics are engineering decisions within an authorized repair when they
+preserve those contracts. Prove FIFO ordering, current authority after awaited
+work, integrity checks, publication fencing, and settlement of write-capable
+work. Assess performance and storage costs as part of that verification.
+
+When separate acceptance is required, the discussion should identify the owning store and lifecycle, the problem being solved, alternatives that avoid new persistence, canonical versus derived data, schema and upgrade/downgrade behavior, retention and deletion behavior, concurrency and recovery invariants, performance/storage impact, rollback plan, and validation limits. The implementing PR must link that accepted decision.
 
 The checkpoint normally does not apply to a read-only query that preserves existing semantics, a bounded query-plan improvement with no material write/disk tradeoff, routine maintenance of an existing approved schema, or tests, generated baselines, and documentation that only follow an already accepted design. A mechanical migration or repair still links the decision that approved its persistent contract.
 

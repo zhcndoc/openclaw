@@ -179,9 +179,11 @@ For the full key index and the other top-level config domains, see [Configuratio
 - Tool activity descriptions appear automatically when supplied by the acting agent; viewing tool calls does not request utility-model completions. The former `controlUi.toolTitles` setting is retired. Run `openclaw doctor --fix` to remove it from existing configs.
 - `controlUi.automaticallyFetchFavicons`: link favicons in Control UI chat. Default: `true`. The authenticated browser asks its same-origin Gateway for each hostname. The Gateway requests only `https://<hostname>/favicon.ico`, rejects IP literals and private/internal destinations, pins public DNS results, revalidates every redirect under the same strict SSRF policy, limits redirects/time/bytes/concurrency, validates the image, and returns a private-cacheable image blob. OpenClaw does not use Google or another favicon service for this flow. This discloses linked hostnames and the Gateway's network address to those destination sites. Set `false` to prevent the browser from requesting favicon routes and the Gateway from contacting link destinations.
 - `controlUi.dangerouslyAllowHostHeaderOriginFallback`: dangerous mode that enables Host-header origin fallback for deployments that intentionally rely on Host-header origin policy.
-- `cliAgents.enabled`: show the experimental **CLI agents** group in the Control UI new-session model picker. Default: `true`; set `false` to disable CLI agents and native CLI session creation. The group appears only when the Gateway advertises `sessions.catalog.list`, and it includes only catalog providers that support creating sessions. Selecting one opens the same catalog-target new-session flow used by the sidebar catalog action.
+- `cliAgents.enabled`: show the **CLI agents** group in the Control UI new-session model picker. Default: `true`; set `false` to disable CLI agents and native CLI session creation. The group appears only when the Gateway advertises `sessions.catalog.list`, and it includes only catalog providers that support creating sessions. Selecting one opens the same catalog-target new-session flow used by the sidebar catalog action.
 
-  Catalog providers can also advertise terminal-based session creation. The method is available only when Labs `cliAgents.enabled` is on, the Gateway terminal is available, and the selected provider exposes the capability. Callers supply `cwd`; create a fresh worktree first with `worktrees.create` when needed, because terminal start does not provision one.
+  Configure CLI agents in **Settings → Infrastructure → Gateway**.
+
+  Catalog providers can also advertise terminal-based session creation. The method is available only when `cliAgents.enabled` is on, the Gateway terminal is available, and the selected provider exposes the capability. Callers supply `cwd`; create a fresh worktree first with `worktrees.create` when needed, because terminal start does not provision one.
 
 - `terminal.enabled`: the admin-scoped operator terminal. Default: `true`; set `false` to opt out. The terminal starts a host PTY in the selected agent workspace, inherits the Gateway process environment, and is refused for agents with `sandbox.mode: "all"`. Changes hot-apply: disabling closes attached, detached, and conversation-owned sessions and cancels pending opens; re-enabling allows fresh sessions. Reload open Control UI pages to pick up the updated content security policy.
 - `terminal.shell`: optional shell executable. When unset, OpenClaw uses `$SHELL` on Unix and `%ComSpec%` on Windows. Changes hot-apply to newly opened terminals; existing terminals keep running their original shell.
@@ -266,7 +268,27 @@ See [Multiple Gateways](/gateway/multiple-gateways).
 - `keyPath`: filesystem path to the TLS private key file; keep permission-restricted.
 - `caPath`: optional CA bundle path for client verification or custom trust chains.
 
+With automatic reload enabled, the Gateway watches the certificate, key, and CA
+files at their accepted paths. Replacing their contents renews all Gateway HTTPS
+listeners without disconnecting existing connections. The complete material is
+validated first; a missing, unreadable, or mismatched pair keeps the previous
+certificate serving and logs the failure. Renewal never generates missing files.
+Background observation follows atomic symlink and projected-directory replacements too.
+Changing TLS configuration or file paths still requires a Gateway restart.
+
+`gateway.reload.mode: "off"` pauses certificate renewal too. Re-enabling reload
+checks the current files, including renewals made while paused. Discovery and new
+pairing payloads use the served fingerprint. Saved remote certificate pins remain
+operator-controlled: update them before reconnecting with a renewed certificate.
+
 Client commands such as `triage`, `gateway status`, and `gateway probe` only read the public certificate to determine a local TLS pin. They never generate or repair TLS files and do not need the server private key or CA bundle. Without `certPath`, they inspect `gateway/tls/gateway-cert.pem` under the state directory. A missing or unreadable certificate supplies no implicit pin; normal connection trust checks still apply. Start the Gateway to generate a missing pair, or provide the configured certificate files before connecting.
+
+Long-lived local health probes remember the last verified certificate for their
+endpoint, preserving health checks while replacement files are incomplete or
+reload is paused. They adopt a replacement only after verifying a connection.
+A new probe, or one that missed an intermediate renewal, cannot trust a serving
+certificate that is no longer in the configured file and was never verified.
+Complete or re-enable renewal so the listener and configured certificate agree.
 
 ### `gateway.reload`
 

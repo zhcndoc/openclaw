@@ -96,8 +96,7 @@ SQLite snapshots, Git backups, and support exports. Selecting a containing or
 nested workspace does not override this rule. Selecting a capture file as config
 or as a database backup source refuses the backup. Other states' captures are
 recognized by the exact sibling layout: `<owner>/` beside
-`<owner>.update-captures/`, with an existing owner directory. Canonical path
-aliases receive the same protection. Unrelated similarly named workspace
+`<owner>.update-captures/`, with an existing owner directory, including a resolved directory link. Unrelated similarly named workspace
 directories remain included; a suffix alone does not establish ownership.
 
 Marked private directories remain excluded after their owner is removed or
@@ -105,10 +104,18 @@ renamed, or the marked directory is moved or copied. Keep the marker with the
 whole directory. Files copied out without it are not recognized by this rule.
 The fixed `.openclaw-private-update-capture` file contains exactly
 `openclaw-private-update-capture-v1` followed by a newline. Export checks inspect
-only selected paths and their ancestors, including canonical aliases. They do
-not parse workspace manifests or scan for other state roots. A malformed or
-unreadable marker refuses export of that selection; a support bundle reports
-the refusal without including that input.
+each path component with `lstat` and resolve symbolic links with cycle and depth
+limits. A resolved target's real ancestors receive the same marker checks as
+the selected path. Links to marked directories are omitted; malformed or
+unreadable real markers refuse export. Loops and dangling links have no resolved
+target and remain link entries, unless a real selected ancestor excludes them.
+Ordinary unmarked links keep their original target text without copying target
+contents through the link.
+
+Explicit content exports, including SQLite snapshots, check the selected archive
+path and actual content source through the same classifier. A support bundle
+reports refused inputs without including their contents. These checks do not
+parse workspace manifests or scan for other state roots.
 
 The marker is an exclusion instruction, not proof of artifact ownership or
 permission to reopen, adopt, or delete it. Producers must durably write it before
@@ -368,7 +375,9 @@ The state directory's `plugin-skills/` root is a generated, OpenClaw-owned symli
 
 Agent-scoped temporary trees under `agents/<agentId>/agent/**/{tmp,.tmp}/` are also omitted and reported as regenerable. This includes temporary files directly below an agent directory and temporary trees inside agent runtime homes; durable sibling directories remain included. An explicitly configured config file, credentials directory, or workspace nested below an omitted temporary root remains included.
 
-Symbolic links are archived as link metadata and are never followed. Relative links are retained only when both the link and its lexical target remain within backup assets declared in `manifest.json`; links between declared assets and dangling links within an asset are allowed. An absolute link whose real target is contained by a declared asset, such as a Nix-managed config or credentials link, is rewritten to a portable relative archive link. Other absolute links, links containing backslashes, and links escaping the archive root or every declared asset are rejected during both creation and verification.
+Symbolic links are archived as link entries with their original target text, including absolute and dangling targets. Creation never follows a link to copy its target. Targets outside the state directory, including separately backed-up config, credentials, or workspace targets, are recorded in the manifest and JSON result's `externalSymbolicLinks` list and reported in the text summary. Restore recreates the links after extracting the file content; it never writes through a restored link. Verification rejects archive entries nested beneath a symbolic link.
+
+Absolute links retain their original location after restore, including links to separately backed-up config or credentials. They are no longer rewritten to relative targets. Review these links before activating a restored tree on another host or at another path. Older releases, including v2026.9.4, reject archives with absolute or escaping link targets; use the current release to restore those archives. Existing archives remain readable.
 
 Installer-managed and rebuildable runtime roots under the state directory are
 also skipped: `dev/`, `git/`, `npm/`, legacy `npm-runtime/`, `tmp/`, and

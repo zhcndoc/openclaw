@@ -42,7 +42,7 @@ Its disk write restores environment references using the original read snapshot.
 
 Internal OpenClaw runtime code follows the same direction: load config once at the CLI, gateway, or process boundary, then pass that value through. Successful mutation writes refresh the process runtime snapshot and advance its internal revision; long-lived caches should key off the runtime-owned cache key instead of serializing config locally. Long-lived runtime modules have a zero-tolerance scanner for ambient `loadConfig()` calls; use a passed `cfg`, a request `context.getRuntimeConfig()`, or `getRuntimeConfig()` at an explicit process boundary.
 
-Provider and channel execution paths must use the active runtime config snapshot, not a file snapshot returned for config readback or editing. File snapshots preserve source values such as SecretRef markers for UI and writes; provider callbacks need the resolved runtime view. When a helper may be called with either the active source snapshot or the active runtime snapshot, route through `selectApplicableRuntimeConfig()` before reading credentials.
+Provider and channel execution paths must use the active runtime config snapshot, not a file snapshot returned for config readback or editing. File snapshots preserve source values such as SecretRef markers for UI and writes; provider callbacks need the resolved runtime view. When a helper may be called with either the active source snapshot or the active runtime snapshot, route through `selectApplicableRuntimeConfig()` before reading credentials. The selector replaces a distinct supplied config only when it matches the runtime snapshot's paired source, including resolution provenance. A pinned snapshot without that source cannot override an explicit config, including a command-scoped config whose secrets have already been resolved. With no supplied config, the selector returns the runtime snapshot.
 
 Retained channel monitors can bind `createRuntimeConfigReader(cfg)` from
 `openclaw/plugin-sdk/runtime-config-snapshot` once at startup. The reader follows
@@ -85,6 +85,11 @@ Native command probes should use `runCommandWithTimeout` from
 `killProcessTree: true`. Await its result so timeout or cancellation cleanup finishes
 before returning. For commands whose output is always UTF-8, such as JSON status
 probes, use `runUtf8CommandWithTimeout` from the same subpath.
+
+When launching an isolated Gateway child that your plugin owns, remove
+`SUPERVISOR_HINT_ENV_VARS` from its environment after applying caller overrides.
+This list is exported from `openclaw/plugin-sdk/process-runtime`; inherited parent
+service markers would otherwise assign restart ownership to that parent's supervisor.
 
 Use `splitCommandArgs(raw)` from the same subpath to group quoted process
 arguments. Backslashes and `#` stay literal; there is no shell expansion.
