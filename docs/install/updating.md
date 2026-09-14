@@ -191,6 +191,17 @@ fallback does not undo an earlier migration; if the database is already newer
 than the restored package, install a compatible target and finish Doctor before
 starting the Gateway.
 
+For a Git checkout updated by 2026.9.2, a Doctor refusal before state writes
+prints source recovery commands when the checkout's reflog identifies the
+previous commit unambiguously. Wait for the updater to exit, then follow the
+printed checkout, `pnpm install`, `pnpm build`, and service-start guidance from
+an independent shell. If the previous commit cannot be verified, Doctor points
+you to the reflog instead. A refusal after state repairs keeps the migration
+owner's instructions: restoring source alone does not restore state.
+These diagnostics also enter the warning log, subject to normal logging settings
+and rotation. After resolving the refusal cause, retry the update. Once the
+upgrade succeeds, subsequent updates validate the candidate before activation.
+
 ### From chat
 
 Ask the agent to update OpenClaw, or send `/update` from Discord or another
@@ -288,6 +299,14 @@ can also supersede a single stale identityless row. Recent rows and recorded
 live drivers are protected. Identityless rows outside the legacy-expiry shape
 require explicit recovery; the Control UI's configuration-write suspension clears
 after reconciliation.
+
+Repair started within the owning update can continue with a matching inherited
+run ID and live process identity; the run records that continuation. Repair
+still refuses an unrelated live or stalled updater. The error identifies its
+run, phase, driver PID, host, start and last-activity ages, and observed liveness.
+Wait for that update to finish, or stop the named driver on its host and rerun
+repair after it exits. See [Update repair](/cli/update/repair-and-recovery#update-repair)
+for maintenance and recovery behavior.
 
 OpenClaw 2026.9.2 does not reject a new CLI update because an older running row
 exists: its [admission path](https://github.com/openclaw/openclaw/blob/v2026.9.2/src/cli/update-cli/update-command-run.ts#L77)

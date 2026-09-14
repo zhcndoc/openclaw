@@ -299,6 +299,16 @@ The accepted spawn receipt describes this path: collect the result with
 `agents_wait`, or await `agents.run()` in OpenClaw Code Mode. Do not use
 `sessions_yield` to wait for collector children. They do not send completion notifications.
 
+How far that holds depends on where the collector turn is built. Where collector
+context reaches the tool factory, such as the embedded runner, the turn is not
+offered `sessions_yield`, and if an override ever reaches the tool, it returns an
+error explaining that collector results are collected explicitly. Other paths do
+not pass that context yet: a CLI-backed collector turn through the Gateway tool
+resolver can still be offered the tool and receive a successful `yielded` result.
+In every case a collector that yields is settled at its own terminal instead of
+pausing, so the turn finishes and its collected result is recorded for the
+waiter.
+
 The target agent resolves in this order:
 
 1. `agentId` on the spawn or `agents.run()` call.
@@ -406,6 +416,13 @@ Delete-mode collector children can clean up their child sessions immediately aft
 completion while retaining their waitable results. Those collector records remain
 available until the group is archived after every member reaches its retention
 deadline. Retained child sessions are archived as a batch at that point.
+
+Resetting a child session durably revokes completed runs' cleanup before changing
+that session, so a delayed cleanup retry cannot delete its replacement. Reset fails
+if completion is still settling or revocation cannot be saved. If reset fails or
+the Gateway stops after revocation is saved, the original session may remain with
+that cleanup disabled. Collector results and task outcomes keep their normal
+retention, and active reset continuations keep running.
 
 ## Stop a Swarm
 
