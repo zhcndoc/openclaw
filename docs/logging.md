@@ -296,6 +296,60 @@ OpenTelemetry log export is enabled, using the same bounded attributes as file
 logs. Configure `diagnostics.otel.logsExporter` to choose OTLP, stdout JSONL, or
 both sinks.
 
+### Embedded attempt preparation
+
+Embedded `prep stages` summaries separate two tool-preparation intervals:
+
+- `bundle-tools`: awaited MCP/LSP preparation, tool normalization and policy
+  projection, measured after preparation admission.
+- `tool-catalog`: synchronous catalog construction, including Code Mode or tool
+  search when enabled, schema projection and tool diagnostics.
+
+`tool-preparation` is an inclusive checkpoint from the preceding bootstrap
+checkpoint. It includes both intervals, preparation admission waits and the
+remaining bootstrap work. These entries overlap: do not sum them or interpret
+them as CPU time. Later permission refreshes do not append initial-preparation
+entries. The conditional Code Mode and tool-search catalog messages still report
+their original activation/compaction events.
+
+Older summaries charged bundle waiting to `code-mode` or `tool-search` and used
+`bundle-tools` for a later bookkeeping checkpoint. Those names do not provide
+the same timing boundaries as the corrected spans.
+
+The summary keeps its existing identity fields and warning thresholds: ten
+seconds total or five seconds in any recorded stage; faster summaries use trace
+logging. A missing summary does not prove preparation completed without delay.
+
+### Session catalog provider waits
+
+With process diagnostics enabled, the `gateway/session-catalog` logger records
+`slow session catalog provider list` for attempts that settle after at least one second. It separates
+`admissionWaitMs`, `providerElapsedMs`, and `completionDelayMs`: waiting for
+catalog provider admission, elapsed time inside the provider call, and the
+continuation after settlement and queue release. These are elapsed intervals,
+not CPU measurements. The Gateway's earlier operator-start queue is separate.
+
+`admitted` and `providerInvoked` distinguish an attempt that never entered the
+queue's active slot from one that called the provider. Unreached intervals are
+omitted. `outcome` reports the attempt's resolution or rejection;
+`signalAborted` reports the signal independently and does not identify an error's
+cause or prove that native work stopped. Provider slots remain owned until their
+returned promises settle, including after cancellation.
+
+`providerIdHash` hashes provider IDs of at most 256 UTF-16 units; longer IDs omit
+the field. It supports correlation, not anonymization or authorization. Host
+summaries count only returned gateway/node kinds, connection flags and error
+presence, inspecting at most 512 hosts. `returnedHostCount` reports the full
+array length and `hostCountsComplete=false` marks partial counts. No session rows,
+host IDs, provider labels, search text or error messages are included.
+
+Each summary describes an underlying provider attempt. Cached and in-flight
+followers can receive several RPC responses from that one attempt. Later
+`waitUntil` host publications have a separate lifetime and are not included in
+the provider duration or returned-host counts. The log does not prove client
+receipt, identify which native operation was slow, or cover attempts that never
+settle. Missing records do not establish that there were no stalls.
+
 ### Lifecycle queue waits
 
 When process diagnostics are enabled, the `sessions/lifecycle` logger emits
@@ -483,6 +537,10 @@ Hot transcript reads identify their purpose in `operation`: `session transcript
 distinguish readers without retaining session IDs or transcript content. Nested
 reads remain part of the outer transaction's timing; older warnings use the
 generic `session transcript hot read` label.
+
+`session branch summaries read` covers the snapshot read and branch-summary
+computation. Stored sessions perform this work in a background Worker; incognito
+sessions use their process-held database. Cache hits do not perform this scan.
 
 Immediate `BEGIN` warnings also include `beginAdmission`: `nativeAttempts` counts
 actual native `BEGIN IMMEDIATE` calls and `nativeMs` measures those calls;

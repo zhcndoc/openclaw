@@ -315,5 +315,14 @@ different npm prefix alone does not isolate operator state.
   </Accordion>
   <Accordion title="Disk-space preflight">
     Before package updates and explicit plugin installs, OpenClaw tries a best-effort disk-space check for the target volume. Low space produces a warning with the checked path, but does not block the update because filesystem quotas, snapshots, and network volumes can change after the check. The actual package-manager install and post-install verification remain authoritative.
+
+    For package updates, the check runs before registry lookups and database-schema validation. Managed update runs retain the warning in update history so it also appears in the Control UI.
+
+    Before staging a replacement, a read-only snapshot check measures the known SQLite database families, including WAL, SHM, and journal files. It reports each family's bytes and the existing snapshot budget: twice the total family bytes, three times the largest family, and 64 MiB for metadata. Plugin copies and registered external databases remain unknown until the complete check after staging.
+
+    Snapshot space is checked at the existing destinations: `TMPDIR`, the capture directory beside the state directory, and the system temporary directory. An update refuses before staging only when every destination has known free space below the snapshot owner's requirement, because its private state copy cannot be taken. A usable alternative, unknown capacity, or incomplete measurement remains a warning with the available numbers. Package and Git targets that are already current need no candidate snapshot. The updater preserves a config copy, not a full-state backup.
+
+    This check runs in the installed updater; an already-installed 2026.9.3 updater retains its prior behavior for its own first upgrade hop.
+
   </Accordion>
 </AccordionGroup>

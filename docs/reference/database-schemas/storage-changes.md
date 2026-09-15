@@ -24,6 +24,25 @@ and publishes the result. Avoid exposing a generic SQL callback to application
 code or adding an asynchronous wrapper around an existing asynchronous facade.
 The plugin KV API already has asynchronous methods over its SQLite owner.
 
+Asynchronous mutable cron-store loads run in the shared-state worker, including
+the existing retired-job deletion and runtime-authority repairs. The connection-bound
+load kernel preserves their separate transactions, partition keys, and fingerprints.
+Completed repair facts invalidate host scheduler snapshots before the load settles,
+including when a later load stage fails. A snapshot retains the host revision captured
+before loading; intervening writes leave it stale for the next load. An unavailable
+worker result or a failed load without a reported repair also invalidates the cached
+revision without replaying the operation. Error causes used by Doctor diagnostics
+cross the same closed-field error graph, without changing ordinary broker errors.
+Cron saves, their transaction hooks, synchronous diagnostic reads, and read-only
+inspection retain their current owners and execution paths.
+
+iMessage outbound receipt recovery reads the external Messages SQLite database
+through the shared worker broker. Its plugin owns the read-only GUID queries;
+each recovery operation retains its read-only connection through polling and
+joins worker cleanup before the send publishes its receipt. Numeric message IDs and the latest matching sent message keep their existing recovery
+rules, including the five-second polling deadline. This does not migrate
+iMessage's startup watermark or conversation-binding queries.
+
 Use Kysely for ordinary queries and mutations. The current
 `getNodeSqliteKysely` facade compiles queries; `executeSqliteQuerySync` runs them
 on the supplied `node:sqlite` connection. Calling Kysely's asynchronous
@@ -70,6 +89,13 @@ classification from one read-only SQLite snapshot, then prepare text and
 provenance off the Gateway thread. The caller carries its current exact-secret
 redaction snapshot and rejects results prepared against an obsolete registry.
 Reset-recall metadata crosses the worker boundary with the prepared content.
+If secret registration invalidates both preparation attempts, the export rejects
+for retry instead of reading SQLite on the Gateway thread. Failed index rebuilds
+preserve the published index and retained retry state.
+Chunk preparation from captured session text uses the existing local workspace
+queue without a durable write lease. File and multimodal preparation retain that
+lease, as do all cache, index, and publication mutations. Those mutations recheck
+current ownership and session tombstones after awaited preparation.
 Incognito databases, archive materialization, and caller-owned transcript
 observers retain their existing local execution. Index publication and
 restoration remain with their existing database and lifecycle owners.
@@ -77,6 +103,16 @@ Worker admission and transport failures preserve the published index and its
 retry state. The existing chunking revision triggers a one-time rebuild to repair
 previously indexed reset boundaries. Rebuilds reuse cached embeddings when
 available and retain the existing atomic publication path.
+
+Branch listing uses the same worker entrypoint with its own bounded background
+queue, separate from history and model-context reads. The worker reads one
+read-only SQLite snapshot and computes branch summaries; only compact results
+return to the Gateway. Both isolates reuse bounded compact caches only while the
+physical database identity and transcript watermark match. Queued worker reads
+validate a fresh snapshot before reuse, so concurrent requests do not repeat an
+unchanged scan. The host restores cold transcripts and rejects results after
+database or session ownership changes. Incognito branches use their process-held
+database locally.
 
 The optional `tasks.async.managedFlows` creation and revision mutations use the
 same row kernels in the shared worker, with fresh owner, managed-mode, and
@@ -89,6 +125,30 @@ preserve the durable mutation result without replaying the write.
 Synchronous callers keep their existing transaction behavior. Native cancellation,
 child-task linkage, and compound task/subagent completion retain their existing
 owners until their complete persistence and lifecycle boundaries move together.
+
+Existing asynchronous config observation, recovery health records, and config
+audit appends run their SQLite work on this same actor. Observations capture a
+short-lived scope before awaited work; newer observations of the same database
+and config path supersede older scopes. Scopes end on return, and synchronous
+write invalidation waits for the outer transaction to commit. The worker checks
+each operation's scope at dispatch; a superseded read stops before logging or
+file work. Health writes carry the exact persisted facts from their original read
+and compare them again inside the
+write transaction. They merge only the selected path's changed fields when those
+facts still match; a failed read or stale observation cannot overwrite newer
+health state. Other paths and untouched JSON fields remain unchanged. Audit
+appends retain the same redaction, insertion ordering, scope limits, and atomic
+insertion-and-pruning transaction. Promotion and recovery return true when their
+file operation commits, even if newer health metadata supersedes their conditional
+update. Ordinary post-file metadata retirement uses the existing best-effort
+failure policy; ownership and maintenance refusals still propagate. Doctor uses
+the committed result to reread the changed file. Explicit prepared
+recovery re-runs the same planner at apply and rejects changed or no-longer-eligible
+candidates before file work. Unavailable health metadata retains the existing
+backup-based planning fallback. Health metadata remains best-effort; the file and
+health row are not one atomic transaction. Synchronous config readers and writers
+keep their existing APIs; config parsing, validation, and plugin preparation retain
+their own execution paths.
 
 SQLite worker transport preserves complete result values. Results within the
 64 MiB inline reply budget keep their existing reply path; larger results are
@@ -126,6 +186,15 @@ retain that context; SDK reconnect requests capture it before waiting for Gatewa
 admission or loading the delivery runtime. A recovery root applies to an existing
 queue entry, while fresh sends use their selected default root. This context stays
 internal and is not added to durable payloads or plugin callback inputs.
+
+Standalone session-delivery queue operations run in the shared-state worker.
+Producers, recovery, generated-media preparation, and the retry scheduler carry
+one captured database context through enqueue, retry bookkeeping, and settlement.
+The scheduler stops admission and joins its reads and active drains before the
+database closes. Queue payloads retain their JSON serialization boundary before
+worker transport. Compound task/subagent admission and settlement retain their
+existing synchronous transaction owner; the outbound queue and its media custody
+operations remain separate migration work.
 
 Conversation sends, turns, and queue completion retain their logical agent and
 physical store while waiting for agent write admission. Retry validation reads
@@ -169,6 +238,10 @@ Artifact cleanup resolves session paths only when its file inventory contains
 candidate transcript, compaction checkpoint, or trajectory files. Prompt-reference
 projection runs only when prompt blobs exist. Age, exclusion, and containment
 checks still govern every removal.
+
+Automatic session-entry maintenance reads its protection-key inventory once per
+plan, only when age or cap candidates exist, within the same write transaction.
+Retention rules and active-work, ancestor, and lifecycle protection remain unchanged.
 
 After archive preparation, session deletion rereads its target before admitting
 the final reclamation worker. A missing or changed target returns the existing

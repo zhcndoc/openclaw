@@ -38,6 +38,7 @@ postures and maintenance modes documented on the other pages.
 - State integrity checks detect orphan transcript files in the sessions directory. Archiving them as `.deleted.<timestamp>` requires interactive confirmation; `--fix`, `--yes`, and headless runs leave them in place.
 - Doctor scans historical `~/.openclaw/cron/jobs.json` stores and previously configured legacy store locations for old cron job shapes, imports jobs and quarantine records into SQLite, and archives the migrated JSON files.
 - Doctor reports cron jobs with an explicit `payload.model` override, including provider-namespace counts and mismatches against `agents.defaults.model`, so scheduled jobs that do not inherit the default model are visible during auth or billing investigations.
+- Doctor reports automatically captured job tool lists that contain no native capabilities when the configured backend supports native-tool capture. Older captures could omit native tools; deliberately restricted jobs can be left as is. Doctor never widens these lists, including with `--fix`. To change a list, use `openclaw cron edit <id> --tools "<complete list>" --json` from an authorized session that holds the tools, including every tool the job should retain.
 - Doctor reports cron jobs still marked in-flight (`state.runningAtMs`), which can make `openclaw cron list` show them as `running`. This check is read-only: if no Gateway is currently executing a marked job, the next cron service startup records the interrupted run and clears the marker.
 
 ## Tool and channel policy
@@ -67,6 +68,7 @@ postures and maintenance modes documented on the other pages.
 - Doctor warns when no command owner is configured. The command owner is the human operator account allowed to run owner-only commands and approve dangerous actions. DM pairing only lets someone talk to the bot; if you approved a sender before first-owner bootstrap existed, set `commands.ownerAllowFrom` explicitly.
 - Doctor reports an info note when Codex-mode agents are configured and personal Codex CLI assets exist in the operator's Codex home. Local Codex app-server launches use isolated per-agent homes; install the Codex plugin first if needed, then use `openclaw migrate plan codex` to inventory assets that should be promoted deliberately.
 - Doctor warns when skills allowed for the default agent are unavailable in the current runtime environment (missing bins, env vars, config, or OS requirements). `doctor --fix` can disable those unavailable skills with `skills.entries.<skill>.enabled=false` and lists the changes without asking you to repeat the repair. Updater-driven repair leaves optional skill enablement unchanged. Install/configure the missing requirement instead if you want to keep the skill active.
+- If an older Doctor run disabled a working `sag` skill, re-enable it with `openclaw config set skills.entries.sag.enabled true`.
 
 ## Sandbox
 

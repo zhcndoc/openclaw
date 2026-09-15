@@ -82,7 +82,15 @@ Update schema inspection and candidate snapshots use this same allowance as an i
 
 The synchronous byte-neutral snapshot strategy is for small or quiescent databases. Inspections of a live agent database, including memory-core readiness, use the asynchronous online-backup worker.
 
-Full startup readiness runs the agent integrity and foreign-key scan against its private snapshot in the existing integrity child. It waits for native close before checking schema compatibility and releasing the snapshot. The source database and WAL remain unchanged. Admission before the migration lease and the fresh check before migration writes remain separate.
+Full startup readiness checks agent ownership, integrity, foreign keys, and schema
+in one fresh read-only transaction in a disposable child. Complete WAL families
+and rollback-mode databases without journals do not need a full private copy.
+Empty files, incomplete WAL families, rollback recovery, and source-exclusion or
+canonical-mutation scopes retain private snapshot inspection. The parent waits
+for native close before accepting the result or releasing its scope. The source
+database and WAL remain unchanged; native WAL readers may update SHM read marks.
+Admission before the migration lease and the fresh check before migration writes
+remain separate, with no cached readiness result shared between them.
 
 Integrity-child timeout and incomplete-exit errors include `lastObservedPhase`:
 
@@ -95,6 +103,20 @@ Integrity-child timeout and incomplete-exit errors include `lastObservedPhase`:
 | `result-received` | The parent received a final result and is waiting for child closure.                      |
 
 These phases describe messages the parent received, not the child's exact current location or native CPU time. `checking` does not distinguish the integrity check from the foreign-key check. A final result can report failure; phase messages never establish successful validation or release ownership.
+
+Slow asynchronous agent-database opens include optional wall-time measurements:
+
+| Field                       | Measured interval                                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `integrityWorkerCheckMs`    | Full integrity and foreign-key checks inside the child, excluding opening and closing the connection.                                 |
+| `integrityWorkerLifetimeMs` | Parent-observed time from forking the child through its close event, including startup, IPC, cleanup and event delivery.              |
+| `integrityOutsideWorkerMs`  | The integrity gate's remaining time outside that child lifetime, including parent preparation, scheduling and admission revalidation. |
+
+Missing measurements stay absent, including a child check killed before reporting
+its duration. These fields are distinct from the calling driver's synchronous
+`integrityCheckSyncMs` and `integrityOutsideCheckMs`. None measures CPU time or
+isolates storage waiting. The parent still waits for child closure and revalidates
+the database and current authority before admission continues.
 
 Startup errors containing `state lease heartbeat did not become ready` include `phase=startup`, the settlement trigger (`timeout` or `message`), and the status observed before the parent marks failure. `status=starting` distinguishes readiness still pending from `status=lost`, where loss was already recorded. `elapsedMs` measures monotonic time since heartbeat startup began; `timeoutMs` is the startup wait budget, capped at five seconds or the remaining initial lease lifetime. These fields do not establish why startup stalled or ownership was lost.
 
