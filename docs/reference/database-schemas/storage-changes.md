@@ -33,7 +33,18 @@ before loading; intervening writes leave it stale for the next load. An unavaila
 worker result or a failed load without a reported repair also invalidates the cached
 revision without replaying the operation. Error causes used by Doctor diagnostics
 cross the same closed-field error graph, without changing ordinary broker errors.
-Cron saves, their transaction hooks, synchronous diagnostic reads, and read-only
+Unguarded cron saves without transaction hooks also execute in that worker, using the same
+connection-bound kernels as native hook-bearing transactions. Full replacement,
+runtime-only updates, quarantine changes, and changed-row merges retain their
+existing transaction boundaries. Save results publish committed or uncertain
+invalidation before settlement. Internal service callers receive an operation-bound
+revision; intervening host writes leave the returned snapshot conservatively stale.
+Evicted revision entries fall back to the existing global publication sequence,
+and stale save receipts use a negative marker that cannot match a current revision.
+Public save signatures and return values are unchanged. Service mutations with
+commit guards, one-use authority capture, or caller preconditions retain their
+synchronous call-through to the native kernels; their worker admission remains
+separate work. Receipt-coupled transaction hooks, Doctor metadata callbacks, synchronous diagnostic reads, and read-only
 inspection retain their current owners and execution paths.
 
 iMessage outbound receipt recovery reads the external Messages SQLite database
@@ -42,6 +53,15 @@ each recovery operation retains its read-only connection through polling and
 joins worker cleanup before the send publishes its receipt. Numeric message IDs and the latest matching sent message keep their existing recovery
 rules, including the five-second polling deadline. This does not migrate
 iMessage's startup watermark or conversation-binding queries.
+
+Memory-host event appends and bounded journal reads execute on the shared state
+worker. The plugin-state owner allocates the sequence, rereads the cursor and
+retained tail, writes both rows, and applies retention in one synchronous write
+transaction on that worker. Caller event fields are serialized before admission;
+the owner adds the sequence while preserving the existing stored JSON and keys.
+Reads use the existing-only worker path and do not create a missing database.
+Public event helpers and exports await durable completion. Cursor eviction,
+namespace-wide append ordering, sibling row budgets, and rollback remain unchanged.
 
 Use Kysely for ordinary queries and mutations. The current
 `getNodeSqliteKysely` facade compiles queries; `executeSqliteQuerySync` runs them
@@ -173,6 +193,26 @@ admission. Publish live session changes and other dependent effects only after
 the durable write succeeds. A future network-backed owner must preserve that
 ordering while awaiting its driver.
 
+Read-only callbacks made while a cached agent writer holds a transaction use a
+separate read-only companion connection. Each call rereads committed rows and
+checks the current schema, agent owner, and physical file identity. The companion
+retains prepared statements and connection-local canonical-key validation, never
+an authorization result or an open read transaction. Canonical validation checks
+the committed main-key policy before reuse. The companion retires with its writer's
+native close, disposal, or replacement, including eviction and update cleanup.
+Cold readers outside the history worker and extension-capable readers remain
+one-shot; incognito reads retain their existing process-local owner.
+
+The history worker retains one read-only connection across requests, rechecking
+schema, agent owner, and physical file identity before reuse. Every request keeps
+its own snapshot and current admission checks. Switching databases closes the
+previous connection. The parent retires the worker after 30 minutes without
+pending history reads; database cleanup revokes admission and joins native worker
+exit before closing the database. Cold restoration carries the request's same
+authority through queue waits and its native commit, so a revoked read cannot
+restore rows after database cleanup. These lifetimes change no schema or
+migration requirement.
+
 Correlated conversation replies retain their original store and state environment
 while waiting for write admission. Capture rechecks the live reply claim and
 session lifecycle before recording a replayable reply. Cancellation or a changed
@@ -193,8 +233,12 @@ one captured database context through enqueue, retry bookkeeping, and settlement
 The scheduler stops admission and joins its reads and active drains before the
 database closes. Queue payloads retain their JSON serialization boundary before
 worker transport. Compound task/subagent admission and settlement retain their
-existing synchronous transaction owner; the outbound queue and its media custody
-operations remain separate migration work.
+existing synchronous transaction owner. Outbound dead-letter health counts use
+the existing grouped-count kernel in the shared-state worker. Health collection
+captures its original worker admission before awaiting configuration and other
+health work; cached health replies await the count while retaining cached ingress
+pressure. Other outbound queue operations and media custody remain separate
+migration work.
 
 Conversation sends, turns, and queue completion retain their logical agent and
 physical store while waiting for agent write admission. Retry validation reads
@@ -220,9 +264,10 @@ Backup outcome recording and freshness reads expose asynchronous operations from
 the shared-state owner. Archive, SQLite snapshot, and Git backup commands await
 recording before reporting completion; a recording failure remains a warning and
 does not change the backup result. Status and Doctor await freshness before
-formatting it. These operations still execute synchronous SQLite internally;
-they retain the existing insertion-and-pruning transaction, 200-row limit, and
-non-creating freshness reads.
+formatting it. Outcome recording executes its insertion-and-pruning transaction
+in the shared-state worker, preserving the 200-row limit and leaving absent
+databases absent. Freshness reads still execute synchronous SQLite internally
+and remain non-creating.
 
 Explicit session deletion, lifecycle-artifact cleanup, and history disk-budget
 eviction prepare their plans inside the session writer queue. When the parent database handle is cold, its
