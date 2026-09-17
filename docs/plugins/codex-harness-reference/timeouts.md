@@ -12,6 +12,9 @@ The timeout budgets around a Codex turn, and how OpenClaw settles a completed tu
 
 ## Timeouts
 
+Client startup and app-server control-request budgets measure elapsed time, so
+system-clock adjustments do not shorten or extend them.
+
 OpenClaw-owned dynamic tool calls are bounded independently from
 `appServer.requestTimeoutMs`. Ordinary Codex `item/tool/call` requests use the
 first available timeout in this order:
@@ -63,6 +66,13 @@ request on the same open connection when the catalog source and query still
 match. The earlier caller stays failed; the new caller keeps its own request
 budget and current authorization checks. Cached stale pages remain available
 while a refresh is pending. A reply with no current waiter is discarded.
+
+After two consecutive local catalog source failures, new page attempts use
+bounded backoff before retrying. The delay starts at five seconds and doubles
+to at most sixty seconds; successful recovery or a configuration reload clears
+it. Existing pending page reads keep their result-sharing lifetime, and cached
+stale pages remain available. Backoff does not cancel native work or change the
+individual request budget.
 
 Connection closure fails current waiters, and a later independent poll can
 reconnect normally. Neither a local timeout nor a lost connection proves that
