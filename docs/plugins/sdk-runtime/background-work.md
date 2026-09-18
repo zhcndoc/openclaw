@@ -183,7 +183,9 @@ Start agent work in the background: hook-dispatched turns for external content, 
     Lists sort newest first. Equal task timestamps sort by task ID descending;
     equal flow timestamps sort by flow ID ascending. Run-ID lookup retains its
     runtime preference and oldest-first selection, then uses task ID ascending
-    for ties. Legacy synchronous methods
+    for ties. When an ACP run ID is reused, lookup excludes superseded backing
+    generations before applying that ordering. Backing details stay internal and
+    are not included in task views. Legacy synchronous methods
     keep their existing insertion-order tie behavior.
 
     The synchronous read methods and corresponding managed-flow state mutations
@@ -272,3 +274,11 @@ for remote or unidentified owners, including Copilot, whose SDK does not expose
 its process identity. The SDK never substitutes the Gateway PID. Records without
 an identity retain the existing grace period, including records written before
 execution ownership was available.
+
+Bundled harnesses delivering a completion can pass
+`isSourceSessionAdmissionAllowed` to `deliverAgentHarnessTaskCompletion(...)`.
+Keep this callback bound to the current parent and task ownership. The delivery
+owner rechecks it after asynchronous routing and immediately before a new Gateway
+turn or message injection is accepted. Work already accepted keeps its own
+lifecycle and can finish after the source retires. Use `signal` when the caller
+also intends to cancel accepted work.

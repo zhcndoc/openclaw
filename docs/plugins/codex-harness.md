@@ -16,8 +16,10 @@ media delivery, and the visible transcript mirror.
 
 The native session catalog requests at most 64 threads per page and shortens
 previews to 500 characters before delivering them to catalog consumers. An unfiltered
-first list fetches one native page; older pages load on demand. Title searches retain
-their bounded scan. A single native preview
+first list fetches one native page; older pages load on demand. Title search and
+hiding OpenClaw-managed sessions share a 20-page catalog scan budget for each returned
+page. Continuing from its cursor searches the next pages without skipping older matches.
+A single native preview
 can still make its response large because the native API has no preview byte limit.
 Pages use native recency order with tie-safe cursors.
 
@@ -28,6 +30,10 @@ Every tenth refresh rechecks the bounded head page for title, status, or archive
 changes that do not advance the newest timestamp. Refreshes update only the walked
 prefix, and native cursors keep older sessions available after cache eviction.
 Nothing is persisted, and restarting the Gateway starts with an empty cache.
+Within each source's 32 cached pages, up to 20 recent-page entries are favored over
+older discovery pages across all queries. Scanning older sessions therefore does
+not discard the entire recent listing before the next poll. Expiry and native
+pagination remain unchanged.
 
 Pasted text saved as a `.txt` attachment is extracted by OpenClaw and included in
 the current turn as untrusted external content, subject to the existing file
@@ -157,6 +163,34 @@ shows that the agent is waiting for messages; it does not invent a list of child
 dependencies. Idle, interrupted, or unloaded native threads do not prove that
 the delegated task succeeded. A resumed native turn clears the previous turn's
 current tool activity while retaining the task identity.
+
+Follow-up work after a native child has finished creates a separate task run on
+the same Codex thread. Earlier results and their delivery status remain intact.
+Each task's transcript links to the full native child conversation, including later follow-ups.
+Interrupted work keeps its task identity when the native turn resumes.
+If a recovered turn's end is still unknown, OpenClaw waits for native history or
+an end event before deciding whether later work resumes that task or starts a new one.
+Older tasks without enough native turn information remain unresolved instead of
+borrowing another turn's result.
+
+For Codex V1 follow-ups, OpenClaw retains a successful submission receipt with
+the parent binding until it records the matching native turn as a task. This
+allows recovery when the parent yields or the Gateway restarts before observing
+the child turn. A receipt alone does not keep an idle native connection alive.
+Observation follows the existing warm-thread lifetime; an unmatched receipt
+remains available for later recovery. Resetting the parent or replacing its native connection
+invalidates these receipts. Before downgrading OpenClaw, let pending native work
+settle: older versions can read the binding but may discard its recovery receipts
+when updating it.
+
+Closing a native child applies to the assignment selected when the close starts.
+OpenClaw waits for Codex to confirm that the child's runtime is absent before
+marking unfinished work canceled; a delayed close cannot cancel a later assignment.
+If confirmation is unavailable, the task asks you to retry the close request.
+Native result receipts do not identify the child's turn. If an earlier result
+is still being recovered or repeated identical results make a receipt ambiguous,
+OpenClaw preserves the later pending delivery instead of risking a lost result;
+this can cause an additional continuation.
 
 Codex owns native subagent execution and controls. Follow up through the parent
 session, which can use Codex's native collaboration tools. OpenClaw's task view

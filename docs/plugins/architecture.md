@@ -148,6 +148,8 @@ After startup, runtime readers reuse that inventory without filesystem discovery
 
 Model-id normalization policies are prepared with each snapshot or narrowed view. Model selection, catalogs, and runtime normalization carry that view forward instead of rebuilding policies from its plugin list. An empty view remains authoritative and cannot inherit policies from a broader process snapshot.
 
+Fleet model-runtime preparation captures one immutable config and authored-source view per build. Plugin argument handling, activation fingerprints, and agent lookups reuse those captured facts across agents. Dynamic model hooks still receive each agent's directory, workspace, and model registry. Preparation yields to the event loop between agents so Gateway requests can run during a large fleet build; config refresh creates a new capture. Existing installations need no configuration changes or migration.
+
 The snapshot and lookup table keep repeated startup decisions on the fast path:
 
 - channel ownership
@@ -166,7 +168,11 @@ Read-only model validation, effective tool inventory, and isolated model probes 
 
 Each plugin service startup attempt owns one cleanup operation, including failed starts. Hot replacement observes candidate startup and service cleanup with five-second deadlines. Candidate startup failure rejects the replacement. Replacing a loaded plugin requires successful cleanup before another registration can acquire its resources; pending cleanup or a cleanup error can therefore reject replacement and prevent automatic recovery. A pending startup retains its resources until it finishes and its one stop operation settles. Plugin removal can report deferred cleanup; Gateway shutdown joins that work before releasing the plugin's resources. Disposal stops new registered calls while physical cleanup finishes. Service cleanup is not invoked a second time merely because an observer timed out. If a command catalog refresh also stopped unchanged channels, failed replacement resumes those healthy registrations while the failed plugin remains fenced.
 
-A later reload can retry after pending cleanup completes successfully, without capturing code from the disposed instance again. A timed-out admitted call also keeps retry blocked until that call finishes. If draining fails before disposal starts, the quiesced registration retains its original loader for the next reload's recovery capture; ordinary plugin calls remain closed. Rejected replacements and failed recovery registrations retain the same cleanup barrier. Recovery preserves existing error records as diagnostics without executing their code. It never substitutes current package files for an already retired registration whose captured source has been released.
+A failed replacement automatically tries to restore the previous code and configuration. If its channels have already stopped, recovery waits up to 60 seconds for admitted work, retrying drain observation with one-, two-, then four-second backoff. Each observation remains bounded by the five-second cleanup deadline and the remaining recovery window. After the work settles, recovery disposes the old registration, registers its captured code with fresh resource ownership, and restarts its channels. Manually stopped accounts stay stopped. A timeout never grants another registration ownership of an unfinished write's resources, and retries do not repeat service stop or resource disposal.
+
+When recovery cannot safely finish, the operation settles as failed and releases its channel reload pauses. Channel health reads retain captured account facts without invoking unavailable plugin code; healthy registrations can restart normally. Detailed readiness reports `failing: ["plugin-reload"]` with the affected plugin IDs and an actionable recovery reason, instead of leaving an indefinite "reloading" state. Retry `openclaw plugins reload <id>` after admitted work and pending cleanup settle, or restart the Gateway. Permanent cleanup failures still prevent another registration from acquiring those resources.
+
+A later reload can retry after pending cleanup completes successfully, without capturing code from the disposed instance again. If draining fails before disposal starts, the quiesced registration retains its original loader for the next reload's recovery capture; ordinary plugin calls remain closed. Rejected replacements and failed recovery registrations retain the same cleanup barrier. Recovery preserves existing error records as diagnostics without executing their code. It never substitutes current package files for an already retired registration whose captured source has been released.
 
 Gateway shutdown also joins actual harness, MCP, LSP, embedding, and media cleanup after their initial grace periods. When clearing the active registry, plugin host cleanup can advance to later hooks after a timeout, but registry resets and shared database closure wait for its actual completion. These waits preserve resources for cleanup; they do not restore a retired plugin's runtime authority.
 
@@ -221,8 +227,17 @@ Runtime and setup retirement remove captured artifacts asynchronously and wait
 for removal to finish. Plugin callback deadlines do not end custody of those
 files; synchronous source inspection and failed capture still clean up before returning.
 
-Model-catalog workers keep their captured plugin files in a directory owned by
-one worker. The parent removes any remaining captures after that worker exits,
+Configured Gateway agents share one model-catalog worker per plugin-inventory
+lifetime. Agent and authentication facts belong to each task; plugin registrations
+and captured source remain with the shared inventory. Standalone hosts that supply
+their own environment retain an isolated catalog worker for that environment.
+
+Credential persistence publishes fresh shared-store ownership before credential
+discovery. Login and explicit auth refresh join the credential owner's publication
+instead of creating another catalog generation for the same change.
+
+Model-catalog workers keep their captured plugin files in a worker-owned directory.
+The parent removes any remaining captures after that worker exits,
 including cancellation and crashes. Files remain available while the worker is
 running, and retiring one worker does not remove another generation's captures.
 Cancellation releases compute capacity after the worker exits; terminal shutdown
