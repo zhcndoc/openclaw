@@ -39,13 +39,24 @@ Explicit logger-level overrides, such as Baileys verbosity, remain in effect.
 
 Talk, realtime voice, and managed-room code paths use the shared file logger for bounded lifecycle records intended for operational debugging and OTLP log export. Transcript text, audio payloads, turn ids, call ids, and provider item ids are never copied into the log record.
 
+Discord realtime voice keeps session lifecycle transitions at `info`; audio chunks
+and transcript deltas use `debug`. Model-fetch starts and successful responses
+under one second also use `debug`. Non-2xx responses and responses taking at least
+one second remain at `info`; transport failures remain warnings. The existing
+[model transport diagnostic flags](/logging#targeted-model-transport-diagnostics)
+promote transport details to `info` when enabled.
+
+Secret egress request audit records remain at `info`, including successful
+forwarding. Their structured fields record the proxy outcome without request
+payloads or credentials; see [secret egress proxy](/gateway/secrets/secret-store-and-egress#secret-egress-proxy).
+
 The Control UI Logs tab tails this file via the gateway (`logs.tail`). The CLI does the same:
 
 ```bash
 openclaw logs --follow
 ```
 
-If a tail read observes that the active file has disappeared, the Control UI clears its previous records and follows the recreated file. Missing files still return an empty tail; filesystem read errors remain visible.
+If a tail read observes that the active file has disappeared, the Control UI clears its previous records and follows the recreated file. Missing files still return an empty tail. Filesystem read errors, including a log path that points to a directory, remain visible while the Control UI keeps the last successfully read records as stale data.
 
 ### Verbose vs. log levels
 
@@ -239,6 +250,29 @@ includes process/thread identity, the request trace, and row counts:
 The latter two distinguish selected rows refreshed during this request from
 selected rows already resident when it began. Dirty counts describe pending
 owner work at the start of the request.
+
+The `materialize` phase measures the wait for session-row projection readiness. In-flight
+catalog renewals no longer block lists or descriptions once a catalog is loaded:
+reads use the current catalog while its replacement loads in the background, then
+rows refresh with the new catalog. Startup still waits for the first catalog.
+Renewals that retain identical catalog content do not dirty resident rows.
+
+Profile and run-registry publications refresh their derived display facts without
+rereading session entries. Worker environment and placement publications refresh
+only the selected rows' worker facts on their next presentation. Stored session
+writes publish exact keys; broad list notifications do not schedule an all-row
+drain. Config, store topology, and adopted model catalogs still refresh affected
+live rows before lists respond. Archived rows stay cold until selected.
+
+Transcript-only row refreshes use a one-second window per resident session: the
+first notification refreshes promptly, and further notifications collapse into a
+trailing refresh. These pending notifications are not dirty rows until that
+refresh is due. Transcript freshness can therefore lag by up to one window;
+optional previews still wait for idle background backfill. Metadata, lifecycle,
+catalog, and topology publications continue to invalidate immediately.
+Transcript notifications do not invalidate parents or children: relationships,
+inherited model settings, and subagent activity have their own metadata or
+registry publications.
 
 Records report phase totals, synchronous selection/row time, and
 `yieldWaitMs`/`yieldCount` for awaiting shared projection readiness. These waits

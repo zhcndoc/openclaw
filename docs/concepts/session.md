@@ -283,9 +283,10 @@ durable external conversation pointers are protected; the unarchived total can
 therefore remain above the cap when protected rows alone exceed it.
 
 Root sessions and sessions auto-parented to the agent's Home root can be pinned;
-genuine child/subagent sessions live in their parent's tree and reject pin
-requests. Existing child pins disappear and no longer protect the session from
-maintenance.
+genuine child sessions and subagent runs reject pin requests. Persistent child
+sessions retain their sidebar nesting; subagent runs appear in transcript activity
+and Tasks views. Existing child pins disappear and no longer protect the session
+from maintenance.
 
 Gateway model-run probe sessions are short-lived by default. Rows matching
 `agent:*:explicit:model-run-<uuid>` use fixed `24h` retention, but cleanup is
@@ -322,6 +323,15 @@ exhausted. Sessions without a recorded archive reason remain protected.
 After skipping a history generation or archived session, disk-budget cleanup
 rechecks physical usage before considering another deletion. A measurement
 failure stops the sweep.
+
+Background disk-budget checks run at most every 30 minutes on entry writes.
+Delete and reset operations can request a check sooner, but repeated requests
+coalesce to at most one forced check per minute per store. If cleanup exhausts
+eligible history and the store remains over budget, automatic checks back off
+for 30 minutes and log one warning until the pressure clears or the budget changes.
+The warning recommends raising `session.maintenance.maxDiskBytes` or exporting
+and deleting unneeded sessions. Checks resume on subsequent activity;
+`openclaw sessions cleanup --enforce` remains available immediately.
 
 If you previously used DM isolation and later returned `session.dmScope` to
 `main`, preview stale peer-keyed DM rows with

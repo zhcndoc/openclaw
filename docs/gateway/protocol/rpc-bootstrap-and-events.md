@@ -36,11 +36,13 @@ bulk refresh. Newly admitted or replaced stores load their metadata once, and
 rows disappear when their store leaves the current topology. Each response
 applies the current viewer's visibility and current activity time.
 
-Resident rows use stored titles and usage. Legacy titles, optional message
-previews, and terminal fallback-model metadata fill in through bounded background
-transcript reads; they can be absent from an early response. Foreground requests take priority over background transcript reads and title writes. Backfill does not restore cold archives or parse oversized
-messages, call a model, or change session activity ordering. Missing usage remains
-absent until the normal usage writer records it.
+Resident rows use stored titles and usage. Optional message previews and terminal
+fallback-model metadata fill in through bounded read-only background transcript
+reads; they can be absent from an early response. Foreground requests take priority.
+These reads do not restore cold archives, parse oversized messages, call a model,
+or change stored metadata or session activity ordering. Missing historical titles
+and legacy ACP keys are repaired only by `openclaw doctor --fix`. Missing usage
+remains absent until the normal usage writer records it.
 
 Both methods accept `activeOnly: true` to select currently running or queued sessions before pagination. Activity comes from the live runtime owners, not a stored status flag. Ordinary listing behavior is unchanged when the option is omitted or false. Active-only results include each visible agent-owned `global` and `unknown` session with its raw key and captured `agentId`; callers identify rows by agent, key, and `sessionId` together. Literal `agent:<id>:global` and `agent:<id>:unknown` sessions remain different rows. Active-only raw sentinel rows omit the optional `childSessions` and `hasActiveSubagentRun` fields; use `hasActiveRun` for direct activity. Normal permissions, archive/inclusion filters, and page limits still apply. Sessionless/internal runs are outside the session index.
 
@@ -86,8 +88,7 @@ count.
   The optional `sessionId` and opaque `lifecycleRevision` identify the session
   lifecycle; `lifecycleRevision` can be absent before the first reset. Revisions
   increase across runs within that lifecycle but can restart after a reset.
-  Critical notice history starts fresh when the identity pair changes, including
-  when `/clear` preserves `sessionId` and changes `lifecycleRevision`.
+  `/clear` preserves `sessionId` and changes `lifecycleRevision`.
   Clients show its headline or inspector link only while the digest's exact `runId`
   is present in `activeRunIds`.
 - `sessions.changed`: session index or metadata changed. Keyed changes carry the
@@ -97,12 +98,22 @@ count.
   and activity-summary enrichment enabled. This adds catalog-backed fields such
   as thinking options and replaces legacy model aliases with canonical model IDs
   in event rows. The Control UI applies these rows locally to existing roster
-  members, so their values match the list. Top-level lifecycle and capacity fields
+  members, so their values match the list. A `reason: "patch"` event that commits a
+  model, account, or runtime selection also carries `catalogChanged: true`; clients
+  may treat other patches as session-only and keep cached catalogs. Top-level lifecycle and capacity fields
   remain event receipts, including explicit clearing values. When a nested row
   omits an optional field, honor its top-level clearing tombstone; nested values
   take precedence when present. Merge an existing
-  roster member's snapshot locally; refresh the list when a row is missing or
-  the event is a broad, keyless invalidation. Profile identity, runner
+  roster member's snapshot locally when the query's membership and pagination
+  window remain valid. The Control UI reuses lifecycle and ordinary `patch`,
+  `send`, `steer`, `agent.run.started`, `agent.input.settled`, `run-capacity`, and
+  `chat.title` snapshots for held standalone rows with unchanged identity, archive,
+  pin, and owner facts and nondecreasing recency. It coalesces an authoritative
+  refresh for missing rows or snapshots, broad/keyless changes, `catalogChanged`,
+  membership filters, linked ancestor facts, and uncertain boundaries (including owner-first rows
+  promoted into the shared page). Events overlapping a roster read retain a
+  trailing refresh so its response cannot lose an update. A retained list with a
+  read error also refreshes on the next relevant event. Profile identity, runner
   availability, and loaded cron bindings can produce broad invalidations.
   Authorized incognito descriptions and events use the same row presentation from
   transient process-local state. Incognito rows remain excluded from the session

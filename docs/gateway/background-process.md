@@ -119,7 +119,8 @@ before loading its main runtime.
 If initial broker startup fails, the Gateway logs the failure reason and runtime
 entry path, then uses in-process spawning for the rest of that Gateway process.
 A new Gateway process tries the broker again.
-When the broker is ready, exec commands and command helpers spawn from it, so Linux does not copy
+When the broker is ready, exec commands, shell-snapshot capture and validation,
+and helpers using the shared command runner spawn from it, so Linux does not copy
 the Gateway's page tables for each command. The existing process supervisors and
 service relays still own cancellation, output, and cleanup. After the broker first
 becomes ready, broker loss fails affected commands rather than rerunning them; later commands use the restarted
@@ -129,6 +130,12 @@ The broker has its own process group, which the Gateway terminates on broker los
 service relays also retain their own parent-loss cleanup.
 A detached child can survive a broker crash before its PID is reported, matching
 the existing residual for directly spawned children when the Gateway crashes.
+
+Canonical credential readers also use the broker. If it confirms that a reader
+never started, the read falls back once to a local process with the original
+environment and working directory. Cancellation, timeouts, uncertain launches, and
+cleanup failures do not trigger a retry. Snapshot-backed credential readers keep
+their local process transport.
 
 A supervised command's timeout also covers startup, including blocked private-input
 delivery. The timeout result can return while cleanup continues. Scope retirement

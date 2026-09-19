@@ -32,9 +32,21 @@ Per-agent session counts and recent activity include only that agent's sessions,
 even when agents share a SQLite session store. Status counts each physical store
 once in its aggregate. The top-level health session summary represents the
 default agent, or the first configured agent when there is no default; it is not
-a fleet total.
+a fleet total. A running Gateway serves clean health and status session summaries
+from its resident session-row projection. Store hydration and exact dirty-row
+refreshes retain the existing read-only SQLite fallback.
 
 ## Deep diagnostics
+
+`openclaw health --json` reports `modelRuntime.degraded: true` when a large
+fleet's model preparation exceeds the startup budget. `pendingAgents` names the
+agents still preparing and `stage` identifies the current acquisition phase.
+The Gateway remains running and completed agents remain usable. Background
+preparation clears the degraded status when all runtimes are ready.
+
+Health and status collection groups fast session-store reads into short work
+slices, keeping busy background preparation from delaying every individual read.
+Slow reads finish their transaction before yielding to other Gateway work.
 
 - Creds on disk: `ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json` (mtime should be recent).
 - Session store: `ls -l ~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`. Count and recent recipients are surfaced via `status`.
