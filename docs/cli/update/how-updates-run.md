@@ -25,6 +25,10 @@ aligned:
 - `beta` -> prefers npm dist-tag `beta`, falling back to `latest` when beta is
   missing or older than the current stable release.
 
+Fresh clones are validated before publication. If the destination or staging
+folder is replaced during validation, the update stops without changing the
+replacement. Choose an empty `OPENCLAW_GIT_DIR` and retry.
+
 ### Validation and activation
 
 If the resolved registry package version equals the installed version without changing
@@ -262,6 +266,16 @@ The new version can be running while verification fails. Recovery guidance uses 
 latest observed service state and names the running version when known; an
 earlier activation stop does not mean the service remains stopped.
 
+Respawn and update verification use the same progress-aware readiness wait as
+Gateway restart. Startup that continues making progress can use the existing
+five-minute startup lease. If that lease ends while the same Gateway is still
+progressing, verification finishes with a warning and reason `still-starting`.
+The process stays running, recovery backups remain available, and the updater
+does not restart it again, roll it back, or instruct you to keep it stopped.
+The run is `skipped` because readiness is unverified. A version that has not yet
+been observed is unknown; a version mismatch requires an observed serving
+version that disagrees with the installed target.
+
 When the readiness allowance expires for the same running PID or boot generation
 while the restart owner reports waiting for a listener, startup migration, or
 healthy settling, the updater records the elapsed wait and startup phase as a warning. It leaves the process starting, keeps readiness
@@ -282,6 +296,12 @@ This warning handling belongs to the updater already running. The published
 2026.9.3 and 2026.9.4 parents cannot distinguish pending readiness from verified
 success when completing a migrated update, so candidate-only updates cannot
 change their backup-retirement and Windows autostart decisions.
+The published 2026.9.4 runtime also retains its own ten-second respawn health
+wait when it verifies a child it started. Installing a new version cannot change
+that already-running wait. The shared respawn readiness wait applies when the
+new runtime owns the respawn, including subsequent upgrades driven by it;
+candidate-side restart verification uses the new owner when the old updater
+hands that work to the installed runtime.
 
 Plugin packages download and sync against the installed target before the managed
 Gateway restarts. The service remains stopped through channel/config writes,
@@ -718,6 +738,11 @@ Switching a pnpm- or Bun-owned package install to Git with `--channel dev` is
 also rejected before activation. Staged source-checkout exposure currently
 requires an npm-owned package symlink; package-to-package updates remain
 supported through the owning manager.
+
+When an npm package link points to a built Git checkout, rollback verifies that
+same checkout and build before restoring the link and launchers. Local source
+edits are preserved. Replacing the checkout or rebuilding it during the update
+prevents automatic rollback; restoring a link alone does not prove runtime safety.
 
 ### Local packaged overrides
 
