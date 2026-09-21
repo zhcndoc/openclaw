@@ -167,12 +167,17 @@ In a normal Control UI chat, type `@` and search by a person's display name (inc
 
 Use Up/Down to move through people, Home/End to jump to the first or last result,
 and Enter or Tab to insert the selected mention. Escape closes the picker. Filtering
-keeps the selected person when they still match. The picker shows placeholders while
-searching, an empty message when nobody matches, and **Retry** if the lookup fails.
+keeps the selected person when they still match. The picker reuses recent results
+for the same search in the same composer, including after closing it or starting
+another mention. After five minutes, it refreshes cached results in the background
+without hiding the people you can already select. Switching sessions, profiles,
+or connections clears that cache. Results older than 30 minutes are discarded.
+The picker shows placeholders for uncached searches, an empty message when nobody
+matches, and **Retry** if a search without usable cached results fails.
 **Will notify** reuses the selected person's photo, with initials while it loads or
 when the photo is unavailable.
 
-Selected mentions render as distinct person references in the transcript. Hover, focus, or tap a reference to open a card with the person's current name, avatar, and Activity link. The original message label and copied text stay unchanged. Cards follow explicit profile merges; ordinary unselected `@name` text does not become a person reference.
+Selected mentions render as distinct person references in the transcript. Hover, focus, or tap a reference to open the same information card used in the sidebar: current name and avatar, observed presence and connection details, visible watched and recent sessions, and the Activity link. The original message label and copied text stay unchanged. Cards follow explicit profile merges; ordinary unselected `@name` text does not become a person reference.
 
 The picker includes known Gateway profiles eligible to read the session, including people who are offline. Its online indicator is only a connection hint, not an eligibility requirement. Sign in with a durable Gateway profile to use human mentions. A mention adds personal discovery involvement, not authored participation or Git contributor credit. It never adds session membership, changes visibility, or grants access. The Gateway rechecks the recipient's current access when creating and displaying it.
 

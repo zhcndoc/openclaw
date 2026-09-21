@@ -124,6 +124,10 @@ repair records `failed` / `abandoned` and exits successfully without Doctor,
 maintenance, or a service stop. `openclaw status` and the Control UI then report the abandoned run as reconciled, without a failure warning or retry prompt; its historical failure record remains intact. It also acknowledges a Gateway-reconciled row
 once within 30 minutes of reconciliation. Later repair invocations use full
 finalization, so historical recovery cannot suppress plugin convergence.
+Successful repair acknowledges every outstanding abandoned run in Doctor's
+latest 100 history records, regardless of age or whether a newer update exists.
+The original failed outcome remains recorded, including when its target build
+is unknown; Doctor stops repeating the repair instruction after acknowledgement.
 Explicit recovery does not wait 30 minutes when every recorded updater process
 is provably dead (its PID is gone or its process-start identity has changed).
 Identityless rows and runs with an unrecorded adopter still require more than
@@ -158,6 +162,15 @@ run are revalidated before every native operation. A restoration failure names
 the cause and the commands to inspect and restart the Gateway. Normal update
 finalization continues to leave activation with its outer updater.
 
+If Doctor reports that the update parent must stop the managed Gateway, wait
+for that update to exit, then run `openclaw gateway stop` and retry
+`openclaw update repair` from an independent shell with the same profile and
+state/config overrides. On macOS, stop unloads the LaunchAgent and verifies that
+its process exited. A still-loaded service or surviving PID after a successful
+stop is a service shutdown failure. If stop cannot unload the service, use the
+exact `launchctl bootout` command printed in the refusal from the owning user's
+logged-in macOS GUI session.
+
 An unrelated update whose driver is live or cannot be inspected still blocks
 repair, even after a long period without activity. Manual `doctor --fix` also
 refuses to stop a service while that update is active. The refusal identifies the
@@ -175,11 +188,20 @@ hide unfinished work from a newer update. If the bounded history inspection is
 incomplete, repair also uses full finalization. The parent parks its owned service
 before Doctor enters maintenance; a Doctor child cannot take service activation
 from an update parent.
-Successful full finalization then reconciles the selected stale rows before
-reporting completion. Failed convergence leaves the selected rows intact. If any
-selected run resumes before reconciliation, the whole selection is preserved.
-Full finalization JSON includes `reconciledRuns` when stale rows were selected
-for recovery, listing the IDs reconciled by that invocation.
+Successful full finalization then reconciles the selected stale rows and acknowledges
+unacknowledged abandoned outcomes from the 100 most recent history rows captured
+at repair admission. Those outcomes need not be the latest run or less than
+30 minutes old; the time limit applies only to skipping full finalization.
+Additional historical outcomes require full finalization, even when the latest
+row qualifies for the lightweight repair. Historical failures and their details
+remain intact; acknowledgment clears their Doctor repair prompts, not their failed
+status. Rows outside the captured history window and new runs admitted during
+repair are not acknowledged by that invocation.
+Failed convergence leaves the selected rows intact. If any selected run resumes
+before reconciliation, the whole selection is preserved. Full finalization JSON
+includes `reconciledRuns` when rows were selected for recovery, listing the IDs
+newly acknowledged by that invocation, including already-terminal abandoned rows.
+Successful completion with nonfatal warnings also acknowledges those rows.
 
 For full finalization, `update repair` runs `openclaw doctor --fix`, reloads the repaired config and
 install records, syncs tracked plugins for the active update channel, updates

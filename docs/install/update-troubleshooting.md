@@ -17,6 +17,14 @@ start one owned automatic repair; other failures retain diagnostics and handoff
 commands. See [automatic recovery](/cli/triage#automatic-failure-handoff). The original update failure and exit status remain authoritative;
 diagnostics do not turn a failed update into a successful one.
 
+If the update health check emits a complete lint report but does not exit before
+its deadline, the failure identifies that completion separately from process
+termination. An exited child whose output pipes remain open is reported
+separately. Without a complete lint report, a deadline does not establish that
+the checks finished. When automatic repair cannot find a usable inference route
+before starting a repair turn, it is recorded as skipped; the original update
+check remains the reported failure.
+
 In the Control UI, a failed attempt opens **Ask OpenClaw** with its recorded
 details and asks it to investigate before retrying. A lost connection or
 verification timeout is presented as an unknown outcome. The tab remembers the
@@ -147,6 +155,13 @@ changes inside a running container are not durable.
 
 ## Published 2026.9.4 on large agent fleets
 
+The published 2026.9.4 updater shares a five-minute deadline across snapshot
+preparation and candidate checks. Its failure log tail combines output from
+those checks: `Doctor complete.` can belong to the preceding repair pass, even
+when lint is the failed step. The elapsed time in the final log line measures
+the whole rehearsal; the step duration measures the individual check. A complete
+lint JSON report is needed to establish that lint finished before termination.
+
 Published OpenClaw 2026.9.4 can spend many minutes preparing model catalogs and
 chat metadata after its HTTP listener binds. In an instrumented 480-agent
 control with no update, HTTP probes remained unanswered during 944 seconds of
@@ -225,6 +240,10 @@ catalog omitted that source for Codex; the correction is on main in
 ## Reason codes
 
 - `dirty`, `no-upstream`: repair the source checkout before retrying.
+- `runtime-artifact-publication`: the affected Gateway is running or cannot be
+  verified offline. Inspect `openclaw gateway status --deep`, stop it through its
+  service owner, and retry. On macOS, a loaded LaunchAgent can respawn even when
+  disabled and temporarily has no PID; `openclaw gateway stop` unloads it.
 - `update-ledger-busy`: another process held the state database's write lock
   beyond the update step budget. The command exited successfully without admitting
   a run and left previous history intact. Retry once the Gateway's writes settle.

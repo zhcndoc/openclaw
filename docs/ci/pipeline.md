@@ -74,23 +74,59 @@ the job's uploaded artifacts.
 | `openclaw-performance`           | Separate workflow: daily/on-demand Kova runtime performance reports with mock-provider, deep-profile, and GPT 5.6 live lanes                                                                                                                                                                             | Scheduled and manual dispatch                      |
 | `docs-external-links`            | Separate workflow: Docs External Link Audit checks external documentation links with lychee and uploads a report; it reports findings without failing, so it never blocks a pull request                                                                                                                 | Scheduled and manual dispatch                      |
 
+### macOS Swift phases
+
+`macos-swift (tests)` builds and runs the app's complete default- and named-profile
+test partitions with coverage. `macos-swift (packages)` independently runs the
+OpenClawKit Talk-trait opt-out build, OpenClawKit tests, and Swabble tests. These
+separate package graphs previously ran before the app build in one job; a hosted
+baseline spent 7m57s on them in a 21m48s job. Separating them gives app compilation
+and tests their own 30-minute budget without removing coverage or increasing
+test-process parallelism.
+
+Both phases use `macos-26`, with at most two concurrent jobs. Full manual
+validation adds the existing `release` phase under the same cap. This adds one
+hosted Mac job and its checkout/setup cost per selected run, with no additional
+Blacksmith registrations. Compare complete hosted timings, including queue and
+setup time, before treating the removed serial work as an observed speedup.
+
+Only the app phases restore the app build cache. SwiftPM dependency caches remain
+restore-only in `packages`; the existing primary phase owns shared cache writes.
+The aggregate gate requires every selected phase to succeed.
+
+Debug Swift CI builds omit the IDE index and use line-table debug information.
+Coverage instrumentation and source-line backtraces remain enabled; interactive
+debugger type/value inspection requires a normal local debug build. The app test
+cache uses a separate build profile so it cannot restore the old indexed products;
+Release build flags and caches remain unchanged.
+
 Ordinary Markdown and MDX pages under `docs/`, plus root `README.md`, retain
 their separate `check-docs` coverage beside precise pull-request Node tests.
 Page deletions and renames preserve this targeting. Explicit Node owners for
 Markdown inputs remain selected; workspace templates under
 `docs/reference/templates/` and unowned source inputs retain the full fallback.
 
+When `docker-seed-e2e` selects the published upgrade survivor, it uploads
+`docker-seed-upgrade-survivor-proof` even after a failure. The artifact contains
+scheduler summaries and sanitized survivor reports. Failed reports include
+bounded, redacted baseline and candidate agent-turn output; private scenario
+state and raw logs remain outside the upload.
+
 Full canonical `main` pushes run the operator config and prior-release state
 startup corpora once through the Node `runtime-config` owner. Canonical pull
 requests also omit the duplicate **Check startup corpus** step when preflight
-certifies both complete files in the required Node matrix on the exact same
+certifies every corpus file in the required Node matrix on the exact same
 checkout revision. Partial, filtered or unknown plans retain the explicit step;
 release-gate dispatches retain their separate merge-tree proof. Both state
 repair passes, all static baseline ratchets and required Node failure aggregation
 remain unchanged.
-The explicit step prepares the runtime once with `pnpm build qaRuntime` before
-forking the config process and four state processes. A failed preparation stops
-the step before those launchers consume memory or attempt their own builds.
+Eight state test files share one matrix inventory so the executor can distribute
+all release/config pairs across workers. Each pair still runs both Doctor and
+Gateway startup checks. The explicit step prepares the runtime once with
+`pnpm build qaRuntime`, then runs the config corpus and all eight state files in
+one Vitest process with at most four workers. A failed preparation stops the step
+before workers consume memory or attempt their own builds. Frozen targets from
+before the file split retain their config process and four state processes.
 The corpus uses the normal bundled-plugin resolver to select the prepared
 runtime from this checkout instead of forcing TypeScript plugin entrypoints.
 Plugins whose Doctor contracts require source loading retain that behavior;
@@ -352,6 +388,23 @@ Vitest. This profile builds runtime JavaScript, plugin assets, and freshness and
 provenance metadata. Private QA shards select their private runtime entries. The
 `build-artifacts` job owns Control UI and SDK declaration validation; release
 package builds still generate the full declarations.
+
+Source-only Linux Node 24 shards can restore compiled Vitest workers from the
+protected cache warmer. The warmer prepares one generation before SDK or runtime
+builds change package resolution, joins the preparation owner, and publishes only
+the retained cache. PR jobs restore it without publishing. Consumers enable
+reuse only when an archive exists; cold runners keep ordinary fresh compilation.
+The worker owner verifies source and dependency bytes, compiler identity,
+resolution topology, environment, output inventory, and the exact checkout and
+output-slot paths before lending a generation. Changed or incompatible inputs
+rebuild locally. Frozen targets, other Node versions, and runtime-building shards
+retain fresh preparation.
+
+The artifact job keeps its built outputs for its own smoke and boundary checks.
+It no longer packs or uploads the unused `dist-runtime-build` and
+`bundled-plugin-assets` archives. Runtime shards still start after preflight;
+they do not wait for SDK declarations, the Control UI build, or artifact checks.
+Diagnostic and proof uploads remain available.
 
 Declaration caches hash the selected writer's transitive generator imports,
 package and plugin metadata, explicit schema and build metadata inputs, and

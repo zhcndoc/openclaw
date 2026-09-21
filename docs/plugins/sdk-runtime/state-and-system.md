@@ -174,6 +174,8 @@ The runtime config snapshot, durable plugin-scoped storage, system utilities, ev
 
     `openBlobStore<TMetadata>(...)` stores bounded binary payloads in shared SQLite without base64 or file sidecars. It requires per-entry, per-namespace byte, and row limits; copies byte arrays at the API boundary; and lists metadata without loading every BLOB. `register(...)` is an explicit upsert, including for expired keys. `registerIfAbsent(...)` provides collision-safe creation: an expired key remains occupied until its owner claims it with `deleteExpiredKey(key)` or `deleteExpired()`, preserving metadata needed to remove related named artifacts after the SQLite commit. Any row with a TTL is transient and excluded from backup/restore even before it expires; omit TTL for durable, restorable state. Host fuses cap each BLOB at 100 MiB, each plugin at 512 MiB of physically stored BLOBs, and each plugin at 50,000 physically stored rows, including expired rows awaiting owner cleanup. Use `registerIfAbsent(...)` with `overflowPolicy: "reject-new"` when external materializations must not be silently orphaned by replacement or eviction.
 
+    Blob mutations use the shared SQLite worker and keep quota checks and changes in one transaction. `lookup` and `entries` use the retained read-only worker path. Missing stores stay absent. Ordinary unselected reads observe independently committed data; an unrelated cached native cursor can retain an older view. An explicitly selected snapshot keeps its private source through completion. Await all methods before publishing dependent artifacts or removing their storage. Shared reader admission is bounded: process inventories sequentially or with bounded concurrency, and join every started operation before reporting a batch failure or completing shutdown. Worker errors preserve `PluginBlobStoreError` classification, operation, path, and causal errors. Byte copying, metadata serialization, and complete result materialization still use caller memory; this is not a streaming BLOB API.
+
     `openChannelIngressQueue<TPayload>(...)` opens a persisted ingress queue scoped to the calling plugin, for buffering inbound events that need at-least-once processing across restarts. When stale-claim recovery uses `shouldRecover`, also provide `shouldRecoverCorrupt` if corrupt claimed payloads should be quarantined: its payload-independent claim identity lets the plugin preserve live owner and lane policy before the queue tombstones the row.
 
     Plugin-state leases were removed in 2026.8.1. Use short SQLite transactions for atomic database work and plugin-scoped keyed stores (`openKeyedStore` or `openSyncKeyedStore`) for bounded durable state.
@@ -323,20 +325,32 @@ argument. After waiting, the helper rejects a closed or replaced handle rather
 than opening a replacement on its behalf. Keep the original borrow alive until
 the operation settles. The caller still owns transactions and authorization.
 For large native publications, `openOpenClawAgentSqliteWorkerStore(options, borrowedDb, { moduleUrl, input })`
-retains the original borrowed handle, physical identity, and a separate agent lease
-for a pooled SQLite Worker connection. Its `run(operation, assertCurrent)` joins
-the existing agent writer queue. The operation receives only the retained store's
-`execute` method; finish it before calling `close()`. Close revokes new work,
-drains accepted operations, closes native storage, and then releases custody.
+retains the original borrowed handle and physical identity. Its
+`run(operation, assertCurrent)` joins the existing agent writer queue and borrows
+the canonical agent executor for the complete operation. The module exports
+`bindSqliteWorkerBackend(input, { databasePath, database, admit })`; it uses the
+supplied connection and closes only its own temporary state. It must not open or
+close the agent database. The operation receives only the bound backend's
+`execute` method; finish it before calling `close()`. Client close revokes new work,
+drains its accepted operations, and releases its original borrow. The canonical
+executor owns the native connection, lease, idle reuse, and final close.
 
 A backend used with this owner requests `transaction` admission after BEGIN and
-`commit` admission immediately before COMMIT through
-`requestSqliteWorkerOperationAdmission`. The host checks current authority at
+`commit` admission immediately before COMMIT through the supplied `admit` callback.
+The host checks the canonical connection and current caller authority at
 both points without waiting synchronously for the native transaction. An accepted
 commit grant orders the commit before later revocation; an earlier refusal rolls
 back. Callers must preserve committed or unknown outcomes and never replay them.
 Private file owners can use `runSqliteWorkerStoreWrite` with their own admission
 and lifetime; it does not supply the shared agent queue or lease.
+
+Worker backends can load module prerequisites asynchronously in `prepare(command)`.
+Preparation carries captured state/runtime facts and performs no native work.
+After it settles, `execute(command)` enters fresh synchronous authority scopes;
+connection-bound execution revalidates authority before native work. Extension
+loading, transactions, and domain callbacks remain synchronous. Agent connection policy, including TEMP
+storage, belongs to the canonical connection owner and cannot be reset when a
+publication binds.
 
 Backends whose failure handling can leave an unusable native connection implement
 synchronous `assertSettled()`. The broker calls it after a command returns or

@@ -20,6 +20,26 @@
     "target": "OpenClaw"
   },
   {
+    "source": "FaceTime plugin",
+    "target": "FaceTime 插件"
+  },
+  {
+    "source": "FaceTime recovery and removal",
+    "target": "FaceTime 恢复与移除"
+  },
+  {
+    "source": "Facetime plugin",
+    "target": "FaceTime 插件"
+  },
+  {
+    "source": "Facetime plugin reference",
+    "target": "FaceTime 插件参考"
+  },
+  {
+    "source": "facetime",
+    "target": "facetime"
+  },
+  {
     "source": "macOS platform notes",
     "target": "macOS 平台说明"
   },
@@ -4878,5 +4898,21 @@
   {
     "source": "typesafe",
     "target": "typesafe"
+  },
+  {
+    "source": "Local ONNX decision models",
+    "target": "本地 ONNX 决策模型"
+  },
+  {
+    "source": "ONNX",
+    "target": "ONNX"
+  },
+  {
+    "source": "onnx",
+    "target": "onnx"
+  },
+  {
+    "source": "Onnx plugin reference",
+    "target": "ONNX 插件参考"
   }
 ]

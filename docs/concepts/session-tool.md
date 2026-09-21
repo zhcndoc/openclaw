@@ -170,6 +170,14 @@ During healthy worker provisioning or workspace preparation, accepted input stay
 - **Wait for reply:** set a timeout and get the response inline.
 - **Continue a paused child task:** send the continuation without `mode`. When the caller controls a native child paused by `sessions_yield` with task-owned completion, the runtime resumes that task automatically, preserving its identity and original completion recipient. Use `mode: "resume"` to require this behavior explicitly. An explicit `mode: "followup"` starts a separate turn and leaves the paused task intact.
 
+A separate follow-up to your native child is accepted only after its task record
+has been saved. If registration fails, the send returns an error and the child
+does not start. A requested state watch is installed only after successful
+admission.
+
+A retry cannot restart a follow-up whose task record is already terminal.
+Completed input receipts are reconciled before rejecting the retry.
+
 Task resume returns `status: "accepted"`, `mode: "resume"`, the successor `runId`,
 the original `taskRunId`, and `completion: "task"`. The existing task owner delivers
 the eventual result once; the tool does not wait for the answer or start a separate
@@ -199,6 +207,10 @@ An accepted result keeps target admission separate from announcement delivery.
 `delivery.status` describes only the later announcement as `pending` or `skipped`.
 Neither field is a target-completion receipt.
 
+If an idempotent retry finds that the original admission is still pending, the
+tool returns an error with `sentBeforeError: true` and the existing run ID, without
+installing a watch. Inspect that run before retrying.
+
 Replies come from the completed run's terminal result. When a same-session
 target has already delivered its final reply to the source conversation through
 `message`, OpenClaw skips the duplicate channel announcement. Progress messages
@@ -219,7 +231,7 @@ completion. A delivery failure does not authorize switching to the operator CLI.
 This check prevents accidental loss of attribution; the environment marker is
 not authentication or isolation from other processes running as the same OS user.
 
-After an independent peer session responds, OpenClaw can run a **reply-back loop** where the agents alternate messages up to the built-in limit. The target agent can reply `REPLY_SKIP` to stop early. Ordinary UI threads remain independent peers.
+After an independent peer session responds, OpenClaw can run a **reply-back loop** where the agents alternate messages up to the built-in limit. The target agent can reply `REPLY_SKIP` to stop early. Control UI requesters instead receive the target result once; their human-facing response is not fed back into the target session.
 
 Subagent coordination does not use this loop. A child report goes to its recipient once, without an automatic acknowledgment turn in the child. An explicitly waiting caller can still receive the recipient's reply inline. For a new child turn, the child's reply returns inline or is delivered once after the wait expires; the receiver's response is not sent back to the child.
 

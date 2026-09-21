@@ -146,7 +146,7 @@ Channel setup catalogs retain the requested workspace and load-path scope, inclu
 
 After startup, runtime readers reuse that inventory without filesystem discovery, manifest rereads, or freshness checks. Narrow plugin selections are in-memory views of the same inventory. Changing an account or an agent's run workspace does not invalidate it. Explicit plugin lifecycle operations prepare a new inventory for installs, updates, removals, source or manifest edits, and discovery-root changes before publishing it to the running Gateway.
 
-Legacy session-key migration selects plugins that declare that capability before checking channel presence. Scoped selections probe persisted credentials only for their channel owners, so unrelated authentication modules stay unloaded during Doctor repairs. This credential scope does not limit environment-based presence signals: configured channels with missing plugins still produce installation and recovery hints.
+Legacy session-key migration selects plugins that declare that capability before checking channel presence. Owners already eligible under migration policy do not need a channel-presence probe. Scoped selections probe persisted credentials only for their channel owners, so unrelated authentication modules stay unloaded during Doctor repairs. This credential scope does not limit environment-based presence signals: configured channels with missing plugins still produce installation and recovery hints.
 
 Model-id normalization policies are prepared with each snapshot or narrowed view. Model selection, catalogs, and runtime normalization carry that view forward instead of rebuilding policies from its plugin list. An empty view remains authoritative and cannot inherit policies from a broader process snapshot.
 
@@ -170,7 +170,7 @@ Once admitted and before stopping services or channels, replacement pauses new c
 
 A provider or harness plugin load failure remains recorded in its runtime generation. It makes that plugin unavailable without superseding the generation or blocking models that use healthy plugins. Inspect the failing owner with `openclaw plugins inspect <id> --runtime --json`. Use `openclaw doctor --fix` for supported installation repairs, or fix the reported problem in plugin code, then request `plugins.reload` through the admin Gateway API to load the repaired plugin.
 
-Read-only model validation, effective tool inventory, and isolated model probes acquire their own registrations when they need executable provider or harness hooks. Concurrent callers share the prepared generation, and its lifecycle disposers run after the final borrower and any unfinished preparation or catalog work settle. Cancellation does not close a registration while its callback is still running. Process shutdown revokes these registry views before joining their remaining work and disposal. Catalog reads that need only metadata do not acquire these executable registrations.
+Read-only model validation, effective tool inventory, and isolated model probes acquire their own registrations when they need executable provider or harness hooks. Concurrent callers share the prepared generation, and its lifecycle disposers run after the final borrower and any unfinished preparation or catalog work settle. Cancellation does not close a registration while its callback is still running. Process shutdown revokes these registry views before joining their remaining work and disposal. Catalog reads that need only metadata do not acquire these executable registrations. Effective tool inventory prepares only configured and session-selected model facts, including captured catalogs from enabled providers; it does not refresh the full model catalog. Session selections do not change the configured model picker.
 
 Each plugin service startup attempt owns one cleanup operation, including failed starts. Hot replacement observes candidate startup and service cleanup with five-second deadlines. Candidate startup failure rejects the replacement. Replacing a loaded plugin requires successful cleanup before another registration can acquire its resources; pending cleanup or a cleanup error can therefore reject replacement and prevent automatic recovery. A pending startup retains its resources until it finishes and its one stop operation settles. Plugin removal can report deferred cleanup; Gateway shutdown joins that work before releasing the plugin's resources. Disposal stops new registered calls while physical cleanup finishes. Service cleanup is not invoked a second time merely because an observer timed out. If a command catalog refresh also stopped unchanged channels, failed replacement resumes those healthy registrations while the failed plugin remains fenced.
 
@@ -206,10 +206,18 @@ Node conditions select the target from that captured metadata. Legacy packages
 without an exports map also prefetch their existing main or index entry as raw
 bytes; this can read a large native entry, but does not execute unselected code.
 The selected package's remaining body is captured before execution.
-Dependency links retain existing nested installation locations; hoisted dependencies
-link at the captured package root. Capture does not add `node_modules` beside
+Dependency links retain existing nested installation locations. Dependencies installed
+beside a package remain siblings in the capture, including optional platform packages
+whose native assets are read through relative filesystem paths. Other ancestor
+dependencies link at the captured package root. Capture does not add `node_modules` beside
 individual source files, so native-addon loaders can still locate their package
 root and its build assets.
+
+Each captured generation links the selected host `openclaw` package so Workers
+and child processes started from its modules can resolve the host SDK. This link
+does not depend on the main thread's module hooks and is recreated during recovery.
+Snapshot cleanup and update source inspection do not descend through these links
+into the host package.
 
 After the existing runtime, setup, or executable-discovery checks admit an entry,
 its instance captures imported shared files and dependency modules on demand.
@@ -229,9 +237,19 @@ creation-time capture; later inputs extend explicit source-current checks withou
 changing that digest. Invalid optional package metadata fails only when selected.
 Module acquisition uses the instance's current admission, and disposal closes
 further capture.
-Runtime and setup retirement remove captured artifacts asynchronously and wait
-for removal to finish. Plugin callback deadlines do not end custody of those
-files; synchronous source inspection and failed capture still clean up before returning.
+Runtime and setup retirement use the existing five-second instance shutdown budget.
+If calls, retained consumers, or cleanup exceed that budget, logical retirement
+returns a forced-retirement diagnostic with the still-running call and consumer
+counts. Ordinary invocation authority closes and late successful results are
+refused. Physical cleanup continues asynchronously: captured files and module
+resolvers remain until calls, consumers, and cleanup tails actually settle.
+An explicitly retained consumer keeps its admitted turn and cleanup authority until
+its host closes or releases it. Its callbacks and late results are refused after release.
+Shared writable state stays owned until its cleanup finishes; late cleanup
+failures remain failures of the resource handoff. Web provider
+descriptors keep their registration identity; runtime projections bind their
+factories and returned tools to the selected plugin instance. Synchronous source
+inspection and failed capture still clean up before returning.
 
 Default source captures live under
 `<stateDir>/tmp/plugin-captures/<instanceId>/captures/`, with a random instance ID
@@ -275,6 +293,7 @@ Doctor (including `--fix`), and update finalization preserve them. Neither age
 nor a lock for one state directory establishes ownership of captures from other
 profiles or containers sharing that temporary directory. No legacy files are
 moved or adopted by the new runtime.
+Doctor lists legacy `openclaw-plugin-build-*` and `openclaw-model-catalog-*` roots under the state temporary directory, their count and total size, and a bounded removal command to run only after every Gateway, CLI process, and container using that state directory has stopped; it never executes the command.
 
 Configured Gateway agents share one model-catalog worker per plugin-inventory
 lifetime. Agent and authentication facts belong to each task; plugin registrations
@@ -291,10 +310,13 @@ Credential persistence publishes fresh shared-store ownership before credential
 discovery. Login and explicit auth refresh join the credential owner's publication
 instead of creating another catalog generation for the same change.
 
-Model-catalog workers keep their captured plugin files in a worker-owned directory.
+Model-catalog workers keep their captured plugin files in a worker-owned directory
+under the same managed capture instance, with custody retained by their producer.
 The parent removes any remaining captures after that worker exits,
 including cancellation and crashes. Files remain available while the worker is
 running, and retiring one worker does not remove another generation's captures.
+If the whole Gateway is killed, the existing hourly cleanup reclaims the abandoned
+instance only after acquiring its released SQLite coordinator.
 Cancellation releases compute capacity after the worker exits; terminal shutdown
 also waits for file cleanup. Failed file removal is reported as a cleanup warning.
 

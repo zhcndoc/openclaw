@@ -12,6 +12,14 @@ The bundled `typesafe` plugin connects OpenClaw's optional decision model role t
 TypeSafe AI's Jev models. Its models appear in the separate **Decision** picker,
 never in the conversational model picker.
 
+The bundled adapter and decision model role were added after released OpenClaw
+`2026.9.5`. Use a development checkout containing these features, or a later
+release that includes them; enabling this configuration on `2026.9.5` does not
+add the missing API or bundled plugin.
+
+See [Decision models](/concepts/decision-models) for the model role, available
+backends, rubric examples, and provider-neutral plugin API.
+
 The plugin is disabled by default. Bundling or enabling it does not select a
 decision model or schedule background work.
 
@@ -84,10 +92,11 @@ largest value is an explicit consumer policy. Probabilities and confidence are
 not demonstrated accuracy guarantees or permission to act.
 
 The host owns concurrency, circuit health, deadlines, cancellation, and provider
-lifecycle. The adapter shares transport and response validation with the tool
-below. Requests use the fixed TypeSafe HTTPS endpoint, reject redirects, and do
-not retry automatically. Consumers decide what to do with unavailable decisions;
-caller cancellation must not start fallback work.
+lifecycle. Native decisions have a ten-second maximum; shorter consumer or
+plugin timeouts still apply. The adapter shares transport and response validation
+with the tool below. Requests use the fixed TypeSafe HTTPS endpoint, reject
+redirects, and do not retry automatically. Consumers decide what to do with
+unavailable decisions; caller cancellation must not start fallback work.
 
 ## Optional evaluation tool
 

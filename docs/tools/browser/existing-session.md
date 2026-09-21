@@ -108,7 +108,7 @@ Agent use:
 - If you use a custom existing-session profile, pass that explicit profile name.
 - Only choose this mode when the user is at the computer to approve the attach
   prompt.
-- The Gateway or node host can spawn `npx -y --audit=false chrome-devtools-mcp@1.8.0 --autoConnect`.
+- The Gateway or node host can spawn `npx -y --audit=false chrome-devtools-mcp@1.8.0 --experimentalVision --autoConnect`.
 
 Notes:
 
@@ -129,6 +129,11 @@ Notes:
   target before target-specific work, and take a new snapshot before using refs.
   Each ref is valid only for its target and latest snapshot. Old aliases are not
   transferred to a replacement tab, even when its URL matches.
+- Starting a snapshot refresh invalidates that tab's earlier refs, even if the
+  refresh fails. Condition waits refresh snapshots internally; take a fresh
+  snapshot after such a wait before performing another ref-based action.
+- Labeled screenshots can include controls in multiple frames. Successful
+  captures remove their temporary labels from each frame before returning.
 - Chrome DevTools MCP currently routes page tools by a process-local numeric page
   ID. Process-scoped handles prevent reuse across subprocess replacement, but an
   in-process browser-context replacement between adjacent tool calls can still
@@ -151,6 +156,9 @@ are operator-managed and must preserve Chrome MCP's connection-argument semantic
 Using `mcpArgs` does not replace the package prefix: when `mcpCommand` is `npx`,
 OpenClaw still prepends `-y --audit=false chrome-devtools-mcp@1.8.0`. The optional npm
 install audit is disabled so registry audit availability does not delay browser startup.
+The default launcher enables `--experimentalVision` for native coordinate clicks.
+A custom `mcpCommand` must expose the `click_at` tool to support `click-coords`;
+pass the server's corresponding feature flag in `mcpArgs` when required.
 
 When `mcpArgs` does not set a connection option, OpenClaw forwards a configured
 `cdpUrl` to Chrome MCP instead of generating `--autoConnect`:
@@ -176,8 +184,9 @@ running browser behind that endpoint rather than opening a profile directory.
 
 Compared to the managed `openclaw` profile, existing-session drivers are more constrained:
 
+- **Ambiguous iframe refs** - Chrome MCP can return the same element ID for different documents on pages with cross-origin frames. OpenClaw discards these snapshots and invalidates their refs to prevent actions from targeting the wrong element. Ref-free page screenshots remain available; use a managed browser profile for ref-based work on affected pages.
 - **Screenshots** - page captures and `--ref` element captures work; CSS `--element` selectors do not. Playwright is not required for page or ref-based element screenshots. (`--full-page` cannot combine with `--ref` or `--element` on any profile, not just existing-session.)
-- **Actions** - `click`, `type`, `hover`, `scrollIntoView`, `drag`, and `select` require snapshot refs (no CSS selectors). `click-coords` clicks visible viewport coordinates and does not require a snapshot ref. `click` is left-button only (no button overrides or modifiers). `type` does not support `slowly=true`; use `fill` or `press`. `press` does not support `delayMs`. `type`, `hover`, `scrollIntoView`, `drag`, `select`, and `fill` do not support per-call `timeoutMs` overrides; `evaluate` does. `select` accepts a single value. `batch` is not supported; send actions individually.
+- **Actions** - `click`, `type`, `hover`, `scrollIntoView`, `drag`, and `select` require snapshot refs (no CSS selectors). `click-coords` sends native input at visible viewport coordinates without a snapshot ref, supporting left clicks and double clicks. Right/middle buttons and nonzero delays return an unsupported-operation error. `click` is left-button only (no button overrides or modifiers). `type` does not support `slowly=true`; use `fill` or `press`. `press` does not support `delayMs`. `type`, `hover`, `scrollIntoView`, `drag`, `select`, and `fill` do not support per-call `timeoutMs` overrides; `evaluate` does. `select` accepts one exact HTML option value, including empty or whitespace values; duplicate display labels do not change which value is selected. `batch` is not supported; send actions individually.
 - **Wait / upload / dialog** - `wait --url` supports exact, substring, and glob patterns (same as managed); `wait --load networkidle` is not supported on existing-session profiles (it works on managed and raw/remote CDP profiles). Upload hooks require `ref` or `inputRef` and do not support CSS `element`; pass multiple paths when the page's file input accepts multiple files. Dialog hooks do not support timeout overrides or `dialogId`.
 - **Dialog visibility** - Managed browser action responses include `blockedByDialog` and `browserState.dialogs.pending` when an action opens a modal dialog; snapshots also include pending dialog state. Respond with `browser dialog --accept/--dismiss --dialog-id <id>` while a dialog is pending. Dialogs handled outside OpenClaw appear under `browserState.dialogs.recent`.
 - **Playwright-only features** - PDF export, download interception, `responsebody`, and the agent actions `requests`, `errors`, `text`, and `emulate` require a Playwright-backed profile, such as the managed `openclaw` profile. Use `snapshot` to inspect an existing-session page.

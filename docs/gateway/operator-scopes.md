@@ -52,6 +52,10 @@ and per-agent GitHub changes remain `operator.admin`. Publication remains
 Unknown future `operator.*` scopes require an exact match unless the caller
 already holds `operator.admin`.
 
+RPCs, events, and background tools use the same scope rules. A continuation with
+`operator.write` can read its GitHub identity and session state without another
+interactive message. Session access and execution-lifetime checks still apply.
+
 ## Named operator roles
 
 Team Gateways can bind authenticated durable profiles to named operator roles.
