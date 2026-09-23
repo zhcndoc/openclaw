@@ -40,7 +40,7 @@ The iOS, macOS, and both shared OpenClawKit Periphery scans use Xcode 27 on GitH
 - **Preflight diagnostics** log `Node test plan changed-set` with the selected row count or `Node test plan broad fallback` with the first blocking reason. Reasons distinguish missing/deleted sources, workspace aliases, public SDK impact, packing-policy proof, unresolved owners, target limits, and missing canonical metadata. The logged changed-path manifest supplies the inputs for replay; a skipped preflight has no observed plan.
 - **PR wrapper extraction** selects `pr-worktree-provision.test.ts` when the wrapper, its library, or a file in `scripts/pr-lib/wrapper-components.txt` changes. This manifest-derived policy watch supplements ordinary source tests because filesystem copying is invisible to the import graph. Manifest-only changes also run provisioning, including its duplicate-inventory and eager runtime import-closure checks.
 - **Tooling test changes** under `test/scripts/**/*.test.ts` also select `test-projects.test.ts`, whose workflow-routing expectations depend on the test inventory. The changed tests retain their own coverage, and newly added workflow guards check routing expectations before merge.
-- **Messaging test-root changes** under `src/auto-reply/` and `src/infra/outbound/`, plus core-test tsconfig inputs, select `tsgo-core-test-shards.test.ts`. This filesystem-inventory guard verifies exactly-once ownership and the 700-root headroom limit before the 720-root compiler cap is reached. It supplements the changed tests' ordinary owners; other test-root paths retain their existing selection.
+- **Messaging test-root changes** under `src/auto-reply/` and `src/infra/outbound/`, plus core-test tsconfig inputs, select `tsgo-core-test-shards.test.ts`. This filesystem-inventory guard verifies exactly-once ownership; shard size against the advisory 720-root limit is reported as a warning only and never blocks CI. It supplements the changed tests' ordinary owners; other test-root paths retain their existing selection.
 - **Codex app-server test changes** under `extensions/codex/src/app-server/**/*.test.ts` also select `test/vitest-projects-config.test.ts`, which verifies complete and unique full-suite test ownership. The changed tests retain their existing extension suite coverage.
 - **Git-owner changes** to its action, base-commit policy, projection generator, lifecycle tests and support, or named owner-adopting workflows such as Workflow Sanity, QA Profile Evidence, Mantis ref validation/installers/worktrees, Docs Sync Publish Repo, OpenClaw Performance, the Linux/macOS/npm-placeholder release admission jobs, and plugin ClawHub/npm publication select the existing `macos-node` and Windows lanes. These run native checkout ownership proof without selecting Swift, iOS, or Android jobs; Mac app and shared-native changes retain their existing Mac lanes.
 - **macOS Swift runner budgets** are 30 minutes per worker on GitHub-hosted `xcode-27` with Xcode 27, including automatic first attempts. Regular PR/main CI and PR `release_gate` dispatches run `tests` for Swift lint, schema checks, and app coverage build/tests, alongside `packages` for the Talk opt-out build, shared package suite, and standalone Swabble suite for current targets. Ordinary full-scope manual validation adds the independent `release` app build, moves lint/schema ownership to that phase, and retains health renders in `tests`. Every selected phase must pass the existing CI gate. At most two workers run concurrently; a failed phase does not cancel the other phases' diagnostics. The preview macOS 27 image changes neither coverage nor the Swift 6.3 source-language minimum; complete native proof is required on the new toolchain.
@@ -86,10 +86,14 @@ plans retain the complete files and all assertions. This explicit inventory
 does not exclude E2E-named package-contract tests or the ordinary mixed TUI
 suite when targeted directly.
 
-`test/scripts/ci-workflow-guards.test.ts` checks proof-tier selection for PR,
-main-push, ordinary manual, and PR-fallback events. Its Docker scheduler guard
+`test/scripts/ci-workflow-planning.test.ts` checks proof-tier selection for PR,
+main-push, ordinary manual, and PR-fallback events. The Docker scheduler guard in
+`test/scripts/ci-workflow-guards.test.ts`
 asserts that the selected `docker_seed_lanes` inventory reaches
 `pnpm test:docker:all` through `OPENCLAW_DOCKER_ALL_LANES`, and its release-child
 guard verifies that `normal_ci` dispatches `ci.yml` against the exact target.
+`test/scripts/ci-workflow-evidence.test.ts` owns QA protocol, evidence-reader,
+and maturity handoff checks. Fast CI-routing and cache warming include all three
+files; YAML action-pinning checks retain their original guard owner.
 The Node planner tests separately assert that main retains the complete Doctor
 refusal and Codex recovery files while PR and PR-fallback plans omit them.
