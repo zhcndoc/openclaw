@@ -95,6 +95,33 @@ unscoped calls warn once per method. Core and bundled callers use the awaited
 methods. This migration changes no RPC schema, stored data, retention, or update
 behavior.
 
+## Await session upstream links
+
+Use `upsertSessionUpstreamLinkAsync` and `deleteSessionUpstreamLinkAsync` from
+`openclaw/plugin-sdk/session-catalog`. Keep the existing arguments and await
+completion before binding a native session, publishing adoption, or depending on
+link cleanup. The upsert resolves to a boolean; deletion resolves to `"deleted"`,
+`"absent"`, `"changed"`, or `undefined`, preserving the existing result semantics.
+
+Pass the existing `assertCommitAllowed` callback when the write depends on live
+authority. It runs at worker transaction and commit admission, so it must remain
+synchronous and must not query the shared-state database. An uncertain write
+outcome does not authorize retrying the write or invoking its synchronous
+counterpart.
+
+Official harnesses using the production-private
+`agent-harness-session-runtime` initializer should replace
+`initialization.link(input)` with `await initialization.linkAsync(input)` before
+calling `initialization.bind(...)`. Await rollback cleanup before releasing the
+initializer's ownership.
+
+The synchronous upsert, delete, and initializer `link` contracts shipped in
+`v2026.9.8` retain their arguments, immediate results, and completion timing until
+the next Plugin SDK major and explicit breaking-release approval. Their
+deprecation is recorded in TypeScript and the compatibility registry without
+runtime warnings. This migration changes no schema, stored data, retention, or
+update behavior.
+
 ## Await session transcript persistence
 
 Use the awaited `SessionManager` methods from
@@ -147,6 +174,34 @@ for read limits, cancellation, and target-binding rules. Synchronous getters rea
 the prepared view. `inMemory()` and `fromEntries()` remain synchronous;
 `appendModelChange`, `appendThinkingLevelChange`, and `createBranchedSession`
 already return promises and keep their names.
+
+Replace `SessionManager.readSessionContext(target, read)` with
+`await SessionManager.readSessionContextAsync(target, read, { admission?, signal? })`.
+This reader preserves full-fidelity messages, including storage-only fields omitted
+from model context. Its consumer may return a promise; the iterator closes when
+the consumer settles, and source validation must succeed before the result is
+returned. A rewritten source or revoked admission rejects the read. The durable
+reader retains its database owner through consumption and cleanup;
+database closure revokes the read. Final acceptance uses the existing writer
+FIFO and native mutation witness, including rewrites made after worker validation.
+The `session-manager-sync-context-read` record deprecates the synchronous reader on
+October 4, 2026, with one warning per process and removal at the next Plugin SDK
+major. Its existing synchronous result remains compatible during that window.
+
+Actor-bound incognito sessions reject the deprecated synchronous persistence and
+context methods before native storage or loaded-view mutation. The error names
+the awaited replacement. Production incognito remains host-owned until the atomic
+worker activation; durable synchronous compatibility is unchanged. An ordinary
+`resolveCurrentTurnEntryId()` only walks the loaded view; to include omitted
+custom messages, await `openAsync(target)` and walk that complete view instead.
+
+Bundled Codex history captures `captureCodexSessionContextReader(target, signal?)`
+from `openclaw/plugin-sdk/codex-session-transcript-runtime` before yielding. When
+an actor binding exists, await the returned reader with the same target and a
+context consumer. It retains the actor through scanning, consumption, validation,
+and cleanup. Without an actor binding it returns `undefined`, preserving the
+existing host route. The synchronous Codex context reader and validators refuse
+actor-bound access; they never reopen a native incognito database.
 
 `branchAsync` can hydrate missing history through the read worker before selecting
 the branch. `resetLeafAsync(): Promise<void>` orders an in-memory navigation reset
@@ -243,6 +298,31 @@ major. Deprecated calls emit the same once-per-method
 legacy hook for supported older consumers. The awaited Gemini helper propagates
 metadata write failures; the legacy adapter retains its historical best-effort
 metadata behavior.
+
+## Await session observer and progress visibility
+
+Use `await context.sessionObserver.handleEventAsync(event)` to join event
+admission, `await getCompanionSnapshotAsync(sessionKey, agentId?)` for a current
+companion snapshot, and `await disposeAsync()` to join accepted observer work
+during shutdown. Connection visibility and removal remain synchronous.
+
+Reply-dispatch hooks should await `event.shouldSendToolSummariesAsync()` and
+`event.shouldSendFullToolDetailsAsync()` at each visibility decision. Current
+hosts supply both methods; they remain optional in the original event type so
+external callers can still construct released boolean-only events. Plugins that
+require worker-backed visibility should report a missing capability on older
+hosts rather than substitute a cached dispatch-start boolean.
+
+Channels should register `onVerboseProgressVisibilityAsync` instead of
+`onVerboseProgressVisibility`. The callback receives `() => Promise<boolean>`;
+dispatch awaits registration before selecting commentary ownership. Await the
+getter before rendering progress and recheck cancellation after that await.
+Commentary ownership remains frozen for a turn where the existing commentary
+delivery policy requires it; ordinary live visibility reads remain fresh.
+When both callbacks are supplied, the async callback takes precedence.
+
+The deprecated methods, booleans, and synchronous callback remain available
+until the next Plugin SDK major and explicit breaking-release approval.
 
 ## Managed node workspace acquisition
 
@@ -657,3 +737,21 @@ write `agents.entries`. This compatibility window adds no runtime warnings.
     ```
   </Step>
 </Steps>
+
+## Await strict transcript message preparation
+
+For `appendSessionTranscriptMessageByIdentityStrict`, use
+`prepareMessageAfterIdempotencyCheckAsync` when a message needs preparation after
+duplicate detection. The callback runs outside the writer transaction; returning
+`undefined` suppresses a fresh message. Replayed messages retain their stored bytes
+and skip preparation. A transcript change during awaited message preparation
+refuses that prepared write.
+
+Keep live, synchronous authority assertions in `beforeFreshMessageCommit`. They
+run only for fresh inserts and are checked again at commit. They must not perform
+blocking reads or query the target database from a worker admission callback;
+use the host owner's prepared source authority when storage facts are needed.
+
+The released `prepareMessageAfterIdempotencyCheck` callback keeps its synchronous
+result and transaction ordering until the next Plugin SDK major and an explicitly
+approved breaking release. This change requires no data migration or update step.
