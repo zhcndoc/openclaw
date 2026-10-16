@@ -64,13 +64,15 @@ The choice is saved to your authenticated profile on the connected Gateway and h
 
 ## Community invitation
 
-The sidebar shows a community invitation with Reddit, Discord, and X links by default. Its first appearance waits until sidebar interaction finishes, so it does not move session controls while you use them. Its close button dismisses it for the current browser origin. The redesigned invitation appears again for browsers that dismissed the older Discord-only card. Dismissing this version keeps it hidden across routine updates. To hide the invitation for everyone using a Control UI deployment, run this on the Gateway serving that UI:
+The sidebar’s compact **Community** entry opens Discord, Reddit, and X links on demand. On phones, the links appear in a bottom sheet; larger screens use a centered dialog. The sheet does not open automatically, and closing it returns focus to **Community** without hiding the entry. Links open in a new tab.
+
+This replaces the promotional invitation card. Existing browser-local card dismissals are left untouched; they do not hide the compact entry. To hide Community for everyone using a Control UI deployment, run this on the Gateway serving that UI:
 
 ```bash
 openclaw config set gateway.controlUi.communityInvite false
 ```
 
-After the Gateway applies the change, reload the browser page or reconnect to pick it up. The setting belongs to the Gateway serving the UI, including when that UI connects to a different remote Gateway. Setting it to `false` hides the card even in new browser profiles. Re-enabling it with `true` preserves existing browser-local dismissals.
+After the Gateway applies the change, reload the browser page or reconnect to pick it up. The setting belongs to the Gateway serving the UI, including when that UI connects to a different remote Gateway. Re-enabling it with `true` restores the compact entry.
 
 ## Personal identity
 
@@ -173,7 +175,7 @@ Themes can choose a neutral prompt mark instead of the lobster mascot and supply
 
 Plugin themes can also bring their own SVG hats and composer visitors through [declared artwork](/plugins/manifest/surfaces#themes).
 
-Every built-in theme includes matching light and dark background artwork across the app canvas. The small, bundled lossless WebP images follow the selected mode, including System. Plugin, personal, and imported palettes use neutral artwork. Existing users keep this theme artwork until they change their background preference.
+Every built-in theme includes matching light and dark background artwork across the app canvas. The small, bundled lossless WebP images follow the selected mode, including System. Plugin themes can [declare their own light and dark backgrounds](/plugins/manifest/surfaces#themes), which are dimmed like a custom image; personal and imported palettes, and plugin themes without one for the current mode, use neutral artwork. Existing users keep this theme artwork until they change their background preference.
 
 In **Appearance → Background**, choose **None**, **Theme artwork**, or **Custom image**. **New session page** and **Conversations** are independent: hiding a background does not delete your image. Choosing a custom image for the first time starts with conversation backgrounds off. Later edits preserve your placement choices. Changing themes, fonts, accent, or color mode does not replace an explicit image or re-enable **None**. Without a personal profile, None, theme artwork, placement, presentation, and visibility are saved only in this browser for the selected Gateway. You can opt out without signing in; private uploads still require a profile.
 
@@ -563,6 +565,19 @@ app-update controls. Permissions include the access published by the device,
 including limited access to contacts or photos. Precise location is read-only
 on iOS; **Open Settings** opens the system setting. Talk shows the device's
 Voice Wake, Talk mode, Talk button, background Talk, and speakerphone controls.
+
+## Claws (Labs)
+
+Enable **Settings → Labs → Claws** to browse official Claw packages from
+ClawHub on the **Agents** page. Search the catalog, review the files and
+capabilities a Claw will install, then select **Add** to create its agent.
+Add creates an ordinary agent and opens its chat. It does not create a separate
+installed Claw to update or remove. Delete the agent through normal agent
+controls; shared plugins and MCP servers remain installed. See
+[Claws](/cli/claws) for the package contract and local-source CLI commands.
+
+Turning the Labs switch off hides Claw discovery and Add. Existing agents keep
+running.
 
 ## Speech bubbles
 
