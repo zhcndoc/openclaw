@@ -1,27 +1,28 @@
 ---
 summary: "持久化会话状态信号日志：状态版本、观察者、陈旧状态通知和对齐"
 read_when:
-  - 你想让代理注意到人类或其他代理在背后更改了某个会话
-  - 你正在调试状态变更通知、观察游标或 session_status 的 changesSince 更改
-  - 你想了解父代理如何与子会话保持同步
+  - "你想让代理注意到人类或其他代理在背后更改了某个会话"
+  - "你正在调试状态变更通知、观察游标或 session_status 的 changesSince 更改"
+  - "你想了解父代理如何与子会话保持同步"
 title: "会话状态感知"
 sidebarTitle: "会话状态感知"
 ---
 
-当多个会话处理同一个问题时——例如，管理者把任务委派给子会话、某个人类直接进入某个工作会话、两个代理通过 [`sessions_send`](/concepts/session-tool) 协作——每个会话都会为其他会话建立一些假设。一旦另一个参与者介入，这些假设就会立刻过时。会话状态感知是一套机制：它能检测到这种介入，只向受影响的会话通知一次，并在其继续行动之前，提供一种低成本的方式让它赶上最新状态。
+多次会话通常会解决同一问题。例如，经理委派给子级，人员直接跳入工作会话，以及两个代理通过 [`sessions_send`](/concepts/session-tool) 进行协调。每个会话都会建立关于其他会话的假设。一旦另一个演员介入，这些假设就会变得陈旧。会话状态感知是检测干预的机制。它告诉受影响的会话一次。然后，它为该会话提供了一种在采取行动之前进行跟进的廉价方式。
 
 这三部分协同工作：
 
 1. **持久化信号日志**记录每个会话的选定状态变更。
 2. **观察者**为每个目标维护游标，并接收一次合并后的陈旧状态通知。
-3. **对齐**通过带有 `changesSince` 的 `session_status` 拉取精确的差异。
+3. **Reconciliation** 通过 `session_status` 和 `changesSince` 提取精确的增量。
 
-## 信号日志
+## <a id="the-signal-log"></a> 信号日志
 
 当被监视的会话发生实质性变化时，OpenClaw 会向共享状态数据库（`session_state_events`）追加一个带类型的事件。事件包含元数据和一行摘要——绝不包含消息内容。
 
-| Kind                   | 记录时间                                             | 通知观察者 |
+| 类型                   | 记录时间                                            | 通知观察者 |
 | ---------------------- | -------------------------------------------------------- | ----------------- |
+| `created`              | 新会话具有可信创建属性           | 否（仅日志）     |
 | `human_direct_message` | 人类直接向被监视的会话发送一个回合       | 是               |
 | `upstream_missing`     | 被采纳会话的上游来源消失          | 是               |
 | `goal_changed`         | 会话的目标状态被创建、更新或清除 | 是               |
@@ -33,28 +34,35 @@ sidebarTitle: "会话状态感知"
 
 每个事件都会标明其行为主体（`human`、`agent` 或 `system`）。被取消和超时的子运行会作为失败记录，并在事件负载中保留精确结果（`cancelled`、`timeout` 或 `error`）。
 
-会话的 **状态版本** 本质上就是其日志中的最高序号，由一个持久化的按会话保存的 head 跟踪，即使在裁剪后也会保留。`sessions_list` 行在会话记录了变更时会包含 `stateVersion`；`session_status` 总是会报告它。
+会话的 **状态版本** 只是其日志中的最高序列号，在持久的每会话头中进行跟踪，该头在修剪后仍然存在。当会话记录更改时，`sessions_list` 行包括 `stateVersion`。 `session_status` 总是报告它。
 
 仅记录日志的类型是为了对账历史，而不是通知：普通的子运行完成交付仍由 [子代理公告](/tools/subagents) 负责，信号日志不会重复记录它。
 
-## 观察者
+默认情况下，会话创建会单独对一次性 Home 通知进行排队，由 `session.notifyOnCreate` 控制。它不会注册观察者或唤醒 Home。与持久观察者通知不同，它仅使用有界的内存中系统事件队列。请参阅 [ 新会话感知 ](/concepts/main-session#what-flows-into-the-main-session) 了解可见性排除。
 
-观察者是一个持有目标上游标（`session_watch_cursors`）的会话。游标来自两个地方：
+## <a id="watchers"></a> 观察者
+
+观察者是一个将光标 （`session_watch_cursors`） 保持在目标上的会话。游标来自三个地方：
 
 - **隐式（spawn 边）。** 当一个会话生成一个子代理或 ACP 子级时，父级的游标会自动在子级的生成版本处被设定。父级从不手动订阅。
-- **显式（`sessions_send watch: true`）。** 任何协调者都可以观察一个非生成的目标：在 `sessions_send` 上传入 `watch: true`，并且在发送成功分发后，发送者会被注册为实际接收该消息的会话的观察者。注册从目标当前的状态版本开始——之前的历史不会产生通知。工具结果会在设置了该参数时报告 `watched: true|false`。
+- **Ambient groups.** 在 `session.groupScope: "per-group"` 下，代理的主会话在第一次人工轮流后监视其隔离组、房间和通道会话。这与 `session.dmScope` 无关。将房间路由到主房间不需要监视，因为它已经共享主要对话。
+- **Explicit （`sessions_send watch: true`）.** 具有正常状态可见性的协调器可以监视未生成的目标。在 `sessions_send` 上传递 `watch: true`。仅每个代理 `tools.agentToAgent.send` 规则不会授予对其他隐藏会话的监视访问权限。发送成功后，发送者将被注册为实际接收消息的会话的观察者。注册从目标的当前状态版本开始——之前的历史记录不会产生通知。设置参数后，工具结果报告 `watched: true|false`。
 
-观察者标识必须是带代理限定的会话键。在 `session.scope="global"` 下，共享的 `global` 键在不同代理之间是有歧义的，因此这类会话会获得持久日志和 `changesSince`，但不会获得主动通知。
+观察者和目标都必须具有有效的代理限定会话密钥。明确选择的目标代理必须与目标密钥一致。诸如 `global` 之类的原始密钥在代理之间是不明确的：其所有者范围的持久日志和 `changesSince` 仍然可用，但主动监视被拒绝。 `sessions_send watch: true` 报告 `watched: false` 并解释这些目标，而不会将已接受的发送转变为失败的发送。登记处拥有的孩子完成情况独立于主动的国家监督。
 
-观察会自动清理：游标行会随着信号日志保留期过期，在观察者会话重置时被移除，并会随着任一会话被删除而删除。v1 中没有 `unwatch` 动词。
+手表还记录其观察者的实体商店。更改 `session.store` 不会将其排队通知转移到具有相同密钥的另一个对话。商店来源不明的旧手表会保留历史记录，但需要重新注册才能恢复主动通知。下一组将针对当前存储注册其环境监视。
 
-Watched Claude, Codex, OpenCode, and Pi sessions adopted from a session catalog are checked for direct upstream human activity on a fixed cadence. Pi monitoring starts after the session is in its append-only v3 format. Detected activity enters the same signal log and watcher flow as other direct human turns.
+合格的监视会自行清理：游标行会随着信号日志保留而过期，在监视会话重置时被删除，并随任一会话一起删除。如果后续清理步骤失败，已提交的重置仍会清除其合格的监视。具有原始或格式错误的端点的历史游标是惰性的，包括重新启动后：它们无法前进、通知、确认或授予环境可见性。会话重置或删除不会删除这些未绑定的游标；他们现有的保留期限仍然适用。 v1 中没有 unwatch 动词。
 
-OpenCode detection is deliberately conservative. OpenCode's v1 tables do not preserve message provenance, so reporting ambiguous rows would create false alarms; per-message provenance exists only in its v2 schema. OpenCode therefore does not report image-only turns, `@file`-mention-only turns, slash commands routed to a subagent, or turns from ACP clients that annotate content with an audience (mapped by OpenCode to `synthetic` or `ignored`). It also suppresses text matching any of the preceding 50 user messages to catch compaction replay, which means a human deliberately repeating the same text within that window can be missed.
+将从会话目录中采用的观看的 Claude、Codex、OpenCode 和 Pi 会话以固定节奏检查直接上游人类活动。 Pi 监控在会话处于其仅附加 v3 格式后开始。检测到的活动与其他直接人类轮流一样进入相同的信号日志和观察者流。
 
-如果某个已采纳会话的上游源被外部删除，连续三次缺失检查（约三个监控周期）会为其观察者生成一条 `upstream_missing` 信号，并移除上游链接。继续该目录会话会重新创建一条新的链接。
+用于识别 OpenClaw-origin 提示的最近用户文本来自一份转录快照，包括长期历史记录。并发回复或文字记录重置无法重复页面或合并来自不同历史记录窗口的消息。
 
-## 注意事项：一条，而非多条
+OpenCode 检测故意保守。 OpenCode 的 v1 表不保留消息来源，因此报告不明确的行会产生误报。每条消息的来源仅存在于其 v2 架构中。因此，OpenCode 不会报告仅图像轮次、仅提及 `@file`- 轮次、路由到子代理的斜杠命令，或来自用受众注释内容的 ACP 客户端的轮次（由 OpenCode 映射到 `synthetic` 或 `ignored`）。它还会抑制与前面 50 条用户消息中的任何一条匹配的文本，以捕获压缩重播。因此，可能会错过在该窗口内故意重复相同文本的人。
+
+如果从外部删除了已采用会话的上游源，则连续三个缺失检查会为其观察者生成一个 `upstream_missing` 信号，并删除上游链路。连续三次检查大约是三个监视器滴答声。再次继续目录会话会创建一个新链接。
+
+## <a id="notices%3A-one%2C-not-many"></a><a id="notices-one-not-many"></a> 注意事项：一条，而非多条
 
 当一个可通知事件到达且某个观察者的游标落后时，该观察者会在其下一次轮到时收到一条系统通知：
 
@@ -62,19 +70,19 @@ OpenCode detection is deliberately conservative. OpenCode's v1 tables do not pre
 Session "agent:main:subagent:child" changed (other actor). Reconcile before acting: session_status sessionKey "agent:main:subagent:child" changesSince 12.
 ```
 
-主会话的观察者也会通过心跳唤醒立即被唤醒；嵌套的子代理观察者则会在其下一次轮到时收到该通知。
+在开始会话事件之前，针对明确观察者的实时通知会合并 20 秒。嵌套的子代理和环境组观察者在下一个普通回合时接收上下文。
 
 该协议刻意避免垃圾通知：
 
-- **每个观察者/目标对仅保留一条待处理通知。** 通知文本在待处理期间保持字节级稳定，系统事件队列会对其去重，因此即使同一目标在短时间内发生二十次快速变化，观察者提示中也只会出现一行。
-- **冻结水位线。** 当通知入队时，游标会冻结其已通知的位置。后续的物料事件只会推进物料水位线；它们不会重新触发通知。
+- **每个 watcher/target 对一个待处理通知。** 通知文本在待处理时是字节稳定的，系统事件队列会对其进行重复数据删除。对同一目标进行二十次快速更改仍然会在观察者的提示中产生一行。
+- **冻结水印。** 当通知排队时，光标冻结其通知位置。进一步的实质性事件仅推进实质性水印。他们不会重新通知。
 - **在清空时确认，仅在交错工作时重新开启。** 当观察者轮到并消费该通知时，游标会前进。如果在入队和清空之间又有更多物料事件到达，则只会为剩余部分开启恰好一条新的通知。
 - **自我抑制。** 观察者永远不会收到自己引发的事件通知。
-- **重启恢复。** 待处理通知保存在内存队列中；在网关重启后，启动扫描会根据持久化游标重新物化这些通知。
+- **重新启动恢复。** 启动扫描从持久游标中恢复挂起的通知作为下一个普通回合的上下文。它不会启动已恢复通知的模型周转或外向交货。重复扫描为每个 watcher/target 对保留一个通知；普通转弯在使用通知时会确认光标。在那之前，对该已经悬而未决的通知的后续更改仍然是被动的，并会提前其材料水印。新创建的实时通知仍然使用主动合并。
 
-## 对账
+## <a id="reconciling"></a> 对账
 
-该通知会准确告诉 watcher 该做什么。带有 `changesSince: <version>` 的 `session_status` 会返回该版本之后的已类型化事件（最多 200 条），且不会推进任何游标：
+该通知准确地告诉观察者该做什么。 `session_status` 和 `changesSince: <version>` 返回该版本之后的键入事件（最多 200 个），而不前进任何游标：
 
 ```json
 {
@@ -85,9 +93,9 @@ Session "agent:main:subagent:child" changed (other actor). Reconcile before acti
         "sequence": 14,
         "kind": "human_direct_message",
         "actorType": "human",
-        "summary": "通过 Telegram 的人工消息"
+        "summary": "human message via telegram"
       },
-      { "sequence": 19, "kind": "goal_changed", "actorType": "human", "summary": "目标已更新" }
+      { "sequence": 19, "kind": "goal_changed", "actorType": "human", "summary": "goal updated" }
     ],
     "historyGap": false
   }
@@ -96,29 +104,34 @@ Session "agent:main:subagent:child" changed (other actor). Reconcile before acti
 
 `historyGap: true` 表示请求的版本早于已保留的历史记录——应当刷新整个会话状态（`sessions_history`、`session_status`），而不是将响应视为一个精确的增量。这个缺口信号是精确的：它来自每个会话被裁剪后的水位线，而不是根据序号运算推断出来的。
 
-## 存储和限制
+## <a id="storage-and-limits"></a> 存储和限制
 
-历史记录保存在共享状态数据库中，受 30 天和 50,000 行的限制；在清理后，每个会话的头部仍保持单调递增。记录采用尽力而为的方式——失败的追加会被记录下来，但绝不会导致原始轮次失败——因此 `stateVersion` 是一个信号日志头，而不是事务性的变更数据捕获版本。
+历史记录保存在共享状态数据库中，期限为 30 天、50,000 行。修剪后，每会话头保持单调。录音是尽力而为。失败的追加会被记录下来，并且永远不会使原始回合失败。因此，`stateVersion` 是信号日志头，而不是事务变更数据捕获版本。
+
+子运行结果是异步记录的，因此等待共享数据库不会阻止网关事件处理。完成加入记录工作，替换或临时运行所有者无法声明运行的第一个终止事件。
+
+等待写入许可后，录制会重新检查会话的所有权。并发元数据更新或写入其他会话不会丢弃其他当前事件。
 
 当前限制：
 
 - 通知投递假定只有一个网关进程拥有共享状态数据库。多个网关共享持久日志和 `changesSince`，但 v1 不会在进程之间推送通知。
-- 压缩事件覆盖嵌入式运行时的压缩所有者；仅原生 harness 的压缩不会被完整记录。
-- 已取消结果的负载细节当前由 ACP 子运行产生；原生子代理取消会显示为通用失败。
-- 上游自回显检测比较的是归一化后的用户文本。与会话最近 10 条 OpenClaw 侧用户消息之一匹配的外部提示会被视为自回显。
-- 单个本地 Claude JSONL 行如果大于每个周期 1 MiB 的扫描上限，会阻塞该会话在 v1 中的游标；未分类字节绝不会被跳过。
-- 单个 Pi JSONL 行如果大于每个周期 1 MiB 的扫描上限，会阻塞该会话在 v1 中的游标；未分类字节绝不会被跳过。
+- Compaction 事件涵盖嵌入式运行时的压缩所有者。仅本机harness压缩未完全记录。
+- 取消结果有效负载详细信息当前由 ACP 子运行生成。本机子代理取消表现为一般故障。
+- 上游自回声检测比较标准化的用户文本。与会话的 10 条最新 OpenClaw-side 用户消息之一匹配的外部提示被视为自回显。
+- A 单个本地 Claude JSONL 行大于 1 MiB 每节奏扫描上限，会阻止该会话在 v1 中的光标。永远不会跳过未分类的字节。
+- A 单个 Pi JSONL 行大于 1 MiB 每节奏扫描上限，会阻止该会话在 v1 中的光标。永远不会跳过未分类的字节。
 - 旧版 Pi 会话是在没有上游链接的情况下接管的。先恢复一次以将文件迁移到 v3，然后再从目录中继续它，以开始监控。
 - OpenCode 检查每个周期发出一次批量数据库查询。只有当该查询显示其持久事件序列已推进时，才会运行会话导出。
 - 配对节点 Claude 检查每个周期会分类最近的 50 个转录项。更大的突发可能会落在 v1 的扫描窗口之外。
 - 配对节点 Claude 历史读取不会暴露明确的 thread-not-found 结果，因此远程 Claude 删除在 v1 中不会被归类为 `upstream_missing`。
 - 尚未被接管的目录会话在 v1 中不在感知层范围内。
-- 在此功能之前接管的会话不包含上游链接；从目录中继续一次即可开始上游监控。
-- 上游链接假定每个已接管的会话键映射到一个拥有代理（接管使用默认存储代理）。在 v1 中，不会监控同一外部线程的多代理接管。
+- 在此功能之前采用的会话不携带上行链路。从目录中继续它们一次以启动上游监控。
+- 上游监控要求每个采用的会话密钥有一个所属代理。采用使用已解析的代理并返回代理限定的密钥。不同的监视键可以监视同一个本机线程。在多个代理 ID 下重用完全相同密钥的链接将被跳过，因为不明确。
 
-## 相关
+## <a id="related"></a> 相关内容
 
 - [会话工具](/concepts/session-tool) — `sessions_send`、`session_status`、`sessions_list`
 - [子代理](/tools/subagents) — 生成边和完成通知
 - [心跳](/gateway/heartbeat) — 排队通知如何唤醒主会话
 - [会话管理](/concepts/session) — 会话密钥、作用域、生命周期
+- [Codex 会话目录和监督](/plugins/codex-supervision) — 本机会话发现和采用

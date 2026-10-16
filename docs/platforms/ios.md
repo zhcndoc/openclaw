@@ -1,40 +1,134 @@
 ---
-summary: "iOS 节点应用：连接到 Gateway、配对、画布和故障排查"
+summary: "iOS 节点应用程序：连接到网关、配对、设备功能和故障排除"
 read_when:
-  - 配对或重新连接 iOS 节点
-  - 启用或排查直接 Apple Watch 节点
-  - 从源码运行 iOS 应用
-  - 调试 gateway 发现或画布命令
+  - "配对或重新连接 iOS 节点"
+  - "使用 Siri 或快捷方式启动实时语音"
+  - "在 Apple 手表上使用语音输入和语音回复"
+  - "设置独立 Apple 观看语音"
+  - "启用或排查直接 Apple Watch 节点"
+  - "从源码运行 iOS 应用"
+  - "调试网关发现或 iOS 节点命令"
+  - "选择本机聊天会话的颜色"
+  - "暂停或唤醒会话"
 title: "iOS 应用"
 ---
 
-可用性：启用发布时，iPhone 应用构建会通过 Apple 渠道分发。也可以从源码运行本地开发构建。
+可用性：官方 iPhone 应用程序可在 [App Store](https://apps.apple.com/app/openclaw-ai-that-does-things/id6780396132) 上获取。本地开发构建也可以从源代码运行。
 
-## 它的作用
+该应用程序需要 iOS 26.2 或 iPadOS 26.2 或更高版本。
+
+## <a id="what-it-does"></a> 它的作用
 
 - 通过 WebSocket 连接到网关（LAN 或 tailnet）。
-- 暴露节点能力：Canvas、屏幕截图、摄像头捕获、位置、对话模式、语音唤醒，以及可选的健康摘要。
+- 公开节点功能：屏幕快照、相机捕获、位置、通话模式、语音唤醒和选择加入健康摘要。
 - 接收 `node.invoke` 命令并报告节点状态事件。
-- 从 Agents 界面（Files）只读浏览所选代理的工作区：目录下钻、带语法高亮的文本预览、图片预览，以及分享面板导出。不执行任何写入操作；预览大小受网关限制。
+- 从代理表面（文件）以只读方式浏览所选代理的工作区：目录深入、语法突出显示的文本预览、图像预览和共享表导出。无写操作；预览的大小受到网关的限制。
+- 为每个配对网关保留最近聊天会话和记录的小型只读离线缓存：冷打开立即绘制最后已知的记录，并在网关响应后刷新，最近的聊天在断开连接时保持可浏览，并且 reset/forget 清除受保护的本地缓存。
+- 将在持久的每个网关发件箱中断开连接时发送的文本消息排队（最多 50 个）：在记录中显示排队的气泡，在重新连接时按顺序刷新，而不会在重试时重复发送，保持持久性，直到保存的历史记录确认发送，在显示 retry/delete 操作之前通过退避重试，并在离线 48 小时后过期而不是发送； reset/forget 使用缓存清除队列。
 - 为每个已配对网关保留一份小型只读离线缓存，存放最近的聊天会话和转录：冷启动打开时会立即显示最后已知的转录，并在网关响应后刷新；断开连接时最近的聊天仍可浏览；重置/忘记会清除受保护的本地缓存。
-- 将断开连接时发送的文本消息排入每个网关各自持久化的发件箱（最多 50 条）：排队气泡会显示在转录中，重连后按顺序刷新并进行幂等重试，在规范历史确认发送之前保持持久化，在向用户显示重试/删除操作之前会以退避策略重试；离线 48 小时后会过期而不是发送；重置/忘记会连同缓存一起清空队列。
-- 聊天是唯一的文本和语音界面。聊天操作可在不离开聊天的情况下打开完整的 Sessions 屏幕，并可显示或隐藏助手推理和工具活动。点击麦克风可进行草稿听写，打开其菜单可录制语音备注，或使用内联的 Talk 控件进行实时语音；Talk 控件在监听或讲话时会根据实时麦克风或播放音量进行动画变化。
-- 聊天支持来自照片选择器、相机、Files、粘贴以及 iOS 分享面板的图片。助手生成的图片会以内联方式从短生命周期的 Gateway 资源 URL 渲染，可在全屏预览中打开，并且在重连或历史重新加载后仍可用，而不会将图片字节存储在转录缓存中。
-- **Settings -> OpenClaw** 会在操作员连接具有 `operator.admin` 且网关支持 `openclaw.chat` 时打开一个专用的 Gateway 设置助手。其设置对话与普通聊天分离，会在本地对秘密回复进行脱敏，且只有在你点击 **Open Chat** 后才会切换到 Chat。
-- 按需朗读助手消息：在 Chat 中长按一条消息并选择 **Listen**。应用会使用配置的 TTS 提供方播放受支持网关的 `tts.speak` 片段；当网关音频不可用或无法播放时，则回退到设备端语音。切换会话或进入后台时会停止播放。
+- Sessions 具有 **Active**、**Snoozed** 和 **Archived** 范围。暂停的会话不会出现在活动侧边栏和概览中，直到它们醒来。
+- Agent 旁白在每个片段完成时以内联方式显示，包括重新连接后。旁白、工具活动和回复集中在一个回复中。紧凑宽度布局隐藏助理头像，为文本留出更多空间；常规宽度布局保留单个顶部对齐的头像。完整的独立气泡使用隐藏头像的发送方尾部，并且可访问的回复容器保留助手的姓名。完成的聊天将早期的工作折叠成 **Worked for …** 在 iPhone 和 iPad 上的回复上方披露。点击它可以检查工作。最终答案和媒体保持可见，活跃或未回答的工作保持扩展。
+- Chat 接受来自照片选择器、相机、文件、粘贴和 iOS 共享表的图像。助理生成的图像从短暂的网关工件 URL 内联渲染，以全屏预览打开，并在重新连接或历史记录重新加载后保持可用，而不将图像字节存储在脚本缓存中。
+- 选择 **+ → 文件** 从文件中附加音频、视频、PDF、text/code、CSV、JSON、Markdown、ZIP 档案和 Office 文档。可拆卸芯片显示文件名和大小。文件使用网关公布的附件大小限制，并通过持久发件箱保留其原始字节。文件限制还限制了每条消息的总附件字节数，对调整大小后的图像进行计数；当您尝试发送时，过大的草稿会保留在编辑器中。对于不公布限制的旧版网关，本机聊天将非图像文件和组合附件预算限制为 19,464,192 字节（25 MiB 帧的解码预算），并在调整大小后以 5 MB 处理图像。图像源读取有一个单独的 64 MiB 上限来绑定调整大小输入内存；当调整大小的 JPEG 适合图像和批次预算时，可以发送该上限内的更大源照片。空或无法读取的文件显示 **无法附加**；超大文件显示 **太大，无法发送**。历史记录刷新后，已发送的上传仍然可见；尚不支持从本机历史记录下载入站上传。录制的语音笔记保持其单独的录音流程。
+- 助理文件附件具有 **下载文件** 操作。点击它以获取托管文件并打开系统共享表，您可以在其中选择**保存到文件**或其他应用程序。下载使用当前网关连接及其范围内的工件访问；过期或删除的文件必须重新发送。文档数量限制为 100 MB。
+- 听写显示何时开始和收听、实时麦克风波形以及到目前为止识别的单词。点击 **Done** 将转录添加到草稿中，或点击 **Cancel** 将其丢弃。附件显示 **正在加载附件…** 和 **正在发送附件…** 交付过程中；失败的照片加载会显示错误，以便您可以再次选择它们。
+- 保留 Markdown 段落分隔符，包括列表之前和响应流式传输时。
+- 将完整的美人鱼代码栅栏渲染为内联图，并具有 source/copy 控件和全屏可缩放预览。图表渲染使用捆绑资源并离线工作。
+- 长按消息或打开其操作菜单并选择 **选择文本** 以选择并复制本机文本视图中的任何范围；代码围栏显示一个复制原始代码的复制按钮。
+- **Settings** 与 `operator.admin` 连接时打开仪表板设置页面；本机网关屏幕仍可用于连接和配对。
+- 按需说出助理消息：在聊天中长按消息并选择 **Listen**。该应用程序使用配置的 TTS 提供程序播放受支持的 Gateway `tts.speak` 剪辑，并在 Gateway 音频不可用或无法播放时退回到设备上的语音。播放在会话切换或后台运行时停止。
 
-## 要求
+## <a id="settings"></a> 设置
 
-- Gateway 运行在另一台设备上（macOS、Linux，或通过 WSL2 的 Windows）。
+打开**设置**在侧边栏中使用与网络相同的仪表板设置页面和macOS应用程序。连接的操作员会话`operator.admin`是必须的。工具栏的**网关**按钮打开本机连接屏幕，包括设置、配对网关、手动连接和高级连接选项。侧边栏页脚还提供网关访问：**添加网关**如果没有保存，则为直接连接设置按钮；如果保存了多个网关，则为快速选择器。选择器使保存的网关即使在离线状态下也保持可用，并包括设置和配对的管理操作。选择标识关注的网关，而不是它是否已连接。在使用快速选择器之前，完成录制或传送附件并发送或清除当前草稿。它不会将草稿移动到另一个网关。**批准**打开本机审批收件箱并显示待处理计数。
+
+本机侧边栏会话旁边的图标显示其最早的待处理请求是问题还是批准。它会打开一个紧凑的预览以及此类附加请求的数量。代理和部分标题总结了他们的会话，包括可见的最近会话列表之外的请求。点击图标，使用键盘激活它，或使用 VoiceOver 阅读详细信息，而无需切换聊天。当离开聊天时，问题仍然可用。已完成、已取消和过期的请求将从这些预览中消失；答案和证书草稿从未出现。网关管理审批会打开其现有的仪表板审核页面，而本机执行和插件审批则保留其现有操作。
+
+网关必须提供支持配套 iOS 应用程序的仪表板页面。如果加载的“设置”页面未报告该支持，则本机横幅会要求您更新网关。 **打开网关**打开本机连接屏幕；网关设置和配对仍然可用。离线 **Device** 部分在没有仪表板支持的情况下也仍然可用。
+
+**此 iPhone** 或 **此 iPad** 页面包含外观、通知传递、相机访问、保持唤醒行为和可选的健康摘要。其 **Permissions** 页面显示通知、相机、麦克风、语音、位置、联系人、日历、提醒和照片访问。权限请求使用原生iOS提示；精确位置显示系统的当前状态并链接到 iOS 设置。仪表板 **Talk** 页面包含此设备的语音唤醒、通话、通话控制、背景监听和扬声器设置。启用语音唤醒、摄像头访问、运行状况摘要或始终定位首先要求本机确认。
+
+网关的 Talk 配置拥有提供商、语音和语音语言。保存的 iOS 覆盖不再适用；已停用的应用程序语音语言首选项在启动时会被清除。默认共享指令也会在启动时停用并清除。共享消息仅包含为该共享明确提供的指令。这些更改不会删除网关的 `talk.speechLocale` 选项。
+
+**这款iPhone**和**这款iPad**还打开原生**Apple手表**、**诊断**、 **许可证**和**关于**屏幕。当断开连接、在没有管理员访问权限的情况下连接或在演示或屏幕截图模式下运行时，“设置”会显示本机回退：网关连接控件后跟 **Device** 部分中的这四行。连接和这些设备屏幕仍然可用，无需加载仪表板。
+
+频道 （`/settings/channels`） 和技能 （`/skills`） 在仪表板中进行管理。外观、通知、隐私、权限以及语音和通话设置也使用仪表板页面；单独的本机设置屏幕和系统代理设置聊天已被删除。代理选择和只读文件浏览仍保持本机状态。
+
+侧边栏在嵌入式仪表板中打开这些网关页面，无需 Web 导航镶边：
+
+| 侧边栏目标 | 仪表板路径            |
+| ------------------- | ------------------------- |
+| 活动            | `/activity`               |
+| 工作看板           | `/workboard`              |
+| 技能工作坊      | `/skills/workshop`        |
+| 实例           | `/settings/devices`       |
+| 做梦            | `/settings/memory/dreams` |
+| 用量               | `/usage`                  |
+| 自动化         | `/automations`            |
+
+这些页面需要与“设置”相同的已连接 `operator.admin` 会话。如果没有该访问权限，它们将显示本机网关连接指南。实例打开 **Devices**，它是配对节点和连接的客户端的仪表板所有者。
+
+一旦名册到达，本机 **New Thread** 代理选择器就会显示配置的名称或代理 ID。已解决的身份会更新每个选择，而不会延迟选择；配置的名称保持优先，网关的默认身份是 **Assistant**。当选取器打开并保持绑定到所选网关时，目录会刷新。
+
+## <a id="cloudflare-access-sign-in"></a> Cloudflare 访问登录
+
+当网关 URL 或设置代码达到 Cloudflare 访问登录挑战时，点击 **Connect** 以在 OpenClaw 内的系统浏览器中登录网关网站。完成 Access 登录，然后点击 **Done**。选择 **Continue** 以授权应用程序连接并完成任何访问审批。仅在您选择继续后，应用程序才会开始其加密会话传输。应用程序验证返回的会话后，浏览器将关闭，然后继续正常的网关配对。当连接检查已成功时，现有网关凭据、服务标头和 WARP 连接将继续工作，而不会出现额外提示。
+
+该浏览器有自己的应用程序会话。使用 Safari 登录并不能保证您已经在此处登录。仅网站登录并不授权本机连接。点击**取消**停止；使用**在本机网关设置中登录**重试。从后台返回永远不会自动启动浏览器。
+
+如果访问权限过期或被撤销，连接会暂停，网关设置会要求您重新登录。您的网关配对和设备密钥仍会保存。注销 Access 将删除该主机的共享授权并关闭使用该 Access 会话的连接。注销控件遵循重点保存的网关，而不是手动凭据编辑器。按钮上方的 **Access Host** 显示将删除的共享会话的完整、可选来源。访问状态和登录指导也遵循重点配置文件，因此另一个配置文件的注销消息不会出现在其有效会话旁边。使用自己的服务标头的网关保持连接。浏览器可能会保留您的身份提供商会话；这不会让您退出该提供商。 **Forget Gateway** 删除一个配置文件及其活动工作。同一主机上的其他配置文件保留其访问会话；忘记最后一个配置文件也会删除该授权。如果您登录时设置代码过期，请扫描新代码。无效或已使用的设置代码是网关配对错误，不需要新的 Access 登录。
+
+本机配对、聊天和经过身份验证的媒体使用访问会话。嵌入式仪表板页面和小部件显示可用本机网关设置的说明；对这些表面的浏览器会话支持是单独的。共享扩展要求您从 OpenClaw 发送访问保护网关。访问凭据不会导出到 Apple Watch 或云工作人员。
+
+## <a id="sessions"></a> 会话
+
+在侧边栏中选择 **所有会话…** 可浏览 **Active**、**Snoozed** 或 **Archived** 会话。长按符合条件的会话并选择 **Snooze**：**1 小时内**、**3 小时内**、**今晚** （当地时间18：00，仅当路程超过一小时时）、**明天**（下一个日历日09：00）或**下周**（下周一09：00）。在星期日，下周被省略，因为它与明天匹配。每个预设都显示其本地唤醒时间。
+
+**Snoozed** 范围显示 **Wakes** 和预定时间。长按暂停的行并选择 **唤醒会话** 将其提前恢复。当会话的截止时间到达、真正的入站消息到达或代理运行完成时，会话也会被唤醒。固定或存档可清除其暂停状态。受保护的主会话、child/subagent 会话和存档会话无法暂停。
+
+缓存的暂停会话在 **Snoozed** 范围内仍可离线浏览。
+
+暂停仅隐藏活动列表中的会话。它永远不会停止运行、阻止消息或禁用自动化。网关存储唤醒时间，因此可以在连接的客户端之间共享；开放的对话保持开放。
+
+## <a id="session-colors"></a> 会话颜色
+
+长按边栏或“会话”屏幕中的会话以打开其会话操作，然后选取“**Color**”。选择红色、蓝色、绿色、黄色、紫色、橙色、粉色或青色。 **Default** 清除颜色。
+
+彩色会话在会话列表中具有狭窄的前导条纹，并且在聊天中其标题旁边有一个小点。未设置的颜色不显示任何标记。网关存储颜色名称，而不是十六进制值；该应用程序会根据浅色和深色外观调整其色调。
+
+## <a id="reactions"></a> 反应
+
+保存的提示和助理回复显示表情符号反应芯片，其中包含 VoiceOver 的计数和反应器名称。点击一个芯片即可切换您的反应，或长按一条消息并选择 **添加反应** 作为快速调色板。 **更多…** 接受一种输入或粘贴的表情符号。反应会在会话开放时实时更新，并且不会创建通知。反应控制遵循网关公布的方法、操作员范围、会话上限和当前共享角色；您只能查看的会话显示没有反应控制的芯片。存档和目录会话不提供反应控制。
+
+## <a id="message-times-and-models"></a> 留言次数及模型
+
+完成的消息组显示过去一周的相对时间和旧消息的紧凑本地日期，以及可用时的使用情况。 VoiceOver 读取准确的日期、时间和时区。助理回复会在已知时显示其记录的原始模型；选择另一个模型不会更改旧的回复。流文本、评论和工具活动不会获得这些页脚。
+
+## <a id="sources-in-chat"></a> 聊天来源
+
+完成的答案最多显示八个紧凑的 **Sources** 卡，用于在答案运行期间由网络搜索或网络获取返回的引用页面。点击卡片读取记录的**搜索片段**或**页面摘录**，然后选择**开源**访问该页面。当没有可用的录制摘录时，会有一张卡片显示。打开预览不会再次检索页面。
+
+源图标遵循网关的自动图标偏好并使用网关的经过身份验证的图标服务。当图标被禁用或不可用时，会出现一个地球仪。会话链接和 GitHub 问题或拉取请求链接保留其现有链接卡。
+
+## <a id="diagrams-in-chat"></a> 聊天图
+
+使用围栏 `mermaid` 块来显示图表。当其关闭栅栏到达或响应完成时，将呈现图表；不完整的流栅栏仍然可以作为代码读取。普通的代码围栏保持其通常的外观。
+
+点击图表可通过捏合缩放打开全屏预览。角菜单可让您在图表及其源之间切换，复制按钮可复制完整的源。如果渲染失败，源仍然可用；临时故障提供**重试图**。
+
+本地源构建在 `pnpm ios:gen` 期间生成捆绑渲染器。在生成 Xcode 项目之前从存储库根运行 `pnpm install`，以便固定的渲染器依赖项可用。
+
+## <a id="requirements"></a> 要求
+
+- Gateway 在另一台设备上运行（macOS、Linux 或通过 WSL2 的 Windows）。
 - 网络路径：
-  - 通过 Bonjour 的同一局域网，**或**
+  - 相同 LAN，通过 Bonjour、**或**
   - 通过单播 DNS-SD 的 tailnet（示例域名：`openclaw.internal.`），**或**
-  - 手动主机/端口（备用方案）。
+  - 手动host/port（后备）。
 
-## 快速开始（配对 + 连接）
+## <a id="quick-start-(pair-%2B-connect)"></a><a id="quick-start-pair-+-connect"></a> Quick start（配对+连接）
 
-首次启动时，应用会先引导你完成简短的配对说明，然后进行 Gateway
-设置。应用不会显示汇总权限页面。使用相关功能时，或你在 **Settings** -> **Permissions** -> **Privacy & Access** 下点击该权限对应的 **Continue** 后，应用才会请求可选访问权限。点击 **Continue** 会立即显示原生 iOS 授权提示。之后可以在 iOS 的“设置”应用中更改已授予的访问权限。
+首次启动时，应用程序会先进行简短的配对解释，然后进行网关设置。它不提供聚合权限页面。当您使用相关功能时，或从 **Settings** -> **This iPhone** （**This iPad** on iPad） -> 请求可选访问权限**权限**。权限请求会显示本机 iOS 授权提示。您可以稍后在 iOS 设置应用程序中更改授予的访问权限。
 
 1. 使用手机能够访问的路由启动一个已认证的 Gateway。推荐的远程路径是 Tailscale Serve：
 
@@ -42,33 +136,28 @@ title: "iOS 应用"
 openclaw gateway --port 18789 --tailscale serve
 ```
 
-对于可信的同一局域网（same-LAN）设置，也可以改用已认证的 `gateway.bind: "lan"`
-。默认的 loopback 绑定无法被手机访问。如果 Gateway 还没有完成配置，请先运行 `openclaw onboard`，这样在创建 setup-code 时会有 token 或 password 认证路径。
+对于可信的同一局域网（same-LAN）设置，也可以改用已认证的 `gateway.bind: "lan"` 。默认的 loopback 绑定无法被手机访问。如果 Gateway 还没有完成配置，请先运行 `openclaw onboard`，这样在创建 setup-code 时会有 token 或 password 认证路径。
 
-2. 打开 [Control UI](/web/control-ui)，选择 **Nodes**，然后在 **Devices** 页面点击
-   **Pair device**。默认已选择并建议使用完整访问权限；只有当你希望省略管理 Gateway 控制项时，才选择 Limited access，然后点击 **Create setup code**。
+2. 打开 [Control UI](/web/control-ui)，选择 **Nodes**，然后在 **Devices** 页面点击 **Pair device**。默认已选择并建议使用完整访问权限；只有当你希望省略管理 Gateway 控制项时，才选择 Limited access，然后点击 **Create setup code**。
 
-3. 在 iOS 应用中，打开 **Settings** -> **Gateway**，扫描二维码（或粘贴
-   setup code），然后连接。
+3. 在iOS应用程序中，打开**Settings** -> **Gateway**，扫描QR代码（或粘贴设置代码），然后连接。使用来自 Control UI 或 [`openclaw qr`](/cli/qr) 的移动设置代码 — 不是从 [`openclaw devices join-code`](/cli/devices#openclaw-devices-join-code) 加入 URL 的网关。
 
-   如果 setup code 同时包含 LAN 和 Tailscale Serve 路由，应用会按顺序探测这些路由，并保存第一个可达的端点。
-
-   已配对的 gateways 会保留在 **Gateways** 列表中。勾选标记表示当前聚焦的 gateway；使用另一行上的 bolt 控件可以让它的 operator 会话同时保持连接。切换聚焦不会断开其他已启用的 gateways。只有聚焦的 gateway 会接收 iPhone 的、带能力凭证的 node 会话，因此相机、屏幕、位置以及其他设备命令始终只有一个明确的拥有者。iOS 在应用进入后台后可能会暂停这些前台连接。
+   配对网关保留在 **Gateways** 列表中。复选标记标识关注的网关；使用另一行上的螺栓控件以同时保持其操作员会话连接。切换焦点不会断开其他启用的网关。只有聚焦的网关才能接收 iPhone 的承载节点会话，因此相机、屏幕、位置和其他设备命令始终有一个明确的所有者。 iOS 可能会在应用程序进入后台后暂停这些前台连接。
 
 4. 官方应用会自动连接。如果 **Pending approval** 显示有一条请求，请在批准前先查看其角色和权限范围。
 
    **Settings → Gateway** 会显示已保存的 operator 连接是 **Full** 还是 **Limited** 访问。明文 LAN `ws://` setup 会因 bearer-token 安全性而自动受限。如果它是受限的，请配置 `wss://` 或 Tailscale Serve，从 Control UI 或 `openclaw qr` 扫描一个新的 full-access code，然后重新连接以启用设置和升级。
 
-Control UI 按钮要求已经配对过的、具有 `operator.admin` 的会话。作为终端兜底方案，可以在 iOS 应用中选择一个已发现的 gateway（或启用 Manual Host 并输入 host/port），然后在 Gateway 主机上批准该请求：
+Control UI 按钮需要已与 `operator.admin` 配对的会话。作为终端回退，在 iOS 应用程序中选择一个已发现的网关（或启用手动主机并输入 host/port），然后在网关主机上批准请求：
 
 ```bash
 openclaw devices list
 openclaw devices approve <requestId>
 ```
 
-如果应用在重新配对时更改了认证细节（角色/权限范围/公钥），之前挂起的请求会被新的请求取代，并创建一个新的 `requestId`。请在批准前再次运行 `openclaw devices list`。
+如果应用程序重试与更改的身份验证详细信息（role/scopes/public 密钥）配对，则先前的待处理请求将被取代，并创建新的 `requestId`。审批前再次运行`openclaw devices list`。
 
-可选：如果 iOS 节点始终从一个严格受控的子网连接，你可以通过显式 CIDR 或精确 IP，选择启用首次节点自动批准：
+可选：如果 iOS 节点始终从严格控制的子网连接，您可以选择使用显式 CIDR 或确切 IP 进行首次节点自动批准：
 
 ```json5
 {
@@ -82,7 +171,7 @@ openclaw devices approve <requestId>
 }
 ```
 
-此功能默认关闭。它仅适用于没有请求任何权限范围的全新 `role: node` 配对。operator/browser 配对以及任何角色、权限范围、元数据或公钥的变更仍然需要手动批准。
+默认情况下禁用此功能。它仅适用于没有要求范围的新 `role: node` 配对。 Operator/browser 配对以及任何角色、范围、元数据或公钥更改仍然需要手动批准。
 
 5. 验证连接：
 
@@ -91,61 +180,123 @@ openclaw nodes status
 openclaw gateway call node.list --params "{}"
 ```
 
-## 健康摘要
+## <a id="health-summaries"></a> 健康摘要
 
 iOS 节点可以返回一份针对当前日历日期的、需用户主动选择加入且只读的 HealthKit 汇总数据。iOS 设备授权和显式的 Gateway 命令授权是彼此独立的门槛。有关设置、调用、载荷字段、隐私行为和故障排除，请参阅 [HealthKit 摘要](/platforms/ios-healthkit)。
 
-默认情况下，Apple Watch 配套端会继续使用现有的 iPhone 中继，并且
-不需要单独的 Gateway 配对。请在 Apple 的 Watch app 中将 Watch 与 iPhone 配对，
-从 **Watch app -> My Watch -> Available Apps** 安装 OpenClaw，然后在两个设备上各自打开一次 OpenClaw。
+## <a id="apple-watch-voice-and-chat"></a> Apple 观看语音和聊天
 
-## 审批命令
+OpenClaw 有两个独立的手表语音路径：
 
-具有 `operator.admin` 权限的操作员连接，或者由 Gateway 明确指定的已配对 `operator.approvals` 连接，可以在 iPhone 上审查待处理的 exec 请求。审批卡片会显示 Gateway 已清理后的命令预览、警告、主机上下文、过期时间，以及该请求提供的所有决策选项。配对的 Apple Watch 会通过现有的 iPhone 中继接收相同的审查者安全提示，并提供简化的仅允许一次/拒绝决策子集。直接的 Watch Gateway 模式不包含审批提示。
+- **Talk to Claw** 使用 watchOS 听写、通过配对 iPhone 转发的文本以及 Watch 上的系统语音回读，一次一圈。
+- Watch 上的 **Talk** 在 iPhone 设置中连接手表后，开始从手表进行实时音频通话。 iPhone 不是它的音频或聊天中继站。
 
-审批状态与 Control UI 以及受支持的聊天界面共享。第一个提交的答复会生效。iPhone 和 Watch 会在其他界面解决该请求后、收到远程已解决通知后，以及在可能丢失解决确认时，从 Gateway 获取规范的终端记录。只有在该读取操作确认请求是否仍然处于待处理状态之前，操作才保持不可用。
+这两条路径都在手表上运行完整的代理或库存 Codex 运行时。网关拥有代理执行和工具策略；手表提供输入、播放和通话控制。
 
-审批归属绑定到所选的 Gateway。切换 Gateway 不会将旧提示应用到替换后的连接。早于统一审批方法的 Gateway 会回退到随附的特定于 exec 的方法；保留的终端状态以及更丰富的跨界面结果需要更新后的 Gateway。
+在 Apple 的手表应用程序中将手表与 iPhone 配对，从 **Watch 应用程序 -> 我的手表 -> 可用应用程序** 安装 OpenClaw，然后在两个设备上打开 OpenClaw 一次。
 
-## 回答代理问题
+### <a id="talk-to-claw-with-the-iphone"></a> 用 iPhone 与 Claw 对话
 
-聊天会将待处理的 Gateway 问题显示为原生卡片，供通过 `operator.questions`（或 `operator.admin`）连接的操作员使用。卡片支持单选和多选选项、选项描述、自由文本的 **其他** 答案，以及过期倒计时。重新连接时会从 Gateway 重新加载待处理问题。当本设备回答了某张卡片、另一端先回答了它，或者问题过期或被取消时，该卡片会锁定。
+此伴随路径不需要单独的 Watch Gateway 配对。它的 Talk 控件可以在配对的 iPhone 上操作 Talk；他们不启用独立的 Watch 通话。
 
-## 可选的直接 Apple Watch 节点
+1. 将 iPhone 连接到您的网关并选择您要使用的聊天。
+2. 在手表上，打开**与Claw**对话，然后点击**消息OpenClaw**旁边的语音按钮。
+3. 使用本机输入表听写并提交您的消息。在手表上保持聊天处于打开状态以听到回复。消息丸还打开本地输入，但不要求口头回复。
 
-直接模式会为手表提供其自己的已签名节点身份和 Gateway 连接。  
-当 OpenClaw 处于活动状态时，即使配对的 iPhone 不可用，支持的节点命令仍可通过手表的 Wi-Fi 或蜂窝网络工作。
+iPhone 必须保持可用状态以转发消息。如果其网关连接处于睡眠状态，Watch 消息将使用与 Watch 快速回复相同的有界后台重新连接，并尊重 iPhone 的自动连接设置。在两台设备上更新 OpenClaw。没有所有权信息的同伴聊天负载无法证明安全传递，因此手机会拒绝它并显示需要更新的错误。在所有权检查之前的 Watch 应用程序仍然可以将后台传输标记为已排队。该标签并不意味着手机接受它。检查手机的递送警告并更新两个应用程序，然后再次发送。
+
+两个应用程序都会在确认之前保存交付状态。手表会在等待手机接受时保留原始命令，手机会保存接受的运行及其回复，然后再将结果发回。因此，重新打开应用程序或丢失结果确认可以重新发送保存的回复，而无需再次提交相同的聊天。排队的消息仍然是 **not** 确认网关已处理它。
+
+永久拒绝（例如过期的消息或停用的网关路由）并不意味着电话接受了该消息。手表会记录该结果，而无需重试该命令。重新连接手表或请求刷新还会重试保存的结果传送，而无需提交其他聊天。
+
+如果递送停止，请在 iPhone 上打开 **设置 -> 此 iPhone -> Apple 手表 -> 消息递送**。 **Delivery certain**表示电话无法证明发送是否到达网关；在重新发送之前检查原始对话。它不会自动重复该发送。缺少传递上下文的已保存邮件显示为 **需要审核**。如果您仍想发送，请将其文本复制到聊天，或使用 **Discard** 删除该文本。完成的卡片提供 **Dismiss**，它会隐藏卡片，同时保留手表的原始收据。主动交付不会采取任何行动。解除不会取消网关运行或延长回复的有效期。
+
+如果网关接受消息但电话无法保存该接受，则稍后刷新或重新连接会重试本地保存，而不会再次发送。如果应用程序在保存之前退出，则重新打开时发送将被视为不确定。
+
+新命令及其保存的应用程序本地副本将在 48 小时后过期（从原始提交开始计算，而不是最近的重试开始计算）。过期停止自动投递和回复重播；它不会取消远程工作或删除网关对话。过期的应用程序本地副本将在下一次传送操作或打开传送列表时删除，而不是通过后台计时器删除。之前保存的标记为 **需要审核** 的消息将保留在 iPhone 上，直到您丢弃它们或忘记其网关。
+
+手机在“丢弃”或“忘记”后保留仅哈希导入标记，因此旧应用程序的保存队列无法在以后的升级中恢复相同的已删除文本。如果较旧的消息与保存的传送数据或忘记的网关冲突，应用程序将保留其来源并显示恢复错误。请联系支持人员以恢复这些消息。 **Reset Onboarding** 故意擦除所有本地客户端状态，包括旧队列及其导入标记；这不是有针对性的消息删除。
+
+仅大声朗读属于已提交轮次的回复。在 iPhone 上切换网关或聊天会取消待处理的语音回复并清除旧的 Watch 预览。离开 Watch Chat 或将应用程序置于后台会停止播放；如果等待尚未过期，则在返回时可以读取在离开时收到的回复。
+
+语音回复等待时间结束后90秒数和显示**语音回复超时。检查 iPhone 上的聊天。**，包括重新打开 Watch 应用后。取消等待或停止讲话确实可以**不是**取消网关聊天运行或删除排队的消息。如果没有人回复，请刷新聊天或在 iPhone 上检查对话，然后再重新发送。长时间运行和中断的回件交付仍可能需要手动回读。保持网关更新，以便在稍后运行时收集消息时获得可靠的回复归因。
+
+当电话提供聊天或快速回复操作时，它会捕获网关、代理和确切的会话。稍后对所选聊天的更改无法重新定位排队消息，包括共享 `main` 或 `global` 会话。如果该交付上下文不可用，请从 iPhone 重新连接并刷新，而不是猜测目标。
+
+忘记网关会删除其电话传送记录并使旧命令无效，即使您再次配对同一网关也是如此。断开连接的手表无法立即远程擦除；当它收到手机的拒绝时，它会清除陈旧的命令。手表的 **Forget direct setup** 操作仅影响其单独的直接连接，而不影响 iPhone 继电器。
+
+这些是 [app-local SQLite 期刊](/reference/database-schemas#apple-companion-delivery-journals)。它们会在应用程序打开时迁移，并且不需要网关数据库升级或 `openclaw doctor` 运行。
+
+### <a id="standalone-voice"></a> 独立语音
+
+独立语音需要具有网关控制的 WebRTC Talk 的当前网关、与 `operator.admin` 进行设置的 iPhone 连接以及手表可以独立访问的安全网关 URL。使用与 [direct Watch 节点设置 ](/platforms/ios#optional-direct-apple-watch-node) 相同的安全端点和初始配对要求：watchOS 必须信任 HTTPS 证书，并且当 Watch 远离手机时，仅 iPhone 或仅 tailnet 路由是不够的。
+
+1. 在具有 `webrtc` 传输的网关上配置实时 [ 通话模式 ](/nodes/talk) 和支持 `gateway-control-v1` 的 provider/authentication 组合，并返回带有 UDP 候选的 ICE-lite 答案。提供商凭据保留在网关上。
+2. 在 iPhone 上，打开 **设置 -> 此 iPhone -> Apple 手表 -> 连接 Apple Watch**。语音访问包含在正常的手表设置中；没有单独的语音启用设置。
+3. 在设置代码过期之前在手表上打开 OpenClaw。在 Watch**上打开**Talk 并等待 **Ready to talk**。
+4. 点击 **Start**，允许麦克风访问，并在出现提示时选择代理。将 OpenClaw 保持在屏幕上，直到显示 **Connected**。单独打开语音屏幕并不会启动麦克风。
+5. 说话，根据需要使用**Mute**或**Unmute**，然后点击**End**结束。屏幕显示最新的用户和助理成绩单；网关保留对话历史记录。
+
+一次性设置为手表提供了自己的节点凭证和操作员凭证，其中包含 `operator.read` 和 `operator.talk`。它不会授予管理员访问权限或复制 iPhone 保存的网关令牌或密码。设置配置存储在手表钥匙串中；颁发的设备凭据存储在其受保护的本机状态 SQLite 数据库中，范围仅限于该网关。如果设置不完整或过期，请从 iPhone 设置重新发送。与较旧的仅节点设置配对的手表再次需要 **Connect Apple Watch** 来授权语音。现有的授权不会悄悄扩大，被撤销的访问权限也不会自动恢复。配对不会开始通话或打开麦克风。
+
+音频在手表和提供商之间使用本机 WebRTC 和 Opus 而非 UDP。安全网关 WebSocket 承载呼叫控制和转录事件，而不是麦克风音频。网关控制提供商工具和代理咨询；手表不会打开提供商数据通道或接收永久提供商 API 密钥。不支持的 provider/authentication 或传输选择明显失败，而不是切换到不同的语音路径。原生Watch传输需要ICE-lite；单独支持网关控制的 WebRTC 是不够的。
+
+提供商错误通知会显示在手表上，而不会结束其他活动的通话。你可以再尝试一下；显式会话关闭或不可恢复的连接失败仍然会结束呼叫。
+
+每个新呼叫都为其选定的座席使用单独的会话。网络恢复是有限的，并保持代理和聊天会话； **Try Again** 终端错误后开始新的呼叫。这不会恢复 iPhone 当前选择的聊天，并且同伴聊天和批准功能仍使用 iPhone 中继。
+
+对于 OpenAI 网关控制的 WebRTC 呼叫，网关在设置期间安排 30 分钟的活动会话租用；音频活动不会更新它。当手表收到租约到期的会话结束事件时，它会显示 **Call unavailable** 并且不会自动重试。将 OpenClaw 带到前台并点击 **Try Again** 开始新呼叫。租赁不保证提供 30 分钟的可用音频，并且通话可能会提前结束。
+
+已建立的通话使用背景音频，不会仅仅因为显示屏变暗或应用程序背景而有意结束。连接之前启动后台会停止，并显示一条消息，要求您将 OpenClaw 保留在屏幕上。返回、点击 **End**、禁用、更改或忘记手表的网关连接、音频中断或不可恢复的故障都会结束通话。
+
+物理手表 microphone/speaker 路由、腕式操作、Wi-Fi/cellular 切换、电池使用和多小时可靠性仍需要设备验证。模拟器测试和本机 macOS 提供商音频检查不会建立这些行为。这不是任意始终在线的网关连接：watchOS 低级网络依赖于活动的音频会话。 UDP 必须可达； Watch 传输不配置 TURN 中继或 TCP/WebSocket 媒体回退。
+
+## <a id="review-command-approvals"></a> 审查命令批准
+
+与 `operator.admin` 的操作员连接或网关明确定位的配对 `operator.approvals` 连接可以查看 iPhone 上待处理的执行请求。批准卡显示网关经过清理的命令预览、警告、主机上下文、过期以及仅由该请求提供的决策。配对的 Apple 手表通过现有的 iPhone 继电器接收相同的审阅者安全提示，并提供紧凑的允许 once/deny 决策子集。 Direct Watch Gateway 模式不带有批准提示。
+
+批准状态与 Control UI 和支持的聊天界面共享。第一个提交的答案获胜。在另一个表面解析请求后、在远程解析通知后以及每当解析确认可能丢失时，iPhone 和 Watch 都会获取网关保存的终端记录。在回读确认请求是否仍处于待处理状态之前，操作将保持不可用。
+
+批准所有权绑定到所选网关。切换网关无法将旧提示应用于替换连接。早于统一批准方法的网关会回退到已发布的 exec 特定方法；保留的终端状态和更丰富的跨表面结果需要更新的网关。
+
+## <a id="answer-agent-questions"></a> 回答代理问题
+
+聊天将待处理的网关问题显示为与 `operator.questions`（或 `operator.admin`）的操作员连接的本机卡。卡片支持单选和多选选项、选项说明、自由文本 **Other** 答案以及到期倒计时。重新连接从网关重新加载待处理的问题。当此设备应答、另一个表面首先应答或者问题过期或被取消时，卡将锁定。
+
+## <a id="optional-direct-apple-watch-node"></a> 可选的直接 Apple Watch 节点
+
+直接模式会为手表提供其自己的已签名节点身份和 Gateway 连接。 当 OpenClaw 处于活动状态时，即使配对的 iPhone 不可用，支持的节点命令仍可通过手表的 Wi-Fi 或蜂窝网络工作。
 
 要求：
 
 - iPhone 已连接到 Gateway，并具有 `operator.admin` 权限范围。
 - 安装代码会公布一个 `wss://` 的 Gateway 端点，该端点使用 watchOS 信任的证书；手表会轮询对应的 `https://` 源。普通 HTTP 以及仅自签名或仅指纹信任都不受支持。有关端点配置，请参见 [Gateway 拥有的配对](/gateway/pairing)。手表无法独立访问回环、仅 iPhone 和仅 tailnet 路由。
 - 蜂窝网络使用需要一款支持蜂窝网络的 Apple Watch，并且已开通有效服务。
-- OpenClaw 在手表上处于活动状态。Apple 不允许普通 watchOS 应用保持通用的 WebSocket/TCP 连接，因此直接节点会使用短周期 HTTPS 轮询，并在应用回到前台时重新连接。请参阅 Apple 的 [watchOS 底层网络指导](https://developer.apple.com/documentation/technotes/tn3135-low-level-networking-on-watchOS)。
+- OpenClaw 在手表上处于活动状态。非语音直接节点使用短HTTPS轮询，并在应用程序返回前台时重新连接；它不维护通用后台连接。独立语音使用单独的活动音频网络路径。请参阅 Apple 的 [watchOS 低级网络指南](https://developer.apple.com/documentation/technotes/tn3135-low-level-networking-on-watchos)。
 
 设置：
 
-1. 在 iPhone 上，打开 **设置 -> Apple Watch**。
-2. 点击 **启用直接 Gateway 连接**。
+1. 在 iPhone 上，打开 **设置 -> 此 iPhone -> Apple Watch**（或离线回退中的 **Device -> Apple Watch**）。
+2. 点击**连接Apple手表**。
 3. 在短期安装代码过期之前，先在手表上打开 OpenClaw。
 4. 使用 `openclaw nodes status` 验证独立的 Apple Watch 行。
 
-安装代码包含一个短期有效、仅用于节点的引导凭据；在其过期前，请将其视为密码。它绝不会包含 iPhone 已保存的 Gateway 密码或令牌。配对完成后，手表会存储自己的设备令牌并删除该引导凭据。直接模式仅覆盖下面的命令。聊天、通话、审批以及现有的 `watch.*` 通知流程仍然是 iPhone 中继功能，并且仍然需要已配对的 iPhone。
+设置代码包含 Watch 节点的短期引导凭证和有限的 read/Talk 角色；将其视为密码直至其过期。它从不包含 iPhone 保存的网关密码或令牌。配对后，手表会存储自己的设备凭据并删除引导凭据。相同的设置涵盖以下命令和 [ 独立语音 ](/platforms/ios#standalone-voice) ；呼叫仍需要 **Start** 和麦克风权限。同伴聊天、iPhone Talk 控制、批准和现有的 `watch.*` 通知流程仍然是 iPhone 中继功能。
+
+`watch.notify` 收据报告手表运输交付或排队，未完成尽力 iPhone 通知镜像。在开始新的手表传输或手机镜像之前检查取消；它无法召回已交给 WatchConnectivity 的工作。一旦手机镜像被移交，它就会独立于调用而继续进行。
 
 watchOS 直接节点命令：
 
-| 表面         | 命令                           | 备注                                                   |
-| ------------ | ------------------------------ | ------------------------------------------------------ |
-| 设备         | `device.info`, `device.status` | 手表身份、电池、温度、存储和网络。                      |
-| 通知         | `system.notify`                | 在应用处于活动状态时可用；需要手表权限。                |
+| 表面       | 命令                       | 笔记                                                   |
+| ------------- | ------------------------------ | ------------------------------------------------------- |
+| 设备        | `device.info`, `device.status` | 手表身份、电池、温度、存储和网络。 |
+| 通知 | `system.notify`                | 在应用处于活动状态时可用；需要手表权限。     |
 
-watchOS 不向第三方应用开放 WebKit，因此直接手表节点不会公布 Canvas 命令。
+## <a id="relay-backed-push-for-official-builds"></a> 官方构建的 relay 支持推送
 
-## 官方构建的 relay 支持推送
+官方分布式 iOS 构建使用外部推送中继，而不是将原始 APNs 令牌发布到网关。官方应用商店从公共发布通道构建，使用 `https://ios-push-relay.openclaw.ai` 上的托管中继；此基础 URL 是针对 App Store 分发进行硬编码的，并且不会读取任何覆盖。
 
-官方分发的 iOS 构建会使用外部推送 relay，而不是将原始 APNs token 发布到网关。公开发布通道中的官方 App Store 构建使用托管的 relay，地址为 `https://ios-push-relay.openclaw.ai`；这个基础 URL 对 App Store 分发是硬编码的，不会读取任何覆盖配置。
-
-自定义 relay 部署需要刻意使用一条独立的 iOS 构建/部署路径，其 relay URL 必须与网关的 relay URL 匹配。App Store 发布通道绝不会接受自定义 relay URL。如果你使用的是自定义 relay 构建，请设置匹配的网关 relay URL：
+自定义中继部署需要特意单独的 iOS build/deployment 路径，其中继 URL 与网关中继 URL 匹配。 App Store 发布通道从不接受自定义继电器 URL。如果您使用自定义继电器版本，请设置匹配的网关继电器 URL：
 
 ```json5
 {
@@ -165,50 +316,52 @@ watchOS 不向第三方应用开放 WebKit，因此直接手表节点不会公�
 
 - iOS 应用使用 App Attest 和 StoreKit 应用事务 JWS 向 relay 注册。
 - relay 返回一个不透明的 relay handle 以及一个注册范围内的发送授权。
-- iOS 应用获取配对的网关身份（`gateway.identity.get`）并将其包含在 relay 注册中，因此由 relay 支持的注册会被委托给该特定网关。
-- 应用将该 relay 支持的注册转发给配对的网关，调用 `push.apns.register`。
-- 网关对 `push.test`、后台唤醒和唤醒提醒使用该已存储的 relay handle。
-- 如果应用之后连接到不同的网关，或者连接到具有不同 relay base URL 的构建，它会刷新 relay 注册，而不是复用旧绑定。
+- iOS 应用程序获取配对的网关身份 （`gateway.identity.get`） 并将其包含在中继注册中，因此中继支持的注册将委托给该特定网关。
+- 该应用程序将该中继支持的注册转发到与 `push.apns.register` 配对的网关。
+- 网关使用存储的中继句柄进行`push.test`、后台唤醒和唤醒微移。
+- 如果应用程序稍后连接到不同的网关或具有不同中继基础 URL 的构建，它将刷新中继注册而不是重用旧绑定。
 
-网关在这一路径中**不需要**什么：不需要部署范围内的 relay token，也不需要用于官方 App Store relay 支持发送的直接 APNs key。
+**not** 在此路径中网关需要什么：没有部署范围的中继令牌，没有官方 App Store 中继支持的发送的直接 APNs 密钥。
 
 预期的操作流程：
 
 1. 安装官方 iOS 应用。
-2. 可选：仅在使用刻意分离的自定义 relay 构建时，在网关上设置 `gateway.push.apns.relay.baseUrl`。
-3. 将应用与网关配对，并让其完成连接。
+2. 可选：仅当使用故意单独的自定义中继构建时，才在网关上设置 `gateway.push.apns.relay.baseUrl`。
+3. 将应用程序与网关配对并让它完成连接。
 4. 当应用获得 APNs token、操作者会话已连接且 relay 注册成功后，应用会发布 `push.apns.register`。
 5. 之后，`push.test`、重新连接唤醒以及唤醒提醒都可以使用已存储的 relay 支持注册。
 
-## 后台存活信标
+## <a id="background-alive-beacons"></a> 后台存活信标
 
-当 iOS 因静默推送、后台刷新或显著位置事件唤醒应用时，应用会尝试进行一次简短的 node 重新连接，然后以 `event: "node.presence.alive"` 调用 `node.event`。网关仅在已知经过身份验证的 node 设备身份后，才会将其记录为配对的 node/device 元数据上的 `lastSeenAtMs`/`lastSeenReason`。
+当 iOS 唤醒应用程序进行静默推送、后台刷新或重要位置事件时，应用程序会尝试短节点重新连接，然后使用 `event: "node.presence.alive"` 调用 `node.event`。仅当已知经过身份验证的节点设备身份后，网关才会在配对的 node/device 元数据上将此记录为 `lastSeenAtMs`/`lastSeenReason`。
 
-应用仅在网关响应中包含 `handled: true` 时，才将一次后台唤醒视为已成功记录。较旧的网关可能会以 `{ "ok": true }` 确认 `node.event`；该响应是兼容的，但不计为持久的 last-seen 更新。
+仅当网关响应包含 `handled: true` 时，应用程序才会将后台唤醒视为已成功记录。较旧的网关可能会用 `{ "ok": true }` 确认 `node.event`；该响应是兼容的，但不算作持久的上次看到的更新。
+
+每当应用程序移至后台、无法应用的静默推送后以及每次刷新运行后再次请求后台刷新唤醒时，系统 BackgroundTasks 调度程序都会请求后台刷新唤醒； iOS 决定它们何时实际执行。如果在 iOS 设置中关闭 OpenClaw 的后台应用程序刷新，它们就会停止，留下推送和重要位置唤醒。
 
 兼容性说明：
 
-- `OPENCLAW_APNS_RELAY_BASE_URL` 仍可作为网关的临时环境变量覆盖（`gateway.push.apns.relay.baseUrl` 是优先使用配置的路径）。
-- App Store 发布构建的 push 模式会硬编码托管 relay 主机，并且不会读取 relay URL 覆盖——`OPENCLAW_PUSH_RELAY_BASE_URL` 构建时环境变量仅影响本地/沙箱 iOS 构建模式。
+- `OPENCLAW_APNS_RELAY_BASE_URL` 仍然用作网关的临时环境覆盖（`gateway.push.apns.relay.baseUrl` 是配置优先路径）。
+- App Store 发布版本的推送模式对托管中继主机进行硬编码，并且从不读取中继 URL 覆盖 — `OPENCLAW_PUSH_RELAY_BASE_URL` 构建时环境变量仅影响 local/sandbox iOS 构建模式。
 
-## 认证与信任流程
+## <a id="authentication-and-trust-flow"></a> 认证与信任流程
 
 relay 的存在是为了强制执行两个约束，这是直接在网关上使用 APNs 无法为官方 iOS 构建提供的：
 
-- 只有通过 Apple 分发的真正 OpenClaw iOS 构建才能使用托管 relay。
-- 网关只能向与该特定网关配对的 iOS 设备发送基于 relay 的推送。
+- 只有通过 Apple 分发的正版 OpenClaw iOS 构建才能使用托管中继。
+- A 网关只能为与该特定网关配对的 iOS 设备发送中继支持的推送。
 
 逐跳说明：
 
-1. `iOS app -> gateway`: 应用通过正常的 Gateway 认证流程与网关配对，从而获得一个已认证的 node session 以及一个已认证的 operator session。operator session 调用 `gateway.identity.get`。
-2. `iOS app -> relay`: 应用通过 HTTPS 调用 relay 注册端点，并附带 App Attest 证明以及 StoreKit app transaction JWS。relay 会验证 bundle ID、App Attest 证明和 Apple 分发证明，并且要求使用官方/生产分发路径——这就是阻止本地 Xcode/dev 构建使用托管 relay 的原因，因为本地构建无法满足官方 Apple 分发证明。
-3. `网关身份委托`: 在 relay 注册之前，应用从 `gateway.identity.get` 获取已配对的网关身份，并将其包含在 relay 注册负载中。relay 返回一个 relay handle，以及一个按注册范围授予、委托给该网关身份的 send grant。
-4. `gateway -> relay`: 网关将 `push.apns.register` 中返回的 relay handle 和 send grant 存储起来。在 `push.test`、重新连接唤醒和唤醒提醒场景下，网关使用自己的设备身份对发送请求签名；relay 会根据注册时委托的网关身份，验证存储的 send grant 和网关签名。即使另一台网关设法获取了该 handle，也不能重用这条已存储的注册。
-5. `relay -> APNs`: relay 持有生产环境 APNs 凭据以及官方构建对应的原始 APNs token。网关不会为基于 relay 的官方构建存储原始 APNs token；relay 代表已配对的网关将最终推送发送到 APNs。
+1. `iOS app -> gateway`：应用程序通过正常的网关身份验证流程与网关配对，为其提供经过身份验证的节点会话和经过身份验证的操作员会话。操作员会话调用 `gateway.identity.get`。
+2. `iOS app -> relay`：应用程序通过 HTTPS 调用中继注册端点，并使用应用程序证明证明加上 StoreKit 应用程序交易 JWS。中继验证捆绑包 ID、应用程序证明证明和 Apple 分发证明，并需要 official/production 分发路径 - 这就是阻止本地 Xcode/dev 构建使用托管中继的原因，因为本地构建无法满足官方 Apple 分发证明。
+3. `gateway identity delegation`：在中继注册之前，应用程序从 `gateway.identity.get` 获取配对的网关身份并将其包含在中继注册负载中。中继返回中继句柄和委托给该网关身份的注册范围发送授权。
+4. `gateway -> relay`：网关存储中继句柄并从 `push.apns.register` 发送授权。在 `push.test` 上，重新连接唤醒和唤醒轻推，网关使用自己的设备身份对发送请求进行签名；中继根据注册中委托的网关身份验证存储的发送授权和网关签名。另一个网关无法重用该存储的注册，即使它以某种方式获得了句柄。
+5. `relay -> APNs`：中继拥有正式构建的生产 APNs 凭证和原始 APNs 令牌。网关从不存储用于中继支持的官方构建的原始 APNs 令牌；中继代表配对网关将最终推送发送到 APN。
 
-创建此设计的原因：将生产 APNs 凭据保留在用户网关之外，避免在网关上存储官方构建的原始 APNs token，只允许官方 OpenClaw iOS 构建使用托管 relay，并防止某个网关向属于另一网关的 iOS 设备发送唤醒推送。
+创建此设计的原因：为了将生产 APN 凭证排除在用户网关之外，避免在网关上存储原始官方构建的 APN 令牌，仅允许官方 OpenClaw iOS 构建使用托管中继，并防止一个网关向另一网关拥有的 iOS 设备发送唤醒推送。
 
-本地/手动构建仍然使用直接 APNs。如果你在不使用 relay 的情况下测试这些构建，网关仍然需要直接 APNs 凭据：
+Local/manual 构建仍然基于直接 APN。如果您在没有中继的情况下测试这些版本，网关仍然需要直接 APNs 凭据：
 
 ```bash
 export OPENCLAW_APNS_TEAM_ID="TEAMID"
@@ -230,81 +383,66 @@ export OPENCLAW_APNS_PRIVATE_KEY_PATH="$HOME/.openclaw/credentials/apns/AuthKey_
 
 不要提交 `.p8` 文件，也不要将其放在仓库检出目录下。
 
-## 发现路径
+## <a id="discovery-paths"></a> 发现路径
 
-### Bonjour（局域网）
+### <a id="bonjour-(lan)"></a><a id="bonjour-lan"></a> 卓悦 （LAN）
 
-iOS 应用在 `local.` 上浏览 `_openclaw-gw._tcp`，并且在配置后，也会浏览相同的广域 DNS-SD 发现域。同一局域网中的网关会从 `local.` 自动出现；跨网络发现可以使用已配置的广域域，而无需更改信标类型。
+iOS 应用程序在 `local.` 上浏览 `_openclaw-gw._tcp`，并且在配置后，浏览相同的广域 DNS-SD 发现域。 Same-LAN 网关自动从`local.`出现；跨网络发现可以使用配置的广域域，而无需更改信标类型。
 
-### Tailnet（跨网络）
+### <a id="tailnet-(cross-network)"></a><a id="tailnet-cross-network"></a> Tailnet（跨网络）
 
 如果 mDNS 被阻止，请使用单播 DNS-SD 区域（选择一个域名；示例：`openclaw.internal.`）和 Tailscale 分割 DNS。有关 CoreDNS 示例，请参见 [Bonjour](/gateway/bonjour)。
 
-### 手动主机/端口
+### <a id="manual-host%2Fport"></a><a id="manual-host/port"></a> 手动 host/port
 
-在设置中启用 **手动主机**，然后输入网关主机 + 端口（默认 `18789`）。
+打开**设置→网关**，启用**使用手动网关**，并输入网关主机+端口（默认`18789`）。
 
-## 多个网关
+## <a id="multiple-gateways"></a> 多个网关
 
-应用会保留其已配对的每个网关的注册信息，因此你可以在它们之间切换，而无需再次配对：
+该应用程序保留与其配对的每个网关的注册表，因此您可以在它们之间切换而无需再次配对：
 
-- **设置 -> 网关** 会显示一个带有当前活动网关标记的 **已配对网关** 列表。点按某一项即可切换；应用会拆除当前会话并重新连接到所选网关。当配对了多个网关时，连接行旁边会出现一个快速切换菜单。
-- 凭据、TLS 信任决策、每个网关的偏好设置以及缓存的聊天记录都会按网关分别存储。切换时绝不会混合不同网关之间的状态，推送注册也会跟随当前活动网关。
-- 轻扫某个已配对网关（或使用其上下文菜单）以 **忘记** 它，这会移除其凭据、设备令牌、TLS 指纹以及缓存的聊天记录。
-- 已发现的网关必须在网络上可见才能切换到它们；手动添加的网关则会通过已保存的主机和端口重新连接。
+- **设置 → 网关** 显示 **配对网关** 列表，其中标记了活动网关。点击条目进行切换；该应用程序会断开当前会话并重新连接到选定的网关。
+- Credentials、TLS 信任决策、每个网关首选项和缓存的聊天历史记录均存储在每个网关中。切换永远不会混合网关之间的状态，并且推送注册遵循活动网关。
+- 滑动配对网关（或使用其上下文菜单）以 **Forget** 它，这将删除其凭据、设备令牌、TLS 引脚和缓存的聊天记录。
+- Discovered Gateway 必须在网络上可见才能切换到它们；手动网关通过保存的主机和端口重新连接。
+- 演示和屏幕截图模式隐藏已保存的网关：侧栏选择器和 **Settings → Gateway** 仅显示夹具连接，而不显示 **配对网关** 列表或手动网关、凭据和自定义标头设置。扫描 QR 代码或粘贴设置代码以连接真实网关。
 
-## 画布 + A2UI
+## <a id="computer-use-relationship"></a> 与 Computer Use 的关系
 
-iOS 节点渲染一个 WKWebView 画布。使用 `node.invoke` 来驱动它：
+iOS 应用程序是移动节点表面，而不是 Codex 计算机使用后端。 Codex计算机使用和`cua-driver mcp`通过MCP工具控制本地macOS桌面； iOS 应用程序通过 OpenClaw 节点命令（例如 `camera.*`、`screen.*`、`location.*` 和 `talk.*`）公开 iPhone 功能。
 
-```bash
-openclaw nodes invoke --node "iOS 节点" --command canvas.navigate --params '{"url":"http://<gateway-host>:18789/__openclaw__/canvas/"}'
-```
+代理仍然可以通过调用节点命令通过 OpenClaw 操作 iOS 应用程序，但这些调用将通过网关节点协议并遵循 iOS foreground/background 限制。使用 [Codex 计算机 Use](/plugins/codex-computer-use) 进行本地桌面控制，使用此页面了解 iOS 节点功能。
 
-说明：
+## <a id="voice-wake-%2B-talk-mode"></a><a id="voice-wake-+-talk-mode"></a> 语音唤醒 + 对话模式
 
-- Gateway 画布主机通过 Gateway HTTP 服务器提供 `/__openclaw__/canvas/` 和 `/__openclaw__/a2ui/`，端口与 `gateway.port` 相同，默认是 `18789`。
-- iOS 节点会将内置脚手架保持为已连接的默认视图。`canvas.a2ui.push` 和 `canvas.a2ui.reset` 使用随附的、应用自有的 A2UI 页面。
-- 远程 Gateway A2UI 页面在 iOS 上仅可渲染；原生 A2UI 按钮操作只接受来自随附的应用自有页面。
-- 使用 `canvas.navigate` 和 `{"url":""}` 返回内置脚手架。
-
-## 与 Computer Use 的关系
-
-iOS 应用是一个移动节点表面，而不是 Codex Computer Use 后端。Codex Computer Use 和 `cua-driver mcp` 通过 MCP 工具控制本地 macOS 桌面；iOS 应用通过诸如 `canvas.*`、`camera.*`、`screen.*`、`location.*` 和 `talk.*` 之类的 OpenClaw 节点命令公开 iPhone 功能。
-
-代理仍然可以通过调用节点命令来操作 iOS 应用，但这些调用会经过网关节点协议，并遵循 iOS 前台/后台限制。使用 [Codex Computer Use](/plugins/codex-computer-use) 进行本地桌面控制，使用本页了解 iOS 节点功能。
-
-### Canvas 评估 / 快照
-
-```bash
-openclaw nodes invoke --node "iOS Node" --command canvas.eval --params '{"javaScript":"(() => { const {ctx} = window.__openclaw; ctx.clearRect(0,0,innerWidth,innerHeight); ctx.lineWidth=6; ctx.strokeStyle=\"#ff2d55\"; ctx.beginPath(); ctx.moveTo(40,40); ctx.lineTo(innerWidth-40, innerHeight-40); ctx.stroke(); return \"ok\"; })()"}'
-```
-
-```bash
-openclaw nodes invoke --node "iOS Node" --command canvas.snapshot --params '{"maxWidth":900,"format":"jpeg"}'
-```
-
-## 语音唤醒 + 对话模式
-
-- 设置中提供语音唤醒和对话模式。
+- 语音唤醒和通话模式可在仪表板的 **Settings -> Talk** 页面上找到。
+- 语音唤醒将识别的命令发送到活动会话；使用对话模式进行语音助理回复。
 - 当 `talk.realtime.transport` 为 `webrtc` 时，OpenAI 实时对话使用由客户端拥有的 WebRTC；明确配置的 `gateway-relay` 仍然属于 Gateway 拥有。参见 [对话模式](/nodes/talk)。
 - 支持对话的 iOS 节点会声明 `talk` 能力，并且可以声明 `talk.ptt.start`、`talk.ptt.stop`、`talk.ptt.cancel` 和 `talk.ptt.once`；对于受信任的、支持对话的节点，Gateway 默认允许这些按住说话命令。
 - iOS 可能会暂停后台音频；当应用未处于活动状态时，请将语音功能视为尽力而为。
 
-## 常见错误
+### <a id="start-live-voice-with-siri-or-shortcuts"></a> 使用 Siri 或快捷方式启动实时语音
 
-- `NODE_BACKGROUND_UNAVAILABLE`: 将 iOS 应用切换到前台（canvas/camera/screen 命令需要它）。
-- `A2UI_HOST_UNAVAILABLE`: 捆绑的 A2UI 页面在应用 WebView 中无法访问；请保持应用在 Screen 选项卡上处于前台并重试。
+**Start Live Voice** 应用程序快捷方式将 OpenClaw 打开到当前聊天，并启动与内联 Talk 控件相同的 Talk 路径。
+
+1. 首先打开OpenClaw和[配对并连接到您的Gateway](/platforms/ios#quick-start-pair-+-connect)。实时语音使用您现有的 [Talk 模式语音提供商配置 ](/nodes/talk)；该快捷方式不配置提供商或旁路配对。
+2. 在**快捷方式→应用程序→OpenClaw**中，选择**启动实时语音**。您还可以询问 Siri：**“用 OpenClaw 开始实时语音”**。
+3. 当 iOS 提示时允许麦克风访问。如果出现提示，请解锁您的 iPhone，并在 Talk 开始时将 OpenClaw 保持在前台。该快捷方式不会绕过 iOS 解锁或前台限制。
+
+要快速访问，请保存包含 **Start Live Voice** 的快捷方式，然后在支持的 iPhone 上的 **设置 → 操作按钮 → 快捷方式** 下进行分配，或使用快捷方式中的 **添加到主屏幕**。背景语音仍然受到与应用程序内启动 Talk 相同的 iOS 限制。
+
+## <a id="common-errors"></a> 常见错误
+
+- `NODE_BACKGROUND_UNAVAILABLE`：将 iOS 应用程序带到前台（camera/screen 命令需要它）。
 - 配对提示从未出现：运行 `openclaw devices list` 并手动批准。
-- Apple Watch 未显示 iPhone 状态：确认 iPhone 在 `watch.status` 中报告 `watchPaired: true`
-  和 `watchAppInstalled: true`。如果 pairing 为 false，请在 Apple 的 Watch 应用中配对
-  Apple Watch。如果 installation 为 false，请从 **我的手表 -> 可用 App** 安装配套应用。
-  在任一更改后，在 Apple Watch 上打开一次 OpenClaw；要立即可达仍需要两个应用都在运行，
-  而排队的更新可能会稍后在后台到达。
+- `Gateway setup incomplete`：网关未提供节点和操作员凭据。从 **Devices -> 在 Control UI 或 `openclaw qr` 中配对设备** 生成新的 iPhone 设置代码，然后在 **Settings -> Gateway** 中扫描它。自动重新连接将保持暂停状态，直到您重试设置为止；这不是设备存储错误。
+- 如果安装程序无法安全地替换网关的脱机数据，它将在应用替换凭据之前停止。设置代码和手动端点保持可用。解决设备存储问题，然后重试。
+- Watch 显示没有 iPhone 状态：确认 iPhone 在 `watch.status` 中报告 `watchPaired: true` 和 `watchAppInstalled: true`。如果配对失败，请在 Apple 的手表应用程序中配对手表。如果安装失败，请从 **My Watch -> 可用应用程序** 安装配套件。任一更改后，在手表上打开 OpenClaw 一次；即时可达性仍然需要两个应用程序都在运行，而排队的更新可以稍后在后台到达。
 - 重新安装后重连失败：Keychain 配对令牌已被清除；请重新为该节点配对。
 
-## 相关文档
+## <a id="related-docs"></a> 相关文档
 
 - [配对](/channels/pairing)
 - [发现](/gateway/discovery)
-- [Bonjour](/gateway/bonjour)
+- [卓悦](/gateway/bonjour)
+- [Stable HTTPS URL](/gateway/stable-https-url) — 为仅环回网关提供稳定的、仅尾网的 HTTPS URL 和 Tailscale 服务

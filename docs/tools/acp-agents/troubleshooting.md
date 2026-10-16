@@ -1,0 +1,48 @@
+---
+summary: "ACP 后端、插件接线和交付失败的症状、可能原因和修复"
+title: "ACP代理故障排除"
+read_when:
+  - "排查 ACP 后端、插件接线或完成投递问题"
+  - "您遇到 ACP 错误消息并需要修复"
+  - "ACP 会话停止、提前失败或泄漏内部上下文"
+---
+
+## <a id="troubleshooting"></a> 故障排查
+
+| 症状                                                                                   | 可能原因                                                                                                           | 修复                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACP runtime backend is not configured`                                                   | 后端插件丢失、禁用或被 `plugins.allow` 阻止。                                                       | 安装并启用后端插件，设置白名单后将 `acpx` 包含在 `plugins.allow` 中，然后运行 ​​`/acp doctor`。                                                                                            |
+| `ACP is disabled by policy (acp.enabled=false)`                                           | ACP 全局已禁用。                                                                                                 | 设置 `acp.enabled=true`。                                                                                                                                                                                             |
+| `ACP dispatch is disabled by policy (acp.dispatch.enabled=false)`                         | 已禁用从普通线程消息到自动分发。                                                               | 设置 `acp.dispatch.enabled=true` 以恢复自动线程路由；显式的 `sessions_spawn({ runtime: "acp" })` 调用仍然有效。                                                                                 |
+| `ACP agent "<id>" is not allowed by policy`                                               | 代理不在允许列表中。                                                                                                | 使用允许的 `agentId`，或更新 `acp.allowedAgents`。                                                                                                                                                                |
+| `/acp doctor` 启动后立即报告后端未就绪                               | 后端插件丢失、禁用、被 allow/deny 策略阻止，或其配置的可执行文件不可用。        | Install/enable 后端插件，重新运行 `/acp doctor`，并检查后端安装或策略错误（如果仍然不正常）。                                                                                      |
+| 未找到harness命令                                                                 | 适配器 CLI 未安装，外部插件丢失，或者非 Codex 适配器的首次运行 `npx` 获取失败。 | 在网关主机上运行 `/acp doctor`、install/prewarm 适配器，或显式配置 acpx 代理命令。                                                                                                 |
+| harness中未找到模型                                                          | 模型 ID 对于另一个 provider/harness 有效，但对于此 ACP 目标无效。                                                | 使用该harness列出的模型、在harness中配置模型或忽略覆盖。                                                                                                                       |
+| harness中的供应商身份验证错误                                                        | OpenClaw 正常，但目标 CLI/provider 未登录。                                                     | 登录或提供网关主机环境上所需的提供程序密钥。                                                                                                                                        |
+| `Unable to resolve session target: ...`                                                   | 错误的 key/id/label 代币。                                                                                                | 运行 `/acp sessions`，复制精确的 key/label，然后重试。                                                                                                                                                                   |
+| `--bind here requires running /acp spawn inside an active ... conversation`               | `--bind here` 在没有活动可绑定对话的情况下使用。                                                            | 移动到目标 chat/channel 并重试，或使用未绑定的生成。                                                                                                                                                    |
+| `Conversation bindings are unavailable for <channel>.`                                    | 适配器缺少当前会话 ACP 绑定能力。                                                             | 在支持的情况下使用 `/acp spawn ... --thread ...`，配置顶层 `bindings[]`，或移动到受支持的频道。                                                                                                |
+| `--thread here requires running /acp spawn inside an active ... thread`                   | `--thread here` 在线程上下文之外使用。                                                                         | 移动到目标线程或使用 `--thread auto`/`off`.                                                                                                                                                                 |
+| `Only <user-id> can rebind this channel/conversation/thread.`                             | 其他用户拥有当前活动绑定目标。                                                                           | 由所有者重新绑定，或使用不同的会话或线程。                                                                                                                                                          |
+| `Thread bindings are unavailable for <channel>.`                                          | 适配器缺乏线程绑定功能。                                                                               | 使用 `--thread off` 或移至受支持的 adapter/channel.                                                                                                                                                            |
+| `Sandboxed sessions cannot spawn ACP sessions ...`                                        | ACP 运行时位于主机侧；请求者会话处于沙盒中。                                                              | 在沙盒会话中使用 `runtime="subagent"`，或从非沙盒会话运行 ACP spawn。                                                                                                                    |
+| `sessions_spawn sandbox="require" is unsupported for runtime="acp" ...`                   | 为 ACP 运行时请求了 `sandbox="require"`。                                                                         | 如需沙盒隔离，请使用 `runtime="subagent"`；或者从非沙盒会话中使用 `sandbox="inherit"` 来使用 ACP。                                                                                                 |
+| `Cannot apply --model ... did not advertise model support`                                | 目标适配器未公开通用的 ACP 模型切换能力。                                                        | 使用声明了 ACP `models`/`session/set_model` 的适配器，使用 Codex ACP 模型引用，或如果该适配器有自己的启动标志，则直接在适配器中配置模型。                                            |
+| 绑定会话缺少 ACP 元数据                                                    | Stale/deleted ACP 会话元数据。                                                                                    | 使用 `/session unbind` 分离，然后使用 `/acp spawn --bind here` 或 `/acp spawn --thread here` 重新创建。                                                                                                           |
+| ACP 输入请求被拒绝或取消                                                | form/URL 格式错误、超出 field/choice 限制、使用不受支持的约束或所属回合结束。        | 读取可见的拒绝原因，使用标准原始形式或有效的 HTTP（S） URL 重试，并在应答时保持原始回合处于活动状态。                                                                   |
+| `PermissionPromptUnavailableError: Permission prompt unavailable in non-interactive mode` | `permissionMode` 在非交互式 ACP 会话中阻止 writes/exec。                                                    | 设置`plugins.entries.acpx.config.permissionMode`为`approve-all`；默认混合重新加载会自动应用插件更改。参见[权限配置](/tools/acp-agents-setup#permission-configuration)。 |
+| ACP 会话提前失败且输出很少                                                | 权限提示被`permissionMode`/`nonInteractivePermissions`.阻止                                        | 检查网关日志中是否有 `AcpRuntimeError`。如需完全权限，请设置`permissionMode=approve-all`；对于正常降级，请设置 `nonInteractivePermissions=deny`。                                                   |
+| ACP 会话完成工作后无限期停止                                     | harness处理已完成，但 ACP 会话未报告完成情况。                                                    | 更新OpenClaw；当前 acpx 清理会在关闭和网关启动时收集 OpenClaw- 拥有的陈旧包装器和适配器进程。                                                                                        |
+| 适配器看到 `<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>`                                      | 内部事件封装越过了 ACP 边界。                                                                | 更新 OpenClaw 并重新运行完成流程；外部适配器应只接收纯粹的完成提示。                                                                                                     |
+
+<Note>
+`Command blocked by PreToolUse hook: Native hook relay unavailable` 属于原生 Codex 挂钩中继，而不是 ACP/acpx. 在绑定的 Codex 聊天中，使用 `/new` 或 `/reset` 启动新会话；如果它工作一次，然后在下一个本机工具调用时返回，请重新启动 Codex 应用程序服务器或 OpenClaw 网关，而不是重复 `/new`。请参阅 [Codex harness故障排除](/plugins/codex-harness/troubleshooting)。
+</Note>
+
+已知的提供者故障包括恢复指导，即使harness没有返回辅助回复。无法识别的故障保留通用消息；原始提供商诊断保留在日志中。如果警告表明工具操作可能已运行，请在重试之前检查其结果。
+
+## <a id="oversized-harness-messages"></a> 超大harness消息
+
+默认情况下，acpx 后端将来自harness的每个传入 ACP 消息限制为 64 MiB 原始字节。如果运行因 `ACP_MESSAGE_TOO_LARGE` 或 `ACP message exceeded ACPX_MAX_ACP_MESSAGE_BYTES` 失败，请减少harness输出或将网关进程环境中的 `ACPX_MAX_ACP_MESSAGE_BYTES` 设置为更大的字节数。将其设置为 `0` 允许无限传入消息大小。
+
+更改环境后重新启动网关，以便新的harness连接使用该限制。对于直接 acpx CLI 会话，关闭现有的暖所有者并启动新会话；热情的业主保留其启动设置。

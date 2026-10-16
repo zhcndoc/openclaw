@@ -1,43 +1,43 @@
 ---
-summary: "使用一键模板在 Railway 上部署 OpenClaw"
+summary: "通过一键模板在Railway上部署OpenClaw"
 read_when:
-  - 将 OpenClaw 部署到 Railway
-  - 你想要一个带浏览器控制界面的云端一键部署
+  - "将 OpenClaw 部署到 Railway"
+  - "你希望通过基于浏览器的 Control UI 进行一键云部署"
 title: "Railway"
 ---
 
-使用一键模板在 Railway 上部署 OpenClaw，并通过网页控制界面访问它。这是最简单的“服务器上无需终端”的方案：Railway 会为你运行 Gateway。
+通过一键模板将OpenClaw部署在Railway上，并通过Web Control UI访问。这是最简单的“服务器上无终端”路径：Railway 为您运行网关。
 
-## 一键部署
+## <a id="one-click-deploy"></a> 一键部署
 
 <a href="https://railway.com/deploy/clawdbot-railway-template" target="_blank" rel="noreferrer">
   在 Railway 上部署
 </a>
 
 <Steps>
-  <Step title="部署模板">
+  <Step id="deploy-the-template" title="部署模板">
     点击上方的 **Deploy on Railway**。
   </Step>
 
-<Step title="添加卷">
+<Step id="add-a-volume" title="添加音量">
   挂载一个位于 `/data` 的卷（持久化状态所必需）。
 </Step>
 
-  <Step title="设置变量">
+  <Step id="set-variables" title="设置变量">
     在服务上设置所需的 **Variables**：
 
     - `OPENCLAW_GATEWAY_PORT=8080`（必需——必须与 Public Networking 中的端口一致）
     - `OPENCLAW_GATEWAY_TOKEN`（必需；请将其视为管理员密钥）
-    - `OPENCLAW_STATE_DIR=/data/.openclaw`（推荐）
-    - `OPENCLAW_WORKSPACE_DIR=/data/workspace`（推荐）
+    - `OPENCLAW_STATE_DIR=/data/.openclaw`（持久状态所需）
+    - `OPENCLAW_WORKSPACE_DIR=/data/workspace`（持久工作区所需）
 
   </Step>
 
-<Step title="启用公共网络">
+<Step id="enable-public-networking" title="启用公共网络">
   在 **Public Networking** 下，为端口 `8080` 的服务启用 **HTTP Proxy**。
 </Step>
 
-  <Step title="连接">
+  <Step id="connect" title="连接">
     在 **Railway -> your service -> Settings -> Domains** 中找到你的公网 URL —— 可能是生成的域名（通常类似 `https://<something>.up.railway.app`）或者你绑定的自定义域名。
 
     打开 `https://<your-railway-domain>/openclaw`，并使用已配置的共享密钥进行连接。该模板默认使用 `OPENCLAW_GATEWAY_TOKEN`；如果你将其替换为密码认证，请改用该密码。
@@ -45,31 +45,38 @@ title: "Railway"
   </Step>
 </Steps>
 
-## 你将获得
+从 Railway shell 运行只读部署预检：
+
+```bash
+openclaw doctor --json
+```
+
+## <a id="what-you-get"></a> 你将获得什么
 
 - 托管的 OpenClaw Gateway + Control UI
-- 通过 Railway Volume（`/data`）提供持久化存储，因此 `openclaw.json`、每个代理的 `auth-profiles.json`、channel/provider 状态、会话以及工作区都可以在重新部署后保留
+- 通过 Railway 卷 （`/data`） 进行持久存储，因此 `openclaw.json`、共享和每个代理 SQLite 身份验证存储、channel/provider 状态、会话和工作区在重新部署后仍然存在
 
-## 连接通道
+## <a id="connect-a-channel"></a> 连接通道
 
-使用 `/openclaw` 处的控制界面，或者通过 Railway 的 shell 运行 `openclaw onboard` 来获取通道设置说明：
+在 `/openclaw` 处使用 Control UI 或通过 Railway 的 shell 运行 `openclaw onboard` 以获取通道设置说明：
 
 - [Discord](/channels/discord)
 - [Telegram](/channels/telegram)（最快——只需一个机器人令牌）
 - [所有通道](/channels)
 
-## 备份和迁移
+## <a id="backups-and-migration"></a> 备份和迁移
 
 导出你的状态、配置、auth profiles 和工作区：
 
 ```bash
 openclaw backup create
+openclaw backup restore <archive.tar.gz> --target <fresh-directory>
 ```
 
-这会创建一个可移植的备份归档，其中包含 OpenClaw 状态以及任何已配置的工作区。详情请参见 [备份](/cli/backup)。
+恢复验证并提取到新的暂存目录中；激活是一个单独的离线步骤。有关回滚警告和激活顺序，请参阅 [ 恢复完整存档 ](/install/backups#restore-a-full-archive)。
 
-## 下一步
+## <a id="next-steps"></a> 下一步
 
 - 设置消息通道：[Channels](/channels)
-- 配置 Gateway：[Gateway configuration](/gateway/configuration)
-- 保持 OpenClaw 为最新版本：[Updating](/install/updating)
+- 配置网关：[网关配置](/gateway/configuration)
+- 使 OpenClaw 保持最新状态：[Updating](/install/updating)

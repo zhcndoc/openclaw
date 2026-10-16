@@ -1,22 +1,26 @@
 ---
 summary: "向 OpenClaw 添加 Vydra 模型提供方支持。"
 read_when:
-  - 你正在安装、配置或审计 vydra 插件
-title: "Vydra 插件"
+  - You are installing, configuring, or auditing the vydra plugin
+title: "Vydra plugin reference"
 ---
 
-# Vydra 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 向 OpenClaw 添加 Vydra 模型提供方支持。
 
 ## 分发
 
-- 软件包：`@openclaw/vydra-provider`
-- 安装渠道：npm；ClawHub：`clawhub:@openclaw/vydra-provider`
+- Package: `@openclaw/vydra-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/vydra-provider`
 
 ## 表面
 
-提供商：`vydra`；合约：`imageGenerationProviders`、`speechProviders`、`videoGenerationProviders`
+- Providers: `vydra`
+- Contracts: `imageGenerationProviders`, `speechProviders`, `videoGenerationProviders`
 
 ## 相关文档
 

@@ -1,8 +1,8 @@
 ---
 summary: "每个收件人的 Matrix 推送规则：用于静默最终版预览编辑"
 read_when:
-  - 为自托管 Synapse 或 Tuwunel 配置 Matrix 静默流式传输
-  - 用户只希望在块完成后收到通知，而不是每次预览编辑都通知
+  - "为自托管 Synapse 或 Tuwunel 配置 Matrix 静默流式传输"
+  - "用户只希望在块完成后收到通知，而不是每次预览编辑都通知"
 title: "Matrix 静默预览推送规则"
 ---
 
@@ -10,20 +10,20 @@ title: "Matrix 静默预览推送规则"
 
 `streaming.mode: "progress"` 也会通过同一路径完成其草稿，因此同样的规则也会对 progress 模式下的最终编辑生效。
 
-如果你只想使用原生 Matrix 通知行为，请使用 `streaming.mode: "partial"` 或保持关闭流式传输。请参见 [Matrix channel setup](/channels/matrix#streaming-previews)。
+如果您只需要库存 Matrix 通知行为，请使用 `streaming.mode: "partial"` 或关闭流式传输。请参见 [ 矩阵消息行为 ](/channels/matrix/messaging#streaming-previews)。
 
-## 前提条件
+## <a id="prerequisites"></a> 先决条件
 
 - recipient user = 应接收通知的人
 - bot user = 发送回复的 OpenClaw Matrix 账户
 - 对下面的 API 调用使用接收者用户的访问令牌
 - 将 push rule 中的 `sender` 与 bot 用户的完整 MXID 匹配
-- 接收者账户必须已经有正常工作的推送器；静默预览规则仅在正常的 Matrix 推送投递运行良好时才有效
+- 接收者帐户必须已经有工作推送程序。仅当正常的 Matrix 推送传递正常时，安静预览规则才有效
 
-## 步骤
+## <a id="steps"></a> 步骤
 
 <Steps>
-  <Step title="配置静默预览">
+  <Step id="configure-quiet-previews" title="配置安静预览">
 
 ```json5
 {
@@ -37,7 +37,7 @@ title: "Matrix 静默预览推送规则"
 
   </Step>
 
-  <Step title="获取收件人的访问令牌">
+  <Step id="get-the-recipients-access-token" title="获取收件人的访问令牌">
     尽可能复用现有的客户端会话令牌。如需生成一个新的：
 
 ```bash
@@ -47,13 +47,19 @@ curl -sS -X POST \
   --data '{
     "type": "m.login.password",
     "identifier": { "type": "m.id.user", "user": "@alice:example.org" },
-    "password": "已隐藏"
+    "password": "REDACTED"
   }'
+```
+
+    将 `https://matrix.example.org` 替换为您的家庭服务器基础 URL，将 `@alice:example.org` 替换为收件人的 MXID。将响应中的 `access_token` 导出为 `USER_ACCESS_TOKEN`；其余步骤如下：
+
+```bash
+export USER_ACCESS_TOKEN="<access_token from the login response>"
 ```
 
   </Step>
 
-  <Step title="验证 pushers 是否存在">
+  <Step id="verify-pushers-exist" title="验证推送器是否存在">
 
 ```bash
 curl -sS \
@@ -65,7 +71,7 @@ curl -sS \
 
   </Step>
 
-  <Step title="安装覆盖推送规则">
+  <Step id="install-the-override-push-rule" title="安装覆盖推送规则">
     安装一条匹配最终预览标记以及发送者为 bot MXID 的规则：
 
 ```bash
@@ -105,7 +111,7 @@ curl -sS -X PUT \
 
   </Step>
 
-  <Step title="验证">
+  <Step id="verify" title="验证">
 
 ```bash
 curl -sS \
@@ -120,33 +126,33 @@ curl -sS \
 
 以后如需移除该规则，可使用收件人的令牌对同一个规则 URL 执行 `DELETE`。
 
-## 多 bot 说明
+## <a id="multi-bot-notes"></a> 多 bot 说明
 
 推送规则按 `ruleId` 键控：对同一个 ID 重复执行 `PUT` 会更新同一条规则。对于多个 OpenClaw bot 向同一收件人发送通知的情况，请为每个 bot 创建一条规则，并使用不同的 sender 匹配。
 
-新的用户自定义 `override` 规则会插入到服务器默认的 suppress 规则之前，因此不需要额外的排序参数。该规则只影响可在原处完成最终确认的纯文本预览编辑；媒体回复、过期预览的回退，以及会触发 Matrix 提及的最终文本，都会改为正常的通知消息发送。
+新的用户定义的 `override` 规则将插入到服务器默认抑制规则之前，因此不需要额外的排序参数。该规则仅影响可以就地完成的纯文本预览编辑。媒体回复、陈旧预览回退以及激活 Matrix 提及的最终文本将作为普通通知消息传递。
 
-## homeserver 说明
+## <a id="homeserver-notes"></a> homeserver 说明
 
 <AccordionGroup>
-  <Accordion title="Synapse">
+  <Accordion id="synapse" title="突触">
     不需要对 `homeserver.yaml` 做特殊更改。如果正常的 Matrix 通知已经能送达该用户，那么收件人令牌 + 上面的 `pushrules` 调用就是主要配置步骤。
 
-    如果你在反向代理或 workers 后面运行 Synapse，请确保 `/_matrix/client/.../pushrules/` 能正确到达 Synapse。推送投递由主进程或 `synapse.app.pusher` / 已配置的 pusher workers 处理——请确保它们运行正常。
+    如果您在反向代理或工作程序后面运行 Synapse，请确保 `/_matrix/client/.../pushrules/` 正确到达 Synapse。推送交付由主进程或 `synapse.app.pusher` / 配置的推送工作人员处理 - 检查它们是否正常。
 
     该规则使用的是 `event_property_is` 推送规则条件（MSC3758，push rule v1.10），它于 2023 年加入 Synapse。旧版 Synapse 会接受 `PUT pushrules/...` 调用，但会悄悄地从不匹配该条件——如果最终预览编辑没有收到通知，请升级 Synapse。
 
   </Accordion>
 
-  <Accordion title="Tuwunel">
-    与 Synapse 的流程相同；无需为最终预览标记做任何 Tuwunel 专属配置。
+  <Accordion id="tuwunel" title="图乌内尔">
+    与 Synapse 相同的流程。最终的预览标记不需要特定于 Tuwunel 的配置。
 
-    如果用户在另一台设备上活跃时通知消失，请检查是否启用了 `suppress_push_when_active`。Tuwunel 在 1.4.2（2025 年 9 月）中加入了此选项，它可以在某台设备活跃时有意抑制向其他设备发送推送。
+    如果用户在另一台设备上处于活动状态时通知消失，请检查是否启用了 `suppress_push_when_active`。 Tuwunel 在 1.4.2（2025 年 9 月）中添加了此选项，它可以在一个设备处于活动状态时有意抑制向其他设备的推送。
 
   </Accordion>
 </AccordionGroup>
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [Matrix 频道设置](/channels/matrix)
 - [流式传输概念](/concepts/streaming)

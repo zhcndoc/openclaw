@@ -1,7 +1,7 @@
 ---
-summary: "OpenClaw 是一个可在任何操作系统上运行的 AI 代理多通道网关。"
+summary: "OpenClaw 是一款开源 AI 助手，可在你自己的硬件上运行，并接入你日常使用的聊天应用。"
 read_when:
-  - 向新人介绍 OpenClaw 时
+  - "向新用户介绍 OpenClaw"
 title: "OpenClaw"
 ---
 
@@ -25,43 +25,41 @@ title: "OpenClaw"
 > _"EXFOLIATE! EXFOLIATE!"_ — 一只太空龙虾，大概吧
 
 <p align="center">
-  <strong>Any OS gateway for AI agents across Discord, Google Chat, iMessage, Matrix, Microsoft Teams, Signal, Slack, Telegram, WhatsApp, Zalo, and more.</strong><br />
-  Send a message, get an agent response from your pocket. Run one Gateway across channel plugins, WebChat, and mobile nodes.<br />
-  Developed in the open by the <a href="https://openclaw.org">OpenClaw Foundation</a>, a non-profit.
+  <strong>你的 AI 助手，运行在你自己的硬件上，接入你日常使用的聊天应用。</strong><br />
+  一个 Gateway，任意模型，任意设备，无需中间托管服务。<br />由独立的 501(c)(3) 非营利组织 <a href="https://openclaw.org">OpenClaw Foundation</a> 公开开发。没有付费层级，默认仅执行可关闭的<a href="/gateway/telemetry">版本检查</a>，不收集其他遥测数据，也不隶属于任何 AI 实验室。
 </p>
 
 <Columns>
   <Card title="开始使用" href="/start/getting-started" icon="rocket">
     安装 OpenClaw，并在几分钟内启动网关。
   </Card>
-  <Card title="入门引导" href="/start/wizard" icon="list-checks">
+  <Card title="运行入门引导" href="/start/wizard" icon="list-checks">
     使用 `openclaw onboard` 和配对流程进行引导式设置。
   </Card>
-  <Card title="连接频道" href="/channels" icon="message-circle">
+  <Card title="连接渠道" href="/channels" icon="message-circle">
     连接 Discord、Signal、Telegram、WhatsApp 等，即可随时随地聊天。
   </Card>
-  <Card title="打开控制界面" href="/web/control-ui" icon="layout-dashboard">
+  <Card title="打开 Control UI" href="/web/control-ui" icon="layout-dashboard">
     启动用于聊天、配置和会话的浏览器仪表盘。
   </Card>
 </Columns>
 
-## 浏览文档
+## <a id="browse-docs"></a> 浏览文档
 
-移动浏览器可能会显示章节菜单，而不会显示完整的桌面端标签栏。请使用
-这些中心链接，从页面正文进入相同的顶级文档区域。
+移动浏览器可能只显示章节菜单，不显示完整的桌面标签栏。你可以通过以下入口，从页面正文访问各个文档分类。
 
 <Columns>
-  <Card title="快速开始" href="/" icon="rocket">
-    概览、展示、第一步和设置指南。
+  <Card title="开始使用" href="/start/getting-started" icon="rocket">
+    概述、第一步和设置指南。
   </Card>
   <Card title="安装" href="/install" icon="download">
     安装路径、更新、容器、托管和高级设置。
   </Card>
-  <Card title="频道" href="/channels" icon="messages-square">
-    消息频道、配对、路由、访问组和频道 QA。
+  <Card title="渠道" href="/channels" icon="messages-square">
+    消息渠道、配对、路由、访问组和渠道质量验证。
   </Card>
-  <Card title="代理" href="/concepts/architecture" icon="bot">
-    架构、会话、上下文、记忆和多代理路由。
+  <Card title="智能体" href="/concepts/architecture" icon="bot">
+    架构、会话、上下文、记忆和多智能体路由。
   </Card>
   <Card title="功能" href="/tools" icon="wand-sparkles">
     工具、技能、cron、webhook 和自动化功能。
@@ -75,84 +73,117 @@ title: "OpenClaw"
   <Card title="平台" href="/platforms" icon="monitor-smartphone">
     macOS、Windows、iOS、Android、节点和 Web 界面。
   </Card>
-  <Card title="网关与运维" href="/gateway" icon="server">
+  <Card title="Gateway 与运维" href="/gateway" icon="server">
     网关配置、安全性、诊断和运维。
   </Card>
   <Card title="参考" href="/cli" icon="terminal">
-    CLI 参考、模式、RPC、发行说明和模板。
+    CLI 参考、架构、RPC 和模板。
+  </Card>
+  <Card title="发布" href="/releases" icon="tag">
+    每个版本的发行说明，包含亮点和源链接。
   </Card>
   <Card title="帮助" href="/help" icon="life-buoy">
     故障排查、常见问题、测试、诊断和环境检查。
   </Card>
 </Columns>
 
-## 什么是 OpenClaw？
+## <a id="what-is-openclaw%3F"></a><a id="what-is-openclaw"></a> 什么是 OpenClaw？
 
-OpenClaw 是一个**自托管网关**，可通过频道插件将你最喜欢的聊天应用——Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等更多应用——连接到 AI 编码代理。你只需在自己的机器（或服务器）上运行一个 Gateway 进程，它就会成为你的消息应用与一个始终可用的 AI 助手之间的桥梁。
+OpenClaw 是一个**自托管网关**，通过渠道插件，将 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等聊天应用连接到 AI 编程智能体。你只需在自己的计算机或服务器上运行一个 Gateway 进程，就能将消息应用连接到随时可用的 AI 助手。
 
-**它适合谁？** 适合希望拥有一个可以随时发消息的个人 AI 助手的开发者和高级用户——而且不必放弃对数据的控制，也不依赖托管服务。
+**适合谁使用？** 适合希望随时向 AI 助手发送消息，同时保持数据控制权、不依赖托管服务的开发者、进阶用户和团队。同一个 Gateway 既可以在笔记本电脑上充当个人助手，也可以作为共享的[团队部署](/start/teams)运行，两者仅配置不同。
 
 **它有何不同？**
 
 - **自托管**：在你的硬件上运行，按你的规则办
 - **多频道**：一个 Gateway 可同时为所有已配置的频道插件提供服务
-- **面向代理**：为支持工具使用、会话、记忆和多代理路由的编码代理而构建
+- **面向智能体**：专为编程智能体构建，支持工具调用、会话、记忆和多智能体路由
 - **开源**：MIT 许可，社区驱动
 
-**What do you need?** Node 26 (recommended), or another supported release: Node 22.22.3+, Node 24.15+, or Node 25.9+. You also need an API key from your chosen provider and 5 minutes. For best quality and security, use the strongest latest-generation model available.
+关于可信网关、不可信执行、由代码强制实施的策略，以及同一产品如何兼顾个人和团队使用的完整架构说明，请参阅[为什么选择 OpenClaw](/start/why-openclaw)。
 
-## 它是如何工作的
+**需要准备什么？** 推荐使用 Node 26，也支持 Node 24.16+ 或 Node 26.1+。你还需要所选提供商的 API 密钥和约 5 分钟时间。为获得更好的质量和安全性，请使用可用的最新一代高性能模型。
+
+## <a id="how-it-works"></a> 工作原理
 
 ```mermaid
 flowchart LR
-  A["聊天应用 + 插件"] --> B["网关"]
+  A["Chat apps + plugins"] --> B["Gateway"]
   B --> C["OpenClaw agent"]
   B --> D["CLI"]
-  B --> E["Web 控制 UI"]
-  B --> F["macOS 应用"]
-  B --> G["iOS 和 Android 节点"]
+  B --> E["Web Control UI"]
+  B --> F["macOS app"]
+  B --> G["iOS and Android nodes"]
 ```
 
 网关是会话、路由和通道连接的唯一事实来源。
 
-## 核心能力
+## <a id="key-capabilities"></a> 核心能力
 
 <Columns>
   <Card title="多通道网关" icon="network" href="/channels">
     使用单个网关进程即可支持 Discord、iMessage、Signal、Slack、Telegram、WhatsApp、WebChat 等。
   </Card>
-  <Card title="插件通道" icon="plug" href="/tools/plugin">
+  <Card title="插件频道" icon="plug" href="/tools/plugin">
     通道插件可添加 Matrix、Nostr、Twitch、Zalo 等；官方插件可按需安装。
   </Card>
-  <Card title="多代理路由" icon="route" href="/concepts/multi-agent">
-    为每个代理、工作区或发送者隔离会话。
+  <Card title="多智能体路由" icon="route" href="/concepts/multi-agent">
+    按智能体、工作区或发送者隔离会话。
   </Card>
   <Card title="媒体支持" icon="image" href="/nodes/images">
     发送和接收图像、音频和文档。
   </Card>
-  <Card title="Web 控制 UI" icon="monitor" href="/web/control-ui">
+  <Card title="网页 Control UI" icon="monitor" href="/web/control-ui">
     用于聊天、配置、会话和节点的浏览器仪表板。
   </Card>
   <Card title="移动节点" icon="smartphone" href="/nodes">
-    配对 iOS 和 Android 节点，以支持 Canvas、摄像头和语音启用的工作流。
+    将 iOS 和 Android 节点配对以实现摄像头、屏幕和支持语音的工作流程。
+  </Card>
+  <Card title="技能" icon="graduation-cap" href="/tools/skills">
+    为智能体定义可重复执行的流程，并按需加载。
+  </Card>
+  <Card title="自动化" icon="clock" href="/automation">
+    使用 cron 作业、挂钩和 Webhook 按计划运行工作。
+  </Card>
+  <Card title="构建插件" icon="hammer" href="/plugins/building-plugins">
+    针对插件 SDK 编写您自己的通道、提供商和工具插件。
   </Card>
 </Columns>
 
-## 快速开始
+## <a id="quick-start"></a> 快速开始
 
 <Steps>
-  <Step title="安装 OpenClaw">
-    ```bash
-    npm install -g openclaw@latest
-    ```
+  <Step id="install-openclaw" title="安装 OpenClaw">
+    <Tabs>
+      <Tab title="macOS / Linux / WSL2">
+        ```bash
+        curl -fsSL https://openclaw.ai/install.sh | bash
+        ```
+      </Tab>
+      <Tab title="Windows (PowerShell)">
+        ```powershell
+        iwr -useb https://openclaw.ai/install.ps1 | iex
+        ```
+      </Tab>
+    </Tabs>
+
+    安装程序会检测操作系统，按需安装 Node，安装 OpenClaw，然后启动入门引导。npm、pnpm、bun、Docker、Nix 和源码安装等其他方式，请参阅[安装](/install)。
+
   </Step>
-  <Step title="完成引导并安装服务">
-    ```bash
-    openclaw onboard --install-daemon
-    ```
+  <Step id="complete-onboarding" title="完成入门引导">
+    入门引导提供 **Quick start** 和 **Custom setup** 两种选项。Quick start 会复用检测到的 AI 访问凭据，通过一次实际的模型请求验证凭据，并打开网页仪表盘，让 Gateway 在前台运行。Custom setup 则会逐项完成全部引导。`openclaw onboard --classic` 会打开经典的分步设置向导。
+
   </Step>
-  <Step title="聊天">
-    在浏览器中打开控制 UI 并发送消息：
+  <Step id="install-the-gateway-service" title="安装 Gateway 服务">
+    Quick start 会让 Gateway 在前台运行。按 **Ctrl+C** 停止后，再安装后台服务：
+
+    ```bash
+    openclaw gateway install
+    ```
+
+  </Step>
+  <Step id="chat" title="聊天">
+    在浏览器中打开Control UI并发送消息：
 
     ```bash
     openclaw dashboard
@@ -163,11 +194,11 @@ flowchart LR
   </Step>
 </Steps>
 
-需要完整的安装和开发设置？请参见 [Getting Started](/start/getting-started)。
+需要完整的安装和开发设置说明？请参阅[入门](/start/getting-started)。
 
-## 仪表板
+## <a id="dashboard"></a> 仪表板
 
-网关启动后，打开浏览器控制 UI。
+网关启动后打开浏览器Control UI。
 
 - 本地默认地址：[http://127.0.0.1:18789/](http://127.0.0.1:18789/)
 - 远程访问：[Web 界面](/web) 和 [Tailscale](/gateway/tailscale)
@@ -176,7 +207,7 @@ flowchart LR
   <img src="/whatsapp-openclaw.jpg" alt="OpenClaw" width="420" />
 </p>
 
-## 配置（可选）
+## <a id="configuration-(optional)"></a><a id="configuration-optional"></a> 配置（可选）
 
 配置位于 `~/.openclaw/openclaw.json`。
 
@@ -197,7 +228,7 @@ flowchart LR
 }
 ```
 
-## 从这里开始
+## <a id="start-here"></a> 从这里开始
 
 <Columns>
   <Card title="文档中心" href="/start/hubs" icon="book-open">
@@ -209,33 +240,33 @@ flowchart LR
   <Card title="远程访问" href="/gateway/remote" icon="globe">
     SSH 和 tailnet 访问模式。
   </Card>
-  <Card title="Channels" href="/channels/telegram" icon="message-square">
-    针对 Discord、飞书、Microsoft Teams、Telegram、WhatsApp 等的频道专属设置。
+  <Card title="渠道" href="/channels" icon="message-square">
+    Discord、Feishu、Microsoft Teams、Telegram、WhatsApp 等的通道特定设置。
   </Card>
   <Card title="节点" href="/nodes" icon="smartphone">
-    带有配对、Canvas、摄像头和设备操作的 iOS 和 Android 节点。
+    iOS 和 Android 节点具有配对、摄像头、屏幕和设备操作。
   </Card>
   <Card title="帮助" href="/help" icon="life-buoy">
     常见修复和故障排查入口。
   </Card>
 </Columns>
 
-## 了解更多
+## <a id="learn-more"></a> 了解更多
 
 <Columns>
   <Card title="完整功能列表" href="/concepts/features" icon="list">
     完整的通道、路由和媒体能力。
   </Card>
-  <Card title="多代理路由" href="/concepts/multi-agent" icon="route">
+  <Card title="多智能体路由" href="/concepts/multi-agent" icon="route">
     工作区隔离和按代理划分的会话。
   </Card>
-  <Card title="安全性" href="/gateway/security" icon="shield">
+  <Card title="安全" href="/gateway/security" icon="shield">
     令牌、允许列表和安全控制。
   </Card>
   <Card title="故障排查" href="/gateway/troubleshooting" icon="wrench">
     网关诊断和常见错误。
   </Card>
-  <Card title="关于与致谢" href="/reference/credits" icon="info">
+  <Card title="关于和制作人员" href="/reference/credits" icon="info">
     项目起源、贡献者和许可证。
   </Card>
 </Columns>

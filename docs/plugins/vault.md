@@ -1,35 +1,28 @@
 ---
-summary: "使用内置的 Vault 插件从 HashiCorp Vault 解析 SecretRefs"
+summary: "使用捆绑的 Vault 插件从 HashiCorp Vault 解析 SecretRefs"
 read_when:
-  - 你希望 OpenClaw 从 HashiCorp Vault 读取 API 密钥
-  - 你正在本地机器或服务器上设置 SecretRefs
-  - 你需要配置基于 Vault 的模型提供方凭据
-title: "Vault SecretRefs"
+  - "你希望 OpenClaw 从 HashiCorp Vault 读取 API 密钥"
+  - "你正在本地机器或服务器上设置 SecretRefs"
+  - "你需要配置基于 Vault 的模型提供方凭据"
+title: "避难所 SecretRefs"
 ---
 
 # Vault SecretRefs
 
-内置的 Vault 插件可让 OpenClaw 在 Gateway 启动和重载时，从
-HashiCorp Vault 解析 `exec` SecretRefs。OpenClaw 会将 Vault
-引用保存在配置中，将解析后的值保留在内存中的 secrets 快照里，
-并且不会把解析后的 API 密钥写回 `openclaw.json`。
+捆绑的 Vault 插件允许 OpenClaw 在网关启动和重新加载时从 HashiCorp Vault 解析 `exec` SecretRefs。 OpenClaw 将 Vault 引用存储在配置中，将解析的值保留在内存中的机密快照中，并且不会将解析的 API 密钥写回 `openclaw.json`。
 
-当你已经在运行 Vault，或者希望模型提供方密钥存放在 OpenClaw 配置文件
-之外时，可以使用此功能。有关 SecretRef 运行时模型，请参阅
-[密钥管理](/gateway/secrets)。
+当你已经在运行 Vault，或者希望模型提供方密钥存放在 OpenClaw 配置文件之外时，可以使用此功能。有关 SecretRef 运行时模型，请参阅 [密钥管理](/gateway/secrets)。
 
-## 开始之前
+## <a id="before-you-begin"></a> 开始之前
 
 你需要：
 
 - 已启用内置的 `vault` 插件的 OpenClaw
 - 一个可访问的 Vault 服务器
 - Vault 认证方式，能够生成具有对 OpenClaw 应解析的密钥路径的读取权限的客户端令牌
-- 启动 Gateway 的环境必须包含 `VAULT_ADDR`，并且还要包含以下其中之一：
-  `VAULT_TOKEN`，`OPENCLAW_VAULT_AUTH_METHOD=token_file` 搭配 `VAULT_TOKEN_FILE`，
-  或者已配置的 JWT/Kubernetes 登录
+- 启动 Gateway 的环境必须包含 `VAULT_ADDR`，并且还要包含以下其中之一： `VAULT_TOKEN`，`OPENCLAW_VAULT_AUTH_METHOD=token_file` 搭配 `VAULT_TOKEN_FILE`， 或者已配置的 JWT/Kubernetes 登录
 
-解析器通过 Node 使用 HTTP 与 Vault 通信。Gateway 不需要 Vault CLI 来解析 SecretRefs。
+解析器通过 HTTP 从 Node 与 Vault 进行通信。网关不需要 Vault CLI 来解析 SecretRefs。
 
 在运行 `openclaw vault` 命令之前，先启用内置插件：
 
@@ -37,9 +30,9 @@ HashiCorp Vault 解析 `exec` SecretRefs。OpenClaw 会将 Vault
 openclaw plugins enable vault
 ```
 
-## 在 Vault 中存储提供方密钥
+## <a id="store-a-provider-key-in-vault"></a> 在 Vault 中存储提供方密钥
 
-OpenClaw 默认使用挂载在 `secret` 上的 KV v2，这与 Vault 开发服务器示例相匹配。对于生产环境的 Vault，在创建 SecretRef id 之前，请将 `OPENCLAW_VAULT_KV_MOUNT` 设置为你的实际 KV 挂载路径。使用 OpenClaw 默认配置时，这个 SecretRef id：
+OpenClaw 默认为安装在 `secret` 的 KV v2，与 Vault 开发服务器示例相匹配。对于生产 Vault，请在创建 SecretRef id 之前将 `OPENCLAW_VAULT_KV_MOUNT` 设置为实际的 KV 挂载路径。使用 OpenClaw 默认值，此 SecretRef id：
 
 ```text
 providers/openrouter/apiKey
@@ -66,7 +59,7 @@ path "secret/data/providers/*" {
 }
 ```
 
-## 使 Vault 对 Gateway 可见
+## <a id="make-vault-visible-to-the-gateway"></a> 使 Vault 对 Gateway 可见
 
 对于未容器化的本地 Gateway，请在启动 OpenClaw 的同一个 shell 中导出 Vault 设置。默认认证方式会从 `VAULT_TOKEN` 读取 Vault 客户端令牌：
 
@@ -107,8 +100,7 @@ export OPENCLAW_VAULT_AUTH_ROLE=openclaw
 export OPENCLAW_VAULT_JWT_FILE=/var/run/secrets/tokens/vault
 ```
 
-JWT 文件应为投影的 workload token，例如具有 Vault 角色可接受 audience 的 Kubernetes service account token。
-交互式 OIDC 浏览器登录适合人工使用，但 Gateway 运行时需要非交互式 JWT 登录或 token 文件。
+JWT 文件应为投影的 workload token，例如具有 Vault 角色可接受 audience 的 Kubernetes service account token。 交互式 OIDC 浏览器登录适合人工使用，但 Gateway 运行时需要非交互式 JWT 登录或 token 文件。
 
 对于 Vault 的 Kubernetes 认证方式，请使用 `kubernetes`。这适用于作为 Pod 运行的 Gateway；默认挂载点为 `kubernetes`，默认 JWT 文件为标准 service account token 路径：
 
@@ -118,7 +110,7 @@ export OPENCLAW_VAULT_AUTH_METHOD=kubernetes
 export OPENCLAW_VAULT_AUTH_ROLE=openclaw
 ```
 
-只有当 Vault 将 Kubernetes 认证挂载在 `auth/kubernetes` 之外的位置时，才设置 `OPENCLAW_VAULT_AUTH_MOUNT`。只有当 service account token 投影到自定义路径时，才设置 `OPENCLAW_VAULT_JWT_FILE`。
+仅当 Vault 在 `auth/kubernetes` 以外的位置安装 Kubernetes 身份验证时，才设置 `OPENCLAW_VAULT_AUTH_MOUNT`。仅当服务帐户令牌投影到自定义路径时，才设置 `OPENCLAW_VAULT_JWT_FILE`。
 
 可选设置：
 
@@ -146,7 +138,7 @@ openclaw vault status --provider-alias corp-vault
 如果 Gateway 作为服务、LaunchAgent、systemd 单元、计划任务或容器运行，则该运行环境必须接收到相同的 Vault 变量。在交互式 shell 中设置变量只能证明该 shell 可见这些变量，而不能证明已经运行的 Gateway 也能看到。
 </Warning>
 
-## 生成并应用 SecretRef 方案
+## <a id="generate-and-apply-a-secretref-plan"></a> 生成并应用 SecretRef 方案
 
 创建一个将 OpenRouter 的模型提供方 API 密钥映射到 Vault 的方案：
 
@@ -165,13 +157,11 @@ openclaw secrets audit --check --allow-exec
 openclaw secrets reload
 ```
 
-使用 `--allow-exec`，因为 Vault 插件是通过由 OpenClaw 管理的
-exec SecretRef provider 进行解析的。
+使用 `--allow-exec` 因为 Vault 插件通过 OpenClaw- 托管执行 SecretRef 提供程序进行解析。
 
-如果 Gateway 还没有运行，请在应用方案后正常启动它，
-而不是运行 `openclaw secrets reload`。
+如果 Gateway 还没有运行，请在应用方案后正常启动它， 而不是运行 `openclaw secrets reload`。
 
-## 配置更多提供方密钥
+## <a id="configure-more-provider-keys"></a> 配置更多提供方密钥
 
 内置快捷方式：
 
@@ -191,7 +181,7 @@ openclaw vault setup \
   --openrouter-id providers/openrouter/apiKey
 ```
 
-没有快捷方式的打包提供方，或已经配置好的兼容 OpenAI 的提供方以及自定义模型提供方，请使用 `--provider-key`：
+没有快捷方式的捆绑提供程序，或已配置的 OpenAI- 兼容和自定义模型提供程序，请使用 `--provider-key`：
 
 ```bash
 openclaw vault setup \
@@ -200,9 +190,7 @@ openclaw vault setup \
   --provider-key groq=providers/groq/apiKey
 ```
 
-每个 `--provider-key <provider=id>` 会将一个 SecretRef 写入
-`models.providers.<provider>.apiKey`。对于自定义提供方，它不会创建
-该提供方的 `baseUrl`、`api` 或 `models` 设置；请先配置这些项。
+每个 `--provider-key <provider=id>` 会将一个 SecretRef 写入 `models.providers.<provider>.apiKey`。对于自定义提供方，它不会创建该提供方的 `baseUrl`、`api` 或 `models` 设置；请先配置这些项。
 
 对任何已知的 SecretRef 目标路径，使用 `--target <path=id>`：
 
@@ -213,13 +201,9 @@ openclaw vault setup \
   --target auth-profiles:main:profiles.openai.key=providers/openai/apiKey
 ```
 
-裸目标路径会应用到 `openclaw.json`。对现有的 `auth-profiles.json` 目标，请使用
-`auth-profiles:<agentId>:<path>`。
-目标路径必须是已注册的 OpenClaw SecretRef 目标。setup
-命令不会在 OpenClaw 中创建任意命名的密钥；Vault 仍然是
-密钥存储，而 OpenClaw 只在受支持的配置字段上存储 SecretRef。
+裸目标路径适用于 `openclaw.json`。将 `auth-profiles:<agentId>:<path>` 用于现有 SQLite 身份验证配置文件目标。目标路径必须是已注册的 OpenClaw SecretRef 目标。 setup命令不会在OpenClaw中创建任意命名的秘密； Vault 仍然是秘密存储，OpenClaw 仅在支持的配置字段上存储 SecretRefs。
 
-## SecretRef id 格式
+## <a id="secretref-id-format"></a> SecretRef id 格式
 
 Vault SecretRef id 使用以下约定：
 
@@ -229,7 +213,7 @@ Vault SecretRef id 使用以下约定：
 
 示例：
 
-| SecretRef id                  | 默认 KV v2 Vault 读取           | 返回字段       |
+| SecretRef id                  | 默认 KV v2 Vault 读取           | 返回字段 |
 | ----------------------------- | ---------------------------------- | -------------- |
 | `providers/openrouter/apiKey` | `secret/data/providers/openrouter` | `apiKey`       |
 | `providers/openai/apiKey`     | `secret/data/providers/openai`     | `apiKey`       |
@@ -249,7 +233,7 @@ export OPENCLAW_VAULT_KV_VERSION=1
 secret/providers/openrouter -> apiKey
 ```
 
-## OpenClaw 存储的内容
+## <a id="what-openclaw-stores"></a> OpenClaw 存储的内容
 
 应用 Vault 设置方案会存储一个由插件管理的 provider：
 
@@ -271,7 +255,7 @@ secret/providers/openrouter -> apiKey
 
 解析后的值只存在于当前活动运行时的 secrets 快照中。
 
-## 容器和托管部署
+## <a id="containers-and-managed-deployments"></a> 容器和托管部署
 
 容器化的 Gateway 仍然使用相同的插件和 SecretRef 配置。容器必须接收：
 
@@ -279,25 +263,15 @@ secret/providers/openrouter -> apiKey
 - 以下某一种认证来源：
   - `VAULT_TOKEN`
   - `OPENCLAW_VAULT_AUTH_METHOD=token_file` 以及 `VAULT_TOKEN_FILE`
-  - `OPENCLAW_VAULT_AUTH_METHOD=jwt` 以及 `OPENCLAW_VAULT_AUTH_MOUNT`、
-    `OPENCLAW_VAULT_AUTH_ROLE` 和 `OPENCLAW_VAULT_JWT_FILE`
-  - `OPENCLAW_VAULT_AUTH_METHOD=kubernetes` 以及 `OPENCLAW_VAULT_AUTH_ROLE`；也可以选择
-    覆盖 `OPENCLAW_VAULT_AUTH_MOUNT` 或 `OPENCLAW_VAULT_JWT_FILE`
-- 可选的 `VAULT_NAMESPACE`、`OPENCLAW_VAULT_KV_MOUNT` 和
-  `OPENCLAW_VAULT_KV_VERSION`
+  - `OPENCLAW_VAULT_AUTH_METHOD=jwt` 以及 `OPENCLAW_VAULT_AUTH_MOUNT`、 `OPENCLAW_VAULT_AUTH_ROLE` 和 `OPENCLAW_VAULT_JWT_FILE`
+  - `OPENCLAW_VAULT_AUTH_METHOD=kubernetes` 以及 `OPENCLAW_VAULT_AUTH_ROLE`；也可以选择覆盖 `OPENCLAW_VAULT_AUTH_MOUNT` 或 `OPENCLAW_VAULT_JWT_FILE`
+- 可选的 `VAULT_NAMESPACE`、`OPENCLAW_VAULT_KV_MOUNT` 和 `OPENCLAW_VAULT_KV_VERSION`
 
-在使用 Kubernetes 时，如果 Vault 已为该集群配置了 Kubernetes 认证，请优先使用
-`OPENCLAW_VAULT_AUTH_METHOD=kubernetes`。仅当 Vault 被配置为将该集群视为通用的 JWT/OIDC 颁发者时，才使用
-`OPENCLAW_VAULT_AUTH_METHOD=jwt`。这两种方式都比在 Kubernetes Secret 中使用长期有效的 Vault
-token 更好。Vault Agent sidecar 或 injector 部署则可以改用 `token_file`。
+在使用 Kubernetes 时，如果 Vault 已为该集群配置了 Kubernetes 认证，请优先使用 `OPENCLAW_VAULT_AUTH_METHOD=kubernetes`。仅当 Vault 被配置为将该集群视为通用的 JWT/OIDC 颁发者时，才使用 `OPENCLAW_VAULT_AUTH_METHOD=jwt`。这两种方式都比在 Kubernetes Secret 中使用长期有效的 Vault token 更好。Vault Agent sidecar 或 injector 部署则可以改用 `token_file`。
 
-对于多租户 Vault 部署，请将租户路由保留在 Vault 策略和部署配置中。OpenClaw 不要求固定的 mount、role 或 path：每个
-Gateway 环境都可以设置自己的 `OPENCLAW_VAULT_KV_MOUNT`、
-`OPENCLAW_VAULT_AUTH_ROLE` 和 SecretRef ids。如果某个共享 Gateway 必须同时解析
-不同的 Vault 用户，请使用手动配置的 exec provider 来封装不同的认证环境，或者将租户按 Gateway
-环境拆分，并使用独立的 Vault 环境。
+对于多租户 Vault 部署，请将租户路由保留在 Vault 策略和部署配置中。OpenClaw 不要求固定的 mount、role 或 path：每个 Gateway 环境都可以设置自己的 `OPENCLAW_VAULT_KV_MOUNT`、 `OPENCLAW_VAULT_AUTH_ROLE` 和 SecretRef ids。如果某个共享 Gateway 必须同时解析不同的 Vault 用户，请使用手动配置的 exec provider 来封装不同的认证环境，或者将租户按 Gateway 环境拆分，并使用独立的 Vault 环境。
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [密钥管理](/gateway/secrets)
 - [`openclaw secrets`](/cli/secrets)

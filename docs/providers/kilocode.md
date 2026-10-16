@@ -2,33 +2,34 @@
 summary: "使用 Kilo Gateway 的统一 API 在 OpenClaw 中访问众多模型"
 title: "Kilo Gateway"
 read_when:
-  - 你希望为多个 LLM 使用一个 API 密钥
-  - 你希望通过 OpenClaw 中的 Kilo Gateway 运行模型
+  - "您需要一个 API 密钥来支持多个 LLM"
+  - "您想通过 OpenClaw 中的 Kilo Gateway 运行模型"
 ---
 
-Kilo Gateway 将请求路由到许多模型，背后通过一个与 OpenAI 兼容的端点和 API 密钥进行统一访问。
+Kilo Gateway 将请求路由到单个 OpenAI- 兼容端点和 API 密钥后面的多个模型。
 
-| 属性 | 值                               |
+| 属性 | 值                              |
 | -------- | ---------------------------------- |
-| 提供方 | `kilocode`                         |
-| 认证 | `KILOCODE_API_KEY`                 |
-| API | 兼容 OpenAI                  |
+| 提供者 | `kilocode`（别名：`kilo`）         |
+| 认证     | `KILOCODE_API_KEY`                 |
+| API      | OpenAI-兼容                  |
 | 基础 URL | `https://api.kilo.ai/api/gateway/` |
 
-## 安装插件
+## <a id="install-plugin"></a> 安装插件
 
 ```bash
 openclaw plugins install @openclaw/kilocode-provider
-openclaw gateway restart
 ```
 
-## 设置
+安装自动应用于正在运行的网关；否则下次启动时生效。请参阅 [ 应用更改并检查 ](/plugins/manage-plugins#apply-changes-and-inspect)。
+
+## <a id="setup"></a> 设置
 
 <Steps>
-  <Step title="创建账户">
-    前往 [app.kilo.ai](https://app.kilo.ai)，登录或创建账户，然后生成一个 API 密钥。
+  <Step id="create-an-account" title="创建一个帐户">
+    Go 到 [app.kilo.ai](https://app.kilo.ai)，登录或创建帐户，然后生成 API 密钥。
   </Step>
-  <Step title="运行 onboarding">
+  <Step id="run-onboarding" title="运行入门引导培训">
     ```bash
     openclaw onboard --auth-choice kilocode-api-key
     ```
@@ -40,29 +41,24 @@ openclaw gateway restart
     ```
 
   </Step>
-  <Step title="验证模型是否可用">
+  <Step id="verify-the-model-is-available" title="验证模型是否可用">
     ```bash
     openclaw models list --provider kilocode
     ```
   </Step>
 </Steps>
 
-## 默认模型和目录
+Onboarding 会保留您的模型条目，并将生成的目录行留给发现。对于 `models.mode: "replace"`，它还会写入内置目录，因为该模式会跳过发现。
 
-默认模型是 `kilocode/kilo-auto/balanced`，即 Kilo Gateway 的平衡智能路由层。
-OpenClaw 不会发布任务到上游模型的映射；`kilo-auto/balanced` 背后的路由由
-Kilo Gateway 负责。
+## <a id="default-model-and-catalog"></a> 默认模型和目录
 
-在启动时，OpenClaw 会查询 `GET https://api.kilo.ai/api/gateway/models`，并将发现的模型
-置于静态备用目录之前进行合并。静态备用目录仅包含
-`kilocode/kilo-auto/balanced`（`Auto Balanced`、`input: ["text", "image"]`、`reasoning: true`、
-`contextWindow: 1000000`、`maxTokens: 65536`）。
+默认模型是 `kilocode/kilo-auto/balanced`，即 Kilo Gateway 的平衡智能路由层。 OpenClaw 不会发布任务到上游模型的映射；`kilo-auto/balanced` 背后的路由由 Kilo Gateway 负责。
 
-网关上的任何模型都可以通过 `kilocode/<upstream-id>` 访问（例如
-`kilocode/anthropic/claude-sonnet-4`、`kilocode/openai/gpt-5.5`）。运行 `/models kilocode` 或
-`openclaw models list --provider kilocode` 可以查看完整的已发现列表。
+启动时，OpenClaw 查询 `GET https://api.kilo.ai/api/gateway/models` 并将非空公共列表与静态路由条目组合起来。静态目录仅包含`kilocode/kilo-auto/balanced`（`Auto Balanced`、`input: ["text", "image"]`、`reasoning: true`、`contextWindow: 1000000`、`maxTokens: 65536`）。
 
-## 配置示例
+网关上的任何模型都可以通过 `kilocode/<upstream-id>` 访问（例如 `kilocode/anthropic/claude-sonnet-4`、`kilocode/openai/gpt-5.5`）。运行 `/models kilocode` 或 `openclaw models list --provider kilocode` 可以查看完整的已发现列表。
+
+## <a id="config-example"></a> 配置示例
 
 ```json5
 {
@@ -75,43 +71,39 @@ Kilo Gateway 负责。
 }
 ```
 
-## 行为说明
+## <a id="behavior-notes"></a> 行为说明
 
 <AccordionGroup>
-  <Accordion title="传输与兼容性">
-    Kilo Gateway 兼容 OpenRouter，因此它使用的是代理式的 OpenAI 兼容请求
-    路径，而不是原生 OpenAI 请求格式化（没有 `store`，也没有 OpenAI reasoning-effort 负载）。
+  <Accordion id="transport-and-compatibility" title="运输和兼容性">
+    Kilo Gateway 与 OpenRouter- 兼容，因此它使用代理样式的 OpenAI- 兼容请求路径，而不是本机 OpenAI 请求整形（没有 `store`，没有 OpenAI 推理工作负载）。
 
-    - Gemini 支持的 Kilo 引用仍然走代理 Gemini 路径：OpenClaw 会在该路径中清理 Gemini thought
-      签名，但不会启用原生 Gemini 回放验证或 bootstrap 重写。
+    - Gemini-backed Kilo 引用保留在 proxy-Gemini 路径上：OpenClaw 清理那里的 Gemini 思想签名，但不启用本机 Gemini 重播验证或引导重写。
     - 请求使用由你的 API 密钥生成的 Bearer token。
 
   </Accordion>
 
-  <Accordion title="流包装器与推理">
-    Kilo 流包装器会添加一个 `X-KILOCODE-FEATURE` 请求头（默认值为 `openclaw`，
-    可通过 `KILOCODE_FEATURE` 环境变量覆盖），并为支持该功能的模型规范化 reasoning-effort 负载。
+  <Accordion id="stream-wrapper-and-reasoning" title="流包装器和推理">
+    Kilo 流包装器会添加一个 `X-KILOCODE-FEATURE` 请求头（默认值为 `openclaw`， 可通过 `KILOCODE_FEATURE` 环境变量覆盖），并为支持该功能的模型规范化 reasoning-effort 负载。
 
     <Warning>
-    `kilocode/kilo-auto/balanced` 和 `x-ai/*` 引用会跳过 reasoning-effort 注入。如果你需要推理支持，请使用具体的
-    模型引用，例如 `kilocode/anthropic/claude-sonnet-4`。
+    `kilocode/kilo-auto/balanced` 和 `x-ai/*` 引用会跳过 reasoning-effort 注入。如果你需要推理支持，请使用具体的模型引用，例如 `kilocode/anthropic/claude-sonnet-4`。
     </Warning>
 
   </Accordion>
 
-  <Accordion title="故障排除">
-    - 如果模型发现过程在启动时失败，OpenClaw 将回退到包含 `kilocode/kilo-auto/balanced` 的静态目录。
+  <Accordion id="troubleshooting" title="故障排查">
+    - 如果模型发现失败，OpenClaw 报告目录刷新不可用。它不会用静态行替换失败的请求或将空响应转换为 `kilocode/kilo-auto/balanced`。
     - 确认你的 API 密钥有效，并且你的 Kilo 账户已启用所需的模型。
-    - 当 Gateway 作为守护进程运行时，确保该进程可以获取 `KILOCODE_API_KEY`（例如在 `~/.openclaw/.env` 中，或通过 `env.shellEnv`）。
+    - 当网关作为守护进程运行时，使 `KILOCODE_API_KEY` 可用于该进程（例如在 `~/.openclaw/.env` 中或通过 `env.shellEnv`）。
 
   </Accordion>
 </AccordionGroup>
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 <CardGroup cols={2}>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    选择提供方、模型引用和故障切换行为。
+  <Card title="选型" href="/concepts/model-providers" icon="layers">
+    选择提供程序、模型引用和故障转移行为。
   </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
     完整的 OpenClaw 配置参考。

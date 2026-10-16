@@ -1,31 +1,27 @@
 ---
-summary: "在 OpenClaw 中使用 NVIDIA 的 OpenAI 兼容 API"
+summary: "在OpenClaw中使用NVIDIA的OpenAI-兼容API"
 read_when:
-  - 你想在 OpenClaw 中免费使用开源模型
-  - 你需要设置 `NVIDIA_API_KEY`
-  - 你想通过 NVIDIA 使用 Nemotron 3 Ultra
+  - "你想在 OpenClaw 中免费使用开源模型"
+  - "您需要 NVIDIA_API_KEY 设置"
+  - "你想通过 NVIDIA 使用 Nemotron 3 Ultra"
 title: "NVIDIA"
 ---
 
-NVIDIA 通过 OpenAI 兼容的 API 在
-`https://integrate.api.nvidia.com/v1` 免费提供开放模型，并使用来自
-[build.nvidia.com](https://build.nvidia.com/settings/api-keys) 的 API 密钥进行身份验证。OpenClaw
-默认将 NVIDIA 提供商设置为 Nemotron 3 Ultra，这是 NVIDIA 的 550B 总参数 / 55B
-活跃推理模型，适用于长上下文的智能体工作。
+NVIDIA 通过 `https://integrate.api.nvidia.com/v1` 上的 OpenAI- 兼容 API 免费提供开放模型，并使用 [build.nvidia.com](https://build.nvidia.com/settings/api-keys). 中的 API 密钥进行身份验证 OpenClaw 默认将 NVIDIA 提供程序提供给 Nemotron 3 Ultra， NVIDIA 的 550B 总计 / 55B 主动推理模型，适用于长上下文代理工作。
 
-## 入门指南
+## <a id="getting-started"></a> 入门
 
 <Steps>
-  <Step title="获取你的 API key">
-    在 [build.nvidia.com](https://build.nvidia.com/settings/api-keys) 创建一个 API key。
+  <Step id="get-your-api-key" title="获取您的 API 密钥">
+    在 [build.nvidia.com](https://build.nvidia.com/settings/api-keys). 创建 API 密钥
   </Step>
-  <Step title="导出 key 并运行初始化">
+  <Step id="export-the-key-and-run-onboarding" title="导出密钥并运行入门">
     ```bash
     export NVIDIA_API_KEY="nvapi-..."
     openclaw onboard --auth-choice nvidia-api-key
     ```
   </Step>
-  <Step title="设置 NVIDIA 模型">
+  <Step id="set-an-nvidia-model" title="设置 NVIDIA 模型">
     ```bash
     openclaw models set nvidia/nvidia/nemotron-3-ultra-550b-a55b
     ```
@@ -39,11 +35,10 @@ openclaw onboard --auth-choice nvidia-api-key --nvidia-api-key "nvapi-..."
 ```
 
 <Warning>
-`--nvidia-api-key` 会将 key 记录到 shell history 和 `ps` 输出中。尽可能优先使用
-`NVIDIA_API_KEY` 环境变量。
+`--nvidia-api-key` 会将 key 记录到 shell history 和 `ps` 输出中。尽可能优先使用 `NVIDIA_API_KEY` 环境变量。
 </Warning>
 
-## 配置示例
+## <a id="config-example"></a> 配置示例
 
 ```json5
 {
@@ -64,63 +59,89 @@ openclaw onboard --auth-choice nvidia-api-key --nvidia-api-key "nvapi-..."
 }
 ```
 
-## 精选目录
+## <a id="live-model-catalog"></a> 直播模型目录
 
-配置 NVIDIA API 密钥后，设置和模型选择路径会从
-`https://assets.ngc.nvidia.com/products/api-catalog/featured-models.json` 获取
-NVIDIA 的公开精选模型目录，并将结果缓存 24 小时（前 32 条，以免费文本输入
-条目的形式导入）。因此，来自 build.nvidia.com 的新精选模型或重新发布的精选模型会在
-缓存刷新后出现在设置和模型选择界面中，无需等待 OpenClaw 发布新版本。新的 NVIDIA
-目录会覆盖随附的停用元数据。当实时数据源可用时，NVIDIA 设置过程中会预选其中的第一个模型。
+配置 NVIDIA API 密钥后，设置和模型选择路径会检查 `https://integrate.api.nvidia.com/v1/models` 的可用模型 ID，并缓存 30 秒。 NVIDIA 的公共 `https://assets.ngc.nvidia.com/products/api-catalog/featured-models.json` 源提供排名和代币限制，缓存 24 小时。仅当推理清单仍列出精选模型时，它们才会首先出现；其他可用的捆绑聊天模型如下。新的库存可以恢复 NVIDIA 重新发布的先前隐藏的模型。
 
-该获取过程对 `assets.ngc.nvidia.com` 使用固定的 HTTPS 主机策略。如果未配置
-NVIDIA API 密钥，或者该源不可用或格式错误，OpenClaw 将回退到内置目录和下面的内置默认值。
+托管目录应用相同的提要：NVIDIA 的特色模型领先其 [ 推荐模型](/concepts/recommended-models#provider-featured-lists)，其次是全球列表。
+
+该清单还包含嵌入和其他非聊天端点，没有功能元数据。因此，OpenClaw 仅提供带有捆绑的聊天元数据或有效的特色模型元数据的精确模型；它不会根据模型名称猜测功能。未知的 ID 仍然可以显式配置；单独列出并不能证明聊天兼容性。这不是每个 NVIDIA 模型的完整自动目录。
+
+两个公共获取都使用固定的 HTTPS 主机并且不发送凭据。失败的清单或特色请求将标记发现不可用，并保留相同提供商配置和凭据的最后成功目录。失败的特色元数据无法默默地删除以前发现的模型。成功的清空库存会清除已发现的模型，即使特色提要失败也是如此。如果没有 NVIDIA 身份验证，浏览将使用捆绑目录而不进行提取。
+
+## <a id="nemotron-3.5-lightning"></a><a id="nemotron-3-5-lightning"></a> Nemotron 3.5 闪电
+
+[`nvidia/nemotron-3.5-lightning-30b-a3b`](https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b/build) 是 NVIDIA 较小的 30B 总/3B 主动推理模型，用于代理工作。捆绑行记录了其 1M 上下文和 16,384 个代币的输出预算，与 NVIDIA 的托管示例相匹配。选择它：
+
+```bash
+openclaw models set nvidia/nvidia/nemotron-3.5-lightning-30b-a3b
+```
+
+当实时库存列出 Lightning 时，即使它没有出现在精选源中，Lightning 也是可选的。 Nemotron 3 Ultra 仍然是默认设置。
 
 ## Nemotron 3 Ultra
 
-Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 的构建页面
-[`nvidia/nemotron-3-ultra-550b-a55b`](https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b)
-将其列为可用的免费端点，并提供 1M token 的上下文规格。
+Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。 NVIDIA 的 [`nvidia/nemotron-3-ultra-550b-a55b`](https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b) 构建页面将其列为具有 1M 令牌上下文规范的可用免费端点。
 
-捆绑的 Ultra 行默认发送
-`chat_template_kwargs: { enable_thinking: false, force_nonempty_content: true }`
-，因此正常的聊天输出会保留在可见答案中，而不会暴露推理文本。
+捆绑的 Ultra 行默认发送 `chat_template_kwargs: { enable_thinking: false, force_nonempty_content: true }` ，因此正常的聊天输出会保留在可见答案中，而不会暴露推理文本。
 
-在需要最高能力的 NVIDIA 默认模型时使用 Ultra。如果你想要更小的 Nemotron 3 选项，就保持选择 Super；或者在 NVIDIA 目录中选择一个第三方模型，当它们的上下文、延迟或行为更适合时使用。
+使用 Ultra 获得最高功能 NVIDIA 默认值。选择 Nemotron 3.5 Lightning 获得较小的纯文本 Nemotron 选项，选择 Nemotron 3.5 Super VL 获得图像和视频理解，或者选择 NVIDIA 目录中托管的第三方模型之一（当其上下文、延迟或行为更适合时）。
 
-## 内置回退目录
+## <a id="nemotron-3.5-super-vl"></a><a id="nemotron-3-5-super-vl"></a> Nemotron 3.5 超级 VL
 
-可选的内置条目快照了 NVIDIA 的精选模型目录。已弃用的兼容性条目保留现有的完整模型引用以便识别，但不会显示在模型选择器中。
+[Nemotron 3.5 Super VL](https://docs.nvidia.com/nemo/automodel/model-coverage/omni/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16) 是 NVIDIA 的用于文本、图像和视频输入的视觉语言模型。
 
-| 模型引用                                   | 名称                  | 上下文   | 最大输出 |
-| ------------------------------------------ | --------------------- | --------- | ---------- |
-| `nvidia/nvidia/nemotron-3-ultra-550b-a55b` | Nemotron 3 Ultra 550B | 1,048,576 | 8,192      |
-| `nvidia/nvidia/nemotron-3-super-120b-a12b` | Nemotron 3 Super 120B | 1,000,000 | 8,192      |
-| `nvidia/z-ai/glm-5.2`                      | GLM 5.2               | 202,752   | 8,192      |
-| `nvidia/moonshotai/kimi-k2.6`              | Kimi K2.6             | 262,144   | 65,536     |
-| `nvidia/minimaxai/minimax-m3`              | Minimax M3            | 196,608   | 8,192      |
-| `nvidia/deepseek-ai/deepseek-v4-pro`       | DeepSeek V4 Pro       | 262,144   | 16,384     |
+选择它用于文本、图像和视频输入：
 
-完整的兼容性目录还保留了这些已发布的引用，以支持现有配置和迁移：`nvidia/qwen/qwen3.5-397b-a17b`、`nvidia/moonshotai/kimi-k2.5`、`nvidia/z-ai/glm-5.1`、`nvidia/z-ai/glm5` 以及 `nvidia/minimaxai/minimax-m2.7`。除非 NVIDIA 在其精选目录中重新发布这些模型，否则这些引用不会显示在内置和离线模型选择器中。NVIDIA 已停用 Qwen 端点，因此使用其模型引用的请求将不再有效。请将现有的 Qwen 配置迁移到活跃模型。
+```bash
+openclaw models set nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b
+```
 
-## 高级配置
+将 Super VL 的图像支持与 Nemotron 3 Ultra 的文本配对。将 Ultra 设置为主模型，将 Super VL 设置为图像模型：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "model": { "primary": "nvidia/nvidia/nemotron-3-ultra-550b-a55b" },
+      "imageModel": { "primary": "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b" }
+    }
+  }
+}
+```
+
+当主模型无法接受图像时，OpenClaw 使用 `imageModel` 进行图像理解。
+
+## <a id="bundled-fallback-catalog"></a> 捆绑后备目录
+
+捆绑的行提供已知的聊天元数据和离线后备。退役模型不包括在内；现有配置不会自动重写。
+
+| 模型引用                                       | 名称                       | 上下文   | 最大输出 |
+| ----------------------------------------------- | -------------------------- | --------- | ---------- |
+| `nvidia/nvidia/nemotron-3-ultra-550b-a55b`      | Nemotron 3 Ultra 550B      | 1,048,576 | 8,192      |
+| `nvidia/nvidia/nemotron-3.5-lightning-30b-a3b`  | Nemotron 3.5 闪电 30B | 1,048,576 | 16,384     |
+| `nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b` | Nemotron 3.5 超级 VL      | 1,048,576 | 8,192      |
+| `nvidia/moonshotai/kimi-k2.6`                   | Kimi K2.6                  | 262,144   | 65,536     |
+
+如果配置的模型已停用，请从 `openclaw models list --provider nvidia` 中选择活跃模型。
+
+## <a id="advanced-configuration"></a> 高级配置
 
 <AccordionGroup>
-  <Accordion title="自动启用行为">
+  <Accordion id="auto-enable-behavior" title="自动启用行为">
     当设置了 `NVIDIA_API_KEY` 环境变量，或在引导过程中已保存密钥时，提供方会自动启用。除密钥外，无需额外的提供方配置。
   </Accordion>
 
-  <Accordion title="目录与定价">
-    配置 NVIDIA 身份验证后，OpenClaw 会优先使用 NVIDIA 的公开精选模型目录，并将其缓存 24 小时。内置的可选回退目录是 NVIDIA 精选模型目录的静态快照；已弃用的精确引用兼容性条目会从该回退目录中隐藏。最新的精选条目可以重新启用 NVIDIA 已重新发布的模型。由于 NVIDIA 目前为所列模型提供免费 API 访问，源代码中的费用默认为 `0`。
+  <Accordion id="catalog-and-pricing" title="目录和定价">
+    OpenClaw 使用 NVIDIA 的推理库存来确定可用性，并使用其特色提要进行排名。精确的捆绑元数据保留了特色提要所忽略的推理和图像功能。退役模型从离线后备中移除；新的特色元数据和库存可以恢复 NVIDIA 重新发布的模型。源中的成本默认为 `0`，因为 NVIDIA 目前为列出的模型提供免费的 API 访问。
   </Accordion>
 
-  <Accordion title="OpenAI 兼容端点">
-    OpenClaw 使用 `openai-completions` 适配器通过标准的 `/v1` 聊天补全路由与 NVIDIA 通信。任何兼容 OpenAI 的工具都应可在 NVIDIA 基础 URL 下直接使用。
+  <Accordion id="openai-compatible-endpoint" title="OpenAI-兼容端点">
+    OpenClaw 使用 `openai-completions` 适配器根据标准 `/v1` 聊天完成路由与 NVIDIA 进行对话。任何 OpenAI- 兼容工具都应与 NVIDIA 底座 URL 一起开箱即用。
   </Accordion>
 
-  <Accordion title="Nemotron 3 Ultra 推理参数">
-    NVIDIA 的 Ultra 示例请求使用 `chat_template_kwargs.enable_thinking`
-    和 `reasoning_budget` 来控制推理输出。OpenClaw 内置的 Ultra 行默认禁用模板推理，以用于正常聊天。如果你需要启用 NVIDIA 的推理输出，或者强制设置其他 NVIDIA 特定请求字段，请按模型设置参数，并将提供方级别的覆盖限定在 NVIDIA 模型上：
+  <Accordion id="nemotron-3-ultra-reasoning-params" title="Nemotron 3 Ultra 推理参数">
+    NVIDIA 的 Ultra 样本请求使用 `chat_template_kwargs.enable_thinking` 和 `reasoning_budget` 进行推理输出。 OpenClaw 捆绑的 Ultra 行默认禁用正常聊天使用的模板思维。如果您需要选择 NVIDIA 推理输出或强制其他 NVIDIA- 特定请求字段，请设置每个模型参数并保持特定于提供程序的覆盖范围仅限于 NVIDIA 模型：
 
     ```json5
     {
@@ -139,16 +160,12 @@ Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 的构建页�
     }
     ```
 
-    `params.chat_template_kwargs` 会合并到请求中已有的 `chat_template_kwargs`
-   ，而不是替换整个对象。
-    `params.extra_body` 是最终的 OpenAI 兼容请求体覆盖项，
-    会覆盖冲突的负载键，因此仅应将其用于 NVIDIA 针对所选端点
-    文档中说明的字段。
+    `params.chat_template_kwargs` 合并到请求中已有的任何 `chat_template_kwargs` 中，而不是替换整个对象。 `params.extra_body` 是最终的 OpenAI- 兼容请求正文覆盖，并覆盖冲突的有效负载密钥，因此仅将其用于所选端点的 NVIDIA 文档字段。
 
   </Accordion>
 
-  <Accordion title="缓慢的自定义提供方响应">
-    某些由 NVIDIA 托管的自定义模型，在发出第一段响应之前，所需时间可能会超过默认约 120 秒的模型空闲看门狗阈值。对于自定义 NVIDIA 提供方条目，应提高提供方超时，而不是提高整个代理运行时超时；`timeoutSeconds` 同时覆盖提供方的 HTTP 请求，并提高该提供方的空闲/流式看门狗上限：
+  <Accordion id="slow-custom-provider-responses" title="定制提供商响应缓慢">
+    某些 NVIDIA-hosted 自定义模型在发出第一个响应块之前可能需要比默认的约 120 秒模型空闲看门狗更长的时间。对于自定义 NVIDIA 提供程序条目，提高提供程序超时而不是整个代理运行时超时； `timeoutSeconds` 涵盖提供商 HTTP 请求并提高该提供商的 idle/stream 看门狗上限。下面的提供商 ID （`custom-integrate-api-nvidia-com`） 是您选择的名称，而不是保留值；只要你的模型引用使用相同的前缀，任何 id 都可以工作：
 
     ```json5
     {
@@ -178,16 +195,14 @@ Nemotron 3 Ultra 是 OpenClaw 中默认的 NVIDIA 模型。NVIDIA 的构建页�
 </AccordionGroup>
 
 <Tip>
-NVIDIA 模型目前可免费使用。请查看
-[build.nvidia.com](https://build.nvidia.com/) 以获取最新的可用性和
-速率限制详情。
+NVIDIA 模型目前可免费使用。请查看 [build.nvidia.com](https://build.nvidia.com/) 以获取最新的可用性和速率限制详情。
 </Tip>
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 <CardGroup cols={2}>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    选择提供方、模型引用和故障转移行为。
+  <Card title="选型" href="/concepts/model-providers" icon="layers">
+    选择提供程序、模型引用和故障转移行为。
   </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
     agents、models 和 providers 的完整配置参考。

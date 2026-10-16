@@ -1,11 +1,14 @@
 ---
 summary: "为 oc:// 工作区文件寻址添加 openclaw path CLI。"
 read_when:
-  - 你正在安装、配置或审计 oc-path 插件
-title: "Oc Path 插件"
+  - You are installing, configuring, or auditing the oc-path plugin
+title: "Oc Path plugin reference"
 ---
 
-# Oc Path 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 oc:// 工作区文件寻址添加 openclaw path CLI。
 
@@ -16,7 +19,7 @@ title: "Oc Path 插件"
 
 ## 接口
 
-plugin
+- CLI commands: `openclaw path`
 
 ## 相关文档
 

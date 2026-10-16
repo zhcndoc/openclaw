@@ -1,32 +1,33 @@
 ---
 summary: "使用 Kustomize 将 OpenClaw Gateway 部署到 Kubernetes 集群"
 read_when:
-  - 你想在 Kubernetes 集群上运行 OpenClaw
-  - 你想在 Kubernetes 环境中测试 OpenClaw
+  - "您想要在 Kubernetes 集群上运行 OpenClaw"
+  - "您想要在 Kubernetes 环境中测试 OpenClaw"
 title: "Kubernetes"
 ---
 
-在 Kubernetes 上运行 OpenClaw 的最小起点，不是可用于生产环境的部署。它涵盖了核心资源，并且旨在根据你的环境进行调整。
+在 Kubernetes 上运行 OpenClaw 的最低起点，而不是生产就绪部署。它涵盖了核心资源，旨在适应您的环境。
 
-## 为什么不用 Helm
+## <a id="why-not-helm"></a> 为什么不用 Helm
 
 OpenClaw 是一个包含一些配置文件的单容器。真正有意思的定制在于代理内容（Markdown 文件、技能、配置覆盖），而不是基础设施模板。Kustomize 可以处理覆盖层，而无需 Helm chart 的开销。如果你的部署变得更复杂，可以在这些清单之上再叠加一个 Helm chart。
 
-## 你需要什么
+## <a id="what-you-need"></a> 准备工作
 
 - 一个正在运行的 Kubernetes 集群（AKS、EKS、GKE、k3s、kind、OpenShift 等）
 - 已连接到你的集群的 `kubectl`
 - 至少一个模型提供商的 API key。
 
-## 快速开始
+## <a id="quick-start"></a> 快速开始
 
 ```bash
-# 替换为你的提供商：ANTHROPIC、GEMINI、OPENAI 或 OPENROUTER
-export <PROVIDER>_API_KEY="..."
+# Export the key for the provider you configured. Use ANTHROPIC_API_KEY,
+# GEMINI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY.
+export ANTHROPIC_API_KEY="..."
 ./scripts/k8s/deploy.sh
 
 kubectl port-forward svc/openclaw 18789:18789 -n openclaw
-open http://localhost:18789
+open http://127.0.0.1:18789
 ```
 
 `deploy.sh` 默认会创建 token 认证。为 Control UI 获取生成的 gateway token：
@@ -37,30 +38,31 @@ kubectl get secret openclaw-secrets -n openclaw -o jsonpath='{.data.OPENCLAW_GAT
 
 对于本地调试，`./scripts/k8s/deploy.sh --show-token` 会在部署后打印 token。
 
-## 使用 Kind 在本地测试
+## <a id="local-testing-with-kind"></a> 使用 Kind 在本地测试
 
 如果你没有集群，可以使用 [Kind](https://kind.sigs.k8s.io/) 在本地创建一个：
 
 ```bash
-./scripts/k8s/create-kind.sh           # 自动检测 docker 或 podman
-./scripts/k8s/create-kind.sh --delete  # 删除
+./scripts/k8s/create-kind.sh           # auto-detects docker or podman
+./scripts/k8s/create-kind.sh --delete  # tear down
 ```
 
 然后像往常一样使用 `./scripts/k8s/deploy.sh` 进行部署。
 
-## 逐步说明
+## <a id="step-by-step"></a> 逐步说明
 
-### 1) 部署
+### <a id="1)-deploy"></a><a id="1-deploy"></a> 1) 部署
 
 **选项 A：在环境中提供 API key（一步完成）**
 
 ```bash
-# 替换为你的提供商：ANTHROPIC、GEMINI、OPENAI 或 OPENROUTER
-export <PROVIDER>_API_KEY="..."
+# Export the key for the provider you configured. Use ANTHROPIC_API_KEY,
+# GEMINI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY.
+export ANTHROPIC_API_KEY="..."
 ./scripts/k8s/deploy.sh
 ```
 
-该脚本会创建一个包含 API key 和自动生成 gateway token 的 Kubernetes Secret，然后进行部署。如果 Secret 已存在，它会保留当前的 gateway token 以及未被更改的任何提供商 key。
+该脚本使用 API 密钥和自动生成的网关令牌创建 Kubernetes Secret，然后进行部署。如果 Secret 已存在，它将保留当前网关令牌和任何未更改的提供商密钥。
 
 **选项 B：单独创建 secret**
 
@@ -72,39 +74,41 @@ export <PROVIDER>_API_KEY="..."
 
 在任一命令中添加 `--show-token`，即可将 token 输出到 stdout，便于本地测试。
 
-### 2) 访问 gateway
+### <a id="2)-access-the-gateway"></a><a id="2-access-the-gateway"></a> 2) 访问 gateway
 
 ```bash
 kubectl port-forward svc/openclaw 18789:18789 -n openclaw
-open http://localhost:18789
+open http://127.0.0.1:18789
 ```
 
-## 部署了什么
+## <a id="what-gets-deployed"></a> 部署了什么
 
 ```text
-Namespace: openclaw (可通过 OPENCLAW_NAMESPACE 配置)
-├── Deployment/openclaw        # 单个 Pod，init 容器 + 网关
-├── Service/openclaw           # 18789 端口上的 ClusterIP
-├── PersistentVolumeClaim      # 为 agent 状态和配置提供 10Gi
+Namespace: openclaw (configurable via OPENCLAW_NAMESPACE)
+├── Deployment/openclaw        # Single pod, init container + gateway
+├── Service/openclaw           # ClusterIP on port 18789
+├── PersistentVolumeClaim      # 10Gi for agent state and config
 ├── ConfigMap/openclaw-config  # openclaw.json + AGENTS.md
-└── Secret/openclaw-secrets    # 网关 token + API 密钥
+└── Secret/openclaw-secrets    # Gateway token + API keys
 ```
 
-Deployment 对启动探针和流量就绪探针都使用 `/startupz`，并提供五分钟的启动时限。频道故障不会将健康的 Gateway 或 Control UI 从 Service 端点中移除。`/healthz` 仍然是存活探针；当监控应包含频道账户健康状态时，请单独使用 `/readyz`。
+该部署以五分钟的启动预算检查 `/readyz` 的启动和流量准备情况，并检查 `/healthz` 的活跃度。每次检查都断言 JSON 检查合约，而不是单独的状态代码，因为 Control UI 通过包罗万象的 `200` 回答未知路径；对于检查路径尚不存在的图像，仅状态检查将永远通过。
 
-## 定制
+`/startupz` 是更好的流量准入检查，因为它忽略通道运行状况，因此一个失败的通道帐户无法从服务端点中驱逐原本运行良好的网关。它需要从 `2026.8.1` 或更新版本（引入它的版本）构建的映像，该映像比上面固定的标签更新。固定此类映像后，将启动和就绪检查切换到 `/startupz` 并保留 `/readyz` 进行监控，其中应包括通道帐户运行状况。
 
-### Agent 指令
+## <a id="customization"></a> 定制
 
-编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `AGENTS.md` 并重新部署：
+### <a id="agent-instructions"></a> Agent 指令
+
+编辑`scripts/k8s/manifests/configmap.yaml`中的`AGENTS.md`并重新部署：
 
 ```bash
 ./scripts/k8s/deploy.sh
 ```
 
-### Gateway 配置
+### <a id="gateway-config"></a> 网关配置
 
-编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `openclaw.json`。完整参考请查看 [Gateway 配置](/gateway/configuration)。
+在`scripts/k8s/manifests/configmap.yaml`中编辑`openclaw.json`。请参阅 [ 网关配置](/gateway/configuration) 以获取完整参考。
 
 init 容器仅在 PVC 中缺少 `openclaw.json` 和工作区 `AGENTS.md` 时，才会分别为其写入初始内容。首次启动后，持久化副本就是事实来源：通过 OpenClaw（`onboard`、`channels add`、`doctor --fix`、Control UI）所做的更改会在 Pod 重启后保留，而更新 ConfigMap 不会覆盖现有的 PVC 副本。若要根据更新后的 ConfigMap 有意重新写入某个文件，请删除持久化副本并重启：
 
@@ -115,7 +119,7 @@ kubectl rollout restart -n openclaw deploy/openclaw
 
 根据之前模板创建的 Deployment 会在每次 Pod 启动时应用 ConfigMap 编辑内容（并丢弃通过 OpenClaw 所做的任何配置更改）。如果你依赖这种流程，请在编辑 ConfigMap 后使用上述重新写入命令。
 
-### 添加提供商
+### <a id="add-providers"></a> 添加提供商
 
 重新运行并导出额外的 key：
 
@@ -136,13 +140,13 @@ kubectl patch secret openclaw-secrets -n openclaw \
 kubectl rollout restart deployment/openclaw -n openclaw
 ```
 
-### 自定义命名空间
+### <a id="custom-namespace"></a> 自定义命名空间
 
 ```bash
 OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh
 ```
 
-### 自定义镜像
+### <a id="custom-image"></a> 自定义镜像
 
 编辑 `scripts/k8s/manifests/deployment.yaml` 中的 `image` 字段：
 
@@ -151,17 +155,19 @@ OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh
 image: ghcr.io/openclaw/openclaw:2026.7.1-2-slim
 ```
 
-### 超出 port-forward 的暴露方式
+从`2026.8.1`开始的图像需要[可写缓存位置](/install/kubernetes#architecture-notes)；发货清单通过 `XDG_CACHE_HOME` 提供。升级较旧的部署时，请应用该环境条目以及映像更改。
+
+### <a id="expose-beyond-port-forward"></a> 超出 port-forward 的暴露方式
 
 默认的 manifests 会将 gateway 绑定到 pod 内的 loopback。这适用于 `kubectl port-forward`，但不适用于需要直接访问 pod IP 的 Kubernetes `Service` 或 Ingress 路径。
 
 要通过 Ingress 或负载均衡器暴露 gateway：
 
 - 将 `scripts/k8s/manifests/configmap.yaml` 中的 gateway 绑定从 `loopback` 改为与你的部署模型匹配的非 loopback 绑定。
-- 保持 gateway 认证启用，并使用正确的 TLS 终止入口。
+- 保持网关身份验证启用并使用正确的 TLS- 终止入口点。
 - 使用支持的 Web 安全模型为远程访问配置 Control UI（例如 HTTPS/Tailscale Serve，以及在需要时显式允许的来源）。
 
-## 重新部署
+## <a id="re-deploy"></a> 重新部署
 
 ```bash
 ./scripts/k8s/deploy.sh
@@ -169,7 +175,7 @@ image: ghcr.io/openclaw/openclaw:2026.7.1-2-slim
 
 这会应用所有清单并重启 Pod，以获取任何配置或 secret 更改。
 
-## 删除部署
+## <a id="teardown"></a> 删除部署
 
 ```bash
 ./scripts/k8s/deploy.sh --delete
@@ -193,31 +199,32 @@ OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh --delete-namespace
 
 此操作也会删除无关的工作负载和 PVC。
 
-## 架构说明
+## <a id="architecture-notes"></a> 架构说明
 
 - 默认情况下，gateway 绑定到 Pod 内部的 loopback，因此所包含的设置适用于 `kubectl port-forward`。
 - 没有集群级资源；所有内容都位于单个命名空间中。
 - 安全加固：`readOnlyRootFilesystem`、`drop: ALL` capabilities、非 root 用户（UID 1000）。
+- 可写缓存：网关在 `XDG_CACHE_HOME`（默认 `~/.cache`）下暂存私有 SQLite 快照。清单将其指向 PVC 上的 `/home/node/.openclaw/.cache`，因为根文件系统是只读的。如果您自定义安装，请保留等效的可写缓存位置。
 - 默认配置将 Control UI 保持在更安全的本地访问路径上：loopback 绑定，再通过 `kubectl port-forward` 访问 `http://127.0.0.1:18789`。
 - 如果你要超出 localhost 访问，请使用受支持的远程模式：HTTPS/Tailscale，以及相应的 gateway 绑定和 Control UI origin 设置。
 - Secret 会在临时目录中生成，并直接应用到集群；不会将任何 secret 内容写入仓库检出目录。
 
-## 文件结构
+## <a id="file-structure"></a> 文件结构
 
 ```text
 scripts/k8s/
-├── deploy.sh                   # 创建命名空间 + secret，通过 kustomize 部署
-├── create-kind.sh              # 本地 Kind 集群（自动检测 docker/podman）
+├── deploy.sh                   # Creates namespace + secret, deploys via kustomize
+├── create-kind.sh              # Local Kind cluster (auto-detects docker/podman)
 └── manifests/
-    ├── kustomization.yaml      # Kustomize 基础
+    ├── kustomization.yaml      # Kustomize base
     ├── configmap.yaml          # openclaw.json + AGENTS.md
-    ├── deployment.yaml         # 带安全加固的 Pod spec
-    ├── pvc.yaml                # 10Gi 持久化存储
-    └── service.yaml            # 18789 上的 ClusterIP
+    ├── deployment.yaml         # Pod spec with security hardening
+    ├── pvc.yaml                # 10Gi persistent storage
+    └── service.yaml            # ClusterIP on 18789
 ```
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [Docker](/install/docker)
-- [Docker VM runtime](/install/docker-vm-runtime)
+- [Docker VM 运行时](/install/docker-vm-runtime)
 - [安装概览](/install)

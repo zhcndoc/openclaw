@@ -1,27 +1,26 @@
 ---
-summary: "通过 Raft CLI 唤醒桥支持 Raft External Agent"
+summary: "通过 Raft CLI 唤醒桥支持 Raft 外部代理"
 read_when:
-  - 你想将 OpenClaw 连接到 Raft workspace
-  - 你正在配置 Raft External Agent
-  - 你正在调试 Raft 唤醒投递
+  - "你想将 OpenClaw 连接到 Raft workspace"
+  - "你正在配置 Raft External Agent"
+  - "你正在调试 Raft 唤醒投递"
 title: "Raft"
 sidebarTitle: "Raft"
 ---
 
-Raft 通过本地 Raft CLI 将 OpenClaw agent 连接到 Raft External Agent。Raft 会向 Gateway 发送经过身份验证的唤醒提示；随后该 agent 使用 Raft CLI 来检查并发送消息。仅支持直接聊天（不支持群组）。
+Raft 通过本地 Raft CLI 将 OpenClaw 代理连接到 Raft 外部代理。 Raft 向网关发送经过身份验证的唤醒提示；然后，代理使用 Raft CLI 检查并发送消息。仅直接聊天（无群组）。
 
-## 安装
+## <a id="install"></a> 安装
 
 Raft 是一个官方外部插件。在 Gateway 主机上安装它：
 
 ```bash
 openclaw plugins install @openclaw/raft
-openclaw gateway restart
 ```
 
-详情：[插件](/tools/plugin)
+在继续之前检查 [ 申请结果](/plugins/manage-plugins#apply-changes-and-inspect)。
 
-## 前置条件
+## <a id="prerequisites"></a> 先决条件
 
 - 一个带有外部代理的 Raft 工作区。
 - Raft CLI 已安装在与 OpenClaw Gateway 相同的主机上，并且位于该服务的 `PATH` 中。
@@ -29,9 +28,9 @@ openclaw gateway restart
 
 该插件不会存储 Raft 凭据；Raft CLI 会在其自己的配置文件中保留该身份验证信息。
 
-## Configuration
+## <a id="configure"></a> 配置
 
-Set the profile in the configuration:
+在配置中设置配置文件：
 
 ```json5
 {
@@ -44,13 +43,13 @@ Set the profile in the configuration:
 }
 ```
 
-For the default account, you can also set `RAFT_PROFILE` in the Gateway environment:
+对于默认帐户，您可以在网关环境中设置 `RAFT_PROFILE`：
 
 ```bash
 RAFT_PROFILE=openclaw
 ```
 
-When a Gateway connects to multiple Raft External Agents, use named accounts:
+当一个网关连接到多个 Raft 外部代理时，使用指定帐户：
 
 ```json5
 {
@@ -75,7 +74,7 @@ When a Gateway connects to multiple Raft External Agents, use named accounts:
 openclaw channels add --channel raft
 ```
 
-## 工作原理
+## <a id="how-it-works"></a> 工作原理
 
 当 Gateway 启动时，插件会：
 
@@ -98,7 +97,7 @@ raft --profile openclaw message send
 Raft 不是推送消息传输。OpenClaw 不会自动通过 bridge 将模型的最终文本发送回去，因此 agent 必须在处理唤醒后使用 Raft CLI。
 </Note>
 
-## 验证
+## <a id="verify"></a> 验证
 
 检查 OpenClaw 是否能找到 CLI，并且是否已配置 profile：
 
@@ -107,27 +106,24 @@ openclaw channels status --probe
 openclaw plugins inspect raft --runtime --json
 ```
 
-然后向 Raft External Agent 发送一条消息。Gateway 日志应显示
-Raft 桥接启动，随后出现一个入站唤醒。该代理应使用
-已配置的 Raft profile 来检查其待处理消息。
+然后向 Raft External Agent 发送一条消息。Gateway 日志应显示 Raft 桥接启动，随后出现一个入站唤醒。该代理应使用已配置的 Raft profile 来检查其待处理消息。
 
-## 故障排除
+## <a id="troubleshooting"></a> 故障排查
 
 <AccordionGroup>
-  <Accordion title="缺少 Raft CLI">
+  <Accordion id="raft-cli-is-missing" title="Raft CLI失踪了">
     在 Gateway 主机上安装 Raft CLI，并使 `raft` 在该服务的 `PATH` 中可用。使用 `raft --help` 验证，然后重启 Gateway。
   </Accordion>
-  <Accordion title="bridge 立即退出">
+  <Accordion id="the-bridge-exits-immediately" title="桥立即退出">
     验证所配置的 profile 已登录，并且属于目标 Raft External Agent。直接运行 `raft --profile <profile> agent bridge` 以查看 CLI 诊断信息。
   </Accordion>
-  <Accordion title="收到 wake，但没有发送 Raft 响应">
-    当 agent 未调用 Raft CLI 时，这是预期行为。wake bridge 不会传递消息正文或自动最终回复。检查 agent 的工具策略，并确保它可以运行 `raft --profile <profile>
-    message check` 和 `message send`。
+  <Accordion id="a-wake-arrives-but-no-raft-response-is-sent" title="唤醒到达但未发送 Raft 响应">
+    当代理不调用 Raft CLI 时，这是预期的。唤醒桥不携带消息体或自动最终回复。检查代理的工具策略并检查其是否可以运行`raft --profile <profile> message check`和`message send`。
   </Accordion>
 </AccordionGroup>
 
-## 参考资料
+## <a id="references"></a> 参考资料
 
-- [Raft](https://raft.build/)
+- [筏](https://raft.build/)
 - [Raft 文档](https://docs.raft.build/welcome/)
 - [Hermes Raft 集成](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/raft)

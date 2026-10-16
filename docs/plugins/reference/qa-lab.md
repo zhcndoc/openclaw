@@ -1,11 +1,14 @@
 ---
 summary: "OpenClaw QA 实验室插件，带有私有调试器 UI 和场景运行器。"
 read_when:
-  - 你正在安装、配置或审核 qa-lab 插件
-title: "QA 实验室插件"
+  - You are installing, configuring, or auditing the qa-lab plugin
+title: "QA Lab plugin reference"
 ---
 
-# QA 实验室插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw QA 实验室插件，带有私有调试器 UI 和场景运行器。
 
@@ -16,4 +19,5 @@ OpenClaw QA 实验室插件，带有私有调试器 UI 和场景运行器。
 
 ## Surface
 
-contracts: `tools`, `webSearchProviders`, `workerProviders`
+- CLI commands: `openclaw qa`
+- Contracts: `tools`, `webSearchProviders`, `workerProviders`

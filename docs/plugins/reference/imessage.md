@@ -1,22 +1,26 @@
 ---
-summary: "为发送和接收 OpenClaw 消息添加 iMessage 渠道接入层。"
+summary: "OpenClaw iMessage channel plugin using imsg on a signed-in Mac."
 read_when:
-  - 您正在安装、配置或审计 imessage 插件
-title: "iMessage 插件"
+  - You are installing, configuring, or auditing the imessage plugin
+title: "iMessage plugin reference"
 ---
 
-# iMessage 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-为发送和接收 OpenClaw 消息添加 iMessage 渠道接入层。
+OpenClaw iMessage channel plugin using imsg on a signed-in Mac.
 
 ## 分发
 
-- 软件包：`@openclaw/imessage`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/imessage`
+- Package: `@openclaw/imessage`
+- Install route: npm or ClawHub: `clawhub:@openclaw/imessage`
 
 ## 接入层
 
-渠道: `imessage`; 技能
+- Channels: `imessage`
+- Skills
 
 ## 相关文档
 

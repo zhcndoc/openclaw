@@ -1,22 +1,25 @@
 ---
 summary: "为默认 diffs 查看器语言集之外的语言添加语法高亮。"
 read_when:
-  - 当你正在安装、配置或审计 diffs-language-pack 插件时
-title: "Diffs Language Pack 插件"
+  - You are installing, configuring, or auditing the diffs-language-pack plugin
+title: "Diffs Language Pack plugin reference"
 ---
 
-# Diffs Language Pack 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为默认 diffs 查看器语言集之外的语言添加语法高亮。
 
 ## 分发
 
-- 包：`@openclaw/diffs-language-pack`
-- 安装路径：npm；ClawHub：`clawhub:@openclaw/diffs-language-pack`
+- Package: `@openclaw/diffs-language-pack`
+- Install route: npm or ClawHub: `clawhub:@openclaw/diffs-language-pack`
 
 ## 表面
 
-plugin
+This plugin declares no channels, providers, commands, or contracts.
 
 ## 新增语言
 
@@ -24,4 +27,35 @@ plugin
 
 示例包括 Astro、Vue、Svelte、MDX、GraphQL、Terraform/HCL、Nix、Clojure、Elixir、Haskell、OCaml、Scala、Zig、Solidity、Verilog/VHDL、Fortran、MATLAB、LaTeX、Mermaid、Sass/Less/SCSS、Nginx、Apache、CSV、dotenv、INI 和 diff 文件。
 
-请参阅 [Shiki languages](https://shiki.style/languages) 以查看 Shiki 的上游语言和别名目录。
+Examples include:
+
+- Astro
+- Vue
+- Svelte
+- MDX
+- GraphQL
+- Terraform/HCL
+- Nix
+- Clojure
+- Elixir
+- Haskell
+- OCaml
+- Scala
+- Zig
+- Solidity
+- Verilog/VHDL
+- Fortran
+- MATLAB
+- LaTeX
+- Mermaid
+- Sass/Less/SCSS
+- Nginx
+- Apache
+- CSV
+- dotenv
+- INI
+- diff files
+
+See [Shiki languages](https://shiki.style/languages) for Shiki's upstream language and alias catalog.
+
+<!-- openclaw-plugin-reference:manual-end -->

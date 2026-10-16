@@ -1,11 +1,14 @@
 ---
 summary: "OpenClaw QQ Bot 用于群聊和私信工作流的频道插件。"
 read_when:
-  - 你正在安装、配置或审计 qqbot 插件
-title: "QQ Bot 插件"
+  - You are installing, configuring, or auditing the qqbot plugin
+title: "QQ Bot plugin reference"
 ---
 
-# QQ Bot 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw QQ Bot 用于群聊和私信工作流的频道插件。
 
@@ -16,7 +19,9 @@ OpenClaw QQ Bot 用于群聊和私信工作流的频道插件。
 
 ## 表面
 
-channels: `qqbot`; contracts: `tools`; skills
+- Channels: `qqbot`
+- Contracts: `tools`
+- Skills
 
 ## 相关文档
 

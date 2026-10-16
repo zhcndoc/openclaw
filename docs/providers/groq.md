@@ -2,44 +2,45 @@
 summary: "Groq 设置（认证 + 模型选择 + Whisper 转录）"
 title: "Groq"
 read_when:
-  - 你想在 OpenClaw 中使用 Groq
-  - 你需要 API 密钥环境变量或 CLI 认证选项
-  - 你正在配置 Groq 上的 Whisper 音频转录
+  - "您想要将 Groq 与 OpenClaw 一起使用"
+  - "你需要 API 密钥环境变量或 CLI 认证选项"
+  - "您正在 Groq 上配置 Whisper 音频转录"
 ---
 
-[Groq](https://groq.com) 基于定制的 LPU 硬件，为开权重模型（Llama、Gemma、Kimi、Qwen、GPT OSS 等）提供超高速推理。Groq 插件同时注册了一个兼容 OpenAI 的聊天提供方和一个音频媒体理解提供方。
+[Groq](https://groq.com) 使用自定义功能对开放权重模型（Llama、Gemma、Kimi、Qwen、GPT OSS 等）提供超快速推理LPU 硬件。 Groq 插件注册了 OpenAI- 兼容的聊天提供程序和音频媒体理解提供程序。
 
-| 属性                   | 值                                       |
+| 属性               | 值                                    |
 | ---------------------- | ---------------------------------------- |
-| 提供方 ID              | `groq`                                   |
-| 插件                   | 官方外部包                               |
+| 提供方 id            | `groq`                                   |
+| 插件                 | 官方外部包                |
 | 认证环境变量           | `GROQ_API_KEY`                           |
-| API                    | 兼容 OpenAI（`openai-completions`）       |
+| API                    | OpenAI-兼容（`openai-completions`） |
 | 基础 URL               | `https://api.groq.com/openai/v1`         |
-| 音频转录               | `whisper-large-v3-turbo`（默认）         |
-| 建议的聊天默认模型     | `groq/openai/gpt-oss-120b`               |
+| 音频转录    | `whisper-large-v3-turbo`（默认）       |
+| 建议的聊天默认模型 | `groq/openai/gpt-oss-120b`               |
 
-## 安装插件
+## <a id="install-plugin"></a> 安装插件
 
-安装官方插件，然后重启 Gateway：
+安装官方插件：
 
 ```bash
 openclaw plugins install @openclaw/groq-provider
-openclaw gateway restart
 ```
 
-## 入门
+安装自动应用于正在运行的网关；否则下次启动时生效。请参阅 [ 应用更改并检查 ](/plugins/manage-plugins#apply-changes-and-inspect)。
+
+## <a id="getting-started"></a> 入门
 
 <Steps>
-  <Step title="获取 API 密钥">
-    在 [console.groq.com/keys](https://console.groq.com/keys) 创建 API 密钥。
+  <Step id="get-an-api-key" title="获取 API 密钥">
+    在 [console.groq.com/keys](https://console.groq.com/keys). 创建 API 密钥
   </Step>
-  <Step title="设置 API 密钥">
+  <Step id="set-the-api-key" title="设置API密钥">
     ```bash
-export GROQ_API_KEY=gsk_...
-```
+    export GROQ_API_KEY=gsk_...
+    ```
   </Step>
-  <Step title="设置默认模型">
+  <Step id="set-a-default-model" title="设置默认模型">
     ```json5
     {
       agents: {
@@ -50,14 +51,14 @@ export GROQ_API_KEY=gsk_...
     }
     ```
   </Step>
-  <Step title="验证目录是否可访问">
+  <Step id="verify-the-catalog-is-reachable" title="验证目录是否可达">
     ```bash
     openclaw models list --provider groq
     ```
   </Step>
 </Steps>
 
-### 配置文件示例
+### <a id="config-file-example"></a> 配置文件示例
 
 ```json5
 {
@@ -70,42 +71,40 @@ export GROQ_API_KEY=gsk_...
 }
 ```
 
-## 内置目录
+## <a id="built-in-catalog"></a> 内置目录
 
-OpenClaw 会随附一个由清单支持的 Groq 目录，其中既包含推理模型，也包含非推理模型。运行 `openclaw models list --provider groq` 可查看你已安装版本的静态条目，或查看 [console.groq.com/docs/models](https://console.groq.com/docs/models) 获取 Groq 的权威列表。
+OpenClaw 提供了清单支持的 Groq 推理模型目录。运行 `openclaw models list --provider groq` 查看您安装的版本的静态行，或检查 [console.groq.com/docs/models](https://console.groq.com/docs/models) 以获取 Groq 的权威列表。
 
-| 模型引用                            | 名称               | 推理      | 输入         | 上下文   |
-| ----------------------------------- | ------------------ | --------- | ------------ | -------- |
-| `groq/openai/gpt-oss-120b`          | GPT OSS 120B       | 是        | 文本         | 131,072  |
-| `groq/openai/gpt-oss-20b`           | GPT OSS 20B        | 是        | 文本         | 131,072  |
-| `groq/openai/gpt-oss-safeguard-20b` | Safety GPT OSS 20B | 是        | 文本         | 131,072  |
-| `groq/qwen/qwen3.6-27b`             | Qwen 3.6 27B       | 是        | 文本 + 图像  | 131,072  |
-| `groq/groq/compound`                | Compound           | 否        | 文本         | 131,072  |
-| `groq/groq/compound-mini`           | Compound Mini      | 否        | 文本         | 131,072  |
-
-清单还会保留 `groq/llama-3.1-8b-instant` 和 `groq/llama-3.3-70b-versatile` 这两个隐藏的已弃用兼容条目，直到 Groq 于 2026 年 8 月 16 日关闭这些模型。对于新的配置，请分别使用 `groq/openai/gpt-oss-20b` 和 `groq/openai/gpt-oss-120b`。
+| 模型引用                           | 名称               | 推理 | 输入 | 上下文 |
+| ----------------------------------- | ------------------ | --------- | ----- | ------- |
+| `groq/openai/gpt-oss-120b`          | GPT OSS 120B       | 是       | 文本  | 131,072 |
+| `groq/openai/gpt-oss-20b`           | GPT OSS 20B        | 是       | 文本  | 131,072 |
+| `groq/openai/gpt-oss-safeguard-20b` | 安全 GPT OSS 20B | 是       | 文本  | 131,072 |
+| `groq/qwen/qwen3.6-27b`             | Qwen 3.6 27B       | 是       | 文本  | 131,072 |
 
 <Tip>
   目录会随着每个 OpenClaw 版本演进。`openclaw models list --provider groq` 会显示你已安装版本已知的条目；请与 [console.groq.com/docs/models](https://console.groq.com/docs/models) 交叉核对新添加或已弃用的模型。
 </Tip>
 
-## 推理模型
+## <a id="reasoning-models"></a> 推理模型
 
-Groq 推理模型（上表中的 `reasoning: true`）将 OpenClaw 共享的 `/think` 等级映射为 `reasoning_effort` 的 `low`、`medium` 或 `high` 值。`/think off` 或 `/think none` 会从请求中省略 `reasoning_effort`，而不是发送一个禁用值。
+Groq 的 GPT OSS 推理模型将 OpenClaw 的共享 `/think` 级别映射到 `low`、`medium` 或 `high` 的 `reasoning_effort` 值。 `/think off` 或 `/think none` 从这些请求中省略 `reasoning_effort`，而不是发送禁用值。
+
+Qwen 3.6 27B 在 Groq 上仅是文本，并支持两种线推理模式。 `/think off` 或 `/think none` 发送 `reasoning_effort: "none"`；每个启用的级别都会发送 `"default"`。当在 Groq Qwen 模型上启用推理时，OpenClaw 会请求 `reasoning_format: "parsed"`，以便推理保留在思维块中，而不是可见的答案文本。此格式挂钩保持禁用推理和 GPT OSS 请求不变。
 
 有关共享的 `/think` 等级以及 OpenClaw 如何针对每个提供方进行转换，请参阅 [思考模式](/tools/thinking)。
 
-## 音频转录
+## <a id="audio-transcription"></a> 音频转录
 
 Groq 插件还会注册一个 **音频媒体理解提供方**，因此语音消息可以通过共享的 `tools.media.audio` 接口进行转录。
 
-| 属性              | 值                                        |
+| 属性          | 值                                     |
 | ----------------- | ----------------------------------------- |
-| 共享模型路径      | `tools.media.models`                      |
-| 默认基础 URL      | `https://api.groq.com/openai/v1`          |
-| 默认模型          | `whisper-large-v3-turbo`                  |
-| 自动优先级        | 20                                        |
-| API 端点          | OpenAI 兼容的 `/audio/transcriptions`     |
+| 共享模型路径 | `tools.media.models`                      |
+| 默认基础 URL  | `https://api.groq.com/openai/v1`          |
+| 默认模型     | `whisper-large-v3-turbo`                  |
+| 自动优先级     | 20                                        |
+| API 端点      | OpenAI-兼容`/audio/transcriptions` |
 
 要将 Groq 设为默认音频后端：
 
@@ -120,17 +119,17 @@ Groq 插件还会注册一个 **音频媒体理解提供方**，因此语音消�
 ```
 
 <AccordionGroup>
-  <Accordion title="守护进程的环境可用性">
+  <Accordion id="environment-availability-for-the-daemon" title="守护进程的环境可用性">
     如果网关作为受管服务运行（launchd、systemd、Docker），`GROQ_API_KEY` 必须对该进程可见——而不只是对你的交互式 shell 可见。
 
     <Warning>
-      仅在交互式 shell 中导出的密钥对 launchd 或 systemd 守护进程没有帮助，除非该环境也被导入到那里。将密钥设置在 `~/.openclaw/.env` 中或通过 `env.shellEnv` 设置，以便网关进程可以读取。
+      仅在交互式 shell 中导出的密钥不会对 launchd 或 systemd 守护进程有帮助，除非该环境也在那里导入。在 `~/.openclaw/.env` 中或通过 `env.shellEnv` 设置密钥，使其可从网关进程中读取。
     </Warning>
 
   </Accordion>
 
-  <Accordion title="自定义 Groq 模型 id">
-    OpenClaw 在运行时接受任意 Groq 模型 id。请使用 Groq 显示的精确 id，并在前面加上 `groq/`。静态目录覆盖常见情况；未收录的 id 会回退到默认的兼容 OpenAI 模板。
+  <Accordion id="custom-groq-model-ids" title="自定义 Groq 模型 ID">
+    OpenClaw 在运行时接受任何 Groq 模型 ID。使用 Groq 显示的确切 ID 并添加 `groq/` 前缀。静态目录涵盖了常见情况；未编目的 ID 会进入默认的 OpenAI- 兼容模板。
 
     ```json5
     {
@@ -145,14 +144,14 @@ Groq 插件还会注册一个 **音频媒体理解提供方**，因此语音消�
   </Accordion>
 </AccordionGroup>
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 <CardGroup cols={2}>
-  <Card title="模型提供方" href="/concepts/model-providers" icon="layers">
-    选择提供方、模型引用和故障转移行为。
+  <Card title="模型提供商" href="/concepts/model-providers" icon="layers">
+    选择提供程序、模型引用和故障转移行为。
   </Card>
-  <Card title="思考模式" href="/tools/thinking" icon="brain">
-    推理努力级别和提供方策略交互。
+  <Card title="思维模式" href="/tools/thinking" icon="brain">
+    推理努力水平和提供商-策略交互。
   </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
     完整配置架构，包括提供方和音频设置。

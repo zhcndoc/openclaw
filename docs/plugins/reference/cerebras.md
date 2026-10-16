@@ -1,22 +1,25 @@
 ---
 summary: "为 OpenClaw 添加 Cerebras 模型提供方支持。"
 read_when:
-  - 你正在安装、配置或审计 cerebras 插件
-title: "Cerebras 插件"
+  - You are installing, configuring, or auditing the cerebras plugin
+title: "Cerebras plugin reference"
 ---
 
-# Cerebras 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 Cerebras 模型提供方支持。
 
 ## 分发
 
-- 包：`@openclaw/cerebras-provider`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/cerebras-provider`
+- Package: `@openclaw/cerebras-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/cerebras-provider`
 
 ## 接口
 
-providers: `cerebras`
+- Providers: `cerebras`
 
 ## 相关文档
 

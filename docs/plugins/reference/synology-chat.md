@@ -1,22 +1,25 @@
 ---
 summary: "OpenClaw 频道和私信的 Synology Chat 频道插件。"
 read_when:
-  - 你正在安装、配置或审计 synology-chat 插件
-title: "Synology Chat 插件"
+  - You are installing, configuring, or auditing the synology-chat plugin
+title: "Synology Chat plugin reference"
 ---
 
-# Synology Chat 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于 OpenClaw 频道和私信的 Synology Chat 频道插件。
 
 ## 分发
 
-- 包：`@openclaw/synology-chat`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/synology-chat`
+- Install route: npm or ClawHub: `clawhub:@openclaw/synology-chat`
 
 ## 界面
 
-channels: `synology-chat`
+- Channels: `synology-chat`
 
 ## 相关文档
 

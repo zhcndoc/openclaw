@@ -1,11 +1,14 @@
 ---
 summary: "从本地文档附件中提取文本和备用页面图像。"
 read_when:
-  - 你正在安装、配置或审计 document-extract 插件
-title: "Document Extract 插件"
+  - You are installing, configuring, or auditing the document-extract plugin
+title: "Document Extract plugin reference"
 ---
 
-# Document Extract 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 从本地文档附件中提取文本和备用页面图像。
 
@@ -16,7 +19,7 @@ title: "Document Extract 插件"
 
 ## 接口
 
-contracts: `documentExtractors`
+- Contracts: `documentExtractors`
 
 ## 相关文档
 

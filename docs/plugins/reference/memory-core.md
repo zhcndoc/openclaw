@@ -1,11 +1,14 @@
 ---
 summary: "添加可由代理调用的工具。"
 read_when:
-  - 你正在安装、配置或审计 memory-core 插件
-title: "Memory Core 插件"
+  - You are installing, configuring, or auditing the memory-core plugin
+title: "Memory Core plugin reference"
 ---
 
-# Memory Core 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 添加可由代理调用的工具。
 
@@ -16,4 +19,6 @@ title: "Memory Core 插件"
 
 ## 表面
 
-commands：`/dreaming`；contracts：`tools`
+- CLI commands: `openclaw memory`
+- Slash commands: `/dreaming`
+- Contracts: `tools`

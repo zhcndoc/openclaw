@@ -3,475 +3,51 @@ summary: "为 OpenClaw 构建消息通道插件的分步指南"
 title: "构建通道插件"
 sidebarTitle: "通道插件"
 read_when:
-  - 你正在构建一个新的消息通道插件
-  - 你想将 OpenClaw 连接到某个消息平台
-  - 你需要理解 ChannelPlugin 适配器表面
+  - "你正在构建一个新的消息通道插件"
+  - "你想将 OpenClaw 连接到某个消息平台"
+  - "你需要理解 ChannelPlugin 适配器表面"
 ---
 
-本指南将构建一个通道插件，用于将 OpenClaw 连接到一个消息平台：私信安全性、配对、回复线程以及出站消息。
+本指南构建了一个将 OpenClaw 连接到消息传递平台的通道插件：DM 安全性、配对、回复线程和出站消息传递。
 
 <Info>
-  对 OpenClaw 插件还不熟悉？请先阅读 [入门指南](/plugins/building-plugins)
-  以了解包结构和清单设置。
+  OpenClaw 插件新手？首先阅读 [Getting Started](/plugins/building-plugins) 了解包结构和清单设置。
 </Info>
 
-## 你的插件负责什么
+## <a id="what-your-plugin-owns"></a> 你的插件负责什么
 
-频道插件不实现 send/edit/react 工具；核心提供一个
-共享的 `message` 工具。你的插件负责：
+频道插件不实现 send/edit/react 工具；核心提供一个共享的 `message` 工具。你的插件负责：
 
 - **配置** - 账号解析和设置向导
 - **安全** - DM 策略和允许名单
 - **配对** - DM 批准流程
-- **会话语法** - 提供方特定的会话 id 如何映射到基础
-  聊天、线程 id 和父级回退
+- **会话语法** - 提供方特定的会话 id 如何映射到基础聊天、线程 id 和父级回退
 - **出站** - 向平台发送文本、媒体和投票
 - **线程化** - 回复如何进行线程化
-- **心跳输入中** - 可选的输入中/忙碌信号，用于心跳投递
-  目标
+- **心跳打字** - 用于心跳传送目标的可选typing/busy信号
+- **格式化合同** - 可选`agentPrompt.inboundFormattingHints`，根据交付帐户解析。尽管其名称如此，核心会将其提供给可见文本到达通道的每个 OpenClaw 代理轮次：回复、心跳、cron 公告、子代理公告，并且 cron 运行时无需使用 `message` 工具发送的回复路由（例如 `delivery.mode: "none"`）。此类运行使用消息工具的默认通道：其当前通道或唯一配置的通道。发送到另一个通道的 `message` 工具不会获取该通道的规则，并且外部 ACP 代理不会收到它。将所有格式规则保留在这一钩子中。
+- **消息指导** - `agentPrompt.messageToolHints` 提供帐户范围的指令。当通道有内嵌按钮引导时，设置`agentPrompt.customInlineButtonHint: true`；然后 core 会省略其通用回调示例和功能配置提示。当帐户禁用按钮时，不返回按钮指令。该标志默认为 `false`。
 
-核心还负责模型选择器的产品操作。渲染
-`ModelPickerAction` 的频道会声明其
-`ModelPickerCapabilityProfile`，然后将类型化操作编码到传输私有的、经过身份验证的回调信封中。在到达该编码边界之前，应始终区分批准、命令、URL、Web 应用、问题、回调和模型选择器操作；绝不要从原始回调字符串推断选择器意图。参与者和源消息检查仍由频道负责。
+核心拥有共享消息工具、提示连线、外部会话密钥形状、通用`:thread:`簿记和调度。对于配置的代理组线程，核心还拥有参与者选择、后续轮次和轮次预算。让这些策略远离通道适配器。
 
-## 消息适配器
+核心还负责模型选择器的产品操作。渲染 `ModelPickerAction` 的频道会声明其 `ModelPickerCapabilityProfile`，然后将类型化操作编码到传输私有的、经过身份验证的回调信封中。在到达该编码边界之前，应始终区分批准、命令、URL、Web 应用、问题、回调和模型选择器操作；绝不要从原始回调字符串推断选择器意图。参与者和源消息检查仍由频道负责。
 
-使用 `openclaw/plugin-sdk/channel-outbound` 中的 `defineChannelMessageAdapter` 暴露一个 `message` 适配器。只声明你的原生传输实际支持的、可持久化的最终发送能力，并通过一个契约测试来证明原生副作用和返回的收据。文本/媒体发送应指向与旧版 `outbound` 适配器相同的传输函数。完整的 API 契约、能力矩阵、收据规则、实时预览定稿、接收确认策略、测试和迁移表，请参见
-[渠道出站 API](/plugins/sdk-channel-outbound)。
+## <a id="opted-in-public-child-sessions"></a> 选择加入公共儿童会话
 
-如果你现有的 `outbound` 适配器已经具备正确的发送方法和能力元数据，则应使用 `createChannelMessageAdapterFromOutbound(...)` 派生 `message` 适配器，而不是手写另一层桥接。适配器发送会返回 `MessageReceipt` 值。对于旧版 id，请使用 `listMessageReceiptPlatformIds(...)` 或 `resolveMessageReceiptPrimaryId(...)` 派生它们，而不是继续维护并行的 `messageIds` 字段。
+入口解析器接受可选的主机调用意图 `childSessionPublication: { audience: "public", assertCurrent }`。仅在明确的操作员选择加入和提供者本地证明整个提供的上下文是公共的之后才提供它。未知的受众元数据必须拒绝发布。 `assertCurrent` 同步复查账户策略和实时入口所有者；切勿从消息文本、存储的永久链接或模型参数派生此字段。普通的仅决策解析器不授予权限。
 
-精确声明实时和定稿器能力——core 会据此判断一个渠道能做什么，而声明与实际行为之间的偏差会被视为契约测试失败：
+对于可变源策略，意图还可以提供 `prepare: async () => assertCurrent`。主机在运行准入时调用它一次，并保留返回的同步防护以用于子发布。如果准备好的提示的路由、访问层或公共上下文证明不再有效，则通道必须通过有界重试重新获取当前授权和路由，并返回 `null`。这会放弃回合，而无需尝试其他模型或发布通用模型失败回复。而是抛出操作失败；这些会停止模型回退，但会产生可重试的访问验证错误。准备工作不能延续已准许的运行；使用时间检查和撤销仍然是强制性的。
 
-| 表面                                 | 值                                                                                             |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `message.live.capabilities`           | `draftPreview`, `previewFinalization`, `progressUpdates`, `nativeStreaming`, `quietFinalization` |
-| `message.live.finalizer.capabilities` | `finalEdit`, `normalFallback`, `discardPending`, `previewReceipt`, `retainOnAmbiguousFailure`    |
+精确的主机解析器到上下文的切换将意图绑定到一次承认的运行。只有其新的直接孤立可见的孩子才能在发布前的创作承诺中获得公共资助。 Private/draft、隐身、现有、分叉、重定向和后代会话不符合条件。无法序列化意图以供将来的转弯或传输回退。这不会授予 creator/admin 权限或更改团队协作权限。 `onVisibleWorkSessions`的消费者可以使用`publicRead: true`作为创建收据；标准化的 URL 本身并不能证明匿名访问。
 
-会就地完成草稿预览定稿的渠道应通过 `defineFinalizableLivePreviewAdapter(...)` 和 `deliverWithFinalizableLivePreviewAdapter(...)` 来承载运行时逻辑，并使用 `verifyChannelMessageLiveCapabilityAdapterProofs(...)` 与 `verifyChannelMessageLiveFinalizerProofs(...)` 测试来保持声明的能力有据可依，这样原生预览、进度、编辑、回退/保留、清理和收据行为就不会悄然偏离。
+主机在第一个回合开始之前等待 `onVisibleWorkSessions(sessions, creation)` 获取新的可见子级，因此通道可以在提示组装之前保留会话范围的原始上下文。即使没有公共网关源或 Control UI 被禁用，可选的第二个参数也提供 `creation.createdSessionKey`；在这种情况下，`sessions` 为空。现有的单参数消费者仍然只收到可用的 URL 描述符。当父进程稳定下来时，回调可能会再次收到相同的子进程； make 通过子会话密钥写入幂等。仅报告该回合的直系子代。当初始化必须在子进程运行之前完成时，返回一个 Promise。
 
-### 进度可见性验收
-
-进度回调报告的是操作员能够看到的内容，而不仅仅是插件排队的内容。在接受可见进度后返回
-`true`，在投递仍处于等待状态或没有发生可见更新时返回 `false`。现有返回 `void` 的同步和异步回调仍保持向后兼容，并被视为可见；新的支持接纳结果的实现应使用显式布尔值。
-
-会延迟平台确认的入站接收器应声明
-`message.receive.defaultAckPolicy` 和 `supportedAckPolicies`，而不是将确认时机隐藏在监控器本地状态中。请使用
-`verifyChannelMessageReceiveAckPolicyAdapterProofs(...)` 覆盖每个已声明的策略。
-
-### TTS 语音投递
-
-在 `capabilities.tts.voice` 下声明原生语音消息行为。当 TTS 提供商应生成原生语音消息格式时，设置
-`synthesisTarget: "voice-note"`。仅当出站语音操作接受可见的最终文本，并执行其传输层的说明文字和溢出规则时，才设置
-`captionedFinalText: true`。对于该操作，core 随后会暂存最终模式下的流式文本，并在语音负载被证明未发送时回退到文本。
-
-旧版 `dispatchInboundReplyWithBase` 辅助函数仍可通过已弃用的
-`openclaw/plugin-sdk/inbound-reply-dispatch` 兼容性 shim 使用。
-不要将其用于新的渠道代码；请改为从 `message` 适配器、收据以及
-`openclaw/plugin-sdk/channel-outbound` 上的接收/发送生命周期辅助函数开始。
-
-### 入站入口（实验性）
-
-正在迁移入站授权的渠道可以从运行时接收路径使用实验性的
-`openclaw/plugin-sdk/channel-ingress-runtime` 子路径。它接受平台事实、
-原始允许列表、路由描述符、命令事实和访问组配置，然后返回发送者/路由/命令/激活
-投影以及有序的入口图，同时将平台查找和副作用保留在插件中。请在传递给解析器的
-描述符中保留插件身份规范化；不要从已解析的状态或决策中序列化原始匹配值。请参阅
-[渠道入口 API](/plugins/sdk-channel-ingress)，了解 API 设计、
-职责边界和测试预期。
-
-### 持久化入口与重放去重
-
-采用持久化入口的通道应使用
-`openclaw/plugin-sdk/channel-outbound` 中的 `createChannelIngressMonitor`，
-除非它们需要实质不同的接纳或泵送契约。在单一接收汇合点将原始传输信封入队
-（接收时不进行规范化），对于 webhook 传输，将传输确认置于持久化追加之后，
-为每个会话派生一个串行通道，并在分发接纳时将事件标记为完成。队列的主键为
-`(queue_name, event_id)`，完成操作会将该行标记为墓碑，而不是删除它，因此在
-墓碑保留窗口内，平台稍后再次投递相同 `event_id` 时会被持久拒绝。
-有关监控器 API 和关闭契约，请参阅[通道出站 API](/plugins/sdk-channel-outbound#durable-ingress-monitors)。
-
-该墓碑是重放保护层
-（`openclaw/plugin-sdk/persistent-dedupe`）的分层规则：只有当保护器的身份或保留时间超过队列时，
-已排空的通道才需要保留独立的重放保护器——例如，与传输投递 ID 不同的逻辑消息键
-（Telegram 使用 `chat_id:message_id` 去重，因为防抖合并可能会让消息以新的
-`update_id` 再次出现），或者比通道墓碑保留时间更长的窗口。如果你的保护器键会等于
-排空的 `event_id`，则应在接纳排空事件时删除该保护器，并相应设置
-`completedTtlMs`/`completedMaxEntries`，使其覆盖旧保护器窗口。诸如年龄栅栏之类的非去重保护与此规则无关。
-稳定的出站消息 ID 应使用 `openclaw/plugin-sdk/channel-outbound` 中共享的出站回显注册表，
-而不是通道本地的 TTL 缓存。
-
-#### 传输类别与保留
-
-根据接收边界处的恢复保证对传输进行分类：
-
-- **确认门控的 webhook 或事件投递：** 仅在持久化追加之后确认或返回成功。
-  追加失败必须使该投递仍具备重试资格，或使接收边界失败。此类别包括 Slack、SMS、Zalo、
-  Microsoft Teams、Google Chat、LINE 和 Synology Chat。
-- **等待式轮询或流式投递：** 仅在追加之后推进远程游标或发送传输确认。当不存在显式游标时，
-  保持接收回调串行并等待完成，以确保追加失败不会让接收循环超前运行。Telegram 轮询、Signal
-  和 Tlon 使用此类别；Telegram webhook 投递遵循上述确认门控规则。
-- **不可重放的套接字：** IRC、Mattermost、Twitch 和 Zalo Personal 无法请求平台重新投递
-  已接受的事件。它们的持久化队列用于保护进程崩溃窗口，并支持本地重启恢复；完成墓碑对于防止平台重放几乎不起作用。
-
-将 30 天作为整个系统的墓碑 TTL 约定，而不是 SDK 默认值。高流量重投递窗口通常使用
-20,000 条已完成条目的上限；低流量的等待式传输和不可重放传输通常使用 1,000-2,000 条。
-当前例外包括 LINE 的 4,096 条上限、SMS 的 24 小时已完成 TTL，以及 Tlon 仅按上限保留已完成条目。
-失败行上限也可以低于已完成条目上限。TTL 和上限都会清理行，因此有效保留时间在第一个边界达到时结束。
-只有在有已记录的平台重试时限、需要保留的已发布重放保护器窗口、预期流量或磁盘预算，
-或不可重放传输等情况下才可偏离，并应通过测试覆盖保留契约。
-
-#### 至少一次副作用
-
-排空分发会先执行命令副作用，然后入口行才到达其完成墓碑。在这两个步骤之间发生进程崩溃会导致该行被重放，
-从而可能再次执行副作用。这种至少一次的崩溃窗口是默认契约。对于配置写入、存储清理或回复通道之外的可见确认等
-非幂等工作，请使用 `openclaw/plugin-sdk/ingress-effect-once` 中的
-`createIngressEffectOnce(...)`。为每次调用提供稳定的入口 `eventId` 以及副作用名称。
-每个入口队列/账户创建一个辅助器，并为该作用域使用稳定且唯一的 `namespacePrefix`，因为传输事件 ID 可能只在队列内唯一。
-辅助器仅在副作用成功后提交其持久化声明；抛出的副作用会释放声明，使排空重试能够再次执行该副作用，
-而并发调用方会等待当前活动声明。持久化状态错误会在提供 `onDiskError` 时调用它，并拒绝操作，而不是回退到进程内存。
-
-将辅助器的 `ttlMs` 设置为至少通道入口墓碑保留时间，加上副作用提交与行完成之间的最大延迟，
-其中包括有界停机时间和排空重试。副作用记录的 TTL 从提交时开始，而墓碑保留时间从完成时才开始；
-如果待处理行的生命周期无界，则没有有限 TTL 能覆盖任意时长的停机。在墓碑不再能够重放该行之后，
-较旧的副作用记录就成了无用负担。为 `stateMaxEntries` 设置足够容量，以容纳该保留窗口内可能存在的每个不同事件/副作用键，
-同时考虑队列的已完成条目上限和每个事件的最大副作用数。较低的上限会在 TTL 到期前驱逐最旧记录，并允许该副作用再次执行。
-如果进程在副作用成功但声明提交之前退出，或记录在其入口行仍处于待处理状态时过期，仍会存在残余的至少一次窗口。
-
-#### 账户范围的重启契约
-
-默认情况下，通道配置变更会重启整个通道。多账户通道只有在以下条件成立时，才可设置
-`reload.accountScopedRestart: true`：配置解析只读取通道范围的共享字段和选定账户，而绝不读取兄弟账户；
-并且 Gateway 能够在不替换兄弟运行时的情况下，停止并启动单个 `(channel, accountId)` 运行时。
-
-范围化路径仅适用于
-`channels.<channel>.accounts.<non-default-id>.*` 下的变更。对共享通道字段、`accounts.default`、
-已删除或无法解析的账户的变更，以及可能影响继承关系的混合变更，都会升级为整个通道重启。
-未选择加入的插件始终使用整个通道路径。
-
-对于使用持久化入口排空的通道，账户监控器的停止路径必须先完成所有已接纳传输的处理，
-然后释放并等待其排空完成。启动账户时会打开同一个按账户键控的队列，其初始排空会恢复尚未分发的持久化行。
-不要添加第二次仅针对重新加载的重放流程；队列恢复是规范的重启路径。
-
-将此标志视为能力声明，而不是性能偏好。契约测试应证明：添加或编辑一个指定账户不会改变兄弟账户的解析配置；
-停止一个账户只会完成该账户监控器和排空的处理；新监控器会恰好一次地恢复该账户的行。如果任何保证无法证明，
-就不要设置该标志。
-
-### 运行时生命周期状态
-
-对于由渠道编写的运行时状态，`ChannelAccountSnapshot.lifecycle` 是
-`healthState` 的后继者。在采用过程中，现有插件可以继续发布
-`healthState`，并且仍支持核心派生的策略写入。暂无移除日期；移除时间取决于外部渠道插件的采用情况。
-
-### 正在输入指示器
-
-如果你的 channel 除了入站回复之外还支持正在输入指示器，请在 channel 插件上暴露 `heartbeat.sendTyping(...)`。core 会在 heartbeat 模型运行开始前，使用已解析的 heartbeat 投递目标调用它，并使用共享的正在输入保活/清理生命周期。当平台需要显式停止信号时，再添加 `heartbeat.clearTyping(...)`。
-
-### 媒体来源参数
-
-如果你的 channel 为消息工具参数添加了媒体来源，请通过 `plugin.actions.describeMessageTool(...).mediaSourceParams` 暴露这些参数名。core 会使用这个显式列表进行 sandbox 路径规范化和 outbound 媒体访问策略，因此插件不需要为特定 provider 的头像、附件或封面图参数添加 shared-core 特例。
-
-建议使用按 action 键控的映射，例如 `{ "set-profile": ["avatarUrl", "avatarPath"] }`，这样无关的 actions 就不会继承另一个 action 的媒体参数。若这些参数本来就是要在所有暴露的 actions 中共享，扁平数组仍然可用。
-
-必须为平台侧媒体拉取暴露临时公开 URL 的 channels，可以使用 `openclaw/plugin-sdk/outbound-media` 中的 `createHostedOutboundMediaStore(...)` 和 plugin state stores。把平台路由解析和 token 强制校验留在 channel 插件里；共享 helper 只负责媒体加载、过期元数据、分块行以及清理。
-
-`prepareUrl({ mediaAccess })` 会将主机授权的本地媒体访问权限转发给共享的 outbound loader。为保持兼容性，托管媒体容量的默认值为 `overflowPolicy: "evict-oldest"`。当生成的 URL 必须在过期前保持有效时，请使用 `"reject-new"`，并将两个后端 keyed stores 都配置为 `"reject-new"`，以确保独立写入方无法驱逐仍有效的行。请先使用 `readMetadata(...)` 对 bearer 请求进行身份验证，再调用 `read(...)`，这样无效 token 和 `HEAD` 请求就不会加载已存储的媒体分块。
-
-入站附件使用有序 facts，而不是并行的 `Media*` 字段。使用 `openclaw/plugin-sdk/channel-inbound` 中的 `toInboundMediaFacts(...)` 规范化 channel 记录，并在构建入站上下文时将其作为 `media` 传入。当插件必须授权本地媒体读取时，请从专用的 `openclaw/plugin-sdk/media-local-roots` 子路径导入 `getAgentScopedMediaLocalRoots(...)` 或 `getAgentScopedMediaLocalRootsForSources(...)`。旧的 `agent-media-payload` builder/root facade 属于已弃用的兼容性接口。
-
-### 原生负载整形
-
-如果你的通道需要对 `message(action="send")` 进行提供商特定的整形，优先使用 `actions.prepareSendPayload(...)`。将原生卡片、区块、嵌入内容或其他持久化数据放在 `payload.channelData.<channel>` 下，并让核心通过 outbound/message 适配器发送。仅将 `actions.handleAction(...)` 用作无法序列化和重试的负载的兼容性回退方案。
-
-### 会话对话语法
-
-如果你的平台把额外作用域存储在 conversation id 中，请使用 `messaging.resolveSessionConversation(...)` 将解析逻辑保留在插件内。这是将 `rawId` 映射到基础 conversation id、可选 thread id、显式 `baseConversationId` 以及任何 `parentConversationCandidates` 的规范钩子。当你返回 `parentConversationCandidates` 时，请按从最窄的 parent 到最宽/base conversation 的顺序排列。
-
-`messaging.resolveParentConversationCandidates(...)` 是一个已弃用的兼容性回退方案，适用于只需要在通用/raw id 之上提供 parent 回退的插件。如果两个钩子都存在，core 会先使用 `resolveSessionConversation(...).parentConversationCandidates`，只有在规范钩子未提供它们时才回退到 `resolveParentConversationCandidates(...)`。
-
-需要在 channel registry 启动之前完成同样解析的捆绑插件，可以提供一个顶层 `session-key-api.ts` 文件，并导出匹配的 `resolveSessionConversation(...)`（参见 Feishu 和 Telegram 插件）。只有在运行时插件 registry 还不可用时，core 才会使用这个启动安全的接口。
-
-当插件代码需要规范化类似 route 的字段、比较子 thread 与其父 route，或从 `{ channel, to, accountId, threadId }` 构建稳定的去重 key 时，请使用 `openclaw/plugin-sdk/channel-route`。这个 helper 会像 core 一样规范化数字类型的 thread id，因此应优先于临时的 `String(threadId)` 比较。具有 provider 特定目标语法的插件应暴露 `messaging.resolveOutboundSessionRoute(...)`，以便 core 无需 parser shim 就能获取 provider 原生的 session 和 thread 身份。
-
-### 按账号作用域的会话绑定支持
-
-当 channel 支持通用的当前会话绑定时，将 `conversationBindings.supportsCurrentConversationBinding` 设为 true。`createChatChannelPlugin(...)` 默认会将这个静态能力设为 `true`。
-
-如果支持情况因已配置账号而异，还应实现 `conversationBindings.isCurrentConversationBindingSupported({ accountId })`。core 只有在静态能力启用后才会评估这个同步 hook。返回 `false` 会使该账号不可用通用的当前会话能力、bind、lookup、list、touch 和 unbind 操作。省略该 hook 则会把静态能力应用于每个账号。
-
-请从已加载的账号配置或运行时状态中解析答案。这个 hook 只会对通用当前会话绑定进行门控；它不会替代已配置的绑定规则或插件拥有的会话路由。契约测试应至少覆盖一个支持账号和一个不支持账号，并通过 `openclaw/plugin-sdk/channel-core` 导出的 `ChannelPlugin["conversationBindings"]` 契约来验证。
-
-## 审批和通道能力
-
-大多数通道插件不需要审批专用代码。Core 负责同聊天室的
-`/approve`、共享的审批按钮载荷以及通用的回退投递。
-`ChannelPlugin.approvals` 已被移除；请改为将审批投递／原生／渲染／认证
-相关事实放到一个 `approvalCapability` 对象上。`plugin.auth` 仅用于登录／登出——
-core 不再从该对象读取审批认证钩子。
-
-仅在需要原生审批路由或抑制回退时使用 `approvalCapability.delivery`，
-仅在通道确实需要自定义审批载荷而不是共享渲染器时使用
-`approvalCapability.render`。
-
-### 审批认证
-
-- `approvalCapability.authorizeActorAction` 和
-  `approvalCapability.getActionAvailabilityState` 是规范的
-  审批认证接口。
-- 使用 `getActionAvailabilityState` 来获取同聊天室审批认证可用性。
-  即使原生投递被禁用，也要让已配置的审批人在 `/approve` 中保持可用；
-  交由原生启动面状态用于投递／设置指引。
-- 如果你的通道暴露原生 exec 审批，在原生客户端状态与同聊天室
-  审批认证不同时，使用 `approvalCapability.getExecInitiatingSurfaceState`
-  作为启动面／原生客户端状态。Core 会使用这个 exec 专用钩子来区分
-  `enabled` 与 `disabled`，判断启动通道是否支持原生 exec 审批，并将该通道
-  纳入原生客户端回退指引中。
-  `createApproverRestrictedNativeApprovalCapability(...)` 已为常见情况补足此项。
-- 如果某个通道能够从现有配置中推断出稳定的、类似 owner 的 DM 身份，
-  使用 `openclaw/plugin-sdk/approval-runtime` 中的
-  `createResolvedApproverActionAuthAdapter` 来限制同聊天室 `/approve`，
-  而无需增加审批专用的 core 逻辑。
-- 如果自定义审批认证有意只允许同聊天室回退，从
-  `openclaw/plugin-sdk/approval-auth-runtime` 返回
-  `markImplicitSameChatApprovalAuthorization({ authorized: true })`；
-  否则 core 会将结果视为显式的审批人授权。
-- 如果由通道拥有的原生回调直接解析审批，在解析前使用
-  `isImplicitSameChatApprovalAuthorization(...)`，这样隐式回退仍会经过通道的
-  常规 actor 认证。
-
-### 载荷生命周期与设置指引
-
-- 当需要通道特定的载荷生命周期行为时，例如隐藏重复的本地审批提示，
-  或在投递前发送 typing 指示器，使用 `outbound.shouldSuppressLocalPayloadPrompt`
-  或 `outbound.beforeDeliverPayload`。
-- 当通道希望 disabled 路径的回复能够解释启用原生 exec 审批所需的具体配置项时，
-  使用 `approvalCapability.describeExecApprovalSetup`。该钩子接收
-  `{ channel, channelLabel, accountId }`；带命名账户的通道应渲染账户范围路径，
-  例如 `channels.<channel>.accounts.<id>.execApprovals.*`，而不是顶层默认项。
-- 当插件审批失败指引在插件审批的 no-route 和超时失败场景中可以安全展示时，
-  使用 `approvalCapability.describePluginApprovalSetup`。
-  `createApproverRestrictedNativeApprovalCapability(...)` 不会从
-  `describeExecApprovalSetup` 推断这一点；只有当插件审批和 exec 审批确实使用相同的原生设置时，
-  才显式传入相同的 helper。
-
-### 原生审批投递
-
-如果一个通道需要原生审批投递，请让通道代码聚焦于目标规范化以及传输／呈现事实。
-使用 `openclaw/plugin-sdk/approval-runtime` 中的
-`createChannelExecApprovalProfile`、`createChannelNativeOriginTargetResolver`、
-`createChannelApproverDmTargetResolver` 和
-`createApproverRestrictedNativeApprovalCapability`。
-把通道特定事实放在 `approvalCapability.nativeRuntime` 之后，最好通过
-`createChannelApprovalNativeRuntimeAdapter(...)` 或
-`createLazyChannelApprovalNativeRuntimeAdapter(...)` 来实现，这样 core 就可以组装
-处理器，并负责请求过滤、路由、去重、过期、网关订阅以及“路由到别处”的通知。
-
-`nativeRuntime` 被拆分为几个更小的接口：
-
-- `availability` - 账户是否已配置，以及请求是否应被处理
-- `presentation` - 将共享审批视图模型映射为 pending／resolved／expired 原生载荷或最终动作
-- `transport` - 准备目标并发送／更新／删除原生审批消息
-- `interactions` - 可选的原生按钮或 reaction 的 bind/unbind/clear-action 钩子，以及可选的 `cancelDelivered` 钩子。若 `deliverPending` 会注册进程内或持久化状态（例如 reaction 目标存储），请实现 `cancelDelivered`，以便在处理器停止且在 `bindPending` 执行前取消投递时，或者当 `bindPending` 返回空句柄时能够释放这些状态
-- `observe` - 可选的投递诊断钩子
-
-其他审批帮助器：
-
-- 当一个通道同时支持会话来源的原生投递和显式审批转发目标时，请使用
-  `openclaw/plugin-sdk/approval-native-runtime` 中的
-  `createNativeApprovalChannelRouteGates`。该帮助器集中处理审批配置选择、`mode`
-  处理、代理／会话过滤、账户绑定、会话目标匹配和目标列表匹配，同时调用方仍负责通道 ID、默认转发模式、账户查找、传输启用检查、目标规范化和轮次来源目标解析。不要使用它来创建由 core 所有的通道策略默认值；请显式传入通道文档规定的默认模式。
-- `createNativeApprovalMessagingTargetResolvers` 集中处理消息传输中的通道匹配以及 `{ to, accountId, threadId }` 规范化，这些传输的原生审批目标是通道自有的规范化目的地。
-  请将群组授权、审批人映射和其他传输策略保留在通道插件中。
-- `createChannelNativeOriginTargetResolver` 默认使用共享的通道路由匹配器来处理 `{ to, accountId, threadId }` 目标。只有当通道具有提供商特定的等价规则（例如 Slack 时间戳前缀匹配）时，才传入 `targetsMatch`。当通道需要在默认路由匹配器或自定义 `targetsMatch` 回调运行之前规范化提供商 ID 时，请传入 `normalizeTargetForMatch`，同时保留原始目标用于投递。只有当解析出的投递目标本身应被规范化时，才使用 `normalizeTarget`。
-- 如果通道需要客户端、令牌、Bolt 应用或 webhook 接收器等由运行时拥有的对象，请通过
-  `openclaw/plugin-sdk/channel-runtime-context` 注册它们。通用的运行时上下文注册表可以让 core 从通道启动状态引导基于能力的处理器，而无需添加审批专用的包装代码。
-- 只有当基于能力的衔接点暂时无法满足需求时，才使用较低层级的
-  `createChannelApprovalHandler` 或
-  `createChannelNativeApprovalRuntime`。
-- 原生审批通道必须通过这些帮助器传递 `accountId` 和 `approvalKind`。`accountId` 确保多账户审批策略限定在正确的机器人账户范围内，而 `approvalKind` 则使通道能够处理 exec 与插件审批行为，无需在 core 中使用硬编码分支。
-- Core 也负责审批重新路由通知。通道插件不应从 `createChannelNativeApprovalRuntime` 发送自己的“审批已转到私信／另一个通道”后续消息；相反，应通过共享审批能力帮助器准确暴露来源 + 审批人私信路由，并让 core 在向发起审批的聊天发布任何通知之前，汇总实际投递结果。
-- 端到端保留已投递审批 ID 的类型。原生客户端不应根据通道本地状态猜测或重写 exec 与插件审批的路由。
-- 将显式的 `approvalKind` 传递给 `resolveApprovalOverGateway`。这会使用规范的
-  `approval.resolve` 服务，并在另一个界面先作出响应时返回已记录的获胜者。较旧的显式 `resolveMethod` 输入仍用于基于命令的控制；新的原生操作不得使用它，也不得从 ID 推断类型。
-- 不同的审批类型可以有意暴露不同的原生界面。目前打包的示例包括：Matrix 对 exec 和插件审批保持相同的原生私信／频道路由和 reaction 用户体验，同时仍允许按审批类型区分授权；Slack 则同时为 exec ID 和插件 ID 提供原生审批路由。
-- `createApproverRestrictedNativeApprovalAdapter` 仍作为兼容性包装器存在，但新代码应优先使用能力构建器，并在插件上暴露 `approvalCapability`。
-
-### 更窄的审批运行时子路径
-
-对于高频通道入口点，当你只需要这一类中的某一部分时，优先使用这些更窄的子路径，而不是更宽泛的 `approval-runtime` 总入口：
-
-- `openclaw/plugin-sdk/approval-auth-runtime`
-- `openclaw/plugin-sdk/approval-client-runtime`
-- `openclaw/plugin-sdk/approval-delivery-runtime`
-- `openclaw/plugin-sdk/approval-gateway-runtime`
-- `openclaw/plugin-sdk/approval-reference-runtime`
-- `openclaw/plugin-sdk/approval-handler-adapter-runtime`
-- `openclaw/plugin-sdk/approval-handler-runtime`
-- `openclaw/plugin-sdk/approval-native-runtime`
-- `openclaw/plugin-sdk/approval-reply-runtime`
-- `openclaw/plugin-sdk/channel-runtime-context`
-
-同样地，在不需要全部功能时，优先使用 `openclaw/plugin-sdk/reply-runtime`、
-`openclaw/plugin-sdk/reply-dispatch-runtime`、`openclaw/plugin-sdk/reply-reference` 和
-`openclaw/plugin-sdk/reply-chunking`，而不是更宽泛的总入口。
-
-### 设置子路径
-
-- `openclaw/plugin-sdk/setup-runtime` 覆盖运行时安全的设置 helper：
-  `createSetupTranslator`、可安全导入的 setup patch 适配器
-  (`createPatchedAccountSetupAdapter`、`createEnvPatchedAccountSetupAdapter`、
-  `createSetupInputPresenceValidator`)、lookup-note 输出、
-  `promptResolvedAllowFrom`、`splitSetupEntries`，以及委托式
-  setup-proxy builders。
-- `openclaw/plugin-sdk/channel-setup` 覆盖可选安装的设置 builders，以及少量设置安全原语：
-  `createOptionalChannelSetupSurface`、`createOptionalChannelSetupAdapter`、
-  `createOptionalChannelSetupWizard`、`DEFAULT_ACCOUNT_ID`、
-  `createTopLevelChannelDmPolicy`、`setSetupChannelEnabled` 和
-  `splitSetupEntries`。
-- 仅当你还需要更重的共享 setup/config helper，例如
-  `moveSingleAccountChannelSectionToDefaultAccount(...)` 时，才使用更宽泛的
-  `openclaw/plugin-sdk/setup` 接口。
-
-如果你的通道只想在设置界面中提示“请先安装此插件”，优先使用
-`createOptionalChannelSetupSurface(...)`。生成的 adapter／wizard 会在配置写入和最终化时
-闭合失败，并且它们会在校验、finalize 和 docs-link 文案中复用同一条“需要安装”的消息。
-
-如果你的通道支持由环境变量驱动的设置或身份验证，请通过通道配置 schema 和设置描述符公开这些能力。将通道运行时的 `envVars` 或本地常量仅用于面向操作员的文案。
-
-如果你的通道可以在插件运行时启动之前就出现在 `status`、`channels list`、`channels status` 或 SecretRef 扫描中，请在 `package.json` 里添加 `openclaw.setupEntry`。该入口点应能在只读命令路径中安全导入，并应返回这些汇总所需的通道元数据、设置安全的 config adapter、状态 adapter，以及通道 secret target 元数据。不要从 setup entry 启动客户端、监听器或传输运行时。
-
-主通道入口导入路径也要保持精简。Discovery 可以在不激活通道的情况下评估入口和通道插件模块来注册能力。像 `channel-plugin-api.ts` 这样的文件应导出通道插件对象，而不要导入 setup wizard、传输客户端、socket 监听器、子进程启动器或服务启动模块。把这些运行时组件放到由 `registerFull(...)`、运行时 setter 或 lazy capability adapter 加载的模块中。
-
-### 其他更窄的通道子路径
-
-对于其他高频通道路径，在不需要更宽泛的遗留接入面时，优先使用更窄的帮助器：
-
-- `openclaw/plugin-sdk/account-core`、`openclaw/plugin-sdk/account-id`、
-  `openclaw/plugin-sdk/account-resolution` 和
-  `openclaw/plugin-sdk/account-helpers`，用于多账户配置和
-  默认账户回退
-- `openclaw/plugin-sdk/inbound-envelope` 和
-  `openclaw/plugin-sdk/channel-inbound`，用于入站路由／信封以及
-  记录并分发的衔接
-- 当终端 reaction 或状态 UI 必须区分已完成的 core agent 运行和恢复后的失败运行时，使用
-  `openclaw/plugin-sdk/channel-inbound` 中的
-  `readAgentRunTerminalOutcome(dispatchResult)`。它仅在 core 运行确实启动时返回
-  `"completed"` 或 `"failed"`，对于命令、去重、繁忙、运行前中止和自定义分发结果则返回
-  `undefined`。投递计数和可见性仍属于传输事实，包括错误载荷的成功投递；进程本地载体不会序列化为 JSON。
-- 当成功的出站发送必须停用活动的入站事件标记时，使用
-  `openclaw/plugin-sdk/inbound-event-delivery` 中的
-  `createInboundEventDeliveryCorrelation(...)`；每个通道创建一个跟踪器，并将目标匹配保留在通道插件中
-- `openclaw/plugin-sdk/channel-targets`，用于目标解析帮助器
-- `openclaw/plugin-sdk/channel-outbound`，用于出站身份／发送委托和类型化载荷规划
-- 当出站路由应保留显式的 `replyToId`／`threadId`，或在基础会话键仍匹配后恢复当前的 `:thread:` 会话时，使用
-  `openclaw/plugin-sdk/channel-core` 中的
-  `buildThreadAwareOutboundSessionRoute(...)`。当提供商平台具有原生线程投递语义时，提供商插件可以覆盖优先级、后缀行为和线程 ID 规范化。
-- `openclaw/plugin-sdk/thread-bindings-runtime`，用于线程绑定生命周期和适配器注册
-
-仅认证的通道通常可以停留在默认路径：core 处理审批，而插件只暴露 outbound／auth 能力。像 Matrix、Slack、Telegram 以及自定义聊天传输这样的原生审批通道，应使用共享的原生 helper，而不是自己重新实现审批生命周期。
-
-## 传入提及策略
-
-将传入提及处理分成两层：
-
-- 插件拥有的证据收集
-- 共享策略评估
-
-使用 `openclaw/plugin-sdk/channel-mention-gating` 进行提及策略决策。
-仅在需要更广泛的传入辅助工具集合时，使用 `openclaw/plugin-sdk/channel-inbound`。
-
-适合放在插件本地逻辑中的内容：
-
-- 回复到机器人检测
-- 引用机器人检测
-- 线程参与检查
-- 服务/系统消息排除
-- 用于证明机器人参与所需的平台原生缓存
-
-适合放在共享辅助中的内容：
-
-- `requireMention`
-- 显式提及结果
-- 隐式提及允许列表
-- 命令旁路
-- 最终跳过决策
-
-推荐流程：
-
-1. 计算本地提及事实。
-2. 将这些事实传入 `resolveInboundMentionDecision({ facts, policy })`。
-3. 在你的传入门控中使用 `decision.effectiveWasMentioned`、`decision.shouldBypassMention` 和
-   `decision.shouldSkip`。
-
-```typescript
-import {
-  implicitMentionKindWhen,
-  matchesMentionWithExplicit,
-  resolveInboundMentionDecision,
-} from "openclaw/plugin-sdk/channel-inbound";
-import { resolveChannelImplicitMentions } from "openclaw/plugin-sdk/channel-ingress-runtime";
-
-const wasMentioned = matchesMentionWithExplicit({
-  text,
-  mentionRegexes,
-  explicit: {
-    hasAnyMention,
-    isExplicitlyMentioned,
-    canResolveExplicit,
-  },
-});
-
-const facts = {
-  canDetectMention: true,
-  wasMentioned,
-  hasAnyMention,
-  implicitMentionKinds: [
-    ...implicitMentionKindWhen("reply_to_bot", isReplyToBot),
-    ...implicitMentionKindWhen("quoted_bot", isQuoteOfBot),
-  ],
-};
-
-const implicitMentions = resolveChannelImplicitMentions({
-  cfg,
-  channel: channelId,
-  accountId,
-});
-
-const decision = resolveInboundMentionDecision({
-  facts,
-  policy: {
-    isGroup,
-    requireMention,
-    implicitMentions,
-    allowTextCommands,
-    hasControlCommand,
-    commandAuthorized,
-  },
-});
-
-if (decision.shouldSkip) return;
-```
-
-`matchesMentionWithExplicit(...)` 返回一个布尔值。`hasAnyMention`、
-`isExplicitlyMentioned` 和 `canResolveExplicit` 来自频道自身的原生
-提及元数据（消息实体、回复到机器人标志等）；当你的平台无法检测它们时，
-请提供 `false`/`undefined` 值。
-
-`api.runtime.channel.mentions` 为已经依赖运行时注入的打包频道插件暴露了相同的共享提及辅助工具：
-`buildMentionRegexes`、`matchesMentionPatterns`、`matchesMentionWithExplicit`、
-`implicitMentionKindWhen`、`resolveInboundMentionDecision`。
-
-如果你只需要 `implicitMentionKindWhen` 和 `resolveInboundMentionDecision`，
-请从 `openclaw/plugin-sdk/channel-mention-gating` 导入，以避免加载
-无关的传入运行时辅助工具。
-
-## 操作指南
+## <a id="walkthrough"></a> 演练
 
 <Steps>
   <a id="step-1-package-and-manifest"></a>
-  <Step title="包和清单">
-    创建标准插件文件。`openclaw.plugin.json` 中的 `channels` 字段（而不是 `kind` 字段）用于标记某个清单拥有一个频道。完整的包元数据字段说明请参见
-    [插件设置与配置](/plugins/sdk-setup#openclaw-channel)：
+  <Step id="package-and-manifest" title="包装和清单">
+    创建标准插件文件。 `openclaw.plugin.json` 中的 `channels` 字段（不是 `kind` 字段）将清单标记为拥有通道。有关完整的包元数据表面，请参阅 [Plugin 设置和 Config](/plugins/sdk-setup#openclaw-channel)：
 
     <CodeGroup>
     ```json package.json
@@ -485,7 +61,7 @@ if (decision.shouldSkip) return;
         "channel": {
           "id": "acme-chat",
           "label": "Acme Chat",
-          "blurb": "将 OpenClaw 连接到 Acme Chat。"
+          "blurb": "Connect OpenClaw to Acme Chat."
         }
       }
     }
@@ -496,7 +72,7 @@ if (decision.shouldSkip) return;
       "id": "acme-chat",
       "channels": ["acme-chat"],
       "name": "Acme Chat",
-      "description": "Acme Chat 频道插件",
+      "description": "Acme Chat channel plugin",
       "configSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -517,7 +93,7 @@ if (decision.shouldSkip) return;
           },
           "uiHints": {
             "token": {
-              "label": "机器人令牌",
+              "label": "Bot token",
               "sensitive": true
             }
           }
@@ -527,14 +103,20 @@ if (decision.shouldSkip) return;
     ```
     </CodeGroup>
 
-    `configSchema` 用于验证 `plugins.entries.acme-chat.config`。把它用于不属于频道账户配置的、由插件拥有的设置。
-    `channelConfigs.acme-chat.schema` 用于验证 `channels.acme-chat`，并且在插件运行时加载之前，作为由配置 schema、设置和 UI 界面使用的冷路径来源。完整的顶层字段参考请参见
-    [插件清单](/plugins/manifest)。
+    `configSchema` 用于验证 `plugins.entries.acme-chat.config`。把它用于不属于频道账户配置的、由插件拥有的设置。 `channelConfigs.acme-chat.schema` 用于验证 `channels.acme-chat`，并且在插件运行时加载之前，作为由配置 schema、设置和 UI 界面使用的冷路径来源。完整的顶层字段参考请参见 [插件清单](/plugins/manifest)。
 
   </Step>
 
-  <Step title="构建频道插件对象">
-    `ChannelPlugin` 接口有许多可选的适配器接口。从最小集合开始——`id`、`config` 和 `setup`——然后按需添加适配器。
+  <Step id="build-the-channel-plugin-object" title="构建通道插件对象">
+    `ChannelPlugin` 接口有许多可选的适配器表面。从最小值开始 - `id`、`config` 和 `setup` - 并根据需要添加适配器。 `createChatChannelPlugin` 默认省略直接消息的能力；当通道支持更多时声明`capabilities.chatTypes`。当通道支持反应时设置 `capabilities.reactions`。通道每条消息只能有一个机器人反应，设置为 `capabilities.reactionSlots` 至 `"single"`； `"multiple"`或省略表示独立的表情符号。当 Control UI 反应从单槽通道中移除时，镜像会恢复最新剩余的表情符号，或者在没有剩余表情符号时清除槽。
+
+    `config.inspectAccount` 是同步的，并返回只读诊断的元数据，包括已禁用或已配置但不可用的帐户。返回 `enabled`、`configured` 和适用的凭证状态字段，无需秘密解析。其结果不是已解析的帐户：支票和帐户状态构建器等操作挂钩会收到 `config.resolveAccountAsync` 或 `config.resolveAccount` 结果。诊断仅公开检查结果中的状态安全字段。包括运行时使用的相同帐户启用和配置决策，包括重复帐户抑制。如果省略 `configured`，诊断将使用记录的网关值（如果可用）；否则，他们会报告配置状态不可用。普通 `channels.status` 读取将此元数据与生命周期记录的帐户状态结合起来。通过 `setStatus` 发布不断变化的健康状况和提供者详细信息；帐户快照和通道摘要挂钩仅针对此 RPC 进行显式实时检查而运行。所有直播挂钩都共享每个频道的截止日期。他们还应该遵守提供的超时，因为 RPC 超时无法取消已经运行的插件操作。秘密兑换之前的选择也直接读取此元数据。目录自动选择需要`configured: true`；当配置状态未知时，呼叫者仍然可以显式选择通道。
+
+    操作帐户读取可以是异步的。当帐户解析读取持久凭证时定义 `config.resolveAccountAsync(cfg, accountId)`，并为匹配的操作配置状态检查定义 `config.hasConfiguredStateAsync({ cfg, env })`。使用 `config.describeAccountAsync(account, cfg)` 表示国家支持的账户摘要，使用 `config.resolveAllowFromAsync({ cfg, accountId })` 表示存储的允许列表，使用 `security.resolveDmPolicyAsync({ cfg, accountId, account })` 表示存储的 DM 策略。这些可选回调返回与其同步对应项相同结果的 Promise。只要异步钩子存在，核心就会等待它；拒绝或空结果都不会重试同步挂钩。为较旧的主机和外部消费者保留同步签名，并通过包装通道的任何适配器转发异步挂钩。
+
+    为每个操作准备当前凭据，并在等待准备后重新验证实时权限，避免出现任何副作用。帐户对象和注册表生成不是凭证缓存。只读 `inspectAccount` 和仅配置引导激活保持独立；单独保留的凭据并不能启用通道。
+
+    `gateway.loginWithQrStart` 接收可选的 `assertCredentialPersistenceCurrent()` 回调。使用 QR 登录保留它，并在凭证写入之前立即调用它，包括 RPC 返回后的延迟写入。当网关的帐户配置或插件生命周期发生更改时，它会抛出。与插件自己的主动登录防护组合起来；请勿更换该防护装置或将 QR 的使用寿命与启动 RPC 相关联。省略的帐户 ID 保留插件特定的单帐户配置文件选择；当配置多个帐户时，网关拒绝遗漏。
 
     创建 `src/channel.ts`：
 
@@ -544,7 +126,7 @@ if (decision.shouldSkip) return;
       createChannelPluginBase,
     } from "openclaw/plugin-sdk/channel-core";
     import type { OpenClawConfig } from "openclaw/plugin-sdk/channel-core";
-    import { acmeChatApi } from "./client.js"; // 你的平台 API 客户端
+    import { acmeChatApi } from "./client.js"; // your platform API client
 
     type ResolvedAccount = {
       accountId: string | null;
@@ -559,7 +141,7 @@ if (decision.shouldSkip) return;
     ): ResolvedAccount {
       const section = (cfg.channels as Record<string, any>)?.["acme-chat"];
       const token = section?.token;
-      if (!token) throw new Error("acme-chat: 需要 token");
+      if (!token) throw new Error("acme-chat: token is required");
       return {
         accountId: accountId ?? null,
         token,
@@ -571,8 +153,8 @@ if (decision.shouldSkip) return;
     export const acmeChatPlugin = createChatChannelPlugin<ResolvedAccount>({
       base: createChannelPluginBase({
         id: "acme-chat",
-        // 账户解析/检查属于 `config`，而不是 `setup`。
-        // `setup` 负责引导写入（applyAccountConfig、validateInput）。
+        // Account resolution/inspection belongs on `config`, not `setup`.
+        // `setup` covers onboarding writes (applyAccountConfig, validateInput).
         config: {
           listAccountIds: () => ["default"],
           resolveAccount,
@@ -597,7 +179,7 @@ if (decision.shouldSkip) return;
         },
       }),
 
-      // DM 安全：谁可以给机器人发消息
+      // DM security: who can message the bot
       security: {
         dm: {
           channelKey: "acme-chat",
@@ -607,21 +189,21 @@ if (decision.shouldSkip) return;
         },
       },
 
-      // 配对：新 DM 联系人的审批流程
+      // Pairing: approval flow for new DM contacts
       pairing: {
         text: {
-          idLabel: "Acme Chat 用户名",
-          message: "发送此代码以验证你的身份：",
+          idLabel: "Acme Chat username",
+          message: "Send this code to verify your identity:",
           notify: async ({ target, code }) => {
             await acmeChatApi.sendDm(target, `Pairing code: ${code}`);
           },
         },
       },
 
-      // 线程：回复如何被投递
+      // Threading: how replies are delivered
       threading: { topLevelReplyToMode: "reply" },
 
-      // 发出：向平台发送消息
+      // Outbound: send messages to the platform
       outbound: {
         attachedResults: {
           channel: "acme-chat",
@@ -642,11 +224,17 @@ if (decision.shouldSkip) return;
     });
     ```
 
-    对于同时接受规范的顶层 DM 键和旧式嵌套键的频道，请使用 `plugin-sdk/channel-config-helpers` 中的辅助函数：`resolveChannelDmAccess`、`resolveChannelDmPolicy`、`resolveChannelDmAllowFrom` 和 `normalizeChannelDmPolicy` 可以优先使用账户本地值，而不是继承的根值。通过 `normalizeLegacyDmAliases` 将同一个解析器用于 doctor 修复，以便运行时和迁移读取同一份契约。
+    对于同时接受当前顶级 DM 密钥和旧嵌套密钥的通道，请使用 `plugin-sdk/channel-config-helpers` 中的帮助程序：`resolveChannelDmAccess`、`resolveChannelDmPolicy`、`resolveChannelDmAllowFrom` 和 `normalizeChannelDmPolicy` 将帐户本地值保留在继承的根值之前。通过 `normalizeLegacyDmAliases` 将相同的解析器与医生修复配对，以便运行时和迁移读取相同的合约。
 
-    如果某个频道有意采用比全局配置更严格的 DM 会话路由，应通过 `security.dmRouting` 暴露此行为，以便 Doctor 和安全审计解析出与运行时相同的会话所有者。可选的 `resolveDmScope` 回调会在核心路由解析之前运行；其上下文包括 `cfg`、`accountId`、已解析的 `account`，以及用于有限允许列表条目的 `principalId`。`resolveDmRoute` 会接收这些字段以及已解析的核心 `route`；它可以返回 `{ sessionKey }` 以使用共享的最终存储桶，返回 `{ kind: "isolated" }` 以表示未知对端，或返回 `{ kind: "core" }` 以保留核心 `dmScope` 命名空间分析。对于通配符／开放策略，`principalId` 不存在，未定义的结果会被报告为未经验证。诊断绝不会臆造对端 ID。两个回调都应保持纯函数特性并且可安全导入，因为只读诊断会在没有频道运行时的情况下运行。
+    对于特定于通道的秘密激活，`openclaw/plugin-sdk/channel-secret-basic-runtime` 中的 `createChannelSecretContract` 结合了 `channelKey`、`account`/`channel` 注册表规范和 `collect` 回调。回调接收`config`、`defaults`、`context`、`channelKey`、`channel`以及解析后的账户`surface`；仅当通道记录存在时才运行。将激活规则保留在回调中。
 
-    <Accordion title="What createChatChannelPlugin does for you">
+    配置支持的注销处理程序可以使用 `openclaw/plugin-sdk/channel-config-helpers` 中的 `clearAccountFieldsFromConfigSection`。通过 `cfg`、`sectionKey`、`accountId` 和插件拥有的 `fields` 进行删除。它返回 `{ nextConfig, changed, cleared }` 而不写入配置或解析凭据。仅当至少一个值为真时，才会针对确切的 `default` 帐户一起清除根字段。嵌套字段使用 `clearAccountEntryFields` 语义：空帐户 ID 选择 `accounts.default`，并且删除空或空白字符串而不报告 `cleared`，除非设置了 `markClearedOnFieldPresence: true`。未更改的配置保留其对象标识；清理修剪只修剪它改变的分支。在插件中保留文件引用选择、持久性、环境报告和其他注销副作用。
+
+    如果通道故意应用比全局配置更严格的 DM 会话路由，请通过 `security.dmRouting` 公开该行为，以便 Doctor 和安全审核将相同的会话所有者解析为运行时。可选的 `resolveDmScope` 回调在核心路由解析之前运行；其上下文包括 `cfg`、`accountId`、已解析的 `account` 以及有限白名单条目的 `principalId`。 `resolveDmRoute` 接收这些字段以及已解析的核心 `route`；它可能会返回 `{ sessionKey }` 表示共享最终存储桶，返回 `{ kind: "isolated" }` 表示未知对等点，或返回 `{ kind: "core" }` 来保留核心 `dmScope` 命名空间分析。对于 wildcard/open 策略，`principalId` 不存在，未定义的结果将报告为未验证。诊断从未发明过同行 ID。保持回调纯净且导入安全，因为只读诊断在没有通道运行时的情况下运行。
+
+    特定于通道的安全诊断可以使用 `security.collectWarnings`。旧字符串结果具有警告严重性。当生产者必须声明信息或严重严重性时，返回结构化 `SecurityAuditFinding` 形状（`checkId`、`severity`、`title`、`detail` 和可选的 `remediation`）； Doctor 和主要安全审计也使用了相同的发现。仅将 `collectAuditFindings` 用于应出现在完整安全审核中但不出现在 Doctor 中的诊断。
+
+    <Accordion id="what-createchatchannelplugin-does-for-you" title="createChatChannelPlugin 能为您做什么">
       无需手动实现底层适配器接口，只需传入声明式选项，构建器就会为你组合这些适配器：
 
       | 选项 | 作用 |
@@ -654,41 +242,48 @@ if (decision.shouldSkip) return;
       | `security.dm` | 来自配置字段的作用域 DM 安全解析器 |
       | `pairing.text` | 基于文本的 DM 配对流程，带代码交换 |
       | `threading` | 回复目标模式解析器（固定、账户作用域或自定义） |
-      | `outbound.attachedResults` | 返回结果元数据（消息 ID）的发送函数；需要一个同级的 `channel` id，以便核心为返回的投递结果加上标记 |
+      | `outbound.attachedResults` | 返回结果元数据（消息 ID）的发送函数；需要同级 `channel` id，以便核心可以标记返回的交付结果 |
 
       如果你需要完全控制，也可以传入原始适配器对象，而不是声明式选项。
 
-      原始发出适配器可以定义 `chunker(text, limit, ctx)` 函数。
-      可选的 `ctx.formatting` 携带投递时的格式化决策，例如 `maxLinesPerMessage`；发送前应先应用它，以便共享发出投递只需解析一次回复线程和分块边界。
-      当解析出了原生回复目标时，发送上下文还包括 `replyToIdSource`（`implicit` 或 `explicit`），这样负载辅助函数可以保留显式回复标签，而不会消耗隐式的一次性回复槽位。
+      原始出站适配器可以定义 `chunker(text, limit, ctx)` 函数。可选的`ctx.formatting`携带交付时间格式化决策，例如`maxLinesPerMessage`；在发送之前应用它，以便通过共享出站传递一次性解析回复线程和块边界。当解析本机回复目标时，发送上下文还包括 `replyToIdSource`（`implicit` 或 `explicit`），因此负载助手可以保留显式回复标签，而无需消耗隐式一次性回复槽。可选的 `sessionKey` 标识产生发送的主机解析会话，包括核心路由和持久发送。它是源会话，而不是从传递目标或其策略推断的会话。它无法识别当前回合是来自用户还是内部事件。
+
+      对于有效负载规划，`openclaw/plugin-sdk/channel-outbound` 导出 `createOutboundPayloadPlan(payloads, context)` 以获取原始回复文本，包括旧版 reply/audio 标签、`MEDIA:` 指令和可选的 Markdown- 图像提取。仅在生产者将这些控件解析为显式负载字段后才使用 `createStructuredOutboundPayloadPlan(payloads)`。结构化规划器不会将剩余文本重新解释为交付指令或静音令牌。下游自动回复静默策略仍然适用，并且频道保留其选择的呈现转换，包括 Markdown- 图像提取。两个操作均使用 `projectOutboundPayloadPlanForDelivery(plan)` 进行交付预测。
+
+      `final` 的投递可以在答复前附上补充通知。决定是否完成任务时，使用 `openclaw/plugin-sdk/reply-payload` 中的 `isReplyPayloadTerminalContent(payload)`。它排除推理、评论和补充状态或 TTS 有效负载，同时保留终端错误和主机标记的命令结果。它对回复通道进行分类；它不检查内容、可发送性或权限。
+
+      来自同一子路径的 `isHostNoticePayload(payload)` 可识别主机错误、状态通知和仅元数据主机诊断。代理到代理通道可以在 `messaging.transformReplyPayload` 中排除这些，同时仍然通过 `replyOptions.onAgentRunTerminalOutcome` 及其本机任务状态保留运行故障。当该回调作为排队的后续操作运行时，该回调将保持与原始请求的绑定；收集到的轮流通知每个源的终端观察者。人性化的频道应继续提供有用的主持人通知。
+
+      `replyOptions.onFollowupQueueDisposition` 报告原始源的终端队列上限拒绝（`queue-cap` 或 `queue-cap-new`）和逐出（`queue-cap-old`）。这些消息不会运行，因此通道应最终确定其状态，而无需等待 `onAgentRunTerminalOutcome`。为摘要保留的溢出仍然悬而未决；从上限报告 `queue-cap-old` 中剔除的来源。
+
+      `queuedDeliveryCorrelations` 条目通过收集批处理与其源保持绑定。其可选的 `shouldSuppressReply(payload)` 在原始路由发送之前应用，这会绕过立即回复调度程序。收集批次中的所有源策略必须同意抑制它；因此，明确的请求可以与被动消息一起保留反馈。 `onReplyDelivered` 仅在确认源发送后运行，因此重复数据删除不得将失败或待传输的发送记录为已发送。在交付和演示清理完成后，其 `begin()` 清理与 `visibleReplySent`、`failed` 和 `completed` 进行可选结算。 `completed` 识别成功执行，包括故意沉默；取消不算是从先前的故障中恢复。 `transportPending: true` 表示交付仍归传输所有，无需稍后回调此源；明确活动 UI 而不声明成功或失败，除非 `visibleReplySent` 或 `failed` 已经证明了结果。省略的结算意味着尝试被推迟，对源重试进行排队，或使用单独的源拥有的交付结果（例如网关答复批次）。将结算用于依赖交割的完成 UI；代理的成功执行回调可以在发送任何回复之前到达。
+
+      克隆主机提供的回复时，使用 `openclaw/plugin-sdk/reply-payload` 中的 `copyReplyPayloadMetadata(source, clone)` 来保留其非序列化运行时元数据。持久的成绩单传送事实无法取代该元数据。来自同一子路径的 `hasReplyPayloadFinalDeliveryCapture(payload)` 标识共享调度程序将记录其确认传送的回复。通道适配器必须跳过它们自己的这些回复的转录镜像，包括回退发送，同时仍然正常报告传送结果。
+
+      共享通道轮次生命周期拥有待定的最终交付许可。它在平台 I/O 之前记录直接发送托管，或将托管转移到持久交付队列。它的回复调度程序会跳过中间排队的声明；终端结算和重放抑制仍然属于交付生命周期。
+
+      从早期源文本恢复有效负载时，应用 `openclaw/plugin-sdk/channel-outbound` 中的 `preserveReplyPayloadMediaSelection(current, recovered)`。这保留了由传递修改器更改的媒体和附件选择，同时允许文本和回复意图独立恢复。未更改的空介质不会阻止转录本恢复。对于未更改的媒体，该操作更喜欢当前准备的参考而不是其记录的源别名，并保留不同的恢复媒体。它保留候选人的其他运行时元数据。在标准化回复上恢复或投影字段后，以 `openclaw/plugin-sdk/channel-outbound` 中的 `createStructuredOutboundPayloadPlan` 结束。这会保留文字文本和主机记录的一次性目标策略。在过滤媒体之前，使用 `openclaw/plugin-sdk/channel-outbound` 中的 `collectReplyMediaEntries(payload, projectedMediaUrls?)` 保留每个 URL 的附件元数据。将这些条目过滤在一起，以便位置名称和引用的记录保留在其媒体中。条目还可以携带`sourceUrls`以供主持人上演参考。记录传送的媒体时，仅请求传输确认接受的 URL 条目；已删除或未发送媒体的源别名不是传送证据。
+
+      带有 `ReplyPayload.textMode: "delta"` 的块携带不相交的文本块。预览适配器将其附加到当前答案通道中；省略的`textMode`表示替换快照。切勿从匹配的前缀中推断出这一点。 Finals总是替换的，耐用的sends/transcripts使用有效负载自己的`text`，而不是累积预览。文本重写传递修饰符清除了增量模式，因此其替换仍然具有权威性。将块附加到现有预览时，使用 `stripReplyPayloadResponsePrefix(payload, text)` 仅删除规范化记录的响应前缀；保留第一个块和独立持久发送的修饰文本。
+
+      流式传输可以通过可选的`onPreparedBlockReply(plan, context)`、调度器`sendPreparedReply(kind, plan)`和适配器`deliverPrepared(plan, info)`操作承载一个`OutboundPayloadPlan`。修改器根据更改的有效负载字段重建该计划，而无需重新解释文字文本。通道转弯适配器可以通过`deliverPreparedWithProviderMessageSending`转发相同的计划，持久入库交付使用`deliverStructuredInboundReplyWithMessageSendContext({ ...context, plan })`。从当前网关发布中准备好的或过滤的代理注册表不是重新加载后继者：普通的最终回复使用该网关的实时通道注册表，并且不需要切换回调。两个持久入站帮助程序都接受可选的同步 `prepareRuntimeHandoff(cfg)` 回调，以在不相关的插件重新加载后进行最终回复。通道必须拒绝已更改的已接纳发件人，并返回一个配置，该配置固定该交付的所有部分的已验证凭据。核心需要为每次后续切换提供准确的保留通道注册和未更改的通道、共享默认值和拥有插件设置。没有此回调的通道将使用后继者未更改的配置进行交付；当发送者凭证可以更改外部配置（环境、令牌文件、SecretRef 值）时添加回调。回调不得保留凭据或更改不相关的设置。现有的原始回调仍然受支持。较旧的适配器通过其原始回调接收有效负载；它必须采用准备好的操作，以避免在其自己的规范化代码中重新解析文字文本。
     </Accordion>
 
-    ### 群组工具策略适配器
+    ### <a id="group-tool-policy-adapters"></a> 群组工具策略适配器
 
-    实现了 `group.resolveToolPolicy` 并支持
-    `toolsBySender` 的频道必须将完整的 `ChannelGroupContext` 转发给其
-    共享策略解析器。尤其要注意：通过在匹配的群组和通配符作用域跳过发送者特定的覆盖项，遵守
-    `senderPolicyMode: "never"`，同时仍应用基础的 `tools` 策略。
+    实现了 `group.resolveToolPolicy` 并支持 `toolsBySender` 的频道必须将完整的 `ChannelGroupContext` 转发给其共享策略解析器。尤其要注意：通过在匹配的群组和通配符作用域跳过发送者特定的覆盖项，遵守 `senderPolicyMode: "never"`，同时仍应用基础的 `tools` 策略。
 
-    OpenClaw 仅会为受信任的非入口执行设置此模式，此类执行的发送者权限已记录在服务器拥有的信封中，例如
-    明确设置了上限的计划运行。插件不得从传入元数据推导此模式，不得将其持久化为频道状态，也不得将其暴露为配置项。添加一个适配器测试，证明该模式会跳过通配符 `toolsBySender` 条目，同时不会丢弃匹配的基础 `tools` 限制。
+    OpenClaw 仅会为受信任的非入口执行设置此模式，此类执行的发送者权限已记录在服务器拥有的信封中，例如明确设置了上限的计划运行。插件不得从传入元数据推导此模式，不得将其持久化为频道状态，也不得将其暴露为配置项。添加一个适配器测试，证明该模式会跳过通配符 `toolsBySender` 条目，同时不会丢弃匹配的基础 `tools` 限制。
 
-    ### 原生插件命令所有权
+    ### <a id="native-plugin-command-ownership"></a> 原生插件命令所有权
 
-    发布提供商原生命令目录的频道插件应使用
-    `openclaw/plugin-sdk/plugin-command-runtime`。规划目录时创建一个运行时，将其候选项与内置条目和技能条目合并，并在已注册的处理程序闭包中保留获胜的候选对象。
-    提供商目录确定后，只要至少保留一个插件候选项，就调用
-    `retainNativeCatalog(provider)`；如果监听器注册可能同步失败，则在这些监听器安装完成后调用它。此操作会记录当前的频道账户生命周期，以便注册表重新加载时，仅重启其处理程序保留了该注册表代次的账户。
-    只对该获胜者调用 `prepareDispatch(rawArgs)`，并使用 `dispatch.execute(context)` 执行返回的分发。对于保留的内置条目和技能获胜者，携带明确的
-    `{ kind: "non-plugin" }` 决策。
-    这样可以确保公布的命令及其可执行的插件注册属于同一个注册表代次。
+    发布提供者本机命令目录的通道插件应使用 `openclaw/plugin-sdk/plugin-command-runtime`。在规划目录时创建一个运行时，将其候选对象与内置条目和技能条目合并，并将获胜的候选对象保留在已注册的处理程序闭包中。插件注册表替换会耗尽并重新启动加载的通道帐户，以便它们的处理程序、命令目录和路由使用新一代。手动停止的帐户保持停止状态。普通通道配置更改仍然只会重新启动受影响的通道或帐户。自 2026.9.2 以来，`retainNativeCatalog(provider)` 已被弃用，并将在下一个重大 SDK 版本中删除；它为针对 2026.9.1 编写的调用者保留，并且现有调用仅断言捕获的注册表生成仍处于活动状态。仅对该获胜者调用 `prepareDispatch(rawArgs)`，并使用 `dispatch.execute(context)` 执行返回的调度。为保留的内置和技能获胜者进行明确的 `{ kind: "non-plugin" }` 决策。这使得广告命令及其可执行插件注册保持在同一注册表生成上。
 
-    候选项只会暴露不可变的显示／身份验证／进度元数据，以及不透明的进程本地分发。它们不会暴露处理程序、插件根目录或注册表行。分发不能跨越运行时工厂或频道，并且注册表替换后，新的执行会返回不可用结果，而不是针对替换后的注册表重新匹配命令文本。
-    已在退役前获准执行的命令可以在其捕获的代次上完成。不要序列化候选项或分发；只将其显示字段投影到提供商 API 负载中。
+    候选者仅公开不可变的 display/auth/progress 元数据以及不透明的进程本地调度。它们不公开处理程序、插件根或注册表行。调度不能跨运行时工厂或通道，并且注册表替换会使新的执行返回不可用的结果，而不是根据替换注册表重新匹配命令文本。在退休之前已经承认的命令可能会在其捕获的一代上结束。不要对候选人或派遣进行序列化；仅将其显示字段投影到提供者 API 有效负载中。
 
   </Step>
 
-  <Step title="连接入口点">
+  <Step id="wire-the-entry-point" title="连接入口点">
     创建 `index.ts`：
 
     ```typescript index.ts
@@ -698,20 +293,20 @@ if (decision.shouldSkip) return;
     export default defineChannelPluginEntry({
       id: "acme-chat",
       name: "Acme Chat",
-      description: "Acme Chat 频道插件",
+      description: "Acme Chat channel plugin",
       plugin: acmeChatPlugin,
       registerCliMetadata(api) {
         api.registerCli(
           ({ program }) => {
             program
               .command("acme-chat")
-              .description("Acme Chat 管理");
+              .description("Acme Chat management");
           },
           {
             descriptors: [
               {
                 name: "acme-chat",
-                description: "Acme Chat 管理",
+                description: "Acme Chat management",
                 hasSubcommands: false,
               },
             ],
@@ -724,14 +319,11 @@ if (decision.shouldSkip) return;
     });
     ```
 
-    将频道拥有的 CLI 描述符放在 `registerCliMetadata(...)` 中，这样 OpenClaw 就可以在根帮助中显示它们，而无需激活完整的频道运行时；同时，正常的完整加载仍然会获取这些相同的描述符用于真正的命令注册。将 `registerFull(...)` 保留给仅运行时的工作。
-    `defineChannelPluginEntry` 会自动处理注册模式的拆分。
-    如果 `registerFull(...)` 注册了网关 RPC 方法，请使用频道专属前缀。核心管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）仍保留并始终解析到 `operator.admin`。更多选项请参见
-    [入口点](/plugins/sdk-entrypoints#definechannelpluginentry)。
+    将通道拥有的 CLI 描述符放入 `registerCliMetadata(...)` 中，以便 OpenClaw 可以在根帮助中显示它们，而无需激活完整通道运行时，而正常的完整加载仍会拾取相同的描述符以进行实际命令注册。保留 `registerFull(...)` 仅用于运行时工作。 `defineChannelPluginEntry` 自动处理注册模式分割。如果 `registerFull(...)` 注册网关 RPC 方法，请使用特定于插件的前缀。核心管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）保持保留并始终解析为 `operator.admin`。有关所有选项，请参阅 [Entry Points](/plugins/sdk-entrypoints#definechannelpluginentry)。
 
   </Step>
 
-  <Step title="添加设置入口">
+  <Step id="add-a-setup-entry" title="添加设置条目">
     创建 `setup-entry.ts`，用于在引导期间进行轻量加载：
 
     ```typescript setup-entry.ts
@@ -741,28 +333,26 @@ if (decision.shouldSkip) return;
     export default defineSetupPluginEntry(acmeChatPlugin);
     ```
 
-    当频道被禁用或未配置时，OpenClaw 会加载此入口而不是完整入口。
-    这样可避免在设置流程中拉取沉重的运行时代码。
-    详见 [设置与配置](/plugins/sdk-setup#setup-entry)。
+    当通道被禁用或未配置时，OpenClaw 加载此内容而不是完整条目。它避免了在设置流程期间引入大量运行时代码。有关详细信息，请参阅 [Setup 和 Config](/plugins/sdk-setup#setup-entry)。
 
-    将设置安全导出拆分到 sidecar 模块的打包工作区频道，如果还需要一个显式的设置期运行时 setter，可以使用 `openclaw/plugin-sdk/channel-entry-contract` 中的 `defineBundledChannelSetupEntry(...)`。
+    将设置安全导出拆分为 sidecar 模块的捆绑工作区通道在还需要显式设置时运行时设置器时可以使用 `openclaw/plugin-sdk/channel-entry-contract` 中的 `defineBundledChannelSetupEntry(...)`。
 
   </Step>
 
-  <Step title="处理传入消息">
+  <Step id="handle-inbound-messages" title="处理入站消息">
     你的插件需要接收来自平台的消息并将它们转发给 OpenClaw。典型模式是使用 webhook 验证请求，然后通过频道的传入处理器分发它：
 
     ```typescript
     registerFull(api) {
       api.registerHttpRoute({
         path: "/acme-chat/webhook",
-        auth: "plugin", // 由插件管理的认证（自行验证签名）
+        auth: "plugin", // plugin-managed auth (verify signatures yourself)
         handler: async (req, res) => {
           const event = parseWebhookPayload(req);
 
-          // 你的传入处理器将消息分发给 OpenClaw。
-          // 具体接线取决于你的平台 SDK -
-          // 请参见打包的 Microsoft Teams 或 Google Chat 插件包中的真实示例。
+          // Your inbound handler dispatches the message to OpenClaw.
+          // The exact wiring depends on your platform SDK -
+          // see a real example in the bundled Microsoft Teams or Google Chat plugin package.
           await handleAcmeChatInbound(api, event);
 
           res.statusCode = 200;
@@ -777,10 +367,18 @@ if (decision.shouldSkip) return;
       传入消息处理是频道特定的。每个频道插件都拥有自己的传入流水线。查看打包的频道插件（例如 Microsoft Teams 或 Google Chat 插件包）以了解真实模式。
     </Note>
 
+    直接消息适配器可以使用 `openclaw/plugin-sdk/channel-inbound` 中的 `dispatchInboundDirectDm`。其可选的同步 `assertAuthority: () => void` 回调通过异步准备携带频道所有者的实时发送者和生命周期检查。在让步之前捕获所选帐户、对等身份和策略；回调必须检查它们当前的权限，而不仅仅是比较已保存的令牌。在当前主机上，它在会话记录之前、元数据事务和提交准入时以及代理分派之前运行。抛出拒绝挂起的效果。回调是临时权限；切勿将其序列化或替换为 `inboundAccessAuthorized: true`。
+
+    相同的回调可用于通道转弯计划和准备好的转弯。直接会话录音调用者可以通过`assertAuthority`；元数据所有者以 `assertCommitAllowed` 的形式接收它，并使用其现有的写入者许可。元数据故障保留其现有的尽力报告，而后续的调度检查仍然拒绝撤销权限。较旧的主机可能会忽略这些附加字段：它们的存在不是能力协商。主机准备后和元数据提交时的检查需要实现此合约的主机。插件还必须检查它们直接发起的效果的实时权限，例如通知和提供商请求。
+
+    向 `auth: "gateway"` 注册的路由使用网关的凭据检查。在处理程序公开受保护的数据、执行突变或启动其他副作用之前，完成读取和验证其主体并等待排队的工作，然后从 `openclaw/plugin-sdk/plugin-runtime` 调用 `await getPluginRuntimeGatewayRequestScope()?.revalidate?.()`。请求范围的功能通过网关身份验证所有者重新检查已承认的设备凭证或签名的 Control UI cookie 及其原始范围。 Cookie 检查包括过期时间、当前身份验证生成以及当前配置文件角色上限。有效的角色策略更改会使正在进行的 cookie 请求无效，因此先前准备的数据不会在过时的权限下泄露。如果授权过期、被撤销、轮换或缩小范围，它会写入标准 HTTP 401 错误并抛出异常。让拒绝阻止处理程序；错误处理程序不得替换已结束的响应。该功能随着 HTTP 响应而过期，并且对于其他身份验证路径不存在。
+
+    该检查授权即将开始的工作。它不会取消已经正在进行的外部操作。在以后的独立突变之前再次重新验证，例如在中继 I/O. 后保存已发布或导入的配置文件
+
   </Step>
 
 <a id="step-6-test"></a>
-<Step title="测试">
+<Step id="test" title="测试">
 在 `src/channel.test.ts` 中编写就近测试：
 
     ```typescript src/channel.test.ts
@@ -788,7 +386,7 @@ if (decision.shouldSkip) return;
     import { acmeChatPlugin } from "./channel.js";
 
     describe("acme-chat plugin", () => {
-      it("从配置中解析账户", () => {
+      it("resolves account from config", () => {
         const cfg = {
           channels: {
             "acme-chat": { token: "test-token", allowFrom: ["user1"] },
@@ -798,7 +396,7 @@ if (decision.shouldSkip) return;
         expect(account.token).toBe("test-token");
       });
 
-      it("检查账户时不具现化密钥", () => {
+      it("inspects account without materializing secrets", () => {
         const cfg = {
           channels: { "acme-chat": { token: "test-token" } },
         } as any;
@@ -807,7 +405,7 @@ if (decision.shouldSkip) return;
         expect(result.tokenStatus).toBe("available");
       });
 
-      it("报告缺失配置", () => {
+      it("reports missing config", () => {
         const cfg = { channels: {} } as any;
         const result = acmeChatPlugin.config.inspectAccount!(cfg, undefined);
         expect(result.configured).toBe(false);
@@ -824,28 +422,112 @@ if (decision.shouldSkip) return;
 </Step>
 </Steps>
 
-## 文件结构
+## <a id="file-structure"></a> 文件结构
 
 ```text
 <bundled-plugin-root>/acme-chat/
-├── package.json              # openclaw.channel 元数据
-├── openclaw.plugin.json      # 带有配置模式的清单
+├── package.json              # openclaw.channel metadata
+├── openclaw.plugin.json      # Manifest with config schema
 ├── index.ts                  # defineChannelPluginEntry
 ├── setup-entry.ts            # defineSetupPluginEntry
-├── api.ts                    # 公共导出（可选）
-├── runtime-api.ts            # 内部运行时导出（可选）
+├── api.ts                    # Public exports (optional)
+├── runtime-api.ts            # Internal runtime exports (optional)
 └── src/
-    ├── channel.ts            # 通过 createChatChannelPlugin 实现的 ChannelPlugin
-    ├── channel.test.ts       # 测试
-    ├── client.ts             # 平台 API 客户端
-    └── runtime.ts            # 运行时存储（如需要）
+    ├── channel.ts            # ChannelPlugin via createChatChannelPlugin
+    ├── channel.test.ts       # Tests
+    ├── client.ts             # Platform API client
+    └── runtime.ts            # Runtime store (if needed)
 ```
 
-## 高级主题
+## <a id="delegated-context-reads"></a> 委托上下文读取
+
+捆绑操作可以证明提供者本地交付别名和与 `actions.messageActionTargetAliases[action].matchesCurrentConversationAsync` 的当前对话之间的等效性。回调接收 `{ args, accountId, toolContext }` 并返回 `Promise<boolean>`。主机仅在检查当前提供者、帐户和任何其他请求的目标后才等待它。外部注册不能使用此回调来绕过精确当前匹配。成功的异步匹配不会取代实时调用者或注册机构；主机在发货前重新检查。
+
+异步别名证明需要加载所选的捆绑注册。活性检查使用其捕获的所有者权限和加载的注册表；在注册终止后，他们永远不会发现或加载捆绑的后备。正常的捆绑运行时注册可以满足此要求。保留的同步路径保留其现有的兼容性行为。
+
+当两者都存在时，异步回调优先于 `matchesCurrentConversation`。错误的结果或被拒绝的承诺永远不会回退到遗留回调。对于存储支持的匹配，同步回调已被弃用，但旧插件和主机仍受支持，并且没有计划删除版本。严格保留其返回类型 `boolean`：较旧的主机将返回的承诺视为真实的，而不是等待它。异步同伴之前的主机会忽略新字段并仅使用同步回调。因此，仅异步别名无法证明这些主机上的等效性；精确的标准化目标匹配仍然有效。
+
+经过验证的官方安装的插件可以将支持的对话、元数据和附件读取委托给提供商拥有的访问检查。通道源请求需要服务器拥有的当前提供者、帐户和对话上下文。经过身份验证的仪表板用户还可以在没有本机通道上下文的情况下使用提供商拥有的检查，包括隐身会话和重新连接后的新消息。普通运输损失不会取消已允许的转弯。该权限仅属于该回合；后台工作和计划​​作业保持各自的授权。正常聊天、会话参与和工具权限以及提供商帐户、目标、操作和请求者策略仍然有效。
+
+帐户创建的计划读取使用实时作业的记录创建者帐户和来源。外部创建者来源限制对该提供者的读取；丢失或未知来源无法授权读取。省略 `accountId` 将选择记录的创建者帐户，包括在提供者的默认帐户更改之后。提供者目标和行动政策仍然有效。重授权和执行规则参见[预定工具策略](/automation/cron-jobs/payloads#agent-turn-options)。
+
+适配器列出了支持 `actions.readAuthorityActions` 中的生命周期栅栏的操作。其 `actions.providerOwnedReadGates` 声明单独标识了提供商拥有其许可的操作。主持人还将该操作归类为合格；稍后添加的主机不会选择现有适配器加入其中。只有经过主办方验证的官方注册才有资格。 Discord 支持 `read`、`search`、`reactions`、`list-pins`、`thread-list`、`channel-info`、`permissions`、`member-info`、 `role-info`、`emoji-list`、`channel-list`、`voice-status` 和 `event-list`。 Feishu 支持 `read`、`reactions`、`list-pins`、`member-info`、`channel-info`、`channel-list` 和配置的 `sticker-search`。 Matrix 支持 `read`、`reactions`、`list-pins`、`emoji-list`、`member-info` 和 `channel-info`。 Mattermost 支持 `read`。 Slack 支持 `read`、`reactions`、`list-pins`、`member-info`、`emoji-list` 和 `download-file`。较旧的外部适配器和未经验证的插件保留精确当前对话限制。这些声明仅适用于列出的读取操作。
+
+委派的 Slack 成员信息仅限于同一帐户的当前请求者，并且表情符号发现使用受信任的工作区。两种元数据操作都不需要通道目标。
+
+Microsoft Teams支持[Teams访问下的`read`、`search`、`reactions`、`list-pins`、`member-info`、`channel-info`和`channel-list`规则](/channels/msteams/access-control)。
+
+Discord 的 `permissions` 操作检查机器人对允许通道的权限。公会范围的元数据读取要求所选帐户的当前配置允许所请求的公会，并具有不受限制或通配符通道访问权限。少数例外是活动的 `thread-list` 命名父级 `channelId`：必须允许父级，并且其元数据必须在公会范围的获取之前确认所请求的公会。结果仅包括那些返回线程的父记录和成员记录下允许的线程。没有父级的活跃列表仍然需要公会范围的频道访问；存档列表保留其通道范围的路径。只有直接操作员才能收到 `channel-list` 的过滤结果放宽；委派的 `channel-list` 呼叫者仍然需要公会范围内的通道访问权限。
+
+对于选择加入的适配器，传输合同是强制性的：
+
+- 在提交每个请求时从 `openclaw/plugin-sdk/fetch-runtime` 捕获 `captureChannelReadAuthority()`，然后将其传递到共享队列。
+- 通过等待和重试保留确切的回调；在任何异步 DNS 或调度程序准备之后，在每个提供程序请求（包括目标查找请求）之前立即调用它。
+- 回调缺失意味着此调用没有额外的读取权限栅栏。抛出的错误会停止请求；不要使用新的回调重试。
+
+在将请求传递到共享队列之前，捆绑传输还会从 `openclaw/plugin-sdk/fetch-runtime` 捕获 `captureEffectAuthority()`。使用其 `run` 方法在排队的延续中恢复捕获的范围。异步准备后，调用 `effect.initiate(() => provider.send(...))` 并在该回调内运行现有的同步断言。当提供者发出调用时、在其响应之前，所有者释放该间隔。每次重试或单独提交的块都会再次调用 `initiate` 以准备新的使用。完全准备好的同步批处理（例如 Twitch 的 SDK 调用或 IRC 的原始行）在第一次切换之前获取一次使用，并提交该回调内的所有部分。切勿预先获取多个持有的使用：所有者的 FIFO 等待先前的使用释放。 SDK切换后的库工作属于已启动的操作。当没有发送任何内容时，保留准备拒绝不变。一旦部分被接受，以后的拒绝、传输失败和交付观察者失败必须在部分交付错误中保留所有已接受的收据，包括当调用者省略其进度回调时。等待启动的批次稳定后再报告其结果。仅在输入 SDK 或传输调用后应用特定于提供商的故障标准化。
+
+启动边界是对提供程序 SDK、CLI 运行程序或本机传输的调用。 OpenClaw 在该调用之前完成其异步准备，并且在等待提供者响应时不保持间隔。切换后，提供程序库仍然可以在内部进行排队、身份验证、加密、连接或重试；这些窗口是启动操作的一部分。应用程序重试和单独提交的块各自获得新的用途。
+
+| 捆绑运输                                                             | 启动切换                                                                 | 交接后工作                                                |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| A2A、Google Chat、Nextcloud Talk、Tlon 和其他共享受保护的 HTTP 呼叫者 | DNS/proxy 准备后获取                                                  | 获取实施和网络                               |
+| 巴斯和 Nostr                                                                | 继电器 `publish` 或 `send`                                                          | 中继连接承诺，WebSocket 缓冲，和网络 I/O    |
+| ClickClack、Zalo、Zalo 个人                                               | 调度准备后的每个获取回调                                     | 获取实施和网络                               |
+| Discord                                                                       | REST 调度程序等待后获取                                                   | 获取实施和网络                               |
+| Feishu                                                                        | 代理和分派准备后的 HTTP 客户端方法                            | Axios 转换、拦截器、重定向和网络         |
+| iMessage 本地 CLI                                                            | CLI 跑步者在 media/target 准备后呼叫                                     | 生成代理、CLI 执行、桥接和消息传递        |
+| iMessage RPC                                                                  | 写入所选进程的标准输入                                              | 管道缓冲、local/SSH CLI、桥接和消息传递      |
+| IRC                                                                           | 预先计算的原始 PRIVMSG 批次；显式出站 JOIN                              | 套接字缓冲和网络                                   |
+| LINE                                                                          | 每条消息授权后获取                                             | Undici 和网络                                             |
+| Matrix                                                                        | DNS、加密、调度准备后获取；每个重定向重新获取        | 获取实施和网络                               |
+| Mattermost 和 SMS                                                            | 共享受保护的提取，或注入的提取回调                               | 获取实施和网络                               |
+| Microsoft Teams                                                               | Teams 普通中间件调用SDK的下一个请求操作                     | SDK token/config 准备、拦截器、axios和联网 |
+| QA 频道和 Synology 聊天                                                  | Node HTTP 请求和正文提交                                              | 套接字连接、缓冲和网络                      |
+| 礁                                                                          | 每个继电器取                                                                   | 获取实施和网络                               |
+| Signal HTTP/container                                                         | Node HTTP request/body 提交或 REST 获取                                    | HTTP 传输和信号-cli 处理                          |
+| Signal Unix 套接字                                                            | 连接后套接字写入                                                      | 套接字缓冲和 signal-cli 处理                        |
+| Slack                                                                         | SDK 队列等待后获取回调                                               | 获取实施和网络                               |
+| Telegram                                                                      | 每个 Undici 调度员提交的资料；注入获取回调                         | Undici 或注入实现                                 |
+| Twitch                                                                        | 预先计算的同步 `ChatClient.say` 调用批次                            | 双速率限制队列、IRC 客户端和网络              |
+| WhatsApp                                                                      | FIFO之后的百利甜酒`sendMessage`，或`sendPresenceUpdate`；两者都重新检查套接字 | Baileys media/session 准备、加密和联网     |
+
+Matrix 的客户端拥有的加密维护使用其客户端生命周期，而不是保留已完成的消息调用。它的消息获取仍然获取它们自己当前的用途。独立所有者可以使用 `withEffectAuthority` 恢复明确捕获的范围；不存在的作用域不提供消息权限。
+
+主机将回调绑定到所选注册及其活动生命周期。本地消息工具和网关代理请求保留原始运行和转向权限。选择加入的捆绑读取使用相同的生命周期围栏，同时保留现有的提供商拥有的准入规则。捆绑的工件或遗漏的范围注册不能提供该权限；委托执行需要活动的注册实例。在调用者或插件权限被撤销后，主机拒绝陈旧的操作结果和错误。完成的操作也会关闭其捕获的回调。栅栏阻止后续请求；它无法撤消已发送给提供商的请求。没有配置开关或插件提供的信任字段可以创建此权限。
+
+Slack 附件下载通过 URL 刷新、二进制传输、媒体存储发布、图像处理和最终主机完成保留原始读取权限。仅当读取成功时才会保留现有媒体工件。如果完成被拒绝，清理仅删除该操作创建的文件；先前存在的文件、替换文件和共享文件将被保留。源中止信号也到达调用者提供的二进制传输。
+
+## <a id="scheduled-channel-administration"></a> 预定频道管理
+
+`ChannelMessageActionAdapter` 通过 `openclaw/plugin-sdk/channel-contract` 公开可选的 `writeAuthorityActions?: readonly ChannelMessageActionName[]` 声明。它标识其传输保留主机实时请求权限的写入操作。通过 `describeMessageTool` 宣传操作或声明读取支持并不建立该合同。
+
+主机单独选择符合条件的操作，并需要有效的捆绑或加载程序验证的官方注册。捆绑的工件后备或插件自己的信任声明无法提供注册权限。 Discord 声明 `writeAuthorityActions: ["channel-edit", "delete", "edit", "pin", "unpin"]`。其他操作名称不会从此声明获得预定访问权限。
+
+预定的 `channel-edit`，包括其现有的通道和线程编辑变体，接受受信任的操作员作业权限或帐户作业的经过身份验证的本机请求者。该声明不能将帐户模式作业提升为操作员权限，也不能取代经过身份验证的请求者身份和当前发送者权限检查。
+
+对于本机帐户编辑，主机会提供经过验证的 `requesterAccountId` 和 `requesterSenderId` 以及 `senderIsOwner: false`。当前没有可放入 `toolContext` 中的入站对话。适配器使用这些主机提供的事实来进行正常的当前请求者权限检查；模型参数和切换回调的存在无法提供请求者身份。主机将保存的本机请求者与早期的完整工具表面读取源分开。发现可以使用这两个事实来呈现配置的操作，但本机请求者不会建立读取访问权限。没有可用的本地事实的作业在调用提供者之前会收到重新授权指导。
+
+预定的 `edit`、`delete`、`pin` 和 `unpin` 支持可信操作员作业和帐户作业。帐户作业必须使用其记录的创建者帐户和已知的创建者来源；外部来源还将其绑定到记录的提供者。其交付目标不提供授权。这些操作还需要适配器的现有 `providerOwnedReadGates` 声明并保留其目标检查。账户作业使用委托目标策略；可信作业使用操作员目标策略。作业的当前执行策略和 `toolsAllow`、帐户限制、启用的操作和提供程序权限仍然适用。
+
+当每个新的计划消息调用被允许时，主机评估当前的工具策略，包括全局、代理、配置文件和选定的模型提供者策略。配置更改控制下一次调用；它们不会追溯更改已许可操作的配置。撤销或缩小作业本身、取消其运行或结束调用者或插件权限仍然会阻止稍后的提供程序请求并在该操作中重试。
+
+主机在目录请求之前承认频道名称解析，并通过写入保留选定的注册。它的准备读取范围在写入开始之前关闭，因此读取完成检查不能丢弃已接受的突变结果。
+
+选择加入的适配器必须遵守现有的 `ChannelMessageActionContext.assertDirectAdapterHandoff` 回调：
+
+- 通过异步准备、权限和目标查找、速率限制队列和重试保留主机提供的准确回调。
+- 在等待准备之后和每个实际提供者请求之前同步调用它，包括查找请求和每次重试尝试。
+- 如果抛出，则停止该请求。不要抑制拒绝、替换回调或将被拒绝的操作放入可重放恢复中。
+- 让提交的请求得到解决并保留其结果，包括在等待响应期间授权到期时确认的突变。过期的权限会阻止以后的请求；它不能导致已接受的突变被重播。
+
+此可选字段使旧适配器保持源兼容。省略或空的声明会使新启用的计划操作被拒绝。现有的捆绑提供商拥有的交互路径保留其准入规则。要支持新的已安装插件路径，请升级 OpenClaw 和插件，实现上面的请求和重试检查，仅声明涵盖的操作，并加载更新的注册。现有的直接操作员和互动操作保留其准入规则。升级插件不会向现有作业授予额外权限。
+
+## <a id="advanced-topics"></a> 高级主题
 
 <CardGroup cols={2}>
-  <Card title="线程选项" icon="git-branch" href="/plugins/sdk-entrypoints#registration-mode">
-    固定、按账户作用域或自定义回复模式
+  <Card title="螺纹选项" icon="git-branch" href="/plugins/sdk-channel-plugins#what-createchatchannelplugin-does-for-you">
+    `threading.topLevelReplyToMode`：固定、帐户范围或自定义回复模式
   </Card>
   <Card title="消息工具集成" icon="puzzle" href="/plugins/architecture#channel-plugins-and-the-shared-message-tool">
     describeMessageTool 和动作发现
@@ -853,8 +535,8 @@ if (decision.shouldSkip) return;
   <Card title="目标解析" icon="crosshair" href="/plugins/architecture-internals#channel-target-resolution">
     inferTargetChatType、looksLikeId、reservedLiterals、resolveTarget
   </Card>
-  <Card title="运行时辅助" icon="settings" href="/plugins/sdk-runtime">
-    通过 api.runtime 提供 TTS、STT、媒体、subagent
+  <Card title="运行时辅助工具" icon="settings" href="/plugins/sdk-runtime">
+    TTS、STT、媒体、子代理（通过 api.runtime）
   </Card>
   <Card title="频道入站 API" icon="bolt" href="/plugins/sdk-channel-inbound">
     共享入站事件生命周期：ingest、resolve、record、dispatch、finalize
@@ -862,17 +544,84 @@ if (decision.shouldSkip) return;
 </CardGroup>
 
 <Note>
-某些打包辅助接缝仍然存在，用于打包插件维护和兼容性。对于新的频道插件，它们不是推荐模式；除非你正在直接维护该打包插件家族，否则应优先使用通用 SDK 表面的 channel/setup/reply/runtime 子路径。
+一些捆绑的帮助器接口仍然存在，用于捆绑插件的维护和兼容性。它们不是新频道插件的推荐模式；更喜欢来自公共 SDK 表面的通用 channel/setup/reply/runtime 子路径，除非您直接维护该捆绑插件系列。
 </Note>
 
-## 下一步
+## <a id="next-steps"></a> 下一步
 
-- [Provider 插件](/plugins/sdk-provider-plugins) - 如果你的插件还提供模型
-- [SDK 概览](/plugins/sdk-overview) - 完整的子路径导入参考
-- [SDK 测试](/plugins/sdk-testing) - 测试工具和契约测试
-- [插件清单](/plugins/manifest) - 完整的清单架构.schemas。
+- [Provider Plugins](/plugins/sdk-provider-plugins) - 如果您的插件还提供模型
+- [SDK Overview](/plugins/sdk-overview) - 完整的子路径导入参考
+- [SDK Testing](/plugins/sdk-testing) - 测试实用程序和合同测试
+- [Plugin Manifest](/plugins/manifest) - 完整清单模式
 
-## 相关内容
+## <a id="where-each-section-moved"></a> 各部分移动的地方
+
+单页版本的每个部分现在都位于此页面或下面的七个子页面之一上。单页版本中的锚点仍然在这里解析。
+
+### <a id="channel-message-adapter"></a> 通道消息适配器
+
+[频道消息适配器](/plugins/sdk-channel-plugins/message-adapter) — `message` 适配器表面：实时和终结器功能、进度可见性、评论传送和本机 TTS 语音传送。
+
+- <a id="message-adapter"></a>[消息适配器](/plugins/sdk-channel-plugins/message-adapter#message-adapter)
+- <a id="progress-visibility-acceptance"></a>[进度可见性验收](/plugins/sdk-channel-plugins/message-adapter#progress-visibility-acceptance)
+- <a id="quiet-progress-presentation"></a>[安静的进度演示](/plugins/sdk-channel-plugins/message-adapter#quiet-progress-presentation)
+- <a id="quiet-acknowledgement-and-coalesced-progress"></a>[安静的确认和合并进度](/plugins/sdk-channel-plugins/message-adapter#quiet-acknowledgement-and-coalesced-progress)
+- <a id="commentary-delivery-ownership"></a>[评论交付所有权](/plugins/sdk-channel-plugins/message-adapter#commentary-delivery-ownership)
+- <a id="tts-voice-delivery"></a>[TTS 语音发送](/plugins/sdk-channel-plugins/message-adapter#tts-voice-delivery)
+
+### <a id="durable-channel-ingress"></a> 耐用通道入口
+
+[持久通道入口](/plugins/sdk-channel-plugins/durable-ingress) - 入口解析器、持久队列和重播重复数据删除、传输保留类、至少一次副作用以及重新加载和重新启动合约。
+
+- <a id="inbound-ingress-(experimental)"></a><a id="inbound-ingress-experimental"></a>[入站入口（实验）](/plugins/sdk-channel-plugins/durable-ingress#inbound-ingress-experimental)
+- <a id="durable-ingress-and-replay-dedupe"></a>[持久入口和重放重复数据删除](/plugins/sdk-channel-plugins/durable-ingress#durable-ingress-and-replay-dedupe)
+- <a id="transport-classes-and-retention"></a>[传输类别和保留](/plugins/sdk-channel-plugins/durable-ingress#transport-classes-and-retention)
+- <a id="at-least-once-side-effects"></a>[至少一次副作用](/plugins/sdk-channel-plugins/durable-ingress#at-least-once-side-effects)
+- <a id="dynamic-policy-publication"></a>[政策动态发布](/plugins/sdk-channel-plugins/durable-ingress#dynamic-policy-publication)
+- <a id="account-scoped-restart-contract"></a>[账户范围重启合约](/plugins/sdk-channel-plugins/durable-ingress#account-scoped-restart-contract)
+
+### <a id="channel-status-and-media"></a> 频道状态和媒体
+
+[通道状态和媒体](/plugins/sdk-channel-plugins/status-and-media) - 通道运行时状态信号以及媒体限制、托管媒体存储、入站媒体事实和本机负载整形。
+
+- <a id="runtime-lifecycle-status"></a>[运行时生命周期状态](/plugins/sdk-channel-plugins/status-and-media#runtime-lifecycle-status)
+- <a id="typing-indicators"></a>[打字指示器](/plugins/sdk-channel-plugins/status-and-media#typing-indicators)
+- <a id="media-source-params"></a>[媒体源参数](/plugins/sdk-channel-plugins/status-and-media#media-source-params)
+- <a id="native-payload-shaping"></a>[本机有效负载整形](/plugins/sdk-channel-plugins/status-and-media#native-payload-shaping)
+
+### <a id="channel-sessions-and-bindings"></a> 频道会话和绑定
+
+[频道会话和绑定](/plugins/sdk-channel-plugins/sessions-and-bindings) — 会话对话语法、对话路由所有权和帐户范围的对话绑定支持。
+
+- <a id="session-conversation-grammar"></a>[会话会话语法](/plugins/sdk-channel-plugins/sessions-and-bindings#session-conversation-grammar)
+- <a id="conversation-route-ownership"></a>[会话路由所有权](/plugins/sdk-channel-plugins/sessions-and-bindings#conversation-route-ownership)
+- <a id="account-scoped-conversation-binding-support"></a>[帐户范围的对话绑定支持](/plugins/sdk-channel-plugins/sessions-and-bindings#account-scoped-conversation-binding-support)
+
+### <a id="channel-approvals"></a> 渠道批准
+
+[渠道批准](/plugins/sdk-channel-plugins/approvals) — 批准功能、批准身份验证、有效负载生命周期和设置指南、本机批准交付以及更窄的批准运行时子路径。
+
+- <a id="approvals-and-channel-capabilities"></a>[批准和渠道能力](/plugins/sdk-channel-plugins/approvals#approvals-and-channel-capabilities)
+- <a id="approval-auth"></a>[批准授权](/plugins/sdk-channel-plugins/approvals#approval-auth)
+- <a id="payload-lifecycle-and-setup-guidance"></a>[有效负载生命周期和设置指南](/plugins/sdk-channel-plugins/approvals#payload-lifecycle-and-setup-guidance)
+- <a id="native-approval-delivery"></a>[原生批准交付](/plugins/sdk-channel-plugins/approvals#native-approval-delivery)
+- <a id="narrower-approval-runtime-subpaths"></a>[较窄的审批运行时子路径](/plugins/sdk-channel-plugins/approvals#narrower-approval-runtime-subpaths)
+
+### <a id="channel-setup-and-config"></a> 通道设置和配置
+
+[通道设置和配置](/plugins/sdk-channel-plugins/setup-and-config) — 设置子路径、帐户模式和继承，以及用于配置、入站、目标和线程的其他窄通道子路径。
+
+- <a id="setup-subpaths"></a>[设置子路径](/plugins/sdk-channel-plugins/setup-and-config#setup-subpaths)
+- <a id="account-schemas-and-inheritance"></a>[帐户架构和继承](/plugins/sdk-channel-plugins/setup-and-config#account-schemas-and-inheritance)
+- <a id="other-narrow-channel-subpaths"></a>[其他窄通道子路径](/plugins/sdk-channel-plugins/setup-and-config#other-narrow-channel-subpaths)
+
+### <a id="channel-mention-policy"></a> 频道提及政策
+
+[频道提及策略](/plugins/sdk-channel-plugins/mention-policy) - 插件拥有的提及证据收集加上共享入站提及策略评估。
+
+- <a id="inbound-mention-policy"></a>[入站提及政策](/plugins/sdk-channel-plugins/mention-policy#inbound-mention-policy)
+
+## <a id="related"></a> 相关内容
 
 - [插件 SDK 设置](/plugins/sdk-setup)
 - [构建插件](/plugins/building-plugins)

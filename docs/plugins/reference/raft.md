@@ -1,22 +1,25 @@
 ---
 summary: "用于安全 CLI 唤醒桥接的 OpenClaw Raft 通道插件。"
 read_when:
-  - 你正在安装、配置或审计 raft 插件
-title: "Raft 插件"
+  - You are installing, configuring, or auditing the raft plugin
+title: "Raft plugin reference"
 ---
 
-# Raft 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于安全 CLI 唤醒桥接的 OpenClaw Raft 通道插件。
 
 ## 分发
 
-- 包：`@openclaw/raft`
-- 安装渠道：npm；ClawHub
+- Package: `@openclaw/raft`
+- Install route: npm or ClawHub: `clawhub:@openclaw/raft`
 
 ## 表面
 
-channels: `raft`
+- Channels: `raft`
 
 ## 相关文档
 

@@ -1,22 +1,26 @@
 ---
 summary: "具有自动回忆、自动捕获和向量搜索功能的 OpenClaw LanceDB 支持的长期记忆插件。"
 read_when:
-  - 你正在安装、配置或审计 memory-lancedb 插件
-title: "Memory Lancedb 插件"
+  - You are installing, configuring, or auditing the memory-lancedb plugin
+title: "Memory Lancedb plugin reference"
 ---
 
-# Memory Lancedb 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 具有自动回忆、自动捕获和向量搜索功能的 OpenClaw LanceDB 支持的长期记忆插件。
 
 ## 分发
 
-- 包：`@openclaw/memory-lancedb`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/memory-lancedb`
+- Install route: npm or ClawHub: `clawhub:@openclaw/memory-lancedb`
 
 ## 表面
 
-contracts: `tools`
+- CLI commands: `openclaw ltm`
+- Contracts: `tools`
 
 ## 相关文档
 

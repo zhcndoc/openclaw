@@ -1,22 +1,27 @@
 ---
 summary: "OpenClaw Discord 频道插件，用于频道、私信、命令和应用事件。"
 read_when:
-  - 你正在安装、配置或审计 discord 插件
-title: "Discord 插件"
+  - You are installing, configuring, or auditing the discord plugin
+title: "Discord plugin reference"
 ---
 
-# Discord 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw Discord 频道插件，用于频道、私信、命令和应用事件。
 
 ## 分发
 
-- 包：`@openclaw/discord`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/discord`
+- Install route: npm or ClawHub: `clawhub:@openclaw/discord`
 
 ## 接入层
 
-channels: `discord`; contracts: `tools`, `transcriptSourceProviders`; skills
+- Channels: `discord`
+- Contracts: `transcriptSourceProviders`
+- Skills
 
 ## 相关文档
 

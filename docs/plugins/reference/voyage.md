@@ -1,19 +1,22 @@
 ---
-summary: "添加记忆嵌入提供器支持。"
+summary: "Adds embedding provider support, including memory search."
 read_when:
-  - 你正在安装、配置或审核 voyage 插件
-title: "Voyage 插件"
+  - You are installing, configuring, or auditing the voyage plugin
+title: "Voyage plugin reference"
 ---
 
-# Voyage 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-添加记忆嵌入提供器支持。
+Adds embedding provider support, including memory search.
 
 ## 分发
 
-- 包：`@openclaw/voyage-provider`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/voyage-provider`
+- Package: `@openclaw/voyage-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/voyage-provider`
 
 ## 接口
 
-contracts: `memoryEmbeddingProviders`
+- Contracts: `embeddingProviders`

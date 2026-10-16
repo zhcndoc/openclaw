@@ -1,22 +1,25 @@
 ---
 summary: "OpenClaw Cohere 提供程序插件。"
 read_when:
-  - 你正在安装、配置或审计 cohere 插件
-title: "Cohere 插件"
+  - You are installing, configuring, or auditing the cohere plugin
+title: "Cohere plugin reference"
 ---
 
-# Cohere 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw Cohere 提供程序插件。
 
 ## 分发
 
-- 软件包：`@openclaw/cohere-provider`
-- 安装途径：npm；ClawHub：`clawhub:@openclaw/cohere-provider`
+- Package: `@openclaw/cohere-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/cohere-provider`
 
 ## 接口
 
-providers: `cohere`
+- Providers: `cohere`
 
 ## 相关文章
 

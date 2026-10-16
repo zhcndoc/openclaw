@@ -1,33 +1,33 @@
 ---
 summary: "Hugging Face 推理设置（认证 + 模型选择）"
 read_when:
-  - 你想在 OpenClaw 中使用 Hugging Face Inference
-  - 你需要 HF token 环境变量或 CLI 认证选项
+  - "您想要将 Hugging Face 推理与 OpenClaw 一起使用"
+  - "你需要 HF token 环境变量或 CLI 认证选项"
 title: "Hugging Face（推理）"
 ---
 
-[Hugging Face Inference Providers](https://huggingface.co/docs/inference-providers) 提供了一个与 OpenAI 兼容的聊天补全路由器，它使用一个 token 将多个托管模型（DeepSeek、Llama 等）统一接入。OpenClaw 只会与 **聊天补全端点** 通信；对于文本生成图像、嵌入或语音，请直接使用 [HF inference clients](https://huggingface.co/docs/api-inference/quicktour)。
+[Hugging Face 推理 Providers](https://huggingface.co/docs/inference-providers) 在一个令牌下的许多托管模型（DeepSeek、Llama 等）前面公开了一个 OpenAI- 兼容的聊天完成路由器。 OpenClaw 仅与 **聊天完成端点进行对话**；对于文本到图像、嵌入或语音，请直接使用 [HF 推理客户端](https://huggingface.co/docs/api-inference/quicktour)。
 
-| 属性         | 值                                                                                                                          |
+| 属性     | 值                                                                                                                       |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Provider id  | `huggingface`                                                                                                               |
-| 插件         | bundled（默认启用，无需安装）                                                                                                |
-| 认证环境变量 | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`（细粒度 token）                                                                       |
-| API          | OpenAI 兼容（`https://router.huggingface.co/v1`）                                                                           |
-| 计费         | 单个 HF token；[定价](https://huggingface.co/docs/inference-providers/pricing) 遵循提供商费率，并提供免费层级                          |
+| 提供方 id  | `huggingface`                                                                                                               |
+| 插件       | bundled（默认启用，无需安装）                                                                               |
+| 认证环境变量 | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`（细粒度 token）                                                                  |
+| API          | OpenAI-兼容（`https://router.huggingface.co/v1`）                                                                      |
+| 计费      | 单个 HF token；[定价](https://huggingface.co/docs/inference-providers/pricing) 遵循提供商费率，并提供免费层级 |
 
-## 开始使用
+## <a id="getting-started"></a> 入门
 
 <Steps>
-  <Step title="创建细粒度 token">
-    前往 [Hugging Face Settings Tokens](https://huggingface.co/settings/tokens/new?ownUserPermissions=inference.serverless.write&tokenType=fineGrained) 并创建一个新的细粒度 token。
+  <Step id="create-a-fine-grained-token" title="创建细粒度令牌">
+    Go 至 [H 修改 Face 设置 Tokens](https://huggingface.co/settings/tokens/new?ownUserPermissions=inference.serverless.write&tokenType=fineGrained) 并创建新的细粒度令牌。
 
     <Warning>
     该 token 必须启用 **Make calls to Inference Providers** 权限，否则 API 请求将被拒绝。
     </Warning>
 
   </Step>
-  <Step title="运行引导配置">
+  <Step id="run-onboarding" title="运行入门引导培训">
     在提供商下拉菜单中选择 **Hugging Face**，然后在提示时输入你的 API key：
 
     ```bash
@@ -35,7 +35,7 @@ title: "Hugging Face（推理）"
     ```
 
   </Step>
-  <Step title="选择默认模型">
+  <Step id="select-a-default-model" title="选择默认模型">
     在 **默认 Hugging Face 模型** 下拉菜单中选择一个模型。只要你的 token 有效，列表就会从 Inference API 加载；否则 OpenClaw 会显示下面内置的目录。你的选择会保存为 `agents.defaults.model.primary`：
 
     ```json5
@@ -49,14 +49,14 @@ title: "Hugging Face（推理）"
     ```
 
   </Step>
-  <Step title="验证模型是否可用">
+  <Step id="verify-the-model-is-available" title="验证模型是否可用">
     ```bash
     openclaw models list --provider huggingface
     ```
   </Step>
 </Steps>
 
-### 非交互式设置
+### <a id="non-interactive-setup"></a> 非交互式设置
 
 ```bash
 openclaw onboard --non-interactive --accept-risk --skip-health \
@@ -67,9 +67,9 @@ openclaw onboard --non-interactive --accept-risk --skip-health \
 
 将 `huggingface/deepseek-ai/DeepSeek-R1` 设置为默认模型。
 
-## 模型 ID
+## <a id="model-ids"></a> 模型 ID
 
-模型引用使用 `huggingface/<org>/<model>` 形式（Hub 风格 ID）。OpenClaw 内置目录：
+模型参考使用 `huggingface/<org>/<model>` 形式（集线器样式 ID）。 OpenClaw的内置目录：
 
 | 模型         | 引用（以 `huggingface/` 为前缀） |
 | ------------- | -------------------------------- |
@@ -78,23 +78,23 @@ openclaw onboard --non-interactive --accept-risk --skip-health \
 | GPT-OSS 120B  | `openai/gpt-oss-120b`            |
 
 <Tip>
-当你的 token 有效时，OpenClaw 还会在入门流程和 Gateway 启动时，通过 **GET** `https://router.huggingface.co/v1/models` 发现其他模型，因此你的目录可以包含远超上述三个模型的模型。你可以将 `:fastest` 或 `:cheapest` 添加到任意模型 ID 后；HF 的 router 会将请求路由至匹配的推理提供商。在[推理提供商设置](https://hf.co/settings/inference-providers)中设置默认的提供商顺序。
+当您的令牌有效时，OpenClaw 还会在登录时和网关启动时发现 **GET** `https://router.huggingface.co/v1/models` 中的任何其他模型，因此您的目录可以包含远远多于上述三个模型。您可以将 `:fastest` 或 `:cheapest` 附加到任何模型 ID； HF 的路由器路由到匹配的推理提供程序。在 [ 推理提供程序设置 ](https://hf.co/settings/inference-providers) 中设置默认提供程序顺序。
 </Tip>
 
-## 高级配置
+## <a id="advanced-configuration"></a> 高级配置
 
 <AccordionGroup>
-  <Accordion title="模型发现和引导下拉菜单">
+  <Accordion id="model-discovery-and-onboarding-dropdown" title="模型发现和入门下拉菜单">
     OpenClaw 通过以下方式发现模型：
 
-    ```bash
+    ```http
     GET https://router.huggingface.co/v1/models
     Authorization: Bearer $HUGGINGFACE_HUB_TOKEN   # or $HF_TOKEN
     ```
 
-    响应采用 OpenAI 风格：`{ "object": "list", "data": [ { "id": "Qwen/Qwen3-8B", "owned_by": "Qwen", ... }, ... ] }`。
+    响应为 OpenAI- 样式：`{ "object": "list", "data": [ { "id": "Qwen/Qwen3-8B", "owned_by": "Qwen", ... }, ... ] }`。
 
-    使用已配置的密钥（引导过程中、`HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`），交互式设置期间的 **默认 Hugging Face 模型** 下拉菜单会从此端点填充。Gateway 启动时会重复同样的调用来刷新目录。发现的模型会与上方内置目录合并（当 id 匹配时，用于上下文窗口和成本等元数据）。如果请求失败、没有返回数据，或者未设置密钥，OpenClaw 将只回退到内置目录。
+    使用配置的密钥（加入、`HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`），交互式设置期间的 **Default Hugging Face model** 下拉列表从此端点填充。网关启动重复相同的调用来刷新目录。匹配的内置模型提供元数据，例如上下文窗口和成本。失败的发现会产生目录失败结果；成功的空响应将保持为空。如果没有密钥，静态目录仍然可用，而无需开始发现。
 
     如需禁用发现功能而不移除 provider：
 
@@ -104,8 +104,8 @@ openclaw onboard --non-interactive --accept-risk --skip-health \
 
   </Accordion>
 
-  <Accordion title="模型名称、别名和策略后缀">
-    - **来自 API 的名称：** 发现的模型在可用时会使用 API 的 `name`、`title` 或 `display_name`；否则 OpenClaw 会根据模型 id 推导名称（例如 `deepseek-ai/DeepSeek-R1` 会变为 “DeepSeek R1”）。
+  <Accordion id="model-names-aliases-and-policy-suffixes" title="模型名称、别名和策略后缀">
+    - **来自 API 的名称：** 发现的模型使用 API 的 `name`、`title` 或 `display_name`（如果存在）；否则，OpenClaw 从模型 ID 中派生出一个名称（e.g. `deepseek-ai/DeepSeek-R1` 变为“DeepSeek R1”）。
     - **覆盖显示名称：** 在配置中为每个模型设置自定义标签：
 
     ```json5
@@ -122,11 +122,11 @@ openclaw onboard --non-interactive --accept-risk --skip-health \
     ```
 
     - **策略后缀：** `:fastest` 和 `:cheapest` 是 HF router 的约定，不是 OpenClaw 会重写的内容：该后缀会作为模型 id 的一部分原样发送，HF 的 router 会选择匹配的推理 provider。如果你希望每个后缀都有不同的别名，请将每个变体作为单独条目添加到 `models.providers.huggingface.models` 下（或在 `model.primary` 中）。
-    - **配置合并：** `models.providers.huggingface.models` 中已有的条目（例如在 `models.json` 中）在配置合并时会保留，因此你在其中设置的任何自定义 `name`、`alias` 或模型选项都会在重启后继续保留。
+    - **配置合并：`models.providers.huggingface.models`中的**（`models.json`中的e.g.）中的现有条目保留在配置合并中，因此您在其中设置的任何自定义`name`、`alias`或模型选项都将持续存在重新启动。
 
   </Accordion>
 
-  <Accordion title="环境和守护进程设置">
+  <Accordion id="environment-and-daemon-setup" title="环境和守护进程设置">
     如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN` 对该进程可用（例如，在 `~/.openclaw/.env` 中或通过 `env.shellEnv`）。
 
     <Note>
@@ -135,7 +135,7 @@ openclaw onboard --non-interactive --accept-risk --skip-health \
 
   </Accordion>
 
-  <Accordion title="配置：DeepSeek R1，带回退">
+  <Accordion id="config-deepseek-r1-with-fallback" title="配置：DeepSeek R1 带后备">
     ```json5
     {
       agents: {
@@ -154,7 +154,7 @@ openclaw onboard --non-interactive --accept-risk --skip-health \
     ```
   </Accordion>
 
-  <Accordion title="配置：DeepSeek，包含最便宜和最快变体">
+  <Accordion id="config-deepseek-with-cheapest-and-fastest-variants" title="配置：DeepSeek，具有最便宜和最快的变体">
     ```json5
     {
       agents: {
@@ -171,7 +171,7 @@ openclaw onboard --non-interactive --accept-risk --skip-health \
     ```
   </Accordion>
 
-  <Accordion title="配置：DeepSeek + GPT-OSS，带别名">
+  <Accordion id="config-deepseek-gpt-oss-with-aliases" title="配置：DeepSeek + GPT-OSS 带别名">
     ```json5
     {
       agents: {
@@ -191,16 +191,16 @@ openclaw onboard --non-interactive --accept-risk --skip-health \
   </Accordion>
 </AccordionGroup>
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 <CardGroup cols={2}>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    所有 provider、模型引用和故障切换行为的概览。
+  <Card title="选型" href="/concepts/model-providers" icon="layers">
+    所有提供程序、模型引用和故障转移行为的概述。
   </Card>
-  <Card title="模型选择" href="/concepts/models" icon="brain">
+  <Card title="模型" href="/concepts/models" icon="brain">
     如何选择和配置模型。
   </Card>
-  <Card title="Inference Providers 文档" href="https://huggingface.co/docs/inference-providers" icon="book">
+  <Card title="推理提供者文档" href="https://huggingface.co/docs/inference-providers" icon="book">
     Hugging Face Inference Providers 的官方文档。
   </Card>
   <Card title="配置" href="/gateway/configuration" icon="gear">

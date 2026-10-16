@@ -1,0 +1,6 @@
+{
+  "app_dir": "/",
+  "install_command": "npm ci --include=dev --allow-git=root",
+  "build_command": "DOCS_SITE_CANONICAL_ORIGIN=https://openclaw.zhcndoc.com DOCS_FEEDBACK_ISSUE_REPO=zhcndoc/openclaw DOCS_SITE_CHAT_API_URL= npm run docs:build",
+  "output_dir": "dist/docs-site"
+}

@@ -1,11 +1,14 @@
 ---
 summary: "OpenClaw 管理 HTTP RPC 端点。"
 read_when:
-  - 你正在安装、配置或审计 admin-http-rpc 插件
-title: "管理 Http Rpc 插件"
+  - You are installing, configuring, or auditing the admin-http-rpc plugin
+title: "Admin Http Rpc plugin reference"
 ---
 
-# 管理 Http Rpc 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw 管理 HTTP RPC 端点。
 
@@ -16,7 +19,7 @@ OpenClaw 管理 HTTP RPC 端点。
 
 ## 接口面
 
-contracts: `gatewayMethodDispatch`
+- Contracts: `gatewayMethodDispatch`
 
 ## 相关文档
 

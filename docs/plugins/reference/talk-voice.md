@@ -1,11 +1,14 @@
 ---
 summary: "管理 Talk Voice 语音选择（list/set）。"
 read_when:
-  - 安装、配置或审查 Talk Voice 插件时
-title: "Talk Voice 插件"
+  - You are installing, configuring, or auditing the talk-voice plugin
+title: "Talk Voice plugin reference"
 ---
 
-# Talk Voice 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 管理 Talk 语音选择（list/set）。
 
@@ -16,7 +19,8 @@ title: "Talk Voice 插件"
 
 ## 界面
 
-命令：`/voice`
+- Slash commands: `/voice`
+- Contracts: `tools`
 
 <!-- openclaw-plugin-reference:manual-start -->
 

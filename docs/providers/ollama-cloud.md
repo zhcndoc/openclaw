@@ -1,18 +1,18 @@
 ---
 summary: "直接使用 Ollama Cloud 与 OpenClaw"
 read_when:
-  - 你想在没有本地 Ollama 服务器的情况下使用托管的 Ollama 模型
-  - 你需要 `ollama-cloud` 提供方 ID、密钥或端点
+  - "你想在没有本地 Ollama 服务器的情况下使用托管的 Ollama 模型"
+  - "您需要 ollama-cloud 提供商 ID、密钥或端点"
 title: "Ollama Cloud"
 ---
 
-Ollama Cloud 是 Ollama 托管的模型 API。`ollama-cloud` 提供方直接通过 Ollama 原生的 `/api/chat` API 在 `https://ollama.com` 上调用它，不需要本地 Ollama 服务器，也不需要本地 Ollama 应用以云模式登录。请使用像 `ollama-cloud/kimi-k2.6` 这样的模型引用。
+Ollama Cloud 是 Ollama 的托管模型 API。 `ollama-cloud` 提供商通过 Ollama 的本机 `/api/chat` API 直接在 `https://ollama.com` 调用它，没有本地 Ollama 服务器，也没有本地 Ollama 应用程序登录到云模式。使用 `ollama-cloud/kimi-k2.6` 等模型参考。
 
-OpenClaw 将 `ollama-cloud` 注册为其自己的提供方 ID，因此仅云端凭据、实时目录发现和模型选择不会与本地 `ollama` 主机混淆。关于本地 Ollama、混合云端加本地路由、嵌入以及自定义主机详情，请参见 [Ollama](/providers/ollama)。
+OpenClaw 将 `ollama-cloud` 注册为其自己的提供商 ID，因此纯云凭据、实时目录发现和模型选择不会与本地 `ollama` 主机混合。有关本地 Ollama、混合云加本地路由、嵌入和自定义主机的详细信息，请参阅 [Ollama](/providers/ollama)。
 
-## 设置
+## <a id="setup"></a> 设置
 
-Follow [Ollama's API key instructions](https://docs.ollama.com/api/authentication#api-keys), then run:
+按照[Ollama的API关键说明](https://docs.ollama.com/api/authentication#api-keys)，然后运行：
 
 ```bash
 openclaw onboard --auth-choice ollama-cloud
@@ -30,50 +30,43 @@ export OLLAMA_API_KEY="<your-ollama-cloud-api-key>" # pragma: allowlist secret
 openclaw onboard --auth-choice ollama-cloud --ollama-cloud-api-key "<key>"
 ```
 
-Onboarding sets the default model to `ollama-cloud/minimax-m2.7`.
+Onboarding 将默认模型设置为 `ollama-cloud/minimax-m2.7`。
 
-## 默认值
+设置流程会拒绝 `ollama-local`，包括来自 `OLLAMA_API_KEY` 或已保存配置文件的情况。该占位符仅启用本地 Ollama；它不是托管的 API 密钥。
 
-- Provider: `ollama-cloud`
-- Base URL: `https://ollama.com`
-- Env var: `OLLAMA_API_KEY`
-- API style: Ollama native `/api/chat`
-- Onboarding default model: `ollama-cloud/minimax-m2.7`
+## <a id="defaults"></a> 默认值
 
-## 何时选择 Ollama Cloud
+- 提供者：`ollama-cloud`
+- 基本URL：`https://ollama.com`
+- Env 变量：`OLLAMA_API_KEY`
+- API 款式：Ollama 原生 `/api/chat`
+- 上线默认模型：`ollama-cloud/minimax-m2.7`
+
+## <a id="when-to-choose-ollama-cloud"></a> 何时选择 Ollama Cloud
 
 - 你想在不本地运行 `ollama serve` 的情况下使用托管的 Ollama 模型。
-- 你希望使用与 OpenClaw 在本地 Ollama 上相同的原生 Ollama 聊天 API 形状，但指向 `https://ollama.com`。
+- 您想要相同的本机 Ollama 聊天 API 形状 OpenClaw 用于本地 Ollama，但指向 `https://ollama.com`。
 - 你需要一个简单的云端路径来使用已经位于 Ollama 托管目录中的模型。
-- 你不需要本地模型拉取、本地 GPU 控制或仅限局域网的推理。
+- 您不需要本地模型拉动、本地 GPU 控制或 LAN- 仅推理。
 
-当你想要通过已登录的 Ollama 主机进行仅本地或云加本地路由时，请改用 [Ollama](/providers/ollama)。当你需要 `/v1/chat/completions`
-语义或提供方特定的 OpenAI 风格功能时，请改用 OpenAI 兼容的提供方。
+当您希望通过登录的 Ollama 主机进行纯本地或云加本地路由时，请使用 [Ollama](/providers/ollama)。当您需要 `/v1/chat/completions` 语义或提供程序特定的 OpenAI-style 功能时，请改用 OpenAI- 兼容提供程序。
 
-## 模型
+## <a id="models"></a> 模型
 
-该提供程序需要 API 密钥；没有密钥时它将保持非活跃状态。使用密钥后，
-OpenClaw 会从托管目录中实时发现 Ollama Cloud 模型：
+该提供程序需要 API 密钥；没有密钥时它将保持非活跃状态。使用密钥后， OpenClaw 会从托管目录中实时发现 Ollama Cloud 模型：
 
 ```bash
 openclaw models list --provider ollama-cloud
 openclaw models set ollama-cloud/kimi-k2.6
 ```
 
-Hosted ids in the live catalog include `deepseek-v4-flash`, `glm-5.2`,
-`gpt-oss:20b`, `kimi-k2.6`, and `minimax-m2.7`. When live discovery returns
-nothing, OpenClaw falls back to the bundled rows `minimax-m2.7`, `glm-5.1`,
-and `glm-5.2`. The retiring `kimi-k2.5` model is hidden from model pickers but
-remains selectable by exact reference until Ollama retires it on July 31, 2026.
+实时目录中的托管 ID 包括 `deepseek-v4-pro`、`glm-5.2`、`gpt-oss:20b`、`kimi-k3` 和 `minimax-m3`。失败的发现会保留相同凭据的最后一次成功清单。如果没有事先清单，OpenClaw 会提供捆绑建议并记录发现失败。成功的空响应会清除已发现的模型；后来的失败保留了空结果。已退役的模型已从捆绑建议中删除；现有配置不会自动重写。
 
-模型 id 是云目录 id，而不是本地拉取名称。如果某个模型名称在
-本地 Ollama 主机上可用，但在托管目录中不存在，请改用 `ollama`
-提供程序并指定该本地主机。
+模型 id 是云目录 id，而不是本地拉取名称。如果某个模型名称在本地 Ollama 主机上可用，但在托管目录中不存在，请改用 `ollama` 提供程序并指定该本地主机。
 
-## 实时测试
+## <a id="live-test"></a> 实时测试
 
-对于 Ollama Cloud API 密钥冒烟测试，请将 Ollama 实时测试指向托管
-端点，并从你当前目录中选择一个模型：
+对于 Ollama Cloud API-key 冒烟测试，请将 Ollama 实时测试指向托管端点并从当前目录中选择一个模型：
 
 ```bash
 export OLLAMA_API_KEY="<your-ollama-cloud-api-key>" # pragma: allowlist secret
@@ -85,23 +78,16 @@ OPENCLAW_LIVE_OLLAMA_MODEL=kimi-k2.6 \
 pnpm test:live -- extensions/ollama/ollama.live.test.ts
 ```
 
-云端冒烟测试会运行文本、原生流式和网页搜索；设置
-`OPENCLAW_LIVE_OLLAMA_WEB_SEARCH=0` 可跳过网页搜索。默认情况下，
-对于 `https://ollama.com` 它会跳过嵌入，因为 Ollama Cloud API 密钥可能
-不会授权 `/api/embed`；可通过 `OPENCLAW_LIVE_OLLAMA_EMBEDDINGS=1` 强制启用。
+云端冒烟测试会运行文本、原生流式和网页搜索；设置 `OPENCLAW_LIVE_OLLAMA_WEB_SEARCH=0` 可跳过网页搜索。默认情况下， 对于 `https://ollama.com` 它会跳过嵌入，因为 Ollama Cloud API 密钥可能不会授权 `/api/embed`；可通过 `OPENCLAW_LIVE_OLLAMA_EMBEDDINGS=1` 强制启用。
 
-## 故障排查
+## <a id="troubleshooting"></a> 故障排查
 
-- `Ollama Cloud 需要 API 密钥` / `设置 OLLAMA_API_KEY` 错误：请提供一个
-  真实的云端 API 密钥。`ollama-local` 标记仅用于本地或
-  私有的 Ollama 主机。
-- 未知模型错误：运行 `openclaw models list --provider ollama-cloud` 并
-  准确复制托管模型 ID。
-- 在自定义 Ollama 主机上出现工具调用或原始 JSON 问题：请检查你是否
-  误用了兼容 OpenAI 的 `/v1` URL。Ollama 路由应使用不带 `/v1` 后缀的原生基础 URL。
+- `Ollama Cloud requires an API key` / `Set OLLAMA_API_KEY` 错误：提供真实的云 API 密钥。本地 `ollama-local` 标记仅适用于本地或私有 Ollama 主机。
+- 未知模型错误：运行 `openclaw models list --provider ollama-cloud` 并准确复制托管模型 ID。
+- 自定义 Ollama 主机上的工具调用或原始 JSON 问题：检查您是否意外使用了 OpenAI- 兼容的 `/v1` URL。 Ollama 路由应使用本机基础 URL，不带 `/v1` 后缀。
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [Ollama](/providers/ollama)
-- [模型提供方](/concepts/model-providers)
+- [模型提供商](/concepts/model-providers)
 - [所有提供方](/providers/index)

@@ -1,52 +1,57 @@
 ---
 summary: "精选的最常用 OpenClaw 文档链接。"
 read_when:
-  - 你想快速访问关键文档页面
+  - "你想快速访问关键文档页面"
 title: "文档目录"
 ---
 
 <Note>
-本页是一个精选索引。如果你是新手，请从 [快速入门](/start/getting-started) 开始。
-有关文档的完整地图，请参阅 [文档中心](/start/hubs)。
+此页面是一个精选索引。如果您是新手，请从 [ 开始获取 Started](/start/getting-started)。有关文档的完整地图，请参阅 [Docs hubs](/start/hubs)。
 </Note>
 
-## From Here
+## <a id="start-here"></a> 从这里开始
 
-- [Documentation Center (All Page Links)](/start/hubs)
-- [Help](/help)
-- [Configuration](/gateway/configuration)
-- [Configuration Examples](/gateway/configuration-examples)
-- [Slash Commands](/tools/slash-commands)
-- [Multi-Agent Routing](/concepts/multi-agent)
-- [Updates and Rollbacks](/install/updating)
-- [Pairing (DM and Nodes)](/channels/pairing)
-- [Nix Mode](/install/nix)
-- [OpenClaw Assistant Setup](/start/openclaw)
-- [Skills](/tools/skills)
-- [Skill Configuration](/tools/skills-config)
-- [Workspace Templates](/reference/templates/AGENTS)
-- [RPC Adapter](/reference/rpc)
-- [Gateway Runbook](/gateway)
-- [Nodes (iOS and Android)](/nodes)
-- [Web Interface (Control UI)](/web)
-- [Discovery and Transport](/gateway/discovery)
-- [Remote Access](/gateway/remote)
+- [入门](/start/getting-started)
+- [入门引导 （CLI）](/start/wizard)
+- [聊天频道](/channels)
+- [配置](/gateway/configuration)
+- [帮助](/help)
 
-## 频道与用户体验
+## <a id="setup-and-reference"></a> 设置和参考
 
-- [控制界面（浏览器）](/web/control-ui)
+- [文档中心（链接的所有页面）](/start/hubs)
+- [配置示例](/gateway/configuration-examples)
+- [斜杠命令](/tools/slash-commands)
+- [多代理路由](/concepts/multi-agent)
+- [更新回滚](/install/updating)
+- [配对（DM与节点）](/channels/pairing)
+- [Nix模式](/install/nix)
+- [OpenClaw 助手设置](/start/openclaw)
+- [技能](/tools/skills)
+- [技能配置](/tools/skills-config)
+- [工作区模板](/reference/templates/AGENTS)
+- [RPC 适配器](/reference/rpc)
+- [Gateway 运行手册](/gateway)
+- [节点（iOS 和 Android）](/nodes)
+- [腹板表面 （Control UI）](/web)
+- [发现与传输](/gateway/discovery)
+- [远程访问](/gateway/remote)
+
+## <a id="channels-and-ux"></a> 通道和UX
+
+- [控制 UI（浏览器）](/web/control-ui)
 - [Discord](/channels/discord)
 - [群组](/channels/groups)
-- [iMessage](/channels/imessage)
+- [i消息](/channels/imessage)
 - [Mattermost](/channels/mattermost)
 - [媒体音频](/nodes/audio)
 - [媒体图片](/nodes/images)
-- [QQ 机器人](/channels/qqbot)
-- [Telegram](/channels/telegram)
+- [QQ Bot](/channels/qqbot)
+- [电报](/channels/telegram)
 - [WebChat](/web/webchat)
 - [WhatsApp 群组消息](/channels/group-messages)
 
-## 配套应用
+## <a id="companion-apps"></a> 配套应用
 
 - [Android 应用](/platforms/android)
 - [iOS 应用](/platforms/ios)
@@ -54,16 +59,16 @@ title: "文档目录"
 - [macOS 应用](/platforms/macos)
 - [Windows Hub](/platforms/windows)
 
-## 运营与安全
+## <a id="operations-and-safety"></a> 运营与安全
 
 - [会话](/concepts/session)
-- [Cron 任务](/automation/cron-jobs)
-- [Webhook](/automation/cron-jobs#webhooks)
+- [定时任务](/automation/cron-jobs)
+- [Webhooks](/automation/cron-jobs#webhooks)
 - [Gmail 钩子（Pub/Sub）](/automation/cron-jobs#gmail-pubsub-integration)
 - [安全](/gateway/security)
 - [故障排查](/gateway/troubleshooting)
 
-## 相关
+## <a id="related"></a> 相关内容
 
-- [快速入门](/start/getting-started)
+- [入门](/start/getting-started)
 - [文档中心](/start/hubs)

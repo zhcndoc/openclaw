@@ -1,11 +1,14 @@
 ---
 summary: "为 OpenClaw 添加 OpenCode Go 模型提供方支持。"
 read_when:
-  - 您正在安装、配置或审计 opencode-go 插件
-title: "OpenCode Go 插件"
+  - You are installing, configuring, or auditing the opencode-go plugin
+title: "OpenCode Go plugin reference"
 ---
 
-# OpenCode Go 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 OpenCode Go 模型提供方支持。
 
@@ -16,7 +19,8 @@ title: "OpenCode Go 插件"
 
 ## 范围
 
-providers: `opencode-go`; contracts: `mediaUnderstandingProviders`
+- Providers: `opencode-go`
+- Contracts: `mediaUnderstandingProviders`
 
 ## 相关文档
 

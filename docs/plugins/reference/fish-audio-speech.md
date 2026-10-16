@@ -1,22 +1,25 @@
 ---
-summary: "由 Fish Audio S2.1 托管的文本转语音，支持流式传输、语音留言和电话输出。"
+summary: "Fish Audio hosted text-to-speech with streaming, voice notes, and telephony output."
 read_when:
-  - 您正在安装、配置或审核 fish-audio-speech 插件
-title: "Fish Audio Speech 插件"
+  - You are installing, configuring, or auditing the fish-audio-speech plugin
+title: "Fish Audio Speech plugin reference"
 ---
 
-# Fish Audio Speech 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-由 Fish Audio S2.1 托管的文本转语音，支持流式传输、语音留言和电话输出。
+Fish Audio hosted text-to-speech with streaming, voice notes, and telephony output.
 
 ## 分发
 
-- 软件包：`@openclaw/fish-audio-speech`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/fish-audio-speech`
+- Package: `@openclaw/fish-audio-speech`
+- Install route: npm or ClawHub: `clawhub:@openclaw/fish-audio-speech`
 
 ## 接口
 
-contracts: `speechProviders`
+- Contracts: `speechProviders`
 
 ## 相关文档
 

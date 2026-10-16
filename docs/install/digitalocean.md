@@ -1,30 +1,30 @@
 ---
 summary: "在 DigitalOcean Droplet 上托管 OpenClaw"
 read_when:
-  - 在 DigitalOcean 上设置 OpenClaw
-  - 为 OpenClaw 寻找一个简单的付费 VPS
+  - "在 DigitalOcean 上设置 OpenClaw"
+  - "寻找简单的付费VPS for OpenClaw"
 title: "DigitalOcean"
 ---
 
-在 DigitalOcean Droplet 上运行一个持久的 OpenClaw Gateway（1 GB 基础套餐约 $6/月）。
+在 DigitalOcean Droplet 上运行持久性 OpenClaw 网关（1 个 GB 基本计划约为 6 美元/月）。
 
 DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免费的选项：
 
-- [Hetzner](/install/hetzner) -- 每美元可获得更多核心/RAM。
-- [Oracle Cloud](/install/oracle) -- 永久在线免费 ARM 套餐（最多 4 OCPU、24 GB RAM），但注册可能比较麻烦，而且仅支持 ARM。
+- [HHetzner](/install/hetzner)——每美元更多 cores/RAM。
+- [Oracle Cloud](/install/oracle) - 始终免费的 ARM 层（最多 4 个 OCPU、24 个 GB RAM），但注册可能很挑剔，而且仅ARM-。
 
-## 前提条件
+## <a id="prerequisites"></a> 先决条件
 
 - DigitalOcean 账户（[注册](https://cloud.digitalocean.com/registrations/new)）
 - SSH 密钥对（或愿意使用密码认证）
 - 大约 20 分钟。
 
-## 设置
+## <a id="setup"></a> 设置
 
 <Steps>
-  <Step title="创建 Droplet">
+  <Step id="create-a-droplet" title="创建一个水滴">
     <Warning>
-    使用干净的基础镜像（Ubuntu 24.04 LTS）。除非你已经检查过第三方 Marketplace 一键镜像的启动脚本和防火墙默认设置，否则请避免使用它们。
+    使用干净的基础镜像（Ubuntu 24.04 LTS）。避免第三方市场1- 单击图像，除非您已查看其启动脚本和防火墙默认设置。
     </Warning>
 
     1. 登录 [DigitalOcean](https://cloud.digitalocean.com/)。
@@ -38,20 +38,20 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
 
   </Step>
 
-  <Step title="连接并安装">
+  <Step id="connect-and-install" title="连接并安装">
     ```bash
     ssh root@YOUR_DROPLET_IP
 
     apt update && apt upgrade -y
 
-    # 安装 Node.js 26
-    curl -fsSL https://deb.nodesource.com/setup_26.x | bash -
+    # Install Node.js 24 LTS
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
     apt install -y nodejs
 
-    # 安装 OpenClaw
-    curl -fsSL https://openclaw.ai/install.sh | bash
+    # Install OpenClaw; run onboarding later as the non-root owner.
+    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
 
-    # 创建将拥有 OpenClaw 状态和服务的非 root 用户。
+    # Create the non-root user that will own OpenClaw state and services.
     adduser openclaw
     usermod -aG sudo openclaw
     loginctl enable-linger openclaw
@@ -64,26 +64,26 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
 
   </Step>
 
-  <Step title="运行引导流程">
+  <Step id="run-onboarding" title="运行入门引导培训">
     ```bash
     openclaw onboard --install-daemon
     ```
 
-    向导会引导你完成模型认证、通道设置、网关令牌生成以及守护进程安装（systemd 用户服务）。
+    该向导将引导您完成模型验证、通道设置、网关令牌生成和守护程序安装（systemd 用户服务）。
 
   </Step>
 
-  <Step title="添加 swap（推荐用于 1 GB Droplet）">
+  <Step id="add-swap-recommended-for-1-gb-droplets" title="添加交换（建议 1 GB Droplet）">
     ```bash
-    fallocate -l 2G /swapfile
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    sudo fallocate -l 2G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
     ```
   </Step>
 
-  <Step title="验证网关">
+  <Step id="verify-the-gateway" title="验证网关">
     ```bash
     openclaw status
     systemctl --user status openclaw-gateway.service
@@ -91,13 +91,13 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
     ```
   </Step>
 
-  <Step title="访问控制界面">
-    默认情况下，网关绑定到回环地址。请选择以下选项之一。
+  <Step id="access-the-control-ui" title="访问 Control UI">
+    网关默认绑定到环回。选择这些选项之一。
 
     **选项 A：SSH 隧道（最简单）**
 
     ```bash
-    # 从你的本地机器执行
+    # From your local machine
     ssh -L 18789:localhost:18789 root@YOUR_DROPLET_IP
     ```
 
@@ -114,50 +114,51 @@ DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免�
 
     然后从你 tailnet 中的任何设备打开 `https://<magicdns>/`。
 
-    Tailscale Serve 会通过 tailnet 身份标头对控制界面和 WebSocket 流量进行身份验证，这假设网关主机本身是可信的。无论如何，HTTP API 端点仍然遵循网关的正常认证模式（令牌/密码）。若要通过 Serve 强制使用显式共享密钥凭据，请设置 `gateway.auth.allowTailscale: false`，并使用 `gateway.auth.mode: "token"` 或 `"password"`。
+    Tailscale Serve 通过 tailnet 身份标头对 Control UI 和 WebSocket 流量进行身份验证，这假定网关主机本身是可信的。无论如何，HTTP API 端点仍遵循网关的正常身份验证模式 （token/password）。要通过 Serve 要求显式共享秘密凭据，请设置 `gateway.auth.allowTailscale: false` 并使用 `gateway.auth.mode: "token"` 或 `"password"`。
 
   </Step>
 </Steps>
 
-## 持久化与备份
+## <a id="persistence-and-backups"></a> 持久化与备份
 
-OpenClaw 状态存放在：
+OpenClaw 的状态位于：
 
-- `~/.openclaw/` -- `openclaw.json`、频道/提供商凭据、按代理划分的 `auth-profiles.json`，以及会话数据。
-- `~/.openclaw/workspace/` -- 代理工作区（SOUL.md、记忆、工件）。
+- `~/.openclaw/` -- `openclaw.json`、channel/provider 凭证、共享和每个代理 SQLite 身份验证存储以及会话数据。
+- `~/.openclaw/workspace/`——代理工作区（SOUL.md、内存、工件）。
 
-这些内容会在 Droplet 重启后保留。要创建一个可移植的快照：
+这些在 Droplet 重启后仍然存在。要创建备份存档：
 
 ```bash
 openclaw backup create
+openclaw backup restore <archive.tar.gz> --target <fresh-directory>
 ```
 
-DigitalOcean 快照会备份整个 Droplet；`openclaw backup create` 可跨主机移植。
+DigitalOcean 快照备份整个 Droplet。 OpenClaw 档案可以传输到另一台主机。绝对符号链接保留其原始目标位置，包括指向单独备份的配置或凭据的链接。在激活另一台主机或另一条路径上的状态之前查看这些链接；请参阅 [ 备份符号链接警告 ](/cli/backup#what-gets-backed-up)。恢复验证并提取到新的暂存目录中；激活是一个单独的离线步骤。有关回滚警告和激活顺序，请参阅 [ 恢复完整存档 ](/install/backups#restore-a-full-archive)。
 
-## 1 GB RAM 提示
+## <a id="1-gb-ram-tips"></a> 1 GB RAM 提示
 
 这个 $6 的 Droplet 只有 1 GB RAM。为了保持顺畅：
 
 - 确保上面的 swap 步骤已写入 `/etc/fstab`，这样重启后仍然有效。
-- 优先使用基于 API 的模型（Claude、GPT），而不是本地模型——本地 LLM 推理无法适配 1 GB 内存。
-- 如果在处理大提示词时遇到 OOM，将 `agents.defaults.model.primary` 设置为更小的模型。
+- 优先选择基于 API- 的模型（Claude、GPT）而不是本地模型 - 本地 LLM 推理不适合 1 GB。
+- 如果您在大型提示中遇到 OOM，请将 `agents.defaults.model.primary` 设置为较小的模型。
 - 使用 `free -h` 和 `htop` 进行监控。
 
-## 故障排除
+## <a id="troubleshooting"></a> 故障排查
 
-**Gateway 无法启动** -- 运行 `openclaw doctor --non-interactive`，并使用 `journalctl --user -u openclaw-gateway.service -n 50` 检查日志。
+**Gateway 不会启动** -- 运行 `openclaw doctor --non-interactive` 并使用 `journalctl --user -u openclaw-gateway.service -n 50` 检查日志。
 
 **端口已被占用** -- 运行 `lsof -i :18789` 找到对应进程，然后停止它。
 
-**内存不足** -- 使用 `free -h` 检查 swap 是否已启用。如果仍然出现 OOM，请切换到基于 API 的模型（Claude、GPT），而不是本地模型，或者升级到 2 GB 的 Droplet。
+**内存不足** -- 验证交换是否与 `free -h` 处于活动状态。如果仍然遇到 OOM，请切换到基于 API- 的模型（Claude、GPT）而不是本地模型，或升级到 2 GB Droplet。
 
-## 下一步
+## <a id="next-steps"></a> 下一步
 
-- [频道](/channels) -- 连接 Telegram、WhatsApp、Discord 等
+- [Channels](/channels) -- 连接 Telegram、WhatsApp、Discord 等
 - [网关配置](/gateway/configuration) -- 所有配置选项
-- [更新](/install/updating) -- 保持 OpenClaw 为最新版本。
+- [Updating](/install/updating) -- 使 OpenClaw 保持最新
 
-## 相关
+## <a id="related"></a> 相关内容
 
 - [安装概览](/install)
 - [Fly.io](/install/fly)

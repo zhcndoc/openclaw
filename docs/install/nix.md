@@ -1,10 +1,10 @@
 ---
 summary: "使用 Nix 声明式安装 OpenClaw"
 read_when:
-  - 你希望安装过程可复现、可回滚
-  - 你已经在使用 Nix/NixOS/Home Manager
-  - 你希望所有内容都被固定版本并以声明式方式管理
-title: "Nix"
+  - "你希望安装过程可复现、可回滚"
+  - "你已经在使用 Nix/NixOS/Home Manager"
+  - "你希望所有内容都被固定版本并以声明式方式管理"
+title: "尼克斯"
 ---
 
 使用 **[nix-openclaw](https://github.com/openclaw/nix-openclaw)** 声明式安装 OpenClaw，这是官方提供、开箱即用的 Home Manager 模块。
@@ -13,44 +13,47 @@ title: "Nix"
 [nix-openclaw](https://github.com/openclaw/nix-openclaw) 仓库是 Nix 安装的唯一事实来源。本页仅作快速概览。
 </Info>
 
-## 你将获得什么
+## <a id="what-you-get"></a> 你将获得什么
 
 - Gateway + macOS 应用 + 工具（whisper、spotify、cameras），全部固定版本
-- 可在重启后持续运行的 launchd 服务
+- Launchd 服务在重新启动后仍然存在
 - 具备声明式配置的插件系统
 - 即时回滚：`home-manager switch --rollback`
 
-## 快速开始
+## <a id="quick-start"></a> 快速开始
 
 <Steps>
-  <Step title="安装 Determinate Nix">
+  <Step id="install-determinate-nix" title="安装确定的 Nix">
     如果尚未安装 Nix，请按照 [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer) 的说明进行操作。
   </Step>
-  <Step title="创建本地 flake">
+  <Step id="create-a-local-flake" title="创建本地薄片">
     使用 nix-openclaw 仓库中的 agent-first 模板：
     ```bash
     mkdir -p ~/code/openclaw-local
-    # 从 nix-openclaw 仓库复制 templates/agent-first/flake.nix
+    git clone https://github.com/openclaw/nix-openclaw.git /tmp/nix-openclaw
+    cp /tmp/nix-openclaw/templates/agent-first/flake.nix ~/code/openclaw-local/flake.nix
     ```
   </Step>
-  <Step title="配置密钥">
+  <Step id="configure-secrets" title="配置机密">
     配置你的消息机器人令牌和模型提供商 API 密钥。放在 `~/.secrets/` 下的普通文件也可以正常使用。
   </Step>
-  <Step title="填入模板占位符并切换">
+  <Step id="fill-in-template-placeholders-and-switch" title="填写模板占位符并切换">
     ```bash
     home-manager switch
     ```
   </Step>
-  <Step title="验证">
+  <Step id="verify" title="验证">
     确认 launchd 服务正在运行，并且你的机器人可以响应消息。
   </Step>
 </Steps>
 
 有关完整的模块选项和示例，请参阅 [nix-openclaw README](https://github.com/openclaw/nix-openclaw)。
 
-## Nix 模式运行时行为
+## <a id="nix-mode-runtime-behavior"></a> Nix 模式运行时行为
 
-当设置了 `OPENCLAW_NIX_MODE=1`（在使用 nix-openclaw 时会自动设置）时，OpenClaw 会进入适用于 Nix 管理安装的确定性模式。其他 Nix 包也可以设置相同模式；nix-openclaw 是首选参考实现。
+当设置 `OPENCLAW_NIX_MODE=1` 时（使用 nix-openclaw 自动），OpenClaw 使用 Nix 管理的安装模式。其他Nix软件包可以设置相同的模式； nix-openclaw 是第一方参考。
+
+对于没有 Nix 的外部管理配置，请使用 [`OPENCLAW_CONFIG_READONLY=1`](/cli/config#externally-managed-config)。它对通用消息传递应用相同的不可变配置强制，而不启用 Nix 特定的行为。现有的 `OPENCLAW_NIX_MODE=1` 安装无需更改。
 
 你也可以手动设置：
 
@@ -64,7 +67,7 @@ export OPENCLAW_NIX_MODE=1
 defaults write ai.openclaw.mac openclaw.nixMode -bool true
 ```
 
-### Nix 模式下会有什么变化
+### <a id="what-changes-in-nix-mode"></a> Nix 模式下会有什么变化
 
 - 自动安装和自我修改流程将被禁用。
 - `openclaw.json` 会被视为不可变。启动时派生的默认值仅保留在运行时，而配置写入器（setup、onboarding、会修改配置的 `openclaw update`、插件 install/update/uninstall/enable、`doctor --fix`、`doctor --generate-gateway-token`、`openclaw config set`）会拒绝编辑该文件。
@@ -72,29 +75,29 @@ defaults write ai.openclaw.mac openclaw.nixMode -bool true
 - 缺失依赖会显示 Nix 特定的修复提示。
 - UI 会显示只读的 Nix 模式横幅。
 
-### 配置和状态路径
+### <a id="config-and-state-paths"></a> 配置和状态路径
 
 OpenClaw 会从 `OPENCLAW_CONFIG_PATH` 读取 JSON5 配置，并将可变数据存储在 `OPENCLAW_STATE_DIR` 中。在 Nix 下，请显式将它们设置为由 Nix 管理的位置，以便运行时状态和配置都不进入不可变 store。
 
-| Variable               | Default                                 |
+| 变量               | 默认值                                 |
 | ---------------------- | --------------------------------------- |
 | `OPENCLAW_HOME`        | `HOME` / `USERPROFILE` / `os.homedir()` |
 | `OPENCLAW_STATE_DIR`   | `~/.openclaw`                           |
 | `OPENCLAW_CONFIG_PATH` | `$OPENCLAW_STATE_DIR/openclaw.json`     |
 
-### 服务 PATH 发现
+### <a id="service-path-discovery"></a> 服务 PATH 发现
 
-launchd/systemd gateway 服务会自动发现 Nix profile 二进制文件，因此会 shell out 到 `nix` 安装的可执行文件的插件和工具无需手动设置 PATH：
+launchd/systemd 网关服务自动发现 Nix-profile 二进制文件，因此为 `nix`- 安装的可执行文件提供外壳的插件和工具无需手动 PATH 设置即可工作：
 
 - 当设置了 `NIX_PROFILES` 时，每个条目都会按从右到左的优先级添加到服务 PATH 中（与 Nix shell 的优先级一致：最右侧优先）。
 - 当未设置 `NIX_PROFILES` 时，会回退添加 `~/.nix-profile/bin`。
 
 这同时适用于 macOS 的 launchd 和 Linux 的 systemd 服务环境。
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 <CardGroup cols={2}>
-  <Card title="nix-openclaw" href="https://github.com/openclaw/nix-openclaw" icon="arrow-up-right-from-square">
+  <Card title="尼克斯张爪" href="https://github.com/openclaw/nix-openclaw" icon="arrow-up-right-from-square">
     事实来源的 Home Manager 模块和完整设置指南。
   </Card>
   <Card title="设置向导" href="/start/wizard" icon="wand-magic-sparkles">

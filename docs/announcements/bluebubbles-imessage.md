@@ -1,19 +1,19 @@
 ---
-summary: "OpenClaw 已移除对 BlueBubbles 的支持。对于新的和已迁移的 iMessage 设置，请使用官方 iMessage 插件和 imsg。"
+summary: "BlueBubbles 支持已从 OpenClaw 中删除。将官方 iMessage 插件与 imsg 结合使用，以进行新的和迁移的 iMessage 设置。"
 read_when:
-  - 你使用了旧的 BlueBubbles 通道，并且需要迁移到 iMessage
-  - 你正在选择受支持的 OpenClaw iMessage 配置
-  - 你需要对 BlueBubbles 移除的简要说明
+  - "你使用了旧的 BlueBubbles 通道，并且需要迁移到 iMessage"
+  - "你正在选择受支持的 OpenClaw iMessage 配置"
+  - "你需要对 BlueBubbles 移除的简要说明"
 title: "BlueBubbles 的移除与 imsg iMessage 路径"
 ---
 
-# BlueBubbles 的移除与 imsg iMessage 路径
+# <a id="bluebubbles-removal-and-the-imsg-imessage-path"></a> BlueBubbles 的移除与 imsg iMessage 路径
 
-OpenClaw 不再提供 BlueBubbles 通道。iMessage 支持通过官方的 `@openclaw/imessage` 插件实现：网关在本地或通过 SSH 包装器启动 [`imsg`](https://github.com/steipete/imsg) 子进程，并通过 stdin/stdout 使用 JSON-RPC 进行通信。无需服务器、无需 webhook、无需端口。
+OpenClaw 不再提供 BlueBubbles 通道。 iMessage 支持通过官方 `@openclaw/imessage` 插件运行：网关在本地或通过 SSH 包装器生成 [`imsg`](https://github.com/steipete/imsg) 作为子进程，并通过 stdin/stdout. 与 JSON-RPC 进行对话，无服务器，无 Webhook，无端口。
 
-如果你的配置中仍包含 `channels.bluebubbles`，请将其迁移到 `channels.imessage`。旧的 `/channels/bluebubbles` 文档 URL 会重定向到 [从 BlueBubbles 迁移](/channels/imessage-from-bluebubbles)，其中包含完整的配置转换表和切换检查清单。
+如果您的配置仍然包含 `channels.bluebubbles`，请将其迁移到 `channels.imessage`。旧版 `/channels/bluebubbles` 文档 URL 重定向到 [，来自 BlueBubbles](/channels/imessage-from-bluebubbles)，它具有完整的配置转换表和切换清单。
 
-## 有哪些变化
+## <a id="what-changed"></a> 改变了什么
 
 - 支持的 iMessage 路径不再包含 BlueBubbles HTTP server、webhook 路由、REST 密码或 BlueBubbles 插件运行时。
 - OpenClaw 通过 `imsg` 在已登录 Messages.app 的 Mac 上读取和监视 Messages。
@@ -21,7 +21,7 @@ OpenClaw 不再提供 BlueBubbles 通道。iMessage 支持通过官方的 `@open
 - 高级操作（线程回复、tapback、编辑、撤回、特效、已读回执、输入指示、群组管理）需要私有 API 桥接：运行 `imsg launch`，这要求关闭 SIP。
 - Linux 和 Windows 网关仍然可以使用 iMessage，只需将 `channels.imessage.cliPath` 指向一个 SSH 包装器，由它在已登录的 Mac 上运行 `imsg`。
 
-## 该怎么做
+## <a id="what-to-do"></a> 该怎么做
 
 1. 在 Gateway 主机上安装官方插件，然后重启 Gateway：
 
@@ -61,15 +61,15 @@ OpenClaw 不再提供 BlueBubbles 通道。iMessage 支持通过官方的 `@open
    }
    ```
 
-5. 重启网关并验证：
+5. 重新启动网关并验证：
 
    ```bash
    openclaw channels status --probe
    ```
 
-6. 在删除旧的 BlueBubbles 服务器之前，测试私信、群组、附件以及你所依赖的任何私有 API 操作。
+6. 在删除旧的 BlueBubbles 服务器之前，测试您依赖的 DM、群组、附件和任何私人 API 操作。
 
-## 迁移说明
+## <a id="migration-notes"></a> 迁移说明
 
 - `channels.bluebubbles.serverUrl` 和 `channels.bluebubbles.password` 在 iMessage 中没有对应项；这里不存在可连接或可认证的服务器。
 - `allowFrom`、`groupAllowFrom`、`groups`、`includeAttachments`、`attachmentRoots`、`mediaMaxMb`、`textChunkLimit` 和 `actions.*` 在 `channels.imessage` 下保持其原有含义不变。
@@ -78,8 +78,8 @@ OpenClaw 不再提供 BlueBubbles 通道。iMessage 支持通过官方的 `@open
 - 带有 `match.channel: "bluebubbles"` 的 ACP 绑定必须改为 `"imessage"`。
 - 旧的 BlueBubbles 会话键不会自动变成 iMessage 会话键。配对批准是按发送者句柄进行判断的，因此复制过来的 `allowFrom` 条目仍然有效，但 BlueBubbles 会话键下的对话历史不会迁移过来。
 
-## 另请参阅
+## <a id="see-also"></a> 另请参阅
 
-- [来自 BlueBubbles 迁移](/channels/imessage-from-bluebubbles)
-- [iMessage](/channels/imessage)
-- [配置参考 - iMessage](/gateway/config-channels#imessage)
+- [来自BlueBubbles](/channels/imessage-from-bluebubbles)
+- [i消息](/channels/imessage)
+- [配置参考-iMessage](/gateway/config-channels#imessage)

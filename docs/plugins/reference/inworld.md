@@ -1,22 +1,25 @@
 ---
 summary: "Inworld 流式文本转语音（MP3、OGG_OPUS、PCM 电话）。"
 read_when:
-  - 你正在安装、配置或审计 inworld 插件
-title: "Inworld 插件"
+  - You are installing, configuring, or auditing the inworld plugin
+title: "Inworld plugin reference"
 ---
 
-# Inworld 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 Inworld 流式文本转语音（MP3、OGG_OPUS、PCM 电话）。
 
 ## 分发
 
 - Package: `@openclaw/inworld-speech`
-- Install route: npm; ClawHub: `clawhub:@openclaw/inworld-speech`
+- Install route: npm or ClawHub: `clawhub:@openclaw/inworld-speech`
 
 ## 接口
 
-contracts: `speechProviders`
+- Contracts: `speechProviders`
 
 ## 相关文档
 

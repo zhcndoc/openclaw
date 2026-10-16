@@ -2,107 +2,165 @@
 summary: "OpenClaw 中实验性标志的含义，以及当前已文档化的标志"
 title: "实验性功能"
 read_when:
-  - 你看到一个 `.experimental` 配置键，并想知道它是否稳定
-  - 你想尝试预览版运行时功能，而不把它们与普通默认值混淆
-  - 你想在一个地方找到当前已文档化的实验性标志
+  - "你看到一个 `.experimental` 配置键，并想知道它是否稳定"
+  - "你想尝试预览版运行时功能，而不把它们与普通默认值混淆"
+  - "你想在一个地方找到当前已文档化的实验性标志"
 ---
 
-实验性功能是位于显式标志之后的预览界面。它们需要更多真实场景下的使用经验，才能成为稳定默认值或长期契约。
+实验功能是由配置标志控制的预览表面。在他们的形状和行为成为长期合同之前，他们需要更多的现实世界里程。
 
-- 默认关闭，除非某个文档描述了一个狭义的自动设置规则。
+- 默认情况下为 Off，除非功能文档另有说明。
 - 其形态和行为可能比稳定配置变化得更快。
 - 如果已经存在稳定路径，优先使用稳定路径。
 - 仅在先于较小环境中测试之后，再广泛推广。
 
-## 当前已文档化的标志
+所有 [ 插件 API](/plugins/sdk-overview#api-stability) 也是实验性的。该稳定性标签不需要普通插件的实验室开关；下面的自定义插件 UI 标志仅控制用户安装的本机浏览器代码。
 
-| 表面             | 键                                                                                           | 使用场景                                                                                                                       | 更多                                                                                   |
-| ---------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| 本地模型运行时 | `agents.defaults.experimental.localModelLean`, `agents.entries.*.experimental.localModelLean` | 较小或限制更严格的本地后端无法处理 OpenClaw 的完整默认工具集                                                | [本地模型](/gateway/local-models)                                                  |
-| Codex harness       | `plugins.entries.codex.config.appServer.experimental.sandboxExecServer`                       | 希望原生 Codex app-server 0.143.0 或更高版本将目标设为由 OpenClaw 沙箱支持的 exec-server，而不是禁用 Code Mode | [Codex harness 参考](/plugins/codex-harness-reference#sandboxed-native-execution) |
-| Code Mode           | `tools.codeMode.enabled`                                                                      | 希望以紧凑的代码编排方式访问隐藏的 OpenClaw 工具目录                                                       | [Code Mode](/tools/code-mode)                                                          |
-| 云端工作器       | `cloudWorkers.desktop`                                                                        | 希望通过控制 UI 监视或控制支持桌面的云端工作器环境                                        | [云端工作器桌面](/gateway/cloud-workers#desktop-interactive)                     |
-| Swarm               | `tools.swarm.enabled`                                                                         | 希望 Code Mode 脚本并行编排受限规模的子代理组                                                | [Swarm](/tools/swarm)                                                                  |
+## <a id="currently-documented-flags"></a> 当前已文档化的标志
 
-## 控制 UI 实验室
+| 表面          | 键                                                                     | 适用场景                                                                                                                       | 更多                                                                                   |
+| ---------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Codexharness    | `plugins.entries.codex.config.appServer.experimental.sandboxExecServer` | 希望原生 Codex app-server 0.143.0 或更高版本将目标设为由 OpenClaw 沙箱支持的 exec-server，而不是禁用 Code Mode | [Codex harness 参考](/plugins/codex-harness-reference#sandboxed-native-execution) |
+| 代码模式        | `tools.codeMode.enabled`                                                | 希望以紧凑的代码编排方式访问隐藏的 OpenClaw 工具目录                                                       | [代码 Mode](/tools/code-mode)                                                          |
+| 云工作者    | `cloudWorkers.desktop`                                                  | 您想要从 Control UI 观看或控制支持桌面的云工作人员环境                                        | [云工作者 Desktop](/gateway/cloud-workers#desktop-interactive)                     |
+| 利爪            | `gateway.controlUi.experimental.claws`                                  | 您想要探索并添加来自 Control UI 的官方 ClawHub 代理                                                           | [爪子](/cli/claws)                                                                    |
+| 自定义插件 UI | `gateway.controlUi.experimental.customPlugins`                          | 您希望受信任的用户安装的插件添加本机 Control UI 视图或替换内置视图                                  | [功能插件](/plugins/feature-plugins#enable-custom-plugin-ui)                    |
+| 主机桌面     | `desktop.host.enabled`                                                  | 您想要通过 VNC 或屏幕共享服务器观看或控制网关主机                                            | [台式机](/gateway/configuration-reference#desktop)                                    |
+| 顾问          | `plugins.entries.advisor.enabled`                                       | 您希望顾问模型定期检查对话的代理工作并给代理一个简短的更正               | [顾问](#advisor)                                                                    |
+| 语音气泡   | `gateway.controlUi.experimental.chatBubbles`                            | 你想尝试对话气泡和紧凑的活动；实验室启用时，主页默认打开                              | [聊天](/web/control-ui/chat)                                                           |
+| 工具搜索      | `tools.toolSearch.enabled`                                              | 您想要控制全局工具搜索默认值，该默认值已启用                                                              | [工具 Search](/tools/tool-search)                                                      |
 
-打开 **设置 → 代理与工具 → 实验室**，以管理带有控制 UI 开关的实验。启用或禁用某个实验会立即修补规范的网关配置；只有当某个功能需要重启时，页面才会显示重启提示。
+## <a id="control-ui-labs"></a> Control UI 实验室
 
-目前已发布的实验室条目包括代码模式、群集、工具搜索、工具循环检测、本地模型的 Lean 工具、消息审计元数据和云端工作器桌面。消息审计元数据和云端工作器桌面需要重启网关；其他开关通常会在未来的代理运行中生效，无需重启。
+打开 **Settings → Labs** 以管理具有 Control UI 开关的实验。启用或禁用实验室会立即修补保存的网关配置，而无需重新启动网关。
 
-## 本地模型精简模式
+实验室包括语音气泡、决策辅助、顾问、代码模式、所有模型的工具搜索、Claws、自定义插件 UI、主机桌面和云工作者桌面。在默认重新加载模式下，自定义插件视图和桌面可用性会在连接的 Control UI 页面中更新。代码模式和工具搜索更改将对将来的代理运行生效。禁用自定义插件 UI 后重新加载浏览器选项卡以清除已运行的插件 JavaScript。云工作人员桌面实验室控制对现有桌面工作人员的访问；更改配置文件的 `settings.desktop` 仅影响新配置的工作人员。
 
-`agents.defaults.experimental.localModelLean: true` 会在每一轮从代理的直接可见工具中移除重量级的可选工具：`browser`、`cron`、`message`、`image_generate`、`music_generate`、`video_generate`、`tts` 和 `pdf`。明确允许或因交付要求保留的工具仍然可用，不过工具搜索可能会将它们编入目录，而不是直接暴露。精简模式在 `tools.toolSearch` 尚未设置时，也会默认将插件/MCP/客户端目录切换为结构化工具搜索（`tool_search`、`tool_describe`、`tool_call`）。可使用 `agents.entries.*.experimental.localModelLean` 将其作用范围限定到单个代理。
+自定义插件 UI 默认关闭。启用的捆绑插件（包括 Workboard）在设置关闭时保留其本机 UI。后端 API 和普通插件仍然可用，安装或批准插件工件不会启用实验室。
 
-在入门配置过程中，如果 `ollama` 或 `lmstudio` 的推理路由已验证可用，而该值缺失，则会自动设置 `agents.defaults.experimental.localModelLean: true`。OpenClaw 会记录该设置来源于入门配置，因此之后若切换到已验证的非本地路由，只会取消这个自动设置。显式配置为 `true` 或 `false` 会被保留。其他自托管和 OpenAI 兼容提供商不会根据模型名称或 URL 推断。
+默认情况下，爪子处于关闭状态。打开它允许官方启动器发现和添加代理、网关 catalog/Add 方法和本地 CLI 添加。 Add 创建一个普通代理并安装其需求；重复添加会创建另一个代理。关闭开关会阻止新的添加操作，但现有代理会继续运行。本地项目创作和检查不需要切换。在交换机更改之前已接受的添加可以安全完成。
 
-如果你已经在全局调优了工具搜索，OpenClaw 会保持该配置不变。将 `tools.toolSearch: false` 设为关闭，可退出精简模式下的工具搜索默认行为。
+代码模式将保持禁用状态，直到您打开其 Labs 开关或明确将 `tools.codeMode` 设置为 `true` 或 `"auto"`。实验室交换机写入 `"auto"`，因此它仅适用于标记为首选代码模式执行者的模型；它不会强制每个模型都打开代码模式。
 
-在结构化 `tools` 模式下，精简运行会让 `exec` 仍然直接可见，并与工具搜索控制并列显示，这样面向代码调优的本地模型仍可选择它们熟悉的 shell 路径。这只会改变 schema 的可见性：正常的工具策略、沙箱和 exec 审批仍然适用。显式的 `code` 和 `directory` 模式会保持其正常的压缩行为。
+当 `tools.toolSearch` 未设置时，默认启用工具搜索。关闭其实验室开关会禁用全局默认设置；打开它会恢复默认值。
 
-### 为什么是这些工具
+## <a id="decision-assistance"></a> 决策辅助
 
-这些工具具有最长的描述、最宽泛的参数形状，或者最容易让小模型偏离正常编码与对话路径。对于较小上下文或更严格的 OpenAI 兼容后端来说，这两者的差异在于：
+此选择启用内置 OpenClaw 运行时中的实验性对话工具过滤。在符合条件的用户轮流之前，配置的决策提供程序会判断该请求是否需要工具。对话结果可以省略该回合的可选工具。其他harness保留其正常工具并且不执行自动预过滤器推理。交换机不会选择提供商、提供凭证、下载模型或启用不相关的消费者模式。
 
-- 工具 schema 能否装进提示词，而不是挤占对话历史。
-- 模型是能否选对工具，还是因为过多相似的 schema 而发出格式错误的工具调用。
-- Chat Completions 适配器是否能保持在结构化输出限制内，而不是在工具调用负载大小上返回 400。
-
-移除它们只会缩短直接工具列表。模型仍然可以使用 `read`、`write`、`edit`、`exec`、`apply_patch`、图像理解、网页搜索/获取（如已配置）、记忆以及会话/代理工具。额外目录仍可通过工具搜索访问，除非你设置 `tools.toolSearch: false`；明确的工具允许项也可以让精简代理重新回到裁剪后的工作流。
-
-### 何时启用
-
-一旦你已经证明模型可以与 Gateway 通信，但完整的代理轮次表现异常，就启用精简模式：
-
-1. `openclaw infer model run --gateway --model <ref> --prompt "Reply with exactly: pong"` 成功。
-2. 正常的代理轮次因格式错误的工具调用、提示词过大，或模型忽略其工具而失败。
-3. 切换为 `localModelLean: true` 后故障消失。
-
-### 何时保持关闭
-
-如果你的后端能够干净地处理完整的默认运行时，就保持关闭。这是为需要更小工具面板的本地栈提供的变通方案，而不是面向托管模型或资源充足的本地机器的默认设置。
-
-精简模式不能替代 `tools.profile`、`tools.allow`/`tools.deny`，也不能替代模型的 `compat.supportsTools: false` 逃生开关。若要为某个特定代理永久使用更窄的工具面板，优先使用这些稳定的配置项。
-
-### 启用
+交换机和手动编写的配置使用相同的全局布尔值：
 
 ```json5
 {
   agents: {
     defaults: {
-      experimental: {
-        localModelLean: true,
-      },
+      experimental: { decisionAssistance: true },
     },
   },
 }
 ```
 
-仅针对一个代理：
+默认为 **off**。仅明确 `true` 选择加入；遗漏、`false` 或不相关的实验选项不会。 `decisionAssistance: { enabled: true }` 等对象无效。关闭实验室开关会删除其覆盖并恢复关闭，保留模型选择和同级设置。没有浏览器本地首选项。
+
+保存的选择加入不属于每个代理的资格。自动消费者还需要一个有效的[决策模型](/concepts/decision-models)作为他们自己的代理。未设置的代理模型继承`agents.defaults.decisionModel`；显式空 `agents.entries.<id>.decisionModel` 会禁用该代理的资格。仅模型选择永远不会选择加入。全局切换并不意味着每个代理都符合资格，也不意味着配置的提供程序已准备就绪。如果没有模型，打开首选项仍会保存，并且无法运行自动决策推理。
+
+根据其正常的模型选择和工具策略合同，显式 `decision_evaluate` 工具独立于实验室。 Labs 不会控制共享决策运行时或提供程序注册，也不会授予操作权限。
+
+### <a id="core-consumer-contract"></a> 核心消费者合约
+
+核心实现可以从 `src/agents/decision-assistance.ts` 导入 `isDecisionAssistanceEligible(config: OpenClawConfig, agentId: string): boolean`。提供准备好的配置和受信任的拥有代理 ID，而不是模型提供的 ID。助手返回的正是 `decisionAssistance === true && resolveDecisionModelSetting(config, agentId) !== undefined`。它不执行提供程序检查、秘密解析、文件读取、网络请求、模型加载或推理，并且不返回提供程序就绪诊断。这是内部基础边界，而不是新插件 SDK 曲面。
+
+例如，在自动消费者边界：
+
+```ts
+import { isDecisionAssistanceEligible } from "./decision-assistance.js";
+
+if (!isDecisionAssistanceEligible(preparedConfig, owningAgentId)) {
+  return existingBaseline;
+}
+// Separately check this consumer’s explicit mode, harness support, and authority
+// before loading its optional implementation or preparing evaluation evidence.
+```
+
+使用现有配置 publication/refresh 生命周期，而不是文件轮询。在等待准备后，消费者在决策提供商调度处再次检查选择加入。禁用援助会阻止后续评估的开始；已经发送的评估可能会完成，包括提供商准备和网络I/O，并且其结果仍然可以使用。模型选择、实时授权、取消、截止日期和 provider/credential 有效性仍保持独立检查。该助手不是权限令牌或取消所有者。
+
+### <a id="conversational-tool-filtering"></a> 会话工具过滤
+
+**升级行为：**现有保存的`decisionAssistance: true`是未来自动决策实验的选择加入意图。安装此消费者后，它可以在具有有效决策模型的代理的合格轮次上运行；该首选项不会选择新的提供程序或授予工具权限。不希望自动评估的操作员可以关闭首选项或清除该代理的决策模型。移交的证据和费用如下所述。
+
+预过滤器将完整的当前请求和最近对话的基于规则的有界投影发送到所属代理配置的决策提供程序。它保留最近的完整 user/assistant 交换，并且在合适时按时间顺序保留一个附加交换。普通 `before_prompt_build` 挂钩的解析输出也会在标记字段中逐字发送（如果存在）：`prependContext`、`appendContext`、`systemPrompt`、`prependSystemContext` 和 `appendSystemContext`。适用两个内部文本边界：
+
+- 最新请求加上保留的user/assistant交换文本仅限于**6,000个UTF-16代码单元**。只能省略整个较旧的交换。
+- 该对话文本加上所有五个逐字挂钩字段值总共必须适合 **8,000 个 UTF-16 代码单元**。过大的钩子字段不会被截断。
+
+这些是证据文本上的 JavaScript 字符串长度限制，而不是序列化 JSON、UTF-8 线路字节或令牌上的限制。字段名称、JSON 转义、遗漏事实、工具结果计数和固定标题会增加序列化开销。当前的请求和基本上下文永远不会被切入强制分类；过大、畸形、缺失或其他不合适的基本上下文保留正常工具。仅使用当前请求来评估真正新鲜的会话。现有的不完整历史记录不被视为新会话；缺少参照物和不确定性必须保留工具。
+
+只有用户可见的文本、returned/failed 工具调用的计数以及列出的已解析普通挂钩字段是次要证据。不发送其他 system/developer 指令、隐藏推理、原始工具参数或结果、内部事件信封和媒体。工具返回计数并不表明操作成功。托管提供商收到此有限证据并可能产生费用；本地提供者将推理保持在本地。分类在主要模型请求之前增加了工作，并且不能保证延迟改进。
+
+当前的内部预算是 500 毫秒，不是配置选项。一个现有的决策批次询问两个独立的布尔问题：最新的请求是否具有未解决的上下文引用，以及满足它是否需要下一个响应中的工具。两个概率必须低于 0.35 才能省略可选工具。缺失的、肯定的或不确定的答案可以保留工具。这些是“是”的概率，而不是工具使用程度或单独的置信度值。
+
+结构化状态命名了最新请求、按时间顺序排列的最近交换以及有关省略的旧对话和原始工具有效负载的事实。每个问题都明确引用这些字段。前面提到的工具本身并不要求新的操作，并且仅省略旧的历史记录并不能否决过滤。这遵循 [TypeSafe 原子 Noul 指导 ](https://docs.typesafe.ai/primitives/noul)，同时使用提供者中立的决策合约；它不提出特定于提供商的请求或校准正确性保证。没有模型感知输入估计器、自动修剪重试或第二个提供程序。普通的不可用结果，包括截止日期或实际的提供商输入拒绝，保持正常的工具表面。调用者预算截止日期不算作提供程序中断或打开共享运行状况电路，因此重复的可选预过滤器超时不会禁用显式 `decision_evaluate` 请求。真正的提供商传输、身份验证和速率限制失败保留其共享的健康处理；进行中的工作仍然拥有其并发槽，直到解决为止。取消、关闭权限和合同错误仍然是错误，而不是开始后备工作。冷模型加载可能会超出预算。分类器估计并不能保证每个操作请求都将保留其可选工具。
+
+过滤会跳过原始检查、延续、内部事件、排队转向、孤立修复、挂起的工具工作、钩子集 `toolsAllow` 限制以及需要最终工具的依赖于权限的提示构建钩子。普通的提示构建挂钩正常运行，其解析字段可以通知决策评估，而无需更改公共挂钩合同。它不再仅仅因为存在先前的助手或工具消息而拒绝转弯。完整的上下文批准仍然是操作请求，而对话确认可以在以后的回合中省略可选工具。它使用现有的主机工具策略，保留已经需要的工具而不授予被拒绝的工具，并使提交的模式、发现和可调用性保持一致。随后的每个转弯都从其自己的正常工具基线开始。选择退出不会撤销对已发送的决策评估的限制。更改后的模型选择仍然会阻止应用等待的限制，并在等待的准备后在前台主模型调度中重新检查。该更改仅撤销了可选限制并恢复了当前允许的工具表面，同时保留了独立的钩帽和所需的工具。不会重写任何历史记录，也不会重新创建本机线程。
+
+为嵌入式运行器启用 DEBUG 日志记录后，第一个前台主调度报告决策 status/reason、决策延迟、上下文计数和遗漏标志、可见工具计数、保留的所需工具以及 before/after 标准化工具定义 JSON UTF-16 字符差异的安全记录（`name`、`description` 和 `parameters`）。工具搜索和代码模式仅计算实际公开的 controls/direct 工具，包括它们的描述，而不是每个隐藏的目录模式。此仅模式指标不是提供商线路字节、完整提示节省、令牌、成本或提供商接受请求的证据。据报告，与工具相关的提示指导未进行衡量。未知的测量结果仍然未知，而不是零。 DEBUG-off 避免了额外的定义序列化。此记录不记录任何对话、工具负载、完整模式或凭据；现有的日志记录和跟踪关联控制适用。
+
+## <a id="advisor"></a> 顾问
+
+Advisor 是一个实验性捆绑插件，默认情况下处于关闭状态。在用户指导的工作期间，它会审查会话自己的模型上的对话分支，并寻找成本最高的可避免问题：工作超出了您的要求，忽略了早期的更正，重复或停滞的工具调用，或者声称工具结果不支持。当它找到一个时，它会通过一次短暂的修正来引导主动运行。如果运行无法接受转向，则修正将在下一个转弯时变为隐藏上下文。当它什么也没发现时，什么也不会发生。
+
+审查根据您的要求判断浪费。用户请求的重复、等待、轮询、验证、排序和计时都不是浪费。纠正必须提供更便宜的下一步，但仍能满足整个请求，修复原因并在可能的情况下恢复工作，而不是报告可恢复的阻止程序。当不确定时，顾问会保持代理的方法不变。
+
+在 **设置 → 代理和工具 → 实验室 → Advisor** 中将其打开。其 **Configure** 按钮可打开插件的设置页面（**Settings → Plugins → Advisor**），您可以在其中设置以下选项。或者使用配置：
 
 ```json5
 {
-  agents: {
+  plugins: {
     entries: {
-      local: {
-        default: true,
-        model: "lmstudio/gemma-4-e4b-it",
-        experimental: {
-          localModelLean: true,
-        },
+      advisor: {
+        enabled: true,
+        config: { everyToolCalls: 10, everyMinutes: 20 },
       },
     },
   },
 }
 ```
 
-更改该标志后请重启 Gateway。精简过滤会移除 `browser`、`cron`、`message`、`image_generate`、`music_generate`、`video_generate`、`tts` 和 `pdf`，除非你通过 `tools.allow` 或 `tools.alsoAllow` 明确保留它们；工具搜索仍可能将已保留的工具编入目录，而不是直接暴露它们。
+- `everyToolCalls`（默认 `10`，范围 `0`–`1000`）：在对话中启动如此多的工具调用（包括仍在后台运行的命令）后标记到期审核。
+- `everyMinutes`（默认 `20`，范围 `0`–`1440`）：标记在生命周期启动事件中这么多分钟的累积代理运行时间后到期的审核，在工具启动或完成以及运行结束时进行检查。开始之前的时间不计算在内。
 
-## 实验性并不意味着隐藏
+评论总是使用会话自己的模型；没有单独的模型设置。
+
+适当的审查会等到所有已启动的工具调用都具有权威的完成事件，或者运行结束或出现错误。内置运行取决于工具结果； Codex 在本机项目完成上运行并记录原始工具输出，包括外部 function/custom-code 调用。已完成的子命令不会解决封闭调用。早期的动态工具结果并不是一个安全的边界。验证在分叉之前再次检查相同的条件。停滞的调用永远不会强制进行审查：顾问程序会等待完成或运行结束，而不会绕过计时器。没有结果的调用可能仍在运行；固定审查合同禁止将其视为失败或中止。运行 end/error 会清除待处理的工具 ID，并允许进行一次适当的审查，即使没有发生下一个模型调用也是如此。
+
+每次审核完成（包括失败的审核）后，两个计数器都会重新启动。将触发器设置为 `0` 将其关闭。两者均位于 `0`，没有评论运行。无需重新启动网关即可应用更改。
+
+行为和限制：
+
+- Reviews 在后台运行，不会延迟触发挂钩。他们从不请求批准或授予代理新的权限。
+- 仅对用户触发的运行进行计数。手动压缩、心跳、cron、内存刷新、溢出、附带问题以及丢失或无法识别的触发器将被忽略。入场使用无历史记录的 `before_agent_reply` 挂钩，无需索取回复；工具和时间核算从生命周期开始时开始。
+- 每个对话最多有一条正在运行的评论。失败的审核会被记录下来，下一次审核会等待完整的时间间隔。会话重置、插件禁用和服务停止取消待审核。
+- Review 回复使用一线 `NO_CHANGE` 或 `CORRECTION` 决策。 `NO_CHANGE` 从不开始验证或转向，即使有注释也是如此。更正草案将接受第二次同一会话审核：只有具有有效最终正文的 `APPROVE` 响应才能到达代理。 `REJECT`、格式错误的回复、验证错误和超时永远不会引导。失败会记录一个有限警告。每条回复字数限制为2000字，每次更正字数限制为120字。两个阶段的截止时间均为 120 秒。
+- A修正首先尝试主动运行转向。如果转向不可用，则会排队等待下一次转向，并在 24 小时后过期。它被标记为代理在采取行动之前必须检查的建议。
+- Each 审核将会话的上下文、模型和凭证用于一次草稿调用，并且仅当它提出更正时，才使用一次验证调用。这两个分支都无法执行工具、保留对话消息或发送回复。在 Codex 上，分叉保留会话的提示和工具定义，以供提示缓存重用。
+- Advisor 需要通过 `plugins.entries.advisor.hooks` 进行对话访问和提示注入权限，可信插件默认具有该权限。
+- Gateway 信息日志记录每个阶段的输入、缓存读取、缓存写入和输出令牌以及经过的时间，以及其更正是否被引导或排队。
+- 计数器驻留在内存中，因此它们会在网关重新启动时重新启动。
+
+## <a id="local-model-lean-mode"></a> 本地模型精简模式
+
+精益模式是一种高级故障排除替代方法，在实验室外部配置。其现有的 `experimental.localModelLean` 密钥仍受支持。有关功能限制、配置示例和恢复指南，请参阅 [ 本地模型精益模式](/gateway/local-models#local-model-lean-mode)。
+
+- <a id="why-these-tools" />[为什么使用这些工具](/gateway/local-models#why-these-tools)
+- <a id="when-to-turn-it-on" />[何时开启](/gateway/local-models#when-to-turn-it-on)
+- <a id="when-to-leave-it-off" />[何时将其关闭](/gateway/local-models#when-to-leave-it-off)
+- <a id="enable" />[启用](/gateway/local-models#enable)
+
+## <a id="experimental-does-not-mean-hidden"></a> 实验性并不意味着隐藏
 
 实验性功能应在文档中以及配置路径本身明确说明，而不是隐藏在一个看起来像稳定默认设置的选项背后。
 
-## 相关
+## <a id="related"></a> 相关内容
 
 - [功能](/concepts/features)
 - [发布渠道](/install/development-channels)

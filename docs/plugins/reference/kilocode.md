@@ -1,22 +1,25 @@
 ---
 summary: "为 OpenClaw 添加 Kilocode 模型提供程序支持。"
 read_when:
-  - 你正在安装、配置或审计 kilocode 插件
-title: "Kilocode 插件"
+  - You are installing, configuring, or auditing the kilocode plugin
+title: "Kilocode plugin reference"
 ---
 
-# Kilocode 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 Kilocode 模型提供程序支持。
 
 ## 分发
 
-- 包：`@openclaw/kilocode-provider`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/kilocode-provider`
+- Package: `@openclaw/kilocode-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/kilocode-provider`
 
 ## 作用范围
 
-providers: `kilocode`
+- Providers: `kilocode`
 
 ## 相关文档
 

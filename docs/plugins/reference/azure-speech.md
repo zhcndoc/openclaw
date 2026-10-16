@@ -2,10 +2,13 @@
 summary: "Azure AI 语音文本转语音（MP3、原生 Ogg/Opus 语音笔记、PCM 电话音频）。"
 read_when:
   - You are installing, configuring, or auditing the azure-speech plugin
-title: "Azure Speech 插件"
+title: "Azure Speech plugin reference"
 ---
 
-# Azure Speech 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 Azure AI 语音文本转语音（MP3、原生 Ogg/Opus 语音笔记、PCM 电话音频）。
 
@@ -16,7 +19,7 @@ Azure AI 语音文本转语音（MP3、原生 Ogg/Opus 语音笔记、PCM 电话
 
 ## 接口
 
-contracts: `speechProviders`
+- Contracts: `speechProviders`
 
 ## 相关文章
 

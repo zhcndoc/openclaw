@@ -1,22 +1,25 @@
 ---
 summary: "OpenClaw Zalo 频道插件，适用于 bot 和 webhook 聊天。"
 read_when:
-  - 你正在安装、配置或审核 zalo 插件
-title: "Zalo 插件"
+  - You are installing, configuring, or auditing the zalo plugin
+title: "Zalo plugin reference"
 ---
 
-# Zalo 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw Zalo 频道插件，适用于 bot 和 webhook 聊天。
 
 ## 分发
 
-- 包：`@openclaw/zalo`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/zalo`
+- Install route: npm or ClawHub: `clawhub:@openclaw/zalo`
 
 ## 表面
 
-channels: `zalo`
+- Channels: `zalo`
 
 ## 相关文档
 

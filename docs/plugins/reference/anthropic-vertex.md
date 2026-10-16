@@ -1,28 +1,31 @@
 ---
 summary: "用于 Google Vertex AI 上 Claude 模型的 OpenClaw Anthropic Vertex 提供方插件。"
 read_when:
-  - 你正在安装、配置或审计 anthropic-vertex 插件
-title: "Anthropic Vertex 插件"
+  - You are installing, configuring, or auditing the anthropic-vertex plugin
+title: "Anthropic Vertex plugin reference"
 ---
 
-# Anthropic Vertex 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于 Google Vertex AI 上 Claude 模型的 OpenClaw Anthropic Vertex 提供方插件。
 
 ## 分发
 
 - Package: `@openclaw/anthropic-vertex-provider`
-- 安装方式：npm；ClawHub
+- Install route: npm or ClawHub: `clawhub:@openclaw/anthropic-vertex-provider`
 
 ## 接口
 
-providers: `anthropic-vertex`
+- Providers: `anthropic-vertex`
 
 ## Claude Fable 5
 
-在你的 Google Cloud 区域中可用时，请使用 `anthropic-vertex/claude-fable-5`。
-Fable 5 始终使用自适应思考，并默认采用 `high` effort。`/think off` 和
-`/think minimal` 会使用 `low` effort，因为该模型不支持关闭思考。
+Use `anthropic-vertex/claude-fable-5` where the model is available in your Google Cloud region.
+Fable 5 always uses adaptive thinking; OpenClaw defaults to `medium` effort. Stored `off`
+and `minimal` settings map to `low` because the model does not support disabling thinking.
 
 ## Claude Sonnet 5
 
@@ -31,7 +34,11 @@ Fable 5 始终使用自适应思考，并默认采用 `high` effort。`/think of
 `/think off` 或原生的 `/think xhigh|max` 级别。OpenClaw 会自动发布其
 1,000,000 token 上下文窗口和 128,000 token 输出上限。
 
-目录定价遵循 Vertex 的介绍性全球费率：截至 2026 年 8 月 31 日，每百万输入/输出 token 分别为 `$2/$10`，随后从
-9 月 1 日起变为 `$3/$15`。`us` 和 `eu` 多区域端点使用 Vertex 文档中所述的 10% 溢价。
+Catalog pricing follows [Google's current Vertex pricing](https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing#anthropics-claude-models):
+`$2/$10` per million input/output tokens for `global`, or `$2.20/$11` for
+the `us` and `eu` multi-region endpoints. Cache hits and 5-minute cache writes
+cost `$0.20/$2.50` globally or `$0.22/$2.75` in either multi-region endpoint,
+per million tokens. These USD rates apply at both 200K input tokens or less
+and above 200K input tokens.
 
 <!-- openclaw-plugin-reference:manual-end -->

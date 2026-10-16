@@ -1,0 +1,1810 @@
+#!/usr/bin/env node
+import fs from "node:fs";
+import http from "node:http";
+import path from "node:path";
+import { chromium } from "playwright";
+
+const accordionOnly = process.argv.includes("--accordion-only");
+if (process.argv.slice(2).some((arg) => arg !== "--accordion-only")) {
+  throw new Error("usage: visual-smoke.mjs [--accordion-only]");
+}
+
+const root = process.cwd();
+const site = path.join(root, "dist", "docs-site");
+const artifacts = process.env.DOCS_VISUAL_ARTIFACT_DIR || path.join(root, ".cache", "docs-visual");
+
+if (!fs.existsSync(path.join(site, "__elements", "index.html"))) {
+  throw new Error("visual smoke requires a built dist/docs-site");
+}
+
+fs.mkdirSync(artifacts, { recursive: true });
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url ?? "/", "http://127.0.0.1");
+  const pathname = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+  const candidates = [
+    path.join(site, pathname),
+    path.join(site, pathname, "index.html"),
+  ];
+  const file = candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
+  if (!file || !file.startsWith(site)) {
+    res.writeHead(404).end("not found");
+    return;
+  }
+  res.setHeader("content-type", contentType(file));
+  fs.createReadStream(file).pipe(res);
+});
+
+await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+const base = `http://127.0.0.1:${server.address().port}`;
+const browser = await chromium.launch({ headless: true });
+
+try {
+  const checks = accordionOnly ? [checkAccordionNavigation] : [
+    checkLanguageSelection,
+    checkAccordionNavigation,
+    checkLandingNavigation,
+    checkPageBackground,
+    checkCommunityBanner,
+    checkHeaderSurface,
+    checkFooterSocials,
+    checkDesktop,
+    checkTocScrollspy,
+    checkTocRailScrolling,
+    checkCompactToc,
+    checkAmbientCodePage,
+    checkMobile,
+    checkRtlNavigationResize,
+    checkLightMode,
+  ];
+  for (const check of checks) await check();
+  console.log(`docs ${accordionOnly ? "accordion" : "visual"} smoke ok: screenshots in ${path.relative(root, artifacts)}`);
+} finally {
+  await browser.close();
+  server.close();
+}
+
+async function checkLanguageSelection() {
+  const page = await browser.newPage({ viewport: { width: 390, height: 600 } });
+  try {
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
+    if (await page.locator("[data-locale-option]").count() < 2) throw new Error("language selection requires the full locale menu");
+    const lastLocale = await page.locator("[data-locale-option]").last().getAttribute("href");
+    await page.locator("[data-language-trigger]").click();
+    await page.keyboard.press("End");
+    await page.keyboard.press("Enter");
+    await page.waitForURL((url) => url.pathname.replace(/\/$/, "") === lastLocale.replace(/\/$/, ""));
+    const routes = [lastLocale];
+    if (fs.existsSync(path.join(site, "ar/index.html"))) routes.push("/ar/");
+    for (const route of routes) {
+      for (const width of [320, 390, 1440]) {
+        await page.setViewportSize({ width, height: 600 });
+        await page.goto(`${base}${route}`, { waitUntil: "networkidle" });
+        await page.evaluate(() => scrollTo({ top: 160, behavior: "instant" }));
+        const before = await page.evaluate(() => scrollY);
+        const trigger = await page.locator("[data-language-trigger]").boundingBox();
+        // Locator clicks may scroll a sticky header to its original document position.
+        await page.mouse.click(trigger.x + trigger.width / 2, trigger.y + trigger.height / 2);
+        const opened = await page.evaluate(() => {
+          const option = document.activeElement;
+          const menu = document.querySelector(".language-menu").getBoundingClientRect();
+          const selected = option.getBoundingClientRect();
+          return {
+            selected: option.matches("[data-locale-option][aria-selected=true]"),
+            visible: selected.top >= menu.top && selected.bottom <= menu.bottom,
+            bounded: menu.left >= 0 && menu.right <= innerWidth && menu.top >= document.querySelector(".site-header").getBoundingClientRect().bottom && menu.bottom <= innerHeight,
+            scrollY,
+          };
+        });
+        if (!opened.selected || !opened.visible || !opened.bounded || opened.scrollY !== before) {
+          throw new Error(`language menu must reveal the selected locale without moving the page (${route}, ${width}px): ${JSON.stringify(opened)}`);
+        }
+        for (const viewport of [{ width: 1440, height: 900 }, { width, height: 600 }, { width, height: 420 }]) {
+          await page.setViewportSize(viewport);
+          await page.waitForFunction(() => {
+            const option = document.activeElement;
+            const menu = option?.closest(".language-menu")?.getBoundingClientRect();
+            const selected = option?.getBoundingClientRect();
+            return option?.matches("[data-locale-option][aria-selected=true]") && menu
+              && selected.top >= menu.top && selected.bottom <= menu.bottom;
+          }, null, { timeout: 3000 });
+        }
+        await page.keyboard.press("Escape");
+        await page.waitForFunction(() => document.activeElement?.matches("[data-language-trigger]"));
+      }
+    }
+  } finally { await page.close(); }
+}
+
+async function checkAccordionNavigation() {
+  for (const reducedMotion of ["no-preference", "reduce"]) {
+    for (const hash of ["#nested-disclosure-target", "#release-source-target"]) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion });
+    let phase = "toc navigation";
+    await page.addInitScript(() => {
+      const events = window.__accordionEvents = [];
+      const record = (event) => {
+        if (event.type !== "scroll" && !event.target?.closest?.(".release-source-toggle")) return;
+        const source = document.querySelector(".release-source-toggle");
+        events.push({ type: event.type, key: event.key, code: event.code,
+          open: source?.open, focus: document.activeElement?.tagName, scrollY });
+        if (events.length > 32) events.shift();
+      };
+      for (const type of ["keydown", "keypress", "keyup", "click", "toggle", "scroll"]) {
+        document.addEventListener(type, record, { capture: true, passive: true });
+      }
+    });
+    const assertTargetVisible = async () => {
+      await page.waitForFunction((hash) => {
+        const target = document.getElementById(hash.slice(1));
+        if (!target) return false;
+        for (let node = target.parentElement; node; node = node.parentElement) {
+          if (node.tagName === "DETAILS" && !node.open) return false;
+        }
+        const rect = target.getBoundingClientRect();
+        const headerBottom = document.querySelector(".site-header").getBoundingClientRect().bottom;
+        return rect.top >= headerBottom && rect.bottom <= innerHeight;
+      }, hash, { timeout: 3000 });
+    };
+    try {
+      await page.goto(`${base}/__elements`, { waitUntil: "networkidle" });
+      await page.locator(`.toc a[href="${hash}"]`).click();
+      await assertTargetVisible();
+
+      phase = "direct fragment navigation";
+      await page.goto("about:blank");
+      await page.goto(`${base}/__elements${hash}`, { waitUntil: "networkidle" });
+      await assertTargetVisible();
+
+      phase = "PJAX fragment navigation";
+      await page.goto(`${base}/`, { waitUntil: "networkidle" });
+      await page.evaluate((hash) => {
+        const link = document.createElement("a");
+        link.href = `/__elements${hash}`;
+        link.textContent = "Nested disclosure target";
+        document.querySelector(".doc").prepend(link);
+      }, hash);
+      await page.getByRole("link", { name: "Nested disclosure target", exact: true }).click();
+      await page.waitForURL(`**/__elements${hash}`);
+      await assertTargetVisible();
+      if (hash === "#release-source-target") {
+        const summary = page.locator(".release-source-toggle > summary");
+        phase = "pointer close and reopen";
+        // Fragment navigation leaves this summary under the sticky header. Keep the control and
+        // body in view before interacting; click auto-scrolling can align only the summary.
+        await summary.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+        await assertTargetVisible();
+        // Interrupt closing with another pointer click, then check the nested body is not clipped.
+        await summary.click();
+        await summary.click();
+        await page.waitForFunction(() => {
+          const source = document.querySelector(".release-source-toggle");
+          const body = source.querySelector(".release-source-content");
+          return source.open && body.getBoundingClientRect().bottom <= source.getBoundingClientRect().bottom + 1;
+        });
+        await assertTargetVisible();
+        phase = "keyboard close";
+        await summary.focus();
+        await page.keyboard.press("Enter");
+        if (await page.locator(".release-source-toggle").getAttribute("open") !== null) throw new Error("Sources must close with the keyboard");
+        phase = "keyboard reopen";
+        await page.keyboard.press("Space");
+        await assertTargetVisible();
+      }
+      console.log(`accordion navigation ok: ${JSON.stringify({ browser: browser.version(), reducedMotion, hash })}`);
+    } catch (error) {
+      const state = await page.evaluate((hash) => {
+        const target = document.getElementById(hash.slice(1));
+        const ancestors = [];
+        for (let node = target?.parentElement; node && ancestors.length < 8; node = node.parentElement) {
+          if (node.tagName !== "DETAILS") continue;
+          const content = node.querySelector(":scope>.oc-accordion-content,:scope>.release-source-content");
+          const style = getComputedStyle(node, "::details-content");
+          ancestors.push({ className: node.className, open: node.open,
+            rect: node.getBoundingClientRect().toJSON(), content: content?.getBoundingClientRect().toJSON(),
+            measuredHeight: node.style.getPropertyValue("--accordion-content-height"),
+            height: style.height, contentVisibility: style.contentVisibility, overflow: style.overflow });
+        }
+        const summary = document.querySelector(".release-source-toggle > summary");
+        return { url: location.href, scrollY, viewport: [innerWidth, innerHeight],
+          reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
+          target: target?.getBoundingClientRect().toJSON(), header: document.querySelector(".site-header")?.getBoundingClientRect().toJSON(),
+          summary: summary?.getBoundingClientRect().toJSON(), summaryFocused: document.activeElement === summary,
+          focusVisible: summary?.matches(":focus-visible"), ancestors, events: window.__accordionEvents };
+      }, hash).catch((diagnosticError) => ({ diagnosticError: diagnosticError.message }));
+      console.error(`accordion navigation failed: ${JSON.stringify({ browser: browser.version(), reducedMotion, hash, phase, state })}`);
+      await page.screenshot({ path: path.join(artifacts, `accordion-${reducedMotion}-${hash.slice(1)}.png`) }).catch(() => {});
+      throw error;
+    } finally {
+      await page.close();
+    }
+    }
+  }
+}
+
+async function openSection(page, title) {
+  if (await page.locator(".docs-sidebar-levels").getAttribute("data-level") === "section") await page.locator(".docs-sidebar-back").click();
+  await page.getByRole("button", { name: title, exact: true }).click();
+  await page.locator(".docs-sidebar-back").waitFor({ state: "visible" });
+}
+
+async function checkRtlNavigationResize() {
+  if (!fs.existsSync(path.join(site, "ar/index.html"))) return;
+  const page = await browser.newPage({ viewport: { width: 390, height: 600 } });
+  try {
+    await page.goto(`${base}/ar/`, { waitUntil: "networkidle" });
+    await page.locator("[data-nav-toggle]").click();
+    await page.waitForFunction(() => document.activeElement?.matches("[data-nav-close]"));
+    if (await page.locator(".docs-sidebar-levels").getAttribute("data-level") === "section") await page.locator(".docs-sidebar-back").click();
+    await page.locator(".docs-section-trigger").last().click();
+    await page.locator(".docs-sidebar-back").waitFor({ state: "visible" });
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForFunction(() => {
+      const target = document.activeElement;
+      if (!target?.matches(".docs-sidebar-back")) return false;
+      const r = target.getBoundingClientRect();
+      return r.top >= document.querySelector(".site-header").getBoundingClientRect().bottom
+        && r.bottom <= innerHeight && target.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    });
+    await page.locator(".docs-sidebar-back").click();
+    await page.locator(".docs-section-trigger").last().click({ trial: true });
+    await page.screenshot({ path: path.join(artifacts, "rtl-navigation-resize.png") });
+  } finally { await page.close(); }
+}
+
+async function assertTocAtArticleStart(page) {
+  const geometry = await page.evaluate(() => {
+    const rect = (selector) => document.querySelector(selector).getBoundingClientRect();
+    const title = rect(".toc h2"), article = rect(".article"), header = rect(".article-header");
+    // The hero is outside .article. Different column insets may still share the first content row.
+    return {
+      besideArticle: title.left >= article.right && title.right <= innerWidth,
+      atArticleStart: title.top >= article.top && title.bottom <= header.bottom,
+      titleVisible: title.width > 0 && title.height > 0,
+    };
+  });
+  if (!geometry.besideArticle || !geometry.atArticleStart || !geometry.titleVisible) {
+    throw new Error(`TOC must sit beside the article header without overlapping it: ${JSON.stringify(geometry)}`);
+  }
+}
+
+async function checkLandingNavigation() {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 800 }, reducedMotion: "reduce" });
+  await page.goto(`${base}/`, { waitUntil: "networkidle" });
+  await page.locator(".home-layout").waitFor({ state: "visible" });
+  for (const width of [320, 390, 820, 1100, 1101, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 800 });
+    const description = await page.locator(".home-description").evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return { text: node.innerText.replace(/\s+/g, " ").trim(), bounded: rect.left >= 0 && rect.right <= innerWidth, clipped: node.scrollHeight > node.clientHeight + 1 };
+    });
+    if (!description.bounded || description.clipped || description.text !== "The AI that really does things. Any OS. Any Platform. The lobster way. 🦞") {
+      throw new Error(`Homepage must show the full introduction at every width (${width}px): ${JSON.stringify(description)}`);
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 800 });
+  await page.locator(".site-header [data-search-open]").click();
+  await page.waitForFunction(() => document.activeElement?.matches("[data-search-input]"));
+  await page.keyboard.press("Escape");
+  if (!await page.evaluate(() => document.activeElement?.matches(".site-header [data-search-open]"))) {
+    throw new Error("header search did not return keyboard focus to its opener");
+  }
+  const sections = await page.locator(".docs-section > summary").allTextContents();
+  if (!sections.includes("Help") || await page.locator(".tabs,.docs-navigation").count()) {
+    throw new Error("complete vertical docs navigation is missing");
+  }
+  await openSection(page, "Gateway & Ops");
+  await page.locator(".docs-sidebar-back").click();
+  await page.mouse.move(1100, 500);
+  await page.mouse.wheel(0, 1100);
+  const wideColumns = await page.evaluate(() => {
+    const sidebar = document.querySelector(".sidebar").getBoundingClientRect();
+    const article = document.querySelector(".article").getBoundingClientRect();
+    return sidebar.right <= article.left + 1 && article.right <= innerWidth + 1
+      && document.documentElement.scrollWidth <= innerWidth + 1;
+  });
+  if (!wideColumns) throw new Error("homepage content overlaps its navigation or overflows the viewport");
+  await page.locator('.docs-quick-nav a[href="/start/getting-started"]').click();
+  await page.waitForURL((url) => url.pathname.replace(/\/$/, "") === "/start/getting-started");
+  if (await page.locator(".home-layout").count()) throw new Error("landing content survived article navigation");
+  await assertPageBackground(page);
+  await assertTocAtArticleStart(page);
+  const sectionUsable = await page.evaluate(() => {
+    const link = document.querySelector(".sidebar .nav-link.active");
+    const rect = link.getBoundingClientRect();
+    return link.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+  });
+  if (!sectionUsable) throw new Error("current page navigation is not reachable after a route change");
+  await page.goBack();
+  await page.locator(".home-layout").waitFor({ state: "visible" });
+  await assertPageBackground(page);
+  await page.close();
+}
+
+async function assertPageBackground(page) {
+  await page.waitForFunction(() => {
+    const node = document.querySelector(".home-hero");
+    if (!node || document.querySelectorAll(".home-hero").length !== 1) return false;
+    const rect = node.getBoundingClientRect();
+    const main = node.parentElement.getBoundingClientRect();
+    const rtl = getComputedStyle(node).direction === "rtl";
+    const viewport = document.documentElement.clientWidth;
+    const fullBleed = rtl ? Math.abs(rect.left) < 1 : Math.abs(rect.right - viewport) < 1;
+    const clearOfSidebar = rtl ? Math.abs(rect.right - main.right) < 1 : Math.abs(rect.left - main.left) < 1;
+    return fullBleed && clearOfSidebar && rect.top + scrollY < 0
+      && getComputedStyle(node).pointerEvents === "none"
+      && document.documentElement.scrollWidth <= viewport;
+  });
+  await page.locator(".home-hero").evaluate(async (node) => {
+    const background = getComputedStyle(node, "::before").backgroundImage;
+    const image = new Image();
+    image.src = background.slice(5, -2);
+    await image.decode();
+  });
+}
+
+async function checkPageBackground() {
+  const page = await browser.newPage({ reducedMotion: "reduce" });
+  const routes = ["/", "/start/getting-started", ...["de", "ar"].flatMap((locale) =>
+    [`/${locale}/`, `/${locale}/start/getting-started`].filter((route) =>
+      fs.existsSync(path.join(site, route, "index.html"))))];
+  try {
+    for (const route of routes) {
+      await page.goto(`${base}${route}`, { waitUntil: "networkidle" });
+      if (route.endsWith("/")) {
+        if (await page.locator(".home-layout").count() !== 1 || await page.locator(".docs-hero").count()) {
+          throw new Error(`Every locale homepage must use the shared layout: ${route}`);
+        }
+      }
+      for (const theme of ["dark", "light"]) {
+        await page.evaluate((theme) => { document.documentElement.dataset.theme = theme; }, theme);
+        for (const width of [390, 820, 1440, 1920, 2560]) {
+          await page.setViewportSize({ width, height: 900 });
+          await assertPageBackground(page);
+        }
+      }
+    }
+  } finally { await page.close(); }
+}
+
+async function checkCommunityBanner() {
+  for (const theme of ["dark", "light"]) {
+    const page = await browser.newPage({ reducedMotion: "reduce" });
+    try {
+      await page.addInitScript((theme) => localStorage.setItem("theme", theme), theme);
+      for (const width of [320, 390, 820, 1024, 1440, 1920]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(`${base}/#community`, { waitUntil: "networkidle" });
+        const banner = page.locator(".home-discord");
+        await banner.scrollIntoViewIfNeeded();
+        await page.waitForFunction(() => [...document.querySelectorAll(".home-discord-art img")]
+          .every((img) => img.complete && img.naturalWidth > 0));
+        const geometry = await banner.evaluate((node) => {
+          const rect = node.getBoundingClientRect();
+          const art = node.querySelector(".home-discord-art").getBoundingClientRect();
+          const title = node.querySelector("h3").getBoundingClientRect();
+          const description = node.querySelector("p").getBoundingClientRect();
+          const button = node.querySelector("a").getBoundingClientRect();
+          const stacked = art.bottom <= title.top;
+          return {
+            stacked,
+            centered: Math.abs((title.top + button.bottom) / 2 - (rect.top + rect.bottom) / 2) < 3,
+            aligned: Math.abs(title.left - description.left) < 1 && Math.abs(title.left - button.left) < 1,
+            bounded: [art, title, description, button].every((item) => item.left >= rect.left && item.right <= rect.right
+              && item.top >= rect.top && item.bottom <= rect.bottom),
+            noOverlap: stacked || (button.right <= art.left && title.right <= art.left),
+            noOverflow: document.documentElement.scrollWidth <= innerWidth + 1,
+          };
+        });
+        if (!geometry.aligned || !geometry.bounded || !geometry.noOverlap || !geometry.noOverflow
+          || (width <= 390 && !geometry.stacked) || (width >= 1440 && (geometry.stacked || !geometry.centered))) {
+          throw new Error(`community banner layout (${theme}, ${width}px): ${JSON.stringify(geometry)}`);
+        }
+        if (width === 390 || width === 1440) {
+          await banner.screenshot({ path: path.join(artifacts, `community-${theme}-${width}.png`) });
+        }
+      }
+      await page.goto(`${base}/`, { waitUntil: "networkidle" });
+      const invite = page.getByRole("complementary", { name: "Pull up a chair." });
+      await invite.waitFor({ state: "visible" });
+      const floating = await invite.evaluate((node) => {
+        const card = node.getBoundingClientRect();
+        const launcher = document.querySelector(".docs-chat-launcher").getBoundingClientRect();
+        return card.left > innerWidth / 2 && card.right <= innerWidth && card.bottom <= innerHeight
+          && launcher.bottom < card.top;
+      });
+      if (!floating) throw new Error(`Community invitation must float at the right with Molty above it (${theme})`);
+      await page.getByRole("button", { name: "Ask Molty", exact: true }).click();
+      await invite.waitFor({ state: "hidden" });
+      await page.getByRole("button", { name: "Minimize", exact: true }).click();
+      await invite.waitFor({ state: "visible" });
+      await invite.getByRole("button", { name: "Dismiss and don't show again" }).click();
+      await page.reload({ waitUntil: "networkidle" });
+      await invite.waitFor({ state: "hidden" });
+      const launcherAtBottom = await page.locator(".docs-chat-launcher").evaluate((node) => innerHeight - node.getBoundingClientRect().bottom < 40);
+      if (!launcherAtBottom) throw new Error("Molty must return to the bottom after the invitation is dismissed");
+    } finally { await page.close(); }
+  }
+}
+
+async function checkHeaderSurface() {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
+    for (const theme of ["dark", "light"]) {
+      await page.evaluate((value) => { document.documentElement.dataset.theme = value; }, theme);
+      await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+      await page.waitForFunction(() => getComputedStyle(document.querySelector(".site-header")).backgroundColor === "rgba(0, 0, 0, 0)");
+      await page.evaluate(() => scrollTo({ top: 300, behavior: "instant" }));
+      await page.waitForFunction(() => getComputedStyle(document.querySelector(".site-header")).backgroundColor !== "rgba(0, 0, 0, 0)");
+      await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+      await page.waitForFunction(() => getComputedStyle(document.querySelector(".site-header")).backgroundColor === "rgba(0, 0, 0, 0)");
+    }
+    await page.getByRole("link", { name: "Community", exact: true }).first().focus();
+    for (const name of ["GitHub", "Reddit", "Discord", "X", "Language: English", "Toggle theme"]) {
+      await page.keyboard.press("Tab");
+      const activeName = await page.evaluate(() => document.activeElement.getAttribute("aria-label"));
+      if (activeName !== name) throw new Error(`Header keyboard order: expected ${name}, got ${activeName}`);
+    }
+    for (const width of [320, 390, 820, 821, 1024, 1120, 1121, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${base}/`, { waitUntil: "networkidle" });
+      const mobile = width <= 820;
+      if (mobile) {
+        await page.locator("[data-nav-toggle]").click();
+        await page.waitForFunction(() => Math.abs(document.querySelector(".sidebar").getBoundingClientRect().left) < 1);
+      }
+      const geometry = await page.evaluate((mobile) => {
+        const container = document.querySelector(mobile ? ".sidebar-tools" : ".header-row").getBoundingClientRect();
+        const links = [...document.querySelectorAll(mobile ? ".sidebar-socials a" : ".header-social-group a")];
+        const controls = [...document.querySelectorAll(mobile
+          ? ".sidebar-tools a,.sidebar-tools button"
+          : ".header-row .brand,.search-button,.network-nav a,.header-social-group a,.header-row .language-trigger,.header-row .theme-toggle")]
+          .map((node) => node.getBoundingClientRect()).filter((rect) => rect.width > 0 && rect.height > 0);
+        return {
+          names: links.map((node) => node.getAttribute("aria-label")),
+          targets: links.every((node) => {
+            const rect = node.getBoundingClientRect();
+            return rect.width + 0.01 >= (mobile ? 44 : 36) && rect.height + 0.01 >= (mobile ? 44 : 36);
+          }),
+          bounded: controls.every((rect) => rect.left >= Math.max(0, container.left) - 1
+            && rect.right <= Math.min(innerWidth, container.right) + 1),
+          clear: controls.every((rect, i) => controls.slice(i + 1).every((other) =>
+            rect.right <= other.left || other.right <= rect.left || rect.bottom <= other.top || other.bottom <= rect.top)),
+        };
+      }, mobile);
+      if (geometry.names.join(",") !== "GitHub,Reddit,Discord,X" || !geometry.targets || !geometry.bounded || !geometry.clear) {
+        throw new Error(`Social navigation geometry (${width}px): ${JSON.stringify(geometry)}`);
+      }
+      if (mobile) await page.locator("[data-nav-close]").click();
+    }
+  } finally { await page.close(); }
+}
+
+async function checkFooterSocials() {
+  const names = ["X", "GitHub", "Discord", "Reddit", "TikTok", "LinkedIn", "Instagram", "YouTube"];
+  const page = await browser.newPage({ reducedMotion: "reduce" });
+  try {
+    for (const width of [320, 390, 820, 821, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${base}/`, { waitUntil: "networkidle" });
+      const socials = page.locator(".site-footer-socials");
+      await socials.scrollIntoViewIfNeeded();
+      const geometry = await socials.locator("a").evaluateAll((links) => {
+        const brand = links[0].closest(".site-footer-brand").getBoundingClientRect();
+        const rects = links.map((link) => link.getBoundingClientRect());
+        return {
+          names: links.map((link) => link.getAttribute("aria-label")),
+          bounded: rects.every((rect) => rect.left >= Math.max(0, brand.left) && rect.right <= Math.min(innerWidth, brand.right) + 1),
+          targets: rects.every((rect) => rect.width >= 24 && rect.height >= 24),
+          oneRow: rects.every((rect) => Math.abs(rect.top - rects[0].top) < 1),
+        };
+      });
+      if (geometry.names.join(",") !== names.join(",") || !geometry.bounded || !geometry.targets || !geometry.oneRow) {
+        throw new Error(`Footer social links (${width}px): ${JSON.stringify(geometry)}`);
+      }
+      await socials.getByRole("link", { name: "X", exact: true }).focus();
+      for (const name of names.slice(1)) {
+        await page.keyboard.press("Tab");
+        if (await page.evaluate(() => document.activeElement.getAttribute("aria-label")) !== name) {
+          throw new Error(`Footer keyboard order (${width}px): expected ${name}`);
+        }
+      }
+      if (width === 390 || width === 1440) {
+        await page.evaluate(() => document.activeElement.blur());
+        for (const theme of ["dark", "light"]) {
+          await page.evaluate((theme) => { document.documentElement.dataset.theme = theme; }, theme);
+          await page.locator(width === 1440 ? ".site-footer" : ".site-footer-brand")
+            .screenshot({ path: path.join(artifacts, `footer-${theme}-${width}.png`) });
+        }
+      }
+      await page.evaluate(() => scrollTo({ top: document.scrollingElement.scrollHeight, behavior: "instant" }));
+      await page.waitForFunction(() => innerHeight - document.querySelector(".docs-chat-launcher").getBoundingClientRect().bottom < 40);
+      const footerObscured = await page.evaluate(() => {
+        const link = document.querySelector(".site-footer-legal a").getBoundingClientRect();
+        const chat = document.querySelector(".docs-chat-launcher").getBoundingClientRect();
+        return link.left < chat.right && link.right > chat.left && link.top < chat.bottom && link.bottom > chat.top;
+      });
+      if (footerObscured) throw new Error(`Footer link is obscured by chat (${width}px)`);
+    }
+  } finally { await page.close(); }
+}
+
+async function checkDesktop() {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(`${base}/__elements`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(artifacts, "elements-desktop-dark.png"), fullPage: true });
+  await page.evaluate(() => scrollTo(0, 760));
+  await page.screenshot({ path: path.join(artifacts, "elements-desktop-scrolled.png"), fullPage: false });
+
+  const overlap = await page.evaluate(() => {
+    const header = document.querySelector(".site-header")?.getBoundingClientRect();
+    const sidebar = document.querySelector(".sidebar")?.getBoundingClientRect();
+    const toc = document.querySelector(".toc")?.getBoundingClientRect();
+    return {
+      headerTop: header?.top,
+      sidebarClear: header && sidebar ? sidebar.top >= header.bottom - 1 : false,
+      tocClear: header && toc ? toc.top >= header.bottom - 1 : false,
+    };
+  });
+  if (overlap.headerTop !== 0 || !overlap.sidebarClear || !overlap.tocClear) {
+    throw new Error(`desktop sticky shell overlap: ${JSON.stringify(overlap)}`);
+  }
+
+  await expectVisible(page, ".oc-code [data-code-copy]", "code copy button");
+  await expectVisible(page, ".page-status .page-status-beta", "page status badge");
+  await expectVisible(page, ".oc-code.has-line-numbers .code-line.is-highlighted", "line-highlighted code");
+  await expectVisible(page, ".oc-badge.oc-badge-orange", "badge");
+  await expectVisible(page, ".oc-panel", "panel");
+  await expectVisible(page, ".oc-prompt [data-prompt-copy]", "prompt copy");
+  await expectVisible(page, ".oc-tile-group .oc-tile", "tiles");
+  await expectVisible(page, ".oc-mermaid", "mermaid block");
+  await page.locator(".oc-mermaid.is-rendered svg").first().waitFor({ state: "visible", timeout: 10000 });
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll(".oc-mermaid.is-rendered")]
+      .some((block) => block.getAttribute("data-mermaid")?.includes("<br>") && block.querySelector("svg"))
+  );
+  await page.locator("[data-mermaid-expand]").first().click();
+  await page.locator("[data-mermaid-overlay].open").waitFor({ state: "visible" });
+  await page.keyboard.press("Tab");
+  const mermaidOverlayFocus = await page.evaluate(() => ({
+    activeInOverlay: Boolean(document.querySelector("[data-mermaid-overlay].open")?.contains(document.activeElement)),
+    bodyLocked: document.body.classList.contains("has-mermaid-overlay"),
+  }));
+  if (!mermaidOverlayFocus.activeInOverlay || !mermaidOverlayFocus.bodyLocked) {
+    throw new Error(`mermaid overlay focus trap failed: ${JSON.stringify(mermaidOverlayFocus)}`);
+  }
+  await page.locator("[data-mermaid-overlay-canvas]").click({ position: { x: 8, y: 8 } });
+  if (!await page.locator("[data-mermaid-overlay].open").count()) {
+    throw new Error("clicking inside the diagram dismissed it");
+  }
+  await page.locator(".oc-mermaid-overlay-head").click({ position: { x: 8, y: 8 } });
+  await page.locator("[data-mermaid-overlay].open").waitFor({ state: "hidden" });
+  if (!await page.evaluate(() => document.activeElement?.matches("[data-mermaid-expand]")
+    && !document.body.classList.contains("has-mermaid-overlay"))) {
+    throw new Error("backdrop dismissal did not restore focus and scrolling");
+  }
+  await page.locator("[data-mermaid-expand]").first().click();
+  await page.locator("[data-mermaid-overlay].open").waitFor({ state: "visible" });
+  await page.evaluate(() => history.pushState({ docs: true }, "", `${location.pathname}#fixture-components`));
+  await page.goBack();
+  await page.locator("[data-mermaid-overlay].open").waitFor({ state: "hidden" });
+  const sameDocumentOverlayClose = await page.evaluate(() => ({
+    pathname: location.pathname,
+    overlayOpen: Boolean(document.querySelector("[data-mermaid-overlay].open")),
+    bodyLocked: document.body.classList.contains("has-mermaid-overlay"),
+  }));
+  if (sameDocumentOverlayClose.pathname !== "/__elements"
+    || sameDocumentOverlayClose.overlayOpen
+    || sameDocumentOverlayClose.bodyLocked) {
+    throw new Error(`same-document history left mermaid overlay open: ${JSON.stringify(sameDocumentOverlayClose)}`);
+  }
+  await page.locator("[data-mermaid-expand]").first().click();
+  await page.locator("[data-mermaid-overlay].open").waitFor({ state: "visible" });
+  await page.keyboard.press("Meta+K");
+  if (await page.locator(".search-modal.open").count()) {
+    throw new Error("mermaid overlay allowed the search shortcut");
+  }
+  await page.keyboard.press("Escape");
+  const mermaidOverlayClose = await page.evaluate(() => ({
+    overlayOpen: Boolean(document.querySelector("[data-mermaid-overlay].open")),
+    bodyLocked: document.body.classList.contains("has-mermaid-overlay"),
+  }));
+  if (mermaidOverlayClose.overlayOpen || mermaidOverlayClose.bodyLocked) {
+    throw new Error(`mermaid overlay did not close on Escape: ${JSON.stringify(mermaidOverlayClose)}`);
+  }
+  await page.locator(".oc-mermaid.is-error pre code").first().waitFor({ state: "visible", timeout: 10000 });
+  const mermaidErrorLeak = await page.evaluate(() => ({
+    bodyText: document.body.innerText.includes("Syntax error in text"),
+    leakedSvg: [...document.querySelectorAll("svg")]
+      .some((svg) => !svg.closest("[data-mermaid]") && svg.textContent?.includes("Syntax error in text")),
+  }));
+  if (mermaidErrorLeak.bodyText || mermaidErrorLeak.leakedSvg) {
+    throw new Error(`mermaid error artifact leaked into shell: ${JSON.stringify(mermaidErrorLeak)}`);
+  }
+  const componentSkin = await page.evaluate(() => {
+    const code = getComputedStyle(document.querySelector(".oc-code"));
+    const pre = getComputedStyle(document.querySelector(".oc-code pre"));
+    const step = getComputedStyle(document.querySelector(".oc-step:last-child"));
+    const paramType = getComputedStyle(document.querySelector(".oc-param-type"));
+    const lineRects = [...document.querySelectorAll(".oc-code.has-line-numbers .code-line")]
+      .slice(0, 3)
+      .map((line) => line.getBoundingClientRect());
+    return {
+      codeBg: code.backgroundColor,
+      codePadding: pre.paddingTop,
+      stepBorderImage: step.borderImageSource,
+      paramTypeColor: paramType.color,
+      codeLineGap: lineRects.length > 1 ? lineRects[1].top - lineRects[0].bottom : 0,
+    };
+  });
+  if (componentSkin.codeBg === "rgba(0, 0, 0, 0)"
+    || parseFloat(componentSkin.codePadding) > 14
+    || !componentSkin.stepBorderImage.includes("linear-gradient")
+    || componentSkin.paramTypeColor === "rgb(154, 154, 162)"
+    || componentSkin.codeLineGap > 3) {
+    throw new Error(`desktop component skin failed: ${JSON.stringify(componentSkin)}`);
+  }
+  const stepCodeSpacing = await page.evaluate(() => {
+    const code = document.querySelector(".oc-step .oc-code");
+    const next = code?.nextElementSibling;
+    const codeRect = code?.getBoundingClientRect();
+    const nextRect = next?.getBoundingClientRect();
+    return {
+      nextTag: next?.tagName,
+      gap: codeRect && nextRect ? Math.round(nextRect.top - codeRect.bottom) : null,
+    };
+  });
+  if (stepCodeSpacing.nextTag !== "P" || (stepCodeSpacing.gap ?? 0) < 14) {
+    throw new Error(`step code block spacing failed: ${JSON.stringify(stepCodeSpacing)}`);
+  }
+  const cardGrids = await page.evaluate(() => {
+    const countColumns = (grid) => {
+      const cards = [...grid.querySelectorAll(":scope > .oc-card")];
+      const firstTop = cards[0]?.getBoundingClientRect().top ?? 0;
+      return cards.filter((card) => Math.abs(card.getBoundingClientRect().top - firstTop) < 2).length;
+    };
+    return Object.fromEntries([1, 2, 3, 4].map((cols) => {
+      const grids = [...document.querySelectorAll(`.oc-card-grid.oc-card-cols-${cols}`)];
+      return [cols, grids.map((grid) => ({
+        columns: countColumns(grid),
+        template: getComputedStyle(grid).gridTemplateColumns,
+        width: grid.getBoundingClientRect().width,
+      }))];
+    }));
+  });
+  const expectedCardColumns = (requested, width) => {
+    if (width <= 520) return 1;
+    if (requested === 4 && width <= 720) return 2;
+    if (requested === 3 && width <= 620) return 2;
+    return requested;
+  };
+  if ([1, 2, 3, 4].some((requested) =>
+    !cardGrids[String(requested)]?.length
+      || !cardGrids[String(requested)].every((grid) => grid.columns === expectedCardColumns(requested, grid.width))
+  )
+    || (cardGrids["4"] ?? []).length < 2) {
+    throw new Error(`desktop card column contract failed: ${JSON.stringify(cardGrids)}`);
+  }
+  await page.setViewportSize({ width: 1900, height: 1000 });
+  await page.goto(`${base}/__elements`, { waitUntil: "networkidle" });
+  const wideCardGrids = await page.evaluate(() => {
+    const countColumns = (grid) => {
+      const cards = [...grid.querySelectorAll(":scope > .oc-card")];
+      const firstTop = cards[0]?.getBoundingClientRect().top ?? 0;
+      return cards.filter((card) => Math.abs(card.getBoundingClientRect().top - firstTop) < 2).length;
+    };
+    return Object.fromEntries([1, 2, 3, 4].map((cols) => {
+      const grids = [...document.querySelectorAll(`.oc-card-grid.oc-card-cols-${cols}`)];
+      return [cols, grids.map((grid) => ({
+        columns: countColumns(grid),
+        width: grid.getBoundingClientRect().width,
+      }))];
+    }));
+  });
+  if (wideCardGrids["1"]?.[0]?.columns !== 1
+    || wideCardGrids["2"]?.[0]?.columns !== 2
+    || wideCardGrids["3"]?.[0]?.columns !== 3
+    || (wideCardGrids["4"] ?? []).length < 2
+    || !wideCardGrids["4"].every((grid) => grid.columns === expectedCardColumns(4, grid.width))) {
+    throw new Error(`wide desktop card column contract failed: ${JSON.stringify(wideCardGrids)}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`${base}/start/getting-started`, { waitUntil: "networkidle" });
+  await checkPageActions(page, "desktop dark");
+  await expectVisible(page, ".page-feedback [data-feedback-value='yes']", "page feedback");
+  const searchShortcut = await page.evaluate(() => {
+    const key = document.querySelector(".search-shortcut");
+    const style = key ? getComputedStyle(key) : null;
+    const rect = key?.getBoundingClientRect();
+    return {
+      display: style?.display,
+      text: key?.textContent?.trim(),
+      hasCommandIcon: Boolean(key?.querySelector(".icon-command")),
+      width: rect?.width,
+      height: rect?.height,
+      borderRadius: style?.borderRadius,
+      backgroundColor: style?.backgroundColor,
+      fontSize: style?.fontSize,
+    };
+  });
+  if (searchShortcut.text !== "K"
+    || !searchShortcut.hasCommandIcon
+    || searchShortcut.width < 20 || searchShortcut.width > 44
+    || searchShortcut.height < 14 || searchShortcut.height > 28
+    || searchShortcut.backgroundColor !== "rgba(0, 0, 0, 0)") {
+    throw new Error(`search shortcut inline hint failed: ${JSON.stringify(searchShortcut)}`);
+  }
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
+  await page.waitForFunction(() =>
+    document.querySelector(".search-modal")?.classList.contains("open")
+      && document.activeElement?.matches("[data-search-input]")
+  );
+  const searchOpen = await page.evaluate(() => ({
+    open: document.querySelector(".search-modal")?.classList.contains("open"),
+    focused: document.activeElement?.matches("[data-search-input]"),
+  }));
+  if (!searchOpen.open || !searchOpen.focused) {
+    throw new Error(`search shortcut did not open and focus input: ${JSON.stringify(searchOpen)}`);
+  }
+  const expectSuggestion = async (label) => {
+    const state = await page.evaluate(() => {
+      const input = document.querySelector("[data-search-input]");
+      const list = document.getElementById(input.getAttribute("aria-controls"));
+      const active = document.getElementById(input.getAttribute("aria-activedescendant"));
+      return {
+        focused: document.activeElement === input,
+        expanded: input.getAttribute("aria-expanded"),
+        label: active?.textContent.trim(),
+        selected: active?.getAttribute("aria-selected"),
+        highlighted: active?.classList.contains("active"),
+        inList: list?.getAttribute("role") === "listbox" && list.contains(active),
+        selectionCount: list?.querySelectorAll('[aria-selected="true"]').length,
+      };
+    });
+    if (!state.focused || state.expanded !== "true" || state.label !== label
+      || state.selected !== "true" || !state.highlighted || !state.inList || state.selectionCount !== 1) {
+      throw new Error(`search suggestion keyboard selection failed: ${JSON.stringify(state)}`);
+    }
+  };
+  await expectSuggestion("Install OpenClaw");
+  await page.keyboard.press("ArrowUp");
+  await expectSuggestion("Build a plugin");
+  await page.keyboard.press("ArrowDown");
+  await expectSuggestion("Install OpenClaw");
+  await page.keyboard.press("ArrowDown");
+  await expectSuggestion("Connect Telegram");
+  await page.keyboard.press("Enter");
+  if (await page.inputValue("[data-search-input]") !== "telegram"
+    || await page.getAttribute("[data-search-input]", "aria-controls") !== "docs-search-results") {
+    throw new Error("Enter did not turn the selected suggestion into a search");
+  }
+  await page.click("[data-search-clear]");
+  await expectSuggestion("Install OpenClaw");
+  await page.keyboard.press("Shift+Tab");
+  if (!await page.evaluate(() => document.activeElement?.closest(".search-modal")
+    && document.activeElement.tabIndex >= 0 && document.activeElement.getAttribute("role") !== "option")) {
+    throw new Error("search focus trap selected a list option outside the tab order");
+  }
+  await page.keyboard.press("Tab");
+  await expectSuggestion("Install OpenClaw");
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => {
+    const textarea = document.createElement("textarea");
+    textarea.dataset.shortcutSmoke = "true";
+    document.body.append(textarea);
+    textarea.focus();
+  });
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
+  const editableShortcut = await page.evaluate(() => ({
+    open: document.querySelector(".search-modal")?.classList.contains("open"),
+    focused: document.activeElement?.matches("[data-shortcut-smoke]"),
+  }));
+  if (editableShortcut.open || !editableShortcut.focused) {
+    throw new Error(`search shortcut hijacked editable target: ${JSON.stringify(editableShortcut)}`);
+  }
+  await page.evaluate(() => document.querySelector("[data-shortcut-smoke]")?.remove());
+  await page.waitForTimeout(350);
+  const initialFloatingChat = await page.evaluate(() => {
+    const chat = document.querySelector(".docs-chat");
+    const panel = document.querySelector(".docs-chat-panel");
+    const main = document.querySelector(".main");
+    const panelStyle = panel ? getComputedStyle(panel) : null;
+    return {
+      open: chat?.classList.contains("open"),
+      panelDisplay: panelStyle?.display,
+      panelOpacity: panelStyle?.opacity,
+      panelTransform: panelStyle?.transform,
+      panelInert: panel?.hasAttribute("inert"),
+      panelAriaHidden: panel?.getAttribute("aria-hidden"),
+      bodyPaddingRight: getComputedStyle(document.body).paddingRight,
+      mainRight: main?.getBoundingClientRect().right,
+    };
+  });
+  if (initialFloatingChat.open
+    || initialFloatingChat.panelDisplay !== "grid"
+    || initialFloatingChat.panelOpacity !== "0"
+    || initialFloatingChat.panelTransform === "none"
+    || !initialFloatingChat.panelInert
+    || initialFloatingChat.panelAriaHidden !== "true"
+    || parseFloat(initialFloatingChat.bodyPaddingRight ?? "0") !== 0) {
+    throw new Error(`initial floating chat should be minimized: ${JSON.stringify(initialFloatingChat)}`);
+  }
+  await page.click("[data-chat-toggle]");
+  await page.waitForTimeout(350);
+  const floatingChat = await page.evaluate(() => {
+    const chat = document.querySelector(".docs-chat");
+    const panel = document.querySelector(".docs-chat-panel");
+    const main = document.querySelector(".main");
+    const copy = document.querySelector("[data-chat-copy]");
+    const retry = document.querySelector("[data-chat-retry]");
+    const maximize = document.querySelector("[data-chat-maximize]");
+    const chatRect = chat?.getBoundingClientRect();
+    const panelRect = panel?.getBoundingClientRect();
+    const mainRect = main?.getBoundingClientRect();
+    const panelStyle = panel ? getComputedStyle(panel) : null;
+    return {
+      open: chat?.classList.contains("open"),
+      bodyPaddingRight: getComputedStyle(document.body).paddingRight,
+      panelDisplay: panelStyle?.display,
+      panelOpacity: panelStyle?.opacity,
+      panelTransform: panelStyle?.transform,
+      panelRight: panelRect ? Math.round(innerWidth - panelRect.right) : null,
+      panelBottom: panelRect ? Math.round(innerHeight - panelRect.bottom) : null,
+      panelHeight: panelRect?.height,
+      panelWidth: panelRect?.width,
+      panelInert: panel?.hasAttribute("inert"),
+      panelAriaHidden: panel?.getAttribute("aria-hidden"),
+      chatWidth: chatRect?.width,
+      mainRight: mainRect?.right,
+      copyHidden: copy?.hasAttribute("hidden"),
+      retryHidden: retry?.hasAttribute("hidden"),
+      retryDisabled: retry?.hasAttribute("disabled"),
+      maximizePressed: maximize?.getAttribute("aria-pressed"),
+    };
+  });
+  if (!floatingChat.open
+    || floatingChat.panelDisplay !== "grid"
+    || floatingChat.panelOpacity !== "1"
+    || floatingChat.panelRight !== 18
+    || floatingChat.panelBottom !== 18
+    || floatingChat.panelHeight < 640
+    || floatingChat.panelHeight > 680
+    || floatingChat.panelWidth < 400
+    || floatingChat.panelWidth > 420
+    || floatingChat.panelInert
+    || floatingChat.panelAriaHidden !== "false"
+    || floatingChat.chatWidth < 400
+    || parseFloat(floatingChat.bodyPaddingRight ?? "0") !== 0
+    || floatingChat.mainRight !== initialFloatingChat.mainRight
+    || !floatingChat.copyHidden
+    || !floatingChat.retryHidden
+    || !floatingChat.retryDisabled
+    || floatingChat.maximizePressed !== "false") {
+    throw new Error(`floating desktop chat failed: ${JSON.stringify(floatingChat)}`);
+  }
+  await page.click("[data-chat-maximize]");
+  await page.waitForTimeout(350);
+  const expandedFloatingChat = await page.evaluate(() => {
+    const chat = document.querySelector(".docs-chat");
+    const panel = document.querySelector(".docs-chat-panel");
+    const main = document.querySelector(".main");
+    const maximize = document.querySelector("[data-chat-maximize]");
+    const chatRect = chat?.getBoundingClientRect();
+    const panelRect = panel?.getBoundingClientRect();
+    const mainRect = main?.getBoundingClientRect();
+    return {
+      expanded: chat?.classList.contains("expanded"),
+      chatWidth: chatRect?.width,
+      panelHeight: panelRect?.height,
+      panelWidth: panelRect?.width,
+      panelRight: panelRect ? Math.round(innerWidth - panelRect.right) : null,
+      panelBottom: panelRect ? Math.round(innerHeight - panelRect.bottom) : null,
+      mainRight: mainRect?.right,
+      bodyPaddingRight: getComputedStyle(document.body).paddingRight,
+      maximizePressed: maximize?.getAttribute("aria-pressed"),
+      maximizeLabel: maximize?.getAttribute("aria-label"),
+    };
+  });
+  if (!expandedFloatingChat.expanded
+    || expandedFloatingChat.chatWidth < 720
+    || expandedFloatingChat.panelWidth < 720
+    || expandedFloatingChat.panelHeight < 820
+    || expandedFloatingChat.panelRight !== 18
+    || expandedFloatingChat.panelBottom !== 18
+    || parseFloat(expandedFloatingChat.bodyPaddingRight ?? "0") !== 0
+    || expandedFloatingChat.mainRight !== initialFloatingChat.mainRight
+    || expandedFloatingChat.maximizePressed !== "true"
+    || expandedFloatingChat.maximizeLabel !== "Shrink") {
+    throw new Error(`expanded floating desktop chat failed: ${JSON.stringify(expandedFloatingChat)}`);
+  }
+  await page.click("[data-chat-minimize]");
+  await page.waitForTimeout(350);
+  const minimizedFloatingChat = await page.evaluate(() => {
+    const chat = document.querySelector(".docs-chat");
+    const panel = document.querySelector(".docs-chat-panel");
+    const panelStyle = panel ? getComputedStyle(panel) : null;
+    return {
+      open: chat?.classList.contains("open"),
+      panelDisplay: panelStyle?.display,
+      panelOpacity: panelStyle?.opacity,
+      panelTransform: panelStyle?.transform,
+      bodyPaddingRight: getComputedStyle(document.body).paddingRight,
+    };
+  });
+  if (minimizedFloatingChat.open
+    || minimizedFloatingChat.panelDisplay !== "grid"
+    || minimizedFloatingChat.panelOpacity !== "0"
+    || minimizedFloatingChat.panelTransform === "none"
+    || parseFloat(minimizedFloatingChat.bodyPaddingRight ?? "0") !== 0) {
+    throw new Error(`minimized floating desktop chat failed: ${JSON.stringify(minimizedFloatingChat)}`);
+  }
+  await page.close();
+}
+
+async function checkTocScrollspy() {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(`${base}/channels/discord`, { waitUntil: "networkidle" });
+  await page.locator(".toc a").first().waitFor({ state: "visible" });
+  const initial = await page.evaluate(() => ({
+    active: [...document.querySelectorAll(".toc a.active")].map((link) => link.hash),
+    tocCount: document.querySelectorAll(".toc a").length,
+  }));
+  if (initial.tocCount < 4 || initial.active.length !== 1) {
+    throw new Error(`toc initial active state failed: ${JSON.stringify(initial)}`);
+  }
+
+  const scrolled = await scrollToTocItem(page, 4);
+  if (!scrolled || scrolled.activeHash !== scrolled.expectedHash || scrolled.scrollY < 700 || scrolled.currentTitle !== scrolled.activeTitle) {
+    throw new Error(`toc scrollspy failed on long page: ${JSON.stringify(scrolled)}`);
+  }
+
+  await openSection(page, "Channels");
+  const closedTelegramGroups = page.locator('.docs-section[data-docs-section="Channels"] details:not([open])')
+    .filter({ has: page.locator('a[href$="/channels/telegram"]') });
+  while (await closedTelegramGroups.count()) await closedTelegramGroups.first().locator(":scope > summary").click();
+  await page.click('.docs-section[data-docs-section="Channels"] a.nav-link[href$="/channels/telegram"]');
+  await page.waitForURL("**/channels/telegram");
+  await page.locator(".toc a").first().waitFor({ state: "visible" });
+  const afterPjax = await scrollToTocItem(page, 2);
+  if (!afterPjax
+    || afterPjax.pathname !== "/channels/telegram"
+    || afterPjax.activeHash !== afterPjax.expectedHash
+    || afterPjax.currentTitle !== afterPjax.activeTitle
+    || afterPjax.activeCount !== 1) {
+    throw new Error(`toc scrollspy failed after PJAX navigation: ${JSON.stringify(afterPjax)}`);
+  }
+
+  await page.evaluate(() => {
+    const link = document.createElement("a");
+    link.href = "/__elements#encoded-anchor%3A-target";
+    link.textContent = "Encoded anchor target";
+    link.dataset.encodedAnchorSmoke = "true";
+    document.querySelector(".doc")?.prepend(link);
+  });
+  await page.click("[data-encoded-anchor-smoke]");
+  await page.waitForURL("**/__elements#encoded-anchor%3A-target");
+  await page.waitForFunction(() => {
+    const target = document.getElementById(location.hash.slice(1));
+    const top = target?.getBoundingClientRect().top;
+    return top !== undefined && top >= 0 && top < innerHeight;
+  });
+  const encodedAnchor = await page.evaluate(() => {
+    const target = document.getElementById(location.hash.slice(1));
+    const active = [...document.querySelectorAll(".toc a.active")];
+    return {
+      activeCount: active.length,
+      activeHash: active[0]?.hash ?? null,
+      hash: location.hash,
+      pathname: location.pathname,
+      targetId: target?.id ?? null,
+      targetTop: target?.getBoundingClientRect().top ?? null,
+      viewportHeight: innerHeight,
+    };
+  });
+  if (encodedAnchor.pathname !== "/__elements"
+    || encodedAnchor.hash !== "#encoded-anchor%3A-target"
+    || encodedAnchor.targetId !== "encoded-anchor%3A-target"
+    || encodedAnchor.targetTop === null
+    || encodedAnchor.targetTop < 0
+    || encodedAnchor.targetTop >= encodedAnchor.viewportHeight
+    || encodedAnchor.activeCount !== 1
+    || encodedAnchor.activeHash !== encodedAnchor.hash) {
+    throw new Error(`encoded cross-page anchor failed: ${JSON.stringify(encodedAnchor)}`);
+  }
+  await page.close();
+}
+
+async function scrollToTocItem(page, index) {
+  const expected = await page.evaluate((targetIndex) => {
+    const links = [...document.querySelectorAll(".toc a")];
+    const items = links
+      .map((link) => ({ hash: link.hash, id: link.hash.slice(1) }))
+      .filter((item) => item.id && document.getElementById(item.id));
+    const item = items[Math.min(targetIndex, items.length - 1)];
+    document.getElementById(item?.id)?.scrollIntoView();
+    return item?.hash ?? null;
+  }, index);
+  if (!expected) return null;
+  await page.waitForFunction((hash) => [...document.querySelectorAll(".toc a.active")].some((link) => link.hash === hash), expected);
+  return page.evaluate((expectedHash) => {
+    const active = [...document.querySelectorAll(".toc a.active")];
+    return {
+      expectedHash,
+      activeHash: active[0]?.hash ?? null,
+      activeCount: active.length,
+      activeTitle: active[0]?.textContent.trim(),
+      currentTitle: document.querySelector("[data-toc-current]")?.textContent,
+      pathname: location.pathname,
+      scrollY,
+    };
+  }, expected);
+}
+
+async function checkTocRailScrolling() {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
+  try {
+    await page.addInitScript(() => localStorage.setItem("openclaw.docs.community-invite.v2", JSON.stringify({ dismissedAtMs: 1 })));
+    await page.goto(`${base}/channels/discord`, { waitUntil: "networkidle" });
+    await page.evaluate(() => document.fonts.ready);
+    // Force a long outline without depending on how upstream content is split into pages.
+    await page.locator(".toc nav").evaluate(nav => {
+      for (let i = 0; i < 40; i++) {
+        const link = document.createElement("a");
+        link.href = `#scroll-fixture-${i}`;
+        link.textContent = `Scrollable section ${i + 1}`;
+        nav.append(link);
+      }
+    });
+    await page.waitForFunction(() => document.querySelector(".toc").classList.contains("can-scroll-down"));
+    await page.mouse.move(700, 300);
+    const start = await page.locator(".toc").evaluate(el => {
+      const box = el.getBoundingClientRect(), title = el.querySelector("h2").getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, titleTop: title.top, viewport: innerHeight, down: el.classList.contains("can-scroll-down"), up: el.classList.contains("can-scroll-up"), thumb: getComputedStyle(el, "::-webkit-scrollbar-thumb").backgroundColor, track: getComputedStyle(el, "::-webkit-scrollbar-track").backgroundColor };
+    });
+    if (Math.abs(start.top - start.titleTop) > 1 || Math.abs(start.bottom - start.viewport) > 1 || !start.down || start.up
+      || start.thumb !== "rgba(0, 0, 0, 0)" || start.track !== "rgba(0, 0, 0, 0)") {
+      throw new Error(`Desktop TOC must start at its heading, fill the viewport and hide the idle track/thumb: ${JSON.stringify(start)}`);
+    }
+    await page.locator(".toc h2").hover();
+    await page.waitForFunction(() => getComputedStyle(document.querySelector(".toc"), "::-webkit-scrollbar-thumb").backgroundColor !== "rgba(0, 0, 0, 0)");
+    await page.locator(".toc").evaluate(el => { el.scrollTop = el.scrollHeight; });
+    await page.waitForFunction(() => {
+      const el = document.querySelector(".toc");
+      return !el.classList.contains("can-scroll-down") && el.classList.contains("can-scroll-up");
+    });
+    await page.keyboard.press("Tab");
+    await page.locator(".toc a").last().focus();
+    await page.waitForFunction(() => {
+      const link = document.activeElement.getBoundingClientRect(), rail = document.querySelector(".toc").getBoundingClientRect(), launcher = document.querySelector(".docs-chat-launcher").getBoundingClientRect();
+      return link.top >= rail.top && link.bottom <= launcher.top - 10;
+    });
+    const focus = await page.locator(".toc").evaluate(el => ({ mask: getComputedStyle(el).maskImage, focused: el.contains(document.activeElement) }));
+    if (focus.mask !== "none" || !focus.focused) throw new Error(`TOC keyboard focus must remain unfaded and clear of chat: ${JSON.stringify(focus)}`);
+    await page.locator(".toc nav").evaluate(nav => { nav.innerHTML = '<a href="#short-outline">Short outline</a>'; });
+    await page.mouse.move(700, 300);
+    await page.waitForFunction(() => {
+      const el = document.querySelector(".toc");
+      return !el.classList.contains("can-scroll-up") && !el.classList.contains("can-scroll-down");
+    });
+    await page.evaluate(() => {
+      const link = document.createElement("a");
+      link.href = "/channels/telegram";
+      link.textContent = "TOC navigation fixture";
+      link.dataset.tocNavigationFixture = "true";
+      document.querySelector(".doc").prepend(link);
+    });
+    await page.locator("[data-toc-navigation-fixture]").click();
+    await page.waitForURL("**/channels/telegram");
+    await page.waitForFunction(() => {
+      const el = document.querySelector(".toc");
+      return el.classList.contains("can-scroll-down") === (el.scrollHeight - el.clientHeight - el.scrollTop > 1);
+    });
+    await page.locator(".toc nav").evaluate(nav => {
+      for (let i = 0; i < 30; i++) {
+        const link = document.createElement("a");
+        link.href = `#scrollspy-spacer-${i}`;
+        link.textContent = `Outline spacer ${i + 1}`;
+        if (i < 20) nav.prepend(link); else nav.append(link);
+      }
+    });
+    for (const index of [Number.MAX_SAFE_INTEGER, 0]) {
+      await scrollToTocItem(page, index);
+      const active = await page.locator(".toc a.active").evaluate(el => {
+        const link = el.getBoundingClientRect(), rail = el.closest(".toc").getBoundingClientRect(), launcher = document.querySelector(".docs-chat-launcher").getBoundingClientRect();
+        return { top: link.top, bottom: link.bottom, railTop: rail.top, launcherTop: launcher.top, reachable: el.contains(document.elementFromPoint(link.x + link.width / 2, link.y + link.height / 2)) };
+      });
+      if (active.top < active.railTop + 28 || active.bottom > active.launcherTop - 10 || !active.reachable) {
+        throw new Error(`Automatic TOC scrolling must clear the fade and launcher: ${JSON.stringify(active)}`);
+      }
+    }
+    await page.locator(".docs-chat-launcher").evaluate(el => { el.hidden = true; });
+    await page.setViewportSize({ width: 1440, height: 860 });
+    await scrollToTocItem(page, Number.MAX_SAFE_INTEGER);
+    const withoutLauncher = await page.locator(".toc a.active").evaluate(el => {
+      const rail = el.closest(".toc"), style = getComputedStyle(rail);
+      return { bottom: el.getBoundingClientRect().bottom, railBottom: rail.getBoundingClientRect().bottom, fade: parseFloat(style.getPropertyValue("--toc-fade-distance")), remaining: rail.scrollHeight - rail.clientHeight - rail.scrollTop };
+    });
+    if (withoutLauncher.remaining <= 1 || withoutLauncher.bottom > withoutLauncher.railBottom - withoutLauncher.fade + 1) {
+      throw new Error(`Active TOC links must clear the full fade without a launcher: ${JSON.stringify(withoutLauncher)}`);
+    }
+    await page.setViewportSize({ width: 1024, height: 650 });
+    await page.waitForFunction(() => getComputedStyle(document.querySelector(".toc summary")).display !== "none");
+    await page.waitForFunction(() => {
+      const el = document.querySelector(".toc");
+      return !el.open && !el.classList.contains("can-scroll-up") && !el.classList.contains("can-scroll-down") && getComputedStyle(el).maskImage === "none";
+    });
+  } finally { await page.close(); }
+}
+
+async function checkCompactToc() {
+  const page = await browser.newPage({ viewport: { width: 1024, height: 650 } });
+  try {
+    await page.goto(`${base}/channels/discord`, { waitUntil: "networkidle" });
+    for (const width of [1024, 320]) {
+      await page.setViewportSize({ width, height: 650 });
+      await scrollToTocItem(page, 4);
+      await page.waitForFunction(() => {
+        const header = document.querySelector(".site-header").getBoundingClientRect();
+        const summary = document.querySelector(".toc summary").getBoundingClientRect();
+        return Math.abs(header.bottom - summary.top) < 1;
+      });
+      const current = await page.locator("[data-toc-current]").evaluate(node => {
+        const style = getComputedStyle(node), rect = node.getBoundingClientRect();
+        return { visible: rect.width > 0 && rect.right <= innerWidth, ellipsis: style.textOverflow === "ellipsis", fading: style.maskImage !== "none", overflowing: node.scrollWidth > node.clientWidth + 1 };
+      });
+      if (!current.visible || current.ellipsis || current.fading !== current.overflowing) throw new Error(`Compact TOC context failed (${width}px): ${JSON.stringify(current)}`);
+      const summary = await page.locator(".toc summary").boundingBox();
+      await page.mouse.click(summary.x + 30, summary.y + summary.height / 2);
+      const nav = await page.locator(".toc nav").boundingBox();
+      if (!nav || nav.x > summary.x + 16 || nav.y < summary.y + summary.height || nav.y + nav.height > 650) throw new Error(`Compact TOC dropdown must open at the leading edge within the viewport: ${JSON.stringify(nav)}`);
+      await page.keyboard.press("Escape");
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    // Header controls move between compact and desktop containers on resize.
+    await page.waitForFunction(() => Math.abs(
+      document.querySelector(".toc").getBoundingClientRect().right
+      - document.querySelector(".header-row .theme-toggle").getBoundingClientRect().right
+    ) <= 1, null, { timeout: 3000 });
+  } finally { await page.close(); }
+}
+
+async function checkMobileToc(page) {
+  await page.goto(`${base}/releases/2026.8.1`, { waitUntil: "networkidle" });
+  const closedAtTop = await page.evaluate(() => ({
+    open: document.querySelector(".toc")?.hasAttribute("open"),
+    opacity: getComputedStyle(document.querySelector(".toc")).opacity,
+  }));
+  if (closedAtTop.open || closedAtTop.opacity !== "1") {
+    throw new Error(`mobile toc should be a closed, visible reading control: ${JSON.stringify(closedAtTop)}`);
+  }
+
+  await page.evaluate(() => {
+    const articleHeader = document.querySelector(".article-header")?.getBoundingClientRect();
+    scrollTo(0, (articleHeader?.bottom ?? 0) + scrollY + 20);
+  });
+  await page.waitForFunction(() => getComputedStyle(document.querySelector(".toc")).opacity === "1");
+  await page.click(".toc summary");
+  await page.screenshot({ path: path.join(artifacts, "release-mobile-toc.png"), fullPage: false });
+
+  const open = await page.evaluate(() => {
+    const rect = (selector) => document.querySelector(selector)?.getBoundingClientRect();
+    const summary = rect(".toc summary");
+    const nav = rect(".toc nav");
+    return {
+      backdrop: getComputedStyle(document.body, "::before").content,
+      bodyOverflow: getComputedStyle(document.body).overflow,
+      chatVisibility: getComputedStyle(document.querySelector(".docs-chat")).visibility,
+      nav: nav?.toJSON(),
+      navBackground: getComputedStyle(document.querySelector(".toc nav")).backgroundColor,
+      open: document.querySelector(".toc")?.hasAttribute("open"),
+      summary: summary?.toJSON(),
+      tocZ: Number(getComputedStyle(document.querySelector(".toc")).zIndex),
+      viewportHeight: innerHeight,
+      viewportWidth: innerWidth,
+    };
+  });
+  if (!open.open
+    || open.bodyOverflow !== "hidden"
+    || open.chatVisibility !== "hidden"
+    || open.backdrop === "none"
+    || open.tocZ < 100
+    || !open.nav
+    || !open.summary
+    || open.nav.left < 13
+    || open.nav.right > open.viewportWidth - 13
+    || open.nav.width < open.viewportWidth - 30
+    || open.nav.top < open.summary.bottom + 7
+    || open.nav.bottom > open.viewportHeight - 13
+    || open.navBackground.includes("/")) {
+    throw new Error(`mobile toc sheet failed: ${JSON.stringify(open)}`);
+  }
+
+  await page.keyboard.press("Tab");
+  if (!await page.evaluate(() => document.activeElement?.matches(".toc a"))) {
+    throw new Error("mobile toc links are not keyboard reachable");
+  }
+  await page.keyboard.press("Escape");
+  const closed = await page.evaluate(() => ({
+    bodyOverflow: getComputedStyle(document.body).overflow,
+    chatVisibility: getComputedStyle(document.querySelector(".docs-chat")).visibility,
+    open: document.querySelector(".toc")?.hasAttribute("open"),
+    focusReturned: document.activeElement?.matches(".toc summary"),
+  }));
+  if (closed.open || !closed.focusReturned || closed.bodyOverflow === "hidden" || closed.chatVisibility === "hidden") {
+    throw new Error(`mobile toc did not clean up after closing: ${JSON.stringify(closed)}`);
+  }
+  await page.goto(`${base}/__elements`, { waitUntil: "networkidle" });
+}
+
+async function checkMobile() {
+  const docsConfig = JSON.parse(fs.readFileSync(path.join(root, "docs", "docs.json"), "utf8"));
+  const expectedTabs = docsConfig.navigation.languages.find((locale) => locale.language === "en")
+    .tabs.map((tab) => tab.tab);
+  const page = await browser.newPage({ viewport: { width: 390, height: 980 }, isMobile: true });
+  await page.goto(`${base}/__elements`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(artifacts, "elements-mobile-dark.png"), fullPage: true });
+  await checkMobileKeyboardOverlays(page);
+
+  const geometry = await page.evaluate(() => {
+    const header = document.querySelector(".site-header")?.getBoundingClientRect();
+    const menu = document.querySelector("[data-nav-toggle]")?.getBoundingClientRect();
+    const theme = document.querySelector("[data-theme-toggle]")?.getBoundingClientRect();
+    const themeStyle = getComputedStyle(document.querySelector("[data-theme-toggle]"));
+    const search = document.querySelector("[data-search-open]")?.getBoundingClientRect();
+    const brand = document.querySelector(".brand")?.getBoundingClientRect();
+    const socials = [...document.querySelectorAll('.header-social-group a')].map((link) => link.getBoundingClientRect());
+    const code = document.querySelector(".oc-code")?.getBoundingClientRect();
+    const step = document.querySelector(".oc-step")?.getBoundingClientRect();
+    const overlap = (a, b) => Boolean(a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
+    return {
+      headerWidth: header?.width,
+      menuThemeOverlap: overlap(menu, theme),
+      themeHasChrome: parseFloat(themeStyle.borderTopWidth) > 0 || themeStyle.backgroundColor !== "rgba(0, 0, 0, 0)",
+      brandClear: Boolean(brand && brand.left >= 0 && brand.right <= innerWidth && !overlap(brand, search) && !overlap(brand, menu) && !overlap(brand, theme)),
+      socialsVisible: socials.some((rect) => rect.width > 0 && rect.height > 0),
+      searchInViewport: search ? search.left >= 0 && search.right <= innerWidth : false,
+      codeInViewport: code ? code.left >= 0 && code.right <= innerWidth + 1 : false,
+      stepInset: step?.left,
+    };
+  });
+  if (geometry.menuThemeOverlap
+    || geometry.themeHasChrome
+    || !geometry.brandClear
+    || geometry.socialsVisible
+    || !geometry.searchInViewport
+    || !geometry.codeInViewport
+    || geometry.stepInset < 0) {
+    throw new Error(`mobile visual geometry failed: ${JSON.stringify(geometry)}`);
+  }
+  await checkMobileToc(page);
+  const mobileCardColumns = await page.evaluate(() => {
+    const countColumns = (grid) => {
+      const cards = [...grid.querySelectorAll(":scope > .oc-card")];
+      const firstTop = cards[0]?.getBoundingClientRect().top ?? 0;
+      return cards.filter((card) => Math.abs(card.getBoundingClientRect().top - firstTop) < 2).length;
+    };
+    return [...document.querySelectorAll(".oc-card-grid")]
+      .map((grid) => countColumns(grid));
+  });
+  if (!mobileCardColumns.length || mobileCardColumns.some((columns) => columns !== 1)) {
+    throw new Error(`mobile card grids should collapse to one column: ${JSON.stringify(mobileCardColumns)}`);
+  }
+  await page.click("[data-nav-toggle]");
+  await page.locator(".sidebar.open").waitFor({ state: "visible" });
+  await page.waitForFunction(() => Math.abs(document.querySelector(".sidebar")?.getBoundingClientRect().left ?? -999) < 1);
+  const menu = await page.evaluate(() => {
+    const sidebar = document.querySelector(".sidebar")?.getBoundingClientRect();
+    const close = document.querySelector("[data-nav-close]")?.getBoundingClientRect();
+    const toggle = document.querySelector("[data-nav-toggle]");
+    const closeStyle = getComputedStyle(document.querySelector("[data-nav-close]"));
+    const sectionSwitcher = document.querySelector(".docs-sections");
+    const sectionSwitcherRect = sectionSwitcher?.getBoundingClientRect();
+    const invitation = document.querySelector(".community-invite");
+    return {
+      bodyOpen: document.body.classList.contains("nav-open"),
+      ariaExpanded: toggle?.getAttribute("aria-expanded"),
+      sidebarLeft: sidebar?.left,
+      sidebarRight: sidebar?.right,
+      sidebarWidth: sidebar?.width,
+      sidebarTop: sidebar?.top,
+      sidebarBottom: sidebar?.bottom,
+      unobscuredBottom: invitation && !invitation.hidden ? invitation.getBoundingClientRect().top : innerHeight,
+      closeVisible: closeStyle.display !== "none" && close && close.height >= 36,
+      sectionSwitcherVisible: Boolean(sectionSwitcherRect && sectionSwitcherRect.width > 0 && sectionSwitcherRect.height > 0),
+      sectionSwitcherOpen: Boolean(sectionSwitcher?.querySelector(".docs-section[open]")),
+      sectionSwitcherCurrent: sectionSwitcher?.querySelector(".docs-section.current > summary")?.textContent?.trim(),
+      drawerAtTop: (document.querySelector(".sidebar")?.scrollTop ?? -1) <= 1,
+      closeFocused: document.activeElement === document.querySelector("[data-nav-close]"),
+      viewport: Math.min(380, document.documentElement.clientWidth),
+      viewportHeight: innerHeight,
+    };
+  });
+  if (!menu.bodyOpen
+    || menu.ariaExpanded !== "true"
+    || Math.abs(menu.sidebarLeft) >= 1
+    || Math.abs(menu.sidebarRight - menu.viewport) >= 1
+    || Math.abs(menu.sidebarWidth - menu.viewport) >= 1
+    || Math.abs(menu.sidebarTop) >= 1
+    || Math.abs(menu.sidebarBottom - menu.unobscuredBottom) > 1
+    || !menu.closeVisible
+    || !menu.sectionSwitcherVisible
+    || !menu.sectionSwitcherOpen
+    || !menu.sectionSwitcherCurrent
+    || !menu.drawerAtTop
+    || !menu.closeFocused) {
+    throw new Error(`mobile menu drawer failed (expected bounded unobscured drawer): ${JSON.stringify(menu)}`);
+  }
+  const sectionLabels = await page.locator(".docs-section > summary > span:first-child").allTextContents();
+  if (JSON.stringify(sectionLabels.map(label => label.trim())) !== JSON.stringify(expectedTabs)) {
+    throw new Error(`vertical sections lost source navigation: ${JSON.stringify(sectionLabels)}`);
+  }
+  for (const viewport of [{ width: 390, height: 980 }, { width: 440, height: 896 }, { width: 390, height: 600 }, { width: 320, height: 568 }, { width: 820, height: 600 }]) {
+    await page.setViewportSize(viewport);
+    if (await page.locator(".docs-sidebar-levels").getAttribute("data-level") === "section") await page.locator(".docs-sidebar-back").click();
+    await page.locator(".docs-section-trigger").last().click();
+    await page.locator(".docs-section:last-child .nav-link").last().scrollIntoViewIfNeeded();
+    await page.locator(".docs-section:last-child .nav-link").last().click({ trial: true });
+    const invite = await page.evaluate(() => {
+      const card = document.querySelector(".community-invite");
+      const rect = card.getBoundingClientRect();
+      const sidebar = document.querySelector(".sidebar").getBoundingClientRect();
+      const links = [...card.querySelectorAll(".community-invite__cta")];
+      return {
+        visible: !card.hidden && !card.inert,
+        aligned: Math.abs(rect.left - sidebar.left) < 1 && Math.abs(rect.right - sidebar.right) < 1,
+        belowNavigation: Math.abs(rect.top - sidebar.bottom) < 1,
+        contained: links.length === 3 && links.every((link) => {
+          const button = link.getBoundingClientRect();
+          return button.left >= rect.left && button.right <= rect.right && button.top >= rect.top
+            && button.bottom <= Math.min(rect.bottom, innerHeight) && link.scrollWidth <= link.clientWidth;
+        }),
+        unobscured: links.every((link) => {
+          const button = link.getBoundingClientRect();
+          return [button.top + 2, button.bottom - 2].every(y => link.contains(document.elementFromPoint(button.left + button.width / 2, y)));
+        }),
+      };
+    });
+    if (Object.values(invite).some(value => !value)) {
+      throw new Error(`mobile invitation or CTA clipped (${viewport.width}x${viewport.height}): ${JSON.stringify(invite)}`);
+    }
+    await page.screenshot({ path: path.join(artifacts, `elements-mobile-sections-${viewport.width}-${viewport.height}.png`), fullPage: false });
+    await page.locator(".docs-sidebar-back").click();
+  }
+  await page.setViewportSize({ width: 390, height: 980 });
+  await page.keyboard.press("Escape");
+  const closed = await page.evaluate(() => ({
+    bodyOpen: document.body.classList.contains("nav-open"),
+    sidebarOpen: document.querySelector(".sidebar")?.classList.contains("open"),
+    ariaExpanded: document.querySelector("[data-nav-toggle]")?.getAttribute("aria-expanded"),
+  }));
+  if (closed.bodyOpen || closed.sidebarOpen || closed.ariaExpanded !== "false") {
+    throw new Error(`mobile menu did not close on Escape: ${JSON.stringify(closed)}`);
+  }
+  await page.goto(`${base}/channels/discord/voice-channels`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(artifacts, "discord-mobile-dark.png"), fullPage: false });
+  const discordOverflow = await page.evaluate(() => {
+    const viewport = innerWidth;
+    const longCode = [...document.querySelectorAll(".doc code")]
+      .find((node) => node.textContent?.includes("voice.realtime.providers.openai.interruptResponseOnInputAudio"));
+    const longCodeRects = [...longCode?.getClientRects() ?? []]
+      .map((rect) => ({ left: rect.left, right: rect.right }));
+    const escaping = [...document.querySelectorAll(".oc-table-wrap,.oc-code,.doc pre")]
+      .map((node) => {
+        const rect = node.getBoundingClientRect();
+        return {
+          className: node.className,
+          tagName: node.tagName,
+          left: rect.left,
+          right: rect.right,
+        };
+      })
+      .filter((rect) => rect.left < -1 || rect.right > viewport + 1);
+    return {
+      viewport,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      longCodeFound: Boolean(longCode),
+      longCodeFits: longCodeRects.length > 0 && longCodeRects.every((rect) => rect.left >= -1 && rect.right <= viewport + 1),
+      escaping,
+    };
+  });
+  if (discordOverflow.documentWidth > discordOverflow.viewport + 1
+    || discordOverflow.bodyWidth > discordOverflow.viewport + 1
+    || !discordOverflow.longCodeFound
+    || !discordOverflow.longCodeFits
+    || discordOverflow.escaping.length) {
+    throw new Error(`discord mobile overflow failed: ${JSON.stringify(discordOverflow)}`);
+  }
+  await page.goto(`${base}/start/getting-started`, { waitUntil: "networkidle" });
+  await checkPageActions(page, "mobile dark");
+  await page.close();
+}
+
+async function checkAmbientCodePage() {
+  const page = await browser.newPage({ viewport: { width: 1496, height: 760 } });
+  await page.goto(`${base}/channels/ambient-room-events`, { waitUntil: "networkidle" });
+  await page.locator(".oc-code").first().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(artifacts, "ambient-code-dark.png"), fullPage: false });
+  const code = await page.evaluate(() => {
+    const figure = document.querySelector(".oc-code");
+    const button = figure?.querySelector("[data-code-copy]");
+    const label = figure?.querySelector(".oc-code-label");
+    const attr = figure?.querySelector(".hljs-attr");
+    const string = figure?.querySelector(".hljs-string");
+    const lines = [...figure?.querySelectorAll(".code-line") ?? []].slice(0, 5);
+    const rects = lines.map((line) => line.getBoundingClientRect());
+    const buttonRect = button?.getBoundingClientRect();
+    const buttonStyle = button ? getComputedStyle(button) : null;
+    const labelStyle = label ? getComputedStyle(label) : null;
+    const iconRect = button?.querySelector(".oc-copy-default")?.getBoundingClientRect();
+    const iconLeft = iconRect ? iconRect.left - buttonRect.left : 0;
+    const iconTop = iconRect ? iconRect.top - buttonRect.top : 0;
+    const iconRight = iconRect ? iconRect.right - buttonRect.left : 0;
+    const iconBottom = iconRect ? iconRect.bottom - buttonRect.top : 0;
+    return {
+      lineCount: figure?.querySelectorAll(".code-line").length ?? 0,
+      lineDisplay: lines.map((line) => getComputedStyle(line).display),
+      lineWhiteSpace: lines.map((line) => getComputedStyle(line).whiteSpace),
+      linesStacked: rects.every((rect, index) => index === 0 || rect.top > rects[index - 1].top),
+      attrColor: attr ? getComputedStyle(attr).color : "",
+      stringColor: string ? getComputedStyle(string).color : "",
+      buttonWidth: buttonRect?.width ?? 0,
+      buttonHeight: buttonRect?.height ?? 0,
+      buttonText: button?.textContent?.trim(),
+      buttonColor: buttonStyle?.color,
+      iconInsetX: Math.round(Math.abs(iconLeft - ((buttonRect?.width ?? 0) - iconRight))),
+      iconInsetY: Math.round(Math.abs(iconTop - ((buttonRect?.height ?? 0) - iconBottom))),
+      labelTransform: labelStyle?.textTransform,
+    };
+  });
+  if (code.lineCount < 9
+    || !code.lineDisplay.every((display) => display === "block")
+    || !code.lineWhiteSpace.every((space) => space === "pre")
+    || !code.linesStacked
+    || code.attrColor === code.stringColor
+    || code.buttonWidth < 30
+    || code.buttonWidth > 34
+    || code.buttonHeight < 28
+    || code.iconInsetX > 2
+    || code.iconInsetY > 2
+    || code.buttonText !== "Copy code"
+    || code.labelTransform !== "uppercase") {
+    throw new Error(`ambient code block visual failed: ${JSON.stringify(code)}`);
+  }
+  await page.evaluate(() => {
+    window.__ocClipboardWrites = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text) => window.__ocClipboardWrites.push(text) },
+    });
+  });
+  await page.click(".oc-code [data-code-copy]");
+  const copied = await page.evaluate(() => ({
+    state: document.querySelector(".oc-code [data-code-copy]")?.dataset.copyState,
+    text: window.__ocClipboardWrites?.[0] ?? "",
+  }));
+  if (copied.state !== "copied" || !copied.text.includes('unmentionedInbound: "room_event"')) {
+    throw new Error(`ambient code copy state failed: ${JSON.stringify(copied)}`);
+  }
+  await page.close();
+}
+
+async function checkMobileKeyboardOverlays(page) {
+  for (let index = 0; index < 12; index += 1) {
+    await page.keyboard.press("Tab");
+    const focused = await page.evaluate(() => ({
+      hiddenPanel: Boolean(document.activeElement?.closest(".sidebar,.community-invite")),
+      hiddenLanguageOption: Boolean(document.activeElement?.closest(".language-picker:not(.open) .language-menu")),
+    }));
+    if (focused.hiddenPanel || focused.hiddenLanguageOption) {
+      throw new Error(`closed phone controls accepted keyboard focus: ${JSON.stringify(focused)}`);
+    }
+  }
+
+  await page.click("[data-nav-toggle]");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-nav-close]"));
+  await page.waitForFunction(() => Math.abs(document.querySelector(".sidebar").getBoundingClientRect().left) < 0.1);
+  await page.locator(".sidebar [data-theme-toggle]").focus();
+  for (const name of ["X", "Discord", "Reddit", "GitHub"]) {
+    await page.keyboard.press("Shift+Tab");
+    const activeName = await page.evaluate(() => document.activeElement?.closest(".sidebar-socials")
+      && document.activeElement.getAttribute("aria-label"));
+    if (activeName !== name) throw new Error(`Mobile social keyboard order: expected ${name}, got ${activeName}`);
+  }
+  if (await page.locator(".docs-sidebar-levels").getAttribute("data-level") === "section") await page.locator(".docs-sidebar-back").click();
+  await page.locator("[data-nav-close]").focus();
+  // The fixed footer stays inside the drawer focus cycle in both directions.
+  for (const key of ["Tab", "Shift+Tab"]) {
+    let reachedFooter = false;
+    let completedCycle = false;
+    for (let index = 0; index < 50; index += 1) {
+      await page.keyboard.press(key);
+      const focus = await page.evaluate(() => ({
+        inside: Boolean(document.activeElement?.closest(".sidebar,.community-invite")),
+        footer: Boolean(document.activeElement?.closest(".sidebar-tools")),
+        close: document.activeElement?.matches("[data-nav-close]"),
+      }));
+      if (!focus.inside) throw new Error(`${key} escaped the phone drawer`);
+      reachedFooter ||= focus.footer;
+      if (focus.close) { completedCycle = true; break; }
+    }
+    if (!reachedFooter || !completedCycle) throw new Error(`${key} did not cycle through the drawer and footer`);
+  }
+  const originalViewport = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 600 });
+  await page.locator(".docs-section-trigger").last().focus();
+  const finalSection = await page.evaluate(() => {
+    const target = document.querySelector(".docs-section-trigger:last-child");
+    const rect = target.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    return { focused: document.activeElement === target, unobscured: target.contains(hit), hitClass: hit?.className };
+  });
+  if (!finalSection.focused || !finalSection.unobscured) {
+    throw new Error(`drawer footer obscures the focused final section: ${JSON.stringify(finalSection)}`);
+  }
+  // Rotation must keep the existing focused link visible in both nested scrollports.
+  for (const resizedViewport of [{ width: 390, height: 440 }, { width: 390, height: 320 }, { width: 780, height: 390 }]) {
+    await page.setViewportSize(resizedViewport);
+    await page.waitForFunction(() => {
+      const target = document.querySelector(".docs-section-trigger:last-child");
+      const rect = target.getBoundingClientRect();
+      return document.activeElement === target && [rect.top + 2, rect.bottom - 2].every((y) =>
+        target.contains(document.elementFromPoint(rect.x + rect.width / 2, y)));
+    });
+  }
+  await page.keyboard.press("Escape");
+  await page.setViewportSize(originalViewport);
+  await page.click("[data-nav-toggle]");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-nav-close]"));
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-search-input]"));
+  if (await page.evaluate(() => document.body.classList.contains("nav-open"))) {
+    throw new Error("search left the phone drawer active underneath it");
+  }
+  await page.fill("[data-search-input]", "gateway");
+  await page.click("[data-search-clear]");
+  if (await page.inputValue("[data-search-input]") !== "") {
+    throw new Error("the first Clear-search activation was consumed by another overlay");
+  }
+  await page.keyboard.press("Tab");
+  if (!await page.evaluate(() => Boolean(document.activeElement?.closest(".search-modal")))) {
+    throw new Error("phone drawer stole focus from the search dialog");
+  }
+  await page.keyboard.press("Escape");
+  await page.click(".site-header [data-search-open]");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-search-input]"));
+  await page.keyboard.press("Escape");
+  if (!await page.evaluate(() => document.activeElement?.matches("[data-search-open]"))) {
+    throw new Error("search dismissal did not restore its opening control");
+  }
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ width: 1440, height: viewport.height });
+  await page.click("[data-language-trigger]");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-locale-option][aria-selected=true]"));
+  await page.setViewportSize(viewport);
+  await page.waitForFunction(() => {
+    const option = document.activeElement;
+    const menu = option?.closest(".language-menu");
+    if (!menu || !option.matches("[data-locale-option]")) return false;
+    const rect = menu.getBoundingClientRect();
+    return rect.left >= 0 && rect.right <= innerWidth && rect.top >= document.querySelector(".site-header").getBoundingClientRect().bottom && rect.bottom <= innerHeight;
+  });
+  const firstLocale = await page.locator("[data-locale-option]").first().getAttribute("href");
+  const lastLocale = await page.locator("[data-locale-option]").last().getAttribute("href");
+  await page.keyboard.press("End");
+  if (await page.evaluate(() => document.activeElement?.getAttribute("href")) !== lastLocale) throw new Error("language menu End did not reach the last locale");
+  await page.keyboard.press("ArrowDown");
+  if (await page.evaluate(() => document.activeElement?.getAttribute("href")) !== firstLocale) throw new Error("language menu did not wrap to the first locale");
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-language-trigger]"));
+  await page.keyboard.press("Tab");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-search-open]"));
+  await page.locator("[data-language-trigger]").focus();
+  await page.setViewportSize({ width: 1440, height: viewport.height });
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-search-input]"));
+  await page.setViewportSize(viewport);
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-language-trigger]"));
+  await page.setViewportSize({ width: 1440, height: viewport.height });
+  await page.click(".site-header [data-search-open]");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-search-input]"));
+  await page.keyboard.press("Escape");
+  await page.setViewportSize(viewport);
+  if (!await page.evaluate(() => document.activeElement?.matches("[data-search-open]"))) {
+    throw new Error("responsive language handoff stole focus from an unrelated control");
+  }
+  await page.setViewportSize({ width: 1440, height: viewport.height });
+  await page.waitForFunction(() => !matchMedia("(max-width:820px)").matches && !document.querySelector(".sidebar").inert && document.activeElement?.matches("[data-search-open]"));
+  let reachedSidebar = false;
+  for (let index = 0; index < 40; index += 1) {
+    await page.keyboard.press("Tab");
+    reachedSidebar = await page.evaluate(() => document.activeElement?.matches(".docs-section-trigger,.docs-sidebar-back"));
+    if (reachedSidebar) break;
+  }
+  if (!reachedSidebar) {
+    const state = await page.evaluate(() => ({ active: document.activeElement?.outerHTML.slice(0, 500), viewport: [innerWidth, innerHeight], navOpen: document.body.classList.contains("nav-open"), sidebarInert: document.querySelector(".sidebar")?.inert, searchOpen: document.querySelector(".search-modal")?.classList.contains("open"), summaries: document.querySelectorAll(".docs-section > summary").length }));
+    await page.screenshot({ path: path.join(artifacts, "navigation-focus-failure.png") });
+    throw new Error(`desktop navigation is not keyboard reachable: ${JSON.stringify(state)}`);
+  }
+  await page.setViewportSize(viewport);
+  await page.waitForFunction(() => document.activeElement?.matches("[data-nav-toggle]"));
+  await page.setViewportSize({ width: 1440, height: viewport.height });
+  await page.waitForFunction(() => document.activeElement?.matches(".docs-section-trigger,.docs-sidebar-back"));
+  await page.setViewportSize(viewport);
+  await page.waitForFunction(() => document.activeElement?.matches("[data-nav-toggle]"));
+  await page.click("[data-nav-toggle]");
+  await page.waitForFunction(() => document.activeElement?.matches("[data-nav-close]"));
+  await page.setViewportSize({ width: 1440, height: viewport.height });
+  await page.waitForFunction(() => document.activeElement?.matches(".docs-section-trigger,.docs-sidebar-back"));
+  await page.setViewportSize(viewport);
+  await page.waitForFunction(() => document.activeElement?.matches("[data-nav-toggle]"));
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForFunction(() => {
+    const target = document.activeElement;
+    if (!target?.matches(".docs-section-trigger,.docs-sidebar-back")) return false;
+    const rect = target.getBoundingClientRect();
+    return target.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+  });
+  await page.setViewportSize(viewport);
+  await page.waitForFunction(() => document.activeElement?.matches("[data-nav-toggle]"));
+  await page.evaluate(() => scrollTo(0, 0));
+}
+
+async function checkLightMode() {
+  const page = await browser.newPage({ viewport: { width: 1180, height: 900 } });
+  await page.addInitScript(() => localStorage.setItem("theme", "light"));
+  await page.goto(`${base}/__elements`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(artifacts, "elements-desktop-light.png"), fullPage: true });
+  const skin = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const code = getComputedStyle(document.querySelector(".oc-code"));
+    const badge = getComputedStyle(document.querySelector(".oc-badge"));
+    const cardWidths = [...document.querySelectorAll(".oc-card")].map((card) => card.getBoundingClientRect().width);
+    return {
+      theme: document.documentElement.dataset.theme,
+      codeBg: code.backgroundColor,
+      badgeRadius: badge.borderRadius,
+      codeText: root.getPropertyValue("--code-text").trim(),
+      minCardWidth: Math.min(...cardWidths),
+    };
+  });
+  if (skin.theme !== "light" || skin.codeText !== "#26262c" || parseFloat(skin.badgeRadius) < 2 || skin.minCardWidth < 150) {
+    throw new Error(`light visual skin failed: ${JSON.stringify(skin)}`);
+  }
+  await page.goto(`${base}/start/getting-started`, { waitUntil: "networkidle" });
+  await checkPageActions(page, "desktop light");
+  await page.close();
+}
+
+async function checkPageActions(page, label) {
+  await expectVisible(page, ".page-actions-primary", `${label} Copy page segment`);
+  await expectVisible(page, ".page-actions-more > summary", `${label} page actions menu segment`);
+  const closed = await page.evaluate(() => {
+    const control = document.querySelector(".page-actions");
+    const primary = document.querySelector(".page-actions-primary");
+    const summary = document.querySelector(".page-actions-more > summary");
+    const copyLabel = primary?.getAttribute("aria-label");
+    const copyIcon = primary?.querySelector(".oc-copy-default");
+    const visibleLabel = primary?.querySelector("[data-copy-feedback]");
+    if (!control || !primary || !summary || !copyLabel || !copyIcon || !visibleLabel) return null;
+    const controlRect = control.getBoundingClientRect();
+    const primaryRect = primary.getBoundingClientRect();
+    const summaryRect = summary.getBoundingClientRect();
+    const iconRect = copyIcon.getBoundingClientRect();
+    const controlStyle = getComputedStyle(control);
+    const primaryStyle = getComputedStyle(primary);
+    const summaryStyle = getComputedStyle(summary);
+    const radiusProbe = document.createElement("div");
+    radiusProbe.style.borderRadius = "var(--oc-radius-control)";
+    document.body.append(radiusProbe);
+    const controlRadius = getComputedStyle(radiusProbe).borderTopLeftRadius;
+    radiusProbe.remove();
+    const cornerRadiusScale = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue("--oc-corner-radius-scale"),
+    ) || 1;
+    const segmentRadius = `${Number.parseFloat(controlRadius) * cornerRadiusScale}px`;
+    const primaryRightBorder = parseFloat(primaryStyle.borderRightWidth);
+    const summaryLeftBorder = parseFloat(summaryStyle.borderLeftWidth);
+    const seamDelta = summaryRect.left - primaryRect.right;
+    const atPrimaryCenter = document.elementFromPoint(
+      (primaryRect.left + primaryRect.right) / 2,
+      (primaryRect.top + primaryRect.bottom) / 2,
+    );
+    const atSummaryCenter = document.elementFromPoint(
+      (summaryRect.left + summaryRect.right) / 2,
+      (summaryRect.top + summaryRect.bottom) / 2,
+    );
+    return {
+      controlDisplay: controlStyle.display,
+      controlWrap: controlStyle.flexWrap,
+      controlHeight: controlRect.height,
+      primaryHeight: primaryRect.height,
+      summaryHeight: summaryRect.height,
+      topDelta: summaryRect.top - primaryRect.top,
+      bottomDelta: summaryRect.bottom - primaryRect.bottom,
+      seamDelta,
+      seamWidth: primaryRightBorder + summaryLeftBorder + seamDelta,
+      primaryRadii: [
+        primaryStyle.borderTopLeftRadius,
+        primaryStyle.borderTopRightRadius,
+        primaryStyle.borderBottomRightRadius,
+        primaryStyle.borderBottomLeftRadius,
+      ],
+      summaryRadii: [
+        summaryStyle.borderTopLeftRadius,
+        summaryStyle.borderTopRightRadius,
+        summaryStyle.borderBottomRightRadius,
+        summaryStyle.borderBottomLeftRadius,
+      ],
+      controlRadius,
+      segmentRadius,
+      whiteSpace: primaryStyle.whiteSpace,
+      iconCentered: Math.abs((iconRect.top + iconRect.bottom) - (primaryRect.top + primaryRect.bottom)) < 2,
+      labelVisible: visibleLabel.innerText === "Copy page" && visibleLabel.getBoundingClientRect().width > 0,
+      distinctTargets: atPrimaryCenter?.closest(".page-actions-primary") === primary
+        && atSummaryCenter?.closest(".page-actions-more > summary") === summary,
+    };
+  });
+  const closeEnough = (value, expected) => Math.abs((value ?? Number.NaN) - expected) <= 0.5;
+  if (!closed
+    || closed.controlDisplay !== "flex"
+    || closed.controlWrap !== "nowrap"
+    || !closeEnough(closed.controlHeight, closed.primaryHeight)
+    || !closeEnough(closed.primaryHeight, closed.summaryHeight)
+    || !closeEnough(closed.topDelta, 0)
+    || !closeEnough(closed.bottomDelta, 0)
+    || closed.seamDelta > 0
+    || closed.seamDelta < -1
+    || !closeEnough(closed.seamWidth, 1)
+    || closed.primaryRadii.join(" ") !== `${closed.segmentRadius} 0px 0px ${closed.segmentRadius}`
+    || closed.summaryRadii.join(" ") !== `0px ${closed.segmentRadius} ${closed.segmentRadius} 0px`
+    || closed.whiteSpace !== "nowrap"
+    || !closed.iconCentered
+    || !closed.labelVisible
+    || !closed.distinctTargets) {
+    throw new Error(`${label} split page actions geometry failed: ${JSON.stringify(closed)}`);
+  }
+
+  await page.locator(".page-actions-more > summary").click();
+  const opened = await page.evaluate(() => {
+    const details = document.querySelector(".page-actions-more");
+    const summary = details?.querySelector(":scope > summary");
+    const menu = details?.querySelector(":scope > .page-actions-menu");
+    const summaryRect = summary?.getBoundingClientRect();
+    const menuRect = menu?.getBoundingClientRect();
+    return {
+      open: details?.hasAttribute("open"),
+      display: menu ? getComputedStyle(menu).display : null,
+      rightDelta: summaryRect && menuRect ? menuRect.right - summaryRect.right : null,
+      topGap: summaryRect && menuRect ? menuRect.top - summaryRect.bottom : null,
+      inViewport: menuRect ? menuRect.left >= 0 && menuRect.right <= innerWidth : false,
+    };
+  });
+  if (!opened.open
+    || opened.display !== "grid"
+    || !closeEnough(opened.rightDelta, 0)
+    || opened.topGap < 4 || opened.topGap > 12
+    || !opened.inViewport) {
+    throw new Error(`${label} page actions menu alignment failed: ${JSON.stringify(opened)}`);
+  }
+  await page.keyboard.press("Escape");
+  if (await page.locator(".page-actions-more[open]").count()) {
+    throw new Error(`${label} page actions menu did not close on Escape`);
+  }
+}
+
+async function expectVisible(page, selector, label) {
+  const visible = await page.locator(selector).first().isVisible();
+  if (!visible) throw new Error(`missing visible ${label}: ${selector}`);
+}
+
+function contentType(file) {
+  if (file.endsWith(".html")) return "text/html; charset=utf-8";
+  if (file.endsWith(".js") || file.endsWith(".mjs")) return "text/javascript; charset=utf-8";
+  if (file.endsWith(".css")) return "text/css; charset=utf-8";
+  if (file.endsWith(".svg")) return "image/svg+xml";
+  if (file.endsWith(".png")) return "image/png";
+  if (file.endsWith(".json")) return "application/json";
+  return "text/plain; charset=utf-8";
+}

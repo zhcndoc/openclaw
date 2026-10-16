@@ -1,11 +1,14 @@
 ---
 summary: "为 OpenClaw 添加 OpenRouter 模型提供方支持。"
 read_when:
-  - 你正在安装、配置或审计 openrouter 插件
-title: "OpenRouter 插件"
+  - You are installing, configuring, or auditing the openrouter plugin
+title: "OpenRouter plugin reference"
 ---
 
-# OpenRouter 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 OpenRouter 模型提供方支持。
 
@@ -16,7 +19,8 @@ title: "OpenRouter 插件"
 
 ## 接口
 
-providers: `openrouter`; contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `musicGenerationProviders`, `speechProviders`, `usageProviders`, `videoGenerationProviders`
+- Providers: `openrouter`
+- Contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `musicGenerationProviders`, `speechProviders`, `usageProviders`, `videoGenerationProviders`
 
 ## 相关文档
 

@@ -1,22 +1,27 @@
 ---
 summary: "用于 Twilio、Telnyx 和 Plivo 电话通话的 OpenClaw 语音通话插件。"
 read_when:
-  - 当你正在安装、配置或审计语音通话插件时
-title: "语音通话插件"
+  - You are installing, configuring, or auditing the voice-call plugin
+title: "Voice Call plugin reference"
 ---
 
-# 语音通话插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于 Twilio、Telnyx 和 Plivo 电话通话的 OpenClaw 语音通话插件。
 
 ## 分发
 
 - Package: `@openclaw/voice-call`
-- Install route: npm; ClawHub
+- Install route: npm or ClawHub: `clawhub:@openclaw/voice-call`
 
 ## 接口
 
-contracts: `tools`; skills
+- CLI commands: `openclaw voicecall`
+- Contracts: `tools`
+- Skills
 
 ## 相关文档
 

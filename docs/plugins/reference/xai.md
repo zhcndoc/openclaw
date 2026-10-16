@@ -1,13 +1,16 @@
 ---
-summary: "为 OpenClaw 添加 xAI 模型提供方支持。"
+summary: "xAI provider for Grok models, Grok web and X search, code execution, speech, and media generation."
 read_when:
-  - 你正在安装、配置或审计 xai 插件
-title: "xAI 插件"
+  - You are installing, configuring, or auditing the xai plugin
+title: "xAI plugin reference"
 ---
 
-# xAI 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-为 OpenClaw 添加 xAI 模型提供方支持。
+xAI provider for Grok models, Grok web and X search, code execution, speech, and media generation.
 
 ## 分发
 
@@ -16,7 +19,8 @@ title: "xAI 插件"
 
 ## Surface
 
-providers: `xai`; contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`, `realtimeVoiceProviders`, `speechProviders`, `tools`, `videoGenerationProviders`, `webSearchProviders`
+- Providers: `xai`
+- Contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`, `realtimeVoiceProviders`, `speechProviders`, `tools`, `usageProviders`, `videoGenerationProviders`, `webSearchProviders`
 
 ## 相关文档
 

@@ -2,10 +2,13 @@
 summary: "通过 Bonjour/mDNS 广播本地 OpenClaw 网关。"
 read_when:
   - You are installing, configuring, or auditing the bonjour plugin
-title: "Bonjour 插件"
+title: "Bonjour plugin reference"
 ---
 
-# Bonjour 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 通过 Bonjour/mDNS 广播本地 OpenClaw 网关。
 
@@ -16,4 +19,4 @@ title: "Bonjour 插件"
 
 ## 接口
 
-plugin
+This plugin declares no channels, providers, commands, or contracts.

@@ -1,22 +1,25 @@
 ---
 summary: "将 Synthetic 模型提供方支持添加到 OpenClaw。"
 read_when:
-  - 你正在安装、配置或审计 synthetic 插件
-title: "Synthetic 插件"
+  - You are installing, configuring, or auditing the synthetic plugin
+title: "Synthetic plugin reference"
 ---
 
-# Synthetic 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 将 Synthetic 模型提供方支持添加到 OpenClaw。
 
 ## 分发
 
-- 软件包：`@openclaw/synthetic-provider`
-- 安装途径：npm；ClawHub：`clawhub:@openclaw/synthetic-provider`
+- Package: `@openclaw/synthetic-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/synthetic-provider`
 
 ## 接口
 
-providers: `synthetic`
+- Providers: `synthetic`
 
 ## 相关文档
 

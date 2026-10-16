@@ -1,13 +1,16 @@
 ---
-summary: "由 Crabbox CLI 支持的云工作器提供程序。"
+summary: "Cloud worker provider and lease-backed sandbox backend for the Crabbox CLI."
 read_when:
-  - 你正在安装、配置或审计 crabbox 插件
-title: "Crabbox 插件"
+  - You are installing, configuring, or auditing the crabbox plugin
+title: "Crabbox plugin reference"
 ---
 
-# Crabbox 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-由 Crabbox CLI 支持的云工作器提供程序。
+Cloud worker provider and lease-backed sandbox backend for the Crabbox CLI.
 
 ## 分发
 
@@ -16,12 +19,25 @@ title: "Crabbox 插件"
 
 ## 表面
 
-contracts: `workerProviders`
+- CLI commands: `openclaw crabbox`
+- Contracts: `tools`, `workerProfileSuggestions`, `workerProviders`
+- Skills
 
 <!-- openclaw-plugin-reference:manual-start -->
 
 ## 配置
 
-参见 [云工作器环境](/gateway/configuration-reference#crabbox-profile) 以了解配置文件模式和生命周期说明。
+See [Cloud worker environments](/gateway/config-cloud-workers#crabbox-profile) for the profile schema and lifecycle notes.
+
+Forward Gateway environment variables to an operator-provided setup script by listing their names in the Crabbox profile settings:
+
+```json5 validate=false
+{
+  setup: 'install-worker "$OPENCLAW_WORKER_ARTIFACT_TOKEN"',
+  setupEnv: ["OPENCLAW_WORKER_ARTIFACT_TOKEN"],
+}
+```
+
+`setupEnv` explicitly forwards up to 16 unique environment variable names to the setup command only. Values are read from the Gateway process environment and are never stored in the profile configuration. Missing variables fail before a machine is allocated.
 
 <!-- openclaw-plugin-reference:manual-end -->

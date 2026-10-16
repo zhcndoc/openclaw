@@ -1,22 +1,25 @@
 ---
 summary: "用于对话的 OpenClaw Nextcloud Talk 频道插件。"
 read_when:
-  - 你正在安装、配置或审计 nextcloud-talk 插件
-title: "Nextcloud Talk 插件"
+  - You are installing, configuring, or auditing the nextcloud-talk plugin
+title: "Nextcloud Talk plugin reference"
 ---
 
-# Nextcloud Talk 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于对话的 OpenClaw Nextcloud Talk 频道插件。
 
 ## 分发
 
-- 包：`@openclaw/nextcloud-talk`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/nextcloud-talk`
+- Install route: npm or ClawHub: `clawhub:@openclaw/nextcloud-talk`
 
 ## 接口
 
-channels: `nextcloud-talk`
+- Channels: `nextcloud-talk`
 
 ## 相关文档
 

@@ -1,22 +1,26 @@
 ---
 summary: "用于房间和直接消息的 OpenClaw Matrix 频道插件。"
 read_when:
-  - 你正在安装、配置或审计 matrix 插件
-title: "Matrix 插件"
+  - You are installing, configuring, or auditing the matrix plugin
+title: "Matrix plugin reference"
 ---
 
-# Matrix 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于房间和直接消息的 OpenClaw Matrix 频道插件。
 
 ## Distribution
 
 - Package: `@openclaw/matrix`
-- Install route: ClawHub: `clawhub:@openclaw/matrix`; npm
+- Install route: npm or ClawHub: `clawhub:@openclaw/matrix`
 
 ## 表面
 
-channels: `matrix`
+- Channels: `matrix`
+- CLI commands: `openclaw matrix`
 
 ## 相关文档
 

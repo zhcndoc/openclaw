@@ -1,22 +1,25 @@
 ---
 summary: "OpenClaw Amazon Bedrock Mantle provider plugin for OpenAI-compatible model routing."
 read_when:
-  - 你正在安装、配置或审计 amazon-bedrock-mantle 插件
-title: "Amazon Bedrock Mantle 插件"
+  - You are installing, configuring, or auditing the amazon-bedrock-mantle plugin
+title: "Amazon Bedrock Mantle plugin reference"
 ---
 
-# Amazon Bedrock Mantle 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw Amazon Bedrock Mantle 提供商插件，用于 OpenAI 兼容的模型路由。
 
 ## 分发
 
 - Package: `@openclaw/amazon-bedrock-mantle-provider`
-- 安装方式: npm; ClawHub
+- Install route: npm or ClawHub: `clawhub:@openclaw/amazon-bedrock-mantle-provider`
 
 ## 接口
 
-providers: `amazon-bedrock-mantle`
+- Providers: `amazon-bedrock-mantle`
 
 ## 相关文档
 

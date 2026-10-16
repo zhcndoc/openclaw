@@ -1,22 +1,26 @@
 ---
 summary: "用于频道、私信、命令和应用事件的 OpenClaw Slack channel 插件。"
 read_when:
-  - 您正在安装、配置或审计 slack 插件
-title: "Slack 插件"
+  - You are installing, configuring, or auditing the slack plugin
+title: "Slack plugin reference"
 ---
 
-# Slack 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于频道、私信、命令和应用事件的 OpenClaw Slack channel 插件。
 
 ## 分发
 
-- 包：`@openclaw/slack`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/slack`
+- Install route: npm or ClawHub: `clawhub:@openclaw/slack`
 
 ## 接口
 
-channels: `slack`; skills
+- Channels: `slack`
+- Skills
 
 ## 相关文档
 

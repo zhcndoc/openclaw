@@ -1,11 +1,14 @@
 ---
 summary: "受保护的端到端加密爪通道。"
 read_when:
-  - 你正在安装、配置或审计 reef 插件
-title: "Reef 插件"
+  - You are installing, configuring, or auditing the reef plugin
+title: "Reef plugin reference"
 ---
 
-# Reef 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 受保护的端到端加密爪通道。
 
@@ -16,7 +19,8 @@ title: "Reef 插件"
 
 ## 表面
 
-channels: `reef`
+- Channels: `reef`
+- CLI commands: `openclaw reef`
 
 ## 相关文档
 

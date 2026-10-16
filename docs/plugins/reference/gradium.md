@@ -2,21 +2,24 @@
 summary: "添加文本转语音提供商支持。"
 read_when:
   - You are installing, configuring, or auditing the gradium plugin
-title: "Gradium 插件"
+title: "Gradium plugin reference"
 ---
 
-# Gradium 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 添加文本转语音提供商支持。
 
 ## 分发
 
-- 包：`@openclaw/gradium-speech`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/gradium-speech`
+- Package: `@openclaw/gradium-speech`
+- Install route: npm or ClawHub: `clawhub:@openclaw/gradium-speech`
 
 ## 接口
 
-contracts: `speechProviders`
+- Contracts: `speechProviders`
 
 ## 相关文档
 

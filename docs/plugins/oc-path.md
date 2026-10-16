@@ -1,27 +1,24 @@
 ---
 summary: "捆绑的 `oc-path` 插件：为 `oc://` 工作区文件寻址方案提供 `openclaw path` CLI"
 read_when:
-  - 你想从终端检查或编辑工作区文件中的单个叶子节点
-  - 你正在针对工作区状态编写脚本，并且需要一种稳定、与类型无关的寻址方案
-  - 你正在决定是否在自托管 Gateway 上启用可选的 `oc-path` 插件
+  - "你想从终端检查或编辑工作区文件中的单个叶子节点"
+  - "你正在针对工作区状态编写脚本，并且需要一种稳定、与类型无关的寻址方案"
+  - "你正在决定是否在自托管 Gateway 上启用可选的 `oc-path` 插件"
 title: "OC Path 插件"
 ---
 
-捆绑的 `oc-path` 插件为 `oc://` 工作区文件寻址方案添加了 [`openclaw path`](/cli/path) CLI。它随 OpenClaw 仓库中的 `extensions/oc-path/` 一起提供，但默认是可选启用的：安装/构建后它会保持未启用状态，直到你将其打开。
+捆绑的 `oc-path` 插件为 `oc://` 工作区文件寻址方案添加了 [`openclaw path`](/cli/path) CLI。它在 `extensions/oc-path/` 下的 OpenClaw 存储库中提供，但可以选择加入：install/build 使其处于休眠状态，直到您启用它。
 
 `oc://` 地址指向工作区文件中的单个叶子节点（或一组通配符叶子节点）。该插件支持四种文件类型：
 
-- **markdown** (`.md`)：frontmatter、sections、items、fields
+- **markdown** （`.md`）：frontmatter、部分、项目、字段
 - **jsonc** (`.jsonc`, `.json`): 注释和格式会被保留
 - **jsonl** (`.jsonl`, `.ndjson`): 按行组织的记录
-- **yaml** (`.yaml`, `.yml`, `.lobster`): 通过
-  `yaml` 包的 `Document` API 处理 map/sequence/scalar 节点
+- **yaml** (`.yaml`, `.yml`, `.lobster`): 通过 `yaml` 包的 `Document` API 处理 map/sequence/scalar 节点
 
-自托管用户和编辑器扩展使用该 CLI 来读写单个叶子节点，而无需直接针对 SDK 编写脚本；代理和钩子则将其视为一种确定性的底层基础设施，因此字节级一致的往返转换以及 redaction
-sentinel 守卫会在所有类型上统一适用。有关完整语法、逐个动词的标志列表，以及按文件类型分类的示例，请参见
-[CLI 参考](/cli/path)；本页说明为什么以及如何启用该插件。
+自托管程序和编辑器扩展使用 CLI 来读取或写入单个叶子，而无需直接针对 SDK 编写脚本；代理和钩子将其视为可预测的基础，因此字节保真度往返和编辑哨兵防护在不同类型之间统一应用。请参阅 [CLI 参考 ](/cli/path) 了解完整的语法、逐个动词的标志列表以及每种文件类型的工作示例；本页介绍了启用该插件的原因和方法。
 
-## 为什么启用它
+## <a id="why-enable-it"></a> 为什么启用它
 
 当脚本、钩子或本地代理工具需要指向工作区状态中的某个精确位置，而不想为每种文件形态各写一套专用解析器时，就启用 `oc-path`。一个 `oc://` 地址可以表示 markdown frontmatter 键、某个节项、JSONC 配置叶子节点、JSONL 事件字段，或者 YAML 工作流步骤。
 
@@ -35,19 +32,19 @@ sentinel 守卫会在所有类型上统一适用。有关完整语法、逐个�
 - **诊断**：`emit` 会让文件经过解析器和生成器再回到原样，因此你可以在依赖自动化编辑之前检查某种文件是否按字节稳定。
 
 ```bash
-# 此配置中 GitHub 插件是否已启用？
+# Is the GitHub plugin enabled in this config?
 openclaw path resolve 'oc://config.jsonc/plugins/github/enabled' --json
 
-# 本次会话日志中出现了哪些 tool-call 名称？
+# Which tool-call names appear in this session log?
 openclaw path find 'oc://session.jsonl/[event=tool_call]/name' --json
 
-# 这次小配置修改会写出哪些字节？
+# What bytes would this tiny config edit write?
 openclaw path set 'oc://config.jsonc/plugins/github/enabled' 'true' --dry-run
 ```
 
-`oc-path` 有意不负责更高层语义。内存插件仍然负责内存写入，配置命令仍然负责完整的配置管理，而 last-known-good（LKG）配置恢复仍然负责恢复/提升。`oc-path` 只是更高层工具可以围绕其构建的、用于精确定位且保持字节不变的文件操作层。
+`oc-path` 故意不是高级语义的所有者。内存插件仍然拥有内存写入，配置命令仍然拥有完整的配置管理，最后已知的（LKG）配置恢复仍然拥有restore/promotion. `oc-path`是那些高级工具可以围绕它们构建的窄寻址和字节保留文件操作层。
 
-## 它运行在哪里
+## <a id="where-it-runs"></a> 运行位置
 
 该插件**以内嵌进程的方式运行在 `openclaw` CLI 内部**，并在你执行命令的主机上运行。它不需要运行中的 Gateway，也不会打开任何网络套接字；每个动词都是对你指定文件的纯转换。
 
@@ -56,7 +53,7 @@ openclaw path set 'oc://config.jsonc/plugins/github/enabled' 'true' --dry-run
 ```json
 {
   "id": "oc-path",
-  "name": "OC 路径",
+  "name": "OC Path",
   "activation": {
     "onStartup": false,
     "onCommands": ["path"]
@@ -65,66 +62,57 @@ openclaw path set 'oc://config.jsonc/plugins/github/enabled' 'true' --dry-run
 }
 ```
 
-`onStartup: false` 可将插件排除在 Gateway 的启动路径之外。  
-`commandAliases` 和 `activation.onCommands` 会告诉 CLI 在你第一次运行 `openclaw path …` 时按需加载该插件，因此从不使用该动词的安装不会承担任何成本。
+`onStartup: false` 可将插件排除在 Gateway 的启动路径之外。 `commandAliases` 和 `activation.onCommands` 会告诉 CLI 在你第一次运行 `openclaw path …` 时按需加载该插件，因此从不使用该动词的安装不会承担任何成本。
 
-## 启用
+## <a id="enable"></a> 启用
 
 ```bash
 openclaw plugins enable oc-path
 ```
 
-重启 Gateway（如果你在运行它）以便让清单快照获取到新的
-状态。裸的 `openclaw path` 调用会在同一主机上立即生效；
-CLI 会按需加载该插件。
+裸 `openclaw path` 调用立即在同一主机上运行； CLI 按需加载插件。正在运行的网关会自动应用启用；请参阅 [ 应用更改并检查 ](/plugins/manage-plugins#apply-changes-and-inspect)。
 
-禁用方式：
+禁用：
 
 ```bash
 openclaw plugins disable oc-path
 ```
 
-## 依赖
+## <a id="dependencies"></a> 依赖
 
 所有解析器依赖都仅限于插件本地；启用 `oc-path` 不会将新包引入核心运行时：
 
-| 依赖项         | 用途                                                                   |
+| 依赖项     | 用途                                                                |
 | -------------- | ---------------------------------------------------------------------- |
 | `commander`    | `resolve`、`find`、`set`、`validate`、`emit` 的子命令连接。    |
 | `jsonc-parser` | 带注释和保留尾随逗号的 JSONC 解析和叶子编辑。     |
 | `markdown-it`  | 用于 section / item / field 模型的 Markdown 词法分析。            |
-| `yaml`         | 带注释和保留 flow style 的 YAML `Document` 解析 / 生成 / 编辑。            |
+| `yaml`         | 带注释和保留 flow style 的 YAML `Document` 解析 / 生成 / 编辑。 |
 
 JSONL 仍然采用手工实现：按行解析比任何依赖都更简单，而且逐行解析本身已经通过 `jsonc-parser` 进行。
 
-## 它提供什么
+## <a id="what-it-provides"></a> 它提供什么
 
 | 表面                        | 由以下内容提供                                             |
 | ------------------------------ | ------------------------------------------------------- |
 | `openclaw path` CLI            | `extensions/oc-path/cli-registration.ts`                |
-| `oc://` 解析器 / 格式化器      | `extensions/oc-path/src/oc-path/oc-path.ts`             |
+| `oc://` 解析器 / 格式化器     | `extensions/oc-path/src/oc-path/oc-path.ts`             |
 | 按类型的 parse / emit / edit   | `extensions/oc-path/src/oc-path/{md,jsonc,jsonl,yaml}`  |
-| 通用 resolve / find / set      | `extensions/oc-path/src/oc-path/{resolve,find,edit}.ts` |
-| 重写哨兵保护                   | `extensions/oc-path/src/oc-path/sentinel.ts`            |
+| 通用 resolve / find / set | `extensions/oc-path/src/oc-path/{resolve,find,edit}.ts` |
+| 重写哨兵保护       | `extensions/oc-path/src/oc-path/sentinel.ts`            |
 
 目前 CLI 是唯一公开的表面。底层动词对插件是私有的；使用者通过 CLI（或基于 SDK 自行构建插件）来使用。
 
-## 与其他插件的关系
+## <a id="relationship-to-other-plugins"></a> 与其他插件的关系
 
-- **`memory-*`**：内存写入通过 memory 插件进行，而不是通过
-  `oc-path`。`oc-path` 是一个通用的文件底层层；memory 插件在其之上叠加
-  自己的语义。
-- **LKG**：`path` 不了解 last-known-good 配置恢复。如果你通过 `path` 编辑的
-  文件也被 LKG 跟踪，那么下一个配置 observe
-  周期会决定是提升还是恢复它；将一次 `path` 编辑视为对该文件的任何其他直接写入。
+- **`memory-*`**：内存写入通过 memory 插件进行，而不是通过 `oc-path`。`oc-path` 是一个通用的文件底层层；memory 插件在其之上叠加自己的语义。
+- **LKG**：`path` 不知道最后一次正确的配置恢复。如果您通过 `path` 编辑的文件也被 LKG- 跟踪，则下一个配置观察周期决定是提升还是恢复它；将 `path` 编辑视为对该文件的任何其他直接写入。
 
-## 安全性
+## <a id="safety"></a> 安全性
 
-`set` 通过底层基础的 emit 路径写入原始字节，这会自动应用重写哨兵保护。包含
-`__OPENCLAW_REDACTED__`（原样或作为子串）的叶子节点会在写入时被拒绝，并返回
-`OC_EMIT_SENTINEL`。CLI 还会清理它输出的任何人类可读或 JSON 输出中的字面哨兵，将其替换为 `[REDACTED]`，这样终端捕获和管道就不会泄露该标记。
+`set` 通过底层基础的 emit 路径写入原始字节，这会自动应用重写哨兵保护。包含 `__OPENCLAW_REDACTED__`（原样或作为子串）的叶子节点会在写入时被拒绝，并返回 `OC_EMIT_SENTINEL`。CLI 还会清理它输出的任何人类可读或 JSON 输出中的字面哨兵，将其替换为 `[REDACTED]`，这样终端捕获和管道就不会泄露该标记。
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [`openclaw path` CLI 参考](/cli/path)
 - [管理插件](/plugins/manage-plugins)

@@ -1,13 +1,16 @@
 ---
-summary: "为发送和接收 OpenClaw 消息添加 Telegram 渠道界面。"
+summary: "OpenClaw Telegram channel plugin."
 read_when:
-  - 您正在安装、配置或审计 telegram 插件
-title: "Telegram 插件"
+  - You are installing, configuring, or auditing the telegram plugin
+title: "Telegram plugin reference"
 ---
 
-# Telegram 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-为发送和接收 OpenClaw 消息添加 Telegram 渠道界面。
+OpenClaw Telegram channel plugin.
 
 ## 分发
 
@@ -16,7 +19,7 @@ title: "Telegram 插件"
 
 ## 接口
 
-channels: `telegram`
+- Channels: `telegram`
 
 ## 相关文档
 

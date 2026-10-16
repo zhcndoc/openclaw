@@ -1,22 +1,26 @@
 ---
 summary: "OpenClaw Amazon Bedrock 提供者插件，支持模型发现、嵌入和护栏。"
 read_when:
-  - 当你正在安装、配置或审计 amazon-bedrock 插件时
-title: "Amazon Bedrock 插件"
+  - You are installing, configuring, or auditing the amazon-bedrock plugin
+title: "Amazon Bedrock plugin reference"
 ---
 
-# Amazon Bedrock 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw Amazon Bedrock 提供者插件，支持模型发现、嵌入和护栏。
 
 ## 分发
 
-- 包：`@openclaw/amazon-bedrock-provider`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/amazon-bedrock-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/amazon-bedrock-provider`
 
 ## 范围
 
-providers: `amazon-bedrock`; contracts: `memoryEmbeddingProviders`
+- Providers: `amazon-bedrock`
+- Contracts: `embeddingProviders`
 
 ## 相关文档
 

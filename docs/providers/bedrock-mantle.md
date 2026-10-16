@@ -1,35 +1,31 @@
 ---
-summary: "将 Amazon Bedrock Mantle OpenAI 兼容和 Claude Messages 模型与 OpenClaw 一起使用"
+summary: "使用 Amazon Bedrock 地幔 OpenAI- 兼容和 Claude 消息模型与 OpenClaw"
 read_when:
-  - You want to use Bedrock Mantle hosted OSS models with OpenClaw
-  - You need the Mantle OpenAI-compatible endpoint for GPT-OSS, Qwen, Kimi, or GLM
-  - You want to use Claude Opus 5, Sonnet 5, or Mythos 5 through Amazon Bedrock Mantle
-title: "Amazon Bedrock Mantle"
+  - "您想要将基岩地幔托管的 OSS 模型与 OpenClaw 一起使用"
+  - "您需要 GPT-OSS、Qwen、Kimi 或 GLM 的 Mantle OpenAI- 兼容端点"
+  - "您想要使用 Claude Opus 5、Sonnet 5 或神话 5 到 Amazon Bedrock 地幔"
+title: "Amazon Bedrock 地幔"
 ---
 
-OpenClaw 包含一个内置的 **Amazon Bedrock Mantle** 提供方，可连接到
-Mantle OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的标准
-`/v1/chat/completions` 接口托管开源和
-第三方模型（GPT-OSS、Qwen、Kimi、GLM 及类似模型）。Mantle 还
-通过 Anthropic Messages 路由公开 Anthropic Claude 模型。
+OpenClaw 包括一个捆绑的 **Amazon Bedrock Mantle** 提供程序，该提供程序连接到 Mantle OpenAI- 兼容端点。 Mantle 通过 Bedrock 基础设施支持的标准 `/v1/chat/completions` 表面托管开源和第三方模型（GPT-OSS、Qwen、Kimi、GLM 等）。 Mantle 还通过 Anthropic 消息路由公开 Anthropic Claude 模型。
 
-| Property       | Value                                                                                  |
+| 属性       | 值                                                                                  |
 | -------------- | -------------------------------------------------------------------------------------- |
-| Provider ID    | `amazon-bedrock-mantle`                                                                |
-| API            | `openai-completions` for discovered OSS models, `anthropic-messages` for Claude models |
-| Auth           | Explicit `AWS_BEARER_TOKEN_BEDROCK` or IAM credential-chain bearer-token generation    |
-| Default region | `us-east-1` (override with `AWS_REGION` or `AWS_DEFAULT_REGION`)                       |
+| 提供商 ID    | `amazon-bedrock-mantle`                                                                |
+| API            | `openai-completions` 适用于已发现的 OSS 模型，`anthropic-messages` 适用于 Claude 模型 |
+| 认证           | 显式 `AWS_BEARER_TOKEN_BEDROCK` 或 IAM 凭证链不记名令牌生成    |
+| 默认区域 | `us-east-1`（用 `AWS_REGION` 或 `AWS_DEFAULT_REGION` 覆盖）                       |
 
-## 入门
+## <a id="getting-started"></a> 入门
 
-选择你偏好的认证方式并按照设置步骤进行。
+选择您首选的身份验证方法并按照设置步骤操作。
 
 <Tabs>
-  <Tab title="显式 bearer token">
+  <Tab id="explicit-bearer-token" title="显式不记名令牌">
     **最适合：** 你已经拥有 Mantle bearer token 的环境。
 
     <Steps>
-      <Step title="在网关主机上设置 bearer token">
+      <Step id="set-the-bearer-token-on-the-gateway-host" title="在网关主机上设置承载令牌">
         ```bash
         export AWS_BEARER_TOKEN_BEDROCK="..."
         ```
@@ -40,7 +36,7 @@ Mantle OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的标�
         export AWS_REGION="us-west-2"
         ```
       </Step>
-      <Step title="验证模型已被发现">
+      <Step id="verify-models-are-discovered" title="验证模型是否被发现">
         ```bash
         openclaw models list
         ```
@@ -51,19 +47,19 @@ Mantle OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的标�
 
   </Tab>
 
-  <Tab title="IAM 凭证">
-    **最适合：** 使用与 AWS SDK 兼容的凭证（共享配置、SSO、Web Identity、实例或任务角色）。
+  <Tab id="iam-credentials" title="IAM 凭证">
+    **最适合：使用 AWS SDK- 兼容凭证的**（共享配置、SSO、Web 身份、实例或任务角色）。
 
     <Steps>
-      <Step title="在网关主机上配置 AWS 凭证">
-        任何与 AWS SDK 兼容的认证源都可以：
+      <Step id="configure-aws-credentials-on-the-gateway-host" title="在网关主机上配置 AWS 凭据">
+        任何 AWS SDK- 兼容的身份验证源都可以工作：
 
         ```bash
         export AWS_PROFILE="default"
         export AWS_REGION="us-west-2"
         ```
       </Step>
-      <Step title="验证模型已被发现">
+      <Step id="verify-models-are-discovered-1" title="验证模型是否被发现">
         ```bash
         openclaw models list
         ```
@@ -73,25 +69,26 @@ Mantle OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的标�
     </Steps>
 
     <Tip>
-    当未设置 `AWS_BEARER_TOKEN_BEDROCK` 时，OpenClaw 会从 AWS 默认凭证链为你生成 bearer token，包括共享凭证/配置文件、SSO、Web Identity，以及实例或任务角色。
+    当未设置 `AWS_BEARER_TOKEN_BEDROCK` 时，OpenClaw 会从 AWS 默认凭证链为您铸造不记名令牌，包括共享 credentials/config 配置文件、SSO、Web 身份以及实例或任务角色。
     </Tip>
 
   </Tab>
 </Tabs>
 
-## 自动模型发现
+## <a id="automatic-model-discovery"></a> 自动模型发现
 
-当设置了 `AWS_BEARER_TOKEN_BEDROCK` 时，OpenClaw 会直接使用它。否则，
-OpenClaw 会尝试从 AWS 默认凭证链生成 Mantle bearer token。然后它会通过查询
-该区域的 `/v1/models` 端点来发现可用的 Mantle 模型。
+当设置了 `AWS_BEARER_TOKEN_BEDROCK` 时，OpenClaw 会直接使用它。否则， OpenClaw 会尝试从 AWS 默认凭证链生成 Mantle bearer token。然后它会通过查询该区域的 `/v1/models` 端点来发现可用的 Mantle 模型。
 
-| 行为              | 详情                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------ |
-| 发现缓存          | 结果会按每个区域缓存 1 小时；获取失败时返回上次缓存的结果 |
-| IAM token 刷新    | 每 2 小时一次，按每个区域缓存                                                     |
+| 行为          | 详情                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| 发现缓存   | 同一区域和持有者凭证的结果缓存 1 小时 |
+| IAM token 刷新 | 每 2 小时一次，按每个区域缓存                                    |
 
-要保持 Mantle 插件启用，但禁止自动发现和 IAM
-bearer token 生成，请禁用由插件拥有的发现开关：
+刷新失败报告不可用或拒绝目录访问。该目录保留了与该故障状态兼容的最后好的模型；过期的发现数据不会成为成功刷新。成功的空响应将清除已发现的成员资格。失败后恢复端点访问并再次刷新。
+
+该插件的公共发现帮助程序保留其 v2026.9.2 咨询默认值：在失败时可以返回相同凭证的陈旧行，并且隐式解析对于空结果返回 `null`。编程调用者可以传递 `discoveryMode: "strict"` 来进行失败传播和成功的空提供程序结果。捆绑的目录挂钩始终选择该严格模式。
+
+要保持 Mantle 插件启用，但禁止自动发现和 IAM bearer token 生成，请禁用由插件拥有的发现开关：
 
 ```bash
 openclaw config set plugins.entries.amazon-bedrock-mantle.config.discovery.enabled false
@@ -101,13 +98,13 @@ openclaw config set plugins.entries.amazon-bedrock-mantle.config.discovery.enabl
 bearer token 与标准 [Amazon Bedrock](/providers/bedrock) 提供程序使用的 `AWS_BEARER_TOKEN_BEDROCK` 相同。
 </Note>
 
-### 支持的区域
+### <a id="supported-regions"></a> 支持的区域
 
 `us-east-1`, `us-east-2`, `us-west-2`, `ap-northeast-1`,
 `ap-south-1`, `ap-southeast-3`, `eu-central-1`, `eu-west-1`, `eu-west-2`,
-`eu-south-1`, `eu-north-1`, `sa-east-1`。
+`eu-south-1`, `eu-north-1`, `sa-east-1`.
 
-## 手动配置
+## <a id="manual-configuration"></a> 手动配置
 
 如果你更喜欢显式配置而不是自动发现：
 
@@ -137,86 +134,53 @@ bearer token 与标准 [Amazon Bedrock](/providers/bedrock) 提供程序使用�
 }
 ```
 
-一个显式且非空的 `models` 列表具有权威性，并会替换所有
-已发现的行，包括下面的 Claude 行。省略 `models` 以保留
-自动的 Mantle 目录，或者包含你想使用的完整 Claude 模型条目。
+显式非空 `models` 列表控制成员资格并替换发现的行，包括下面的 Claude 行。对于匹配的行，显式的 `input` 获胜；当源行省略 `input` 时，发现可以填充该功能元数据。省略 `models` 以保留自动 Mantle 目录，或包含您要使用的完整 Claude 模型条目。
 
-## 高级配置
+## <a id="advanced-configuration"></a> 高级配置
 
 <AccordionGroup>
-  <Accordion title="推理支持">
-    推理支持是根据模型 ID 中包含的模式推断出来的，例如
-    `thinking`、`reasoner`、`reasoning`、`deepseek.r`、`gpt-oss-120b` 或
-    `gpt-oss-safeguard-120b`。OpenClaw 在发现阶段会自动为匹配的模型设置
-    `reasoning: true`。
+  <Accordion id="reasoning-support" title="推理支持">
+    推理支持是从包含 `thinking`、`reasoner`、`reasoning`、`deepseek.r`、`gpt-oss-120b` 或 `gpt-oss-safeguard-120b` 等模式的模型 ID 推断出来的。 OpenClaw 在发现期间自动设置 `reasoning: true` 以匹配模型。
   </Accordion>
 
-  <Accordion title="端点不可用">
-    如果 Mantle 端点不可用、未返回任何模型，或者 bearer token 解析失败，
-    则发现过程会返回空结果，并跳过隐式提供程序。OpenClaw 不会报错；其他已配置的提供程序
-    会继续正常工作。
+  <Accordion id="endpoint-unavailability" title="端点不可用">
+    失败的端点请求报告不可用或拒绝目录访问。兼容的最后好模型仍以该故障状态列出。成功的空响应将清除已发现的成员资格。如果无法解析不记名令牌，则不会尝试发现并跳过隐式提供程序。其他配置的提供程序继续正常工作。
   </Accordion>
 
-  <Accordion title="Claude via the Anthropic Messages route">
-    When automatic discovery owns the model list, OpenClaw appends five Claude
-    models after a successful lookup, regardless of what `/v1/models` returns:
-    `amazon-bedrock-mantle/anthropic.claude-opus-5` (Claude Opus 5),
-    `amazon-bedrock-mantle/anthropic.claude-sonnet-5` (Claude Sonnet 5),
-    `amazon-bedrock-mantle/anthropic.claude-opus-4-7` (Claude Opus 4.7), and
-    `amazon-bedrock-mantle/anthropic.claude-mythos-5` (Claude Mythos 5), plus
-    `amazon-bedrock-mantle/anthropic.claude-mythos-preview` (Claude Mythos
-    Preview). They use the `anthropic-messages` API surface and stream through
-    the same bearer-authenticated Anthropic-compatible endpoint
-    (`<mantle-base>/anthropic`), so the AWS bearer token is not treated like an
-    Anthropic API key.
+  <Accordion id="claude-via-the-anthropic-messages-route" title="Claude 通过 Anthropic 消息路由">
+    当自动发现拥有模型列表时，OpenClaw 在成功返回至少一个模型的 `/v1/models` 查找后附加 5 个 Claude 模型：`amazon-bedrock-mantle/anthropic.claude-opus-5` （Claude Opus 5）、`amazon-bedrock-mantle/anthropic.claude-sonnet-5` （Claude Sonnet 5）、`amazon-bedrock-mantle/anthropic.claude-opus-4-7` （Claude Opus 4.7） 和 `amazon-bedrock-mantle/anthropic.claude-mythos-5` （Claude 神话 5） 以及 `amazon-bedrock-mantle/anthropic.claude-mythos-preview` （Claude 神话预览）。它们使用 `anthropic-messages` API 表面并通过相同的承载身份验证的 Anthropic- 兼容端点 （`<mantle-base>/anthropic`） 进行流式传输，因此 AWS 承载令牌不会被视为 Anthropic API 密钥。
 
-    Claude Opus 5 publishes a 1,000,000-token context window, 128,000-token
-    output limit, image input, and `$5/$25` input/output pricing. Adaptive
-    thinking defaults to `high`; `/think off` disables thinking, and
-    `/think xhigh|max` uses the model's native effort levels. OpenClaw omits
-    caller-selected sampling parameters.
+    Claude Opus 5 发布了 1,000,000 个代币上下文窗口、128,000 个代币输出限制、图像输入和 `$5/$25` input/output 定价。适应性思维默认为`high`； `/think off` 禁用思考，而 `/think xhigh|max` 使用模型的本机努力水平。 OpenClaw 省略调用者选择的采样参数。
 
-    Claude Sonnet 5 always uses adaptive thinking and defaults to `high`
-    effort. `/think off` and `/think minimal` map to `low` because the Mantle
-    route cannot disable thinking. OpenClaw also omits custom temperature for
-    Sonnet 5 requests.
+    Claude Sonnet 5 始终使用适应性思维并默认为 `high` 努力。 `/think off`和`/think minimal`映射到`low`，因为Mantle路线不能禁用思维。 OpenClaw 还省略了 Sonnet 5 请求的自定义温度。
 
-    Claude Mythos 5 为限量访问。它提供 1,000,000 token 的上下文窗口和 128,000 token 的输出上限，
-    始终使用自适应思考，`/think off` 和 `/think minimal` 映射为 `low`，
-    并省略调用方选择的采样参数。
+    Claude Mythos 5 为限量访问。它提供 1,000,000 token 的上下文窗口和 128,000 token 的输出上限， 始终使用自适应思考，`/think off` 和 `/think minimal` 映射为 `low`， 并省略调用方选择的采样参数。
 
-    Claude Mythos Preview 始终请求推理，在未设置 `/think` 级别时默认使用 `high`
-    努力级别（从 `xhigh`/`max` 映射为 `high`，从 `minimal` 映射为 `low`）。Mantle 上的 Opus 4.7
-    会在不带模型提供的推理的情况下流式传输，并且 OpenClaw 会省略其 `temperature`
-    参数，因为 Opus 4.7 在此路由上不接受采样覆盖；Mythos Preview 正常接受
-    `temperature` 覆盖。
+    Claude Mythos Preview 始终请求推理，当未设置 `/think` 级别时，默认为 `high` 工作量（从 `xhigh`/`max` 向下映射到 `high`，从 `minimal` 向上映射到 `low`）。 Mantle 流上的 Opus 4.7 没有模型提供的推理，并且 OpenClaw 省略了其 `temperature` 参数，因为 Opus 4.7 不接受此路由上的采样覆盖； Mythos Preview 通常接受 `temperature` 覆盖。
 
-    非空的显式 `models.providers["amazon-bedrock-mantle"].models`
-    列表会替换完整的已发现目录。当你想要这些内置 Claude 行时，请省略该列表。
+    非空显式 `models.providers["amazon-bedrock-mantle"].models` 列表控制成员资格并替换完整的已发现目录。仅当源行省略它时，匹配行才能继承发现的 `input` 功能。当您需要这些内置 Claude 行时，请忽略该列表。
 
   </Accordion>
 
-  <Accordion title="与 Amazon Bedrock 提供程序的关系">
-    Bedrock Mantle 是一个独立于标准
-    [Amazon Bedrock](/providers/bedrock) 提供程序的提供程序。Mantle 为其 OSS 目录使用
-    兼容 OpenAI 的 `/v1` 接口，而标准 Bedrock 提供程序使用原生的 Bedrock Converse API。
+  <Accordion id="relationship-to-amazon-bedrock-provider" title="与 Amazon Bedrock 提供商的关系">
+    Bedrock Mantle 是独立于标准 [Amazon Bedrock](/providers/bedrock) 提供程序的提供程序。 Mantle 在其 OSS 目录中使用 OpenAI- 兼容的 `/v1` 表面，而标准 Bedrock 提供程序则使用本机 Bedrock Converse API。
 
     当存在时，这两个提供程序共享同一个 `AWS_BEARER_TOKEN_BEDROCK` 凭证。
 
   </Accordion>
 </AccordionGroup>
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 <CardGroup cols={2}>
   <Card title="Amazon Bedrock" href="/providers/bedrock" icon="cloud">
     用于 Anthropic Claude、Titan 和其他模型的原生 Bedrock 提供程序。
   </Card>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+  <Card title="选型" href="/concepts/model-providers" icon="layers">
     选择提供程序、模型引用和故障转移行为。
   </Card>
-  <Card title="OAuth 和认证" href="/gateway/authentication" icon="key">
-    认证详情和凭证复用规则。
+  <Card title="OAuth 并授权" href="/gateway/authentication" icon="key">
+    身份验证详细信息和凭证重用规则。
   </Card>
   <Card title="故障排查" href="/help/troubleshooting" icon="wrench">
     常见问题及其解决方法。

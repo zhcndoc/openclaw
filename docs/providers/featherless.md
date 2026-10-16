@@ -2,33 +2,32 @@
 summary: "Featherless AI 设置、模型选择和工具调用"
 title: "Featherless AI"
 read_when:
-  - 你想将 Featherless AI 与 OpenClaw 一起使用
-  - 你需要 Featherless API 密钥环境变量或模型引用格式
+  - "你想将 Featherless AI 与 OpenClaw 一起使用"
+  - "你需要 Featherless API 密钥环境变量或模型引用格式"
 ---
 
-[Featherless AI](https://featherless.ai) 通过一个
-与 OpenAI 兼容的 API 提供开放模型。OpenClaw 将 Featherless 作为官方外部
-提供方插件安装，并在运行时接受来自 Featherless 的精确
-模型 ID，同时保持内置目录较小。
+[Featherless AI](https://featherless.ai) 通过 OpenAI- 兼容的 API 为开放模型提供服务。 OpenClaw 将 Featherless 安装为官方外部提供商插件，并保持内置目录较小，同时在运行时接受来自 Featherless 的精确模型 ID。
 
-| 提供方 ID       | 值                                       |
+| 属性        | 值                                    |
 | --------------- | ---------------------------------------- |
-| `featherless`   | `@openclaw/featherless-provider`         |
+| 提供方 id     | `featherless`                            |
+| 包裹         | `@openclaw/featherless-provider`         |
 | 认证环境变量    | `FEATHERLESS_API_KEY`                    |
-| 引导标志        | `--auth-choice featherless-api-key`      |
-| 直接 CLI 标志   | `--featherless-api-key <key>`            |
-| API             | 与 OpenAI 兼容（`openai-completions`）    |
+| 引导标志 | `--auth-choice featherless-api-key`      |
+| 直接 CLI 标志 | `--featherless-api-key <key>`            |
+| API             | OpenAI-兼容（`openai-completions`） |
 | 基础 URL        | `https://api.featherless.ai/v1`          |
-| 默认模型        | `featherless/Qwen/Qwen3-32B`             |
+| 默认模型   | `featherless/Qwen/Qwen3-32B`             |
 
-## 设置
+## <a id="setup"></a> 设置
 
-安装插件并重启 Gateway：
+安装插件：
 
 ```bash
 openclaw plugins install @openclaw/featherless-provider
-openclaw gateway restart
 ```
+
+安装自动应用于正在运行的网关；否则下次启动时生效。请参阅 [ 应用更改并检查 ](/plugins/manage-plugins#apply-changes-and-inspect)。
 
 运行引导：
 
@@ -57,13 +56,13 @@ export FEATHERLESS_API_KEY="<your-featherless-api-key>" # pragma: allowlist secr
 openclaw models list --provider featherless
 ```
 
-## 默认模型
+## <a id="default-model"></a> 默认模型
 
 该插件使用 `Qwen/Qwen3-32B` 作为默认设置，因为 Featherless 为 Qwen 3 系列提供原生工具调用支持。OpenClaw 配置了其 32,768-token 的上下文窗口、保守的 4,096-token 输出上限，以及 Qwen 聊天模板的思考控制。
 
 目录中的成本字段使用 Featherless 公布的请求定价费率，即每百万输入令牌 $0.102，以及每百万输出令牌 $0.493。固定订阅计划仍按固定费率计费；缓存成本字段保持为零，因为 Featherless 没有公布该模型单独的缓存读取或缓存写入费率。
 
-## 其他 Featherless 模型
+## <a id="other-featherless-models"></a> 其他 Featherless 模型
 
 在 `featherless/` 提供商前缀后使用完整且准确的 Featherless 模型 id：
 
@@ -110,15 +109,15 @@ OpenClaw 有意不会将 Featherless 的完整公开模型索引复制到选择�
 
 在添加自定义元数据之前，请查看 Featherless 的模型目录，确认当前模型可用性和能力标签。
 
-## 故障排查
+## <a id="troubleshooting"></a> 故障排查
 
 - `401` 或 `403`：确认 `FEATHERLESS_API_KEY` 对 Gateway 进程可见，或者重新运行引导流程。
 - 未知模型：使用 Featherless 在 `featherless/` 前缀后提供的、严格区分大小写的 id。
 - 工具调用被作为文本返回：选择 Featherless 文档中支持原生函数调用的模型系列，例如 Qwen 3。
 - 托管 Gateway 无法看到密钥：将其放入 `~/.openclaw/.env` 或服务加载的其他环境来源中，然后重启 Gateway。
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [模型提供商](/concepts/model-providers)
-- [所有提供商](/providers/index)
+- [所有提供方](/providers/index)
 - [思考模式](/tools/thinking)

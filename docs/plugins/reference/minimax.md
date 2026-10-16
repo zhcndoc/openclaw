@@ -1,11 +1,14 @@
 ---
 summary: "向 OpenClaw 添加 MiniMax、MiniMax Portal 模型提供方支持。"
 read_when:
-  - 你正在安装、配置或审计 minimax 插件
-title: "MiniMax 插件"
+  - You are installing, configuring, or auditing the minimax plugin
+title: "MiniMax plugin reference"
 ---
 
-# MiniMax 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 向 OpenClaw 添加 MiniMax、MiniMax Portal 模型提供方支持。
 
@@ -16,7 +19,8 @@ title: "MiniMax 插件"
 
 ## 暴露接口
 
-providers: `minimax`, `minimax-portal`; contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `musicGenerationProviders`, `speechProviders`, `usageProviders`, `videoGenerationProviders`, `webSearchProviders`
+- Providers: `minimax`, `minimax-portal`
+- Contracts: `imageGenerationProviders`, `mediaUnderstandingProviders`, `musicGenerationProviders`, `speechProviders`, `usageProviders`, `videoGenerationProviders`, `webSearchProviders`
 
 ## 相关文档
 

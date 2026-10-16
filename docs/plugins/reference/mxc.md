@@ -1,19 +1,22 @@
 ---
 summary: "OS-level sandboxed tool execution via MXC: runs commands in a Windows ProcessContainer with configured MXC policy files."
 read_when:
-  - 你正在安装、配置或审计 mxc 插件
-title: "Mxc 插件"
+  - You are installing, configuring, or auditing the mxc plugin
+title: "Mxc plugin reference"
 ---
 
-# Mxc 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OS-level sandboxed tool execution via MXC: runs commands in a Windows ProcessContainer with configured MXC policy files.
 
 ## 分发
 
-- 包：`@openclaw/mxc-sandbox`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/mxc-sandbox`
+- Install route: npm or ClawHub: `clawhub:@openclaw/mxc-sandbox`
 
 ## 表面
 
-插件
+This plugin declares no channels, providers, commands, or contracts.

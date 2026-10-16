@@ -1,22 +1,26 @@
 ---
 summary: "向 OpenClaw 添加 Xiaomi 和 Xiaomi Token Plan 模型提供方支持。"
 read_when:
-  - 你正在安装、配置或审核 xiaomi 插件
-title: "小米插件"
+  - You are installing, configuring, or auditing the xiaomi plugin
+title: "Xiaomi plugin reference"
 ---
 
-# 小米插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 向 OpenClaw 添加 Xiaomi 和 Xiaomi Token Plan 模型提供方支持。
 
 ## 分发
 
-- 软件包：`@openclaw/xiaomi-provider`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/xiaomi-provider`
+- Package: `@openclaw/xiaomi-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/xiaomi-provider`
 
 ## 接口
 
-提供商：`xiaomi`、`xiaomi-token-plan`；合约：`speechProviders`、`usageProviders`
+- Providers: `xiaomi`, `xiaomi-token-plan`
+- Contracts: `speechProviders`, `usageProviders`
 
 ## 相关文档
 

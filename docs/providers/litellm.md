@@ -2,16 +2,16 @@
 summary: "通过 LiteLLM Proxy 运行 OpenClaw，实现统一的模型访问和成本跟踪"
 title: "LiteLLM"
 read_when:
-  - 你想通过 LiteLLM 代理路由 OpenClaw
-  - 你需要通过 LiteLLM 进行成本跟踪、日志记录或模型路由
+  - "你想通过 LiteLLM 代理路由 OpenClaw"
+  - "你需要通过 LiteLLM 进行成本跟踪、日志记录或模型路由"
 ---
 
 [LiteLLM](https://litellm.ai) 是一个开源的 LLM 网关，提供统一的 API 以连接 100+ 个模型提供商。通过 LiteLLM 路由 OpenClaw，可实现集中式成本跟踪、日志记录、带消费限额的虚拟密钥，以及后端故障切换，而无需更改 OpenClaw 配置。
 
-## 快速开始
+## <a id="quick-start"></a> 快速开始
 
 <Tabs>
-  <Tab title="入门（推荐）">
+  <Tab id="onboarding-recommended" title="入门引导（推荐）">
     ```bash
     openclaw onboard --auth-choice litellm-api-key
     ```
@@ -25,25 +25,29 @@ read_when:
 
   </Tab>
 
-  <Tab title="手动设置">
+  <Tab id="manual-setup" title="手动设置">
     <Steps>
-      <Step title="启动 LiteLLM Proxy">
+      <Step id="start-litellm-proxy" title="启动 LiteLLM 代理">
+        LiteLLM 代表您调用上游提供商，因此在启动之前导出该提供商的密钥 — 对于以下模型为 `ANTHROPIC_API_KEY`。有关多后端设置，请参阅 [ 模型路由](#advanced)。
+
         ```bash
         pip install 'litellm[proxy]'
+        export ANTHROPIC_API_KEY=sk-ant-...
         litellm --model claude-opus-4-6
         ```
       </Step>
-      <Step title="将 OpenClaw 指向 LiteLLM">
+      <Step id="point-openclaw-to-litellm" title="将 OpenClaw 指向 LiteLLM">
         ```bash
         export LITELLM_API_KEY="your-litellm-key"
         openclaw
         ```
       </Step>
     </Steps>
+
   </Tab>
 </Tabs>
 
-## 配置
+## <a id="configuration"></a> 配置
 
 ```json5
 {
@@ -63,12 +67,12 @@ read_when:
             maxTokens: 64000,
           },
           {
-            id: "gpt-4o",
-            name: "GPT-4o",
-            reasoning: false,
+            id: "gpt-6-astra",
+            name: "GPT-6 Astra",
+            reasoning: true,
             input: ["text", "image"],
-            contextWindow: 128000,
-            maxTokens: 8192,
+            contextWindow: 1050000,
+            maxTokens: 128000,
           },
         ],
       },
@@ -84,11 +88,11 @@ read_when:
 
 默认的模型 onboarding 写入为 `litellm/claude-opus-4-6`。
 
-## 图像生成
+在合并模式下，使用显式代理 URL 加入会保留任何编写的提供程序模型，否则会将提供程序模型列表保留为空以供发现。运行 `openclaw models list --provider litellm --refresh --json` 以列出代理的模型。对于 `models.mode: "replace"`，发现被禁用，因此加入会在提供者模型列表中保留记录的默认值，同时保留现有的模型定义。
 
-LiteLLM 可以通过兼容 OpenAI 的 `/images/generations` 和
-`/images/edits` 路由支持 `image_generate` 工具。默认图像模型为 `gpt-image-2`；可在
-`agents.defaults.mediaModels.image` 下配置其他模型：
+## <a id="image-generation"></a> 图像生成
+
+LiteLLM可以通过OpenAI-兼容的`/images/generations`和`/images/edits`路由支持`image_generate`工具。默认镜像模型为`gpt-image-2`；在 `agents.defaults.mediaModels.image` 下配置一个不同的：
 
 ```json5
 {
@@ -113,14 +117,12 @@ LiteLLM 可以通过兼容 OpenAI 的 `/images/generations` 和
 }
 ```
 
-回环 LiteLLM URL（`http://localhost:4000`、`127.0.0.1`、`::1`、`host.docker.internal`）无需全局私有网络覆盖即可工作。
-对于部署在局域网主机上的代理，请设置
-`models.providers.litellm.request.allowPrivateNetwork: true`，因为 API 密钥会发送到该主机。
+环回 LiteLLM URL（`http://localhost:4000`、`127.0.0.1`、`::1`、`host.docker.internal`）无需全局专用网络覆盖即可工作。对于 LAN- 托管代理，请设置 `models.providers.litellm.request.allowPrivateNetwork: true`，因为 API 密钥将发送到该主机。
 
-## 高级
+## <a id="advanced"></a> 高级
 
 <AccordionGroup>
-  <Accordion title="虚拟密钥">
+  <Accordion id="virtual-keys" title="虚拟按键">
     为 OpenClaw 创建一个带支出限制的专用密钥：
 
     ```bash
@@ -138,7 +140,7 @@ LiteLLM 可以通过兼容 OpenAI 的 `/images/generations` 和
 
   </Accordion>
 
-  <Accordion title="模型路由">
+  <Accordion id="model-routing" title="模型路由">
     LiteLLM 可以将模型请求路由到不同的后端。在你的 LiteLLM `config.yaml` 中进行如下配置：
 
     ```yaml
@@ -148,9 +150,9 @@ LiteLLM 可以通过兼容 OpenAI 的 `/images/generations` 和
           model: claude-opus-4-6
           api_key: os.environ/ANTHROPIC_API_KEY
 
-      - model_name: gpt-4o
+      - model_name: gpt-6-astra
         litellm_params:
-          model: gpt-4o
+          model: gpt-6-astra
           api_key: os.environ/OPENAI_API_KEY
     ```
 
@@ -158,45 +160,42 @@ LiteLLM 可以通过兼容 OpenAI 的 `/images/generations` 和
 
   </Accordion>
 
-  <Accordion title="查看使用情况">
+  <Accordion id="viewing-usage" title="查看使用情况">
     ```bash
-    # 密钥信息
+    # Key info
     curl "http://localhost:4000/key/info" \
       -H "Authorization: Bearer sk-litellm-key"
 
-    # 支出日志
+    # Spend logs
     curl "http://localhost:4000/spend/logs" \
       -H "Authorization: Bearer $LITELLM_MASTER_KEY"
     ```
 
   </Accordion>
 
-  <Accordion title="代理行为说明">
+  <Accordion id="proxy-behavior-notes" title="代理行为注释">
     - LiteLLM 默认运行在 `http://localhost:4000`。
-    - OpenClaw 通过 LiteLLM 的代理式、与 OpenAI 兼容的 `/v1` 端点连接。
-    - 通过已配置的 LiteLLM 基础 URL 时，不适用原生 OpenAI 专用的请求形状处理：
-      没有 `service_tier`，没有 Responses 的 `store`，没有 prompt-cache 提示，也没有 OpenAI reasoning-effort
-      负载形状处理。
-    - 隐藏的 OpenClaw 归属头（`originator`、`version`、`User-Agent`）只会发送到
-      已验证的原生 OpenAI 端点，因此不会在自定义 LiteLLM 基础 URL 上注入。
+    - OpenClaw 通过 LiteLLM 的代理式 OpenAI- 兼容 `/v1` 端点进行连接。
+    - Native-OpenAI-only 请求整形不适用于通过配置的 LiteLLM 基础 URL：无 `service_tier`、无响应 `store`、无提示缓存提示、无 OpenAI 推理工作负载整形。
+    - 隐藏的 OpenClaw 归属头（`originator`、`version`、`User-Agent`）只会发送到已验证的原生 OpenAI 端点，因此不会在自定义 LiteLLM 基础 URL 上注入。
   </Accordion>
 </AccordionGroup>
 
 <Note>
-有关通用提供商配置和故障转移行为，请参见 [模型提供商](/concepts/model-providers)。
+有关一般提供程序配置和故障转移行为，请参阅 [Model Providers](/concepts/model-providers)。
 </Note>
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 <CardGroup cols={2}>
   <Card title="LiteLLM 文档" href="https://docs.litellm.ai" icon="book">
     LiteLLM 官方文档和 API 参考。
   </Card>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    所有提供商、模型引用和故障转移行为的概览。
+  <Card title="选型" href="/concepts/model-providers" icon="layers">
+    所有提供程序、模型引用和故障转移行为的概述。
   </Card>
   <Card title="配置" href="/gateway/configuration" icon="gear">
-    完整的配置参考。
+    完整配置参考。
   </Card>
   <Card title="模型" href="/concepts/models" icon="brain">
     如何选择和配置模型。

@@ -1,13 +1,16 @@
 ---
-summary: "添加用于发送和接收 OpenClaw 消息的 QA Channel 界面。"
+summary: "OpenClaw QA synthetic channel plugin."
 read_when:
-  - You are installing, configuring, or auditing the qa-channel 插件
-title: "QA Channel 插件"
+  - You are installing, configuring, or auditing the qa-channel plugin
+title: "QA Channel plugin reference"
 ---
 
-# QA Channel 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-添加用于发送和接收 OpenClaw 消息的 QA Channel 界面。
+OpenClaw QA synthetic channel plugin.
 
 ## 分发
 
@@ -16,7 +19,7 @@ title: "QA Channel 插件"
 
 ## 界面
 
-channels: `qa-channel`
+- Channels: `qa-channel`
 
 ## 相关文档
 

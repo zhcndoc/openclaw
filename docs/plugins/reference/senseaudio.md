@@ -1,11 +1,14 @@
 ---
 summary: "添加媒体理解提供商支持。"
 read_when:
-  - 你正在安装、配置或审计 senseaudio 插件
-title: "Senseaudio 插件"
+  - You are installing, configuring, or auditing the senseaudio plugin
+title: "Senseaudio plugin reference"
 ---
 
-# Senseaudio 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 添加媒体理解提供商支持。
 
@@ -16,7 +19,7 @@ title: "Senseaudio 插件"
 
 ## 接口
 
-contracts: `mediaUnderstandingProviders`
+- Contracts: `mediaUnderstandingProviders`
 
 ## 相关文档
 

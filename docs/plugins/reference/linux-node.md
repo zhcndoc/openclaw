@@ -2,10 +2,13 @@
 summary: "适用于 Linux node 主机的桌面通知、摄像头捕获和位置。"
 read_when:
   - You are installing, configuring, or auditing the linux-node plugin
-title: "Linux Node 插件"
+title: "Linux Node plugin reference"
 ---
 
-# Linux Node 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 适用于 Linux node 主机的桌面通知、摄像头捕获和位置。
 
@@ -16,4 +19,4 @@ title: "Linux Node 插件"
 
 ## 表面
 
-插件
+This plugin declares no channels, providers, commands, or contracts.

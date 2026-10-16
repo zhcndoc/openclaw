@@ -1,22 +1,25 @@
 ---
 summary: "用于 LINE Bot API 聊天的 OpenClaw LINE 渠道插件。"
 read_when:
-  - 你正在安装、配置或审计 line 插件
-title: "LINE 插件"
+  - You are installing, configuring, or auditing the line plugin
+title: "LINE plugin reference"
 ---
 
-# LINE 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于 LINE Bot API 聊天的 OpenClaw LINE 渠道插件。
 
 ## 分发
 
-- 包：`@openclaw/line`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/line`
+- Install route: npm or ClawHub: `clawhub:@openclaw/line`
 
 ## 接口
 
-channels: `line`
+- Channels: `line`
 
 ## 相关文档
 

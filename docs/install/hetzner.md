@@ -1,239 +1,132 @@
 ---
-summary: "在廉价的 Hetzner VPS（Docker）上 24/7 运行 OpenClaw Gateway，具备持久状态和内置二进制文件"
+summary: "在带有 Docker 的 Hetzner VPS 上运行 OpenClaw 网关 24/7"
+doc-schema-version: 1
 read_when:
-  - 你希望 OpenClaw 在云 VPS 上 24/7 运行（而不是在你的笔记本上）
-  - 你希望在自己的 VPS 上运行一个生产级、始终在线的 Gateway
-  - 你希望对持久化、二进制文件和重启行为拥有完全控制权
-  - 你正在 Hetzner 或类似提供商的 Docker 中运行 OpenClaw
+  - "您希望 OpenClaw 在 Hetzner VPS 上 24/7 运行"
+  - "您需要 Hetzner 配置、防火墙或 SSH 隧道指导"
+  - "您想要云上有一个持久的 Docker 网关 VM"
 title: "Hetzner"
 ---
 
-使用 Docker 在 Hetzner VPS 上运行一个持久化的 OpenClaw Gateway，具备耐久状态、内置二进制文件和安全的重启行为。
+在 Debian 或 Ubuntu Hetzner VPS 上运行持久 OpenClaw 网关。本页涵盖 Hetzner 配置、主机安全和访问；共享的 [Docker VM Runtime](/install/docker-vm-runtime) 页面拥有容器设置、持久性、自定义二进制文件、验证和更新。
 
-Hetzner 的定价会变化；请选择能满足需求的最小 Debian/Ubuntu VPS，如果遇到 OOM 再进行扩容。
+将 VPS 视为有状态基础设施。将个人浏览器、Apple、Google 和密码管理器配置文件保留在公司共享运行时之外。如果用户不共享一个信任边界，请将其拆分到网关、主机或 OS 用户之间。请参阅 [ 网关安全 ](/gateway/security) 和 [VPS 托管 ](/vps)。
 
-你可以通过从笔记本电脑进行 SSH 端口转发访问 Gateway，或者在你自己管理防火墙和令牌的情况下直接暴露端口。
+## <a id="what-you-need"></a> 准备工作
 
-安全模型提醒：
-
-- 当所有人都处于同一信任边界内且运行时仅用于业务时，共享公司的 agent 是可以的。
-- 保持严格隔离：专用 VPS/运行时 + 专用账户；该主机上不要有个人的 Apple/Google/浏览器/密码管理器配置文件。
-- 如果用户彼此具有对抗性，请按 gateway/host/OS 用户进行拆分。
-
-参见 [安全性](/gateway/security) 和 [VPS 托管](/vps)。
-
-本指南假定你在 Hetzner 上使用 Ubuntu 或 Debian。若是在其他 Linux VPS 上，请相应映射软件包。通用的 Docker 流程请参见 [Docker](/install/docker)。
-
-## 你需要的内容
-
-- 具有 root 访问权限的 Hetzner VPS
+- A Hetzner VPS 具有 root 访问权限
 - 从你的笔记本电脑进行 SSH 访问
-- Docker 和 Docker Compose
-- 模型认证凭据
-- 可选的提供商凭据（WhatsApp QR、Telegram 机器人 token、Gmail OAuth）
-- 约 20 分钟
+- A Hetzner 云防火墙或主机防火墙
+- 模型和可选通道凭证
+- 大约 20 分钟。
 
-## 快速路径
-
-1. Provision Hetzner VPS
-2. 安装 Docker
-3. 克隆 OpenClaw 仓库
-4. 创建持久化主机目录
-5. 配置 `.env` 和 `docker-compose.yml`
-6. 将所需二进制文件烘焙进镜像
-7. `docker compose up -d`
-8. 验证持久化和 Gateway 访问
+## <a id="provision-and-secure-the-vps"></a> 配置和保护VPS
 
 <Steps>
-  <Step title="Provision the VPS">
-    在 Hetzner 中创建一个 Ubuntu 或 Debian 的 VPS，然后以 root 身份连接：
+  <Step id="create-the-server" title="创建服务器">
+    在 Hetzner 云中，创建一个 Debian 或 Ubuntu 服务器，其中至少有 6 个 GB RAM 用于源映像构建。在较小的服务器上，使用 [Docker VM 运行时](/install/docker-vm-runtime) 中描述的官方预构建映像。 Add your SSH key during provisioning。
+
+    以 root 身份连接：
 
     ```bash
-    ssh root@YOUR_VPS_IP
+    ssh root@<vps-ip>
     ```
-
-    将 VPS 视为有状态基础设施，而不是一次性基础设施。
 
   </Step>
 
-  <Step title="安装 Docker（在 VPS 上）">
+  <Step id="restrict-inbound-traffic" title="限制入站流量">
+    连接 Hetzner 云防火墙，允许 TCP 22 来自您的管理网络。不添加TCP 18789的公共入站规则；下面的隧道通过 SSH 到达该端口。
+
+    如果您还在主机上使用 UFW，请在启用之前允许 SSH：
+
+    ```bash
+    apt-get update
+    apt-get install -y ufw
+    ufw allow OpenSSH
+    ufw enable
+    ufw status verbose
+    ```
+
+    如果您有意通过反向代理或tailnet发布网关，请遵循[Gateway security](/gateway/security)，而不是直接向`0.0.0.0/0`开放容器端口。
+
+  </Step>
+
+  <Step id="install-docker" title="安装Docker">
     ```bash
     apt-get update
     apt-get install -y git curl ca-certificates
     curl -fsSL https://get.docker.com | sh
-    ```
-
-    验证：
-
-    ```bash
     docker --version
     docker compose version
     ```
 
   </Step>
-
-  <Step title="克隆 OpenClaw 仓库">
-    ```bash
-    git clone https://github.com/openclaw/openclaw.git
-    cd openclaw
-    ```
-
-    本指南会构建一个自定义镜像，因此你烘焙进去的任何二进制文件都会在重启后保留。
-
-  </Step>
-
-  <Step title="Create persistent host directories">
-    Docker 容器是短暂的；所有长生命周期状态都必须存放在主机上。
-
-    ```bash
-    mkdir -p /root/.openclaw/workspace
-
-    # 将所有权设置为容器用户（uid 1000）：
-    chown -R 1000:1000 /root/.openclaw
-    ```
-
-  </Step>
-
-  <Step title="Configure environment variables">
-    在仓库根目录创建 `.env`：
-
-    ```bash
-    OPENCLAW_IMAGE=openclaw:latest
-    OPENCLAW_GATEWAY_TOKEN=
-    OPENCLAW_GATEWAY_BIND=lan
-    OPENCLAW_GATEWAY_PORT=18789
-
-    OPENCLAW_CONFIG_DIR=/root/.openclaw
-    OPENCLAW_WORKSPACE_DIR=/root/.openclaw/workspace
-
-    GOG_KEYRING_PASSWORD=
-    XDG_CONFIG_HOME=/home/node/.openclaw
-    ```
-
-    将 `OPENCLAW_GATEWAY_TOKEN` 设置为通过 `.env` 管理稳定的 gateway token；否则在依赖跨重启的客户端之前，请配置 `gateway.auth.token`。如果两者都未设置，OpenClaw 会在该次启动时使用仅运行时有效的 token。为 `GOG_KEYRING_PASSWORD` 生成一个 keyring 密码：
-
-    ```bash
-    openssl rand -hex 32
-    ```
-
-    **不要提交此文件。** 它包含容器/运行时环境变量，例如
-    `OPENCLAW_GATEWAY_TOKEN`。已存储的提供商 OAuth/API key 身份验证位于
-    挂载的 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` 中。
-
-  </Step>
-
-  <Step title="Docker Compose configuration">
-    创建或更新 `docker-compose.yml`：
-
-    ```yaml
-    services:
-      openclaw-gateway:
-        image: ${OPENCLAW_IMAGE}
-        build: .
-        restart: unless-stopped
-        env_file:
-          - .env
-        environment:
-          - HOME=/home/node
-          - NODE_ENV=production
-          - TERM=xterm-256color
-          - OPENCLAW_GATEWAY_BIND=${OPENCLAW_GATEWAY_BIND}
-          - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT}
-          - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
-          - GOG_KEYRING_PASSWORD=${GOG_KEYRING_PASSWORD}
-          - XDG_CONFIG_HOME=${XDG_CONFIG_HOME}
-          - PATH=/home/linuxbrew/.linuxbrew/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-        volumes:
-          - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
-          - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
-        ports:
-          # 推荐：在 VPS 上将 Gateway 仅绑定到回环地址；通过 SSH 隧道访问。
-          # 如果要公开暴露，请移除 `127.0.0.1:` 前缀并相应配置防火墙。
-          - "127.0.0.1:${OPENCLAW_GATEWAY_PORT}:18789"
-        command:
-          [
-            "node",
-            "dist/index.js",
-            "gateway",
-            "--bind",
-            "${OPENCLAW_GATEWAY_BIND}",
-            "--port",
-            "${OPENCLAW_GATEWAY_PORT}",
-            "--allow-unconfigured",
-          ]
-    ```
-
-    `--allow-unconfigured` 仅用于引导阶段的便利性，并不能替代真正的 gateway 配置。仍然要为你的部署设置认证（`gateway.auth.token` 或密码）以及安全的绑定模式。
-
-  </Step>
-
-  <Step title="Shared Docker VM runtime steps">
-    按照共享运行时指南，了解通用 Docker 主机流程：
-
-    - [将所需二进制文件烘焙进镜像](/install/docker-vm-runtime#bake-required-binaries-into-the-image)
-    - [构建并启动](/install/docker-vm-runtime#build-and-launch)
-    - [哪些内容持久化在哪里](/install/docker-vm-runtime#what-persists-where)
-    - [更新](/install/docker-vm-runtime#updates)
-
-  </Step>
-
-  <Step title="Hetzner-specific access">
-    完成共享的构建和启动步骤后，打开隧道。
-
-    **前提条件：** 确保你的 VPS sshd 配置允许 TCP 转发。如果你已经加固了 SSH 配置，请检查 `/etc/ssh/sshd_config` 并设置：
-
-    ```text
-    AllowTcpForwarding local
-    ```
-
-    `local` 允许从你的笔记本电脑使用 `ssh -L` 本地转发，同时阻止服务器发起的远程转发。将其设置为 `no` 会导致隧道失败，并出现：
-    `channel 3: open failed: administratively prohibited: open failed`
-
-    确认已启用 TCP 转发后，重启 SSH 服务
-    （`systemctl restart ssh`），并在你的笔记本上运行隧道：
-
-    ```bash
-    ssh -N -L 18789:127.0.0.1:18789 root@YOUR_VPS_IP
-    ```
-
-    打开 `http://127.0.0.1:18789/` 并粘贴已配置的共享密钥。
-    本指南默认使用 gateway token；如果你切换为密码认证，请改用你配置的密码。
-
-  </Step>
 </Steps>
 
-共享持久化映射位于 [Docker VM Runtime](/install/docker-vm-runtime#what-persists-where)。
+## <a id="configure-the-docker-runtime"></a> 配置Docker运行时
 
-## 基础设施即代码（Terraform）
+在 VPS 上，按照 [Docker VM 运行时 ](/install/docker-vm-runtime) 从 **开始之前** 到 **验证并管理网关**。维护的安装脚本默认使用这些 root 拥有的主机路径：
 
-对于偏好基础设施即代码工作流的团队，社区维护的 Terraform 方案提供了：
+```bash
+export OPENCLAW_CONFIG_DIR="$HOME/.openclaw"
+export OPENCLAW_WORKSPACE_DIR="$HOME/.openclaw/workspace"
+export OPENCLAW_AUTH_PROFILE_SECRET_DIR="$HOME/.openclaw-auth-profile-secrets"
+```
 
-- 带远程状态管理的模块化 Terraform 配置
-- 通过 cloud-init 自动化创建
-- 部署脚本（bootstrap、deploy、backup/restore）
-- 安全加固（防火墙、UFW、仅 SSH 访问）
-- 用于 gateway 访问的 SSH 隧道配置
+如果源构建以 `Killed` 或退出代码 137 结束，请在重试之前调整服务器大小。请参阅二进制烘焙的共享指南、完整的持久性映射和更新命令。
 
-**仓库：**
+## <a id="access-the-control-ui"></a> 访问Control UI
 
-- 基础设施：[openclaw-terraform-hetzner](https://github.com/andreesg/openclaw-terraform-hetzner)
-- Docker 配置：[openclaw-docker-config](https://github.com/andreesg/openclaw-docker-config)
+首先确认VPS SSH守护进程允许本地端口转发。在 `/etc/ssh/sshd_config` 中，使用：
 
-这种方式在上面的 Docker 设置基础上，补充了可复现部署、版本控制的基础设施和自动化灾难恢复。
+```text
+AllowTcpForwarding local
+```
+
+`local` 允许来自笔记本电脑的 `ssh -L`，同时阻止来自服务器的远程转发。更改后，验证并重新启动SSH：
+
+```bash
+sshd -t
+systemctl restart ssh
+```
+
+从您的笔记本电脑上，打开隧道并使其保持运行：
+
+```bash
+ssh -N -L 18789:127.0.0.1:18789 root@<vps-ip>
+```
+
+打开 `http://127.0.0.1:18789/` 并粘贴 VPS `.env` 中的网关令牌。要重新打印仪表板 URL 或批准浏览器设备，请在 VPS 上运行：
+
+```bash
+cd openclaw
+docker compose run --rm openclaw-cli dashboard --no-open
+docker compose run --rm openclaw-cli devices list
+docker compose run --rm openclaw-cli devices approve <requestId>
+```
+
+如果隧道失败并显示`administratively prohibited`，请重新检查`AllowTcpForwarding`和SSH服务配置。云防火墙只需要接纳SSH即可；它不需要承认端口18789。
+
+## <a id="infrastructure-as-code"></a> 基础设施即代码
+
+对于喜欢 Terraform 的团队，社区维护的项目提供远程状态、cloud-init 配置、部署和备份脚本、防火墙强化和 SSH 隧道设置：
+
+- [openclaw-terraform-hetzner](https://github.com/andreesg/openclaw-terraform-hetzner)
+- [openclaw-docker-config](https://github.com/andreesg/openclaw-docker-config)
 
 <Note>
-由社区维护。如有问题或贡献，请参见上面的仓库链接。
+这些存储库由社区维护。报告问题并在各自的存储库中做出贡献。
 </Note>
 
-## 下一步
+## <a id="next-steps"></a> 下一步
 
-- 设置消息通道：[Channels](/channels)
-- 配置 Gateway：[Gateway configuration](/gateway/configuration)
-- 保持 OpenClaw 最新：[Updating](/install/updating)
+- [频道](/channels)
+- [网关配置](/gateway/configuration)
+- [更新](/install/docker-vm-runtime#update-openclaw)
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [安装概览](/install)
-- [Fly.io](/install/fly)
+- [Docker VM Runtime](/install/docker-vm-runtime)
 - [Docker](/install/docker)
 - [VPS 托管](/vps)

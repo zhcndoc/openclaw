@@ -1,22 +1,26 @@
 ---
 summary: "以 Chrome 浏览器访客身份加入 Microsoft Teams 会议。"
 read_when:
-  - 你正在安装、配置或审核 Teams 会议插件
-title: "Microsoft Teams 会议插件"
+  - You are installing, configuring, or auditing the teams-meetings plugin
+title: "Microsoft Teams meetings plugin reference"
 ---
 
-# Microsoft Teams 会议插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 以 Chrome 浏览器访客身份加入 Microsoft Teams 会议。
 
 ## 分发
 
-- 软件包：`@openclaw/teams-meetings`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/teams-meetings`
+- Package: `@openclaw/teams-meetings`
+- Install route: npm or ClawHub: `clawhub:@openclaw/teams-meetings`
 
 ## 接口
 
-contracts: `tools`, `transcriptSourceProviders`
+- CLI commands: `openclaw teamsmeetings`
+- Contracts: `tools`, `transcriptSourceProviders`
 
 ## 相关文档
 

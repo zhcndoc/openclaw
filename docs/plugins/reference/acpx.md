@@ -1,22 +1,25 @@
 ---
 summary: "OpenClaw ACP 运行时后端，支持由插件管理会话和传输。"
 read_when:
-  - 你正在安装、配置或审计 acpx 插件
-title: "ACPx 插件"
+  - You are installing, configuring, or auditing the acpx plugin
+title: "ACPx plugin reference"
 ---
 
-# ACPx 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw ACP 运行时后端，支持由插件管理会话和传输。
 
 ## 分发
 
-- 包：`@openclaw/acpx`
-- 安装途径：npm；ClawHub
+- Package: `@openclaw/acpx`
+- Install route: npm or ClawHub: `clawhub:@openclaw/acpx`
 
 ## 范围
 
-技能
+- Skills
 
 <!-- openclaw-plugin-reference:manual-start -->
 

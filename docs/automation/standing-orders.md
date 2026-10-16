@@ -1,25 +1,25 @@
 ---
 summary: "为自主代理程序定义永久操作权限"
 read_when:
-  - 设置无需按任务逐次提示的自主代理工作流
-  - 定义代理可以独立执行什么，以及哪些需要人工批准
-  - 设计具有清晰边界和升级规则的多程序代理
+  - "设置无需按任务逐次提示的自主代理工作流"
+  - "定义代理可以独立执行什么，以及哪些需要人工批准"
+  - "设计具有清晰边界和升级规则的多程序代理"
 title: "常设指令"
 ---
 
 常设指令赋予你的代理针对已定义程序的**永久操作权限**。你无需为每项任务都单独提示代理，而是通过定义具有清晰范围、触发条件和升级规则的程序，让代理在这些边界内自主执行：“周报由你负责。每周五汇总并发送，只有在发现异常时才上报。”
 
-## 为什么需要常设指令
+## <a id="why-standing-orders"></a> 为什么需要常设指令
 
 **没有常设指令：** 你需要为每项任务都去提示代理，日常工作会被遗忘或延迟，而你会成为瓶颈。
 
 **有常设指令：** 代理会在定义好的边界内自主执行，日常工作按计划进行，而你只在例外情况和审批时介入。
 
-## 它们如何工作
+## <a id="how-they-work"></a> 它们如何工作
 
 常设指令定义在你的 [代理工作区](/concepts/agent-workspace) 文件中。推荐直接将它们写入 `AGENTS.md`（它会在每次会话中自动注入），这样代理始终能在上下文中获取它们。对于更大的配置，你也可以把它们放到诸如 `standing-orders.md` 之类的专用文件中，并在 `AGENTS.md` 中引用它。
 
-对于严格的、临时的 CI 或脚本入口点，请使用 [`openclaw agent exec`](/cli/agent#agent-exec)。它会跳过工作区引导文件，因此每次一次性运行都是自包含的，而不是受常设指令约束。
+对于临时 CI 或脚本入口点，请使用 [`openclaw agent exec`](/cli/agent#agent-exec)。它会跳过工作区引导文件的创建，但默认情况下仍会注入现有文件（例如 `AGENTS.md`），包括它们包含的任何常规订单。要在嵌入式运行时中省略自动工作区上下文注入，请设置 [`agents.defaults.contextInjection: "never"`](/gateway/config-agents/workspace-and-bootstrap#agents.defaults.contextinjection)，除非每个代理都覆盖。
 
 每个程序指定：
 
@@ -28,47 +28,47 @@ title: "常设指令"
 3. **审批门槛** - 在采取行动前需要哪些人工签字确认
 4. **升级规则** - 何时停止并寻求帮助
 
-代理会在每次会话中通过工作区引导文件加载这些指令（有关自动注入文件的完整列表，请参阅[代理工作区](/concepts/agent-workspace)），并结合[自动化](/automation/cron-jobs)执行基于时间的强制实施。
+代理在每个会话中通过工作区引导文件加载这些指令（有关自动注入文件的完整列表，请参阅 [Agent Workspace](/concepts/agent-workspace)）并针对它们执行，结合 [automations](/automation/cron-jobs) 进行基于时间的强制执行。
 
 <Tip>
 将常设指令放在 `AGENTS.md` 中，以确保每次会话都会加载它们。工作区引导会自动注入 `AGENTS.md`、`SOUL.md`、`IDENTITY.md`、`USER.md`、`BOOTSTRAP.md` 和 `MEMORY.md`——但不会注入子目录中的任意文件。
 </Tip>
 
-## 常设指令的结构
+## <a id="anatomy-of-a-standing-order"></a> 常设指令的结构
 
 ```markdown
-## 程序：每周状态报告
+## Program: Weekly Status Report
 
-**权限：** 汇总数据、生成报告、向利益相关者交付
-**触发条件：** 每周五下午 4 点（通过自动化任务强制执行）
-**审批门槛：** 标准报告无需审批。发现异常时标记以供人工审核。
-**升级条件：** 如果数据源不可用或指标看起来异常（偏离正常值超过 2σ）
+**Authority:** Compile data, generate report, deliver to stakeholders
+**Trigger:** Every Friday at 4 PM (enforced via automation job)
+**Approval gate:** None for standard reports. Flag anomalies for human review.
+**Escalation:** If data source is unavailable or metrics look unusual (>2σ from norm)
 
-### 执行步骤
+### Execution steps
 
-1. 从已配置的数据源拉取指标
-2. 与上一周及目标进行比较
-3. 在 Reports/weekly/YYYY-MM-DD.md 中生成报告
-4. 通过已配置渠道发送摘要
-5. 将完成情况记录到 Agent/Logs/
+1. Pull metrics from configured sources
+2. Compare to prior week and targets
+3. Generate report in Reports/weekly/YYYY-MM-DD.md
+4. Deliver summary via configured channel
+5. Log completion to Agent/Logs/
 
-### 不要做的事
+### What NOT to do
 
-- 不要将报告发送给外部方
-- 不要修改源数据
-- 即使指标看起来很差，也不要跳过交付——要如实报告
+- Do not send reports to external parties
+- Do not modify source data
+- Do not skip delivery if metrics look bad - report accurately
 ```
 
-## 常设指令与自动化
+## <a id="standing-orders-plus-automations"></a> 常设指令与自动化
 
 常设指令定义代理**获授权执行的操作**。[自动化](/automation/cron-jobs)定义**执行时间**。二者协同工作：
 
 ```text
-常设指令：“你负责每日收件箱分诊”
+Standing Order: "You own the daily inbox triage"
     ↓
-自动化（每天上午 8 点）：“根据常设指令执行收件箱分诊”
+Automation (8 AM daily): "Execute inbox triage per standing orders"
     ↓
-代理：读取常设指令 → 执行步骤 → 报告结果
+Agent: Reads standing orders → executes steps → reports results
 ```
 
 自动化任务提示应引用常设指令，而不是重复其中的内容（`openclaw automations`；`openclaw cron` 仍是别名）：
@@ -82,87 +82,87 @@ openclaw automations add \
   --announce \
   --channel imessage \
   --to "+1XXXXXXXXXX" \
-  --message "根据常设指令执行每日收件箱分诊。检查邮件中的新警报。解析、分类并持久化每一项。向负责人报告摘要。升级未知项。"
+  --message "Execute daily inbox triage per standing orders. Check mail for new alerts. Parse, categorize, and persist each item. Report summary to owner. Escalate unknowns."
 ```
 
-## 示例
+## <a id="examples"></a> 示例
 
-### 示例 1：内容和社交媒体（每周周期）
+### <a id="example-1%3A-content-and-social-media-(weekly-cycle)"></a><a id="example-1-content-and-social-media-weekly-cycle"></a> 示例 1：内容和社交媒体（每周周期）
 
 ```markdown
-## 计划：内容与社交媒体
+## Program: Content & Social Media
 
-**权限范围：** 起草内容、安排发布、汇总互动报告
-**审批门槛：** 前 30 天所有帖子都需要负责人审阅，之后为常设批准
-**触发条件：** 每周周期（周一审查 → 周中起草 → 周五简报）
+**Authority:** Draft content, schedule posts, compile engagement reports
+**Approval gate:** All posts require owner review for first 30 days, then standing approval
+**Trigger:** Weekly cycle (Monday review → mid-week drafts → Friday brief)
 
-### 每周周期
+### Weekly cycle
 
-- **周一：** 审查平台指标和受众互动
-- **周二至周四：** 起草社交媒体帖子，创建博客内容
-- **周五：** 汇总每周营销简报 → 交付给所有者
+- **Monday:** Review platform metrics and audience engagement
+- **Tuesday-Thursday:** Draft social posts, create blog content
+- **Friday:** Compile weekly marketing brief → deliver to owner
 
-### 内容规则
+### Content rules
 
-- 语气必须与品牌一致（见 SOUL.md 或品牌语气指南）
-- 在面向公众的内容中绝不自称为 AI
-- 在可用时包含指标
-- 聚焦对受众的价值，而不是自我宣传
+- Voice must match the brand (see SOUL.md or brand voice guide)
+- Never identify as AI in public-facing content
+- Include metrics when available
+- Focus on value to audience, not self-promotion
 ```
 
-### 示例 2：财务运营（事件触发）
+### <a id="example-2%3A-finance-operations-(event-triggered)"></a><a id="example-2-finance-operations-event-triggered"></a> 示例 2：财务运营（事件触发）
 
 ```markdown
-## 计划：财务处理
+## Program: Financial Processing
 
-**权限范围：** 处理交易数据、生成报告、发送摘要
-**审批门槛：** 分析无需审批。建议需要负责人批准。
-**触发条件：** 检测到新的数据文件 OR 按月定期执行
+**Authority:** Process transaction data, generate reports, send summaries
+**Approval gate:** None for analysis. Recommendations require owner approval.
+**Trigger:** New data file detected OR scheduled monthly cycle
 
-### 新数据到达时
+### When new data arrives
 
-1. 在指定输入目录中检测新文件
-2. 解析并分类所有交易
-3. 与预算目标进行比较
-4. 标记：异常项目、超阈值、全新的经常性费用
-5. 在指定输出目录中生成报告
-6. 通过已配置渠道向负责人发送摘要
+1. Detect new file in designated input directory
+2. Parse and categorize all transactions
+3. Compare against budget targets
+4. Flag: unusual items, threshold breaches, new recurring charges
+5. Generate report in designated output directory
+6. Deliver summary to owner via configured channel
 
-### 升级规则
+### Escalation rules
 
-- 单笔 > $500：立即提醒
-- 某类别超预算 20%：在报告中标记
-- 无法识别的交易：向负责人询问分类
-- 重试 2 次后仍处理失败：报告失败，不要猜测
+- Single item > $500: immediate alert
+- Category > budget by 20%: flag in report
+- Unrecognizable transaction: ask owner for categorization
+- Failed processing after 2 retries: report failure, do not guess
 ```
 
-### 示例 3：监控与告警（持续运行）
+### <a id="example-3%3A-monitoring-and-alerts-(continuous)"></a><a id="example-3-monitoring-and-alerts-continuous"></a> 示例 3：监控与告警（持续运行）
 
 ```markdown
-## 计划：系统监控
+## Program: System Monitoring
 
-**权限范围：** 检查系统健康状况、重启服务、发送告警
-**审批门槛：** 自动重启服务。如重启两次都失败，则升级处理。
-**触发条件：** 每个心跳周期
+**Authority:** Check system health, restart services, send alerts
+**Approval gate:** Restart services automatically. Escalate if restart fails twice.
+**Trigger:** Every heartbeat cycle
 
-### 检查项
+### Checks
 
-- 服务健康端点响应正常
-- 磁盘空间高于阈值
-- 待处理任务不是陈旧的（>24 小时）
-- 交付渠道可用
+- Service health endpoints responding
+- Disk space above threshold
+- Pending tasks not stale (>24 hours)
+- Delivery channels operational
 
-### 响应矩阵
+### Response matrix
 
-| 条件             | 操作                     | 是否升级？                  |
-| ---------------- | ------------------------ | --------------------------- |
-| 服务宕机         | 自动重启                 | 仅当重启失败 2 次时          |
-| 磁盘空间 < 10%   | 提醒负责人               | 是                          |
-| 陈旧任务 > 24 小时 | 提醒负责人             | 否                          |
-| 渠道离线         | 记录并在下一个周期重试   | 若离线 > 2 小时则升级        |
+| Condition        | Action                   | Escalate?                |
+| ---------------- | ------------------------ | ------------------------ |
+| Service down     | Restart automatically    | Only if restart fails 2x |
+| Disk space < 10% | Alert owner              | Yes                      |
+| Stale task > 24h | Remind owner             | No                       |
+| Channel offline  | Log and retry next cycle | If offline > 2 hours     |
 ```
 
-## 执行-验证-报告模式
+## <a id="execute-verify-report-pattern"></a> 执行-验证-报告模式
 
 当与严格的执行纪律结合时，常设指令效果最佳。常设指令中的每个任务都应遵循这个循环：
 
@@ -171,39 +171,39 @@ openclaw automations add \
 3. **报告** - 告诉所有者做了什么以及验证了什么
 
 ```markdown
-### 执行规则
+### Execution rules
 
-- 每个任务都遵循“执行-验证-报告”。没有例外。
-- “我会处理”不算执行。先做，再报告。
-- 没有验证就说“完成”是不可接受的。要证明它。
-- 如果执行失败：使用调整后的方法重试一次。
-- 如果仍然失败：报告失败并附带诊断。绝不要静默失败。
-- 永远不要无限重试——最多 3 次，然后升级处理。
+- Every task follows Execute-Verify-Report. No exceptions.
+- "I'll do that" is not execution. Do it, then report.
+- "Done" without verification is not acceptable. Prove it.
+- If execution fails: retry once with adjusted approach.
+- If still fails: report failure with diagnosis. Never silently fail.
+- Never retry indefinitely - 3 attempts max, then escalate.
 ```
 
 这种模式可以防止代理最常见的失败方式：只确认任务，却没有真正完成。
 
-## 多程序架构
+## <a id="multi-program-architecture"></a> 多程序架构
 
 对于管理多个关注点的代理，应将常设指令组织为边界清晰的独立程序：
 
 ```markdown
-## 程序 1：[领域 A]（每周）
+## Program 1: [Domain A] (Weekly)
 
 ...
 
-## 程序 2：[领域 B]（每月 + 按需）
+## Program 2: [Domain B] (Monthly + On-Demand)
 
 ...
 
-## 程序 3：[领域 C]（按需）
+## Program 3: [Domain C] (As-Needed)
 
 ...
 
-## 升级规则（所有程序）
+## Escalation Rules (All Programs)
 
-- [通用升级标准]
-- [适用于所有程序的审批门槛]
+- [Common escalation criteria]
+- [Approval gates that apply across programs]
 ```
 
 每个程序都应该有：
@@ -212,18 +212,18 @@ openclaw automations add \
 - 自己的**审批门槛**（有些程序比其他程序需要更多监督）
 - 清晰的**边界**（代理应知道一个程序在哪里结束、另一个从哪里开始）
 
-## 最佳实践
+## <a id="best-practices"></a> 最佳实践
 
-### 应当这样做
+### Do
 
 - 从有限的权限开始，随着信任建立逐步扩大权限
 - 为高风险操作定义明确的审批关卡
-- 包含“不要做什么”部分——边界与权限同样重要
+- 包括“NOT 做什么”部分 - 边界与权限一样重要
 - 与自动化结合，以可靠地执行基于时间的任务
 - 每周检查代理日志，确认常规指令是否得到遵循
 - 随着需求变化更新常规指令——它们是不断演变的文档
 
-### 应避免这样做
+### <a id="avoid"></a> 应避免这样做
 
 - 在第一天就授予广泛权限（“做你认为最好的事”）
 - 跳过升级规则——每个程序都需要包含“何时停止并询问”的条款
@@ -231,10 +231,11 @@ openclaw automations add \
 - 在单个程序中混合多个关注点——不同领域使用不同的程序
 - 忘记通过自动化来强制执行——没有触发器的常规指令最终只会变成建议
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [自动化](/automation)：一览所有自动化机制。
 - [自动化任务](/automation/cron-jobs)：用于执行常规指令的计划安排。
 - [钩子](/automation/hooks)：由事件驱动的代理生命周期脚本。
 - [Webhooks](/automation/cron-jobs#webhooks)：入站 HTTP 事件触发器。
 - [代理工作区](/concepts/agent-workspace)：常规指令所在的位置，其中包括自动注入的引导文件完整列表（`AGENTS.md`、`SOUL.md` 等）。
+- [Goal](/tools/goal) — 持久的每会话目标和 `/goal` 控件

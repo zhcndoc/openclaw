@@ -2,10 +2,13 @@
 summary: "为 OpenClaw 添加 Hugging Face 模型提供方支持。"
 read_when:
   - You are installing, configuring, or auditing the huggingface plugin
-title: "Hugging Face 插件"
+title: "Hugging Face plugin reference"
 ---
 
-# Hugging Face 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 Hugging Face 模型提供方支持。
 
@@ -16,7 +19,7 @@ title: "Hugging Face 插件"
 
 ## 接口
 
-providers: `huggingface`
+- Providers: `huggingface`
 
 ## 相关文档
 

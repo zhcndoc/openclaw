@@ -1,11 +1,14 @@
 ---
 summary: "将 Claude Code 和 Claude Desktop 的说明、MCP 服务器、技能以及安全配置导入 OpenClaw。"
 read_when:
-  - 你正在安装、配置或审核 migrate-claude 插件
-title: "迁移 Claude 插件"
+  - You are installing, configuring, or auditing the migrate-claude plugin
+title: "Migrate Claude plugin reference"
 ---
 
-# 迁移 Claude 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 将 Claude Code 和 Claude Desktop 的说明、MCP 服务器、技能以及安全配置导入 OpenClaw。
 
@@ -16,4 +19,4 @@ title: "迁移 Claude 插件"
 
 ## 表面
 
-contracts: `migrationProviders`
+- Contracts: `migrationProviders`

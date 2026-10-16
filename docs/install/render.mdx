@@ -1,25 +1,25 @@
 ---
-summary: "在 Render 上使用基础设施即代码部署 OpenClaw"
+summary: "使用基础设施即代码在 Render 上部署 OpenClaw"
 read_when:
-  - 将 OpenClaw 部署到 Render
-  - 你希望使用 Render Blueprints 进行声明式云部署
+  - "将 OpenClaw 部署到 Render"
+  - "你希望使用 Render Blueprints 进行声明式云部署"
 title: "Render"
 ---
 
 使用仓库中的 `render.yaml` Blueprint 在 [Render](https://render.com) 上部署 OpenClaw。它会在一个文件中声明服务、磁盘和环境变量。
 
-## 前提条件
+## <a id="prerequisites"></a> 先决条件
 
 - 一个 [Render 账户](https://render.com)（提供免费套餐）
 - 来自你首选 [模型提供商](/providers) 的 API 密钥
 
-## 部署
+## <a id="deploy"></a> 部署
 
 [部署到 Render](https://render.com/deploy?repo=https://github.com/openclaw/openclaw)
 
 这会根据 `render.yaml` 创建一个 Render 服务，构建 Docker 镜像并进行部署。你的服务 URL 形式如下：`https://<service-name>.onrender.com`。
 
-## 蓝图
+## <a id="the-blueprint"></a> 蓝图
 
 ```yaml
 services:
@@ -27,6 +27,7 @@ services:
     name: openclaw
     runtime: docker
     plan: starter
+    dockerCommand: node openclaw.mjs gateway --allow-unconfigured
     healthCheckPath: /startupz
     envVars:
       - key: OPENCLAW_GATEWAY_PORT
@@ -36,100 +37,117 @@ services:
       - key: OPENCLAW_WORKSPACE_DIR
         value: /data/workspace
       - key: OPENCLAW_GATEWAY_TOKEN
-        generateValue: true # 自动生成一个安全令牌
+        generateValue: true # auto-generates a secure token
     disk:
       name: openclaw-data
       mountPath: /data
       sizeGB: 1
 ```
 
-| 功能                  | 用途                                                               |
-| --------------------- | ------------------------------------------------------------------ |
-| `runtime: docker`     | 从仓库的 Dockerfile 构建                                             |
-| `healthCheckPath`     | `/startupz` 报告启动完成后，Render 才会接收流量                         |
-| `generateValue: true` | 自动生成一个经过加密安全处理的值                                       |
-| `disk`                | 在重新部署后仍然保留的持久化存储                                       |
+| 功能               | 用途                                                          |
+| --------------------- | ---------------------------------------------------------------- |
+| `runtime: docker`     | 从仓库的 Dockerfile 构建                                |
+| `healthCheckPath`     | `/startupz` 报告启动完成后，Render 才会接收流量 |
+| `generateValue: true` | 自动生成一个经过加密安全处理的值                  |
+| `disk`                | 在重新部署后仍然保留的持久化存储                       |
 
-## 选择套餐
+## <a id="choosing-a-plan"></a> 选择套餐
 
-| 套餐      | 休眠           | 磁盘          | 最适合                        |
-| --------- | -------------- | ------------- | ----------------------------- |
-| Free      | 空闲 15 分钟后 | 不可用        | 测试、演示                    |
-| Starter   | 永不休眠       | 1GB+          | 个人使用、小团队              |
-| Standard+ | 永不休眠       | 1GB+          | 生产环境、多渠道              |
+| 计划      | 休眠         | 磁盘          | 最适合                      |
+| --------- | ----------------- | ------------- | ----------------------------- |
+| 自由的      | 空闲 15 分钟后 | 不可用 | 测试、演示                |
+| 起动机   | 永不休眠             | 1GB+          | 个人使用、小团队     |
+| 标准+ | 永不休眠             | 1GB+          | 生产环境、多渠道 |
 
-Blueprint 默认为 `starter`。要使用免费套餐，请在你 fork 的 `render.yaml` 中将 `plan: free` 更改为 `plan: free` —— 请注意，由于没有持久磁盘，OpenClaw 状态会在每次部署时重置。
+蓝图默认为 `starter`。要使用免费套餐，请更改 `plan: free` **并删除分叉 `render.yaml` 中的 `disk:` 块**； Render 拒绝将永久性磁盘附加到空闲实例的蓝图。如果没有该磁盘，OpenClaw 状态会在每次部署时重置。
 
-## 部署之后
+## <a id="after-deployment"></a> 部署之后
 
-### 访问控制界面
+### <a id="access-the-control-ui"></a> 访问Control UI
 
 Web 仪表板可通过 `https://<your-service>.onrender.com/` 访问。使用共享密钥连接：自动生成的 `OPENCLAW_GATEWAY_TOKEN`（在 **Dashboard → your service → Environment** 中查找），或者如果你切换到了密码认证，则使用你的密码。
 
-### 日志
+### <a id="logs"></a> 日志
 
 **Dashboard → your service → Logs** 显示构建日志（Docker 镜像创建）、部署日志（服务启动）以及运行时日志（应用输出）。
 
-### Shell 访问
+### <a id="shell-access"></a> Shell 访问
 
 **Dashboard → your service → Shell** 会打开一个 shell 会话。持久化磁盘挂载在 `/data`。
 
-### 环境变量
+### <a id="environment-variables"></a> 环境变量
 
 在 **Dashboard → your service → Environment** 中编辑变量。更改会触发自动重新部署。
 
-### 自动部署
+### <a id="auto-deploy"></a> 自动部署
 
 当已连接仓库的分支有新提交时，Render 会自动重新部署。如果你是直接从 `openclaw/openclaw` 部署，而不是从你自己的 fork 部署，那么你没有推送权限来触发这一过程，因此请通过 Dashboard 手动同步 Blueprint，或者将服务指向你自己的 fork。
 
-## 自定义域名
+## <a id="custom-domain"></a> 自定义域名
 
-1. **Dashboard → your service → Settings → Custom Domains**
+1. **仪表板→您的服务→设置→自定义域**
 2. 添加你的域名
 3. 按照说明配置 DNS（CNAME 指向 `*.onrender.com`）
 4. Render 会自动签发 TLS 证书
 
-## 扩展
+## <a id="scaling"></a> 扩展
 
-- **垂直扩展**：为方案增加更多 CPU/RAM。通常对 OpenClaw 来说已经足够。
+- **Vertical**：更改更多的计划 CPU/RAM. 通常足够用于 OpenClaw。
 - **水平扩展**：增加实例数量（标准方案及以上）。由于 OpenClaw 会将运行时状态保存在本地磁盘上，因此需要粘性会话或外部状态管理。
 
-## 备份和迁移
+## <a id="backups-and-migration"></a> 备份和迁移
 
 从 Render Dashboard shell 中，您可以随时导出状态、配置、身份验证配置文件和工作区：
 
 ```bash
 openclaw backup create
+openclaw backup restore <archive.tar.gz> --target <fresh-directory>
 ```
 
-这会创建一个可移植的备份归档。参见 [备份](/cli/backup)。
+恢复验证并提取到新的暂存目录中；激活是一个单独的离线步骤。有关回滚警告和激活顺序，请参阅 [ 恢复完整存档 ](/install/backups#restore-a-full-archive)。
 
-## 故障排查
+## <a id="troubleshooting"></a> 故障排查
 
-### 服务无法启动
+### <a id="service-will-not-start"></a> 服务无法启动
 
 检查 Render 仪表板中的部署日志。常见问题包括：
 
 - 缺少 `OPENCLAW_GATEWAY_TOKEN` — 请确认它已在 **Dashboard → Environment** 中设置
-- 端口不匹配 — 确保 `OPENCLAW_GATEWAY_PORT=8080`，以便网关绑定到 Render 期望的端口
+- Port 不匹配 — 设置 `OPENCLAW_GATEWAY_PORT=8080`，以便网关绑定到 Render 期望的端口
 
-### 冷启动缓慢（免费套餐）
+### <a id="slow-cold-starts-(free-tier)"></a><a id="slow-cold-starts-free-tier"></a> 冷启动缓慢（免费套餐）
 
 免费套餐服务在 15 分钟无活动后会进入休眠；休眠后第一次请求在容器启动期间会延迟几秒。升级到 Starter 可实现始终在线。
 
-### 重新部署后数据丢失
+### <a id="data-loss-after-redeploy"></a> 重新部署后数据丢失
 
 这会发生在免费套餐上（没有持久化磁盘）。请升级到付费方案，或者定期从 Render shell 使用 `openclaw backup create` 导出备份。
 
-### 健康检查失败
+### <a id="health-check-failures"></a> 健康检查失败
 
 如果构建成功但部署失败，则服务可能需要较长时间才能启动，或者可能无法访问 `/startupz`。请检查：
 
 - 构建日志中是否有错误
-- 容器是否可在本地使用 `docker build && docker run` 正常运行
+- 容器是否使用相同的镜像和命令在本地运行 Render 使用
 
-## 下一步
+从存储库签出本地复制 Render 容器：
 
-- 设置消息渠道：[Channels](/channels)
-- 配置 Gateway：[网关配置](/gateway/configuration)
-- 保持 OpenClaw 为最新版本：[更新](/install/updating)
+```bash
+docker build -t openclaw:local -f Dockerfile .
+docker run --rm -p 8080:8080 \
+  -e OPENCLAW_GATEWAY_PORT=8080 \
+  -e OPENCLAW_GATEWAY_TOKEN="$(openssl rand -hex 32)" \
+  openclaw:local node openclaw.mjs gateway --allow-unconfigured
+```
+
+令牌是必需的，而不是可选的：在容器中，网关选择自动绑定模式，并且它拒绝绑定没有共享密钥的非环回地址。 `--allow-unconfigured` 放弃了配置先决条件，而不是那个守卫。 Render 提供蓝图 `generateValue: true` 中的值；一次性的在当地就可以了。
+
+此处保留 `OPENCLAW_STATE_DIR` 和 `OPENCLAW_WORKSPACE_DIR` 未设置。 Render 将它们设置为其已安装磁盘上的路径，但映像仅准备其自己的 `node`- 拥有的目录并以该用户身份运行，因此当网关创建其锁定目录时，将它们指向未安装的 `/data` 会失败。状态落在图像的默认值下，并与容器一起丢弃，这就是您想要进行健康检查复制的内容。
+
+有关完整的本地容器工作流程，请参阅 [Docker](/install/docker)。
+
+## <a id="next-steps"></a> 下一步
+
+- 设置消息通道：[Channels](/channels)
+- 配置网关：[网关配置](/gateway/configuration)
+- 使 OpenClaw 保持最新状态：[Updating](/install/updating)

@@ -1,11 +1,14 @@
 ---
 summary: "HashiCorp Vault SecretRef provider integration."
 read_when:
-  - 你正在安装、配置或审计 vault 插件
-title: "Vault 插件"
+  - You are installing, configuring, or auditing the vault plugin
+title: "Vault plugin reference"
 ---
 
-# Vault 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 HashiCorp Vault SecretRef 提供程序集成。
 
@@ -16,7 +19,7 @@ HashiCorp Vault SecretRef 提供程序集成。
 
 ## 表面
 
-插件
+- CLI commands: `openclaw vault`
 
 ## 相关文档
 

@@ -1,22 +1,25 @@
 ---
-summary: "添加用于发送和接收 OpenClaw 消息的 Mattermost 渠道界面。"
+summary: "OpenClaw Mattermost channel plugin."
 read_when:
-  - 你正在安装、配置或审计 mattermost 插件
-title: "Mattermost 插件"
+  - You are installing, configuring, or auditing the mattermost plugin
+title: "Mattermost plugin reference"
 ---
 
-# Mattermost 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-添加用于发送和接收 OpenClaw 消息的 Mattermost 渠道界面。
+OpenClaw Mattermost channel plugin.
 
 ## 分发
 
 - Package: `@openclaw/mattermost`
-- Install route: npm; ClawHub: `clawhub:@openclaw/mattermost`
+- Install route: npm or ClawHub: `clawhub:@openclaw/mattermost`
 
 ## 界面
 
-channels: `mattermost`
+- Channels: `mattermost`
 
 ## 相关文档
 

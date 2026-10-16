@@ -1,123 +1,81 @@
 ---
-summary: "通过 WKWebView + 自定义 URL scheme 嵌入的受代理控制的 Canvas 面板"
+summary: "在 macOS 面板中显示托管小部件"
 read_when:
-  - 实现 macOS Canvas 面板
-  - 为视觉工作区添加代理控制
-  - 调试 WKWebView Canvas 加载
-title: "画布"
+  - "Showing an agent-created widget on a Mac"
+  - "从配对节点控制 macOS 小部件面板"
+  - "Debugging hosted widget navigation"
+title: "小部件面板"
+doc-schema-version: 1
 ---
 
-macOS 应用使用 `WKWebView` 嵌入一个由代理控制的 **画布面板**，这是一个轻量级的可视化工作区，用于 HTML/CSS/JS、A2UI 以及小型交互式 UI 界面。
+macOS 应用程序包括一个用于显示托管小部件文档的本机面板。 Canvas 插件拥有此演示路径。它不是独立的可视工作区或 A2UI 推送目标。
 
-## Canvas 的位置
+建议的代理路径是 [`show_widget`](/tools/show-widget) 和 `presentation.target: "node_panel"`。 OpenClaw 将小部件存储为托管文档，选择连接的 macOS 节点，打开面板并将其导航到该文档。如果未连接符合条件的 Mac 或演示失败，小部件仍会内联显示在聊天中，并且工具结果会说明如何重试。
 
-Canvas 状态存储在 Application Support 下：
+本机面板中的小部件仅用于渲染。主机集成的小部件操作在 Control UI 聊天和 [ 会话仪表板 ](/web/dashboards) 表面中仍然可用，而不是在面板中。
 
-- `~/Library/Application Support/OpenClaw/canvas/<session>/...`
+## <a id="panel-behavior"></a> 面板行为
 
-Canvas 面板通过自定义 URL scheme 公开这些文件，
-`openclaw-canvas://<session>/<path>`：
+- 该面板无边框、可调整大小，并固定在菜单栏或鼠标光标附近。
+- 呈现小部件不会切换应用程序或获取键盘焦点。
+- 一次只能看到一个小部件面板。
+- 该应用程序会记住每个会话的面板大小和位置。
 
-- `openclaw-canvas://main/` -> `<canvasRoot>/main/index.html`
-- `openclaw-canvas://main/assets/app.css` -> `<canvasRoot>/main/assets/app.css`
-- `openclaw-canvas://main/widgets/todo/` -> `<canvasRoot>/main/widgets/todo/index.html`
+可以从 **Dashboard → 设置 → 本机 → 功能** 禁用画布。禁用时，面板命令返回 `CANVAS_DISABLED`。
 
-如果根目录中没有 `index.html`，应用将显示一个内置的脚手架页面。
+## <a id="agent-path"></a> 代理路径
 
-## 面板行为
+要求代理使用 `show_widget` 并定位节点面板。该工具仅在小部件呈现器插件处于活动状态时才会公开 `node_panel`。
 
-- 无边框、可调整大小的面板，锚定在菜单栏（或鼠标光标）附近。
-- 显示 Canvas 不会切换应用或抢占键盘焦点。
-- 每个会话都会记住大小/位置。
-- 当本地 canvas 文件更改时会自动重新加载。
-- 同一时间只显示一个 Canvas 面板（必要时会切换会话）。
+```json
+{
+  "title": "Build status",
+  "widget_code": "<main><h1>Build passed</h1></main>",
+  "presentation": { "target": "node_panel" }
+}
+```
 
-可在 Settings -> **Allow Canvas** 中禁用 Canvas。禁用后，
-canvas 节点命令会返回 `CANVAS_DISABLED`。
+演示成功后，结果会识别所选的 Mac。 OpenClaw 当前仅选择声明 `canvas.present` 的已连接 macOS 节点。
 
-## 代理 API 表面
+## <a id="node-commands"></a> Node 命令
 
-Canvas 通过 Gateway WebSocket 暴露，因此代理可以显示/隐藏
-面板、导航到路径或 URL、执行 JavaScript，以及捕获
-快照图像：
+配对节点命令界面包含三个命令：
 
 ```bash
 openclaw nodes canvas present --node <id>
-openclaw nodes canvas navigate --node <id> "/"
-openclaw nodes canvas eval --node <id> --js "document.title"
-openclaw nodes canvas snapshot --node <id>
+openclaw nodes canvas navigate --node <id> "/__openclaw__/canvas/documents/<document-id>/index.html"
+openclaw nodes canvas hide --node <id>
 ```
 
-`eval` 和 `a2ui.*` 会在不打开或显示面板的情况下更新内容。只有
-`present`、`navigate` 或用户操作才会显示它；在隐藏之后，内容更新
-仍会继续应用到隐藏的面板。`snapshot` 需要一个可见的面板，否则
-会返回 `CANVAS_HIDDEN`；请先运行 `present`。
+- `canvas.present` 显示面板。它还接受现有的可选目标和放置参数。
+- `canvas.navigate` 加载托管小部件文档路径或应用程序本地画布 URL。
+- `canvas.hide` 隐藏面板而不更改其当前文档。
 
-`canvas.navigate` 接受本地 canvas 路径、`http(s)` URL 和 `file://`
-URL。传入 `"/"` 会显示本地脚手架或 `index.html`。
+下的托管路径`/__openclaw__/canvas/`通过节点会话的当前作用域来解决`pluginSurfaceUrls.canvas` URL。该应用程序会在导航前刷新这种短暂的功能。调用者应该传递文档路径，而不是构造或复制功能URL。
 
-位于 `/__openclaw__/canvas/` 和 `/__openclaw__/a2ui/` 下的 Gateway 托管目标会通过节点会话的当前作用域 Canvas URL 进行解析。应用会在导航前刷新该短期有效的能力；你无需自行构造或复制 capability URL。
+应用程序本地方案仍然可用于应用程序拥有的内容：
 
-## Canvas 中的 A2UI
-
-A2UI 由 Gateway canvas host 托管，并渲染在 Canvas
-面板内。当 Gateway 广播 Canvas host 时，macOS 应用会在首次打开时自动跳转到
-A2UI host 页面。
-
-广告的 URL 具有能力范围，例如
-`http://<gateway-host>:18789/__openclaw__/cap/<token>/__openclaw__/a2ui/?platform=macos`。
-请将其视为一次性凭据，而不是稳定链接。
-
-### A2UI 命令（v0.8）
-
-Canvas 接受 A2UI v0.8 的 server-to-client 消息：`beginRendering`、
-`surfaceUpdate`、`dataModelUpdate`、`deleteSurface`。`createSurface`（v0.9）目前
-还不支持。
-
-```bash
-cat > /tmp/a2ui-v0.8.jsonl <<'EOFA2'
-{"surfaceUpdate":{"surfaceId":"main","components":[{"id":"root","component":{"Column":{"children":{"explicitList":["title","content"]}}}},{"id":"title","component":{"Text":{"text":{"literalString":"Canvas（A2UI v0.8）"},"usageHint":"h1"}}},{"id":"content","component":{"Text":{"text":{"literalString":"如果你能读到这段文字，说明 A2UI 推送生效了。"},"usageHint":"body"}}}]}}
-{"beginRendering":{"surfaceId":"main","root":"root"}}
-EOFA2
-
-openclaw nodes canvas a2ui push --jsonl /tmp/a2ui-v0.8.jsonl --node <id>
+```text
+openclaw-canvas://<session>/<path>
 ```
 
-快速冒烟测试：
+该方案处理的文件必须保留在应用程序支持中会话的 Canvas 根目录内。目录遍历被阻止。
 
-```bash
-openclaw nodes canvas a2ui push --node <id> --text "来自 A2UI 的你好"
-```
+## <a id="a2ui-belongs-on-session-dashboards"></a> A2UI 属于会话仪表板
 
-## 从 Canvas 触发代理运行
+A2UI 小部件在 [ 会话仪表板 ](/web/dashboards) 上呈现，它们与其他仪表板小部件共享相同的固定、布局、批准和交互模型。他们的渲染器包继续从网关的 `/__openclaw__/a2ui/` 资源路径加载。
 
-Canvas 可以通过 `openclaw://agent?...` 深度链接触发新的代理运行：
+macOS 面板不接受 A2UI push/reset 命令，并且不会自动导航到 A2UI 页面。
 
-```js
-window.location.href = "openclaw://agent?message=Review%20this%20design";
-```
+## <a id="migrating-documents-from-a-custom-root"></a> 从自定义根迁移文档
 
-支持的查询参数：
+跑步`openclaw doctor --fix`转移退休人员的文件`plugins.entries.canvas.config.host.root`（或较旧的`canvasHost.root`） 进入状态目录`canvas/documents`文件夹。显式插件根优先于旧设置。 Doctor 仅在没有遗留文档后才会删除根设置。如果目录访问或文档复制失败，doctor 会发出警告并保留源定位器以供重试。它可能会将旧设置移至插件配置中，同时保留路径。已经指向默认存储文件夹（包括通过符号链接）的根不需要复制。
 
-| 参数                     | 含义                         |
-| ------------------------ | ---------------------------- |
-| `message`                | 预填充的代理提示词。         |
-| `sessionKey`             | 稳定的会话标识符。           |
-| `thinking`               | 可选的思考配置。             |
-| `deliver`, `to`, `channel` | 传递目标。                 |
-| `timeoutSeconds`         | 可选的运行超时时间。         |
-| `key`                    | 由应用生成的安全令牌，用于受信任的本地调用方。 |
+修复报告的权限或目标冲突，然后重新运行命令。请勿自行删除 root 设置。托管路由仅服务于默认存储文件夹，因此在迁移完成之前剩余的旧文档不可用。
 
-除非提供有效的 key，否则应用会提示确认。未带 key 的链接会在批准前显示消息和 URL，并忽略传递路由字段；带 key 的链接会使用正常的 Gateway 运行路径。
+## <a id="related"></a> 相关内容
 
-## 安全说明
-
-- Canvas 方案会阻止目录遍历；文件必须位于会话根目录下。
-- 本地 Canvas 内容使用自定义方案（无需回环服务器）。
-- 仅当明确导航时，才允许外部 `http(s)` URL。
-- 普通网页仅用于渲染。只有来自应用拥有的 Canvas 方案，或由应用选择的、精确限定能力范围的 Gateway A2UI 文档，才接受代理操作；子框架、重定向、失效的能力以及已更改的查询都不能触发操作。
-
-## 相关内容
-
+- [显示小部件](/tools/show-widget)
+- [会话仪表盘](/web/dashboards)。
 - [macOS 应用](/platforms/macos)
-- [WebChat](/web/webchat)
+- [节点](/nodes)

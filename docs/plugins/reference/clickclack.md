@@ -1,22 +1,26 @@
 ---
-summary: "为发送和接收 OpenClaw 消息添加 Clickclack 通道表面。"
+summary: "OpenClaw ClickClack channel plugin."
 read_when:
   - You are installing, configuring, or auditing the clickclack plugin
-title: "Clickclack 插件"
+title: "Clickclack plugin reference"
 ---
 
-# Clickclack 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-为发送和接收 OpenClaw 消息添加 Clickclack 通道表面。
+OpenClaw ClickClack channel plugin.
 
 ## 分发
 
 - Package: `@openclaw/clickclack`
-- Install route: npm; ClawHub: `clawhub:@openclaw/clickclack`
+- Install route: npm or ClawHub: `clawhub:@openclaw/clickclack`
 
 ## 表面
 
-channels: `clickclack`; contracts: `tools`
+- Channels: `clickclack`
+- Contracts: `tools`
 
 <!-- openclaw-plugin-reference:manual-start -->
 

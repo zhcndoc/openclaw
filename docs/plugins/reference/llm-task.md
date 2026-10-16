@@ -1,11 +1,14 @@
 ---
 summary: "用于可从工作流调用的结构化任务的通用仅 JSON LLM 工具。"
 read_when:
-  - 你正在安装、配置或审计 llm-task 插件
-title: "LLM Task 插件"
+  - You are installing, configuring, or auditing the llm-task plugin
+title: "LLM Task plugin reference"
 ---
 
-# LLM Task 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于可从工作流调用的结构化任务的通用仅 JSON LLM 工具。
 
@@ -16,4 +19,4 @@ title: "LLM Task 插件"
 
 ## 接口
 
-contracts: `tools`
+- Contracts: `tools`

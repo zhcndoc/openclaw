@@ -1,22 +1,25 @@
 ---
 summary: "添加网络搜索提供方支持。"
 read_when:
-  - 你正在安装、配置或审计 duckduckgo 插件
-title: "DuckDuckGo 插件"
+  - You are installing, configuring, or auditing the duckduckgo plugin
+title: "DuckDuckGo plugin reference"
 ---
 
-# DuckDuckGo 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 添加网络搜索提供方支持。
 
 ## 分发
 
-- 包：`@openclaw/duckduckgo-plugin`
-- 安装渠道：npm；ClawHub：`clawhub:@openclaw/duckduckgo-plugin`
+- Package: `@openclaw/duckduckgo-plugin`
+- Install route: npm or ClawHub: `clawhub:@openclaw/duckduckgo-plugin`
 
 ## 接口
 
-contracts: `webSearchProviders`
+- Contracts: `webSearchProviders`
 
 ## 相关文档
 

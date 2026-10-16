@@ -1,22 +1,25 @@
 ---
-summary: "为发送和接收 OpenClaw 消息添加 Signal 通道表面。"
+summary: "OpenClaw Signal channel plugin."
 read_when:
-  - 你正在安装、配置或审计 signal 插件
-title: "Signal 插件"
+  - You are installing, configuring, or auditing the signal plugin
+title: "Signal plugin reference"
 ---
 
-# Signal 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-为发送和接收 OpenClaw 消息添加 Signal 通道表面。
+OpenClaw Signal channel plugin.
 
 ## 分发
 
 - Package: `@openclaw/signal`
-- Install route: npm; ClawHub: `clawhub:@openclaw/signal`
+- Install route: npm or ClawHub: `clawhub:@openclaw/signal`
 
 ## Surface
 
-channels: `signal`
+- Channels: `signal`
 
 ## 相关文档
 

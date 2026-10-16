@@ -1,22 +1,26 @@
 ---
 summary: "通过原生 zca-js 集成的 OpenClaw Zalo 个人账号插件。"
 read_when:
-  - 你正在安装、配置或审计 zalouser 插件
-title: "Zalo 个人插件"
+  - You are installing, configuring, or auditing the zalouser plugin
+title: "Zalo Personal plugin reference"
 ---
 
-# Zalo 个人插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 通过原生 zca-js 集成的 OpenClaw Zalo 个人账号插件。
 
 ## 分发
 
-- 包：`@openclaw/zalouser`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/zalouser`
+- Install route: npm or ClawHub: `clawhub:@openclaw/zalouser`
 
 ## 界面
 
-channels: `zalouser`; contracts: `tools`
+- Channels: `zalouser`
+- Contracts: `tools`
 
 ## 相关文档
 

@@ -1,11 +1,11 @@
 ---
 summary: "OpenClaw 在各个渠道、路由、媒体和 UX 方面的能力。"
 read_when:
-  - 你想查看 OpenClaw 支持的完整列表
+  - "你想查看 OpenClaw 支持的完整列表"
 title: "功能"
 ---
 
-## 亮点
+## <a id="highlights"></a> 亮点
 
 <Columns>
   <Card title="渠道" icon="message-square" href="/channels">
@@ -18,41 +18,38 @@ title: "功能"
     具有隔离会话的多代理路由。
   </Card>
   <Card title="媒体" icon="image" href="/nodes/images">
-    图片、音频、视频、文档，以及图像/视频生成。
+    图片、音频、视频、文档和image/video生成。
   </Card>
-  <Card title="应用和 UI" icon="monitor" href="/platforms">
-    Windows Hub、浏览器控制 UI、macOS 菜单栏应用，以及移动节点。
+  <Card title="应用程序和 UI" icon="monitor" href="/platforms">
+    Windows 集线器、浏览器 Control UI、macOS 菜单栏应用程序和移动节点。
   </Card>
   <Card title="移动节点" icon="smartphone" href="/nodes">
-    支持配对、语音/聊天以及丰富设备命令的 iOS 和 Android 节点。
+    iOS 和 Android 节点具有配对、voice/chat 和丰富的设备命令。
   </Card>
 </Columns>
 
-## 完整列表
+## <a id="full-list"></a> 完整列表
 
 **渠道：**
 
-- Telegram 和 WebChat 随核心安装包一同提供；其他所有渠道都是通过 `openclaw plugins install @openclaw/<id>` 安装的官方插件（或在 `openclaw onboard` / `openclaw channels add` 期间按需安装）
-- 官方插件渠道：Discord、Feishu、Google Chat、iMessage、IRC、LINE、Matrix、Mattermost、
-  Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Raft、Signal、Slack、SMS、Synology Chat、
-  Tlon、Twitch、Voice Call、WhatsApp、Zalo 和 Zalo Personal
+- A2A、Reef、Telegram 和 WebChat 附带核心安装；每个其他频道都是随 `openclaw plugins install @openclaw/<id>` 安装的官方插件（或在 `openclaw onboard` / `openclaw channels add` 期间按需安装）
+- 官方插件渠道：Discord、Feishu、Google Chat、iMessage、IRC、LINE、Matrix、Mattermost、 Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Raft、Signal、Slack、SMS、Synology Chat、 Tlon、Twitch、Voice Call、WhatsApp、Zalo 和 Zalo Personal
 - 在 OpenClaw 仓库外维护的外部插件渠道：WeChat、Yuanbao 和 Zalo ClawBot
 - 支持基于提及激活的群聊
-- 通过允许列表和配对机制保障私聊安全
+- DM 具有允许列表和配对的安全性
 
 **代理：**
 
 - 内置代理运行时，支持工具流式传输
 - 按工作区或发送者进行隔离会话的多代理路由
-- 会话：直接聊天会折叠到共享的 `main`；群组是隔离的
+- Sessions：直接聊天折叠为共享 `main`；默认情况下组是隔离的
 - 针对长回复的流式传输和分块
 
 **认证和提供商：**
 
-- 35+ 个模型提供商（Anthropic、OpenAI、Google 等）
-- 通过 OAuth 的订阅认证（例如 OpenAI Codex）
-- 支持自定义和自托管提供商（vLLM、SGLang、Ollama、llama.cpp、LM Studio，以及
-  任何 OpenAI 兼容或 Anthropic 兼容的端点）
+- 许多 [ 模型提供者](/providers)（Anthropic、OpenAI、Google 等）— 提供者目录是维护的列表
+- 通过 OAuth 进行订阅授权 （e.g. OpenAI Codex）
+- 自定义和自托管提供商支持（vLLM、SGLang、Ollama、llama.cpp、LM Studio 以及任何 OpenAI- 兼容或 Anthropic- 兼容端点）
 
 **媒体：**
 
@@ -64,10 +61,10 @@ title: "功能"
 
 **应用和界面：**
 
-- WebChat 和浏览器控制 UI
+- WebChat 和浏览器 Control UI
 - macOS 菜单栏配套应用
-- 具备配对、Canvas、摄像头、屏幕录制、位置和语音功能的 iOS 节点
-- 具备配对、聊天、语音、Canvas、摄像头和设备命令的 Android 节点
+- iOS 节点，具有配对、摄像头、屏幕录制、位置和语音功能
+- Android 节点，具有配对、聊天、语音、摄像头和设备命令
 
 **工具和自动化：**
 
@@ -76,7 +73,7 @@ title: "功能"
 - Cron 任务和心跳调度
 - Skills、插件和工作流管道（Lobster）
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 <CardGroup cols={2}>
   <Card title="实验性功能" href="/concepts/experimental-features" icon="flask">

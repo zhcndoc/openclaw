@@ -1,9 +1,9 @@
 ---
 summary: "`openclaw wiki` 的 CLI 参考（memory-wiki vault 状态、搜索、编译、lint、应用、桥接、ChatGPT 导入，以及 Obsidian 辅助工具）"
 read_when:
-  - 你想使用 memory-wiki CLI
-  - 你正在编写或修改 `openclaw wiki`
-title: "Wiki"
+  - "你想使用 memory-wiki CLI"
+  - "你正在编写或修改 `openclaw wiki`"
+title: "维基百科"
 ---
 
 # `openclaw wiki`
@@ -15,9 +15,9 @@ openclaw plugins enable memory-wiki
 openclaw gateway restart
 ```
 
-相关：[Memory Wiki 插件](/plugins/memory-wiki)，[Memory 概览](/concepts/memory)，[CLI: memory](/cli/memory)
+相关：[Memory Wiki插件](/plugins/memory-wiki)、[内存Overview](/concepts/memory)、[CLI：内存](/cli/memory)
 
-## 常用命令
+## <a id="common-commands"></a> 常用命令
 
 ```bash
 openclaw wiki status
@@ -28,17 +28,17 @@ openclaw wiki okf import ./knowledge-catalog/okf/bundles/ga4
 openclaw wiki compile
 openclaw wiki lint
 openclaw wiki search "alpha"
-openclaw wiki search "我应该问谁关于 Teams 的事？" --mode route-question
+openclaw wiki search "who should I ask about Teams?" --mode route-question
 openclaw wiki get entity.alpha --from 1 --lines 80
 
 openclaw wiki apply synthesis "Alpha Summary" \
-  --body "简短的综合内容正文" \
+  --body "Short synthesis body" \
   --source-id source.alpha
 
 openclaw wiki apply metadata entity.alpha \
   --source-id source.alpha \
   --status review \
-  --question "仍然活跃吗？"
+  --question "Still active?"
 
 openclaw wiki bridge import
 openclaw wiki unsafe-local import
@@ -52,10 +52,9 @@ openclaw wiki obsidian command workspace:quick-switcher
 openclaw wiki obsidian daily
 ```
 
-## Agent 选择
+## <a id="agent-selection"></a> Agent 选择
 
-当 `plugins.entries.memory-wiki.config.vault.scope` 为 `agent` 时，使用命令的
-`--agent <id>` 选项选择知识库：
+当 `plugins.entries.memory-wiki.config.vault.scope` 为 `agent` 时，使用命令的 `--agent <id>` 选项选择知识库：
 
 ```bash
 openclaw wiki status --agent support
@@ -63,11 +62,11 @@ openclaw wiki search "refund policy" --agent support
 openclaw wiki ingest ./campaign-notes.md --agent marketing
 ```
 
-省略 `--agent` 时，CLI 操作使用配置的默认 Agent，与其他按 Agent 作用域划分的 CLI 系列保持一致。传入该标志以选择其他 Agent。未知的 Agent ID 会在知识库操作开始前导致失败。如果无法解析默认 Agent，错误信息会提示你传入 `--agent <id>` 或配置一个 Agent。当 `vault.scope` 为 `global` 时，该选项不会改变所选路径。
+当省略 `--agent` 时，CLI 操作使用配置的默认代理，与其他代理范围的 CLI 系列相匹配。传递标志以选择不同的代理。未知的代理 ID 在保管库操作开始之前失败。如果无法解决默认问题，该错误会告诉您传递 `--agent <id>` 或配置代理。当 `vault.scope` 为 `global` 时，该选项不会更改所选路径。
 
-网关客户端仍需显式指定：在按 Agent 作用域划分的多 Agent 设置中，为基于知识库的 `wiki.*` 请求传入 `agentId`。缺少或未知的 ID 会导致错误。Agent 对话轮次、wiki 工具、记忆语料补充内容以及已编译的提示词摘要，都已携带当前运行时的 Agent 上下文。
+网关客户端保持显式：在代理范围的多代理设置中，在保管库支持的 `wiki.*` 请求上传递 `agentId`。丢失或未知的 ID 是一个错误。代理轮流、wiki 工具、记忆语料库补充和编译的提示摘要已经带有活动的运行时代理上下文。
 
-## 命令
+## <a id="commands"></a> 命令
 
 ### `wiki status`
 
@@ -79,13 +78,13 @@ openclaw wiki ingest ./campaign-notes.md --agent marketing
 
 运行 wiki 健康检查并报告可执行的修复项。若状态不健康则以非零状态退出。
 
-当 bridge 模式处于激活状态且配置为读取 memory artifacts 时，此命令会在生成报告前查询正在运行的 Gateway。已禁用的 bridge 导入以及不读取 memory artifacts 的 bridge 配置会保持本地/离线。
+当桥接模式处于活动状态并配置为读取内存工件时，此命令会在构建报告之前查询正在运行的网关。禁用的桥接导入和不读取内存工件的桥接配置保留为 local/offline.
 
 典型问题：
 
 - 启用了 bridge 模式，但没有公开的 memory artifacts
 - vault 布局无效或缺失
-- 期望使用 Obsidian 模式时缺少外部 Obsidian CLI
+- 当需要 Obsidian 模式时， 缺少外部 Obsidian CLI
 
 ### `wiki init`
 
@@ -118,7 +117,7 @@ openclaw wiki get <path-from-json-result>
 
 ### `wiki compile`
 
-重建索引、相关块、仪表盘以及已编译的查询/提示快照。快照会持久化到 OpenClaw 的共享 SQLite 插件状态中，并保留在内存中以便同步提示投射；它不会在 vault 中创建缓存文件。
+重建索引、相关块、仪表板和编译的 query/prompt 快照。快照持久化在OpenClaw的共享SQLite插件状态中，并保存在内存中用于同步提示投影；它不会在 Vault 中创建缓存文件。
 
 如果启用了 `render.createDashboards`，编译还会刷新报告页面。
 
@@ -126,7 +125,7 @@ openclaw wiki get <path-from-json-result>
 
 检查 vault 并生成报告，覆盖以下内容：
 
-- 结构性问题（损坏的链接、缺失/重复 id、缺失页面类型或标题、无效 frontmatter）
+- 结构问题（链接损坏、missing/duplicate id、缺少页面类型或标题、无效的 frontmatter）
 - 溯源缺口（缺失 source id、缺失导入溯源）
 - 矛盾（被标记的矛盾、冲突的断言）
 - 未决问题
@@ -147,7 +146,7 @@ openclaw wiki get <path-from-json-result>
 
 搜索模式：
 
-- `find-person`: 别名、账号、社交信息、规范 ID 和人物页面
+- `find-person`：别名、句柄、社交、主 ID 和个人页面
 - `route-question`: ask-for/best-used-for 提示和关系上下文
 - `source-evidence`: source 页面和结构化证据字段
 - `raw-claim`: 带有 claim/evidence 元数据的结构化断言文本
@@ -165,7 +164,9 @@ openclaw wiki search "strong route Teams" --mode raw-claim --json
 
 ### `wiki get <lookup>`
 
-按 id 或相对路径读取 wiki 页面。
+通过 ID 或相对路径读取 wiki 页面。首先解析已编译的索赔 ID。激活保管库后，现有的可见 Markdown 路径仅读取请求的页面。新的 CLI 进程仍会根据保管库验证已编译的快照；缺少索引或快照会触发自动编译。丢失或无效的候选、无扩展路径、基本名称和页面 ID 保留其现有的查找后备，并可能扫描保管库。
+
+Wiki 页面读取支持大文件和硬链接。读取逃离保管库或通过其中的符号链接的垃圾路径。
 
 ```bash
 openclaw wiki get entity.alpha
@@ -185,11 +186,11 @@ openclaw wiki get syntheses/alpha-summary.md --from 1 --lines 80
 
 从活跃的 memory 插件导入公开 memory artifacts 到 bridge 支持的 source 页面中。在 `bridge` 模式下使用此命令，将最新导出的 memory artifacts 拉取到 wiki vault。
 
-对于活跃的 bridge artifact 读取，CLI 会通过 Gateway RPC 执行导入，因此会使用运行时 memory 插件上下文。如果 bridge 导入被禁用或 artifact 读取关闭，该命令会保持本地/离线的零导入行为。导入后的索引刷新受 `ingest.autoCompile` 控制。
+对于主动桥工件读取，CLI 通过网关 RPC 路由导入，因此它使用运行时内存插件上下文。如果禁用桥导入或关闭工件读取，该命令将保留 local/offline 零导入行为。导入后的索引刷新由 `ingest.autoCompile` 控制。
 
 ### `wiki unsafe-local import`
 
-在 `unsafe-local` 模式下，从显式配置的本地路径（`unsafeLocal.paths`）导入。该功能有意保持实验性，并且仅限同一台机器使用。导入后的索引刷新受 `ingest.autoCompile` 控制。
+在 `unsafe-local` 模式下从显式配置的本地路径 （`unsafeLocal.paths`） 导入。仅有意进行实验且在同一台机器上。导入后的索引刷新由 `ingest.autoCompile` 控制。
 
 ### `wiki chatgpt import`
 
@@ -200,12 +201,14 @@ openclaw wiki chatgpt import --export ./chatgpt-export
 openclaw wiki chatgpt import --export ./conversations.json --dry-run
 ```
 
-| 标志              | 默认值     | 说明                                                      |
-| ----------------- | ---------- | --------------------------------------------------------- |
-| `--export <path>` | (required) | ChatGPT 导出目录或 `conversations.json` 路径。            |
-| `--dry-run`       | `false`    | 预览创建/更新/跳过的数量，不写入页面。                    |
+| 标志              | 默认值    | 描述                                                   |
+| ----------------- | ---------- | ------------------------------------------------------------- |
+| `--export <path>` | （必需的） | ChatGPT 导出目录或 `conversations.json` 路径。        |
+| `--dry-run`       | `false`    | 预览 created/updated/skipped 计数，无需写页。 |
 
 一次非 dry-run 的导入如果修改了任意页面，会记录一个 import run id，并在摘要中输出；回滚时需要该 id。
+
+在初始化保管库或更改导入的页面之前，格式错误的 UTF-8 导出将被拒绝。如果错误指出导出无效，请下载新的 ChatGPT 导出并重试导入。
 
 ### `wiki chatgpt rollback <run-id>`
 
@@ -213,11 +216,11 @@ openclaw wiki chatgpt import --export ./conversations.json --dry-run
 
 ### `wiki obsidian ...`
 
-用于在 Obsidian 友好模式下运行的 vault 的 Obsidian 辅助命令：`status`、`search`、`open`、`command`、`daily`。当启用 `obsidian.useOfficialCli` 时，这些命令需要 `PATH` 中存在官方 `obsidian` CLI。
+Obsidian 用于在 Obsidian- 友好模式下运行的保管库的帮助程序命令：`status`、`search`、`open`、`command`、`daily`。当启用 `obsidian.useOfficialCli` 时，这些需要 `PATH` 上的官方 `obsidian` CLI。
 
-当 `vault.scope` 为 `agent` 时，配置校验会拒绝 `obsidian.useOfficialCli: true`，因为 `obsidian.vaultName` 是一个全局设置，而不是按 agent 映射。Obsidian 友好的 Markdown 渲染仍然可用。
+当 `vault.scope` 为 `agent` 时，配置验证会拒绝 `obsidian.useOfficialCli: true`，因为 `obsidian.vaultName` 是一项全局设置，而不是每代理映射。 Obsidian- 友好的 Markdown 渲染仍然可用。
 
-## 实用使用指南
+## <a id="practical-usage-guidance"></a> 实用使用指南
 
 - 当来源可信度和页面标识很重要时，使用 `wiki search` + `wiki get`。
 - 使用 `wiki apply`，不要手动编辑受管理的生成部分。
@@ -226,7 +229,7 @@ openclaw wiki chatgpt import --export ./conversations.json --dry-run
 - 当数据目录、文档导出或 agent 富化流水线已经输出 OKF markdown bundles 时，使用 `wiki okf import`。
 - 当 bridge 模式依赖于新导出的 memory artifacts 时，使用 `wiki bridge import`。
 
-## 配置关系
+## <a id="configuration-tie-ins"></a> 配置关系
 
 `openclaw wiki` 的行为由以下配置项决定：
 
@@ -241,9 +244,9 @@ openclaw wiki chatgpt import --export ./conversations.json --dry-run
 - `plugins.entries.memory-wiki.config.render.*`
 - `plugins.entries.memory-wiki.config.context.includeCompiledDigestPrompt`
 
-完整的配置模型请参见 [Memory Wiki Plugin](/plugins/memory-wiki)。
+有关完整的配置模型，请参阅 [Memory Wiki 插件](/plugins/memory-wiki)。
 
-## 相关
+## <a id="related"></a> 相关内容
 
 - [CLI 参考](/cli)
 - [记忆维基](/plugins/memory-wiki)

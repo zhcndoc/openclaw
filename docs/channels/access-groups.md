@@ -1,21 +1,21 @@
 ---
 summary: "消息渠道的可复用发送者允许列表"
 read_when:
-  - 为多个消息渠道配置相同的允许列表时
-  - 共享 DM 和群组发送者访问规则时
-  - 审查消息渠道访问控制时
+  - "为多个消息渠道配置相同的允许列表时"
+  - "共享 DM 和群组发送者访问规则时"
+  - "审查消息渠道访问控制时"
 title: "访问组"
 ---
 
 访问组是你在 `accessGroups` 下定义一次，并通过通道允许列表中的 `accessGroup:<name>` 引用的命名发送者列表。
 
-当同一批人需要在多个消息渠道中被允许，或者同一组受信任对象需要同时适用于 DM 和群组发送者授权时使用它们。
+当应允许同一个人跨多个消息通道时，或者当一组可信集应适用于 DM 和群组发件人授权时，请使用它们。
 
 组本身不会授予任何权限。只有在允许列表字段引用它时，它才会产生作用。
 
-## 静态消息发送者组
+## <a id="static-message-sender-groups"></a> 静态消息发送者组
 
-静态发送者组使用 `type: "message.senders"`。`members` 以消息频道 ID 为键，另外还有 `"*"` 用于每个频道共享的条目：
+静态发件人组使用 `type: "message.senders"`。 `members` 由消息通道 id 加上 `"*"` 来作为每个通道共享的条目的键控：
 
 ```json5
 {
@@ -34,13 +34,13 @@ title: "访问组"
 ```
 
 | 键                        | 含义                                                                     |
-| ------------------------- | ------------------------------------------------------------------------ |
+| -------------------------- | --------------------------------------------------------------------------- |
 | `"*"`                      | 对引用该组的每个消息频道都会检查的共享条目。 |
 | `discord`, `telegram`, ... | 仅针对该频道的允许列表匹配进行检查的条目。                 |
 
-条目会按照目标频道的常规 `allowFrom` 规则进行匹配。OpenClaw 不会在不同频道之间转换发送者 ID：如果 Alice 有一个 Telegram ID 和一个 Discord ID，请在匹配的频道键下同时列出这两个 ID。
+条目与目标通道的正常 `allowFrom` 规则相匹配。 OpenClaw 不会在通道之间转换发件人 ID：如果 Alice 有 Telegram id 和 Discord id，则在匹配的通道密钥下列出这两个 id。
 
-## 在允许列表中引用组
+## <a id="reference-groups-from-allowlists"></a> 在允许列表中引用组
 
 在消息渠道路径支持发送者允许列表的任何位置，都可以使用 `accessGroup:<name>` 引用组。
 
@@ -112,7 +112,7 @@ DM 允许列表示例：
 }
 ```
 
-## 支持的消息渠道路径
+## <a id="supported-message-channel-paths"></a> 支持的消息渠道路径
 
 访问组可用于共享的消息渠道授权路径中：
 
@@ -123,7 +123,7 @@ DM 允许列表示例：
 
 消息渠道是否受支持取决于该渠道是否通过共享的 OpenClaw 发送者授权辅助工具接入。目前受支持的渠道集成包括 ClickClack、Discord、Feishu、Google Chat、iMessage、IRC、LINE、Mattermost、Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Signal、Slack、SMS、Telegram、WhatsApp、Zalo 和 Zalo Personal。静态的 `message.senders` 组与具体渠道无关，因此新消息渠道只需使用共享插件 SDK 的入口辅助工具，而无需自定义允许列表扩展，即可获得这些支持。
 
-## Discord 渠道受众
+## <a id="discord-channel-audiences"></a> Discord 渠道受众
 
 Discord 还支持一种动态访问组类型：
 
@@ -146,7 +146,7 @@ Discord 还支持一种动态访问组类型：
 }
 ```
 
-`discord.channelAudience` 表示“允许当前可以查看此服务器频道的 Discord 私信发送者”。OpenClaw 会在授权时通过 Discord 解析发送者，并应用 Discord 的 `ViewChannel` 权限规则。`membership` 是可选的，默认值为 `canViewChannel`。
+`discord.channelAudience`的意思是“允许Discord DM当前可以查看该公会频道的发件人”。 OpenClaw 在授权时通过 Discord 解析发件人，并应用 Discord `ViewChannel` 权限规则。 `membership` 可选，默认为 `canViewChannel`。
 
 当某个 Discord 频道已经是团队的事实来源时使用它，例如 `#maintainers` 或 `#on-call`。
 
@@ -154,11 +154,11 @@ Discord 还支持一种动态访问组类型：
 
 - 机器人需要能够访问该服务器和频道。
 - 机器人需要启用 Discord Developer Portal 的 **Server Members Intent**。
-- 当 Discord 返回 `Missing Access`、发送者无法被解析为服务器成员，或该频道属于另一个服务器时，访问组会以关闭失败的方式处理。
+- 当 Discord 返回 `Missing Access` 时，访问组不授予访问权限，发送者无法解析为行会成员，或者频道属于另一个行会。
 
-更多 Discord 特定示例：[Discord 访问控制](/channels/discord#access-control-and-routing)。
+更多Discord-具体示例：[Discord访问控制](/channels/discord/access-control#access-control-and-routing)
 
-## 插件诊断
+## <a id="plugin-diagnostics"></a> 插件诊断
 
 插件作者可以在不将其展开回扁平 allowlist 的情况下检查结构化的 access-group 状态：
 
@@ -175,16 +175,16 @@ const state = await resolveAccessGroupAllowFromState({
 });
 ```
 
-结果会报告已引用、已匹配、缺失、不支持和失败的组。可将其用于诊断或一致性测试。仅在仍然期望扁平 `allowFrom` 数组的兼容性路径中使用 `expandAllowFromWithAccessGroups(...)`。
+结果报告引用、匹配、缺失、不支持和失败的组。将其用于诊断或一致性测试。仅将 `expandAllowFromWithAccessGroups(...)` 用于仍需要平面 `allowFrom` 阵列的兼容性路径。
 
-## 安全说明
+## <a id="security-notes"></a> 安全说明
 
 - 访问组是允许列表别名，不是角色。它们不会创建所有者、批准配对请求，也不会单独授予工具权限。
 - `dmPolicy: "open"` 仍然需要在生效的 DM 允许列表中包含 `"*"`. 引用访问组并不等同于公开访问。
-- 缺失的组名会以关闭失败的方式处理。如果 `allowFrom` 包含 `accessGroup:operators` 但 `accessGroups.operators` 不存在，则该条目不会授权任何人。
-- 保持频道 id 稳定。只要频道同时支持数字 id 和用户 id，就优先使用数字 id/用户 id，而不是显示名称。
+- 缺少组名称则不允许访问。如果 `allowFrom` 包含 `accessGroup:operators` 并且 `accessGroups.operators` 不存在，则该条目未授权任何人。
+- 保持频道 ID 稳定。更喜欢numeric/user当频道同时支持 ids 和显示名称时。
 
-## 故障排查
+## <a id="troubleshooting"></a> 故障排查
 
 如果某个发送者本应匹配却被阻止：
 
@@ -195,3 +195,9 @@ const state = await resolveAccessGroupAllowFromState({
 5. 对于 Discord 渠道受众，请确认机器人能够看到该服务器频道，并且已启用 Server Members Intent。
 
 编辑访问控制配置后运行 `openclaw doctor`。它会在运行前捕获许多无效的允许列表和策略组合。
+
+## <a id="related"></a> 相关内容
+
+- [Groups](/channels/groups) — 群聊行为和提及门控
+- [Pairing](/channels/pairing) — 通道发送方的单独 DM 配对流程
+- [频道概述](/channels) — 这些组适用的频道

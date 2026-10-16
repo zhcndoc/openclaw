@@ -1,11 +1,14 @@
 ---
 summary: "添加媒体理解提供方支持。添加实时转录提供方支持。添加文本转语音提供方支持。"
 read_when:
-  - 当你正在安装、配置或审核 elevenlabs 插件时
-title: "Elevenlabs 插件"
+  - You are installing, configuring, or auditing the elevenlabs plugin
+title: "Elevenlabs plugin reference"
 ---
 
-# Elevenlabs 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 添加媒体理解提供方支持。添加实时转录提供方支持。添加文本转语音提供方支持。
 
@@ -16,7 +19,7 @@ title: "Elevenlabs 插件"
 
 ## 表面
 
-contracts: `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`, `speechProviders`
+- Contracts: `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`, `speechProviders`
 
 ## 相关文档
 

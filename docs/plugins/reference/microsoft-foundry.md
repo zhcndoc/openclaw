@@ -1,11 +1,14 @@
 ---
 summary: "向 OpenClaw 添加 Microsoft Foundry 模型提供程序支持。"
 read_when:
-  - 你正在安装、配置或审核 microsoft-foundry 插件
-title: "Microsoft Foundry 插件"
+  - You are installing, configuring, or auditing the microsoft-foundry plugin
+title: "Microsoft Foundry plugin reference"
 ---
 
-# Microsoft Foundry 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 向 OpenClaw 添加 Microsoft Foundry 模型提供程序支持。
 
@@ -16,7 +19,8 @@ title: "Microsoft Foundry 插件"
 
 ## 接口
 
-providers：`microsoft-foundry`；contracts：`imageGenerationProviders`
+- Providers: `microsoft-foundry`
+- Contracts: `imageGenerationProviders`
 
 - 图像生成提供程序：`microsoft-foundry`
 

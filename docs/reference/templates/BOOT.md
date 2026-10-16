@@ -2,7 +2,7 @@
 summary: "BOOT.md 的工作区模板"
 title: "BOOT.md 模板"
 read_when:
-  - 添加 BOOT.md 清单
+  - "添加 BOOT.md 清单"
 ---
 
 # BOOT.md
@@ -15,9 +15,9 @@ read_when:
 openclaw hooks enable boot-md
 ```
 
-如果某个清单项需要发送消息，请使用消息工具，然后回复精确的静默令牌 `NO_REPLY`（不区分大小写）。
+该钩子会关闭正常的最终响应传递。如果清单项目发送消息，请使用消息工具。在每个调用中命名一个通道和一个目标。然后准确地回复 `NO_REPLY` 作为整个最终答案，无需标点符号或格式。
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [Agent 工作区](/concepts/agent-workspace)
-- [Hooks](/automation/hooks#boot-md)
+- [H挂钩](/automation/hooks/bundled-hooks#boot-md)

@@ -1,11 +1,14 @@
 ---
 summary: "从本地 HTML 网页抓取响应中提取可读的文章内容。"
 read_when:
-  - 你正在安装、配置或审计 web-readability 插件
-title: "Web Readability 插件"
+  - You are installing, configuring, or auditing the web-readability plugin
+title: "Web Readability plugin reference"
 ---
 
-# Web Readability 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 从本地 HTML 网页抓取响应中提取可读的文章内容。
 
@@ -16,4 +19,4 @@ title: "Web Readability 插件"
 
 ## 表面
 
-contracts: `webContentExtractors`
+- Contracts: `webContentExtractors`

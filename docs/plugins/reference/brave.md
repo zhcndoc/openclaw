@@ -1,22 +1,25 @@
 ---
 summary: "用于网页搜索的 OpenClaw Brave Search 提供器插件。"
 read_when:
-  - 你正在安装、配置或审计 brave 插件
-title: "Brave 插件"
+  - You are installing, configuring, or auditing the brave plugin
+title: "Brave plugin reference"
 ---
 
-# Brave 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于网页搜索的 OpenClaw Brave Search 提供器插件。
 
 ## 分发
 
-- 包：`@openclaw/brave-plugin`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/brave-plugin`
+- Install route: npm or ClawHub: `clawhub:@openclaw/brave-plugin`
 
 ## 接口
 
-contracts: `webSearchProviders`
+- Contracts: `webSearchProviders`
 
 ## 相关文档
 

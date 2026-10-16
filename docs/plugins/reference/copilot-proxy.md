@@ -1,11 +1,14 @@
 ---
 summary: "为 OpenClaw 添加 Copilot Proxy 模型提供程序支持。"
 read_when:
-  - 你正在安装、配置或审计 copilot-proxy 插件
-title: "Copilot Proxy 插件"
+  - You are installing, configuring, or auditing the copilot-proxy plugin
+title: "Copilot Proxy plugin reference"
 ---
 
-# Copilot Proxy 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 Copilot Proxy 模型提供程序支持。
 
@@ -16,4 +19,4 @@ title: "Copilot Proxy 插件"
 
 ## 接口
 
-providers: `copilot-proxy`
+- Providers: `copilot-proxy`

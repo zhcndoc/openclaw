@@ -1,11 +1,14 @@
 ---
 summary: "用于代理拥有的问题和会话的仪表盘工作板。"
 read_when:
-  - 你正在安装、配置或审计 workboard 插件
-title: "工作板插件"
+  - You are installing, configuring, or auditing the workboard plugin
+title: "Workboard plugin reference"
 ---
 
-# 工作板插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于代理拥有的问题和会话的仪表盘工作板。
 
@@ -16,7 +19,10 @@ title: "工作板插件"
 
 ## 表面
 
-contracts: `tools`; dashboard data bindings: `workboard.cards.list`, `workboard.stats`, `workboard.boards.list`; dashboard action verbs: `workboard.dispatch`
+- CLI commands: `openclaw workboard`
+- Contracts: `tools`
+- Dashboard data bindings: `workboard.cards.list`, `workboard.stats`, `workboard.boards.list`
+- Dashboard action verbs: `workboard.dispatch`
 
 ## 相关文档
 

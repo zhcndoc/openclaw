@@ -1,13 +1,16 @@
 ---
-summary: "适用于 Windows 和 Linux 节点主机的实验性 CUA Driver SDK 计算机控制。"
+summary: "Experimental CUA Driver computer control for macOS, Windows, and Linux node hosts."
 read_when:
-  - "安装、配置或审计 cua-computer 插件时"
-title: "Cua Computer 插件"
+  - You are installing, configuring, or auditing the cua-computer plugin
+title: "Cua Computer plugin reference"
 ---
 
-# Cua Computer 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-适用于 Windows 和 Linux 节点主机的实验性 CUA Driver SDK 计算机控制。
+Experimental CUA Driver computer control for macOS, Windows, and Linux node hosts.
 
 ## 分发
 
@@ -16,4 +19,4 @@ title: "Cua Computer 插件"
 
 ## 表面
 
-插件。
+This plugin declares no channels, providers, commands, or contracts.

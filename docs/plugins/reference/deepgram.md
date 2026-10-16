@@ -1,13 +1,16 @@
 ---
-summary: "添加媒体理解提供方支持。添加实时转录提供方支持。"
+summary: "Deepgram audio transcription with Nova and Flux models, plus realtime speech recognition."
 read_when:
   - You are installing, configuring, or auditing the deepgram plugin
-title: "Deepgram 插件"
+title: "Deepgram plugin reference"
 ---
 
-# Deepgram 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
-添加媒体理解提供方支持。添加实时转录提供方支持。
+Deepgram audio transcription with Nova and Flux models, plus realtime speech recognition.
 
 ## 分发
 
@@ -16,7 +19,7 @@ title: "Deepgram 插件"
 
 ## 接口
 
-contracts: `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`
+- Contracts: `mediaUnderstandingProviders`, `realtimeTranscriptionProviders`
 
 ## 相关文档
 

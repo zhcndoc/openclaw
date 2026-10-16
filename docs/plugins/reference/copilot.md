@@ -1,22 +1,25 @@
 ---
 summary: "注册 GitHub Copilot 代理运行时。"
 read_when:
-  - 你正在安装、配置或审计 copilot 插件
-title: "Copilot 插件"
+  - You are installing, configuring, or auditing the copilot plugin
+title: "Copilot plugin reference"
 ---
 
-# Copilot 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 注册 GitHub Copilot 代理运行时。
 
 ## 分发
 
-- 包：`@openclaw/copilot`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/copilot`
+- Package: `@openclaw/copilot`
+- Install route: npm or ClawHub: `clawhub:@openclaw/copilot`
 
 ## 表面
 
-plugin
+This plugin declares no channels, providers, commands, or contracts.
 
 ## 相关文档
 

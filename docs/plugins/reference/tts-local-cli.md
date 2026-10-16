@@ -2,10 +2,13 @@
 summary: "添加文本转语音提供商支持。"
 read_when:
   - You are installing, configuring, or auditing the tts-local-cli plugin
-title: "TTS 本地 CLI 插件"
+title: "TTS Local CLI plugin reference"
 ---
 
-# TTS 本地 CLI 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 添加文本转语音提供商支持。
 
@@ -16,4 +19,4 @@ title: "TTS 本地 CLI 插件"
 
 ## 接口
 
-contracts: `speechProviders`
+- Contracts: `speechProviders`

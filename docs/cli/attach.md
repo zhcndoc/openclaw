@@ -1,9 +1,9 @@
 ---
-summary: "openclaw attach 的 CLI 参考（使用受限的 Gateway MCP 授权启动 Claude Code）"
+summary: "`openclaw attach` 的 CLI 参考（使用范围网关 MCP 授权启动 Claude Code）"
 read_when:
-  - 你希望 Claude Code 使用 OpenClaw Gateway MCP 工具
-  - 你需要一个面向外部 harness 的临时、会话绑定的 MCP 授权
-title: "Attach CLI"
+  - "你希望 Claude Code 使用 OpenClaw Gateway MCP 工具"
+  - "你需要一个面向外部 harness 的临时、会话绑定的 MCP 授权"
+title: "附CLI"
 ---
 
 `openclaw attach` 会启动 Claude Code，并附带一个严格的临时 MCP 配置，该配置仅绑定到一个 Gateway 会话。
@@ -34,14 +34,12 @@ openclaw attach --print-config
 
 请传递位置目标或 `--session`，但不能同时传递两者。短引用会在生成受限 attach 授权之前解析；缺失的会话不会被隐式创建。
 
-URL 或主机目标绝不会复用已配置的凭据或
-`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。它会使用该确切 Gateway 来源所存储的设备令牌，或显式提供的 `--token`/`--password` 凭据。首次连接时，请传递其中一种凭据，在该 Gateway 的 Control UI 中批准配对请求，然后重试；请参阅
-[Devices](/cli/devices)。会话 URL 必须不包含凭据：userinfo 以及诸如 `token` 和
-`password` 之类的敏感查询或片段参数会被拒绝。
+URL 或主机目标绝不会重复使用已配置的凭据或 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。它使用存储的设备令牌来获取确切的网关源，或显式的 `--token`/`--password` 凭据。第一次联系时，传递其中一个凭据一次，批准该网关的 Control UI 中的配对请求，然后重试；请参阅 [Devices](/cli/devices)。会话 URL 必须保持无凭据：用户信息和敏感查询或片段参数（例如 `token` 和 `password`）将被拒绝。
 
 目标解析使用与 `openclaw tui` 相同的[会话目标错误矩阵](/cli/tui#session-target-errors)。
 
-承载令牌通过环境变量传递，而不是通过 argv。OpenClaw 会使用
-`--strict-mcp-config --mcp-config <path>` 启动 Claude Code，因此环境中的 Claude MCP 服务器不会加入所附加的会话。普通启动（不使用 `--print-config`）会在 Claude Code 进程退出时撤销授权。
+承载令牌通过环境变量传递，而不是通过 argv。OpenClaw 会使用 `--strict-mcp-config --mcp-config <path>` 启动 Claude Code，因此环境中的 Claude MCP 服务器不会加入所附加的会话。普通启动（不使用 `--print-config`）会在 Claude Code 进程退出时撤销授权。
+
+如果附加工具询问结构化问题，请通过 Control UI 或本机应用程序中的问题控件回答。附加授予范围工具到会话，但不识别活动的 OpenClaw 运行或其原始调用者权限，因此普通通道文本无法声明该问题。请参阅 [ 询问用户 ](/tools/ask-user)。
 
 另请参阅：[Control UI URLs](/web/urls)、[Devices](/cli/devices)、[Gateway CLI](/cli/gateway)、[MCP CLI](/cli/mcp) 和 [ACP CLI](/cli/acp)。

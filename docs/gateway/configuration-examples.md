@@ -1,17 +1,19 @@
 ---
 summary: "常见 OpenClaw 配置的与 Schema 严格匹配的示例"
 read_when:
-  - 学习如何配置 OpenClaw
-  - 寻找配置示例
-  - 首次设置 OpenClaw
+  - "学习如何配置 OpenClaw"
+  - "寻找配置示例"
+  - "首次设置 OpenClaw"
 title: "配置示例"
 ---
 
 下面的示例与当前配置 schema 保持一致。完整参考以及逐字段说明请见 [配置](/gateway/configuration)。
 
-## 快速开始
+Doctor 将旧版 `agents.list` 阵列和 `default` 标记迁移到具有明确表面所有者的键控 `agents.entries` 中。更新程序通过其备份流程运行此迁移。直接替换二进制文件后，在启动网关之前运行 `openclaw doctor --fix`。
 
-### 最小必需配置
+## <a id="quick-start"></a> 快速开始
+
+### <a id="absolute-minimum"></a> 最小必需配置
 
 ```json5
 {
@@ -20,9 +22,9 @@ title: "配置示例"
 }
 ```
 
-保存到 `~/.openclaw/openclaw.json`，然后你就可以用该号码给机器人发私信了。
+保存到 `~/.openclaw/openclaw.json`，您就可以从该号码 DM 机器人。
 
-### 推荐起步配置
+### <a id="recommended-starter"></a> 推荐起步配置
 
 ```json5
 {
@@ -50,20 +52,22 @@ title: "配置示例"
   messages: {
     visibleReplies: "automatic",
     groupChat: {
-      visibleReplies: "message_tool", // 可选；可见输出需要 message(action=send)
+      visibleReplies: "message_tool", // opt-in; visible output requires message(action=send)
       unmentionedInbound: "room_event",
     },
   },
 }
 ```
 
-## 扩展示例（主要选项）
+## <a id="expanded-example-(major-options)"></a><a id="expanded-example-major-options"></a> 扩展示例（主要选项）
 
 > JSON5 允许使用注释和尾随逗号。普通 JSON 也可以。
 
+此示例未设置 `agents.defaults.timeoutSeconds`，因此每次模型尝试都使用 48 小时默认值。仅当您的工作流程需要时，才设置不同的每次尝试预算。每个已配置的后备方案都会收到新的预算；请参阅 [Agent 运行时](/concepts/agent-loop#timeouts)。
+
 ```json5
 {
-  // 环境 + shell
+  // Environment + shell
   env: {
     vars: {
       OPENROUTER_API_KEY: "sk-or-...",
@@ -75,7 +79,7 @@ title: "配置示例"
     },
   },
 
-  // 身份验证配置文件元数据（密钥存放在 auth-profiles.json 中）
+  // Auth profile metadata (secrets live in SQLite auth stores)
   auth: {
     profiles: {
       "anthropic:default": { provider: "anthropic", mode: "api_key" },
@@ -89,9 +93,9 @@ title: "配置示例"
     },
   },
 
-  // 身份信息按 agent 区分——在下方的 agents.entries.<id>.identity 中设置。
+  // Identity is per agent — set it on agents.entries.<id>.identity below.
 
-  // 日志
+  // Logging
   logging: {
     level: "info",
     file: "/tmp/openclaw/openclaw.log",
@@ -99,7 +103,7 @@ title: "配置示例"
     consoleStyle: "pretty",
   },
 
-  // 消息格式
+  // Message formatting
   messages: {
     visibleReplies: "automatic",
     responsePrefix: ">",
@@ -107,7 +111,7 @@ title: "配置示例"
     ackReactionScope: "group-mentions",
     groupChat: {
       historyLimit: 50,
-      visibleReplies: "message_tool", // 在共享房间中启用，适用于工具可靠的模型
+      visibleReplies: "message_tool", // opt in for shared rooms with tool-reliable models
       unmentionedInbound: "room_event",
     },
     queue: {
@@ -126,10 +130,10 @@ title: "配置示例"
     },
   },
 
-  // 会话行为
+  // Session behavior
   session: {
     scope: "per-sender",
-    dmScope: "per-channel-peer", // 推荐用于多用户收件箱
+    dmScope: "per-channel-peer", // recommended for multi-user inboxes
     reset: {
       mode: "daily",
       atHour: 4,
@@ -144,9 +148,9 @@ title: "配置示例"
       mode: "warn",
       pruneAfter: "30d",
       maxEntries: 500,
-      resetArchiveRetention: "30d", // 持续时间或 false
-      maxDiskBytes: "500mb", // 可选
-      highWaterBytes: "400mb", // 可选（默认值为 maxDiskBytes 的 80%）
+      resetArchiveRetention: "30d", // duration or false
+      maxDiskBytes: "500mb", // optional
+      highWaterBytes: "400mb", // optional (defaults to 80% of maxDiskBytes)
     },
     sendPolicy: {
       default: "allow",
@@ -154,7 +158,7 @@ title: "配置示例"
     },
   },
 
-  // 频道
+  // Channels
   channels: {
     whatsapp: {
       dmPolicy: "pairing",
@@ -208,10 +212,13 @@ title: "配置示例"
     },
   },
 
-  // Agent 运行时
+  // Agent runtime
   agents: {
+    ownership: "explicit",
     defaults: {
       workspace: "~/.openclaw/workspace",
+      systemAgent: { agentId: "main" },
+      sessionStore: { agentId: "main" },
       userTimezone: "America/Chicago",
       model: {
         primary: "anthropic/claude-sonnet-4-6",
@@ -225,7 +232,7 @@ title: "配置示例"
         "anthropic/claude-sonnet-4-6": { alias: "sonnet" },
         "openai/gpt-5.4": { alias: "gpt" },
       },
-      skills: ["github", "weather"], // 未指定 list[].skills 的 agent 将继承
+      skills: ["github", "weather"], // inherited by agents that omit entries.*.skills
       thinkingDefault: "low",
       verboseDefault: "off",
       toolProgressDetail: "explain",
@@ -244,7 +251,6 @@ title: "配置示例"
       humanDelay: {
         mode: "natural",
       },
-      timeoutSeconds: 600,
       mediaMaxMb: 5,
       typingIntervalSeconds: 5,
       maxConcurrent: 3,
@@ -258,7 +264,7 @@ title: "配置示例"
       },
       sandbox: {
         mode: "non-main",
-        scope: "session", // 相比旧版 perSession: true 更推荐
+        scope: "session", // preferred over legacy perSession: true
         workspaceRoot: "~/.openclaw/sandboxes",
         docker: {
           image: "openclaw-sandbox:bookworm-slim",
@@ -275,27 +281,35 @@ title: "配置示例"
     },
     entries: {
       main: {
-        default: true,
+        workspace: "~/.openclaw/workspace",
         identity: {
           name: "Samantha",
           theme: "helpful sloth",
           emoji: "🦥",
         },
-        // 继承 defaults.skills -> github, weather
+        // inherits defaults.skills -> github, weather
         groupChat: {
           mentionPatterns: ["@openclaw", "openclaw"],
         },
-        thinkingDefault: "high", // 覆盖每个 agent 的 thinking
-        reasoningDefault: "on", // 每个 agent 的 reasoning 可见性
-        fastModeDefault: false, // 每个 agent 的快速模式
+        thinkingDefault: "high", // per-agent thinking override
+        reasoningDefault: "on", // per-agent reasoning visibility
+        fastModeDefault: false, // per-agent fast mode
       },
       quick: {
-        skills: [], // 此 agent 不使用任何技能
-        fastModeDefault: true, // 此 agent 始终以快速模式运行
+        skills: [], // no skills for this agent
+        fastModeDefault: true, // this agent always runs fast
         thinkingDefault: "off",
       },
     },
   },
+
+  bindings: [
+    { agentId: "main", match: { channel: "discord", accountId: "*" } },
+    { agentId: "main", match: { channel: "slack", accountId: "*" } },
+    { agentId: "main", match: { channel: "telegram", accountId: "*" } },
+    { agentId: "main", match: { channel: "whatsapp", accountId: "*" } },
+  ],
+  talk: { agentId: "main" },
 
   memory: {
     search: {
@@ -338,21 +352,21 @@ title: "配置示例"
     },
   },
 
-  // 自定义模型提供商
+  // Custom model providers
   models: {
     mode: "merge",
     providers: {
       "custom-proxy": {
         baseUrl: "http://localhost:4000/v1",
         apiKey: "LITELLM_KEY",
-        api: "openai-responses",
+        api: "openai-completions",
         authHeader: true,
         headers: { "X-Proxy-Region": "us-west" },
         models: [
           {
             id: "llama-3.1-8b",
             name: "Llama 3.1 8B",
-            api: "openai-responses",
+            api: "openai-completions",
             reasoning: false,
             input: ["text"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -364,13 +378,13 @@ title: "配置示例"
     },
   },
 
-  // Cron 任务
+  // Cron jobs
   cron: {
     enabled: true,
     sessionRetention: "24h",
   },
 
-  // Webhook
+  // Webhooks
   hooks: {
     enabled: true,
     path: "/hooks",
@@ -384,8 +398,10 @@ title: "配置示例"
         action: "agent",
         wakeMode: "now",
         name: "Gmail",
+        // One dispatch per pushed email; templates see the current message.
+        forEach: "messages",
         sessionKey: "hook:gmail:{{messages[0].id}}",
-        messageTemplate: "来自：{{messages[0].from}}\n主题：{{messages[0].subject}}",
+        messageTemplate: "From: {{messages[0].from}}\nSubject: {{messages[0].subject}}",
         textTemplate: "{{messages[0].snippet}}",
         deliver: true,
         channel: "last",
@@ -413,7 +429,7 @@ title: "配置示例"
     },
   },
 
-  // Gateway + 网络
+  // Gateway + networking
   gateway: {
     mode: "local",
     port: 18789,
@@ -424,7 +440,7 @@ title: "配置示例"
       token: "gateway-token",
       allowTailscale: true,
     },
-    tailscale: { mode: "serve", resetOnExit: false },
+    tailscale: { mode: "serve" },
     remote: { url: "ws://gateway-host.ts.net:18789", token: "remote-token" },
     reload: { mode: "hybrid" },
   },
@@ -432,8 +448,8 @@ title: "配置示例"
   skills: {
     allowBundled: ["gemini", "peekaboo"],
     load: {
-      extraDirs: ["~/Projects/agent-scripts/skills"],
-      allowSymlinkTargets: ["~/Projects/agent-scripts/skills"],
+      extraDirs: ["~/path/to/agent-scripts/skills"],
+      allowSymlinkTargets: ["~/path/to/agent-scripts/skills"],
     },
     install: {
       preferBrew: true,
@@ -452,16 +468,16 @@ title: "配置示例"
 }
 ```
 
-### 软链接的兄弟技能仓库
+### <a id="symlinked-sibling-skill-repo"></a> 软链接的兄弟技能仓库
 
-当内置技能根目录包含指向兄弟仓库的软链接时使用，例如 `~/.agents/skills/manager -> ~/Projects/manager/skills`。
+当内置技能根包含指向同级存储库的符号链接（例如 `~/.agents/skills/manager -> ~/path/to/skills`）时，请使用此选项。
 
 ```json5
 {
   skills: {
     load: {
-      extraDirs: ["~/Projects/manager/skills"],
-      allowSymlinkTargets: ["~/Projects/manager/skills"],
+      extraDirs: ["~/path/to/skills"],
+      allowSymlinkTargets: ["~/path/to/skills"],
     },
   },
 }
@@ -469,24 +485,28 @@ title: "配置示例"
 
 - `extraDirs` 扫描兄弟仓库，作为显式的技能根目录。
 - `allowSymlinkTargets` 允许软链接的技能文件夹解析到该受信任的真实目标根目录，而不允许任意软链接逃逸。
-- 如需让 Skill Workshop 通过同一受信任的软链接目标应用写入，请设置 `skills.workshop.allowSymlinkTargetWrites: true`。
+- Skill Workshop 不使用这些配置的符号链接目标。它仅写入活动代理的 `<state-dir>/agents/<agentId>/agent/workshop-skills` 内。
 
-## 常见模式
+## <a id="common-patterns"></a> 常见模式
 
-### 共享技能基线与单一覆盖
+### <a id="shared-skill-baseline-with-one-override"></a> 共享技能基线与单一覆盖
 
 ```json5
 {
   agents: {
+    ownership: "explicit",
     defaults: {
       workspace: "~/.openclaw/workspace",
       skills: ["github", "weather"],
+      heartbeat: { agentId: "main" },
+      systemAgent: { agentId: "main" },
     },
     entries: {
-      main: { default: true },
+      main: { workspace: "~/.openclaw/workspace" },
       docs: { workspace: "~/.openclaw/workspace-docs", skills: ["docs-search"] },
     },
   },
+  talk: { agentId: "main" },
 }
 ```
 
@@ -494,7 +514,7 @@ title: "配置示例"
 - `agents.entries.*.skills` 会为某个代理替换该基线。
 - 当某个代理不应看到任何技能时，使用 `skills: []`。
 
-### 多平台设置
+### <a id="multi-platform-setup"></a> 多平台设置
 
 ```json5
 {
@@ -515,9 +535,9 @@ title: "配置示例"
 }
 ```
 
-### 受信任节点网络自动批准
+### <a id="trusted-node-network-auto-approval"></a> 受信任节点网络自动批准
 
-除非你控制网络路径，否则请保持设备配对为手动。对于专用实验室或 tailnet 子网，你可以通过精确的 CIDR 或 IP，选择在首次节点设备配对时自动批准：
+除非您控制网络路径，否则请保持手动设备配对。对于专用实验室或尾网子网，您可以选择使用准确的 CIDR 或 IP 进行首次节点设备自动批准：
 
 ```json5
 {
@@ -531,25 +551,25 @@ title: "配置示例"
 }
 ```
 
-当未设置时，此功能保持关闭。它仅适用于没有请求范围的全新 `role: node` 配对。操作员／浏览器客户端以及角色、范围、元数据或公钥升级仍然需要手动批准。
+未设置时此功能保持关闭状态。它仅适用于没有要求范围的新 `role: node` 配对。 Operator/browser 客户端和角色、范围、元数据或公钥升级仍需要手动批准。
 
-### 安全 DM 模式（共享收件箱／多用户 DM）
+### <a id="secure-dm-mode-(shared-inbox-%2F-multi-user-dms)"></a><a id="secure-dm-mode-shared-inbox-/-multi-user-dms"></a> 安全 DM 模式（共享收件箱/多用户 DM）
 
-如果有多于一人可以向你的机器人发送 DM（`allowFrom` 中有多个条目、针对多人的配对批准，或 `dmPolicy: "open"`），请启用 **安全 DM 模式**，这样不同发送者的 DM 默认不会共享同一个上下文：
+如果超过一个人可以 DM 您的机器人（`allowFrom` 中的多个条目、多人的配对批准或 `dmPolicy: "open"`），请启用 **secure DM 模式**，以便来自不同发件人的 DM 默认情况下不会共享同一个上下文：
 
 ```json5
 {
-  // 安全 DM 模式（推荐用于多用户或敏感 DM 代理）
+  // Secure DM mode (recommended for multi-user or sensitive DM agents)
   session: { dmScope: "per-channel-peer" },
 
   channels: {
-    // 示例：WhatsApp 多用户收件箱
+    // Example: WhatsApp multi-user inbox
     whatsapp: {
       dmPolicy: "allowlist",
       allowFrom: ["+15555550123", "+15555550124"],
     },
 
-    // 示例：Discord 多用户收件箱
+    // Example: Discord multi-user inbox
     discord: {
       enabled: true,
       token: "YOUR_DISCORD_BOT_TOKEN",
@@ -559,10 +579,9 @@ title: "配置示例"
 }
 ```
 
-对于 Discord／Google Chat／IRC／Mattermost／Microsoft Teams／Slack，默认情况下发送者授权以 ID 优先。
-只有在你明确接受该风险时，才为每个频道启用 `dangerouslyAllowNameMatching: true`，以允许直接基于可变的名称／邮箱／nick 进行匹配。
+对于Discord/Google Chat/IRC/Mattermost/Microsoft Teams/Slack，发件人授权默认为ID-first。仅当您明确接受该风险时，才启用与每个通道的 `dangerouslyAllowNameMatching: true` 的直接可变 name/email/nick 匹配。
 
-### Anthropic API 密钥 + MiniMax 回退
+### <a id="anthropic-api-key-%2B-minimax-fallback"></a><a id="anthropic-api-key-+-minimax-fallback"></a> Anthropic API 密钥 + MiniMax 回退
 
 ```json5
 {
@@ -598,7 +617,7 @@ title: "配置示例"
 }
 ```
 
-### 工作机器人（受限访问）
+### <a id="work-bot-(restricted-access)"></a><a id="work-bot-restricted-access"></a> 工作机器人（受限访问）
 
 ```json5
 {
@@ -611,7 +630,7 @@ title: "配置示例"
       main: {
         identity: {
           name: "WorkBot",
-          theme: "专业助手",
+          theme: "professional assistant",
         },
       },
     },
@@ -629,7 +648,7 @@ title: "配置示例"
 }
 ```
 
-### 仅使用本地模型
+### <a id="local-models-only"></a> 仅使用本地模型
 
 ```json5
 {
@@ -649,7 +668,7 @@ title: "配置示例"
         models: [
           {
             id: "my-local-model",
-            name: "本地模型",
+            name: "Local Model",
             reasoning: false,
             input: ["text"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -663,14 +682,14 @@ title: "配置示例"
 }
 ```
 
-## 提示
+## <a id="tips"></a> 提示
 
 - 如果你设置了 `dmPolicy: "open"`，匹配的 `allowFrom` 列表必须包含 `"*"`.
-- 提供方 ID 各不相同（电话号码、用户 ID、频道 ID）。请查阅提供方文档以确认格式。
+- 提供商 ID 不同（电话号码、用户 ID、频道 ID）。使用提供商文档来确认格式。
 - 可稍后添加的可选部分：`web`、`browser`、`ui`、`discovery`、`plugins`、`talk`、`signal`、`imessage`。
 - 查看 [提供方](/providers) 和 [故障排除](/gateway/troubleshooting) 以获取更深入的设置说明。
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [配置参考](/gateway/configuration-reference)
-- [配置](/gateway/configuration)。
+- [配置](/gateway/configuration)

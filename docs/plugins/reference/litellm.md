@@ -1,11 +1,14 @@
 ---
 summary: "将 LiteLLM 模型提供方支持添加到 OpenClaw。"
 read_when:
-  - 你正在安装、配置或审计 litellm 插件
-title: "LiteLLM 插件"
+  - You are installing, configuring, or auditing the litellm plugin
+title: "LiteLLM plugin reference"
 ---
 
-# LiteLLM 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 将 LiteLLM 模型提供方支持添加到 OpenClaw。
 
@@ -16,7 +19,8 @@ title: "LiteLLM 插件"
 
 ## 接口
 
-providers: `litellm`; contracts: `imageGenerationProviders`
+- Providers: `litellm`
+- Contracts: `imageGenerationProviders`
 
 ## 相关文档
 

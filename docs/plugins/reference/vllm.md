@@ -1,11 +1,14 @@
 ---
 summary: "为 OpenClaw 添加 vLLM 模型提供方支持。"
 read_when:
-  - 你正在安装、配置或审计 vllm 插件
-title: "vLLM 插件"
+  - You are installing, configuring, or auditing the vllm plugin
+title: "vLLM plugin reference"
 ---
 
-# vLLM 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 vLLM 模型提供方支持。
 
@@ -16,7 +19,7 @@ title: "vLLM 插件"
 
 ## 接口
 
-providers: `vllm`
+- Providers: `vllm`
 
 ## 相关文档
 

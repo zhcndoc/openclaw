@@ -1,11 +1,14 @@
 ---
 summary: "为 OpenClaw 添加 Google、Google Gemini CLI、Google Vertex 模型提供方支持。"
 read_when:
-  - 你正在安装、配置或审计 google 插件
-title: "Google 插件"
+  - You are installing, configuring, or auditing the google plugin
+title: "Google plugin reference"
 ---
 
-# Google 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 Google、Google Gemini CLI、Google Vertex 模型提供方支持。
 
@@ -16,7 +19,8 @@ title: "Google 插件"
 
 ## 表面
 
-提供商：`google`、`google-gemini-cli`、`google-vertex`；契约：`imageGenerationProviders`、`mediaUnderstandingProviders`、`memoryEmbeddingProviders`、`musicGenerationProviders`、`realtimeVoiceProviders`、`speechProviders`、`videoGenerationProviders`、`webSearchProviders`
+- Providers: `google`, `google-gemini-cli`, `google-vertex`
+- Contracts: `embeddingProviders`, `imageGenerationProviders`, `mediaUnderstandingProviders`, `musicGenerationProviders`, `realtimeVoiceProviders`, `speechProviders`, `videoGenerationProviders`, `webSearchProviders`
 
 ## 相关文档
 

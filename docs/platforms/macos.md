@@ -1,137 +1,193 @@
 ---
 summary: "安装并使用 OpenClaw macOS 菜单栏应用"
 read_when:
-  - 安装 macOS 应用
-  - 在 macOS 上决定使用本地还是远程 Gateway 模式
-  - 查找 macOS 应用发布下载
+  - "安装 macOS 应用"
+  - "在 macOS 上决定使用本地还是远程 Gateway 模式"
+  - "查找 macOS 应用发布下载"
 title: "macOS 应用"
 ---
 
-macOS 应用是 OpenClaw 的 **菜单栏伴侣**：原生托盘界面、macOS
-权限提示、通知、WebChat、语音输入、Canvas，以及
-由 Mac 托管的节点工具，例如 `system.run`。
+macOS 应用程序是 OpenClaw **菜单栏伴侣**：本机托盘 UI、macOS 权限提示、通知、WebChat、语音输入、托管小部件面板和 Mac 托管节点工具，例如`system.run`。
 
-使用 **Quick Chat**，即可在不打开完整窗口的情况下，使用 Spotlight 风格的主会话输入框。默认按下 Option-Space（⌥Space），从菜单栏菜单中选择，或在 **设置 → 通用** 中录制其他快捷键。
+使用 **Quick Chat** 进行 Spotlight 风格的主会话编辑器，无需打开完整窗口。默认按 Option-Space （⌥Space），从菜单栏菜单中选择它，或在 **Dashboard → 设置 → 本机 → App** 中记录另一个快捷方式。
 
-完整的原生聊天支持通过选择器、粘贴以及拖放来添加图片附件。助手生成的图片会通过短期有效的
-Gateway artifact URL 内联显示，并可在更大的预览中打开；iOS 和 macOS 共享同一套有界图片模型和渲染器。
+使用绿色窗口按钮进入本机全屏。仪表板的侧边栏和聊天控件仍然位于窗口顶部。离开全屏将恢复正常的标题栏和窗口控件。
+
+当仪表板加载时，其空画布将遵循本机窗口的外观。页面绘制后，仪表板选定的主题将提供其背景。
+
+完整的本机聊天通过其选择器、粘贴和拖放接受图像附件。助理生成的图像通过短暂的网关工件 URL 内联渲染，并在更大的预览中打开； iOS 和 macOS 共享相同的有界图像模型和渲染器。
 
 只需要 CLI 和 Gateway？请从[开始使用](/start/getting-started)开始。
 
-## 下载
+## <a id="requirements"></a> 要求
 
-从 [OpenClaw GitHub 发布页](https://github.com/openclaw/openclaw/releases) 获取 macOS 应用构建版本。
-当某个发布包含 macOS 应用资源时，请查找：
+**OpenClaw.app 需要 macOS 26.2 （Tahoe） 或更高版本。** 这也适用于其本机 `openclaw-mac` 助手和 [Voice Wake 和一键通 ](/platforms/mac/voicewake#requirements)。
 
-- `OpenClaw-<version>.dmg`（首选）
-- `OpenClaw-<version>.zip`
+基于 Node- 的 CLI 和网关需要在该运行时支持的操作系统上有 [ 支持的 Node 版本 ](/install/node)。官方 Node 24 和 Node 26 macOS 二进制文件是为 macOS 13.5 或更高版本（Node 支持的最旧版本）构建的。较旧的 macOS 版本可能仍会运行它们，但不受支持。在较旧的 Mac 上运行 CLI 不会使本机应用程序与该 macOS 版本兼容。
 
-有些发布只包含 CLI、证据或 Windows 资源。如果最新发布
-没有 macOS 应用资源，请使用最新的包含该资源的版本，或者通过
-[macOS 开发环境设置](/platforms/mac/dev-setup) 从源代码构建。
+从源代码构建还需要 [macOS 开发人员设置](/platforms/mac/dev-setup#prerequisites) 中列出的工具链。
 
-## 首次运行
+## <a id="download"></a> 下载
 
-1. 安装并启动 **OpenClaw.app**。
-2. 对于本地 Gateway，选择 **此 Mac**；或者连接到远程 Gateway。
-3. 等待应用安装匹配的 CLI 运行时。在本地模式下，它还会
-   安装并启动 Gateway。
-4. 通过实时模型检查建立推理连接。如果应用复用了你不想使用的登录信息，请在成功横幅上选择
-   **选择其他 AI**，以重新打开选择器，其中包括 API 密钥选项。
-5. 完成。应用会打开仪表板，OpenClaw 将在一次对话中引导完成其余设置
-   （导入记忆、频道、权限）。你可以随时从 **设置 → 权限** 授予 macOS 权限。
+从已发布的 **2026.10.3** 版本下载 macOS 安装程序：
 
-如果应用连接到一个现有 Gateway，且其默认 agent 已配置
-模型，则会将该 Gateway 视为已完成设置，跳过 provider onboarding 和
-OpenClaw，并打开仪表板。如果 Gateway 无法连接，或者其
-默认 agent 没有模型，则仍可进行推理入门以便恢复。
+| 你的Mac                              | 安装人员                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Apple 硅                         | [苹果硅 DMG](https://github.com/openclaw/openclaw/releases/download/v2026.10.3/OpenClaw-2026.10.3-arm64.dmg) |
+| 英特尔                                 | [英特尔 DMG](https://github.com/openclaw/openclaw/releases/download/v2026.10.3/OpenClaw-2026.10.3-x86_64.dmg)        |
+| 要么是架构，要么你不确定 | [通用 DMG](https://github.com/openclaw/openclaw/releases/download/v2026.10.3/OpenClaw-2026.10.3.dmg)           |
 
-对于 CLI/Gateway 设置路径，请使用 [入门指南](/start/getting-started)。
-如需恢复权限，请使用 [macOS 权限](/platforms/mac/permissions)。
+这些下载链接固定到 **2026.10.3**。对于较新的版本或 ZIP 存档，请参阅 [OpenClaw GitHub 版本 ](https://github.com/openclaw/openclaw/releases)。某些版本仅发布 CLI、证据或 Windows 资产。如果最新版本没有 macOS 应用程序资产，请使用有的最新版本，或者使用 [macOS dev setup](/platforms/mac/dev-setup) 从源代码构建。
 
-## 更新
+## <a id="first-run"></a> 首次运行
+
+安装并启动 **OpenClaw.app**。在没有保存网关或配置的全新安装中，当应用程序准备其捆绑运行时、在 **This Mac** 上启动网关并打开仪表板的入门对话时，会出现一个进度窗口。它永远不会自动加入已发现的网关。该窗口显示当前步骤，并在仪表板准备就绪后关闭。在此切换期间重新连接仪表板会在同一窗口中保留设置，并且 **审阅权限** 会在仪表板中继续。选择 **手动设置** 以使用本机设置。
+
+仪表板连接您的 AI，显示它选择的内容，并提供替代方案。您可以选择另一个网关或从设置卡查看此 Mac 的权限。 OpenClaw 然后指导同一对话中的剩余设置（内存导入、通道和权限）。随时从 **仪表板 → 设置 → 本机 → 权限** 授予 macOS 权限。
+
+如果运行时准备、网关启动或身份验证或仪表板加载失败，同一窗口会切换到出现错误的相关本机设置步骤。没有自动 AI 设置的旧网关会打开本机 AI 选择器。本机设置仍然可以从菜单中进行手动恢复：选择 **This Mac** 或输入现有网关的地址，在需要时准备本地运行时，然后选择 AI 连接来运行其实时模型检查。当运行时准备从流程中删除安装步骤时，本机设置使当前页面保持可见。
+
+现有安装和远程连接保留其保存的设置。本机 AI 检测仅呈现可用连接；它会在您选择后检查并激活它。经过验证的现有模型会打开正常的仪表板，而无需替换配置的路线。
+
+自动设置会保留现有的配置模型。否则，它会尝试保存的 OpenClaw 身份验证配置文件、存储的 Codex 登录名、Claude CLI 登录名、`OPENAI_API_KEY`、`ANTHROPIC_API_KEY`，然后在 Ollama、LM Studio 中加载符合条件的模型，或者llama.cpp. 它激活通过实时完成的第一个连接。如果都不起作用，它会安装或启用官方 Codex 插件并使用其登录或要求您使用 ChatGPT 登录。 Apple 基础模型从未被选为主要模型，并且本机 Claude/Codex 对话发现保持关闭状态。
+
+当安装程序重复使用 Codex 时，该卡显示 **使用您现有的 Codex 登录·与 Codex** 共享的会话。 Codex在网关用户的`CODEX_HOME`（或`~/.codex`）中拥有认证和令牌刷新； OpenClaw 不会复制 OAuth 代币。选择 **使用卡上的单独登录名** 登录到隔离的 OpenClaw 座席主页。您还可以通过 **Model Setup** 更改提供商或单独登录。请参阅 [Codex 登录和隔离](/start/onboarding#codex-login-and-isolation)。
+
+对于 CLI/Gateway 设置路径，请使用 [入门指南](/start/getting-started)。 如需恢复权限，请使用 [macOS 权限](/platforms/mac/permissions)。
+
+要添加另一个网关用于仪表板和聊天访问，请打开 **Connection… → 网关 → 添加网关** 并输入其主机名或 HTTPS 地址。 Cloudflare 访问网关允许您在默认浏览器中使用个人帐户登录。您还可以从网关网站上的 **获取应用程序 → 在 Mac 应用程序中打开** 开始。请参阅 [ 浏览器登录 ](/platforms/mac/remote#connect-with-your-browser)。
+
+从菜单栏中选择 **Settings…** 或按 Cmd-， 打开仪表板设置。 **此 Mac** 包含应用程序首选项、本地功能、浏览器登录导入、cookie 同步和权限。设备语音控制显示在 **设置 → 通话 → 这台 Mac** 下，应用程序更新首选项显示在 **设置 → 更新 → 这台 Mac** 下。这些设备控件仅出现在 macOS 应用程序的嵌入式仪表板中，而不出现在普通浏览器中。
+
+**此 Mac → 功能 → 桌面共享** 默认启用。它在 **Systems** 中公开此 Mac 的现有屏幕共享服务，独立于 **计算机 Control** 和 **保持计算机唤醒**。在 **系统设置→常规→共享** 中启用屏幕共享，并在请求时批准节点的桌面功能。更新后，现有的显式禁用设置将保持关闭状态；更改 Mac 设置会自动重新连接节点。请参阅 [ 配对节点桌面](/gateway/config-browser-ui-desktop#paired-node-desktops)。
+
+启用敏感功能会打开本机确认，默认情况下为 **Cancel**。关闭或替换仪表板页面会取消待定同意；从当前页面再次请求更改。
+
+## <a id="connection"></a> 连接
+
+选择 **Connection...** 即使无法访问网关也可以打开小型本机窗口。其 **Connection** 选项卡包含本地网关状态、remote/SSH 选项、Tailscale 和发现； **Gateways** 管理保存的网关配置文件。当启用 **This Mac → Developer** 中的开发人员切换时，会出现 **Debug** 选项卡。相同的切换可在仪表板和小部件面板上下文菜单中启用 **Inspect Element**；更改适用于打开的窗口而无需重新启动。 **About OpenClaw** 在此窗口中选择 **About** 选项卡，其中包含应用程序版本、构建信息和资源链接。 **Copy 构建信息** 复制完整版本、提交和构建时间戳。关于离线工作。
+
+如果应用程序管理的本地网关丢失、过时或损坏，“连接”选项卡将提供 **Install Gateway**、**Update Gateway** 或 **Repair Gateway**。该操作将打开现有的安装提示，显示安装进度，然后检查网关。您可以在取消之前的提示后在此处重试。对于比应用程序更新的不兼容网关，**设置网关**可让您检查设置选择。独立管理的网关保留自己的更新工作流程。
+
+应用程序本地设置（权限、快速聊天、语音、更新）位于仪表板→设置→本机中，并且需要包含这些页面的网关版本。连接选项卡的 **打开仪表板设置** 按钮可打开该仪表板。
+
+## <a id="updates"></a> 更新
+
+打开 **Dashboard → 设置 → 更新 → 此 Mac** 打开或关闭自动应用程序更新，选择 **检查更新…**，然后查看已安装的应用程序版本和版本。该页面解释了更新何时不可用，包括指定应用程序配置文件处于活动状态时。
+
+如果主网关连接拒绝应用程序的协议版本，应用程序将显示更新警报并在其连接状态中保留说明。远程设置和连接检查显示相同的内联指导。该消息命名了应用程序版本和两个协议版本，并告诉您哪一侧需要更新：在较旧的网关主机上运行 `openclaw update`，或从 [ 下载选项 ](#download) 安装较新的 Mac 应用程序。被拒绝的握手可能不会报告网关的发布版本；该应用程序将该信息标记为不可用。仅不同的版本号不会触发此警报。
 
 仪表盘更新卡片会说明应用将更新的内容：
 
-- **更新 Mac 应用 + Gateway** 表示已签名的应用拥有本地的 launchd
-  Gateway。Sparkle 会先更新应用；重新启动后，应用会自动将其 Gateway 更新并重启到匹配的版本，然后验证连接。
+- **更新 Mac 应用 + Gateway** 表示已签名的应用拥有本地的 launchd Gateway。Sparkle 会先更新应用；重新启动后，应用会自动将其 Gateway 更新并重启到匹配的版本，然后验证连接。
 - **更新 Gateway** 表示应用连接的是远程 Gateway、手动管理的本地 Gateway，或应用不拥有的其他安装实例。此按钮会运行该 Gateway 的常规更新流程，而不是更改 Mac 应用。
 
-任一按钮都会先请求确认。只有在你选择**更新 Mac 应用并重新启动**后，卡片才会将更新交给应用处理，因此误点击不会启动
-Sparkle。
+任一按钮都会先请求确认。只有在你选择**更新 Mac 应用并重新启动**后，卡片才会将更新交给应用处理，因此误点击不会启动 Sparkle。
 
-协调更新失败后，应用会停留在设置样式的窗口中，并提供重试、[更新指南](/install/updating)和 Discord 操作。自动修复绝不会将较新的 Gateway
-降级，也不会覆盖 `extended-stable` 通道固定设置。
+协调更新失败后，应用会停留在设置样式的窗口中，并提供重试、[更新指南](/install/updating)和 Discord 操作。自动修复绝不会将较新的 Gateway 降级，也不会覆盖 `extended-stable` 通道固定设置。
 
-成功更新后，应用会找到最近一次由人使用的、顶层的直接会话，并向该代理发送一次性的更新事件。心跳和 cron
-活动不会影响这一选择。然后，代理可以从你最可能正在使用的对话中欢迎你回来。在远程模式下，应用只会更新本地 Mac 节点运行时，并且当远程 Gateway 版本比应用更旧时会跳过通知。
+当更新后收据丢失、过时或不可读时，启用更新的启动启动还会检查应用程序拥有的运行时。当前运行时所有权和版本决定工作；收据保留中断的进度和通知重复数据删除。待处理的欢迎通知等待当前运行时验证。没有应用程序更新收据的相同版本协调不会再次表示欢迎。
 
-Sparkle 遵循 Gateway 的 `update.channel` 设置。`beta` 和 `dev` 会选择加入
-beta 应用构建版本；`extended-stable` 只接受 extended-stable 应用版本，因此在没有匹配的应用版本时会保持静默。`stable`、缺失值和
-未知值会继续使用 stable 应用构建版本。
+旧版 Mac 应用程序的中断更新可能涉及其托管的 CLI 包，而不是当前选择的网关或节点服务。应用程序会在协调所选运行时之前验证所有权并修复该包。保留较新的软件包而不降级它；任何单独需要的服务更新仍会记录其自己的恢复进度。
 
-## 打开仪表盘链接
+成功更新后，该应用程序会找到最近人类使用的顶级直接网络聊天会话，并为该代理提供一次性更新事件。心跳和 cron 活动不会影响此选择。然后，客服人员可以欢迎您从您最有可能使用的对话中回来。在远程模式下，单独安装的、应用程序管理的节点服务保留其自己的运行时更新和恢复流程；当远程网关比应用程序旧时，应用程序会跳过通知。应用程序的私有节点工作线程使用应用程序包本身进行更新。
 
-在 macOS 应用内嵌的仪表盘中，点击外部网页链接会在可调整大小的浏览器侧边栏中打开页面，宽度为窗口的一半，同时保留仪表盘导航可见。拖动分隔线即可选择其他宽度；应用会记住该设置。每个链接都会在自己的标签页中打开；当打开多个页面时，标签栏会显示出来；再次点击同一链接时，会复用其现有标签页。拖动标签页即可重新排序；使用标签页关闭按钮或鼠标中键点击即可关闭标签页；右键单击标签页可选择 **在默认浏览器中打开**、**复制链接**、**重新加载**、**关闭标签页** 和 **关闭其他标签页**。窗口标题栏中的后退/前进控件以及触控板滑动手势可浏览仪表盘历史记录；侧边栏自身的后退/前进控件则用于浏览当前标签页的历史记录。侧边栏还提供重新加载、在默认浏览器中打开和关闭控件。
+Sparkle 遵循 Gateway 的 `update.channel` 设置。`beta` 和 `dev` 会选择加入 beta 应用构建版本；`extended-stable` 只接受 extended-stable 应用版本，因此在没有匹配的应用版本时会保持静默。`stable`、缺失值和未知值会继续使用 stable 应用构建版本。
 
-标题栏控件会随应用侧边栏变化：当侧边栏展开时，后退/前进按钮位于其右侧边缘，紧挨着侧边栏切换按钮；当侧边栏折叠时，它们则为搜索按钮（打开命令面板）和新会话按钮让出位置。
+## <a id="open-dashboard-links"></a> 打开仪表盘链接
 
-右键单击外部链接可选择 **在侧边栏中打开**、**在默认浏览器中打开** 或 **复制链接**。从仪表盘中进行的带修饰键点击，以及用户主动触发的新窗口链接，仍会在默认浏览器中打开；侧边栏内的新窗口链接会作为新的侧边栏标签页打开。普通浏览器承载的 Control UI 页面会保持浏览器默认的链接和上下文菜单行为。
+对于通过 [ 浏览器登录 ](/platforms/mac/remote#connect-with-your-browser) 添加的已保存网关，仪表板使用该配置文件的钥匙串支持的个人会话。您不需要在嵌入式浏览器中再次登录。 **Reconnect** in **Connection… → 网关** 续订过期会话。
 
-## 导入浏览器登录信息
+对于具有身份感知身份验证的远程网关，应用程序会在其登录地址打开仪表板：HTTPS `gateway.publicOrigin`（用于可信代理身份验证），或在启用 Tailscale 身份时打开主动托管的 Tailscale 服务地址。发球不需要 `gateway.publicOrigin`。如果该配置文件没有保存的浏览器会话，请在仪表板窗口内完成登录；然后，您现有的网关配置文件将拥有显示的身份和聊天属性。本机设备连接保留其配置的传输（包括 SSH），并且其凭据不会发送到公共仪表板或登录提供商。没有个人登录路由的共享秘密网关将继续使用共享所有者配置文件。
 
-当应用在本地 Gateway 上运行时，浏览器侧边栏首次打开，如果 Mac 上存在带有 cookie 的 Chrome 系列配置文件，仪表板会显示一个可关闭的横幅。该横幅提供将这些 cookie 复制到一个隔离的受管配置文件中的选项，代理会使用该配置文件进行浏览。通过其 **导入** 控件选择一个配置文件（可能需要 Touch ID）；进度和已导入的 cookie 数量会以内联方式显示，并且只会复制 cookie——密码绝不会离开源浏览器。关闭该横幅会记录该选择；随时可通过 **设置 → 常规 → 浏览器登录 → 导入…** 重新显示。有关底层导入流程和 `browser.allowSystemProfileImport` 开关，请参阅 [Browser](/cli/browser)。
+重新连接后，打开保存的网关配置文件的窗口会遵循登录路由更改。未更改的路线会保留当前仪表板及其导航。
 
-## 选择 Gateway 模式
+仪表板左下角的帐户卡显示您的姓名、当前网关及其主要状态。您姓名下方的单个副标题解释了计划的暂停、重新启动、重新连接和恢复。发件箱计数涵盖该网关未解决的消息，包括需要审核的消息；它不承诺每条消息都会自动发送。打开卡的 **Gateway** 部分以切换网关，按住 Command 键单击或 Control- 单击网关以在另一个窗口中将其打开，或选择 **网关设置…**。 **设为主要…** 当前网关可升级时出现。即使只有一个已保存的网关，这些控件也可用。
 
-| 模式   | 适用场景                                                                       | 详情页面                                           |
+在默认聊天登陆处打开嵌入式仪表板会恢复您访问的最后一个页面，例如该网关源的 **Usage**。显式会话链接和导航请求优先于记住的页面，并且首次运行的模型设置仍会在需要时运行。
+
+在 macOS 应用程序的嵌入式仪表板中，单击外部 Web 链接会将其作为聊天侧面板的 **Browser** 选项卡中的 **Mac 选项卡** 打开。在非聊天路线上，它在 shell 级浏览器停靠栏中打开。当“设置”打开时，外部链接会在默认浏览器中打开，因为“浏览器”面板被隐藏。 WebKit 原生呈现 Mac 选项卡，以及由网关控制的浏览器支持的 **Agent 浏览器选项卡**。仍发送旧版 `inline` 链接请求的旧版 Control UI 捆绑包会打开默认浏览器；当前捆绑包通过本机浏览器桥打开 Mac 选项卡。
+
+使用选项卡条选择或关闭页面，使用 URL 栏进行导航，使用后退、前进、重新加载、停止和 **在默认浏览器中打开** 控件来管理活动的 Mac 选项卡。再次打开同一链接会重用其现有选项卡，包括初始重定向后保留的原始 URL。 Mac 选项卡属于每个窗口，并且在聊天会话切换后仍然存在。 **Annotate** 和 **Inspect** 捕获 Mac 选项卡的一次性快照，以便与代理共享页面上下文。将该选项卡导航到不同的 URL 将放弃捕获并恢复其实时视图。窗口的标题栏 back/forward 控件和触控板滑动导航仪表板历史记录；浏览器面板的控件可导航活动页面。
+
+标题栏控件跟随应用程序侧边栏：展开时，back/forward 位于侧边栏切换旁边的右边缘；当它折叠时，它们为搜索按钮（打开命令面板）和新会话按钮让路。
+
+拖动侧面板选项卡旁边的空白区域以移动窗口。标题的完整高度可用，并且在添加、删除或调整大小时，可拖动空间跟随选项卡。选项卡和标题按钮保持正常的单击和选项卡重新排序行为。
+
+当菜单或悬停卡在仪表板的其他位置打开时，Mac 选项卡保持可见。仅当菜单与其浏览器窗格重叠时，或者当模式对话框或命令选项板打开时，选项卡的页面才会暂时隐藏，并在障碍物清除时返回。
+
+拖动停靠的 OpenClaw 聊天面板中的空白标题空间或标题以移动应用程序窗口。它的停靠位置和关闭按钮仍然可点击。
+
+右键单击仪表板中的外部链接以选择 **在浏览器面板中打开**、**在默认浏览器中打开** 或 **复制链接**。修改后的点击仍然打开默认浏览器。 Mac 选项卡内的新窗口链接可打开另一个 Mac 选项卡；指针激活的下载将交给默认浏览器。响应 WebKit 仅针对指针激活的主机导航无法显示切换；其他不可显示的响应将被默默取消。常规浏览器托管的 Control UI 页面将保持其正常链接和上下文菜单行为，除非您启用浏览器面板链接首选项。
+
+## <a id="import-browser-logins"></a> 导入浏览器登录信息
+
+选择**导入浏览器登录信息** in **仪表板 → 设置 → 本机 → 浏览器**发现Chrome-家庭资料并打开导入横幅。在您请求此功能之前，首次启动、自动设置和被动仪表板刷新不会检查其他应用程序的浏览器数据。macOS发现开始时可能会要求访问。从横幅中选择一个配置文件**进口**控制（触摸ID可能需要）；进度和导入的 cookie 计数内联显示，并且只有 cookie 被复制到隔离的托管配置文件中 - 密码永远不会离开源浏览器。解除横幅记录了选择；相同的设置操作可以重新打开它。看[浏览器](/cli/browser)对于基础进口流量和`browser.allowSystemProfileImport`门。
+
+退出本地模式会隐藏导入横幅并放弃待处理状态或横幅结果。已发送到本地网关的导入可能仍会在那里完成；切换模式不会撤消复制的 cookie。返回本地模式后，您可以从 **设置 → 本机 → 浏览器** 请求新报价。
+
+## <a id="sync-cookies-to-a-remote-computer"></a> 将 cookie 同步到远程计算机
+
+将 cookie 副本一次导入到同一台 Mac 上的配置文件中。当您的网关和代理浏览器运行在**单独的电脑**（一个专用盒子，一个无头Linux主机或云容器），打开 cookie 同步，以便此 Mac 保持远程浏览器登录到您选择的站点。
+
+打开 **仪表板 → 设置 → 本机 → 浏览器**。默认情况下，Cookie 同步为 **off**，并且仅在本 Mac 上使用外部 CLI 的远程模式下可用。打开 cookie 同步，将您想要保持同步的站点添加到 **Domains** 白名单（例如 `github.com` 和 `accounts.google.com`），然后设置接收它们的 **Target 配置文件**（远程网关上的托管配置文件名称，默认为 `imported`）。状态行显示同步是否正在运行。
+
+如果待处理的添加会恢复在另一个仪表板窗口中删除的域，则会将其丢弃。查看更新的列表并再次添加所需的域。
+
+启用后，该应用程序会针对连接的网关监督 [`openclaw browser cookie-sync --watch`](/cli/browser#cookie-sync-to-a-remote-gateway) 命令。 Cookie 在此 Mac 上本地解密（每个会话一个 macOS 钥匙串或触摸 ID 提示），并通过应用程序现有的加密网关连接推送到远程配置文件；仅发送允许列表中的域，并且 cookie 值永远不会写入日志。空的允许列表不会同步任何内容。与导入一样，某些 Google 会话使用与此 Mac 保持关联的设备绑定会话凭据 （DBSC），并且在同步后可能仍需要重新身份验证；对于这些站点，请通过 [ 浏览器节点代理 ](/cli/browser#remote-browser-control-node-host-proxy) 驱动 Mac 本身上的浏览器。
+
+## <a id="choose-a-gateway-mode"></a> 选择 Gateway 模式
+
+| 模式   | 适用场景                                                                    | 详情页面                                        |
 | ------ | ------------------------------------------------------------------------------ | -------------------------------------------------- |
-| 本地   | 这台 Mac 应运行 Gateway，并由 launchd 保持其持续运行。                         | [macOS 上的 Gateway](/platforms/mac/bundled-gateway) |
-| 远程   | 另一台主机运行 Gateway；这台 Mac 通过 SSH、LAN 或 Tailnet 对其进行控制。      | [远程控制](/platforms/mac/remote)                  |
+| 本地  | 这台 Mac 应该运行网关并通过 launchd 保持其活动状态。                | [macOS 上的网关](/platforms/mac/bundled-gateway) |
+| 远程 | 另一台主机运行 Gateway；这台 Mac 通过 SSH、LAN 或 Tailnet 对其进行控制。 | [远程控制](/platforms/mac/remote)            |
 
-两种模式都需要已安装 `openclaw` CLI，因为应用会复用其 node-host
-运行时。在全新的 Mac 上，应用会自动安装匹配的 CLI；本地
-模式随后会启动 Gateway 向导，而远程模式会连接到所选的
-Gateway，而不会再启动第二个本地 Gateway。
-有关手动恢复，请参见 [macOS 上的 Gateway](/platforms/mac/bundled-gateway)。
+应用程序的 Mac 节点在两种模式下都使用其捆绑的私有运行时。仅应用程序拥有的本地网关的设置和管理需要单独安装 CLI。远程模式和连接到独立管理的本地网关会跳过该安装。可选的 cookie 同步仍然需要此 Mac 上的外部 CLI，并且现有的单独节点服务保留其自己的 CLI 生命周期。请参阅 macOS](/platforms/mac/bundled-gateway) 上的 [Gateway 以进行手动恢复。
 
-## 应用程序拥有的内容
+## <a id="what-the-app-owns"></a> 应用程序拥有的内容
+
+本机代码拥有设备本地功能和连接窗口；仪表板拥有所有设置 UI。设备首选项保留在这台 Mac 上，而嵌入式仪表板要求应用程序读取或更改它们并打开本机权限、快捷方式、麦克风测试或浏览器导入面板。
 
 - 菜单栏状态、通知、健康状态、WebChat 以及浮动的 Quick Chat 栏。
 - macOS 针对屏幕、麦克风、语音、自动化和辅助功能的权限提示。
-- 一个 Mac 节点，将原生 Canvas、摄像头/屏幕捕获、通知、位置和电脑控制，与 CLI 节点主机的系统、浏览器、插件、技能和 MCP 命令相结合。
+- One Mac 节点，将本机小部件面板、camera/screen 捕获、通知、位置和计算机控制与 CLI 节点主机的系统、浏览器、插件、技能和 MCP 命令相结合。
 - Mac 主机命令的执行批准提示。
 - 经批准的 Shell 命令的应用上下文执行，同时保留应用的 macOS 权限归属，并由 CLI 运行时负责共享节点策略。
 - 远程模式下的 SSH 隧道或直接 Gateway 连接。
 
-在嵌入式控制界面中，**设置 → 通知**显示的是应用的原生通知权限，而不是浏览器推送权限，因为应用会以原生方式发送通知。
+对于本机 `system.run`，该应用程序通过其首选工具文件夹（包括 Homebrew 和 `~/.local/bin`）增强了其继承的 `PATH`，无论它是从 Finder、Dock 还是登录启动打开。它会在首次使用时发现这些文件夹，并重新使用它们进行批准和执行，而无需加载 shell 启动文件。更改工具安装文件夹后重新启动应用程序；将工具安装到已列出的文件夹中不需要重新启动。请求级别 `PATH` 覆盖仍然被阻止。 CLI 和单独管理的节点服务保留自己的环境配置。
+
+在嵌入的 Control UI 中，**Dashboard → 设置 → 通知** 显示应用程序的本机通知权限，而不是浏览器推送，因为应用程序本身会发送通知。
 
 应用**不会**取代 Gateway 或通用 CLI 文档。Gateway 配置、提供商、插件、频道、工具和安全性都有各自的文档。
 
-## macOS 详细页面
+## <a id="macos-detail-pages"></a> macOS 详细页面
 
 | 任务                                     | 阅读                                                                                        |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 安装或调试 CLI／Gateway 服务             | [Gateway on macOS](/platforms/mac/bundled-gateway)                                          |
-| 避免将状态存储在云同步文件夹中           | [Gateway on macOS](/platforms/mac/bundled-gateway#state-directory-on-macos)                 |
-| 调试应用发现和连接                       | [Gateway on macOS](/platforms/mac/bundled-gateway#debug-app-connectivity)                   |
-| 了解 launchd 行为                        | [Gateway on macOS](/platforms/mac/bundled-gateway)                                          |
-| 修复权限或签名／TCC 问题                 | [macOS permissions](/platforms/mac/permissions)                                             |
-| 检测你最近使用的 Mac                     | [Active computer presence](/nodes/presence)                                                 |
-| 连接到远程 Gateway                       | [Remote control](/platforms/mac/remote)                                                     |
-| 读取菜单栏状态和健康检查                 | [Menu bar](/platforms/mac/menu-bar)、[Health checks](/platforms/mac/health)                 |
-| 使用内嵌聊天 UI                          | [WebChat](/platforms/mac/webchat)                                                           |
-| 使用语音唤醒或按键通话                   | [Voice wake](/platforms/mac/voicewake)                                                      |
-| 使用 Canvas 和 Canvas 深层链接            | [Canvas](/platforms/mac/canvas)                                                             |
-| 为 UI 自动化托管 PeekabooBridge           | [Peekaboo bridge](/platforms/mac/peekaboo)                                                  |
-| 配置命令审批                             | [Exec approvals](/tools/exec-approvals)、[advanced details](/tools/exec-approvals-advanced) |
-| 检查 Mac 节点命令和应用 IPC              | [macOS IPC](/platforms/mac/xpc)                                                             |
-| 捕获日志                                 | [macOS logging](/platforms/mac/logging)                                                     |
-| 从源代码构建                             | [macOS dev setup](/platforms/mac/dev-setup)                                                 |
+| 安装或调试CLI/Gateway服务 | [macOS 上的网关](/platforms/mac/bundled-gateway)                                          |
+| 避免将状态存储在云同步文件夹中   | [macOS 上的网关](/platforms/mac/bundled-gateway#state-directory-on-macos)                 |
+| 调试应用发现和连接     | [macOS 上的网关](/platforms/mac/bundled-gateway#debug-app-connectivity)                   |
+| 了解 launchd 行为              | [macOS 上的网关](/platforms/mac/bundled-gateway)                                          |
+| 修复权限或 signing/TCC 问题    | [macOS 权限](/platforms/mac/permissions)                                             |
+| 检测你最近使用的 Mac    | [活跃计算机状态](/nodes/presence)                                                 |
+| 连接到远程 Gateway              | [远程控制](/platforms/mac/remote)                                                     |
+| 读取菜单栏状态和健康检查   | [菜单栏](/platforms/mac/menu-bar)、[健康检查](/platforms/mac/health)                 |
+| 使用内嵌聊天 UI                 | [WebChat](/platforms/mac/webchat)                                                           |
+| 使用语音唤醒或按键通话           | [语音唤醒](/platforms/mac/voicewake)                                                      |
+| 在 Mac 面板中显示托管小部件  | [小部件面板](/platforms/mac/canvas)                                                       |
+| 为 UI 自动化托管 PeekabooBridge    | [躲猫桥](/platforms/mac/peekaboo)                                                  |
+| 配置命令审批              | [执行批准](/tools/exec-approvals)、[高级详细信息](/tools/exec-approvals-advanced) |
+| 检查 Mac 节点命令和应用 IPC    | [macOS IPC](/platforms/mac/xpc)                                                             |
+| 捕获日志                             | [macOS 日志记录](/platforms/mac/logging)                                                     |
+| 从源代码构建                        | [macOS 开发设置](/platforms/mac/dev-setup)                                                 |
+| 从应用程序浏览并安装技能   | [macOS 应用程序中的技能](/platforms/mac/skills)                                            |
 
-## 相关内容
+## <a id="related"></a> 相关内容
 
 - [平台](/platforms)
-- [入门指南](/start/getting-started)
+- [入门](/start/getting-started)
+- [Onboarding](/start/onboarding) - macOS 应用程序的首次运行流程：网关运行、运行时安装和连接提供程序的位置
 - [网关](/gateway)
-- [执行审批](/tools/exec-approvals)
+- [执行批准](/tools/exec-approvals)

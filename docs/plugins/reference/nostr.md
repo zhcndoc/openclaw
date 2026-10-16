@@ -1,22 +1,25 @@
 ---
 summary: "OpenClaw Nostr 频道插件，用于 NIP-04 加密直接消息。"
 read_when:
-  - 你正在安装、配置或审计 nostr 插件
-title: "Nostr 插件"
+  - You are installing, configuring, or auditing the nostr plugin
+title: "Nostr plugin reference"
 ---
 
-# Nostr 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw Nostr 频道插件，用于 NIP-04 加密直接消息。
 
 ## 分发
 
-- 包：`@openclaw/nostr`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/nostr`
+- Install route: npm or ClawHub: `clawhub:@openclaw/nostr`
 
 ## 表面
 
-channels: `nostr`
+- Channels: `nostr`
 
 ## 相关文档
 

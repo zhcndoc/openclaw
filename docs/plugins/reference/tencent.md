@@ -1,22 +1,25 @@
 ---
 summary: "为 OpenClaw 添加 Tencent TokenHub、Tencent Tokenplan 模型提供商支持。"
 read_when:
-  - 你正在安装、配置或审计 tencent 插件
-title: "Tencent 插件"
+  - You are installing, configuring, or auditing the tencent plugin
+title: "Tencent plugin reference"
 ---
 
-# Tencent 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 Tencent TokenHub、Tencent Tokenplan 模型提供商支持。
 
 ## 分发
 
 - Package: `@openclaw/tencent-provider`
-- Install route: npm; ClawHub: `clawhub:@openclaw/tencent-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/tencent-provider`
 
 ## 接口
 
-providers: `tencent-tokenhub`, `tencent-tokenplan`
+- Providers: `tencent-tokenhub`, `tencent-tokenplan`
 
 ## 相关文档
 

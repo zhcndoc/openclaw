@@ -1,48 +1,49 @@
 ---
-summary: "OpenClaw 文档的集中入口"
+summary: "链接主要 OpenClaw 文档的集线器"
 read_when:
-  - 你想要一份完整的文档地图
+  - "你想要一份完整的文档地图"
 title: "文档中心"
 ---
 
 <Note>
-如果你是 OpenClaw 的新用户，请从 [快速开始](/start/getting-started) 开始。
+如果您是 OpenClaw 的新手，请从 [ 获取 Started](/start/getting-started) 开始。
 </Note>
 
-使用这些中心来发现每一页内容，包括左侧导航中没有出现的深入说明和参考文档。
+使用这些中心可以发现更多文档，包括左侧导航中未出现的深入研究和参考文档。
 
-## 从这里开始
+## <a id="start-here"></a> 从这里开始
 
 - [索引](/)
-- [快速开始](/start/getting-started)
+- [获取Started](/start/getting-started)
 - [入门引导](/start/onboarding)
-- [入门引导（CLI）](/start/wizard)
+- [入门引导 （CLI）](/start/wizard)
 - [设置](/start/setup)
-- [仪表盘（本地 Gateway）](http://127.0.0.1:18789/)
+- [Dashboard](/web/dashboard) - 在网关主机上，它在 `http://127.0.0.1:18789/` 打开
 - [帮助](/help)
 - [文档目录](/start/docs-directory)
 - [配置](/gateway/configuration)
 - [配置示例](/gateway/configuration-examples)
 - [OpenClaw 助手](/start/openclaw)
-- [展示](/start/showcase)
 - [传说](/start/lore)
 
-## 安装 + 更新
+## <a id="installation-%2B-updates"></a><a id="installation-+-updates"></a> 安装 + 更新
 
+- [安装概览](/install)
+- [安装器内部](/install/installer)
 - [Docker](/install/docker)
 - [Nix](/install/nix)
 - [更新 / 回滚](/install/updating)
-- [Bun 工作流（实验性）](/install/bun)
+- [包子工作流程](/install/bun)
 
-## 核心概念
+## <a id="core-concepts"></a> 核心概念
 
 - [架构](/concepts/architecture)
 - [功能](/concepts/features)
 - [网络中心](/network)
 - [代理运行时](/concepts/agent)
-- [代理工作区](/concepts/agent-workspace)
+- [Agent 工作区](/concepts/agent-workspace)
 - [记忆](/concepts/memory)
-- [代理循环](/concepts/agent-loop)
+- [代理回路](/concepts/agent-loop)
 - [流式传输 + 分块](/concepts/streaming)
 - [多代理路由](/concepts/multi-agent)
 - [压缩](/concepts/compaction)
@@ -54,58 +55,57 @@ title: "文档中心"
 - [RPC 适配器](/reference/rpc)
 - [TypeBox 模式](/concepts/typebox)
 - [时区处理](/concepts/timezone)
-- [存在状态](/concepts/presence)
+- [存在](/concepts/presence)
 - [发现 + 传输](/gateway/discovery)
-- [Bonjour](/gateway/bonjour)
-- [通道路由](/channels/channel-routing)
+- [卓悦](/gateway/bonjour)
+- [频道路由](/channels/channel-routing)
 - [群组](/channels/groups)
 - [群组消息](/channels/group-messages)
 - [模型故障转移](/concepts/model-failover)
-- [OAuth](/concepts/oauth)。
+- [OAuth](/concepts/oauth)
 
-## 提供者 + 接入
+## <a id="providers-%2B-ingress"></a><a id="providers-+-ingress"></a> 提供者 + 接入
 
 - [聊天频道中心](/channels)
-- [模型提供商中心](/providers/models)
+- [模型提供商中心](/providers)
 - [Discord](/channels/discord)
-- [iMessage](/channels/imessage)
+- [i消息](/channels/imessage)
 - [Mattermost](/channels/mattermost)
-- [QQ 机器人](/channels/qqbot)
-- [Signal](/channels/signal)
+- [QQ Bot](/channels/qqbot)
+- [信号](/channels/signal)
 - [Slack](/channels/slack)
-- [Telegram](/channels/telegram)
+- [电报](/channels/telegram)
 - [WebChat](/web/webchat)
 - [WhatsApp](/channels/whatsapp)
 - [位置解析](/channels/location)
 - [Webhooks](/automation/cron-jobs#webhooks)
-- [Gmail Pub/Sub](/automation/cron-jobs#gmail-pub-sub-integration)
+- [Gmail Pub/Sub](/automation/cron-jobs#gmail-pubsub-integration)
 
-## Gateway + 运维
+## <a id="gateway-%2B-operations"></a><a id="gateway-+-operations"></a> Gateway + 运维
 
 - [Gateway 运行手册](/gateway)
 - [网络模型](/network#core-model)
-- [Gateway 配对](/gateway/pairing)
+- [网关配对](/gateway/pairing)
 - [Gateway 锁](/gateway/gateway-lock)
 - [后台进程](/gateway/background-process)
 - [健康状态](/gateway/health)
 - [心跳](/gateway/heartbeat)
-- [Doctor](/gateway/doctor)
+- [诊断工具](/gateway/doctor)
 - [日志记录](/gateway/logging)
 - [沙箱化](/gateway/sandboxing)
 - [仪表盘](/web/dashboard)
-- [控制界面](/web/control-ui)
+- [控制 UI](/web/control-ui)
 - [远程访问](/gateway/remote)
-- [远程 gateway 说明](/gateway/remote-gateway-readme)
-- [Tailscale](/gateway/tailscale)
-- [安全性](/gateway/security)
-- [故障排除](/gateway/troubleshooting)
+- [macOS SSH 隧道](/gateway/remote#macos-persistent-ssh-tunnel-via-launchagent)
+- [尾盘](/gateway/tailscale)
+- [安全](/gateway/security)
+- [故障排查](/gateway/troubleshooting)
 
-## 工具 + 自动化
+## <a id="tools-%2B-automation"></a><a id="tools-+-automation"></a> 工具 + 自动化
 
 - [工具入口](/tools)
-- [OpenProse](/prose)
 - [CLI 参考](/cli)
-- [执行工具](/tools/exec)
+- [Exec 工具](/tools/exec)
 - [PDF 工具](/tools/pdf)
 - [提升模式](/tools/elevated)
 - [定时任务](/automation/cron-jobs)
@@ -119,7 +119,7 @@ title: "文档中心"
 - [浏览器（Linux 故障排查）](/tools/browser-linux-troubleshooting)
 - [投票](/cli/message)
 
-## 节点、媒体、语音
+## <a id="nodes%2C-media%2C-voice"></a><a id="nodes-media-voice"></a> 节点、媒体、语音
 
 - [节点概览](/nodes)
 - [相机](/nodes/camera)
@@ -129,7 +129,7 @@ title: "文档中心"
 - [语音唤醒](/nodes/voicewake)
 - [对话模式](/nodes/talk)
 
-## 平台
+## <a id="platforms"></a> 平台
 
 - [平台概览](/platforms)
 - [macOS](/platforms/macos)
@@ -139,14 +139,14 @@ title: "文档中心"
 - [Linux](/platforms/linux)
 - [Web 界面](/web)
 
-## macOS 配套应用（高级）
+## <a id="macos-companion-app-(advanced)"></a><a id="macos-companion-app-advanced"></a> macOS 配套应用（高级）
 
 - [macOS 开发设置](/platforms/mac/dev-setup)
 - [macOS 菜单栏](/platforms/mac/menu-bar)
 - [macOS 语音唤醒](/platforms/mac/voicewake)
 - [macOS 语音覆盖层](/platforms/mac/voice-overlay)
 - [macOS WebChat](/platforms/mac/webchat)
-- [macOS Canvas](/platforms/mac/canvas)
+- [macOS 小部件面板](/platforms/mac/canvas)
 - [macOS 网关（launchd）](/platforms/mac/bundled-gateway)
 - [macOS 健康状态](/platforms/mac/health)
 - [macOS 图标](/platforms/mac/icon)
@@ -158,7 +158,7 @@ title: "文档中心"
 - [macOS 技能](/platforms/mac/skills)
 - [macOS Peekaboo](/platforms/mac/peekaboo)
 
-## 插件
+## <a id="plugins"></a> 插件
 
 - [插件概览](/tools/plugin)
 - [构建插件](/plugins/building-plugins)
@@ -167,11 +167,11 @@ title: "文档中心"
 - [代理工具](/plugins/building-plugins#registering-agent-tools)
 - [插件包](/plugins/bundles)
 - [ClawHub](/clawhub)
-- [能力食谱](/tools/capability-cookbook)
+- [添加功能](/plugins/adding-capabilities)
 - [语音通话插件](/plugins/voice-call)
 - [Zalo 用户插件](/plugins/zalouser)
 
-## 工作区 + 模板
+## <a id="workspace-%2B-templates"></a><a id="workspace-+-templates"></a> 工作区 + 模板
 
 - [技能](/tools/skills)
 - [ClawHub](/clawhub)
@@ -185,16 +185,16 @@ title: "文档中心"
 - [模板：AGENTS](/reference/templates/AGENTS)
 - [模板：USER](/reference/templates/USER)
 
-## 项目
+## <a id="project"></a> 项目
 
 - [致谢](/reference/credits)
 
-## 测试 + 发布
+## <a id="testing-%2B-release"></a><a id="testing-+-release"></a> 测试 + 发布
 
 - [测试](/reference/test)
 - [发布策略](/reference/RELEASING)
 - [设备模型](/reference/device-models)
 
-## 相关
+## <a id="related"></a> 相关内容
 
-- [快速开始](/start/getting-started)
+- [入门](/start/getting-started)

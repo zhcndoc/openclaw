@@ -1,22 +1,25 @@
 ---
 summary: "用于空间和直接消息的 OpenClaw Google Chat 频道插件。"
 read_when:
-  - 你正在安装、配置或审计 googlechat 插件
-title: "Google Chat 插件"
+  - You are installing, configuring, or auditing the googlechat plugin
+title: "Google Chat plugin reference"
 ---
 
-# Google Chat 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于空间和直接消息的 OpenClaw Google Chat 频道插件。
 
 ## 分发
 
-- 包：`@openclaw/googlechat`
-- 安装方式：npm；ClawHub
+- Package: `@openclaw/googlechat`
+- Install route: npm or ClawHub: `clawhub:@openclaw/googlechat`
 
 ## 界面
 
-channels: `googlechat`
+- Channels: `googlechat`
 
 ## 相关文档
 

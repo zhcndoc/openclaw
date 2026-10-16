@@ -1,22 +1,25 @@
 ---
 summary: "OpenClaw Featherless AI provider plugin."
 read_when:
-  - 你正在安装、配置或审计 featherless 插件
-title: "Featherless 插件"
+  - You are installing, configuring, or auditing the featherless plugin
+title: "Featherless plugin reference"
 ---
 
-# Featherless 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw Featherless AI provider plugin.
 
 ## 分发
 
-- 包：`@openclaw/featherless-provider`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/featherless-provider`
+- Package: `@openclaw/featherless-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/featherless-provider`
 
 ## 表面
 
-providers: `featherless`
+- Providers: `featherless`
 
 ## 相关文档
 

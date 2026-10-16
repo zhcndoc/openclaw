@@ -1,22 +1,27 @@
 ---
 summary: "用于 WhatsApp Web 聊天的 OpenClaw WhatsApp 频道插件。"
 read_when:
-  - 你正在安装、配置或审计 whatsapp 插件
-title: "WhatsApp 插件"
+  - You are installing, configuring, or auditing the whatsapp plugin
+title: "WhatsApp plugin reference"
 ---
 
-# WhatsApp 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于 WhatsApp Web 聊天的 OpenClaw WhatsApp 频道插件。
 
 ## 分发
 
-- 包：`@openclaw/whatsapp`
-- 安装方式：ClawHub: `clawhub:@openclaw/whatsapp`; npm
+- Package: `@openclaw/whatsapp`
+- Install route: npm or ClawHub: `clawhub:@openclaw/whatsapp`
 
 ## 接入层
 
-channels: `whatsapp`; contracts: `tools`; skills
+- Channels: `whatsapp`
+- Contracts: `tools`
+- Skills
 
 ## 相关文档
 

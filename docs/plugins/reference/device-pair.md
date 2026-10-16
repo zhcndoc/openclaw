@@ -1,11 +1,14 @@
 ---
 summary: "生成设置代码并批准设备配对请求。"
 read_when:
-  - "安装、配置或审计 Device Pair plugin 时"
-title: "Device Pair plugin"
+  - You are installing, configuring, or auditing the device-pair plugin
+title: "Device Pair plugin reference"
 ---
 
-# Device Pair plugin
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 生成设置代码并批准设备配对请求。
 
@@ -16,4 +19,4 @@ title: "Device Pair plugin"
 
 ## Surface
 
-命令：`/pair`
+- Slash commands: `/pair`

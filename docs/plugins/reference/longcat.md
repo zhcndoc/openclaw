@@ -1,22 +1,25 @@
 ---
 summary: "OpenClaw LongCat 提供程序插件。"
 read_when:
-  - 你正在安装、配置或审核 longcat 插件
-title: "LongCat 插件"
+  - You are installing, configuring, or auditing the longcat plugin
+title: "LongCat plugin reference"
 ---
 
-# LongCat 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 OpenClaw LongCat 提供程序插件。
 
 ## 分发
 
-- 包：`@openclaw/longcat-provider`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/longcat-provider`
+- Package: `@openclaw/longcat-provider`
+- Install route: npm or ClawHub: `clawhub:@openclaw/longcat-provider`
 
 ## 表面
 
-providers: `longcat`
+- Providers: `longcat`
 
 ## 相关文档
 

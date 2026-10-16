@@ -1,11 +1,14 @@
 ---
 summary: "适用于 OpenClaw 的持久化 wiki 编译器和 Obsidian 友好的知识库。"
 read_when:
-  - 你正在安装、配置或审计 memory-wiki 插件
-title: "Memory Wiki 插件"
+  - You are installing, configuring, or auditing the memory-wiki plugin
+title: "Memory Wiki plugin reference"
 ---
 
-# Memory Wiki 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 适用于 OpenClaw 的持久化 wiki 编译器和 Obsidian 友好的知识库。
 
@@ -16,7 +19,9 @@ title: "Memory Wiki 插件"
 
 ## 表面
 
-contracts: `tools`; skills
+- CLI commands: `openclaw wiki`
+- Contracts: `tools`
+- Skills
 
 ## 相关文档
 

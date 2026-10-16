@@ -1,11 +1,14 @@
 ---
 summary: "为 OpenClaw 添加 ClawRouter 模型提供商支持。"
 read_when:
-  - 你正在安装、配置或审计 clawrouter 插件
-title: "ClawRouter 插件"
+  - You are installing, configuring, or auditing the clawrouter plugin
+title: "ClawRouter plugin reference"
 ---
 
-# ClawRouter 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 为 OpenClaw 添加 ClawRouter 模型提供商支持。
 
@@ -16,7 +19,8 @@ title: "ClawRouter 插件"
 
 ## Surface
 
-providers: `clawrouter`; contracts: `usageProviders`
+- Providers: `clawrouter`
+- Contracts: `usageProviders`
 
 ## 相关文档
 

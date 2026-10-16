@@ -1,19 +1,22 @@
 ---
 summary: "用于运行时指标的 OpenClaw diagnostics Prometheus 导出器。"
 read_when:
-  - 你正在安装、配置或审计 diagnostics-prometheus 插件
-title: "Diagnostics Prometheus 插件"
+  - You are installing, configuring, or auditing the diagnostics-prometheus plugin
+title: "Diagnostics Prometheus plugin reference"
 ---
 
-# Diagnostics Prometheus 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 用于运行时指标的 OpenClaw diagnostics Prometheus 导出器。
 
 ## 分发
 
-- 包：`@openclaw/diagnostics-prometheus`
-- 安装方式：npm；ClawHub：`clawhub:@openclaw/diagnostics-prometheus`
+- Package: `@openclaw/diagnostics-prometheus`
+- Install route: npm or ClawHub: `clawhub:@openclaw/diagnostics-prometheus`
 
 ## 表面
 
-plugin
+This plugin declares no channels, providers, commands, or contracts.

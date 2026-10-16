@@ -1,11 +1,14 @@
 ---
 summary: "Anthropic 模型、Claude CLI 和原生 Claude 会话目录。"
 read_when:
-  - 你正在安装、配置或审计 anthropic 插件
-title: "Anthropic 插件"
+  - You are installing, configuring, or auditing the anthropic plugin
+title: "Anthropic plugin reference"
 ---
 
-# Anthropic 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 Anthropic 模型、Claude CLI 和原生 Claude 会话目录。
 
@@ -16,7 +19,8 @@ Anthropic 模型、Claude CLI 和原生 Claude 会话目录。
 
 ## 接口
 
-providers: `anthropic`; contracts: `mediaUnderstandingProviders`, `usageProviders`
+- Providers: `anthropic`
+- Contracts: `mediaUnderstandingProviders`, `usageProviders`
 
 <!-- openclaw-plugin-reference:manual-start -->
 

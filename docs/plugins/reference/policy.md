@@ -1,11 +1,14 @@
 ---
 summary: "添加基于策略的 doctor 检查，用于工作区一致性。"
 read_when:
-  - 当你正在安装、配置或审计 policy 插件时
-title: "Policy 插件"
+  - You are installing, configuring, or auditing the policy plugin
+title: "Policy plugin reference"
 ---
 
-# Policy 插件
+<!-- Generated file. Do not edit by hand.
+Run `pnpm plugins:inventory:gen` to rebuild it. Hand-written text survives only
+between the openclaw-plugin-reference:manual-start and
+openclaw-plugin-reference:manual-end comment markers. -->
 
 添加基于策略的 doctor 检查，用于工作区一致性。
 
@@ -16,7 +19,7 @@ title: "Policy 插件"
 
 ## 表面
 
-plugin
+- CLI commands: `openclaw policy`
 
 ## 行为
 
@@ -26,7 +29,14 @@ Policy 将编写的需求存储在 `policy.jsonc` 中，将现有 OpenClaw 设�
 
 `openclaw policy compare --baseline <file>` 将一个 policy 文件与另一个 policy 文件进行比较。它只做配置级一致性检查：使用 policy 规则元数据来验证被检查的 policy 没有缺失，也没有比编写的基线更弱，并且不会检查运行时状态、凭据或密钥值。
 
-工具姿态规则可以要求已批准的配置文件、仅限工作区的文件系统工具、受限制的 exec security/ask/host 设置、禁用提升模式、精确的 `alsoAllow` 条目，以及必需的工具拒绝条目。证据会记录累加式的 `alsoAllow` 条目，因为它们可能扩大有效的工具姿态。这些检查只观察配置一致性；它们不会读取运行时批准状态，也不会增加运行时强制执行。
+`openclaw policy check`, `watch`, and workspace-relative `compare` accept
+`--agent <id>`. Explicit multi-agent fleets must select the workspace owner;
+the plugin does not infer one from roster order.
+
+`openclaw policy compare --baseline <file>` compares one policy file to another
+policy file. It is config-level conformance only: it uses policy rule metadata
+to verify that the checked policy is not missing or weaker than the authored
+baseline, and it does not inspect runtime state, credentials, or secret values.
 
 沙箱姿态规则可以要求已批准的沙箱模式/后端、禁止宿主容器网络、禁止容器命名空间加入、要求容器挂载为只读、禁止容器运行时 socket 挂载和未受限的容器配置文件，并要求沙箱浏览器 CDP 源范围。这些检查只观察配置一致性；它们不会读取运行时批准状态，不会检查正在运行的容器，也不会增加运行时强制执行。
 
