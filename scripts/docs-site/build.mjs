@@ -1,0 +1,1055 @@
+#!/usr/bin/env node
+import fs from "node:fs";
+import { latestReleaseAnnouncement, releaseVersionHtml, releaseBadgeHtml } from "./release-announcement.mjs";
+import { homeLayoutHtml } from "./home-layout.mjs";
+import { homeStringsForLocale } from "./home-strings.mjs";
+import { homeHeroArt } from "./home-hero.mjs";
+import { docsQuickNav } from "./docs-navigation.mjs";
+import path from "node:path";
+import { glimmAssetName, glimmEntry, glimmRuntime } from "./glimm-runtime.mjs";
+import { createHash } from "node:crypto";
+import { parseArgs } from "node:util";
+import { resolvePreviewPaths, preparePreviewOutput } from "./preview-paths.mjs";
+
+import { stripMdxForLlms, firstHeading, titleize, textFromHtml, fileSlug, normalizeSlug } from "./document-text.mjs";
+import { ignoredDocDirs, ignoredDocFiles, localeFlags, localeLabels, navigationLocaleToDir, rtlLocales } from "./config.mjs";
+import { walkDocs } from "./document-files.mjs";
+import { siteCss } from "./site-css.mjs";
+import { siteJs } from "./site-js.mjs";
+import { webVitalsAssetName, webVitalsRuntime } from "./web-vitals-runtime.mjs";
+import { chromeStringsForLocale } from "./chrome-strings.mjs";
+import { createMarkdownRenderer, renderMdxish, copyControlContent } from "./mdx-ish.mjs";
+import { createRenderCache } from "./render-cache.mjs";
+import { editSourceUrlForPage, frontmatterSourcePath, readSourceMetadata } from "./edit-source.mjs";
+import { elementsFixture } from "./elements-fixture.mjs";
+import { parseFrontmatter } from "../../.openclaw-sync/lib/docs-markdown.mjs";
+import { renderPageOgCards, renderOgPng } from "./og-cards.mjs";
+import { renderDefaultOgSvg } from "./og-card-template.mjs";
+import { activeTabTitle, groupForPage, flattenNavEntries, flattenNav } from "./navigation.mjs";
+import { resolveRedirects } from "../../.openclaw-sync/lib/docs-redirects.mjs";
+
+const root = process.cwd();
+const { values: cli } = parseArgs({
+  options: {
+    page: { type: "string", multiple: true, default: [] },
+    "source-root": { type: "string" },
+    "output-dir": { type: "string" },
+  },
+});
+const requestedPages = cli.page;
+const { sourceRoot, outDir, customOutput } = resolvePreviewPaths(root, cli);
+const docsDir = path.join(sourceRoot, "docs");
+const siteAssetsDir = path.join(root, "scripts", "docs-site");
+const shellPublicAssetsDir = path.join(siteAssetsDir, "assets");
+const redirectMetadataPath = path.join(root, "dist", "docs-markdown-redirects.json");
+const config = JSON.parse(fs.readFileSync(path.join(docsDir, "docs.json"), "utf8"));
+const sourceMetadata = readSourceMetadata(sourceRoot);
+const md = createMarkdownRenderer();
+const renderArticle = (markdown, options) => renderMdxish(markdown, md, options);
+const basePath = normalizeBasePath(process.env.DOCS_SITE_BASE_PATH ?? "");
+const legacyBasePath = normalizeBasePath(process.env.DOCS_SITE_LEGACY_BASE_PATH ?? "/docs");
+const canonicalOrigin = (process.env.DOCS_SITE_CANONICAL_ORIGIN
+  ?? (process.env.DOCS_SITE_CNAME ? `https://${process.env.DOCS_SITE_CNAME}` : "https://docs.openclaw.ai"))
+  .replace(/\/$/, "");
+const feedbackIssueRepository = normalizeRepository(process.env.DOCS_FEEDBACK_ISSUE_REPO ?? "openclaw/openclaw");
+const llmsFullAvailable = process.env.DOCS_SITE_LLMS_FULL_AVAILABLE === "1";
+const ogImagePath = "/og-card.png";
+const chatApiUrl = process.env.DOCS_SITE_CHAT_API_URL ?? "/ask-molty/api/chat";
+const shellCss = siteCss();
+const shellJs = siteJs();
+const defaultShellAssetVersion = createHash("sha256")
+  .update(shellCss)
+  .update("\0")
+  .update(shellJs)
+  .digest("hex")
+  .slice(0, 12);
+const shellAssetVersion = process.env.DOCS_SITE_SHELL_ASSET_VERSION ?? defaultShellAssetVersion;
+const defaultOgSvg = renderDefaultOgSvg();
+const defaultOgPng = await renderOgPng(defaultOgSvg);
+const defaultOgVersion = createHash("sha256")
+  .update(defaultOgPng)
+  .digest("hex")
+  .slice(0, 12);
+const previewPagesPerGroup = parseOptionalPositiveInt(
+  process.env.DOCS_SITE_PREVIEW_PAGES_PER_GROUP,
+  "DOCS_SITE_PREVIEW_PAGES_PER_GROUP",
+);
+const configuredMaxPages = parseOptionalPositiveInt(process.env.DOCS_SITE_PREVIEW_MAX_PAGES, "DOCS_SITE_PREVIEW_MAX_PAGES");
+const previewMode = Boolean(cli["source-root"] || cli["output-dir"] || requestedPages.length || previewPagesPerGroup || configuredMaxPages || process.env.DOCS_SITE_PREVIEW_LOCALE);
+const previewMaxPages = Math.min(configuredMaxPages || 30, 30);
+const previewLocale = process.env.DOCS_SITE_PREVIEW_LOCALE || "en";
+const artifactMode = previewMode ? "shell" : process.env.DOCS_SITE_ARTIFACT_MODE ?? "full";
+const shellOnly = artifactMode === "shell";
+const renderCache = !previewMode && process.env.DOCS_SITE_RENDER_CACHE !== "0"
+  ? createRenderCache(path.join(root, ".cache", "docs-render"), renderArticle)
+  : null;
+const includeElementsFixture = !previewMode || process.env.DOCS_SITE_PREVIEW_INCLUDE_FIXTURE === "1";
+if (!["full", "shell"].includes(artifactMode)) {
+  throw new Error(`DOCS_SITE_ARTIFACT_MODE must be full or shell, got ${artifactMode}`);
+}
+const locales = buildLocales(config);
+const localeCodes = new Set(locales.map((locale) => locale.code));
+if (previewMode && !localeCodes.has(previewLocale)) {
+  throw new Error(`Preview locale not found: ${previewLocale}`);
+}
+const allPages = [...collectPages(locales), ...(includeElementsFixture ? [elementsFixturePage()] : [])];
+const allPageByKey = new Map(allPages.map((page) => [pageKey(page.locale, page.slug), page]));
+const announcement = latestReleaseAnnouncement(allPages);
+const announcedReleasePage = announcement?.page ?? null;
+let pages = allPages;
+let pageByKey = new Map(pages.map((page) => [pageKey(page.locale, page.slug), page]));
+const navByLocale = new Map(locales.map((locale) => [locale.code, buildNav(locale)]));
+if (previewMode) {
+  const previewKeys = collectPreviewPageKeys(navByLocale, {
+    locale: previewLocale,
+    maxPages: previewMaxPages,
+    pagesPerGroup: previewPagesPerGroup || 1,
+  });
+  pages = allPages.filter((page) => previewKeys.has(pageKey(page.locale, page.slug)));
+  pageByKey = new Map(pages.map((page) => [pageKey(page.locale, page.slug), page]));
+  // Keep the full source navigation. Only rendering is bounded; unbuilt links use live docs.
+}
+const localePickerLabels = {
+  "pt-BR": "Português (BR)"
+};
+
+// Preview builds skip redirects, so never let an earlier full build's records survive.
+if (customOutput) {
+  preparePreviewOutput(outDir);
+} else {
+  fs.rmSync(redirectMetadataPath, { force: true });
+  fs.rmSync(outDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  fs.mkdirSync(outDir, { recursive: true });
+}
+copyPublicFiles();
+const pageOgVersions = previewMode ? new Map() : await renderPageOgCards({
+  pages, enNav: navByLocale.get("en") ?? [], outDir,
+  cacheDir: path.join(root, ".cache", "docs-og"), siteName: config.name,
+});
+for (const page of pages) writePage(page);
+if (renderCache) {
+  renderCache.prune();
+  const { hits, misses, bypassed } = renderCache.stats;
+  console.log(`article cache: ${hits} reused, ${misses} rendered, ${bypassed} snippet owners rendered`);
+}
+if (!shellOnly) {
+  writeLlmsIndex();
+  writeRobotsTxt();
+  writeSitemap();
+}
+if (!previewMode) writeRedirects();
+writeStaticAssets();
+const previewLabel = previewMode
+  ? `, preview ${previewPagesPerGroup || 1}/group${previewMaxPages ? ` max ${previewMaxPages}` : ""}${previewLocale ? ` ${previewLocale}` : ""}`
+  : "";
+console.log(`built ${pages.length} pages in ${path.relative(root, outDir)} (${artifactMode}${previewLabel})`);
+
+function buildLocales(docsConfig) {
+  const ordered = [];
+  for (const entry of docsConfig.navigation?.languages ?? []) {
+    const code = navigationLocaleToDir[entry.language] ?? entry.language;
+    ordered.push({ code, source: entry, root: code === "en" });
+  }
+  for (const dirent of fs.readdirSync(docsDir, { withFileTypes: true })) {
+    if (!dirent.isDirectory() || ignoredDocDirs.has(dirent.name)) continue;
+    if (localeLabels[dirent.name] && !ordered.some((locale) => locale.code === dirent.name)) {
+      ordered.push({ code: dirent.name, source: ordered[0]?.source, root: false });
+    }
+  }
+  return ordered.filter((locale) => locale.root || fs.existsSync(path.join(docsDir, locale.code)));
+}
+
+function parseOptionalPositiveInt(value, name) {
+  if (value === undefined || value === "") return 0;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || String(parsed) !== String(value).trim()) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function collectPages(localeList) {
+  const result = [];
+  const localeRoots = new Set(localeList.filter((locale) => !locale.root).map((locale) => locale.code));
+  for (const locale of localeList) {
+    if (previewMode && !locale.root && locale.code !== previewLocale) continue;
+    const base = locale.root ? docsDir : path.join(docsDir, locale.code);
+    for (const file of walkDocs(base, locale.root ? localeRoots : new Set())) {
+      const rel = path.relative(base, file).replaceAll(path.sep, "/");
+      if (ignoredDocFiles.has(rel)) continue;
+      const raw = fs.readFileSync(file, "utf8");
+      const parsed = parseFrontmatter(raw);
+      const slug = fileSlug(rel);
+      const title = String(parsed.data.title ?? "") || firstHeading(parsed.content) || titleize(path.basename(slug));
+      result.push({
+        locale: locale.code,
+        dir: locale.root ? "" : locale.code,
+        slug,
+        file,
+        rel,
+        sourcePath: frontmatterSourcePath(parsed.data),
+        raw,
+        title,
+        summary: String(parsed.data.summary ?? ""),
+        readWhen: parsed.data.read_when ?? [],
+        body: parsed.content,
+        meta: {
+          hidden: parsed.data.hidden === true,
+          status: parsed.data.status ?? firstStatusLine(parsed.content),
+          appliesTo: parsed.data.applies_to ?? parsed.data.appliesTo,
+          since: parsed.data.since,
+          updated: parsed.data.updated ?? parsed.data.last_updated,
+          deprecated: parsed.data.deprecated,
+          beta: parsed.data.beta,
+        }
+      });
+    }
+  }
+  return result;
+}
+
+function elementsFixturePage() {
+  const parsed = parseFrontmatter(elementsFixture);
+  return {
+    locale: "en",
+    dir: "",
+    slug: "__elements",
+    file: path.join(siteAssetsDir, "elements-fixture.mjs"),
+    rel: "__elements.md",
+    raw: elementsFixture,
+    title: String(parsed.data.title ?? "") || "Docs elements",
+    summary: String(parsed.data.summary ?? ""),
+    readWhen: [],
+    body: parsed.content,
+    meta: {
+      status: parsed.data.status,
+      appliesTo: parsed.data.applies_to ?? parsed.data.appliesTo,
+      since: parsed.data.since,
+      updated: parsed.data.updated ?? parsed.data.last_updated,
+      deprecated: parsed.data.deprecated,
+      beta: parsed.data.beta,
+    },
+    hidden: true
+  };
+}
+
+function buildNav(locale) {
+  const source = locale.source ?? locales[0]?.source;
+  const tabs = (source?.tabs ?? []).map((tab) => ({
+    title: tab.tab,
+    groups: (tab.groups ?? []).map((group) => navGroup(locale.code, group)).filter(Boolean)
+  }));
+  return tabs.filter((tab) => tab.groups.length);
+}
+
+function navGroup(locale, group) {
+  const pages = flattenPages(locale, group.pages ?? []);
+  return pages.length ? { title: group.group ?? "Docs", pages } : null;
+}
+
+function collectPreviewPageKeys(navByLocale, { locale, maxPages, pagesPerGroup }) {
+  const keys = new Set();
+  for (const route of requestedPages) {
+    const slug = navEntrySlug(locale, route.replace(/^\/+|\/+$/g, ""));
+    const key = pageKey(locale, slug);
+    if (!allPageByKey.has(key)) throw new Error(`Preview page not found (${locale}): ${route}`);
+    keys.add(key);
+  }
+  if (includeElementsFixture) keys.add(pageKey("en", "__elements"));
+  if (keys.size > maxPages) throw new Error(`Requested pages exceed the preview limit of ${maxPages}`);
+  for (const [navLocale, nav] of navByLocale) {
+    if (locale && navLocale !== locale) continue;
+    for (const tab of nav) {
+      for (const group of tab.groups) {
+        for (const page of flattenNavEntries(group.pages).slice(0, pagesPerGroup)) {
+          if (keys.size >= maxPages) return keys;
+          keys.add(pageKey(page.locale, page.slug));
+        }
+      }
+    }
+  }
+  return keys;
+}
+
+function flattenPages(locale, entries) {
+  const output = [];
+  for (const entry of entries) {
+    if (typeof entry === "string") {
+      const page = pageByKey.get(pageKey(locale, navEntrySlug(locale, entry)));
+      if (page) output.push(page);
+    } else if (entry?.pages) {
+      const nested = flattenPages(locale, entry.pages);
+      if (nested.length) output.push({ group: entry.group ?? "More", pages: nested });
+    }
+  }
+  return output;
+}
+
+function navEntrySlug(locale, entry) {
+  const slug = normalizeSlug(entry);
+  return slug.startsWith(`${locale}/`) ? normalizeSlug(slug.slice(locale.length + 1)) : slug;
+}
+
+function writePage(page) {
+  const nav = navByLocale.get(page.locale) ?? [];
+  const flat = flattenNav(nav);
+  const activeIndex = flat.findIndex((item) => item.slug === page.slug);
+  const activeTab = activeTabTitle(nav, page.slug);
+  const prev = activeIndex > 0 ? flat[activeIndex - 1] : null;
+  const next = activeIndex >= 0 && activeIndex < flat.length - 1 ? flat[activeIndex + 1] : null;
+  const options = { sourceFile: page.file, root: sourceRoot, pageRoute: pageRoute(page) };
+  const article = renderCache ? renderCache.render(page.raw, options) : renderArticle(page.raw, options);
+  const composed = page.slug === "index" ? homeLayoutHtml(article, icon, announcement ? { ...announcement, href: pageRoute(announcedReleasePage) } : null, page.locale) : article;
+  const html = rewriteInternalUrls(composed, page.locale);
+  const toc = tableOfContents(html);
+  const outPath = path.join(outDir, pageRoute(page).replace(/^\//, ""), "index.html");
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, layout({ page, nav, activeTab, html, toc, prev, next }), "utf8");
+  const mdPath = path.join(outDir, pageMarkdownRoute(page).replace(/^\//, ""));
+  fs.mkdirSync(path.dirname(mdPath), { recursive: true });
+  fs.writeFileSync(mdPath, page.raw, "utf8");
+}
+
+function layout({ page, nav, activeTab, html, toc, prev, next }) {
+  const home = page.slug === "index";
+  const lang = page.locale;
+  const dir = rtlLocales.has(page.locale) ? "rtl" : "ltr";
+  const title = page.slug === "index" ? `${config.name} Docs` : `${page.title} - ${config.name}`;
+  const description = page.summary || config.description || "";
+  const ogTitle = page.slug === "index" ? `${config.name} Docs` : `${page.title} · ${config.name}`;
+  const canonicalUrl = canonicalOrigin ? `${canonicalOrigin}${pageRoute(page)}` : "";
+  const analyticsEligible = process.env.DOCS_SITE_GA4_ENABLED === "1" && !previewMode && !page.hidden && !basePath && canonicalOrigin === "https://docs.openclaw.ai";
+  // tableOfContents already caps this shared UI/analytics heading list at 24.
+  const pageOgVersion = page.locale === "en" ? pageOgVersions.get(page.slug) : undefined;
+  const pageOgPath = pageOgVersion
+    ? `/og/${page.slug}.png`
+    : ogImagePath;
+  const ogImageUrl = `${canonicalOrigin ? `${canonicalOrigin}${pageOgPath}` : publicPath(pageOgPath)}?v=${pageOgVersion ?? defaultOgVersion}`;
+  return `<!doctype html>
+<html lang="${lang}" dir="${dir}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="${escapeAttr(description)}">
+<title>${escapeHtml(title)}</title>
+${canonicalUrl ? `<link rel="canonical" href="${escapeAttr(canonicalUrl)}">` : ""}
+${hreflangLinks(page)}${page.hidden ? '<meta name="robots" content="noindex,nofollow">' : ""}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${escapeAttr(config.name)}">
+<meta property="og:title" content="${escapeAttr(ogTitle)}">
+<meta property="og:description" content="${escapeAttr(description)}">
+${canonicalUrl ? `<meta property="og:url" content="${escapeAttr(canonicalUrl)}">` : ""}
+<meta property="og:image" content="${escapeAttr(ogImageUrl)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${escapeAttr(`${config.name} — ${description}`)}">
+<meta property="og:locale" content="${escapeAttr(page.locale.replace("-", "_"))}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeAttr(ogTitle)}">
+<meta name="twitter:description" content="${escapeAttr(description)}">
+<meta name="twitter:image" content="${escapeAttr(ogImageUrl)}">
+<meta name="twitter:image:alt" content="${escapeAttr(`${config.name} — ${description}`)}">
+<meta name="theme-color" content="#f5654a">
+<link rel="icon" href="${publicPath("/assets/openclaw.svg")}" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="${publicPath("/assets/favicon-32.png")}">
+<link rel="apple-touch-icon" href="${publicPath("/assets/apple-touch-icon.png")}">
+<link rel="preload" href="${publicPath("/assets/fonts/Switzer-Regular.woff2")}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="${assetUrl("/assets/docs-site.css")}">
+<script>window.OPENCLAW_DOCS_BASE=${JSON.stringify(basePath)};window.OPENCLAW_DOCS_CHAT_API=${JSON.stringify(chatApiUrl)};document.documentElement.dataset.theme=localStorage.getItem("theme")||"dark"</script>
+</head>
+<body class="oc-app-surface docs-layout${page.slug === "index" ? " docs-home" : ""}${home ? " docs-home-layout" : ""}">
+${siteHeader(page)}
+<div class="doc-shell">
+${sidebar(page, nav, activeTab)}
+<div class="main"${analyticsEligible ? ` data-analytics-path="${escapeAttr(pageRoute(page))}" data-analytics-title="${escapeAttr(title)}" data-analytics-sections="${escapeAttr(JSON.stringify(toc.map(item => item.id)))}"` : ""}>
+${homeHeroArt}
+<div class="page-intro"></div>
+${tocHtml(toc, page.locale)}
+<main class="article" id="main">
+<header class="article-header">
+${articleMeta(page, nav)}
+${page.hidden ? "" : pageMarkdownScript(page)}
+<p class="article-kicker">${escapeHtml(groupForPage(nav, page.slug) ?? activeTab)}</p>
+${page.slug === "index" ? `<h2 class="home-section-title">${escapeHtml(activeTab)}</h2>` : `<h1>${escapeHtml(page.title)}</h1>`}
+${pageStatus(page)}
+</header>
+${pageSearchMetadata(page, nav)}
+<div class="doc"${page.hidden ? ' data-pagefind-ignore' : ' data-pagefind-body'}>${html}</div>
+${page.hidden ? "" : pageFeedback(page)}
+${pager(prev, next)}
+</main>
+</div>
+</div>
+${communityInvite(page.locale)}
+${siteFooter(analyticsEligible)}
+${searchModal()}
+${page.hidden ? "" : chatWidget()}
+<script type="module" src="${assetUrl("/assets/docs-site.js")}"></script>
+</body>
+</html>`;
+}
+
+function assetUrl(file) {
+  return `${publicPath(file)}?v=${encodeURIComponent(shellAssetVersion)}`;
+}
+
+function siteHeader(page) {
+  const controls = homeStringsForLocale(page.locale).controls;
+  const network = [["Product", "https://openclaw.ai/"], ["Install", "https://openclaw.ai/install"], ["Ecosystem", "https://openclaw.ai/ecosystem"], ["Integrations", "https://openclaw.ai/integrations"], ["Blog", "https://openclaw.ai/blog"], ["Community", "https://community.openclaw.ai/"]];
+  return `<header class="site-header">
+<div class="header-row">
+<div class="header-left"><a class="brand" href="${pageUrl(allPageByKey.get(pageKey(page.locale, "index")) ?? page)}"${previewLinkAttrs(allPageByKey.get(pageKey(page.locale, "index")) ?? page, "OpenClaw Docs")}><img src="${publicPath("/assets/openclaw.svg")}" alt=""><span class="brand-name">OpenClaw</span><span class="brand-tag">Docs</span></a></div>
+<button class="search-button" type="button" data-search-open aria-label="${escapeAttr(controls[0])}">${icon("search")}<span class="search-label">${escapeHtml(controls[0])}</span><span class="search-shortcut" aria-hidden="true">${icon("command")}<span>K</span></span></button>
+<div class="header-actions">
+<nav class="network-nav" aria-label="OpenClaw sites">${network.map(([label, href]) => `<a href="${href}">${label}</a>`).join("")}</nav>
+<nav class="header-links" aria-label="Community and preferences"><div class="header-social-group" role="group" aria-label="Social links">${socialIconLinks()}</div><div class="header-preferences-group" role="group" aria-label="Preferences">${languagePicker(page)}<button class="theme-toggle" type="button" data-theme-toggle aria-label="${escapeAttr(controls[1])}"><span class="theme-toggle-icon theme-toggle-icon-dark">${icon("moon")}</span><span class="theme-toggle-icon theme-toggle-icon-light">${icon("sun")}</span></button></div><button class="nav-toggle" type="button" data-nav-toggle aria-label="${escapeAttr(controls[2])}" aria-expanded="false"><span></span><span></span><span></span></button></nav>
+</div>
+</div>
+</header>`;
+}
+
+function siteFooter(analyticsEligible = false) {
+  const home = { locale: "en", slug: "index", title: "Docs" };
+  const socials = [
+    ["X", "https://x.com/openclaw", "x-social"],
+    ["GitHub", "https://github.com/openclaw/openclaw", "github"],
+    ["Discord", "https://discord.com/invite/clawd", "discord"],
+    ["Reddit", "https://www.reddit.com/r/openclaw/", "reddit"],
+    ["TikTok", "https://www.tiktok.com/@open_claw", "tiktok"],
+    ["LinkedIn", "https://www.linkedin.com/company/the-openclaw-foundation", "linkedin"],
+    ["Instagram", "https://www.instagram.com/openclaw_org/", "instagram"],
+    ["YouTube", "https://www.youtube.com/@OpenClawYT", "youtube"],
+  ];
+  const groups = [
+    ["Product", [["Install", "https://openclaw.ai/install"], ["Showcase", "https://openclaw.ai/showcase"], ["Integrations", "https://openclaw.ai/integrations"], ["Docs", pageUrl(home), home]]],
+    ["Resources", [["Blog", "https://openclaw.ai/blog"], ["Podcast", "https://openclaw.ai/podcast"], ["Press", "https://openclaw.ai/press"], ["Shoutouts", "https://openclaw.ai/shoutouts"], ["Releases", "https://github.com/openclaw/openclaw/releases"], ["Privacy policy", "https://openclaw.ai/privacy"]]],
+    ["Project", [["Foundation", "https://openclaw.org"], ["Security", "https://openclaw.ai/security"], ["GitHub", "https://github.com/openclaw/openclaw"]]],
+  ];
+  return `<footer class="site-footer">
+<div class="site-footer-inner">
+<section class="site-footer-brand" aria-label="OpenClaw">
+<a class="site-footer-logo" href="https://openclaw.ai">OpenClaw</a>
+<p class="site-footer-note">An <a href="https://openclaw.org">OpenClaw Foundation</a> project.</p>
+<nav class="site-footer-socials" aria-label="Community">${socials.map(([label, href, iconName]) => `<a href="${escapeAttr(href)}" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}" target="_blank" rel="noopener">${icon(iconName)}</a>`).join("")}</nav>
+</section>
+${groups.map(([title, links]) => `<nav class="site-footer-links" aria-label="${title}"><h2>${title}</h2>${links.map(([label, href, target]) => `<a href="${escapeAttr(href)}"${target ? previewLinkAttrs(target, label) : ""}>${label}</a>`).join("")}</nav>`).join("")}
+</div>
+<div class="site-footer-legal"><p>Open-source assistant infrastructure.</p><p>© 2026</p><a href="https://openclaw.org">OpenClaw Foundation</a></div>
+</footer>`;
+}
+
+function sidebar(page, nav, activeTab) {
+  const copy = homeStringsForLocale(page.locale);
+  return `<aside class="sidebar">
+<div class="sidebar-head"><a class="brand sidebar-brand" href="${pageUrl(allPageByKey.get(pageKey(page.locale, "index")) ?? page)}" aria-label="OpenClaw Docs"><img src="${publicPath("/assets/openclaw.svg")}" alt=""><span class="brand-name">OpenClaw</span><span class="brand-tag">Docs</span></a><button class="sidebar-close" type="button" data-nav-close aria-label="${escapeAttr(copy.controls[3])}">${icon("x")}</button></div>
+${rewriteInternalUrls(docsQuickNav(page.slug, icon, page.locale), page.locale)}
+<nav class="docs-sections" aria-label="${escapeAttr(copy.navigation[6])}" data-back-label="${escapeAttr(copy.controls[4])}" data-sections-label="${escapeAttr(copy.navigation[6])}">${nav.map((tab) => {
+    const current = tab.title === activeTab;
+    const release = announcement && flattenNav([tab]).some((entry) => entry.slug === announcedReleasePage.slug) ? announcement : null;
+    return `<details class="docs-section${current ? " current" : ""}" name="docs-sections" data-docs-section="${escapeAttr(tab.title)}"><summary${current ? ' aria-current="true"' : ""}><span>${escapeHtml(tab.title)}</span>${releaseVersionHtml(release, page.locale)}${icon("chevron-down")}</summary><div class="docs-section-pages">${tab.groups.map((group) => navGroupHtml(page, group)).join("")}</div></details>`;
+  }).join("")}</nav>
+<div class="sidebar-tools">
+<nav class="sidebar-socials" aria-label="Community links">${socialIconLinks()}</nav>
+<button class="theme-toggle" type="button" data-theme-toggle aria-label="${escapeAttr(copy.controls[1])}"><span class="theme-toggle-icon theme-toggle-icon-dark">${icon("moon")}</span><span class="theme-toggle-icon theme-toggle-icon-light">${icon("sun")}</span></button>
+</div>
+</aside>`;
+}
+
+// Keep this outside the transformed mobile drawer so its fixed card is not clipped.
+// Start hidden to avoid flashing an invitation that the visitor already dismissed.
+function communityInvite(locale) {
+  const strings = chromeStringsForLocale(locale);
+  const joinLabel = (platform) => strings.communityJoinLabel.replace("{platform}", platform);
+  const followLabel = strings.communityFollowLabel.replace("{platform}", "X");
+  return `<aside class="community-invite" aria-labelledby="community-invite-title" hidden>
+<div class="community-invite__header">
+<img class="community-invite__art community-invite__art--dark" src="${publicPath("/assets/community-invite-dark.webp")}" alt="" width="1024" height="512" loading="lazy" decoding="async" nopin="nopin" data-pin-nopin="true">
+<img class="community-invite__art community-invite__art--light" src="${publicPath("/assets/community-invite-light.webp")}" alt="" width="1024" height="512" loading="lazy" decoding="async" nopin="nopin" data-pin-nopin="true">
+<div class="community-invite__marks" aria-hidden="true"><span dir="ltr">${icon("reddit")}${icon("discord")}${icon("x-social")}</span></div>
+<button class="community-invite__close" type="button" data-community-invite-dismiss aria-label="${escapeAttr(strings.communityDismissLabel)}">${icon("x")}</button>
+</div>
+<div class="community-invite__body">
+<h2 class="community-invite__title" id="community-invite-title">${escapeHtml(strings.communityTitle)}</h2>
+<p class="community-invite__text">${escapeHtml(strings.communityBody)}</p>
+<div class="community-invite__links" dir="ltr">
+<a class="community-invite__cta" href="https://www.reddit.com/r/openclaw/" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(joinLabel("Reddit"))}" title="${escapeAttr(joinLabel("Reddit"))}">${icon("reddit")}<span>${escapeHtml(strings.communityJoin)}</span></a>
+<a class="community-invite__cta" href="https://discord.com/invite/clawd" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(joinLabel("Discord"))}" title="${escapeAttr(joinLabel("Discord"))}">${icon("discord")}<span>${escapeHtml(strings.communityJoin)}</span></a>
+<a class="community-invite__cta" href="https://x.com/openclaw" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(followLabel)}" title="${escapeAttr(followLabel)}">${icon("x-social")}<span>${escapeHtml(strings.communityFollow)}</span></a>
+</div>
+</div>
+</aside>`;
+}
+
+function languagePicker(page) {
+  const current = locales.find((locale) => locale.code === page.locale) ?? locales[0];
+  const currentLabel = localeDisplayName(current.code);
+  const currentFlag = localeFlag(current.code);
+  const pickerLocales = previewMode
+    ? locales.filter((locale) => locale.code === page.locale || pageByKey.has(pageKey(locale.code, page.slug)))
+    : locales;
+  const options = pickerLocales.map((locale) => {
+    const active = locale.code === page.locale;
+    return `<a class="language-option${active ? " active" : ""}" role="option" aria-selected="${active ? "true" : "false"}" href="${escapeAttr(localeUrlForSlug(locale.code, page.slug))}" data-locale-option><span class="locale-flag" aria-hidden="true">${escapeHtml(localeFlag(locale.code))}</span><span class="language-name">${escapeHtml(localeDisplayName(locale.code))}</span><span class="language-check" aria-hidden="true">${icon("check")}</span></a>`;
+  }).join("");
+  return `<div class="language-picker" data-language-picker><button class="language-trigger" type="button" data-language-trigger aria-label="${escapeAttr(`Language: ${currentLabel}`)}" aria-haspopup="listbox" aria-controls="language-menu" aria-expanded="false"><span class="locale-flag" aria-hidden="true">${escapeHtml(currentFlag)}</span><span class="language-current">${escapeHtml(currentLabel)}</span><span class="language-chevron" aria-hidden="true">${icon("chevron-down")}</span></button><div id="language-menu" class="language-menu" role="listbox" aria-label="Language">${options}</div></div>`;
+}
+
+function localeFlag(code) {
+  return localeFlags[code] ?? "🌐";
+}
+
+function localeDisplayName(code) {
+  return localePickerLabels[code] ?? localeLabels[code] ?? code;
+}
+
+function socialIconLinks() {
+  return [
+    ["GitHub", "https://github.com/openclaw/openclaw", "github"],
+    ["Reddit", "https://www.reddit.com/r/openclaw/", "reddit"],
+    ["Discord", "https://discord.com/invite/clawd", "discord"],
+    ["X", "https://x.com/openclaw", "x-social"],
+  ].map(([label, href, iconName]) => `<a class="top-icon-link" href="${escapeAttr(href)}" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}">${icon(iconName)}</a>`).join("");
+}
+
+function firstStatusLine(content) {
+  const match = String(content).match(/^(?:\*\*)?Status(?:\*\*)?:\s*(.+)$/im);
+  return match?.[1]?.replace(/\s+/g, " ").trim();
+}
+
+function articleMeta(page, nav) {
+  const crumbTrail = breadcrumbs(page, nav);
+  const tools = page.hidden ? "" : pageTools(page);
+  return crumbTrail || tools ? `<div class="article-meta-row">${crumbTrail}${tools}</div>` : "";
+}
+
+function pageSearchMetadata(page, nav) {
+  if (page.hidden) return "";
+  const category = activeTabTitle(nav, page.slug);
+  const section = groupForPage(nav, page.slug);
+  return [
+    category ? `<span hidden data-pagefind-meta="category">${escapeHtml(category)}</span>` : "",
+    section ? `<span hidden data-pagefind-meta="section">${escapeHtml(section)}</span>` : "",
+  ].filter(Boolean).join("");
+}
+
+function breadcrumbs(page, nav) {
+  if (page.hidden) return "";
+  const activeTab = activeTabTitle(nav, page.slug);
+  const activeTabEntry = nav.find((tab) => tab.title === activeTab);
+  const activeTabPage = activeTabEntry ? firstPage(activeTabEntry) : null;
+  const group = groupForPage(nav, page.slug);
+  const parts = [
+    activeTab && activeTabPage
+      ? { className: "breadcrumb-tab", html: `<a href="${escapeAttr(pageUrl(activeTabPage))}"${previewLinkAttrs(activeTabPage, activeTab)}>${escapeHtml(activeTab)}</a>` }
+      : activeTab ? { className: "breadcrumb-tab", html: `<span>${escapeHtml(activeTab)}</span>` } : null,
+    group ? { className: "breadcrumb-group", html: `<span>${escapeHtml(group)}</span>` } : null,
+    { className: "breadcrumb-page", html: `<span aria-current="page">${escapeHtml(page.title)}</span>` },
+  ].filter(Boolean);
+  return parts.length > 1
+    ? `<nav class="breadcrumbs" aria-label="Breadcrumb">${parts.map((part, index) => `<span class="breadcrumb-part ${part.className}">${index ? '<span class="breadcrumb-separator" aria-hidden="true">/</span>' : ""}${part.html}</span>`).join("")}</nav>`
+    : "";
+}
+
+function pageTools(page) {
+  const canonicalUrl = `${docsOrigin()}${pageRoute(page)}`;
+  const markdownUrl = publicPath(pageMarkdownRoute(page));
+  const markdownCanonicalUrl = `${docsOrigin()}${pageMarkdownRoute(page)}`;
+  const markdownPrompt = `Read from ${markdownCanonicalUrl} so I can ask questions about it.`;
+  return `<div class="page-tools" data-page-tools data-page-url="${escapeAttr(canonicalUrl)}" data-page-markdown-url="${escapeAttr(markdownUrl)}"><div class="page-actions"><button type="button" class="page-actions-primary" data-copy-page data-copy-control data-copy-label="Copy page" aria-label="Copy page" title="Copy page as Markdown">${copyControlContent("Copy page", true)}</button><details class="page-actions-more"><summary aria-label="Open page actions"><span class="page-actions-chevron">${icon("chevron-down")}</span></summary><div class="page-actions-menu">${pageActionLink("View as Markdown", "View this page as plain text", markdownUrl, "markdown")}${pageActionLink("Open in ChatGPT", "Ask questions about this page", assistantUrl("https://chatgpt.com/", "hints=search", markdownPrompt), "openai")}${pageActionLink("Open in Claude", "Ask questions about this page", assistantUrl("https://claude.ai/new", "", markdownPrompt), "anthropic")}</div></details></div></div>`;
+}
+
+function pageActionLink(title, description, href, iconName) {
+  return `<a class="page-action" href="${escapeAttr(href)}" target="_blank" rel="noreferrer">${icon(iconName)}<span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(description)}</small></span><span class="page-action-external" aria-hidden="true">${icon("external-link")}</span></a>`;
+}
+
+function assistantUrl(baseUrl, extraQuery, prompt) {
+  const query = [extraQuery, `q=${encodeURIComponent(prompt)}`].filter(Boolean).join("&");
+  return `${baseUrl}?${query}`;
+}
+
+function pageMarkdownScript(page) {
+  return `<script type="application/json" data-page-markdown>${jsonScript(markdownBodyForCopy(page.raw))}</script>`;
+}
+
+function markdownBodyForCopy(markdown) {
+  const text = String(markdown || "");
+  const frontmatter = /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
+  if (!frontmatter || !/(^|\n)[A-Za-z0-9_-]+:\s*/.test(frontmatter[1])) return text;
+  return text.slice(frontmatter[0].length).replace(/^\s*\n/, "");
+}
+
+function pageStatus(page) {
+  const meta = page.meta ?? {};
+  const badges = [];
+  if (truthy(meta.beta)) badges.push(["Beta", "beta"]);
+  if (truthy(meta.deprecated)) badges.push(["Deprecated", "deprecated"]);
+  if (meta.status) badges.push([`Status: ${meta.status}`, "status"]);
+  if (meta.appliesTo) badges.push([`Applies to: ${meta.appliesTo}`, "applies"]);
+  if (meta.since) badges.push([`Since ${meta.since}`, "since"]);
+  if (meta.updated) badges.push([`Updated ${meta.updated}`, "updated"]);
+  return badges.length
+    ? `<div class="page-status">${badges.map(([label, kind]) => `<span class="oc-pill page-status-badge page-status-${kind}">${escapeHtml(label)}</span>`).join("")}</div>`
+    : "";
+}
+
+function truthy(value) {
+  return value === true || value === "true" || value === "yes" || value === 1 || value === "1";
+}
+
+function icon(name) {
+  const attrs = `class="icon icon-${escapeAttr(name)}" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false"`;
+  // Additional footer brand glyphs from https://openclaw.ai/ (2026-10-02).
+  if (name === "tiktok") return `<svg ${attrs} fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>`;
+  if (name === "linkedin") return `<svg ${attrs} fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM7.11 20.45H3.56V9h3.55v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0Z"/></svg>`;
+  if (name === "instagram") return `<svg ${attrs} fill="currentColor"><path d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>`;
+  if (name === "youtube") return `<svg ${attrs} fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+  if (name === "reddit") return `<svg ${attrs} fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.343 6.314 3.515 8.485l-2.286 2.286C.775 23.225 1.097 24 1.738 24H12c6.627 0 12-5.373 12-12S18.627 0 12 0Zm4.388 3.199c1.104 0 1.999.895 1.999 1.999 0 1.105-.895 2-1.999 2-.946 0-1.739-.657-1.947-1.539v.002c-1.147.162-2.032 1.15-2.032 2.341v.007c1.776.067 3.4.567 4.686 1.363.473-.363 1.064-.58 1.707-.58 1.547 0 2.802 1.254 2.802 2.802 0 1.117-.655 2.081-1.601 2.531-.088 3.256-3.637 5.876-7.997 5.876-4.361 0-7.905-2.617-7.998-5.87-.954-.447-1.614-1.415-1.614-2.538 0-1.548 1.255-2.802 2.803-2.802.645 0 1.239.218 1.712.585 1.275-.79 2.881-1.291 4.64-1.365v-.01c0-1.663 1.263-3.034 2.88-3.207.188-.911.993-1.595 1.959-1.595Zm-8.085 8.376c-.784 0-1.459.78-1.506 1.797-.047 1.016.64 1.429 1.426 1.429.786 0 1.371-.369 1.418-1.385.047-1.017-.553-1.841-1.338-1.841Zm7.406 0c-.786 0-1.385.824-1.338 1.841.047 1.017.634 1.385 1.418 1.385.785 0 1.473-.413 1.426-1.429-.046-1.017-.721-1.797-1.506-1.797Zm-3.703 4.013c-.974 0-1.907.048-2.77.135-.147.015-.241.168-.183.305.483 1.154 1.622 1.964 2.953 1.964 1.33 0 2.47-.81 2.953-1.964.057-.137-.037-.29-.184-.305-.863-.087-1.795-.135-2.769-.135Z"/></svg>`;
+  if (name === "x-social") return `<svg ${attrs} fill="currentColor"><path d="M18.9 2H22l-6.8 7.8L23.2 22H17l-4.9-7.4L5.6 22H2.4l7.2-8.4L1.5 2h6.4l4.5 6.8L18.9 2ZM17.5 20h2L6.8 3.9H4.7L17.5 20Z"/></svg>`;
+  if (name === "github") return `<svg ${attrs} fill="currentColor"><path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.08 1.84 2.82 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.46-1.33-5.46-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.62-5.47 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.57A12 12 0 0 0 12 .5Z"/></svg>`;
+  if (name === "discord") return `<svg ${attrs} fill="currentColor"><path d="M20.32 4.37A19.8 19.8 0 0 0 15.37 2.84a13.77 13.77 0 0 0-.63 1.31 18.4 18.4 0 0 0-5.48 0 13.7 13.7 0 0 0-.64-1.31 19.72 19.72 0 0 0-4.95 1.54C.55 9.07-.32 13.64.1 18.15a19.9 19.9 0 0 0 6.07 3.07 14.6 14.6 0 0 0 1.3-2.11 12.9 12.9 0 0 1-2.05-.98c.17-.13.34-.26.5-.39a14.2 14.2 0 0 0 12.16 0c.17.14.33.27.5.39-.65.38-1.33.7-2.05.98.38.74.82 1.45 1.3 2.11a19.86 19.86 0 0 0 6.08-3.07c.5-5.23-.84-9.76-3.59-13.78ZM8.02 15.38c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.95-2.42 2.15-2.42 1.2 0 2.18 1.1 2.15 2.42 0 1.33-.95 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.95-2.42 2.15-2.42 1.2 0 2.17 1.1 2.15 2.42 0 1.33-.95 2.41-2.15 2.41Z"/></svg>`;
+  if (name === "markdown") return `<svg class="icon icon-markdown" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.25 3.75H2.75C1.64543 3.75 0.75 4.64543 0.75 5.75V12.25C0.75 13.3546 1.64543 14.25 2.75 14.25H15.25C16.3546 14.25 17.25 13.3546 17.25 12.25V5.75C17.25 4.64543 16.3546 3.75 15.25 3.75Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.75 11.25V6.75H8.356L6.25 9.5L4.144 6.75H3.75V11.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.5 9.5L13.25 11.25L15 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.25 11.25V6.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  if (name === "openai") return `<svg class="icon icon-openai" aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M21.55 10.004a5.416 5.416 0 00-.478-4.501c-1.217-2.09-3.662-3.166-6.05-2.66A5.59 5.59 0 0010.831 1C8.39.995 6.224 2.546 5.473 4.838A5.553 5.553 0 001.76 7.496a5.487 5.487 0 00.691 6.5 5.416 5.416 0 00.477 4.502c1.217 2.09 3.662 3.165 6.05 2.66A5.586 5.586 0 0013.168 23c2.443.006 4.61-1.546 5.361-3.84a5.553 5.553 0 003.715-2.66 5.488 5.488 0 00-.693-6.497v.001zm-8.381 11.558a4.199 4.199 0 01-2.675-.954c.034-.018.093-.05.132-.074l4.44-2.53a.71.71 0 00.364-.623v-6.176l1.877 1.069c.02.01.033.029.036.05v5.115c-.003 2.274-1.87 4.118-4.174 4.123zM4.192 17.78a4.059 4.059 0 01-.498-2.763c.032.02.09.055.131.078l4.44 2.53c.225.13.504.13.73 0l5.42-3.088v2.138a.068.068 0 01-.027.057L9.9 19.288c-1.999 1.136-4.552.46-5.707-1.51h-.001zM3.023 8.216A4.15 4.15 0 015.198 6.41l-.002.151v5.06a.711.711 0 00.364.624l5.42 3.087-1.876 1.07a.067.067 0 01-.063.005l-4.489-2.559c-1.995-1.14-2.679-3.658-1.53-5.63h.001zm15.417 3.54l-5.42-3.088L14.896 7.6a.067.067 0 01.063-.006l4.489 2.557c1.998 1.14 2.683 3.662 1.529 5.633a4.163 4.163 0 01-2.174 1.807V12.38a.71.71 0 00-.363-.623zm1.867-2.773a6.04 6.04 0 00-.132-.078l-4.44-2.53a.731.731 0 00-.729 0l-5.42 3.088V7.325a.068.068 0 01.027-.057L14.1 4.713c2-1.137 4.555-.46 5.707 1.513.487.833.664 1.809.499 2.757h.001zm-11.741 3.81l-1.877-1.068a.065.065 0 01-.036-.051V6.559c.001-2.277 1.873-4.122 4.181-4.12.976 0 1.92.338 2.671.954-.034.018-.092.05-.131.073l-4.44 2.53a.71.71 0 00-.365.623l-.003 6.173v.002zm1.02-2.168L12 9.25l2.414 1.375v2.75L12 14.75l-2.415-1.375v-2.75z"/></svg>`;
+  if (name === "anthropic") return `<svg class="icon icon-anthropic" aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" height="18" viewBox="0 0 256 257" width="18" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid"><path d="m50.228 170.321 50.357-28.257.843-2.463-.843-1.361h-2.462l-8.426-.518-28.775-.778-24.952-1.037-24.175-1.296-6.092-1.297L0 125.796l.583-3.759 5.12-3.434 7.324.648 16.202 1.101 24.304 1.685 17.629 1.037 26.118 2.722h4.148l.583-1.685-1.426-1.037-1.101-1.037-25.147-17.045-27.22-18.017-14.258-10.37-7.713-5.25-3.888-4.925-1.685-10.758 7-7.713 9.397.649 2.398.648 9.527 7.323 20.35 15.75L94.817 91.9l3.889 3.24 1.555-1.102.195-.777-1.75-2.917-14.453-26.118-15.425-26.572-6.87-11.018-1.814-6.61c-.648-2.723-1.102-4.991-1.102-7.778l7.972-10.823L71.42 0 82.05 1.426l4.472 3.888 6.61 15.101 10.694 23.786 16.591 32.34 4.861 9.592 2.592 8.879.973 2.722h1.685v-1.556l1.36-18.211 2.528-22.36 2.463-28.776.843-8.1 4.018-9.722 7.971-5.25 6.222 2.981 5.12 7.324-.713 4.73-3.046 19.768-5.962 30.98-3.889 20.739h2.268l2.593-2.593 10.499-13.934 17.628-22.036 7.778-8.749 9.073-9.657 5.833-4.601h11.018l8.1 12.055-3.628 12.443-11.342 14.388-9.398 12.184-13.48 18.147-8.426 14.518.778 1.166 2.01-.194 30.46-6.481 16.462-2.982 19.637-3.37 8.88 4.148.971 4.213-3.5 8.62-20.998 5.184-24.628 4.926-36.682 8.685-.454.324.519.648 16.526 1.555 7.065.389h17.304l32.21 2.398 8.426 5.574 5.055 6.805-.843 5.184-12.962 6.611-17.498-4.148-40.83-9.721-14-3.5h-1.944v1.167l11.666 11.406 21.387 19.314 26.767 24.887 1.36 6.157-3.434 4.86-3.63-.518-23.526-17.693-9.073-7.972-20.545-17.304h-1.36v1.814l4.73 6.935 25.017 37.59 1.296 11.536-1.814 3.76-6.481 2.268-7.13-1.297-14.647-20.544-15.1-23.138-12.185-20.739-1.49.843-7.194 77.448-3.37 3.953-7.778 2.981-6.48-4.925-3.436-7.972 3.435-15.749 4.148-20.544 3.37-16.333 3.046-20.285 1.815-6.74-.13-.454-1.49.194-15.295 20.999-23.267 31.433-18.406 19.702-4.407 1.75-7.648-3.954.713-7.064 4.277-6.286 25.47-32.405 15.36-20.092 9.917-11.6-.065-1.686h-.583L44.07 198.125l-12.055 1.555-5.185-4.86.648-7.972 2.463-2.593 20.35-13.999-.064.065Z"/></svg>`;
+  const paths = {
+    "check": '<path d="m20 6-11 11-5-5"/>',
+    "grid-2x2": '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    "terminal": '<path d="M12 19h8"/><path d="m4 17 6-6-6-6"/>',
+    "download": '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+    "book-open": '<path d="M12 5v16"/><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"/>',
+    "list-checks": '<path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/>',
+    "settings": '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
+    "arrow-right": '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    "external-link": '<path d="M15 3h6v6"/><path d="m21 3-11 11"/><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/>',
+    "search": '<path d="m21 21-4.35-4.35"/><circle cx="11" cy="11" r="7"/>',
+    "command": '<path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/>',
+    "corner-down-left": '<path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/>',
+    "x": '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    "package": '<path d="m21 8-9-5-9 5 9 5 9-5Z"/><path d="m3 8 9 5 9-5"/><path d="M12 22V13"/><path d="m3 8v8l9 6 9-6V8"/>',
+    "moon": '<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>',
+    "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+    "chevron-left": '<path d="m15 18-6-6 6-6"/>',
+    "chevron-right": '<path d="m9 18 6-6-6-6"/>',
+    "chevron-down": '<path d="m6 9 6 6 6-6"/>',
+    "list-sort-ascending": '<path d="M3 19h18"/><path d="M15 12H3"/><path d="M9 5H3"/>',
+    "copy": '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    "file-text": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+    "message-circle": '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>',
+    "bot": '<path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M9 13v2"/><path d="M15 13v2"/><path d="M9 18h6"/>',
+    "maximize-2": '<path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="M9 21H3v-6"/><path d="m3 21 7-7"/>',
+    "minimize-2": '<path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/>',
+    "minus": '<path d="M5 12h14"/>',
+    "refresh-cw": '<path d="M21 12a9 9 0 0 1-15.1 6.64"/><path d="M3 12A9 9 0 0 1 18.1 5.36"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/>',
+    "sparkles": '<path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6L12 3Z"/><path d="m19 14-.8 2.2L16 17l2.2.8L19 20l.8-2.2L22 17l-2.2-.8L19 14Z"/><path d="m5 4-.7 1.8L2.5 6.5l1.8.7L5 9l.7-1.8 1.8-.7-1.8-.7L5 4Z"/>',
+    "send": '<path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/>',
+    "paperclip": '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+    "trash": '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/>',
+    };
+  return `<svg ${attrs} fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[name] ?? ""}</svg>`;
+}
+
+function navGroupHtml(activePage, group) {
+  return `<details class="nav-section" open><summary><h2>${escapeHtml(group.title)}</h2>${icon("chevron-down")}</summary>${group.pages.map((entry) => navEntryHtml(activePage, entry)).join("")}</details>`;
+}
+
+function navEntryHtml(activePage, entry) {
+  const current = entry.group && flattenNavEntries(entry.pages).some((page) => page.locale === activePage.locale && page.slug === activePage.slug);
+  return entry.group
+    ? `<details class="nav-nested"${current ? " open" : ""}><summary><h2>${escapeHtml(entry.group)}</h2>${icon("chevron-down")}</summary>${entry.pages.map((child) => navEntryHtml(activePage, child)).join("")}</details>`
+    : navLink(activePage, entry);
+}
+
+function navLink(activePage, page) {
+  const active = activePage.locale === page.locale && activePage.slug === page.slug ? " active" : "";
+  return `<a class="nav-link${active}" href="${pageUrl(page)}"${previewLinkAttrs(page)}${active ? ' aria-current="page"' : ""}>${escapeHtml(page.title)}${announcement && page.slug === announcedReleasePage.slug ? releaseBadgeHtml(announcement, activePage.locale) : ""}</a>`;
+}
+
+function tableOfContents(html) {
+  return [...html.matchAll(/<h([23])\b[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h\1>/g)]
+    .map((m) => ({ level: Number(m[1]), id: m[2], title: decodeHtmlEntities(stripTags(m[3]).replace(/^#\s*/, "")) }))
+    .slice(0, 24);
+}
+
+function tocHtml(items, locale) {
+  if (!items.length) return "";
+  const label = chromeStringsForLocale(locale).onThisPage;
+  const tocIcon = icon("list-sort-ascending");
+  return `<details class="toc" aria-label="${escapeAttr(label)}" open><summary><span class="toc-label">${tocIcon}${escapeHtml(label)}</span><span class="toc-current" data-toc-current></span></summary><h2>${tocIcon}${escapeHtml(label)}</h2><nav>${items.map((item) => `<a class="toc-l${item.level}" href="#${escapeAttr(item.id)}">${escapeHtml(item.title)}</a>`).join("")}</nav></details>`;
+}
+
+function pager(prev, next) {
+  if (!prev && !next) return "";
+  return `<nav class="page-nav" aria-label="Page navigation">${prev ? `<a class="prev" href="${pageUrl(prev)}"${previewLinkAttrs(prev, `Previous: ${prev.title}`)}><small>${icon("arrow-right")}Previous</small><strong>${escapeHtml(prev.title)}</strong></a>` : ""}${next ? `<a class="next" href="${pageUrl(next)}"${previewLinkAttrs(next, `Next: ${next.title}`)}><small>Next${icon("arrow-right")}</small><strong>${escapeHtml(next.title)}</strong></a>` : ""}</nav>`;
+}
+
+function pageFeedback(page) {
+  const editUrl = editSourceUrlForPage(page, sourceMetadata);
+  const editLink = editUrl ? `<a href="${escapeAttr(editUrl)}">Edit source</a>` : "";
+  const pagePath = pageRoute(page);
+  const canonicalUrl = `${docsOrigin()}${pagePath}`;
+  return `<section class="page-feedback" aria-label="Page feedback" data-feedback-path="${escapeAttr(pagePath)}" data-feedback-url="${escapeAttr(canonicalUrl)}" data-feedback-repo="${escapeAttr(feedbackIssueRepository)}"><div class="page-feedback-prompt"><span>Was this useful?</span><button class="oc-action oc-action-ghost" type="button" data-feedback-value="yes" aria-pressed="false">Yes</button><button class="oc-action oc-action-ghost" type="button" data-feedback-value="no" aria-pressed="false">No</button><output data-feedback-result></output></div><nav class="page-feedback-links" aria-label="Page source and issue">${editLink}<a href="${escapeAttr(raiseIssueUrl(page))}">Raise issue</a></nav><div class="page-feedback-composer" data-feedback-composer hidden><textarea data-feedback-detail rows="3" placeholder="What were you looking for?" aria-label="What was missing?"></textarea><button class="oc-action oc-action-secondary page-feedback-submit" data-feedback-issue-link type="button">${icon("github")}<span>Open issue</span></button></div></section>`;
+}
+
+function raiseIssueUrl(page) {
+  const title = encodeURIComponent("Issue on docs");
+  const body = encodeURIComponent(`Path: ${pageRoute(page)}`);
+  return `https://github.com/${feedbackIssueRepository}/issues/new?title=${title}&body=${body}`;
+}
+
+function searchModal() {
+  const avatar = chatAvatarAssets();
+  const suggestions = [
+    { label: "Install OpenClaw", query: "install" },
+    { label: "Connect Telegram", query: "telegram" },
+    { label: "Troubleshoot the Gateway", query: "gateway troubleshooting" },
+    { label: "Build a plugin", query: "plugins" },
+  ];
+  const molty = chatApiUrl
+    ? `<button class="search-molty" type="button" data-search-molty><img src="${avatar.staticPath}" alt=""><span><span data-search-molty-prefix>Ask Molty</span> <strong data-search-molty-term hidden></strong></span><span class="search-molty-shortcut" aria-hidden="true">${icon("command")}${icon("corner-down-left")}</span></button>`
+    : "";
+  return `<div class="search-modal"><div class="search-panel" role="dialog" aria-modal="true" aria-label="Search documentation"><div class="search-head">${icon("search")}<input data-search-input placeholder="Search documentation…" aria-label="Search documentation" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="docs-search-results"><button class="search-clear" type="button" data-search-clear aria-label="Clear search" title="Clear search" hidden>${icon("x")}</button><button class="search-close" type="button" data-search-close aria-label="Close search" title="Close search (Escape)"><span class="search-close-key">Esc</span><span class="search-close-label">Cancel</span></button></div><div class="search-hints"><p id="docs-search-suggestions-label">Suggested searches</p><div class="search-suggestions" id="docs-search-suggestions" role="listbox" aria-labelledby="docs-search-suggestions-label">${suggestions.map(({ label, query }, index) => `<button type="button" role="option" tabindex="-1" aria-selected="false" id="docs-search-suggestion-${index}" data-search-suggestion="${escapeAttr(query)}">${icon("search")}<span>${escapeHtml(label)}</span>${icon("corner-down-left")}</button>`).join("")}</div></div><div class="search-results" id="docs-search-results" data-search-results role="listbox" aria-label="Search results"></div>${molty}</div></div>`;
+}
+
+function writeLlmsIndex() {
+  const origin = docsOrigin();
+  const lines = [
+    `# ${config.name}`,
+    "",
+    config.description ?? "OpenClaw documentation.",
+    "",
+    "> Use this file as a lightweight map of the OpenClaw documentation. Fetch individual pages as Markdown with `.md` URLs or `Accept: text/markdown`.",
+    "",
+    "## Agent Resources",
+    "",
+    `- [Markdown page export](${origin}/start/getting-started.md): Append \`.md\` to any docs page URL for clean Markdown.`,
+    `- [Sitemap](${origin}/sitemap.xml): Search crawler URL index.`,
+    `- [Robots policy](${origin}/robots.txt): Bot and crawler policy.`,
+    "",
+    "## Documentation Index",
+    "",
+  ];
+  if (llmsFullAvailable) {
+    lines.splice(8, 0, `- [Full documentation corpus](${origin}/llms-full.txt): Nightly full-site Markdown corpus for LLM context.`);
+  }
+  for (const page of englishDocsPages()) {
+    const summary = page.summary ? `: ${stripMdxForLlms(page.summary).replace(/\s+/g, " ").trim()}` : "";
+    lines.push(`- [${page.title}](${origin}${pageRoute(page)})${summary}`);
+  }
+  const content = `${lines.join("\n")}\n`;
+  fs.writeFileSync(path.join(outDir, "llms.txt"), content, "utf8");
+  fs.writeFileSync(path.join(outDir, "llm.txt"), content, "utf8");
+  const wellKnownDir = path.join(outDir, ".well-known");
+  fs.mkdirSync(wellKnownDir, { recursive: true });
+  fs.writeFileSync(path.join(wellKnownDir, "llms.txt"), content, "utf8");
+}
+
+function writeRobotsTxt() {
+  const origin = docsOrigin();
+  const botAgents = [
+    "GPTBot",
+    "OAI-SearchBot",
+    "ChatGPT-User",
+    "ClaudeBot",
+    "Claude-User",
+    "PerplexityBot",
+    "Perplexity-User",
+    "Google-Extended",
+  ];
+  const lines = [
+    "# OpenClaw documentation crawler policy",
+    "# Human docs are HTML. Agent-optimized docs are available as Markdown via .md URLs or Accept: text/markdown.",
+    llmsFullAvailable
+      ? "# Agent-optimized docs are available through /llms.txt, page-level Markdown, and the nightly /llms-full.txt corpus."
+      : "# Agent-optimized docs are available through /llms.txt and page-level Markdown.",
+    "",
+    "User-agent: *",
+    "Allow: /",
+    "Disallow: /__elements",
+    "Disallow: /ask-molty/api/",
+    "",
+  ];
+  for (const agent of botAgents) {
+    lines.push(`User-agent: ${agent}`);
+    lines.push("Allow: /");
+    lines.push("Disallow: /__elements");
+    lines.push("Disallow: /ask-molty/api/");
+    lines.push("");
+  }
+  lines.push(`Sitemap: ${origin}/sitemap.xml`);
+  lines.push(`LLMS: ${origin}/llms.txt`);
+  if (llmsFullAvailable) lines.push(`LLMS-Full: ${origin}/llms-full.txt`);
+  lines.push("");
+  fs.writeFileSync(path.join(outDir, "robots.txt"), lines.join("\n"), "utf8");
+}
+
+function writeSitemap() {
+  const origin = docsOrigin();
+  const urls = [...new Set(pages.filter((page) => !page.hidden).map((page) => `${origin}${pageRoute(page)}`))]
+    .sort((a, b) => a.localeCompare(b));
+  const xml = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...urls.map((url) => `  <url><loc>${escapeXml(url)}</loc></url>`),
+    "</urlset>",
+    "",
+  ].join("\n");
+  fs.writeFileSync(path.join(outDir, "sitemap.xml"), xml, "utf8");
+}
+
+function englishDocsPages() {
+  return pages
+    .filter((page) => !page.hidden && page.locale === "en" && !localeLabels[page.rel.split("/")[0]])
+    .sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+function docsOrigin() {
+  return (canonicalOrigin || "https://docs.openclaw.ai").replace(/\/$/, "");
+}
+
+function chatAvatarAssets() {
+  const staticPath = fs.existsSync(path.join(shellPublicAssetsDir, "molty-avatar.png"))
+    ? "/assets/molty-avatar.png"
+    : fs.existsSync(path.join(docsDir, "assets", "molty-avatar.png"))
+    ? "/assets/molty-avatar.png"
+    : "/assets/pixel-lobster.svg";
+  const hoverPath = fs.existsSync(path.join(shellPublicAssetsDir, "molty-avatar-hover.gif"))
+    ? "/assets/molty-avatar-hover.gif"
+    : fs.existsSync(path.join(docsDir, "assets", "molty-avatar-hover.gif"))
+    ? "/assets/molty-avatar-hover.gif"
+    : staticPath;
+  return { staticPath: publicPath(staticPath), hoverPath: publicPath(hoverPath) };
+}
+
+function chatWidget() {
+  if (!chatApiUrl) return "";
+  const avatar = chatAvatarAssets();
+  return `<section class="docs-chat" data-docs-chat aria-label="OpenClaw docs assistant">
+<button class="docs-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="docs-chat-panel"><img class="docs-chat-avatar" src="${avatar.staticPath}" data-static-src="${avatar.staticPath}" data-hover-src="${avatar.hoverPath}" alt=""><span>Ask Molty</span></button>
+<div class="docs-chat-panel" id="docs-chat-panel" data-chat-panel role="dialog" aria-modal="false" aria-labelledby="docs-chat-title" aria-hidden="true" inert>
+<header class="docs-chat-head"><div class="docs-chat-title"><img class="docs-chat-avatar" src="${avatar.staticPath}" data-static-src="${avatar.staticPath}" data-hover-src="${avatar.hoverPath}" alt=""><h2 id="docs-chat-title">Molty</h2></div><div class="docs-chat-actions"><button class="docs-chat-icon docs-chat-maximize" type="button" data-chat-maximize aria-label="Expand" aria-pressed="false">${icon("maximize-2")}</button><button class="docs-chat-icon docs-chat-copy" type="button" data-chat-copy aria-label="Copy chat" hidden>${icon("copy")}</button><button class="docs-chat-icon docs-chat-retry" type="button" data-chat-retry aria-label="Reload last answer" hidden disabled>${icon("refresh-cw")}</button><button class="docs-chat-icon docs-chat-clear" type="button" data-chat-clear aria-label="Clear chat" hidden>${icon("trash")}</button><button class="docs-chat-icon docs-chat-minimize" type="button" data-chat-minimize aria-label="Minimize">${icon("minus")}</button></div></header>
+<div class="docs-chat-auth" data-chat-auth hidden></div>
+<div class="docs-chat-log" data-chat-log aria-live="polite">
+<div class="docs-chat-empty">Responses are generated using AI and may contain mistakes.</div>
+</div>
+<form class="docs-chat-form" id="docs-assistant-form" data-chat-form><textarea data-chat-input rows="2" maxlength="2000" placeholder="Ask a question..."></textarea><button type="submit" data-chat-submit aria-label="Send">${icon("send")}</button></form>
+</div>
+</section>`;
+}
+
+function writeRedirects() {
+  const records = resolveRedirects({
+    redirects: config.redirects ?? [],
+    pages: pages.map((page) => ({ route: pageRoute(page), markdownRoute: pageMarkdownRoute(page) })),
+    localeCodes,
+    knownLocales: Object.keys(localeLabels),
+    prefixes: [...new Set([basePath, legacyBasePath].filter(Boolean))],
+    publicPath,
+  });
+  const metadata = {};
+  for (const { source, destination, markdownTarget } of records) {
+    const target = path.resolve(outDir, source.slice(1), "index.html");
+    if (!target.startsWith(`${outDir}${path.sep}`)) throw new Error(`Redirect escapes output directory: ${source}`);
+    if (fs.existsSync(target)) continue;
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, redirectHtml(destination), "utf8");
+    if (markdownTarget) metadata[path.relative(outDir, target).split(path.sep).join("/")] = markdownTarget;
+  }
+  fs.writeFileSync(redirectMetadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+}
+
+function redirectHtml(dest) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0; url=${escapeAttr(dest)}"><link rel="canonical" href="${escapeAttr(dest)}"><title>Redirecting - ${escapeHtml(config.name)}</title><script>location.replace(${JSON.stringify(dest)})</script></head><body><a href="${escapeAttr(dest)}">Redirecting</a></body></html>`;
+}
+
+function writeStaticAssets() {
+  const assetsDir = path.join(outDir, "assets");
+  fs.mkdirSync(assetsDir, { recursive: true });
+  copyDir(shellPublicAssetsDir, assetsDir);
+  copyDir(path.join(siteAssetsDir, "fonts"), path.join(assetsDir, "fonts"));
+  fs.writeFileSync(path.join(assetsDir, "docs-site.css"), shellCss, "utf8");
+  fs.writeFileSync(path.join(assetsDir, "docs-site.js"), shellJs, "utf8");
+  fs.writeFileSync(path.join(assetsDir, webVitalsAssetName), webVitalsRuntime, "utf8");
+  const glimmDir = path.dirname(glimmEntry);
+  fs.writeFileSync(path.join(assetsDir, glimmAssetName), glimmRuntime, "utf8");
+  fs.copyFileSync(path.join(glimmDir, "..", "LICENSE"), path.join(assetsDir, "glimm-LICENSE.txt"));
+  const mermaidDist = path.join(root, "node_modules", "mermaid", "dist");
+  const mermaidEntry = path.join(mermaidDist, "mermaid.esm.min.mjs");
+  if (fs.existsSync(mermaidEntry)) {
+    fs.copyFileSync(mermaidEntry, path.join(assetsDir, "mermaid.esm.min.mjs"));
+    copyDir(path.join(mermaidDist, "chunks", "mermaid.esm.min"), path.join(assetsDir, "chunks", "mermaid.esm.min"), {
+      filter: (source) => !source.endsWith(".map"),
+    });
+  }
+  fs.writeFileSync(path.join(outDir, ".nojekyll"), "", "utf8");
+  fs.writeFileSync(path.join(outDir, "og-card.png"), defaultOgPng);
+  fs.writeFileSync(path.join(outDir, "og-card.svg"), defaultOgSvg);
+  if (process.env.DOCS_SITE_CNAME) {
+    fs.writeFileSync(path.join(outDir, "CNAME"), `${process.env.DOCS_SITE_CNAME}\n`, "utf8");
+  }
+}
+
+function copyPublicFiles() {
+  for (const source of walkPublicFiles(docsDir)) {
+    const rel = path.relative(docsDir, source);
+    const dest = path.join(outDir, rel);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(source, dest);
+  }
+}
+
+function walkPublicFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name.startsWith(".")) return [];
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (previewMode && dir === docsDir && entry.name !== "en"
+        && localeCodes.has(entry.name) && entry.name !== previewLocale) return [];
+      return walkPublicFiles(full);
+    }
+    const rel = path.relative(docsDir, full).replaceAll(path.sep, "/");
+    if (ignoredDocFiles.has(rel) || /\.(md|mdx|json|jsonl)$/.test(entry.name)) return [];
+    return [full];
+  });
+}
+
+function copyDir(source, dest, options = {}) {
+  if (!fs.existsSync(source)) return;
+  fs.cpSync(source, dest, { recursive: true, filter: options.filter });
+}
+
+function firstPage(tab) {
+  return flattenNav([tab])[0] ?? pages[0];
+}
+
+function localeUrlForSlug(locale, slug) {
+  return pageByKey.has(pageKey(locale, slug)) ? pageUrl(pageByKey.get(pageKey(locale, slug))) : publicPath(locale === "en" ? "/" : `/${locale}/`);
+}
+
+function internalPageUrl(page) {
+  return pageByKey.has(pageKey(page.locale, page.slug)) ? pageUrl(page) : `${docsOrigin()}${pageRoute(page)}`;
+}
+
+function isPreviewRemote(page) {
+  return previewMode && !pageByKey.has(pageKey(page.locale, page.slug));
+}
+
+function previewLinkAttrs(page, label = page.title) {
+  return isPreviewRemote(page)
+    ? ` data-preview-live title="Opens live docs; not built in this local preview" aria-label="${escapeAttr(label)} (opens live docs)"`
+    : "";
+}
+
+function pageUrl(page) {
+  return isPreviewRemote(page) ? `${docsOrigin()}${pageRoute(page)}` : publicPath(pageRoute(page));
+}
+
+function pageRoute(page) {
+  const prefix = page.locale === "en" ? "" : `/${page.locale}`;
+  return page.slug === "index" ? (prefix || "/") : `${prefix}/${page.slug}`;
+}
+
+function hreflangLinks(page) {
+  // hreflang alternates require absolute URLs; skip when no canonical origin is set
+  // or when the page is excluded from indexing.
+  if (!canonicalOrigin || page.hidden) return "";
+  // Collect every locale that publishes this same slug, using the current page for
+  // its own locale and skipping any locale variant that is itself hidden.
+  const variants = [];
+  for (const locale of locales) {
+    const variant = locale.code === page.locale ? page : allPageByKey.get(pageKey(locale.code, page.slug));
+    if (variant && !variant.hidden) variants.push(variant);
+  }
+  // Nothing to cross-link if the page exists in only one locale.
+  if (variants.length < 2) return "";
+  const links = variants.map(
+    (variant) => `<link rel="alternate" hreflang="${escapeAttr(variant.locale)}" href="${escapeAttr(`${canonicalOrigin}${pageRoute(variant)}`)}">`,
+  );
+  // x-default points at the English variant when available, otherwise the current page.
+  const defaultPage = variants.find((variant) => variant.locale === "en") ?? page;
+  links.push(`<link rel="alternate" hreflang="x-default" href="${escapeAttr(`${canonicalOrigin}${pageRoute(defaultPage)}`)}">`);
+  return `${links.join("\n")}\n`;
+}
+
+function pageMarkdownRoute(page) {
+  const prefix = page.locale === "en" ? "" : `/${page.locale}`;
+  return page.slug === "index" ? `${prefix || ""}/index.md` : `${prefix}/${page.slug}.md`;
+}
+
+function rewriteInternalUrls(html, locale) {
+  return html.replace(/\b(href|src)="\/([^"#?]*)([#?][^"]*)?"/g, (match, attr, target, suffix = "") => {
+    if (attr === "src") return `${attr}="${publicPath(`/${target}`)}${suffix}"`;
+    if (!target || target.startsWith("assets/") || target.startsWith("pagefind/")) {
+      return `${attr}="${publicPath(`/${target}`)}${suffix}"`;
+    }
+    const segments = target.replace(/\/$/, "").split("/");
+    const maybeLocale = segments[0];
+    const localizedSlug = normalizeSlug(segments.slice(1).join("/") || "index");
+    const localizedPage = allPageByKey.get(pageKey(maybeLocale, localizedSlug));
+    if (localizedPage) {
+      return `${attr}="${internalPageUrl(localizedPage)}${suffix}"`;
+    }
+    if (localeCodes.has(maybeLocale)) {
+      const englishPage = allPageByKey.get(pageKey("en", localizedSlug));
+      if (englishPage) return `${attr}="${internalPageUrl(englishPage)}${suffix}"`;
+    }
+    const slug = normalizeSlug(target.replace(/\/$/, ""));
+    const page = allPageByKey.get(pageKey(locale, slug)) ?? allPageByKey.get(pageKey("en", slug));
+    return page ? `${attr}="${internalPageUrl(page)}${suffix}"` : `${attr}="${publicPath(`/${target}`)}${suffix}"`;
+  });
+}
+
+function pageKey(locale, slug) {
+  return `${locale}:${slug}`;
+}
+
+function publicPath(value) {
+  if (!basePath) return value;
+  if (value === "/") return `${basePath}/`;
+  return `${basePath}${value.startsWith("/") ? value : `/${value}`}`;
+}
+
+function normalizeBasePath(value) {
+  if (!value || value === "/") return "";
+  return `/${value.replace(/^\/+|\/+$/g, "")}`;
+}
+
+function normalizeRepository(value) {
+  const repo = String(value).trim();
+  return /^[^/\s]+\/[^/\s]+$/.test(repo) ? repo : "openclaw/openclaw";
+}
+
+function stripTags(value) {
+  return textFromHtml(value).replace(/\s+/g, " ").trim();
+}
+
+function decodeHtmlEntities(value) {
+  return String(value).replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (match, entity) => {
+    const lower = entity.toLowerCase();
+    if (lower === "amp") return "&";
+    if (lower === "lt") return "<";
+    if (lower === "gt") return ">";
+    if (lower === "quot") return "\"";
+    if (lower === "apos") return "'";
+    const code = lower.startsWith("#x") ? Number.parseInt(lower.slice(2), 16) : Number.parseInt(lower.slice(1), 10);
+    return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+  });
+}
+
+function escapeHtml(value) {
+  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replaceAll("'", "&#39;");
+}
+
+function escapeXml(value) {
+  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
+}
+
+function jsonScript(value) {
+  return JSON.stringify(value)
+    .replaceAll("<", "\\u003c")
+    .replaceAll(">", "\\u003e")
+    .replaceAll("&", "\\u0026");
+}

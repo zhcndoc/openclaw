@@ -1,0 +1,463 @@
+import assert from "node:assert/strict";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { fixture, servesMarkdown, pipeline, run, write } from "./test-helpers/redirect-fixture.mjs";
+
+const metadata = (target) => target ? { "openclaw-markdown-target": target } : undefined;
+const manifest = (entries) => ({ version: 1, entries, objectCount: entries.length });
+
+function uploadFixture(t) {
+  const f = fixture(t);
+  const body = "<html>Identical redirect bytes</html>";
+  write(f.root, "files/redirect.html", body);
+  const entry = (key, target) => ({
+    key, sourceKey: key, file: "files/redirect.html", size: Buffer.byteLength(body),
+    contentType: "text/html; charset=utf-8", cacheControl: "public, max-age=60",
+    sha256: crypto.createHash("sha256").update(body).digest("hex"),
+    md5: crypto.createHash("md5").update(body).digest("hex"),
+    ...(target ? { customMetadata: metadata(target) } : {}),
+  });
+  const local = [entry("add", "/target.md"), entry("change", "/new.md?lang=de#part"), entry("remove"), entry("same", "/same.md")];
+  const old = [entry("add"), entry("change", "/old.md#part"), entry("remove", "/old.md"), entry("same", "/same.md")];
+  return { ...f, local, old };
+}
+
+function dryUpload(root, local, remote, env = {}) {
+  write(root, "dist/local.json", JSON.stringify(manifest(local)));
+  write(root, "dist/remote.json", JSON.stringify(manifest(remote)));
+  return run(root, "r2-upload.mjs", {
+    R2_UPLOAD_DRY_RUN: "1", R2_UPLOAD_MANIFEST_PATH: "dist/local.json",
+    R2_UPLOAD_REMOTE_MANIFEST_PATH: "dist/remote.json", ...env,
+  });
+}
+
+function puts(output) {
+  return [...output.matchAll(/^r2 dry-run put: (.+)$/gm)].map((match) => match[1])
+    .filter((key) => key !== ".openclaw-docs-r2-manifest.json").sort();
+}
+
+function fetchUploadRoot(t) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-r2-fetch-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  write(root, "no-network.mjs", 'globalThis.fetch = () => { throw new Error("Unexpected outbound fetch"); };\n');
+  const body = "<html>ok</html>";
+  write(root, "files/page.html", body);
+  const local = [{
+    key: "page", sourceKey: "page", file: "files/page.html", size: Buffer.byteLength(body),
+    contentType: "text/html; charset=utf-8", cacheControl: "public, max-age=60",
+    sha256: crypto.createHash("sha256").update(body).digest("hex"),
+    md5: crypto.createHash("md5").update(body).digest("hex"),
+  }];
+  write(root, "dist/local.json", JSON.stringify(manifest(local)));
+  write(root, "dist/remote.json", JSON.stringify(manifest(local)));
+  return root;
+}
+
+const syntheticR2 = {
+  R2_UPLOAD_MANIFEST_PATH: "dist/local.json", R2_UPLOAD_REMOTE_MANIFEST_PATH: "dist/remote.json",
+  R2_DELETE_ORPHANS: "0", R2_UPLOAD_RETRIES: "0", OPENCLAW_R2_S3_ENDPOINT: "https://synthetic-r2.invalid",
+  CLOUDFLARE_R2_BUCKET: "synthetic-bucket", OPENCLAW_R2_ACCESS_KEY_ID: "synthetic-access",
+  OPENCLAW_R2_SECRET_ACCESS_KEY: "synthetic-secret",
+};
+
+for (const value of ["30s", "1.5", "0", "-1", "Infinity", "2147483648"]) {
+  test(`R2 upload rejects invalid timeout ${value} before making a request`, (t) => {
+    const root = fetchUploadRoot(t);
+    const result = run(root, "r2-upload.mjs", { ...syntheticR2, R2_UPLOAD_FETCH_TIMEOUT_MS: value });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /R2_UPLOAD_FETCH_TIMEOUT_MS must be an integer between/);
+    assert.doesNotMatch(result.stderr, /Unexpected outbound fetch/);
+  });
+}
+
+test("manifest diff detects metadata additions, changes and removals with identical HTML hashes", (t) => {
+  const f = uploadFixture(t);
+  const result = dryUpload(f.root, f.local, f.old);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(puts(result.stdout), ["add", "change", "remove"]);
+  assert.match(result.stdout, /markdown_target=3/);
+  const unchanged = dryUpload(f.root, f.local, f.local);
+  assert.equal(unchanged.status, 0, unchanged.stderr);
+  assert.deepEqual(puts(unchanged.stdout), []);
+});
+
+test("prepared artifact paths preserve uploaded bytes and reuse old manifest objects", (t) => {
+  const f = fixture(t);
+  const files = {
+    "index.html": "<html>Root</html>",
+    "guide.v2/index.html": "<html>Guide</html>",
+    "assets/image.png": Buffer.from([0, 255, 1, 128]),
+  };
+  for (const [key, body] of Object.entries(files)) write(f.root, `dist/docs-site/${key}`, body);
+  write(f.root, "dist/docs-site/_headers", "/*\n  Cache-Control: no-store\n");
+  write(f.root, "dist/docs-r2/removed.html", "old artifact");
+  const prepared = f.prepare();
+  assert.deepEqual(prepared.entries.map((entry) => entry.key), [
+    "assets/image.png", "guide.v2", "index.html",
+  ]);
+  assert.equal(prepared.objectCount, 3);
+  for (const entry of prepared.entries) {
+    const expected = Buffer.from(files[entry.sourceKey]);
+    assert.deepEqual(fs.readFileSync(path.join(f.root, entry.file)), expected);
+    assert.equal(entry.size, expected.length);
+    assert.equal(entry.md5, crypto.createHash("md5").update(expected).digest("hex"));
+    assert.equal(entry.sha256, crypto.createHash("sha256").update(expected).digest("hex"));
+  }
+  const alias = prepared.entries.find((entry) => entry.key === "guide.v2");
+  assert.equal(alias.contentType, "text/html; charset=utf-8");
+  assert.equal(alias.cacheControl, "public, max-age=60, s-maxage=86400, stale-while-revalidate=604800");
+
+  const legacy = [...prepared.entries, { ...alias, key: alias.sourceKey }];
+  const retirement = dryUpload(f.root, prepared.entries, legacy);
+  assert.equal(retirement.status, 0, retirement.stderr);
+  assert.deepEqual(puts(retirement.stdout), [], "identical canonical objects need no rewrite");
+  assert.deepEqual([...retirement.stdout.matchAll(/^r2 dry-run delete: (\S+)$/gm)].map(match => match[1]), ["guide.v2/index.html"]);
+  assert.ok(fs.existsSync(path.join(f.root, alias.file)), "the nested preview file stays on disk");
+  const partial = dryUpload(f.root, prepared.entries, legacy, { R2_UPLOAD_SCOPE: "shell" });
+  assert.equal(partial.status, 0, partial.stderr);
+  assert.doesNotMatch(partial.stdout, /^r2 dry-run delete:/m, "partial uploads cannot retire legacy keys");
+  const partialManifest = JSON.parse(fs.readFileSync(path.join(f.root, "dist/docs-r2-manifest.shell.merged.json"), "utf8"));
+  assert.ok(partialManifest.entries.some(entry => entry.key === alias.sourceKey));
+
+  // A previous publication can name different local files; only object bytes
+  // and HTTP metadata determine whether an upload is necessary.
+  const old = prepared.entries.map((entry) => ({ ...entry, file: `old-copy/${entry.sourceKey}` }));
+  old.push({ ...old[0], key: "removed.html" });
+  const result = dryUpload(f.root, prepared.entries, old);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(puts(result.stdout), []);
+  assert.match(result.stdout, /^r2 dry-run delete: removed\.html$/m);
+
+  // A cold upload must be able to open every newly prepared file as well.
+  const cold = dryUpload(f.root, prepared.entries, []);
+  assert.equal(cold.status, 0, cold.stderr);
+  assert.deepEqual(puts(cold.stdout), prepared.entries.map((entry) => entry.key));
+});
+
+for (const mode of ["manifest", "head", "head-error"]) {
+  test(`${mode} audit uploads metadata add/change/remove despite unchanged ETags using only mocked fetch`, (t) => {
+    const f = uploadFixture(t);
+    write(f.root, "dist/local.json", JSON.stringify(manifest(f.local)));
+    // Matching remote manifest makes HEAD solely responsible for finding drift.
+    write(f.root, "dist/remote.json", JSON.stringify(manifest(mode === "head" ? f.local : f.old)));
+    write(f.root, "heads.json", JSON.stringify(f.old));
+    write(f.root, "mock-fetch.mjs", `
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const heads = new Map(JSON.parse(fs.readFileSync("heads.json", "utf8")).map(entry => [entry.key, entry]));
+const calls = [];
+globalThis.fetch = async (input, init) => {
+  const url = new URL(input);
+  assert.equal(url.origin, "https://synthetic-r2.invalid");
+  assert.ok(url.pathname.startsWith("/synthetic-bucket/"));
+  const key = decodeURIComponent(url.pathname.slice("/synthetic-bucket/".length));
+  const headers = new Headers(init.headers);
+  calls.push({ method: init.method, key, target: headers.get("x-amz-meta-openclaw-markdown-target") });
+  fs.writeFileSync("calls.json", JSON.stringify(calls));
+  if (init.method === "HEAD") {
+    assert.ok(heads.has(key), key);
+    if (${mode === "head-error"}) return new Response(null, { status: 503 });
+    const entry = heads.get(key);
+    const target = entry.customMetadata?.["openclaw-markdown-target"];
+    return new Response(null, { headers: {
+      "Content-Type": entry.contentType, "Cache-Control": entry.cacheControl,
+      "Content-Length": String(entry.size), ETag: '"' + entry.md5 + '"',
+      ...(target ? { "x-amz-meta-openclaw-markdown-target": target } : {}),
+    } });
+  }
+  assert.equal(init.method, "PUT");
+  assert.ok(heads.has(key) || key === ".openclaw-docs-r2-manifest.json", key);
+  return new Response(null, { status: 200 });
+};
+`);
+    const result = run(f.root, "r2-upload.mjs", {
+      R2_UPLOAD_MANIFEST_PATH: "dist/local.json", R2_UPLOAD_REMOTE_MANIFEST_PATH: "dist/remote.json",
+      R2_UPLOAD_FULL_REFRESH: mode === "manifest" ? "0" : "1", R2_DELETE_ORPHANS: "0",
+      R2_UPLOAD_RETRIES: "0", OPENCLAW_R2_S3_ENDPOINT: "https://synthetic-r2.invalid",
+      CLOUDFLARE_R2_BUCKET: "synthetic-bucket", OPENCLAW_R2_ACCESS_KEY_ID: "synthetic-access",
+      OPENCLAW_R2_SECRET_ACCESS_KEY: "synthetic-secret",
+    }, [path.join(f.root, "mock-fetch.mjs")]);
+    assert.equal(result.status, 0, result.stderr);
+    const calls = JSON.parse(fs.readFileSync(path.join(f.root, "calls.json"), "utf8"));
+    const uploaded = calls.filter((call) => call.method === "PUT" && !call.key.startsWith(".openclaw"));
+    assert.deepEqual(uploaded.map((call) => call.key).sort(), ["add", "change", "remove"]);
+    for (const call of uploaded) {
+      assert.equal(call.target, f.local.find((entry) => entry.key === call.key).customMetadata?.["openclaw-markdown-target"] ?? null);
+    }
+    assert.equal(calls.filter((call) => call.method === "HEAD").length, mode === "manifest" ? 0 : 4);
+    if (mode === "head-error") assert.match(result.stderr, /falling back to manifest comparison/);
+  });
+}
+
+test("translation page/locale scopes own affected aliases and compatibility prefixes without publishing unrelated pages", async (t) => {
+  const f = fixture(t, [
+    { source: "/old", destination: "/target#part" },
+    { source: "/other-old", destination: "/other" },
+    { source: "/explicit", destination: "/de/target#part" },
+    { source: "/nested-old", destination: "/section/index" },
+    { source: "/root-old", destination: "/" },
+  ], {
+    "target.md": "# Target\n", "other.md": "# Other\n", "section/index.md": "# Section\n",
+    "de/index.md": "# Deutsch\n", "de/old.md": "# Existing source\n",
+    "de/other.md": "# Andere\n", "fr/index.md": "# Français\n",
+  }, "/manual");
+  const before = pipeline(f);
+  assert.equal((await before.request("/de/old.md")).status, 200);
+  await servesMarkdown(before, "/manual/de/old.md", "/target.md");
+  write(f.root, "docs/de/target.md", "# Ziel\n");
+  write(f.root, "docs/de/section/index.md", "# Abschnitt\n");
+  const after = pipeline(f);
+  const scoped = (scope, page = "target.md") => dryUpload(f.root, after.manifest.entries, before.manifest.entries, {
+    R2_UPLOAD_SCOPE: scope, R2_UPLOAD_LOCALE: "de", R2_UPLOAD_PAGE_PATH: page, R2_UPLOAD_PUT_ALL: "1",
+  });
+  const page = scoped("page");
+  assert.equal(page.status, 0, page.stderr);
+  const expected = ["de/target", "de/target.md"];
+  for (const prefix of ["", "docs/", "manual/"]) {
+    for (const alias of ["de/old", "explicit", "de/explicit", "fr/explicit"]) {
+      if (prefix === "" && alias === "de/old") continue;
+      expected.push(`${prefix}${alias}`);
+    }
+  }
+  assert.deepEqual(puts(page.stdout), expected.sort());
+  const merged = JSON.parse(fs.readFileSync(path.join(f.root, "dist/docs-r2-manifest.page.merged.json"), "utf8"));
+  // Serve through the partially published manifest, not the full new build.
+  after.entries.clear();
+  for (const entry of merged.entries) after.entries.set(entry.key, entry);
+  await servesMarkdown(after, "/manual/de/old.md", "/de/target.md");
+  await servesMarkdown(after, "/docs/fr/explicit.md", "/de/target.md");
+  assert.equal(after.entries.has("de/section.md"), false);
+
+  const locale = scoped("locale");
+  assert.equal(locale.status, 0, locale.stderr);
+  assert.ok(puts(locale.stdout).includes("docs/de/nested-old"));
+  assert.ok(puts(locale.stdout).includes("manual/fr/explicit"));
+  assert.ok(!puts(locale.stdout).includes("fr/other-old"));
+  assert.ok(!puts(locale.stdout).includes("target.md"));
+  assert.ok(!puts(locale.stdout).includes("other.md"));
+
+  for (const [pagePath, markdownKey, alias] of [
+    ["section/index.md", "de/section.md", "manual/de/nested-old"],
+    ["index.md", "de/index.md", "docs/de/root-old"],
+  ]) {
+    const result = scoped("page", pagePath);
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(puts(result.stdout).includes(markdownKey));
+    assert.ok(puts(result.stdout).includes(alias));
+    assert.ok(!puts(result.stdout).includes("de/target.md"));
+  }
+
+  // Reverting to fallback must also select aliases by their previous target.
+  const fallback = dryUpload(f.root, before.manifest.entries, after.manifest.entries, {
+    R2_UPLOAD_SCOPE: "page", R2_UPLOAD_LOCALE: "de", R2_UPLOAD_PAGE_PATH: "target",
+  });
+  assert.equal(fallback.status, 0, fallback.stderr);
+  assert.deepEqual(puts(fallback.stdout), expected.filter((key) => !key.startsWith("de/target")));
+});
+
+test("signedFetch attaches an AbortSignal so a stalled R2 socket can time out", (t) => {
+  const root = fetchUploadRoot(t);
+  write(root, "mock-fetch.mjs", `
+import fs from "node:fs";
+const calls = [];
+globalThis.fetch = async (input, init = {}) => {
+  const url = new URL(input);
+  const key = decodeURIComponent(url.pathname.slice("/synthetic-bucket/".length));
+  calls.push({
+    method: init.method,
+    key,
+    hasSignal: Boolean(init.signal),
+    signalAborted: Boolean(init.signal?.aborted),
+    signalName: init.signal?.constructor?.name ?? null,
+  });
+  fs.writeFileSync("calls.json", JSON.stringify(calls));
+  return new Response(null, { status: 200 });
+};
+`);
+  const result = run(root, "r2-upload.mjs", syntheticR2, [path.join(root, "mock-fetch.mjs")]);
+  assert.equal(result.status, 0, result.stderr);
+  const calls = JSON.parse(fs.readFileSync(path.join(root, "calls.json"), "utf8"));
+  assert.ok(calls.length > 0, "signedFetch must call fetch at least once");
+  for (const call of calls) {
+    assert.equal(call.hasSignal, true, `${call.method} ${call.key} missing AbortSignal`);
+    assert.equal(call.signalName, "AbortSignal", `${call.method} ${call.key}`);
+    assert.equal(call.signalAborted, false, `${call.method} ${call.key} started already aborted`);
+  }
+});
+
+test("signedFetch aborts a hung R2 fetch so retries are not stuck on a stalled socket", (t) => {
+  const root = fetchUploadRoot(t);
+  write(root, "mock-fetch.mjs", `
+globalThis.fetch = (_input, init = {}) => new Promise((_resolve, reject) => {
+  const signal = init.signal;
+  const keepAlive = setTimeout(() => {}, 60_000);
+  const abort = () => {
+    clearTimeout(keepAlive);
+    const error = new Error("The operation was aborted");
+    error.name = "AbortError";
+    reject(error);
+  };
+  if (!signal) return;
+  if (signal.aborted) {
+    abort();
+    return;
+  }
+  signal.addEventListener("abort", abort, { once: true });
+});
+`);
+  const started = Date.now();
+  const result = run(root, "r2-upload.mjs", {
+    ...syntheticR2, R2_UPLOAD_FETCH_TIMEOUT_MS: "80",
+  }, [path.join(root, "mock-fetch.mjs")], { timeout: 4000 });
+  const elapsed = Date.now() - started;
+  assert.notEqual(result.status, null, `hung fetch was killed after ${elapsed}ms instead of aborting`);
+  assert.notEqual(result.status, 0, result.stdout);
+  assert.match(result.stderr, /abort/i);
+  assert.ok(elapsed < 2000, `hung fetch ran ${elapsed}ms without aborting`);
+});
+
+test("shell scope selects both physical and virtual redirect objects for metadata-only changes", (t) => {
+  const f = uploadFixture(t);
+  const local = [
+    { ...f.local[0], key: "old" }, { ...f.local[0], key: "old/index.html" },
+    { ...f.local[0], key: "docs/old" }, { ...f.local[0], key: "docs/old/index.html" },
+  ];
+  const old = local.map(({ customMetadata, ...entry }) => entry);
+  const result = dryUpload(f.root, local, old, { R2_UPLOAD_SCOPE: "shell" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(puts(result.stdout), local.map((entry) => entry.key).sort());
+});
+
+function localeEntries(template) {
+  return [
+    { ...template, key: "de/page" },
+    { ...template, key: "de/page/index.html" },
+    { ...template, key: "de/page.md" },
+  ];
+}
+
+test("empty object remote manifest is not a hit and does not write a merged manifest", (t) => {
+  const f = uploadFixture(t);
+  const local = localeEntries(f.local[0]);
+  write(f.root, "dist/local.json", JSON.stringify(manifest(local)));
+  write(f.root, "dist/remote.json", "{}\n");
+  const mergedPath = path.join(f.root, "dist/docs-r2-manifest.locale.merged.json");
+  const result = run(f.root, "r2-upload.mjs", {
+    R2_UPLOAD_DRY_RUN: "1", R2_UPLOAD_MANIFEST_PATH: "dist/local.json",
+    R2_UPLOAD_REMOTE_MANIFEST_PATH: "dist/remote.json",
+    R2_UPLOAD_SCOPE: "locale", R2_UPLOAD_LOCALE: "de",
+  });
+  assert.notEqual(result.status, 0, result.stdout);
+  assert.match(`${result.stderr}\n${result.stdout}`, /entries array/i);
+  assert.equal(fs.existsSync(mergedPath), false);
+});
+
+test("valid remote manifest with empty entries array remains a hit", (t) => {
+  const f = uploadFixture(t);
+  const result = dryUpload(f.root, f.local, []);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /r2 remote manifest: hit from file \(0 entries\)/);
+});
+
+test("dry-run without a remote manifest path stays missing", (t) => {
+  const f = uploadFixture(t);
+  write(f.root, "dist/local.json", JSON.stringify(manifest(f.local)));
+  const result = run(f.root, "r2-upload.mjs", {
+    R2_UPLOAD_DRY_RUN: "1", R2_UPLOAD_MANIFEST_PATH: "dist/local.json",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /r2 remote manifest: missing from dry-run \(0 entries\)/);
+});
+
+for (const body of ["null", "[]"]) {
+  test(`remote manifest HTTP 200 body ${body} fails closed`, (t) => {
+    const f = uploadFixture(t);
+    write(f.root, "dist/local.json", JSON.stringify(manifest(f.local)));
+    write(f.root, "mock-fetch.mjs", `
+globalThis.fetch = async (input, init) => {
+  const url = new URL(input);
+  const key = decodeURIComponent(url.pathname.slice("/synthetic-bucket/".length));
+  if (init.method === "GET" && key === ".openclaw-docs-r2-manifest.json") {
+    return new Response(${JSON.stringify(body)}, { status: 200 });
+  }
+  return new Response(null, { status: 200 });
+};
+`);
+    const result = run(f.root, "r2-upload.mjs", {
+      R2_UPLOAD_MANIFEST_PATH: "dist/local.json", R2_UPLOAD_RETRIES: "0",
+      OPENCLAW_R2_S3_ENDPOINT: "https://synthetic-r2.invalid",
+      CLOUDFLARE_R2_BUCKET: "synthetic-bucket", OPENCLAW_R2_ACCESS_KEY_ID: "synthetic-access",
+      OPENCLAW_R2_SECRET_ACCESS_KEY: "synthetic-secret",
+    }, [path.join(f.root, "mock-fetch.mjs")]);
+    assert.notEqual(result.status, 0, result.stdout);
+    assert.match(`${result.stderr}\n${result.stdout}`, /entries array|invalid JSON/i);
+  });
+}
+
+test("HTTP 404 remote manifest stays missing with empty entries", (t) => {
+  const f = uploadFixture(t);
+  write(f.root, "dist/local.json", JSON.stringify(manifest(f.local)));
+  write(f.root, "mock-fetch.mjs", `
+globalThis.fetch = async (input, init) => {
+  const url = new URL(input);
+  const key = decodeURIComponent(url.pathname.slice("/synthetic-bucket/".length));
+  if (init.method === "GET" && key === ".openclaw-docs-r2-manifest.json") {
+    return new Response("Not Found", { status: 404 });
+  }
+  return new Response(null, { status: 200 });
+};
+`);
+  const result = run(f.root, "r2-upload.mjs", {
+    R2_UPLOAD_MANIFEST_PATH: "dist/local.json", R2_UPLOAD_RETRIES: "0", R2_DELETE_ORPHANS: "0",
+    OPENCLAW_R2_S3_ENDPOINT: "https://synthetic-r2.invalid",
+    CLOUDFLARE_R2_BUCKET: "synthetic-bucket", OPENCLAW_R2_ACCESS_KEY_ID: "synthetic-access",
+    OPENCLAW_R2_SECRET_ACCESS_KEY: "synthetic-secret",
+  }, [path.join(f.root, "mock-fetch.mjs")]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /r2 remote manifest: missing from r2 \(0 entries\)/);
+});
+
+for (const failImage of [false, true]) {
+  test(`R2 publishes image prerequisites before HTML (image failure: ${failImage})`, (t) => {
+    const root = fetchUploadRoot(t);
+    const local = JSON.parse(fs.readFileSync(path.join(root, "dist/local.json"), "utf8")).entries;
+    const bytes = Buffer.from("synthetic image");
+    write(root, "files/image.png", bytes);
+    local.push({
+      key: "og/page.png", sourceKey: "og/page.png", file: "files/image.png", size: bytes.length,
+      contentType: "image/png", cacheControl: "public, max-age=31536000, immutable",
+      sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
+      md5: crypto.createHash("md5").update(bytes).digest("hex"),
+    });
+    write(root, "dist/local.json", JSON.stringify(manifest(local)));
+    write(root, "dist/remote.json", JSON.stringify(manifest([])));
+    write(root, "image-order.mjs", `
+import assert from "node:assert/strict";
+import fs from "node:fs";
+let imageReady = false;
+const calls = [];
+globalThis.fetch = async (input, init) => {
+  const url = new URL(input);
+  assert.equal(url.origin, "https://synthetic-r2.invalid");
+  assert.equal(init.method, "PUT");
+  const key = decodeURIComponent(url.pathname.slice("/synthetic-bucket/".length));
+  calls.push(key);
+  fs.writeFileSync("image-order.json", JSON.stringify(calls));
+  if (key === "og/page.png") {
+    if (${failImage}) return new Response("synthetic failure", { status: 503 });
+    imageReady = true;
+  } else {
+    assert.ok(imageReady, "HTML and the catalog must wait for their image");
+  }
+  return new Response(null, { status: 200 });
+};
+`);
+    const result = run(root, "r2-upload.mjs", syntheticR2, [path.join(root, "image-order.mjs")]);
+    assert.equal(result.status, failImage ? 1 : 0, result.stderr);
+    const calls = JSON.parse(fs.readFileSync(path.join(root, "image-order.json"), "utf8"));
+    assert.deepEqual(calls, failImage ? ["og/page.png"] : ["og/page.png", "page", ".openclaw-docs-r2-manifest.json"]);
+  });
+}

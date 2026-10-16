@@ -1,0 +1,408 @@
+import fs from "node:fs";
+import { createHash } from "node:crypto";
+import { initSidebarLevels } from "./sidebar-levels.mjs";
+import { mountHomeHero } from "./home-hero.mjs";
+import { createHomeGlimm } from "./home-glimm.mjs";
+import { glimmAssetName } from "./glimm-runtime.mjs";
+import { createDocsAnalytics } from "./analytics.mjs";
+import { createDocsAnalyticsEvents } from "./analytics-events.mjs";
+import { webVitalsAssetName } from "./web-vitals-runtime.mjs";
+import { initDocsAnalyticsConsent } from "./analytics-consent.mjs";
+// The emitted runtime also supports the classic-script navigation harness.
+const heroRuntime = fs.readFileSync(new URL("./hero-art.mjs", import.meta.url), "utf8").replace(/^export /gm, "");
+
+import { resolveDocsFragment } from "../../.openclaw-sync/lib/docs-markdown.mjs";
+
+export function siteJs() {
+  const source = `
+${heroRuntime}
+${initSidebarLevels.toString()}
+${mountHomeHero.toString()}
+${createHomeGlimm.toString()}
+const docsAnalytics=(${createDocsAnalytics.toString()})(()=>import(withBase(${JSON.stringify("/assets/" + webVitalsAssetName)})),docsRuntimeRelease);
+const docsTelemetry=(${createDocsAnalyticsEvents.toString()})(docsAnalytics);
+docsAnalytics.pageView();
+queueMicrotask(()=>(${initDocsAnalyticsConsent.toString()})(docsAnalytics,()=>{try{if(docsAnalytics.publicPage())currentDocKey=location.pathname+location.search;syncCommunityInvite()}catch{}}));
+const homeGlimm=createHomeGlimm(()=>import(withBase(${JSON.stringify("/assets/" + glimmAssetName)})));
+let disposeHomeHero=()=>{};function initHomeHero(){disposeHomeHero();const disposeHero=mountOpenClawHeroArt(document.querySelector(".docs-hero"));const disposeBackground=mountHomeHero(document.querySelector(".home-hero"));disposeHomeHero=()=>{disposeHero();disposeBackground()}}
+const root=document.documentElement;const saved=localStorage.getItem("theme");root.dataset.theme=saved||"dark";
+function syncHeaderSurface(){
+const header=document.querySelector(".site-header");header?.classList.toggle("is-scrolled",window.scrollY>4);
+const summary=document.querySelector(".toc summary")?.getBoundingClientRect();
+const headerBottom=header?.getBoundingClientRect().bottom||0;
+document.body.classList.toggle("has-docked-toc",Boolean(summary?.height&&Math.abs(summary.top-headerBottom)<1));
+}
+syncHeaderSurface();addEventListener("scroll",syncHeaderSurface,{passive:true});
+const modal=document.querySelector(".search-modal");const input=document.querySelector("[data-search-input]");const results=document.querySelector("[data-search-results]");const moltySearch=document.querySelector("[data-search-molty]");const moltySearchPrefix=document.querySelector("[data-search-molty-prefix]");const moltySearchTerm=document.querySelector("[data-search-molty-term]");let pagefindReady;let pagefindLoadAttempt=0;let navigating=false;let searchActiveIndex=-1;
+function withBase(url){const base=window.OPENCLAW_DOCS_BASE||"";if(!base||!url.startsWith("/"))return url;return url===base||url.startsWith(base+"/")?url:base+url}
+function closeLanguage(){const picker=document.querySelector("[data-language-picker]");const trigger=document.querySelector("[data-language-trigger]");const restore=picker?.querySelector(".language-menu")?.contains(document.activeElement);picker?.classList.remove("open");trigger?.setAttribute("aria-expanded","false");if(restore)trigger?.focus({preventScroll:true})}
+function focusLanguageOption(option){
+if(!option)return;option.focus({preventScroll:true});
+const menu=option.closest(".language-menu");if(!menu)return;
+const top=option.offsetTop,bottom=top+option.offsetHeight;
+if(top<menu.scrollTop)menu.scrollTop=top;else if(bottom>menu.scrollTop+menu.clientHeight)menu.scrollTop=bottom-menu.clientHeight;
+}
+function toggleLanguage(){const picker=document.querySelector("[data-language-picker]");const trigger=document.querySelector("[data-language-trigger]");if(picker?.classList.contains("open")){closeLanguage();return}picker?.classList.add("open");trigger?.setAttribute("aria-expanded","true");focusLanguageOption(picker?.querySelector(".language-option.active")??picker?.querySelector(".language-option"))}
+function handleLanguageKeydown(e){
+const picker=e.target?.closest?.("[data-language-picker]");if(!picker)return false;
+const trigger=picker.querySelector("[data-language-trigger]");
+if(e.target===trigger&&(e.key==="ArrowDown"||e.key==="ArrowUp")){e.preventDefault();if(!picker.classList.contains("open"))toggleLanguage();const options=picker.querySelectorAll("[data-locale-option]");focusLanguageOption(e.key==="ArrowUp"?options[options.length-1]:options[0]);return true}
+if(!e.target.matches("[data-locale-option]"))return false;
+const options=[...picker.querySelectorAll("[data-locale-option]")],index=options.indexOf(e.target);
+let next;if(e.key==="ArrowDown")next=(index+1)%options.length;else if(e.key==="ArrowUp")next=(index-1+options.length)%options.length;else if(e.key==="Home")next=0;else if(e.key==="End")next=options.length-1;else return false;
+e.preventDefault();focusLanguageOption(options[next]);return true;
+}
+function isPlainLeftClick(e){return e.button===0&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey}
+function isDocsPage(url){if(url.origin!==location.origin)return false;const base=window.OPENCLAW_DOCS_BASE||"";if(base&&url.pathname!==base&&!url.pathname.startsWith(base+"/"))return false;if(/\\/(?:assets|pagefind)\\//.test(url.pathname))return false;return !/\\.[a-z0-9]{2,8}$/i.test(url.pathname)}
+function sameSidebarLinks(a,b){const signature=node=>[...node.querySelectorAll("a,summary,h2")].map(el=>el.tagName+":"+(el.getAttribute("href")||"")+":"+el.textContent);const ah=signature(a),bh=signature(b);return ah.length===bh.length&&ah.every((value,i)=>value===bh[i])}
+function updateSidebarFade(){const sidebar=document.querySelector(".sidebar");if(!sidebar)return;const levels=sidebar.querySelector(".docs-sidebar-levels");if(levels){levels.updateFade();return}const overflow=sidebar.scrollHeight>sidebar.clientHeight+1;const canUp=overflow&&sidebar.scrollTop>1;const canDown=overflow&&sidebar.scrollTop+sidebar.clientHeight<sidebar.scrollHeight-1;sidebar.classList.toggle("has-overflow",overflow);sidebar.classList.toggle("can-scroll-up",canUp);sidebar.classList.toggle("can-scroll-down",canDown)}
+function scrollActiveNavLink(){const sidebar=document.querySelector(".sidebar");const active=[...sidebar?.querySelectorAll(".nav-link.active")||[]].find(isUsableFocusTarget);if(!sidebar||!active||!isUsableFocusTarget(active)){updateSidebarFade();return}const scroller=active.closest(".docs-sidebar-context > .docs-sections,.docs-sidebar-directory")||sidebar;const target=scroller.scrollTop+active.getBoundingClientRect().top-scroller.getBoundingClientRect().top-scroller.clientHeight/2+active.offsetHeight/2;const max=scroller.scrollHeight-scroller.clientHeight;scroller.scrollTop=Math.max(0,Math.min(max,target));updateSidebarFade()}
+// Bump only for an intentional site-wide reset; v2 introduces the Reddit/Discord/X invitation.
+const communityInviteKey="openclaw.docs.community-invite.v2";
+let communityFooterVisible=false;
+// Null means storage is unusable or holds a value that is not ours, and the card stays hidden;
+// an empty object is a browser that has never dismissed it.
+function readCommunityInvite(){try{const raw=localStorage.getItem(communityInviteKey);if(raw===null)return{};const value=JSON.parse(raw);if(!value||typeof value!=="object"||Array.isArray(value))return null;const at=value.dismissedAtMs;return typeof at==="number"&&Number.isFinite(at)&&at>=0?{dismissedAtMs:at}:null}catch{return null}}
+// --community-invite-h is the reserve two owners consume: the page reserves it while the card
+// floats (wide layouts), the nav drawer reserves it while the card is docked in it (narrow
+// layouts). Both collapse to zero once the card is dismissed.
+function syncCommunityInvite(){
+const card=document.querySelector(".community-invite");if(!card)return;
+const state=readCommunityInvite(),narrow=mobileNavQuery.matches;
+const floatingBlocked=!narrow&&(communityFooterVisible||document.querySelector(".docs-chat.open"));
+const baseHide=state===null||state.dismissedAtMs!==undefined||floatingBlocked;
+const ownedFocus=card.contains(document.activeElement);card.hidden=Boolean(baseHide);
+const rect=baseHide?null:card.getBoundingClientRect(),sidebar=document.querySelector(".sidebar")?.getBoundingClientRect();
+const overlapsSidebar=rect&&!narrow&&sidebar&&sidebar.left<rect.right&&sidebar.right>rect.left;
+const launcherHeight=document.querySelector(".docs-chat-launcher")?.getBoundingClientRect().height||0;
+const floatingTop=rect?rect.top-launcherHeight-12:0;
+const room=rect?(narrow?innerHeight-rect.height:overlapsSidebar?floatingTop-sidebar.top-12:floatingTop-(document.querySelector(".site-header")?.getBoundingClientRect().bottom||0)):0;
+// Keep two touch-sized navigation rows below fixed controls, including in the RTL rail.
+const reservesNavigation=narrow||overlapsSidebar;
+const navChrome=reservesNavigation?[...document.querySelectorAll(".sidebar-head,.sidebar-tools,.docs-sidebar-back")].reduce((height,el)=>{const style=getComputedStyle(el);return height+el.getBoundingClientRect().height+parseFloat(style.marginTop)+parseFloat(style.marginBottom)},0):0;
+const hide=Boolean(baseHide||room-navChrome<(reservesNavigation?88:160));card.hidden=hide;docsTelemetry.communityVisible(!hide&&getComputedStyle(card).visibility!=="hidden");
+document.body.classList.toggle("has-community-invite",!hide);
+root.style.setProperty("--community-invite-h",hide?"0px":rect.height+"px");
+root.style.setProperty("--sidebar-available-height",!hide&&overlapsSidebar?Math.max(0,room)+"px":"100dvh");
+updateSidebarFade();syncTocSpace();
+if(hide&&ownedFocus){const target=document.body.classList.contains("nav-open")?document.querySelector("[data-nav-close]"):document.querySelector(".brand");target?.focus({preventScroll:true})}
+}
+// Hide only once the write reads back, so a rejected write leaves the card on screen.
+function dismissCommunityInvite(){const serialized=JSON.stringify({dismissedAtMs:Date.now()});try{localStorage.setItem(communityInviteKey,serialized);if(localStorage.getItem(communityInviteKey)!==serialized)return}catch{return}docsTelemetry.popup("docs_community",false,"close_button","community_invite");syncCommunityInvite()}
+function syncSidebar(nextDoc){const current=document.querySelector(".sidebar");const incoming=nextDoc.querySelector(".sidebar");if(!current||!incoming)return;const scroll=current.scrollTop;if(sameSidebarLinks(current,incoming)){for(const selector of ["a",".docs-section",".docs-section>summary"]){const next=[...incoming.querySelectorAll(selector)];current.querySelectorAll(selector).forEach((element,i)=>{element.className=next[i].className;const value=next[i].getAttribute("aria-current");if(value===null)element.removeAttribute("aria-current");else element.setAttribute("aria-current",value)})}current.scrollTop=scroll}else{const opened=new Set([...current.querySelectorAll(".docs-section[open]")].map(section=>section.dataset.docsSection));for(const section of incoming.querySelectorAll(".docs-section"))section.open=opened.has(section.dataset.docsSection);current.replaceWith(incoming);initSidebarLevels();syncHeaderSearchPosition()}document.querySelector(".docs-sidebar-levels")?.syncSection();scrollActiveNavLink()}
+// Compact layouts use a sticky disclosure in the reading pane; wide layouts keep the TOC rail.
+const compactTocQuery=matchMedia("(max-width:1280px)");function isCompactToc(){return compactTocQuery.matches}function syncStickyHeaderOffset(){const headerHeight=document.querySelector(".site-header")?.getBoundingClientRect().height||0;root.style.setProperty("--header-row-h",headerHeight+"px");const tocHeight=isCompactToc()?document.querySelector(".toc summary")?.getBoundingClientRect().height||0:0;root.style.setProperty("--sticky-header-h",Math.ceil(headerHeight+tocHeight)+"px");syncHeaderSurface();syncTocCurrentFade()}
+function syncTocSpace(){
+const toc=document.querySelector(".toc");if(!toc)return;
+if(isCompactToc()){toc.style.removeProperty("--toc-available-height");toc.style.removeProperty("--toc-scroll-end-space");syncTocFade();return}
+const rect=toc.getBoundingClientRect();let bottom=innerHeight,endSpace=parseFloat(getComputedStyle(toc).getPropertyValue("--toc-fade-distance"))||36;
+const overlapsRail=control=>rect.left<control.right&&rect.right>control.left;
+const card=document.querySelector(".community-invite");
+if(isUsableFocusTarget(card)){const control=card.getBoundingClientRect();if(overlapsRail(control))bottom=Math.min(bottom,control.top-12)}
+// Keep the rail full-height beside the small launcher, with room to scroll its last link clear.
+const launcher=document.querySelector(".docs-chat-launcher");
+if(isUsableFocusTarget(launcher)){const control=launcher.getBoundingClientRect();if(overlapsRail(control)&&control.top<bottom)endSpace=Math.max(endSpace,bottom-control.top+12)}
+toc.style.setProperty("--toc-available-height",Math.max(0,bottom-rect.top)+"px");
+toc.style.setProperty("--toc-scroll-end-space",Math.min(endSpace,Math.max(0,bottom-rect.top))+"px");
+revealTocFocus();syncTocFade();
+}
+function syncTocFade(){
+const toc=document.querySelector(".toc");if(!toc)return;
+const overflow=!isCompactToc()&&toc.scrollHeight>toc.clientHeight+1;
+toc.classList.toggle("can-scroll-up",overflow&&toc.scrollTop>1);
+toc.classList.toggle("can-scroll-down",overflow&&toc.scrollHeight-toc.clientHeight-toc.scrollTop>1);
+}
+function revealTocFocus(){
+const target=document.activeElement,toc=target?.closest?.(".toc");
+if(!toc||isCompactToc()||!target.matches("a"))return;
+const visible=tocScrollBounds(toc),link=target.getBoundingClientRect();
+if(link.bottom>visible.bottom)toc.scrollTop+=link.bottom-visible.bottom;
+else if(link.top<visible.top)toc.scrollTop+=link.top-visible.top;
+}
+// Programmatic reveals share the same fade and floating-control clearances as keyboard scrolling.
+function tocScrollBounds(toc){
+const box=toc.getBoundingClientRect(),style=getComputedStyle(toc);
+return{top:box.top+(parseFloat(style.scrollPaddingTop)||0),bottom:box.bottom-(parseFloat(style.scrollPaddingBottom)||0)};
+}
+function syncTocDisclosure(){document.querySelectorAll(".toc").forEach(toc=>{if(isCompactToc()){if(!toc.dataset.compactTocReady){toc.open=false;toc.dataset.compactTocReady="true"}toc.classList.add("is-visible")}else{toc.open=true;toc.classList.remove("is-visible");delete toc.dataset.compactTocReady}});syncTocSpace()}
+const mobileNavQuery=matchMedia("(max-width:820px)");
+function isUsableFocusTarget(target){if(!target?.isConnected||target===document.body||target.disabled||target.closest("[inert],[aria-hidden=true]"))return false;for(let closed=target.closest("details:not([open])");closed;closed=closed.parentElement?.closest("details:not([open])")){if(!closed.querySelector(":scope>summary")?.contains(target))return false}return Boolean(target.getClientRects().length&&getComputedStyle(target).visibility!=="hidden")}
+function syncSidebarAccess(){const closed=mobileNavQuery.matches&&!document.body.classList.contains("nav-open");for(const panel of document.querySelectorAll(".sidebar,.community-invite"))panel.inert=closed}
+function setNavOpen(open){const sidebar=document.querySelector(".sidebar");const toggle=document.querySelector("[data-nav-toggle]");const restoreFocus=!open&&(sidebar?.contains(document.activeElement)||document.querySelector(".community-invite")?.contains(document.activeElement));document.body.classList.toggle("nav-open",open);sidebar?.classList.toggle("open",open);toggle?.setAttribute("aria-expanded",String(open));syncSidebarAccess();if(open){sidebar?.scrollTo({top:0});requestAnimationFrame(()=>sidebar?.querySelector("[data-nav-close]")?.focus())}else if(restoreFocus){toggle?.focus({preventScroll:true})}}
+function trapNavFocus(e){if(modal?.classList.contains("open")||e.key!=="Tab"||!mobileNavQuery.matches||!document.body.classList.contains("nav-open"))return false;const items=[...document.querySelectorAll(".sidebar a[href],.sidebar button:not([disabled]),.sidebar select:not([disabled]),.sidebar summary,.community-invite a[href],.community-invite button:not([disabled])")].filter(isUsableFocusTarget);if(!items.length)return false;const first=items[0],last=items.at(-1);if(!items.includes(document.activeElement)){e.preventDefault();first.focus();return true}if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();return true}if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();return true}
+// The invitation is docked visually but outside the transformed drawer DOM. Bridge that Tab gap.
+const next=items[items.indexOf(document.activeElement)+(e.shiftKey?-1:1)];if(next&&next.closest(".sidebar,.community-invite")!==document.activeElement.closest(".sidebar,.community-invite")){e.preventDefault();next.focus();return true}return false}
+// CSS can blur responsive controls before the media-change callback runs.
+// Retain actual widget focus, but never reclaim focus after an unrelated action.
+let navigationFocusOwned=false;
+// Immediate sidebar reveals prevent pending toggle scrolls from cancelling focus placement.
+function revealSidebarFocus(){
+const target=document.activeElement;
+if(mobileNavQuery.matches||!target?.closest(".sidebar")||!isUsableFocusTarget(target))return;
+const launcher=document.querySelector(".docs-chat-launcher");
+if(!isUsableFocusTarget(launcher))return;
+const focusRect=target.getBoundingClientRect(),launcherRect=launcher.getBoundingClientRect();
+if(focusRect.left<launcherRect.right&&focusRect.right>launcherRect.left&&focusRect.top<launcherRect.bottom&&focusRect.bottom>launcherRect.top)target.scrollIntoView({behavior:"instant",block:"center",inline:"nearest"});
+}
+document.addEventListener("focusin",e=>{if(!e.target?.closest?.("[data-language-picker]"))closeLanguage();navigationFocusOwned=Boolean(e.target?.closest?.(".sidebar,.community-invite,[data-nav-toggle]"));if(e.target?.closest?.(".sidebar"))requestAnimationFrame(revealSidebarFocus);if(e.target?.closest?.(".toc"))requestAnimationFrame(revealTocFocus)});
+document.addEventListener("pointerdown",e=>{if(!e.target?.closest?.(".sidebar,.community-invite,[data-nav-toggle]"))navigationFocusOwned=false});
+// Keep keyboard order aligned with the compact header's language, search, menu row.
+function syncHeaderSearchPosition(){
+const search=document.querySelector(".site-header .search-button"),picker=document.querySelector(".site-header .language-picker"),actions=document.querySelector(".header-actions");
+if(!search||!picker||!actions)return;
+const focused=document.activeElement===search;
+if(mobileNavQuery.matches){if(picker.nextElementSibling!==search)picker.after(search)}
+else if(search.parentElement!==actions.parentElement)actions.before(search);
+if(focused&&document.activeElement!==search)search.focus({preventScroll:true});
+}
+mobileNavQuery.addEventListener("change",()=>{const restoreNavigation=navigationFocusOwned;if(!mobileNavQuery.matches)setNavOpen(false);syncSidebarAccess();syncHeaderSearchPosition();if(restoreNavigation&&!modal?.classList.contains("open")&&!isUsableFocusTarget(document.activeElement)){const target=mobileNavQuery.matches?document.querySelector("[data-nav-toggle]"):([...document.querySelectorAll(".docs-sidebar-back,.docs-section-trigger,.docs-section>summary")].find(isUsableFocusTarget));target?.focus()}});
+initSidebarLevels();
+syncSidebarAccess();
+syncHeaderSearchPosition();
+// The footer persists outside PJAX swaps. Do not let the floating invitation cover it.
+const communityFooter=document.querySelector(".site-footer");
+if(communityFooter&&typeof IntersectionObserver!=="undefined"){const observer=new IntersectionObserver(entries=>{communityFooterVisible=entries.some(entry=>entry.isIntersecting);syncCommunityInvite()});observer.observe(communityFooter)}
+function swap(selector,nextDoc){const current=document.querySelector(selector);const incoming=nextDoc.querySelector(selector);if(current&&incoming)current.replaceWith(incoming)}
+let codeFadeObserver;
+function initCodeFades(){
+  codeFadeObserver?.disconnect();
+  const sync=pre=>{
+    const viewport=pre.parentElement;
+    // Leave room for overlay scrollbars too; classic tracks use their actual width.
+    const left=pre.clientLeft,right=pre.offsetWidth-pre.clientWidth-left;
+    const bottom=pre.offsetHeight-pre.clientHeight;
+    viewport.style.setProperty("--code-fade-left",Math.max(12,left)+"px");
+    viewport.style.setProperty("--code-fade-right",Math.max(12,right)+"px");
+    viewport.style.setProperty("--code-fade-bottom",Math.max(bottom,pre.scrollWidth>pre.clientWidth?12:0)+"px");
+  };
+  codeFadeObserver=new ResizeObserver(entries=>entries.forEach(entry=>sync(entry.target)));
+  document.querySelectorAll(".oc-code.is-expandable pre").forEach(pre=>{sync(pre);codeFadeObserver.observe(pre)});
+}
+let accordionResizeObserver;
+function initAccordionMotion(){
+  accordionResizeObserver?.disconnect();
+  if(!window.CSS?.supports("selector(::details-content)")||!CSS.supports("transition-behavior:allow-discrete")||!("ResizeObserver" in window))return;
+  const sync=content=>{
+    const accordion=content.parentElement;
+    if(accordion.open)accordion.style.setProperty("--accordion-content-height",content.getBoundingClientRect().height+"px");
+  };
+  accordionResizeObserver=new ResizeObserver(entries=>entries.forEach(entry=>sync(entry.target)));
+  document.querySelectorAll(".oc-accordion,.release-source-toggle").forEach(accordion=>{
+    let content=accordion.querySelector(":scope>.oc-accordion-content,:scope>.release-source-content");
+    if(!content&&accordion.matches(".release-source-toggle")){
+      const summary=accordion.querySelector(":scope>summary");if(!summary)return;
+      content=document.createElement("div");content.className="release-source-content";
+      while(summary.nextSibling)content.append(summary.nextSibling);
+      accordion.append(content);
+    }
+    if(!content)return;
+    sync(content);
+    if(!accordion.hasAttribute("data-accordion-motion")){
+      accordion.addEventListener("toggle",()=>sync(content));
+      accordion.setAttribute("data-accordion-motion","");
+    }
+    accordionResizeObserver.observe(content);
+  });
+}
+function initCodeGroups(){document.querySelectorAll(".oc-code-group").forEach(group=>{if(group.dataset.codeGroupReady)return;const blocks=[...group.querySelectorAll(":scope > .oc-code")];if(!blocks.length)return;group.dataset.codeGroupReady="true";const preferred=localStorage.getItem("preferredCodeTab")||"";const preferredIndex=Math.max(0,blocks.findIndex(block=>(block.dataset.codeLabel||"Code")===preferred));const activeIndex=preferredIndex||0;const tabs=document.createElement("div");tabs.className="oc-code-tabs";tabs.setAttribute("role","tablist");blocks.forEach((block,i)=>{const label=block.dataset.codeLabel||"Code";const button=document.createElement("button");button.type="button";button.className="oc-code-tab"+(i===activeIndex?" active":"");button.textContent=label;button.setAttribute("role","tab");button.setAttribute("aria-selected",String(i===activeIndex));button.addEventListener("click",()=>{tabs.querySelectorAll(".oc-code-tab").forEach(tab=>{tab.classList.remove("active");tab.setAttribute("aria-selected","false")});blocks.forEach(item=>item.classList.remove("active"));button.classList.add("active");button.setAttribute("aria-selected","true");block.classList.add("active");localStorage.setItem("preferredCodeTab",label)});tabs.appendChild(button);block.classList.toggle("active",i===activeIndex)});group.prepend(tabs)})}
+const mermaidExpandIcon='<svg class="icon icon-maximize-2" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="M9 21H3v-6"/><path d="m3 21 7-7"/></svg>';
+const mermaidCloseIcon='<svg class="icon icon-x" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+let mermaidReady;let lastMermaidTrigger=null;let mermaidOverlayRender=0;
+function resetMermaidBlock(block,source){block.dataset.mermaidReady="";block.classList.remove("is-rendered","is-error");block.innerHTML="<pre><code>"+escapeHtml(source)+"</code></pre>"}
+function removeMermaidRenderArtifact(id){document.getElementById("d"+id)?.remove();const svg=document.getElementById(id);if(svg&&!svg.closest("[data-mermaid]"))svg.remove()}
+// Mermaid's color parser cannot consume CSS Color 4 values such as OKLCH.
+function mermaidColor(styles,name){const value=styles.getPropertyValue(name).trim();if(!value||!CSS.supports("color",value))return value;const canvas=document.createElement("canvas");canvas.width=canvas.height=1;const context=canvas.getContext("2d",{willReadFrequently:true});if(!context)return value;context.fillStyle=value;context.fillRect(0,0,1,1);const [r,g,b,a]=context.getImageData(0,0,1,1).data;return a===255?"rgb("+r+", "+g+", "+b+")":"rgba("+r+", "+g+", "+b+", "+a/255+")"}
+function mermaidOptions(){
+  const styles=getComputedStyle(document.querySelector(".docs-layout")||root);
+  const fontFamily=styles.getPropertyValue("--oc-font-body").trim()||"sans-serif";
+  const color=name=>mermaidColor(styles,name);
+  const node=color("--docs-diagram-node")||color("--paper");
+  const border=color("--docs-diagram-border")||color("--line-strong");
+  const line=color("--docs-diagram-line")||color("--muted");
+  return {startOnLoad:false,securityLevel:"strict",theme:"base",fontFamily,
+    sequence:{width:128,height:48,actorMargin:64,messageMargin:44,actorFontSize:14,actorFontWeight:600,messageFontSize:13,noteFontSize:13},
+    themeVariables:{darkMode:root.dataset.theme!=="light",fontFamily,fontSize:"14px",background:color("--paper"),primaryColor:node,primaryTextColor:color("--ink"),primaryBorderColor:border,secondaryColor:node,tertiaryColor:color("--paper"),mainBkg:node,lineColor:line,textColor:color("--text"),nodeBorder:border,clusterBkg:color("--paper"),clusterBorder:border,edgeLabelBackground:color("--paper"),actorBorder:border,actorBkg:node,actorTextColor:color("--ink"),actorLineColor:border,signalColor:color("--brand"),signalTextColor:color("--text"),labelBoxBkgColor:node,labelBoxBorderColor:border,labelTextColor:color("--ink"),noteBkgColor:node,noteBorderColor:border,noteTextColor:color("--text")}}
+}
+async function renderMermaidSvg(source,renderId){const mermaid=await (mermaidReady??=import(withBase("/assets/mermaid.esm.min.mjs")).then(module=>module.default));mermaid.initialize(mermaidOptions());return mermaid.render(renderId,source)}
+function mermaidExpandButton(){return '<div class="oc-mermaid-actions"><button type="button" class="oc-mermaid-expand" data-mermaid-expand aria-label="Expand diagram" title="Expand diagram">'+mermaidExpandIcon+'<span class="oc-visually-hidden">Expand diagram</span></button></div>'}
+function ensureMermaidOverlay(){let overlay=document.querySelector("[data-mermaid-overlay]");if(overlay)return overlay;overlay=document.createElement("div");overlay.className="oc-mermaid-overlay";overlay.dataset.mermaidOverlay="";overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-label","Expanded diagram");overlay.innerHTML='<div class="oc-mermaid-overlay-head"><button type="button" class="oc-mermaid-overlay-close" data-mermaid-overlay-close aria-label="Close expanded diagram">'+mermaidCloseIcon+'</button></div><div class="oc-mermaid-overlay-canvas" data-mermaid-overlay-canvas></div>';document.body.appendChild(overlay);return overlay}
+function closeMermaidOverlay(){const overlay=document.querySelector("[data-mermaid-overlay]");if(!overlay?.classList.contains("open"))return;mermaidOverlayRender+=1;overlay.classList.remove("open");document.body.classList.remove("has-mermaid-overlay");overlay.querySelector("[data-mermaid-overlay-canvas]").innerHTML="";lastMermaidTrigger?.focus?.();lastMermaidTrigger=null}
+function handleMermaidOverlayKeydown(e){const overlay=document.querySelector("[data-mermaid-overlay].open");if(!overlay)return false;if(e.key==="Escape"){e.preventDefault();e.stopImmediatePropagation();closeMermaidOverlay();return true}if(isSearchShortcutEvent(e)){e.preventDefault();e.stopImmediatePropagation();return true}if(e.key!=="Tab")return false;const controls=[...overlay.querySelectorAll("button:not([disabled]),[href],[tabindex]:not([tabindex='-1'])")].filter(control=>!control.hidden&&control.getAttribute("aria-hidden")!=="true"&&control.offsetParent!==null);const first=controls[0];const last=controls.at(-1);if(!first){e.preventDefault();return true}if(!overlay.contains(document.activeElement)||e.shiftKey&&document.activeElement===first||!e.shiftKey&&document.activeElement===last){e.preventDefault();(e.shiftKey?last:first).focus();return true}return false}
+async function openMermaidOverlay(control){const block=control.closest("[data-mermaid]");const source=block?.dataset.mermaid||"";if(!source)return;const renderToken=++mermaidOverlayRender;lastMermaidTrigger=control;const overlay=ensureMermaidOverlay();const canvas=overlay.querySelector("[data-mermaid-overlay-canvas]");canvas.innerHTML="<pre><code>"+escapeHtml(source)+"</code></pre>";overlay.classList.add("open");document.body.classList.add("has-mermaid-overlay");overlay.querySelector("[data-mermaid-overlay-close]")?.focus();const renderId="oc_mermaid_overlay_"+Date.now();try{const {svg}=await renderMermaidSvg(source,renderId);if(renderToken!==mermaidOverlayRender||!overlay.classList.contains("open")){removeMermaidRenderArtifact(renderId);return}canvas.innerHTML=svg}catch{removeMermaidRenderArtifact(renderId)}}
+async function initMermaid(force=false){const blocks=[...document.querySelectorAll("[data-mermaid]")].filter(block=>force||!block.dataset.mermaidReady);if(!blocks.length)return;let i=0;for(const block of blocks){const source=block.dataset.mermaid||"";if(force)resetMermaidBlock(block,source);const renderId="oc_mermaid_"+Date.now()+"_"+i++;try{const {svg}=await renderMermaidSvg(source,renderId);block.innerHTML=mermaidExpandButton()+svg;block.dataset.mermaidReady="true";block.classList.remove("is-error");block.classList.add("is-rendered")}catch(err){removeMermaidRenderArtifact(renderId);resetMermaidBlock(block,source);block.dataset.mermaidReady="true";block.classList.add("is-error");block.insertAdjacentHTML("afterbegin",'<div class="oc-mermaid-error"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg><span>Diagram could not be rendered</span></div>')}}}
+function setCopyFeedback(control,state){if(!control)return;if(control.matches("[data-code-copy]")||control.matches("[data-prompt-copy]")||control.matches("[data-chat-copy]")||control.matches("[data-copy-page]")||control.matches("[data-heading-anchor]")){const label=control.dataset.copyLabel||control.getAttribute("aria-label")||"Copy";control.dataset.copyLabel=label;const feedback=control.querySelector("[data-copy-feedback]");const old=control.dataset.copyDefaultText||feedback?.textContent||label;control.dataset.copyDefaultText=old;clearTimeout(control._copyStateTimer);if(state==="copying"){control.dataset.copyState="copying";control.setAttribute("aria-label","Copying");if(feedback)feedback.textContent="Copying...";return}const ok=state==="copied";control.dataset.copyState=ok?"copied":"failed";control.setAttribute("aria-label",ok?"Copied":"Copy failed");if(control.hasAttribute("title"))control.title=ok?"Copied":"Copy failed";if(feedback)feedback.textContent=ok?"Copied":"Copy failed";control._copyStateTimer=setTimeout(()=>{delete control.dataset.copyState;control.setAttribute("aria-label",label);if(control.hasAttribute("title"))control.title=label;if(feedback)feedback.textContent=old},1300);return}const old=control.textContent;control.textContent=state==="copied"?"Copied":"Copy failed";setTimeout(()=>control.textContent=old||"Copy",1300)}
+function showCopyFeedback(control,ok){setCopyFeedback(control,ok?"copied":"failed")}
+async function copyText(text,control){const analyticsCapture=docsAnalytics.capture(),analyticsCopy=docsTelemetry.copyContext(control);try{const value=String(text||"");if(!value.trim())throw new Error("Nothing to copy");let copied=false;if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(value);copied=true}catch{}}if(!copied){const area=document.createElement("textarea");area.value=value;area.setAttribute("readonly","");area.style.position="fixed";area.style.opacity="0";document.body.appendChild(area);area.select();copied=document.execCommand("copy");area.remove();if(!copied)throw new Error("Copy failed")}showCopyFeedback(control,true);docsTelemetry.copy(analyticsCopy,true,analyticsCapture);return true}catch{showCopyFeedback(control,false);docsTelemetry.copy(analyticsCopy,false,analyticsCapture);return false}}
+function codeTextForCopy(block){const lines=[...block?.querySelectorAll(".code-line")||[]];if(lines.length)return lines.map(line=>line.textContent).join("\\n");return block?.querySelector("code")?.textContent||""}
+function pageMarkdownForCopy(control){const source=control.closest(".article")?.querySelector("[data-page-markdown]");if(!source)return"";try{return JSON.parse(source.textContent||'""')}catch{return source.textContent||""}}
+function copyPageMarkdown(control){return copyText(pageMarkdownForCopy(control),control)}
+function toggleCodeExpand(control){const block=control.closest(".oc-code");if(!block)return;const expanded=!block.classList.contains("is-expanded");block.classList.toggle("is-expanded",expanded);control.setAttribute("aria-expanded",String(expanded));control.textContent=expanded?"Show less":"Show more"}
+const feedbackStoragePrefix="openclaw.docs.feedback:";
+function feedbackPath(section){return section?.dataset.feedbackPath||new URL(location.href).pathname||"/"}
+function feedbackStorageKey(section){return feedbackStoragePrefix+feedbackPath(section)}
+function feedbackRepo(section){const repo=section?.dataset.feedbackRepo||"openclaw/openclaw";return /^[^/\\s]+\\/[^/\\s]+$/.test(repo)?repo:"openclaw/openclaw"}
+function feedbackPageUrl(section){return section?.dataset.feedbackUrl||location.href}
+function feedbackIssueUrl(section){const path=feedbackPath(section);const url=new URL("https://github.com/"+feedbackRepo(section)+"/issues/new");const detail=section?.querySelector("[data-feedback-detail]")?.value.trim();const body=["Page: "+path,"URL: "+feedbackPageUrl(section),"",detail?"Missing or confusing:":"","",detail||""].filter((part,i)=>part||i<3).join("\\n");url.searchParams.set("title","Docs feedback: "+path);url.searchParams.set("body",body);return url.href}
+function setFeedbackState(section,value,{persist=false}={}){if(!section)return;const result=section.querySelector("[data-feedback-result]");const composer=section.querySelector("[data-feedback-composer]");section.querySelectorAll("[data-feedback-value]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.feedbackValue===value)));if(result)result.value=value==="yes"?"Thanks.":"";if(composer)composer.hidden=value!=="no";if(persist)docsTelemetry.select("feedback_choice",value==="yes"?"helpful":"not_helpful","page_feedback");if(persist)try{localStorage.setItem(feedbackStorageKey(section),value)}catch{}}
+function initPageFeedback(){document.querySelectorAll(".page-feedback").forEach(section=>{if(section.dataset.feedbackReady)return;section.dataset.feedbackReady="true";try{const saved=localStorage.getItem(feedbackStorageKey(section));if(saved==="yes"||saved==="no")setFeedbackState(section,saved)}catch{}})}
+function handleDocsControlClick(e){if(e.target.closest("[data-mermaid-overlay].open")&&!e.target.closest("[data-mermaid-overlay-canvas]")){closeMermaidOverlay();return true}const expandMermaid=e.target.closest("[data-mermaid-expand]");if(expandMermaid){openMermaidOverlay(expandMermaid);return true}const copyCode=e.target.closest("[data-code-copy]");if(copyCode){copyText(codeTextForCopy(copyCode.closest(".oc-code")),copyCode);return true}const expandCode=e.target.closest("[data-code-expand]");if(expandCode){toggleCodeExpand(expandCode);return true}const copyPrompt=e.target.closest("[data-prompt-copy]");if(copyPrompt){const prompt=copyPrompt.closest(".oc-prompt")?.querySelector(".oc-prompt-content")?.innerText.trim()||"";copyText(prompt,copyPrompt);return true}const copyPage=e.target.closest("[data-copy-page]");if(copyPage){copyPageMarkdown(copyPage);return true}const headingAnchor=e.target.closest("[data-heading-anchor]");if(headingAnchor){const url=new URL(location.href);url.hash=headingAnchor.dataset.headingAnchor||"";copyText(url.href,headingAnchor);return true}const feedbackIssue=e.target.closest("[data-feedback-issue-link]");if(feedbackIssue){docsTelemetry.formAttempt("docs_feedback","page_feedback");window.open(feedbackIssueUrl(feedbackIssue.closest(".page-feedback")),"_blank","noopener,noreferrer");return true}const feedback=e.target.closest("[data-feedback-value]");if(feedback){setFeedbackState(feedback.closest(".page-feedback"),feedback.dataset.feedbackValue,{persist:true});return true}return false}
+const resolveDocsFragment=${resolveDocsFragment.toString()};
+function fragmentId(hash){return resolveDocsFragment(hash,{has:id=>Boolean(document.getElementById(id))})??hash.slice(1)}
+function revealTarget(target){
+  const animated=[];
+  for(let node=target;node;node=node.parentElement){
+    if(node.tagName!=="DETAILS")continue;
+    if(node.hasAttribute("data-accordion-motion")){
+      animated.push(node);
+      node.setAttribute("data-accordion-reveal","");
+    }
+    node.open=true;
+  }
+  // Fragment navigation needs the final layout before scrolling, including nested disclosures.
+  for(const accordion of animated){
+    const content=accordion.querySelector(":scope>.oc-accordion-content,:scope>.release-source-content");
+    accordion.style.setProperty("--accordion-content-height",content.getBoundingClientRect().height+"px");
+  }
+  for(const accordion of animated)accordion.removeAttribute("data-accordion-reveal");
+}
+function scrollTarget(hash){if(hash){const id=fragmentId(hash);const found=document.getElementById(id);const target=found?.classList.contains("anchor-alias")?found.closest("h1,h2,h3,h4,h5,h6"):found;revealTarget(target);target?.scrollIntoView();tocSpyHoldUntil=Date.now()+900;setActiveTocLink(target?.id)}else{scrollTo({top:0,behavior:"instant"})}}
+let tocObserver=null;let tocSizeObserver=null;let tocScrollHandler=null;let tocSpyHoldUntil=0;let currentDocKey=location.pathname+location.search;
+function tocLinkId(link){return fragmentId(link.hash)}
+function syncTocCurrentFade(){
+const current=document.querySelector("[data-toc-current]");
+if(current)current.classList.toggle("is-overflowing",current.scrollWidth>current.clientWidth+1);
+}
+function syncTocCurrent(toc,active){
+const current=toc.querySelector("[data-toc-current]");if(!current)return;
+const label=active?.textContent?.trim()||"";
+if(current.textContent===label)return;
+current.textContent=label;current.title=label;syncTocCurrentFade();
+}
+function setActiveTocLink(id){const toc=document.querySelector(".toc");if(!toc)return;let active=null;toc.querySelectorAll('a[href^="#"]').forEach(link=>{const on=Boolean(id&&tocLinkId(link)===id);link.classList.toggle("active",on);if(on)active=link});syncTocCurrent(toc,active);if(active){const list=active.closest(".toc");if(list&&list.scrollHeight>list.clientHeight){const lr=list.getBoundingClientRect();if(!isCompactToc()&&lr.top>parseFloat(getComputedStyle(list).top)+1)return;const visible=isCompactToc()?lr:tocScrollBounds(list),ar=active.getBoundingClientRect();if(ar.top<visible.top)list.scrollTop+=ar.top-visible.top;else if(ar.bottom>visible.bottom)list.scrollTop+=ar.bottom-visible.bottom}}}
+function currentTocHeadingId(headings){const top=parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)||120;const scroller=document.scrollingElement||document.documentElement;if(scroller.scrollTop+innerHeight>=scroller.scrollHeight-2)return headings.at(-1)?.id||"";let current=headings[0];for(const heading of headings){if(heading.getBoundingClientRect().top<=top+1)current=heading;else break}return current?.id||""}
+function initTocScrollspy(){tocObserver?.disconnect();tocObserver=null;tocSizeObserver?.disconnect();tocSizeObserver=null;if(tocScrollHandler){removeEventListener("scroll",tocScrollHandler);tocScrollHandler=null;}const toc=document.querySelector(".toc");if(!toc)return;if("ResizeObserver" in window){tocSizeObserver=new ResizeObserver(syncTocSpace);tocSizeObserver.observe(toc);const nav=toc.querySelector("nav");if(nav)tocSizeObserver.observe(nav)}const links=[...toc.querySelectorAll('a[href^="#"]')];const headings=[...document.querySelectorAll(".doc h2[id],.doc h3[id]")].filter(heading=>links.some(link=>tocLinkId(link)===heading.id));links.forEach(link=>link.classList.remove("active"));if(!headings.length)return;const sync=()=>{if(Date.now()<tocSpyHoldUntil)return;setActiveTocLink(currentTocHeadingId(headings))};let tocScrollRaf=0;tocScrollHandler=()=>{cancelAnimationFrame(tocScrollRaf);tocScrollRaf=requestAnimationFrame(sync)};addEventListener("scroll",tocScrollHandler,{passive:true});requestAnimationFrame(sync);if(!("IntersectionObserver" in window)){sync();return}tocObserver=new IntersectionObserver(sync,{rootMargin:"-120px 0px -70% 0px",threshold:[0,1]});headings.forEach(heading=>tocObserver.observe(heading))}
+async function navigateTo(url,replace=false,animateHome=false){if(navigating)return false;navigating=true;if(!animateHome)homeGlimm.cancel();closeLanguage();closeMermaidOverlay();try{const res=await fetch(url.href,{credentials:"same-origin"});if(!res.ok||!res.headers.get("content-type")?.includes("text/html"))return false;const nextDoc=new DOMParser().parseFromString(await res.text(),"text/html");if(!nextDoc.querySelector(".main"))return false;const commit=()=>{disposeHomeHero();for(const name of ["docs-home","docs-home-layout"])document.body.classList.toggle(name,nextDoc.body.classList.contains(name));syncSidebar(nextDoc);swap(".header-left",nextDoc);swap(".main",nextDoc);initHomeHero();syncStickyHeaderOffset();syncTocDisclosure();initCodeGroups();initCodeFades();initAccordionMotion();initPageFeedback();initMermaid();document.title=nextDoc.title;history[replace?"replaceState":"pushState"]({docs:true},"",url.href);docsAnalytics.pageView();currentDocKey=location.pathname+location.search;setNavOpen(false);initTocScrollspy();scrollTarget(url.hash);syncCommunityInvite()};if(animateHome)await homeGlimm.run(commit);else commit();return true}catch{return false}finally{navigating=false}}
+function unavailableSearch(){return {unavailable:true,search:async()=>({results:[]})}}
+function loadPagefind(){if(pagefindReady)return pagefindReady;const src=withBase("/pagefind/pagefind.js")+(pagefindLoadAttempt?"?retry="+pagefindLoadAttempt:"");pagefindLoadAttempt+=1;pagefindReady=import(src).then(m=>m.init?.().then?.(()=>m)??m).catch(()=>{pagefindReady=null;return unavailableSearch()});return pagefindReady}
+let searchReturnFocus=null;
+function openSearch(){if(!modal)return;closeLanguage();if(document.body.classList.contains("nav-open"))setNavOpen(false);if(!modal.classList.contains("open")){searchReturnFocus=document.activeElement;docsTelemetry.popup("docs_search",true,"","search_dialog")}modal.classList.add("open");if(!searchQuery()&&results&&!results.innerHTML.trim())results.innerHTML=searchInitialHtml();setSearchChrome(searchQuery());setTimeout(()=>input?.focus(),0);loadPagefind()}
+function clearSearch(){docsTelemetry.cancelSearch();clearTimeout(searchTimer);seq+=1;searchActiveIndex=-1;setSearchLoading(false);if(input)input.value="";setSearchChrome("");if(results){results.classList.remove("is-loading");results.innerHTML=searchInitialHtml()}}
+function closeSearch(method="close_button"){const wasOpen=modal?.classList.contains("open");if(wasOpen){docsTelemetry.flushSearch();docsTelemetry.popup("docs_search",false,method,"search_dialog")}modal?.classList.remove("open");clearSearch();if(wasOpen){let target=searchReturnFocus;if(!isUsableFocusTarget(target))target=document.querySelector("[data-search-open]");target?.focus({preventScroll:true})}searchReturnFocus=null}
+function escapeHtml(text){return String(text).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
+function trimTrailingPunctuation(value){return value.replace(/[.,;!?]+$/,"")}
+function compactGithubLinks(text){return String(text).replace(/(^|[\\s>])https:\\/\\/github\\.com\\/openclaw\\/openclaw\\/issues\\/(\\d+)\\/?(?=[\\s).,;!?]|$)/g,(_,prefix,number)=>prefix+"[Issue #"+number+"](https://github.com/openclaw/openclaw/issues/"+number+")").replace(/(^|[\\s>])https:\\/\\/github\\.com\\/openclaw\\/openclaw\\/pull\\/(\\d+)\\/?(?=[\\s).,;!?]|$)/g,(_,prefix,number)=>prefix+"[PR #"+number+"](https://github.com/openclaw/openclaw/pull/"+number+")").replace(/(^|[\\s>])https:\\/\\/github\\.com\\/openclaw\\/openclaw\\/commit\\/([0-9a-f]{7,40})\\/?(?=[\\s).,;!?]|$)/gi,(_,prefix,sha)=>prefix+"[commit "+sha.slice(0,7)+"](https://github.com/openclaw/openclaw/commit/"+sha+")").replace(/(^|[\\s>])https:\\/\\/github\\.com\\/openclaw\\/openclaw\\/blob\\/([0-9a-f]{7,40})\\/([^\\s)]+)/gi,(_,prefix,sha,path)=>{const cleanPath=trimTrailingPunctuation(path);const suffix=path.slice(cleanPath.length);const label=decodeURIComponent(cleanPath).replace(/#L(\\d+)(?:-L(\\d+))?$/,(_line,from,to)=>to?":L"+from+"-L"+to:":L"+from);return prefix+"["+label+"](https://github.com/openclaw/openclaw/blob/"+sha+"/"+cleanPath+")"+suffix})}
+function safeHttpUrl(value){try{const url=new URL(value);return url.protocol==="http:"||url.protocol==="https:"?url.href:null}catch{return null}}
+function splitChatBlocks(text){const blocks=[];let textLines=[];let code=null;const flushText=()=>{if(textLines.length){blocks.push({type:"text",text:textLines.join("\\n")});textLines=[]}};for(const line of String(text).replace(/\\r\\n?/g,"\\n").split("\\n")){const fence=line.match(/^\`\`\`([A-Za-z0-9_.+-]*)\\s*$/);if(fence){if(code){blocks.push({type:"code",lang:code.lang,code:code.lines.join("\\n")});code=null}else{flushText();code={lang:fence[1]||"",lines:[]}}continue}if(code)code.lines.push(line);else textLines.push(line)}if(code)blocks.push({type:"code",lang:code.lang,code:code.lines.join("\\n")});flushText();return blocks}
+function renderChatInline(text){const pattern=/\`([^\`\\n]+)\`|\\[([^\\]\\n]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)|(https?:\\/\\/[^\\s<>"']+)/g;let html="";let last=0;for(const match of text.matchAll(pattern)){html+=escapeHtml(text.slice(last,match.index));last=match.index+match[0].length;if(match[1]){html+="<code>"+escapeHtml(match[1])+"</code>";continue}const label=match[2];const rawUrl=match[3]||match[4]||"";const cleanUrl=trimTrailingPunctuation(rawUrl);const suffix=rawUrl.slice(cleanUrl.length);const href=safeHttpUrl(cleanUrl);if(!href){html+=escapeHtml(match[0]);continue}const linkText=label?escapeHtml(label):escapeHtml(cleanUrl);html+='<a href="'+escapeHtml(href)+'" target="_blank" rel="noopener noreferrer">'+linkText+"</a>"+escapeHtml(suffix)}return html+escapeHtml(text.slice(last))}
+function renderChatParagraphs(text){return text.split(/\\n{2,}/).map(part=>part.trim()).filter(Boolean).map(part=>"<p>"+renderChatInline(part).replace(/\\n/g,"<br>")+"</p>").join("")}
+function renderChatCodeBlock(block){const label=block.lang?'<div class="docs-chat-code-head">'+escapeHtml(block.lang)+"</div>":"";return '<div class="docs-chat-code">'+label+"<pre><code>"+escapeHtml(block.code)+"</code></pre></div>"}
+function renderChatText(text){return splitChatBlocks(compactGithubLinks(text)).map(block=>block.type==="code"?renderChatCodeBlock(block):renderChatParagraphs(block.text)).join("")||"<p></p>"}
+const chatEmptyHtml='<div class="docs-chat-empty">Responses are generated using AI and may contain mistakes.</div>';
+function removeChatEmpty(log){log?.querySelector(".docs-chat-empty")?.remove()}
+function addChatMessage(kind,text){const log=document.querySelector("[data-chat-log]");if(!log)return null;removeChatEmpty(log);const item=document.createElement("div");item.className="docs-chat-message "+kind;item.innerHTML=renderChatText(text);log.appendChild(item);log.scrollTop=log.scrollHeight;return item}
+function addChatThinking(){const log=document.querySelector("[data-chat-log]");if(!log)return null;removeChatEmpty(log);const item=document.createElement("div");item.className="docs-chat-message assistant thinking";item.setAttribute("aria-label","Thinking");item.innerHTML='<div class="docs-chat-thinking" role="status" aria-live="polite"><span></span><span></span><span></span></div>';log.appendChild(item);log.scrollTop=log.scrollHeight;return item}
+function setChatClearVisible(visible){for(const selector of ["[data-chat-clear]","[data-chat-copy]"]){const btn=document.querySelector(selector);if(!btn)continue;if(visible)btn.removeAttribute("hidden");else btn.setAttribute("hidden","")}}
+function clearChat(){const log=document.querySelector("[data-chat-log]");if(!log)return;log.innerHTML=chatEmptyHtml;log.scrollTop=0;setChatClearVisible(false);document.querySelector("[data-chat-input]")?.focus()}
+function isAuthFetchError(err){const msg=String(err?.message||err||"").toLowerCase();return msg==="auth_required"||msg.includes("load failed")||msg.includes("failed to fetch")||msg.includes("networkerror")}
+function chatFailureMessage(message){const msg=String(message||"").trim();const serverError=msg.toLowerCase().startsWith("docs agent returned 5");if(serverError)return"Molty is temporarily unavailable. Try again in a moment.";return msg||"Docs agent failed."}
+const pendingMoltyQuestionKey="openclaw-docs-pending-molty-question";
+function chatSignInUrl(){const url=new URL("/ask-molty/sign-in",location.href);const back=new URL(location.href);if(localStorage.getItem(pendingMoltyQuestionKey))back.searchParams.set("molty_resume","1");url.searchParams.set("return_to",back.href);return url.href}
+function initChat(){
+const chat=document.querySelector("[data-docs-chat]");
+const auth=document.querySelector("[data-chat-auth]");
+const form=document.querySelector("[data-chat-form]");
+const input=document.querySelector("[data-chat-input]");
+const submit=document.querySelector("[data-chat-submit]");
+const retry=document.querySelector("[data-chat-retry]");
+const copy=document.querySelector("[data-chat-copy]");
+const maximize=document.querySelector("[data-chat-maximize]");
+const panel=document.querySelector("[data-chat-panel]");
+const head=document.querySelector(".docs-chat-head");
+for(const avatar of document.querySelectorAll(".docs-chat-avatar[data-hover-src]")){const still=avatar.dataset.staticSrc||avatar.src;const animated=avatar.dataset.hoverSrc;const play=()=>{if(animated)avatar.src=animated+"#"+Date.now()};const stop=()=>{avatar.src=still};const trigger=avatar.closest("[data-chat-toggle],.docs-chat-title")||avatar;trigger.addEventListener("mouseenter",play);trigger.addEventListener("mouseleave",stop);trigger.addEventListener("focusin",play);trigger.addEventListener("focusout",stop)}
+if(!chat||!form||!input)return;
+let authState="unknown";
+let authPromise=null;
+let lastMessage="";
+const setRetryEnabled=()=>{if(retry){if(lastMessage)retry.removeAttribute("hidden");else retry.setAttribute("hidden","");retry.disabled=!lastMessage||authState!=="ready"}};
+const setAuthState=state=>{authState=state;chat.dataset.chatAuthState=state;if(auth){auth.hidden=state!=="checking"&&state!=="required";if(state==="checking")auth.innerHTML='<div class="docs-chat-auth-card"><strong>Checking your OpenClaw ID...</strong><p>One moment.</p></div>';if(state==="required")auth.innerHTML='<div class="docs-chat-auth-card"><strong>Don&#39;t worry, no pinching 🦞</strong><p>Sign in with your OpenClaw ID (GitHub or email) and Molty will handle all your docs questions.</p><a class="docs-chat-verify" href="'+chatSignInUrl()+'"><svg class="docs-chat-github-icon" role="img" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><span>Continue with OpenClaw ID</span></a></div>'}const ready=state==="ready";form.hidden=!ready;form.inert=!ready;input.disabled=!ready;input.readOnly=!ready;if(submit)submit.disabled=!ready;setRetryEnabled()};
+const ensureAuth=async()=>{if(authState==="ready")return true;if(authPromise)return authPromise;setAuthState("checking");authPromise=(async()=>{const api=window.OPENCLAW_DOCS_CHAT_API;if(!api)throw new Error("AUTH_REQUIRED");try{const res=await fetch(api,{method:"GET",credentials:"same-origin",redirect:"manual",headers:{"Accept":"application/json"}});if(res.type==="opaqueredirect"||res.redirected||res.status===0||res.status===401||res.status===403)throw new Error("AUTH_REQUIRED");if(!res.ok)throw new Error("AUTH_REQUIRED");setAuthState("ready");setTimeout(()=>input.focus(),0);return true}catch(err){setAuthState("required");return false}finally{authPromise=null}})();return authPromise};
+const chatBaseRight=()=>window.matchMedia("(max-width:820px)").matches?14:18;let chatPanelRight=chatBaseRight();const chatTargetWidth=expanded=>Math.min(expanded?760:420,window.innerWidth-28);const clampChatRight=(right,width=chat.getBoundingClientRect().width)=>{const pad=14;return Math.min(Math.max(pad,right),Math.max(pad,window.innerWidth-width-pad))};const applyChatRight=(right,width)=>{chatPanelRight=clampChatRight(right,width);chat.style.left="";chat.style.right=chatPanelRight+"px"};if(head){let dragStart=null;head.addEventListener("pointerdown",e=>{if(e.button!==0||e.target.closest("button,a,input,textarea"))return;const rect=chat.getBoundingClientRect();dragStart={pointerX:e.clientX,left:rect.left,width:rect.width,dragging:false};head.setPointerCapture?.(e.pointerId)});head.addEventListener("pointermove",e=>{if(!dragStart)return;const delta=e.clientX-dragStart.pointerX;if(!dragStart.dragging&&Math.abs(delta)<6)return;if(!dragStart.dragging){dragStart.dragging=true;chat.classList.add("dragging")}const left=Math.min(Math.max(14,dragStart.left+delta),Math.max(14,window.innerWidth-dragStart.width-14));applyChatRight(window.innerWidth-left-dragStart.width,dragStart.width);e.preventDefault()});const stopDrag=e=>{if(!dragStart)return;if(dragStart.dragging)applyChatRight(chatPanelRight,dragStart.width);chat.classList.remove("dragging");head.releasePointerCapture?.(e.pointerId);dragStart=null};head.addEventListener("pointerup",stopDrag);head.addEventListener("pointercancel",stopDrag);head.addEventListener("dblclick",e=>{if(e.target.closest("button,a,input,textarea"))return;setExpanded(!chat.classList.contains("expanded"))})}
+const maximizeIcon='<svg class="icon icon-maximize-2" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="M9 21H3v-6"/><path d="m3 21 7-7"/></svg>';const collapseIcon='<svg class="icon icon-minimize-2" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></svg>';const keepChatInViewport=()=>{if(!chat.classList.contains("open")){chatPanelRight=chatBaseRight();chat.style.left="";chat.style.right=chatPanelRight+"px";return}applyChatRight(chatPanelRight,chat.getBoundingClientRect().width)};const setExpanded=expanded=>{const targetWidth=chatTargetWidth(expanded);applyChatRight(chatPanelRight,targetWidth);chat.classList.toggle("expanded",expanded);if(maximize){maximize.setAttribute("aria-pressed",String(expanded));maximize.setAttribute("aria-label",expanded?"Shrink":"Expand");maximize.innerHTML=expanded?collapseIcon:maximizeIcon}};window.addEventListener("resize",()=>keepChatInViewport());
+let resetChatTimer=0;const resetChatLauncherPosition=()=>{chatPanelRight=chatBaseRight();chat.style.left="";chat.style.right=chatPanelRight+"px";chat.classList.remove("closing")};const setOpen=(open,method="toggle")=>{const changed=chat.classList.contains("open")!==open;if(open&&changed){docsTelemetry.popup("docs_assistant",true,"","docs_assistant");docsAnalytics.hold("docs_assistant",true)}clearTimeout(resetChatTimer);chat.classList.toggle("open",open);syncCommunityInvite();if(open){chat.classList.remove("closing");applyChatRight(chatPanelRight,chat.getBoundingClientRect().width)}else{chat.classList.add("closing");resetChatTimer=setTimeout(resetChatLauncherPosition,220)}panel?.toggleAttribute("inert",!open);panel?.setAttribute("aria-hidden",String(!open));document.querySelector("[data-chat-toggle]")?.setAttribute("aria-expanded",String(open));if(!open&&changed){docsAnalytics.hold("docs_assistant",false);docsTelemetry.popup("docs_assistant",false,method,"docs_assistant")}if(open)ensureAuth().then(ok=>{if(ok)setTimeout(()=>input.focus(),0)})};
+const chatText=()=>[...document.querySelectorAll(".docs-chat-message")].filter(item=>!item.classList.contains("thinking")).map(item=>(item.classList.contains("user")?"You: ":"OpenClaw: ")+item.innerText.trim()).filter(Boolean).join("\\n\\n");
+const chatErrorMessage=async res=>{const fallback="Docs agent returned "+res.status;if(res.status>=500)return fallback;try{const data=await res.clone().json();return typeof data?.error==="string"&&data.error.trim()?data.error.trim():fallback}catch{return fallback}};
+const sendChatMessage=async(message,{echoUser=true}={})=>{const api=window.OPENCLAW_DOCS_CHAT_API;if(!api||!message)return;if(!await ensureAuth())return;lastMessage=message;setRetryEnabled();if(echoUser)addChatMessage("user",message);setChatClearVisible(true);const reply=addChatThinking();if(submit)submit.disabled=true;if(retry)retry.disabled=true;try{const res=await fetch(api,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",redirect:"manual",body:JSON.stringify({message,retrieval:"auto",confidenceThreshold:.3})});if(res.type==="opaqueredirect"||res.redirected||res.status===0||res.status===401||res.status===403)throw new Error("AUTH_REQUIRED");if(!res.ok)throw new Error(await chatErrorMessage(res));if(!res.body)throw new Error("Docs agent did not stream a response");const reader=res.body.getReader();const decoder=new TextDecoder();let raw="";while(true){const {done,value}=await reader.read();if(done)break;raw+=decoder.decode(value,{stream:true});if(reply&&raw.trim()){if(reply.classList.contains("thinking"))reply.classList.remove("thinking");reply.innerHTML=renderChatText(raw);reply.parentElement.scrollTop=reply.parentElement.scrollHeight}}if(!raw&&reply){reply.classList.remove("thinking");reply.innerHTML="<p>No response.</p>"}}catch(err){if(reply){const msg=isAuthFetchError(err)?"[Sign in with OpenClaw ID]("+chatSignInUrl()+"), then ask again.":chatFailureMessage(err?.message);reply.className="docs-chat-message error";reply.innerHTML=renderChatText(msg);if(isAuthFetchError(err))setAuthState("required")}}finally{if(submit)submit.disabled=authState!=="ready";setRetryEnabled();if(authState==="ready")input.focus()}};
+const askMoltyQuestion=async message=>{const question=String(message||"").trim();setOpen(true);if(!question){localStorage.removeItem(pendingMoltyQuestionKey);await ensureAuth();return}localStorage.setItem(pendingMoltyQuestionKey,question);if(!await ensureAuth())return;localStorage.removeItem(pendingMoltyQuestionKey);await sendChatMessage(question)};
+window.OPENCLAW_DOCS_ASK_MOLTY=askMoltyQuestion;
+const resumeMolty=new URLSearchParams(location.search).get("molty_resume")==="1";const pendingMoltyQuestion=localStorage.getItem(pendingMoltyQuestionKey);if(resumeMolty&&pendingMoltyQuestion){const clean=new URL(location.href);clean.searchParams.delete("molty_resume");history.replaceState(history.state,"",clean.href);setTimeout(()=>askMoltyQuestion(pendingMoltyQuestion),0)}
+setAuthState("unknown");
+document.addEventListener("click",e=>{if(e.target.closest("[data-chat-maximize]")){if(!chat.classList.contains("open"))setOpen(true);setExpanded(!chat.classList.contains("expanded"));return}if(e.target.closest("[data-chat-toggle]")){setOpen(!chat.classList.contains("open"));return}if(e.target.closest("[data-chat-minimize]")){setOpen(false,"minimize");return}if(e.target.closest("[data-chat-clear]")){clearChat();lastMessage="";setRetryEnabled();return}if(e.target.closest("[data-chat-copy]")){copyText(chatText(),copy);return}if(e.target.closest("[data-chat-retry]")){if(lastMessage)sendChatMessage(lastMessage,{echoUser:false});return}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&chat.classList.contains("open"))setOpen(false,"escape")});
+input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});
+form.addEventListener("submit",async e=>{e.preventDefault();if(authState!=="ready"){setAuthState(authState==="unknown"?"checking":authState);ensureAuth();return}const message=input.value.trim();if(!message)return;input.value="";await sendChatMessage(message)});
+}
+syncStickyHeaderOffset();
+syncTocDisclosure();
+initChat();
+initCodeGroups();initCodeFades();initAccordionMotion();
+initPageFeedback();
+initMermaid();
+syncCommunityInvite();
+window.addEventListener("storage",e=>{if(e.key===communityInviteKey||e.key===null)syncCommunityInvite()});
+scrollActiveNavLink();
+initTocScrollspy();
+if(location.hash)requestAnimationFrame(()=>scrollTarget(location.hash));
+addEventListener("hashchange",()=>scrollTarget(location.hash));
+document.addEventListener("click",async e=>{const pageActions=e.target.closest(".page-actions");document.querySelectorAll(".page-actions-more[open]").forEach(menu=>{if(!pageActions?.contains(menu))menu.removeAttribute("open")});const toc=e.target.closest(".toc");document.querySelectorAll(".toc[open]").forEach(menu=>{if(isCompactToc()&&!toc?.contains(menu))menu.open=false});const tocLink=e.target.closest(".toc a");if(tocLink){tocSpyHoldUntil=Date.now()+900;setActiveTocLink(tocLinkId(tocLink));if(isCompactToc())tocLink.closest(".toc").open=false}if(handleDocsControlClick(e))return;const theme=e.target.closest("[data-theme-toggle]");if(theme){const next=root.dataset.theme==="dark"?"light":"dark";root.dataset.theme=next;localStorage.setItem("theme",next);initMermaid(true);return}const trigger=e.target.closest("[data-language-trigger]");if(trigger){e.stopPropagation();toggleLanguage();return}const picker=document.querySelector("[data-language-picker]");if(picker&&!picker.contains(e.target))closeLanguage();const navToggle=e.target.closest("[data-nav-toggle]");if(navToggle){setNavOpen(!document.body.classList.contains("nav-open"));return}if(e.target.closest("[data-nav-close]")){setNavOpen(false);return}if(e.target.closest("[data-community-invite-dismiss]")){dismissCommunityInvite();return}if(document.body.classList.contains("nav-open")&&!e.target.closest(".sidebar")){setNavOpen(false);return}if(e.target.closest("[data-search-open]")){openSearch();return}if(e.target.closest("[data-search-close]")){closeSearch();return}if(e.target.closest("[data-search-clear]")){clearSearch();input?.focus();return}const link=e.target.closest("a[href]");if(!link)return;if(link.closest("[data-language-picker]"))return;if(link.target||link.download||!isPlainLeftClick(e))return;const url=new URL(link.href,location.href);if(url.origin===location.origin&&url.pathname===location.pathname&&url.search===location.search&&url.hash){e.preventDefault();history.pushState({docs:true},"",url.href);scrollTarget(url.hash);return}if(!isDocsPage(url))return;e.preventDefault();closeSearch("navigation");const animateHome=e.detail>0&&link.matches(".site-header .brand")&&!document.body.classList.contains("docs-home");const ok=await navigateTo(url,false,animateHome);if(!ok)location.href=url.href});
+addEventListener("keydown",e=>{handleMermaidOverlayKeydown(e)},{capture:true});modal?.addEventListener("click",e=>{if(e.target===modal)closeSearch("backdrop")});function isEditableTarget(target){return target instanceof Element&&!!target.closest("input,textarea,select,[contenteditable]")}function isSearchShortcutEvent(e){return (e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&(e.code==="KeyK"||String(e.key).toLowerCase()==="k")}function searchFocusable(){return [...modal?.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex=\\\"-1\\\"])")||[]].filter(el=>el.tabIndex>=0&&!el.hidden&&el.getAttribute("aria-hidden")!=="true"&&el.offsetParent!==null)}function trapSearchFocus(e){if(e.key!=="Tab"||!modal?.classList.contains("open"))return false;const items=searchFocusable();if(!items.length){e.preventDefault();input?.focus();return true}const first=items[0];const last=items[items.length-1];if(!modal.contains(document.activeElement)){e.preventDefault();first.focus();return true}if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();return true}if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();return true}return false}addEventListener("keydown",e=>{if(trapSearchFocus(e)||trapNavFocus(e)||handleLanguageKeydown(e))return;if(isSearchShortcutEvent(e)){if(!isEditableTarget(e.target)){e.preventDefault();e.stopPropagation();openSearch()}return}if(e.key==="Escape"){closeSearch("escape");document.querySelectorAll(".page-actions-more[open]").forEach(menu=>menu.removeAttribute("open"));document.querySelectorAll(".toc[open]").forEach(menu=>{if(isCompactToc()){const restore=menu.contains(document.activeElement);menu.open=false;if(restore)menu.querySelector("summary")?.focus({preventScroll:true})}});closeLanguage();setNavOpen(false)}},{capture:true});
+addEventListener("popstate",()=>{closeMermaidOverlay();const key=location.pathname+location.search;if(key===currentDocKey){docsAnalytics.pageView();scrollTarget(location.hash);return}docsAnalytics.suspend();navigateTo(new URL(location.href),true)});
+document.addEventListener("toggle",e=>{const section=e.target;if(section?.matches?.(".nav-section,.nav-nested")){updateSidebarFade();return}if(!section?.matches?.(".docs-section")||section.closest(".docs-sidebar-levels"))return;updateSidebarFade();if(section.open)requestAnimationFrame(()=>{const summary=section.querySelector(":scope>summary");if(section.open&&isUsableFocusTarget(summary))summary.scrollIntoView({behavior:"instant",block:"nearest",inline:"nearest"})})},{capture:true});
+document.addEventListener("scroll",e=>{if(e.target?.classList?.contains("sidebar")||e.target?.matches?.(".docs-sidebar-directory,.docs-sidebar-context > .docs-sections"))updateSidebarFade();if(e.target?.matches?.(".toc"))syncTocFade()},{capture:true,passive:true});
+let tocScrollRaf=0;function scheduleTocDisclosure(){if(tocScrollRaf)return;tocScrollRaf=requestAnimationFrame(()=>{tocScrollRaf=0;syncTocDisclosure();syncCommunityInvite()})}addEventListener("scroll",scheduleTocDisclosure,{passive:true});addEventListener("scrollend",scheduleTocDisclosure,{passive:true});
+// Keep desktop navigation focus clear of fixed corner controls after responsive layout changes.
+let layoutResizeRaf=0;addEventListener("resize",()=>{syncStickyHeaderOffset();syncTocDisclosure();cancelAnimationFrame(layoutResizeRaf);layoutResizeRaf=requestAnimationFrame(()=>{updateSidebarFade();syncCommunityInvite();const focused=document.activeElement;if(focused?.matches("[data-locale-option]")&&focused.closest(".language-picker.open"))focusLanguageOption(focused);if(focused?.closest(".sidebar")&&isUsableFocusTarget(focused))focused.scrollIntoView({behavior:"instant",block:mobileNavQuery.matches?"nearest":"center",inline:"nearest"})})});
+initHomeHero();document.fonts?.ready.then(()=>{syncStickyHeaderOffset();syncCommunityInvite();syncTocSpace()});
+let seq=0;let searchTimer=0;const searchCommandIcon='<svg class="icon icon-command" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></svg>';const searchEnterIcon='<svg class="icon icon-corner-down-left" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>';const searchAliases={install:"getting started onboarding setup curl node",setup:"install onboarding getting started",telegram:"channels telegram groups tdlib pairing",slack:"channels slack app bot socket mode",gateway:"gateway auth heartbeat remote health restart",doctor:"gateway health heartbeat restart diagnostics",plugin:"plugins capabilities tools skills",plugins:"plugins capabilities tools skills",config:"configuration json5 env defaults",model:"models providers openai anthropic google"};function expandSearchQuery(q){const extra=q.toLowerCase().split(/\\s+/).flatMap(word=>searchAliases[word]?[searchAliases[word]]:[]);return [q,...extra].join(" ").trim()}
+function searchQuery(){return input?.value.trim()||""}
+function updateSearchFade(){
+  if(!results)return;
+  const remaining=Math.max(0,results.scrollHeight-results.clientHeight-results.scrollTop);
+  results.style.setProperty("--search-fade-top",Math.min(24,Math.max(0,results.scrollTop))+"px");
+  results.style.setProperty("--search-fade-bottom",(remaining<1?0:Math.min(24,remaining))+"px");
+}
+if(results){
+  let fadeFrame=0;
+  const scheduleFade=()=>{if(fadeFrame)return;fadeFrame=requestAnimationFrame(()=>{fadeFrame=0;updateSearchFade()})};
+  results.addEventListener("scroll",scheduleFade,{passive:true});
+  new ResizeObserver(scheduleFade).observe(results);
+  new MutationObserver(scheduleFade).observe(results,{childList:true});
+}
+function escapeSearchHtml(value){const div=document.createElement("div");div.textContent=String(value||"");return div.innerHTML}
+function setSearchChrome(q){modal?.classList.toggle("has-query",!!q);const clear=modal?.querySelector("[data-search-clear]");if(clear)clear.hidden=!q;input?.setAttribute("aria-controls",q?"docs-search-results":"docs-search-suggestions");if(!q){const expanded=!!modal?.classList.contains("open");input?.setAttribute("aria-expanded",String(expanded));if(expanded)setActiveSearchResult(0);else input?.removeAttribute("aria-activedescendant")}if(moltySearchPrefix)moltySearchPrefix.textContent=q?"Ask Molty about":"Ask Molty";if(moltySearchTerm){moltySearchTerm.textContent=q;moltySearchTerm.hidden=!q}}
+function setSearchLoading(loading){modal?.classList.toggle("is-searching",loading);results?.classList.toggle("is-loading",loading);if(loading){input?.setAttribute("aria-expanded","false");input?.removeAttribute("aria-activedescendant");results?.setAttribute("role","status")}results?.setAttribute("aria-busy",String(loading))}
+function searchLoadingHtml(){return '<div class="search-loading"><span class="search-spinner" aria-hidden="true"></span><span>Searching…</span></div>'}function showSearchLoading(){if(results&&!results.querySelector(".search-loading"))results.innerHTML=searchLoadingHtml()}
+function searchInitialHtml(){return ""}
+function searchUnavailableHtml(){return '<div class="search-empty search-unavailable"><strong>Search is unavailable</strong><p>Please try again in a moment, or browse the docs using the navigation.</p></div>'}
+function canAskMoltyFromSearch(){return Boolean(moltySearch&&window.OPENCLAW_DOCS_ASK_MOLTY)}
+function searchOptions(){const list=document.getElementById(searchQuery()?"docs-search-results":"docs-search-suggestions");return [...list?.querySelectorAll('[role="option"]')||[]]}
+function setActiveSearchResult(index){const options=searchOptions();if(!options.length){searchActiveIndex=-1;input?.removeAttribute("aria-activedescendant");return}searchActiveIndex=(index+options.length)%options.length;input?.setAttribute("aria-activedescendant",options[searchActiveIndex].id);options.forEach((node,i)=>{const active=i===searchActiveIndex;node.classList.toggle("active",active);node.setAttribute("aria-selected",String(active));if(active)node.scrollIntoView({block:"nearest"})})}
+function searchResultHtml(item,index){const meta=item.meta||{};const metaParts=[meta.category,meta.section].filter(Boolean).map(part=>'<span>'+escapeSearchHtml(part)+'</span>').join("");return '<a class="search-result" id="docs-search-result-'+index+'" role="option" tabindex="-1" aria-selected="false" data-search-result-index="'+index+'" href="'+withBase(item.url)+'">'+(metaParts?'<div class="search-result-meta">'+metaParts+'</div>':"")+'<strong>'+escapeSearchHtml(meta.title||item.url)+'</strong><span class="search-result-enter" aria-hidden="true">'+searchEnterIcon+'</span><p>'+(item.excerpt||"")+"</p></a>"}
+function searchEmptyHtml(q){const fallback=canAskMoltyFromSearch()?'<p>Try fewer words, or <span class="search-empty-kbd" aria-label="Command Enter">'+searchCommandIcon+searchEnterIcon+'</span> to ask Molty.</p>':'<p>Try fewer words, a command, or the name of a channel.</p>';return '<div class="search-empty"><strong>No results found</strong>'+fallback+'</div>'}
+function renderSearchResults(items,q){searchActiveIndex=-1;if(!results)return;results.setAttribute("role",items.length?"listbox":"status");input?.setAttribute("aria-expanded",String(!!items.length));results.innerHTML=items.length?items.map(searchResultHtml).join(""):searchEmptyHtml(q);if(items.length)setActiveSearchResult(0)}
+async function runSearch(q,id,analyticsCapture){if(!results)return;setSearchChrome(q);setSearchLoading(true);showSearchLoading();const pf=await loadPagefind();if(id!==seq)return;if(pf?.unavailable){if(docsAnalytics.isCurrentCapture(analyticsCapture))docsTelemetry.clientError("network","search_unavailable",analyticsCapture.page);docsTelemetry.searchRendered(q,[],undefined,"error",analyticsCapture);setSearchLoading(false);searchActiveIndex=-1;results.innerHTML=searchUnavailableHtml();return}try{let search=await pf.search(q);const expanded=expandSearchQuery(q);if(!search.results.length&&expanded!==q)search=await pf.search(expanded);const items=await Promise.all(search.results.slice(0,12).map(r=>r.data()));if(id!==seq)return;setSearchLoading(false);renderSearchResults(items,q);docsTelemetry.searchRendered(q,items,items.length,search.results.length>items.length?"partial":"complete",analyticsCapture)}catch{if(id!==seq)return;if(docsAnalytics.isCurrentCapture(analyticsCapture))docsTelemetry.clientError("network","search_failed",analyticsCapture.page);docsTelemetry.searchRendered(q,[],undefined,"error",analyticsCapture);setSearchLoading(false);searchActiveIndex=-1;results.innerHTML=searchUnavailableHtml()}}
+function scheduleSearch(immediate=false){docsTelemetry.cancelSearch();const q=searchQuery();const id=++seq;clearTimeout(searchTimer);searchActiveIndex=-1;setSearchChrome(q);if(!q){setSearchLoading(false);if(results)results.innerHTML=searchInitialHtml();return}setSearchLoading(true);showSearchLoading();const analyticsCapture=docsAnalytics.capture();const run=()=>runSearch(q,id,analyticsCapture);if(immediate)run();else searchTimer=setTimeout(run,240)}
+async function askMoltyFromSearch(){if(!canAskMoltyFromSearch())return;const q=searchQuery();closeSearch("switch_to_chat");await window.OPENCLAW_DOCS_ASK_MOLTY(q)}
+input?.addEventListener("input",()=>scheduleSearch(false));
+input?.addEventListener("keydown",e=>{if(e.isComposing)return;if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();askMoltyFromSearch();return}if(e.key==="ArrowDown"){if(searchOptions().length){e.preventDefault();setActiveSearchResult(searchActiveIndex+1)}return}if(e.key==="ArrowUp"){if(searchOptions().length){e.preventDefault();setActiveSearchResult(searchActiveIndex-1)}return}if(e.key==="Enter"&&!e.shiftKey){const active=searchOptions()[searchActiveIndex];if(active){e.preventDefault();active.click()}}});
+modal?.addEventListener("pointermove",e=>{const option=e.target.closest?.('[role="option"]');const index=searchOptions().indexOf(option);if(index>=0&&index!==searchActiveIndex)setActiveSearchResult(index)});
+modal?.addEventListener("focusin",e=>{const option=e.target.closest?.('[role="option"]');const index=searchOptions().indexOf(option);if(index>=0)setActiveSearchResult(index)});
+moltySearch?.addEventListener("click",()=>askMoltyFromSearch());
+
+document.addEventListener("click",e=>{const suggestion=e.target.closest("[data-search-suggestion]");if(!suggestion||!input)return;input.value=suggestion.dataset.searchSuggestion||"";input.focus();scheduleSearch(true)});
+`;
+  // Hash the complete emitted runtime before adding its identity, avoiding a
+  // self-referential hash. Serialized analytics/config and hashed lazy module
+  // paths participate; a cached runtime keeps its own identity across PJAX.
+  const release = "js-" + createHash("sha256").update(source).digest("hex").slice(0, 12);
+  return `const docsRuntimeRelease=${JSON.stringify(release)};\n${source}`;
+}

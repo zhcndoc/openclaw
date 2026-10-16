@@ -1,0 +1,1097 @@
+#!/usr/bin/env node
+import { docsNotFoundHtml } from "../../workers/not-found.ts";
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { DomUtils, parseDocument } from "htmlparser2";
+
+import { ignoredDocDirs, localeFlags, localeLabels, navigationLocaleToDir } from "./config.mjs";
+import { chromeStrings } from "./chrome-strings.mjs";
+import { homeStrings } from "./home-strings.mjs";
+import { editSourceUrlForPage, frontmatterSourcePath, readSourceMetadata } from "./edit-source.mjs";
+import { parseFrontmatter } from "../../.openclaw-sync/lib/docs-markdown.mjs";
+
+const root = process.cwd();
+const site = path.join(root, "dist", "docs-site");
+const docsDir = path.join(root, "docs");
+const workerNotFoundHtml = docsNotFoundHtml("/missing-page");
+const sourceMetadata = readSourceMetadata(root);
+const expectedOrigin = (process.env.DOCS_SITE_CANONICAL_ORIGIN
+  ?? (process.env.DOCS_SITE_CNAME ? `https://${process.env.DOCS_SITE_CNAME}` : "https://docs.openclaw.ai"))
+  .replace(/\/$/, "");
+const previewOrigin = (process.env.DOCS_SITE_CNAME ? `https://${process.env.DOCS_SITE_CNAME}` : "https://docs.openclaw.ai")
+  .replace(/\/$/, "");
+const llmsFullAvailable = process.env.DOCS_SITE_LLMS_FULL_AVAILABLE === "1";
+const artifactMode = process.env.DOCS_SITE_ARTIFACT_MODE ?? "full";
+const shellOnly = artifactMode === "shell";
+const basePath = `/${(process.env.DOCS_SITE_BASE_PATH ?? "").replace(/^\/+|\/+$/g, "")}`.replace(/^\/$/, "");
+if (!["full", "shell"].includes(artifactMode)) {
+  throw new Error(`DOCS_SITE_ARTIFACT_MODE must be full or shell, got ${artifactMode}`);
+}
+const required = [
+  "index.html",
+  "tools/reactions/index.html",
+  "it/channels/index.html",
+  "zh-CN/tools/reactions/index.html",
+  "de/tools/reactions/index.html",
+  "de/gateway/heartbeat/index.html",
+  "reference/templates/AGENTS/index.html",
+  "images/groups-flow.svg",
+  "images/feishu-get-group-id.png",
+  "assets/docs-site.css",
+  "assets/docs-site.js",
+  "assets/pixel-lobster.svg"
+];
+if (!shellOnly) {
+  required.push(
+    "concepts/models.md",
+    "llm.txt",
+    "llms.txt",
+    ".well-known/llms.txt",
+    "robots.txt",
+    "sitemap.xml",
+    "pagefind/pagefind.js",
+    "docs-search.json",
+  );
+}
+if (!/--oc-bg-page: #101012/.test(workerNotFoundHtml)
+  || !/@media \(prefers-color-scheme: light\)/.test(workerNotFoundHtml)
+  || !/background: var\(--oc-bg-page\)/.test(workerNotFoundHtml)
+  || !/border-radius: var\(--oc-radius-surface\)/.test(workerNotFoundHtml)
+  || !/background var\(--oc-duration-fast\) var\(--oc-ease-out\)/.test(workerNotFoundHtml)
+  || /<link[^>]+stylesheet/.test(workerNotFoundHtml)) {
+  throw new Error("worker 404: shared token foundation or self-contained rendering is missing");
+}
+const poison = [
+  /\banalysis\s+to=functions\./iu,
+  /\b(?:commentary|final)\s+to=functions\./iu,
+  /\bfunctions\.(?:read|write|exec|search|run)\b/iu,
+  /OPENCLAW_DOCS_MARKER/u,
+  /<\/?openclaw_docs_i18n_input>/iu,
+  /\/home\/runner\/work\//u,
+  /彩神马争霸/u
+];
+
+for (const locale of activeLocaleCodes()) {
+  if (!localeLabels[locale]) throw new Error(`locale metadata: missing label for ${locale}`);
+  if (!localeFlags[locale]) throw new Error(`locale metadata: missing flag for ${locale}`);
+  if (!Object.hasOwn(chromeStrings, locale)) throw new Error(`chrome strings: missing translations for ${locale}`);
+}
+
+for (const rel of required) {
+  const file = path.join(site, rel);
+  if (!fs.existsSync(file)) throw new Error(`missing ${rel}`);
+  if (!rel.endsWith(".html")) continue;
+  const html = fs.readFileSync(file, "utf8");
+  if (!/<title>[^<]+<\/title>/i.test(html)) throw new Error(`${rel}: missing title`);
+  if (!html.includes('class="home-hero"')) throw new Error(`${rel}: missing shared page background`);
+  for (const pattern of poison) {
+    if (pattern.test(html)) throw new Error(`${rel}: poison matched ${pattern}`);
+  }
+}
+assertLocalizedChrome();
+if (!shellOnly) {
+  for (const rel of ["llms-full.txt", ".well-known/llms-full.txt"]) {
+    if (fs.existsSync(path.join(site, rel))) throw new Error(`${rel}: full-site LLM corpus should not be emitted`);
+  }
+  const llms = fs.readFileSync(path.join(site, "llms.txt"), "utf8");
+  if (llmsFullAvailable && !/llms-full\.txt/.test(llms)) throw new Error("llms.txt: should advertise llms-full.txt");
+  if (!llmsFullAvailable && /llms-full\.txt/.test(llms)) throw new Error("llms.txt: should not advertise unavailable llms-full.txt");
+  if (!/Accept: text\/markdown|\.md/.test(llms)) throw new Error("llms.txt: should advertise page-level Markdown");
+  if (!llms.includes(`${expectedOrigin}/start/getting-started.md`) || !llms.includes(`${expectedOrigin}/sitemap.xml`)) {
+    throw new Error(`llms.txt: expected canonical origin ${expectedOrigin}`);
+  }
+  if (previewOrigin !== expectedOrigin && llms.includes(previewOrigin)) {
+    throw new Error(`llms.txt: preview origin ${previewOrigin} should not be advertised`);
+  }
+  const wellKnownLlms = fs.readFileSync(path.join(site, ".well-known/llms.txt"), "utf8");
+  if (wellKnownLlms !== llms) throw new Error(".well-known/llms.txt: does not match root llms.txt");
+  const robots = fs.readFileSync(path.join(site, "robots.txt"), "utf8");
+  if (!robots.includes(`Sitemap: ${expectedOrigin}/sitemap.xml`)) {
+    throw new Error(`robots.txt: sitemap directive missing canonical origin ${expectedOrigin}`);
+  }
+  if (/Disallow: \/(?:\.well-known\/)?llms-full\.txt/.test(robots) || !robots.includes(`LLMS: ${expectedOrigin}/llms.txt`)) {
+    throw new Error("robots.txt: LLM directives missing");
+  }
+  if (llmsFullAvailable && !robots.includes(`LLMS-Full: ${expectedOrigin}/llms-full.txt`)) {
+    throw new Error("robots.txt: LLMS-Full directive missing");
+  }
+  if (!llmsFullAvailable && /LLMS-Full:/u.test(robots)) {
+    throw new Error("robots.txt: should not advertise unavailable llms-full.txt");
+  }
+  if (previewOrigin !== expectedOrigin && robots.includes(previewOrigin)) {
+    throw new Error(`robots.txt: preview origin ${previewOrigin} should not be advertised`);
+  }
+  const sitemap = fs.readFileSync(path.join(site, "sitemap.xml"), "utf8");
+  if (!sitemap.includes(`<loc>${expectedOrigin}/`)) {
+    throw new Error(`sitemap.xml: expected canonical origin ${expectedOrigin}`);
+  }
+  if (previewOrigin !== expectedOrigin && sitemap.includes(previewOrigin)) {
+    throw new Error(`sitemap.xml: preview origin ${previewOrigin} should not be advertised`);
+  }
+}
+if (!shellOnly) {
+  const searchIndex = JSON.parse(fs.readFileSync(path.join(site, "docs-search.json"), "utf8"));
+  if (!Array.isArray(searchIndex.entries) || searchIndex.entries.length < 100) {
+    throw new Error("docs-search.json: search index is missing entries");
+  }
+  if (!searchIndex.entries.some((entry) => entry.title === "Getting started" && entry.url === "/start/getting-started")) {
+    throw new Error("docs-search.json: expected getting started entry missing");
+  }
+}
+const zhReactions = fs.readFileSync(path.join(site, "zh-CN/tools/reactions/index.html"), "utf8");
+if (!/href="(?:\/docs)?\/zh-CN\/tools\/reactions"/.test(zhReactions)) {
+  throw new Error("zh-CN reactions: language picker does not preserve current page");
+}
+if (!/href="(?:\/docs)?\/zh-CN\/tools\/agent-send/.test(zhReactions)) {
+  throw new Error("zh-CN reactions: article links do not stay in locale");
+}
+const itChannels = fs.readFileSync(path.join(site, "it/channels/index.html"), "utf8");
+if (!/class="nav-link active" href="(?:\/docs)?\/it\/channels" aria-current="page"/.test(itChannels)) {
+  throw new Error("it channels: localized navigation is missing the active page");
+}
+if (!/<details class="nav-section"[^>]*><summary><h2>Overview<\/h2>/.test(itChannels)) {
+  throw new Error("it channels: localized sidebar is missing");
+}
+if (!itChannels.includes(`<link rel="alternate" hreflang="it" href="${expectedOrigin}/it/channels">`)) {
+  throw new Error("it channels: self-referential hreflang alternate is missing");
+}
+if (!itChannels.includes(`<link rel="alternate" hreflang="en" href="${expectedOrigin}/channels">`)) {
+  throw new Error("it channels: hreflang alternate back to English is missing");
+}
+if (!itChannels.includes(`<link rel="alternate" hreflang="x-default" href="${expectedOrigin}/channels">`)) {
+  throw new Error("it channels: x-default hreflang alternate is missing");
+}
+const index = fs.readFileSync(path.join(site, "index.html"), "utf8");
+const indexDocument = parseDocument(index);
+for (const id of ["quick-start", "what-is-openclaw%3F"]) {
+  const heading = DomUtils.findOne((node) => node.name === "h2" && node.attribs.id === id, indexDocument.children);
+  if (!heading) throw new Error(`index: homepage section ${id} is missing`);
+  for (let parent = heading.parent; parent; parent = parent.parent) {
+    if (parent.name === "details" && !Object.hasOwn(parent.attribs, "open")) {
+      throw new Error(`index: homepage section ${id} is hidden behind a disclosure`);
+    }
+  }
+}
+const mainLandmarks = DomUtils.findAll((node) => node.name === "main", indexDocument.children);
+if (mainLandmarks.length !== 1 || mainLandmarks[0].attribs.id !== "main"
+  || !mainLandmarks[0].attribs.class?.split(/\s+/).includes("article")
+  || mainLandmarks[0].attribs.class?.split(/\s+/).includes("main")) {
+  throw new Error("index: expected one article main landmark, separate from the layout wrapper");
+}
+if (!index.includes('class="site-footer"') || !index.includes('class="site-footer-links"')) {
+  throw new Error("index: site footer is missing");
+}
+if (!index.includes(`<link rel="canonical" href="${expectedOrigin}/">`)) {
+  throw new Error(`index: canonical link should use ${expectedOrigin}`);
+}
+if (!index.includes(`<meta property="og:url" content="${expectedOrigin}/">`)) {
+  throw new Error(`index: og:url should use ${expectedOrigin}`);
+}
+if (!index.includes(`<link rel="alternate" hreflang="en" href="${expectedOrigin}/">`)) {
+  throw new Error("index: self-referential hreflang alternate is missing");
+}
+if (!index.includes(`<link rel="alternate" hreflang="x-default" href="${expectedOrigin}/">`)) {
+  throw new Error("index: x-default hreflang alternate is missing");
+}
+const gettingStarted = fs.readFileSync(path.join(site, "start/getting-started/index.html"), "utf8");
+const gettingStartedOgImage = `${expectedOrigin}/og/start/getting-started.png`;
+if (!fs.existsSync(path.join(site, "og/start/getting-started.png"))) {
+  throw new Error("start/getting-started: per-page og image was not generated");
+}
+if (!gettingStarted.includes(`<meta property="og:image" content="${gettingStartedOgImage}?v=`)) {
+  throw new Error("start/getting-started: og:image does not use the per-page card");
+}
+if (!gettingStarted.includes(`<meta name="twitter:image" content="${gettingStartedOgImage}?v=`)) {
+  throw new Error("start/getting-started: twitter:image does not use the per-page card");
+}
+if (gettingStarted.includes(`${expectedOrigin}/og-card.png"`)) {
+  throw new Error("start/getting-started: metadata fell back to the generic og-card.png");
+}
+if (!/og\/start\/getting-started\.png\?v=[0-9a-f]{12}/.test(gettingStarted)) {
+  throw new Error("start/getting-started: og image URL must carry a cache-busting content version");
+}
+if (previewOrigin !== expectedOrigin && /<link rel="canonical"[^>]+documentation\.openclaw\.ai/.test(index)) {
+  throw new Error(`index: canonical link should not use preview origin ${previewOrigin}`);
+}
+if (!/data-language-picker/.test(index) || !/class="language-option active"[^>]*aria-selected="true"/.test(index)) {
+  throw new Error("index: custom language picker is missing active state");
+}
+const indexTree = parseDocument(index);
+const languageTriggers = DomUtils.findAll(node => node.name === "button" && node.attribs?.["aria-controls"] === "language-menu", indexTree.children);
+const mobileTools = DomUtils.findOne(node => node.attribs?.class === "sidebar-tools", indexTree.children);
+const siteHeader = DomUtils.findOne(node => node.name === "header" && node.attribs?.class === "site-header", indexTree.children);
+if (languageTriggers.length !== 1 || !mobileTools || !siteHeader || !DomUtils.findOne(node => node === languageTriggers[0], siteHeader.children)) {
+  throw new Error("index: site header must contain a single language menu button");
+}
+for (const href of ["https://github.com/openclaw/openclaw", "https://discord.com/invite/clawd"]) {
+  if (!DomUtils.findOne(node => node.name === "a" && node.attribs?.href === href, mobileTools.children)) {
+    throw new Error(`index: mobile navigation is missing ${href}`);
+  }
+}
+if (!/Português \(BR\)/.test(index)) {
+  throw new Error("index: language picker labels were not rendered");
+}
+if (!/🇮🇳/.test(index) || !/हिन्दी/.test(index) || !/🇷🇺/.test(index) || !/Русский/.test(index)) {
+  throw new Error("index: Hindi and Russian language picker metadata was not rendered");
+}
+if (
+  !/data-docs-chat/.test(index) ||
+  !/OPENCLAW_DOCS_CHAT_API/.test(index) ||
+  !/data-static-src="\/assets\/molty-avatar\.png"/.test(index) ||
+  !/data-hover-src="\/assets\/molty-avatar-hover\.gif"/.test(index) ||
+  !/<h2 id="docs-chat-title">Molty<\/h2>/.test(index)
+) {
+  throw new Error("index: docs chat widget was not rendered");
+}
+if (!fs.existsSync(path.join(site, "assets/molty-avatar.png"))
+  || !fs.existsSync(path.join(site, "assets/molty-avatar-hover.gif"))) {
+  throw new Error("assets: Molty avatar assets were not copied");
+}
+const chatCss = fs.readFileSync(path.join(site, "assets/docs-site.css"), "utf8");
+if (!/data-chat-copy/.test(index)
+  || !/data-chat-retry/.test(index)
+  || !/data-chat-maximize/.test(index)
+  || !/data-chat-minimize/.test(index)
+  || !/docs-chat-empty/.test(index)
+  || !/Responses are generated using AI/.test(index)
+  || !/data-chat-copy[^>]+hidden/.test(index)
+  || !/data-chat-retry[^>]+hidden/.test(index)
+  || !/\.docs-chat\.expanded/.test(chatCss)
+  || !/\.docs-chat\{[^}]*height:min\(680px/.test(chatCss)
+  || !/\.docs-chat-panel\{[^}]*border-radius:var\(--oc-radius-surface\)/.test(chatCss)
+  || !/\.docs-chat-panel>\*\{min-width:0;max-width:100%/.test(chatCss)
+  || !/\.docs-chat-actions\{[^}]*gap:6px/.test(chatCss)
+  || !/\.docs-chat-head\{overflow:visible\}/.test(chatCss)
+  || !/\.docs-chat-actions\{position:relative;z-index:3\}/.test(chatCss)
+  || !/\.docs-chat-icon:is\(:hover,:focus-visible\):not\(:disabled\):after\{content:attr\(aria-label\)/.test(chatCss)
+  || !/\.docs-chat-icon:is\(:hover,:focus-visible\):not\(:disabled\):after\{[^}]*background:var\(--tooltip-bg\);color:var\(--tooltip-text\)/.test(chatCss)
+  || !/\.docs-chat-copy\[data-copy-state\] \.icon\{display:none/.test(chatCss)
+  || !/\.docs-chat-copy\[data-copy-state="copied"\]:before\{content:"✓"/.test(chatCss)
+  || !/\.docs-chat-log\{[^}]*overflow-x:hidden/.test(chatCss)
+  || !/\.docs-chat-message\{[^}]*overflow-wrap:anywhere/.test(chatCss)
+  || !/\.docs-chat-message\.user a,\.docs-chat-message\.user a:visited\{color:inherit/.test(chatCss)
+  || !/\.docs-chat-form\{[^}]*max-width:100%;overflow:hidden/.test(chatCss)
+  || !/\.docs-chat:not\(\[data-chat-auth-state="ready"\]\) \.docs-chat-form\{display:none/.test(chatCss)
+  || !/\.docs-chat-form textarea:focus\{[^}]*inset 0 0 0 4px/.test(chatCss)
+  || !/\.docs-chat-form button\{position:absolute;right:34px;bottom:34px/.test(chatCss)
+  || !/\.docs-chat-auth\{[^}]*grid-row:4;align-self:end/.test(chatCss)
+  || !/\.docs-chat-github-icon\{[^}]*fill:currentColor/.test(chatCss)
+  || !/\.docs-chat-avatar\{[^}]*border-radius:var\(--oc-radius-round\)/.test(chatCss)
+  || !/translateY\(10px\) scale\(\.985\)/.test(chatCss)) {
+  throw new Error("index: floating docs chat controls are missing");
+}
+if (/docs-chat-attach/.test(index) || /\.docs-chat-attach/.test(chatCss)) {
+  throw new Error("index: docs chat attachment affordance should not be rendered");
+}
+if (!/class="hljs-attr">channels<\/span>/.test(index)
+  || !/class="hljs-string">&quot;\+15555550123&quot;<\/span>/.test(index)
+  || !/class="hljs-literal">true<\/span>/.test(index)) {
+  throw new Error("index: json5 config example was not syntax-highlighted");
+}
+const modelsMarkdown = fs.readFileSync(path.join(site, "concepts/models.md"), "utf8");
+if (!/^---\nsummary: /m.test(modelsMarkdown) || !/title: "Models CLI"/m.test(modelsMarkdown)) {
+  throw new Error("concepts/models.md: source markdown was not emitted");
+}
+if (process.env.DOCS_SITE_BASE_PATH && (/src="\/assets\//.test(index) || /href="\/assets\//.test(index))) {
+  throw new Error("index: absolute asset paths were not base-path rewritten");
+}
+const cssVersion = index.match(/href="[^"]*\/assets\/docs-site\.css\?v=([a-f0-9]{12})"/)?.[1];
+const jsVersion = index.match(/src="[^"]*\/assets\/docs-site\.js\?v=([a-f0-9]{12})"/)?.[1];
+if (!process.env.DOCS_SITE_BASE_PATH && !cssVersion) {
+  throw new Error("index: custom-domain build did not emit root asset paths");
+}
+if (!jsVersion || cssVersion !== jsVersion) {
+  throw new Error("index: docs shell assets do not share a content version");
+}
+if (process.env.DOCS_SITE_CNAME) {
+  const cnamePath = path.join(site, "CNAME");
+  if (!fs.existsSync(cnamePath) || fs.readFileSync(cnamePath, "utf8").trim() !== process.env.DOCS_SITE_CNAME) {
+    throw new Error("CNAME: custom domain file missing or wrong");
+  }
+}
+const siteJs = fs.readFileSync(path.join(site, "assets/docs-site.js"), "utf8");
+const siteCss = fs.readFileSync(path.join(site, "assets/docs-site.css"), "utf8");
+const maturityScorecard = fs.readFileSync(path.join(site, "maturity/scorecard/index.html"), "utf8");
+const maturityTaxonomy = fs.readFileSync(path.join(site, "maturity/taxonomy/index.html"), "utf8");
+if (!maturityScorecard.includes('class="maturity-summary-grid"')
+  || !maturityScorecard.includes('class="maturity-surface-table"')
+  || !maturityTaxonomy.includes('class="maturity-level-list"')
+  || !DomUtils.findAll((node) => node.name === "summary", parseDocument(maturityTaxonomy).children).some((node) => DomUtils.textContent(node).trim() === "CLI - M4 Stable - 7 areas")
+  || !/<div class="maturity-category-docs">\s*<p><a href="\/install">Index<\/a>/.test(maturityTaxonomy)
+  || maturityTaxonomy.includes("<pre><code>&lt;/div&gt;")
+  || /<div class="maturity-category-docs">[^<]*\[Index\]\(\/install\/index\)/.test(maturityTaxonomy)
+  || /<(?:a|div|span)[^>]*\/>/.test(maturityScorecard)
+  || /<(?:a|div|span)[^>]*\/>/.test(maturityTaxonomy)
+  || /<(?:div|span|a)[^>]+className="maturity-/.test(maturityScorecard)
+  || /<(?:div|span)[^>]+style=\{\{/.test(maturityScorecard)
+  || !/\.maturity-hero\s*\{/.test(siteCss)
+  || !/\.maturity-level-pill\s*\{/.test(siteCss)
+  || !/\.maturity-surface-table\s*\{/.test(siteCss)) {
+  throw new Error("maturity docs: authored structure or shell styles are missing");
+}
+if (!/\.language-menu\{top:calc\(100% \+ 8px\);width:min\(270px,calc\(100vw - 32px\)\);max-height:min\(62vh,430px\)/.test(siteCss)
+  || !/\.language-menu::-webkit-scrollbar-track\{background:transparent\}/.test(siteCss)) {
+  throw new Error("assets: compact language picker is missing");
+}
+if (/\.header-links a[\s{:.[]/.test(siteCss)) {
+  throw new Error("assets: .header-links descendant anchor rules override .language-option layout; scope to .header-links>a");
+}
+if (!/\.header-links>a\{display:inline-flex/.test(siteCss) || !/\.language-option\{display:grid/.test(siteCss)) {
+  throw new Error("assets: language menu options must stack as grid rows");
+}
+try {
+  execFileSync(process.execPath, ["--check", path.join(site, "assets/docs-site.js")], { stdio: "pipe" });
+} catch (err) {
+  const detail = String(err.stderr || err.message || "").trim();
+  throw new Error(`assets: docs-site.js has a syntax error and would break every interactive control\n${detail}`);
+}
+if (!/theme-toggle-icon-dark/.test(index)
+  || !/theme-toggle-icon-light/.test(index)
+  || !/:root\[data-theme="dark"\] \.theme-toggle-icon-dark,:root\[data-theme="light"\] \.theme-toggle-icon-light\{display:grid\}/.test(siteCss)) {
+  throw new Error("assets: theme toggle icon must follow the active color theme");
+}
+if (/\.oc-card:first-child\{border-color:var\(--brand\)/.test(siteCss)) {
+  throw new Error("assets: first card is hard-highlighted");
+}
+const footer = DomUtils.findOne((node) => node.name === "footer", indexDocument.children);
+const foundationLink = footer && DomUtils.findOne(
+  (node) => node.name === "a" && node.attribs.href === "https://openclaw.org"
+    && DomUtils.textContent(node).trim() === "OpenClaw Foundation",
+  footer.children,
+);
+if (!foundationLink) {
+  throw new Error("assets: site footer with Foundation attribution is missing");
+}
+const footerResources = DomUtils.findOne(
+  (node) => node.name === "nav" && node.attribs["aria-label"] === "Resources",
+  footer.children,
+);
+const privacyPolicyLink = footerResources && DomUtils.findOne(
+  (node) => node.name === "a" && node.attribs.href === "https://openclaw.ai/privacy"
+    && DomUtils.textContent(node).trim() === "Privacy policy",
+  footerResources.children,
+);
+if (!privacyPolicyLink) {
+  throw new Error("footer Resources must link to the shared Privacy policy");
+}
+const footerSocialGroup = DomUtils.findOne((node) => node.attribs?.class === "site-footer-socials", footer.children);
+const footerSocialLinks = DomUtils.findAll((node) => node.name === "a", footerSocialGroup?.children ?? []);
+const expectedFooterSocials = [
+  ["X", "https://x.com/openclaw"],
+  ["GitHub", "https://github.com/openclaw/openclaw"],
+  ["Discord", "https://discord.com/invite/clawd"],
+  ["Reddit", "https://www.reddit.com/r/openclaw/"],
+  ["TikTok", "https://www.tiktok.com/@open_claw"],
+  ["LinkedIn", "https://www.linkedin.com/company/the-openclaw-foundation"],
+  ["Instagram", "https://www.instagram.com/openclaw_org/"],
+  ["YouTube", "https://www.youtube.com/@OpenClawYT"],
+];
+if (JSON.stringify(footerSocialLinks.map((node) => [node.attribs["aria-label"], node.attribs.href])) !== JSON.stringify(expectedFooterSocials)
+  || footerSocialLinks.some((node) => node.attribs.target !== "_blank" || !node.attribs.rel?.split(" ").includes("noopener")
+    || !DomUtils.findOne((child) => child.name === "svg", node.children))) {
+  throw new Error("footer social links must match openclaw.ai with accessible icons and safe new tabs");
+}
+if (!/--code:#f2f0ec;--code-inline:#ecebe6;--code-block:#fffefc;--code-text:#26262c;--code-border:#dbd8d1;--code-shadow:none/.test(siteCss)) {
+  throw new Error("assets: light code theme is not skinned");
+}
+if (!/--oc-status-success-bg: rgb\(34 197 94 \/ 0\.12\)/.test(siteCss)
+  || !/\.oc-app-surface\s*\{/.test(siteCss)
+  || !/\.oc-action\s*\{/.test(siteCss)
+  || !DomUtils.findOne((node) => node.name === "body" && node.attribs.class?.split(/\s+/).includes("oc-app-surface"), indexDocument.children)
+  || !/class="oc-card oc-card-interactive"/.test(index)) {
+  throw new Error("assets: v0.0.1 product tokens and shared component primitives were not bundled and consumed");
+}
+if (/\.toc a:first-of-type/.test(siteCss)) {
+  throw new Error("assets: first table-of-contents item is hard-highlighted");
+}
+if (!/\.toc summary\{display:none\}/.test(siteCss)) {
+  throw new Error("assets: desktop table of contents summary must stay hidden");
+}
+if (!/\.doc pre \.tok-comment,\.doc pre \.hljs-comment/.test(siteCss)
+  || !/\.doc pre \.tok-key,\.doc pre \.hljs-attr/.test(siteCss)) {
+  throw new Error("assets: syntax token colors are not theme-variable based");
+}
+if (!fs.existsSync(path.join(site, "assets/mermaid.esm.min.mjs"))
+  || !fs.existsSync(path.join(site, "assets/chunks/mermaid.esm.min"))) {
+  throw new Error("assets: Mermaid runtime was not copied");
+}
+if (!/\.sidebar\{[^}]*padding:0 6px var\(--oc-space-8\) 0;[^}]*scrollbar-gutter:stable/.test(siteCss)) {
+  throw new Error("assets: sidebar scroll-end padding is missing");
+}
+if (!/\.sidebar\{[^}]*scrollbar-width:thin;[^}]*scrollbar-color:/.test(siteCss)
+  || !/\.sidebar\.has-overflow\{[^}]*mask-image:linear-gradient/.test(siteCss)
+  || !/\.sidebar\.can-scroll-down\{--sidebar-fade-bottom:30px\}/.test(siteCss)) {
+  throw new Error("assets: sidebar overflow affordance is missing");
+}
+if (!siteCss.includes(".docs-layout .toc.can-scroll-down")
+  || !siteCss.includes(".docs-layout .toc::-webkit-scrollbar-track")
+  || !siteCss.includes("--toc-rail-inset")
+  || !siteJs.includes("function syncTocFade()")) {
+  throw new Error("assets: desktop TOC scrolling affordances are missing");
+}
+const expectedSocialLinks = [
+  ["GitHub", "https://github.com/openclaw/openclaw"],
+  ["Reddit", "https://www.reddit.com/r/openclaw/"],
+  ["Discord", "https://discord.com/invite/clawd"],
+  ["X", "https://x.com/openclaw"],
+];
+for (const className of ["header-social-group", "sidebar-socials"]) {
+  const group = DomUtils.findOne((node) => node.attribs?.class?.split(" ").includes(className), indexDocument.children);
+  const links = DomUtils.findAll((node) => node.name === "a", group?.children ?? []);
+  if (JSON.stringify(links.map((node) => [node.attribs["aria-label"], node.attribs.href])) !== JSON.stringify(expectedSocialLinks)
+    || links.some((node) => !DomUtils.findOne((child) => child.name === "svg", node.children))) {
+    throw new Error(`${className}: expected accessible GitHub, Reddit, Discord, and X icon links`);
+  }
+}
+const communityInvite = DomUtils.findOne((node) => node.name === "aside"
+  && node.attribs?.class?.split(" ").includes("community-invite"), indexDocument.children);
+if (!communityInvite
+  || !DomUtils.findOne((node) => node.name === "button" && "data-community-invite-dismiss" in node.attribs, communityInvite.children)
+  || !DomUtils.findOne((node) => node.name === "a" && node.attribs.href === "https://discord.com/invite/clawd", communityInvite.children)
+  || !DomUtils.findOne((node) => node.name === "a" && node.attribs.href === "https://discord.com/invite/clawd",
+    DomUtils.findOne((node) => node.attribs?.class?.split(" ").includes("home-community"), indexDocument.children)?.children ?? [])) {
+  throw new Error("community invitation, dismissal control, or homepage Discord link is missing");
+}
+const communityArt = DomUtils.findAll((node) => node.name === "img", communityInvite.children);
+if (communityArt.length !== 2
+  || communityArt.some((node) => node.attribs.nopin !== "nopin" || node.attribs["data-pin-nopin"] !== "true")) {
+  throw new Error("community invitation artwork must opt out of Pinterest saves in both themes");
+}
+const communityLinks = DomUtils.findAll((node) => node.name === "a", communityInvite.children);
+const expectedCommunityLinks = [
+  ["Join", "https://www.reddit.com/r/openclaw/", "Join the OpenClaw community on Reddit"],
+  ["Join", "https://discord.com/invite/clawd", "Join the OpenClaw community on Discord"],
+  ["Follow", "https://x.com/openclaw", "Follow OpenClaw on X"],
+];
+if (JSON.stringify(communityLinks.map((node) => [DomUtils.textContent(node).trim(), node.attribs.href, node.attribs["aria-label"]])) !== JSON.stringify(expectedCommunityLinks)
+  || communityLinks.some((node) => node.attribs.target !== "_blank" || !node.attribs.rel?.split(" ").includes("noopener"))) {
+  throw new Error("community invitation must link to Reddit, Discord, and X in order with safe new tabs");
+}
+
+if (!/\.header-row\{max-width:1780px;margin:0 auto\}/.test(siteCss)
+  || !/\.doc-shell\{width:100%;max-width:1780px;margin:0 auto;flex:1 0 auto\}/.test(siteCss)
+  || !/:root\{--shell-pad:56px;--rail-gap:56px;--rail-max:272px;--article-max:820px\}/.test(siteCss)
+  || !/\.doc-shell\{display:grid;grid-template-columns:minmax\(var\(--rail-max\),1fr\) minmax\(0,var\(--article-max\)\) minmax\(var\(--rail-max\),1fr\);gap:var\(--rail-gap\);padding:38px var\(--shell-pad\) 90px\}/.test(siteCss)
+  || !/@media\(max-width:1280px\)[\s\S]*?\.doc-shell\{grid-template-columns:var\(--rail-max\) minmax\(0,1fr\)\}\.article\{width:min\(100%,var\(--article-max\)\);justify-self:center\}/.test(siteCss)) {
+  throw new Error("assets: docs shell geometry does not match the wide reference layout");
+}
+if (!/body\{[^}]*font:var\(--oc-font-size-md\)\/1\.7 var\(--oc-font-body\)/.test(siteCss)
+  || !/::selection\{background:var\(--brand\);color:var\(--on-brand\)\}/.test(siteCss)
+  || /body::before\{[^}]*background-image:radial-gradient/.test(siteCss)
+  || !/\.article h1\{font:700 clamp\(34px,3\.8vw,44px\)\/1\.08 var\(--oc-font-display\)/.test(siteCss)
+  || !/\.doc\{font-size:var\(--oc-font-size-md\)\}/.test(siteCss)) {
+  throw new Error("assets: docs type scale drifted from the reference skin");
+}
+if (!/\.nav-section h2\{[^}]*var\(--oc-font-mono\)[^}]*text-transform:uppercase/.test(siteCss)
+  || !/\.article-kicker\{[^}]*var\(--oc-font-mono\)[^}]*text-transform:uppercase/.test(siteCss)
+  || !/\.toc h2\{[^}]*var\(--oc-font-mono\)[^}]*text-transform:uppercase/.test(siteCss)) {
+  throw new Error("assets: mono label accents drifted from the reference skin");
+}
+if (!/--oc-palette-ink-950:\s*#101012/.test(siteCss)
+  || !/--bg:var\(--oc-bg-page\);--paper:var\(--oc-bg-surface\);--paper-2:var\(--oc-bg-elevated\)/.test(siteCss)
+  || !/--brand:var\(--oc-accent-primary\);--brand-2:var\(--oc-accent-primary-deep\)/.test(siteCss)
+  || !/--soft:var\(--oc-surface-accent-soft\)/.test(siteCss)
+  || !/\.nav-link\.active\{border-left-color:var\(--brand\);color:var\(--brand\);font-weight:650\}/.test(siteCss)) {
+  throw new Error("assets: dark sidebar surface is not reference-aligned");
+}
+if (!/\.site-footer\{[^}]*border-top:1px solid var\(--line\)/.test(siteCss)
+  || !/\.site-footer-inner\{[^}]*var\(--oc-font-mono\)/.test(siteCss)) {
+  throw new Error("assets: site footer skin is missing");
+}
+if (!/function syncSidebar/.test(siteJs) || !/async function navigateTo/.test(siteJs)) {
+  throw new Error("assets: docs PJAX navigation is missing");
+}
+if (!/function syncStickyHeaderOffset/.test(siteJs)
+  || !/function syncTocDisclosure/.test(siteJs)
+  || !/syncStickyHeaderOffset\(\);\s*syncTocDisclosure\(\);\s*initChat\(\);\s*initCodeGroups\(\)/.test(siteJs)) {
+  throw new Error("assets: compact page orientation should refresh across PJAX navigation");
+}
+if (!/compactTocQuery=matchMedia\("\(max-width:1280px\)"\)/.test(siteJs)
+  || !/\.toc\{position:fixed;left:var\(--toc-left\);top:calc\(var\(--sticky-header-h\) \+ 8px\);z-index:60/.test(siteCss)
+  || !/\.toc\.is-visible,\.toc\[open\]\{opacity:1;visibility:visible;pointer-events:auto;transform:none\}/.test(siteCss)
+  || !/\.toc summary\{display:flex;align-items:center;gap:var\(--oc-space-2\)/.test(siteCss)
+  || !/\.toc nav\{position:absolute;left:0;top:calc\(100% \+ 8px\);display:none;width:min\(340px,var\(--toc-room\)\)/.test(siteCss)
+  || !/\.toc\[open\] nav\{display:grid;align-content:start;gap:2px\}/.test(siteCss)) {
+  throw new Error("assets: compact table of contents dropdown is missing for mid-width pages");
+}
+if (!/\.toc\[open\]\{z-index:100\}/.test(siteCss)
+  || !/\.toc\[open\] nav\{position:fixed;inset:calc\(var\(--sticky-header-h\) \+ 52px\) 14px max\(14px,env\(safe-area-inset-bottom\)\) 14px;[^}]*background:var\(--paper\)/.test(siteCss)
+  || !/body:has\(\.toc\[open\]\)\{overflow:hidden\}/.test(siteCss)
+  || !/body:has\(\.toc\[open\]\) \.docs-chat\{visibility:hidden;pointer-events:none\}/.test(siteCss)) {
+  throw new Error("assets: mobile table of contents sheet is missing");
+}
+if (!/let tocObserver=null/.test(siteJs)
+  || !/function initTocScrollspy/.test(siteJs)
+  || !/new IntersectionObserver/.test(siteJs)
+  || !/rootMargin:"-120px 0px -70% 0px"/.test(siteJs)
+  || !/scroller\.scrollTop\+innerHeight>=scroller\.scrollHeight-2/.test(siteJs)
+  || !/initTocScrollspy\(\);scrollTarget\(url\.hash\)/.test(siteJs)) {
+  throw new Error("assets: table-of-contents scrollspy is missing");
+}
+if (!/function setNavOpen/.test(siteJs) || !/body\.nav-open:before/.test(siteCss) || !/data-nav-close/.test(index)) {
+  throw new Error("assets: mobile navigation drawer state is missing");
+}
+const docsSections = DomUtils.findOne((node) => node.attribs?.class === "docs-sections", indexDocument.children);
+if (docsSections?.attribs["aria-label"] !== homeStrings.en.navigation[6]
+  || !/class="docs-section current"[^>]*><summary aria-current="true">/.test(index)
+  || /class="(?:tabs|mobile-tabs)"/.test(index)) {
+  throw new Error("assets: complete vertical docs navigation is missing");
+}
+if (!/function initChat/.test(siteJs)
+  || !/data-chat-form/.test(siteJs)
+  || !/new URL\("\/ask-molty\/sign-in",location\.href\)/.test(siteJs)
+  || !/chat\.dataset\.chatAuthState=state/.test(siteJs)
+  || !/function chatFailureMessage/.test(siteJs)
+  || !/serverError=msg\.toLowerCase\(\)\.startsWith\("docs agent returned 5"\)/.test(siteJs)
+  || !/if\(res\.status>=500\)return fallback/.test(siteJs)
+  || !/Molty is temporarily unavailable\. Try again in a moment\./.test(siteJs)
+  || !/panel\?\.toggleAttribute\("inert",!open\)/.test(siteJs)
+  || !/panel\?\.setAttribute\("aria-hidden",String\(!open\)\)/.test(siteJs)
+  || !/form\.inert=!ready/.test(siteJs)
+  || !/input\.readOnly=!ready/.test(siteJs)) {
+  throw new Error("assets: docs chat behavior is missing");
+}
+if (/hub\.openclaw\.ai\/docs\/auth/.test(siteJs)) {
+  throw new Error("assets: docs chat still uses the retired ClawHub auth URL");
+}
+if (/matchMedia\("\(min-width:1121px\)"\)\.matches\)setOpen\(true\)/.test(siteJs)) {
+  throw new Error("assets: docs chat must stay closed until Ask Molty is pressed");
+}
+if (!/function runSearch/.test(siteJs)
+  || !/function scheduleSearch\(immediate=false\)/.test(siteJs)
+  || !/input\?\.addEventListener\("input",\(\)=>scheduleSearch\(false\)\)/.test(siteJs)
+  || !/setTimeout\(run,240\)/.test(siteJs)) {
+  throw new Error("assets: search input is not debounced");
+}
+if (!/const searchAliases=/.test(siteJs) || !/data-search-suggestion/.test(index)) {
+  throw new Error("assets: search aliases and suggestions are missing");
+}
+const platformsIndex = fs.readFileSync(path.join(site, "platforms/index.html"), "utf8");
+if (/VPS &amp;amp; hosting/.test(platformsIndex)) {
+  throw new Error("platforms index: TOC double-escaped ampersand");
+}
+const execPage = fs.readFileSync(path.join(site, "tools/exec/index.html"), "utf8");
+for (const id of ["session-overrides-(%2Fexec)", "session-overrides-/exec"]) {
+  if (!execPage.includes(`id="${id}"`)) throw new Error(`tools/exec: missing published anchor ${id}`);
+}
+const toolsIndex = fs.readFileSync(path.join(site, "tools/index.html"), "utf8");
+if (/class="anchor"/.test(toolsIndex)) {
+  throw new Error("tools index: legacy visible heading permalink anchors should not be rendered");
+}
+const toolsHeading = DomUtils.findOne(
+  (node) => node.name === "h2" && DomUtils.textContent(node) === "Choose tools, skills, or plugins",
+  parseDocument(toolsIndex).children,
+);
+const headingCopy = toolsHeading && DomUtils.findOne((node) => node.name === "button", toolsHeading.children);
+if (!toolsHeading?.attribs.id || headingCopy?.attribs["data-heading-anchor"] !== toolsHeading.attribs.id
+  || headingCopy.attribs.type !== "button" || headingCopy.attribs.class !== "heading-anchor"
+  || headingCopy.attribs["aria-label"] !== "Copy link to section"
+  || headingCopy.attribs["data-copy-label"] !== "Copy link to section"
+  || !DomUtils.existsOne((node) => node.attribs.class?.split(" ").includes("lucide-link"), headingCopy.children)
+  || !DomUtils.existsOne((node) => node.attribs.class?.split(" ").includes("lucide-check"), headingCopy.children)) {
+  throw new Error("tools index: heading ids should render copy-link buttons");
+}
+if (/<aside class="toc"[\s\S]*Copy link to section/.test(toolsIndex)) {
+  throw new Error("tools index: heading copy controls should not pollute the table of contents");
+}
+if (/\.oc-step:before\{[^}]*background:var\(--brand\)/.test(siteCss)
+  || !/\.oc-step:before\{[^}]*background:color-mix\(in srgb,var\(--line-strong\) 78%,var\(--paper\) 22%\)/.test(siteCss)) {
+  throw new Error("assets: step badges should use neutral timeline styling");
+}
+if (!/\.oc-step:last-child\{[^}]*border-image:linear-gradient\(to bottom,var\(--line\)/.test(siteCss)) {
+  throw new Error("assets: final step rail should fade out");
+}
+if (!/\.oc-callout-warning\{--callout-accent:var\(--oc-status-warning-fg\)\}/.test(siteCss)
+  || !/\.oc-callout-check\{--callout-accent:var\(--oc-status-success-fg\)\}/.test(siteCss)) {
+  throw new Error("assets: callout icons should retain semantic warning and success colors");
+}
+if (!/\.oc-table-wrap\{[^}]*max-width:100%;overflow:auto/.test(siteCss)
+  || !/\.doc code\{overflow-wrap:anywhere;word-break:break-word\}/.test(siteCss)
+  || !/@media\(max-width:820px\)[\s\S]*?\.doc \.oc-table\{min-width:0;table-layout:fixed\}/.test(siteCss)
+  || !/:root\{[^}]*--tooltip-bg:var\(--oc-text-primary\);--tooltip-text:var\(--oc-bg-page\);--tooltip-border:var\(--oc-text-primary\)/.test(siteCss)
+  || !/\.oc-chart\{[^}]*border:1px solid var\(--line-strong\)/.test(siteCss)
+  || !/\.oc-chart-mark\[data-tip\]:hover:after/.test(siteCss)
+  || !/\.oc-chart-mark\[data-tip\]:hover:after,[^{]+\.oc-chart-donut-key\[data-tip\]:focus:after\{[^}]*background:var\(--tooltip-bg\);color:var\(--tooltip-text\)/.test(siteCss)
+  || !/\.oc-chart-donut-segment\{[^}]*stroke-dasharray:var\(--oc-chart-share\)/.test(siteCss)
+  || !/\.oc-cta\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/.test(siteCss)
+  || !/\.oc-cta-link\{[^}]*transition:background var\(--oc-duration-fast\) var\(--oc-ease-out\),border-color var\(--oc-duration-fast\) var\(--oc-ease-out\),color var\(--oc-duration-fast\) var\(--oc-ease-out\),filter var\(--oc-duration-fast\) var\(--oc-ease-out\)/.test(siteCss)
+  || !/\.oc-cta-link:hover\{filter:brightness\(1\.04\)\}\.oc-cta-link-primary:hover\{background:var\(--oc-accent-primary-hover\);border-color:var\(--oc-accent-primary-hover\);color:var\(--on-brand\)\}/.test(siteCss)
+  || !/\.oc-tooltip\[data-tip\]:hover:after,\.oc-tooltip\[data-tip\]:focus:after\{[^}]*background:var\(--tooltip-bg\);color:var\(--tooltip-text\)/.test(siteCss)
+  || !/\.oc-pullquote\{[^}]*border-left:3px solid var\(--brand\)/.test(siteCss)) {
+  throw new Error("assets: editorial components should keep the docs publishing skin");
+}
+if (!/\.doc\{container-type:inline-size\}/.test(siteCss)
+  || !/\.oc-card-grid,\.oc-card-group\{--oc-card-columns:2;display:grid;grid-template-columns:repeat\(var\(--oc-card-columns\),minmax\(0,1fr\)\)/.test(siteCss)
+  || !/\.oc-card-grid\.oc-card-cols-1,\.oc-card-group\.oc-card-cols-1\{--oc-card-columns:1\}/.test(siteCss)
+  || !/\.oc-card-grid\.oc-card-cols-2,\.oc-card-group\.oc-card-cols-2\{--oc-card-columns:2\}/.test(siteCss)
+  || !/\.oc-card-grid\.oc-card-cols-3,\.oc-card-group\.oc-card-cols-3\{--oc-card-columns:3\}/.test(siteCss)
+  || !/\.oc-card-grid\.oc-card-cols-4,\.oc-card-group\.oc-card-cols-4\{--oc-card-columns:4\}/.test(siteCss)
+  || !/@container \(max-width:520px\)\{\.oc-card-grid,\.oc-card-group\{--oc-card-columns:1\}\}/.test(siteCss)) {
+  throw new Error("assets: card column classes should use explicit column counts with responsive collapse");
+}
+if (!/@supports \(corner-shape: superellipse\(1\.5\)\)\{/.test(siteCss)
+  || !/:root\{--oc-corner-radius-scale:1\.25\}/.test(siteCss)
+  || !/\.oc-card\.oc-card,\.oc-cta-card\.oc-cta-card\{border-radius:calc\(var\(--oc-radius-lg\) \* var\(--oc-corner-radius-scale\)\);corner-shape:superellipse\(1\.5\)\}/.test(siteCss)
+  || !/\.page-tools \.page-actions-primary\.page-actions-primary\{[^}]*corner-shape:superellipse\(1\.5\)\}/.test(siteCss)
+  || !/@media\(min-width:821px\)\{\.community-invite\.community-invite\{[^}]*corner-shape:superellipse\(1\.5\)\}\}/.test(siteCss)) {
+  throw new Error("assets: continuous corner curvature is missing from cards and controls");
+}
+const elementsIndexPath = path.join(site, "__elements/index.html");
+if (!fs.existsSync(elementsIndexPath)) {
+  throw new Error("__elements: hidden component fixture page is missing");
+}
+const elementsIndex = fs.readFileSync(elementsIndexPath, "utf8");
+const callouts = DomUtils.findAll(
+  (node) => node.name === "aside" && node.attribs.class?.split(" ").includes("oc-callout"),
+  parseDocument(elementsIndex).children,
+);
+for (const callout of callouts) {
+  const icons = DomUtils.findAll((node) => node.name === "svg", callout.children);
+  if (icons.length !== 1 || icons[0].attribs["aria-hidden"] !== "true"
+    || icons[0].attribs.focusable !== "false" || !icons[0].children.length) {
+    throw new Error("__elements: each callout needs one decorative, non-focusable icon");
+  }
+}
+if (!elementsIndex.includes('data-code-label="json5"')
+  || !elementsIndex.includes('data-code-label="openclaw.json5"')
+  || /data-code-label="[^"]*validate=false/.test(elementsIndex)) {
+  throw new Error("__elements: validation metadata leaked into code labels");
+}
+for (const marker of [
+  'class="oc-callout oc-callout-tip"',
+  'class="oc-callout oc-callout-info"',
+  'class="oc-callout oc-callout-warning"',
+  'class="oc-card-grid oc-card-cols-1"',
+  'class="oc-card-grid oc-card-cols-2"',
+  'class="oc-card-grid oc-card-cols-3"',
+  'class="oc-card-grid oc-card-cols-4"',
+  'class="oc-card oc-card-interactive"',
+  'class="oc-code"',
+  'class="oc-code is-expandable"',
+  'class="oc-code-group"',
+  'scripts/setup-openclaw.sh',
+  'openclaw.json5',
+  'class="hljs-comment"',
+  'class="oc-step"',
+  'class="oc-tab"',
+  'class="oc-accordion"',
+  'class="release-source-toggle"',
+  'class="oc-param"',
+  'class="oc-frame"',
+  'class="docs-media-scene"',
+  'class="oc-tooltip"',
+  'class="oc-param-default"',
+  'class="oc-pill page-status-badge page-status-beta"',
+  'Status: visual fixture',
+  'Applies to: docs shell',
+  'class="oc-badge oc-badge-orange"',
+  'class="oc-panel"',
+  'class="oc-prompt"',
+  'class="oc-tile-group"',
+  'class="oc-tile"',
+  'class="oc-lead"',
+  'class="oc-pullquote"',
+  'class="oc-stat-grid"',
+  'class="oc-stat"',
+  'class="oc-chart oc-chart-bar"',
+  'class="oc-chart oc-chart-line"',
+  'class="oc-chart oc-chart-area"',
+  'class="oc-chart oc-chart-donut"',
+  'class="oc-chart-mark"',
+  'class="oc-chart-donut-segment"',
+  'class="oc-cta oc-cta-default"',
+  'class="oc-cta-grid"',
+  'class="oc-card oc-card-interactive oc-cta-card oc-cta-card-default"',
+  'class="oc-table-wrap"',
+  'class="oc-table"',
+  'class="oc-mermaid"',
+  'Ready&lt;br&gt;state',
+  'Broken --&gt;',
+  'data-code-copy',
+  'data-code-expand',
+  'Show more',
+  'class="code-line is-highlighted"',
+  'data-prompt-copy',
+  'data-heading-anchor',
+  'Shared snippet',
+  '<kbd>',
+]) {
+  if (!elementsIndex.includes(marker)) throw new Error(`__elements: missing fixture marker ${marker}`);
+}
+if (elementsIndex.includes('href="http://SKILL.md"')) {
+  throw new Error("__elements: card body should not autolink SKILL.md inside the card anchor");
+}
+if ((elementsIndex.match(/class="oc-card-grid oc-card-cols-4"/g) ?? []).length < 2) {
+  throw new Error("__elements: CardGroup and Columns should both preserve explicit cols attrs");
+}
+if (!/class="article-meta-row"/.test(index)
+  || !/class="breadcrumbs"/.test(index)
+  || !/data-copy-page/.test(index)
+  || !/class="page-feedback"/.test(index)) {
+  throw new Error("index: page reader affordances are missing");
+}
+if (!/data-page-markdown-url="\/index\.md"/.test(index)
+  || !/data-page-markdown-url="\/start\/getting-started\.md"/.test(gettingStarted)) {
+  throw new Error("page tools: Copy page should target generated Markdown routes");
+}
+if (!fs.existsSync(path.join(site, "index.md"))
+  || !fs.existsSync(path.join(site, "start/getting-started.md"))) {
+  throw new Error("page tools: advertised Markdown action routes must exist in this artifact");
+}
+const rootMarkdownPrompt = encodeURIComponent(`Read from ${expectedOrigin}/index.md so I can ask questions about it.`);
+const chatgptAction = `https://chatgpt.com/?hints=search&amp;q=${rootMarkdownPrompt}`;
+const claudeAction = `https://claude.ai/new?q=${rootMarkdownPrompt}`;
+if (!/<script type="application\/json" data-page-markdown>/.test(index)
+  || />"---\\n/.test(index)) {
+  throw new Error("page tools: Copy page should embed frontmatter-free Markdown for synchronous clipboard writes");
+}
+if (!/class="page-actions"/.test(index)
+  || !/class="page-actions-primary" data-copy-page/.test(index)
+  || !/class="page-actions-more"/.test(index)
+  || !/class="page-actions-chevron"/.test(index)
+  || !/class="page-actions-menu"/.test(index)
+  || !/View as Markdown/.test(index)
+  || !/target="_blank" rel="noreferrer"/.test(index)
+  || !/Open in ChatGPT/.test(index)
+  || !/Open in Claude/.test(index)
+  || /Open in Perplexity/.test(index)
+  || !index.includes(chatgptAction)
+  || !index.includes(claudeAction)) {
+  throw new Error("page tools: AI action menu links are missing");
+}
+if ((index.match(/class="page-action" href="[^"]+" target="_blank" rel="noreferrer"/g) ?? []).length < 3) {
+  throw new Error("page tools: dropdown links should open in a new tab");
+}
+if (!/class="page-feedback-links" aria-label="Page source and issue"/.test(index)
+  || !/Edit source/.test(index)
+  || !/Raise issue/.test(index)
+  || !/https:\/\/github\.com\/openclaw\/openclaw\/issues\/new\?title=Issue%20on%20docs&amp;body=Path%3A%20%2F/.test(index)) {
+  throw new Error("page feedback: footer source and issue actions are missing");
+}
+assertEditSourceLinks();
+if (!/function initCodeGroups/.test(siteJs) || !/className="oc-code-tab"/.test(siteJs) || !/preferredCodeTab/.test(siteJs)) {
+  throw new Error("assets: code group tabs are missing");
+}
+if (!/function handleDocsControlClick/.test(siteJs) || !/async function copyText/.test(siteJs)) {
+  throw new Error("assets: copy and feedback controls are missing");
+}
+if (!/data-feedback-repo="openclaw\/openclaw"/.test(index)
+  || !/data-feedback-issue-link/.test(index)
+  || !/function initPageFeedback/.test(siteJs)
+  || !/openclaw\.docs\.feedback/.test(siteJs)
+  || !/github\.com\/"\+feedbackRepo/.test(siteJs)) {
+  throw new Error("assets: useful feedback composer is missing");
+}
+if (!/function toggleCodeExpand/.test(siteJs)
+  || !/data-code-expand/.test(siteJs)
+  || !/is-expanded/.test(siteJs)
+  || !/Show less/.test(siteJs)) {
+  throw new Error("assets: expandable code controls are missing");
+}
+if (!/function copyPageMarkdown/.test(siteJs)
+  || !/function pageMarkdownForCopy/.test(siteJs)
+  || !/function setCopyFeedback/.test(siteJs)
+  || !/document\.execCommand\("copy"\)/.test(siteJs)
+  || !/\.page-actions-more\[open\]/.test(siteJs)
+  || !/menu\.removeAttribute\("open"\)/.test(siteJs)
+  || /fetch\(markdownUrl/.test(siteJs)
+  || /dataset\.pageUrl\|\|location\.href/.test(siteJs)) {
+  throw new Error("assets: Copy page should copy embedded Markdown content instead of copying the URL");
+}
+if (!/Nothing to copy/.test(siteJs) || !/data-chat-copy/.test(siteJs) || !/data-heading-anchor/.test(siteJs)) {
+  throw new Error("assets: chat copy feedback is missing");
+}
+if (!/function showCopyFeedback/.test(siteJs) || !/data-copy-label="Copy code"/.test(elementsIndex)) {
+  throw new Error("assets: code copy controls should use stateful icon feedback");
+}
+if (!/\.heading-anchor\{[^}]*opacity:0/.test(siteCss)
+  || !/\.doc :is\(h1,h2,h3,h4,h5,h6\):hover \.heading-anchor/.test(siteCss)
+  || !/\.heading-anchor:focus-visible/.test(siteCss)
+  || !/\.heading-anchor \.heading-anchor-icon/.test(siteCss)
+  || !/\.heading-anchor\[data-copy-state="copied"\] \.heading-anchor-check/.test(siteCss)) {
+  throw new Error("assets: heading copy anchor skin is missing");
+}
+if (!/\.article-meta-row\{display:flex;align-items:center;justify-content:space-between/.test(siteCss)
+  || !/\.page-actions\{display:inline-flex;align-items:stretch;position:relative\}/.test(siteCss)
+  || !/\.page-tools \.page-actions-primary\{display:inline-flex;align-items:center;gap:7px;white-space:nowrap/.test(siteCss)
+  || !/\.page-tools \.page-actions-primary\{[^}]*border-radius:var\(--oc-radius-control\) 0 0 var\(--oc-radius-control\);margin-right:-1px/.test(siteCss)
+  || !/\.page-tools \.page-actions-more summary\{display:grid;place-items:center;width:34px/.test(siteCss)
+  || !/\.page-tools \.page-actions-more summary\{[^}]*border-radius:0 var\(--oc-radius-control\) var\(--oc-radius-control\) 0/.test(siteCss)
+  || !/\.page-tools \.page-actions-more \.page-actions-menu\{position:absolute;top:calc\(100% \+ 8px\);left:auto;right:0;z-index:40;display:none/.test(siteCss)
+  || !/\.page-tools \.page-actions-more\[open\] \.page-actions-menu\{display:grid\}/.test(siteCss)
+  || !/\.page-tools \.page-action\{display:grid;grid-template-columns:18px minmax\(0,1fr\) auto/.test(siteCss)) {
+  throw new Error("assets: page action trigger should use the split button skin");
+}
+if (!/\.page-tools \.page-action-external\{justify-self:end;color:var\(--muted\)/.test(siteCss)
+  || !/\.page-feedback-links\{display:flex;align-items:center;gap:9px;margin-left:auto\}/.test(siteCss)) {
+  throw new Error("assets: page action hover, external marker, and footer link skin are missing");
+}
+if (!/\.oc-step \.oc-code\{max-width:100%;margin:14px 0 18px\}/.test(siteCss)
+  || !/\.oc-step \.oc-code:last-child\{margin-bottom:0\}/.test(siteCss)) {
+  throw new Error("assets: step code blocks should leave room before following text");
+}
+const ambient = fs.readFileSync(path.join(site, "channels/ambient-room-events/index.html"), "utf8");
+if (!/<figure class="oc-code" data-code-label="json5">/.test(ambient)
+  || !/class="language-json5"/.test(ambient)
+  || !/class="hljs-attr">unmentionedInbound<\/span>/.test(ambient)
+  || !/class="hljs-string">&quot;room_event&quot;<\/span>/.test(ambient)
+  || !/<span class="code-line" data-line="9">/.test(ambient)
+  || !/data-code-copy/.test(ambient)) {
+  throw new Error("ambient room events: json5 code block should keep lines, highlight tokens, and copy control");
+}
+if (!/<meta name="robots" content="noindex,nofollow">/.test(elementsIndex)) {
+  throw new Error("__elements: hidden component fixture should be noindex");
+}
+if (/data-pagefind-body/.test(elementsIndex) || !/data-pagefind-ignore/.test(elementsIndex)) {
+  throw new Error("__elements: hidden component fixture should be excluded from Pagefind");
+}
+if (/data-docs-chat/.test(elementsIndex)) {
+  throw new Error("__elements: hidden component fixture should not be obscured by docs chat");
+}
+if (!shellOnly) {
+  if (/\/__elements/.test(fs.readFileSync(path.join(site, "sitemap.xml"), "utf8"))
+    || /\/__elements/.test(fs.readFileSync(path.join(site, "llms.txt"), "utf8"))) {
+    throw new Error("__elements: hidden component fixture leaked into public indexes");
+  }
+}
+const dateTime = fs.readFileSync(path.join(site, "date-time/index.html"), "utf8");
+if (/Current Date &amp;amp; Time/.test(dateTime)) {
+  throw new Error("date-time: TOC double-escaped ampersand");
+}
+const legacyDigitalOcean = path.join(site, "docs/platforms/digitalocean/index.html");
+if (!fs.existsSync(legacyDigitalOcean)) {
+  throw new Error("legacy DigitalOcean redirect: missing /docs/platforms/digitalocean compatibility file");
+}
+if (!/url=\/(?:docs\/)?install\/digitalocean/.test(fs.readFileSync(legacyDigitalOcean, "utf8"))) {
+  throw new Error("legacy DigitalOcean redirect: wrong destination");
+}
+for (const locale of activeLocaleCodes()) {
+  if (locale === "en") continue;
+  const localizedCodexSupervisor = path.join(site, locale, "plugins/reference/codex-supervisor/index.html");
+  if (!fs.existsSync(localizedCodexSupervisor)) {
+    throw new Error(`localized Codex Supervisor redirect: missing /${locale}/plugins/reference/codex-supervisor`);
+  }
+  const localizedDestination = fs.existsSync(path.join(docsDir, locale, "plugins/codex-supervision.md"))
+    ? `${basePath}/${locale}/plugins/codex-supervision`
+    : `${basePath}/plugins/codex-supervision`;
+  if (!fs.readFileSync(localizedCodexSupervisor, "utf8").includes(`url=${localizedDestination}`)) {
+    throw new Error(`localized Codex Supervisor redirect: wrong ${locale} destination`);
+  }
+}
+for (const locale of activeLocaleCodes()) {
+  const localePrefix = locale === "en" ? "" : `${locale}/`;
+  for (const prefix of new Set(["", "docs/", basePath ? `${basePath.slice(1)}/` : ""])) {
+    for (const route of ["showcase", "start/showcase"]) {
+      const rel = `${prefix}${localePrefix}${route}`;
+      const html = fs.readFileSync(path.join(site, rel, "index.html"), "utf8");
+      if (!html.includes('content="0; url=https://openclaw.ai/showcase"')) {
+        throw new Error(`retired showcase: /${rel} must redirect to the live website`);
+      }
+      if (fs.existsSync(path.join(site, `${rel}.md`))) {
+        throw new Error(`retired showcase: /${rel}.md must not publish stale content`);
+      }
+    }
+  }
+}
+assertInternalRoutes();
+assertEditSourceLinks();
+console.log(`docs site smoke ok: shell, routing, skin, and hidden fixture checks passed (${artifactMode})`);
+
+function assertInternalRoutes() {
+  const files = walkFiles(site);
+  const present = new Set(files.map((file) => path.relative(site, file).replaceAll(path.sep, "/")));
+  const missing = new Map();
+
+  for (const file of files) {
+    if (!file.endsWith(".html")) continue;
+    const rel = path.relative(site, file).replaceAll(path.sep, "/");
+    const html = fs.readFileSync(file, "utf8");
+    for (const match of html.matchAll(/\b(?:href|src)="(\/[^"<>]*)"/gu)) {
+      let target = match[1].split(/[?#]/u, 1)[0];
+      if (basePath && (target === basePath || target.startsWith(`${basePath}/`))) {
+        target = target.slice(basePath.length) || "/";
+      }
+      if (!target
+        || target.startsWith("//")
+        || target.startsWith("/api/")
+        || target.startsWith("/ask-molty/")
+        || target === "/mcp"
+        || target === "/mcp.search_open_claw") continue;
+      try {
+        target = decodeURIComponent(target);
+      } catch {
+        // Leave malformed URLs intact so the missing-route report exposes them.
+      }
+      const route = target.replace(/^\/+|\/+$/gu, "");
+      const candidates = route ? [route, `${route}/index.html`, `${route}.html`] : ["index.html"];
+      if (candidates.some((candidate) => present.has(candidate))) continue;
+      if (!missing.has(target)) missing.set(target, []);
+      if (missing.get(target).length < 3) missing.get(target).push(rel);
+    }
+  }
+
+  if (missing.size) {
+    const details = [...missing]
+      .slice(0, 20)
+      .map(([target, sources]) => `${target} from ${sources.join(", ")}`)
+      .join("; ");
+    throw new Error(`internal route audit: ${missing.size} missing target(s): ${details}`);
+  }
+}
+
+function assertEditSourceLinks() {
+  const htmlFiles = walkHtml(site);
+  let checked = 0;
+  let missingEdit = 0;
+  for (const file of htmlFiles) {
+    const rel = path.relative(site, file).replaceAll(path.sep, "/");
+    const html = fs.readFileSync(file, "utf8");
+    if (rel === "__elements/index.html") {
+      if (/data-page-tools|Edit source/.test(html)) {
+        throw new Error("__elements: hidden component fixture should not expose page tools");
+      }
+      continue;
+    }
+
+    const tools = html.match(/<div class="page-tools"[\s\S]*?<\/div>/u)?.[0];
+    if (!tools) continue;
+    checked += 1;
+    const editSurface = html.match(/<nav class="page-feedback-links"[\s\S]*?<\/nav>/u)?.[0] ?? "";
+
+    const page = pageForRenderedHtml(rel);
+    if (!page) {
+      if (/Edit source/.test(editSurface)) throw new Error(`${rel}: edit source link has no canonical source page`);
+      missingEdit += 1;
+      continue;
+    }
+
+    const expected = editSourceUrlForPage(page, sourceMetadata);
+    const actual = editSurface.match(/<a href="([^"]+)">Edit source<\/a>/u)?.[1] ?? "";
+    if (!expected) {
+      if (actual) throw new Error(`${rel}: unexpected edit source link ${actual}`);
+      missingEdit += 1;
+      continue;
+    }
+    if (actual !== expected) {
+      throw new Error(`${rel}: edit source link ${actual || "(missing)"} should be ${expected}`);
+    }
+  }
+
+  if (checked < 100) {
+    throw new Error(`edit source audit: expected many rendered page tools, checked ${checked}`);
+  }
+
+  assertEditSourceSample("clawhub/index.html", "https://github.com/openclaw/clawhub/edit/main/docs/clawhub.md");
+  assertEditSourceSample("clawhub/publishing/index.html", "https://github.com/openclaw/clawhub/edit/main/docs/publishing.md");
+  assertEditSourceSample("ar/clawhub/publishing/index.html", "https://github.com/openclaw/clawhub/edit/main/docs/publishing.md");
+  assertEditSourceSample("de/channels/index.html", "https://github.com/openclaw/openclaw/edit/main/docs/channels/index.md");
+  if (missingEdit > 0) {
+    console.log(`edit source audit: ${missingEdit} page tool(s) intentionally have no edit source link`);
+  }
+}
+
+function assertLocalizedChrome() {
+  for (const locale of activeLocaleCodes()) {
+    if (!homeStrings[locale]) throw new Error(`homepage strings: missing locale ${locale}`);
+    const homeFile = path.join(site, locale === "en" ? "" : locale, "index.html");
+    const homeDocument = parseDocument(fs.readFileSync(homeFile, "utf8"));
+    const homeLayouts = DomUtils.findAll((node) => node.attribs?.class === "home-layout", homeDocument.children);
+    if (homeLayouts.length !== 1 || DomUtils.findOne((node) => node.attribs?.class === "docs-hero", homeDocument.children)) {
+      throw new Error(`homepage layout: ${locale} must use the shared composition`);
+    }
+    if (!DomUtils.textContent(homeLayouts[0]).includes(homeStrings[locale].tagline[0])) {
+      throw new Error(`homepage strings: ${locale} did not render its localized tagline`);
+    }
+    const rel = `${locale === "en" ? "" : `${locale}/`}start/getting-started/index.html`;
+    const file = path.join(site, rel);
+    if (!fs.existsSync(file)) throw new Error(`chrome strings: missing rendered sample ${rel}`);
+    const document = parseDocument(fs.readFileSync(file, "utf8"));
+    const strings = chromeStrings[locale];
+    const byClass = (className) => DomUtils.findOne(
+      (node) => node.attribs?.class?.split(" ").includes(className),
+      document.children,
+    );
+    const text = (node) => DomUtils.textContent(node).trim();
+    if (!byClass("home-hero")) throw new Error(`page background: missing on ${rel}`);
+    if (byClass("docs-sections")?.attribs["aria-label"] !== homeStrings[locale].navigation[6]) {
+      throw new Error(`navigation label: ${rel} did not render its locale label`);
+    }
+    const toc = byClass("toc");
+    const tocSummary = toc && DomUtils.findOne((node) => node.name === "summary", toc.children);
+    const tocHeading = toc && DomUtils.findOne((node) => node.name === "h2", toc.children);
+    if (toc?.attribs["aria-label"] !== strings.onThisPage
+      || text(tocSummary) !== strings.onThisPage
+      || text(tocHeading) !== strings.onThisPage) {
+      throw new Error(`chrome strings: ${rel} did not render its locale table`);
+    }
+  }
+}
+
+function assertEditSourceSample(rel, expected) {
+  const file = path.join(site, rel);
+  if (!fs.existsSync(file)) {
+    throw new Error(`edit source audit: missing sample ${rel}`);
+  }
+  const html = fs.readFileSync(file, "utf8");
+  if (!html.includes(`href="${expected}"`)) {
+    throw new Error(`${rel}: expected edit source link ${expected}`);
+  }
+}
+
+function pageForRenderedHtml(htmlRel) {
+  const segments = htmlRel.split("/");
+  if (segments.at(-1) !== "index.html") return null;
+  segments.pop();
+
+  const locale = localeLabels[segments[0]] ? segments.shift() : "en";
+  const route = segments.join("/");
+  const base = locale === "en" ? docsDir : path.join(docsDir, locale);
+  const sourceFile = findSourcePageFile(base, route);
+  if (!sourceFile) return null;
+
+  const raw = fs.readFileSync(sourceFile, "utf8");
+  const parsed = parseFrontmatter(raw);
+  return {
+    rel: path.relative(base, sourceFile).replaceAll(path.sep, "/"),
+    sourcePath: frontmatterSourcePath(parsed.data),
+  };
+}
+
+function findSourcePageFile(base, route) {
+  const candidates = route
+    ? [`${route}/index.md`, `${route}/index.mdx`, `${route}.md`, `${route}.mdx`]
+    : ["index.md", "index.mdx"];
+  for (const candidate of candidates) {
+    const file = path.join(base, candidate);
+    if (fs.existsSync(file)) return file;
+  }
+  return "";
+}
+
+function walkHtml(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return walkHtml(full);
+    return entry.isFile() && entry.name.endsWith(".html") ? [full] : [];
+  });
+}
+
+function walkFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    return entry.isDirectory() ? walkFiles(full) : [full];
+  });
+}
+
+function activeLocaleCodes() {
+  const docsConfig = JSON.parse(fs.readFileSync(path.join(docsDir, "docs.json"), "utf8"));
+  const configured = (docsConfig.navigation?.languages ?? [])
+    .map((entry) => navigationLocaleToDir[entry.language] ?? entry.language);
+  const knownLocaleDirs = fs.readdirSync(docsDir, { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory() && !ignoredDocDirs.has(dirent.name) && localeLabels[dirent.name])
+    .map((dirent) => dirent.name);
+  return new Set(["en", ...configured, ...knownLocaleDirs]);
+}
