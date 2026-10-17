@@ -64,6 +64,13 @@ incognito owner during its separate migration.
 
 ### Retained helper contracts
 
+The question-reaction helpers in `openclaw/plugin-sdk/question-gateway-runtime`
+remain available for existing third-party plugins without a contract change. Bundled
+channels no longer use question reactions. New integrations should declare
+native question input through
+[`agentPrompt.questionInputMode`](/plugins/sdk-channel-plugins#what-your-plugin-owns)
+or let the agent ask in plain text. No removal date has been announced.
+
 `openclaw/plugin-sdk/sandbox.resolveSandboxRuntimeStatus` is deprecated. Await
 `resolveSandboxRuntimeStatusAsync` for a session lookup, or use
 `resolvePreparedSandboxRuntimeStatus` with an already selected full session entry
@@ -740,6 +747,16 @@ Plan-based migrations can use
 `definePluginDoctorMigrationFromPlans(...)` from
 `openclaw/plugin-sdk/runtime-doctor-migrations` to preserve existing move, copy, preview,
 and plugin-state import behavior.
+
+For legacy SQLite migrations, declare
+`sqliteOnly: { family: "state" }` (or the destination's other configurable
+database family) on `PluginDoctorStateMigration`. The host runs detection before
+porting that family to PostgreSQL and refuses pending work with
+`openclaw doctor --fix` guidance. When the family's effective engine is already
+PostgreSQL, the host skips detection, repair, and backup-resource callbacks and
+records an intentional non-outcome. An optional `postgresNote` in `sqliteOnly`
+can explain retained legacy artifacts or rebuilding from authoritative sources.
+Migrations without this declaration keep their existing behavior.
 
 Migrations may supply a read-only `collectBackupResources` callback, including
 through `definePluginDoctorMigrationFromPlans(...)`. Return absolute paths with

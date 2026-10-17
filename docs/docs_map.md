@@ -1239,7 +1239,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Lifecycle status reactions
   - H2: Reactions (message tool)
   - H2: Approval reactions
-  - H2: Question reactions
+  - H2: Agent questions
   - H2: Delivery targets (CLI/cron)
   - H2: Aliases
   - H2: Troubleshooting
@@ -1582,7 +1582,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Runtime model
   - H2: Call the current requester with MeowCaller (experimental)
   - H2: Approval prompts
-  - H2: Question reactions
+  - H2: Agent questions
   - H2: Plugin hooks and privacy
   - H2: Access control
   - H3: Access control and activation
@@ -1612,6 +1612,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Public work sessions
   - H2: Work sessions and replies
   - H2: Reply outcomes and failures
+  - H2: Native proof attachments
   - H2: Manage the allowlist
   - H2: Verify GitHub collaborators
   - H3: Trust model
@@ -1850,6 +1851,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Hourly main CI
   - H3: Restore per-push CI
   - H3: What stays on pushes
+  - H2: Weekly mobile store releases
   - H2: Nightly Full Release Validation
   - H2: OpenClaw Performance
   - H3: Gateway concurrency benchmark
@@ -3757,6 +3759,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: What goes where
   - H2: Import from coding assistants
   - H2: Action-sensitive memories
+  - H2: PostgreSQL memory search
   - H2: Memory tools
   - H2: Memory search
   - H2: Memory engines
@@ -5027,6 +5030,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/config-tools/github-identity
 - Headings:
+  - H2: Session GitHub App reader
   - H2: tools.github
   - H2: Sandbox opt-in
 
@@ -5211,6 +5215,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/doctor/config-migrations
 - Headings:
+  - H2: Group allowlist fallback
   - H2: Cloud setup secret migration
   - H2: Runtime config migration
   - H2: Direct Ollama Cloud routing
@@ -5267,6 +5272,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/doctor/state-and-sessions
 - Headings:
+  - H2: Legacy data and PostgreSQL
   - H2: Checks 3-7b
 
 ## gateway/doctor/workspace-and-dreams.md
@@ -5406,6 +5412,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Regional hosting / data routing
   - H2: Other OpenAI-compatible local proxies
   - H2: Smaller or stricter backends
+  - H2: Output budgets and repetition stops
   - H2: Troubleshooting
   - H3: Local model lean mode
   - H4: Why these tools
@@ -5640,6 +5647,31 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: The portal is not reachable from this browser
   - H3: Close a portal
 
+## gateway/postgresql.md
+
+- Route: /gateway/postgresql
+- Headings:
+  - H1: PostgreSQL operator guide
+  - H2: When to use PostgreSQL
+  - H2: Requirements
+  - H3: Provision a database and runtime role
+  - H3: Supply the connection securely
+  - H2: Set up a fresh installation
+  - H2: Run independent Gateways on one server
+  - H2: Mixed engines (experimental)
+  - H2: Migrate an existing installation
+  - H3: Prepare and port to PostgreSQL
+  - H3: Recover an interrupted port
+  - H3: Understand refusals
+  - H2: Backup and restore
+  - H3: Capture both server data and local state
+  - H3: Current restore limits
+  - H3: Disaster recovery for shared state and agents
+  - H2: Updates and schema migrations
+  - H2: Search on PostgreSQL
+  - H2: Monitoring and troubleshooting
+  - H2: Roll back to SQLite
+
 ## gateway/prometheus.md
 
 - Route: /gateway/prometheus
@@ -5652,6 +5684,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Current sessions and work
   - H3: Runtime identity
   - H3: Event-loop observation windows
+  - H3: Main-thread stall attribution
   - H3: Worker request queues
   - H3: Memory and process churn
   - H3: Garbage collection duration
@@ -7320,6 +7353,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Build the default JIT executable
   - H2: Choose a compilation mode
+  - H2: Select embedded plugins
   - H2: Read the manifest
   - H3: macOS signing
   - H2: Update the complete artifact
@@ -7367,6 +7401,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /install/updating
 - Headings:
   - H2: Update implementation contract
+  - H3: Migration integrity checks
   - H2: Retired tenant-container management
   - H2: Upgrading very old versions
   - H2: Recommended: openclaw update
@@ -8440,6 +8475,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/architecture-internals/context-engines
 - Headings:
   - H2: Context engine plugins
+  - H3: Compaction progress
 
 ## plugins/architecture-internals/gateway-routes.md
 
@@ -9032,6 +9068,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Dock a conversation
   - H2: Build and reload
   - H3: Solid views
+  - H3: Packaged Settings presentations
   - H3: Bundle boundaries
   - H2: Approve an agent-built artifact
 
@@ -9061,6 +9098,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Enable or disable the plugin
   - H2: Limits and unavailable content
   - H2: Plugin author integration
+  - H2: Session-bound Enterprise previews
 
 ## plugins/google-meet.md
 
@@ -9309,6 +9347,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: modelSupport reference
   - H2: modelCatalog reference
+  - H3: Task-specific inference metadata
   - H2: modelIdNormalization reference
   - H2: modelPricing reference
   - H3: OpenClaw Provider Index
@@ -9655,6 +9694,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Distribution
   - H2: Surface
   - H2: Related docs
+
+## plugins/reference/autoreview.md
+
+- Route: /plugins/reference/autoreview
+- Headings:
+  - H2: Distribution
+  - H2: Surface
 
 ## plugins/reference/azure-speech.md
 
@@ -10389,6 +10435,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## plugins/reference/ollama.md
 
 - Route: /plugins/reference/ollama
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
+## plugins/reference/omlx.md
+
+- Route: /plugins/reference/omlx
 - Headings:
   - H2: Distribution
   - H2: Surface
@@ -11390,6 +11444,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Capability registration
   - H3: Storage providers
   - H3: Worker providers
+  - H2: Versioned decision data
+  - H2: Prepared decision execution (contract version 2)
   - H2: Decision models (contract version 1)
   - H3: Calling from a third-party plugin
 
@@ -11472,6 +11528,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Import an existing credential during sign-in
   - H2: Loopback OAuth callbacks
+  - H2: Declare physical credential ownership
   - H2: Handle model access after sign-in
   - H3: Defer the choice to a later reply
   - H3: Keep hosted writes authorized
@@ -11537,6 +11594,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Instance-bound background context
   - H3: Memory runtime replacement
   - H2: Browser meeting transport builders
+  - H2: Browser meeting configuration
   - H2: Browser meeting status ownership
   - H2: Browser meeting participation
   - H2: Worker provider allocation authority
@@ -11568,6 +11626,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-runtime/background-work
 - Headings:
   - H2: Background work namespaces
+  - H2: Native harness continuation retry settings
   - H2: Native harness completion delivery
 
 ## plugins/sdk-runtime/channel.md
@@ -11585,6 +11644,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Reusable runtime utilities
   - H3: Bounded waits
   - H3: Stage timing diagnostics
+  - H2: Darwin process inspection
 
 ## plugins/sdk-runtime/gateway-and-nodes.md
 
@@ -12556,6 +12616,19 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Ollama Web Search
 
+## providers/omlx.md
+
+- Route: /providers/omlx
+- Headings:
+  - H2: Quick start
+  - H3: Install and start oMLX
+  - H3: Connect OpenClaw
+  - H2: Memory embeddings
+  - H2: Server URL and authentication
+  - H2: Non-interactive onboarding
+  - H2: Troubleshooting
+  - H2: Related
+
 ## providers/openai.md
 
 - Route: /providers/openai
@@ -12676,6 +12749,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Getting started
   - H2: Config example
   - H2: Model references
+  - H2: Typed decisions with Jev
   - H2: Image generation
   - H2: Video generation
   - H2: Music generation
@@ -13040,6 +13114,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-engines
 - Headings:
   - H2: Configure PostgreSQL
+  - H3: Legacy data and PostgreSQL
+  - H3: Mixed engines (experimental)
   - H2: Search on PostgreSQL
   - H2: Port existing stores
   - H2: Several Gateways on one PostgreSQL server
@@ -13063,6 +13139,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Agent schema 28
   - H3: Context-engine outbox FIFO sequence
   - H3: JSON predicate columns
   - H3: Session writer validation
@@ -13140,6 +13217,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 26
+  - H3: State schema 25
   - H3: State schema 24
   - H3: State schema 23
   - H3: State schema 22
@@ -13181,6 +13260,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/versioning
 - Headings:
   - H2: Versioning contract
+  - H3: Local credential-store preparation
   - H3: Schema bumps and older updaters
   - H3: Profile-owned skill library
   - H2: Declared migration backup scopes
@@ -13459,6 +13539,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/scripts/pr-tooling
 - Headings:
   - H1: PR wrapper tooling
+  - H2: Captured baseline evidence hashes
   - H2: Rerun failed CI tests
 
 ## reference/scripts/prior-ci.md
@@ -13501,6 +13582,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H4: plugins
   - H4: skills
   - H4: talk
+  - H4: tools
   - H4: tts
   - H3: SQLite auth-profile targets (secrets configure + secrets apply + secrets audit)
   - H3: Node-host connection targets
@@ -14906,6 +14988,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Model guidance
   - H2: Related
 
+## tools/autoreview.md
+
+- Route: /tools/autoreview
+- Headings:
+  - H2: Enable
+  - H2: Inputs and results
+
 ## tools/brave-search.md
 
 - Route: /tools/brave-search
@@ -15074,6 +15163,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /tools/browser/troubleshooting
 - Headings:
+  - H2: Slow first browser request
   - H2: Inspection times out but screenshots work
   - H2: Output directory errors
   - H2: CDP startup failure vs navigation SSRF block
@@ -16228,6 +16318,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui/chat
 - Headings:
+  - H2: Context breakdown
   - H2: Image viewing
   - H2: Collaborator drafts
   - H2: Reactions
