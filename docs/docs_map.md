@@ -3472,6 +3472,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Quick start
   - H2: How it works
+  - H3: Provider compaction ownership
   - H3: Subagent lifecycle (optional)
   - H3: System prompt addition
   - H2: The legacy engine
@@ -5178,6 +5179,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Useful options
   - H2: Disable diagnostics
   - H2: Garbage collection metrics
+  - H2: Outbound WebSocket event traffic
   - H2: RPC response size and heap changes
   - H2: Related
 
@@ -5201,6 +5203,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/doctor
 - Headings:
+  - H2: Database store diagnostics
   - H2: Doctor pages
   - H2: Where each section moved
   - H2: Related
@@ -5499,6 +5502,19 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Examples
   - H2: Related
 
+## gateway/openshell-workers.md
+
+- Route: /gateway/openshell-workers
+- Headings:
+  - H1: OpenShell worker inference
+  - H2: Compatibility and rollback
+  - H2: Prerequisites
+  - H2: Configure the plugin
+  - H2: Bind one agent's canonical files (optional)
+  - H2: Create, enroll, and select
+  - H2: Restart, rotate, and retire
+  - H2: Trust and qualification
+
 ## gateway/openshell.md
 
 - Route: /gateway/openshell
@@ -5546,6 +5562,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Claude Code CLI model-call fidelity
   - H2: Exported metrics
   - H3: Gateway RPC
+  - H3: Session-list retention
+  - H3: Gateway WebSocket events
   - H3: Model usage
   - H3: Message flow
   - H3: Talk
@@ -5665,11 +5683,12 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Understand refusals
   - H2: Backup and restore
   - H3: Capture both server data and local state
-  - H3: Current restore limits
-  - H3: Disaster recovery for shared state and agents
+  - H3: Restore all PostgreSQL stores
+  - H3: Disaster recovery from Git
   - H2: Updates and schema migrations
   - H2: Search on PostgreSQL
   - H2: Monitoring and troubleshooting
+  - H3: Read the Doctor and status store report
   - H2: Roll back to SQLite
 
 ## gateway/prometheus.md
@@ -5744,6 +5763,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/protocol/presence
 - Headings:
   - H2: Presence
+  - H3: Opt-in presence deltas
   - H3: Node host stats
   - H3: Node background alive event
   - H2: Broadcast event scoping
@@ -5755,6 +5775,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Session list bootstrap
   - H2: Session message subscriptions and narration
   - H2: Common event families
+  - H2: Session event row deltas
   - H2: Node helper methods
   - H2: Node exec lifecycle events
 
@@ -8612,6 +8633,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Config shape
   - H2: Advanced backend hooks
   - H3: parseJsonlEvent: provider-specific JSONL streams
+  - H3: classifyErrorCode: backend-native failure details
   - H3: parseJsonlLifecycleEvent: provider-native lifecycle records
   - H3: ownsNativeCompaction: opting out of OpenClaw compaction
   - H2: MCP tool bridge
@@ -9500,6 +9522,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Requirements
   - H2: Install
   - H2: Quickstart
+  - H3: Model identities and names
   - H2: Auth
   - H2: Configuration
   - H2: Approvals and sandbox
@@ -11019,6 +11042,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-agent-harness/sessions-and-results
 - Headings:
   - H2: Native sessions and transcript mirror
+  - H3: Fresh native thread seeds
   - H2: Shared native binding lifecycle
   - H2: Tool and media results
   - H3: Same-turn retry context
@@ -11514,6 +11538,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Memory audience
   - H3: Compatibility and host integration
   - H3: Dreaming remains separate
+  - H2: Memory host event diagnostics
   - H2: Bundled Memory Core workers
 
 ## plugins/sdk-overview/tools-and-commands.md
@@ -11619,6 +11644,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Channel delivery mirrors
   - H2: Bounded model context
   - H2: Scoped session visibility
+  - H2: Context engine transcript cursor
+  - H3: Reset reasons
+  - H3: Reset-window start
+  - H3: Current-turn fence
+  - H3: Entries
   - H2: Agent and session namespaces
 
 ## plugins/sdk-runtime/background-work.md
@@ -12185,6 +12215,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Live testing
   - H2: Config example
   - H2: Related
+  - H2: Web search
+  - H3: Queries and results
 
 ## providers/ds4.md
 
@@ -13139,6 +13171,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Agent schema 31
+  - H3: Trajectory payload storage
+  - H3: Agent schema 29
   - H3: Agent schema 28
   - H3: Context-engine outbox FIFO sequence
   - H3: JSON predicate columns
@@ -13161,6 +13196,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: btrfs and NOCOW
   - H2: Planner statistics maintenance
   - H2: Troubleshooting
+  - H3: A migrated agent remains unavailable with a serialization error
   - H3: The state database is busy
   - H3: Database paths cannot be compared
   - H3: A mount check times out while opening a local database
@@ -13217,6 +13253,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 27
   - H3: State schema 26
   - H3: State schema 25
   - H3: State schema 24
@@ -13247,10 +13284,12 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Memory chunk path index retirement
   - H3: Preserve the data and concurrency contracts
   - H3: Keep engine-specific capabilities owned
+  - H2: Trajectory payload compression
   - H2: Trajectory retention covering index
   - H2: Talk voice-session lookup indexes
   - H2: Session usage overview projection
   - H2: Background exec notification obligations
+  - H2: Memory index batch revisions
   - H2: Review checkpoint for material changes
   - H2: Preflight a target release
   - H3: Preflight an explicit agent copy
