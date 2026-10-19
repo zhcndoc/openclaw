@@ -4076,6 +4076,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Reporting
   - H3: Scheduled instances and retained observations
   - H3: Explicit proof requirements
+  - H3: Scorecard gap report
   - H3: Evidence previews
   - H3: Character and style evaluation
 
@@ -4172,6 +4173,20 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Pair once per Gateway origin
   - H2: Failure taxonomy
   - H2: Related pages
+
+## concepts/session-controller.md
+
+- Route: /concepts/session-controller
+- Headings:
+  - H2: Implementation owners
+  - H2: Identity and ownership
+  - H2: Statechart
+  - H2: Inputs and custody
+  - H2: Queue policy
+  - H2: Stop semantics
+  - H2: Lifecycle mutations
+  - H2: Liveness and restart
+  - H2: Invariants and verification
 
 ## concepts/session-pruning.md
 
@@ -5837,6 +5852,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: npm packages
   - H2: Transport and framing
+  - H3: Compression threshold
   - H3: Profile binding
   - H2: Connection keepalives
   - H2: Gateway-controlled WebRTC Talk
@@ -6606,6 +6622,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /help/scripts
 - Headings:
   - H2: Conventions
+  - H2: Formatting and linting
   - H2: Auth monitoring scripts
   - H2: GitHub read helper
   - H2: When adding scripts
@@ -11285,6 +11302,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-migration
 - Headings:
   - H2: What changed
+  - H3: Session-keyed harness registration
+  - H3: Gateway session control
+  - H3: Agent turn start observation
   - H3: Session and command preparation
   - H3: Native session lineage
   - H3: Exec approval reads
@@ -11312,6 +11332,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-migration/compatibility-policy
 - Headings:
   - H2: Compatibility policy
+  - H3: Session-controller cutover exception
   - H3: Harness deletion companions
   - H3: Retained helper contracts
   - H3: Session header link helper
@@ -11682,6 +11703,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Service scheduling
   - H2: Gateway and node namespaces
+  - H3: Session control
   - H3: Session resource methods
   - H3: Person access lifetimes
   - H3: Durable person access grants
@@ -13253,6 +13275,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 28
   - H3: State schema 27
   - H3: State schema 26
   - H3: State schema 25
@@ -13323,6 +13346,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /reference/database-schemas/worker-access
 - Headings:
+  - H2: Rules for code changes
   - H2: Choose the execution owner
   - H2: Check once on load; trust the owner
   - H2: Final authority without SQL
@@ -13578,6 +13602,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/scripts/pr-tooling
 - Headings:
   - H1: PR wrapper tooling
+  - H2: Recover a retained dependency projection
   - H2: Captured baseline evidence hashes
   - H2: Rerun failed CI tests
 
@@ -13884,6 +13909,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Routine local order
   - H2: Core commands
+  - H3: OpenClaw Bun fork
   - H3: Source tests and subprocess builds
   - H2: Full local run (only when explicitly needed)
 
