@@ -265,6 +265,28 @@ If local session state requires Doctor, status prints any installation drift to 
 - `status --all` includes a **Telemetry exporters** diagnosis with the latest
   trusted per-signal exporter state and transport. Endpoint values, headers,
   certificates, payloads, and raw errors are not shown.
+- Missing log files are omitted from `status --all`. Unreadable logs show an
+  unavailable message with guidance to check the file path and permissions.
+
+## Plugin health
+
+Plugin-health collection warns when persisted quarantine records cannot be read
+and continues with the available health information. The inventory may be
+incomplete; run `openclaw doctor` to inspect state storage. The warning does not
+include stored records or raw database errors.
+
+## Plugin reload
+
+While the Gateway replaces plugins, status shows a **Plugin reload** overview
+row naming the plugins, phase, and waiting or failure reason. JSON includes the
+owner's `pluginReload` record: `phase` (`reloading`, `recovering`, or `failed`),
+`pluginIds`, and optional `deadlineAtMs` and `reason`. New agent runs wait during
+replacement. Ordinary drains have a shared 60-second budget;
+[`plugins reload --wait`](/cli/plugins/uninstall-and-update) extends it to ten
+minutes and can be cancelled with Ctrl+C. A successful rollback, including after
+a drain timeout, clears the pending reload record. Unresolved activation or
+recovery failures stay visible until a later reload of the affected plugin
+succeeds or the Gateway restarts.
 
 ## Secrets
 

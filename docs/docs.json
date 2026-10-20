@@ -1840,6 +1840,7 @@
                       "plugins/memory-lancedb",
                       "plugins/memory-wiki",
                       "plugins/onnx",
+                      "plugins/subq",
                       "plugins/typesafe"
                     ]
                   },
@@ -2222,6 +2223,7 @@
                       "providers/google",
                       "providers/groq",
                       "providers/huggingface",
+                      "providers/levanto",
                       "providers/longcat",
                       "providers/meta",
                       "providers/minimax",
@@ -3222,6 +3224,7 @@
                 "group": "Release notes",
                 "pages": [
                   "releases/index",
+                  "releases/2026.10.5",
                   "releases/2026.10.4",
                   "releases/2026.10.3",
                   "releases/2026.10.2",
@@ -3946,6 +3949,7 @@
                       "zh-CN/plugins/memory-lancedb",
                       "zh-CN/plugins/memory-wiki",
                       "zh-CN/plugins/onnx",
+                      "zh-CN/plugins/subq",
                       "zh-CN/plugins/typesafe"
                     ]
                   },
@@ -4294,6 +4298,7 @@
                       "zh-CN/providers/google",
                       "zh-CN/providers/groq",
                       "zh-CN/providers/huggingface",
+                      "zh-CN/providers/levanto",
                       "zh-CN/providers/longcat",
                       "zh-CN/providers/meta",
                       "zh-CN/providers/minimax",
@@ -5294,6 +5299,7 @@
                 "group": "发布说明",
                 "pages": [
                   "zh-CN/releases/index",
+                  "zh-CN/releases/2026.10.5",
                   "zh-CN/releases/2026.10.4",
                   "zh-CN/releases/2026.10.3",
                   "zh-CN/releases/2026.10.2",
@@ -6018,6 +6024,7 @@
                       "zh-TW/plugins/memory-lancedb",
                       "zh-TW/plugins/memory-wiki",
                       "zh-TW/plugins/onnx",
+                      "zh-TW/plugins/subq",
                       "zh-TW/plugins/typesafe"
                     ]
                   },
@@ -6366,6 +6373,7 @@
                       "zh-TW/providers/google",
                       "zh-TW/providers/groq",
                       "zh-TW/providers/huggingface",
+                      "zh-TW/providers/levanto",
                       "zh-TW/providers/longcat",
                       "zh-TW/providers/meta",
                       "zh-TW/providers/minimax",
@@ -7366,6 +7374,7 @@
                 "group": "Release notes",
                 "pages": [
                   "zh-TW/releases/index",
+                  "zh-TW/releases/2026.10.5",
                   "zh-TW/releases/2026.10.4",
                   "zh-TW/releases/2026.10.3",
                   "zh-TW/releases/2026.10.2",
@@ -8090,6 +8099,7 @@
                       "ja-JP/plugins/memory-lancedb",
                       "ja-JP/plugins/memory-wiki",
                       "ja-JP/plugins/onnx",
+                      "ja-JP/plugins/subq",
                       "ja-JP/plugins/typesafe"
                     ]
                   },
@@ -8438,6 +8448,7 @@
                       "ja-JP/providers/google",
                       "ja-JP/providers/groq",
                       "ja-JP/providers/huggingface",
+                      "ja-JP/providers/levanto",
                       "ja-JP/providers/longcat",
                       "ja-JP/providers/meta",
                       "ja-JP/providers/minimax",
@@ -9438,6 +9449,7 @@
                 "group": "Release notes",
                 "pages": [
                   "ja-JP/releases/index",
+                  "ja-JP/releases/2026.10.5",
                   "ja-JP/releases/2026.10.4",
                   "ja-JP/releases/2026.10.3",
                   "ja-JP/releases/2026.10.2",
@@ -10162,6 +10174,7 @@
                       "es/plugins/memory-lancedb",
                       "es/plugins/memory-wiki",
                       "es/plugins/onnx",
+                      "es/plugins/subq",
                       "es/plugins/typesafe"
                     ]
                   },
@@ -10510,6 +10523,7 @@
                       "es/providers/google",
                       "es/providers/groq",
                       "es/providers/huggingface",
+                      "es/providers/levanto",
                       "es/providers/longcat",
                       "es/providers/meta",
                       "es/providers/minimax",
@@ -11510,6 +11524,7 @@
                 "group": "Release notes",
                 "pages": [
                   "es/releases/index",
+                  "es/releases/2026.10.5",
                   "es/releases/2026.10.4",
                   "es/releases/2026.10.3",
                   "es/releases/2026.10.2",
@@ -12234,6 +12249,7 @@
                       "pt-BR/plugins/memory-lancedb",
                       "pt-BR/plugins/memory-wiki",
                       "pt-BR/plugins/onnx",
+                      "pt-BR/plugins/subq",
                       "pt-BR/plugins/typesafe"
                     ]
                   },
@@ -12582,6 +12598,7 @@
                       "pt-BR/providers/google",
                       "pt-BR/providers/groq",
                       "pt-BR/providers/huggingface",
+                      "pt-BR/providers/levanto",
                       "pt-BR/providers/longcat",
                       "pt-BR/providers/meta",
                       "pt-BR/providers/minimax",
@@ -13582,6 +13599,7 @@
                 "group": "Release notes",
                 "pages": [
                   "pt-BR/releases/index",
+                  "pt-BR/releases/2026.10.5",
                   "pt-BR/releases/2026.10.4",
                   "pt-BR/releases/2026.10.3",
                   "pt-BR/releases/2026.10.2",
@@ -14306,6 +14324,7 @@
                       "ko/plugins/memory-lancedb",
                       "ko/plugins/memory-wiki",
                       "ko/plugins/onnx",
+                      "ko/plugins/subq",
                       "ko/plugins/typesafe"
                     ]
                   },
@@ -14654,6 +14673,7 @@
                       "ko/providers/google",
                       "ko/providers/groq",
                       "ko/providers/huggingface",
+                      "ko/providers/levanto",
                       "ko/providers/longcat",
                       "ko/providers/meta",
                       "ko/providers/minimax",
@@ -15654,6 +15674,7 @@
                 "group": "Release notes",
                 "pages": [
                   "ko/releases/index",
+                  "ko/releases/2026.10.5",
                   "ko/releases/2026.10.4",
                   "ko/releases/2026.10.3",
                   "ko/releases/2026.10.2",
@@ -16378,6 +16399,7 @@
                       "de/plugins/memory-lancedb",
                       "de/plugins/memory-wiki",
                       "de/plugins/onnx",
+                      "de/plugins/subq",
                       "de/plugins/typesafe"
                     ]
                   },
@@ -16726,6 +16748,7 @@
                       "de/providers/google",
                       "de/providers/groq",
                       "de/providers/huggingface",
+                      "de/providers/levanto",
                       "de/providers/longcat",
                       "de/providers/meta",
                       "de/providers/minimax",
@@ -17726,6 +17749,7 @@
                 "group": "Release notes",
                 "pages": [
                   "de/releases/index",
+                  "de/releases/2026.10.5",
                   "de/releases/2026.10.4",
                   "de/releases/2026.10.3",
                   "de/releases/2026.10.2",
@@ -18450,6 +18474,7 @@
                       "fr/plugins/memory-lancedb",
                       "fr/plugins/memory-wiki",
                       "fr/plugins/onnx",
+                      "fr/plugins/subq",
                       "fr/plugins/typesafe"
                     ]
                   },
@@ -18798,6 +18823,7 @@
                       "fr/providers/google",
                       "fr/providers/groq",
                       "fr/providers/huggingface",
+                      "fr/providers/levanto",
                       "fr/providers/longcat",
                       "fr/providers/meta",
                       "fr/providers/minimax",
@@ -19798,6 +19824,7 @@
                 "group": "Release notes",
                 "pages": [
                   "fr/releases/index",
+                  "fr/releases/2026.10.5",
                   "fr/releases/2026.10.4",
                   "fr/releases/2026.10.3",
                   "fr/releases/2026.10.2",
@@ -20522,6 +20549,7 @@
                       "hi/plugins/memory-lancedb",
                       "hi/plugins/memory-wiki",
                       "hi/plugins/onnx",
+                      "hi/plugins/subq",
                       "hi/plugins/typesafe"
                     ]
                   },
@@ -20870,6 +20898,7 @@
                       "hi/providers/google",
                       "hi/providers/groq",
                       "hi/providers/huggingface",
+                      "hi/providers/levanto",
                       "hi/providers/longcat",
                       "hi/providers/meta",
                       "hi/providers/minimax",
@@ -21870,6 +21899,7 @@
                 "group": "Release notes",
                 "pages": [
                   "hi/releases/index",
+                  "hi/releases/2026.10.5",
                   "hi/releases/2026.10.4",
                   "hi/releases/2026.10.3",
                   "hi/releases/2026.10.2",
@@ -22594,6 +22624,7 @@
                       "ar/plugins/memory-lancedb",
                       "ar/plugins/memory-wiki",
                       "ar/plugins/onnx",
+                      "ar/plugins/subq",
                       "ar/plugins/typesafe"
                     ]
                   },
@@ -22942,6 +22973,7 @@
                       "ar/providers/google",
                       "ar/providers/groq",
                       "ar/providers/huggingface",
+                      "ar/providers/levanto",
                       "ar/providers/longcat",
                       "ar/providers/meta",
                       "ar/providers/minimax",
@@ -23942,6 +23974,7 @@
                 "group": "Release notes",
                 "pages": [
                   "ar/releases/index",
+                  "ar/releases/2026.10.5",
                   "ar/releases/2026.10.4",
                   "ar/releases/2026.10.3",
                   "ar/releases/2026.10.2",
@@ -24666,6 +24699,7 @@
                       "it/plugins/memory-lancedb",
                       "it/plugins/memory-wiki",
                       "it/plugins/onnx",
+                      "it/plugins/subq",
                       "it/plugins/typesafe"
                     ]
                   },
@@ -25014,6 +25048,7 @@
                       "it/providers/google",
                       "it/providers/groq",
                       "it/providers/huggingface",
+                      "it/providers/levanto",
                       "it/providers/longcat",
                       "it/providers/meta",
                       "it/providers/minimax",
@@ -26014,6 +26049,7 @@
                 "group": "Release notes",
                 "pages": [
                   "it/releases/index",
+                  "it/releases/2026.10.5",
                   "it/releases/2026.10.4",
                   "it/releases/2026.10.3",
                   "it/releases/2026.10.2",
@@ -26738,6 +26774,7 @@
                       "vi/plugins/memory-lancedb",
                       "vi/plugins/memory-wiki",
                       "vi/plugins/onnx",
+                      "vi/plugins/subq",
                       "vi/plugins/typesafe"
                     ]
                   },
@@ -27086,6 +27123,7 @@
                       "vi/providers/google",
                       "vi/providers/groq",
                       "vi/providers/huggingface",
+                      "vi/providers/levanto",
                       "vi/providers/longcat",
                       "vi/providers/meta",
                       "vi/providers/minimax",
@@ -28086,6 +28124,7 @@
                 "group": "Release notes",
                 "pages": [
                   "vi/releases/index",
+                  "vi/releases/2026.10.5",
                   "vi/releases/2026.10.4",
                   "vi/releases/2026.10.3",
                   "vi/releases/2026.10.2",
@@ -28810,6 +28849,7 @@
                       "nl/plugins/memory-lancedb",
                       "nl/plugins/memory-wiki",
                       "nl/plugins/onnx",
+                      "nl/plugins/subq",
                       "nl/plugins/typesafe"
                     ]
                   },
@@ -29158,6 +29198,7 @@
                       "nl/providers/google",
                       "nl/providers/groq",
                       "nl/providers/huggingface",
+                      "nl/providers/levanto",
                       "nl/providers/longcat",
                       "nl/providers/meta",
                       "nl/providers/minimax",
@@ -30158,6 +30199,7 @@
                 "group": "Release notes",
                 "pages": [
                   "nl/releases/index",
+                  "nl/releases/2026.10.5",
                   "nl/releases/2026.10.4",
                   "nl/releases/2026.10.3",
                   "nl/releases/2026.10.2",
@@ -30882,6 +30924,7 @@
                       "fa/plugins/memory-lancedb",
                       "fa/plugins/memory-wiki",
                       "fa/plugins/onnx",
+                      "fa/plugins/subq",
                       "fa/plugins/typesafe"
                     ]
                   },
@@ -31230,6 +31273,7 @@
                       "fa/providers/google",
                       "fa/providers/groq",
                       "fa/providers/huggingface",
+                      "fa/providers/levanto",
                       "fa/providers/longcat",
                       "fa/providers/meta",
                       "fa/providers/minimax",
@@ -32230,6 +32274,7 @@
                 "group": "Release notes",
                 "pages": [
                   "fa/releases/index",
+                  "fa/releases/2026.10.5",
                   "fa/releases/2026.10.4",
                   "fa/releases/2026.10.3",
                   "fa/releases/2026.10.2",
@@ -32954,6 +32999,7 @@
                       "tr/plugins/memory-lancedb",
                       "tr/plugins/memory-wiki",
                       "tr/plugins/onnx",
+                      "tr/plugins/subq",
                       "tr/plugins/typesafe"
                     ]
                   },
@@ -33302,6 +33348,7 @@
                       "tr/providers/google",
                       "tr/providers/groq",
                       "tr/providers/huggingface",
+                      "tr/providers/levanto",
                       "tr/providers/longcat",
                       "tr/providers/meta",
                       "tr/providers/minimax",
@@ -34302,6 +34349,7 @@
                 "group": "Sürüm notları",
                 "pages": [
                   "tr/releases/index",
+                  "tr/releases/2026.10.5",
                   "tr/releases/2026.10.4",
                   "tr/releases/2026.10.3",
                   "tr/releases/2026.10.2",
@@ -35026,6 +35074,7 @@
                       "uk/plugins/memory-lancedb",
                       "uk/plugins/memory-wiki",
                       "uk/plugins/onnx",
+                      "uk/plugins/subq",
                       "uk/plugins/typesafe"
                     ]
                   },
@@ -35374,6 +35423,7 @@
                       "uk/providers/google",
                       "uk/providers/groq",
                       "uk/providers/huggingface",
+                      "uk/providers/levanto",
                       "uk/providers/longcat",
                       "uk/providers/meta",
                       "uk/providers/minimax",
@@ -36374,6 +36424,7 @@
                 "group": "Release notes",
                 "pages": [
                   "uk/releases/index",
+                  "uk/releases/2026.10.5",
                   "uk/releases/2026.10.4",
                   "uk/releases/2026.10.3",
                   "uk/releases/2026.10.2",
@@ -37098,6 +37149,7 @@
                       "id/plugins/memory-lancedb",
                       "id/plugins/memory-wiki",
                       "id/plugins/onnx",
+                      "id/plugins/subq",
                       "id/plugins/typesafe"
                     ]
                   },
@@ -37446,6 +37498,7 @@
                       "id/providers/google",
                       "id/providers/groq",
                       "id/providers/huggingface",
+                      "id/providers/levanto",
                       "id/providers/longcat",
                       "id/providers/meta",
                       "id/providers/minimax",
@@ -38446,6 +38499,7 @@
                 "group": "Release notes",
                 "pages": [
                   "id/releases/index",
+                  "id/releases/2026.10.5",
                   "id/releases/2026.10.4",
                   "id/releases/2026.10.3",
                   "id/releases/2026.10.2",
@@ -39170,6 +39224,7 @@
                       "pl/plugins/memory-lancedb",
                       "pl/plugins/memory-wiki",
                       "pl/plugins/onnx",
+                      "pl/plugins/subq",
                       "pl/plugins/typesafe"
                     ]
                   },
@@ -39518,6 +39573,7 @@
                       "pl/providers/google",
                       "pl/providers/groq",
                       "pl/providers/huggingface",
+                      "pl/providers/levanto",
                       "pl/providers/longcat",
                       "pl/providers/meta",
                       "pl/providers/minimax",
@@ -40518,6 +40574,7 @@
                 "group": "Release notes",
                 "pages": [
                   "pl/releases/index",
+                  "pl/releases/2026.10.5",
                   "pl/releases/2026.10.4",
                   "pl/releases/2026.10.3",
                   "pl/releases/2026.10.2",
@@ -41242,6 +41299,7 @@
                       "th/plugins/memory-lancedb",
                       "th/plugins/memory-wiki",
                       "th/plugins/onnx",
+                      "th/plugins/subq",
                       "th/plugins/typesafe"
                     ]
                   },
@@ -41590,6 +41648,7 @@
                       "th/providers/google",
                       "th/providers/groq",
                       "th/providers/huggingface",
+                      "th/providers/levanto",
                       "th/providers/longcat",
                       "th/providers/meta",
                       "th/providers/minimax",
@@ -42590,6 +42649,7 @@
                 "group": "Release notes",
                 "pages": [
                   "th/releases/index",
+                  "th/releases/2026.10.5",
                   "th/releases/2026.10.4",
                   "th/releases/2026.10.3",
                   "th/releases/2026.10.2",
@@ -43314,6 +43374,7 @@
                       "ru/plugins/memory-lancedb",
                       "ru/plugins/memory-wiki",
                       "ru/plugins/onnx",
+                      "ru/plugins/subq",
                       "ru/plugins/typesafe"
                     ]
                   },
@@ -43662,6 +43723,7 @@
                       "ru/providers/google",
                       "ru/providers/groq",
                       "ru/providers/huggingface",
+                      "ru/providers/levanto",
                       "ru/providers/longcat",
                       "ru/providers/meta",
                       "ru/providers/minimax",
@@ -44662,6 +44724,7 @@
                 "group": "Release notes",
                 "pages": [
                   "ru/releases/index",
+                  "ru/releases/2026.10.5",
                   "ru/releases/2026.10.4",
                   "ru/releases/2026.10.3",
                   "ru/releases/2026.10.2",
@@ -45386,6 +45449,7 @@
                       "sv/plugins/memory-lancedb",
                       "sv/plugins/memory-wiki",
                       "sv/plugins/onnx",
+                      "sv/plugins/subq",
                       "sv/plugins/typesafe"
                     ]
                   },
@@ -45734,6 +45798,7 @@
                       "sv/providers/google",
                       "sv/providers/groq",
                       "sv/providers/huggingface",
+                      "sv/providers/levanto",
                       "sv/providers/longcat",
                       "sv/providers/meta",
                       "sv/providers/minimax",
@@ -46734,6 +46799,7 @@
                 "group": "Versionsinformation",
                 "pages": [
                   "sv/releases/index",
+                  "sv/releases/2026.10.5",
                   "sv/releases/2026.10.4",
                   "sv/releases/2026.10.3",
                   "sv/releases/2026.10.2",

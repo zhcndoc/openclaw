@@ -61,6 +61,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: External CLI credential discovery
   - H2: OAuth SecretRef Policy Guard
   - H2: Legacy-Compatible Messaging
+  - H2: Client identities and paired tokens
   - H2: Related
 
 ## automation/cron-jobs.md
@@ -919,6 +920,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /channels/matrix/messaging
 - Headings:
+  - H2: Inbound delivery across restarts
   - H2: Streaming previews
   - H2: Voice messages
   - H2: Reactions
@@ -3025,6 +3027,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Session and model resolution
   - H2: Usage and quota
   - H2: Overview and update status
+  - H2: Plugin health
+  - H2: Plugin reload
   - H2: Secrets
   - H2: Memory
   - H2: Related
@@ -4127,6 +4131,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Steer and streaming
   - H2: Answering a pending question
   - H2: Precedence
+  - H2: One-message followup
   - H2: Per-session overrides
   - H2: Queued-turn cancellation
   - H2: Input durability
@@ -5234,6 +5239,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/doctor/config-migrations
 - Headings:
   - H2: Group allowlist fallback
+  - H2: Collaborative steering default
   - H2: Cloud setup secret migration
   - H2: Runtime config migration
   - H2: Direct Ollama Cloud routing
@@ -5714,6 +5720,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Metrics exported
   - H3: HTTP cancellations
   - H3: Worktree preparation
+  - H3: Session diff stages
   - H3: Catalog list stages
   - H3: Current sessions and work
   - H3: Runtime identity
@@ -5908,6 +5915,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Safety valves and observability
   - H2: Verify recovery after an update
   - H2: What is not resumed
+  - H2: Automatic peer results
 
 ## gateway/sandbox-vs-tool-policy-vs-elevated.md
 
@@ -7419,6 +7427,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Doctor cannot enter maintenance during finalization
   - H2: Node and global install permissions
   - H3: System-scope systemd services
+  - H2: Debug logging blocks the update handoff
   - H2: Candidate migration rehearsal timeouts
   - H2: Published 2026.9.4 on large agent fleets
   - H2: Headless nodes waiting on 2026.9.6
@@ -8056,6 +8065,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /platforms/ios
 - Headings:
   - H2: What it does
+  - H2: Model sign-in
   - H2: Settings
   - H2: Cloudflare Access sign-in
   - H2: Sessions
@@ -9912,6 +9922,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Distribution
   - H2: Surface
   - H2: Configure
+  - H2: Conversation tool feedback
 
 ## plugins/reference/cua-computer.md
 
@@ -10216,6 +10227,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## plugins/reference/kimi.md
 
 - Route: /plugins/reference/kimi
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
+## plugins/reference/levanto.md
+
+- Route: /plugins/reference/levanto
 - Headings:
   - H2: Distribution
   - H2: Surface
@@ -10706,6 +10725,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## plugins/reference/stepfun.md
 
 - Route: /plugins/reference/stepfun
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
+## plugins/reference/subq.md
+
+- Route: /plugins/reference/subq
 - Headings:
   - H2: Distribution
   - H2: Surface
@@ -11301,6 +11328,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/sdk-migration
 - Headings:
+  - H2: MCP result compatibility window
   - H2: What changed
   - H3: Session-keyed harness registration
   - H3: Gateway session control
@@ -11333,6 +11361,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Compatibility policy
   - H3: Session-controller cutover exception
+  - H3: Channel prepared tool policy
   - H3: Harness deletion companions
   - H3: Retained helper contracts
   - H3: Session header link helper
@@ -11573,6 +11602,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-provider-plugins
 - Headings:
   - H2: Import an existing credential during sign-in
+  - H2: Read a selected personal account
   - H2: Loopback OAuth callbacks
   - H2: Declare physical credential ownership
   - H2: Handle model access after sign-in
@@ -11817,6 +11847,16 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Handle manual actions
   - H2: Limits
   - H2: Related
+
+## plugins/subq.md
+
+- Route: /plugins/subq
+- Headings:
+  - H1: SubQ
+  - H2: Install and configure
+  - H2: Use
+  - H2: API and limits
+  - H2: Sources and verification
 
 ## plugins/team-reports.md
 
@@ -12423,6 +12463,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Config example
   - H2: Behavior notes
   - H2: Related
+
+## providers/levanto.md
+
+- Route: /providers/levanto
+- Headings:
+  - H2: Connect and select
+  - H2: Native operations
+  - H2: Results, usage and limitations
 
 ## providers/litellm.md
 
@@ -13230,6 +13278,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: The Gateway refuses to start with a newer schema version error
   - H3: A database is quarantined after integrity verification failed
   - H2: Downgrade recovery
+  - H3: Client credential cutover rollback
   - H3: Example: state schema 21 to 20
 
 ## reference/database-schemas/layout.md
@@ -13275,6 +13324,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 29
   - H3: State schema 28
   - H3: State schema 27
   - H3: State schema 26
@@ -13322,7 +13372,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/versioning
 - Headings:
   - H2: Versioning contract
-  - H3: Local credential-store preparation
+  - H3: Local client credentials
   - H3: Schema bumps and older updaters
   - H3: Profile-owned skill library
   - H2: Declared migration backup scopes
@@ -13602,6 +13652,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/scripts/pr-tooling
 - Headings:
   - H1: PR wrapper tooling
+  - H2: Keep the admitted workflow across commands
   - H2: Recover a retained dependency projection
   - H2: Captured baseline evidence hashes
   - H2: Rerun failed CI tests
@@ -14127,6 +14178,25 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Security and Privacy
   - H2: Quality-of-Life Improvements
   - H2: Other Bug Fixes
+
+## releases/2026.10.5.md
+
+- Route: /releases/2026.10.5
+- Headings:
+  - H1: v2026.10.5
+  - H2: Sidebar
+  - H2: Skill Workshop 2.0
+  - H2: Public conversation links
+  - H2: Conversations and workspaces
+  - H2: Memory and learning
+  - H2: Models and local runtimes
+  - H2: Channels and calls
+  - H2: Skills and integrations
+  - H2: Web and native apps
+  - H2: Browser and computer use
+  - H2: Automations
+  - H2: Installation and maintenance
+  - H2: Security and privacy
 
 ## releases/2026.6.11.md
 
@@ -16028,6 +16098,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/steer
 - Headings:
   - H2: Current session
+  - H2: One message as a new turn
   - H2: Steer vs queue
   - H2: Sub-agents
   - H2: ACP sessions
@@ -16369,6 +16440,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui
 - Headings:
+  - H2: Temporary disconnections
   - H2: Browser requirements
   - H2: Download files
   - H2: Take a photo in chat
@@ -16439,6 +16511,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui/offline-and-reconnect
 - Headings:
+  - H2: Queued session changes
   - H2: Busy initial connection
   - H2: Warm reload
   - H3: Upgrading existing browser data
