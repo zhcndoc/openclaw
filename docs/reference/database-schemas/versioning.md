@@ -34,6 +34,12 @@ never opens the selected Gateway database. Shared state schema 29 retires
 and removes socket material from `exec_approvals_config`. Approval policy remains
 shared; its meaning and execution authority are unchanged.
 
+The cutover reads socket credentials from the canonical approval JSON, even when
+the legacy SQL path or token-presence projections are stale. It preserves the
+socket path, token, and approval policy; rollback restores the original row,
+including its projections. Invalid socket values in the canonical JSON still
+require repair before migration.
+
 The TypeScript owner and Swift adapter use exclusive SQLite custody in DELETE
 journal mode. A running macOS app owns the bounded operation route; other clients
 use its authenticated control socket first. The app closes the physical database
@@ -48,6 +54,17 @@ new native operations while capture, migration, or restore holds custody.
 The TypeScript adapter refuses existing macOS ACL entries instead of removing
 them. A directory with custom deny or mixed ACLs requires explicit permission
 repair before that adapter can use it.
+
+The TypeScript worker handles each offline operation in one request and closes
+the database before replying. It reuses schema and integrity admission facts for
+the same device, inode, birthtime, and `user_version`. Every open still validates
+private paths and modes, checks DELETE journal policy, and takes immediate
+transaction custody with exclusive locking. A single receipt-and-version query
+inside that transaction guards cross-process migration phases before row work;
+even reads retain this transaction so another process cannot migrate between
+the guard and the operation. Replacement or version changes require admission
+again, and lifecycle drainage discards the worker and its cached facts. Initial
+store creation commits separately so cancellation cannot leave an empty store.
 
 Update and Doctor recovery capture the local file exactly, including its
 absence, alongside the shared database. Ordinary backup archives preserve
@@ -71,6 +88,16 @@ bytes, verifies them, and records `copied`. Only then does it retire the shared
 records and publish `complete`. Interrupted work resumes through the same owner;
 normal clients refuse a pending or stale receipt. Shared records stay authoritative
 until this verified retirement finishes in that custody.
+
+Credential copies use bounded insert batches within the same transaction, so
+large stores do not exceed SQLite's statement parameter limit. If an older
+cutover build reports `too many SQL variables`, the shared credentials remain
+authoritative. Install a build with this fix and rerun `openclaw doctor --fix`;
+do not delete credentials or pair clients again to work around the error.
+
+Doctor’s verified offline NOCOW rewrite transfers a matching credential receipt
+to the replacement shared database file. Existing tokens remain usable after
+the rewrite; an unrelated file replacement remains fenced.
 
 Canonical receipt bindings relative to the local store root survive matched archive activation by directory rename; independent native-source bindings remain absolute.
 
@@ -389,6 +416,40 @@ Untagged intermediate builds that used unmarked anchors must drain their workers
 on that original build before replacement. Active modern workers must also drain
 before downgrade or rollback to an older writer, which cannot interpret anchor
 lineage completion.
+
+Persistent sandbox streams use the first-use `sandbox_persistent_execs` companion
+table in shared state, owned by the sandbox registry. The table shape and schema
+version stay unchanged. Cron records desired execution; the companion records
+whole-container cleanup custody, including the original Docker daemon, exact
+dedicated container ID and generation, host process owner, and registry workspace
+binding. The parent sandbox generation remains the reservation relation. Each
+start uses a fresh dedicated container; the receipt does not authorize reusing
+its filesystem or starting execution. Recovery checks the original workspace
+path, kind, and registry generation before settling managed edits. Ordinary
+registry writes, job deletion, and quarantine do not delete these independent
+rows.
+
+Unresolved custody blocks a replacement launch and has no age-based expiry.
+Recovery can claim cleanup after proving the original owner is dead in the same
+host process namespace. Unknown identity retains custody unless the Docker owner
+removes the exact dedicated container and confirms its absence on the original
+daemon; that proof permits only terminal cleanup, never starting
+execution. Container removal and confirmed absence precede workspace settlement
+and custody deletion. No guest helper response authorizes cleanup, and there is
+no autonomous execution lease: after controller loss, the workload may continue
+until recovery. A changed or unavailable Docker target cannot prove that the
+original container disappeared. Reads and installations that never use this
+feature do not create its table.
+
+Persisted sandbox stream jobs use the distinct `sandbox-stream` schedule kind.
+Older readers quarantine this unsupported kind instead of launching its command
+on the Gateway. They ignore the custody companion without erasing its rows.
+Stop and settle these streams on the current build before downgrading; unresolved
+cleanup requires recovery against the original Docker daemon. Older sandbox
+pruning may remove a container, which a later compatible reader can reconcile
+against its exact original identity. Re-upgrade does not automatically
+restore quarantined jobs: recreation or explicit restoration uses current
+authority and approval. Preserve a verified backup before downgrade.
 
 Notification ownership uses bare nullable `TEXT` columns at the same schema
 version: `session_watch_cursors.watcher_store_path`,

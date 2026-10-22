@@ -160,8 +160,10 @@ pages. If a deployment invalidates a cursor, restart from the first page.
 `package` is required. Returns `{ packageName, version, releaseId, releaseCreatedAt, scan, items, nextCursor }`.
 Missing or ineligible public plugins return `404`. A plugin without a current usable
 inventory returns empty `items` and an explicit `missing`, `failed`, or `incompatible`
-scan status. A successfully inspected plugin with no references returns `complete`
-and empty `items`.
+scan status. Inventories come from the daily Package Inspector scan, not from
+publication, so a newly published release reports `missing` until that scan inspects
+it. A successfully inspected plugin with no references returns `complete` and empty
+`items`.
 
 Scan metadata includes `inputKind` (`artifact` for eligible inventories), the inventory schema/analysis versions, Inspector version,
 target OpenClaw version, artifact hash, completion time, coverage counters, entry and
@@ -822,7 +824,7 @@ Use each category's description to choose the main reason someone installs the
 plugin. New plugin releases may declare exactly one category in
 `openclaw.plugin.json`, for example `"categories": ["developer-tools"]`. When the
 declaration is absent, ClawHub generates one category from bounded manifest,
-package, and documentation evidence using `gpt-5.6-luna` by default. Operators can
+package, and documentation evidence using `gpt-6-luna` by default. Operators can
 override this with `OPENAI_PLUGIN_CATEGORY_MODEL`; the skill-summary model setting
 does not affect plugin classification.
 
