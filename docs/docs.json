@@ -3225,6 +3225,7 @@
                 "group": "Release notes",
                 "pages": [
                   "releases/index",
+                  "releases/2026.10.6",
                   "releases/2026.10.5",
                   "releases/2026.10.4",
                   "releases/2026.10.3",
@@ -3381,6 +3382,7 @@
                 "group": "Start here",
                 "pages": [
                   "help/index",
+                  "help/support",
                   "help/troubleshooting",
                   "help/debugging"
                 ]
@@ -5301,6 +5303,7 @@
                 "group": "发布说明",
                 "pages": [
                   "zh-CN/releases/index",
+                  "zh-CN/releases/2026.10.6",
                   "zh-CN/releases/2026.10.5",
                   "zh-CN/releases/2026.10.4",
                   "zh-CN/releases/2026.10.3",
@@ -5457,6 +5460,7 @@
                 "group": "帮助",
                 "pages": [
                   "zh-CN/help/index",
+                  "zh-CN/help/support",
                   "zh-CN/help/troubleshooting",
                   "zh-CN/help/debugging"
                 ]
@@ -7377,6 +7381,7 @@
                 "group": "Release notes",
                 "pages": [
                   "zh-TW/releases/index",
+                  "zh-TW/releases/2026.10.6",
                   "zh-TW/releases/2026.10.5",
                   "zh-TW/releases/2026.10.4",
                   "zh-TW/releases/2026.10.3",
@@ -7533,6 +7538,7 @@
                 "group": "Start here",
                 "pages": [
                   "zh-TW/help/index",
+                  "zh-TW/help/support",
                   "zh-TW/help/troubleshooting",
                   "zh-TW/help/debugging"
                 ]
@@ -9453,6 +9459,7 @@
                 "group": "Release notes",
                 "pages": [
                   "ja-JP/releases/index",
+                  "ja-JP/releases/2026.10.6",
                   "ja-JP/releases/2026.10.5",
                   "ja-JP/releases/2026.10.4",
                   "ja-JP/releases/2026.10.3",
@@ -9609,6 +9616,7 @@
                 "group": "Start here",
                 "pages": [
                   "ja-JP/help/index",
+                  "ja-JP/help/support",
                   "ja-JP/help/troubleshooting",
                   "ja-JP/help/debugging"
                 ]
@@ -11529,6 +11537,7 @@
                 "group": "Release notes",
                 "pages": [
                   "es/releases/index",
+                  "es/releases/2026.10.6",
                   "es/releases/2026.10.5",
                   "es/releases/2026.10.4",
                   "es/releases/2026.10.3",
@@ -11685,6 +11694,7 @@
                 "group": "Start here",
                 "pages": [
                   "es/help/index",
+                  "es/help/support",
                   "es/help/troubleshooting",
                   "es/help/debugging"
                 ]
@@ -13605,6 +13615,7 @@
                 "group": "Release notes",
                 "pages": [
                   "pt-BR/releases/index",
+                  "pt-BR/releases/2026.10.6",
                   "pt-BR/releases/2026.10.5",
                   "pt-BR/releases/2026.10.4",
                   "pt-BR/releases/2026.10.3",
@@ -13761,6 +13772,7 @@
                 "group": "Start here",
                 "pages": [
                   "pt-BR/help/index",
+                  "pt-BR/help/support",
                   "pt-BR/help/troubleshooting",
                   "pt-BR/help/debugging"
                 ]
@@ -15681,6 +15693,7 @@
                 "group": "Release notes",
                 "pages": [
                   "ko/releases/index",
+                  "ko/releases/2026.10.6",
                   "ko/releases/2026.10.5",
                   "ko/releases/2026.10.4",
                   "ko/releases/2026.10.3",
@@ -15837,6 +15850,7 @@
                 "group": "Start here",
                 "pages": [
                   "ko/help/index",
+                  "ko/help/support",
                   "ko/help/troubleshooting",
                   "ko/help/debugging"
                 ]
@@ -17757,6 +17771,7 @@
                 "group": "Release notes",
                 "pages": [
                   "de/releases/index",
+                  "de/releases/2026.10.6",
                   "de/releases/2026.10.5",
                   "de/releases/2026.10.4",
                   "de/releases/2026.10.3",
@@ -17913,6 +17928,7 @@
                 "group": "Start here",
                 "pages": [
                   "de/help/index",
+                  "de/help/support",
                   "de/help/troubleshooting",
                   "de/help/debugging"
                 ]
@@ -19833,6 +19849,7 @@
                 "group": "Release notes",
                 "pages": [
                   "fr/releases/index",
+                  "fr/releases/2026.10.6",
                   "fr/releases/2026.10.5",
                   "fr/releases/2026.10.4",
                   "fr/releases/2026.10.3",
@@ -19989,6 +20006,7 @@
                 "group": "Start here",
                 "pages": [
                   "fr/help/index",
+                  "fr/help/support",
                   "fr/help/troubleshooting",
                   "fr/help/debugging"
                 ]
@@ -21909,6 +21927,7 @@
                 "group": "Release notes",
                 "pages": [
                   "hi/releases/index",
+                  "hi/releases/2026.10.6",
                   "hi/releases/2026.10.5",
                   "hi/releases/2026.10.4",
                   "hi/releases/2026.10.3",
@@ -22065,6 +22084,7 @@
                 "group": "Start here",
                 "pages": [
                   "hi/help/index",
+                  "hi/help/support",
                   "hi/help/troubleshooting",
                   "hi/help/debugging"
                 ]
@@ -23985,6 +24005,7 @@
                 "group": "Release notes",
                 "pages": [
                   "ar/releases/index",
+                  "ar/releases/2026.10.6",
                   "ar/releases/2026.10.5",
                   "ar/releases/2026.10.4",
                   "ar/releases/2026.10.3",
@@ -24141,6 +24162,7 @@
                 "group": "Start here",
                 "pages": [
                   "ar/help/index",
+                  "ar/help/support",
                   "ar/help/troubleshooting",
                   "ar/help/debugging"
                 ]
@@ -26061,6 +26083,7 @@
                 "group": "Release notes",
                 "pages": [
                   "it/releases/index",
+                  "it/releases/2026.10.6",
                   "it/releases/2026.10.5",
                   "it/releases/2026.10.4",
                   "it/releases/2026.10.3",
@@ -26217,6 +26240,7 @@
                 "group": "Start here",
                 "pages": [
                   "it/help/index",
+                  "it/help/support",
                   "it/help/troubleshooting",
                   "it/help/debugging"
                 ]
@@ -28137,6 +28161,7 @@
                 "group": "Release notes",
                 "pages": [
                   "vi/releases/index",
+                  "vi/releases/2026.10.6",
                   "vi/releases/2026.10.5",
                   "vi/releases/2026.10.4",
                   "vi/releases/2026.10.3",
@@ -28293,6 +28318,7 @@
                 "group": "Start here",
                 "pages": [
                   "vi/help/index",
+                  "vi/help/support",
                   "vi/help/troubleshooting",
                   "vi/help/debugging"
                 ]
@@ -30213,6 +30239,7 @@
                 "group": "Release notes",
                 "pages": [
                   "nl/releases/index",
+                  "nl/releases/2026.10.6",
                   "nl/releases/2026.10.5",
                   "nl/releases/2026.10.4",
                   "nl/releases/2026.10.3",
@@ -30369,6 +30396,7 @@
                 "group": "Start here",
                 "pages": [
                   "nl/help/index",
+                  "nl/help/support",
                   "nl/help/troubleshooting",
                   "nl/help/debugging"
                 ]
@@ -32289,6 +32317,7 @@
                 "group": "Release notes",
                 "pages": [
                   "fa/releases/index",
+                  "fa/releases/2026.10.6",
                   "fa/releases/2026.10.5",
                   "fa/releases/2026.10.4",
                   "fa/releases/2026.10.3",
@@ -32445,6 +32474,7 @@
                 "group": "Start here",
                 "pages": [
                   "fa/help/index",
+                  "fa/help/support",
                   "fa/help/troubleshooting",
                   "fa/help/debugging"
                 ]
@@ -34365,6 +34395,7 @@
                 "group": "Sürüm notları",
                 "pages": [
                   "tr/releases/index",
+                  "tr/releases/2026.10.6",
                   "tr/releases/2026.10.5",
                   "tr/releases/2026.10.4",
                   "tr/releases/2026.10.3",
@@ -34521,6 +34552,7 @@
                 "group": "Buradan başlayın",
                 "pages": [
                   "tr/help/index",
+                  "tr/help/support",
                   "tr/help/troubleshooting",
                   "tr/help/debugging"
                 ]
@@ -36441,6 +36473,7 @@
                 "group": "Release notes",
                 "pages": [
                   "uk/releases/index",
+                  "uk/releases/2026.10.6",
                   "uk/releases/2026.10.5",
                   "uk/releases/2026.10.4",
                   "uk/releases/2026.10.3",
@@ -36597,6 +36630,7 @@
                 "group": "Start here",
                 "pages": [
                   "uk/help/index",
+                  "uk/help/support",
                   "uk/help/troubleshooting",
                   "uk/help/debugging"
                 ]
@@ -38517,6 +38551,7 @@
                 "group": "Release notes",
                 "pages": [
                   "id/releases/index",
+                  "id/releases/2026.10.6",
                   "id/releases/2026.10.5",
                   "id/releases/2026.10.4",
                   "id/releases/2026.10.3",
@@ -38673,6 +38708,7 @@
                 "group": "Start here",
                 "pages": [
                   "id/help/index",
+                  "id/help/support",
                   "id/help/troubleshooting",
                   "id/help/debugging"
                 ]
@@ -40593,6 +40629,7 @@
                 "group": "Release notes",
                 "pages": [
                   "pl/releases/index",
+                  "pl/releases/2026.10.6",
                   "pl/releases/2026.10.5",
                   "pl/releases/2026.10.4",
                   "pl/releases/2026.10.3",
@@ -40749,6 +40786,7 @@
                 "group": "Start here",
                 "pages": [
                   "pl/help/index",
+                  "pl/help/support",
                   "pl/help/troubleshooting",
                   "pl/help/debugging"
                 ]
@@ -42669,6 +42707,7 @@
                 "group": "Release notes",
                 "pages": [
                   "th/releases/index",
+                  "th/releases/2026.10.6",
                   "th/releases/2026.10.5",
                   "th/releases/2026.10.4",
                   "th/releases/2026.10.3",
@@ -42825,6 +42864,7 @@
                 "group": "Start here",
                 "pages": [
                   "th/help/index",
+                  "th/help/support",
                   "th/help/troubleshooting",
                   "th/help/debugging"
                 ]
@@ -44745,6 +44785,7 @@
                 "group": "Release notes",
                 "pages": [
                   "ru/releases/index",
+                  "ru/releases/2026.10.6",
                   "ru/releases/2026.10.5",
                   "ru/releases/2026.10.4",
                   "ru/releases/2026.10.3",
@@ -44901,6 +44942,7 @@
                 "group": "Start here",
                 "pages": [
                   "ru/help/index",
+                  "ru/help/support",
                   "ru/help/troubleshooting",
                   "ru/help/debugging"
                 ]
@@ -46821,6 +46863,7 @@
                 "group": "Versionsinformation",
                 "pages": [
                   "sv/releases/index",
+                  "sv/releases/2026.10.6",
                   "sv/releases/2026.10.5",
                   "sv/releases/2026.10.4",
                   "sv/releases/2026.10.3",
@@ -46977,6 +47020,7 @@
                 "group": "Börja här",
                 "pages": [
                   "sv/help/index",
+                  "sv/help/support",
                   "sv/help/troubleshooting",
                   "sv/help/debugging"
                 ]

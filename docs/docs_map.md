@@ -53,6 +53,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Setup replacements
   - H2: Agent copy portability
   - H2: Plugin SDK OAuth validation
+  - H2: Provider-boundary OAuth outcomes
+  - H3: Non-model and externally owned routes
+  - H3: Recovering an interrupted rotating refresh
   - H2: Personal model accounts
   - H2: Config-only auth routes
   - H2: Explicit auth order filtering
@@ -1123,6 +1126,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Inbound file shares
   - H2: Outbound attachments
   - H2: Release qualification for attachment support
+  - H2: Silent sends
   - H2: Capabilities
   - H2: Configuration reference (Nextcloud Talk)
   - H2: Related
@@ -2223,6 +2227,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /cli/devices
 - Headings:
   - H1: openclaw devices
+  - H2: Doctor pairing findings
   - H2: Common options
   - H2: Commands
   - H3: openclaw devices list
@@ -2287,6 +2292,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /cli/doctor/checks
 - Headings:
   - H2: Modes and prompting
+  - H2: Choosing which findings to address
   - H2: Config writes and backups
   - H2: Gateway and service repairs
   - H2: Session state and cron
@@ -2327,6 +2333,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Postures
   - H2: Examples
   - H2: Options
+  - H2: Understanding findings
+  - H3: Auth and browser findings
+  - H3: Auth migration recovery
 
 ## cli/doctor/sqlite-maintenance.md
 
@@ -2346,6 +2355,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Legacy state migration
   - H2: Pending plugin migrations
   - H2: Plugin migration recovery coverage
+  - H3: Older updater recovery copies
 
 ## cli/file-transfer.md
 
@@ -2784,6 +2794,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Inspect
   - H2: Doctor
+  - H3: Doctor priorities and repair steps
   - H2: Registry
 
 ## cli/plugins/install.md
@@ -4426,6 +4437,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Personal USER files on a shared Gateway
   - H2: Gateway profile and GitHub credit
+  - H3: Member and administrator controls
   - H2: Merging duplicate profiles
   - H2: Channel identity links
   - H3: Assign to me from a channel
@@ -4450,7 +4462,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: System event lines (local by default)
   - H3: Configure user timezone
   - H2: Time format detection
-  - H2: Tool payloads + connectors (raw provider time + normalized fields)
+  - H2: Tool payloads + channel plugins (raw provider time + normalized fields)
   - H2: Related docs
 
 ## diagnostics/flags.md
@@ -6633,6 +6645,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /help
 - Headings:
+  - H2: Support
   - H2: FAQ
   - H2: Diagnostics
   - H2: Testing
@@ -6648,6 +6661,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: GitHub read helper
   - H2: When adding scripts
   - H2: Related
+
+## help/support.md
+
+- Route: /help/support
+- Headings:
+  - H2: Start with self-service help
+  - H2: What to include
+  - H2: Bugs and security reports
 
 ## help/testing-live.md
 
@@ -8656,6 +8677,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H4: Hook packs
   - H4: Embedded OpenClaw settings
   - H4: Embedded OpenClaw LSP
+  - H4: LSP server environment
   - H3: Detected but not executed
   - H2: MCP for embedded OpenClaw
   - H3: Transports
@@ -8851,7 +8873,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/codex-harness-runtime/replies
 - Headings:
-  - H2: Visible replies and heartbeats
+  - H2: Visible replies and scheduled turns
   - H2: Attachments in a remote workspace
   - H2: Final answers after settled tool work
 
@@ -9244,6 +9266,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Quick start
   - H3: Permissions and scope
   - H3: Choose a hook
+  - H3: Before durable channel ingress
   - H2: Troubleshooting
   - H2: Upcoming deprecations
   - H2: Where each section moved
@@ -11308,6 +11331,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-entrypoints/define-tool-plugin
 - Headings:
   - H2: defineToolPlugin
+  - H2: Dictionary schemas and preparation validation
   - H2: Input-dependent output schemas
 
 ## plugins/sdk-entrypoints/native-providers.md
@@ -11493,6 +11517,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Channel, config, and infrastructure compatibility facades
   - H3: Command, Discord, and Telegram account facades
   - H3: Codex app-server extension factories
+  - H3: Heartbeat executor and wake helpers
   - H3: Hosted media, global transforms, and executor controllers
   - H3: Retroactively recorded shipped exports
   - H3: Reply silence parsing
@@ -11735,6 +11760,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-runtime/background-work
 - Headings:
   - H2: Requester-bound native children
+  - H2: Recover plugin-owned native children
+  - H2: Command-scoped native children
+  - H2: Requester-admitted scheduled commands
   - H2: Background work namespaces
   - H2: Native harness continuation retry settings
   - H2: Native harness completion delivery
@@ -11780,6 +11808,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/sdk-runtime/models
 - Headings:
+  - H2: Requester-admitted model catalog
   - H2: Protected model egress for standalone commands
   - H2: Prepared simple completions
   - H2: Low-level completions
@@ -11920,6 +11949,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Requirements
   - H2: Quickstart
   - H2: Write a tool
+  - H2: Provider-portable dictionaries and validation
   - H2: Optional and factory tools
   - H3: Owner-authorized continuations
   - H2: Return values
@@ -12241,6 +12271,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Readiness and live proof
   - H2: Model discovery
   - H2: Protocol and provider plugins
+  - H2: Hosted web search
   - H2: Image generation
   - H2: Quotas and usage
   - H2: Pool dashboard
@@ -13075,6 +13106,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Getting started
   - H2: Non-interactive example
+  - H2: Token Pass
   - H2: Model ID shorthand
   - H2: Advanced configuration
   - H2: Related
@@ -13366,6 +13398,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 31
   - H3: State schema 30
   - H3: State schema 29
   - H3: State schema 28
@@ -13698,6 +13731,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: PR wrapper tooling
   - H2: Keep the admitted workflow across commands
+  - H2: Reconcile a completed CI review
   - H2: Recover a retained dependency projection
   - H2: Captured baseline evidence hashes
   - H2: Rerun failed CI tests
@@ -14243,6 +14277,26 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Installation and maintenance
   - H2: Security and privacy
 
+## releases/2026.10.6.md
+
+- Route: /releases/2026.10.6
+- Headings:
+  - H1: v2026.10.6
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Quality-of-Life Improvements
+  - H2: Other Bug Fixes
+
 ## releases/2026.6.11.md
 
 - Route: /releases/2026.6.11
@@ -14641,6 +14695,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /releases
 - Headings:
   - H2: Releases
+  - H3: October 2026
+  - H3: September 2026
+  - H3: Earlier releases
   - H2: Changelog
 
 ## security/CONTRIBUTING-THREAT-MODEL.md
@@ -16486,6 +16543,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui
 - Headings:
+  - H2: Command palette file attachments
   - H2: Temporary disconnections
   - H2: Browser requirements
   - H2: Download files
@@ -16501,6 +16559,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui/chat
 - Headings:
+  - H2: Mobile message input
   - H2: Context breakdown
   - H2: Image viewing
   - H2: Collaborator drafts
@@ -16508,6 +16567,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Session rail and side chat
   - H2: Session links in messages
   - H2: Suggested tasks
+  - H2: Mobile composer
   - H2: Composer predictions
   - H2: Composer capability menu
   - H2: Emoji shortcodes
