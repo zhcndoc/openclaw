@@ -1886,6 +1886,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Duplicate PRs After Merge
   - H3: Update Migration
   - H2: ClawSweeper activity forwarding
+  - H3: Barnacle inactivity lifecycle
   - H2: Related
 
 ## ci/scope-and-routing.md
@@ -2959,6 +2960,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Commands
   - H3: openclaw sandbox list
   - H3: openclaw sandbox recreate
+  - H3: openclaw sandbox recover
   - H3: openclaw sandbox explain
   - H2: Why recreate is needed
   - H2: Common triggers
@@ -3047,6 +3049,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /cli/status
 - Headings:
+  - H2: Recovery-copy disk usage
   - H2: Status timing
   - H2: Skills diagnosis
   - H2: Session and model resolution
@@ -3186,6 +3189,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: update repair
   - H3: Skipped legacy audit recovery
   - H2: update cleanup
+  - H3: Explicitly retire an unmanifested original
 
 ## cli/update/status-and-history.md
 
@@ -3512,6 +3516,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Failure isolation
   - H3: ownsCompaction
   - H2: Configuration reference
+  - H3: Plugin and engine IDs
   - H2: Relationship to compaction and memory
   - H2: Tips
   - H2: Related
@@ -5296,6 +5301,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: ACP session metadata
   - H2: ACP agents' model precedence
   - H2: Missing plugins during migration
+  - H2: Context engine plugin-ID selectors
   - H2: Blocked local plugins
   - H2: Retired TaskFlow Webhooks plugin
   - H2: Schema publication during a 2026.9.2 update
@@ -9153,6 +9159,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Contribute and replace views
   - H3: Host capabilities
   - H3: Dock a conversation
+  - H2: Inline views from tools
+  - H3: Persistence and transfer
+  - H3: Inline plugin author responsibilities
   - H2: Build and reload
   - H3: Solid views
   - H3: Packaged Settings presentations
@@ -9435,6 +9444,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: modelSupport reference
   - H2: modelCatalog reference
+  - H3: Model family
   - H3: Task-specific inference metadata
   - H2: modelIdNormalization reference
   - H2: modelPricing reference
@@ -9969,6 +9979,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Distribution
   - H2: Surface
   - H2: Configure
+  - H2: Model-run timeout
   - H2: Conversation tool feedback
 
 ## plugins/reference/cua-computer.md
@@ -10698,6 +10709,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Surface
   - H2: Related docs
 
+## plugins/reference/requesty.md
+
+- Route: /plugins/reference/requesty
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
 ## plugins/reference/runway.md
 
 - Route: /plugins/reference/runway
@@ -11133,6 +11152,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-agent-harness/sessions-and-results
 - Headings:
   - H2: Native sessions and transcript mirror
+  - H3: Native child observations
   - H3: Fresh native thread seeds
   - H2: Shared native binding lifecycle
   - H2: Tool and media results
@@ -11720,6 +11740,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Storing runtime references
   - H2: Plugin lifecycle and cleanup
   - H3: Plugin value boundary
+  - H3: Handle native client errors
   - H3: Instance-bound background context
   - H3: Memory runtime replacement
   - H2: Browser meeting transport builders
@@ -11760,6 +11781,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-runtime/background-work
 - Headings:
   - H2: Requester-bound native children
+  - H2: Plugin-local subagent profiles
   - H2: Recover plugin-owned native children
   - H2: Command-scoped native children
   - H2: Requester-admitted scheduled commands
@@ -12372,6 +12394,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Authentication
   - H2: Text-to-speech
   - H2: Speech-to-text
+  - H3: Provider options
   - H2: Streaming STT
   - H2: Related
 
@@ -12999,6 +13022,17 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Choose a model
   - H2: Scope and troubleshooting
 
+## providers/requesty.md
+
+- Route: /providers/requesty
+- Headings:
+  - H2: Setup
+  - H2: Non-interactive example
+  - H2: Default model and catalog
+  - H2: Config example
+  - H2: Behavior notes
+  - H2: Related
+
 ## providers/runway.md
 
 - Route: /providers/runway
@@ -13315,6 +13349,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Agent schema 32
   - H3: Agent schema 31
   - H3: Trajectory payload storage
   - H3: Agent schema 29
@@ -13545,6 +13580,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/full-release-validation/evidence
 - Headings:
   - H2: Evidence to keep
+  - H2: Release-tooling waivers
   - H2: Workflow files
 
 ## reference/full-release-validation/extended-stable.md
@@ -13566,6 +13602,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/full-release-validation/release-checks
 - Headings:
   - H2: Release checks stages
+  - H2: Windows-node candidate lanes
   - H2: Docker release-path chunks
 
 ## reference/full-release-validation/stages.md
@@ -13730,6 +13767,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/scripts/pr-tooling
 - Headings:
   - H1: PR wrapper tooling
+  - H2: Qualify the workspace before review
   - H2: Keep the admitted workflow across commands
   - H2: Reconcile a completed CI review
   - H2: Recover a retained dependency projection
@@ -14869,6 +14907,20 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Acceptance tests
   - H2: Related
 
+## specs/native-local-personal-identity.md
+
+- Route: /specs/native-local-personal-identity
+- Headings:
+  - H1: Native local personal identity proposal
+  - H2: User problem and intended outcome
+  - H2: Existing ownership and related work
+  - H2: Proposed journey
+  - H2: Trust and security requirements
+  - H2: Decisions requested from Core
+  - H2: Proposed implementation PR sequence
+  - H2: Acceptance evidence required
+  - H2: Alternatives and guidance
+
 ## start/bootstrapping.md
 
 - Route: /start/bootstrapping
@@ -15358,6 +15410,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Native Linux and macOS
   - H2: Configure an opt-in profile
   - H2: Session and capability limits
+  - H2: Lightpanda 1.0.2 compatibility
   - H2: Verification and benchmarks
   - H3: Chromium headless shell baseline
   - H3: Native engine comparison
@@ -16365,6 +16418,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: How a turn runs
   - H2: Modes
+  - H2: Select which tools to defer
   - H2: Why this exists
   - H2: Structured controls
   - H3: Search
@@ -16570,6 +16624,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Mobile composer
   - H2: Composer predictions
   - H2: Composer capability menu
+  - H2: Video preparation compatibility
+  - H3: Output and input boundaries
+  - H3: Evidence baseline
+  - H3: Qualification outcomes
+  - H3: Proposed successful-conversion minimum
+  - H3: Evidence record and runbook
+  - H3: Outstanding compatibility decisions
   - H2: Emoji shortcodes
   - H2: JSON in chat
   - H2: Chat behavior

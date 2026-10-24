@@ -193,6 +193,11 @@ CLI backends have two independent limits:
 - `agents.defaults.timeoutSeconds` limits the whole agent turn. Normal Gateway turns inherit the 48-hour default. `0` makes the turn budget unlimited. A stored override such as `600` replaces that default.
 - The CLI no-output watchdog stops a subprocess that remains silent. Each backend plugin owns separate fresh/resume profiles, and the watchdog remains active even when the overall turn budget is unlimited.
 
+Cancellation also reaches `before_agent_reply` hooks that run before the CLI
+subprocess starts. When a cron deadline aborts the turn, the hook's next admission
+check rejects further work. This is cooperative cancellation; it does not interrupt
+an already-dispatched operation that has no cancellation checkpoint.
+
 Remove a short overall-timeout override to return to the 48-hour default, or set an explicit budget such as 12 hours:
 
 ```bash
@@ -503,6 +508,11 @@ Serialization: `serialize: true` keeps same-lane runs ordered (most CLIs seriali
 When the resolved MCP tool names change, OpenClaw starts a fresh native CLI session
 and logs `cli session reset: provider=<backend> reason=prompt-tools`. This refreshes
 the CLI's cached tool catalog; resending prompt text alone cannot refresh it.
+Tools that follow the calling client (`screen`, `show_widget`, `suggest_task`,
+`dismiss_task`) do not count: subagent-completion and channel turns drop them, and
+resetting on each change would discard the session's context. Their change still
+alters the system prompt, so a warm process restarts and the resumed CLI lists the
+current tools.
 The OpenClaw chat remains intact, and saved-history recovery follows the
 [history account boundaries](#history-account-boundaries) above. System-prompt-only
 changes continue to reuse the native session when the backend can resend the prompt.
