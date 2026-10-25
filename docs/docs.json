@@ -1872,6 +1872,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "plugins/building-plugins",
+                  "plugins/runtime-compatibility",
                   "plugins/feature-plugins",
                   "plugins/tool-plugins",
                   "plugins/sdk-channel-plugins",
@@ -2204,6 +2205,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "providers/abliteration",
                       "providers/alibaba",
                       "providers/anthropic",
                       "plugins/reference/anthropic-vertex",
@@ -3985,6 +3987,7 @@
                 "group": "构建插件",
                 "pages": [
                   "zh-CN/plugins/building-plugins",
+                  "zh-CN/plugins/runtime-compatibility",
                   "zh-CN/plugins/feature-plugins",
                   "zh-CN/plugins/tool-plugins",
                   "zh-CN/plugins/sdk-channel-plugins",
@@ -4283,6 +4286,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "zh-CN/providers/abliteration",
                       "zh-CN/providers/alibaba",
                       "zh-CN/providers/anthropic",
                       "zh-CN/plugins/reference/anthropic-vertex",
@@ -6064,6 +6068,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "zh-TW/plugins/building-plugins",
+                  "zh-TW/plugins/runtime-compatibility",
                   "zh-TW/plugins/feature-plugins",
                   "zh-TW/plugins/tool-plugins",
                   "zh-TW/plugins/sdk-channel-plugins",
@@ -6362,6 +6367,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "zh-TW/providers/abliteration",
                       "zh-TW/providers/alibaba",
                       "zh-TW/providers/anthropic",
                       "zh-TW/plugins/reference/anthropic-vertex",
@@ -8143,6 +8149,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "ja-JP/plugins/building-plugins",
+                  "ja-JP/plugins/runtime-compatibility",
                   "ja-JP/plugins/feature-plugins",
                   "ja-JP/plugins/tool-plugins",
                   "ja-JP/plugins/sdk-channel-plugins",
@@ -8441,6 +8448,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "ja-JP/providers/abliteration",
                       "ja-JP/providers/alibaba",
                       "ja-JP/providers/anthropic",
                       "ja-JP/plugins/reference/anthropic-vertex",
@@ -10222,6 +10230,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "es/plugins/building-plugins",
+                  "es/plugins/runtime-compatibility",
                   "es/plugins/feature-plugins",
                   "es/plugins/tool-plugins",
                   "es/plugins/sdk-channel-plugins",
@@ -10520,6 +10529,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "es/providers/abliteration",
                       "es/providers/alibaba",
                       "es/providers/anthropic",
                       "es/plugins/reference/anthropic-vertex",
@@ -12301,6 +12311,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "pt-BR/plugins/building-plugins",
+                  "pt-BR/plugins/runtime-compatibility",
                   "pt-BR/plugins/feature-plugins",
                   "pt-BR/plugins/tool-plugins",
                   "pt-BR/plugins/sdk-channel-plugins",
@@ -12599,6 +12610,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "pt-BR/providers/abliteration",
                       "pt-BR/providers/alibaba",
                       "pt-BR/providers/anthropic",
                       "pt-BR/plugins/reference/anthropic-vertex",
@@ -14380,6 +14392,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "ko/plugins/building-plugins",
+                  "ko/plugins/runtime-compatibility",
                   "ko/plugins/feature-plugins",
                   "ko/plugins/tool-plugins",
                   "ko/plugins/sdk-channel-plugins",
@@ -14678,6 +14691,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "ko/providers/abliteration",
                       "ko/providers/alibaba",
                       "ko/providers/anthropic",
                       "ko/plugins/reference/anthropic-vertex",
@@ -16459,6 +16473,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "de/plugins/building-plugins",
+                  "de/plugins/runtime-compatibility",
                   "de/plugins/feature-plugins",
                   "de/plugins/tool-plugins",
                   "de/plugins/sdk-channel-plugins",
@@ -16757,6 +16772,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "de/providers/abliteration",
                       "de/providers/alibaba",
                       "de/providers/anthropic",
                       "de/plugins/reference/anthropic-vertex",
@@ -18538,6 +18554,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "fr/plugins/building-plugins",
+                  "fr/plugins/runtime-compatibility",
                   "fr/plugins/feature-plugins",
                   "fr/plugins/tool-plugins",
                   "fr/plugins/sdk-channel-plugins",
@@ -18836,6 +18853,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "fr/providers/abliteration",
                       "fr/providers/alibaba",
                       "fr/providers/anthropic",
                       "fr/plugins/reference/anthropic-vertex",
@@ -20617,6 +20635,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "hi/plugins/building-plugins",
+                  "hi/plugins/runtime-compatibility",
                   "hi/plugins/feature-plugins",
                   "hi/plugins/tool-plugins",
                   "hi/plugins/sdk-channel-plugins",
@@ -20915,6 +20934,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "hi/providers/abliteration",
                       "hi/providers/alibaba",
                       "hi/providers/anthropic",
                       "hi/plugins/reference/anthropic-vertex",
@@ -22696,6 +22716,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "ar/plugins/building-plugins",
+                  "ar/plugins/runtime-compatibility",
                   "ar/plugins/feature-plugins",
                   "ar/plugins/tool-plugins",
                   "ar/plugins/sdk-channel-plugins",
@@ -22994,6 +23015,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "ar/providers/abliteration",
                       "ar/providers/alibaba",
                       "ar/providers/anthropic",
                       "ar/plugins/reference/anthropic-vertex",
@@ -24775,6 +24797,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "it/plugins/building-plugins",
+                  "it/plugins/runtime-compatibility",
                   "it/plugins/feature-plugins",
                   "it/plugins/tool-plugins",
                   "it/plugins/sdk-channel-plugins",
@@ -25073,6 +25096,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "it/providers/abliteration",
                       "it/providers/alibaba",
                       "it/providers/anthropic",
                       "it/plugins/reference/anthropic-vertex",
@@ -26854,6 +26878,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "vi/plugins/building-plugins",
+                  "vi/plugins/runtime-compatibility",
                   "vi/plugins/feature-plugins",
                   "vi/plugins/tool-plugins",
                   "vi/plugins/sdk-channel-plugins",
@@ -27152,6 +27177,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "vi/providers/abliteration",
                       "vi/providers/alibaba",
                       "vi/providers/anthropic",
                       "vi/plugins/reference/anthropic-vertex",
@@ -28933,6 +28959,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "nl/plugins/building-plugins",
+                  "nl/plugins/runtime-compatibility",
                   "nl/plugins/feature-plugins",
                   "nl/plugins/tool-plugins",
                   "nl/plugins/sdk-channel-plugins",
@@ -29231,6 +29258,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "nl/providers/abliteration",
                       "nl/providers/alibaba",
                       "nl/providers/anthropic",
                       "nl/plugins/reference/anthropic-vertex",
@@ -31012,6 +31040,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "fa/plugins/building-plugins",
+                  "fa/plugins/runtime-compatibility",
                   "fa/plugins/feature-plugins",
                   "fa/plugins/tool-plugins",
                   "fa/plugins/sdk-channel-plugins",
@@ -31310,6 +31339,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "fa/providers/abliteration",
                       "fa/providers/alibaba",
                       "fa/providers/anthropic",
                       "fa/plugins/reference/anthropic-vertex",
@@ -33091,6 +33121,7 @@
                 "group": "Plugin oluşturma",
                 "pages": [
                   "tr/plugins/building-plugins",
+                  "tr/plugins/runtime-compatibility",
                   "tr/plugins/feature-plugins",
                   "tr/plugins/tool-plugins",
                   "tr/plugins/sdk-channel-plugins",
@@ -33389,6 +33420,7 @@
                   {
                     "group": "Sohbet ve kodlama modelleri",
                     "pages": [
+                      "tr/providers/abliteration",
                       "tr/providers/alibaba",
                       "tr/providers/anthropic",
                       "tr/plugins/reference/anthropic-vertex",
@@ -35170,6 +35202,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "uk/plugins/building-plugins",
+                  "uk/plugins/runtime-compatibility",
                   "uk/plugins/feature-plugins",
                   "uk/plugins/tool-plugins",
                   "uk/plugins/sdk-channel-plugins",
@@ -35468,6 +35501,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "uk/providers/abliteration",
                       "uk/providers/alibaba",
                       "uk/providers/anthropic",
                       "uk/plugins/reference/anthropic-vertex",
@@ -37249,6 +37283,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "id/plugins/building-plugins",
+                  "id/plugins/runtime-compatibility",
                   "id/plugins/feature-plugins",
                   "id/plugins/tool-plugins",
                   "id/plugins/sdk-channel-plugins",
@@ -37547,6 +37582,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "id/providers/abliteration",
                       "id/providers/alibaba",
                       "id/providers/anthropic",
                       "id/plugins/reference/anthropic-vertex",
@@ -39328,6 +39364,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "pl/plugins/building-plugins",
+                  "pl/plugins/runtime-compatibility",
                   "pl/plugins/feature-plugins",
                   "pl/plugins/tool-plugins",
                   "pl/plugins/sdk-channel-plugins",
@@ -39626,6 +39663,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "pl/providers/abliteration",
                       "pl/providers/alibaba",
                       "pl/providers/anthropic",
                       "pl/plugins/reference/anthropic-vertex",
@@ -41407,6 +41445,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "th/plugins/building-plugins",
+                  "th/plugins/runtime-compatibility",
                   "th/plugins/feature-plugins",
                   "th/plugins/tool-plugins",
                   "th/plugins/sdk-channel-plugins",
@@ -41705,6 +41744,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "th/providers/abliteration",
                       "th/providers/alibaba",
                       "th/providers/anthropic",
                       "th/plugins/reference/anthropic-vertex",
@@ -43486,6 +43526,7 @@
                 "group": "Building plugins",
                 "pages": [
                   "ru/plugins/building-plugins",
+                  "ru/plugins/runtime-compatibility",
                   "ru/plugins/feature-plugins",
                   "ru/plugins/tool-plugins",
                   "ru/plugins/sdk-channel-plugins",
@@ -43784,6 +43825,7 @@
                   {
                     "group": "Chat and coding models",
                     "pages": [
+                      "ru/providers/abliteration",
                       "ru/providers/alibaba",
                       "ru/providers/anthropic",
                       "ru/plugins/reference/anthropic-vertex",
@@ -45565,6 +45607,7 @@
                 "group": "Bygga pluginer",
                 "pages": [
                   "sv/plugins/building-plugins",
+                  "sv/plugins/runtime-compatibility",
                   "sv/plugins/feature-plugins",
                   "sv/plugins/tool-plugins",
                   "sv/plugins/sdk-channel-plugins",
@@ -45863,6 +45906,7 @@
                   {
                     "group": "Chatt- och kodmodeller",
                     "pages": [
+                      "sv/providers/abliteration",
                       "sv/providers/alibaba",
                       "sv/providers/anthropic",
                       "sv/plugins/reference/anthropic-vertex",

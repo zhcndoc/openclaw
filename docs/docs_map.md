@@ -1623,6 +1623,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /channels/x
 - Headings:
   - H2: Setup
+  - H2: Requester identity and credit
   - H2: Public work sessions
   - H2: Work sessions and replies
   - H2: Reply outcomes and failures
@@ -4195,6 +4196,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Durable outbound delivery
   - H2: Related
 
+## concepts/runtime-profiles.md
+
+- Route: /concepts/runtime-profiles
+- Headings:
+  - H2: Profiles
+  - H2: Features that execute code
+  - H2: Plugins fetched after the build
+  - H2: String-codegen hardening
+
 ## concepts/session-attachment.md
 
 - Route: /concepts/session-attachment
@@ -4443,6 +4453,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Personal USER files on a shared Gateway
   - H2: Gateway profile and GitHub credit
   - H3: Member and administrator controls
+  - H2: Optional OpenClaw pull request attribution
   - H2: Merging duplicate profiles
   - H2: Channel identity links
   - H3: Assign to me from a channel
@@ -5228,6 +5239,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: WebSocket disconnect logs
   - H2: Command-lane diagnostics
   - H2: Stability recorder
+  - H2: Runtime capabilities
   - H2: CPU profile
   - H2: Full heap snapshot
   - H2: Sampling heap profile
@@ -5273,11 +5285,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/doctor/config-migrations
 - Headings:
+  - H2: Retired A2UI widgets
   - H2: Group allowlist fallback
   - H2: Collaborative steering default
   - H2: Cloud setup secret migration
   - H2: Runtime config migration
   - H3: Heartbeat to ordinary automations
+  - H3: Memory flush model selection
   - H3: Provider configuration
   - H2: Direct Ollama Cloud routing
   - H2: Claude CLI model routing
@@ -5749,6 +5763,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Worktree preparation
   - H3: Control UI documents
   - H3: Session diff stages
+  - H3: Chat startup stages
   - H3: Catalog list stages
   - H3: Current sessions and work
   - H3: Runtime identity
@@ -6162,6 +6177,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Check dependency advisories
   - H3: Interpret coverage
   - H2: Published package behavior
+  - H3: Archive compression
   - H2: Validate npm dependency graphs
   - H2: Inspect a plugin tarball
   - H2: Related
@@ -7440,6 +7456,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Build the default JIT executable
   - H2: Choose a compilation mode
+  - H3: WebAssembly in AOT builds
+  - H2: Matched JIT support build
+  - H3: Build each target on its matching host
   - H2: Select embedded plugins
   - H2: Read the manifest
   - H3: macOS signing
@@ -8187,7 +8206,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Panel behavior
   - H2: Agent path
   - H2: Node commands
-  - H2: A2UI belongs on session dashboards
   - H2: Migrating documents from a custom root
   - H2: Related
 
@@ -8907,6 +8925,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/codex-harness
 - Headings:
   - H2: Shared output projection
+  - H3: Intentional yield and native interruption markers
+  - H3: Stop and cancellation
   - H2: Saved-account usage
   - H2: Native subagent status
   - H2: Requirements
@@ -9543,6 +9563,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Ollama embeddings
   - H2: Recall and capture limits
   - H2: Commands
+  - H3: Compact a local table
+  - H3: Query memories
   - H2: Storage
   - H2: Runtime dependencies and platform support
   - H2: Troubleshooting
@@ -9684,6 +9706,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## plugins/reference/a2a.md
 
 - Route: /plugins/reference/a2a
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
+## plugins/reference/abliteration.md
+
+- Route: /plugins/reference/abliteration
 - Headings:
   - H2: Distribution
   - H2: Surface
@@ -11064,6 +11094,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Surface
   - H2: Related docs
 
+## plugins/runtime-compatibility.md
+
+- Route: /plugins/runtime-compatibility
+- Headings:
+  - H2: What the warnings mean
+  - H2: Warnings and host qualification
+
 ## plugins/sdk-agent-harness.md
 
 - Route: /plugins/sdk-agent-harness
@@ -11327,6 +11364,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Session persistence
   - H2: Stateful CLI commands
   - H2: OpenAI-compatible Decisions runtime
+  - H2: Runtime request headers
 
 ## plugins/sdk-entrypoints/define-channel-plugin-entry.md
 
@@ -11398,6 +11436,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/sdk-migration
 - Headings:
+  - H2: Memory flush model selection
+  - H2: Prompt hook history is read-only
   - H2: MCP result compatibility window
   - H2: What changed
   - H3: Session-keyed harness registration
@@ -11734,6 +11774,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/sdk-runtime
 - Headings:
+  - H2: Module loading and host identity
   - H2: What each page covers
   - H2: Runtime namespaces
   - H3: Read-only session forks
@@ -11756,6 +11797,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Setup secret egress
   - H3: Bounded stale reads
   - H3: Worker provisioning status
+  - H2: Runtime schema validation
 
 ## plugins/sdk-runtime/agent.md
 
@@ -11802,6 +11844,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Config loading and writes
   - H2: Reusable runtime utilities
+  - H3: Runtime execution profile
+  - H3: Process and network utilities
   - H3: Bounded waits
   - H3: Stage timing diagnostics
   - H2: Darwin process inspection
@@ -12149,6 +12193,18 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Migrate
   - H2: Related
 
+## providers/abliteration.md
+
+- Route: /providers/abliteration
+- Headings:
+  - H2: Setup
+  - H2: Models
+  - H2: Thinking levels
+  - H2: Prompt caching
+  - H2: Images and tools
+  - H2: Troubleshooting
+  - H2: Related
+
 ## providers/alibaba.md
 
 - Route: /providers/alibaba
@@ -12213,6 +12269,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Getting started
   - H2: Default model
   - H2: Bundled fallback catalog
+  - H2: Decision models
   - H2: Prompt caching
   - H2: Manual config
   - H2: Related
@@ -13310,6 +13367,18 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Skills (third-party APIs)
   - H2: Related
 
+## reference/control-ui-warm-transcript-design.md
+
+- Route: /reference/control-ui-warm-transcript-design
+- Headings:
+  - H1: Earlier warm transcript display
+  - H2: Existing behavior and proposed change
+  - H2: Identity and revalidation
+  - H2: Privacy, bounds, and failure behavior
+  - H2: Implementation and proof
+  - H3: Measurement contract
+  - H3: October 24 measurements
+
 ## reference/credits.md
 
 - Route: /reference/credits
@@ -13349,6 +13418,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Agent schema 33
   - H3: Agent schema 32
   - H3: Agent schema 31
   - H3: Trajectory payload storage
@@ -13620,6 +13690,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Custom provider ids
   - H3: API key resolution
   - H2: Remote endpoint config
+  - H2: Query instructions
   - H2: Provider-specific config
   - H2: Indexing behavior
   - H3: File-watcher pressure
@@ -15438,7 +15509,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## tools/browser/security.md
 
 - Route: /tools/browser/security
-- Headings: none
+- Headings:
+  - H2: Local preview access
 
 ## tools/browser/setup.md
 
@@ -15753,6 +15825,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /tools/exec
 - Headings:
+  - H2: Host memory protection
   - H2: Parameters
   - H2: Config
   - H3: Modes
@@ -15928,6 +16001,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Approvals
   - H2: Troubleshooting
   - H3: A tool returns an error
+  - H3: JSON Schema validation
   - H3: The server appears in Settings but exposes no tools
   - H3: A stdio server does not start
   - H3: An HTTP server needs authorization
@@ -16663,6 +16737,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /web/control-ui/development
 - Headings:
   - H2: Build and develop the UI
+  - H3: First paint
   - H3: Measure cold HTTP delivery
   - H2: Chat input ownership
   - H2: Chat render scheduling
@@ -16813,7 +16888,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Session writer access
   - H2: What widgets are allowed to do
   - H2: MCP apps on the board
-  - H2: A2UI widgets
+  - H2: Retired widget formats
   - H2: Retired Workspaces
   - H2: Good to know
 
@@ -16898,6 +16973,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Stability contract
   - H3: Native catalog links
   - H2: Social previews
+  - H3: Animated cards and platform support
   - H3: Behind a login proxy
   - H2: Public session transcripts
   - H3: Revocation and older links
