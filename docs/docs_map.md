@@ -1123,6 +1123,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Moving existing webhook endpoints to the Gateway
   - H2: Access control (DMs)
   - H2: Rooms (groups)
+  - H2: Quoted replies
   - H2: Inbound file shares
   - H2: Outbound attachments
   - H2: Release qualification for attachment support
@@ -2182,6 +2183,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Schedule types
   - H3: Monitoring policies
   - H2: Sessions
+  - H3: Binding older jobs to their conversation
   - H2: Delivery
   - H3: Delivery ownership
   - H3: Owner targets and direct-message policy
@@ -3838,6 +3840,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Session stickiness (cache-friendly)
   - H3: OpenAI Codex subscription plus API-key backup
   - H2: Cooldowns
+  - H3: Rate-limit fallback stickiness
   - H2: Auth failure skip cache
   - H2: Billing disables
   - H2: Model fallback
@@ -4595,6 +4598,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Using it as a fallback
   - H2: Configuration
   - H2: How it works
+  - H3: Keeping Claude Code orchestration tools on managed turns
   - H2: Timeouts and long-running work
   - H3: Claude CLI specifics
   - H3: Native Bash and the exec allowlist
@@ -5729,6 +5733,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: PostgreSQL operator guide
   - H2: Support matrix
   - H2: Server-major qualification
+  - H2: Native Windows qualification
   - H2: When to use PostgreSQL
   - H2: Requirements
   - H3: Provision a database and runtime role
@@ -5750,7 +5755,10 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Search on PostgreSQL
   - H2: Performance evidence
   - H2: Monitoring and troubleshooting
+  - H3: Recover missing local client credentials
   - H3: Read the Doctor and status store report
+  - H3: Outcome unknown after a connection loss
+  - H3: Slow first search after a bulk import
   - H2: Roll back to SQLite
 
 ## gateway/prometheus.md
@@ -7450,12 +7458,18 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Health check failures
   - H2: Next steps
 
+## install/standalone-aot-actions.md
+
+- Route: /install/standalone-aot-actions
+- Headings: none
+
 ## install/standalone.md
 
 - Route: /install/standalone
 - Headings:
   - H2: Build the default JIT executable
   - H2: Choose a compilation mode
+  - H3: Original TypeScript and compiler options
   - H3: WebAssembly in AOT builds
   - H2: Matched JIT support build
   - H3: Build each target on its matching host
@@ -7463,6 +7477,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Read the manifest
   - H3: macOS signing
   - H2: Update the complete artifact
+  - H3: Managed Gateway service
+  - H3: Artifact replacement
   - H2: Runtime contents and limits
   - H2: Qualify an artifact before packaging
   - H3: Sandboxed Doctor on macOS
@@ -9358,6 +9374,152 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Behavior
   - H2: Package E2E
 
+## plugins/knowledge.md
+
+- Route: /plugins/knowledge
+- Headings:
+  - H2: How it relates to other memory plugins
+  - H2: Enable Knowledge
+  - H2: Configuration
+  - H2: Stores and agent membership
+  - H2: Where Knowledge keeps data
+  - H2: Writes and authority
+  - H2: Tools
+  - H2: Bundled skills
+  - H2: Control UI
+  - H2: Local Git history
+  - H2: Scheduled maintenance
+  - H2: Capabilities and limits
+  - H2: Moving from a linked or path install
+  - H2: Related
+
+## plugins/knowledge/control-ui.md
+
+- Route: /plugins/knowledge/control-ui
+- Headings:
+  - H2: Knowledge page
+  - H2: Page addresses
+  - H2: Links in chat
+  - H2: Session activity panel
+
+## plugins/knowledge/corrections.md
+
+- Route: /plugins/knowledge/corrections
+- Headings:
+  - H2: Correct a claim or relationship
+  - H2: Withdraw a record
+  - H2: Impact and visibility
+  - H2: Recovery and safeguards
+  - H2: Merge duplicate pages
+
+## plugins/knowledge/evidence.md
+
+- Route: /plugins/knowledge/evidence
+- Headings:
+  - H2: Upload and download
+  - H2: Source identity
+  - H2: Git and large files
+  - H2: Reconcile or migrate page evidence
+
+## plugins/knowledge/ingestion.md
+
+- Route: /plugins/knowledge/ingestion
+- Headings:
+  - H2: Bundled skills
+  - H3: Workflow rules
+  - H3: Scheduled ingestion
+  - H3: Enumerable sources
+  - H2: Batch publication
+  - H3: Source-change checks
+  - H2: Structural verification
+
+## plugins/knowledge/local-history.md
+
+- Route: /plugins/knowledge/local-history
+- Headings:
+  - H2: Policy
+  - H2: Publication and checkpoints
+  - H2: What gets committed
+  - H2: Failures and recovery
+
+## plugins/knowledge/maintenance.md
+
+- Route: /plugins/knowledge/maintenance
+- Headings:
+  - H2: Relink
+  - H3: Run it on demand
+  - H2: Schedule
+  - H2: Status
+  - H2: Agent review
+
+## plugins/knowledge/memory-provider.md
+
+- Route: /plugins/knowledge/memory-provider
+- Headings:
+  - H2: Ownership and activation
+  - H2: Shared memory reads
+  - H2: Memory prompt
+  - H2: Knowledge index
+  - H2: Automatic recall
+  - H2: Pre-compaction memory flush
+  - H2: What Knowledge does not replace
+
+## plugins/knowledge/records-and-ontology.md
+
+- Route: /plugins/knowledge/records-and-ontology
+- Headings:
+  - H2: Records
+  - H3: Pages
+  - H3: Claims
+  - H3: Relationships
+  - H3: Optional assertion fields
+  - H3: Lifecycle and merge metadata
+  - H3: Automatic recall block
+  - H3: Displayed author
+  - H2: Ontology
+  - H3: Composition rules
+  - H3: Default vocabulary
+  - H3: Fingerprints
+  - H2: Filenames and links
+
+## plugins/knowledge/retrieval.md
+
+- Route: /plugins/knowledge/retrieval
+- Headings:
+  - H2: Query contract
+  - H2: Results and citations
+  - H2: Index behavior
+  - H3: What is rebuildable
+  - H2: Dates and Chronicle
+
+## plugins/knowledge/stores-and-access.md
+
+- Route: /plugins/knowledge/stores-and-access
+- Headings:
+  - H2: Stores
+  - H3: Manage stores from the Control UI
+  - H2: Storage layout
+  - H2: Partitions
+  - H2: Caller authority
+  - H2: Runtime
+  - H2: Limits
+
+## plugins/knowledge/tools.md
+
+- Route: /plugins/knowledge/tools
+- Headings:
+  - H2: Ontology
+  - H2: Reading records
+  - H2: Listing and connections
+  - H2: Search and lookup
+  - H2: Remembering claims
+  - H2: Pages and body edits
+  - H2: Claims and relationships
+  - H2: Attachments
+  - H2: Receipts, history, and recovery
+  - H2: Ingestion and dates
+  - H2: Live state
+
 ## plugins/llama-cpp.md
 
 - Route: /plugins/llama-cpp
@@ -10315,6 +10477,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## plugins/reference/kimi.md
 
 - Route: /plugins/reference/kimi
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
+## plugins/reference/knowledge.md
+
+- Route: /plugins/reference/knowledge
 - Headings:
   - H2: Distribution
   - H2: Surface
@@ -11672,6 +11842,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-overview/infrastructure
 - Headings:
   - H2: Infrastructure
+  - H3: Bounded directory inventories
   - H3: File-watch capacity errors
   - H3: Filesystem observation and worker notifications
   - H3: Streaming file verification
@@ -12624,6 +12795,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Native operations
   - H2: Results, usage and limitations
 
+## providers/liquid-inference.md
+
+- Route: /providers/liquid-inference
+- Headings:
+  - H2: Quick start
+  - H2: Models
+  - H2: Request headers and spending
+  - H2: Errors and fallback models
+
 ## providers/litellm.md
 
 - Route: /providers/litellm
@@ -12943,7 +13123,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Quick choice
   - H3: Retired subscription model references
   - H2: Models your API key lists
-  - H2: Daybreak Blue and Red
+  - H2: Daybreak alias retirement
+  - H3: Chat Access control
+  - H3: Responses access program and speed
   - H2: GPT-6 Astra
   - H3: Async tools, steering, and reasoning changes
   - H2: GPT-6.1 Sol
@@ -13418,6 +13600,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Agent schema 36
+  - H3: Agent schemas 34 and 35
   - H3: Agent schema 33
   - H3: Agent schema 32
   - H3: Agent schema 31
@@ -13503,6 +13687,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schemas 32 and 33
   - H3: State schema 31
   - H3: State schema 30
   - H3: State schema 29
@@ -13533,6 +13718,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Session writer validation
   - H2: Preparing for another database backend
   - H3: Shared-state PostgreSQL schema generation
+  - H3: PostgreSQL index ordering migrations
   - H3: PostgreSQL engine
   - H3: Keep operations at the owning store
   - H3: Memory chunk path index retirement
@@ -15242,6 +15428,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: OpenClaw tools MCP bridge
   - H3: Runtime operation timeout configuration
   - H3: Health check agent configuration
+  - H3: Agent process environment
   - H2: Permission configuration
   - H3: permissionMode
   - H3: nonInteractivePermissions
@@ -16672,6 +16859,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /web/control-ui
 - Headings:
   - H2: Command palette file attachments
+  - H2: Automatic session names
   - H2: Temporary disconnections
   - H2: Browser requirements
   - H2: Download files
@@ -16682,6 +16870,18 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: What each page covers
   - H2: Where each section moved
   - H2: Related
+
+## web/control-ui/asset-delivery.md
+
+- Route: /web/control-ui/asset-delivery
+- Headings:
+  - H2: Current delivery owners
+  - H2: Compression measurement
+  - H2: Route delivery hints
+  - H2: Service-worker navigation
+  - H2: HTTP multiplexing
+  - H3: Direct HTTP/2 design boundary
+  - H2: Fonts
 
 ## web/control-ui/chat.md
 
