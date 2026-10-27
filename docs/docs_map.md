@@ -15,6 +15,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Runtime Layout
   - H2: Boundaries
+  - H2: Streaming update ownership
   - H2: Manifests
   - H2: Runtime Selection
   - H2: Model Runtime Generations
@@ -52,6 +53,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Manual API keys
   - H2: Setup replacements
   - H2: Agent copy portability
+  - H2: Long-running custom transport requests
   - H2: Plugin SDK OAuth validation
   - H2: Provider-boundary OAuth outcomes
   - H3: Non-model and externally owned routes
@@ -2311,6 +2313,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /cli/doctor/health-contract
 - Headings:
   - H2: Structured health checks
+  - H3: Model-reference retirement inventory
 
 ## cli/doctor/lint.md
 
@@ -2340,6 +2343,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Understanding findings
   - H3: Auth and browser findings
   - H3: Auth migration recovery
+  - H2: Daybreak alias migration
 
 ## cli/doctor/sqlite-maintenance.md
 
@@ -6400,6 +6404,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Optional anonymous feature statistics
   - H3: What is not sent or stored
   - H2: Turn anonymous feature statistics on or off
+  - H2: Update outcomes
   - H2: Automated environments
   - H2: Disable every automatic update request
 
@@ -9148,6 +9153,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: git installs
   - H2: Local plugins
   - H2: Startup and reload
+  - H3: Nested dependency missing under preserve-symlinks
   - H2: Bundled plugins
   - H3: Native imports from a standalone source build
   - H2: Legacy cleanup
@@ -11616,6 +11622,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Session and command preparation
   - H3: Native session lineage
   - H3: Exec approval reads
+  - H3: Durable-send destination history
   - H3: Session reset freshness
   - H3: Why
   - H2: Where each topic lives
@@ -11897,6 +11904,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Publish to ClawHub
   - H2: File structure
   - H2: Catalog order reference
+  - H2: Per-request credentials in custom transports
   - H2: Provider stream decorators
   - H2: Next steps
   - H2: Where each section moved
@@ -11994,6 +12002,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-runtime/background-work
 - Headings:
   - H2: Requester-bound native children
+  - H2: Blind native children
   - H2: Plugin-local subagent profiles
   - H2: Recover plugin-owned native children
   - H2: Command-scoped native children
@@ -12220,6 +12229,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Connect OpenClaw
   - H2: Custom endpoint and provider request settings
   - H2: Decision contract
+  - H2: Experimental image decisions
   - H2: Agent evaluation tool
   - H2: Existing external installation
 
@@ -13469,7 +13479,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: One owner
   - H2: Considered options
   - H2: Status and order
-  - H2: Risks to check before step 2
+  - H2: Limits and risks
 
 ## refactor/cron-worker-owned.md
 
@@ -13600,6 +13610,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Agent schema 37
   - H3: Agent schema 36
   - H3: Agent schemas 34 and 35
   - H3: Agent schema 33
@@ -13687,6 +13698,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 34
   - H3: State schemas 32 and 33
   - H3: State schema 31
   - H3: State schema 30
@@ -13877,6 +13889,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: API key resolution
   - H2: Remote endpoint config
   - H2: Query instructions
+  - H2: Query and document prefixes
   - H2: Provider-specific config
   - H2: Indexing behavior
   - H3: File-watcher pressure
@@ -14589,6 +14602,24 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Browser and Computer Use
   - H2: Plugins and Integrations
   - H2: Security and Privacy
+  - H2: Quality-of-Life Improvements
+  - H2: Other Bug Fixes
+
+## releases/2026.10.7.md
+
+- Route: /releases/2026.10.7
+- Headings:
+  - H1: v2026.10.7
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
   - H2: Quality-of-Life Improvements
   - H2: Other Bug Fixes
 
@@ -16428,6 +16459,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: How the agent learns
   - H2: Undo
+  - H2: Drafts
   - H2: Unused-skill cleanup
   - H2: /learn
   - H2: Agent tool
