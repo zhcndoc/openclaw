@@ -46,6 +46,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /auth-credential-semantics
 - Headings:
+  - H2: Account status in Models
   - H2: Stable check reason codes
   - H2: Token credentials
   - H3: Eligibility rules
@@ -985,6 +986,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Threading and sessions
   - H2: Access control (DMs)
   - H2: Channels (groups)
+  - H2: Posts from other bots
   - H2: Targets for outbound delivery
   - H2: DM channel retry
   - H2: Preview streaming
@@ -5111,6 +5113,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/config-tools/provider-examples
 - Headings:
   - H2: Provider examples
+  - H2: Route interactive and background requests to different URLs
 
 ## gateway/config-tools/sessions-and-subagents.md
 
@@ -5295,7 +5298,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Retired A2UI widgets
   - H2: Group allowlist fallback
-  - H2: Collaborative steering default
+  - H2: Collaborative steering defaults
   - H2: Cloud setup secret migration
   - H2: Runtime config migration
   - H3: Heartbeat to ordinary automations
@@ -5671,6 +5674,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Connection roles
   - H2: Scope levels
   - H2: Named operator roles
+  - H3: Access program grants
+  - H3: Model policy
   - H2: Identity scope grants
   - H2: Method scope is only the first gate
   - H2: Device pairing approvals
@@ -6001,6 +6006,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Managed GitHub identity
   - H2: Minimal enable example
   - H2: Related
+  - H3: Inaccessible generated-skills mountpoint
 
 ## gateway/sandboxing/crabbox-backend.md
 
@@ -6251,6 +6257,16 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Audit
   - H3: Collect for a report
 
+## gateway/security/presets.md
+
+- Route: /gateway/security/presets
+- Headings:
+  - H2: What the presets select
+  - H2: Precedence and explicit overrides
+  - H2: Steering authority is execution-bound
+  - H2: Existing installations and changes
+  - H2: Comparison with other agent products
+
 ## gateway/security/prompt-injection.md
 
 - Route: /gateway/security/prompt-injection
@@ -6379,6 +6395,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: How we build OpenClaw with OpenClaw
   - H2: Before you begin
+  - H2: Optimal setup
   - H2: 1. Install under one service account
   - H2: 2. Configure the public URL and authenticated ingress
   - H3: Set the public URL once
@@ -6868,6 +6885,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Live (network-touching) tests
   - H2: Docs sanity
   - H2: Offline regression (CI-safe)
+  - H2: Opt-in Gateway restart stress
 
 ## help/testing/writing-tests.md
 
@@ -7482,6 +7500,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Read the manifest
   - H3: macOS signing
   - H2: Update the complete artifact
+  - H3: Desktop app artifacts
   - H3: Managed Gateway service
   - H3: Artifact replacement
   - H2: Runtime contents and limits
@@ -7966,6 +7985,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Codex sessions and transcripts
   - H2: Claude sessions and transcripts
   - H2: OpenCode and Pi sessions
+  - H2: Activity probe failures
   - H2: OpenClaw sessions and transcripts
 
 ## nodes/session-hosting.md
@@ -8826,6 +8846,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/codex-harness-reference/dynamic-tools
 - Headings:
   - H2: Dynamic tools
+  - H2: Protected conversation continuity
 
 ## plugins/codex-harness-reference/model-discovery.md
 
@@ -9395,6 +9416,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Control UI
   - H2: Local Git history
   - H2: Scheduled maintenance
+  - H2: Scribes
   - H2: Capabilities and limits
   - H2: Moving from a linked or path install
   - H2: Related
@@ -9497,6 +9519,18 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Index behavior
   - H3: What is rebuildable
   - H2: Dates and Chronicle
+
+## plugins/knowledge/scribes.md
+
+- Route: /plugins/knowledge/scribes
+- Headings:
+  - H2: The scribes
+  - H2: Start a scribe
+  - H3: Example prompt
+  - H2: States
+  - H2: Controls
+  - H2: Limits
+  - H2: Related
 
 ## plugins/knowledge/stores-and-access.md
 
@@ -10518,6 +10552,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Distribution
   - H2: Surface
+
+## plugins/reference/liquid-ai.md
+
+- Route: /plugins/reference/liquid-ai
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
 
 ## plugins/reference/litellm.md
 
@@ -11959,6 +12001,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Read-only session forks
   - H2: Storing runtime references
   - H2: Plugin lifecycle and cleanup
+  - H3: Reload-safe plugins
   - H3: Plugin value boundary
   - H3: Handle native client errors
   - H3: Instance-bound background context
@@ -12015,6 +12058,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/sdk-runtime/channel
 - Headings:
+  - H2: Queued source replies
   - H2: Channel namespaces
   - H2: Awaited conversation binding mutations
 
@@ -12805,6 +12849,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Native operations
   - H2: Results, usage and limitations
 
+## providers/liquid-ai.md
+
+- Route: /providers/liquid-ai
+- Headings:
+  - H1: Liquid AI
+  - H2: Set up the provider
+  - H2: Evaluate a decision
+  - H2: Limits and routing
+
 ## providers/liquid-inference.md
 
 - Route: /providers/liquid-inference
@@ -12855,9 +12908,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Quick start
   - H2: Non-interactive onboarding
   - H2: Configuration
-  - H3: Streaming usage compatibility
-  - H3: Gemma 4 tool-call recovery
-  - H3: Thinking compatibility
+  - H3: Chat transport and thinking
   - H3: Explicit configuration
   - H3: Model instances and context
   - H3: Disabling preload
@@ -13610,6 +13661,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Agent schema 38
   - H3: Agent schema 37
   - H3: Agent schema 36
   - H3: Agent schemas 34 and 35
@@ -13699,6 +13751,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: State schema history
   - H3: State schema 34
+  - H3: State schema 35
   - H3: State schemas 32 and 33
   - H3: State schema 31
   - H3: State schema 30
@@ -13730,6 +13783,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Session writer validation
   - H2: Preparing for another database backend
   - H3: Shared-state PostgreSQL schema generation
+  - H3: Local workspace manifest storage
   - H3: PostgreSQL index ordering migrations
   - H3: PostgreSQL engine
   - H3: Keep operations at the owning store
@@ -13959,6 +14013,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /reference/pull-request-review-flow
 - Headings:
+  - H2: Local review before a PR
+  - H3: Set up a local reviewer
+  - H3: Report the actual review
   - H2: Barnacle
   - H2: ClawSweeper
   - H2: Improve a PR during review
@@ -14154,6 +14211,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Two persistence layers
   - H2: On-disk locations
+
+## reference/session-start-measurement.md
+
+- Route: /reference/session-start-measurement
+- Headings: none
 
 ## reference/team-immutable-update-design.md
 
@@ -14621,6 +14683,24 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Browser and Computer Use
   - H2: Plugins and Integrations
   - H2: Quality-of-Life Improvements
+  - H2: Other Bug Fixes
+
+## releases/2026.10.8.md
+
+- Route: /releases/2026.10.8
+- Headings:
+  - H1: v2026.10.8
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
   - H2: Other Bug Fixes
 
 ## releases/2026.6.11.md
@@ -15699,6 +15779,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Native Linux and macOS
   - H2: Configure an opt-in profile
   - H2: Session and capability limits
+  - H2: Page classification and judge
   - H2: Lightpanda 1.0.2 compatibility
   - H2: Verification and benchmarks
   - H3: Chromium headless shell baseline
@@ -16919,6 +17000,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui/chat
 - Headings:
+  - H2: Desktop message input
   - H2: Mobile message input
   - H2: Context breakdown
   - H2: Image viewing

@@ -422,9 +422,13 @@ if (!/\.doc pre \.tok-comment,\.doc pre \.hljs-comment/.test(siteCss)
   || !/\.doc pre \.tok-key,\.doc pre \.hljs-attr/.test(siteCss)) {
   throw new Error("assets: syntax token colors are not theme-variable based");
 }
-if (!fs.existsSync(path.join(site, "assets/mermaid.esm.min.mjs"))
-  || !fs.existsSync(path.join(site, "assets/chunks/mermaid.esm.min"))) {
-  throw new Error("assets: Mermaid runtime was not copied");
+if (!fs.existsSync(path.join(site, "assets/pele-1.6.0.js"))
+  || !fs.existsSync(path.join(site, "assets/pele-LICENSE.txt"))) {
+  throw new Error("assets: Pele runtime and license were not copied");
+}
+if (!siteJs.includes("pele.enableZoom(canvas") || !siteCss.includes("container-type:size")
+  || siteCss.includes("min-width:min(1040px,100%)")) {
+  throw new Error("assets: expanded diagrams must fit the viewport and retain zoom controls");
 }
 if (!/\.sidebar\{[^}]*padding:0 6px var\(--oc-space-8\) 0;[^}]*scrollbar-gutter:stable/.test(siteCss)) {
   throw new Error("assets: sidebar scroll-end padding is missing");
