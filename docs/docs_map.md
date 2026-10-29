@@ -1858,6 +1858,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Testbox spending limits
   - H3: CI runner routing
   - H3: Windows dependency-cache experiment
+  - H3: Android release runner
   - H3: Blacksmith runner capacity
   - H3: Runner backend modes
   - H3: RunsOn qualification
@@ -2102,18 +2103,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: openclaw clawbot
   - H2: Migration
   - H2: Related
-
-## cli/claws.md
-
-- Route: /cli/claws
-- Headings:
-  - H1: openclaw claws
-  - H2: Create with an agent
-  - H2: Author locally
-  - H2: Inspect and Add
-  - H2: Remove the agent
-  - H2: Command reference
-  - H2: See also
 
 ## cli/completion.md
 
@@ -3090,6 +3079,18 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: system presence
   - H2: Notes
   - H2: Related
+
+## cli/templates.md
+
+- Route: /cli/templates
+- Headings:
+  - H1: openclaw templates
+  - H2: Create with an agent
+  - H2: Author locally
+  - H2: Inspect and Add
+  - H2: Remove the agent
+  - H2: Command reference
+  - H2: See also
 
 ## cli/transcripts.md
 
@@ -5298,7 +5299,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Retired A2UI widgets
   - H2: Group allowlist fallback
-  - H2: Collaborative steering defaults
+  - H2: Collaborative steering default
+  - H2: Removed security presets
   - H2: Cloud setup secret migration
   - H2: Runtime config migration
   - H3: Heartbeat to ordinary automations
@@ -5315,7 +5317,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Cron ownership before roster migration
   - H2: Legacy cron delivery settings
   - H2: Exec approval policy
-  - H2: Claw provenance schema
+  - H2: Template provenance schema
   - H2: Channel account routing during an update
   - H2: Channel ownership during an update
   - H2: Sender tool policies
@@ -5965,13 +5967,12 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/restart-recovery
 - Headings:
   - H2: What survives a restart
-  - H2: Graceful restarts drain first
+  - H2: Graceful shutdown
   - H3: Maintenance custody observations
   - H3: Systemd stop deadlines
   - H3: Launchd stop deadlines
   - H2: Host sleep and process freezes
   - H2: Recovery after a failed update
-  - H2: How interrupted work is detected
   - H2: Automatic resume
   - H3: Subagents
   - H3: Agent-requested restarts
@@ -6257,16 +6258,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Audit
   - H3: Collect for a report
 
-## gateway/security/presets.md
-
-- Route: /gateway/security/presets
-- Headings:
-  - H2: What the presets select
-  - H2: Precedence and explicit overrides
-  - H2: Steering authority is execution-bound
-  - H2: Existing installations and changes
-  - H2: Comparison with other agent products
-
 ## gateway/security/prompt-injection.md
 
 - Route: /gateway/security/prompt-injection
@@ -6417,6 +6408,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Inspect what is sent
   - H2: Daily update check
+  - H2: Identifier-free installation counting
   - H2: Approximate location
   - H2: Optional anonymous feature statistics
   - H3: What is not sent or stored
@@ -7598,6 +7590,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Source-checkout servers (reference script)
   - H2: Alternative: re-run the installer
   - H2: Homebrew formula installs
+  - H2: System-package and image-based installs
   - H2: Alternative: manual npm, pnpm, or bun
   - H3: Package lifecycle and operator state
   - H3: Stuck on 2026.9.3
@@ -7841,6 +7834,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Terminal file uploads
   - H2: Agent file transfers
   - H3: Gateway workspace files
+  - H3: Split-storage setup
+  - H4: Prepare and pair the node
+  - H4: Configure the Gateway
+  - H4: Select execution separately
+  - H4: Verify the setup
   - H3: Workspace Skill installation
   - H3: Binary transfers for services
   - H3: Transferred files
@@ -8506,6 +8504,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Gateway auto-start before Windows login
   - H2: Expose WSL services over LAN
   - H2: Troubleshooting
+  - H3: PowerShell refuses to run openclaw.ps1
   - H3: The Gateway Scheduled Task is disabled
   - H3: The Scheduled Task stops before the Gateway is ready
   - H3: The tray icon does not appear
@@ -9436,6 +9435,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Correct a claim or relationship
   - H2: Withdraw a record
+  - H2: Supersede claims by an existing claim
   - H2: Impact and visibility
   - H2: Recovery and safeguards
   - H2: Merge duplicate pages
@@ -9538,6 +9538,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Stores
   - H3: Manage stores from the Control UI
+  - H2: Conversation access
   - H2: Storage layout
   - H2: Partitions
   - H2: Caller authority
@@ -9554,6 +9555,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Search and lookup
   - H2: Remembering claims
   - H2: Pages and body edits
+  - H2: Page budgets
+  - H3: Extract a section
   - H2: Claims and relationships
   - H2: Attachments
   - H2: Receipts, history, and recovery
@@ -9760,6 +9763,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Installation
   - H2: Quick start
+  - H2: Host memory status and search
   - H2: Embedding config
   - H3: Dimensions
   - H2: Ollama embeddings
@@ -12569,6 +12573,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /providers/clawrouter
 - Headings:
   - H2: Getting started
+  - H2: Utility model
   - H2: Decision models
   - H2: Text embeddings for memory
   - H2: Managed non-interactive deployment
@@ -13750,6 +13755,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 36
   - H3: State schema 34
   - H3: State schema 35
   - H3: State schemas 32 and 33
@@ -15933,6 +15939,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Implementation layout
   - H2: Validation checklist
   - H2: E2E test plan
+  - H2: Engine performance qualification
 
 ## tools/code-mode/output.md
 
@@ -16979,7 +16986,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Take a photo in chat
   - H2: Watch a desktop in Picture-in-Picture
   - H2: Quick open (local)
-  - H2: Agents and Claws
+  - H2: Agents and Templates
   - H2: What each page covers
   - H2: Where each section moved
   - H2: Related
@@ -17144,7 +17151,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Settings
   - H3: Side panel keyboard shortcuts
   - H3: This device (macOS and iOS apps)
-  - H2: Claws (Labs)
+  - H2: Templates (Labs)
   - H2: Speech bubbles
   - H2: Custom plugin UI
   - H2: Import assistant memory

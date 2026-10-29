@@ -3,6 +3,10 @@
   "description": "Self-hosted gateway that connects Discord, Google Chat, iMessage, Matrix, Microsoft Teams, Signal, Slack, Telegram, WhatsApp, Zalo, and more to AI coding agents. Run one Gateway process on your own machine and message your AI assistant from anywhere.",
   "redirects": [
     {
+      "source": "/cli/claws",
+      "destination": "/cli/templates"
+    },
+    {
       "source": "/cli/commitments",
       "destination": "/automation#retired-inferred-commitments"
     },
@@ -2593,7 +2597,6 @@
                     "pages": [
                       "gateway/security/index",
                       "gateway/security/trust-model",
-                      "gateway/security/presets",
                       "gateway/security/running-the-audit",
                       "gateway/security/audit-checks",
                       "gateway/security/hardened-baseline",
@@ -2860,7 +2863,7 @@
                     "pages": [
                       "cli/agent",
                       "cli/agents",
-                      "cli/claws",
+                      "cli/templates",
                       "cli/infer",
                       "cli/memory",
                       "cli/models",
@@ -4702,7 +4705,6 @@
                     "pages": [
                       "zh-CN/gateway/security/index",
                       "zh-CN/gateway/security/trust-model",
-                      "zh-CN/gateway/security/presets",
                       "zh-CN/gateway/security/running-the-audit",
                       "zh-CN/gateway/security/audit-checks",
                       "zh-CN/gateway/security/hardened-baseline",
@@ -4969,7 +4971,7 @@
                     "pages": [
                       "zh-CN/cli/agent",
                       "zh-CN/cli/agents",
-                      "zh-CN/cli/claws",
+                      "zh-CN/cli/templates",
                       "zh-CN/cli/infer",
                       "zh-CN/cli/memory",
                       "zh-CN/cli/models",
@@ -6811,7 +6813,6 @@
                     "pages": [
                       "zh-TW/gateway/security/index",
                       "zh-TW/gateway/security/trust-model",
-                      "zh-TW/gateway/security/presets",
                       "zh-TW/gateway/security/running-the-audit",
                       "zh-TW/gateway/security/audit-checks",
                       "zh-TW/gateway/security/hardened-baseline",
@@ -7078,7 +7079,7 @@
                     "pages": [
                       "zh-TW/cli/agent",
                       "zh-TW/cli/agents",
-                      "zh-TW/cli/claws",
+                      "zh-TW/cli/templates",
                       "zh-TW/cli/infer",
                       "zh-TW/cli/memory",
                       "zh-TW/cli/models",
@@ -8920,7 +8921,6 @@
                     "pages": [
                       "ja-JP/gateway/security/index",
                       "ja-JP/gateway/security/trust-model",
-                      "ja-JP/gateway/security/presets",
                       "ja-JP/gateway/security/running-the-audit",
                       "ja-JP/gateway/security/audit-checks",
                       "ja-JP/gateway/security/hardened-baseline",
@@ -9187,7 +9187,7 @@
                     "pages": [
                       "ja-JP/cli/agent",
                       "ja-JP/cli/agents",
-                      "ja-JP/cli/claws",
+                      "ja-JP/cli/templates",
                       "ja-JP/cli/infer",
                       "ja-JP/cli/memory",
                       "ja-JP/cli/models",
@@ -11029,7 +11029,6 @@
                     "pages": [
                       "es/gateway/security/index",
                       "es/gateway/security/trust-model",
-                      "es/gateway/security/presets",
                       "es/gateway/security/running-the-audit",
                       "es/gateway/security/audit-checks",
                       "es/gateway/security/hardened-baseline",
@@ -11296,7 +11295,7 @@
                     "pages": [
                       "es/cli/agent",
                       "es/cli/agents",
-                      "es/cli/claws",
+                      "es/cli/templates",
                       "es/cli/infer",
                       "es/cli/memory",
                       "es/cli/models",
@@ -13138,7 +13137,6 @@
                     "pages": [
                       "pt-BR/gateway/security/index",
                       "pt-BR/gateway/security/trust-model",
-                      "pt-BR/gateway/security/presets",
                       "pt-BR/gateway/security/running-the-audit",
                       "pt-BR/gateway/security/audit-checks",
                       "pt-BR/gateway/security/hardened-baseline",
@@ -13405,7 +13403,7 @@
                     "pages": [
                       "pt-BR/cli/agent",
                       "pt-BR/cli/agents",
-                      "pt-BR/cli/claws",
+                      "pt-BR/cli/templates",
                       "pt-BR/cli/infer",
                       "pt-BR/cli/memory",
                       "pt-BR/cli/models",
@@ -15247,7 +15245,6 @@
                     "pages": [
                       "ko/gateway/security/index",
                       "ko/gateway/security/trust-model",
-                      "ko/gateway/security/presets",
                       "ko/gateway/security/running-the-audit",
                       "ko/gateway/security/audit-checks",
                       "ko/gateway/security/hardened-baseline",
@@ -15514,7 +15511,7 @@
                     "pages": [
                       "ko/cli/agent",
                       "ko/cli/agents",
-                      "ko/cli/claws",
+                      "ko/cli/templates",
                       "ko/cli/infer",
                       "ko/cli/memory",
                       "ko/cli/models",
@@ -17356,7 +17353,6 @@
                     "pages": [
                       "de/gateway/security/index",
                       "de/gateway/security/trust-model",
-                      "de/gateway/security/presets",
                       "de/gateway/security/running-the-audit",
                       "de/gateway/security/audit-checks",
                       "de/gateway/security/hardened-baseline",
@@ -17623,7 +17619,7 @@
                     "pages": [
                       "de/cli/agent",
                       "de/cli/agents",
-                      "de/cli/claws",
+                      "de/cli/templates",
                       "de/cli/infer",
                       "de/cli/memory",
                       "de/cli/models",
@@ -19465,7 +19461,6 @@
                     "pages": [
                       "fr/gateway/security/index",
                       "fr/gateway/security/trust-model",
-                      "fr/gateway/security/presets",
                       "fr/gateway/security/running-the-audit",
                       "fr/gateway/security/audit-checks",
                       "fr/gateway/security/hardened-baseline",
@@ -19732,7 +19727,7 @@
                     "pages": [
                       "fr/cli/agent",
                       "fr/cli/agents",
-                      "fr/cli/claws",
+                      "fr/cli/templates",
                       "fr/cli/infer",
                       "fr/cli/memory",
                       "fr/cli/models",
@@ -21574,7 +21569,6 @@
                     "pages": [
                       "hi/gateway/security/index",
                       "hi/gateway/security/trust-model",
-                      "hi/gateway/security/presets",
                       "hi/gateway/security/running-the-audit",
                       "hi/gateway/security/audit-checks",
                       "hi/gateway/security/hardened-baseline",
@@ -21841,7 +21835,7 @@
                     "pages": [
                       "hi/cli/agent",
                       "hi/cli/agents",
-                      "hi/cli/claws",
+                      "hi/cli/templates",
                       "hi/cli/infer",
                       "hi/cli/memory",
                       "hi/cli/models",
@@ -23683,7 +23677,6 @@
                     "pages": [
                       "ar/gateway/security/index",
                       "ar/gateway/security/trust-model",
-                      "ar/gateway/security/presets",
                       "ar/gateway/security/running-the-audit",
                       "ar/gateway/security/audit-checks",
                       "ar/gateway/security/hardened-baseline",
@@ -23950,7 +23943,7 @@
                     "pages": [
                       "ar/cli/agent",
                       "ar/cli/agents",
-                      "ar/cli/claws",
+                      "ar/cli/templates",
                       "ar/cli/infer",
                       "ar/cli/memory",
                       "ar/cli/models",
@@ -25792,7 +25785,6 @@
                     "pages": [
                       "it/gateway/security/index",
                       "it/gateway/security/trust-model",
-                      "it/gateway/security/presets",
                       "it/gateway/security/running-the-audit",
                       "it/gateway/security/audit-checks",
                       "it/gateway/security/hardened-baseline",
@@ -26059,7 +26051,7 @@
                     "pages": [
                       "it/cli/agent",
                       "it/cli/agents",
-                      "it/cli/claws",
+                      "it/cli/templates",
                       "it/cli/infer",
                       "it/cli/memory",
                       "it/cli/models",
@@ -27901,7 +27893,6 @@
                     "pages": [
                       "vi/gateway/security/index",
                       "vi/gateway/security/trust-model",
-                      "vi/gateway/security/presets",
                       "vi/gateway/security/running-the-audit",
                       "vi/gateway/security/audit-checks",
                       "vi/gateway/security/hardened-baseline",
@@ -28168,7 +28159,7 @@
                     "pages": [
                       "vi/cli/agent",
                       "vi/cli/agents",
-                      "vi/cli/claws",
+                      "vi/cli/templates",
                       "vi/cli/infer",
                       "vi/cli/memory",
                       "vi/cli/models",
@@ -30010,7 +30001,6 @@
                     "pages": [
                       "nl/gateway/security/index",
                       "nl/gateway/security/trust-model",
-                      "nl/gateway/security/presets",
                       "nl/gateway/security/running-the-audit",
                       "nl/gateway/security/audit-checks",
                       "nl/gateway/security/hardened-baseline",
@@ -30277,7 +30267,7 @@
                     "pages": [
                       "nl/cli/agent",
                       "nl/cli/agents",
-                      "nl/cli/claws",
+                      "nl/cli/templates",
                       "nl/cli/infer",
                       "nl/cli/memory",
                       "nl/cli/models",
@@ -32119,7 +32109,6 @@
                     "pages": [
                       "fa/gateway/security/index",
                       "fa/gateway/security/trust-model",
-                      "fa/gateway/security/presets",
                       "fa/gateway/security/running-the-audit",
                       "fa/gateway/security/audit-checks",
                       "fa/gateway/security/hardened-baseline",
@@ -32386,7 +32375,7 @@
                     "pages": [
                       "fa/cli/agent",
                       "fa/cli/agents",
-                      "fa/cli/claws",
+                      "fa/cli/templates",
                       "fa/cli/infer",
                       "fa/cli/memory",
                       "fa/cli/models",
@@ -34228,7 +34217,6 @@
                     "pages": [
                       "tr/gateway/security/index",
                       "tr/gateway/security/trust-model",
-                      "tr/gateway/security/presets",
                       "tr/gateway/security/running-the-audit",
                       "tr/gateway/security/audit-checks",
                       "tr/gateway/security/hardened-baseline",
@@ -34495,7 +34483,7 @@
                     "pages": [
                       "tr/cli/agent",
                       "tr/cli/agents",
-                      "tr/cli/claws",
+                      "tr/cli/templates",
                       "tr/cli/infer",
                       "tr/cli/memory",
                       "tr/cli/models",
@@ -36337,7 +36325,6 @@
                     "pages": [
                       "uk/gateway/security/index",
                       "uk/gateway/security/trust-model",
-                      "uk/gateway/security/presets",
                       "uk/gateway/security/running-the-audit",
                       "uk/gateway/security/audit-checks",
                       "uk/gateway/security/hardened-baseline",
@@ -36604,7 +36591,7 @@
                     "pages": [
                       "uk/cli/agent",
                       "uk/cli/agents",
-                      "uk/cli/claws",
+                      "uk/cli/templates",
                       "uk/cli/infer",
                       "uk/cli/memory",
                       "uk/cli/models",
@@ -38446,7 +38433,6 @@
                     "pages": [
                       "id/gateway/security/index",
                       "id/gateway/security/trust-model",
-                      "id/gateway/security/presets",
                       "id/gateway/security/running-the-audit",
                       "id/gateway/security/audit-checks",
                       "id/gateway/security/hardened-baseline",
@@ -38713,7 +38699,7 @@
                     "pages": [
                       "id/cli/agent",
                       "id/cli/agents",
-                      "id/cli/claws",
+                      "id/cli/templates",
                       "id/cli/infer",
                       "id/cli/memory",
                       "id/cli/models",
@@ -40555,7 +40541,6 @@
                     "pages": [
                       "pl/gateway/security/index",
                       "pl/gateway/security/trust-model",
-                      "pl/gateway/security/presets",
                       "pl/gateway/security/running-the-audit",
                       "pl/gateway/security/audit-checks",
                       "pl/gateway/security/hardened-baseline",
@@ -40822,7 +40807,7 @@
                     "pages": [
                       "pl/cli/agent",
                       "pl/cli/agents",
-                      "pl/cli/claws",
+                      "pl/cli/templates",
                       "pl/cli/infer",
                       "pl/cli/memory",
                       "pl/cli/models",
@@ -42664,7 +42649,6 @@
                     "pages": [
                       "th/gateway/security/index",
                       "th/gateway/security/trust-model",
-                      "th/gateway/security/presets",
                       "th/gateway/security/running-the-audit",
                       "th/gateway/security/audit-checks",
                       "th/gateway/security/hardened-baseline",
@@ -42931,7 +42915,7 @@
                     "pages": [
                       "th/cli/agent",
                       "th/cli/agents",
-                      "th/cli/claws",
+                      "th/cli/templates",
                       "th/cli/infer",
                       "th/cli/memory",
                       "th/cli/models",
@@ -44773,7 +44757,6 @@
                     "pages": [
                       "ru/gateway/security/index",
                       "ru/gateway/security/trust-model",
-                      "ru/gateway/security/presets",
                       "ru/gateway/security/running-the-audit",
                       "ru/gateway/security/audit-checks",
                       "ru/gateway/security/hardened-baseline",
@@ -45040,7 +45023,7 @@
                     "pages": [
                       "ru/cli/agent",
                       "ru/cli/agents",
-                      "ru/cli/claws",
+                      "ru/cli/templates",
                       "ru/cli/infer",
                       "ru/cli/memory",
                       "ru/cli/models",
@@ -46882,7 +46865,6 @@
                     "pages": [
                       "sv/gateway/security/index",
                       "sv/gateway/security/trust-model",
-                      "sv/gateway/security/presets",
                       "sv/gateway/security/running-the-audit",
                       "sv/gateway/security/audit-checks",
                       "sv/gateway/security/hardened-baseline",
@@ -47149,7 +47131,7 @@
                     "pages": [
                       "sv/cli/agent",
                       "sv/cli/agents",
-                      "sv/cli/claws",
+                      "sv/cli/templates",
                       "sv/cli/infer",
                       "sv/cli/memory",
                       "sv/cli/models",
