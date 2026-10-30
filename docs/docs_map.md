@@ -4468,6 +4468,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Channel identity links
   - H3: Assign to me from a channel
   - H2: GitHub connections
+  - H3: Inspect publication readiness
   - H3: Publish with your account
   - H3: Disconnect and reconnect
   - H2: Profile appearance preferences
@@ -6767,6 +6768,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Live: model smoke (profile keys)
   - H3: Layer 1: Direct model completion (no gateway)
   - H3: Layer 2: Gateway + dev agent smoke (what "@openclaw" actually does)
+  - H3: Thinking probe (what a route accepts per level)
 
 ## help/testing-live/quick-smokes.md
 
@@ -8966,6 +8968,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/codex-harness
 - Headings:
   - H2: Shared output projection
+  - H3: Parent-local inference connection recovery
   - H3: Intentional yield and native interruption markers
   - H3: Stop and cancellation
   - H2: Saved-account usage
@@ -9070,6 +9073,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/codex-harness/troubleshooting
 - Headings:
   - H2: Troubleshooting
+  - H3: Image-heavy conversations exceed the request-size limit
 
 ## plugins/codex-native-plugins.md
 
@@ -9525,6 +9529,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/knowledge/scribes
 - Headings:
   - H2: The scribes
+  - H3: The Granola plugin
   - H2: Start a scribe
   - H3: Example prompt
   - H2: States
@@ -11938,6 +11943,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/sdk-provider-plugins
 - Headings:
+  - H2: Checklist before you open a provider PR
   - H2: Import an existing credential during sign-in
   - H2: Read a selected personal account
   - H2: Loopback OAuth callbacks
@@ -12381,6 +12387,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Starting work from a card
   - H2: Agent tools
   - H2: Dispatch
+  - H3: Dependency promotion
   - H3: Worker selection
   - H3: Entry points
   - H2: CLI and slash command
@@ -14093,6 +14100,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/scripts/pr-preparation
 - Headings:
   - H1: PR preparation
+  - H2: Publish a candidate for required proof
   - H2: Signing a baseline on another host
 
 ## reference/scripts/pr-tooling.md
@@ -14102,6 +14110,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: PR wrapper tooling
   - H2: Qualify the workspace before review
   - H2: Keep the admitted workflow across commands
+  - H3: Continue a correction with repaired workflow code
   - H2: Reconcile a completed CI review
   - H2: Recover a retained dependency projection
   - H2: Captured baseline evidence hashes
@@ -14112,6 +14121,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/scripts/prior-ci
 - Headings:
   - H1: Prior-CI admin admission
+  - H2: Artifact-build failure with successful primary CI
   - H2: Requalification on a busy main
 
 ## reference/scripts/remote-gates.md
@@ -14708,6 +14718,20 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Plugins and Integrations
   - H2: Security and Privacy
   - H2: Other Bug Fixes
+
+## releases/2026.10.9.md
+
+- Route: /releases/2026.10.9
+- Headings:
+  - H1: v2026.10.9
+  - H2: Installation and Onboarding
+  - H2: Updates and Maintenance
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Quality-of-Life Improvements
 
 ## releases/2026.6.11.md
 
@@ -16549,6 +16573,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Undo
   - H2: Drafts
   - H2: Unused-skill cleanup
+  - H2: Skill diet
   - H2: /learn
   - H2: Agent tool
   - H2: Configuration
