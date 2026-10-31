@@ -1469,6 +1469,7 @@
                     "pages": [
                       "install/ansible",
                       "install/docker-vm-runtime",
+                      "install/jetson",
                       "install/kubernetes",
                       "install/macos-vm",
                       "install/raspberry-pi"
@@ -2245,6 +2246,7 @@
                       "providers/github-copilot",
                       "providers/gmi",
                       "providers/google",
+                      "providers/google-vertex",
                       "providers/groq",
                       "providers/huggingface",
                       "providers/levanto",
@@ -2273,6 +2275,7 @@
                       },
                       "providers/opencode",
                       "providers/opencode-go",
+                      "providers/particle",
                       "providers/perplexity-provider",
                       "providers/poolside",
                       "providers/qianfan",
@@ -3612,6 +3615,7 @@
                     "pages": [
                       "zh-CN/install/ansible",
                       "zh-CN/install/docker-vm-runtime",
+                      "zh-CN/install/jetson",
                       "zh-CN/install/kubernetes",
                       "zh-CN/install/macos-vm",
                       "zh-CN/install/raspberry-pi"
@@ -4354,6 +4358,7 @@
                       "zh-CN/providers/github-copilot",
                       "zh-CN/providers/gmi",
                       "zh-CN/providers/google",
+                      "zh-CN/providers/google-vertex",
                       "zh-CN/providers/groq",
                       "zh-CN/providers/huggingface",
                       "zh-CN/providers/levanto",
@@ -4382,6 +4387,7 @@
                       },
                       "zh-CN/providers/opencode",
                       "zh-CN/providers/opencode-go",
+                      "zh-CN/providers/particle",
                       "zh-CN/providers/perplexity-provider",
                       "zh-CN/providers/poolside",
                       "zh-CN/providers/qianfan",
@@ -5721,6 +5727,7 @@
                     "pages": [
                       "zh-TW/install/ansible",
                       "zh-TW/install/docker-vm-runtime",
+                      "zh-TW/install/jetson",
                       "zh-TW/install/kubernetes",
                       "zh-TW/install/macos-vm",
                       "zh-TW/install/raspberry-pi"
@@ -6463,6 +6470,7 @@
                       "zh-TW/providers/github-copilot",
                       "zh-TW/providers/gmi",
                       "zh-TW/providers/google",
+                      "zh-TW/providers/google-vertex",
                       "zh-TW/providers/groq",
                       "zh-TW/providers/huggingface",
                       "zh-TW/providers/levanto",
@@ -6491,6 +6499,7 @@
                       },
                       "zh-TW/providers/opencode",
                       "zh-TW/providers/opencode-go",
+                      "zh-TW/providers/particle",
                       "zh-TW/providers/perplexity-provider",
                       "zh-TW/providers/poolside",
                       "zh-TW/providers/qianfan",
@@ -7830,6 +7839,7 @@
                     "pages": [
                       "ja-JP/install/ansible",
                       "ja-JP/install/docker-vm-runtime",
+                      "ja-JP/install/jetson",
                       "ja-JP/install/kubernetes",
                       "ja-JP/install/macos-vm",
                       "ja-JP/install/raspberry-pi"
@@ -8572,6 +8582,7 @@
                       "ja-JP/providers/github-copilot",
                       "ja-JP/providers/gmi",
                       "ja-JP/providers/google",
+                      "ja-JP/providers/google-vertex",
                       "ja-JP/providers/groq",
                       "ja-JP/providers/huggingface",
                       "ja-JP/providers/levanto",
@@ -8600,6 +8611,7 @@
                       },
                       "ja-JP/providers/opencode",
                       "ja-JP/providers/opencode-go",
+                      "ja-JP/providers/particle",
                       "ja-JP/providers/perplexity-provider",
                       "ja-JP/providers/poolside",
                       "ja-JP/providers/qianfan",
@@ -9939,6 +9951,7 @@
                     "pages": [
                       "es/install/ansible",
                       "es/install/docker-vm-runtime",
+                      "es/install/jetson",
                       "es/install/kubernetes",
                       "es/install/macos-vm",
                       "es/install/raspberry-pi"
@@ -10681,6 +10694,7 @@
                       "es/providers/github-copilot",
                       "es/providers/gmi",
                       "es/providers/google",
+                      "es/providers/google-vertex",
                       "es/providers/groq",
                       "es/providers/huggingface",
                       "es/providers/levanto",
@@ -10709,6 +10723,7 @@
                       },
                       "es/providers/opencode",
                       "es/providers/opencode-go",
+                      "es/providers/particle",
                       "es/providers/perplexity-provider",
                       "es/providers/poolside",
                       "es/providers/qianfan",
@@ -12048,6 +12063,7 @@
                     "pages": [
                       "pt-BR/install/ansible",
                       "pt-BR/install/docker-vm-runtime",
+                      "pt-BR/install/jetson",
                       "pt-BR/install/kubernetes",
                       "pt-BR/install/macos-vm",
                       "pt-BR/install/raspberry-pi"
@@ -12790,6 +12806,7 @@
                       "pt-BR/providers/github-copilot",
                       "pt-BR/providers/gmi",
                       "pt-BR/providers/google",
+                      "pt-BR/providers/google-vertex",
                       "pt-BR/providers/groq",
                       "pt-BR/providers/huggingface",
                       "pt-BR/providers/levanto",
@@ -12818,6 +12835,7 @@
                       },
                       "pt-BR/providers/opencode",
                       "pt-BR/providers/opencode-go",
+                      "pt-BR/providers/particle",
                       "pt-BR/providers/perplexity-provider",
                       "pt-BR/providers/poolside",
                       "pt-BR/providers/qianfan",
@@ -14157,6 +14175,7 @@
                     "pages": [
                       "ko/install/ansible",
                       "ko/install/docker-vm-runtime",
+                      "ko/install/jetson",
                       "ko/install/kubernetes",
                       "ko/install/macos-vm",
                       "ko/install/raspberry-pi"
@@ -14899,6 +14918,7 @@
                       "ko/providers/github-copilot",
                       "ko/providers/gmi",
                       "ko/providers/google",
+                      "ko/providers/google-vertex",
                       "ko/providers/groq",
                       "ko/providers/huggingface",
                       "ko/providers/levanto",
@@ -14927,6 +14947,7 @@
                       },
                       "ko/providers/opencode",
                       "ko/providers/opencode-go",
+                      "ko/providers/particle",
                       "ko/providers/perplexity-provider",
                       "ko/providers/poolside",
                       "ko/providers/qianfan",
@@ -16266,6 +16287,7 @@
                     "pages": [
                       "de/install/ansible",
                       "de/install/docker-vm-runtime",
+                      "de/install/jetson",
                       "de/install/kubernetes",
                       "de/install/macos-vm",
                       "de/install/raspberry-pi"
@@ -17008,6 +17030,7 @@
                       "de/providers/github-copilot",
                       "de/providers/gmi",
                       "de/providers/google",
+                      "de/providers/google-vertex",
                       "de/providers/groq",
                       "de/providers/huggingface",
                       "de/providers/levanto",
@@ -17036,6 +17059,7 @@
                       },
                       "de/providers/opencode",
                       "de/providers/opencode-go",
+                      "de/providers/particle",
                       "de/providers/perplexity-provider",
                       "de/providers/poolside",
                       "de/providers/qianfan",
@@ -18375,6 +18399,7 @@
                     "pages": [
                       "fr/install/ansible",
                       "fr/install/docker-vm-runtime",
+                      "fr/install/jetson",
                       "fr/install/kubernetes",
                       "fr/install/macos-vm",
                       "fr/install/raspberry-pi"
@@ -19117,6 +19142,7 @@
                       "fr/providers/github-copilot",
                       "fr/providers/gmi",
                       "fr/providers/google",
+                      "fr/providers/google-vertex",
                       "fr/providers/groq",
                       "fr/providers/huggingface",
                       "fr/providers/levanto",
@@ -19145,6 +19171,7 @@
                       },
                       "fr/providers/opencode",
                       "fr/providers/opencode-go",
+                      "fr/providers/particle",
                       "fr/providers/perplexity-provider",
                       "fr/providers/poolside",
                       "fr/providers/qianfan",
@@ -20484,6 +20511,7 @@
                     "pages": [
                       "hi/install/ansible",
                       "hi/install/docker-vm-runtime",
+                      "hi/install/jetson",
                       "hi/install/kubernetes",
                       "hi/install/macos-vm",
                       "hi/install/raspberry-pi"
@@ -21226,6 +21254,7 @@
                       "hi/providers/github-copilot",
                       "hi/providers/gmi",
                       "hi/providers/google",
+                      "hi/providers/google-vertex",
                       "hi/providers/groq",
                       "hi/providers/huggingface",
                       "hi/providers/levanto",
@@ -21254,6 +21283,7 @@
                       },
                       "hi/providers/opencode",
                       "hi/providers/opencode-go",
+                      "hi/providers/particle",
                       "hi/providers/perplexity-provider",
                       "hi/providers/poolside",
                       "hi/providers/qianfan",
@@ -22593,6 +22623,7 @@
                     "pages": [
                       "ar/install/ansible",
                       "ar/install/docker-vm-runtime",
+                      "ar/install/jetson",
                       "ar/install/kubernetes",
                       "ar/install/macos-vm",
                       "ar/install/raspberry-pi"
@@ -23335,6 +23366,7 @@
                       "ar/providers/github-copilot",
                       "ar/providers/gmi",
                       "ar/providers/google",
+                      "ar/providers/google-vertex",
                       "ar/providers/groq",
                       "ar/providers/huggingface",
                       "ar/providers/levanto",
@@ -23363,6 +23395,7 @@
                       },
                       "ar/providers/opencode",
                       "ar/providers/opencode-go",
+                      "ar/providers/particle",
                       "ar/providers/perplexity-provider",
                       "ar/providers/poolside",
                       "ar/providers/qianfan",
@@ -24702,6 +24735,7 @@
                     "pages": [
                       "it/install/ansible",
                       "it/install/docker-vm-runtime",
+                      "it/install/jetson",
                       "it/install/kubernetes",
                       "it/install/macos-vm",
                       "it/install/raspberry-pi"
@@ -25444,6 +25478,7 @@
                       "it/providers/github-copilot",
                       "it/providers/gmi",
                       "it/providers/google",
+                      "it/providers/google-vertex",
                       "it/providers/groq",
                       "it/providers/huggingface",
                       "it/providers/levanto",
@@ -25472,6 +25507,7 @@
                       },
                       "it/providers/opencode",
                       "it/providers/opencode-go",
+                      "it/providers/particle",
                       "it/providers/perplexity-provider",
                       "it/providers/poolside",
                       "it/providers/qianfan",
@@ -26811,6 +26847,7 @@
                     "pages": [
                       "vi/install/ansible",
                       "vi/install/docker-vm-runtime",
+                      "vi/install/jetson",
                       "vi/install/kubernetes",
                       "vi/install/macos-vm",
                       "vi/install/raspberry-pi"
@@ -27553,6 +27590,7 @@
                       "vi/providers/github-copilot",
                       "vi/providers/gmi",
                       "vi/providers/google",
+                      "vi/providers/google-vertex",
                       "vi/providers/groq",
                       "vi/providers/huggingface",
                       "vi/providers/levanto",
@@ -27581,6 +27619,7 @@
                       },
                       "vi/providers/opencode",
                       "vi/providers/opencode-go",
+                      "vi/providers/particle",
                       "vi/providers/perplexity-provider",
                       "vi/providers/poolside",
                       "vi/providers/qianfan",
@@ -28920,6 +28959,7 @@
                     "pages": [
                       "nl/install/ansible",
                       "nl/install/docker-vm-runtime",
+                      "nl/install/jetson",
                       "nl/install/kubernetes",
                       "nl/install/macos-vm",
                       "nl/install/raspberry-pi"
@@ -29662,6 +29702,7 @@
                       "nl/providers/github-copilot",
                       "nl/providers/gmi",
                       "nl/providers/google",
+                      "nl/providers/google-vertex",
                       "nl/providers/groq",
                       "nl/providers/huggingface",
                       "nl/providers/levanto",
@@ -29690,6 +29731,7 @@
                       },
                       "nl/providers/opencode",
                       "nl/providers/opencode-go",
+                      "nl/providers/particle",
                       "nl/providers/perplexity-provider",
                       "nl/providers/poolside",
                       "nl/providers/qianfan",
@@ -31029,6 +31071,7 @@
                     "pages": [
                       "fa/install/ansible",
                       "fa/install/docker-vm-runtime",
+                      "fa/install/jetson",
                       "fa/install/kubernetes",
                       "fa/install/macos-vm",
                       "fa/install/raspberry-pi"
@@ -31771,6 +31814,7 @@
                       "fa/providers/github-copilot",
                       "fa/providers/gmi",
                       "fa/providers/google",
+                      "fa/providers/google-vertex",
                       "fa/providers/groq",
                       "fa/providers/huggingface",
                       "fa/providers/levanto",
@@ -31799,6 +31843,7 @@
                       },
                       "fa/providers/opencode",
                       "fa/providers/opencode-go",
+                      "fa/providers/particle",
                       "fa/providers/perplexity-provider",
                       "fa/providers/poolside",
                       "fa/providers/qianfan",
@@ -33138,6 +33183,7 @@
                     "pages": [
                       "tr/install/ansible",
                       "tr/install/docker-vm-runtime",
+                      "tr/install/jetson",
                       "tr/install/kubernetes",
                       "tr/install/macos-vm",
                       "tr/install/raspberry-pi"
@@ -33880,6 +33926,7 @@
                       "tr/providers/github-copilot",
                       "tr/providers/gmi",
                       "tr/providers/google",
+                      "tr/providers/google-vertex",
                       "tr/providers/groq",
                       "tr/providers/huggingface",
                       "tr/providers/levanto",
@@ -33908,6 +33955,7 @@
                       },
                       "tr/providers/opencode",
                       "tr/providers/opencode-go",
+                      "tr/providers/particle",
                       "tr/providers/perplexity-provider",
                       "tr/providers/poolside",
                       "tr/providers/qianfan",
@@ -35247,6 +35295,7 @@
                     "pages": [
                       "uk/install/ansible",
                       "uk/install/docker-vm-runtime",
+                      "uk/install/jetson",
                       "uk/install/kubernetes",
                       "uk/install/macos-vm",
                       "uk/install/raspberry-pi"
@@ -35989,6 +36038,7 @@
                       "uk/providers/github-copilot",
                       "uk/providers/gmi",
                       "uk/providers/google",
+                      "uk/providers/google-vertex",
                       "uk/providers/groq",
                       "uk/providers/huggingface",
                       "uk/providers/levanto",
@@ -36017,6 +36067,7 @@
                       },
                       "uk/providers/opencode",
                       "uk/providers/opencode-go",
+                      "uk/providers/particle",
                       "uk/providers/perplexity-provider",
                       "uk/providers/poolside",
                       "uk/providers/qianfan",
@@ -37356,6 +37407,7 @@
                     "pages": [
                       "id/install/ansible",
                       "id/install/docker-vm-runtime",
+                      "id/install/jetson",
                       "id/install/kubernetes",
                       "id/install/macos-vm",
                       "id/install/raspberry-pi"
@@ -38098,6 +38150,7 @@
                       "id/providers/github-copilot",
                       "id/providers/gmi",
                       "id/providers/google",
+                      "id/providers/google-vertex",
                       "id/providers/groq",
                       "id/providers/huggingface",
                       "id/providers/levanto",
@@ -38126,6 +38179,7 @@
                       },
                       "id/providers/opencode",
                       "id/providers/opencode-go",
+                      "id/providers/particle",
                       "id/providers/perplexity-provider",
                       "id/providers/poolside",
                       "id/providers/qianfan",
@@ -39465,6 +39519,7 @@
                     "pages": [
                       "pl/install/ansible",
                       "pl/install/docker-vm-runtime",
+                      "pl/install/jetson",
                       "pl/install/kubernetes",
                       "pl/install/macos-vm",
                       "pl/install/raspberry-pi"
@@ -40207,6 +40262,7 @@
                       "pl/providers/github-copilot",
                       "pl/providers/gmi",
                       "pl/providers/google",
+                      "pl/providers/google-vertex",
                       "pl/providers/groq",
                       "pl/providers/huggingface",
                       "pl/providers/levanto",
@@ -40235,6 +40291,7 @@
                       },
                       "pl/providers/opencode",
                       "pl/providers/opencode-go",
+                      "pl/providers/particle",
                       "pl/providers/perplexity-provider",
                       "pl/providers/poolside",
                       "pl/providers/qianfan",
@@ -41574,6 +41631,7 @@
                     "pages": [
                       "th/install/ansible",
                       "th/install/docker-vm-runtime",
+                      "th/install/jetson",
                       "th/install/kubernetes",
                       "th/install/macos-vm",
                       "th/install/raspberry-pi"
@@ -42316,6 +42374,7 @@
                       "th/providers/github-copilot",
                       "th/providers/gmi",
                       "th/providers/google",
+                      "th/providers/google-vertex",
                       "th/providers/groq",
                       "th/providers/huggingface",
                       "th/providers/levanto",
@@ -42344,6 +42403,7 @@
                       },
                       "th/providers/opencode",
                       "th/providers/opencode-go",
+                      "th/providers/particle",
                       "th/providers/perplexity-provider",
                       "th/providers/poolside",
                       "th/providers/qianfan",
@@ -43683,6 +43743,7 @@
                     "pages": [
                       "ru/install/ansible",
                       "ru/install/docker-vm-runtime",
+                      "ru/install/jetson",
                       "ru/install/kubernetes",
                       "ru/install/macos-vm",
                       "ru/install/raspberry-pi"
@@ -44425,6 +44486,7 @@
                       "ru/providers/github-copilot",
                       "ru/providers/gmi",
                       "ru/providers/google",
+                      "ru/providers/google-vertex",
                       "ru/providers/groq",
                       "ru/providers/huggingface",
                       "ru/providers/levanto",
@@ -44453,6 +44515,7 @@
                       },
                       "ru/providers/opencode",
                       "ru/providers/opencode-go",
+                      "ru/providers/particle",
                       "ru/providers/perplexity-provider",
                       "ru/providers/poolside",
                       "ru/providers/qianfan",
@@ -45792,6 +45855,7 @@
                     "pages": [
                       "sv/install/ansible",
                       "sv/install/docker-vm-runtime",
+                      "sv/install/jetson",
                       "sv/install/kubernetes",
                       "sv/install/macos-vm",
                       "sv/install/raspberry-pi"
@@ -46534,6 +46598,7 @@
                       "sv/providers/github-copilot",
                       "sv/providers/gmi",
                       "sv/providers/google",
+                      "sv/providers/google-vertex",
                       "sv/providers/groq",
                       "sv/providers/huggingface",
                       "sv/providers/levanto",
@@ -46562,6 +46627,7 @@
                       },
                       "sv/providers/opencode",
                       "sv/providers/opencode-go",
+                      "sv/providers/particle",
                       "sv/providers/perplexity-provider",
                       "sv/providers/poolside",
                       "sv/providers/qianfan",

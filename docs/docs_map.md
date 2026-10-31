@@ -3193,6 +3193,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Recover a failed update
   - H3: Original state captures
   - H4: Inspect migration preservation
+  - H3: Interrupted state restore
   - H3: Retained updater runtime
   - H2: Candidate Doctor stack overflow
   - H2: Docker image-layer package updates
@@ -3443,6 +3444,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /concepts/agent-workspace
 - Headings:
   - H2: Default location
+  - H2: Sharing generated memory files
   - H2: Extra workspace folders
   - H2: Workspace file map
   - H2: What is NOT in the workspace
@@ -3606,6 +3608,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: CLI workflow
   - H2: Key defaults
   - H2: Dreams UI
+  - H2: LanceDB and dreaming
   - H2: Related
 
 ## concepts/experimental-features.md
@@ -4567,6 +4570,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Env overrides
   - H3: Config (preferred over env overrides)
   - H3: Disable automatic completion turns
+  - H3: Durable processes
   - H2: Worker environments
   - H2: Control UI
   - H2: Child process bridging
@@ -4894,6 +4898,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/config-agents/workspace-and-bootstrap
 - Headings:
   - H2: agents.defaults.workspace
+  - H2: agents.defaults.workspaceFileMode
   - H2: agents.defaults.cwd
   - H2: agents.defaults.repoRoot
   - H2: agents.defaults.skills
@@ -5050,6 +5055,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/config-runtime
 - Headings:
   - H2: worktreeRoot
+  - H2: repositoryBranchPrefix
   - H2: worktreeAcceleration
   - H2: worktreeMaxCount
   - H2: Models
@@ -5749,6 +5755,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: When to use PostgreSQL
   - H2: Requirements
   - H3: Provision a database and runtime role
+  - H3: Connection poolers
   - H3: Supply the connection securely
   - H3: TLS and exec connection qualification
   - H2: Set up a fresh installation
@@ -5761,6 +5768,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Backup and restore
   - H3: Capture both server data and local state
   - H3: Restore all PostgreSQL stores
+  - H3: Recover a retained agent store
   - H3: Disaster recovery from Git
   - H2: Published-stable upgrade qualification
   - H2: Updates and schema migrations
@@ -6871,6 +6879,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: E2E (gateway smoke)
   - H3: E2E (Control UI mocked browser)
   - H3: Network-isolated local E2E
+  - H3: E2E: native Codex command and gateway OAuth
   - H3: E2E: OpenShell backend smoke
   - H3: Live (real providers + real models)
   - H3: Prompt-cache regression coverage
@@ -7101,6 +7110,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Health checks
   - H2: Detailed topics
   - H2: Related
+  - H2: Build from an offline installed runtime
 
 ## install/docker/compose-operations.md
 
@@ -7258,6 +7268,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: CI and automation
   - H2: Troubleshooting
   - H2: Related
+
+## install/jetson.md
+
+- Route: /install/jetson
+- Headings:
+  - H2: Prepare the Jetson
+  - H2: Install and connect
+  - H2: Jetson diagnostics
+  - H2: Next steps
 
 ## install/kubernetes.md
 
@@ -8221,6 +8240,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Install
   - H2: Gateway service (systemd)
   - H2: Memory pressure and OOM kills
+  - H3: Agent exec resource isolation
+  - H3: Child-first OOM policy
   - H2: Related
 
 ## platforms/mac/bundled-gateway.md
@@ -8840,6 +8861,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/codex-harness-reference/auth
 - Headings:
   - H2: Auth and environment isolation
+  - H2: Custom providers with native command auth
   - H2: Upgrading from 2026.9.4 with Codex sign-in
 
 ## plugins/codex-harness-reference/dynamic-tools.md
@@ -9074,6 +9096,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Troubleshooting
   - H3: Image-heavy conversations exceed the request-size limit
+  - H2: Worker-hosted app-server
 
 ## plugins/codex-native-plugins.md
 
@@ -9639,6 +9662,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Manifest and package.json fields
   - H2: Minimal example
   - H2: Rich example
+  - H2: Generation overlap
   - H2: Top-level field reference
   - H2: Catalog categories
   - H2: JSON Schema requirements
@@ -10878,6 +10902,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Distribution
   - H2: Surface
 
+## plugins/reference/particle.md
+
+- Route: /plugins/reference/particle
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
 ## plugins/reference/perplexity.md
 
 - Route: /plugins/reference/perplexity
@@ -11592,6 +11624,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Stateful CLI commands
   - H2: OpenAI-compatible Decisions runtime
   - H2: Runtime request headers
+  - H3: Node workspace process environment
 
 ## plugins/sdk-entrypoints/define-channel-plugin-entry.md
 
@@ -11644,6 +11677,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Tool policy vocabulary
   - H2: Runtime tool allowlists
+  - H2: Exec policy layering
   - H2: Sandbox bind parsing
   - H2: Sandbox filesystem mappings
   - H2: Directory listing metadata
@@ -12762,6 +12796,18 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Troubleshooting
   - H2: Related
 
+## providers/google-vertex.md
+
+- Route: /providers/google-vertex
+- Headings:
+  - H2: Prerequisites
+  - H2: Authenticate
+  - H2: Configure the Gateway
+  - H3: Environment variables
+  - H2: Verify and chat
+  - H2: Troubleshooting
+  - H2: Related
+
 ## providers/google.md
 
 - Route: /providers/google
@@ -13269,6 +13315,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Advanced configuration
   - H2: Related
 
+## providers/particle.md
+
+- Route: /providers/particle
+- Headings:
+  - H2: Setup
+  - H2: Particle-1
+  - H2: Reasoning and caching
+  - H2: Supported API surface
+
 ## providers/perplexity-provider.md
 
 - Route: /providers/perplexity-provider
@@ -13650,6 +13705,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Configure PostgreSQL
   - H3: Legacy data and PostgreSQL
   - H3: Mixed engines
+  - H2: Workflow support and qualification
   - H2: Search on PostgreSQL
   - H2: Port existing stores
   - H2: Several Gateways on one PostgreSQL server
@@ -13703,6 +13759,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Startup on multi-agent hosts
   - H2: btrfs and NOCOW
   - H2: Planner statistics maintenance
+  - H2: Historical import evidence
   - H2: Troubleshooting
   - H3: A migrated agent remains unavailable with a serialization error
   - H3: The state database is busy
@@ -13725,6 +13782,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Database layout
   - H3: Local daemon service intent
+  - H3: Durable background processes
   - H3: Linux database page cache
   - H3: Session reactions
   - H3: Session run outcomes and liveness
@@ -14110,6 +14168,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: PR wrapper tooling
   - H2: Qualify the workspace before review
   - H2: Keep the admitted workflow across commands
+  - H3: Salvage an unknown file in an interrupted review checkout
   - H3: Continue a correction with repaired workflow code
   - H2: Reconcile a completed CI review
   - H2: Recover a retained dependency projection

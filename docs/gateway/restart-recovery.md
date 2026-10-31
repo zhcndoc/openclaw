@@ -89,6 +89,11 @@ short bounded time for in-flight persistence and gives other resource cleanup a
 bounded grace. A long model stream, tool call, or background process does not get
 a full run-completion drain before shutdown.
 
+After marker persistence and cancellation, process-owned shutdown gives session
+resources five seconds to settle. Leftovers retain their shared databases until
+process exit instead of extending the session-admission wait. Embedded hosts
+still join those resources before reusing the runtime.
+
 A plain stop (`SIGTERM` or `SIGINT`) arriving during an in-process restart makes
 the Gateway finish its bounded shutdown and exit instead of starting again.
 Managed update handoffs keep their own stop handling.
@@ -103,7 +108,10 @@ cleanup deadline, lifetime sidecar, or retained plugin runtime, and returns with
 status `0` unless required persistence failed. A runtime that still owns resources
 is never reused for an in-process restart. Node exits naturally after owned handles
 close; the native shutdown watchdog kills the process if leaked handles keep it
-alive past the deadline. That signal exit is accepted, and the supervisor starts
+alive two seconds past the shutdown deadline. Its worker and main-thread fallback
+share one monotonic deadline, including worker startup time, and report retained
+cleanup owners before forcing exit. A duplicate `SIGTERM` during shutdown is
+logged once and ignored. That signal exit is accepted, and the supervisor starts
 a fresh Gateway.
 
 Reversible suspension and host freeze preparation keep their own semantics. A

@@ -12,6 +12,11 @@ sidebarTitle: "Chat"
 
 How the chat pane behaves: session controls, the composer, and how the transcript renders.
 
+An existing session with an empty transcript shows **No messages yet** and keeps
+the composer available. The agent welcome and recent chats appear only on the
+**New session** page. If no model is configured, the existing session's composer
+banner still offers **Connect an AI provider**.
+
 Click a session-menu submenu, such as **Assign to…**, to open it immediately.
 Hovering still uses a short delay so moving across the menu does not open every submenu.
 
@@ -24,6 +29,10 @@ automatic loading. Scroll upward or select **Show earlier** to load more or retr
 Hidden panes, background tabs, and programmatic or maintenance scrolling do not
 trigger automatic loading. An incomplete history page does not show the new-chat welcome
 screen.
+
+Hidden history rows do not end pagination while older source rows remain. The
+Gateway continues from the consumed source boundary, including hidden rows, and
+stops offering earlier history when that source is exhausted.
 
 Enable **Settings → Labs → Speech bubbles** to try the experimental view (off by default).
 While enabled, Home uses bubbles by default. The session menu’s **View → Speech bubbles**
@@ -41,6 +50,10 @@ If an inactive run's saved history ends during tool use and has no terminal
 assistant message, Chat keeps its commentary and tool activity visible and marks
 the run **Interrupted**. This presentation does not resume the run or recover an
 answer that was never saved.
+
+Archived sessions keep earlier messages and recorded failures readable in the
+transcript. Past run failures do not show a recovery banner above the archived
+composer; unarchive the session to continue the conversation.
 
 Tool activity shows a tool-specific icon beside its purpose or details instead of
 repeating the tool name. When no distinct purpose or detail is available, the row
@@ -511,7 +524,7 @@ Select an MCP server's row to expand its tools inline; its switch enables or dis
 
 If a server's tools are already expanded, the list refreshes when the current session's run finishes; you do not need to collapse and expand it to see newly discovered tools.
 
-Capability toggles stay disabled until the Gateway, session, and runtime config are loaded, and read-only operators cannot change them. Adding a server requires administrator access. See [Connect MCP servers](/tools/mcp) for the Settings, CLI, and config paths.
+Capability toggles stay disabled until the Gateway, session, and runtime config are loaded, and read-only operators cannot change them. If your account cannot read plugin configuration, **Plugins** explains that its settings are unavailable instead of showing an empty server list. Adding a server requires administrator access. See [Connect MCP servers](/tools/mcp) for the Settings, CLI, and config paths.
 
 Switching capability views focuses the first menu item after the new view renders, while preserving any newer focus choice you make.
 
@@ -907,7 +920,7 @@ Run-error banners offer **Refresh** to reload the conversation without resending
     - Switching to another conversation retires the previous conversation’s file previews. Returning to **Files** shows its catalog with the saved folder, search, and filter; saved files and unsaved drafts remain intact.
     - **Review** and file tabs retain their own content. A pending file or artifact updates only its own open tab: it cannot select itself over a newer tab, reopen a closed preview, or return after you leave the chat page. Switching tabs or hiding the whole side panel preserves the pending preview without changing your chosen layout when it finishes. Text attachments retain their Preview or View Raw Text mode while switching between open files. Background download-link refreshes keep an unchanged attachment's reader in place, including keyboard focus and code-block controls.
     - Each chat pane has a main view and a unified side panel. When Chat and Desktop are both present, the panel’s **Panel position** menu offers a **Swap** action that exchanges them; Dashboard keeps its own view controls. Expanding or restoring a panel preserves live content and drafts. The header’s **Panels** control hides or reopens the side panel without clearing its tabs, and the browser remembers each session’s arrangement.
-    - On desktop, the **Panel position** menu in the panel header places it left, right, or below the main area. Use the adjacent expand/restore control to change how much of the pane it occupies. On mobile, **Panels** opens the shared sheet; its expand/restore control changes the sheet height without changing the saved desktop docking arrangement.
+    - On desktop, the **Panel position** menu in the panel header places it left, right, or below the main area. Use the adjacent expand/restore control to change how much of the pane it occupies. On mobile, **Panels** opens the shared sheet; its expand/restore control changes the sheet height without changing the saved desktop docking arrangement. Drag the grabber or empty header space to resize it: a slow release keeps the height you chose, a flick moves to the next height (docked, expanded, or full), and a downward flick or a pull past half its minimum height closes it.
     - In **Processes**, **Finished** starts collapsed; click its heading to expand or collapse the list.
     - **Details → Processes** previews only running commands, with their elapsed time and available **Stop** action. Its count includes every running process; the preview shows up to three on desktop and two on mobile. Select a command to open its output, or **View all processes** to open the full list, including finished commands. The Details section disappears when no processes are running; **Panels → Processes** remains available.
     - A new Browser side panel uses the chat pane's available width and the rendered chat column to reclaim unused chat margins. This default applies on web, macOS, and Tauri; saved widths and manual divider adjustments take precedence.
@@ -1083,8 +1096,42 @@ previews have no session folder and do not load relative assets.
 Loaded classic scripts with `defer` run after parsing, in document order with
 non-async module scripts, while retaining classic script globals.
 
+Documents with an authored Content Security Policy use a separate, conservative
+relative-resource preview path. Supported documents have one CSP meta element in
+an explicit HTML head, before scripts and resource references, with these declarations:
+
+```text
+default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'
+```
+
+`img-src` and `media-src` may additionally be `'none'`, `'self'`, or `'self' data:`.
+The authored policy is preserved, and **Source** and **Download** retain the
+original file bytes. The existing isolated sandbox loads permitted classic
+scripts and stylesheets as unchanged external resources, retaining native
+`defer` ordering. Its opaque origin still prevents
+access to Control UI data and browser storage such as `localStorage`; an app that
+requires that storage must use its original downloaded files.
+
+This path admits at most 64 distinct relative resources, including the single
+stylesheet resource round, under the same file-read and byte limits above.
+Resource URLs belong to the issuing connection and selected preview, expire,
+and stop serving bytes when the preview is closed or replaced, the source loses
+read authority, or the resource content changes. Reopen Preview if a later load
+needs a fresh URL. They provide no general filesystem or network access.
+
+Modules, `crossorigin` or integrity-bearing resources, CSS imports and fonts,
+authored base URLs, multiple or ambiguous policies, and other CSP directives or
+source expressions are outside this first supported subset. Such documents keep
+an explicit preview limitation and their original **Source** and **Download**
+recovery; their relative assets are not silently converted to inline content.
+The browser enforces CSP at the generated preview URLs. Apps whose behavior or
+later policies depend on their original URL or origin should use the downloaded
+files. Ordinary documents without an authored CSP retain their existing preview
+behavior.
+
 Authored in-page HTML links such as `href="#section"` scroll within the preview, including
-in `strict` mode. This leaves the original file and **Source** unchanged; authored
+in `strict` mode. Fragment navigation does not depend on the relative-resource CSP
+subset above. This leaves the original file and **Source** unchanged; authored
 base URLs, links targeting another window, and download links keep their behavior.
 
 Workspace file reads and edits retain their existing 256 KiB limit. After a successful save, Files refreshes its metadata and Review refreshes its diff without switching the active panel or clearing the current Files search.
@@ -1390,15 +1437,13 @@ other runs are not included. Source cards require run identity in the transcript
 and follow tool-activity visibility. They are hidden while a run is active or
 transcript search is filtering messages.
 
-In completed dashboard turns, all assistant text and visual results stay visible
-in their original positions. Contiguous tool activity and reasoning-only parts
-fold into separate **Worked** disclosures between those visible parts in both
-flat and bubble mode. Expanding a disclosure shows that stretch of activity in its
-original order, and loading older history preserves which disclosures are open.
-Messages with saved attachments stay intact so each attachment appears once.
-Each disclosure is untimed; the final recap keeps the duration for the whole turn,
-including after reopening a completed chat when its saved timing matches the visible reply.
-Browser tab previews keep their execution order relative to visible results, so a page opened after an inline widget appears after that widget.
+In completed dashboard turns, commentary, reasoning-only messages, and tool activity
+share one **Worked for…** disclosure above the answers. Expanding it shows the
+activity in its original order; explicit answer segments and visual results stay
+visible below it. Browser tab previews keep their execution order relative to those
+visible results, so a page opened after an inline widget appears after that widget.
+Speech bubble view keeps commentary in place; contiguous tool activity uses its own
+activity disclosure instead of the **Worked for…** rollup.
 Failed tool results after the last answer stay visible outside
 the disclosure until a later answer follows them. This is display grouping, not a
 change to stored history. Live turns, search results, and turns without an answer
@@ -1408,7 +1453,7 @@ resumes the closing line reports the request. User messages,
 forwarded inputs, and structural markers remain boundaries for grouping.
 Selecting the author's name on a reply's **Replying to** line scrolls to the
 original message and briefly highlights it, first opening its containing
-**Worked** group when the original sits inside one.
+**Worked for…** group when the original sits inside one.
 
 On wide desktop panes, the conversation position rail provides keyboard shortcuts
 to messages. In right-to-left interface languages, the rail uses the right gutter
