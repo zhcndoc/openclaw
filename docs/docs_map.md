@@ -931,6 +931,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /channels/matrix/messaging
 - Headings:
   - H2: Inbound delivery across restarts
+  - H2: Final reply recovery
   - H2: Streaming previews
   - H2: Voice messages
   - H2: Reactions
@@ -1956,6 +1957,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: How to use this
   - H2: Selecting agents
   - H2: Use from acpx (Codex, Claude, other ACP clients)
+  - H2: T3 Code compatibility
   - H2: Zed editor setup
   - H2: Session mapping
   - H2: Options
@@ -2042,6 +2044,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: openclaw backup
   - H2: PostgreSQL stores
+  - H2: Local companion checkpoints
   - H2: Notes
   - H2: Offsite archives
   - H3: Offsite retention
@@ -2469,6 +2472,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Color palette
   - H2: Command tree
   - H2: Database
+  - H3: Exact SQLite migration capture
   - H2: Chat slash commands
   - H2: Usage tracking
   - H2: Related
@@ -3565,6 +3569,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Interpret scores and probabilities
   - H2: Limits and unavailable results
   - H2: Provide models from a plugin
+  - H2: Contract ownership
 
 ## concepts/delegate-architecture.md
 
@@ -4766,12 +4771,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Move through the API
   - H2: Recover after an interruption
   - H2: What survives a dead machine
+  - H2: Exact provider-resource receipts
 
 ## gateway/cloud-workers/setup-and-bundle-installation.md
 
 - Route: /gateway/cloud-workers/setup-and-bundle-installation
 - Headings:
   - H2: Automatic Linux Node toolchains
+  - H2: Platform certificate trust
   - H2: The setup command
   - H3: Protected setup secrets
   - H3: Native Windows prerequisites
@@ -5305,6 +5312,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/doctor/config-migrations
 - Headings:
   - H2: Retired A2UI widgets
+  - H2: Skill Workshop plugin policy
   - H2: Group allowlist fallback
   - H2: Collaborative steering default
   - H2: Removed security presets
@@ -5762,6 +5770,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Run independent Gateways on one server
   - H2: Mixed engines
   - H2: Migrate an existing installation
+  - H3: Move an exact stopped source between disposable hosts
   - H3: Prepare and port to PostgreSQL
   - H3: Recover an interrupted port
   - H3: Understand refusals
@@ -7566,6 +7575,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Retired tenant-container management
   - H2: Upgrading very old versions
   - H2: Recommended: openclaw update
+  - H3: npm plugin rollback
   - H3: Package-publication recovery
   - H3: Recover an unfinished publication after a remount
   - H3: Recover a completed receipt with an older updater
@@ -8233,6 +8243,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: First-run setup
   - H3: Host sleep
   - H3: Media codecs
+  - H3: Raspberry Pi and low-memory desktops
   - H3: Quick Chat
   - H2: CLI and SSH alternative
   - H2: Node capabilities
@@ -9825,6 +9836,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Browsing the wiki in the Control UI
   - H2: Prompt and context behavior
   - H2: Configuration
+  - H3: Bridge page visibility in a shared vault
   - H3: Per-agent vaults
   - H3: Example: builtin memory + bridge mode
   - H2: CLI
@@ -11053,6 +11065,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Surface
   - H2: Related docs
 
+## plugins/reference/skill-workshop.md
+
+- Route: /plugins/reference/skill-workshop
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+
 ## plugins/reference/slack-huddles.md
 
 - Route: /plugins/reference/slack-huddles
@@ -11179,6 +11198,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Distribution
   - H2: Surface
+  - H2: Compaction scope
   - H2: Related docs
 
 ## plugins/reference/tts-local-cli.md
@@ -11613,6 +11633,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Where each section moved
   - H2: Plugin shapes
   - H2: Related
+  - H2: Offline worker runtime artifacts
   - H2: Code Mode executor runtime
   - H2: Native MCP App adapters
   - H2: MCP subprocess runtime
@@ -11892,9 +11913,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Capability registration
   - H3: Storage providers
+  - H3: Repository preparation integrations
   - H3: Worker providers
   - H2: Versioned decision data
   - H2: Prepared decision execution (contract version 2)
+  - H3: Provider implementation boundaries
   - H2: Decision models (contract version 1)
   - H3: Calling from a third-party plugin
 
@@ -12000,6 +12023,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Provider voice capabilities
   - H3: Provider media and search
   - H2: Related
+  - H2: Worker resource receipts
 
 ## plugins/sdk-provider-plugins/hook-families.md
 
@@ -12356,6 +12380,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Configuration
   - H3: Choose the call owner
   - H3: Config reference
+  - H3: Twilio call recording
   - H3: Twilio voicemail detection tuning
   - H2: Session scope
 
@@ -13729,6 +13754,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Session deletion indexes (same-version additive index, lead-approved 2026-10-31)
+  - H3: Agent schema 39
   - H3: Agent schema 38
   - H3: Agent schema 37
   - H3: Agent schema 36
@@ -13820,6 +13847,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 37
   - H3: State schema 36
   - H3: State schema 34
   - H3: State schema 35
@@ -15997,6 +16025,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/code-mode/guest-api
 - Headings:
   - H2: Guest runtime API
+  - H2: Reading skill companions
   - H2: Session store
   - H2: Reading paginated file data
 
