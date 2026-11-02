@@ -3157,6 +3157,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Usage
   - H2: Immutable release installations
   - H2: Candidate-owned admission
+  - H3: External supervisor readiness
   - H2: Database capture and recovery
   - H2: Runtime retention failures
   - H2: Gateway recovery verification failures
@@ -4754,6 +4755,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/cloud-workers/session-lifecycle
 - Headings:
+  - H2: Retained-disk lifecycle integration
   - H2: Dispatch a session
   - H2: Update the Gateway and worker runtime
   - H2: Synchronize workspace files
@@ -4772,6 +4774,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Recover after an interruption
   - H2: What survives a dead machine
   - H2: Exact provider-resource receipts
+  - H3: Explicit current-disk consumers
 
 ## gateway/cloud-workers/setup-and-bundle-installation.md
 
@@ -5010,6 +5013,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Cloud worker environments
   - H3: Required worker profile
+  - H3: Repository workspace durability
   - H3: Crabbox profile
   - H4: Crabbox machine catalog
   - H3: Setup secrets
@@ -5314,6 +5318,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Retired A2UI widgets
   - H2: Skill Workshop plugin policy
   - H2: Group allowlist fallback
+  - H2: Copied model allowlists
   - H2: Collaborative steering default
   - H2: Removed security presets
   - H2: Cloud setup secret migration
@@ -6038,6 +6043,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/sandboxing/docker-backend
 - Headings:
   - H2: Docker backend
+  - H3: Container user
+  - H3: Docker daemon
   - H3: Sandboxed browser
 
 ## gateway/sandboxing/images-and-setup.md
@@ -6803,6 +6810,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Local proof during development
   - H2: Headless node auto-update proof
   - H2: Docker lanes
+  - H3: Native systemd update matrix
   - H2: Package Acceptance
   - H2: Release default
   - H2: Legacy compatibility
@@ -7395,6 +7403,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Supported versions
   - H2: How the gate decides
   - H2: Why the floors exist
+  - H2: Completed SQLite iterators
   - H2: V8 compiler settings
   - H2: Platform consequences
   - H2: What the installer provisions
@@ -9039,6 +9048,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Commands and diagnostics
   - H3: Shared Fast mode and Codex fast mode
+  - H3: Verify tool access before a Codex turn
   - H3: Inspect Codex threads locally
 
 ## plugins/codex-harness/config-fields.md
@@ -11915,6 +11925,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Storage providers
   - H3: Repository preparation integrations
   - H3: Worker providers
+  - H4: Retained worker disks
   - H2: Versioned decision data
   - H2: Prepared decision execution (contract version 2)
   - H3: Provider implementation boundaries
@@ -12006,7 +12017,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Loopback OAuth callbacks
   - H2: Declare physical credential ownership
   - H2: Handle model access after sign-in
-  - H3: Defer the choice to a later reply
   - H3: Keep hosted writes authorized
   - H2: Submit JSON requests
   - H2: Walkthrough
@@ -13675,6 +13685,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Release cadence
   - H2: Release validation
   - H3: Operator capabilities
+  - H3: Watch publication
   - H3: Plugin SDK evidence transport
   - H3: Frozen qualification identity
   - H2: Packages and apps can become available at different times
@@ -13847,6 +13858,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 39
+  - H3: State schema 38
   - H3: State schema 37
   - H3: State schema 36
   - H3: State schema 34

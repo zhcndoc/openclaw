@@ -7,6 +7,7 @@ import { DomUtils, parseDocument } from "htmlparser2";
 
 import { ignoredDocDirs, localeFlags, localeLabels, navigationLocaleToDir } from "./config.mjs";
 import { chromeStrings } from "./chrome-strings.mjs";
+import { peleAssetName } from "./pele-runtime.mjs";
 import { homeStrings } from "./home-strings.mjs";
 import { editSourceUrlForPage, frontmatterSourcePath, readSourceMetadata } from "./edit-source.mjs";
 import { parseFrontmatter } from "../../.openclaw-sync/lib/docs-markdown.mjs";
@@ -422,7 +423,7 @@ if (!/\.doc pre \.tok-comment,\.doc pre \.hljs-comment/.test(siteCss)
   || !/\.doc pre \.tok-key,\.doc pre \.hljs-attr/.test(siteCss)) {
   throw new Error("assets: syntax token colors are not theme-variable based");
 }
-if (!fs.existsSync(path.join(site, "assets/pele-1.6.0.js"))
+if (!fs.existsSync(path.join(site, "assets", peleAssetName))
   || !fs.existsSync(path.join(site, "assets/pele-LICENSE.txt"))) {
   throw new Error("assets: Pele runtime and license were not copied");
 }
@@ -508,6 +509,11 @@ if (!/--oc-palette-ink-950:\s*#101012/.test(siteCss)
   || !/--soft:var\(--oc-surface-accent-soft\)/.test(siteCss)
   || !/\.nav-link\.active\{border-left-color:var\(--brand\);color:var\(--brand\);font-weight:650\}/.test(siteCss)) {
   throw new Error("assets: dark sidebar surface is not reference-aligned");
+}
+if (!/\.docs-layout :is\(\.docs-quick-nav, \.docs-section-pages\) \.nav-link\.active \{ color: var\(--ink\); background: var\(--docs-nav-active-bg\); box-shadow: none; font-weight: 500; \}/.test(siteCss)
+  || !/\.docs-layout \.toc a\.active \{ color: var\(--ink\); background: var\(--docs-nav-active-bg\); font-weight: 500; \}/.test(siteCss)
+  || /\.docs-layout[^{}]*\.nav-link\.active \{[^}]*color: var\(--brand\)/.test(siteCss)) {
+  throw new Error("assets: sidebar, drawer, and TOC active links must share the quiet selection treatment");
 }
 if (!/\.site-footer\{[^}]*border-top:1px solid var\(--line\)/.test(siteCss)
   || !/\.site-footer-inner\{[^}]*var\(--oc-font-mono\)/.test(siteCss)) {
