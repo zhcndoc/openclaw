@@ -1737,6 +1737,16 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Where each section moved
   - H2: Related
 
+## ci/adaptive-testing.md
+
+- Route: /ci/adaptive-testing
+- Headings:
+  - H1: Adaptive CI experiments
+  - H2: Export observations
+  - H2: Current coverage
+  - H2: Plan in shadow mode
+  - H2: Estimate cost and compute savings
+
 ## ci/capacity.md
 
 - Route: /ci/capacity
@@ -1942,6 +1952,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Fix failed tests locally
   - H3: Recover an existing PR run first
   - H2: PR context and evidence
+  - H2: Adaptive test observations
   - H2: Related
 
 ## cli/acp.md
@@ -2472,6 +2483,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Color palette
   - H2: Command tree
   - H2: Database
+  - H3: Prepare exact PostgreSQL shared state
   - H3: Exact SQLite migration capture
   - H2: Chat slash commands
   - H2: Usage tracking
@@ -3786,6 +3798,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Deletion: purging what a session produced
   - H3: Purged sessions stay purged
   - H2: What deletion does not cover
+  - H2: Freeform edits and quarantine
   - H2: Purging a person or a source end to end
   - H2: Related
 
@@ -4630,6 +4643,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Backend text transforms
   - H2: Native compaction ownership
   - H2: Bundle MCP overlays
+  - H3: Separate Claude configuration
   - H2: Reseed history cap
   - H2: Limitations
   - H2: Troubleshooting
@@ -4823,6 +4837,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: How the pieces fit
   - H2: Step 1: Route the tunnel to loopback
   - H2: Step 2: Protect the hostname with Access
+  - H3: Email-code sign-in
   - H3: OIDC sign-in and existing people
   - H3: Verified GitHub credit through OIDC
   - H2: Step 3: Trust those headers in the Gateway
@@ -5846,7 +5861,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/protocol/handshake
 - Headings:
   - H2: Handshake
+  - H3: Hello response
+  - H3: Attachment limits
+  - H3: Connection lifecycle and credentials
   - H3: Worker role and closed protocol
+  - H3: Server capabilities
   - H3: Client capabilities
   - H3: Node connect example
   - H2: Roles and scopes
@@ -5912,6 +5931,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/protocol/rpc-session-control
 - Headings:
   - H2: Session control
+  - H3: Chat input reconciliation
   - H3: Existing folders on paired devices
 
 ## gateway/protocol/rpc-system-and-channels.md
@@ -6498,6 +6518,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Gateway service not running
   - H2: macOS gateway silently stops responding, then resumes when you touch the dashboard
+  - H2: macOS LAN commands fail with No route to host
   - H2: macOS launchd supervisor loop with duplicate gateway/node LaunchAgents
   - H2: Native aborts on Linux (SIGABRT)
   - H2: Gateway exits during high memory use
@@ -7310,6 +7331,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Customization
   - H3: Agent instructions
   - H3: Gateway config
+  - H3: Temporary storage
   - H3: Add providers
   - H3: Custom namespace
   - H3: Custom image
@@ -7338,6 +7360,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: 6) Install OpenClaw
   - H2: 7) Configure channels
   - H2: 8) Run the VM headlessly
+  - H2: 9) Open the dashboard from your Mac
   - H2: Bonus: iMessage integration
   - H2: Save a golden image
   - H2: Running 24/7
@@ -7680,6 +7703,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Slow Git content reads
   - H3: Slow worktree cleanup
   - H3: Slow agent database opens
+  - H3: State lease renewal failures
   - H3: SQLite transaction timing
   - H3: SQLite session writes
   - H3: Slow reply preparation
@@ -8388,6 +8412,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Desktop availability and keeping awake
   - H2: Recovery checklist when prompts disappear
   - H2: Files and folders permissions (Desktop/Documents/Downloads)
+  - H2: Local Network access for the Gateway
   - H2: Related
 
 ## platforms/mac/remote.md
@@ -9427,6 +9452,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Registration and execution
   - H2: Hook catalog
+  - H3: Explicit Stop
   - H3: Skill lifecycle
   - H3: Channel pairing requests
 
@@ -11615,6 +11641,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Session conversation grammar
   - H2: Conversation route ownership
   - H2: Account-scoped conversation binding support
+  - H2: Native conversation forks
 
 ## plugins/sdk-channel-plugins/setup-and-config.md
 
@@ -11652,6 +11679,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Tool failure diagnostics
   - H2: ACP harness turns
   - H2: Session persistence
+  - H2: Skill authoring
   - H2: Stateful CLI commands
   - H2: OpenAI-compatible Decisions runtime
   - H2: Runtime request headers
@@ -12077,12 +12105,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: What each page covers
   - H2: Runtime namespaces
   - H3: Read-only session forks
+  - H3: Forked turns with plugin tools
   - H2: Storing runtime references
   - H2: Plugin lifecycle and cleanup
   - H3: Reload-safe plugins
   - H3: Plugin value boundary
   - H3: Handle native client errors
   - H3: Instance-bound background context
+  - H3: Background session notices
   - H3: Memory runtime replacement
   - H2: Browser meeting transport builders
   - H2: Browser meeting configuration
@@ -13757,6 +13787,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /reference/database-schemas
 - Headings:
+  - H2: Selective session dependency recovery
   - H2: Related
   - H2: Where each section moved
 
@@ -13907,6 +13938,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Talk voice-session lookup indexes
   - H2: Session usage overview projection
   - H2: Background exec notification obligations
+  - H2: Plugin session notice delivery owner
   - H2: Memory index batch revisions
   - H2: Review checkpoint for material changes
   - H2: Preflight a target release
@@ -13922,6 +13954,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Schema bumps and older updaters
   - H3: Profile-owned skill library
   - H2: Declared migration backup scopes
+  - H2: Durable session creation receipts
 
 ## reference/database-schemas/worker-access-inventory.md
 
@@ -16257,11 +16290,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/exec
 - Headings:
   - H2: Host memory protection
+  - H2: Host I/O isolation
   - H2: Parameters
   - H2: Config
   - H3: Modes
   - H3: Inline eval (strictInlineEval)
   - H3: PATH handling
+  - H3: macOS Local Network access
   - H3: Python environments (uv)
   - H2: Session overrides (/exec)
   - H2: Exec approvals (companion app / node host)
@@ -16700,7 +16735,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Bundled skill allowlist
   - H2: Per-skill entries (skills.entries)
   - H2: Agent allowlists (agents)
-  - H2: Workshop (skills.workshop)
+  - H2: Workshop settings
   - H2: Symlinked skill roots
   - H2: Sandboxed skills and env vars
   - H2: Loading order reminder
@@ -16738,6 +16773,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/slash-commands
 - Headings:
   - H2: Three command types
+  - H2: Fork a conversation
   - H2: Configuration
   - H2: Command list
   - H3: Core commands
@@ -17105,6 +17141,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /web/control-ui
 - Headings:
   - H2: Command palette file attachments
+  - H2: Choose a session workspace
   - H2: Automatic session names
   - H2: Temporary disconnections
   - H2: Browser requirements
