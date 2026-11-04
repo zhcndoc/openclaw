@@ -1,0 +1,20 @@
+FROM --platform=$BUILDPLATFORM node:24-bookworm AS builder
+
+WORKDIR /app
+
+ENV CI=true \
+    DOCS_SITE_CANONICAL_ORIGIN=https://openclaw.zhcndoc.com \
+    DOCS_FEEDBACK_ISSUE_REPO=zhcndoc/openclaw \
+    DOCS_SITE_CHAT_API_URL=""
+
+COPY . .
+
+RUN npm ci --include=dev --allow-git=root
+
+RUN npm run docs:build
+
+FROM ikxin/caddy:latest
+
+COPY --from=builder /app/dist/docs-site /usr/share/caddy
+
+EXPOSE 8080
