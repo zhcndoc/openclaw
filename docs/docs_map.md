@@ -394,6 +394,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Access control
   - H3: Bot conversations
   - H3: Passive room context
+  - H3: Thread sessions
   - H3: Reply placement
   - H2: Manual configuration
   - H3: Reply prefix
@@ -1736,6 +1737,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Where each section moved
   - H2: Related
+  - H2: Adaptive observation pilot
 
 ## ci/adaptive-testing.md
 
@@ -1743,6 +1745,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: Adaptive CI experiments
   - H2: Export observations
+  - H2: Observation pilot
   - H2: Current coverage
   - H2: Plan in shadow mode
   - H2: Estimate cost and compute savings
@@ -2850,6 +2853,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Uninstall
   - H2: Update
   - H2: Reload
+  - H3: Development: reload edited bundled code
   - H3: Inspect retained references
 
 ## cli/policy.md
@@ -5331,6 +5335,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/doctor/config-migrations
 - Headings:
   - H2: Retired A2UI widgets
+  - H2: Skill library tool split
   - H2: Skill Workshop plugin policy
   - H2: Group allowlist fallback
   - H2: Copied model allowlists
@@ -5536,6 +5541,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: File-based logger
   - H3: Verbose vs. log levels
   - H3: SQLite session writes
+  - H3: Slow SQLite transcript hydration
   - H3: SQLite snapshot cleanup
   - H3: Slow agent database opens
   - H3: Slow cron list pages
@@ -6425,28 +6431,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Learn more
   - H2: Related
 
-## gateway/team-server.md
-
-- Route: /gateway/team-server
-- Headings:
-  - H2: How we build OpenClaw with OpenClaw
-  - H2: Before you begin
-  - H2: Optimal setup
-  - H2: 1. Install under one service account
-  - H2: 2. Configure the public URL and authenticated ingress
-  - H3: Set the public URL once
-  - H2: 3. Bootstrap administrators and assign roles
-  - H3: Invite guests
-  - H2: 4. Synchronize people with verified GitHub identities
-  - H3: Use an OIDC provider without losing existing profiles
-  - H3: Configure GitHub access for repository work
-  - H2: 5. Connect chat and remote clients
-  - H2: 6. Give widgets a separate sandbox origin
-  - H2: 7. Share selected sessions from another Gateway
-  - H2: 8. Verify the complete flow
-  - H2: Keep operations recoverable
-  - H2: Troubleshooting
-
 ## gateway/telemetry.md
 
 - Route: /gateway/telemetry
@@ -6470,6 +6454,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Security boundary (important)
   - H2: Request body
   - H2: Policy + routing behavior
+  - H3: Configured MCP tools
   - H2: Responses
   - H2: Example
   - H2: Related
@@ -8805,6 +8790,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Install a bundle
   - H2: What OpenClaw maps from bundles
   - H3: Supported now
+  - H4: Recommended prompts
   - H4: Skill content
   - H4: Hook packs
   - H4: Embedded OpenClaw settings
@@ -9711,6 +9697,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Rich example
   - H2: Generation overlap
   - H2: Top-level field reference
+  - H2: Recommended prompts
   - H2: Catalog categories
   - H2: JSON Schema requirements
   - H2: Retained state checks
@@ -12062,6 +12049,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Provider media and search
   - H2: Related
   - H2: Worker resource receipts
+  - H3: Native web search codecs
 
 ## plugins/sdk-provider-plugins/hook-families.md
 
@@ -12106,6 +12094,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Runtime namespaces
   - H3: Read-only session forks
   - H3: Forked turns with plugin tools
+  - H2: Skill usage
   - H2: Storing runtime references
   - H2: Plugin lifecycle and cleanup
   - H3: Reload-safe plugins
@@ -12679,6 +12668,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /providers/clawrouter
 - Headings:
   - H2: Getting started
+  - H2: Vercel native Messages
   - H2: Utility model
   - H2: Decision models
   - H2: Text embeddings for memory
@@ -12688,6 +12678,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Protocol and provider plugins
   - H2: Hosted web search
   - H2: Image generation
+  - H2: Native Gradium speech
   - H2: Quotas and usage
   - H2: Pool dashboard
   - H2: Troubleshooting
@@ -14226,6 +14217,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/scripts/merge-recovery
 - Headings:
   - H1: PR merge recovery
+  - H2: Delayed completion
 
 ## reference/scripts/pr-preparation.md
 
@@ -14725,6 +14717,37 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Security and Privacy
   - H3: Quality-of-Life Improvements
   - H3: Other Bug Fixes
+
+## releases/2026.10.10.md
+
+- Route: /releases/2026.10.10
+- Headings:
+  - H1: v2026.10.10
+  - H2: Chat Details Panel
+  - H2: Advisor
+  - H2: Split speech voice mode
+  - H2: Bring your agent to your files
+  - H2: Control from ChatGPT and Claude
+  - H2: Event-triggered automations
+  - H2: Quality-of-life improvements
+  - H3: Conversations and navigation
+  - H3: Performance and diagnostics
+  - H3: Cloud workspaces
+  - H3: Setup, updates and documentation
+  - H3: Models, voice and media
+  - H3: Skills, plugins and automations
+  - H2: Bug fixes
+  - H3: Conversations and interface
+  - H3: Agents, Goals and automations
+  - H3: Messaging, voice and media
+  - H3: Memory and search
+  - H3: Workspaces and paired computers
+  - H3: Skills, plugins and GitHub
+  - H3: Models and coding agents
+  - H3: Tools, browsing and permissions
+  - H3: Diagnostics and service maintenance
+  - H3: Desktop and mobile apps
+  - H3: Installation, updates and backups
 
 ## releases/2026.10.2.md
 
@@ -15527,6 +15550,40 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: The Future
   - H2: Related
 
+## start/multiplayer.md
+
+- Route: /start/multiplayer
+- Headings:
+  - H2: How we build OpenClaw with OpenClaw
+  - H2: One trust boundary
+  - H2: Before you begin
+  - H2: Quick setup
+  - H3: Step 1: Give the team access to the Gateway
+  - H3: Step 2: Connect the team chat
+  - H3: Step 3: Sign the team in to the Control UI
+  - H3: Step 4: Work in shared sessions
+  - H3: Step 5: Bound what each person can do
+  - H4: Coding as a guest
+  - H3: Verify the quick setup
+  - H2: Production deployment
+  - H3: Optimal setup
+  - H3: 1. Install under one service account
+  - H3: 2. Configure the public URL and authenticated ingress
+  - H4: Set the public URL once
+  - H3: 3. Bootstrap administrators and assign roles
+  - H4: Invite guests
+  - H3: 4. Synchronize people with verified GitHub identities
+  - H4: Use an OIDC provider without losing existing profiles
+  - H4: Configure GitHub access for repository work
+  - H3: 5. Connect chat and remote clients
+  - H3: 6. Give widgets a separate sandbox origin
+  - H3: 7. Share selected sessions from another Gateway
+  - H3: 8. Verify the complete flow
+  - H2: Keep operations recoverable
+  - H2: Troubleshooting
+  - H2: When to split things up
+  - H2: Related
+
 ## start/onboarding-overview.md
 
 - Route: /start/onboarding-overview
@@ -15581,22 +15638,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Updating (without wrecking your setup)
   - H2: Linux (systemd user service)
   - H2: Related docs
-
-## start/teams.md
-
-- Route: /start/teams
-- Headings:
-  - H2: Before you begin
-  - H2: One trust boundary
-  - H2: Step 1: Give the team access to the Gateway
-  - H2: Step 2: Connect the team chat
-  - H2: Step 3: Sign the team in to the Control UI
-  - H2: Step 4: Work in shared sessions
-  - H2: Step 5: Bound what each person can do
-  - H3: Coding as a guest
-  - H2: Verify
-  - H2: When to split things up
-  - H2: Related
 
 ## start/why-openclaw.md
 
@@ -15692,6 +15733,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: acpx harness support (current)
   - H2: GitHub Copilot CLI in native chat
+  - H2: Grok Build in native chat
+  - H2: Qoder CLI in native chat
   - H2: Permissions for native chat runtimes
   - H2: Required config
   - H2: Repair existing bare-session histories
@@ -17140,6 +17183,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui
 - Headings:
+  - H2: Edit a failed message
   - H2: Command palette file attachments
   - H2: Choose a session workspace
   - H2: Automatic session names
