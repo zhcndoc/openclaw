@@ -1746,9 +1746,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: Adaptive CI experiments
   - H2: Export observations
   - H2: Observation pilot
+  - H3: Published prior snapshots
+  - H3: Owned model rankings
   - H2: Current coverage
   - H2: Plan in shadow mode
+  - H2: Evaluate recorded decisions
   - H2: Estimate cost and compute savings
+  - H2: Declared file inputs
+  - H2: Optional Jev ranking experiment
 
 ## ci/capacity.md
 
@@ -1875,6 +1880,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Android release runner
   - H3: Blacksmith runner capacity
   - H3: Runner backend modes
+  - H3: Boat build qualification
   - H3: RunsOn qualification
   - H3: Hybrid hosted assignment guard
   - H2: Related
@@ -1894,6 +1900,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Vitest paired benchmark
   - H2: Security Review reconciler
   - H2: QA Lab
+  - H2: OpenGrep
   - H2: CodeQL
   - H3: Security categories
   - H3: Platform-specific security shards
@@ -4019,7 +4026,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Storage (where tokens live)
   - H2: Anthropic Claude CLI reuse
   - H2: OAuth exchange (how login works)
-  - H3: Restarting sign-in in Model Setup
+  - H3: Restarting sign-in in Models
   - H3: Anthropic setup-token
   - H3: OpenAI Codex (ChatGPT OAuth)
   - H2: Refresh + expiry
@@ -4463,6 +4470,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /concepts/usage-tracking
 - Headings:
+  - H2: Account-scoped quotas
   - H2: What it is
   - H2: Where it shows up
   - H2: Usage date ranges
@@ -5334,6 +5342,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/doctor/config-migrations
 - Headings:
+  - H2: Plugin prompt-modification permission
   - H2: Retired A2UI widgets
   - H2: Skill library tool split
   - H2: Skill Workshop plugin policy
@@ -7317,6 +7326,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Agent instructions
   - H3: Gateway config
   - H3: Temporary storage
+  - H3: Private storage after a PVC remount
   - H3: Add providers
   - H3: Custom namespace
   - H3: Custom image
@@ -11565,6 +11575,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-channel-plugins
 - Headings:
   - H2: What your plugin owns
+  - H2: Native mention display
   - H2: Opted-in public child sessions
   - H2: Walkthrough
   - H2: File structure
@@ -17186,6 +17197,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Edit a failed message
   - H2: Command palette file attachments
   - H2: Choose a session workspace
+  - H2: Create a nested session
   - H2: Automatic session names
   - H2: Temporary disconnections
   - H2: Browser requirements
@@ -17214,6 +17226,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui/chat
 - Headings:
+  - H2: Goals, questions, and recovery
+  - H2: Slash-command feedback
+  - H2: Command approvals
   - H2: Desktop message input
   - H2: Mobile message input
   - H2: Context breakdown
@@ -17347,7 +17362,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Browser tab icon
   - H2: Community invitation
   - H2: Personal identity
-  - H2: Gateway host status
+  - H2: Gateway connection
   - H2: Language support
   - H2: Appearance themes
   - H2: Opening links
@@ -17361,7 +17376,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Templates (Labs)
   - H2: Speech bubbles
   - H2: Custom plugin UI
-  - H2: Import assistant memory
+  - H2: Import agent memory
   - H2: MCP page
   - H2: Activity tab
   - H2: Meetings page

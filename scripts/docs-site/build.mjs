@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from "node:fs";
+import { Parser } from "htmlparser2";
 import { latestReleaseAnnouncement, releaseVersionHtml, releaseBadgeHtml } from "./release-announcement.mjs";
 import { homeLayoutHtml } from "./home-layout.mjs";
 import { homeStringsForLocale } from "./home-strings.mjs";
@@ -302,7 +303,7 @@ function writePage(page) {
   const options = { sourceFile: page.file, root: sourceRoot, pageRoute: pageRoute(page) };
   const article = renderCache ? renderCache.render(page.raw, options) : renderArticle(page.raw, options);
   const composed = page.slug === "index" ? homeLayoutHtml(article, icon, announcement ? { ...announcement, href: pageRoute(announcedReleasePage) } : null, page.locale) : article;
-  const html = rewriteInternalUrls(composed, page.locale);
+  const html = rewriteInternalUrls(rewriteOfficialDiscordLinks(composed, page.slug), page.locale);
   const toc = tableOfContents(html);
   const outPath = path.join(outDir, pageRoute(page).replace(/^\//, ""), "index.html");
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -310,6 +311,51 @@ function writePage(page) {
   const mdPath = path.join(outDir, pageMarkdownRoute(page).replace(/^\//, ""));
   fs.mkdirSync(path.dirname(mdPath), { recursive: true });
   fs.writeFileSync(mdPath, page.raw, "utf8");
+}
+
+// Rewrite only rendered article anchors, after the article cache, so cached and
+// localized content share the canonical page placement without changing sources.
+function rewriteOfficialDiscordLinks(html, slug) {
+  const placements = new Map([
+    ["help/faq", "docs-help-faq"],
+    ["install/updating", "docs-install-updating"],
+    ["plugins/building-plugins", "docs-plugins-building-plugins"],
+  ]);
+  const placement = placements.get(slug) ?? "docs";
+  const edits = [];
+  const ancestors = [];
+  const parser = new Parser({
+    onopentag(name, attributes) {
+      if (name === "a" && attributes.href && !ancestors.some(tag => ["pre", "code", "script", "style"].includes(tag))) {
+        let url;
+        try { url = new URL(attributes.href); } catch {}
+        // Queries/fragments may carry event-specific meaning. Keep those, other
+        // communities, service URLs, and credential-bearing URLs untouched.
+        if (url && ["http:", "https:"].includes(url.protocol) && !url.username && !url.password
+          && !url.port && !url.search && !url.hash
+          && ((url.hostname === "discord.gg" && /^\/clawd\/?$/.test(url.pathname))
+            || (["discord.com", "discordapp.com"].includes(url.hostname) && /^\/invite\/clawd\/?$/.test(url.pathname)))) {
+          const start = parser.startIndex;
+          const end = parser.endIndex + 1;
+          const opening = html.slice(start, end);
+          let replaced = false;
+          const replacement = opening.replace(/(\s+)([^\s"'<>/=]+)(\s*=\s*)(?:"[^"]*"|'[^']*'|[^\s>]+)/g,
+            (attribute, space, name, equals) => {
+              if (replaced || name.toLowerCase() !== "href") return attribute;
+              replaced = true;
+              return `${space}${name}${equals}"https://openclaw.ai/discord?from=${placement}"`;
+            });
+          edits.push({ start, end, replacement });
+        }
+      }
+      ancestors.push(name);
+    },
+    onclosetag() { ancestors.pop(); },
+  });
+  parser.write(html);
+  parser.end();
+  for (const { start, end, replacement } of edits.reverse()) html = html.slice(0, start) + replacement + html.slice(end);
+  return html;
 }
 
 function layout({ page, nav, activeTab, html, toc, prev, next }) {
@@ -405,7 +451,7 @@ function siteHeader(page) {
 <button class="search-button" type="button" data-search-open aria-label="${escapeAttr(controls[0])}">${icon("search")}<span class="search-label">${escapeHtml(controls[0])}</span><span class="search-shortcut" aria-hidden="true">${icon("command")}<span>K</span></span></button>
 <div class="header-actions">
 <nav class="network-nav" aria-label="OpenClaw sites">${network.map(([label, href]) => `<a href="${href}">${label}</a>`).join("")}</nav>
-<nav class="header-links" aria-label="Community and preferences"><div class="header-social-group" role="group" aria-label="Social links">${socialIconLinks()}</div><div class="header-preferences-group" role="group" aria-label="Preferences">${languagePicker(page)}<button class="theme-toggle" type="button" data-theme-toggle aria-label="${escapeAttr(controls[1])}"><span class="theme-toggle-icon theme-toggle-icon-dark">${icon("moon")}</span><span class="theme-toggle-icon theme-toggle-icon-light">${icon("sun")}</span></button></div><button class="nav-toggle" type="button" data-nav-toggle aria-label="${escapeAttr(controls[2])}" aria-expanded="false"><span></span><span></span><span></span></button></nav>
+<nav class="header-links" aria-label="Community and preferences"><div class="header-social-group" role="group" aria-label="Social links">${socialIconLinks("docs-header")}</div><div class="header-preferences-group" role="group" aria-label="Preferences">${languagePicker(page)}<button class="theme-toggle" type="button" data-theme-toggle aria-label="${escapeAttr(controls[1])}"><span class="theme-toggle-icon theme-toggle-icon-dark">${icon("moon")}</span><span class="theme-toggle-icon theme-toggle-icon-light">${icon("sun")}</span></button></div><button class="nav-toggle" type="button" data-nav-toggle aria-label="${escapeAttr(controls[2])}" aria-expanded="false"><span></span><span></span><span></span></button></nav>
 </div>
 </div>
 </header>`;
@@ -416,7 +462,7 @@ function siteFooter(analyticsEligible = false) {
   const socials = [
     ["X", "https://x.com/openclaw", "x-social"],
     ["GitHub", "https://github.com/openclaw/openclaw", "github"],
-    ["Discord", "https://discord.com/invite/clawd", "discord"],
+    ["Discord", "https://openclaw.ai/discord?from=docs-footer", "discord"],
     ["Reddit", "https://www.reddit.com/r/openclaw/", "reddit"],
     ["TikTok", "https://www.tiktok.com/@open_claw", "tiktok"],
     ["LinkedIn", "https://www.linkedin.com/company/the-openclaw-foundation", "linkedin"],
@@ -452,7 +498,7 @@ ${rewriteInternalUrls(docsQuickNav(page.slug, icon, page.locale), page.locale)}
     return `<details class="docs-section${current ? " current" : ""}" name="docs-sections" data-docs-section="${escapeAttr(tab.title)}"><summary${current ? ' aria-current="true"' : ""}><span>${escapeHtml(tab.title)}</span>${releaseVersionHtml(release, page.locale)}${icon("chevron-down")}</summary><div class="docs-section-pages">${tab.groups.map((group) => navGroupHtml(page, group)).join("")}</div></details>`;
   }).join("")}</nav>
 <div class="sidebar-tools">
-<nav class="sidebar-socials" aria-label="Community links">${socialIconLinks()}</nav>
+<nav class="sidebar-socials" aria-label="Community links">${socialIconLinks("docs-sidebar")}</nav>
 <button class="theme-toggle" type="button" data-theme-toggle aria-label="${escapeAttr(copy.controls[1])}"><span class="theme-toggle-icon theme-toggle-icon-dark">${icon("moon")}</span><span class="theme-toggle-icon theme-toggle-icon-light">${icon("sun")}</span></button>
 </div>
 </aside>`;
@@ -476,7 +522,7 @@ function communityInvite(locale) {
 <p class="community-invite__text">${escapeHtml(strings.communityBody)}</p>
 <div class="community-invite__links" dir="ltr">
 <a class="community-invite__cta" href="https://www.reddit.com/r/openclaw/" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(joinLabel("Reddit"))}" title="${escapeAttr(joinLabel("Reddit"))}">${icon("reddit")}<span>${escapeHtml(strings.communityJoin)}</span></a>
-<a class="community-invite__cta" href="https://discord.com/invite/clawd" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(joinLabel("Discord"))}" title="${escapeAttr(joinLabel("Discord"))}">${icon("discord")}<span>${escapeHtml(strings.communityJoin)}</span></a>
+<a class="community-invite__cta" href="https://openclaw.ai/discord?from=docs-community-invite" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(joinLabel("Discord"))}" title="${escapeAttr(joinLabel("Discord"))}">${icon("discord")}<span>${escapeHtml(strings.communityJoin)}</span></a>
 <a class="community-invite__cta" href="https://x.com/openclaw" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(followLabel)}" title="${escapeAttr(followLabel)}">${icon("x-social")}<span>${escapeHtml(strings.communityFollow)}</span></a>
 </div>
 </div>
@@ -505,11 +551,11 @@ function localeDisplayName(code) {
   return localePickerLabels[code] ?? localeLabels[code] ?? code;
 }
 
-function socialIconLinks() {
+function socialIconLinks(placement) {
   return [
     ["GitHub", "https://github.com/openclaw/openclaw", "github"],
     ["Reddit", "https://www.reddit.com/r/openclaw/", "reddit"],
-    ["Discord", "https://discord.com/invite/clawd", "discord"],
+    ["Discord", `https://openclaw.ai/discord?from=${placement}`, "discord"],
     ["X", "https://x.com/openclaw", "x-social"],
   ].map(([label, href, iconName]) => `<a class="top-icon-link" href="${escapeAttr(href)}" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}">${icon(iconName)}</a>`).join("");
 }
