@@ -91,6 +91,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /automation/cron-jobs/delivery
 - Headings:
   - H2: Delivery and output
+  - H3: Default destinations
   - H3: Owner delivery and direct messages
   - H3: Failure notifications
   - H4: Owner-conversation repair
@@ -1749,6 +1750,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Published prior snapshots
   - H3: Owned model rankings
   - H2: Current coverage
+  - H3: Qualified Markdown skipping pilot
   - H2: Plan in shadow mode
   - H2: Evaluate recorded decisions
   - H2: Estimate cost and compute savings
@@ -3221,6 +3223,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Recover a failed update
   - H3: Original state captures
   - H4: Inspect migration preservation
+  - H3: Interrupted while the Gateway restarts
   - H3: Interrupted state restore
   - H3: Retained updater runtime
   - H2: Candidate Doctor stack overflow
@@ -4961,6 +4964,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/config-automation
 - Headings:
   - H2: Automations (cron)
+  - H3: cron.delivery, cron.agents, and cron.creators
   - H3: cron.failureAlert
   - H2: Media model template variables
 
@@ -5184,6 +5188,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: tools.gatewayPolicy
   - H3: Automation scope and command jobs
   - H2: tools.byProvider
+  - H3: Per-model exec ceiling
   - H2: tools.toolsBySender
   - H2: tools.elevated
 
@@ -8288,16 +8293,35 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /platforms/mac/bundled-gateway
 - Headings:
   - H2: Automatic setup
+  - H3: Terminal commands
+  - H3: Existing and development Gateways
+  - H3: Set up Chrome
   - H2: Manual recovery
+  - H3: Install an independent Node Gateway
   - H2: Launchd (Gateway as LaunchAgent)
+  - H3: Switch hosting modes
+  - H3: Manage the service from the CLI
+  - H3: Runtime pins and migration state
   - H3: Unexpected repeated restarts
   - H3: Attach-only development
+  - H3: Logs and installation identity
   - H2: App-hosted lifecycle and updates
+  - H3: Startup and crash recovery
+  - H3: What an app update does
+  - H3: Legacy and remote installations
+  - H3: Replace a release app with a local build
   - H3: Existing app-managed Node services
+  - H4: Checks before replacing a service
+  - H4: Installations that stay on their current runtime
+  - H4: Resume a paused legacy installation
   - H2: Version compatibility
   - H2: State directory on macOS
   - H2: Debug app connectivity
   - H2: Smoke check
+  - H2: Runtime and credential details
+  - H3: Service permissions after an update
+  - H3: Local authentication
+  - H3: Credential recovery
   - H2: Related
 
 ## platforms/mac/canvas.md
@@ -9559,6 +9583,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Memory prompt
   - H2: Knowledge index
   - H2: Automatic recall
+  - H2: Recall gate
+  - H3: Use an existing reranker
   - H2: Pre-compaction memory flush
   - H2: What Knowledge does not replace
 
@@ -9585,6 +9611,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/knowledge/retrieval
 - Headings:
   - H2: Query contract
+  - H3: Superseded wording
   - H2: Results and citations
   - H2: Index behavior
   - H3: What is rebuildable
@@ -11051,6 +11078,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Surface
   - H2: Related docs
 
+## plugins/reference/rerank.md
+
+- Route: /plugins/reference/rerank
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
 ## plugins/reference/runway.md
 
 - Route: /plugins/reference/runway
@@ -11749,6 +11784,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: HTTP and sockets
   - H2: Browser device approval
   - H2: Security boundary
+  - H2: Unattended operator continuations
 
 ## plugins/sdk-migration.md
 
@@ -12100,6 +12136,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/sdk-runtime
 - Headings:
+  - H2: Settled agent lifecycle events
   - H2: Module loading and host identity
   - H2: What each page covers
   - H2: Runtime namespaces
@@ -13347,6 +13384,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Getting started
   - H2: Config example
   - H2: Catalog
+  - H2: Endpoint outages
   - H2: Privacy
   - H2: Advanced configuration
   - H2: Related
@@ -13466,6 +13504,17 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Config example
   - H2: Behavior notes
   - H2: Related
+
+## providers/rerank.md
+
+- Route: /providers/rerank
+- Headings:
+  - H1: Rerank
+  - H2: Supported servers
+  - H2: Configure
+  - H2: What a reranker can answer
+  - H2: Recall gate example
+  - H2: Privacy
 
 ## providers/runway.md
 
@@ -14243,11 +14292,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/scripts/pr-tooling
 - Headings:
   - H1: PR wrapper tooling
+  - H2: Finalized task closeout
+  - H2: Wrapper execution and dependencies
   - H2: Qualify the workspace before review
   - H2: Keep the admitted workflow across commands
   - H3: Salvage an unknown file in an interrupted review checkout
   - H3: Continue a correction with repaired workflow code
   - H2: Reconcile a completed CI review
+  - H2: Recover dependency-cache device identities
   - H2: Recover a retained dependency projection
   - H2: Captured baseline evidence hashes
   - H2: Rerun failed CI tests
@@ -14900,6 +14952,26 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Security and Privacy
   - H2: Quality-of-Life Improvements
 
+## releases/2026.11.1.md
+
+- Route: /releases/2026.11.1
+- Headings:
+  - H1: v2026.11.1
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Quality-of-Life Improvements
+  - H2: Other Bug Fixes
+
 ## releases/2026.6.11.md
 
 - Route: /releases/2026.6.11
@@ -15298,6 +15370,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /releases
 - Headings:
   - H2: Releases
+  - H3: November 2026
   - H3: October 2026
   - H3: September 2026
   - H3: Earlier releases
@@ -15611,6 +15684,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /start/onboarding
 - Headings:
+  - H2: Automatic first run
+  - H2: macOS prompts
+  - H2: Manual setup
+  - H2: AI connection options
+  - H3: Automatic selection
+  - H3: Codex login and isolation
+  - H3: Other connections
+  - H2: If AI setup stalls
   - H2: Related
 
 ## start/openclaw.md
