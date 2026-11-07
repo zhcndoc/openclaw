@@ -1859,6 +1859,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /ci/routing-costs
 - Headings:
+  - H2: Blacksmith physical allocation
   - H2: Routing from measured wall time
   - H3: Telegram process overlap
   - H2: Hosted assignment on the critical path
@@ -2316,6 +2317,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Modes and prompting
   - H2: Choosing which findings to address
+  - H2: Gmail watcher dependency
   - H2: Config writes and backups
   - H2: Gateway and service repairs
   - H2: Session state and cron
@@ -3223,7 +3225,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Recover a failed update
   - H3: Original state captures
   - H4: Inspect migration preservation
-  - H3: Interrupted while the Gateway restarts
+  - H3: Interrupted during an update
   - H3: Interrupted state restore
   - H3: Retained updater runtime
   - H2: Candidate Doctor stack overflow
@@ -3653,6 +3655,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Core consumer contract
   - H3: Conversational tool filtering
   - H2: Advisor
+  - H2: OpenClaw ID remote access
+  - H3: Sign in with OpenClaw ID
+  - H3: How the tunnel reaches the Gateway
+  - H3: Turn on remote access
+  - H3: Membership
   - H2: Local model lean mode
   - H2: Experimental does not mean hidden
   - H2: Related
@@ -5148,6 +5155,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/config-tools/custom-providers
 - Headings:
   - H2: Custom providers and base URLs
+  - H2: Provider names and icons
   - H2: Provider field details
 
 ## gateway/config-tools/github-identity.md
@@ -5381,6 +5389,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Talk realtime inheritance
   - H2: ACP session metadata
   - H2: ACP agents' model precedence
+  - H2: Saved model output caps
   - H2: Missing plugins during migration
   - H2: Context engine plugin-ID selectors
   - H2: Blocked local plugins
@@ -6008,6 +6017,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: The core idea
   - H2: Topology options
+  - H2: OpenClaw ID alongside existing access
   - H2: Command flow (what runs where)
   - H2: SSH tunnel (CLI + tools)
   - H2: CLI remote defaults
@@ -7631,6 +7641,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Headless node updates
   - H2: Auto-updater
+  - H3: Choose an automatic-update schedule
   - H3: Update campaigns
 
 ## install/updating/rollback-and-recovery.md
@@ -10326,6 +10337,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Distribution
   - H2: Surface
 
+## plugins/reference/deep-research.md
+
+- Route: /plugins/reference/deep-research
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
 ## plugins/reference/deepgram.md
 
 - Route: /plugins/reference/deepgram
@@ -10942,6 +10961,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Surface
   - H2: Related docs
 
+## plugins/reference/openclaw-id-access.md
+
+- Route: /plugins/reference/openclaw-id-access
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+
 ## plugins/reference/opencode-go.md
 
 - Route: /plugins/reference/opencode-go
@@ -11440,6 +11466,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Distribution
   - H2: Surface
   - H2: Related docs
+
+## plugins/research-adapters.md
+
+- Route: /plugins/research-adapters
+- Headings: none
 
 ## plugins/runtime-compatibility.md
 
@@ -12045,6 +12076,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Post-ack webhook work
   - H3: Requester-scoped MCP connections
   - H3: Doctor plugin-state repairs
+  - H2: Durable session work in services
 
 ## plugins/sdk-overview/memory-and-context.md
 
@@ -12787,6 +12819,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Config snippet
   - H2: Supported surfaces
   - H2: Available models
+  - H2: Thinking
   - H2: Prompt caching
   - H2: Price estimates
   - H2: Notes
@@ -16302,6 +16335,17 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Tier 3: advanced operations
   - H2: Add an operator skill
   - H2: Related
+
+## tools/deep-research.md
+
+- Route: /tools/deep-research
+- Headings:
+  - H2: Choose an engine
+  - H2: Start and inspect research
+  - H2: Portable evidence and budgets
+  - H2: Google managed research
+  - H2: Recovery and cancellation
+  - H2: Qualification
 
 ## tools/diffs.md
 
