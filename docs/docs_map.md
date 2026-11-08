@@ -6039,6 +6039,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/restart-recovery
 - Headings:
+  - H2: Unexpected exits
+  - H2: A wedged main thread
   - H2: What survives a restart
   - H2: Graceful shutdown
   - H3: Maintenance custody observations
@@ -6526,6 +6528,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/troubleshooting/gateway-service-and-process
 - Headings:
   - H2: Gateway service not running
+  - H2: Unexpected Gateway exits
   - H2: macOS gateway silently stops responding, then resumes when you touch the dashboard
   - H2: macOS LAN commands fail with No route to host
   - H2: macOS launchd supervisor loop with duplicate gateway/node LaunchAgents
@@ -8245,6 +8248,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Model sign-in
   - H2: Settings
   - H2: Cloudflare Access sign-in
+  - H2: Share request admission
   - H2: Sessions
   - H2: Session colors
   - H2: Reactions
@@ -13442,7 +13446,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Getting started
   - H2: Config example
   - H2: Model references
-  - H2: Typed decisions with Jev
+  - H2: Typed decisions
+  - H3: Parallel Decisions Fast
+  - H3: Jev
   - H2: Image generation
   - H2: Video generation
   - H2: Music generation
@@ -14024,6 +14030,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Background exec notification obligations
   - H2: Plugin session notice delivery owner
   - H2: Memory index batch revisions
+  - H2: Active transcript event facts
   - H2: Review checkpoint for material changes
   - H2: Preflight a target release
   - H3: Preflight an explicit agent copy
@@ -14333,6 +14340,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Continue a correction with repaired workflow code
   - H2: Reconcile a completed CI review
   - H2: Recover dependency-cache device identities
+  - H2: Release finished dependency holds
   - H2: Recover a retained dependency projection
   - H2: Captured baseline evidence hashes
   - H2: Rerun failed CI tests
@@ -16731,6 +16739,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Tool parameters
   - H2: Notes
   - H2: Related
+  - H2: Decisions
 
 ## tools/pdf.md
 
