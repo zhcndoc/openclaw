@@ -2704,6 +2704,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Identity and pairing state
   - H2: Exec approvals
   - H2: Related
+  - H2: Labs: OpenClaw ID tunnel targets
 
 ## cli/nodes.md
 
@@ -3706,6 +3707,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: CLI
   - H2: Gateway methods
   - H2: Workboard workspaces
+  - H2: Shared clone history
   - H2: Related
 
 ## concepts/mantis-slack-desktop-runbook.md
@@ -5756,6 +5758,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: How capability approval works
   - H3: Upgrades and older writers
   - H2: One-paste node pairing
+  - H2: OpenClaw ID nodes (Labs)
+  - H3: Gateway API for owner clients
   - H2: CLI workflow (headless friendly)
   - H2: API surface (gateway protocol)
   - H2: Node command gating (2026.3.31+)
@@ -5988,6 +5992,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Talk and TTS
   - H3: Relay output cancellation
   - H2: Secrets, config, update, and wizard
+  - H3: Reconcile a config write after a lost response
   - H2: Agent and workspace helpers
 
 ## gateway/protocol/transport.md
@@ -6015,6 +6020,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/remote
 - Headings:
+  - H2: OpenClaw ID nodes (Labs)
   - H2: The core idea
   - H2: Topology options
   - H2: OpenClaw ID alongside existing access
@@ -6096,6 +6102,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Docker backend
   - H3: Container user
+  - H3: Shell environment
   - H3: Docker daemon
   - H3: Sandboxed browser
 
@@ -13373,7 +13380,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /providers/openai/image-and-video
 - Headings:
   - H2: Image generation
-  - H3: GPT Image 2.5
+  - H3: GPT Image 2.5 and 2.6
   - H3: Other Image Models
 
 ## providers/openai/models.md
@@ -13805,6 +13812,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Release cadence
   - H2: Release validation
   - H3: Operator capabilities
+  - H3: Resume activation while ClawHub recovery is independent
   - H3: Watch publication
   - H3: Plugin SDK evidence transport
   - H3: Frozen qualification identity
@@ -14139,6 +14147,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Evidence to keep
   - H2: Release-tooling waivers
+  - H2: Receipt-backed beta aggregate recovery
   - H2: Workflow files
 
 ## reference/full-release-validation/extended-stable.md
@@ -14335,6 +14344,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Finalized task closeout
   - H2: Wrapper execution and dependencies
   - H2: Qualify the workspace before review
+  - H2: Reuse the base and fetch only needed history
   - H2: Keep the admitted workflow across commands
   - H3: Salvage an unknown file in an interrupted review checkout
   - H3: Continue a correction with repaired workflow code
@@ -14998,6 +15008,26 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /releases/2026.11.1
 - Headings:
   - H1: v2026.11.1
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Quality-of-Life Improvements
+  - H2: Other Bug Fixes
+
+## releases/2026.11.2.md
+
+- Route: /releases/2026.11.2
+- Headings:
+  - H1: v2026.11.2
   - H2: Installation and Onboarding
   - H2: Web UI
   - H2: Updates and Maintenance
