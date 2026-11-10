@@ -2185,6 +2185,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /cli/connect
 - Headings:
   - H1: openclaw connect
+  - H2: OpenClaw ID invitations
   - H2: Create a join command
   - H2: Connect in the foreground
   - H2: Reconnect a paired node
@@ -2251,6 +2252,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /cli/devices
 - Headings:
   - H1: openclaw devices
+  - H2: Browser-code pairing
   - H2: Doctor pairing findings
   - H2: Common options
   - H2: Commands
@@ -2696,6 +2698,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: openclaw node
   - H2: Why use a node host?
   - H2: Browser proxy (zero-config)
+  - H2: Join with OpenClaw ID
   - H2: Run (foreground)
   - H2: Gateway auth for node host
   - H2: Service (background)
@@ -2758,6 +2761,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Switching to an agent
   - H2: Message rescue mode
   - H2: Related
+
+## cli/pair.md
+
+- Route: /cli/pair
+- Headings:
+  - H1: openclaw pair
+  - H2: Options
+  - H2: Running it over SSH
+  - H2: Requirements
 
 ## cli/pairing.md
 
@@ -3532,6 +3544,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Manual compaction
   - H2: Configuration
   - H3: Using a different model
+  - H3: Summary size
   - H3: Identifier preservation
   - H3: Active transcript byte guard
   - H3: History hydration byte limit
@@ -6101,6 +6114,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/sandboxing/docker-backend
 - Headings:
   - H2: Docker backend
+  - H3: Idle containers
   - H3: Container user
   - H3: Shell environment
   - H3: Docker daemon
@@ -14334,6 +14348,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: PR preparation
   - H2: Publish a candidate for required proof
+  - H2: Refresh a retained candidate for pending proof
   - H2: Signing a baseline on another host
 
 ## reference/scripts/pr-tooling.md
@@ -17432,6 +17447,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /web/control-ui/connect-and-pair
 - Headings:
   - H2: Device pairing (first connection)
+  - H2: Pair a browser with a code
   - H2: Pair a mobile device
   - H2: Runtime config endpoint
   - H2: PWA install and web push
