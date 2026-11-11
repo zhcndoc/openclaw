@@ -1883,6 +1883,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Android release runner
   - H3: Blacksmith runner capacity
   - H3: Runner backend modes
+  - H3: Android Store routing
+  - H3: Hourly plugin routing
   - H3: Boat build qualification
   - H3: RunsOn qualification
   - H3: Hybrid hosted assignment guard
@@ -2010,6 +2012,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /cli/agents
 - Headings:
   - H1: openclaw agents
+  - H2: Reserved agent IDs and setup recovery
   - H2: Examples
   - H2: Command surface
   - H3: agents list
@@ -5730,6 +5733,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Continue an upstream WebSocket trace
   - H2: Privacy and content capture
+  - H2: Session identity
 
 ## gateway/opentelemetry/setup.md
 
@@ -6033,6 +6037,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/remote
 - Headings:
+  - H2: OpenClaw ID from a source checkout
   - H2: OpenClaw ID nodes (Labs)
   - H2: The core idea
   - H2: Topology options
@@ -6414,6 +6419,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/security/tool-permissions
 - Headings:
   - H2: Control plane tools
+  - H2: Owner authority after network reads
   - H2: Cross-provider messaging
   - H2: Node execution (system.run)
   - H2: Dynamic skills (watcher / remote nodes)
@@ -9683,6 +9689,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/knowledge/tools
 - Headings:
+  - H2: Agent response shapes
   - H2: Ontology
   - H2: Reading records
   - H2: Listing and connections
@@ -12236,6 +12243,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Bounded model context
   - H2: Scoped session visibility
   - H2: Context engine transcript cursor
+  - H3: Canonical replay groups
   - H3: Reset reasons
   - H3: Reset-window start
   - H3: Current-turn fence
@@ -14160,6 +14168,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/full-release-validation/evidence
 - Headings:
   - H2: Evidence to keep
+  - H2: Bounded publication recovery
   - H2: Release-tooling waivers
   - H2: Receipt-backed beta aggregate recovery
   - H2: Workflow files
@@ -16075,6 +16084,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Root cause
   - H3: Solution 1: install Google Chrome (recommended)
   - H3: Solution 2: use snap Chromium in attach-only mode
+  - H3: Missing shared libraries
   - H3: Verify the browser works
   - H3: Config reference
   - H2: Problem: No Chrome tabs found for profile="user"
@@ -17196,6 +17206,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Modes
   - H2: Select which tools to defer
   - H2: Why this exists
+  - H2: MCP tool directory
   - H2: Structured controls
   - H3: Search
   - H3: Describe
@@ -17373,10 +17384,12 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /web/control-ui
 - Headings:
+  - H2: Feedback and bug reports
   - H2: Edit a failed message
   - H2: Command palette file attachments
   - H2: Choose a session workspace
   - H2: Create a nested session
+  - H2: Rename a session
   - H2: Automatic session names
   - H2: Temporary disconnections
   - H2: Browser requirements
