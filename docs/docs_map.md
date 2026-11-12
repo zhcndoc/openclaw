@@ -2491,6 +2491,16 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Notes
   - H2: Related
 
+## cli/id.md
+
+- Route: /cli/id
+- Headings:
+  - H1: openclaw id
+  - H2: Common options
+  - H2: Status
+  - H2: Move to new keys
+  - H2: Publish
+
 ## cli/index.md
 
 - Route: /cli
@@ -5163,6 +5173,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/config-tools/built-in-tools
 - Headings:
   - H2: tools.exec
+  - H2: tools.openclaw
   - H2: tools.loopDetection
   - H2: tools.web
   - H2: tools.media
@@ -5766,6 +5777,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Device pairing approvals
   - H2: Node pairing approvals
   - H2: Shared-secret auth
+  - H2: Recovering from inactive authority
   - H2: Related
 
 ## gateway/pairing.md
@@ -6590,6 +6602,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Configuration
   - H3: Configuration reference
   - H3: Configure with the wizard
+  - H2: Enterprise browser delegation
   - H2: Per-identity scope grants
   - H2: Automatic device approval
   - H2: Control UI pairing behavior
@@ -7728,6 +7741,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: File logs (JSONL)
   - H3: Console output
   - H3: Gateway WebSocket logs
+  - H3: Operator authority failures
   - H3: Steering and input cancellation
   - H2: Configuring logging
   - H3: Log levels
@@ -7997,6 +8011,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /nodes/media-playback
 - Headings:
   - H2: Client support
+  - H2: Audio previews and loading
   - H2: Portable formats
   - H2: Lazy playback renditions
   - H2: Managed attachments and access
@@ -9506,6 +9521,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Restrict a run to local models
   - H3: Handler lifetime
   - H3: Authorized prompt enrichment
+  - H4: Session continuity
   - H3: Session extensions and next-turn injections
 
 ## plugins/hooks/reference.md
@@ -13835,6 +13851,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Release validation
   - H3: Operator capabilities
   - H3: Resume activation while ClawHub recovery is independent
+  - H3: Explicit beta plugin authentication deferrals
   - H3: Watch publication
   - H3: Plugin SDK evidence transport
   - H3: Frozen qualification identity
@@ -14708,6 +14725,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/test/remote-proof
 - Headings:
   - H2: Remote proof policy for agents
+  - H3: Explicit Testbox proof
   - H2: Focused Android proof
   - H2: Testbox runner sizing
   - H2: Crabbox repository setup
@@ -15062,6 +15080,22 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Models and Providers
   - H2: Automations and Scheduling
   - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Quality-of-Life Improvements
+  - H2: Other Bug Fixes
+
+## releases/2026.11.3.md
+
+- Route: /releases/2026.11.3
+- Headings:
+  - H1: v2026.11.3
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Skills
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
   - H2: Plugins and Integrations
   - H2: Security and Privacy
   - H2: Quality-of-Life Improvements
@@ -17552,6 +17586,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /web/control-ui/settings
 - Headings:
   - H2: Environment identity
+  - H2: Appearance preferences
   - H2: Browser tab icon
   - H2: Community invitation
   - H2: Personal identity
