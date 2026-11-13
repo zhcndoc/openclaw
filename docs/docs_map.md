@@ -1783,6 +1783,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /ci/local-proof
 - Headings:
   - H2: Local equivalents
+  - H3: Delegating changed compilers in CI
   - H3: Opt-in compiler evidence
   - H2: Workflow lint tools
   - H2: Surface ratchets
@@ -1886,6 +1887,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Android Store routing
   - H3: Hourly plugin routing
   - H3: Boat build qualification
+  - H3: Scheduled Android CodeQL routing
   - H3: RunsOn qualification
   - H3: Hybrid hosted assignment guard
   - H2: Related
@@ -3626,6 +3628,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Limits and unavailable results
   - H2: Provide models from a plugin
   - H2: Contract ownership
+  - H2: Native provider live verification
 
 ## concepts/delegate-architecture.md
 
@@ -3678,12 +3681,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Currently documented flags
   - H2: Control UI Labs
+  - H2: Usage-ranked tool index
+  - H3: Inspect, import, or reset
+  - H3: Storage and privacy
   - H2: Decision assistance
   - H3: Core consumer contract
   - H3: Conversational tool filtering
-  - H2: Advisor
   - H2: OpenClaw ID remote access
   - H3: Sign in with OpenClaw ID
+  - H3: Link OpenClaw ID to your profile
   - H3: How the tunnel reaches the Gateway
   - H3: Turn on remote access
   - H3: Membership
@@ -5958,6 +5964,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Node host stats
   - H3: Node background alive event
   - H2: Broadcast event scoping
+  - H3: Optional live tool output
 
 ## gateway/protocol/rpc-bootstrap-and-events.md
 
@@ -6603,6 +6610,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Configuration reference
   - H3: Configure with the wizard
   - H2: Enterprise browser delegation
+  - H2: Organization co-author defaults
   - H2: Per-identity scope grants
   - H2: Automatic device approval
   - H2: Control UI pairing behavior
@@ -8890,6 +8898,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Detected but not executed
   - H2: MCP for embedded OpenClaw
   - H3: Transports
+  - H3: Python stdio servers in Agent Plugins bundles
   - H3: Tool naming
   - H2: Bundle formats
   - H2: Detection precedence
@@ -9683,6 +9692,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: The Granola plugin
   - H2: Start a scribe
   - H3: Example prompt
+  - H2: After updating OpenClaw
   - H2: States
   - H2: Controls
   - H2: Limits
@@ -9907,6 +9917,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/meeting-plugins
 - Headings:
   - H2: Choose a plugin
+  - H2: Enable bundled meeting plugins
   - H2: Choose a mode
   - H2: Configure Teams or Zoom
   - H2: Prepare Chrome and audio
@@ -10115,6 +10126,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Distribution
   - H2: Surface
+  - H2: How Advisor works
   - H2: Review instructions
 
 ## plugins/reference/agent-guidance.md
@@ -10273,6 +10285,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Distribution
   - H2: Surface
+
+## plugins/reference/celeris.md
+
+- Route: /plugins/reference/celeris
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
 
 ## plugins/reference/cerebras.md
 
@@ -10504,6 +10524,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## plugins/reference/fal.md
 
 - Route: /plugins/reference/fal
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
+## plugins/reference/fastino.md
+
+- Route: /plugins/reference/fastino
 - Headings:
   - H2: Distribution
   - H2: Surface
@@ -10928,6 +10956,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Distribution
   - H2: Surface
+
+## plugins/reference/nace.md
+
+- Route: /plugins/reference/nace
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
 
 ## plugins/reference/nextcloud-talk.md
 
@@ -11788,11 +11824,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: MCP subprocess runtime
   - H2: Workspace access
   - H2: Agent workspace context
+  - H2: Subagent progress references
   - H2: Tool failure diagnostics
   - H2: ACP harness turns
   - H2: Session persistence
   - H2: Skill authoring
   - H2: Stateful CLI commands
+  - H2: Prepared Decision HTTP runtime
   - H2: OpenAI-compatible Decisions runtime
   - H2: Runtime request headers
   - H3: Node workspace process environment
@@ -12236,6 +12274,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Browser meeting status ownership
   - H2: Browser meeting participation
   - H2: Worker provider allocation authority
+  - H2: Harness request-policy denials
   - H2: Harness execution identity
   - H2: Other top-level api fields
   - H2: Where each section moved
@@ -12756,6 +12795,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Endpoint and model IDs
   - H2: Authentication
 
+## providers/celeris.md
+
+- Route: /providers/celeris
+- Headings:
+  - H1: Celeris
+  - H2: Setup
+  - H2: Supported decisions
+  - H2: Limits and routing
+
 ## providers/cerebras.md
 
 - Route: /providers/cerebras
@@ -12924,6 +12972,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Music generation
   - H2: Related
 
+## providers/fastino.md
+
+- Route: /providers/fastino
+- Headings:
+  - H1: Fastino
+  - H2: Supported decisions
+  - H2: Interpret results
+
 ## providers/featherless.md
 
 - Route: /providers/featherless
@@ -13000,7 +13056,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Getting started
   - H2: Gemini 4 Argon
+  - H2: Gemini 4 Hydrogen
   - H2: Capabilities
+  - H2: Decision models
   - H2: Web search
   - H2: Image generation
   - H2: Video generation
@@ -13237,6 +13295,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Kimi web search
   - H2: Advanced configuration
   - H2: Related
+
+## providers/nace.md
+
+- Route: /providers/nace
+- Headings:
+  - H1: Nace
+  - H2: Setup
+  - H2: Supported decisions
+  - H2: Limits and routing
 
 ## providers/neon.md
 
@@ -13522,6 +13589,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Search modes
   - H2: Native API filtering
   - H2: Advanced configuration
+  - H2: Decision models
   - H2: Related
 
 ## providers/pixverse.md
@@ -13993,6 +14061,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Session reactions
   - H3: Session run outcomes and liveness
   - H3: Activity session recaps
+  - H3: Scheduled run parent receipts
   - H3: User-turn model prompt projections
   - H3: Transcript search row ownership
   - H3: Cold transcript archives
@@ -14012,6 +14081,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Package-publication recovery receipt
   - H2: Immutable installation preparation
   - H3: Immutable release-retention inventory
+  - H3: Usage-ranked tool index
 
 ## reference/database-schemas/personal-data.md
 
@@ -14020,12 +14090,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Personal GitHub connections and publication
   - H2: Personal model accounts
   - H2: Apple companion delivery journals
+  - H2: Native chat composer drafts
+  - H2: Apple OpenClaw ID node enrollment
 
 ## reference/database-schemas/state-schema-history.md
 
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 40
   - H3: State schema 39
   - H3: State schema 38
   - H3: State schema 37
@@ -14082,6 +14155,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Preflight a target release
   - H3: Preflight an explicit agent copy
   - H2: Files from before PR workspace adoption
+  - H2: Scheduled run parent receipts
 
 ## reference/database-schemas/versioning.md
 
@@ -16219,6 +16293,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/browser/profiles
 - Headings:
   - H2: Browser panel in the Control UI
+  - H3: Chrome settings and passwords
 
 ## tools/browser/remote.md
 
@@ -17453,6 +17528,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /web/control-ui/chat
 - Headings:
   - H2: Goals, questions, and recovery
+  - H2: Inline command trail
   - H2: Slash-command feedback
   - H2: Command approvals
   - H2: Desktop message input
