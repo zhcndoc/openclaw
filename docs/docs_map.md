@@ -3212,6 +3212,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Usage
   - H2: Immutable release installations
   - H2: Candidate-owned admission
+  - H3: Candidate-owned rehearsal
   - H3: External supervisor readiness
   - H2: Database capture and recovery
   - H2: Runtime retention failures
@@ -5580,6 +5581,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Pick a backend
   - H2: LM Studio + large local model (Responses API)
   - H3: Hybrid config: hosted primary, local fallback
+  - H3: Non-interactive hybrid setup
   - H3: Regional hosting / data routing
   - H2: Other OpenAI-compatible local proxies
   - H2: Smaller or stricter backends
@@ -7540,6 +7542,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Quick start
   - H2: Agent sandbox backend
   - H2: Podman and Tailscale
+  - H2: Reaching model servers on the host
   - H2: Systemd (Quadlet, optional)
   - H2: Config, env, and storage
   - H2: Upgrading images
@@ -13982,9 +13985,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Several Gateways on one PostgreSQL server
   - H3: Recommended: one database per Gateway
   - H3: One database with separate namespaces
+  - H3: Gateway ownership in PostgreSQL
   - H2: Isolation and durability
   - H2: Anchors and backups
   - H2: Updates and target compatibility
+  - H3: Server recovery captures
   - H2: Limits and recovery
   - H2: Observe database work
 
@@ -14365,6 +14370,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: diagnostics.cacheTrace config
   - H3: Env toggles (one-off debugging)
   - H3: What to inspect
+  - H2: Session prefix stability
   - H2: Quick troubleshooting
   - H2: Related
 
@@ -16140,6 +16146,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/ask-user
 - Headings:
   - H2: Answer a question
+  - H2: Required manual steps
   - H2: Platform behavior
   - H2: Async questions
   - H2: Timeout and no answer
@@ -16169,6 +16176,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/browser-control
 - Headings:
   - H2: Control API (optional)
+  - H3: Operator input
   - H3: Screencast stream
   - H3: /act error contract
   - H3: Playwright requirement
@@ -16720,6 +16728,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /tools/image-generation
 - Headings:
+  - H2: Creative projects
   - H2: Quick start
   - H2: Common routes
   - H2: Supported providers
