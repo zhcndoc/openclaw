@@ -85,6 +85,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Gmail sections
   - H3: Troubleshooting sections
   - H2: Related
+  - H3: Per-job Access
 
 ## automation/cron-jobs/delivery.md
 
@@ -3689,8 +3690,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Core consumer contract
   - H3: Conversational tool filtering
   - H2: OpenClaw ID remote access
+  - H3: Member roles
+  - H3: Managing remote access
   - H3: Sign in with OpenClaw ID
   - H3: Link OpenClaw ID to your profile
+  - H3: Invite someone who already has a profile
   - H3: How the tunnel reaches the Gateway
   - H3: Turn on remote access
   - H3: Membership
@@ -5601,7 +5605,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: File-based logger
   - H3: Verbose vs. log levels
   - H3: SQLite session writes
-  - H3: Slow SQLite transcript hydration
+  - H3: Slow SQLite transcript hydration and appends
   - H3: SQLite snapshot cleanup
   - H3: Slow agent database opens
   - H3: Slow cron list pages
@@ -5778,6 +5782,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Connection roles
   - H2: Scope levels
   - H2: Named operator roles
+  - H3: OpenClaw ID member roles
   - H3: Access program grants
   - H3: Model policy
   - H2: Identity scope grants
@@ -7081,6 +7086,19 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Restore a full archive
   - H3: Restore a database
   - H2: Related
+
+## install/boat.md
+
+- Route: /install/boat
+- Headings:
+  - H2: Host the Gateway on Boat
+  - H3: Create and connect
+  - H3: Install and onboard
+  - H3: Open the dashboard privately
+  - H3: Stop, resume, and backups
+  - H2: Cloud workers through Crabbox
+  - H3: Tool sandbox limitation
+  - H2: Official Boat references
 
 ## install/bun-compatibility.md
 
@@ -9534,6 +9552,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Handler lifetime
   - H3: Authorized prompt enrichment
   - H4: Session continuity
+  - H4: Presentation on an accepted final
   - H3: Session extensions and next-turn injections
 
 ## plugins/hooks/reference.md
@@ -12645,6 +12664,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Card fields
   - H2: Starting work from a card
   - H2: Agent tools
+  - H3: Result evidence
   - H2: Dispatch
   - H3: Dependency promotion
   - H3: Worker selection
@@ -16279,6 +16299,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/browser/lightweight
 - Headings:
   - H1: Lightweight browsers
+  - H2: Kitesurf (experimental)
+  - H3: Compare engines
   - H2: Browser plugin architecture
   - H2: Licensing and distribution
   - H2: Alternatives reviewed
@@ -16728,6 +16750,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /tools/image-generation
 - Headings:
+  - H2: Review before delivery
   - H2: Creative projects
   - H2: Quick start
   - H2: Common routes
