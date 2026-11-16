@@ -1784,6 +1784,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /ci/local-proof
 - Headings:
   - H2: Local equivalents
+  - H3: Independent full-check stages
   - H3: Delegating changed compilers in CI
   - H3: Opt-in compiler evidence
   - H2: Workflow lint tools
@@ -3146,6 +3147,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: openclaw templates
   - H2: Create with an agent
+  - H2: Add through the setup helper
   - H2: Author locally
   - H2: Inspect and Add
   - H2: Remove the agent
@@ -3213,7 +3215,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Usage
   - H2: Immutable release installations
   - H2: Candidate-owned admission
-  - H3: Candidate-owned rehearsal
   - H3: External supervisor readiness
   - H2: Database capture and recovery
   - H2: Runtime retention failures
@@ -3231,6 +3232,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: What it does
   - H3: Validation and activation
+  - H4: Private rehearsal by older installed updaters
+  - H4: Inspection before staging
   - H3: Recovery limits
   - H3: Compatibility-checked package rollback
   - H3: Restart handoff
@@ -4649,6 +4652,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: exec tool
   - H3: Env overrides
   - H3: Config (preferred over env overrides)
+  - H3: Lost background commands
   - H3: Disable automatic completion turns
   - H3: Durable processes
   - H2: Worker environments
@@ -7689,6 +7693,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Retired tenant-container management
   - H2: Upgrading very old versions
   - H2: Recommended: openclaw update
+  - H3: Host prerequisites
   - H3: npm plugin rollback
   - H3: Package-publication recovery
   - H3: Recover an unfinished publication after a remount
@@ -12098,6 +12103,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Account services, runtime config, workspace, and TTS
   - H2: Debug proxy capture and raw SQLite
   - H2: Verify the migration
+  - H2: Worker statement diagnostics
 
 ## plugins/sdk-migration/talk.md
 
@@ -17336,6 +17342,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Enable the plugin
   - H2: What tokenjuice changes
   - H2: Verify it is working
+  - H2: Measure the complete task
   - H2: Disable the plugin
   - H2: Related
 
@@ -17526,6 +17533,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /web/control-ui
 - Headings:
   - H2: Feedback and bug reports
+  - H2: Answer an agent question
   - H2: Edit a failed message
   - H2: Command palette file attachments
   - H2: Choose a session workspace
