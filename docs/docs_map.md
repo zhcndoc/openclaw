@@ -1335,6 +1335,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Emoji (ackReaction)
   - H3: Scope (messages.ackReactionScope)
   - H2: Text streaming
+  - H3: Reasoning cards
+  - H4: Continuation messages
   - H2: Typing reaction fallback
   - H2: Question buttons
   - H2: Commands and slash behavior
@@ -1823,6 +1825,10 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Mobile store releases
   - H2: Full Release Validation
+  - H3: Choose and freeze the run
+  - H3: Coverage and runners
+  - H3: Publish qualified artifacts
+  - H3: Dispatch and recover
 
 ## ci/release-validation/install-smoke-and-docker-e2e.md
 
@@ -2027,6 +2033,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: agents bind
   - H3: agents unbind
   - H3: agents set-identity
+  - H3: agents render-blobster &lt;design&gt;
   - H3: agents delete &lt;id&gt;
   - H2: Routing bindings
   - H3: --bind format
@@ -3150,7 +3157,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Add through the setup helper
   - H2: Author locally
   - H2: Inspect and Add
+  - H3: Add from the Control UI
   - H2: Remove the agent
+  - H2: Agents from the earlier lifecycle
   - H2: Command reference
   - H2: See also
 
@@ -3249,6 +3258,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Update steps
   - H2: Plugin sync details
   - H2: Package-manager installs
+  - H3: Replacing the package directory
+  - H3: Release directories on OpenClaw-owned prefixes
   - H3: Local packaged overrides
 
 ## cli/update/repair-and-recovery.md
@@ -3533,6 +3544,16 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Steering while streaming
   - H2: Model refs
   - H2: Configuration (minimal)
+  - H2: Related
+
+## concepts/agents-and-templates.md
+
+- Route: /concepts/agents-and-templates
+- Headings:
+  - H2: When to make a new agent
+  - H2: Give the agent its job
+  - H2: Package it as a Template
+  - H2: Start from someone else's Template
   - H2: Related
 
 ## concepts/architecture.md
@@ -13485,6 +13506,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /providers/openai/authentication
 - Headings:
   - H2: Compare capabilities
+  - H3: Sign in with ChatGPT usage limits
   - H3: Choose model access and harness separately
   - H2: Shared agent credential or personal account?
   - H2: Set up an agent's credential
@@ -13546,7 +13568,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /providers/openai/setup
 - Headings:
   - H2: Getting started
-  - H2: Sign in with ChatGPT (Beta)
+  - H2: Sign in with ChatGPT
   - H3: Current limitations
 
 ## providers/openai/voice-and-speech.md
@@ -13951,6 +13973,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Explicit beta plugin authentication deferrals
   - H3: Watch publication
   - H3: Plugin SDK evidence transport
+  - H3: Shared qualification validation
   - H3: Frozen qualification identity
   - H2: Packages and apps can become available at different times
   - H2: Release notes and verification
@@ -14281,6 +14304,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /reference/full-release-validation/dispatch
 - Headings:
+  - H2: Recover qualification tooling without changing the candidate
+  - H3: November 2026 plan-cache restoration incident
   - H2: Exact frozen-target test omissions
   - H2: Retain and reconcile the root request
   - H2: Select coverage
@@ -15207,6 +15232,24 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Quality-of-Life Improvements
   - H2: Other Bug Fixes
 
+## releases/2026.11.4.md
+
+- Route: /releases/2026.11.4
+- Headings:
+  - H1: v2026.11.4
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Quality-of-Life Improvements
+  - H2: Other Bug Fixes
+
 ## releases/2026.6.11.md
 
 - Route: /releases/2026.6.11
@@ -15610,6 +15653,17 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: September 2026
   - H3: Earlier releases
   - H2: Changelog
+
+## screens/member-recovery-kit/live-history/README.md
+
+- Route: /screens/member-recovery-kit/live-history/README
+- Headings:
+  - H1: Historical member recovery-kit live proof
+  - H2: Frozen revisions for every artifact
+  - H2: Save, wipe and recover
+  - H2: Owner notice
+  - H2: Retained history after member removal
+  - H2: Publication and interpretation limits
 
 ## security/CONTRIBUTING-THREAT-MODEL.md
 
@@ -16835,13 +16889,10 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /tools/loop-detection
 - Headings:
-  - H2: Why this exists
-  - H2: Configuration block
-  - H3: Field behavior
-  - H2: Recommended setup
-  - H2: Repeated tool errors
-  - H2: Post-compaction guard
-  - H2: Logs and expected behavior
+  - H2: How it works
+  - H3: Tools that repeat by design
+  - H2: Configuration
+  - H2: Logs
   - H2: Related
 
 ## tools/mcp.md
