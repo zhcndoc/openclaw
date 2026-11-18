@@ -1454,6 +1454,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /channels/telegram/media
 - Headings:
   - H2: Media and attachments
+  - H2: Inbound attachments that fail to download
 
 ## channels/telegram/messaging.md
 
@@ -1764,6 +1765,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /ci/capacity
 - Headings:
+  - H2: Boat start admission
   - H2: Runner registration budget
   - H2: Vitest worker sizing
   - H3: Fixed job preparation
@@ -2178,6 +2180,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: JSON output shape
   - H2: Applying changes
   - H2: Write safety
+  - H3: Agent-assisted recovery
   - H2: Repair loop
   - H2: Related
 
@@ -3094,6 +3097,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: openclaw setup
   - H2: Options
+  - H3: Desktop terminal PATH integration
   - H3: Baseline mode
   - H2: Examples
   - H2: Notes
@@ -3156,6 +3160,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Create with an agent
   - H2: Add through the setup helper
   - H2: Author locally
+  - H3: Welcome description and conversation starters
   - H2: Inspect and Add
   - H3: Add from the Control UI
   - H2: Remove the agent
@@ -3243,6 +3248,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Validation and activation
   - H4: Private rehearsal by older installed updaters
   - H4: Inspection before staging
+  - H4: Owed steps
   - H3: Recovery limits
   - H3: Compatibility-checked package rollback
   - H3: Restart handoff
@@ -4947,6 +4953,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/config-agents/entries-and-multi-agent
 - Headings:
   - H2: agents.entries (per-agent overrides)
+  - H2: Chat welcome
   - H2: Multi-agent routing
   - H3: Binding match fields
   - H3: Per-agent access profiles
@@ -5817,6 +5824,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Shared-secret auth
   - H2: Recovering from inactive authority
   - H2: Related
+  - H3: Automation administrator delegation across UI clients
 
 ## gateway/pairing.md
 
@@ -5932,6 +5940,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H4: Memory samples and worker coverage
   - H3: Pool worker task and GC totals
   - H3: Garbage collection duration
+  - H2: Plugin metric families
   - H2: Label policy
   - H2: PromQL recipes
   - H2: Choosing between Prometheus and OpenTelemetry export
@@ -7796,6 +7805,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: File logs (JSONL)
   - H3: Console output
   - H3: Gateway WebSocket logs
+  - H3: Reply watchdog failures
   - H3: Operator authority failures
   - H3: Steering and input cancellation
   - H2: Configuring logging
@@ -9436,6 +9446,17 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Bundle boundaries
   - H2: Approve an agent-built artifact
 
+## plugins/gbrain.md
+
+- Route: /plugins/gbrain
+- Headings:
+  - H2: Before you install
+  - H2: What install does
+  - H2: Docker
+  - H2: Status and recovery
+  - H2: Uninstall
+  - H2: GBrain and Knowledge
+
 ## plugins/geolocation.md
 
 - Route: /plugins/geolocation
@@ -9927,6 +9948,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/manifest/surfaces
 - Headings:
   - H2: Plugin icon
+  - H3: Explicit recovery CLI subtrees
   - H2: Inline activity icons
   - H2: Themes
   - H2: Transcript sources reference
@@ -10629,6 +10651,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## plugins/reference/fish-audio-speech.md
 
 - Route: /plugins/reference/fish-audio-speech
+- Headings:
+  - H2: Distribution
+  - H2: Surface
+  - H2: Related docs
+
+## plugins/reference/gbrain.md
+
+- Route: /plugins/reference/gbrain
 - Headings:
   - H2: Distribution
   - H2: Surface
@@ -12307,8 +12337,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Module loading and host identity
   - H2: What each page covers
   - H2: Runtime namespaces
-  - H3: Read-only session forks
-  - H3: Forked turns with plugin tools
+  - H3: Session forks
+  - H4: Tool-free forks
+  - H4: Forked turns with plugin tools
   - H2: Skill usage
   - H2: Storing runtime references
   - H2: Plugin lifecycle and cleanup
@@ -13543,6 +13574,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /providers/openai/models
 - Headings:
+  - H2: GPT-6.2 Astra and Sol
   - H2: Quick choice
   - H3: Retired subscription model references
   - H2: Models your API key lists
@@ -14136,6 +14168,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Immutable installation preparation
   - H3: Immutable release-retention inventory
   - H3: Usage-ranked tool index
+  - H3: Pending-input endings
 
 ## reference/database-schemas/personal-data.md
 
@@ -14317,7 +14350,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Evidence to keep
   - H2: Bounded publication recovery
   - H2: Release-tooling waivers
-  - H2: Receipt-backed beta aggregate recovery
+  - H2: Unavailable qualification evidence
   - H2: Workflow files
 
 ## reference/full-release-validation/extended-stable.md
@@ -15249,6 +15282,30 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Security and Privacy
   - H2: Quality-of-Life Improvements
   - H2: Other Bug Fixes
+
+## releases/2026.11.5.md
+
+- Route: /releases/2026.11.5
+- Headings:
+  - H1: v2026.11.5
+  - H2: Quality of life
+  - H3: Chat and sessions
+  - H3: Tools and providers
+  - H3: Maintenance
+  - H3: Automation notifications
+  - H2: Bug fixes
+  - H3: Automations
+  - H3: Gateway and recovery
+  - H3: Security and privacy
+  - H3: Agents and tools
+  - H3: Updates and maintenance
+  - H3: Sessions and chat
+  - H3: Memory and search
+  - H3: Models and providers
+  - H3: Channels and apps
+  - H3: Browser and desktop
+  - H3: Plugins and installation
+  - H3: Command line
 
 ## releases/2026.6.11.md
 
@@ -16501,6 +16558,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/code-mode/guest-api
 - Headings:
   - H2: Guest runtime API
+  - H2: File edits and multiline commands
   - H2: Reading skill companions
   - H2: Session store
   - H2: Reading paginated file data

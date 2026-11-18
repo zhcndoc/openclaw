@@ -138,7 +138,7 @@ That split lets OpenClaw validate config, explain missing/disabled plugins, and 
 
 Failed registrations remain visible in plugin diagnostics after their contributions are rolled back. Those records do not enter execution scopes or block healthy plugins and core context-engine admission; the loader still owns their cleanup.
 
-Runtime preparation checks pending data migrations through the shared-state read worker before registering plugins. Once checked, the process reuses that ledger result across plugin generations until a committed deferred-migration write invalidates it. Unrelated state writes do not repeat the check. Explicit artifact-preserving inspection keeps its isolated snapshot, and plugins with pending data migrations remain blocked until Doctor completes them.
+Runtime preparation checks pending data migrations through the shared-state read worker before registering plugins. Once checked, the process reuses that ledger result across plugin generations until a committed deferred-migration write invalidates it. Unrelated state writes do not repeat the check. Explicit artifact-preserving inspection keeps its isolated snapshot, and plugins with pending data migrations remain blocked until Doctor completes them. A plugin may separately declare explicit recovery CLI subtrees in its Doctor contract. The CLI can register those subtrees while migration withholds normal entrypoints; this never admits normal runtime code or invokes automatic recovery.
 
 Gateway startup confirms completed plugin migrations through the admitted live database reader, so checking a small migration ledger does not copy the entire shared database. Offline Doctor inspection retains its artifact-preserving snapshots.
 
@@ -172,6 +172,8 @@ Channel setup catalogs retain the requested workspace and load-path scope, inclu
 After startup, runtime readers reuse that inventory without filesystem discovery, manifest rereads, or freshness checks. Narrow plugin selections are in-memory views of the same inventory. Changing an account or an agent's run workspace does not invalidate it. Explicit plugin lifecycle operations prepare a new inventory for installs, updates, removals, source or manifest edits, and discovery-root changes before publishing it to the running Gateway.
 
 Plugin enablement readers can pass `rootConfig` to `resolveEffectiveEnableState` without constructing a normalized `config` copy. The policy owner reuses the published runtime configuration's prepared policy and refreshes it on publication; an explicitly supplied normalized `config` still takes precedence. Public normalization helpers continue to return caller-owned mutable copies.
+
+Plugin lifecycle confirmations use the complete committed inventory; catalog visibility filters only presentation and never make a successful install or policy change appear missing. Hidden Labs features remain hidden until explicitly enabled.
 
 Plugin inventory responses share prepared enablement and package-ownership facts between install-health diagnostics and catalog presentation. Those facts belong to one synchronous response preparation, after hosted catalog loading and before optional category loading; maintenance operations still prepare their own current ownership checks.
 
