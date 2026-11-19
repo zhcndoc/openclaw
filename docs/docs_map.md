@@ -3157,6 +3157,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /cli/templates
 - Headings:
   - H1: openclaw templates
+  - H2: Add an unpublished local project to a running Gateway
+  - H2: Import a Template archive in the Control UI
   - H2: Create with an agent
   - H2: Add through the setup helper
   - H2: Author locally
@@ -6427,6 +6429,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Prompt injection
   - H3: External content and untrusted-input wrapping
+  - H3: Screening the final model request
   - H3: Bypass flags (keep off in production)
   - H3: Reasoning and verbose output in groups
 
@@ -7750,6 +7753,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Auto-updater
   - H3: Choose an automatic-update schedule
   - H3: Update campaigns
+  - H3: Owed plugin steps
 
 ## install/updating/rollback-and-recovery.md
 
@@ -9600,6 +9604,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Authorized prompt enrichment
   - H4: Session continuity
   - H4: Presentation on an accepted final
+  - H3: Final model request policy
   - H3: Session extensions and next-turn injections
 
 ## plugins/hooks/reference.md
@@ -9617,6 +9622,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/hooks/tool-policy
 - Headings:
   - H2: Tool call policy
+  - H3: Device-aware policy
   - H3: Sender-aware policy in one file
   - H3: Tool call observation
   - H3: Exec environment hook
@@ -12161,6 +12167,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-migration/talk
 - Headings:
   - H2: Talk and realtime voice migration
+  - H2: Await session-policy preparation
 
 ## plugins/sdk-overview.md
 
@@ -12334,6 +12341,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-runtime
 - Headings:
   - H2: Settled agent lifecycle events
+  - H2: Reply session initialization conflicts
   - H2: Module loading and host identity
   - H2: What each page covers
   - H2: Runtime namespaces
@@ -12355,6 +12363,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Browser meeting participation
   - H2: Worker provider allocation authority
   - H2: Harness request-policy denials
+  - H2: Harness runtime updates
   - H2: Harness execution identity
   - H2: Other top-level api fields
   - H2: Where each section moved
@@ -12430,6 +12439,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Person access lifetimes
   - H3: Durable person access grants
   - H2: Gateway service events
+  - H2: Publication-reader device admission
+  - H3: Existing named reader identity
 
 ## plugins/sdk-runtime/media.md
 
@@ -12522,6 +12533,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Before you begin
   - H2: Choose sessions on the source
+  - H2: Outbound Gateway pull
   - H2: Enable the receiver and pair the source
   - H2: Read shared sessions
   - H2: Attribute the source node
@@ -12722,7 +12734,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Card fields
   - H2: Starting work from a card
   - H2: Agent tools
-  - H3: Result evidence
+  - H3: Verification
   - H2: Dispatch
   - H3: Dependency promotion
   - H3: Worker selection
@@ -14548,6 +14560,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: PR wrapper tooling
   - H2: Finalized task closeout
   - H2: Wrapper execution and dependencies
+  - H3: Defer shared cache collection
   - H2: Qualify the workspace before review
   - H2: Reuse the base and fetch only needed history
   - H2: Keep the admitted workflow across commands
@@ -15288,24 +15301,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /releases/2026.11.5
 - Headings:
   - H1: v2026.11.5
-  - H2: Quality of life
-  - H3: Chat and sessions
-  - H3: Tools and providers
-  - H3: Maintenance
-  - H3: Automation notifications
-  - H2: Bug fixes
-  - H3: Automations
-  - H3: Gateway and recovery
-  - H3: Security and privacy
-  - H3: Agents and tools
-  - H3: Updates and maintenance
-  - H3: Sessions and chat
-  - H3: Memory and search
-  - H3: Models and providers
-  - H3: Channels and apps
-  - H3: Browser and desktop
-  - H3: Plugins and installation
-  - H3: Command line
 
 ## releases/2026.6.11.md
 
