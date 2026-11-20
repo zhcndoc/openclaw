@@ -3264,6 +3264,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Git checkout flow
   - H3: Channel selection
   - H3: Update steps
+  - H3: Git checkouts that run from releases
   - H2: Plugin sync details
   - H2: Package-manager installs
   - H3: Replacing the package directory
@@ -3285,6 +3286,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: update repair
   - H3: Skipped legacy audit recovery
   - H2: update cleanup
+  - H3: What automatic cleanup deletes
   - H3: Explicitly retire an unmanifested original
 
 ## cli/update/status-and-history.md
@@ -9859,6 +9861,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Uninstall plugins
   - H2: Choose a source
   - H2: Publish plugins
+  - H2: OpenClaw ID Access page
   - H2: Related
 
 ## plugins/manifest.md
@@ -12307,6 +12310,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/sdk-provider-plugins/hook-families
 - Headings:
   - H2: Family builders
+  - H3: Serialized Converse transport
 
 ## plugins/sdk-provider-plugins/media-and-search.md
 
@@ -12938,6 +12942,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /providers/clawrouter
 - Headings:
   - H2: Getting started
+  - H2: Bedrock Converse
   - H2: Vercel native Messages
   - H2: Utility model
   - H2: Decision models
@@ -14362,7 +14367,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Evidence to keep
   - H2: Bounded publication recovery
   - H2: Release-tooling waivers
-  - H2: Unavailable qualification evidence
+  - H2: Receipt-backed aggregate recovery
   - H2: Workflow files
 
 ## reference/full-release-validation/extended-stable.md
@@ -14550,6 +14555,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: PR preparation
   - H2: Publish a candidate for required proof
+  - H3: Accept pending proof at an exact published head
   - H2: Refresh a retained candidate for pending proof
   - H2: Signing a baseline on another host
 
@@ -15300,7 +15306,21 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /releases/2026.11.5
 - Headings:
-  - H1: v2026.11.5
+  - H1: OpenClaw v2026.11.5
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Other QOL Improvements
+  - H2: Other Bug Fixes
 
 ## releases/2026.6.11.md
 
