@@ -1285,6 +1285,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Linked requester identity
   - H2: Actions and gates
+  - H3: Read token selection
   - H2: Live policy changes
   - H2: Access control and routing
   - H3: Group DMs (MPDMs) and bots
@@ -5152,6 +5153,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Multi-instance isolation
   - H3: gateway.tls
   - H3: gateway.reload
+  - H2: gateway.resources.profile
 
 ## gateway/config-hooks.md
 
@@ -5334,6 +5336,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Media model template variables
   - H2: Config includes ($include)
   - H2: Related
+  - H3: Publication reader opt-in
+  - H3: Active steering opt-in
+  - H3: Publication writer opt-in
 
 ## gateway/configuration.md
 
@@ -5600,6 +5605,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Common failure signatures
   - H2: Safety guarantees
   - H2: Related
+  - H2: Resource profile and worker diagnostics
 
 ## gateway/local-model-services.md
 
@@ -5818,6 +5824,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Connection roles
   - H2: Scope levels
   - H2: Named operator roles
+  - H3: Session approvals
   - H3: OpenClaw ID member roles
   - H3: Access program grants
   - H3: Model policy
@@ -6045,8 +6052,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/protocol/rpc-session-control
 - Headings:
   - H2: Session control
+  - H3: Active-only human steering
+  - H3: Restricted Session Share writer transport
   - H3: Chat input reconciliation
   - H3: Existing folders on paired devices
+  - H3: Restricted writer opt-in
 
 ## gateway/protocol/rpc-system-and-channels.md
 
@@ -8029,6 +8039,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H4: Configure the Gateway
   - H4: Select execution separately
   - H4: Verify the setup
+  - H3: Size-limited node connections
   - H3: Workspace Skill installation
   - H3: Binary transfers for services
   - H3: Transferred files
@@ -8533,6 +8544,18 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Debug override
   - H2: Testing checklist
   - H2: Related
+
+## platforms/mac/openclaw-id-sign-in-testing.md
+
+- Route: /platforms/mac/openclaw-id-sign-in-testing
+- Headings:
+  - H1: Mac OpenClaw ID sign-in testing
+  - H2: 1. Prepare an isolated Mac
+  - H2: 2. What the native regression proves
+  - H3: Red/green comparison
+  - H2: 3. GitHub Actions and remaining focused checks
+  - H2: 4. Test the actual app against OpenClaw ID
+  - H2: 5. Evidence to return
 
 ## platforms/mac/peekaboo.md
 
@@ -9653,6 +9676,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Control UI
   - H2: Local Git history
   - H2: Scheduled maintenance
+  - H2: Lean resource policy
   - H2: Scribes
   - H2: Capabilities and limits
   - H2: Moving from a linked or path install
@@ -9767,6 +9791,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: The scribes
   - H3: The Granola plugin
+  - H3: The Slack plugin
   - H2: Start a scribe
   - H3: Example prompt
   - H2: After updating OpenClaw
@@ -11813,6 +11838,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: What your plugin owns
   - H2: Native mention display
+  - H2: Renewing queued ingress access
   - H2: Opted-in public child sessions
   - H2: Walkthrough
   - H2: File structure
@@ -11919,6 +11945,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Stateful CLI commands
   - H2: Prepared Decision HTTP runtime
   - H2: OpenAI-compatible Decisions runtime
+  - H2: Resource profile
   - H2: Runtime request headers
   - H3: Node workspace process environment
 
@@ -12266,6 +12293,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Host consumers
   - H3: Memory audience
   - H3: Compatibility and host integration
+  - H3: Memory backends
   - H3: Dreaming remains separate
   - H2: Memory host event diagnostics
   - H2: Bundled Memory Core workers
@@ -12344,6 +12372,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/sdk-runtime
 - Headings:
+  - H2: Resource profile
   - H2: Settled agent lifecycle events
   - H2: Reply session initialization conflicts
   - H2: Module loading and host identity
@@ -14202,6 +14231,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 41
   - H3: State schema 40
   - H3: State schema 39
   - H3: State schema 38
@@ -15309,6 +15339,104 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: OpenClaw v2026.11.5
   - H2: Installation and Onboarding
   - H2: Web UI
+  - H3: Opening and reading conversations
+  - H3: Chat and new sessions
+  - H3: Sessions and sidebar
+  - H3: Boards, dashboards and activity
+  - H3: Sharing and notifications
+  - H3: Settings and interface controls
+  - H3: Starting and writing conversations
+  - H3: Session controls and navigation
+  - H3: Sharing and access
+  - H3: Finding sessions
+  - H3: Chat history and context
+  - H3: Archived conversations
+  - H3: Live updates and replies
+  - H3: Session storage and processing
+  - H3: Chat and session display
+  - H3: Files and outputs
+  - H3: Changes and pull requests
+  - H3: Chat Details and activity
+  - H3: Chat and Side chat
+  - H3: Terminal and panels
+  - H2: Updates and Maintenance
+  - H3: Update and installation reports
+  - H2: Messaging
+  - H3: Nextcloud Talk
+  - H3: Slack
+  - H3: Discord
+  - H3: Telegram
+  - H3: Feishu
+  - H3: X
+  - H3: Mattermost
+  - H3: Microsoft Teams
+  - H3: WhatsApp
+  - H3: Zalo
+  - H3: LINE
+  - H3: Nostr
+  - H3: Twilio SMS
+  - H3: Channel delivery and recovery
+  - H3: Channel status and indicators
+  - H3: Messaging replies
+  - H3: Regional channel maturity
+  - H3: Message delivery across channels
+  - H3: Channel login and settings
+  - H3: Channel startup and recovery
+  - H3: Channel replies and progress
+  - H3: Channel commands and settings
+  - H3: Search and conversation history across channels
+  - H3: Slack and Telegram introductions
+  - H3: Attachment limits across channels
+  - H3: Interactive questions across channels
+  - H3: Slack fixes
+  - H3: Telegram fixes
+  - H3: Feishu fixes
+  - H3: Discord fixes
+  - H3: Matrix
+  - H3: WhatsApp fixes
+  - H3: Google Chat
+  - H3: Microsoft Teams fixes
+  - H3: iMessage
+  - H3: Mattermost fixes
+  - H3: Nextcloud Talk fixes
+  - H3: Signal
+  - H3: X fixes
+  - H3: Tlon
+  - H3: Nostr fixes
+  - H3: ClickClack
+  - H3: Buzz
+  - H3: Zalo and Zalo Personal
+  - H3: Reef
+  - H3: A2A
+  - H3: IMAP
+  - H3: IRC
+  - H3: LINE fixes
+  - H3: QA Channel
+  - H3: Synology Chat
+  - H3: Twilio MMS
+  - H3: Twitch
+  - H2: Memory
+  - H3: LanceDB startup
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H3: Prompt caching and conversation continuations
+  - H3: Prompt caching and conversation continuations fixes
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Other QOL Improvements
+  - H3: Host file edits
+  - H2: Other Bug Fixes
+
+## releases/2026.11.6.md
+
+- Route: /releases/2026.11.6
+- Headings:
+  - H1: OpenClaw v2026.11.6
+  - H2: Installation and Onboarding
+  - H2: Web UI
   - H2: Updates and Maintenance
   - H2: Messaging
   - H2: Memory
@@ -15948,6 +16076,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: What you need
   - H2: Try it in one command
   - H2: Quick setup
+  - H2: Pair your iPhone or iPad
   - H2: If setup does not work
   - H2: What to do next
   - H2: Related
@@ -16766,6 +16895,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /tools/exec-approvals
 - Headings:
+  - H2: Who can review session approvals
   - H2: Where it applies
   - H3: Trust model
   - H3: macOS split

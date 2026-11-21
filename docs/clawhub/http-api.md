@@ -185,10 +185,13 @@ Query params:
 
 - `q` (required): query string
 - `limit` (optional): integer
+- `category` (optional): restrict results to a skill category slug from `GET /api/v1/skills/-/categories`; works with default and exact search.
 - `mode` (optional): `exact` for deterministic exact-slug matches
 - `highlightedOnly` (optional): `true` to filter to highlighted skills
 - `nonSuspiciousOnly` (optional): `true` to hide suspicious (`flagged.suspicious`) skills
 - `nonSuspicious` (optional): legacy alias for `nonSuspiciousOnly`
+
+Skill results may include `categories: string[]` (canonical browse slugs). An external row without a recognized stored category omits the field.
 
 Search modes:
 
@@ -234,6 +237,14 @@ Publisher discoverability guidance:
 - Rename aliases preserve resolution for old URLs and installs that resolve through the registry, but search ranking is based on the canonical skill metadata after the rename has indexed. Existing stats stay with the skill.
 - If a skill is unexpectedly invisible, check moderation state first with `clawhub inspect @owner/slug` while logged in before changing ranking-related metadata.
 
+### `GET /api/v1/trending?kind=skills`
+
+Use this mixed-source, ranked feed for the skill discovery overview. Each `items[]` row may include `categories: string[]` using the browse slugs below. This adds no client-side detail requests: group the current page using those slugs and leave unclassified external rows ungrouped. Keep the feed order, cursor, `source`, `install`, and trust metadata unchanged. Use the category-filtered skills list for full category browsing, not a filter over one Trending page.
+
+### `GET /api/v1/skills/-/categories`
+
+Returns `{ "categories": [...] }` in the same display order as the Skills directory, including Other. Each entry has `slug`, `label`, `description`, and a Lucide `icon` key. This is the public taxonomy, not a count of available skills. Use the returned slug with list or search, for example `GET /api/v1/skills?category=research&limit=10` or `GET /api/v1/search?q=notes&category=research`.
+
 ### `GET /api/v1/skills`
 
 Query params:
@@ -241,6 +252,7 @@ Query params:
 - `limit` (optional): integer (1–200)
 - `cursor` (optional): pagination cursor for any non-`trending` sort
 - `sort` (optional): `updated` (default), `recommended` (alias: `default`), `createdAt` (alias: `newest`), `downloads`, `stars` (alias: `rating`), `name`, legacy install aliases `installsCurrent`/`installs`/`installsAllTime` map to `downloads`, `trending`
+- `category` (optional): filter by a canonical skill category; invalid slugs or combining `category` with `prefix` return `400`. Keep the category and sort fixed when following `nextCursor`. Bounded category reads may return a short or empty page with a continuation.
 - `prefix` (optional): literal skill-slug prefix; results use ascending slug order and require `sort=name` when `sort` is supplied
 - `nonSuspiciousOnly` (optional): `true` to hide suspicious (`flagged.suspicious`) skills
 - `nonSuspicious` (optional): legacy alias for `nonSuspiciousOnly`
@@ -252,6 +264,7 @@ Notes:
 - `recommended` uses engagement and recency signals.
 - `trending` ranks by installs in the last 7 days (telemetry-based).
 - `createdAt` is stable for new-skill crawls; `updated` changes when existing skills are republished.
+- Each item includes canonical browse `categories` (string slugs); older deployments may omit the field.
 - Each item is identified by the owner-qualified pair `ownerHandle/slug`; slugs are not globally unique across publishers.
 - `latestVersion` is always present. It is `null` when the skill has no public version.
 - Prefix listing is complete across pages: keep following `nextCursor` until it is `null`.
@@ -818,8 +831,8 @@ Query params:
   be combined with `featured` or `officialFirst`. Eligible canonical package pins
   come first, then remaining plugins by downloads descending and canonical name
   ascending, consistently across pages and both plugin families. Category browse
-  retains all listing languages. The response includes category metadata with
-  optional ordered `pinnedPackages`.
+  started without an overview `previewCursor` retains all listing languages. The
+  response includes category metadata with optional ordered `pinnedPackages`.
 
 Legacy v1 filter aliases remain accepted on read endpoints:
 
@@ -854,9 +867,14 @@ Marked items also include their zero-based `featuredRank` or `trendingRank`, so
 clients preserve each shelf's independent order after deduplicating metadata.
 Featured ranks follow newest-featured order, matching `GET /api/v1/plugins?featured=true`.
 
-The response is public and carries shared-cache headers. Use the paginated
-`GET /api/v1/plugins` endpoint for searches, category expansion, and complete
-catalog traversal.
+Request `?previewCursors=true` to include an opaque `previewCursor` on each
+category whose English shelf may have more results. Pass it as `cursor` to
+`GET /api/v1/plugins?curated=true&category=<slug>&sort=downloads&limit=100`.
+Follow any returned `nextCursor` to stay in the same public, English-only order;
+a continuation can be empty if no further eligible packages remain. Omit the
+cursor to start a complete, multilingual category browse instead.
+
+The response is public and carries shared-cache headers.
 
 ### `GET /api/v1/plugins/categories`
 
@@ -1015,6 +1033,15 @@ Notes:
 - Template package metadata may include bounded `templateManifestSummary` and
   `templateProfilePolicyVersion: 1`. The summary exposes identity and resource
   counts, never the full manifest, prompt body, bootstrap, or profile contents.
+- The website can request `?view=template-detail`. A matching published latest
+  Template may add `templateRelease: { version, contents, llmAnalysis }` alongside
+  the unchanged `package` and `owner`. `contents` is the bounded UTF-8 preview
+  of the exact `CLAW.md` declared by that release’s validated `package.json`;
+  `llmAnalysis` is the same analysis returned by its exact-version endpoint.
+  Either may be null. Private or download-blocked content is not embedded.
+  Older servers and releases without a validated entry point omit the expansion;
+  clients can use the existing exact-version and file endpoints instead. Other
+  files are fetched explicitly, never inlined by this view.
 - Eligible community and official Templates are discoverable with `family=template`;
   their current publisher must be active and match the package scope. The separate
   Official feed has the narrower publisher policy described below.
