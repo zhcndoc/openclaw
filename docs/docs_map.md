@@ -4729,7 +4729,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Keeping Claude Code orchestration tools on managed turns
   - H2: Timeouts and long-running work
   - H3: Claude CLI specifics
-  - H3: Native Bash and the exec allowlist
   - H3: Claude browser tools and 1Password sign-in
   - H2: Sessions
   - H3: History account boundaries
@@ -4938,6 +4937,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: OIDC sign-in and existing people
   - H3: Verified GitHub credit through OIDC
   - H2: Step 3: Trust those headers in the Gateway
+  - H3: Verify the Access JWT
   - H2: Step 4: Decide how nodes and workers get in
   - H2: Step 5: Connect each client
   - H2: Verify
@@ -5916,6 +5916,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Backup and restore
   - H3: Capture both server data and local state
   - H3: Restore all PostgreSQL stores
+  - H4: Run an isolated restore drill
   - H3: Recover a retained agent store
   - H3: Disaster recovery from Git
   - H2: Published-stable upgrade qualification
@@ -6669,6 +6670,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Organization co-author defaults
   - H2: Per-identity scope grants
   - H2: Automatic device approval
+  - H2: Approved CLI and TUI grants
   - H2: Control UI pairing behavior
   - H2: Operator scopes header
   - H2: TLS termination and HSTS
@@ -6984,6 +6986,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /help/testing/control-ui-load
 - Headings:
   - H1: Control UI protocol load
+  - H2: Memory capacity
   - H2: Workload contract
   - H2: Results
   - H2: Cache policy and proof
@@ -12570,6 +12573,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Enable the receiver and pair the source
   - H2: Read shared sessions
   - H2: Attribute the source node
+  - H2: Open original on a paired node
   - H2: Security boundary
   - H2: Troubleshooting
   - H2: Related
@@ -13660,6 +13664,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /providers/opencode-go
 - Headings:
   - H2: Getting started
+  - H2: Browser sign-in
   - H2: Config example
   - H2: Catalog
   - H2: Endpoint outages
@@ -13672,6 +13677,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /providers/opencode
 - Headings:
   - H2: Getting started
+  - H2: Browser sign-in
   - H2: Config example
   - H2: Provider catalogs
   - H3: Zen
@@ -17971,7 +17977,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Settings
   - H3: Side panel keyboard shortcuts
   - H3: This device (macOS and iOS apps)
-  - H2: Templates (Labs)
+  - H2: Templates
   - H2: Speech bubbles
   - H2: Custom plugin UI
   - H2: Import agent memory
