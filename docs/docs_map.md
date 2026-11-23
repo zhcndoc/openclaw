@@ -1520,6 +1520,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Group channels
   - H2: Access control
   - H2: Owner and approval system
+  - H3: Group DMs
   - H2: Auto-accept settings
   - H2: Hot-reload via Urbit settings store
   - H2: Delivery targets (CLI/cron)
@@ -2514,6 +2515,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Common options
   - H2: Status
   - H2: Move to new keys
+  - H2: Unlink
   - H2: Publish
 
 ## cli/index.md
@@ -3240,6 +3242,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Native service commands during updates
   - H2: Options
   - H2: update wizard
+  - H2: update plugins
   - H2: Detailed topics
   - H2: Related
 
@@ -3285,6 +3288,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Candidate Doctor stack overflow
   - H2: Docker image-layer package updates
   - H2: update repair
+  - H3: Recorded data risk
   - H3: Skipped legacy audit recovery
   - H2: update cleanup
   - H3: What automatic cleanup deletes
@@ -4040,6 +4044,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /concepts/models
 - Headings:
   - H2: Selection order
+  - H3: No model configured
   - H2: Selection source and fallback strictness
   - H2: Quick model policy
   - H2: Onboarding
@@ -5154,6 +5159,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: gateway.tls
   - H3: gateway.reload
   - H2: gateway.resources.profile
+  - H3: Lean worker memory admission
 
 ## gateway/config-hooks.md
 
@@ -5240,6 +5246,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/config-tools/github-identity
 - Headings:
+  - H2: File an issue from a project conversation
   - H2: Session GitHub App reader
   - H2: tools.github
   - H2: Sandbox opt-in
@@ -6104,6 +6111,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Versioning
   - H3: Client constants
+  - H2: Update consent and checkout identity
   - H2: Local state owner routing
   - H3: Refusals and uncertain outcomes
   - H3: Mixed versions and retained boundaries
@@ -7736,6 +7744,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /install/updating
 - Headings:
+  - H2: Local packaged-code overrides
   - H2: Update implementation contract
   - H3: Migration integrity checks
   - H2: Retired tenant-container management
@@ -12060,6 +12069,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Compatibility policy
   - H3: Session-controller cutover exception
+  - H3: Implicit default model
   - H3: Channel prepared tool policy
   - H3: Harness deletion companions
   - H3: Retained helper contracts
@@ -12569,11 +12579,13 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Before you begin
   - H2: Choose sessions on the source
+  - H2: Filter shared sessions by person
   - H2: Outbound Gateway pull
   - H2: Enable the receiver and pair the source
   - H2: Read shared sessions
   - H2: Attribute the source node
   - H2: Open original on a paired node
+  - H3: Relationship filtering
   - H2: Security boundary
   - H2: Troubleshooting
   - H2: Related
@@ -14368,6 +14380,17 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Data source
   - H2: Updating the database
   - H2: Related
+
+## reference/fast-track-release-approval.md
+
+- Route: /reference/fast-track-release-approval
+- Headings:
+  - H1: Fast-track release approval
+  - H2: Approval model
+  - H2: Prepare a request
+  - H2: Policies retained for review
+  - H2: Remaining integration
+  - H2: Manual checks (not CI)
 
 ## reference/full-release-validation.md
 
@@ -17332,6 +17355,15 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Troubleshooting
   - H3: Nothing is learned
   - H3: Too many or unwanted changes
+  - H2: Related
+
+## tools/session-project.md
+
+- Route: /tools/session-project
+- Headings:
+  - H2: Actions
+  - H2: What a move does
+  - H2: Who can move a conversation
   - H2: Related
 
 ## tools/show-widget.md
