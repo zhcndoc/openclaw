@@ -1849,6 +1849,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /ci/release-validation/live-and-e2e-shards
 - Headings:
   - H2: Live and E2E shards
+  - H3: Z.AI credentials
+  - H3: Native live execution
 
 ## ci/release-validation/package-acceptance.md
 
@@ -3597,6 +3599,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: How it works
   - H2: Auto-compaction
+  - H3: Warm request compaction
   - H2: Manual compaction
   - H2: Configuration
   - H3: Using a different model
@@ -4976,6 +4979,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: agents.defaults.systemAgent
   - H2: agents.defaults.compaction
   - H2: agents.defaults.contextPruning
+  - H2: agents.defaults.promptCacheKeepWarm
   - H2: Block streaming
   - H2: Typing indicators
 
@@ -5159,6 +5163,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: gateway.tls
   - H3: gateway.reload
   - H2: gateway.resources.profile
+  - H3: Lean startup
   - H3: Lean worker memory admission
 
 ## gateway/config-hooks.md
@@ -7282,6 +7287,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Headless bootstrap
   - H3: Manual flow
   - H3: Upgrading container images
+  - H3: Windows-drive bind mounts
   - H3: Read-only container root
   - H3: Source-built images with selected plugins
   - H3: Observability
@@ -7746,6 +7752,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Local packaged-code overrides
   - H2: Update implementation contract
+  - H3: Release updates
+  - H3: Proof for update changes
+  - H3: Recorded contract notes
   - H3: Migration integrity checks
   - H2: Retired tenant-container management
   - H2: Upgrading very old versions
@@ -14067,6 +14076,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Operator capabilities
   - H3: Resume activation while ClawHub recovery is independent
   - H3: Explicit beta plugin authentication deferrals
+  - H3: Beta.1 plugin trust closeout
   - H3: Watch publication
   - H3: Plugin SDK evidence transport
   - H3: Shared qualification validation
@@ -14427,6 +14437,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Bounded publication recovery
   - H2: Release-tooling waivers
   - H2: Receipt-backed aggregate recovery
+  - H3: Recover with a later waiver ledger
   - H2: Workflow files
 
 ## reference/full-release-validation/extended-stable.md
@@ -14502,6 +14513,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Keep model settings stable
   - H2: Stable tools between turns
   - H2: Keep replayed tool results stable
+  - H2: Warm compaction requests
+  - H2: Idle keep-warm
   - H2: Primary knobs
   - H3: Worker turns
   - H3: cacheRetention
@@ -15464,6 +15477,26 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /releases/2026.11.6
 - Headings:
   - H1: OpenClaw v2026.11.6
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Other QOL Improvements
+  - H2: Other Bug Fixes
+
+## releases/2026.11.7.md
+
+- Route: /releases/2026.11.7
+- Headings:
+  - H1: OpenClaw v2026.11.7
   - H2: Installation and Onboarding
   - H2: Web UI
   - H2: Updates and Maintenance
@@ -17377,6 +17410,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Native dashboard reports
   - H2: Show on a device
   - H2: Audio and video
+  - H2: Comment on a widget element
   - H2: Interactive widgets
   - H2: Dashboard capabilities
   - H3: Read GitHub Actions runs
@@ -17497,6 +17531,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/subagents/announce
 - Headings:
   - H2: Announce
+  - H3: Child status in requester history
   - H3: Private parent completion
   - H3: Announce context
   - H3: Stats line
