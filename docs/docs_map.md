@@ -1948,7 +1948,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 ## ci/scope-and-routing/job-budgets.md
 
 - Route: /ci/scope-and-routing/job-budgets
-- Headings: none
+- Headings:
+  - H2: Android matrix
 
 ## ci/scope-and-routing/manual-dispatches.md
 
@@ -7753,6 +7754,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Local packaged-code overrides
   - H2: Update implementation contract
   - H3: Release updates
+  - H3: Uncovered database paths
   - H3: Proof for update changes
   - H3: Recorded contract notes
   - H3: Migration integrity checks
@@ -7793,6 +7795,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /install/updating/rollback-and-recovery
 - Headings:
   - H2: Before you upgrade
+  - H2: Protected release rollback
   - H2: Downgrade
   - H3: Full-state recovery requires a backup
   - H3: Automatic schema-neutral rollback
@@ -8965,11 +8968,16 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Enable
   - H2: Authentication
   - H2: Request
+  - H2: Read a portable snapshot
+  - H3: Publish a portable packet
+  - H3: Release the reviewed revision
+  - H3: Send an instruction to the destination
   - H2: Continue on the Team Gateway
   - H2: Storage and visibility
   - H3: Delete
   - H2: Security boundary
   - H2: Mirroring
+  - H3: Enroll a v2 publication
   - H2: Troubleshooting
   - H2: Related
 
@@ -9686,6 +9694,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/knowledge
 - Headings:
+  - H2: What Knowledge does
+  - H2: Turn it on in one minute
+  - H2: Everyday workflows
   - H2: How it relates to other memory plugins
   - H2: Enable Knowledge
   - H2: Configuration
@@ -12489,6 +12500,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Service scheduling
   - H2: Gateway and node namespaces
+  - H3: Request authority
   - H3: Session control
   - H3: Session resource methods
   - H3: Person access lifetimes
@@ -14259,6 +14271,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/state-schema-history
 - Headings:
   - H2: State schema history
+  - H3: State schema 42
   - H3: State schema 41
   - H3: State schema 40
   - H3: State schema 39
@@ -14313,6 +14326,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Plugin session notice delivery owner
   - H2: Memory index batch revisions
   - H2: Active transcript event facts
+  - H2: Session member access levels
   - H2: Review checkpoint for material changes
   - H2: Preflight a target release
   - H3: Preflight an explicit agent copy
@@ -14391,17 +14405,6 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Updating the database
   - H2: Related
 
-## reference/fast-track-release-approval.md
-
-- Route: /reference/fast-track-release-approval
-- Headings:
-  - H1: Fast-track release approval
-  - H2: Approval model
-  - H2: Prepare a request
-  - H2: Policies retained for review
-  - H2: Remaining integration
-  - H2: Manual checks (not CI)
-
 ## reference/full-release-validation.md
 
 - Route: /reference/full-release-validation
@@ -14428,12 +14431,14 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Exact frozen-target test omissions
   - H2: Retain and reconcile the root request
   - H2: Select coverage
+  - H3: Historical artifact and workload identity
 
 ## reference/full-release-validation/evidence.md
 
 - Route: /reference/full-release-validation/evidence
 - Headings:
   - H2: Evidence to keep
+  - H2: Stable-qualified beta to final
   - H2: Bounded publication recovery
   - H2: Release-tooling waivers
   - H2: Receipt-backed aggregate recovery
@@ -14613,6 +14618,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: PR merge admission
   - H2: Complete check-suite reads
+  - H2: Retaining merge resources
 
 ## reference/scripts/merge-recovery.md
 
@@ -14620,6 +14626,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H1: PR merge recovery
   - H2: Delayed completion
+  - H2: Explicit resource retention
 
 ## reference/scripts/pr-preparation.md
 
@@ -15320,6 +15327,30 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Quality-of-Life Improvements
   - H2: Other Bug Fixes
 
+## releases/2026.11.10.md
+
+- Route: /releases/2026.11.10
+- Headings:
+  - H1: OpenClaw v2026.11.10
+  - H2: Highlights
+  - H3: Deep Research
+  - H3: Knowledge
+  - H3: Browser handoff
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Other QOL Improvements
+  - H2: Other Bug Fixes
+
 ## releases/2026.11.2.md
 
 - Route: /releases/2026.11.2
@@ -15511,6 +15542,36 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Security and Privacy
   - H2: Other QOL Improvements
   - H2: Other Bug Fixes
+
+## releases/2026.11.8.md
+
+- Route: /releases/2026.11.8
+- Headings:
+  - H1: OpenClaw v2026.11.8
+  - H2: Installation and Onboarding
+  - H2: Web UI
+  - H2: Updates and Maintenance
+  - H2: Messaging
+  - H2: Memory
+  - H2: Skills
+  - H2: Native Apps
+  - H2: Models and Providers
+  - H2: Automations and Scheduling
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
+  - H2: Other QOL Improvements
+  - H2: Other Bug Fixes
+
+## releases/2026.11.9.md
+
+- Route: /releases/2026.11.9
+- Headings:
+  - H1: OpenClaw v2026.11.9
+  - H2: Models and Providers
+  - H2: Browser and Computer Use
+  - H2: Plugins and Integrations
+  - H2: Security and Privacy
 
 ## releases/2026.6.11.md
 
@@ -16646,6 +16707,10 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /tools/browser/profiles
 - Headings:
   - H2: Browser panel in the Control UI
+  - H2: Browser handoff
+  - H3: When to use it
+  - H3: Taking and releasing control
+  - H3: What happens while you have control
   - H3: Chrome settings and passwords
 
 ## tools/browser/remote.md
@@ -16866,6 +16931,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /tools/deep-research
 - Headings:
+  - H2: What Deep Research does
+  - H2: How to use it
+  - H2: What you get
   - H2: Choose an engine
   - H2: Start and inspect research
   - H2: Portable evidence and budgets
@@ -17176,6 +17244,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: The server appears in Settings but exposes no tools
   - H3: A stdio server does not start
   - H3: An HTTP server needs authorization
+  - H3: A stdio server needs a new sign-in
   - H3: Changes do not reach an active agent
   - H2: Related
 
