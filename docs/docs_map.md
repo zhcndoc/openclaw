@@ -1286,6 +1286,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Linked requester identity
   - H2: Actions and gates
   - H3: Read token selection
+  - H3: Read author names
   - H2: Live policy changes
   - H2: Access control and routing
   - H3: Group DMs (MPDMs) and bots
@@ -1851,6 +1852,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Live and E2E shards
   - H3: Z.AI credentials
   - H3: Native live execution
+  - H2: Frozen native clients against candidate source
 
 ## ci/release-validation/package-acceptance.md
 
@@ -1919,6 +1921,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: OpenClaw Performance
   - H3: Gateway concurrency benchmark
   - H3: Vitest paired benchmark
+  - H4: Node compile-cache diagnostic qualification
+  - H4: Prepared workload disabled control
+  - H4: Prepared workload cache controls
+  - H4: Admit prepared workload qualification
+  - H4: Qualified paired measurements
   - H2: Security Review reconciler
   - H2: QA Lab
   - H2: OpenGrep
@@ -4653,6 +4660,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /gateway/audit
 - Headings:
   - H1: Audit history
+  - H2: Choose the right audit view
+  - H2: Evidence sources
   - H2: Run identity inspection
   - H2: Record families
   - H2: Message lifecycle events
@@ -5837,6 +5846,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Connection roles
   - H2: Scope levels
   - H2: Named operator roles
+  - H3: Retained participant work
   - H3: Session approvals
   - H3: OpenClaw ID member roles
   - H3: Access program grants
@@ -7036,11 +7046,21 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Shared Telegram credentials via Convex (v1)
   - H3: Adding a channel to QA
 
+## help/testing/released-app-compatibility.md
+
+- Route: /help/testing/released-app-compatibility
+- Headings:
+  - H1: Released app compatibility
+  - H2: Frozen inputs and execution
+  - H2: Candidate execution boundary
+  - H2: What this does not prove
+
 ## help/testing/suites.md
 
 - Route: /help/testing/suites
 - Headings:
   - H2: Quick start
+  - H2: Released mobile apps against a candidate Gateway
   - H2: Runner exit status
   - H2: Test suites (what runs where)
   - H3: PostgreSQL conformance
@@ -8217,7 +8237,9 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /nodes/session-hosting
 - Headings:
   - H2: Host OpenClaw sessions
+  - H3: Writable volume ancestors
   - H3: Work in an existing device folder
+  - H3: Restrict Linux worker filesystem access
   - H3: Isolate hosted worker sessions in containers
 
 ## nodes/talk.md
@@ -8978,6 +9000,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Security boundary
   - H2: Mirroring
   - H3: Enroll a v2 publication
+  - H2: Share a screenshot
   - H2: Troubleshooting
   - H2: Related
 
@@ -9466,7 +9489,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Requirements
   - H2: Install the plugin and native companion
-  - H2: Configure owner identities
+  - H2: Configure allowed callers
   - H3: Configure voice credentials
   - H3: Choose the agent and tool access
   - H3: Choose a voice
@@ -14173,6 +14196,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /reference/database-schemas/agent-schema-history
 - Headings:
   - H2: Agent schema history
+  - H3: Agent schema 45
   - H3: Session deletion indexes (same-version additive index, lead-approved 2026-10-31)
   - H3: Agent schema 39
   - H3: Agent schema 38
@@ -14327,6 +14351,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Memory index batch revisions
   - H2: Active transcript event facts
   - H2: Session member access levels
+  - H2: Participate child constraints within agent schema 44
   - H2: Review checkpoint for material changes
   - H2: Preflight a target release
   - H3: Preflight an explicit agent copy
@@ -14426,6 +14451,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /reference/full-release-validation/dispatch
 - Headings:
+  - H2: Check the hosted npm source and package build
   - H2: Recover qualification tooling without changing the candidate
   - H3: November 2026 plan-cache restoration incident
   - H2: Exact frozen-target test omissions
@@ -16253,6 +16279,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: How we build OpenClaw with OpenClaw
   - H2: One trust boundary
+  - H3: Participate collaborator policy
   - H2: Before you begin
   - H2: Quick setup
   - H3: Step 1: Give the team access to the Gateway
@@ -17755,6 +17782,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Search
   - H3: Describe
   - H3: Call
+  - H3: On-demand tools
   - H3: Batch search
   - H3: Directory mode
   - H2: Execution policy
@@ -17930,7 +17958,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Feedback and bug reports
   - H2: Answer an agent question
-  - H2: Edit a failed message
+  - H2: Rewind and fork
   - H2: Command palette file attachments
   - H2: Choose a session workspace
   - H2: Create a nested session
