@@ -1286,7 +1286,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Linked requester identity
   - H2: Actions and gates
   - H3: Read token selection
-  - H3: Read author names
+  - H3: Read author and mention names
   - H2: Live policy changes
   - H2: Access control and routing
   - H3: Group DMs (MPDMs) and bots
@@ -2473,7 +2473,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Run the Gateway
   - H3: Options
   - H2: Reveal the configured token
-  - H2: Recover an unverifiable state lock
+  - H2: Wait for a previous container
 
 ## cli/gateway/service.md
 
@@ -3653,6 +3653,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Quick start (inspect context)
   - H2: Example output
+  - H3: /context
   - H3: /context list
   - H3: /context detail
   - H3: /context map
@@ -4594,6 +4595,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /concepts/user-model
 - Headings:
+  - H2: One USER.md for several agents
   - H2: Personal USER files on a shared Gateway
   - H2: Gateway profile and GitHub credit
   - H3: Member and administrator controls
@@ -5049,6 +5051,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: agents.defaults.contextInjection
   - H2: agents.defaults.bootstrapMaxChars
   - H2: agents.defaults.bootstrapTotalMaxChars
+  - H2: `agents.entries.*.sharedUserDir`
   - H2: Per-agent bootstrap profile overrides
   - H2: Bootstrap truncation notice
   - H2: Context budget ownership map
@@ -5568,7 +5571,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Three layers
   - H3: State and config locks
   - H3: Socket bind
-  - H2: Recover a crashed foreign owner
+  - H2: Container restarts and replacements
+  - H3: Supervisor-verified recovery
   - H2: Operational notes
   - H2: Related
 
@@ -6588,6 +6592,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/telemetry
 - Headings:
+  - H2: Telemetry controls
   - H2: Inspect what is sent
   - H2: Daily update check
   - H2: Identifier-free installation counting
@@ -7331,6 +7336,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /install/docker/environment-variables
 - Headings:
   - H2: Environment variables
+  - H2: Telemetry
 
 ## install/docker/networking-and-storage.md
 
@@ -7583,6 +7589,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Quick start
   - H2: Nix-mode runtime behavior
   - H3: What changes in Nix mode
+  - H3: Telemetry
   - H3: Config and state paths
   - H3: Service PATH discovery
   - H2: Related
@@ -9439,8 +9446,10 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/copilot
 - Headings:
   - H2: Requirements
+  - H2: Model discovery
   - H2: Install
   - H2: Quickstart
+  - H3: Copilot Fusion
   - H2: Supported providers
   - H2: BYOK
   - H2: Auth
@@ -9848,8 +9857,11 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: The Granola plugin
   - H3: The Slack plugin
   - H2: Start a scribe
-  - H3: Example prompt
+  - H3: Example run message
   - H2: After updating OpenClaw
+  - H3: Upgrade an earlier automation
+  - H3: Updates the page makes on its own
+  - H3: Review earlier conversation learning
   - H2: States
   - H2: Controls
   - H2: Limits
@@ -9891,6 +9903,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /plugins/llama-cpp
 - Headings:
+  - H2: Llama.app catalog and inference
+  - H3: Set up the app connection
   - H2: Choose server ownership
   - H2: Managed local server
   - H3: Model recommendations
@@ -13366,6 +13380,17 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Advanced
   - H2: Related
 
+## providers/llama.md
+
+- Route: /providers/llama
+- Headings:
+  - H2: Quick start
+  - H3: Install Llama and download a model
+  - H3: Connect OpenClaw
+  - H2: Non-interactive onboarding
+  - H2: Troubleshooting
+  - H2: Related
+
 ## providers/llmman.md
 
 - Route: /providers/llmman
@@ -13404,6 +13429,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: LAN or tailnet host
   - H2: Troubleshooting
   - H3: Context overflow
+  - H3: Embedding model fails to load on a small host
   - H3: Model discovery failures
   - H3: LM Studio not detected
   - H3: Authentication errors (HTTP 401)
@@ -14677,6 +14703,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Keep the admitted workflow across commands
   - H3: Salvage an unknown file in an interrupted review checkout
   - H3: Continue a correction with repaired workflow code
+  - H3: Upgrade an incoming READY review
+  - H3: Upgrade an ordinary READY preparation
   - H2: Reconcile a completed CI review
   - H2: Recover dependency-cache device identities
   - H2: Release finished dependency holds
