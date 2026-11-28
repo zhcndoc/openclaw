@@ -2791,6 +2791,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H1: openclaw setup
   - H2: When it starts
   - H2: What OpenClaw shows
+  - H2: Explain an error without a model
   - H2: Examples
   - H2: Operations and approval
   - H3: Change history
@@ -3641,6 +3642,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Host requirements
   - H3: Failure isolation
   - H3: ownsCompaction
+  - H3: Compaction requests
   - H2: Configuration reference
   - H3: Plugin and engine IDs
   - H2: Relationship to compaction and memory
@@ -5573,6 +5575,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Socket bind
   - H2: Container restarts and replacements
   - H3: Supervisor-verified recovery
+  - H2: Recovering an older legacy record
   - H2: Operational notes
   - H2: Related
 
@@ -7778,6 +7781,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /install/updating
 - Headings:
+  - H2: Linux system service run by another account
   - H2: Local packaged-code overrides
   - H2: Update implementation contract
   - H3: Release updates
@@ -7786,6 +7790,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Recorded contract notes
   - H3: Migration integrity checks
   - H2: Retired tenant-container management
+  - H2: Upgrading after a legacy Linux Gateway crash
   - H2: Upgrading very old versions
   - H2: Recommended: openclaw update
   - H3: Host prerequisites
@@ -9178,7 +9183,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Route: /plugins/codex-harness-reference/workspace-bootstrap-files
 - Headings:
   - H2: Workspace bootstrap files
-  - H3: Skills, persona, and memory without a managed relay
+  - H3: Skills, persona, and memory on the thread
 
 ## plugins/codex-harness-runtime.md
 
@@ -9918,6 +9923,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H3: Authentication and endpoint replacement
   - H3: Manual configuration
   - H2: Requests and local embeddings
+  - H2: Download access and offline hosts
   - H2: Troubleshooting
   - H2: Related
 
@@ -12334,6 +12340,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 - Headings:
   - H2: Infrastructure
   - H3: Bounded directory inventories
+  - H3: Root-scoped file errors
   - H3: File-watch capacity errors
   - H3: Filesystem observation and worker notifications
   - H3: Streaming file verification
@@ -13056,6 +13063,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Protocol and provider plugins
   - H2: Hosted web search
   - H2: Image generation
+  - H3: Native Google images
   - H2: Native Gradium speech
   - H2: Quotas and usage
   - H2: Pool dashboard
@@ -14542,7 +14550,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Hybrid search config
   - H3: Full example
   - H2: Additional memory paths
-  - H2: Multimodal memory (Gemini)
+  - H2: Multimodal memory
   - H2: Embedding cache
   - H2: Batch indexing
   - H2: Session memory search
@@ -17222,6 +17230,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Built-in tool categories
   - H2: Plugin-provided tools
   - H2: Configure access and approvals
+  - H2: Large tool results
   - H2: Extend capabilities
   - H2: Troubleshoot missing tools
   - H2: Related
@@ -18097,6 +18106,8 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
   - H2: Warm reload
   - H3: Upgrading existing browser data
   - H2: Offline page reload
+  - H2: Fresh visits during Gateway downtime
+  - H3: Example: an existing Caddy proxy
   - H2: Gateway updates and suspended tabs
   - H2: Visualizations during a connection loss
   - H2: Connection loss and reconnect
